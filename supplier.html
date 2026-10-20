@@ -1304,7 +1304,7 @@ const A = {
   editPhone: ()=> { SI.editPhone = true; render(); },
   forgot: ()=> { SI.forgot = true; render(); },
   forgotClose: ()=> { SI.forgot = false; render(); },
-  askPin: async ()=> { const ph = (document.getElementById('siPhone')||{}).value || store(K_PHONE) || ''; try{ await api('ask_pin', { phone: ph }); }catch(_){} SI.requested = true; render(); },
+  askPin: async ()=> { const ph = (document.getElementById('siPhone')||{}).value || store(K_PHONE) || ''; try{ await api('ask_pin', { phone: ph }); SI.requested = true; SI.msg = ''; }catch(e){ SI.requested = false; SI.msg = (e && e.message) || 'The shop could not be reached'; } render(); },
   setupWa: ()=> { saveSetup({ wa: setup().wa === false }); render(); },
   setupDone: ()=> { saveSetup({ seen: true }); go('#today'); },
   lang: async (el)=> {
@@ -1547,7 +1547,7 @@ async function answerOrder(id){
       try{ prods = await load('products', 'products'); }catch(_){ prods = null; }
       for(const l of priced){
         const row = prods && (prods.items || []).find(p=> l.productId != null && String(p.productId) === String(l.productId) && (p.variantIdx == null ? l.variantIdx == null : Number(p.variantIdx) === Number(l.variantIdx)));
-        if(row){ try{ await send('price', { priceId: row.priceId, unitPrice: st.price[l.lineId], lines: [] }, 'New price · ' + fullName(l)); row.proposal = { kind:'price', status:'pending' }; }catch(_){} }
+        if(row){ try{ await send('price', { priceId: row.priceId, unitPrice: st.price[l.lineId], lines: [] }, 'New price · ' + fullName(l)); row.proposal = { kind:'price', status:'pending' }; }catch(e){ toast('Your answer went, but the new price for ' + fullName(l) + ' did not: ' + ((e && e.message) || e), 6000); } }
       }
     }
     st.sent = state; st.queued = !!r.queued; st.at = Date.now();

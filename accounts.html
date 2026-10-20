@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Accounts</title>
 <!-- The phone app's native layer (apps/accounts). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -722,7 +723,7 @@ input{font-family:inherit;color:var(--ink)}
 <div id="bx_app"><div id="bx_main"><div class="bx-empty" style="padding-top:40vh"><b>Omni-Ware Accounts</b>Opening…</div></div></div>
 <div id="bx_pages"></div>
 <div id="bx_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Accounts — the books on a phone.
@@ -778,8 +779,6 @@ function isoOf(ts){ if (!ts) return ''; const d = new Date(typeof ts === 'string
 function msOf(ts){ if (ts == null || ts === '') return 0; if (typeof ts === 'number') return ts; const n = Date.parse(ts); return isNaN(n) ? (Number(ts) || 0) : n; }
 function daysBetween(a, b){ if (!a || !b) return 0; return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
 function hm(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
-// A wait, said the way a clock says it: 2:08, or 25 m under the hour.
-function waitClock(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' m' : Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0'); }
 function waitWords(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 1) return 'just now'; if (mins < 60) return mins + ' min'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : ''); const d = Math.round(h / 24); return d === 1 ? '1 day' : d + ' days'; }
 function minsSince(ms){ return ms ? (Date.now() - ms) / 60000 : 0; }
 function dayLabel(iso){ if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
@@ -863,7 +862,6 @@ const ITEM_ICONS = [
   [/timber|wood|plank|board|ply/i, 'M3 8h18v8H3zM7 8v8M12 8v8M17 8v8'],
 ];
 function itemIcon(name){ const hit = ITEM_ICONS.find(([re]) => re.test(String(name || ''))); return hit ? hit[1] : 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10'; }
-function itemTile(name, tint, size){ size = size || 30; return `<span class="bx-tile" style="width:${size}px;height:${size}px;background:${tint[0]};color:${tint[1]}"><svg width="${Math.round(size * .6)}" height="${Math.round(size * .6)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${itemIcon(name)}"/></svg></span>`; }
 
 let toastTimer = null;
 function toast(msg, ms){
@@ -1361,7 +1359,7 @@ async function selectAll(table, keyCol, since){
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
-    if (since) q = q.gte(since[0], since[1]);
+    if (typeof since === 'function') q = since(q); else if (since) q = q.gte(since[0], since[1]);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -1400,8 +1398,41 @@ function rowToDue(d){ return { id: d.id, kind: d.kind, refId: d.ref_id, period: 
   proposed: (d.payload && Array.isArray(d.payload.proposed)) ? d.payload.proposed : [] }; }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
   cashGiven: r.cash_given == null ? null : Number(r.cash_given), cashCount: r.cash_count || null }; }
+function rowToPayAsk(x){ return ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at }); }
+function accHandoffs(rows){ return (rows || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at })).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
 function rowToAsk(x){ return { id: x.id, quoteId: x.quote_id, customerId: x.customer_id, kind: x.kind, amount: Number(x.amount) || 0, lines: x.lines || [], reason: x.reason || '', status: x.status, askedBy: x.asked_by, createdAt: x.created_at, decidedAt: x.decided_at || null }; }
 
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
+async function refreshLive(){
+  if (!S.data) return loadAll();
+  const [quotes, txns, asks, payAsks, handoffs] = await Promise.all([
+    selectAll('saved_quotes', 'id', liveQuoteFilter),
+    selectAll('cash_txns', 'id', ['date', daysAgoISO(2)]),
+    sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
+    sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
+    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').eq('status', 'open').then(r => r.error ? null : r.data || [], () => null),
+  ]);
+  mergeQuotes(quotes);
+  const list = D().cashTxns || [], at = new Map(list.map((t, i) => [Number(t.id), i]));
+  txns.forEach(r => { const t = rowToTxn(r), i = at.get(Number(t.id)); if (i == null) list.push(t); else list[i] = t; });
+  D().cashTxns = list;
+  if (asks) D().asks = asks.map(rowToAsk);
+  if (payAsks) D().payAsks = payAsks.map(rowToPayAsk);
+  if (handoffs) D().handoffs = accHandoffs(handoffs);
+  S.loadedAt = Date.now(); saveSnapshot();
+}
 async function loadAll(){
   const opt = p => p.then(r => r, () => []);
   const [customers, debtLog, products, prices, quotes, suppliers, staff, txns, days, bills, stm, promises, stockIn, settingsR, tasksR, membersR] = await Promise.all([
@@ -1414,7 +1445,7 @@ async function loadAll(){
     opt(selectAll('statements_sent')),
     opt(selectAll('payment_promises')),
     // What came into stock against a supplier's bill (0107 pi_id). Absent before 0107.
-    sb.from('stock_log').select('pi_id, product_id, variant_idx, delta, date').eq('shop_id', S.shopId).not('pi_id', 'is', null).gte('date', daysAgoISO(400)).limit(5000).then(r => r.error ? null : r.data, () => null),
+    selectAll('stock_log', 'id', q => q.not('pi_id', 'is', null).gte('date', daysAgoISO(400))).then(rows => rows, () => null),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     sb.from('role_tasks').select('task').eq('role', S.role || '').then(r => r, () => ({ data: [] })),
     sb.from('shop_members').select('user_id, role').eq('shop_id', S.shopId).then(r => r, () => ({ data: [] })),
@@ -1423,7 +1454,7 @@ async function loadAll(){
   const [dues, loans, assets, rents, stockRows, lots, trips, agents, claims, asks, payAsks, handoffs] = await Promise.all([
     opt(selectAll('dues')), opt(selectAll('loans')), opt(selectAll('fixed_assets')), opt(selectAll('rent_agreements')),
     opt(selectAll('stock', 'key')), opt(selectAll('stock_lots')),
-    sb.from('collection_trips').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).limit(2000).then(r => r.error ? [] : r.data || [], () => []),
+    selectAll('collection_trips', 'id', q => q.gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString())).then(rows => rows, () => []),
     opt(selectAll('agents')),
     sb.from('agent_commission_claims').select('*').eq('shop_id', S.shopId).then(r => r.error ? [] : r.data || [], () => []),
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
@@ -1462,10 +1493,9 @@ async function loadAll(){
     agents: (agents || []).map(a => ({ id: a.id, name: a.name || '', phone: a.phone || '', paymentTerm: a.payment_term || 'prepay', userId: a.user_id || null })),
     claims: (claims || []).map(c => ({ id: c.id, agentId: c.agent_id, month: c.month, amount: Number(c.bonus_amount) || 0, status: c.status, requestedAt: c.requested_at, paidAt: c.paid_at })),
     asks: (asks || []).map(rowToAsk),
-    payAsks: (payAsks || []).map(x => ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at })),
+    payAsks: (payAsks || []).map(rowToPayAsk),
     members: (membersR && membersR.data) || [],
-    handoffs: (handoffs || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at }))
-      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))),
+    handoffs: accHandoffs(handoffs),
     cashTxns: txns.map(rowToTxn),
     cashDays,
     bills: bills.map(rowToBill),
@@ -2290,7 +2320,10 @@ function start(){
   S.started = true;
   phonePush();
   render();
-  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
+  // Every 90 s: the orders that can still change, today's cash, the asks and
+  // the hand-offs -- not the whole books (29 reads and 3 MB a tick on a big
+  // shop, the audit measured). The whole books load at boot and on coming back.
+  setInterval(() => { if (document.visibilityState === 'visible' && quiet() && !S.sheet) refreshLive().then(() => { if (quiet()) render(); }).catch(() => {}); }, 90000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000 && quiet()) loadAll().then(() => { if (quiet()) render(); }).catch(() => {}); });
 }
 // A refresh never redraws under a finger: not mid-slide, mid-write, or while a figure is being typed.
@@ -2384,18 +2417,7 @@ function segRing(segs, size, stroke, inner, label){
     const s = `<circle class="a-ring${x.blink ? ' a-blink' : ''}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${x.col}" stroke-width="${stroke}" pathLength="100" stroke-dasharray="${Math.max(0.01, len - gap).toFixed(2)} ${(100 - len + gap).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`; at += len; return s; }).join('');
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/>${arcs}</svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function pctRing(pct, size, stroke, col, inner, label, track){
-  const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
-  return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
-}
-function sheetTop(title, eyebrow, eyeCol, opts){
-  opts = opts || {};
-  return `<button class="tapback" data-act="back" aria-label="Back"></button>`;
-}
 function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
-function waBtn(href, label, extraAct){ return `<a class="bx-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
-function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'bx-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'bx-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
-function callSmall(phone, name){ const u = telUrl(phone); return `<a ${u ? `href="${u}"` : 'aria-disabled="true"'} aria-label="Call ${esc(name)}" style="width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;${u ? '' : 'opacity:.35'}">${ic('phone', 16)}</a>`; }
 function emptyCard(title, sub){ return `<div class="bx-card"><div class="bx-empty"><b>${esc(title)}</b>${esc(sub || '')}</div></div>`; }
 function bindSlides(){
   document.querySelectorAll('[data-slide]').forEach(el => {
@@ -2404,7 +2426,7 @@ function bindSlides(){
     let sx = 0, x = 0, drag = false, step = 0;
     const max = () => el.offsetWidth - 56;
     const paint = () => { k.style.transform = `translateX(${x.toFixed(1)}px)`; fill.style.width = (x + 56).toFixed(1) + 'px'; lab.style.opacity = Math.max(0, 1 - x / max() * 1.6).toFixed(2); };
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     k.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; S.dragging = true; sx = e.clientX; x = 0; step = 0; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(0, Math.min(max(), e.clientX - sx)); const s = Math.floor(x / max() * 4); if (s !== step) { step = s; if (s > 0) FEEL.tick(); } paint(); });
     const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * 0.86) { x = max(); paint(); setTimeout(done, 120); } else { if (x > 8) FEEL.back(); x = 0; paint(); } };
@@ -3059,7 +3081,7 @@ ACT['slide:pay'] = async () => {
     loadAll().then(() => { if (S.stack.length && S.stack[S.stack.length - 1].type === 'paid') render(); }).catch(() => {});
   } catch (e) {
     S.busy = false;
-    if (e.partial > 0) { toast(`Stopped part-way: ${n0(e.partial)} of ${n0(a.amt)} was recorded. Check the cash book before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (e.partial > 0) { toast(`Stopped part-way: ${n0(e.partial)} of ${n0(a.amt)} was recorded — ${(e && e.message) || e}. Check the cash book before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { render(); toast(failWord(e), 6000); }
   }
 };
@@ -5175,11 +5197,15 @@ function nowHM(){ return new Date().toTimeString().slice(0, 5); }
 // index.html addCashReceipt / addCashPayment: one line, its id from the server.
 async function addCash(o){
   const id = await issueRowId('row:cash_txn', cashMax());
+  S.landed = null;
   const row = { id, shop_id: S.shopId, date: o.date || todayISO(), account: o.account, type: o.type, category: o.category, amount: Math.round(o.amount),
     description: o.description || o.category, time: nowHM(), quote_id: o.quoteId == null ? null : o.quoteId, entered_by: S.user ? String(S.user.id) : null,
     ...(o.transferId != null ? { transfer_id: o.transferId } : {}), ...(o.photo ? { photo: o.photo } : {}) };
   await insertRow('cash_txns', row, ['entered_by', 'transfer_id', 'photo']);
   D().cashTxns.push(rowToTxn(row));
+  // Remembered until the action finishes: a later write that fails must not
+  // say "nothing was changed" when this line is already in the book.
+  S.landed = { id, amount: row.amount, category: row.category, account: row.account, at: Date.now() };
   return id;
 }
 // The owner's log (0123 decision_log). Never blocks the work: a database
@@ -5187,13 +5213,19 @@ async function addCash(o){
 async function logDecision(task, what, o){
   o = o || {};
   try {
-    await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
+    const { error } = await sb.from('decision_log').insert({ shop_id: S.shopId, by: S.user ? S.user.id : null, by_name: myName(), role: S.role, task, what,
       amount: o.amount == null ? null : Math.round(o.amount), ref: o.ref || null, before: o.before || null, after: o.after || null });
-  } catch (_e) {}
+    if (error) throw error;
+  } catch (e) { toast('Done — but the line for the owner’s log did not save: ' + ((e && e.message) || e), 6000); }
 }
-function booksChanged(){ S.loadedAt = Date.now(); saveSnapshot(); }
+function booksChanged(){ S.loadedAt = Date.now(); S.landed = null; saveSnapshot(); }
 // A write that failed half way: reload the books so the screen shows what landed.
-async function afterFail(e){ toast(failWord(e), 7000); try { await loadAll(); } catch (_e) {} render(); }
+async function afterFail(e){
+  const l = S.landed; S.landed = null;
+  if (l && Date.now() - l.at < 120000) toast(`${l.category} of ${n0(l.amount)} is in the ${ACCT_WORD[l.account] || l.account} book (line ${l.id}), but the rest did not save — ${(e && e.message) || e}. Put the rest right, or correct that line in the cash book.`, 10000);
+  else toast(failWord(e), 7000);
+  try { await loadAll(); } catch (_e) {} render();
+}
 function needTask(task){ if (can(task)) return true; toast(`That needs “${TASK_WORDS[task] || task}” — the owner switches it on`, 5000); return false; }
 
 /* ---- money helpers the new screens share ---- */

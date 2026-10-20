@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Buyer</title>
 <!-- The phone app's native layer (apps/buyer). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -485,7 +486,7 @@ input{font-family:inherit;color:var(--ink)}
 <div id="bx_app"><div id="bx_main"><div class="bx-empty" style="padding-top:40vh"><b>Omni-Ware Buyer</b>Opening…</div></div></div>
 <div id="bx_pages"></div>
 <div id="bx_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Buyer — the buying desk on a phone.
@@ -697,11 +698,12 @@ const S = {
 };
 window.BX = S;
 
-async function selectAll(table, keyCol){
+async function selectAll(table, keyCol, filter){
   keyCol = keyCol || 'id';
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
+    if (filter) q = filter(q);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -764,10 +766,23 @@ async function loadAll(){
   S.loadedAt = Date.now();
   saveSnapshot();
 }
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
 async function refreshLive(){
   try {
-    const [quotes, trips, handoffs, restock] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null), selectAll('buyer_handoffs').catch(() => null), selectAll('restock_buys').catch(() => null)]);
-    S.data.savedQuotes = quotes.map(rowToQuote);
+    const [quotes, trips, handoffs, restock] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('collection_trips').catch(() => null), selectAll('buyer_handoffs').catch(() => null), selectAll('restock_buys').catch(() => null)]);
+    mergeQuotes(quotes);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (handoffs) S.data.handoffs = handoffs.map(rowToHandoff);
     if (restock) S.data.restockBuys = restock.map(rowToRestock);
@@ -1404,7 +1419,7 @@ function pushOpen(d){
     } else if (d.kind === 'trip.cash.ready') {
       const h = (D().handoffs || []).find(x => String(x.id) === String(d.id));
       at('plan', h && h.payload && h.payload.supplierId ? { sid: h.payload.supplierId } : {});
-    } else if (d.kind === 'restock.held') at('restock', { picked: null });
+    } else if (d.kind === 'restock.held' || d.kind === 'restock.released') at('restock', { picked: null });
   } catch (e) { console.warn(e); }
 }
 function pushOn(){ return !!window.owPushReady; }
@@ -1519,10 +1534,6 @@ function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function sheetTop(title, eyebrow, eyeCol, opts){
-  opts = opts || {};
-  return `<button class="tapback" data-act="back" aria-label="Back"></button>`;
-}
 function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
 function waBtn(href, label, extraAct){ return `<a class="bx-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
 function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'bx-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'bx-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
@@ -1596,7 +1607,7 @@ function bindSlides(){
     let sx = 0, x = 0, drag = false, step = 0;
     const max = () => el.offsetWidth - 56;
     const paint = () => { k.style.transform = `translateX(${x.toFixed(1)}px)`; fill.style.width = (x + 56).toFixed(1) + 'px'; lab.style.opacity = Math.max(0, 1 - x / max() * 1.6).toFixed(2); };
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     k.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; S.dragging = true; sx = e.clientX; x = 0; step = 0; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(0, Math.min(max(), e.clientX - sx)); const s = Math.floor(x / max() * 4); if (s !== step) { step = s; if (s > 0) FEEL.tick(); } paint(); });
     const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * 0.86) { x = max(); paint(); setTimeout(done, 120); } else { if (x > 8) FEEL.back(); x = 0; paint(); } };
@@ -1922,13 +1933,18 @@ async function changeOrder(id, fn){
   ORDER_KEYS.forEach(k => { if (q[k] === undefined || q[k] === null && payload[k] === undefined) delete payload[k]; else payload[k] = q[k]; });
   const patch = { payload };
   if (q.status !== before) patch.status = q.status;
-  const u = await sb.from('saved_quotes').update(patch).eq('shop_id', S.shopId).eq('id', id);
+  // The row as the database kept it: the Checking gate (0119) may have
+  // held the move and put the order back in Checking (gateHeldMove), and
+  // a phone that only believed its own patch said "moved" when it had not.
+  const u = await sb.from('saved_quotes').update(patch).eq('shop_id', S.shopId).eq('id', id).select('*').maybeSingle();
   if (u.error) throw u.error;
-  const fresh = rowToQuote({ ...row, ...patch });
+  const fresh = rowToQuote(u.data || { ...row, ...patch });
   const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();
-  return { q: fresh, out, moved: q.status !== before };
+  const held = q.status !== before && fresh.status === before && fresh.gateHeldMove ? fresh.gateHeldMove : null;
+  if (held && out && typeof out === 'object') out.moved = false;
+  return { q: fresh, out, moved: fresh.status !== before, held };
 }
 /* ==================================================================
    Answers from the supplier app (0132). A supplier answers in
@@ -1952,7 +1968,7 @@ async function readAppAnswers(){
     if (r.error || !r.data || !r.data.length) return;   // no 0132 yet, or nothing said
     const latest = new Map();
     r.data.forEach(a => latest.set(String(a.order_id) + '|' + String(a.supplier_id), a));
-    let folded = 0, moved = null;
+    let folded = 0, moved = null, heldBy = null;
     for (const a of latest.values()) {
       if (appFolded.has(a.id)) continue;
       const sid = String(a.supplier_id), at = Date.parse(a.at);
@@ -1968,16 +1984,19 @@ async function readAppAnswers(){
           : setOrderSupplierConfirm(q, sid, a.state === 'confirmed' ? 'confirmed' : 'problem', note,
             { by: 'supplier', at, short: a.state === 'short' ? a.changes : null }));
         appFolded.add(a.id);
-        if (res) { folded++; if (res.moved) moved = res.q; }
+        if (res) { folded++; if (res.moved) moved = res.q; if (res.held) heldBy = res; }
       } catch (e) { if (!isNetworkError(e)) console.warn(e); }
     }
     if (moved) movedToast(moved);
+    if (heldBy) heldToast(heldBy.q, heldBy.held);
     else if (folded) toast(`${folded} ${folded === 1 ? 'supplier answered' : 'suppliers answered'} in their app`, 4000);
     if (folded && !S.dragging) render();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
   finally { appFolding = false; }
 }
 function movedToast(q){ toast(`All suppliers confirmed — ${quoteClientName(q)}'s order has moved to ${STAGE_WORD[q.status]}.`, 5000); }
+// The gate kept it in Checking: say so, and why, instead of "moved".
+function heldToast(q, held){ toast(`${quoteClientName(q)}'s order stays in Checking — ${held.why === 'credit' ? 'a credit hold waits for ' + whoRole('manager') : 'a price waits for ' + whoRole('manager')}.`, 6000); }
 
 // A supplier's answer, from the slider or the answer tiles.
 ACT.answer = async (qid, sid, to) => {
@@ -1986,7 +2005,7 @@ ACT.answer = async (qid, sid, to) => {
   try { res = await changeOrder(Number(qid), q => q.status !== 'draft' ? false : setOrderSupplierConfirm(q, sid, state, '')); }
   catch (e) { toast(failWord(e), 5000); render(); return null; }
   if (!res) { toast('That order has already left Checking'); render(); return null; }
-  if (res.out.moved) { movedToast(res.q); setTimeout(FEEL.stamp, 350); }
+  if (res.out.moved) { movedToast(res.q); setTimeout(FEEL.stamp, 350); } else if (res.held) heldToast(res.q, res.held);
   else if (res.out.held) toast(orderHoldReason(res.q) + ' · it moves once that is decided', 5000);
   render();
   return res;
@@ -2124,7 +2143,7 @@ ACT.pdo = async () => {
     if (a.pick === 'drop') { FEEL.no(); toast('Dropped — ' + lineName(it0).base); }
     else if (a.pick === 'shelf') { FEEL.yes(); toast('From our shelf — ' + lineName(it0).base); }
     else { FEEL.yes(); toast(`Switched to ${supplierName(alt.supplierId)} · ask them next`); }
-    if (res.out.moved) movedToast(res.q);
+    if (res.out.moved) movedToast(res.q); else if (res.held) heldToast(res.q, res.held);
     if (alt && !res.out.moved) replaceTop('ask', { sid: alt.supplierId, id: a.id });
     else if (S.stack.length > 1 && S.stack[S.stack.length - 2].type === 'order') pop();
     else replaceTop('order', { id: a.id });
@@ -2319,10 +2338,10 @@ ACT.pgo = async () => {
     let listed = null;
     if (a.phone) {
       const row = productPriceRows(it0.productId, it0.variantIdx).find(r => String(r.supplierId) === String(it0.supplierId));
-      if (row) listed = await sb.rpc('buyer_confirm_price', { p_shop_id: S.shopId, p_price_id: row.id, p_wholesale: each }).then(r => { if (r.error) throw r.error; row.wholesale = each; row.date = isoOf(new Date()); row.confirmedVia = 'phone'; saveSnapshot(); return true; }).catch(() => false);
+      if (row) listed = await sb.rpc('buyer_confirm_price', { p_shop_id: S.shopId, p_price_id: row.id, p_wholesale: each }).then(r => { if (r.error) throw r.error; row.wholesale = each; row.date = isoOf(new Date()); row.confirmedVia = 'phone'; saveSnapshot(); return true; }).catch(e => { a.listedWhy = (e && e.message) || String(e); return false; });
     }
     S.busy = false;
-    if (a.phone) { FEEL.yes(); toast('Confirmed for ' + supplierShort(it0.supplierId) + (listed ? ' · price list updated' : listed === false ? ' · the price list could not be updated' : ' · not on their price list') + (res.out && res.out.held ? ' · ' + orderHoldReason(res.q) : ''), 4500); if (res.out && res.out.moved) movedToast(res.q); }
+    if (a.phone) { FEEL.yes(); toast('Confirmed for ' + supplierShort(it0.supplierId) + (listed ? ' · price list updated' : listed === false ? ' · the price list could not be updated (' + (a.listedWhy || 'no reason given') + ')' : ' · not on their price list') + (res.out && res.out.held ? ' · ' + orderHoldReason(res.q) : ''), 4500); if (res.out && res.out.moved) movedToast(res.q); }
     else { FEEL.stamp(); toast('Re-priced — slide right when they confirm it'); }
     const back = S.stack.map(p => p.type).lastIndexOf('order');
     if (back >= 0) { S.stack = S.stack.slice(0, back + 1); render(); } else replaceTop('order', { id: a.id });
@@ -2670,7 +2689,7 @@ ACT['slide:trip'] = async () => {
     if (r.error && /cash_given|column|schema cache/i.test(r.error.message || '')) { const lean = { ...row }; delete lean.cash_given; r = await sb.from('collection_trips').insert(lean); lostCash = trip.cashGiven != null; trip.cashGiven = null; }
     if (r.error) throw r.error;
     D().collectionTrips.push(trip); saveSnapshot();
-    await restockOnTrip(trip).catch(() => {});
+    await restockOnTrip(trip).catch(e => toast('The trip started, but the shelf lines on it were not marked — ' + (e.message || e) + '. Open the trip again.', 7000));
     S.busy = false; FEEL.go();
     if (lostCash) toast('Trip started — the cash given was not saved: migration 0114 is not on this database yet', 6000);
     if (trip.status === 'collecting' && !tripIsSupplierDelivered(trip)) replaceTop('trip', { id: trip.id });
@@ -2873,7 +2892,7 @@ ACT['slide:handin'] = async () => {
     if (u.error) throw u.error;
     D().collectionTrips = D().collectionTrips.map(x => x.id === id ? rowToTrip({ ...r.data, ...patch }) : x); saveSnapshot();
     await pricesPaidToList(t);
-    await restockCollected(t).catch(() => {});
+    await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e), 7000));
     S.busy = false; S.ui.horn = id; replaceTop('done', { id });
   } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
 };
@@ -3112,7 +3131,9 @@ const PRICE_WAIT_NOTES = ['under', 'nomargin', 'nocost'];
 function priceWaits(q){
   return (q.items || []).filter(it => it && PRICE_WAIT_NOTES.includes(it.priceNote) && !(it.priceReview && it.priceReview.state));
 }
-function creditHolds(q){ return !!(q && q.creditCheck && q.creditCheck.decision === 'hold'); }
+// Mirrors ow_gate_reason (0136): a plain hold, or "cash first" while the
+// order is still unpaid. The goods total is only summed here, never drawn.
+function creditHolds(q){ const d = q && q.creditCheck && q.creditCheck.decision; return d === 'hold' || (d === 'cash' && (q.items || []).reduce((t, it) => t + (Number(it.qty) || 0) * (Number(it.sellPrice) || 0), 0) - (Number(q.amountPaid) || 0) > 0); }
 function managerWaits(q){ return priceWaits(q).length + (creditHolds(q) ? 1 : 0) + (agentOrderOnHold(q) ? 1 : 0); }
 // A line nobody sells must be decided: found, dropped off the bill, or the
 // client agrees to wait for it (billed only when it comes).
@@ -3312,7 +3333,7 @@ ACT.nonedrop = async t => {
     S.busy = false;
     if (!res) { toast((quoteById(id) || {}).items && quoteById(id).items.length < 2 ? 'It is the only line — the order would be empty' : 'That line has already changed'); render(); return; }
     FEEL.no(); toast('Dropped · off the order and the bill · ' + sellerOf(res.q) + ' is told');
-    if (res.out.moved) movedToast(res.q);
+    if (res.out.moved) movedToast(res.q); else if (res.held) heldToast(res.q, res.held);
     render();
   } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
 };
@@ -3329,7 +3350,7 @@ ACT.nonewait = async t => {
     S.busy = false;
     if (!res) { toast('That line has already changed'); render(); return; }
     FEEL[undo ? 'back' : 'yes'](); toast(undo ? 'Back to undecided' : 'The client waits · billed only when it comes in');
-    if (res.out.moved) movedToast(res.q);
+    if (res.out.moved) movedToast(res.q); else if (res.held) heldToast(res.q, res.held);
     render();
   } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
 };
@@ -3525,7 +3546,7 @@ async function passOn(kind, forRole, ref, payload){
   (D().handoffs ||= []).push(rowToHandoff({ ...row, status: 'open', created_at: new Date().toISOString() })); saveSnapshot();
   return row;
 }
-function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at }; }
+function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at, heldBy: r.held_by || null, heldAt: r.held_at || null }; }
 function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at }; }
 function handoffsFor(kind, ref){ return (D().handoffs || []).filter(h => h.kind === kind && (ref == null || String(h.ref) === String(ref)) && h.status !== 'withdrawn'); }
 async function closeHandoff(id, status){
@@ -3756,7 +3777,11 @@ ACT.fixgo = async () => {
 const RESTOCK_ORDER = { id: 'restock', client: { name: 'The shelf' }, items: [] };
 function restockCover(){ const c = Number(D().presetRestockCoverDays); return c > 0 ? c : 14; }
 function restockRule(key){ const r = (D().presetReorderRules || {})[key]; if (!r) return null; const m = Number(r.minUnits) || 0, c = Number(r.coverDays) || 0; return m > 0 || c > 0 ? { minUnits: m, coverDays: c } : null; }
-function restockHold(key){ const h = (D().presetBuyHolds || {})[key]; return h && String(h.reason || '').trim() && !h.endedOn ? h : null; }
+function restockHold(key){
+  const held = (D().restockBuys || []).find(r => r.status === 'held' && stockKey(r.productId, r.variantIdx) === key);
+  if (held) return { reason: `${whoRole('manager')} said not yet`, by: held.heldBy || null, endedOn: null, managerHeld: true };
+  const h = (D().presetBuyHolds || {})[key]; return h && String(h.reason || '').trim() && !h.endedOn ? h : null;
+}
 function restockOpen(){ return (D().restockBuys || []).filter(r => r.status === 'planned' || r.status === 'on_trip'); }
 // Sold off our own shelf in the last 30 days, per item.
 function shelfSales30(){
@@ -3846,12 +3871,12 @@ function restockRunLines(){
 }
 async function restockOnTrip(trip){
   const ids = tripLines(trip).filter(l => l.orderId === 'restock').map(l => l.lineId); if (!ids.length) return;
-  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'on_trip', trip_id: trip.id }).eq('shop_id', S.shopId).eq('id', id); if (!u.error && r) { r.status = 'on_trip'; r.tripId = trip.id; } }
+  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'on_trip', trip_id: trip.id }).eq('shop_id', S.shopId).eq('id', id); if (u.error) throw u.error; if (r) { r.status = 'on_trip'; r.tripId = trip.id; } }
   saveSnapshot();
 }
 async function restockCollected(t){
   const ids = tripLines(t).filter(l => l.orderId === 'restock').map(l => l.lineId);
-  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'collected' }).eq('shop_id', S.shopId).eq('id', id); if (!u.error && r) r.status = 'collected'; }
+  for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'collected' }).eq('shop_id', S.shopId).eq('id', id); if (u.error) throw u.error; if (r) r.status = 'collected'; }
   if (ids.length) saveSnapshot();
 }
 

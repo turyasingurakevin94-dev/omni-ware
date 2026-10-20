@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Sales</title>
 <!-- The phone app's native layer (apps/sales). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -2288,7 +2289,7 @@ button.py-row:active{background:var(--soft)}
 <div id="sx_app"><div id="sx_main"><div class="sx-empty" style="padding-top:40vh"><b>Omni-Ware Sales</b>Opening…</div></div></div>
 <div id="sx_pages"></div>
 <div id="sx_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Sales — the sales desk on a phone.
@@ -2391,6 +2392,7 @@ function toast(msg, ms){
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), ms || 3200);
 }
 function haptic(kind){ try { if (window.owHaptic) window.owHaptic(kind); } catch (_e) {} }
+function rpcMissing(e){ return !!e && (e.code === 'PGRST202' || /Could not find the function/i.test(String(e.message || e))); }
 function isNetworkError(e){ return !!e && /fetch|network|Failed to fetch|NetworkError|Load failed/i.test(String(e.message || e)); }
 
 /* ==================================================================
@@ -2407,11 +2409,12 @@ const S = {
 };
 window.SX = S;
 
-async function selectAll(table, keyCol){
+async function selectAll(table, keyCol, filter){
   keyCol = keyCol || 'id';
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
+    if (filter) q = filter(q);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -2429,7 +2432,7 @@ async function loadAll(){
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'), selectAll('product_links').catch(() => []),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
-    sb.from('cash_txns').select('*').eq('shop_id', S.shopId).gte('date', monthStartISO()).order('id').limit(5000),
+    selectAll('cash_txns', 'id', q => q.gte('date', monthStartISO())).then(rows => ({ data: rows })),
     selectAll('staff').catch(() => []),
     // Who is out collecting what (0070); members read.
     sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('voided', false).neq('status', 'confirmed').limit(500).then(r => r, () => ({ data: [] })),
@@ -2510,8 +2513,32 @@ function rowToSwitch(h){ const p = h.payload || {}; return { id: h.id, orderId: 
 function rowToLead(r){ return { id: r.id, name: r.name || '', status: r.status || 'asked', productId: r.product_id || null, assignedStaffId: r.assigned_staff_id || null, createdAt: r.created_at, stageEnteredAt: r.stage_entered_at == null ? null : Number(r.stage_entered_at), requests: Array.isArray(r.requests) ? r.requests : [], candidates: Array.isArray(r.candidates) ? r.candidates : [] }; }
 // The Buyer's open item switches (0125 buyer_handoffs); null when the read fails.
 function switchesQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'sales').eq('kind', 'item_switch').eq('status', 'open').limit(500).then(r => r.error ? null : r.data || [], () => null); }
+// One order, fresh from the books (the counter's wait screen asks every few
+// seconds; the whole table every 6 seconds was the old cost of that).
+async function refreshOne(id){
+  try {
+    const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', Number(id)).maybeSingle();
+    if (r.error || !r.data) return;
+    const q = rowToQuote(r.data), i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
+    if (i >= 0) D().savedQuotes[i] = q; else D().savedQuotes.push(q);
+    render();
+  } catch (e) { if (!isNetworkError(e)) console.warn(e); }
+}
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
 async function refreshQuotes(){
-  try { const [rows, sw] = await Promise.all([selectAll('saved_quotes'), switchesQuery()]); S.data.savedQuotes = rows.map(rowToQuote); if (sw) S.data.switches = sw.map(rowToSwitch); S.loadedAt = Date.now(); saveSnapshot(); render(); }
+  try { const [rows, sw] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), switchesQuery()]); mergeQuotes(rows); if (sw) S.data.switches = sw.map(rowToSwitch); S.loadedAt = Date.now(); saveSnapshot(); render(); }
   catch (e) { if (!isNetworkError(e)) console.warn(e); }
 }
 
@@ -2598,7 +2625,6 @@ function waWaiting(){
 }
 // 52053
 function waFmtWait(mins){ if (mins == null) return '—'; if (mins < 1) return 'just now'; if (mins < 60) return Math.round(mins) + ' min'; if (mins < 48 * 60) return Math.round(mins / 60) + ' h'; return Math.round(mins / 1440) + ' d'; }
-function waSnippet(m){ if (!m) return ''; const body = m.msg_type === 'order' ? 'Order from the catalogue' : (m.body || '[' + m.msg_type + ']'); return (m.direction === 'out' ? 'You: ' : '') + body; }
 // The last 9 digits, as cfNormalisedPhone keeps them.
 function phone9(p){ const d = String(p || '').replace(/[^0-9]/g, ''); return d.length >= 9 ? d.slice(-9) : ''; }
 // 50128: the one customer whose number ends the same, if exactly one does.
@@ -3252,7 +3278,7 @@ function pushOpen(d){
       if (q) { S.ordersStage = q.status || 'draft'; S.stack = [{ type: 'order', args: { id: Number(q.id) } }]; } else S.stack = [];
     };
     let done = true;
-    if (['price.decided', 'price.changed', 'credit.decided'].includes(k)) order(has(d.orderId) ? d.orderId : d.id);
+    if (['price.decided', 'price.changed', 'credit.decided', 'line.dropped'].includes(k)) order(has(d.orderId) ? d.orderId : d.id);
     else if (k === 'item.switch') { const sw = (D().switches || []).find(x => String(x.id) === String(d.id)); order(has(d.orderId) ? d.orderId : sw && sw.orderId); }
     else if (k === 'invoice.ask.decided') {
       const ask = (D().asks || []).find(x => String(x.id) === String(d.id));
@@ -3275,7 +3301,10 @@ function start(){
   render();
   setInterval(() => { if (document.visibilityState === 'visible') refreshQuotes(); }, 60000);
   // The chats, every 15 seconds while the app is open. A redraw waits while someone is typing.
-  const waTick = async () => { if (document.visibilityState !== 'visible') return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
+  // The chats poll only on a shop that has WhatsApp (wa-send 'status', asked once), every
+  // 15 s while Chats is open and every minute otherwise: 480 reads an hour, idle, before.
+  let waTicks = 0;
+  const waTick = async () => { if (document.visibilityState !== 'visible') return; if (S.wa.configured == null) await waStatus(); if (!S.wa.configured) return; if (S.view !== 'chats' && (++waTicks % 4)) return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
   waTick(); setInterval(waTick, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000) loadAll().then(render).catch(() => {}); });
 }
@@ -3395,7 +3424,7 @@ function bindSliders(){
     if (el._bound) return; el._bound = true;
     const k = el.querySelector('.k'); let sx = 0, dx = 0, drag = false;
     const max = () => el.clientWidth - k.clientWidth - 8;
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     el.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; sx = e.clientX; dx = 0; k.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', e => { if (!drag) return; dx = Math.max(0, Math.min(max(), e.clientX - sx)); k.style.transform = `translateX(${dx}px)`; });
     const end = () => { if (!drag) return; drag = false; k.style.transition = ''; if (dx >= max() * 0.82) { k.style.transform = `translateX(${max()}px)`; setTimeout(done, 120); } else k.style.transform = ''; };
@@ -3419,10 +3448,6 @@ function moneyIn(fromISO, toISO){ return D().cashTxns.filter(t => t.type === 're
 function ring(pct, size, stroke, col, inner){
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, pct)));
   return `<span style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="transition:stroke-dashoffset 1s"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner}</span></span>`;
-}
-function stripHTML(states, w){
-  const col = { ok: '#0F6B43', ask: '#F5B26B', wait: '#D9D4CB', no: '#8E2A22', way: '#3A3F9B', short: '#F5B26B' };
-  return `<span style="display:flex;gap:2px;width:${w || 58}px">${states.map(s => `<i class="${s.k === 'ask' || s.k === 'way' ? 'sx-blink' : ''}" style="flex:1;height:5px;border-radius:999px;background:${col[s.k] || '#D9D4CB'}"></i>`).join('')}</span>`;
 }
 
 /* ---------------- Today ---------------- */
@@ -3768,7 +3793,6 @@ function ordTotals(q){
   const all = pricedView(q), kept = views.some(v => v.k === 'no') ? pricedView({ ...q, items: keep }) : all;
   return { all: all.total, kept: kept.total, dropped: views.filter(v => v.k === 'no').length, toConfirm: kept.toConfirm };
 }
-function ordDue(q){ return Math.max(0, ordTotals(q).kept - (Number(q.amountPaid) || 0)); }
 
 /* ---------------- Orders ---------------- */
 function ordGroups(list){
@@ -3874,7 +3898,6 @@ function ordFindAll(qs){
   const digits = s.replace(/[^0-9]/g, ''), num = digits ? String(Number(digits)) : '';
   return ordFindIndex().filter(e => e.n.includes(s) || (num && e.id === num) || e.no.includes(s));
 }
-function ordFindHits(qs){ return ordFindAll(qs).slice(0, ORD_FIND_MAX).map(e => e.q); }
 const ORD_STAGE_TINT = { draft: ['#FDEEE1', '#95530C'], awaiting_goods: ['#E4E6FA', '#3A3F9B'], preparing: ['#FDEEE1', '#7A4A02'], pending_delivery: ['#DCEAF8', '#1A5A8A'], completed: ['#E4F4EA', '#0F6B43'] };
 function ordFindRows(qs){
   if (!String(qs || '').trim()) return `<div class="sx-empty" style="padding:18px 8px">Type a client’s name or an order number</div>`;
@@ -4364,7 +4387,6 @@ function ordTellText(q){
   }
   return out.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 }
-function tellText(q){ return ordTellText(q); }
 
 /* ---------------- the order picture ----------------
    Drawn from the order's own lines (index.html waDrawOrderReceipt's
@@ -6130,7 +6152,6 @@ ACT.nwkeep = () => {
   S.stack = S.stack.filter(p => !['neworder', 'aisles', 'aisle'].includes(p.type)); render();
   toast(`${firstWord(d.client.name) || 'The'}’s order is kept in Drafts`);
 };
-ACT.cleardraft = () => { S.draft = null; saveDraft(); S.stack = S.stack.filter(p => p.type !== 'neworder'); render(); toast('Order cleared'); };
 ACT.nwreview = () => { if (!S.draft) return; S.draft.q = ''; NW.find = null; S.stack = S.stack.filter(p => p.type !== 'aisles' && p.type !== 'aisle'); if (!S.stack.some(p => p.type === 'neworder' || p.type === 'counter')) S.stack.push({ type: S.draft.counter ? 'counter' : 'neworder', args: {} }); render(); const pg = document.querySelector('#sx_pages .sx-page:last-child'); if (pg) pg.scrollTop = 0; };
 
 /* ---------------- charges (the shop's own list, presets.services) ---------------- */
@@ -6909,7 +6930,7 @@ ACT['slide:pay'] = async () => {
     payLand({ kind: 'cust', id: c0.id, name: c0.name, phone: c0.phone || c0.phone2 || '', amount, method, bills: done, before: debt0, after: debt, at: Date.now(), time, group: !!a.group }, a);
   } catch (e) {
     S.paying = false;
-    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded — ${(e && e.message) || e}. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { refreshPay(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
   }
 };
@@ -6943,7 +6964,7 @@ async function payOrderSlide(a){
       bills: [{ quoteId: q.id, label: 'Order ' + orderNo(q), pay, cleared: pay >= toPay, left: toPay - pay, total: toPay + (Number(q.amountPaid) || 0) }], before: toPay, after: toPay - pay }, a);
   } catch (e) {
     S.paying = false;
-    if (written > 0) { toast(`The receipt for ${n0(written)} was written but the order was not updated. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
+    if (written > 0) { toast(`The receipt for ${n0(written)} was written but the order was not updated — ${(e && e.message) || e}. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
     else { refreshPay(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
   }
 }
@@ -8318,56 +8339,35 @@ function counterDockHTML(){
 // The order, as the order screen places one, marked a counter sale. The
 // gate (0119) puts a shelf-only order at Packing by itself, or keeps it in
 // Checking while a price waits for the Manager.
-async function ctPlace(d){
-  const maxId = D().savedQuotes.reduce((m, q) => Math.max(m, Number(q.id) || 0), 0);
-  const id = await issueRowId('row:saved_quote', maxId);
-  const now = Date.now(), iso = new Date(now).toISOString(), q = draftQuote();
+/* The whole sale is ONE write in the database (0136 counter_sale): placed,
+   paid, delivered and invoiced together, so a phone that drops signal
+   half-way leaves nothing behind -- no ghost order, no money without a
+   sale. A sale under the shop's price is placed and waits for the
+   Manager's yes (the function answers waiting: 'price'). */
+function ctRowFor(d){
+  const q = draftQuote();
   const items = d.items.map(it => ({ lineId: it.lineId, productId: it.productId, variantIdx: it.variantIdx, productName: it.productName, unit: it.unit, packUnit: it.packUnit, packQty: it.packQty, qtyIn: it.qtyIn, qty: it.qty, supplierId: it.supplierId, supplierName: it.supplierName, price: it.price, sellPrice: it.sellPrice,
     ...placedPriceTag(it) }));
   const charges = (d.charges || []).map(ch => ({ id: ch.id, service: ch.service || null, label: ch.label || '', type: ch.type === 'percent' ? 'percent' : 'fixed', value: Math.max(0, Number(ch.value) || 0), cost: null }));
-  const payload = { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges, credit: q.credit, savedAt: iso, createdAt: iso,
-    payments: [], customerId: d.customerId || null, debtCharged: 0, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }], takenBy: S.user ? String(S.user.id) : null, counter: true };
-  const row = { id, shop_id: S.shopId, client_name: payload.client.name, client_phone: payload.client.phone || null, date: todayISO(), status: 'draft',
-    invoiced: false, invoiced_at: null, invoiced_ts: null, amount_paid: 0, voided: false, payload };
-  const { error } = await sb.from('saved_quotes').insert(row);
-  if (error) throw error;
-  D().savedQuotes.push(rowToQuote(row)); saveSnapshot();
-  return id;
+  return { client_name: d.client.name || 'Walk-in', client_phone: d.client.phone || null,
+    payload: { client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' }, items, charges, credit: q.credit, customerId: d.customerId || null } };
 }
-/* Paid and handed over: one receipt, the order at Delivered and paid in
-   full, then invoiced. Each step re-reads what the last one left. */
-async function ctPay(qid, method){
-  const date = todayISO(), time = new Date().toTimeString().slice(0, 5), now = Date.now();
-  const cur = await sb.from('saved_quotes').select('status, amount_paid, payload, invoiced, voided').eq('shop_id', S.shopId).eq('id', qid).maybeSingle();
-  if (cur.error) throw cur.error;
-  if (!cur.data) throw new Error('the sale is no longer in the books');
-  if (cur.data.voided) throw new Error('the sale was cancelled');
-  const payload = cur.data.payload || {}, q = rowToQuote({ id: qid, status: cur.data.status, invoiced: cur.data.invoiced, amount_paid: cur.data.amount_paid, payload });
-  if (pricesWaiting(q).length) throw new Error(`a price still waits for ${mgrName()}`);
-  const total = Math.round(pricedView(q).total), pay = Math.max(0, total - (Number(q.amountPaid) || 0));
-  let cashTxnId = null, step = 'pay';
-  try {
-    if (pay > 0) {
-      const ctx = { date, time, method, cashMax: D().cashTxns.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) };
-      cashTxnId = await payCashRow(ctx, pay, 'Sales Revenue', `Counter sale — order ${orderNo(q)}`, qid);
-      D().cashTxns.push({ id: cashTxnId, date, account: method, type: 'receipt', category: 'Sales Revenue', amount: pay, description: `Counter sale — order ${orderNo(q)}`, time, quoteId: qid, enteredBy: S.user ? String(S.user.id) : null });
-    }
-    step = 'order';
-    const prior = Array.isArray(payload.payments) ? payload.payments : [];
-    const payments = pay > 0 ? prior.concat([{ date, amount: pay, note: 'Counter sale', cashTxnId, method, id: payNextPaymentId(prior) }]) : prior;
-    const log = Array.isArray(payload.stageLog) ? payload.stageLog : [];
-    const up = await sb.from('saved_quotes').update({ status: 'completed', amount_paid: (Number(q.amountPaid) || 0) + pay,
-      payload: { ...payload, payments, deliveredAt: now, stageEnteredAt: now, stageLog: log.concat([{ status: 'completed', at: now, counter: true }]) } }).eq('shop_id', S.shopId).eq('id', qid);
-    if (up.error) throw up.error;
-    const chk = await sb.from('saved_quotes').select('status').eq('shop_id', S.shopId).eq('id', qid).maybeSingle();
-    if (chk.data && chk.data.status !== 'completed') throw new Error(`the shop’s Checking gate held it for ${mgrName()}`);
-    step = 'invoice';
-    const inv = await sb.rpc('invoice_order', { p_shop_id: S.shopId, p_quote_id: qid });
-    if (inv.error) throw inv.error;
-    return { pay, total, invoice: (inv.data && inv.data.invoice) || invoiceLabel(q), invoiced: true };
-  } catch (e) {
-    e.ctStep = step; e.ctPaid = pay > 0 && step !== 'pay' ? pay : 0; e.ctTotal = total; throw e;
-  }
+async function ctSell(qid, row, method, given){
+  const { data, error } = await sb.rpc('counter_sale', { p_shop_id: S.shopId, p_quote_id: qid == null ? null : Number(qid), p_row: row || null, p_method: method || 'cash', p_given: Number(given) || 0 });
+  if (error) throw error;
+  if (!data || !data.ok) throw new Error('the sale did not go through');
+  return data;
+}
+// The sale as the database now holds it, on this phone at once; the next
+// refresh replaces it with the row itself.
+function ctKeepLocal(r, row, method){
+  const now = Date.now(), iso = new Date(now).toISOString();
+  const payload = { ...(row ? row.payload : {}), counter: true, savedAt: iso, createdAt: iso, deliveredAt: now, stageEnteredAt: now, stageLog: [{ status: 'draft', at: now }, { status: 'completed', at: now, counter: true }],
+    payments: r.pay > 0 ? [{ id: 1, date: todayISO(), amount: r.pay, note: 'Counter sale', cashTxnId: r.cashTxnId, method }] : [] };
+  const q = rowToQuote({ id: r.id, status: 'completed', invoiced: true, invoiced_at: todayISO(), amount_paid: r.total, payload });
+  const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(r.id));
+  if (i >= 0) D().savedQuotes[i] = { ...D().savedQuotes[i], ...q }; else D().savedQuotes.push(q);
+  saveSnapshot();
 }
 // Sold: the done screen, with the change to give back and the receipt.
 // Nothing is sent by itself: the receipt goes out from its own button.
@@ -8384,39 +8384,26 @@ function ctLand(qid, r, method, given){
   loadAll().then(() => { const t = S.stack[S.stack.length - 1]; if (t && t.type === 'counterdone') render(); }).catch(() => {});
 }
 function ctFailWords(e){
-  const m = (e && e.message) || String(e);
-  if (e && e.ctStep === 'invoice') return `Paid ${n0(e.ctPaid || 0)} — but not invoiced yet (${m}). It invoices itself within 24 hours, or ${mgrName()} does it.`;
-  if (e && e.ctStep === 'order') return `The money (${n0(e.ctPaid || 0)}) is in the cash book but the sale was not closed: ${m}. Tell Accounts before trying again.`;
-  if (/counter\.sell|invoice\.make|42501/.test(m)) return 'This login can’t sell over the counter yet — the owner runs supabase/migrations/0119_shared_foundation.sql';
-  return isNetworkError(e) ? 'No connection — nothing was sold. Slide again when you have signal.' : 'Not sold: ' + m;
+  const m = (e && e.message) || String(e), code = e && e.code;
+  if (isNetworkError(e)) return 'No connection — nothing was sold. Slide again when you have signal.';
+  if (rpcMissing(e)) return 'Selling over the counter needs the shop’s database update (0136). Nothing was sold.';
+  if (code === '42501' || /counter\.sell/.test(m)) return 'This login can’t sell over the counter (counter.sell) — the owner switches it on in the Owner app. Nothing was sold.';
+  return 'Not sold — ' + m.replace(/^[A-Z0-9]{5}: /, '');
 }
 
 ACT['slide:counter'] = async () => {
-  const d = S.draft; if (!d || !d.counter || S.ctBusy || !d.items.length || ctOffShelf(d).length || pricesWaiting(draftQuote()).length) return;
+  const d = S.draft; if (!d || !d.counter || S.ctBusy || !d.items.length || ctOffShelf(d).length) return;
   const method = d.payMethod || 'cash', given = method === 'cash' ? Number(d.given) || 0 : 0; S.ctBusy = true; ctRedrawDock();
-  let qid = null;
   try {
-    qid = await ctPlace(d);
+    const row = ctRowFor(d), r = await ctSell(null, row, method, given);
     S.draft = null; saveDraft(); nwSaveDrafts(nwDraftsRaw().filter(x => x.dkey !== d.dkey));
-    const r = await ctPay(qid, method);
-    S.ctBusy = false; ctLand(qid, r, method, given); refreshQuotes();
-  } catch (e) {
     S.ctBusy = false;
-    if (qid == null) { ctRedrawDock(); toast(ctFailWords(e), 7000); return; }
-    toast(ctFailWords(e), 9000);
-    if (e.ctStep === 'invoice') { ctLand(qid, { pay: e.ctPaid, total: e.ctTotal, invoiced: false }, method, given); refreshQuotes(); return; }
-    S.stack = S.stack.filter(x => x.type !== 'neworder' && x.type !== 'counter'); push('counterwait', { id: qid, method }); refreshQuotes();
-  }
-};
-ACT['slide:counterask'] = async () => {
-  const d = S.draft; if (!d || !d.counter || S.ctBusy) return;
-  S.ctBusy = true; ctRedrawDock();
-  try {
-    const qid = await ctPlace(d);
-    S.draft = null; saveDraft(); nwSaveDrafts(nwDraftsRaw().filter(x => x.dkey !== d.dkey));
-    S.ctBusy = false; S.stack = S.stack.filter(x => x.type !== 'neworder' && x.type !== 'counter'); push('counterwait', { id: qid, method: d.payMethod || 'cash' });
+    if (r.waiting) { S.stack = S.stack.filter(x => x.type !== 'neworder' && x.type !== 'counter'); push('counterwait', { id: r.id, method }); refreshQuotes(); return; }
+    ctKeepLocal(r, row, method); ctLand(r.id, r, method, given); refreshQuotes();
   } catch (e) { S.ctBusy = false; ctRedrawDock(); toast(ctFailWords(e), 7000); }
 };
+// Under the shop's price: the same write places it and asks the Manager.
+ACT['slide:counterask'] = ACT['slide:counter'];
 
 /* ---------------- waiting for the Manager's yes ---------------- */
 PAGE.counterwait = a => {
@@ -8460,8 +8447,11 @@ ACT['slide:counterpay'] = async () => {
   const top = S.stack[S.stack.length - 1]; if (!top || top.type !== 'counterwait' || S.ctBusy) return;
   const qid = Number(top.args.id), method = top.args.method || 'cash';
   S.ctBusy = true; render();
-  try { const r = await ctPay(qid, method); S.ctBusy = false; ctLand(qid, r, method, 0); refreshQuotes(); }
-  catch (e) { S.ctBusy = false; toast(ctFailWords(e), 9000); if (e.ctStep === 'invoice') { ctLand(qid, { pay: e.ctPaid, total: e.ctTotal, invoiced: false }, method, 0); } refreshQuotes(); }
+  try {
+    const r = await ctSell(qid, null, method, 0); S.ctBusy = false;
+    if (r.waiting) { toast(`A price still waits for ${mgrName()}`); render(); return; }
+    ctKeepLocal(r, quoteById(qid) ? { payload: quoteById(qid) } : null, method); ctLand(qid, r, method, 0); refreshQuotes();
+  } catch (e) { S.ctBusy = false; toast(ctFailWords(e), 9000); refreshQuotes(); }
 };
 
 /* ---------------- sold, paid, invoiced ---------------- */
@@ -8514,7 +8504,7 @@ ACT.countershop = async t => {
 let ctPoll = null;
 AFTER.push(() => {
   const top = S.stack[S.stack.length - 1], on = !!(top && top.type === 'counterwait');
-  if (on && !ctPoll) ctPoll = setInterval(() => { const t2 = S.stack[S.stack.length - 1]; if (!t2 || t2.type !== 'counterwait') { clearInterval(ctPoll); ctPoll = null; return; } if (!S.ctBusy && document.visibilityState === 'visible') refreshQuotes(); }, 6000);
+  if (on && !ctPoll) ctPoll = setInterval(() => { const t2 = S.stack[S.stack.length - 1]; if (!t2 || t2.type !== 'counterwait') { clearInterval(ctPoll); ctPoll = null; return; } if (!S.ctBusy && document.visibilityState === 'visible') refreshOne(top.args.id); }, 6000);
   if (!on && ctPoll) { clearInterval(ctPoll); ctPoll = null; }
 });
 

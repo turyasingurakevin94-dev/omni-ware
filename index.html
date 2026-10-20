@@ -46749,15 +46749,6 @@ function fmtUGXPerUnit(n, unit){
   const base = fmtUGX(n);
   return unit ? `${base}<span class="prc-unit">/${esc(unit)}</span>` : base;
 }
-// Same pack-level conversion as fmtPriceCompactPack, for the fuller
-// "10,000 UGX/Tin" style used on the supplier comparison cards.
-function fmtUGXPerUnitPack(n, row){
-  if(n===null||n===undefined||n==='') return '—';
-  const packQty = row ? Number(row.packQty)||0 : 0;
-  const packUnit = row ? row.packUnit : '';
-  if(packQty>0 && packUnit) return fmtUGXPerUnit(Number(n)*packQty, packUnit);
-  return fmtUGXPerUnit(n, row ? row.unit : '');
-}
 // esc() now lives in shared-worker.js.
 
 /* ---- Long lists show a page, and say how many there really are -------
@@ -48902,10 +48893,6 @@ function mpMatchScore(m, users, tokens){
   return tokens.filter(t=> hay.includes(t)).length;
 }
 
-function mpSetTab(up){
-  mpState.src = up ? 'up' : (mpState.src === 'up' ? 'all' : mpState.src);
-  renderMediaPicker();
-}
 
 function openMediaPicker(opts){
   const guess = mpGuessTarget();
@@ -60897,38 +60884,6 @@ function ipComputeQty(rawQty, unitMode, packQty){
   return Math.max(1, unitMode==='pack' && packQty>0 ? raw*packQty : raw);
 }
 
-/* What a suggestion row says about money.
-
-   It used to say the cheapest supplier's raw buy figure -- no tier, no
-   markup -- which on this page is exactly backwards: the admin is on a
-   call, and the number on the screen is the number they are about to
-   say out loud. Every suggestion now quotes the recommended SELL price,
-   through the same markup rules every other sell surface uses; the
-   cost and the supplier belong one step later, in the picker stage.
-
-   A product with a price but NO markup rule is the honest edge:
-   quoteSuggestedPrice falls back to the cost silently, and showing that
-   here would put the cost on the call after all -- labelled as a sell.
-   So suggestedSellingPrice is asked directly (it returns null when no
-   rule exists), and the row says "cost X · no markup rule" in caution
-   colour, which is a prompt to fix the product rather than a lie. */
-function suggestionPriceParts(p, variantIdx){
-  const best = rankedPriceRows(p.id, variantIdx)[0];
-  if(!best) return { none: true };
-  const kind = best.retail!=null ? 'retail' : 'wholesale';
-  const cost = best.retail!=null ? best.retail : best.wholesale;
-  const sell = suggestedSellingPrice(p, cost, kind, variantIdx, Number(best.packQty)||0);
-  return sell==null
-    ? { kind, unit: best.unit, figure: Math.round(cost), isSell: false }
-    : { kind, unit: best.unit, figure: Math.round(sell), isSell: true };
-}
-function suggestionStockParts(p, variantIdx){
-  const s = stockOnHand(p.id, variantIdx==null ? null : variantIdx);
-  if(!s.counted) return { reading: 'none', text: 'not counted',
-    title: 'This line has never been counted, which is not the same as having none' };
-  return s.qty > 0 ? { reading: 'good', text: `${s.qty} in stock`, title: '' }
-                   : { reading: 'bad', text: 'out of stock', title: '' };
-}
 function ipSuggestionPriceNote(p, variantIdx){
   const best = rankedPriceRows(p.id, variantIdx)[0];
   if(!best) return '<span class="ip-price-none">No price on file</span>';
@@ -66730,102 +66685,6 @@ function paymentPostWatch(customerId, selections){
   };
 }
 
-/* WHAT NEEDS YOU. A decision only the owner can make, or a chore the
-   app cannot do by itself -- and nothing else. Every chip is a named
-   derivation: the supplier confirm states, the agent-prepay gate, the
-   trips covering an order's lines, a short delivery, a short pick, an
-   order delivered but not invoiced, or a stage past its limit. Money
-   on a row is a size, never a warning; amber is for overdue, short
-   and problem only. Returns null when the order needs nothing. */
-function orderNeedsYou(q, isOverdue){
-  const em = (s)=> `<span class="ow-ot-em">${esc(s)}</span>`;
-  const fig = (n)=> `<span class="ow-ot-fig">${esc(fmtUGX(n))}</span>`;
-  const late = !!(isOverdue && isOverdue(q));
-  const waited = otStageSince(q);
-  let need = null;
-  if(q.status === 'draft'){
-    const groups = orderSupplierGroups(q);
-    const states = groups.map(g=> ({ g, st: orderSupplierConfirmState(q, g.supplierId) }));
-    const problem = states.find(x=> x.st.state === 'problem');
-    const stale = states.filter(x=> x.st.state === 'stale');
-    const unasked = states.filter(x=> x.st.state === 'pending' && !x.st.askedAt);
-    const silent = states.filter(x=> x.st.state === 'pending' && x.st.askedAt);
-    if(problem){
-      need = { chip:'Problem', tone:'ow-warn', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
-        say:`${em(supplierName(problem.g.supplierId))} reported a problem${problem.st.note ? ': ' + esc(problem.st.note) : ''}. Sort it out with them, then mark them confirmed or ask again.` };
-    } else if(stale.length){
-      need = { chip:'Quote changed', tone:'ow-warn', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
-        say:`The quote changed after ${stale.length === 1 ? em(supplierName(stale[0].g.supplierId)) + ' confirmed' : stale.length + ' suppliers confirmed'} — ask again at the new terms.` };
-    } else if(unasked.length){
-      const all = unasked.length === groups.length;
-      need = { chip: all ? 'Not asked' : `${unasked.length} not asked`, tone: late ? 'ow-warn' : '', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
-        say:`Taken ${waited} ago and ${all ? 'no supplier has been asked' : unasked.length + ' of ' + groups.length + ' suppliers have not been asked'}. Ask opens their WhatsApp with the lines written; Confirmed is one tap when they answer.` };
-    } else if(silent.length){
-      const askedAgo = otDuration(Date.now() - Math.min(...silent.map(x=> x.st.askedAt)));
-      need = { chip:'Supplier silent', tone: late ? 'ow-warn' : '', acts:[], html: orderSupplierActsHTML(q, { max:2 }),
-        say:`${silent.map(x=> em(supplierName(x.g.supplierId))).join(' and ')} ${silent.length === 1 ? 'was' : 'were'} asked ${askedAgo} ago and ${silent.length === 1 ? 'has' : 'have'} not answered. Ask again, or mark them confirmed if they rang.` };
-    } else if(agentOrderNeedsShopCheck(q)){
-      const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
-      need = { chip:'Confirm for agent', tone: late ? 'ow-warn' : '', acts:[{act:'agentconfirm', label:'Confirm lines'}],
-        say:`Drop any line you cannot supply, then confirm. ${em(agent ? agent.name : 'The agent')} is asked to pay only after that — ${fig(invoiceBalanceDue(q))} for the lines as they stand.` };
-    } else if(agentPaymentBlocksPreparing(q)){
-      const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
-      need = { chip:'Agent unpaid', tone:'ow-warn', acts:[{act:'prepay', label:'Record payment'}],
-        say:`${em(agent ? agent.name : 'This agent')} pays before their orders are prepared — ${fig(invoiceBalanceDue(q))} owed for this one.` };
-    } else {
-      need = { chip:'Ready', tone:'', acts:[{act:'leave', label: groups.length ? 'Move on' : 'To the pickers'}],
-        say: groups.length ? 'Every supplier has confirmed. Move it on; announce it to the group when you like.' : 'Nothing to buy in — everything is on the shelf, so there is no answer to wait for. Send it to the pickers.' };
-    }
-  } else if(q.status === 'awaiting_goods'){
-    const p = orderGoodsProgress(q);
-    const nobody = orderLinesWithNobodySent(q);
-    if(p.short){
-      const lines = orderShortLines(q);
-      need = { chip:'Short delivery', tone:'ow-warn', acts:[{act:'buying', label:'Buying list'}],
-        say:`The trip came back short: ${lines.map(l=> `${em(quoteLineShortfall(l).toLocaleString('en-UG') + (l.unit ? ' ' + l.unit : ''))} of ${esc(l.productName || 'an item')}`).join(', ')}. Send someone for the rest from the buying list, or amend the order.` };
-    } else if(nobody.length){
-      const sups = [...new Set(nobody.map(it=> supplierName(it.supplierId)))];
-      need = { chip:'Nobody sent to buy', tone: late ? 'ow-warn' : '', acts:[{act:'buying', label:'Buying list'}],
-        say:`${em(nobody.length + ' line' + (nobody.length === 1 ? '' : 's'))} ${nobody.length === 1 ? 'is' : 'are'} on no buying trip: ${sups.map(esc).join(', ')}.` };
-    }
-  } else if(q.status === 'preparing'){
-    const picker = staffName(q.assignedWorkerId);
-    if(orderHasPickShortfall(q)){
-      need = { chip:'Short pick', tone:'ow-warn', acts:[{act:'shortpick', label:'Decide'}],
-        say:`${esc(pickShortfallLabel(q))}. Amend the order to what was found, or bill it as ordered — nothing can be invoiced until you decide.` };
-    } else if(q.pickingStatus === 'done'){
-      const packedAgo = q.pickingDoneAt ? otDuration(Date.now() - q.pickingDoneAt) + ' ago' : '';
-      need = { chip:'Packed', tone: late ? 'ow-warn' : '', acts:[{act:'loaded', label:'Loaded'}],
-        say:`Packed${picker ? ' by ' + em(picker) : ''}${packedAgo ? ' ' + packedAgo : ''}, waiting for the transport. When it is here, say who is carrying it and tap Loaded — here, or the picker does it from their phone.` };
-    } else if(orderNeedsWorker(q)){
-      need = otStaffGone(q.assignedWorkerId)
-        ? { chip:'Picker left', tone:'ow-warn', acts:[{act:'release', label:'Back to the queue'}], say:'Held by someone no longer on staff. Put it back in the queue and the next free picker takes it.' }
-        : { chip:'Not on a phone', tone: late ? 'ow-warn' : '', acts:[{act:'release', label:'Back to the queue'}], say:`${em(picker)} holds it, but their phone is not showing it. Put it back in the queue and the next free picker takes it.` };
-    } else if(!q.assignedWorkerId && agentPaymentBlocksPreparing(q)){
-      const agent = (data.agents||[]).find(a=> a.id === q.originAgentId);
-      need = { chip:'Agent unpaid', tone:'ow-warn', acts:[{act:'prepay', label:'Record payment'}],
-        say:`${em(agent ? agent.name : 'This agent')} pays before their orders are picked — it stays out of the pickers' queue until ${fig(invoiceBalanceDue(q))} is in.` };
-    } else if(!q.assignedWorkerId && goodsBlockPreparing(q)){
-      const left = orderIncomingLines(q).length;
-      need = { chip:'Goods not in', tone:'ow-warn', acts:[{act:'buying', label:'Buying list'}],
-        say:`${em(left + ' line' + (left === 1 ? '' : 's'))} ${left === 1 ? 'is' : 'are'} still at a supplier, so no picker is offered it. Check the goods in from the buying list.` };
-    }
-  } else if(q.status === 'pending_delivery'){
-    if(orderNeedsDelivery(q)){
-      need = { chip: otStaffGone(q.assignedDeliveryId) ? 'Driver left' : 'Nobody named', tone: late ? 'ow-warn' : '', acts:[{act:'loaded', label:'Who has it'}],
-        say:'Out, with nobody named as carrying it. Open the row and say who has it — the transport, one of ours, or the client’s own person.' };
-    }
-  } else if(q.status === 'completed' && !q.invoiced){
-    need = { chip:'Not invoiced', tone: late ? 'ow-warn' : '', acts:[{act:'invoice', label:'Invoice'}],
-      say:`Delivered ${esc(otWhen(q.stageEnteredAt))}. Invoicing moves the stock, raises the supplier bills and books ${fig(savedQuoteTotal(q))} on ${em(quoteClientName(q))}'s account.` };
-  }
-  if(!need && late){
-    const a = orderActSpec(q);
-    need = { chip:`Waiting ${waited}`, tone:'ow-warn', acts: a ? [{act:a.act, label:a.label}] : [],
-      say:`In ${esc(otStageShort(q.status))} for ${waited}, past the limit set in Presets. ${esc(orderWhoText(q))}.` };
-  }
-  return need;
-}
 
 /* THE ONE ACT. What the stage needs from the owner and nothing else;
    the rest of what can be done to an order lives in the open row. */
@@ -67095,27 +66954,6 @@ function otTyping(){
   const el = document.activeElement;
   return !!(el && el.closest && el.closest('#savedQuotesWrap [data-load]'));
 }
-// Which field, and where in it, so both can be given back after the wrap
-// is rewritten.
-function otFocusSnapshot(){
-  const el = document.activeElement;
-  const form = el && el.closest ? el.closest('#savedQuotesWrap [data-load]') : null;
-  if(!form || !el.dataset || !el.dataset.car) return null;
-  const text = el.tagName === 'INPUT';
-  return { id: form.dataset.load, car: el.dataset.car,
-    start: text ? el.selectionStart : null, end: text ? el.selectionEnd : null };
-}
-function otRestoreFocus(snap){
-  if(!snap) return;
-  const el = document.querySelector(`#savedQuotesWrap [data-load="${snap.id}"] [data-car="${snap.car}"]`);
-  if(!el) return;
-  el.focus();
-  // Back where the word was, not at the end of it -- a caret that jumps
-  // to the end is its own kind of broken when correcting a middle letter.
-  if(snap.start != null && el.setSelectionRange){
-    try{ el.setSelectionRange(snap.start, snap.end); }catch(e){/* a type that has no caret */}
-  }
-}
 function otLoadGo(id, el){
   /* The row on the phone, the order's dialog on the console: one form,
      two homes, and the reader finds whichever it is in. */
@@ -67137,13 +66975,6 @@ function otLoadGo(id, el){
      was missing. */
   else if(root) otLoadDrafts.set(id, car);
   return went;
-}
-function otFocusLoad(id){
-  const f = document.querySelector(`#savedQuotesWrap [data-load="${id}"]`);
-  if(!f) return;
-  f.scrollIntoView({ block:'nearest' });
-  const first = [...f.querySelectorAll('[data-car]')].find(x=> x.closest('label') && x.closest('label').style.display !== 'none');
-  if(first) first.focus();
 }
 /* WHAT THE DELIVERY COST, ASKED WHERE THE DELIVERY IS.
 
@@ -67422,15 +67253,6 @@ function orderRowHTML(q, isOverdue){
   </div>${open ? `<div class="ow-tbl-x">${orderRowBodyHTML(q)}</div>` : ''}`;
 }
 
-function otQueueRowHTML(x, i){
-  const { q, need } = x;
-  const acts = need.html || (need.acts || []).map(a=> `<button type="button" class="btn btn-ghost ow-sm" data-act="${a.act}" data-id="${q.id}">${esc(a.label)}</button>`).join('');
-  return `<div class="ow-ot-q${i >= 3 ? ' ow-ot-more' : ''}${need.html ? ' ow-ot-q-sup' : ''}" data-id="${q.id}">
-    <div class="ow-ot-qc"><span class="ow-cp${need.tone ? ' ' + need.tone : ''}">${esc(need.chip)}</span><span class="ow-ot-qw-n" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))}</span><span class="ow-ot-qw-s">#${q.id} · ${esc(fmtUGX(savedQuoteTotal(q)))}</span></div>
-    <div class="ow-ot-qs">${need.say}</div>
-    <div class="ow-ot-qa${need.html ? ' ow-ot-qa-sup' : ''}">${acts}</div>
-  </div>`;
-}
 
 /* THE RAIL. Today's buying trip by place, what is out, and what has
    waited longest -- the three things the day is organised around. */
@@ -67483,25 +67305,7 @@ function orderOutPanelHTML(list){
     d.unknown.length ? `${d.unknown.length} with no address` : ''].filter(Boolean).join(' · ');
   return `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Out for delivery</span><span class="ow-pan-n">${orders.length || ''}</span><button type="button" class="btn btn-ghost ow-sm ow-pan-a" data-act="runs" title="What is going the same way" aria-label="What is going the same way">Runs</button></div>${body}${note ? `<p class="ow-mini">${esc(note)}.</p>` : ''}</div>`;
 }
-function orderLatePanelHTML(quotes, isOverdue){
-  const limits = data.presetOrderStageLimits || {};
-  const late = quotes.filter(q=> q.status !== 'completed' && isOverdue(q)).sort((a, b)=> (a.stageEnteredAt || 0) - (b.stageEnteredAt || 0));
-  const anyLimit = SQ_STATUS_ORDER.some(s=> Number(limits[s]) > 0);
-  const body = late.length ? late.map(q=> `<div class="ow-sr ow-sr-2"><span class="ow-sr-k2"><b class="ow-sr-k2-t" title="${esc(quoteClientName(q))}">${esc(quoteClientName(q))}</b><span class="ow-sr-k2-s">${esc(otStageShort(q.status))} · limit ${esc(otDuration((Number(limits[q.status]) || 0) * 60000))}</span></span><span class="ow-sr-v ow-warn">${esc(otStageSince(q))}</span></div>`).join('')
-    : `<div class="ow-empty">${anyLimit ? 'Nothing past its limit.' : 'No stage limits set — Presets › Order tracking.'}</div>`;
-  return `<div class="ow-pan"><div class="ow-pan-h"><span class="ow-pan-t">Waiting longest</span><span class="ow-pan-n">${late.length ? `${late.length} past the limit` : ''}</span></div>${body}<p class="ow-mini">Past the stage limit set in Presets. ${data.presetStageAlerts ? 'Told to you once, while the app is open.' : 'Flagged on this board only — alerts are off in Presets.'}</p></div>`;
-}
 
-/* The search matches what a person would type: the client, the number,
-   a place, or something on the order. Its input lives OUTSIDE what this
-   render rewrites, so typing never loses the caret. */
-function otOrderMatches(q, tokens){
-  if(!tokens.length) return true;
-  const hay = [quoteClientName(q), q.client && q.client.phone, `#${q.id}`, invoiceNumberLabel(q), orderCustomerLocation(q), q.deliveryAddress,
-    ...(q.items || []).map(it=> itemDisplayName(it)), ...(q.items || []).map(it=> orderLineIsBoughtIn(it) ? supplierName(it.supplierId) : '')]
-    .filter(Boolean).join(' ').toLowerCase();
-  return matchesAllTokens(hay, tokens);
-}
 
 
 /* ================= THE BOARD'S DIALOGS =================
@@ -69161,46 +68965,6 @@ function otCardHTML(q, chip, now){
   </button>`;
 }
 
-/* ONE LANE. Its name, its count, the dialog it is the reason for, and
-   what the lane is worth.
-
-   The rule that moves an order out of a lane used to be printed on the
-   lane, in two lines of room whether it needed them or not: 40px of
-   every lane, five lanes, for a sentence that is read once. It is the
-   lane head's title and the screen's "i" now, and the line it freed
-   says what the owner comes back for — how much money is standing in
-   this lane, and in what state. An empty lane says nothing there: a
-   zero is a figure, and there is no figure. */
-function otLaneHTML(stage, orders, opts){
-  const o = opts || {};
-  const act = OT_LANE_ACT[stage];
-  const n = orders.length + (o.tail || 0);
-  const rule = stage === 'completed'
-    ? `${o.invoiced || 0} of ${n} invoiced. ${OT_LANE_RULE[stage]}`
-    : OT_LANE_RULE[stage];
-  const value = orders.reduce((t, q)=> t + savedQuoteTotal(q), 0);
-  const money = orders.length
-    ? `<span class="ow-ot-lh-f">${esc(otFig(value))}</span> ${esc(stage === 'completed'
-        ? `delivered · ${o.invoiced || 0} of ${n} billed`
-        : OT_LANE_MONEY[stage])}`
-    : '';
-  const body = orders.length
-    ? orders.map(q=> otCardHTML(q, o.queued && o.queued.get(q.id), o.now === q.id)).join('')
-      + (o.tail ? `<div class="ow-ot-tail">+${o.tail} earlier · already in Invoices</div>` : '')
-    : `<div class="ow-empty">${o.searching ? 'No order in this lane matches the search.' : esc(OT_LANE_EMPTY[stage])}</div>`;
-  return `<div class="ow-ot-lane" data-stage="${esc(stage)}">
-    <div class="ow-ot-lh" title="${esc(rule)}">
-      <div class="ow-ot-lh-r">
-        <span class="ow-ot-lh-n">${esc(OT_LANE_NAME[stage])}</span>
-        <span class="ow-ot-lh-c">${n}</span>
-        <span class="ow-ot-lh-sp"></span>
-        ${act ? `<button type="button" class="btn btn-ghost ow-sm" data-act="${act.act}" data-id="0" title="${esc(act.label)}" aria-label="${esc(act.label)}">${act.icon}</button>` : ''}
-      </div>
-      <div class="ow-ot-lh-m">${money}</div>
-    </div>
-    <div class="ow-ot-cards">${body}</div>
-  </div>`;
-}
 
 /* THE DECISION ON THE CARD. What the queue says needs doing becomes one
    oxide primary whose label IS the decision, and one ghost beside it.
@@ -69216,63 +68980,6 @@ function otDecisionActs(q, need){
   return { primary, secondary };
 }
 
-/* THE DOCK. One decision, the next one named, and a way to step. A list
-   of twenty decisions is not twenty decisions; it is a reason to make
-   none. So the longest-waiting one gets the sentence and the two
-   buttons, and the rest wait their turn.
-
-   It was a card in an oxide edge beside a 300px panel listing the two
-   behind it — and underneath, on the board, every one of those orders
-   already had a card of its own, edged in oxide too. Three copies of
-   one queue, and the accent spent five ways. The panel's one real job,
-   naming the one after this so the queue can be believed, is a sentence
-   in the head; the card it drew is the card already in the lane, which
-   wears a navy edge while the dock is standing on it.
-
-   Acting does NOT advance the queue. The owner stays on the order they
-   just moved, so they can see it move -- the position line says so, and
-   Next is the only thing that steps. */
-function otDockHTML(needs){
-  if(!needs.length){
-    return `<div class="ow-ot-dk-h"><span class="ow-ot-dk-t">Needs you</span>
-      <span class="ow-ot-dk-s">Nothing is waiting on a decision — every order is with a supplier, a trip, a picker or a driver.</span></div>`;
-  }
-  if(otQIndex >= needs.length) otQIndex = 0;
-  if(otQIndex < 0) otQIndex = needs.length - 1;
-  const cur = needs[otQIndex];
-  const q = cur.q, need = cur.need;
-  const { primary, secondary } = otDecisionActs(q, need);
-  const place = orderCustomerLocation(q);
-  const meta = [`#${q.id}`, place, otAge(q)].filter(Boolean).join(' · ');
-  const nxt = needs.length > 1 ? needs[(otQIndex + 1) % needs.length] : null;
-  const btn = (a, cls)=> `<button type="button" class="btn ${cls} ow-sm" data-act="${a.act}" data-id="${q.id}">${esc(a.label)}</button>`;
-  return `<div class="ow-ot-dk-h">
-      <span class="ow-ot-dk-t">Needs you</span>
-      <span class="ow-ot-dk-n">${needs.length}</span>
-      <span class="ow-ot-dk-s">Longest waiting first, one at a time; its card below wears a navy edge.</span>
-      ${nxt ? `<span class="ow-ot-dk-x" title="Waiting ${esc(otAge(nxt.q))}">Then <button type="button" class="ow-ot-dk-j" data-act="qjump" data-id="${nxt.q.id}">${esc(quoteClientName(nxt.q))} #${nxt.q.id}</button>.</span>` : ''}
-      <span class="ow-ot-dk-st">
-        <span class="ow-ot-dk-p">${otQIndex + 1} of ${needs.length}</span>
-        <button type="button" class="btn btn-ghost ow-sm ow-ot-dk-back" data-act="qprev" data-id="0" aria-label="The one before">
-          <svg class="icon ow-i12" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg>
-        </button>
-        <button type="button" class="btn btn-ghost ow-sm" data-act="qnext" data-id="0">Next
-          <svg class="icon ow-i12" viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg>
-        </button>
-      </span>
-    </div>
-    <div class="ow-ot-now">
-      <div class="ow-ot-now-l">
-        <div class="ow-ot-now-h">
-          <span class="ow-ot-now-c">${esc(quoteClientName(q))}</span>
-          <span class="ow-ot-now-m" title="${esc(meta)}">${esc(meta)}</span>
-          <span class="ow-ot-now-v" title="What the client pays">${esc(otFig(savedQuoteTotal(q)))}</span>
-        </div>
-        <div class="ow-ot-now-w">${need.say}</div>
-      </div>
-      <div class="ow-ot-now-a">${btn(secondary, 'btn-ghost')}${btn(primary, 'btn-accent')}</div>
-    </div>`;
-}
 
 let sqActiveMobileStep = 'draft'; // which .sq-col the phone step-switcher currently shows
 /* Where the strip is scrolled to. The 60s poll re-renders the board by
@@ -73630,46 +73337,7 @@ function invBindDocActions(wrap){
   }));
 }
 
-/* WHAT A JOB COST, AND WHAT IT KEPT.
 
-   DERIVED, NEVER INVENTED, and this one has a sharp edge. Kept is what
-   the sale was invoiced for less what the bills behind it came to -- and
-   it exists ONLY where there is a live bill to subtract. An order filled
-   from stock the shop already had raised no bill at all
-   (generatePurchaseInvoiceForRestock sets quoteId: null, so that cost
-   sits in the stock lots and on no document this screen can see), and
-   printing the whole invoice as profit because nothing was subtracted
-   would be the screen inventing the figure the shop most wants.
-   So: null, and the pane says why.
-
-   A VOIDED BILL IS NOT A COST. It is a cancelled document; its figures
-   stand as the record of what was once asked for and nothing else. It
-   is counted into neither `bought` nor `owed`, and it is still listed,
-   struck through, because a cancelled document that vanishes cannot be
-   explained to anybody later. */
-function invJobFigures(q){
-  const bills = q ? purchaseInvoicesForOrder(q) : [];
-  const live = bills.filter(pi=> !pi.voided);
-  const sold = q ? savedQuoteTotal(q) : 0;
-  const bought = live.reduce((sum,pi)=> sum + purchaseInvoiceTotal(pi), 0);
-  const owed = live.reduce((sum,pi)=> sum + purchaseInvoiceBalanceDue(pi), 0);
-  return {bills, live, sold, bought, owed,
-    kept: live.length ? sold - bought : null,
-    pct: (live.length && sold > 0) ? Math.round((sold - bought) / sold * 100) : null};
-}
-
-/* EVERY BILL IN THE RANGE, on the same dates the sales side is reading.
-   piDocGetDateRange() is invDocGetDateRange() -- one bar drives both
-   sides -- so this asks the same question of the other table. */
-function invRangedBills(){
-  const {from, to} = invDocGetDateRange();
-  return (data.purchaseInvoices||[]).filter(pi=>{
-    const d = pi.date || '';
-    if(from && d < from) return false;
-    if(to && d > to) return false;
-    return true;
-  });
-}
 
 /* WHERE A BILL STANDS, in one chip. A day the owner named is the only
    thing that can make a bill late: dueDate defaults to null rather than
@@ -76289,28 +75957,6 @@ function purchaseInvoicePaymentStatusLabel(pi){
   if(paid>=total) return {cls:'settled', label:'Settled'};
   return {cls:'partial', label:'Partial'};
 }
-// How much of what's owed to THIS supplier has effectively been earned
-// back from the client so far -- null when there's no client order to
-// collect from (a restock purchase invoice). A customer's payment isn't
-// earmarked per-supplier, so it's treated as applying proportionally
-// across every supplier on that order; working the math out, that always
-// lands on the same percentage as the order's own payment progress,
-// regardless of this invoice's particular share of the order total.
-function purchaseInvoiceCollectionPct(pi){
-  if(!pi.quoteId) return null;
-  const q = data.savedQuotes.find(x=>x.id===pi.quoteId);
-  if(!q) return null;
-  const orderTotal = savedQuoteTotal(q);
-  if(orderTotal<=0) return 0;
-  return Math.max(0, Math.min(100, (Number(q.amountPaid)||0) / orderTotal * 100));
-}
-// For a restock purchase invoice (no client order attached), the relevant
-// progress instead is how much of it WE'VE paid the supplier.
-function purchaseInvoiceSupplierPaidPct(pi){
-  const total = purchaseInvoiceTotal(pi);
-  if(total<=0) return 0;
-  return Math.max(0, Math.min(100, (Number(pi.amountPaid)||0) / total * 100));
-}
 
 // Groups an invoiced quote's items by supplier and creates one purchase
 // invoice per supplier group. Clears out any purchase invoices already on
@@ -77283,7 +76929,6 @@ function piSearchValue(){
   const box = document.getElementById('inv_doc_search');
   return box ? box.value : '';
 }
-function piIsForOrder(pi){ return pi.quoteId != null; }
 /* ONE COLOUR PER SUPPLIER, the same one on every lens -- the Together
    chips, a bill's swatch, the bar of what is owed to them. Handed out
    by how much the shop has ever bought from each supplier, biggest
@@ -79087,35 +78732,6 @@ document.getElementById('pip_save').addEventListener('click', ()=>{
    actually walks the yard with. If a real bulk void is wanted it comes
    back per row, naming the delivery consequence on each. */
 
-/* ONE PRINT BUTTON, TWO SHEETS. The header carries a single Print list
-   -- accent on Sales, ghost on Purchases -- so what it prints is
-   whichever register is open, and the two builders below and above it
-   are unchanged. */
-function piPrintList(){
-  if(piLastRows.length===0){ toast('No purchase invoices to print'); return; }
-  const rowsHtml = piLastRows.map((pi,i)=>{
-    const total = purchaseInvoiceTotal(pi);
-    const paid = Number(pi.amountPaid)||0;
-    const due = total - paid;
-    const status = purchaseInvoicePaymentStatusLabel(pi);
-    return `<tr><td>${i+1}</td><td>${esc(pi.date||'')}</td><td>${esc(purchaseInvoiceNumberLabel(pi))}</td><td>${esc(pi.supplierName||'Unknown supplier')}</td><td>${fmtUGX(Math.round(total))}</td><td>${fmtUGX(Math.round(paid))}</td><td>${fmtUGX(Math.round(due))}</td><td>${esc(status.label)}${pi.voided?' (voided)':''}</td></tr>`;
-  }).join('');
-  const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Purchase invoice list</title><style>
-    body{font-family:Arial,sans-serif;padding:16px;color:#1B2430;}
-    table{width:100%;border-collapse:collapse;font-size:12px;}
-    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}
-    th{background:#eee;}
-    h1{font-size:16px;}
-  </style></head><body>
-    <h1>Purchase invoice list</h1>
-    <table><thead><tr><th>No.</th><th>Date</th><th>Doc No.</th><th>Supplier</th><th>Total Amt</th><th>Paid to supplier</th><th>Balance due</th><th>Payment status</th></tr></thead>
-    <tbody>${rowsHtml}</tbody></table>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  win.print();
-}
 
 // Builds one A5 page of markup for a purchase invoice.
 function buildPurchaseInvoiceA5HTML(pi){
@@ -79870,10 +79486,6 @@ function anWindowBounds(){
     if(ds.length){ f = f || ds[0]; t = t || ds[ds.length-1]; }
   }
   return {f, t};
-}
-function anWindowDays(){
-  const {f, t} = anWindowBounds();
-  return (f && t) ? dashRangeSpanDays(f, t) : 0;
 }
 /* The window immediately before this one, as invoices -- the same window
    anPreviousTotals adds up, for the pictures that need its days. */
@@ -82373,12 +81985,6 @@ function supBillDue(pi, s){
   if(t == null || t === '' || !pi || !pi.date) return null;
   return custAddDaysISO(pi.date, Math.max(0, Number(t) || 0));
 }
-/* Days past due (positive) or until due (negative), for one line. */
-function supDueWords(rel){
-  if(rel < 0) return `${-rel} ${rel === -1 ? 'day' : 'days'} overdue`;
-  if(rel === 0) return 'due today';
-  return `due in ${rel} ${rel === 1 ? 'day' : 'days'}`;
-}
 function supOwedByDueHTML(open, f){
   const lo = Math.min(-1, ...open.map(o=> o.rel)), hi = Math.max(1, ...open.map(o=> o.rel));
   const x = (rel)=> ((rel - lo) / (hi - lo) * 100).toFixed(1);
@@ -84677,13 +84283,6 @@ document.getElementById('s_search').addEventListener('input', e=>renderSuppliers
    selling their products. Drives the "Expected commission" column in
    Purchase analytics -- Statistics by supplier -- see panRowsBySupplier(). ---- */
 let scmSupplierId = null;
-// A supplier only "expects" a commission once a rate has actually been
-// agreed and set; a supplier with no rate on file just isn't part of a
-// commission arrangement.
-function supplierExpectsCommission(supplierId){
-  const s = data.suppliers.find(x=>x.id===supplierId);
-  return !!(s && s.commissionPct!=null && s.commissionPct>0);
-}
 function openSupplierCommissionModal(supplierId){
   const s = data.suppliers.find(x=>x.id===supplierId); if(!s) return;
   scmSupplierId = supplierId;
@@ -86811,18 +86410,6 @@ function agentOpenInvoices(a){
   return agentOrders(a)
     .filter(q=> q.invoiced && invoiceBalanceDue(q) > 0)
     .sort((x,y)=> String(x.invoicedAt||x.date||'').localeCompare(String(y.invoicedAt||y.date||'')));
-}
-// How old the oldest unpaid invoice is, across everybody. Null when
-// nothing is owed -- never 0, which would read as "settled today".
-function agentOldestUnpaidDays(){
-  let oldest = null;
-  (data.agents||[]).forEach(a=>{
-    agentOpenInvoices(a).forEach(q=>{
-      const d = daysSinceDate(q.invoicedAt || q.date);
-      if(d != null && (oldest == null || d > oldest)) oldest = d;
-    });
-  });
-  return oldest;
 }
 
 /* HAS THE AGENT EVER SIGNED IN. An invite that never took and an agent
@@ -89464,7 +89051,6 @@ function agentFeedItemName(key){
 }
 
 
-function agentFeedNum(n){ return Math.round(Number(n)||0).toLocaleString('en-UG'); }
 function daysUntilDate(iso){
   const d = Date.parse(iso + 'T00:00:00');
   const t = Date.parse(todayISO() + 'T00:00:00');
@@ -96055,48 +95641,6 @@ function briefRoundRect(x, y, w, h, r){
 function briefStampWidth(ctx, text){
   ctx.font = `22px ${BRIEF_DISPLAY}`;
   return ctx.measureText(text).width + 74;
-}
-function briefStampPill(ctx, text, bx, by){
-  const bw = briefStampWidth(ctx, text);
-  ctx.fillStyle = BRIEF_INK.verdigris;
-  ctx.fill(briefRoundRect(bx, by, bw, 52, 26));
-  ctx.strokeStyle = BRIEF_INK.paper; ctx.lineWidth = 4;
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(bx + 22, by + 27); ctx.lineTo(bx + 30, by + 35); ctx.lineTo(bx + 44, by + 18);
-  ctx.stroke();
-  ctx.fillStyle = BRIEF_INK.paper;
-  ctx.font = `22px ${BRIEF_DISPLAY}`;
-  ctx.textAlign = 'left';
-  ctx.fillText(text, bx + 56, by + 35);
-  return bw;
-}
-/* A number and its word, centred as one thing. Measured rather than
-   guessed, because the number is monospaced and the word is not. */
-function briefPair(ctx, big, bigPx, bigFont, bigFill, small, smallPx, smallFill, cx, y){
-  ctx.textAlign = 'left';
-  ctx.font = `${bigPx} ${bigFont}`;
-  const bw = ctx.measureText(big).width;
-  ctx.font = `${smallPx}px ${BRIEF_DISPLAY}`;
-  const sw = small ? ctx.measureText(small).width : 0;
-  const gap = small ? 14 : 0;
-  let x = cx - (bw + gap + sw) / 2;
-  ctx.font = `${bigPx} ${bigFont}`; ctx.fillStyle = bigFill;
-  ctx.fillText(big, x, y);
-  if(small){
-    ctx.font = `${smallPx}px ${BRIEF_DISPLAY}`; ctx.fillStyle = smallFill;
-    ctx.fillText(small, x + bw + gap, y);
-  }
-}
-/* Shrinks until it fits rather than wrapping mid-word: a name is read
-   as one thing or not at all. */
-function briefFit(ctx, text, font, px, maxW){
-  let size = px;
-  for(;;){
-    ctx.font = `${size}px ${font}`;
-    if(ctx.measureText(text).width <= maxW || size <= 14) return size;
-    size -= 2;
-  }
 }
 function briefMark(ctx, dark){
   ctx.save();
@@ -105285,17 +104829,6 @@ function payrollGroups(period){
   };
 }
 
-/* WHEN THE PAYROLL FALLS DUE. Wages land on the last day of the month,
-   all of them at once, which is exactly the morning somebody needs
-   telling -- and four days' notice is the difference between arranging
-   it and being short. */
-function payrollNextDue(g){
-  const ahead = g.payable.filter(r=> !r.overdue && r.due.dueDate);
-  if(!ahead.length) return null;
-  const on = ahead.map(r=> String(r.due.dueDate)).sort()[0];
-  const mine = ahead.filter(r=> String(r.due.dueDate) === on);
-  return {on, count: mine.length, sum: mine.reduce((s,r)=> s + r.bal, 0)};
-}
 
 /* ---- WHICH VIEW THE CONSOLE IS ON ----------------------------------
    One screen, three views, the way the canvas drew them: the board
@@ -108080,35 +107613,6 @@ function credDueRows(){
 }
 
 
-/* WHY THIS SUPPLIER IS WHERE IT IS.
-
-   The column the sell side does not have, and the one fault the old
-   table could not fix by sorting: you could order by owed, waiting,
-   bills or last paid, but nothing on a row said whether you had given
-   this supplier a day and let it pass -- which is the single fact that
-   decides who gets paid first. Same three ranks the order uses, so the
-   row can never explain itself differently from the list it sits in. */
-function credRowReason(r){
-  if(r.missedOn){
-    const late = daysSinceDate(r.missedOn);
-    return {tone:'ow-bad',
-      head: `${late} day${late===1?'':'s'} past your word`,
-      sub: `you said ${fmtShortDate(r.missedOn)}${r.missedCount > 1 ? ` &middot; ${r.missedCount} bills` : ''}`};
-  }
-  if(r.dueNext){
-    /* daysBetweenISO, not daysSinceDate: that one clamps at zero, so
-       every day still ahead came back as today -- on the one screen
-       whose whole subject is when you said you would pay. */
-    const inDays = daysBetweenISO(todayISO(), r.dueNext);
-    return {tone:'ow-warn',
-      head: inDays <= 0 ? 'You said today' : inDays === 1 ? 'You said tomorrow' : `You said ${fmtShortDate(r.dueNext)}`,
-      sub: inDays <= 1 ? esc(fmtShortDate(r.dueNext)) : `in ${inDays} days`};
-  }
-  return {tone:'ow-none', head:'No day named',
-    sub: r.openCount > 1
-      ? (r.noDayCount === r.openCount ? `on none of the ${r.openCount}` : `on ${r.noDayCount} of the ${r.openCount}`)
-      : ''};
-}
 
 /* THE CONSOLE: the plan over a table.
 
@@ -108961,21 +108465,6 @@ const MARKUP_TYPE_OPTIONS = `<option value="percent">Percentage (%)</option><opt
    choice is about; in the variant table the column header already says
    "markup" and the row has twenty-three neighbours to line up with. */
 const MARKUP_TYPE_OPTIONS_SHORT = `<option value="percent">%</option><option value="fixed">UGX</option>`;
-// Caption shown on each variant card: which markup rule actually applies --
-// the variant's own (if it set one) or the product-level default -- read
-// live from the form so it updates as the person types, before saving.
-function variantEffectiveCaption(v){
-  const pWType = document.getElementById('p_wholesale_markup_type').value;
-  const pWVal = Number(document.getElementById('p_wholesale_markup_value').value)||0;
-  const pRType = document.getElementById('p_retail_markup_type').value;
-  const pRVal = Number(document.getElementById('p_retail_markup_value').value)||0;
-  const vWVal = Number(v.wholesaleMarkupValue)||0;
-  const vRVal = Number(v.retailMarkupValue)||0;
-  const wRule = vWVal>0 ? {type:v.wholesaleMarkupType, value:vWVal, custom:true} : (pWVal>0 ? {type:pWType, value:pWVal, custom:false} : null);
-  const rRule = vRVal>0 ? {type:v.retailMarkupType, value:vRVal, custom:true} : (pRVal>0 ? {type:pRType, value:pRVal, custom:false} : null);
-  const fmt = r => r ? `${markupRuleLabel(r.type, r.value)} <em>${r.custom?'· custom':'· default'}</em>` : '<span class="variance-pending">No rule</span>';
-  return `Applies — Wholesale: <b>${fmt(wRule)}</b> &nbsp;·&nbsp; Retail: <b>${fmt(rRule)}</b>`;
-}
 
 /* ---- Variant attribute/combination builder (used inside the product modal) ---- */
 let draftVariantAttrs = [];   // [{name:'Color', values:'Red, Blue'}]
@@ -111110,7 +110599,6 @@ function saveOnceAtATime(btn, run){
     }
   };
 }
-function generateNextProductId(){ return nextEntityId('product', 'P', 3, data.products); }
 // The pricing pane's reminder that an empty rule is not an unpriced
 // product any more — the shop default catches it. Set at open time from
 // both doors into the modal, so it always reflects the current default.
@@ -115049,21 +114537,6 @@ function packBridgeFor(row, wantUnit){
   }
   return null;
 }
-/* Written only when the owner says so, and stamped as theirs: a row
-   that gains a pack size has had every one of its tiers re-read, so
-   this is an edit to the price entry and not a tidy-up. */
-function applyPackBridge(id){
-  const r = (data.prices || []).find(p=> p.id === id);
-  if(!r) return;
-  const o = priceOddities().get(id);
-  const b = (o && o.wantUnit) ? packBridgeFor(r, o.wantUnit) : null;
-  if(!b || !b.packQty){ toast('Nothing in your books says how many of these are in one — type it on the entry instead'); return; }
-  if(!confirm(`Record ${b.packQty} ${r.unit || 'units'} in a ${b.packUnit}?\n\nRead from ${b.where}. A pack size decides which of this row\u2019s prices count as wholesale, so check the tiers after saving.`)) return;
-  r.packQty = b.packQty;
-  r.packUnit = b.packUnit;
-  saveData(); triggerPricesRender();
-  toast(`Recorded ${b.packQty} ${r.unit || 'units'} in a ${b.packUnit} \u2014 this quote and your invoices can be compared now`);
-}
 /* THE WHOLE LIST AS TEXT, because the ones the books cannot close are
    a conversation: a figure is wrong and only somebody who was there
    knows which way. Every finding carries its own evidence already —
@@ -115719,17 +115192,11 @@ const priceSeriesKey = (productId, variantIdx, supplierId)=>
 const priceLineKey = (productId, variantIdx)=>
   productId + '::' + (variantIdx == null || variantIdx === '' ? '' : String(Number(variantIdx)));
 function priceWatchDays(){ return Math.max(1, Number(data.presetPriceWatchDays) || 180); }
-function priceAgeShort(days){ return days == null ? '—' : days < 60 ? days + ' d' : Math.round(days / 30) + ' mo'; }
 function priceAgeWords(days){
   if(days == null) return 'undated';
   if(days < 60) return days + ' day' + (days === 1 ? '' : 's');
   const m = Math.round(days / 30);
   return m + ' month' + (m === 1 ? '' : 's');
-}
-function pricePackLabel(r){
-  const pack = (r.packQty && r.packUnit) ? `${r.packQty} ${r.unit || 'units'} in a ${r.packUnit}`
-    : r.unit ? `per ${r.unit}` : '';
-  return [r.category, pack].filter(Boolean).join(' · ');
 }
 /* Built once per render, read by every card on the page. */
 function buildPriceSignalIndex(groups){
@@ -116538,35 +116005,6 @@ function confirmPriceStillRight(id){
   if(document.getElementById('tab-dashboard')
     && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
   toast('Marked checked today — the price itself is untouched');
-}
-/* After a call where the supplier says nothing has moved: every price
-   held from them, checked today in one act. Asked first, with the count
-   and the name, because it writes a date onto every one of their rows;
-   the figures themselves are never touched. */
-function confirmSupplierUnchanged(supplierId){
-  const rows = (data.prices || []).filter(r=> String(r.supplierId) === String(supplierId));
-  const name = supplierName(supplierId);
-  if(!rows.length){ toast(`Nothing on file from ${name}`); return; }
-  if(!confirm(`Mark all ${rows.length} of ${name}'s prices as checked today? The figures stay exactly as they are.`)) return;
-  rows.forEach(r=> confirmPriceUnchanged(r.id));
-  saveData(); triggerPricesRender();
-  if(document.getElementById('tab-dashboard')
-    && document.getElementById('tab-analysis').style.display !== 'none') renderDashPriceReview();
-  toast(`${rows.length} ${rows.length===1?'price':'prices'} from ${name} marked checked today — the figures are untouched`, 5000);
-}
-/* Copied rather than sent: nothing in this app sends itself, and a list
-   of the shop's own weak spots is the last thing that should. */
-async function copyPriceOddityReport(){
-  const text = priceOddityReport();
-  try{
-    await navigator.clipboard.writeText(text);
-    toast('Copied — paste it wherever you are working through them');
-  }catch(e){
-    /* A clipboard the browser will not open is not a failure to report
-       nothing: the list still exists, and it goes on screen to be read
-       or selected by hand. */
-    alert(text);
-  }
 }
 function toggleOutOfStock(id){
   const r = data.prices.find(p=>p.id===id); if(!r) return;
@@ -118516,18 +117954,6 @@ function renderCbDayHeader(){
 function cbIsTransfer(t){
   return !!t && (t.transferId != null || t.category === CASH_TRANSFER_CATEGORY);
 }
-// The day's movement with transfers taken out: what came into the
-// business, what left it, and what only moved inside it.
-function cbDayFlow(date){
-  let inn = 0, out = 0, moved = 0;
-  (data.cashTxns||[]).forEach(t=>{
-    if(t.date !== date) return;
-    const amt = Number(t.amount) || 0;
-    if(cbIsTransfer(t)){ if(!cashIsMoneyIn(t)) moved += amt; return; }
-    if(cashIsMoneyIn(t)) inn += amt; else out += amt;
-  });
-  return { in: inn, out, moved };
-}
 
 /* Where the money sits, as one bar split by account. Only what is
    actually held: an account run below zero has no share of anything,
@@ -118545,7 +117971,6 @@ function cbMinutes(time){
   const m = /^(\d{1,2}):(\d{2})/.exec(String(time || ''));
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
-function cbHourLabel(min){ return String(Math.floor(min / 60)).padStart(2, '0') + ':00'; }
 
 
 
@@ -118598,13 +118023,6 @@ function renderCbTriggers(){
   renderCbLists();
 }
 
-// A figure in thousands or millions, for a label too small for seven digits.
-function fmtShort(n){
-  n = Number(n)||0;
-  if(n>=1000000) return (n/1000000).toFixed(n%1000000===0?0:1)+'M';
-  if(n>=1000) return Math.round(n/1000)+'K';
-  return String(n);
-}
 /* ---- 4. DOES THE DRAWER AGREE ----
    One card per account: what the book says, what was counted, and what
    the difference means -- with the one act that settles it beside it. A
@@ -118993,7 +118411,6 @@ function cbFindInLedger(cat){
 
 function accountLabel(key){ const a = ACCOUNTS.find(x=>x.key===key); return a? a.label : key; }
 function typeLabel(type){ return type==='receipt' ? 'Receipt' : (type==='payment' ? 'Payment' : (type==='expense' ? 'Expense' : (type==='in' ? 'Receipt' : 'Payment'))); }
-function typeClass(type){ return type==='receipt' ? 'txn-receipt' : (type==='payment' ? 'txn-payment' : (type==='expense' ? 'txn-expense' : (type==='in' ? 'txn-receipt' : 'txn-payment'))); }
 
 
 /* What a ledger line should SAY during reconciling: the stored
@@ -119096,16 +118513,6 @@ function cbRowIdentity(t){
    a document number does not fit the column, and the PINV prefix already
    names the register. */
 const CB_DOC_ICON = '<svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
-function cbDocHTML(idn){
-  if(!idn.doc) return '';
-  const title = idn.posted
-    ? `Posted by ${idn.posted} — opens ${idn.doc}`
-    : `Opens ${idn.doc}`;
-
-  if(idn.docKind == null) return `<span class="cb-led-doc is-flat" title="${esc(idn.doc)} is not on file">${esc(idn.doc)}</span>`;
-  return `<button type="button" class="cb-led-doc" title="${esc(title)}"
-    data-doc-kind="${esc(idn.docKind)}" data-doc-id="${idn.docId}">${idn.posted ? CB_DOC_ICON : ''}${esc(idn.doc)}</button>`;
-}
 const CB_ICON_EDIT = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.121 2.121 0 1 0-3-3L5 17v3z"/></svg>';
 const CB_ICON_TRASH = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>';
 // The marks the page draws with. Arrows for the way money went, two
@@ -120342,20 +119749,6 @@ function editCashTxn(id){
    moving before anything is written. It was three browser prompts in a
    row, the last asking "What was it for?" in a grey system box. */
 let cbXfer = { from: 'cash', to: 'bank' };
-function openAccountTransfer(){
-  cbXfer = { from: 'cash', to: 'bank' };
-  document.getElementById('cb_x_amount').value = '';
-  document.getElementById('cb_x_note').value = '';
-  const note = document.getElementById('cb_x_datenote');
-  if(note){
-    const d = currentCbDate();
-    note.textContent = d === todayISO() ? 'Today' : `Entered against ${fmtShortDate(d)}`;
-    note.classList.toggle('is-past', d !== todayISO());
-  }
-  cbXferRender();
-  openModal('cashTransferModal');
-  document.getElementById('cb_x_amount').focus();
-}
 function cbXferAmount(){
   return Number(String(document.getElementById('cb_x_amount').value).replace(/,/g, '')) || 0;
 }
@@ -126235,63 +125628,6 @@ function ipeFillBillOptions(e, vIdx){
       + '. None is a one-line bill for this item, so none can be linked here.'
     : `${supplierName(chosen)} has no open bills — nothing they are owed can come from this purchase.`;
 }
-function openStockPurchaseEdit(logId){
-  const e = (data.stockLog || []).find(x => String(x.id) === String(logId));
-  if(!e || !isStockPurchaseRow(e)){ toast('That movement cannot be corrected here'); return; }
-  editingPurchaseLogId = e.id;
-  const eff = effectiveStockPurchase(e);
-  const onHand = Number(data.stock[e.key]) || 0;
-  const minQty = stockPurchaseMinQty(e);
-  const vIdx = (e.variantIdx == null || e.variantIdx === '') ? null : e.variantIdx;
-
-  /* Speak packs where the product packs: 60 cartons was recorded as its
-     base units, and a bare unit field invited a carton figure typed over
-     it. The stored record stays base units; only the field converts. */
-  const pk = productPackInfo(e.productId, vIdx);
-  ipePack = (pk && Number(pk.packQty) > 1) ? { packQty: Number(pk.packQty), packUnit: pk.packUnit || 'Pack', unit: pk.unit || 'units' } : null;
-  const packBit = (n)=> ipePack && n > 0 && Number.isInteger(n / ipePack.packQty)
-    ? ` (= ${n / ipePack.packQty} ${ipePack.packUnit})` : '';
-
-  document.getElementById('ipe_item').textContent = e.label || e.productId;
-  document.getElementById('ipe_asrecorded').textContent =
-    `Recorded on ${e.date}: ${e.delta} bought${packBit(Number(e.delta)||0)}${e.cost != null ? ` at ${fmtUGX(e.cost)} each` : ''}`
-    + `${e.supplierId ? ` from ${supplierName(e.supplierId)}` : ''}.`
-    + (eff.tail !== e ? ` Since corrected to ${eff.qty}${packBit(eff.qty)}${eff.cost != null ? ` at ${fmtUGX(eff.cost)}` : ''}.` : '');
-
-  const unitSel = document.getElementById('ipe_qty_unit');
-  if(ipePack){
-    const inPacks = eff.qty / ipePack.packQty;
-    const packMode = inPacks > 0 && Number.isInteger(inPacks);
-    unitSel.innerHTML = `<option value="unit">${esc(ipePack.unit)}</option>`
-      + `<option value="pack"${packMode ? ' selected' : ''}>${esc(ipePack.packUnit)} of ${ipePack.packQty}</option>`;
-    unitSel.style.display = '';
-    document.getElementById('ipe_qty').value = packMode ? inPacks : eff.qty;
-  } else {
-    unitSel.innerHTML = '';
-    unitSel.style.display = 'none';
-    document.getElementById('ipe_qty').value = eff.qty;
-  }
-  document.getElementById('ipe_price').value = eff.cost == null ? '' : eff.cost;
-  const sel = document.getElementById('ipe_supplier');
-  sel.innerHTML = `<option value="">(not recorded)</option>` + (data.suppliers || [])
-    .map(s => `<option value="${esc(s.id)}" ${s.id === eff.supplierId ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
-
-  /* The money side, said plainly. A linked bill is shown and will be
-     corrected with the save; an unlinked one is offered from the bills
-     that match this item, because "corrected" that never reached the
-     bill is how a supplier balance stood wrong at a real shop. */
-  ipeFillBillOptions(e, vIdx);
-
-  /* Says the floor BEFORE anything is typed, with the arithmetic behind
-     it. A form that only objects after the fact leaves somebody guessing
-     at what it will accept. */
-  const effect = document.getElementById('ipe_effect');
-  effect.textContent = minQty > 0
-    ? `${eff.qty - onHand} of these have already been sold or written off, so this cannot go below ${minQty}. ${onHand} are still on the shelf.`
-    : `All ${onHand} are still on the shelf, so this can be corrected to any quantity.`;
-  document.getElementById('ipe_error').style.display = 'none';
-  openModal('invPurchaseEditModal');
-}
 document.getElementById('invLogWrap').addEventListener('click', (ev)=>{
   const pr = ev.target.closest('[data-putright-log]');
   if(pr){ openPutItRight(pr.dataset.putrightLog); return; }
@@ -129549,15 +128885,6 @@ function breakevenPosition(is, period){
   };
 }
 
-/* A hundred shillings as a hundred dots, the kept ones filled. "25 UGX
-   of every 100" is a number to take on trust; a quarter of a square
-   filled in is a proportion the eye checks for itself. */
-function stHundredHTML(pct){
-  const kept = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
-  let dots = '';
-  for(let i = 0; i < 100; i++) dots += i < kept ? '<i class="on"></i>' : '<i></i>';
-  return `<span class="st-hundred" aria-hidden="true">${dots}</span>`;
-}
 
 
 /* ================= WHAT THE SHOP LEANS ON =========================
@@ -130109,70 +129436,6 @@ function stRatioGaugeHTML(row, prior){
   return `<span class="st-gauge" aria-hidden="true"><span class="st-gauge-t">${track}</span>${was}<b class="st-gauge-now${off ? ' off' : ''}" style="left:${at(row.value).toFixed(2)}%"></b></span>`;
 }
 
-function ratiosHTML(r, prev){
-  const fmtVal = (row)=>{
-    if(row.value == null) return '—';
-    const v = row.unit === '%' ? row.value.toFixed(1)
-      : row.unit === 'x' ? row.value.toFixed(2)
-      : Math.round(row.value);
-    return v + (row.unit === ' days' && v === 1 ? ' day' : row.unit);
-  };
-  const priorOf = (g, row)=>{
-    if(!prev) return null;
-    const pg = prev.groups.find(x=> x.name === g.name);
-    const pr = pg && pg.rows.find(x=> x.label === row.label);
-    return pr && pr.value != null && isFinite(pr.value) ? pr.value : null;
-  };
-  const basis = [];
-  if(r.annualised) basis.push({k:'“a year” scales the period to twelve months',
-    t:`Anything marked a year scales this ${r.days}-day period up to twelve months so it can be set against the balances, which are a snapshot. A good month is not a good year.`});
-  else basis.push({k:'A full year, nothing scaled', t:'The period is a full year, so nothing needed scaling.'});
-  basis.push({k:'“closing” uses today’s stock and debtors',
-    t:'Ratios marked closing use today’s stock and debtors rather than the period’s average, which this app does not keep — they read high in a growing shop and low in a shrinking one.'});
-  basis.push({k:'Shading follows each ratio’s own test',
-    t:'The green stretch of each track is where that ratio counts as healthy, the amber where it wants a look, and the red — drawn only where the ratio’s own sentence names a line — where it is trouble: a margin or return below nothing, a current ratio under 1, interest not covered by profit.'});
-
-  return `<section class="st-ratios">
-    <h3>What the figures say</h3>
-    <div class="st-gauge-key" aria-hidden="true">
-      <span><i class="good"></i>healthy</span><span><i class="watch"></i>worth a look</span><span><i class="bad"></i>trouble</span>
-      <span><b></b>now</span>${prev ? '<span><em></em>the period compared</span>' : ''}
-    </div>
-    <div class="st-ratio-grid">
-      ${r.groups.map(g=>{
-        const known = g.rows.filter(row=> row.value != null && isFinite(row.value));
-        const states = known.map(row=> stRatioState(row, row.value, ST_RATIO_SCALES[row.label]));
-        const bad = states.filter(x=> x === 'bad').length, watch = states.filter(x=> x === 'watch').length;
-        /* Each question answered in a word before its figures, so the
-           four groups read as four answers across the top of the page. */
-        const verdict = !known.length ? {cls:'none', t:'Nothing to measure yet'}
-          : bad ? {cls:'bad', t:`${bad} in trouble`}
-          : watch ? {cls:'watch', t:`${watch} worth a look`}
-          : {cls:'good', t:'All healthy'};
-        return `<div class="st-ratio-group">
-        <h4>${esc(g.name)}</h4>
-        <span class="st-ratio-verdict ${verdict.cls}">${esc(verdict.t)}</span>
-        ${!known.length
-          ? `<p class="st-ratio-none">None of these can be worked out — there is nothing to measure them against in this period yet.</p>`
-          : g.rows.map(row=>{
-          const isKnown = row.value != null && isFinite(row.value);
-          const st = isKnown ? stRatioState(row, row.value, ST_RATIO_SCALES[row.label]) : '';
-          const tone = !isKnown ? '' : (st === 'good' ? 'ok' : st === 'bad' ? 'bad' : 'warn');
-          return `<div class="st-ratio ${tone}">
-            <div class="st-ratio-head">
-              <span class="st-ratio-label">${esc(row.label)}${row.annual?'<em>a year</em>':''}${row.closing?'<em>closing</em>':''}</span>
-              <b>${esc(fmtVal(row))}</b>
-            </div>
-            ${isKnown ? stRatioGaugeHTML(row, priorOf(g, row)) : ''}
-            <span class="st-ratio-read">${isKnown ? esc(row.read) : 'Cannot be worked out — there is nothing to measure it against yet.'}</span>
-          </div>`;
-        }).join('')}
-      </div>`;
-      }).join('')}
-    </div>
-    ${stBasisHTML(basis)}
-  </section>`;
-}
 const stRow = (label, value, cls)=>
   `<tr class="${cls||''}"><td>${esc(label)}</td><td class="r num">${fmtUGX(Math.round(value))}</td></tr>`;
 /* One page per document.
@@ -132141,99 +131404,8 @@ function stShort(n){
   return s + a;
 }
 
-// A bar split into parts. Widths are shares of 100; a part with nothing
-// in it is left out rather than drawn as a sliver.
-function stMarkBarHTML(parts){
-  return `<span class="st-mbar" aria-hidden="true">${parts.filter(p=> p.w > 0).map(p=>
-    `<i class="${p.cls}" style="width:${Math.min(100, p.w).toFixed(2)}%"></i>`).join('')}</span>`;
-}
 
-// The six months as a line, the last one being the period's own end.
-// Nothing drawn when there is nothing to draw: a flat line at zero
-// reads as a steady month, not as no record.
-function stSparkHTML(values){
-  if(values.length < 2 || values.every(v=> !v)) return '';
-  const W = 100, H = 28;
-  const lo = Math.min(0, ...values), hi = Math.max(0, ...values);
-  const span = (hi - lo) || 1;
-  const y = (v)=> (H - 2 - ((v - lo) / span) * (H - 4)).toFixed(2);
-  const pts = values.map((v, i)=> `${(i * W / (values.length - 1)).toFixed(2)},${y(v)}`).join(' ');
-  return `<svg class="st-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    ${lo < 0 ? `<line class="st-spark-z" x1="0" y1="${y(0)}" x2="${W}" y2="${y(0)}"></line>` : ''}
-    <polyline points="${pts}"></polyline></svg>`;
-}
 
-/* WHERE EVERY 100 SHILLINGS OF SALES WENT.
-
-   The profit and loss as one picture: sales at full width, each cost
-   taken off the running total, and what is left at the bottom. A
-   shopkeeper reading "net margin 7.2%" has to believe it; reading a
-   bar that starts at 100 and ends at 7 they can see which step took
-   the rest. Built from the same incomeStatement the P&L tab prints, so
-   the two cannot disagree, and deliberately NOT clickable -- the
-   records live behind the P&L's own lines, not behind a digest of them.
-
-   Costs are grey, not red. A cost is a size, not a warning; the only
-   state colour on the panel is the last bar, which is genuinely good
-   or bad news. */
-function stWaterfallHTML(is){
-  const rev = Number(is.revenue) || 0;
-  const head = `<div class="ow-pan-h"><span class="ow-pan-t">Where every 100 shillings of sales went</span>
-    <span class="ow-pan-n">${rev > 0 ? `${is.invoiceCount} invoice${is.invoiceCount===1?'':'s'}` : ''}</span></div>`;
-  if(!(rev > 0)){
-    return `<section class="ow-pan">${head}
-      <div class="ow-empty"><b>Nothing was invoiced in this period.</b><br>
-        There are no sales to follow down to what was kept. Counter takings count here once they are invoiced.</div>
-    </section>`;
-  }
-  const num = (n)=> Number(n) || 0;
-  const goods = num(is.costOfSales) + num(is.costOfService);
-  const charges = num(is.interest) + num(is.loanFees);
-  const steps = [
-    {label:'Sales', kind:'total', value: rev},
-    {label:'The goods', kind:'step', value: -goods, keep:true},
-    {label:'Gross profit', kind:'total', value: num(is.grossProfit)},
-    {label:'Running costs', kind:'step', value: -num(is.opex), keep:true},
-    {label:'Depreciation', kind:'step', value: -num(is.depreciation)},
-    {label:'Equipment sold', kind:'step', value: num(is.disposalGain)},
-    {label:'Loan interest and charges', kind:'step', value: -charges},
-    {label:'Net profit', kind:'net', value: num(is.netProfit)},
-  ].filter(s=> s.kind !== 'step' || s.keep || Math.round(s.value) !== 0);
-
-  // Each bar runs between two levels of the running total. A loss takes
-  // the total below zero, so the scale is set from the lowest level as
-  // well as the highest rather than clipping the loss at the axis.
-  let level = 0;
-  steps.forEach(s=>{
-    if(s.kind === 'step'){ s.a = level; s.b = level + s.value; level = s.b; }
-    else { s.a = 0; s.b = s.value; level = s.value; }
-  });
-  const ends = steps.flatMap(s=> [s.a, s.b]);
-  const lo = Math.min(0, ...ends), hi = Math.max(0, ...ends);
-  const pos = (x)=> ((x - lo) / ((hi - lo) || 1)) * 100;
-
-  const rows = steps.map(s=>{
-    const left = pos(Math.min(s.a, s.b)), width = Math.max(0.5, pos(Math.max(s.a, s.b)) - left);
-    const cls = s.kind === 'total' ? 'a'
-      : s.kind === 'net' ? (s.value < 0 ? 'bad' : 'good')
-      : s.value > 0 ? 'good' : 'c';
-    const per = s.value / rev * 100;
-    const shown = s.kind === 'step' ? Math.abs(per) : per;
-    return `<div class="st-wf-r ${s.kind}" title="${esc(s.label)}: ${esc(fmtUGX(stZero(s.value)))}">
-      <span class="st-wf-l">${esc(s.label)}</span>
-      <span class="st-wf-t" aria-hidden="true"><i class="${cls}" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%"></i></span>
-      <span class="st-wf-v">${stZero(s.value).toLocaleString('en-UG')}</span>
-      <span class="st-wf-p">${shown.toFixed(1)}</span>
-    </div>`;
-  }).join('');
-
-  return `<section class="ow-pan">${head}
-    <div class="st-wf">
-      <div class="st-wf-r st-wf-cap"><span></span><span></span><span>UGX</span><span>of 100</span></div>
-      ${rows}
-    </div>
-  </section>`;
-}
 
 /* The answer to "how are we doing", before any document is opened. */
 
@@ -132262,140 +131434,9 @@ function stBasisHTML(rules){
 }
 
 
-/* THE WHOLE SHEET AS ONE PICTURE.
-
-   A balance sheet answers one question -- how much of what the shop
-   has is really the owner's -- and the table makes the reader find it
-   by reading three totals and subtracting. Two bars on one scale answer
-   it before a figure is read: what the shop owns, split into what it is
-   held as, and under it what the shop owes, with the gap between the
-   two drawn as what is left. That gap IS net worth; the table below is
-   the working.
-
-   The gap is verdigris when it is the owner's and crimson when the shop
-   owes more than it owns, which is genuinely bad news and the one state
-   on the drawing. Everything else is identity: where the money sits,
-   not whether it is good. */
-function stOwnsOwesHTML(bs){
-  const scale = Math.max(bs.assets, bs.liabilities);
-  if(!(scale > 0)) return '';
-  const seg = (label, v, cls)=> ({label, v: Number(v) || 0, cls});
-  const owns = [
-    ...bs.cashAccounts.map(a=> seg(a.label, a.amount, 'cash')),
-    seg('Customers owe', bs.receivables, 'debt'),
-    seg('Stock', bs.inventory, 'stock'),
-    seg('Equipment', bs.fixedAssets, 'kit'),
-    seg('Paid in advance', bs.prepaid, 'pre'),
-  ].filter(x=> x.v > 0.5);
-  const owes = [
-    seg('Suppliers', bs.payables, 'o1'),
-    seg('Wages and rent', bs.staffAndRent, 'o2'),
-    seg('Running costs', bs.accruedCosts, 'o2'),
-    seg('Loans', bs.loans, 'o3'),
-  ].filter(x=> x.v > 0.5);
-  const w = (v)=> (v / scale * 100);
-  const bar = (xs)=> xs.map(x=>{
-    const pct = w(x.v);
-    return `<i class="${x.cls}" style="width:${pct.toFixed(2)}%" title="${esc(x.label)}: ${esc(fmtUGX(Math.round(x.v)))}">${
-      pct >= 11 ? `<span>${esc(x.label)} ${esc(stShort(x.v))}</span>` : ''}</i>`;
-  }).join('');
-  const mine = bs.equity > 0.5
-    ? `<i class="gap" style="width:${w(bs.equity).toFixed(2)}%"><span>yours ${esc(stShort(bs.equity))} · ${Math.round(bs.equity / bs.assets * 100)}%</span></i>`
-    : '';
-  const short = bs.equity < -0.5
-    ? `<i class="short" style="width:${w(-bs.equity).toFixed(2)}%"><span>short ${esc(stShort(-bs.equity))}</span></i>`
-    : '';
-  return `<div class="st-oo" role="img" aria-label="${esc(`Owns ${fmtUGX(Math.round(bs.assets))}, owes ${fmtUGX(Math.round(bs.liabilities))}, net worth ${fmtUGX(Math.round(bs.equity))}`)}">
-    <div class="st-oo-r"><span class="st-oo-l">Owns</span><span class="st-oo-b">${bar(owns)}${short}</span><span class="st-oo-v">${esc(stShort(bs.assets))}</span></div>
-    <div class="st-oo-r"><span class="st-oo-l">Owes</span><span class="st-oo-b">${bar(owes)}${mine}</span><span class="st-oo-v">${esc(stShort(bs.liabilities))}</span></div>
-  </div>`;
-}
-
-/* HOW SOON WHAT IT OWNS BECOMES CASH.
-
-   Forty-five million owned is not forty-five million to spend. The same
-   figures as the table, ordered by how long each takes to turn back
-   into money: cash now, debtors at the pace customers actually pay,
-   stock at the pace it actually sells, and equipment not at all. The
-   paces are the Ratios tab's own days-to-get-paid and days-of-stock, so
-   the two screens cannot disagree; where a pace cannot be worked out
-   the step says what it waits on instead of inventing a number. */
-function stCashLadderHTML(bs, is, cf){
-  const rows = financialRatios(is, bs, cf).groups.flatMap(g=> g.rows);
-  const days = (label)=>{
-    const r = rows.find(x=> x.label === label);
-    return r && r.value != null && isFinite(r.value) && r.value > 0 ? Math.round(r.value) : null;
-  };
-  const paid = days('Days to get paid'), shelf = days('Days of stock');
-  const steps = [
-    {when:'Now', what:'cash, mobile money and bank', v: bs.cash, cls:'cash'},
-    {when: paid ? `In about ${paid} day${paid===1?'':'s'}` : 'When collected', what:'what customers owe, at the pace they pay', v: bs.receivables, cls:'debt'},
-    {when: shelf ? `In about ${shelf} day${shelf===1?'':'s'}` : 'As it sells', what:'stock, at the pace it sells', v: bs.inventory, cls:'stock'},
-    {when:'Not for sale', what:'equipment and vehicles, after depreciation', v: bs.fixedAssets, cls:'kit'},
-  ].filter(x=> Math.abs(x.v) > 0.5);
-  if(!steps.length) return '';
-  const top = Math.max(...steps.map(x=> Math.abs(x.v))) || 1;
-  return `<div class="st-ladder">
-    <h4 class="st-ladder-h">How soon it becomes cash</h4>
-    ${steps.map(x=> `<div class="st-ladder-r">
-      <span class="st-ladder-dot ${x.cls}" aria-hidden="true"></span>
-      <div class="st-ladder-m">
-        <div class="st-ladder-t"><b>${esc(x.when)}</b><span class="st-ladder-v">${esc(fmtUGX(Math.round(x.v)))}</span></div>
-        <span class="st-ladder-bar" aria-hidden="true"><i class="${x.cls}" style="width:${Math.max(1, Math.abs(x.v) / top * 100).toFixed(2)}%"></i></span>
-        <span class="st-ladder-w">${esc(x.what)}</span>
-      </div>
-    </div>`).join('')}
-  </div>`;
-}
 
 
-/* THE TILL, BRIDGED.
 
-   A cash flow statement is an explanation of one difference: the money
-   there was at the start and the money there is at the end. The table
-   gives the pieces and leaves the reader to add them; the bridge draws
-   the addition. The start and end are the same cash the balance sheet
-   carries -- the end is the sheet's cash, the start that less everything
-   that moved -- so the bridge cannot close anywhere but on the figure
-   the balance sheet prints.
-
-   Money coming in is the Money door's sky, money going out the neutral
-   grey: which way it went is identity, not a verdict. The verdict is the
-   caption under it, in words. */
-function stCashBridgeHTML(cf, bs, from){
-  const end = Number(bs.cash) || 0;
-  const startV = end - (Number(cf.netMovement) || 0);
-  const steps = [
-    {l:'At the start', s: from, kind:'end', v: startV},
-    {l:'Trading', s:'selling and buying', v: cf.operating},
-    {l:'Investing', s:'equipment', v: cf.investing},
-    {l:'Financing', s:'loans and the owner', v: cf.financing},
-    Math.abs(cf.unclassified) >= 1 ? {l:'Not classified', s:'none of the above', v: cf.unclassified} : null,
-    {l:'At the end', s: bs.asOf, kind:'end', v: end},
-  ].filter(Boolean);
-  let level = 0;
-  steps.forEach(x=>{
-    x.v = Number(x.v) || 0;
-    if(x.kind === 'end'){ x.a = 0; x.b = x.v; level = x.v; }
-    else { x.a = level; x.b = level + x.v; level = x.b; }
-  });
-  const ends = steps.flatMap(x=> [x.a, x.b]);
-  const lo = Math.min(0, ...ends), hi = Math.max(0, ...ends);
-  if(hi - lo < 1) return '';
-  const y = (v)=> (v - lo) / (hi - lo) * 100;
-  const signed = (v)=> (v > 0 ? '+' : '') + stShort(v);
-  return `<div class="st-bridge" role="img" aria-label="${esc(`Cash ${fmtUGX(Math.round(startV))} at the start, ${fmtUGX(Math.round(end))} at the end`)}">
-    ${steps.map(x=>{
-      const bottom = y(Math.min(x.a, x.b)), height = Math.max(1.5, y(Math.max(x.a, x.b)) - bottom);
-      const cls = x.kind === 'end' ? 'end' : (x.v >= 0 ? 'in' : 'out');
-      return `<div class="st-bridge-c" title="${esc(x.l)}: ${esc(fmtUGX(Math.round(x.v)))}">
-        <span class="st-bridge-v ${cls}">${esc(x.kind === 'end' ? stShort(x.v) : signed(x.v))}</span>
-        <span class="st-bridge-p">${lo < 0 ? `<em style="bottom:${y(0).toFixed(2)}%"></em>` : ''}<i class="${cls}" style="bottom:${bottom.toFixed(2)}%;height:${height.toFixed(2)}%"></i></span>
-        <b>${esc(x.l)}</b><span class="st-bridge-s">${esc(x.s)}</span>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
 
 
 /* ==== STATEMENTS — THE PERFORMANCE HUB ====================================
@@ -132560,13 +131601,6 @@ function shRank(values, v){
 }
 const shAvg = (a)=> a.length ? a.reduce((s, v)=> s + v, 0) / a.length : null;
 
-/* ---- the answer strip that opens a view: one sentence, the figures under it ---- */
-function shAnswerStrip(q, a, figs){
-  return `<section class="sh-card sh-answer" aria-label="The answer">
-    <div class="sh-answer-a"><span class="sh-eyebrow">${esc(q)}</span><b class="sh-answer-t">${esc(a)}</b></div>
-    <div class="sh-answer-f">${figs.map(f=> `<div class="sh-answer-c"><span class="sh-lbl">${esc(f.l)}</span><b class="sh-fig sh-v22${f.tone === 'bad' ? ' sh-ink-bad' : ''}">${esc(f.v)}</b>${f.c ? shChip(f.c, f.tone || 'n') : ''}</div>`).join('')}</div>
-  </section>`;
-}
 /* The five-tile row the canvas uses on the cash flow and balance sheet. */
 function shTiles(tiles){
   return `<section class="sh-card sh-tiles">${tiles.map(t=> `<div class="sh-tile">
@@ -135010,13 +134044,6 @@ function alBehind(l, p){
   return b > Math.max(1, inst * 0.01) ? b : 0;
 }
 
-/* Money short enough for a bar's label: 21.26m, 550k. */
-function alM(n){
-  const v = Math.round(Number(n)||0), a = Math.abs(v);
-  if(a >= 1e6) return `${(v/1e6).toFixed(2)}m`;
-  if(a >= 1e3) return `${Math.round(v/1e3)}k`;
-  return String(v);
-}
 
 /* Which instalments the money paid so far covers, in order. A payment
    short of an instalment does not cover it. */
@@ -135917,7 +134944,6 @@ function openLoanPerformance(id){
   const m = document.getElementById('alSheetModal');
   if(alSheetLoanId === id && m && m.classList.contains('show')) alPaintAgreement();
 }
-function openAssetSchedule(id){ alOpen = 'a'+id; alScreen = 'detail'; renderAssetsLoans(); }
 
 /* ---- Being reminded, and being able to act on the reminder ----------
 
@@ -137302,13 +136328,6 @@ function withPresetCategory(list, category){
   return arr.indexOf(category) === -1 ? arr.concat([category]) : arr;
 }
 function dashPct(n){ return (n>=0?'+':'') + n.toFixed(1) + '%'; }
-function dashFmtShort(n){
-  const sign = n<0 ? '-' : '';
-  n = Math.abs(n);
-  if(n>=1e6) return sign + (n/1e6).toFixed(1).replace(/\.0$/,'') + 'M';
-  if(n>=1e3) return sign + (n/1e3).toFixed(1).replace(/\.0$/,'') + 'K';
-  return sign + Math.round(n);
-}
 function dashGetRange(){
   const preset = document.getElementById('dash_range_preset').value;
   const today = todayISO();
@@ -140379,13 +139398,6 @@ function dashDemandBreadth(invoices){
     };
   });
 }
-function dashDebtorExposure(){
-  return data.customers
-    .map(c=>({name:c.name||'Unnamed customer', debt:Number(c.debt)||0, ageDays: (Number(c.debt)||0)>0.5 ? daysSinceDate(customerOldestOpenChargeDate(c)) : -1}))
-    .filter(r=>r.debt>0.5)
-    .sort((a,b)=>b.debt-a.debt)
-    .slice(0,3);
-}
 /* ---------------- The Procurement Copilot ----------------
 
    "What should I buy, with the money I have" — a ranked buy list the
@@ -142854,91 +141866,7 @@ function dashCashBridgeData(){
     return {label:b.label, inAmt, outAmt};
   });
 }
-function dashDemandTrendData(){
-  const buckets = dashWeeklyBuckets(10);
-  return buckets.map(b=>{
-    const invoices = anInvoicesInRange(b.from,b.to);
-    const t = anOverallTotals(invoices);
-    return {label:b.label, qty:t.qty, sales:t.sales};
-  });
-}
 
-/* ---- tiny inline SVG chart builders (no external chart library) ---- */
-function dashGroupedBarSVG(data, colorA, colorB){
-  const w=560, h=190, padL=8, padR=8, padT=10, padB=24;
-  const innerW = w-padL-padR, innerH = h-padT-padB;
-  const max = Math.max(1, ...data.flatMap(d=>[d.inAmt,d.outAmt]));
-  const groupW = innerW/data.length;
-  const barW = Math.min(16, groupW*0.32);
-  let bars='';
-  data.forEach((d,i)=>{
-    const gx = padL + i*groupW + groupW/2;
-    const hIn = (d.inAmt/max)*innerH;
-    const hOut = (d.outAmt/max)*innerH;
-    bars += `<rect x="${gx-barW-2}" y="${padT+innerH-hIn}" width="${barW}" height="${Math.max(hIn,0.5)}" rx="2" fill="${colorA}"/>`;
-    bars += `<rect x="${gx+2}" y="${padT+innerH-hOut}" width="${barW}" height="${Math.max(hOut,0.5)}" rx="2" fill="${colorB}"/>`;
-    bars += `<text x="${gx}" y="${h-6}" font-size="9.5" fill="var(--ink-soft)" text-anchor="middle">${esc(d.label)}</text>`;
-  });
-  bars += `<line x1="${padL}" y1="${padT+innerH}" x2="${w-padR}" y2="${padT+innerH}" stroke="var(--line)" stroke-width="1"/>`;
-  return `<svg viewBox="0 0 ${w} ${h}" class="cashbridge-svg">${bars}</svg>`;
-}
-function dashAreaSVG(values, labels, color){
-  const w=270, h=140, padL=6, padR=6, padT=10, padB=20;
-  const innerW = w-padL-padR, innerH = h-padT-padB;
-  const max = Math.max(1, ...values);
-  const step = values.length>1 ? innerW/(values.length-1) : innerW;
-  const pts = values.map((v,i)=>{
-    const x = padL + i*step;
-    const y = padT + innerH - (v/max)*innerH;
-    return [x,y];
-  });
-  const linePath = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const areaPath = linePath + ` L${pts[pts.length-1][0].toFixed(1)},${padT+innerH} L${pts[0][0].toFixed(1)},${padT+innerH} Z`;
-  const dots = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.4" fill="${color}"/>`).join('');
-  const firstLabel = labels[0], lastLabel = labels[labels.length-1];
-  return `<svg viewBox="0 0 ${w} ${h}" class="trend-svg">
-    <path d="${areaPath}" fill="${color}" opacity="0.14"/>
-    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2"/>
-    ${dots}
-    <text x="${padL}" y="${h-4}" font-size="9.5" fill="var(--ink-soft)">${esc(firstLabel||'')}</text>
-    <text x="${w-padR}" y="${h-4}" font-size="9.5" fill="var(--ink-soft)" text-anchor="end">${esc(lastLabel||'')}</text>
-  </svg>`;
-}
-function dashQuadrantSVG(items){
-  const w=520, h=340, pad=34;
-  const innerW=w-pad*2, innerH=h-pad*2;
-  if(!items.length){
-    return `<svg viewBox="0 0 ${w} ${h}" class="quadrant-svg"><text x="${w/2}" y="${h/2}" font-size="13" fill="var(--ink-soft)" text-anchor="middle">Not enough sales data yet</text></svg>`;
-  }
-  const xs = items.map(i=>i.qty), ys = items.map(i=>i.margin);
-  const maxX = Math.max(1, ...xs), minY = Math.min(0,...ys), maxY = Math.max(1,...ys);
-  const medX = xs.slice().sort((a,b)=>a-b)[Math.floor(xs.length/2)];
-  const medY = ys.slice().sort((a,b)=>a-b)[Math.floor(ys.length/2)];
-  const sx = q => pad + (q/maxX)*innerW;
-  const sy = m => pad + innerH - ((m-minY)/(maxY-minY||1))*innerH;
-  const qcolor = (qty,margin) => {
-    const highVol = qty>=medX, highMar = margin>=medY;
-    if(highVol && highMar) return 'var(--good)';
-    if(highVol && !highMar) return '#3B82C4';
-    if(!highVol && highMar) return 'var(--accent)';
-    return 'var(--danger)';
-  };
-  const dots = items.map(it=>{
-    const x=sx(it.qty), y=sy(it.margin);
-    const r = 4 + Math.min(6, Math.sqrt(Math.max(it.sales,0))/60);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${qcolor(it.qty,it.margin)}" fill-opacity="0.85"><title>${esc(it.name)} — qty ${Math.round(it.qty)}, margin ${it.margin.toFixed(1)}%</title></circle>`;
-  }).join('');
-  const dividerX = sx(medX), dividerY = sy(medY);
-  return `<svg viewBox="0 0 ${w} ${h}" class="quadrant-svg">
-    <line x1="${pad}" y1="${dividerY.toFixed(1)}" x2="${w-pad}" y2="${dividerY.toFixed(1)}" stroke="var(--line)" stroke-dasharray="4 4"/>
-    <line x1="${dividerX.toFixed(1)}" y1="${pad}" x2="${dividerX.toFixed(1)}" y2="${h-pad}" stroke="var(--line)" stroke-dasharray="4 4"/>
-    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--line)"/>
-    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="var(--line)"/>
-    <text x="${pad}" y="${pad-10}" font-size="10.5" fill="var(--ink-soft)">Margin %</text>
-    <text x="${w-pad}" y="${h-pad+22}" font-size="10.5" fill="var(--ink-soft)" text-anchor="end">Sales volume (qty) →</text>
-    ${dots}
-  </svg>`;
-}
 
 // Standing check for the failure 0036 had to repair by hand: an agent
 // order whose originAgentId was stripped, which detaches it from its
@@ -163278,21 +162206,6 @@ function fupInitials(name){
   if(/^[+0-9]/.test(parts[0])) return '?';
   return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
 }
-/* One line for why a whole set is being left alone today. The reasons
-   are counted rather than listed: eleven names in a band is a list
-   nobody reads, and the count with its reason is the fact. */
-function fupHeldWhy(held){
-  const by = {};
-  (held.list || []).forEach(h=> { by[h.kind] = (by[h.kind] || 0) + 1; });
-  const say = {promised:'named a day', chased:'chased inside the rest period',
-    blocked:'a balance being checked', told:'told inside the last fortnight',
-    nophone:'no number on file', quiet:'gone quiet', spend_down:'spending less',
-    first_order:'bought once and never came back'};
-  const bits = Object.keys(by).map(k=> `${by[k]} ${say[k] || k}`);
-  return bits.length
-    ? bits.join(' · ') + ' — each one carries its reason and the date it lifts'
-    : 'each one carries its reason and the date it lifts';
-}
 /* THE RAIL: the day's loop, and it does not move between filters.
 
    Came back is the panel the three lenses never had -- a reply, in
@@ -165444,44 +164357,6 @@ function msgAgingPoints(chase, nowMs){
   return {pts, carried: Math.max(0, (Number(chase.debt) || 0) - listed), terms: custTermsDays()};
 }
 
-/* THE LAST N DAYS BETWEEN THE SHOP AND ONE CUSTOMER: what they bought,
-   what they paid, when the shop spoke, when they wrote, and every day
-   they named. One line, so a gap reads as a gap. */
-function msgTimeline(customerId, nowMs, days){
-  const today = fupDayISO(nowMs);
-  const from = fupDayISO(nowMs - days * 86400000);
-  const inRange = (d)=> d && d >= from && d <= today;
-  const c = (data.customers || []).find(x=> String(x.id) === String(customerId));
-  const ev = [];
-  if(!c) return {from, today, days, ev};
-  customerOrdersFor(c.id).forEach(q=>{
-    const d = String(q.invoicedAt || q.date || '').slice(0,10);
-    if(q.invoiced && inRange(d)) ev.push({d, k: 'bought', v: savedQuoteTotal(q) || 0});
-  });
-  (c.debtLog || []).forEach(l=>{
-    const d = String(l.date || '').slice(0,10);
-    if(l.type === 'payment' && inRange(d)) ev.push({d, k: 'paid', v: Number(l.amount) || 0});
-  });
-  followUpsForCustomer(c.id).forEach(f=> (f.contacts || []).forEach(x=>{
-    const d = String(x.at || '').slice(0,10); if(inRange(d)) ev.push({d, k: 'told'}); }));
-  const chased = (data.presetDebtChases || {})[c.id];
-  if(inRange(String(chased || '').slice(0,10))) ev.push({d: String(chased).slice(0,10), k: 'told'});
-  (data.briefsSent || []).forEach(b=>{
-    if(String(b.customerId) === String(c.id) && inRange(String(b.sentOn || '').slice(0,10))) ev.push({d: String(b.sentOn).slice(0,10), k: 'told'});
-  });
-  if(msgInboxLoaded()){
-    const sufs = contactPhones(c).map(cfNormalisedPhone).filter(Boolean);
-    const convIds = new Set(waInbox.convs.filter(x=> sufs.includes(cfNormalisedPhone(x.wa_id))).map(x=> x.id));
-    msgInboxSource().msgs.forEach(m=>{
-      const d = String(m.sent_at || '').slice(0,10);
-      if(m.direction === 'in' && convIds.has(m.conversation_id) && inRange(d)) ev.push({d, k: 'wrote'});
-    });
-  }
-  promisesFor(c.id).forEach(p=>{
-    if(inRange(p.promisedOn)) ev.push({d: p.promisedOn, k: 'named', state: promiseState(p, c, today)});
-  });
-  return {from, today, days, ev};
-}
 
 /* WHOSE WORD HOLDS: each decided payment promise, oldest first, kept or
    broken as the ledger reads it today. */
@@ -167023,14 +165898,6 @@ function msgRegTrackHTML(f, fromMs, nowMs){
     ${newsAt ? `<i class="ow-mi-rev ow-mi-rev-n" style="left:${at(newsAt)}" title="News since: ${esc(news[0].short || news[0].text || '')}"></i>` : ''}
     ${f.closedAt ? `<i class="ow-mi-rev ow-mi-rev-c" style="left:${at(endMs)}" title="${esc(fupClosedLabel(f))}"></i>` : ''}
   </span>`;
-}
-/* The pill, in words that say which silence it is. followUpStatePill
-   decides the state; this only names it. */
-function msgRegStateLabel(f, pill){
-  if(f.closedAt) return {label: fupClosedLabel(f), cls: ''};
-  if(pill.label === 'Not told') return followUpLastContact(f) ? {label: 'news not told', cls: 'warn'} : {label: 'never told', cls: 'warn'};
-  if(pill.label === 'Told') return {label: 'told', cls: 'good'};
-  return {label: 'waiting', cls: ''};
 }
 /* THE RECORD, READ WHOLE: what is open, which silences, how old, and how
    the closed ones ended. */
@@ -169217,10 +168084,6 @@ function sourcingAskerName(r){
   const c = (data.customers||[]).find(x=> String(x.id) === String(r.customerId));
   return c ? c.name : '';
 }
-function leadLastAskedAt(l){
-  const times = ((l && l.requests) || []).map(r=> new Date(r.at).getTime()).filter(t=> !isNaN(t));
-  return times.length ? Math.max(...times) : null;
-}
 
 /* The four facts the shop said it needs before an item can be sold:
    importer, supplier, price, packing. This is the "how far have we
@@ -169884,11 +168747,6 @@ function renderSourcingBadge(){
     'items still being sourced');
 }
 
-function sourcingDaysHere(l, nowMs){
-  if(!l.stageEnteredAt) return '';
-  const days = Math.floor(((nowMs==null?Date.now():nowMs) - l.stageEnteredAt) / 86400000);
-  return days >= 1 ? `${days}d` : 'today';
-}
 
 /* ---------------- What it would cost to bring in ----------------
 
@@ -170116,12 +168974,6 @@ function sourcingMapSVG(live, nowMs, phone){
     ${bubbles}
   </svg>`;
 }
-function sourcingFilterHTML(counts){
-  const opts = [['all','All'],['ready','Ready'],['over','Over time'],['nobody','Nobody on it']];
-  return `<div class="ow-seg ow-sf-fl" role="tablist" aria-label="Show">${opts.map(([k, label])=>
-    `<button type="button" role="tab" class="ow-seg-b${sourcingFilter === k ? ' ow-on' : ''}" data-sf-filter="${k}" aria-selected="${sourcingFilter === k}">${
-      k === 'all' ? '' : `<span class="ow-sf-fd ow-sf-b-${k}"></span>`}${label} <span class="ow-seg-n">${counts[k]}</span></button>`).join('')}</div>`;
-}
 
 /* The spread, drawn: one dot per shop at what the asked-for quantity
    would cost from them, the cheapest in green and the gap to the next
@@ -170289,101 +169141,7 @@ function sourcingOpenWhy(l, askAt, unit){
   return `${people}. Nobody has started looking for it yet.`;
 }
 
-/* ---------------- The pipeline strip ----------------
-   The five steps across the top, each with how many are standing on it
-   and one square per item coloured by its state -- so where things pile
-   up, and which of them are late, is read before a single row is. Then
-   the three figures that say whether the whole board is healthy.
-   Generated from SOURCING_STATUS_ORDER, so a step cannot exist in the
-   funnel and be missing here. */
-function sourcingStripHTML(leads, nowMs){
-  const live = leads.filter(l=> l.status !== 'listed');
-  const seen = new Set();
-  let asks = 0;
-  live.forEach(l=> (l.requests||[]).forEach((r,i)=>{
-    asks++;
-    const phone = sourcingPhoneKey(r.phone);
-    const name = String(r.customerName||'').trim().toLowerCase();
-    if(r.customerId) seen.add('c:' + String(r.customerId));
-    else if(phone) seen.add('p:' + phone);
-    else if(name) seen.add('n:' + name);
-    else seen.add('anon:' + l.id + ':' + i);
-  }));
-  const priced = live.map(sourcingBringInCost).filter(Boolean);
-  const cost = priced.reduce((s,c)=> s + c.total, 0);
-  let waitDays = 0, waitName = '';
-  live.forEach(l=>{ const d = sourcingWaitDays(l, nowMs); if(d > waitDays){ waitDays = d; waitName = l.name; } });
-  const steps = SOURCING_STATUS_ORDER.map(s=>{
-    const here = leads.filter(l=> l.status === s);
-    const end = s === 'listed';
-    return `<div class="ow-sf-pl-s${end ? ' ow-end' : ''}">
-      <span class="ow-sf-pl-l">${esc(SOURCING_SHORT_LABELS[s])}</span>
-      <span class="ow-sf-pl-n">${here.length}</span>
-      <span class="ow-sf-pl-q">${end
-        ? (here.length ? '<svg class="ow-sf-pl-ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : '')
-        : here.slice(0, 12).map(l=> `<span class="ow-sf-sq ow-sf-b-${sourcingState(l, nowMs)}" title="${esc(l.name)} — ${esc(SOURCING_STATE_LABELS[sourcingState(l, nowMs)])}"></span>`).join('')
-          + (here.length > 12 ? `<span class="ow-sf-pl-more">+${here.length - 12}</span>` : '')}</span>
-    </div>`;
-  }).join('<svg class="ow-sf-pl-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>');
-  return `<div class="ow-pan">
-    <div class="ow-sf-pl-row">${steps}</div>
-    <div class="ow-sf-pl-f">
-      <div class="ow-sf-pl-m"><span class="ow-sf-pl-v">${seen.size}</span><span class="ow-sf-pl-c">${seen.size===1?'person':'people'} waiting &middot; ${asks} ask${asks===1?'':'s'}</span></div>
-      <div class="ow-sf-pl-m"><span class="ow-sf-pl-v">${priced.length ? Math.round(cost).toLocaleString('en-UG') : '&mdash;'}</span><span class="ow-sf-pl-c">${priced.length
-        ? `UGX to bring in the ${priced.length} priced`
-        : 'nothing priced yet'}</span></div>
-      <div class="ow-sf-pl-m"><span class="ow-sf-pl-v${waitDays >= 30 ? ' ow-warn' : ''}">${waitDays ? waitDays + 'd' : '&mdash;'}</span><span class="ow-sf-pl-c" title="${esc(waitName)}">${waitDays
-        ? `longest wait &middot; ${esc(waitName)}` : 'nobody is waiting'}</span></div>
-    </div>
-  </div>`;
-}
 
-/* ---------------- The context rail ----------------
-   Who is waiting, drawn as how long -- a bar per person, amber past a
-   month, with the month marked -- and where the asks came in as one
-   split bar. Both read straight off the requests already on the leads;
-   there is nothing here the screen has to be told. */
-function sourcingRailHTML(leads, nowMs){
-  const live = leads.filter(l=> l.status !== 'listed');
-  const by = new Map();
-  live.forEach(l=> (l.requests||[]).forEach(r=>{
-    const who = (r.customerName || sourcingAskerName(r) || '').trim();
-    if(!who) return;
-    const at = Date.parse(r.at) || 0;
-    const days = at ? Math.floor(((nowMs==null?Date.now():nowMs) - at) / 86400000) : 0;
-    const cur = by.get(who);
-    if(cur == null || days > cur) by.set(who, days);
-  }));
-  const people = [...by.entries()].sort((a,b)=> b[1]-a[1]);
-  const top = people.slice(0, 8);
-  const scale = Math.max(40, ...top.map(p=> p[1]));
-  const src = new Map();
-  live.forEach(l=> (l.requests||[]).forEach(r=>{
-    const k = SOURCING_SOURCE_LABELS[r.source] || r.source || 'Somewhere else';
-    src.set(k, (src.get(k)||0) + 1);
-  }));
-  const sources = [...src.entries()].sort((a,b)=> b[1]-a[1]);
-  const total = sources.reduce((s, x)=> s + x[1], 0);
-  return `<div class="ow-side">
-    <div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Who is waiting</span><span class="ow-pan-n">${by.size}</span></div>
-      ${top.length ? `<div class="ow-sf-wt">${top.map(([who,days])=>
-        `<div class="ow-sf-wr"><span class="ow-sf-wn" title="${esc(who)}">${esc(who)}</span><span class="ow-sf-wb"><i class="ow-sf-wf${days>=30?' ow-warn':''}" style="width:${Math.min(100, days / scale * 100).toFixed(1)}%"></i></span><span class="ow-sf-wd${days>=30?' ow-warn':''}">${days}d</span></div>`).join('')}
-        <div class="ow-sf-wr ow-sf-wx" aria-hidden="true"><span></span><span class="ow-sf-wb ow-sf-wm"><b class="ow-sf-wl" style="left:${(30 / scale * 100).toFixed(1)}%">30d</b></span><span></span></div>
-        ${people.length > top.length ? `<p class="ow-mini"><span>and ${people.length - top.length} more</span></p>` : ''}</div>`
-        : '<div class="ow-empty">Nobody has left a name yet. An ask with a name on it is one you can answer.</div>'}
-      <p class="ow-mini"><span>Follow-ups writes one message per person, however many things they are waiting for. Nothing sends itself.</span></p>
-    </div>
-    ${sources.length ? `<div class="ow-pan">
-      <div class="ow-pan-h"><span class="ow-pan-t">Where the asks came in</span><span class="ow-pan-n">${total}</span></div>
-      <div class="ow-sf-src">
-        <div class="ow-sf-src-b" role="img" aria-label="${esc(sources.map(([k,n])=> `${k}: ${n}`).join(', '))}">${
-          sources.map(([k,n], i)=> `<span class="ow-sf-s${Math.min(i, 3)}" style="width:${(n / total * 100).toFixed(1)}%"></span>`).join('')}</div>
-        ${sources.map(([k,n], i)=> `<div class="ow-sr"><span class="ow-sr-k"><span class="ow-sf-sk ow-sf-s${Math.min(i, 3)}"></span>${esc(k)}</span><span class="ow-sr-v">${n}</span></div>`).join('')}
-      </div>
-    </div>` : ''}
-  </div>`;
-}
 
 /* ---------------- The archive: what left the funnel ----------------
 
@@ -170465,25 +169223,6 @@ function renderSourcingListedBody(){
     : (sourcingListedShowAll && all.length > SOURCING_LISTED_PAGE
       ? `<button type="button" class="ow-sf-more" id="sf_listed_more">Showing all ${all.length} — show fewer</button>`
       : '');
-}
-function sourcingArchiveHTML(leads){
-  const listed = leads.filter(l=> l.status === 'listed');
-  if(!listed.length) return '';
-  const names = listed.slice(0, 2).map(l=> l.name).join(', ');
-  const rest = listed.length - Math.min(2, listed.length);
-  return `<div class="ow-pan">
-    <button type="button" class="ow-sf-arc" id="sf_arc_tog" aria-expanded="${sourcingArchiveOpen}">
-      <svg class="ow-sf-arc-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      <span class="ow-sf-arc-t">Added to what we sell</span>
-      <span class="ow-sf-arc-s">&mdash; ${esc(names)}${rest ? `, and ${rest} before ${rest===1?'it':'them'}` : ''}</span>
-      <span class="ow-sf-arc-n">${listed.length}</span>
-    </button>
-    ${sourcingArchiveOpen ? `<div class="ow-sf-arc-x">
-      <div class="ow-sf-q"><div class="search-bar"><input type="search" id="sf_listed_q" placeholder="Search what you have listed" autocomplete="off" value="${esc(sourcingListedSearch)}"></div></div>
-      <div id="sf_listed_body"></div>
-      <div id="sf_listed_foot"></div>
-    </div>` : ''}
-  </div>`;
 }
 
 /* ---------------- The screen ---------------- */

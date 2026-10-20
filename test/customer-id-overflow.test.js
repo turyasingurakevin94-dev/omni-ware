@@ -48,7 +48,9 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
   t.check(strip(o) === strip(n), 'ow_invoice_core is 0119\'s but for that one line (if 0119 changes it, change it here too)');
   const files = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations')).filter(f => /^\d{4}_.*\.sql$/.test(f)).sort();
   const last = re => files.filter(f => re.test(read('supabase/migrations/' + f))).pop();
-  t.check(last(/create or replace function ow_invoice_core\(/) === '0135_customer_id_overflow.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0135 is the last word on both');
+  // 0136 re-states ow_invoice_core once more (the invoice label past 9999)
+  // and test/audit-0136.test.js holds it to 0135's text but for that line.
+  t.check(last(/create or replace function ow_invoice_core\(/) === '0136_counter_sale_one_write.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0136 is the last word on the core and 0135 on next_entity_id');
   t.check(/\| 0135 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0135 for it');
 }
 

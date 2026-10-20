@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Store</title>
 <!-- The phone app's native layer (apps/store). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -615,7 +616,7 @@ html.big .ct-key{height:60px}
 <div id="st_app"><div id="st_main"><div class="st-empty" style="padding-top:40vh"><b>Omni-Ware Store</b>Opening…</div></div></div>
 <div id="st_pages"></div>
 <div id="st_sheet"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Store — the shop floor and the storeroom on a phone.
@@ -664,7 +665,6 @@ function signed(n){ n = Math.round(Number(n) || 0); return (n > 0 ? '+' : n < 0 
 function todayISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function isoOf(ts){ if (!ts) return ''; const d = new Date(typeof ts === 'string' && /^\d+$/.test(ts) ? Number(ts) : ts); if (isNaN(d)) return String(ts).slice(0, 10); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function msOf(ts){ if (ts == null || ts === '') return 0; if (typeof ts === 'number') return ts; const n = Date.parse(ts); return isNaN(n) ? (Number(ts) || 0) : n; }
-function daysBetween(a, b){ if (!a || !b) return 0; return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
 function hm(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // A wait, said the way a clock says it: 2:08, or 25 m under the hour.
 function waitClock(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' m' : Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0'); }
@@ -751,7 +751,6 @@ const ITEM_ICONS = [
   [/timber|wood|plank|board|ply/i, 'M3 8h18v8H3zM7 8v8M12 8v8M17 8v8'],
 ];
 function itemIcon(name){ const hit = ITEM_ICONS.find(([re]) => re.test(String(name || ''))); return hit ? hit[1] : 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10'; }
-function itemTile(name, tint, size){ size = size || 30; return `<span class="st-tile" style="width:${size}px;height:${size}px;background:${tint[0]};color:${tint[1]}"><svg width="${Math.round(size * .6)}" height="${Math.round(size * .6)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${itemIcon(name)}"/></svg></span>`; }
 
 let toastTimer = null;
 function toast(msg, ms){
@@ -817,11 +816,12 @@ const FEEL = {
   hand: () => { buzz([20, 40, 60]); sfx('horn'); }, stamp: () => { buzz(16); sfx('stamp'); },
 };
 
-async function selectAll(table, keyCol){
+async function selectAll(table, keyCol, filter){
   keyCol = keyCol || 'id';
   let rows = [], total = null;
   for (;;) {
     let q = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', S.shopId);
+    if (filter) q = filter(q);
     if (rows.length) q = q.gt(keyCol, rows[rows.length - 1][keyCol]);
     const r = await q.order(keyCol, { ascending: true }).limit(1000);
     if (r.error) throw r.error;
@@ -940,14 +940,27 @@ async function loadAll(){
   S.loadedAt = Date.now();
   saveSnapshot();
 }
+
+/* The orders that can still change: not delivered, not yet invoiced, voided,
+   or invoiced in the last two days. A refresh reads these and merges them
+   over the copy on the phone, instead of the whole order history on every
+   tick (the audit measured 2 MB a tick on a shop of 1,500 orders). The
+   whole history is read once, at boot and when the app comes back after
+   half a minute away. */
+function liveQuoteFilter(q){ return q.or('status.neq.completed,invoiced.eq.false,voided.eq.true,invoiced_ts.gte.' + new Date(Date.now() - 2 * 864e5).toISOString()); }
+function mergeQuotes(rows){
+  const list = D().savedQuotes || [], at = new Map(list.map((q, i) => [Number(q.id), i]));
+  rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
+  D().savedQuotes = list;
+}
 async function refreshLive(){
   try {
-    const [quotes, trips, stock, counts, reports, returns] = await Promise.all([selectAll('saved_quotes'), selectAll('collection_trips').catch(() => null),
+    const [quotes, trips, stock, counts, reports, returns] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('collection_trips').catch(() => null),
       selectCols('stock', 'key,product_id,variant_idx,qty', 'key').catch(() => null),
       sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
       sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
       sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data)]);
-    S.data.savedQuotes = quotes.map(rowToQuote);
+    mergeQuotes(quotes);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (stock) { const m = {}; stock.forEach(s => { m[s.key] = Number(s.qty) || 0; }); S.data.stock = m; }
     if (counts) S.data.counts = counts.map(rowToCount);
@@ -1452,26 +1465,10 @@ document.addEventListener('input', e => { const t = e.target.closest('[data-in]'
 
 /* ---------------- shared pieces ---------------- */
 function greeting(){ const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
-// A ring of coloured arcs, each a share of the whole, with a label inside.
-function segRing(segs, size, stroke, inner, label){
-  const total = segs.reduce((s, x) => s + x.n, 0) || 1, r = (size - stroke) / 2;
-  let at = 0;
-  const arcs = segs.filter(x => x.n > 0).map(x => { const len = x.n / total * 100, gap = segs.filter(y => y.n > 0).length > 1 ? 1.2 : 0;
-    const s = `<circle class="a-ring${x.blink ? ' a-blink' : ''}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${x.col}" stroke-width="${stroke}" pathLength="100" stroke-dasharray="${Math.max(0.01, len - gap).toFixed(2)} ${(100 - len + gap).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`; at += len; return s; }).join('');
-  return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/>${arcs}</svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
-}
 function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function sheetTop(title, eyebrow, eyeCol, opts){
-  opts = opts || {};
-  return `<button class="tapback" data-act="back" aria-label="Back"></button>`;
-}
-function closeBtn(light){ return `<button class="st-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
-function waBtn(href, label, extraAct){ return `<a class="st-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
-function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'st-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'st-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
-function callSmall(phone, name){ const u = telUrl(phone); return `<a ${u ? `href="${u}"` : 'aria-disabled="true"'} aria-label="Call ${esc(name)}" style="width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;${u ? '' : 'opacity:.35'}">${ic('phone', 16)}</a>`; }
 function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empty"><b>${esc(title)}</b>${esc(sub || '')}</div></div>`; }
 
 
@@ -1520,7 +1517,7 @@ function setPick(q, i, s, n){
   const d = S.pickDraft[q.id] || (S.pickDraft[q.id] = {});
   d[lineKey(it, i)] = { s, n: s === 'done' ? Number(it.qty) || 0 : s === 'short' ? Math.max(0, Math.floor(Number(n) || 0)) : null, cur: i };
   saveDrafts();
-  clearTimeout(setPick.t); setPick.t = setTimeout(() => flushPicks(q.id).catch(() => {}), 900);
+  clearTimeout(setPick.t); setPick.t = setTimeout(() => flushPicks(q.id).catch(e => toast(pickKeptWords(e), 6000)), 900);
 }
 // shared-worker.js setItemPickedQty / toggleItemPickedAt, for each answer this phone holds.
 async function flushPicks(id){
@@ -1790,7 +1787,8 @@ async function enablePush(){
 function listenPush(){
   const P = nativePush(); if (!P || listenPush.on) return; listenPush.on = true;
   P.addListener('registration', async t => { const me = myStaff(); if (!me) return;
-    try { await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: me.id, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' }); } catch (_e) {} });
+    try { const { error } = await sb.from('push_subscriptions').upsert({ shop_id: S.shopId, staff_id: me.id, user_id: S.user.id, fcm_token: t.value }, { onConflict: 'fcm_token' }); if (error) toast('This phone could not be signed up for alerts — ' + error.message, 6000); }
+    catch (e) { toast('This phone could not be signed up for alerts — ' + ((e && e.message) || e), 6000); } });
   P.addListener('pushNotificationActionPerformed', a => { const d = (a && a.notification && a.notification.data) || {};
     refreshLive().then(() => { pushOpen(d); render(); }).catch(() => {}); });
 }
@@ -1862,7 +1860,7 @@ function bindSlides(){
     let sx = 0, x = 0, drag = false, step = 0;
     const max = () => el.offsetWidth - 64;
     const paint = () => { k.style.transform = `translateX(${x.toFixed(1)}px)`; fill.style.width = (x + 60).toFixed(1) + 'px'; lab.style.opacity = Math.max(0.15, 1 - x / max()).toFixed(2); };
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     const refuse = () => { buzz([20, 40, 20]); sfx('no'); el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260 }); };
     k.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') { refuse(); return; } drag = true; S.dragging = true; sx = e.clientX; x = 0; step = 0; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(0, Math.min(max(), e.clientX - sx)); const s = Math.floor(x / max() * 4); if (s !== step) { step = s; if (s > 0) FEEL.tick(); } paint(); });
@@ -1882,8 +1880,6 @@ function sfxNotes(notes, type){
       o.connect(g); g.connect(ctx.destination); o.start(t + at); o.stop(t + at + len + 0.05); });
   } catch (_e) {}
 }
-// buzz() reads its own switch on You (Buzz), apart from Sounds.
-function buzzOn(){ return S.prefs.buzz !== false; }
 
 /* ---------------- pieces ---------------- */
 function nLines(n){ n = Number(n) || 0; return n + (n === 1 ? ' line' : ' lines'); }
@@ -2344,7 +2340,10 @@ ACT.pkfix = () => { const q = pkQ(), it = pickView(q)[S.ui.pk.i]; if (it.pickSta
 ACT.pkgo = t => pkGo(S.ui.pk.i + Number(t.dataset.d));
 ACT.pkto = t => pkGo(Number(t.dataset.i));
 ACT.pksound = () => { S.prefs.sound = !S.prefs.sound; savePrefs(); if (S.prefs.sound) FEEL.tick(); render(); };
-ACT.pkclose = () => { const q = pkQ(); if (q) flushPicks(q.id).catch(() => {}); FEEL.back(); pop(); };
+ACT.pkclose = () => { const q = pkQ(); if (q) flushPicks(q.id).catch(e => toast(pickKeptWords(e), 6000)); FEEL.back(); pop(); };
+// A pick that did not reach the books stays on this phone (S.pickDraft) and
+// goes with the next tap; the picker is told, not left believing it is done.
+function pickKeptWords(e){ return isNetworkError(e) ? 'No signal — your picks are kept on this phone and go when it is back.' : 'Your picks are kept on this phone but not saved yet — ' + ((e && e.message) || e) + '. They go with your next tap.'; }
 ACT.pkfinish = async () => {
   const q = pkQ(); if (!q) return; S.busy = true; render();
   try { const r = await finishPack(q.id); if (!r) toast('Every line needs an answer first'); else { chimeDone(); S.stack = []; push('load', { fresh: q.id }); } }
@@ -2996,7 +2995,6 @@ async function sendCountOnce(){
   ct.sending = false; if (topType() === 'countresults') render();
 }
 function managerName(){ const m = D().staff.find(s => /manager/i.test(s.role)); return m ? firstWord(m.name) : 'the manager'; }
-function managerPhone(){ const m = D().staff.find(s => /manager/i.test(s.role)); return m ? m.phone : ''; }
 
 /* ---------------- the reveal ---------------- */
 PAGE.countresults = () => {

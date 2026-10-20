@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#16203C">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <title>Omni-Ware Sourcing</title>
 <!-- The phone app's native layer (apps/sourcing). Inert in a browser. It
      lives here rather than in the app's own files so a fix to it reaches
@@ -490,7 +491,7 @@ button,input,select,textarea{font-family:inherit;color:inherit;}
 </head>
 <body>
 <main id="sx_app"><div id="sx_screen" class="sx-screen"></div></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 <script>
 /* ==================================================================
    Omni-Ware Sourcing — finding new items and new suppliers, on a phone.
@@ -961,8 +962,6 @@ function snapKey(){ return 'ow-sourcing-snap:' + (S.user && S.user.id); }
 function saveSnapshot(){ try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, tasks: S.tasks, at: S.loadedAt, data: S.data })); } catch (_e) {} }
 function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('ow-sourcing-snap:' + userId)); return s && s.data ? s : null; } catch (_e) { return null; } }
 
-/* ---------------- who's who ---------------- */
-function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
 function myName(){ const s = myStaff(); return (s && s.name) || (S.user && S.user.email ? S.user.email.split('@')[0] : 'You'); }
 function customerById(id){ return D().customers.find(c => String(c.id) === String(id)) || null; }
