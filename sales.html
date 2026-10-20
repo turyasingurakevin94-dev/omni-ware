@@ -2625,7 +2625,6 @@ function waWaiting(){
 }
 // 52053
 function waFmtWait(mins){ if (mins == null) return '—'; if (mins < 1) return 'just now'; if (mins < 60) return Math.round(mins) + ' min'; if (mins < 48 * 60) return Math.round(mins / 60) + ' h'; return Math.round(mins / 1440) + ' d'; }
-function waSnippet(m){ if (!m) return ''; const body = m.msg_type === 'order' ? 'Order from the catalogue' : (m.body || '[' + m.msg_type + ']'); return (m.direction === 'out' ? 'You: ' : '') + body; }
 // The last 9 digits, as cfNormalisedPhone keeps them.
 function phone9(p){ const d = String(p || '').replace(/[^0-9]/g, ''); return d.length >= 9 ? d.slice(-9) : ''; }
 // 50128: the one customer whose number ends the same, if exactly one does.
@@ -3410,7 +3409,7 @@ function bindSliders(){
     if (el._bound) return; el._bound = true;
     const k = el.querySelector('.k'); let sx = 0, dx = 0, drag = false;
     const max = () => el.clientWidth - k.clientWidth - 8;
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     el.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; sx = e.clientX; dx = 0; k.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', e => { if (!drag) return; dx = Math.max(0, Math.min(max(), e.clientX - sx)); k.style.transform = `translateX(${dx}px)`; });
     const end = () => { if (!drag) return; drag = false; k.style.transition = ''; if (dx >= max() * 0.82) { k.style.transform = `translateX(${max()}px)`; setTimeout(done, 120); } else k.style.transform = ''; };
@@ -3434,10 +3433,6 @@ function moneyIn(fromISO, toISO){ return D().cashTxns.filter(t => t.type === 're
 function ring(pct, size, stroke, col, inner){
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, off = c * (1 - Math.max(0, Math.min(1, pct)));
   return `<span style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" style="transition:stroke-dashoffset 1s"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner}</span></span>`;
-}
-function stripHTML(states, w){
-  const col = { ok: '#0F6B43', ask: '#F5B26B', wait: '#D9D4CB', no: '#8E2A22', way: '#3A3F9B', short: '#F5B26B' };
-  return `<span style="display:flex;gap:2px;width:${w || 58}px">${states.map(s => `<i class="${s.k === 'ask' || s.k === 'way' ? 'sx-blink' : ''}" style="flex:1;height:5px;border-radius:999px;background:${col[s.k] || '#D9D4CB'}"></i>`).join('')}</span>`;
 }
 
 /* ---------------- Today ---------------- */
@@ -3783,7 +3778,6 @@ function ordTotals(q){
   const all = pricedView(q), kept = views.some(v => v.k === 'no') ? pricedView({ ...q, items: keep }) : all;
   return { all: all.total, kept: kept.total, dropped: views.filter(v => v.k === 'no').length, toConfirm: kept.toConfirm };
 }
-function ordDue(q){ return Math.max(0, ordTotals(q).kept - (Number(q.amountPaid) || 0)); }
 
 /* ---------------- Orders ---------------- */
 function ordGroups(list){
@@ -3889,7 +3883,6 @@ function ordFindAll(qs){
   const digits = s.replace(/[^0-9]/g, ''), num = digits ? String(Number(digits)) : '';
   return ordFindIndex().filter(e => e.n.includes(s) || (num && e.id === num) || e.no.includes(s));
 }
-function ordFindHits(qs){ return ordFindAll(qs).slice(0, ORD_FIND_MAX).map(e => e.q); }
 const ORD_STAGE_TINT = { draft: ['#FDEEE1', '#95530C'], awaiting_goods: ['#E4E6FA', '#3A3F9B'], preparing: ['#FDEEE1', '#7A4A02'], pending_delivery: ['#DCEAF8', '#1A5A8A'], completed: ['#E4F4EA', '#0F6B43'] };
 function ordFindRows(qs){
   if (!String(qs || '').trim()) return `<div class="sx-empty" style="padding:18px 8px">Type a client’s name or an order number</div>`;
@@ -4379,7 +4372,6 @@ function ordTellText(q){
   }
   return out.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
 }
-function tellText(q){ return ordTellText(q); }
 
 /* ---------------- the order picture ----------------
    Drawn from the order's own lines (index.html waDrawOrderReceipt's
@@ -6145,7 +6137,6 @@ ACT.nwkeep = () => {
   S.stack = S.stack.filter(p => !['neworder', 'aisles', 'aisle'].includes(p.type)); render();
   toast(`${firstWord(d.client.name) || 'The'}’s order is kept in Drafts`);
 };
-ACT.cleardraft = () => { S.draft = null; saveDraft(); S.stack = S.stack.filter(p => p.type !== 'neworder'); render(); toast('Order cleared'); };
 ACT.nwreview = () => { if (!S.draft) return; S.draft.q = ''; NW.find = null; S.stack = S.stack.filter(p => p.type !== 'aisles' && p.type !== 'aisle'); if (!S.stack.some(p => p.type === 'neworder' || p.type === 'counter')) S.stack.push({ type: S.draft.counter ? 'counter' : 'neworder', args: {} }); render(); const pg = document.querySelector('#sx_pages .sx-page:last-child'); if (pg) pg.scrollTop = 0; };
 
 /* ---------------- charges (the shop's own list, presets.services) ---------------- */

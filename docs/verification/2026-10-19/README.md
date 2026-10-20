@@ -18,7 +18,7 @@ database, never the live shop:
 | The code | Line-by-line reads of the flows, the migrations 0119 to 0135 and the functions, with every claim re-checked by running it: a function extracted and executed, SQL inside `begin … rollback`, or the real screen tapped through. |
 
 The harness lives in the session's scratch folder, not in the repo; the way to
-rebuild it is in section 6. The test suite went from 429 files to 432, all green.
+rebuild it is in section 6. The test suite went from 429 files to 433, all green.
 
 ---
 
@@ -47,6 +47,7 @@ harness, or both. The file and line are where the defect was before the fix.
 | 14 | `owner.html`, `accounts.html`, `manager.html` log lines | A decision-log line that did not save was dropped without a word, under screens saying "in the owner's log". | Code read. | Each says "Done — but the line for the owner's log did not save: …". |
 | 15 | `supplier.html` | "Asked · watch WhatsApp" shown even when asking for the PIN failed; a price proposal dropped silently when its send failed. | Code read. | Both show the reason. |
 | 16 | `sales.html`, `manager.html`, `accounts.html` partial payments | "Stopped part-way … Tell Accounts" carried no reason. | Code read. | The reason is in the message. |
+| 17 | `manager.html` sliders | **Four Manager decisions could not be made by their slider**: accept the yard's trip count, accept a stock count, raise a credit note, void an invoice. Their sliders carry the thing's id in the key (`credit:ask-cr`); the dispatcher looked the handler up by the whole key, found none, and the slide did nothing, silently. `test/manager-decide.test.js` called the handlers directly and stayed green. Found by the dead-code scan: the four handlers had no caller. | grep of `slideHTML('credit:' + …` against `bindSlides`. | Every app's dispatcher falls back to the key's first part; `test/audit-manager-slides.test.js` holds every id-bearing slider to a handler. |
 
 ### Performance, measured
 
@@ -117,7 +118,7 @@ said), all eight apps and their `apps/*/src/transform.js` for the pinned,
 preconnected client.
 
 **Tests**: `test/audit-0136.test.js`, `test/audit-live-refresh.test.js`,
-`test/audit-fail-with-a-reason.test.js`; `test/sales-app.test.js`,
+`test/audit-fail-with-a-reason.test.js`, `test/audit-manager-slides.test.js`; `test/sales-app.test.js`,
 `test/customer-id-overflow.test.js` and `test/phone-push.test.js` updated to
 the new shape.
 
@@ -199,7 +200,29 @@ next round starts there, not from zero.
     full access" policies; 17. Sourcing's 90-second `loadAll` (18 reads) to a
     live set like Accounts and Owner; 18. Manager's blind 60-second re-render.
 
-**Dead code and waste**
+**Dead code, removed in this round**
+
+A comment-stripped, word-boundary scan of every declaration in the fifteen
+app files (the scanner resolves `data-act`, `data-slide`, `onclick` and the
+helpers that build them; there is no `window[name]` or `eval` anywhere)
+found 245 functions with no caller in their own file. Those no test pins
+were removed, one at a time, each removal checked to leave the page
+parsing: **2,250 lines**: 66 functions in `index.html` (whole dead families:
+the old order-board `ot*`, statements `st*`, dashboard `dash*SVG`,
+messages `msg*`, sourcing `sourcing*HTML`, old invoice helpers), 21 in
+`owner.html` (customer-statement and payment-plan machinery copied from
+other apps that the owner's screens never call), 11 in `manager.html`, 10
+in `store.html`, 7 in `accounts.html`, 6 in `sales.html` (including
+`ACT.cleardraft`, which no button named), 4 in `agent.html`, 1 each in
+`buyer.html` and `sourcing.html`. The 130 candidates the 2026-10-09
+verification named were all still dead; none had been removed since.
+Left in place: 100 dead functions that tests still extract and run (the
+tests should go with them), `ACT['slide:tripok']` and `ACT['slide:count']`
+(alive after the dispatcher fix), and about 60 unused CSS classes per
+phone app from one pasted boilerplate block. No table, edge function or
+migration is unreferenced.
+
+**Dead code and waste, remaining**
 
 19. The console (`index.html`) still holds every action the phone apps now
     own; docs/decision-rights.md says each console copy is retired once the

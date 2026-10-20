@@ -716,12 +716,7 @@ function isoOf(ts){ if (!ts) return ''; const d = new Date(typeof ts === 'string
 function msOf(ts){ if (ts == null || ts === '') return 0; if (typeof ts === 'number') return ts; const n = Date.parse(ts); return isNaN(n) ? (Number(ts) || 0) : n; }
 function daysBetween(a, b){ if (!a || !b) return 0; return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
 function hm(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
-// A wait, said the way a clock says it: 2:08, or 25 m under the hour.
-function waitClock(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' m' : Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0'); }
-function waitWords(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 1) return 'just now'; if (mins < 60) return mins + ' min'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : ''); const d = Math.round(h / 24); return d === 1 ? '1 day' : d + ' days'; }
-function minsSince(ms){ return ms ? (Date.now() - ms) / 60000 : 0; }
 function dayLabel(iso){ if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
-function shortDay(iso){ if (!iso) return ''; if (iso === todayISO()) return 'today'; const t = new Date(); t.setDate(t.getDate() + 1); if (iso === isoOf(t)) return 'tomorrow'; return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }); }
 function initials(name){
   const w = String(name || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
   if (!w.length) return '?';
@@ -733,13 +728,10 @@ function tintFor(key){ let h = 0; String(key || '').split('').forEach(c => { h =
 const RUN_COLS = ['#5FC4CF', '#7FB3E0', '#9BA3F0', '#E3A9D3', '#F0C27B', '#8ED1A6'];
 function avatar(name, key, size, round){ const t = tintFor(key || name); size = size || 40; return `<span class="bx-av${round ? ' round' : ''}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]}">${esc(initials(name))}</span>`; }
 function firstWord(name){ return String(name || '').trim().split(/\s+/)[0] || ''; }
-// "St. Mary's Secondary School" reads as "St. Mary's", not "St.".
-function shortName(name){ const w = String(name || '').trim().split(/\s+/).filter(Boolean); if (!w.length) return ''; return (w.length > 1 && (w[0].length <= 3 || /\.$/.test(w[0]))) ? w[0] + ' ' + w[1] : w[0]; }
 function phoneDigits(p){ let d = String(p || '').replace(/[^0-9]/g, ''); if (d.startsWith('0')) d = '256' + d.slice(1); else if (d && !d.startsWith('256')) d = '256' + d; return d; }
 // index.html 63165
 function waComposeUrl(phone, msg){ const d = phoneDigits(phone); return d ? `https://wa.me/${d}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`; }
 function telUrl(phone){ const d = phoneDigits(phone); return d ? 'tel:+' + d : ''; }
-function fmtPhone(p){ return String(p || '').trim(); }
 // index.html 97745
 function contactPhones(rec){ return [rec && rec.phone, rec && rec.phone2].map(x => String(x || '').trim()).filter(Boolean); }
 function fmtUGX(n){ return Number(n).toLocaleString('en-UG') + ' UGX'; }
@@ -801,7 +793,6 @@ const ITEM_ICONS = [
   [/timber|wood|plank|board|ply/i, 'M3 8h18v8H3zM7 8v8M12 8v8M17 8v8'],
 ];
 function itemIcon(name){ const hit = ITEM_ICONS.find(([re]) => re.test(String(name || ''))); return hit ? hit[1] : 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10'; }
-function itemTile(name, tint, size){ size = size || 30; return `<span class="bx-tile" style="width:${size}px;height:${size}px;background:${tint[0]};color:${tint[1]}"><svg width="${Math.round(size * .6)}" height="${Math.round(size * .6)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${itemIcon(name)}"/></svg></span>`; }
 
 let toastTimer = null;
 function toast(msg, ms){
@@ -918,14 +909,6 @@ Object.assign(ICON, {
 });
 
 
-/* ---------------- slide to do it ---------------- */
-function slideHTML(id, label, icon, opts){
-  opts = opts || {};
-  return `<div class="bx-slide settle${opts.mint ? ' mint' : ''}${opts.amber ? ' amber' : ''}" data-slide="${id}" ${opts.disabled ? 'aria-disabled="true"' : ''}>
-    <span class="road" aria-hidden="true"></span><span class="fill" aria-hidden="true"></span>
-    <span class="lab" aria-hidden="true"><b>${esc(label)}</b><i>›››</i></span><span class="flag" aria-hidden="true"></span>
-    <button type="button" class="k" aria-label="${esc(label)}. Drag right, or press Enter">${ic(icon || 'arrow', 24, 'style="stroke-width:2"')}</button></div>`;
-}
 
 /* ==================================================================
    The owner's rules, carried from sales.html (index.html beneath it):
@@ -1239,8 +1222,6 @@ async function custRecordStatement(cid, st){
   if (error) throw error;
   list.unshift(row); saveSnapshot();
 }
-// A product's own name today, not the name a past line was saved with.
-function nwName(pid, vi, fallback){ const p = productById(pid); return nameParts(pid, vi, p ? productVariantLabel(p, vi == null || vi === '' ? null : Number(vi)) : fallback); }
 /* The plan for an amount: which bills it pays and what they owe after.
    picks = null spreads it oldest first; an array of quote ids pays those
    bills in that order and nothing else (the owner's invoice picker). The
@@ -1466,19 +1447,10 @@ function custAging(c){
   });
 }
 function debtors(){ return memo('debtors', '', () => D().customers.filter(c => (Number(c.debt) || 0) > 0.5)); }
-function owedTotals(){
-  return memo('owedTot', '', () => {
-    const t = { b30: 0, b60: 0, b90: 0, b90p: 0, unknown: 0, all: 0 };
-    debtors().forEach(c => { const a = custAging(c); BANDS.forEach(b => { t[b.k] += a.parts[b.k]; }); t.unknown += a.unknown; t.all += Number(c.debt) || 0; });
-    return t;
-  });
-}
 function lastStatement(cid){ return (D().statementsSent || []).filter(s => String(s.customer_id) === String(cid)).sort((a, b) => String(b.sent_on).localeCompare(String(a.sent_on)))[0] || null; }
-function promiseFor(cid){ const t = todayISO(); return (D().promises || []).filter(p => String(p.customerId) === String(cid) && p.promisedOn >= t).sort((a, b) => a.promisedOn.localeCompare(b.promisedOn))[0] || null; }
 // index.html invTermsOf 72584 / cbDueOfInvoice 117950
 function invTerms(q){ const t = Number(q.termsDays); return t > 0 ? t : (Number(D().presetChaseAfterDays) || 0); }
 function invDue(q){ const t = invTerms(q), s = custISO(q.invoicedAt || q.date); if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + t); return isoOf(d); }
-function invLateDays(q){ const due = invDue(q); return due && due < todayISO() ? daysBetween(due, todayISO()) : 0; }
 // A statement is due when they owe and none went in 30 days (the rule the owner confirms).
 const STMT_EVERY = 30;
 function statementDue(c){ const l = lastStatement(c.id); return (Number(c.debt) || 0) > 0.5 && (!l || daysBetween(String(l.sent_on), todayISO()) >= STMT_EVERY); }
@@ -1672,7 +1644,6 @@ function applyPrefs(){ document.documentElement.classList.toggle('big', !!S.pref
 function go(view){ S.view = view; S.stack = []; closeSheet(true); render(); window.scrollTo(0, 0); }
 function push(type, args){ S.stack.push({ type, args: args || {} }); render(); const p = document.querySelector('.bx-page:last-of-type'); if (p) p.scrollTop = 0; }
 function pop(){ S.stack.pop(); render(); }
-function replaceTop(type, args){ S.stack[S.stack.length - 1] = { type, args: args || {} }; render(); }
 function topArgs(){ return S.stack.length ? S.stack[S.stack.length - 1].args : {}; }
 window.bxBack = function(){
   if (S.busy) { toast('One moment — it is still being written'); return true; }
@@ -1746,14 +1717,7 @@ function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/>${p > 0 ? `<circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/>` : ''}</svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function sheetTop(title, eyebrow, eyeCol, opts){
-  opts = opts || {};
-  return `<button class="tapback" data-act="back" aria-label="Back"></button>`;
-}
 function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
-function waBtn(href, label, extraAct){ return `<a class="bx-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
-function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'bx-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'bx-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
-function callSmall(phone, name){ const u = telUrl(phone); return `<a ${u ? `href="${u}"` : 'aria-disabled="true"'} aria-label="Call ${esc(name)}" style="width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;${u ? '' : 'opacity:.35'}">${ic('phone', 16)}</a>`; }
 function emptyCard(title, sub){ return `<div class="bx-card"><div class="bx-empty"><b>${esc(title)}</b>${esc(sub || '')}</div></div>`; }
 function bindSlides(){
   document.querySelectorAll('[data-slide]').forEach(el => {
@@ -3403,7 +3367,6 @@ function nmInvoicesIn(from, to){ return D().savedQuotes.filter(q => { if (!nmIsS
 function nmAddDays(iso, n){ const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function nmMonthEnd(iso){ const d = new Date(iso + 'T00:00:00'); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0); return e.getFullYear() + '-' + String(e.getMonth() + 1).padStart(2, '0') + '-' + String(e.getDate()).padStart(2, '0'); }
 function nmMonthName(iso){ return new Date((iso || todayISO()) + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long' }); }
-function nmIsWholeMonth(from, to){ return String(from).slice(8) === '01' && to === nmMonthEnd(from); }
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* The owner's open 'sales' goal that covers today (manager_notes kind
@@ -3444,7 +3407,6 @@ function salesTarget(){
 }
 
 
-function monthEndOf(iso){ return nmMonthEnd(iso); }
 function nextMonthStart(){ const d = new Date(todayISO() + 'T00:00:00'); const n = new Date(d.getFullYear(), d.getMonth() + 1, 1); return isoOf(n); }
 function goalFor(from){ return (D().targets || []).filter(t => { const b = t.body || {}; return !b.who && b.metric === 'sales' && b.from === from; })
   .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))[0] || null; }
@@ -3473,8 +3435,6 @@ async function setShopGoal(from, aim){
 function team(){ return (D().staff || []).slice().sort((a, b) => HIRE_ROLES.indexOf(a.role) - HIRE_ROLES.indexOf(b.role) || a.name.localeCompare(b.name)); }
 function payMonthly(s){ return s.payBasis === 'monthly' && s.payRate > 0 ? s.payRate : 0; }
 function payWords(s){ const r = Number(s.payRate) || 0; if (!(r > 0) || !s.payBasis) return 'no pay set'; return n0(r) + ' a ' + (s.payBasis === 'daily' ? 'day' : s.payBasis === 'weekly' ? 'week' : 'month'); }
-// A login that has not been taken up yet: a role with its own app, and no user on the row.
-function hasApp(s){ return !!roleOf(s.role).app; }
 function pending(s){ return !s.userId; }
 function roleGroups(){
   const m = new Map();
@@ -3483,7 +3443,6 @@ function roleGroups(){
     other: people.filter(s => s.payBasis && s.payBasis !== 'monthly' && s.payRate > 0), pend: people.filter(pending) }))
     .sort((a, b) => HIRE_ROLES.indexOf(a.role) - HIRE_ROLES.indexOf(b.role));
 }
-function signedInCount(){ const ids = new Set((D().members || []).map(m => String(m.user_id))); return team().filter(s => s.userId && ids.has(String(s.userId))).length; }
 
 /* ---- set-up: what is done ---- */
 function setupSteps(){

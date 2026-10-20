@@ -699,12 +699,9 @@ function isoOf(ts){ if (!ts) return ''; const d = new Date(typeof ts === 'string
 function msOf(ts){ if (ts == null || ts === '') return 0; if (typeof ts === 'number') return ts; const n = Date.parse(ts); return isNaN(n) ? (Number(ts) || 0) : n; }
 function daysBetween(a, b){ if (!a || !b) return 0; return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5); }
 function hm(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
-// A wait, said the way a clock says it: 2:08, or 25 m under the hour.
-function waitClock(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' m' : Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0'); }
 function waitWords(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 1) return 'just now'; if (mins < 60) return mins + ' min'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : ''); const d = Math.round(h / 24); return d === 1 ? '1 day' : d + ' days'; }
 function minsSince(ms){ return ms ? (Date.now() - ms) / 60000 : 0; }
 function dayLabel(iso){ if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
-function shortDay(iso){ if (!iso) return ''; if (iso === todayISO()) return 'today'; const t = new Date(); t.setDate(t.getDate() + 1); if (iso === isoOf(t)) return 'tomorrow'; return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }); }
 function initials(name){
   const w = String(name || '?').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
   if (!w.length) return '?';
@@ -716,13 +713,10 @@ function tintFor(key){ let h = 0; String(key || '').split('').forEach(c => { h =
 const RUN_COLS = ['#5FC4CF', '#7FB3E0', '#9BA3F0', '#E3A9D3', '#F0C27B', '#8ED1A6'];
 function avatar(name, key, size, round){ const t = tintFor(key || name); size = size || 40; return `<span class="bx-av${round ? ' round' : ''}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]}">${esc(initials(name))}</span>`; }
 function firstWord(name){ return String(name || '').trim().split(/\s+/)[0] || ''; }
-// "St. Mary's Secondary School" reads as "St. Mary's", not "St.".
-function shortName(name){ const w = String(name || '').trim().split(/\s+/).filter(Boolean); if (!w.length) return ''; return (w.length > 1 && (w[0].length <= 3 || /\.$/.test(w[0]))) ? w[0] + ' ' + w[1] : w[0]; }
 function phoneDigits(p){ let d = String(p || '').replace(/[^0-9]/g, ''); if (d.startsWith('0')) d = '256' + d.slice(1); else if (d && !d.startsWith('256')) d = '256' + d; return d; }
 // index.html 63165
 function waComposeUrl(phone, msg){ const d = phoneDigits(phone); return d ? `https://wa.me/${d}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`; }
 function telUrl(phone){ const d = phoneDigits(phone); return d ? 'tel:+' + d : ''; }
-function fmtPhone(p){ return String(p || '').trim(); }
 // index.html 97745
 function contactPhones(rec){ return [rec && rec.phone, rec && rec.phone2].map(x => String(x || '').trim()).filter(Boolean); }
 function fmtUGX(n){ return Number(n).toLocaleString('en-UG') + ' UGX'; }
@@ -1032,10 +1026,6 @@ function nameParts(pid, vi, fallback){
   const s = String(fallback || (p && p.name) || ''), i = s.indexOf(' — ');
   return i > 0 ? { base: s.slice(0, i), variant: s.slice(i + 3) } : { base: s, variant: '' };
 }
-function nameHTML(n, opts){
-  opts = opts || {};
-  return `<span class="sx-nm${opts.cls ? ' ' + opts.cls : ''}"><span class="b" title="${esc(n.base)}">${esc(n.base)}</span>${n.variant ? `<span class="v">${esc(n.variant)}</span>` : ''}</span>`;
-}
 function stockKey(pid, vi){ return (vi == null || vi === '') ? pid : `${pid}::${vi}`; }
 function getStockQty(pid, vi){ return Number(D().stock[stockKey(pid, vi)]) || 0; }
 function getFIFOUnitCost(pid, vi){ const lots = D().stockLots[stockKey(pid, vi)] || []; const lot = lots.find(l => l.qty > 0 && l.cost != null); return lot ? Number(lot.cost) : null; }
@@ -1198,7 +1188,6 @@ function quoteTotal(q){ const credited = (q.creditNotes || []).reduce((s, cn) =>
 function balanceDue(q){ return Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)); }
 function shopCreditPct(){ const n = Number(D().presetCreditPct); return Number.isFinite(n) && n > 0 ? n : 0; }
 function invoiceLabel(q){ return 'INV-' + String(q.id).padStart(4, '0'); }
-function orderNo(q){ return '#' + String(q.id).padStart(4, '0'); }
 
 function customerOrdersFor(cid){
   return memo('orders', cid, () => {
@@ -1235,8 +1224,6 @@ function nmInvoiceSales(q){
 function nmInvoicesIn(from, to){ return D().savedQuotes.filter(q => { if (!nmIsSale(q)) return false; const d = nmInvoiceDate(q); return !!d && d >= from && d <= to; }); }
 function nmAddDays(iso, n){ const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function nmMonthEnd(iso){ const d = new Date(iso + 'T00:00:00'); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0); return e.getFullYear() + '-' + String(e.getMonth() + 1).padStart(2, '0') + '-' + String(e.getDate()).padStart(2, '0'); }
-function nmMonthName(iso){ return new Date((iso || todayISO()) + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long' }); }
-function nmIsWholeMonth(from, to){ return String(from).slice(8) === '01' && to === nmMonthEnd(from); }
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* The owner's open 'sales' goal that covers today (manager_notes kind
@@ -1885,24 +1872,11 @@ document.addEventListener('input', e => { const t = e.target.closest('[data-in]'
 ACT.push = t => { FEEL.open(); push(t.dataset.p, { ...t.dataset }); };
 /* ---------------- shared pieces ---------------- */
 function greeting(){ const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
-// A ring of coloured arcs, each a share of the whole, with a label inside.
-function segRing(segs, size, stroke, inner, label){
-  const total = segs.reduce((s, x) => s + x.n, 0) || 1, r = (size - stroke) / 2;
-  let at = 0;
-  const arcs = segs.filter(x => x.n > 0).map(x => { const len = x.n / total * 100, gap = segs.filter(y => y.n > 0).length > 1 ? 1.2 : 0;
-    const s = `<circle class="a-ring${x.blink ? ' a-blink' : ''}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${x.col}" stroke-width="${stroke}" pathLength="100" stroke-dasharray="${Math.max(0.01, len - gap).toFixed(2)} ${(100 - len + gap).toFixed(2)}" stroke-dashoffset="${(-at).toFixed(2)}"/>`; at += len; return s; }).join('');
-  return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${stroke}"/>${arcs}</svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
-}
 function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function sheetTop(title, eyebrow, eyeCol, opts){
-  opts = opts || {};
-  return `<button class="tapback" data-act="back" aria-label="Back"></button>`;
-}
 function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
-function waBtn(href, label, extraAct){ return `<a class="bx-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
 function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'bx-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'bx-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
 function callSmall(phone, name){ const u = telUrl(phone); return `<a ${u ? `href="${u}"` : 'aria-disabled="true"'} aria-label="Call ${esc(name)}" style="width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;${u ? '' : 'opacity:.35'}">${ic('phone', 16)}</a>`; }
 function emptyCard(title, sub){ return `<div class="bx-card"><div class="bx-empty"><b>${esc(title)}</b>${esc(sub || '')}</div></div>`; }
@@ -1921,7 +1895,7 @@ function bindSlides(){
     let sx = 0, x = 0, drag = false, step = 0;
     const max = () => el.offsetWidth - 56;
     const paint = () => { k.style.transform = `translateX(${x.toFixed(1)}px)`; fill.style.width = (x + 56).toFixed(1) + 'px'; lab.style.opacity = Math.max(0, 1 - x / max() * 1.6).toFixed(2); };
-    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const f = ACT['slide:' + el.dataset.slide]; if (f) f(el); };
+    const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     k.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; S.dragging = true; sx = e.clientX; x = 0; step = 0; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(0, Math.min(max(), e.clientX - sx)); const s = Math.floor(x / max() * 4); if (s !== step) { step = s; if (s > 0) FEEL.tick(); } paint(); });
     const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * 0.86) { x = max(); paint(); setTimeout(done, 120); } else { if (x > 8) FEEL.back(); x = 0; paint(); } };
