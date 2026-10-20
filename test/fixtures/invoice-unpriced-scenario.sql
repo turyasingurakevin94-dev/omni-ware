@@ -79,6 +79,7 @@ grant execute on function _is to authenticated;
 -- ---- what counts as nobody, and as a line to price
 select _try('check: generic names are nobody', 'ok', $q$select _is($c$ow_generic_client('Walk-in') and ow_generic_client(' walk in ') and ow_generic_client('WALKIN') and ow_generic_client('Cash sale') and ow_generic_client('') and ow_generic_client(null) and ow_generic_client('Counter')$c$)$q$);
 select _try('check: a real name is somebody', 'ok', $q$select _is($c$not ow_generic_client('Kato Construction') and not ow_generic_client('Hajat @Faluk') and not ow_generic_client('Cashew Traders') and not ow_generic_client('Walker Hardware')$c$)$q$);
+select _try('check: a line the client waits for (no supplier yet) is not a line to price', 'ok', $q$select _is($c$ow_order_unpriced('11111111-1111-1111-1111-111111111111', '[{"productId":"P2","qty":5,"price":0,"supplierId":"","clientWaits":true}]', '{}') = 0 and ow_order_unpriced('11111111-1111-1111-1111-111111111111', '[{"productId":"P2","qty":5,"price":0,"supplierId":""}]', '{}') = 1$c$)$q$);
 select _try('check: Q-0541''s shape has one line to price; a settled zero line is none', 'ok', $q$select _is($c$ow_order_unpriced('11111111-1111-1111-1111-111111111111', (select payload->'items' from saved_quotes where id=9501), '{}') = 1 and ow_order_unpriced('11111111-1111-1111-1111-111111111111', (select payload->'items' from saved_quotes where id=9506), '{}') = 0$c$)$q$);
 
 -- ---- the Manager's Invoice button

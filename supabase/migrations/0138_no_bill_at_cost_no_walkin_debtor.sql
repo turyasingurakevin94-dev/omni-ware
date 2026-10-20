@@ -62,7 +62,7 @@ language sql immutable as $$
 $$;
 
 -- How many lines on an order still have no selling price (and are not
--- settled to nothing by a short pick).
+-- settled to nothing by a short pick, nor waiting for Sourcing to find).
 create or replace function ow_order_unpriced(p_shop_id uuid, p_items jsonb, p_presets jsonb)
 returns int
 language sql stable as $$
@@ -70,6 +70,9 @@ language sql stable as $$
     from jsonb_array_elements(case when jsonb_typeof(p_items) = 'array' then p_items else '[]'::jsonb end) e
    where jsonb_typeof(e) = 'object'
      and coalesce(ow_num(e ->> 'qty'), 0) > 0
+     -- A line the client waits for (buyer.html "client waits": no supplier has it yet) is not
+     -- part of this delivery: Sourcing hunts it, and it is sold when it is found.
+     and not (coalesce(e ->> 'clientWaits', '') in ('true', '1') and coalesce(e ->> 'supplierId', '') = '')
      and ow_line_to_confirm(p_shop_id, e, coalesce(p_presets, '{}'::jsonb))
 $$;
 revoke all on function ow_order_unpriced(uuid, jsonb, jsonb) from public, anon;
