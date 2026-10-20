@@ -105,7 +105,28 @@ function fakeDb(tb){
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
   };
   return { writes, tb, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: x => new Q(x),
-    rpc: async (name, a) => name === 'next_row_id_blocks' ? { data: { [a.p_kinds[0]]: Math.max(nextId++, Number(a.p_floors[a.p_kinds[0]]) + 1) }, error: null } : { data: null, error: { message: 'no rpc' } } };
+    rpc: async (name, a) => {
+      if (name === 'next_row_id_blocks') return { data: { [a.p_kinds[0]]: Math.max(nextId++, Number(a.p_floors[a.p_kinds[0]]) + 1) }, error: null };
+      // 0138 trip_cash_count, as the server does it: a Stock Purchase line per
+      // stop, the short/over line, the count on the trips, the bills paid.
+      if (name === 'trip_cash_count') {
+        const trips = (tb.collection_trips || []).filter(t => a.p_trip_ids.includes(t.id)), date = new Date().toISOString().slice(0, 10), cashRows = [], paidTxns = [], bills = [];
+        let given = 0, paid = 0;
+        trips.forEach(t => {
+          given += Number(t.cash_given) || 0;
+          const p = Math.round((t.lines || []).reduce((s, l) => s + (l.gotQty == null ? 0 : Number(l.gotQty) * (l.gotPrice != null ? Number(l.gotPrice) : Number(l.expectedPrice) || 0)), 0)); paid += p;
+          if (p <= 0) return;
+          const row = { id: nextId++, shop_id: a.p_shop_id, date, account: 'cash', type: 'payment', category: 'Stock Purchase', amount: p, description: 'Paid at S1 on the buyer\'s trip ' + t.id, time: '09:00' };
+          writes.push(['insert', 'cash_txns', clone(row)]); (tb.cash_txns || (tb.cash_txns = [])).push(clone(row)); cashRows.push(row); paidTxns.push({ tripId: t.id, cashTxnId: row.id, amount: p, supplierId: t.supplier_id });
+        });
+        const counted = Math.round(a.p_counted), diff = counted - (given - paid); let cashTxnId = null;
+        if (Math.abs(diff) >= 1) { const row = { id: nextId++, shop_id: a.p_shop_id, date, account: 'cash', type: diff < 0 ? 'payment' : 'receipt', category: diff < 0 ? 'Cash Shortage' : 'Cash Overage', amount: Math.abs(diff), description: 'Short on the trip cash', time: '09:00' }; writes.push(['insert', 'cash_txns', clone(row)]); tb.cash_txns.push(clone(row)); cashRows.push(row); cashTxnId = row.id; }
+        const count = { group: a.p_trip_ids, given, paid, expected: given - paid, counted, diff, cashTxnId, paidTxns, at: new Date().toISOString() };
+        trips.forEach(t => { writes.push(['update', 'collection_trips', { cash_count: clone(count) }]); t.cash_count = clone(count); });
+        return { data: { given, paid, counted, diff, cashTxnId, paidTxns, bills, count, cashRows }, error: null };
+      }
+      return { data: null, error: { message: 'no rpc' } };
+    } };
 }
 
 /* ---------------- the page, in a sandbox ---------------- */
@@ -316,8 +337,9 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     // A trip's cash, short.
     X.S.stack = [{ type: 'tripcash', args: { key: X.tripsToCount()[0].key, counted: 150000 } }];
     await X.ACT['slide:tripcash']();
-    const trip = db.tb.collection_trips[0], sh = db.writes.filter(w => w[1] === 'cash_txns').pop()[2];
+    const trip = db.tb.collection_trips[0], cashW = db.writes.filter(w => w[1] === 'cash_txns'), sh = cashW.pop()[2], stop = cashW.pop()[2];
     t.check(trip.cash_count && trip.cash_count.expected === 200000 && trip.cash_count.diff === -50000 && sh.category === 'Cash Shortage' && sh.amount === 50000, 'a trip’s cash 50,000 short is counted on the trip and booked as a Cash Shortage');
+    t.check(stop.category === 'Stock Purchase' && stop.amount === 300000 && stop.type === 'payment' && X.txnById(stop.id) && X.txnById(sh.id), 'the 300,000 paid at the stop is a Stock Purchase line (0138), and both lines are on the phone');
     // A loan repaid, an asset bought.
     X.S.stack = [{ type: 'loans', args: { lid: 1, amt: 111000, acct: 'bank' } }];
     await X.ACT['slide:loanrepay']();
@@ -351,7 +373,7 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     t.check(/30,000<\/span> of it has no date/.test(X.PAGE.account({ id: 'C3' })), 'fix 9: their account names the part with no date');
   }
   {
-    // Fix 10: a bill invoice_order raised (0138) carries payload.dueDate from the supplier's terms; Bills and Today read it.
+    // Fix 10: a bill invoice_order raised (0139) carries payload.dueDate from the supplier's terms; Bills and Today read it.
     const ahead = d => { const x = new Date(Date.now() + d * 864e5); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
     const { X } = await page(tb => tb.purchase_invoices.push({ id: 23, shop_id: SH, quote_id: 11, date: iso(27), payload: { supplierId: 'S1', supplierName: 'Steel & Tube', dueDate: ahead(3), items: [{ productId: 'P1', productName: 'Iron sheets', qty: 2, price: 30000 }], amountPaid: 0 } }));
     const b = X.D().bills.find(x => x.id === 23);

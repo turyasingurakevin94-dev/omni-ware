@@ -13,7 +13,7 @@
  *   2. A REAL database, when OW_PG names one: every migration in order, a
  *      shop with C001..C999 on file, then the shared-foundation scenario --
  *      whose invoices make new customers -- must pass, and they must be
- *      C1000 and C1001 (a walk-in is nobody since 0138, so it makes none).
+ *      C1000 and C1001 (a walk-in is nobody since 0139, so it makes none).
  *
  * Run: node test/customer-id-overflow.test.js
  *      OW_PG="host=/tmp port=5544 user=postgres" node test/customer-id-overflow.test.js
@@ -50,9 +50,9 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
   const last = re => files.filter(f => re.test(read('supabase/migrations/' + f))).pop();
   // 0136 re-states ow_invoice_core once more (the invoice label past 9999)
   // and test/audit-0136.test.js holds it to 0135's text but for that line;
-  // 0138 re-states it again (no bill at cost, no walk-in debtor) and
+  // 0139 re-states it again (no bill at cost, no walk-in debtor) and
   // test/invoice-unpriced-db.test.js holds it to 0136's but for those.
-  t.check(last(/create or replace function ow_invoice_core\(/) === '0138_no_bill_at_cost_no_walkin_debtor.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0138 is the last word on the core and 0135 on next_entity_id');
+  t.check(last(/create or replace function ow_invoice_core\(/) === '0139_no_bill_at_cost_no_walkin_debtor.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0139 is the last word on the core and 0135 on next_entity_id');
   t.check(/\| 0135 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0135 for it');
 }
 

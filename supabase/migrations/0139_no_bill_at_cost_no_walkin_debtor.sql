@@ -29,7 +29,7 @@
 --    item 3). Each order it cannot invoice pushes the Manager once a day:
 --    a price to set (price.approve), anything else (invoice.make).
 --
--- ow_invoice_core is 0136's, with the marked changes (0138:).
+-- ow_invoice_core is 0136's, with the marked changes (0139:).
 -- Applied by hand after 0136. Safe to run twice.
 --
 -- CHECK AFTERWARDS:
@@ -137,14 +137,14 @@ begin
   if exists (select 1 from jsonb_array_elements(items) e where ow_line_waits_price(p_shop_id, e, presets)) then
     raise exception 'A price on % still waits for the Manager.', inv_label using errcode = 'OWPRC';
   end if;
-  -- 0138: a line still with no selling price is never billed (at cost or at all): the Manager prices it first.
+  -- 0139: a line still with no selling price is never billed (at cost or at all): the Manager prices it first.
   if ow_order_unpriced(p_shop_id, items, presets) > 0 then
     raise exception '% line% on % still % no selling price: the Manager prices % first.',
       ow_order_unpriced(p_shop_id, items, presets), case when ow_order_unpriced(p_shop_id, items, presets) = 1 then '' else 's' end, inv_label,
       case when ow_order_unpriced(p_shop_id, items, presets) = 1 then 'has' else 'have' end,
       case when ow_order_unpriced(p_shop_id, items, presets) = 1 then 'it' else 'them' end using errcode = 'OWTPC';
   end if;
-  -- 0138: a supplier bill already on the order (the console's "a supplier's bill ... for a sale")
+  -- 0139: a supplier bill already on the order (the console's "a supplier's bill ... for a sale")
   -- is kept, and only the suppliers without one are billed below; it is no longer refused (OWBIL).
 
   -- orderIsBackdated: a late entry is invoiced on its own date.
@@ -203,7 +203,7 @@ begin
     if coalesce(sid, '') not in ('', '__stock__') and not (sid = any(sids)) then sids := sids || sid; end if;
   end loop;
   foreach sid in array sids loop
-    -- 0138: this supplier's bill for this order is on file already: keep it, raise no second one.
+    -- 0139: this supplier's bill for this order is on file already: keep it, raise no second one.
     select b.id into bill_id from purchase_invoices b
      where b.shop_id = p_shop_id and b.quote_id = p_quote_id and b.payload ->> 'supplierId' = sid
        and coalesce(b.payload ->> 'voided', 'false') <> 'true'
@@ -236,7 +236,7 @@ begin
            'supplierName', coalesce((select s.name from suppliers s where s.shop_id = p_shop_id and s.id = sid),
                                     (select e ->> 'supplierName' from jsonb_array_elements(out_items) e where e ->> 'supplierId' = sid limit 1), ''),
            'items', bill_items, 'amountPaid', 0, 'payments', '[]'::jsonb, 'voided', false)
-           -- 0138: due on the supplier's terms, as Accounts' own bill form sets it (fix 10).
+           -- 0139: due on the supplier's terms, as Accounts' own bill form sets it (fix 10).
            || coalesce((select jsonb_build_object('dueDate', to_char(inv_at + s.terms_days, 'YYYY-MM-DD'))
                           from suppliers s where s.shop_id = p_shop_id and s.id = sid and s.terms_days is not null), '{}'::jsonb));
     bills := bills || to_jsonb(bill_id);
@@ -252,7 +252,7 @@ begin
     if coalesce(pay ->> 'customerId', '') <> '' then
       select * into c from customers where shop_id = p_shop_id and id = pay ->> 'customerId' for update;
     end if;
-    -- 0138: a generic name ("Walk-in", "Cash") is nobody: never matched, never made a debtor.
+    -- 0139: a generic name ("Walk-in", "Cash") is nobody: never matched, never made a debtor.
     if c.id is null and client is not null and not ow_generic_client(client) then
       select * into c from customers where shop_id = p_shop_id and lower(btrim(coalesce(name, ''))) = lower(client)
        order by id limit 1 for update;
@@ -263,7 +263,7 @@ begin
           returning * into c;
       end if;
     end if;
-    -- 0138: money still owed with nobody to owe it goes back to the Manager, not into a made-up debtor.
+    -- 0139: money still owed with nobody to owe it goes back to the Manager, not into a made-up debtor.
     if c.id is null and delta > 0 then
       raise exception '% leaves % unpaid and no customer to owe it: name the customer on the order, or take the money first.',
         inv_label, trim(to_char(desired, 'FM999,999,999,990')) using errcode = 'OWWLK';

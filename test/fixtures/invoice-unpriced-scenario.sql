@@ -1,4 +1,4 @@
--- 0138, asked of a real database: a delivered order with a line still to
+-- 0139, asked of a real database: a delivered order with a line still to
 -- price is never invoiced (by the Manager's button or the hourly run), a
 -- generic name is never made a debtor, and the hourly run tells the
 -- Manager what it skipped. The shape is Q-0541's (19 Oct 2026).

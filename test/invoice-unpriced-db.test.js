@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The end-to-end test of 19 Oct 2026, fix 2 (0138): invoicing never bills
+ * The end-to-end test of 19 Oct 2026, fix 2 (0139): invoicing never bills
  * a line that still has no selling price (Q-0541 billed 6 such lines at
  * cost), never makes a debtor of a generic name ("Walk-in"), and the
  * hourly run tells the Manager what it skipped.
  *
  *   1. The SQL text: the refusals, where they sit, and the hourly push.
  *   2. A REAL database, when OW_PG names one: every migration in order,
- *      0138 run twice, then test/fixtures/invoice-unpriced-scenario.sql.
+ *      0139 run twice, then test/fixtures/invoice-unpriced-scenario.sql.
  *
  * Run: node test/invoice-unpriced-db.test.js
  *      OW_PG="host=/var/tmp/owpg port=5499 user=postgres" node test/invoice-unpriced-db.test.js
@@ -18,8 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('no bill at cost, no walk-in debtor (0138)');
-const raw = read('supabase/migrations/0138_no_bill_at_cost_no_walkin_debtor.sql');
+const t = createReporter('no bill at cost, no walk-in debtor (0139)');
+const raw = read('supabase/migrations/0139_no_bill_at_cost_no_walkin_debtor.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the refusals, in the one core both callers use ---------------- */
@@ -49,7 +49,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
     'the hourly run pushes each order it skips, once a day');
   t.check(/when v_code in \('OWTPC', 'OWPRC'\) then 'price\.approve'/.test(run) && !/to_role|'owner'/.test(run), 'to the task that clears it, never the owner');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
-  t.check(/\| 0138 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0138 for this build');
+  t.check(/\| 0139 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0139 for this build');
 }
 
 /* ---------------- 2. on a real database ---------------- */
@@ -74,8 +74,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0138_no_bill_at_cost_no_walkin_debtor.sql')]);
-t.check(again.status === 0, `0138 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0139_no_bill_at_cost_no_walkin_debtor.sql')]);
+t.check(again.status === 0, `0139 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'invoice-unpriced-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

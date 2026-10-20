@@ -1827,7 +1827,7 @@ function pushOpen(d){
     if (k === 'pick.short') { if (shortPicks().some(y => same(y.q.id))) { S.ui.spPick = null; S.ui.spDone = null; open('shortpick', { id }); } else open(); return; }
     if (k === 'agent.change' || k === 'agent.cancel') { if (agentAsks().some(y => same(y.q.id))) { S.ui.agKeep = null; open('agentask', { id }); } else open(); return; }
     if (k === 'order.delivered') { open('invoices'); return; }
-    // 0138: the hourly run could not invoice it; open what clears it.
+    // 0139: the hourly run could not invoice it; open what clears it.
     if (k === 'invoice.held') {
       const c = String(d.code || '');
       if (c === 'OWTPC' || c === 'OWPRC') { pushOpen({ ...d, kind: 'price.waits' }); return; }
@@ -2867,7 +2867,7 @@ function linePriceNow(it){ return Math.round(Number(it.sellPrice) > 0 ? Number(i
 function reviewFresh(it){ const r = it && it.priceReview; return !!r && Number(r.price) === linePriceNow(it) && Number(r.qty) === Number(it.qty); }
 // A salesperson's own price, tagged (sales.html placedPriceTag); or a line with no selling price
 // at all that nobody tagged (an order made before the tag, or on the console): the invoice
-// refuses those since 0138 (OWTPC), so the Manager prices them here. A line settled to 0 is none.
+// refuses those since 0139 (OWTPC), so the Manager prices them here. A line settled to 0 is none.
 function lineWaitsPrice(it){
   if (!it || reviewFresh(it)) return false;
   if (it.priceBy) return ['under', 'nomargin', 'nocost'].includes(it.priceNote);

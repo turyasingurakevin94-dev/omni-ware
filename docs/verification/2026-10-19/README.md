@@ -5,15 +5,16 @@ one system: each workflow from its first tap to its last write, on slow
 networks and with things going wrong, for bugs, dead code, waste and
 failures that say nothing, and for the shortest path to each job. This
 folder is the record: what was run, what was found and proved, what was
-fixed (migrations 0136 and 0137 and the matching app changes, with tests),
-and what remains, in priority order.
+fixed (migrations 0136, 0137 and 0138 and the matching app changes, with
+tests), and what remains, in priority order. Section 7 is the second day: one
+order driven through all five apps as one scenario, and what that found.
 
 **How it was tested.** Three layers, all against real code and a real
 database, never the live shop:
 
 | Layer | What runs |
 |---|---|
-| A real database | Postgres 16 with **all 137 migrations applied in order, 0 failures**, behind PostgREST 12 with `max_rows = 1000`, the same cap as the hosted project. Row-level security runs as the signed-in person: every probe impersonates a seeded login (Grace in Sales, Denis the Buyer, Musa at the Store, Ruth the Manager, Esther in Accounts, Moses in Sourcing, Joseph the owner: docs/canvas-cast.md). |
+| A real database | Postgres 16 with **all 138 migrations applied in order, 0 failures**, behind PostgREST 12 with `max_rows = 1000`, the same cap as the hosted project. Row-level security runs as the signed-in person: every probe impersonates a seeded login (Grace in Sales, Denis the Buyer, Musa at the Store, Ruth the Manager, Esther in Accounts, Moses in Sourcing, Joseph the owner: docs/canvas-cast.md). |
 | The real apps | `sales.html`, `buyer.html`, `store.html`, `manager.html`, `accounts.html`, `sourcing.html` and `owner.html`, unchanged, in headless Chromium at a phone's size, signed in through their own sign-in screens; every request the page makes goes to that database. The harness can add latency to any request, make any request fail, or cut the signal mid-action. |
 | The code | Line-by-line reads of the flows, the migrations 0119 to 0135 and the functions, with every claim re-checked by running it: a function extracted and executed, SQL inside `begin … rollback`, or the real screen tapped through. |
 
@@ -266,3 +267,101 @@ from docs/canvas-cast.md (one login per role, products with and without
 variants, two customers over their limit, stock and lots), then sign in
 through the app's own screen and tap. Latency, failures and loss of signal
 are injected in the route handler. Everything measured above came from that.
+
+---
+
+## 7. The second day: one order through every app
+
+**The scenario.** Grace (Sales) takes an order for Kato Construction: one bag
+of cement off the shelf and three lengths of hollow section that only Kiseka
+Steel sells. Denis (Buyer) asks Kiseka, records their yes, plans a cash trip,
+loads the steel at Kiseka and hands the trip in. Musa (Store) counts the trip
+in at the yard, picks both lines, loads the truck and delivers with a photo.
+Ruth (Manager) invoices the delivered order. Esther (Accounts) counts the
+trip's cash and records Kato's payment. The same database as day one, which
+holds two shops (the sample shop and the 1,500-order shop from the
+performance run), the real apps in headless Chromium, every write read back
+from the tables after each slide.
+
+**The path, in taps.**
+
+| Leg | Who | Interactions | Writes read back |
+|---|---|---|---|
+| Place the order | Grace | 8 (new order, customer, two searches, two adds, review, slide) | saved_quotes draft, Checking |
+| Ask and confirm | Denis | 4 (order, Ask Kiseka, Ask on WhatsApp, Yes) | supplierConfirms, status awaiting_goods, push order.buying |
+| Plan, load, hand in | Denis | 5 (Plan the trip, slide, Open the truck, All 3 came, slide hand in) | collection_trips collected, prices, pushes trip.back and trip.cash |
+| Yard, pack, load, deliver | Musa | 10 and a photo (Check it in, slide, Start packing, Picked ×2, Packed, Load, road, slide, Deliver, shutter) | stock +3, order preparing → pending_delivery → completed, push order.delivered |
+| Invoice | Ruth | 2 (Invoices, Invoice) | invoiced, stock −1 and −3, debt 243,625, debt log, supplier bill |
+| Count the trip's cash | Esther | 3 (count it, amount, slide) | cash_txns, bill paid, cash_count, log |
+| Record the payment | Esther | 4 (Owed, Kato, Record a payment, slide) | cash_txns, amount_paid, debt 0, debt log |
+
+Thirty-six interactions and one photo from the first tap to the last write,
+across five phones. The only step that could be shorter is the Store's load
+page, which asks for the road again after "Packed · to the truck" when one
+order is packed (one tap; section 4, item 22).
+
+**What it found, and proved by running it.**
+
+1. **The Manager's invoice failed outright on a database with two shops.**
+   "Nothing was changed: duplicate key value violates unique constraint
+   customer_debt_log_pkey". Row ids are counters per shop (0034) while every
+   such table keys on id alone; `ow_invoice_core` floored its debt-log and
+   supplier-bill ids by the shop's own highest id, so the second shop's rows
+   were in the way. The same flooring was in `ow_stock_move`,
+   `accept_stock_count`, `manager_apply_stock_lines`, `next_stock_log_id` and
+   every app's `issueRowId`. And `apply_momo_payment` (0109) inserts its cash
+   line without an id, from an identity sequence nothing had advanced since
+   0034, so a mobile-money receipt on an established shop lands on an id the
+   counter issued long ago. **Fixed in 0138** inside the two allocators, for
+   every caller: table-wide floor, every shop's counter, the identity sequence
+   read and kept ahead, one advisory lock per kind. Re-run: invoiced, stock
+   taken, debt raised, bill raised.
+2. **A trip's price landed on the wrong side of the list, and the
+   salesperson was told of a change that was no change.** Three lengths at
+   the retail 55,000 came back from Kiseka and overwrote the wholesale 52,000
+   (`trip_prices_to_list`); the price trigger then pushed Grace "Hollow
+   section 2x2 is now 55,000. Tell them." while her line was 55,000 all
+   along. **Fixed in 0138**: `ow_price_side` picks the side the quantity
+   buys on, for trips and phone confirmations (the Buyer app now sends the
+   quantity and mirrors the side); `price.changed` prices each matching
+   line at its quantity and pushes only when that figure moved.
+3. **The invoice told nobody.** docs/decision-rights.md: "Told: Accounts,
+   Sales"; the Manager's screen: "Accounts and the salesperson are told"; no
+   push existed. **Fixed in 0138**: `order.invoiced` to Accounts
+   (`invoice.send`) and to whoever took the order, with what is due; Sales
+   opens the order from it, Accounts opens Invoices.
+4. **A cash trip's money never reached the books.** Denis left with 200,000,
+   paid Kiseka 165,000, brought 35,000 back; Esther's count said "it
+   agrees" and wrote nothing: the cash book had no line for the 165,000 that
+   stayed at Kiseka, and the supplier bill the invoice raised for the same
+   steel stood at 165,000 owed ("We owe 165,000" on Accounts' Today). The
+   day's close would then have found the drawer 165,000 short and booked a
+   shortage. The Buyer's "Ask Esther" and Accounts' "Handed over" write no
+   cash line either. **Fixed in 0138**: `trip_cash_count` is one write: a
+   Stock Purchase line per stop, the short or over line, the trips' count,
+   the orders' bills marked paid by the trip, the owner's log line; a bill
+   raised after the count is born paid by the trip and linked to the line
+   (`purchase_invoices_born_paid`, so the hourly auto-invoice is covered).
+   Re-run, 5,000 short: "Taken in · 165,000 paid at the stops is in the
+   book · 5,000 short booked"; the bill shows 165,000 paid on the trip.
+5. **Accounts could not record a customer's payment.** "Stopped part-way:
+   243,625 of 243,625 was recorded — malformed array literal:
+   agentPaymentStatus." 0123's order guard appends a bare literal to a text
+   array; Postgres reads `text[] || 'word'` as array || array. Every
+   Accounts login holds agent.pay, so every payment against an order stopped
+   after the cash line, with the debt still standing. The message was honest
+   (day one's fix); the write was broken. **Fixed in 0138**; re-run: paid,
+   debt 0, "All clear".
+
+**What was looked at and found sound on this path.** The Checking gate and
+its push to the Buyer; the trip's lines, prices and hand-in pushes to the
+Store and Accounts; the yard check-in putting the goods on the shelf and
+moving the order to Packing; picks reaching the order; the load slide moving
+it out and the photo marking it delivered with the push to the Manager; the
+invoice taking stock, raising the debt, the debt log and the bill; the
+payment's cash line, debt log and order. "Ask on WhatsApp" does mark the
+supplier asked (the harness's click on the pop-up link had not completed;
+dispatching the click shows `askedAt` written).
+
+**Tests.** `test/audit-0138.test.js` pins all six; `test/buyer-app.test.js`
+and `test/audit-0136.test.js` were brought up to the new call and push list.
