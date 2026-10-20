@@ -2755,6 +2755,38 @@ function nameHTML(n, opts){
 }
 function stockKey(pid, vi){ return (vi == null || vi === '') ? pid : `${pid}::${vi}`; }
 function getStockQty(pid, vi){ return Number(D().stock[stockKey(pid, vi)]) || 0; }
+/* What is on the shelf to sell (docs/decision-rights.md, rule A): the shelf
+   less what the invoices of live orders will take off it. A line off our
+   stock, or one that came in, on an order past Checking that is not yet
+   invoiced, voided or cancelled -- exactly what ow_invoice_core takes when
+   that order is invoiced. exceptId leaves one order's own lines out. */
+// ow_on_shelf: a line counted in the shelf's pack is that many shelf units.
+function lineShelfUnits(it){
+  const qty = Math.max(0, Number(it.qty) || 0), said = cmpUnitKey(it.unit), su = stockUnitFor(it.productId, it.variantIdx);
+  if (!said || !su.unit || said === cmpUnitKey(su.unit)) return qty;
+  if (su.hasPack && said === cmpUnitKey(su.packUnit)) return qty * (Number(it.packQty) > 0 && cmpUnitKey(it.packUnit) === said ? Number(it.packQty) : su.packQty);
+  return qty;
+}
+function heldIndex(){
+  return memo('held', '', () => {
+    const m = new Map();
+    D().savedQuotes.forEach(q => {
+      if (q.invoiced || q.voided || q.cancelledAt || q.status === 'draft') return;
+      (q.items || []).forEach(it => {
+        if (!it || !it.productId || (it.supplierId !== '__stock__' && !lineReceived(it))) return;
+        const n = lineShelfUnits(it); if (!(n > 0)) return;
+        const k = stockKey(it.productId, it.variantIdx), e = m.get(k) || { all: 0, by: new Map() };
+        e.all += n; e.by.set(String(q.id), (e.by.get(String(q.id)) || 0) + n); m.set(k, e);
+      });
+    });
+    return m;
+  });
+}
+function heldForOrders(productId, variantIdx, exceptId){
+  const e = heldIndex().get(stockKey(productId, variantIdx)); if (!e) return 0;
+  return Math.max(0, e.all - (exceptId != null ? e.by.get(String(exceptId)) || 0 : 0));
+}
+function shelfAvailable(productId, variantIdx, exceptId){ return Math.max(0, getStockQty(productId, variantIdx) - heldForOrders(productId, variantIdx, exceptId)); }
 function getFIFOUnitCost(pid, vi){ const lots = D().stockLots[stockKey(pid, vi)] || []; const lot = lots.find(l => l.qty > 0 && l.cost != null); return lot ? Number(lot.cost) : null; }
 // index.html 55428
 function productPriceRows(pid, vi){ return (IX().rows.get(pid + '|' + (vi == null || vi === '' ? '' : Number(vi))) || []).slice(); }
@@ -2983,7 +3015,7 @@ function makeLine(pid, vi, qty, opts){
   const p = productById(pid); if (!p) return null;
   vi = vi == null || vi === '' ? null : Number(vi);
   qty = Math.max(0, Number(qty) || 0);
-  const shelf = getStockQty(pid, vi), stockCost = getFIFOUnitCost(pid, vi);
+  const shelf = shelfAvailable(pid, vi), stockCost = getFIFOUnitCost(pid, vi);
   const ranked = rankedPurchaseRowsAtQty(pid, vi, qty || 1);
   const best = ranked[0] || null;
   const fromShelf = shelf >= qty && shelf > 0;
@@ -3000,11 +3032,28 @@ function makeLine(pid, vi, qty, opts){
   return it;
 }
 
+/* A line the supplier sells only by the pack (no loose price): the shop
+   buys whole packs (ow_units_bought), so the salesperson can offer the
+   full pack. null when it comes loose, off our shelf, or is a full pack. */
+function linePackOnly(it){
+  if (!it || !it.supplierId || it.supplierId === '__stock__') return null;
+  const row = productPriceRows(it.productId, it.variantIdx).find(r => String(r.supplierId) === String(it.supplierId)), pack = row ? Number(row.packQty) || 0 : 0, qty = Number(it.qty) || 0;
+  if (!row || row.retail != null || !(pack > 0) || !(qty > 0)) return null;
+  const units = Math.ceil(qty / pack) * pack;
+  return { pack, packUnit: row.packUnit || it.packUnit || 'pack', units, extra: units - qty };
+}
+
 /* ---- totals: savedQuoteGoodsTotal 63537 ... savedQuoteTotal 63768 ---- */
 function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * quoteItemSellPrice(it), 0); }
 /* What the salesperson can quote today: lines still to be priced are left
    out and counted, never shown at cost. */
 function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length, pending: (q.items || []).filter(it => it.priceNote === 'nocost' && !linePriceToConfirm(it)).length }; }
+/* A line "Bill what went" settled to nothing (the Manager's short-pick
+   sheet sets its qty to what was packed, 0 here): it is off the order --
+   struck through on the paper, never "to price" or "GOT 0 OF 0". */
+function lineSettledOut(q, it){ return !!(q && it && q.pickSettle && q.pickSettle.pick === 'went' && !(Number(it.qty) > 0)); }
+// pricedView (word for word the Manager's) over the lines still on the order.
+function pricedLive(q){ return (q.items || []).some(it => lineSettledOut(q, it)) ? pricedView({ ...q, items: q.items.filter(it => !lineSettledOut(q, it)) }) : pricedView(q); }
 function chargeAmount(ch, goods){ if (!ch) return 0; const v = Number(ch.value) || 0; if (!(v > 0)) return 0; return ch.type === 'percent' ? Math.round((Number(goods) || 0) * v / 100) : Math.round(v); }
 function chargesTotal(q){ const g = goodsTotal(q); return (q.charges || []).reduce((s, ch) => s + chargeAmount(ch, g), 0); }
 function cashTotal(q){ const gross = goodsTotal(q) + chargesTotal(q); return gross - Math.min(Math.max(0, Number(q.discount) || 0), gross); }
@@ -3012,6 +3061,10 @@ function creditTerms(q){ const c = q && q.credit; if (!c || !(Number(c.pct) > 0)
 function creditCharge(q){ const t = creditTerms(q); return t ? Math.round(cashTotal(q) * t.pct / 100) : 0; }
 function quoteTotal(q){ const credited = (q.creditNotes || []).reduce((s, cn) => s + (cn && !cn.voided ? Number(cn.amount) || 0 : 0), 0); return cashTotal(q) + creditCharge(q) - credited; }
 function balanceDue(q){ return Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)); }
+/* What is still to pay on an order, said one way everywhere: an invoice's
+   balance once invoiced; before that the known-only total (pricedView) less
+   what was paid -- a line still to price is counted, never billed at cost. */
+function orderDue(q){ return q.invoiced ? balanceDue(q) : Math.max(0, pricedLive(q).total - (Number(q.amountPaid) || 0)); }
 function shopCreditPct(){ const n = Number(D().presetCreditPct); return Number.isFinite(n) && n > 0 ? n : 0; }
 function invoiceLabel(q){ return 'INV-' + String(q.id).padStart(4, '0'); }
 function orderNo(q){ return '#' + String(q.id).padStart(4, '0'); }
@@ -3039,6 +3092,7 @@ function lineReceived(it){ return !!(it && it.receivedAt && Number(it.receivedQt
 function lineShort(it){ return orderLineIsBoughtIn(it) && lineReceived(it) ? Math.max(0, (Number(it.qty) || 0) - (Number(it.receivedQty) || 0)) : 0; }
 /* One line's state for the salesperson, in their words. */
 function lineState(q, it){
+  if (lineSettledOut(q, it)) return { k: 'ok', word: 'not sent', col: '#8A93A3' };
   if (!it.supplierId) return { k: 'wait', word: 'waiting for a supplier', col: '#8A93A3' };
   if (it.supplierId === '__stock__') return { k: 'ok', word: 'on the shelf', col: '#767F91' };
   if (q.status === 'draft') {
@@ -3456,11 +3510,11 @@ function viewToday(){
   // One walk over the orders for both the month and today, by time rather than by building a date per order.
   const mMs = Date.parse(mStart + 'T00:00:00'), dMs = Date.parse(today + 'T00:00:00'), month = [], t = [];
   liveOrders().forEach(q => { const ms = createdMs(q); if (ms >= mMs) { month.push(q); if (ms >= dMs && isoOf(ms) === today) t.push(q); } });
-  const monthSold = month.reduce((s, q) => s + pricedView(q).total, 0);
+  const monthSold = month.reduce((s, q) => s + pricedLive(q).total, 0);
   const gone = month.filter(q => stageIdx(q) >= 3).length;
-  const tSold = t.reduce((s, q) => s + pricedView(q).total, 0);
+  const tSold = t.reduce((s, q) => s + pricedLive(q).total, 0);
   const tOut = t.filter(q => stageIdx(q) >= 3).length;
-  const tPaid = t.filter(q => (Number(q.amountPaid) || 0) > 0 && balanceDue(q) === 0).length;
+  const tPaid = t.filter(q => (Number(q.amountPaid) || 0) > 0 && orderDue(q) === 0 && (q.invoiced || !pricedLive(q).toConfirm)).length;
   const inToday = moneyIn(today, today).reduce((s, x) => s + x.amount, 0);
   const pct = month.length ? gone / month.length : 0;
   const bar = (n, of, col) => `<span style="height:6px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;display:block"><span class="sx-grow" style="display:block;height:100%;border-radius:999px;width:${of ? Math.round(n / of * 100) : 0}%;background:${col}"></span></span>`;
@@ -3474,7 +3528,8 @@ function viewToday(){
     // Past the goal the ring is full; the figure says how far past, and never spills out of the ring.
     const pctN = Math.round(frac * 100), pctTxt = pctN >= 1000 ? (Math.floor(frac * 10) / 10).toFixed(frac >= 100 ? 0 : 1) + '×' : pctN + '%';
     ringHTML = `<button class="tdy-goal" data-act="tdygoal" aria-label="${pctN}% of ${esc(period)}’s goal. Open the goal">${tdyGoalRing(frac, pace)}<span class="tdy-goal-in"><span class="m" style="font-size:${pctTxt.length > 4 ? 18 : 22}px;font-weight:600;letter-spacing:-.03em">${pctTxt}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">of goal</span></span></button>`;
-    figHTML = `<span class="tdy-eyebrow">Shop sales · ${esc(period)}</span>
+    // The goal counts invoiced sales only (nmInvoicesIn, as the owner's measure): the card says so.
+    figHTML = `<span class="tdy-eyebrow">Shop sales invoiced · ${esc(period)}</span>
       <span class="m tdy-big" style="${tdyBigSize(tgt.actual)}">${n0(tgt.actual)}</span>
       <span class="tdy-of"><span>of <span class="m" style="color:#DDE3F0">${n0(tgt.aim)}</span></span><span style="color:${ahead ? 'var(--mint)' : 'var(--amber)'}">${ahead ? 'ahead of pace' : 'behind pace'}</span></span>`;
   } else {
@@ -3547,7 +3602,7 @@ function tdyTells(){
 }
 function tdyTellCard(x){
   const q = x.q, name = (q.client && q.client.name) || 'Walk-in', first = firstWord(name) || 'them', by = priceReviewer(x.lines[0]), t = tintFor(name);
-  const was = ordWasTotal(q), now = pricedView(q).total, diff = was == null ? 0 : now - was;
+  const was = ordWasTotal(q), now = pricedLive(q).total, diff = was == null ? 0 : now - was;
   const rows = x.lines.slice(0, 2).map(it => { const r = it.priceReview, qw = ordQty(it);
     return `<div class="tdy-tline"><span class="tx"><b class="ell">${esc(ordItemName(it))}</b><small><span class="m">${n0(qw.n)}</span> ${esc(qw.u)}</small></span><span class="m was">${n0(r.was)}</span>${ic('chev', 14, 'style="stroke-width:2.4;color:var(--ink3)"')}<span class="m now">${n0(r.price)}</span></div>`; }).join('');
   return `<div class="tdy-tell" data-key="tell-${q.id}">
@@ -3598,8 +3653,7 @@ function needsYou(){
   D().customers.forEach(c => {
     // "Owes" is the customer's own balance: someone who owes nothing is not chased.
     if (!(Number(c.debt) > 0)) return;
-    const inv = outstandingInvoices(c.id); if (!inv.length) return;
-    const age = daysBetween(inv[0].invoicedAt || inv[0].date, today);
+    const age = custOldestOrNull(c); if (age == null) return;
     const terms = c.termsDays != null ? Number(c.termsDays) : D().presetChaseAfterDays;
     if (age > terms) out.push({ act: 'customer', id: c.id, icon: 'cash', bg: '#FDEEE1', fg: '#95530C', title: c.name, sub: `<span class="m" style="color:var(--ink2);font-weight:600">${n0(c.debt)}</span> owed · ${age} days`, subHTML: true, label: `Owes ${n0(c.debt)}, oldest bill ${age} days`, cta: 'Collect', w: 1, age });
   });
@@ -3651,7 +3705,7 @@ function tdyFoundHTML(q){
   const orders = D().savedQuotes.filter(o => !o.voided && ((num != null && Number(o.id) === num) || words.every(x => String((o.client && o.client.name) || '').toLowerCase().includes(x)))).map(o => [createdMs(o), o]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
   const html = group('Chats', 'chat', chats.slice(0, 4).map(c => tdyFoundChat(c, null)), chats.length)
     + group('Customers', 'people', custs.slice(0, 4).map(c => `<button class="sx-row" data-act="tdygo" data-k="customer" data-id="${esc(c.id)}">${chatFace(c.name, 36)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(c.name)}</span><span class="ell sx-sub">${esc([c.location, c.phone].filter(Boolean).join(' · '))}</span></span>${c.debt > 0 ? `<span class="m" style="font-size:13px;font-weight:600">${n0(c.debt)}</span>` : ''}</button>`), custs.length)
-    + group('Orders', 'orders', orders.slice(0, 4).map(o => { const st = stageOf(o); return `<button class="sx-row" data-act="tdygo" data-k="order" data-id="${o.id}"><span class="m" style="font-size:13px;font-weight:600;width:52px;flex:none">${orderNo(o)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc((o.client && o.client.name) || 'Walk-in')}</span><span class="sx-sub" style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:9px;background:${st.col}"></i>${st.label} · ${esc(dayLabel(o.date || isoOf(createdMs(o))))}</span></span><span class="m" style="font-size:13px;font-weight:600">${n0(pricedView(o).total)}</span></button>`; }), orders.length);
+    + group('Orders', 'orders', orders.slice(0, 4).map(o => { const st = stageOf(o); return `<button class="sx-row" data-act="tdygo" data-k="order" data-id="${o.id}"><span class="m" style="font-size:13px;font-weight:600;width:52px;flex:none">${orderNo(o)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc((o.client && o.client.name) || 'Walk-in')}</span><span class="sx-sub" style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:9px;background:${st.col}"></i>${st.label} · ${esc(dayLabel(o.date || isoOf(createdMs(o))))}${pricedLive(o).toConfirm ? ` · +${pricedLive(o).toConfirm} to price` : ''}</span></span><span class="m" style="font-size:13px;font-weight:600">${n0(pricedLive(o).total)}</span></button>`; }), orders.length);
   return html || `<div class="sx-card cht-empty"><b>Nothing matches “${esc(q)}”</b><span>Try a name, a phone number or an order number.</span></div>`;
 }
 function tdyFoundChat(c, mins){
@@ -3752,6 +3806,7 @@ function ordDeliveredMs(q){
 function ordLineView(q, it){
   const qty = Number(it.qty) || 0, shelf = it.supplierId === '__stock__';
   const G = '#0F6B43', A = '#95530C', I = '#3A3F9B', M = '#767F91', F = '#8A93A3';
+  if (lineSettledOut(q, it)) return { k: 'out', icon: '', word: '', col: F, struck: true };
   if (q.status === 'draft') {
     const s = lineState(q, it);
     if (s.k === 'ok') return { k: 'ok', icon: 'tick', word: shelf ? 'ON THE SHELF' : '', col: M };
@@ -3790,7 +3845,7 @@ function ordCount(views){ const c = { ok: 0, ask: 0, toask: 0, no: 0, in: 0, sho
    owner drops them. The lines stay on the order until the owner does. */
 function ordTotals(q){
   const views = ordViews(q), keep = (q.items || []).filter((it, i) => views[i].k !== 'no');
-  const all = pricedView(q), kept = views.some(v => v.k === 'no') ? pricedView({ ...q, items: keep }) : all;
+  const all = pricedLive(q), kept = views.some(v => v.k === 'no') ? pricedLive({ ...q, items: keep }) : all;
   return { all: all.total, kept: kept.total, dropped: views.filter(v => v.k === 'no').length, toConfirm: kept.toConfirm };
 }
 
@@ -3802,7 +3857,7 @@ function ordGroups(list){
 }
 function ordStrip(views, w){
   const col = { ok: '#0F6B43', in: '#0F6B43', ask: '#F5B26B', toask: '#D9D4CB', no: '#8E2A22', way: '#3A3F9B', short: '#F5B26B', wait: '#D9D4CB' };
-  return `<span class="ord-strip" style="width:${w || 58}px">${views.map(v => `<i class="${v.k === 'ask' || v.k === 'way' ? 'ord-blink' : ''}" style="background:${col[v.k] || '#D9D4CB'}"></i>`).join('')}</span>`;
+  return `<span class="ord-strip" style="width:${w || 58}px">${views.filter(v => v.k !== 'out').map(v => `<i class="${v.k === 'ask' || v.k === 'way' ? 'ord-blink' : ''}" style="background:${col[v.k] || '#D9D4CB'}"></i>`).join('')}</span>`;
 }
 function ordStack(qs, max){
   const show = qs.slice(0, max || 2), more = qs.length - show.length;
@@ -3855,13 +3910,13 @@ function viewOrders(){
       else body += `<button class="ord-foundbar" data-act="ordmore" data-g="found" data-key="fb-found" aria-expanded="false"><i></i><span class="t">All found <span class="m">${g.found.length}</span> <em>· going to Buying</em></span>${ordStack(g.found, 2)}${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>`;
     }
   } else body = ordPagedCard(sel, list, q => orderRow(q));
-  const total = moving.reduce((s, q) => s + pricedView(q).total, 0);
+  const total = moving.reduce((s, q) => s + pricedLive(q).total, 0);
   return `<div class="ord-top"><div class="ord-title"><h1>Orders</h1><span class="sx-sub"><span class="m" style="color:var(--ink);font-weight:600">${moving.length}</span> on the move · <span class="m" style="color:var(--ink);font-weight:600">${n0(total)}</span></span></div>
     <button class="sx-circle light ord-find" data-act="ordfind" aria-label="Find an order">${ic('search', 20)}</button></div>
   <div class="sx-body ord-body"><div class="ord-tiles" role="tablist" aria-label="Stage">${tiles}</div><div class="ord-list" data-key="ol-${sel}">${body}</div></div>`;
 }
 function orderRow(q, tellBtn){
-  const views = ordViews(q), c = ordCount(views), pv = pricedView(q);
+  const views = ordViews(q), c = ordCount(views), pv = pricedLive(q);
   let note = '', col = 'var(--ink3)';
   if (q.status === 'draft') {
     if (c.no) { note = `${c.no} not found · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--crimson)'; }
@@ -3904,7 +3959,7 @@ function ordFindRows(qs){
   const all = ordFindAll(qs), hits = all.slice(0, ORD_FIND_MAX).map(e => e.q);
   if (!hits.length) return `<div class="sx-empty" style="padding:18px 8px"><b>No order matches</b>Try part of the name, or the number like 24</div>`;
   return `<div class="sx-card ord-card">${hits.map(q => { const s = stageOf(q), tn = ORD_STAGE_TINT[s.key] || ORD_STAGE_TINT.draft, name = ordName(q);
-    return `<div class="ord-row" data-key="f-${q.id}"><button class="ord-rmain" data-act="ordopen" data-id="${q.id}">${ordAv(name, 34)}<span class="ord-rtx"><span class="a"><span class="ell n" title="${esc(name)}">${esc(name)}</span><span class="m t">${n0(pricedView(q).total)}</span></span>
+    return `<div class="ord-row" data-key="f-${q.id}"><button class="ord-rmain" data-act="ordopen" data-id="${q.id}">${ordAv(name, 34)}<span class="ord-rtx"><span class="a"><span class="ell n" title="${esc(name)}">${esc(name)}</span><span class="m t">${n0(pricedLive(q).total)}</span></span>
       <span class="b"><span class="m" style="color:var(--ink3);flex:none">${orderNo(q)}</span><span class="ord-pill" style="color:${tn[1]};background:${tn[0]}"><i style="background:${tn[1]}"></i>${s.label}</span><span class="ell" style="color:var(--ink3)">${esc(ordWhen(createdMs(q)))}</span></span></span>${ordIc('chev', 16, 'stroke:#9AA1AE')}</button></div>`; }).join('')}
     ${all.length > hits.length ? `<div class="ord-findmore">The newest <span class="m">${hits.length}</span> of <span class="m">${n0(all.length)}</span> · type more of the name to narrow it</div>` : ''}</div>`;
 }
@@ -3930,13 +3985,15 @@ function ordStampHTML(q, small){
   const t = ordTotals(q), tot = q.invoiced ? quoteTotal(q) : t.kept, paid = Number(q.amountPaid) || 0;
   if (!(tot > 0)) return '';
   const due = q.invoiced ? balanceDue(q) : Math.max(0, tot - paid), word = q.invoiced ? 'OWED' : 'TO PAY';
-  if (paid >= tot || (q.invoiced && due === 0 && paid > 0)) {
+  // Lines still to price: what is paid covers only the priced part, so it is not PAID yet.
+  const tp = !q.invoiced ? t.toConfirm : 0;
+  if ((paid >= tot && !tp) || (q.invoiced && due === 0 && paid > 0)) {
     const p = ordPayInfo(q) || {}, d = p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : '';
     const when = small ? [p.method, p.time].filter(Boolean).join(' · ') : '';
     return `<div class="ord-stamp ok${small ? ' sm' : ''}" role="img" aria-label="Paid${p.method ? ' by ' + p.method.toLowerCase() : ''}"><b>PAID</b>${small ? (when ? `<span>${esc(when)}</span>` : '') : `${p.method ? `<span>${p.method}</span>` : ''}${d || p.time ? `<span class="m">${esc([d, p.time].filter(Boolean).join(' · '))}</span>` : ''}`}</div>`;
   }
   const part = paid > 0;
-  return `<button class="ord-stamp ${part ? 'part' : 'no'}${small ? ' sm' : ''}" data-act="ordpay" data-id="${q.id}" aria-label="${part ? 'Part paid' : 'Not paid'}, ${n0(due)} ${word.toLowerCase()}. Take a payment"><b>${part ? 'PART PAID' : 'NOT PAID'}</b><span class="m">${n0(due)} ${word}</span><span>TAP TO TAKE PAYMENT</span></button>`;
+  return `<button class="ord-stamp ${part ? 'part' : 'no'}${small ? ' sm' : ''}" data-act="ordpay" data-id="${q.id}" aria-label="${part ? 'Part paid' : 'Not paid'}, ${tp && !due ? tp + ' to price' : n0(due) + ' ' + word.toLowerCase()}. Take a payment"><b>${part ? 'PART PAID' : 'NOT PAID'}</b><span class="m">${tp && !due ? `${tp} TO PRICE` : `${n0(due)} ${word}`}</span><span>TAP TO TAKE PAYMENT</span></button>`;
 }
 ACT.ordpay = t => push('pay', { orderId: Number(t.dataset.id) });
 
@@ -3989,7 +4046,7 @@ function ordLimitLine(q){
   return '';
 }
 function ordHeroHTML(q, views){
-  const c = ordCount(views), n = views.length;
+  const c = ordCount(views), n = views.length - (c.out || 0);
   const sub = parts => parts.filter(p => p[0] > 0).map(p => `<b style="color:${p[2]}">${p[0]} ${p[1]}</b>`).join(' · ');
   if (q.status === 'draft') {
     const ready = c.ok;
@@ -4032,12 +4089,14 @@ function ordPaperLine(q, it, v){
   const qw = ordQty(it), toc = linePriceToConfirm(it);
   const ico = { tick: ordIc('tick', 12, 'stroke:#0F6B43;stroke-width:3.2'), ask: '<i class="ord-dot ord-ask" style="background:#F5B26B"></i>', amber: '<i class="ord-dot" style="background:#F5B26B"></i>', hollow: '<i class="ord-dot hollow"></i>', truck: `<span class="ord-blink" style="color:#3A3F9B;display:flex">${ordIc('truck', 14, 'stroke-width:1.9')}</span>` }[v.icon] || '';
   const was = priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0 ? (Number(it.qty) || 0) * Number(it.priceReview.was) : 0;
+  if (v.k === 'out') { const st = ((q.pickSettle && q.pickSettle.lines) || []).find(l => (q.items || [])[l.idx] === it), was = st ? ordQty({ ...it, qty: st.ordered }) : qw;
+    return `<div class="ord-pl struck" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(was.n)} <small>${esc(was.u)}</small></span><span class="st" aria-hidden="true"></span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}</span><span class="ord-nf">NOT SENT</span></div>`; }
   const amt = v.k === 'no' ? '<span class="ord-nf">NOT FOUND</span>' : toc ? '<span class="ord-toprice">to price</span>' : `<span class="ord-amts"><span class="m amt">${n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span>${was ? `<span class="m ord-was">${n0(was)}</span>` : ''}</span>`;
   return `<div class="ord-pl${v.struck ? ' struck' : ''}" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(qw.n)} <small>${esc(qw.u)}</small></span>
     <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${priceTagHTML(it, true)}</span>${amt}</div>`;
 }
 function ordPaperHead(q, views){
-  const c = ordCount(views), n = views.length, all = n && c.in === n;
+  const c = ordCount(views), n = views.length - (c.out || 0), all = n && c.in === n;
   const wait = pricesWaiting(q).length;
   if (q.status === 'draft' && wait) return [`${wait} waiting for ${mgrName()}`, '#95530C'];
   if (q.status === 'draft') return [`${c.ok} of ${n} ready`, c.ok === n ? '#0F6B43' : c.ok ? '#0F6B43' : '#767F91'];
@@ -4154,7 +4213,7 @@ function ordGateHTML(q, views){
     : ordGateTile('PRICES', true, 'Shop’s prices', 'nothing to decide');
   // Credit: the hold the Manager's app reads, and their answer (payload.creditCheck).
   const cust = q.customerId != null && q.customerId !== '' ? customerById(q.customerId) : null;
-  const hold = cust ? creditHoldFor(cust, Math.max(0, pricedView(q).total - (Number(q.amountPaid) || 0))) : null, cc = q.creditCheck || null;
+  const hold = cust ? creditHoldFor(cust, Math.max(0, pricedLive(q).total - (Number(q.amountPaid) || 0))) : null, cc = q.creditCheck || null;
   const ccBy = cc && cc.byName ? esc(firstWord(cc.byName)) : mgr;
   const cre = !cust ? ordGateTile('CREDIT', true, 'Cash sale', 'no account')
     : !hold ? ordGateTile('CREDIT', true, creditTerms(q) ? 'On credit' : 'Cash order', creditTerms(q) ? 'within their limit' : 'no credit needed')
@@ -4166,7 +4225,7 @@ function ordGateHTML(q, views){
 /* What the order came to before the Manager changed a price; null when nothing was changed. */
 function ordWasTotal(q){
   const its = q.items || []; if (!its.some(it => priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0)) return null;
-  return pricedView({ ...q, items: its.map(it => priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0 ? { ...it, sellPrice: Number(it.priceReview.was) } : it) }).total;
+  return pricedLive({ ...q, items: its.map(it => priceReviewState(it) === 'changed' && Number((it.priceReview || {}).was) > 0 ? { ...it, sellPrice: Number(it.priceReview.was) } : it) }).total;
 }
 function ordToldLine(q){
   const told = (q.items || []).filter(it => priceReviewState(it) === 'changed' && !priceToTell(it)).map(it => Date.parse(it.priceToldAt) || 0).reduce((m, x) => Math.max(m, x), 0);
@@ -4360,7 +4419,7 @@ function ordTellText(q){
   const views = ordViews(q), items = q.items || [], tt = ordTotals(q);
   const names = k => items.filter((it, i) => (Array.isArray(k) ? k.includes(views[i].k) : views[i].k === k)).map(ordItemName);
   const total = q.invoiced ? quoteTotal(q) : tt.kept, paid = Number(q.amountPaid) || 0;
-  const money = () => { if (!(total > 0)) return ''; if (paid >= total) return 'It is paid in full — thank you.'; if (paid > 0) return `Total ${n0(total)}, ${n0(paid)} paid, ${n0(total - paid)} ${q.invoiced ? 'still owed' : 'to pay'}.`; return `Total ${n0(total)}${tt.toConfirm ? ' (some prices still to confirm)' : ''}.`; };
+  const money = () => { if (!(total > 0)) return ''; if (paid >= total && !(tt.toConfirm && !q.invoiced)) return 'It is paid in full — thank you.'; if (paid >= total) return `${n0(paid)} paid — thank you. Some prices are still to confirm.`; if (paid > 0) return `Total ${n0(total)}, ${n0(paid)} paid, ${n0(total - paid)} ${q.invoiced ? 'still owed' : 'to pay'}.`; return `Total ${n0(total)}${tt.toConfirm ? ' (some prices still to confirm)' : ''}.`; };
   const out = [`Hello ${name}, about your order ${orderNo(q)} from ${S.shopName}:`];
   if (q.status === 'draft') {
     const ok = names('ok'), ask = names(['ask', 'toask']), no = names('no');
@@ -4382,7 +4441,7 @@ function ordTellText(q){
     out[0] = `Hello ${name}, thank you for your order ${orderNo(q)} from ${S.shopName}.`;
     const d = ordDeliveredMs(q); out.push(`It was delivered${d ? (ordSameDay(d) ? ' today at ' + timeOf(d) : ' on ' + dayLabel(isoOf(d))) : ''}.`);
     if (q.invoiced && balanceDue(q) > 0) out.push(`${invoiceLabel(q)}: ${n0(balanceDue(q))} still owed.`);
-    else if (total > 0 && paid >= total) out.push('It is paid in full.');
+    else if (total > 0 && paid >= total && !(tt.toConfirm && !q.invoiced)) out.push('It is paid in full.');
     out.push('We appreciate your business!');
   }
   return out.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
@@ -4396,6 +4455,7 @@ function ordPictureRows(q){
   const views = ordViews(q);
   return (q.items || []).map((it, i) => {
     const v = views[i], qw = ordQty(it), toc = linePriceToConfirm(it);
+    if (v.k === 'out') return null;   // settled to nothing: not on the customer's picture
     let tag = '', tagCol = '#95530C';
     if (v.k === 'no') { tag = 'NOT FOUND'; tagCol = '#8E2A22'; }
     else if (v.k === 'ask' || v.k === 'toask') tag = 'BEING CONFIRMED';
@@ -4407,7 +4467,7 @@ function ordPictureRows(q){
     const r = it.priceReview || {}, was = !toc && v.k !== 'no' && priceReviewState(it) === 'changed' && Number(r.was) > 0 ? (Number(it.qty) || 0) * Number(r.was) : null;
     if (was != null && !tag) { tag = `NEW PRICE · ${n0(r.price)} EACH`; tagCol = '#1A5A8A'; }
     return { qty: qw.n, unit: qw.u, name: ordItemName(it), tag, tagCol, struck: v.k === 'no', was, amount: v.k === 'no' ? null : toc ? 'to price' : (Number(it.qty) || 0) * quoteItemSellPrice(it) };
-  });
+  }).filter(Boolean);
 }
 function ordDrawPicture(canvas, q){
   const rows = ordPictureRows(q), w = 640, rowH = 46, head = 132, tt = ordTotals(q);
@@ -4628,8 +4688,9 @@ function nmWhoKey(q){ const c = q.customerId != null && q.customerId !== '' ? cu
 /* ---------------- Your day ---------------- */
 const NM_STAGE_TINT = { draft: ['#FDEEE1', '#95530C'], awaiting_goods: ['#E4E6FA', '#3A3F9B'], preparing: ['#FDEEE1', '#7A4A02'], pending_delivery: ['#DCEAF8', '#1A5A8A'], completed: ['#E4F4EA', '#0F6B43'] };
 function nmPaidWord(q){
-  const tot = quoteTotal(q), paid = Number(q.amountPaid) || 0;
-  if (paid > 0 && tot > 0 && balanceDue(q) <= 0) return ['PAID', 'var(--green)'];
+  // Known-only (orderDue): a line still to price means more is to come, so it is not PAID yet.
+  const tot = q.invoiced ? quoteTotal(q) : pricedLive(q).total, paid = Number(q.amountPaid) || 0;
+  if (paid > 0 && tot > 0 && orderDue(q) <= 0 && (q.invoiced || !pricedLive(q).toConfirm)) return ['PAID', 'var(--green)'];
   if (paid > 0) return ['PART PAID', 'var(--amberInk)'];
   return ['NOT PAID', 'var(--ink3)'];
 }
@@ -4658,7 +4719,7 @@ function nmPayments(today){
   return groups.map(g => {
     const ps = g.parts, p0 = ps[0], amount = ps.reduce((s, p) => s + p.x.amount, 0);
     const qs = [...new Map(ps.filter(p => p.q).map(p => [p.q.id, p.q])).values()];
-    const left = qs.reduce((s, q) => s + balanceDue(q), 0);
+    const left = qs.reduce((s, q) => s + orderDue(q), 0);
     // what it paid for (may shorten), and what is still left (never shortened)
     let what, dot, rest = 0;
     if (qs.length > 1) {
@@ -4678,10 +4739,10 @@ const NM_DAY_ROWS = 30;
 PAGE.day = ({ mode, all }) => {
   const money = mode === 'money', today = todayISO(), t = nmOrdersOn(today).sort((a, b) => createdMs(a) - createdMs(b));
   const tx = moneyIn(today, today), pays = nmPayments(today);
-  const sold = t.reduce((s, q) => s + pricedView(q).total, 0), inSum = tx.reduce((s, x) => s + x.amount, 0);
+  const sold = t.reduce((s, q) => s + pricedLive(q).total, 0), inSum = tx.reduce((s, x) => s + x.amount, 0);
   const ids = new Set(t.map(q => Number(q.id)));
   const forToday = tx.filter(x => x.quoteId != null && ids.has(Number(x.quoteId))).reduce((s, x) => s + x.amount, 0);
-  const old = inSum - forToday, unpaid = t.reduce((s, q) => s + Math.max(0, pricedView(q).total - (Number(q.amountPaid) || 0)), 0);
+  const old = inSum - forToday, unpaid = t.reduce((s, q) => s + Math.max(0, pricedLive(q).total - (Number(q.amountPaid) || 0)), 0);
   const date = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
   const list = money ? pays : t, hidden = all ? 0 : Math.max(0, list.length - NM_DAY_ROWS), shown = list.slice(hidden);
   const earlier = hidden ? `<button class="nm-earlier" data-act="dayall" data-key="ea-${money ? 'm' : 's'}">${ic('chev', 16, 'style="transform:rotate(-90deg)"')}<span>Show <span class="m">${hidden}</span> earlier ${money ? (hidden === 1 ? 'payment' : 'payments') : (hidden === 1 ? 'order' : 'orders')}</span></button>` : '';
@@ -4695,8 +4756,8 @@ PAGE.day = ({ mode, all }) => {
       return `<button class="sx-pl nm-row" data-key="q-${q.id}" data-act="order" data-id="${q.id}">
         <span class="nm-time"><span class="m">${timeOf(createdMs(q))}</span></span>
         <span class="nm-mid"><span class="ell nm-cn">${esc((q.client && q.client.name) || 'Walk-in')}</span>
-          <span class="nm-what"><span class="nm-stage" style="background:${tint[0]};color:${tint[1]}">${esc(st.label)}</span>${n} item${n === 1 ? '' : 's'}</span></span>
-        <span class="nm-right"><span class="m nm-amt">${n0(pricedView(q).total)}</span><span class="nm-pw" style="color:${pw[1]}">${pw[0]}</span></span></button>`; }).join(''));
+          <span class="nm-what"><span class="nm-stage" style="background:${tint[0]};color:${tint[1]}">${esc(st.label)}</span>${n} item${n === 1 ? '' : 's'}${pricedLive(q).toConfirm ? ` · +${pricedLive(q).toConfirm} to price` : ''}</span></span>
+        <span class="nm-right"><span class="m nm-amt">${n0(pricedLive(q).total)}</span><span class="nm-pw" style="color:${pw[1]}">${pw[0]}</span></span></button>`; }).join(''));
   const tile = (k) => { const [label, icon] = NM_ACCT[k], v = tx.filter(x => x.account === k).reduce((s, x) => s + x.amount, 0), pc = inSum ? v / inSum : 0;
     return `<div class="nm-tile"><span class="nm-tile-h"><span class="nm-tile-ic">${ic(icon, 16)}</span><span class="m nm-tile-p">${nmPct(pc)}</span></span>
       <span class="nm-tile-v"><span class="m">${n0(v)}</span><span>${label}</span></span><span class="nm-tile-bar"><i class="sx-grow" style="width:${Math.round(pc * 100)}%"></i></span></div>`; };
@@ -4802,7 +4863,7 @@ PAGE.goal = () => {
     <div class="nm-goal">
       <span class="nm-goalring" role="img" aria-label="${nmPct(tg.pct)} of ${n0(tg.aim)}, day ${tg.dayN} of ${tg.days}">${nmGoalRing(tg, 132)}
         <span class="nm-goalin"><span class="m p${nmPct(tg.pct).length > 4 ? ' long' : ''}">${nmPct(tg.pct)}</span><span class="d">day <span class="m">${tg.dayN}</span> of ${tg.days}</span></span></span>
-      <span class="nm-goalr"><span style="display:flex;flex-direction:column;gap:1px"><span class="m nm-big">${n0(tg.actual)}</span><span class="nm-of">of <span class="m">${n0(tg.aim)}</span></span></span>
+      <span class="nm-goalr"><span style="display:flex;flex-direction:column;gap:1px"><span class="m nm-big">${n0(tg.actual)}</span><span class="nm-of">invoiced · of <span class="m">${n0(tg.aim)}</span></span></span>
         <span class="nm-pace"><i></i>where pace says <span class="m">${short(tg.pace)}</span></span>${chip}</span></div>
     <div class="sx-glass nm-two"><span><span class="l">To finish, a day</span>${tg.reached ? `<span class="v" style="color:var(--mint)">Done</span>` : `<span class="m v">${n0(Math.round(tg.perDayToFinish))}</span>`}</span>
       <span><span class="l">At this rate, done by</span>${done}</span></div>
@@ -4837,7 +4898,7 @@ function viewMe(){
   const tg = salesTarget(), today = todayISO(), mStart = monthStartISO(), month = nmMonthName(mStart);
   const mStartMs = new Date(mStart + 'T00:00:00').getTime(), orders = memo('nmMonth', mStart, () => liveOrders().filter(q => createdMs(q) >= mStartMs));
   const dayOfMonth = daysBetween(mStart, today) + 1;
-  const monthFig = tg && nmIsWholeMonth(tg.from, tg.to) && tg.from === mStart ? tg.actual : orders.reduce((s, q) => s + pricedView(q).total, 0);
+  const monthFig = tg && nmIsWholeMonth(tg.from, tg.to) && tg.from === mStart ? tg.actual : orders.reduce((s, q) => s + pricedLive(q).total, 0);
   const collected = moneyIn(mStart, today).reduce((s, x) => s + x.amount, 0);
   const name = myName(), tasks = nmTasks();
   // the face, wrapped in the goal
@@ -4861,7 +4922,7 @@ function viewMe(){
       <span class="nm-me-t"><span class="ell nm-me-n">${esc(name)}</span><span class="nm-me-r">${S.role === 'sales' ? 'Sales desk' : esc(String(S.role || '').replace(/^./, c => c.toUpperCase()))} · ${esc(S.shopName)}</span>${chip}</span>
       <button class="sx-circle" data-act="tab" data-v="today" aria-label="Close" style="align-self:flex-start">${ic('close', 16, 'style="stroke-width:2.2"')}</button></div>
     <div class="sx-glass nm-strip">
-      <button data-act="nmgoal"><span class="l">${tg && !nmIsWholeMonth(tg.from, tg.to) ? 'Goal' : month}</span><span class="m v">${short(tg && !nmIsWholeMonth(tg.from, tg.to) ? tg.actual : monthFig)}</span>${tg ? `<span class="nm-strip-bar"><i class="sx-grow" style="width:${Math.round(pc * 100)}%"></i></span>` : `<span class="s">this month</span>`}</button>
+      <button data-act="nmgoal"><span class="l">${tg && !nmIsWholeMonth(tg.from, tg.to) ? 'Goal' : month}${tg && (!nmIsWholeMonth(tg.from, tg.to) || tg.from === mStart) ? ' invoiced' : ''}</span><span class="m v">${short(tg && !nmIsWholeMonth(tg.from, tg.to) ? tg.actual : monthFig)}</span>${tg ? `<span class="nm-strip-bar"><i class="sx-grow" style="width:${Math.round(pc * 100)}%"></i></span>` : `<span class="s">this month</span>`}</button>
       <button data-act="day" data-mode="sold"><span class="l">Orders</span><span class="m v">${orders.length}</span><span class="s"><span class="m">${(orders.length / dayOfMonth).toFixed(1)}</span> a day</span></button>
       <button data-act="day" data-mode="money"><span class="l">Collected</span><span class="m v" style="color:var(--mint)">${short(collected)}</span><span class="s">${monthFig > 0 ? `<span class="m">${nmPct(collected / monthFig)}</span> of sold` : 'this month'}</span></button></div>
     <span class="nm-note">${ic('store', 12)}Whole-shop figures</span>
@@ -4911,7 +4972,12 @@ function custISO(v){ const s = String(v || ''); return /^\d{4}-\d{2}-\d{2}$/.tes
 function custBillAge(q){ return Math.max(0, daysBetween(custISO(q.invoicedAt || q.date), todayISO())); }
 // Their open bills, oldest first -- worked out once per set of books, not once per row per tap.
 function custOpen(cid){ return memo('cuOpen', cid, () => outstandingInvoices(cid)); }
-function custOldestAge(c){ const inv = custOpen(c.id); return inv.length ? custBillAge(inv[0]) : 0; }
+// How old a debt is comes from the customer's debt log (custAging, accounts.html's rule), not from invoice dates.
+function custOldestAge(c){ return custAging(c).oldest; }
+// Their oldest dated charge's age, or null when nothing they owe has a date.
+function custOldestOrNull(c){ const a = custAging(c); return c.debt > 0.5 && !agingNoDate(a) ? a.oldest : null; }
+// One charge's age, null when it has no date.
+function custChargeAge(ch){ return ch && ch.date ? Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())) : null; }
 function custOverdue(c){ return c.debt > 0 && custOldestAge(c) > custTerms(c); }
 function custLimit(c){ return Number(c.creditLimit) || 0; }
 function custOverLimit(c){ const l = custLimit(c); return l > 0 && c.debt > l; }
@@ -4953,13 +5019,13 @@ function custSaysPaid(c){ return custPaidIndex().get(String(c.id)) || null; }
 function custState(c, k){
   k = k || '';
   return memo('cuState', c.id + '|' + k + '|' + c.debt + '|' + custWaKey(), () => {
-    const r = customerRhythm(c.id), inv = c.debt > 0 ? custOpen(c.id) : [];
-    const age = inv.length ? custBillAge(inv[0]) : null, over = custOverLimit(c);
+    const r = customerRhythm(c.id);
+    const age = c.debt > 0 ? custOldestOrNull(c) : null, over = custOverLimit(c);
     const pastTerms = age != null && age > custTerms(c), paid = custSaysPaid(c);
     const debt = [], beat = []; let col = 'var(--ink3)';
     if (paid) { debt.push('says they paid today'); col = 'var(--sky)'; }
     else {
-      if (c.debt > 0) debt.push(age != null ? `oldest bill ${age} day${age === 1 ? '' : 's'}` : 'owes · no bill date');
+      if (c.debt > 0) debt.push(age != null ? `oldest bill ${age} day${age === 1 ? '' : 's'}` : 'owes · no date');
       if (over) debt.push('over their limit');
       // Under Owe, being quiet is left to its own chip; due to buy is worth saying with the debt.
       if (r.overdue) { if (k !== 'owe') beat.push(`quiet ${r.since} days`); }
@@ -4975,14 +5041,13 @@ function custAv(c, size, ring){
   const t = tintFor(c.name);
   return `<span class="cu-av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.32)}px;background:${t[0]};color:${t[1]};${ring ? `box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px ${ring}` : ''}">${esc(initials(c.name))}</span>`;
 }
-// How old the shop's money is: each open bill by its age, and a balance no bill explains as its own part.
+// How old the shop's money is: each open charge by its age (custOpenCharges), and what has no date as its own part.
 function custDebtBands(list){
   const b = { a: 0, b: 0, c: 0, nd: 0 };
   list.forEach(c => {
     if (!(c.debt > 0)) return;
-    let tied = 0;
-    custOpen(c.id).forEach(q => { const due = balanceDue(q), age = custBillAge(q); tied += due; b[age < 30 ? 'a' : age <= 60 ? 'b' : 'c'] += due; });
-    if (c.debt - tied > 0.5) b.nd += c.debt - tied;
+    custOpenCharges(c).forEach(ch => { const age = custChargeAge(ch); if (age == null) return; b[age < 30 ? 'a' : age <= 60 ? 'b' : 'c'] += ch.remaining; });
+    b.nd += custAging(c).unknown;
   });
   return b;
 }
@@ -5000,7 +5065,7 @@ function custFiltered(k){ return memo('cuIn', k + '|' + D().customers.length, ()
 function viewCustomers(){
   const all = D().customers, owe = custFiltered('owe'), owed = owe.reduce((s, c) => s + c.debt, 0);
   const bands = memo('cuBands', owe.length, () => custDebtBands(owe)), sum = bands.a + bands.b + bands.c + bands.nd;
-  const seg = [['a', '#6FDCB0', 'under 30 days'], ['b', '#F5B26B', '30–60'], ['c', '#E5483D', 'over 60'], ['nd', '#8D99B5', 'no bill date']];
+  const seg = [['a', '#6FDCB0', 'under 30 days'], ['b', '#F5B26B', '30–60'], ['c', '#E5483D', 'over 60'], ['nd', '#8D99B5', 'no date']];
   const shown = seg.filter(s => bands[s[0]] > 0.5 || (s[0] !== 'nd'));
   const bar = sum > 0 ? seg.filter(s => bands[s[0]] > 0.5).map(s => `<i style="flex:${bands[s[0]]};background:${s[1]}" title="${s[2]} · ${n0(bands[s[0]])}"></i>`).join('') : '';
   const q = S.custQuery.trim(), k = S.custFilter, inK = custFiltered(k);
@@ -5126,7 +5191,7 @@ PAGE.customer = ({ id }) => {
   const r = customerRhythm(c.id), hist = orderHistory(c.id), inv = custOpen(c.id), usual = usualLines(c.id);
   const live = customerOrdersFor(c.id).filter(q => !q.invoiced && q.status !== 'completed' && !q.cancelledAt);
   const terms = custTerms(c), limit = custLimit(c), over = custOverLimit(c);
-  const oldest = inv.length ? custBillAge(inv[0]) : null, pastTerms = oldest != null && oldest > terms;
+  const oldest = custOldestOrNull(c), pastTerms = oldest != null && oldest > terms;
   const ph = c.phone || c.phone2;
   const sub = [custAreaOf(c), hist.length ? `first order ${String(hist[0].date).slice(0, 4)}` : 'no orders yet', hist.length ? `${hist.length} order${hist.length === 1 ? '' : 's'}` : ''].filter(Boolean);
   // How often they come back, as a ring: days since the last order against their usual gap.
@@ -5155,18 +5220,21 @@ PAGE.customer = ({ id }) => {
       <div class="sx-paper-f"><span class="cu-ft">At today’s prices${toConfirm ? `<small>${toConfirm} price${toConfirm === 1 ? '' : 's'} to confirm</small>` : ''}</span><span class="m cu-ftv">${priced.length ? n0(priced.reduce((s, x) => s + x.total, 0)) : '—'}</span></div>
     </div></div>` : '';
   // Open bills: one bar, a part per bill, coloured by its age -- or, past a dozen, a part per age band.
-  const invSum = inv.reduce((s, q) => s + balanceDue(q), 0), loose = c.debt - invSum > 0.5 ? c.debt - invSum : 0;
-  const parts = inv.map(q => { const age = custBillAge(q); return { amt: balanceDue(q), age, col: custAgeCol(age), label: invoiceLabel(q), id: q.id }; });
+  // Aged the one way (custOpenCharges, rule B): each dated charge still open, and what has no date as its own grey part.
+  const loose = c.debt > 0.5 ? custAging(c).unknown : 0;
+  const parts = (c.debt > 0.5 ? custOpenCharges(c) : []).filter(ch => ch.date).map((ch, i) => { const age = custChargeAge(ch), q = ch.quoteId != null ? quoteById(ch.quoteId) : null;
+    return { amt: ch.remaining, age, col: custAgeCol(age), label: q && q.invoiced ? invoiceLabel(q) : 'on account', id: q ? q.id : null, k: (q ? q.id : 'a') + '-' + i }; });
+  const billsN = parts.length;
   let barParts = parts;
   if (parts.length > 12) { const by = new Map(); parts.forEach(p => { const e = by.get(p.col) || { amt: 0, col: p.col }; e.amt += p.amt; by.set(p.col, e); }); barParts = [...by.values()]; }
-  if (loose) { const lp = { amt: loose, age: null, col: '#C9C3B8', label: 'not tied to a bill', id: null }; parts.push(lp); barParts = barParts.concat([lp]); }
+  if (loose > 0.5) { const lp = { amt: loose, age: null, col: '#C9C3B8', label: 'no date', id: null }; parts.push(lp); barParts = barParts.concat([lp]); }
   const all = S.cuBillsAll === String(c.id), CAP = 8, show = all || parts.length <= CAP + 1 ? parts : parts.slice(0, CAP), hidden = parts.slice(show.length);
   const stm = custLastStatement(c.id);
   const stmLine = stm ? `<span class="cu-stm">${ic('doc', 14)}statement sent ${esc(dayLabel(custISO(stm.sent_on)))}${stm.due != null ? ` · <b class="m">${n0(stm.due)}</b> then due` : ''}</span>` : '';
   const billRow = p => { const tag = p.id != null ? 'button' : 'span', ageCol = p.age == null ? '' : p.age > 60 ? 'var(--crimson)' : p.age > terms ? 'var(--amberInk)' : 'var(--ink3)';
-    return `<${tag} class="cu-bl"${p.id != null ? ` data-act="order" data-id="${p.id}" data-key="b-${p.id}"` : ' data-key="b-loose"'}><i style="background:${p.col}"></i><b class="m">${n0(p.amt)}</b><span class="cu-bn">${esc(p.label)}</span>${p.age != null ? `<span class="cu-ba" style="color:${ageCol}">${p.age === 0 ? 'today' : p.age + (p.age === 1 ? ' day' : ' days')}</span>` : '<span class="cu-ba"></span>'}${p.id != null ? ic('chev', 14) : '<span></span>'}</${tag}>`; };
+    return `<${tag} class="cu-bl"${p.id != null ? ` data-act="order" data-id="${p.id}" data-key="b-${p.k}"` : ' data-key="b-loose"'}><i style="background:${p.col}"></i><b class="m">${n0(p.amt)}</b><span class="cu-bn">${esc(p.label)}</span>${p.age != null ? `<span class="cu-ba" style="color:${ageCol}">${p.age === 0 ? 'today' : p.age + (p.age === 1 ? ' day' : ' days')}</span>` : '<span class="cu-ba"></span>'}${p.id != null ? ic('chev', 14) : '<span></span>'}</${tag}>`; };
   const billsHTML = c.debt > 0 || parts.length ? `<div class="sx-card cu-bills">
-      <span class="cu-bh"><b>Open bills <span class="m">${inv.length}</span></b><span class="cu-bhb">${c.debt > 0 && D().promises != null ? `<button class="cu-prombtn" data-act="promise" data-id="${esc(c.id)}" aria-label="${esc(firstWord(c.name))} promises to pay">${ic('hand', 15)}Promise</button>` : ''}${c.debt > 0 ? `<button class="cu-takepay" data-act="pay" data-id="${esc(c.id)}"><span>${ic('cash', 14, 'style="stroke-width:2"')}</span>Take payment</button>` : ''}</span></span>
+      <span class="cu-bh"><b>Open bills <span class="m">${billsN}</span></b><span class="cu-bhb">${c.debt > 0 && D().promises != null ? `<button class="cu-prombtn" data-act="promise" data-id="${esc(c.id)}" aria-label="${esc(firstWord(c.name))} promises to pay">${ic('hand', 15)}Promise</button>` : ''}${c.debt > 0 ? `<button class="cu-takepay" data-act="pay" data-id="${esc(c.id)}"><span>${ic('cash', 14, 'style="stroke-width:2"')}</span>Take payment</button>` : ''}</span></span>
       ${custPromiseLine(c)}
       <span class="cu-bbar sx-grow${barParts.length > 12 ? ' thin' : ''}">${barParts.map(p => `<i style="flex:${p.amt};background:${p.col}"></i>`).join('')}</span>
       <span class="cu-blabels" style="--aw:${Math.max(4, ...show.map(p => n0(p.amt).length))}ch">${show.map(billRow).join('')}</span>
@@ -5221,7 +5289,7 @@ ACT.promise = t => {
 };
 SHEET.promise = a => {
   const c = customerById(a.id); if (!c) return '';
-  const first = firstWord(c.name) || 'They', inv = custOpen(c.id), bill = inv.length ? Math.round(balanceDue(inv[0])) : 0, oldest = inv.length ? custBillAge(inv[0]) : null;
+  const first = firstWord(c.name) || 'They', inv = custOpen(c.id), bill = inv.length ? Math.round(balanceDue(inv[0])) : 0, oldest = custOldestOrNull(c);
   const amount = custPromiseAmount(a, c), today = todayISO();
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + i); return isoOf(d.getTime()); });
   if (!a.day) a.day = days[Math.min(6, Math.max(0, Number(c.termsDays) > 0 ? 3 : 2))];
@@ -5321,6 +5389,31 @@ function custOpenCharges(c){
   });
   return open.filter(ch => ch.remaining > 0.5);
 }
+/* How old a debt is (docs/decision-rights.md, rule B): accounts.html's
+   custOpenCharges and custAging word for word, so Sales, the Manager and
+   Accounts show one oldest age and one "over 30 days". What the log does
+   not place -- a debt from before it, or a charge with no date -- is
+   "no date", never aged and never counted as new. This desk draws its own
+   bands (custAgeCol) from the same open charges. */
+const BANDS = [
+  { k: 'b30', label: 'under 30', lo: 0, hi: 29, col: '#6FDCB0', ink: '#0F6B43' },
+  { k: 'b60', label: '30–60', lo: 30, hi: 59, col: '#F5B26B', ink: '#95530C' },
+  { k: 'b90', label: '60–90', lo: 60, hi: 89, col: '#E5483D', ink: '#8E2A22' },
+  { k: 'b90p', label: 'over 90', lo: 90, hi: Infinity, col: 'repeating-linear-gradient(135deg,#E5483D 0 3px,#8E2A22 3px 6px)', solid: '#8E2A22', ink: '#8E2A22' },
+];
+function bandOf(age){ return BANDS.find(b => age >= b.lo && age <= b.hi) || BANDS[0]; }
+function custAging(c){
+  return memo('aging', c.id, () => {
+    const parts = { b30: 0, b60: 0, b90: 0, b90p: 0 }; let oldest = 0, known = 0;
+    // A charge with no date cannot be aged: it stays in "no date" with what the log does not cover, never counted as new.
+    custOpenCharges(c).forEach(ch => { if (!ch.date) return; const age = Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())); parts[bandOf(age).k] += ch.remaining; known += ch.remaining; if (age > oldest) oldest = age; });
+    // What the log cannot place (a debt from before the log, or a charge with no date) is named "no date", not dropped.
+    const unknown = Math.max(0, (Number(c.debt) || 0) - known);
+    return { parts, oldest, unknown };
+  });
+}
+// All of what they owe is "no date": there is no oldest age to show.
+function agingNoDate(a){ return a.unknown > 0.5 && BANDS.every(b => a.parts[b.k] <= 0.5); }
 function custStmtRowDetail(r){
   const note = String(r.note || ''), auto = /^Auto-sync\s*[—-]\s*(.+)$/.exec(note), ref = auto ? auto[1] : '';
   if (ref) return r.type === 'payment' ? `Payment received — ${ref}` : `Invoice ${ref}`;
@@ -5633,11 +5726,11 @@ function nwUnpark(k){ const a = nwDraftsRaw(), d = a.find(x => x.dkey === k); nw
 function nwQuoteOf(d){ const pct = shopCreditPct(); return { items: d.items || [], charges: d.charges || [], discount: 0, credit: d.credit && pct > 0 ? { pct, days: custTermsDays(), agreedAt: todayISO() } : null }; }
 function draftQuote(){ return nwQuoteOf(S.draft || newDraft(null)); }
 function custTermsDays(){ return Math.max(0, Number(D().presetChaseAfterDays) || 0); }
-function nwTotal(){ return S.draft ? pricedView(draftQuote()).total : 0; }
+function nwTotal(){ return S.draft ? pricedLive(draftQuote()).total : 0; }
 // A total said honestly: nothing priced yet reads "to price", not "0 + ?".
 // noConf: the caller says how many are to be confirmed on a line of its own (the order bar's second line).
 // pricedView plus how many prices wait for the Manager (pricedView itself is copied word for word into manager.html).
-function nwPv(q){ return { ...pricedView(q), waiting: pricesWaiting(q).length }; }
+function nwPv(q){ return { ...pricedLive(q), waiting: pricesWaiting(q).length }; }
 function nwForWords(pv){ return [pv.waiting ? `${pv.waiting} for ${esc(mgrName())}` : '', pv.pending ? `${pv.pending} to confirm` : ''].filter(Boolean).join(' · '); }
 function nwMoney(pv, noConf){ const w = noConf ? '' : nwForWords(pv), conf = w ? `<span class="nw-amb nw-pconf"> · ${w}</span>` : ''; return pv.total > 0 || !pv.toConfirm ? `<span class="m">${n0(pv.total)}</span>${pv.toConfirm ? ' + ?' : ''}${conf}` : '<span class="nw-amb">to price</span>'; }
 
@@ -5788,7 +5881,7 @@ function nwClientBody(args){
   if (args.drafts) {
     const ds = nwDrafts();
     if (!ds.length) return `<div class="sx-card sx-empty" data-key="none"><b>No drafts</b></div>`;
-    return `<div class="nw-sec" data-key="sec-drafts"><b>Drafts on this phone</b><span class="m">${ds.length}</span></div><div class="sx-card nw-clist" data-key="drafts">${ds.map(d => { const pv = pricedView(nwQuoteOf(d)), n = d.items.length, name = d.client.name || 'Walk-in', conf = args.confirm === d.dkey;
+    return `<div class="nw-sec" data-key="sec-drafts"><b>Drafts on this phone</b><span class="m">${ds.length}</span></div><div class="sx-card nw-clist" data-key="drafts">${ds.map(d => { const pv = pricedLive(nwQuoteOf(d)), n = d.items.length, name = d.client.name || 'Walk-in', conf = args.confirm === d.dkey;
       return `<div class="nw-drow" data-key="d-${esc(d.dkey)}"><button class="nw-crow" data-act="nwresume" data-k="${esc(d.dkey)}">${avatar(name)}<span class="nw-ct"><span class="ell nw-cn">${esc(name)}</span><span class="ell sx-sub"><span class="m">${n}</span> item${n === 1 ? '' : 's'} · ${nwMoney(pv)} · ${esc(agoWords(d.savedAt))}</span></span></button><button class="nw-ddel ${conf ? 'on' : ''}" data-act="nwdropdraft" data-k="${esc(d.dkey)}" aria-label="${conf ? 'Tap again to remove' : 'Remove this draft'}">${conf ? 'Remove?' : ic('trash', 17)}</button></div>`; }).join('')}</div>`;
   }
   let h = '';
@@ -5796,7 +5889,7 @@ function nwClientBody(args){
   // The order already open, one tap away.
   const d = S.draft;
   if (nwHasLines(d)) {
-    const pv = pricedView(draftQuote()), name = d.client.name || 'Walk-in';
+    const pv = pricedLive(draftQuote()), name = d.client.name || 'Walk-in';
     h += `<button class="nw-carry" data-key="carry" data-act="nwcarry">${avatar(name)}<span class="nw-ct"><span class="nw-ey">${d.counter ? 'Carry on · counter sale' : 'Carry on'}</span><span class="ell nw-cn">${esc(name)}</span><span class="sx-sub"><span class="m">${d.items.length}</span> line${d.items.length === 1 ? '' : 's'} · ${nwMoney(pv)}</span></span>${ic('chev', 18)}</button>`;
   }
   // Asking on WhatsApp now.
@@ -5845,10 +5938,10 @@ ACT.nwask = t => {
 /* ---------------- switch who it is for (QSwitch) ---------------- */
 SHEET.switch = args => {
   const d = S.draft, n = d ? d.items.length : 0, cur = d ? (firstWord(d.client.name) || 'Walk-in') : '';
-  const pv = d ? pricedView(draftQuote()) : { total: 0, toConfirm: 0 }, parked = nwDrafts();
+  const pv = d ? pricedLive(draftQuote()) : { total: 0, toConfirm: 0 }, parked = nwDrafts();
   return `<div class="nw-row"><span class="nw-ttl dark"><b>Who is this order for?</b><span>now ${esc(cur)} · <span class="m">${n}</span> line${n === 1 ? '' : 's'} · ${nwMoney(pv)}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
     <label class="sx-search nw-swsearch">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="nwswq" type="search" placeholder="Name or phone" aria-label="Name or phone" autocomplete="off" value="${esc(args.q || '')}"></label>
-    ${parked.length ? `<span class="nw-lab">YOUR OPEN DRAFTS <span class="m">${parked.length}</span></span><div class="nw-dchips ${parked.length > 2 ? 'scroll' : ''}">${parked.map(x => { const nm = x.client.name || 'Walk-in', p2 = pricedView(nwQuoteOf(x)), k = x.items.length;
+    ${parked.length ? `<span class="nw-lab">YOUR OPEN DRAFTS <span class="m">${parked.length}</span></span><div class="nw-dchips ${parked.length > 2 ? 'scroll' : ''}">${parked.map(x => { const nm = x.client.name || 'Walk-in', p2 = pricedLive(nwQuoteOf(x)), k = x.items.length;
       return `<button class="nw-dchip" data-key="d-${esc(x.dkey)}" data-act="nwresume" data-k="${esc(x.dkey)}">${avatar(nm, 's')}<span class="nw-ct"><span class="ell nw-cn">${esc(nm)}</span><span class="sx-sub nw-dcs"><span class="m">${k}</span> item${k === 1 ? '' : 's'} · ${nwMoney(p2)}</span></span></button>`; }).join('')}</div>` : ''}
     <span class="nw-lab" id="nw_swlab">${args.q ? 'MATCHES' : 'RECENT'}</span>
     <div class="sx-card nw-clist" id="nw_swlist">${nwSwList(args)}</div>
@@ -5915,7 +6008,7 @@ function nwSearch(s){
       const strip = words.filter(w => !(packWord && singular(w) === packWord) && !(unitWord && singular(w) === unitWord && !hay.includes(singular(w))));
       const nameWords = strip.length ? strip : words.filter(w => !(packWord && singular(w) === packWord));
       if (!nameWords.length || !nameWords.every(w => hay.includes(w) || hay.includes(singular(w)))) return;
-      const shelf = getStockQty(p.id, vi), priced = rankedPriceRows(p.id, vi).length > 0;
+      const shelf = shelfAvailable(p.id, vi), priced = rankedPriceRows(p.id, vi).length > 0;
       const inPacks = su.hasPack && words.some(w => singular(w) === packWord);
       const starts = label.toLowerCase().startsWith(nameWords[0]) ? 0 : 1;
       hits.push({ p, vi, label, inPacks, su, shelf, rank: starts * 10 + (shelf > 0 ? 0 : priced ? 1 : 2) });
@@ -5971,7 +6064,7 @@ function nwAttrs(p){
 }
 // A variant with no price rows has no unit of its own: its siblings say what it is sold by.
 function nwUnitGuess(p){ const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((v, i) => i) : [null]; for (const vi of vs) { const u = stockUnitFor(p.id, vi).unit; if (u) return u; } return ''; }
-function nwAvail(pid, vi){ return rankedPriceRows(pid, vi).length > 0 || getStockQty(pid, vi) > 0; }
+function nwAvail(pid, vi){ return rankedPriceRows(pid, vi).length > 0 || shelfAvailable(pid, vi) > 0; }
 function nwPickVariant(p, curVi, attr, val){
   const cur = ((p.variants[curVi] || {}).combo) || {}, want = { ...cur, [attr]: val };
   let best = -1, score = -1;
@@ -5985,7 +6078,7 @@ function nwOptionLive(p, curVi, attr, val){
 function nwTile(p, size){
   return p && p.image ? `<img class="nw-tile" src="${esc(p.image)}" alt="" style="width:${size}px;height:${size}px">` : `<span class="nw-tile" style="width:${size}px;height:${size}px">${ic('item', Math.round(size * 0.46))}</span>`;
 }
-function nwShelfWord(pid, vi){ const s = getStockQty(pid, vi); return s > 0 ? `<span class="nw-g">${n0(s)} on shelf</span>` : (rankedPriceRows(pid, vi).length ? '<span class="nw-a">bought in</span>' : '<span class="nw-a">to price</span>'); }
+function nwShelfWord(pid, vi){ const s = shelfAvailable(pid, vi); return s > 0 ? `<span class="nw-g">${n0(s)} on shelf</span>` : (rankedPriceRows(pid, vi).length ? '<span class="nw-a">bought in</span>' : '<span class="nw-a">to price</span>'); }
 // Links the shop marked "instead": in stock, for when this one is short.
 function nwInstead(pid, vi, qty){
   const out = [];
@@ -5993,7 +6086,7 @@ function nwInstead(pid, vi, qty){
     const other = l.fromId === pid ? l.toId : l.fromId, ovi = l.fromId === pid ? l.toVariantIdx : l.fromVariantIdx;
     const p = productById(other); if (!p || other === pid) return;
     const vs = ovi != null ? [ovi] : (Array.isArray(p.variants) && p.variants.length ? p.variants.map((v, i) => i) : [null]);
-    const best = vs.map(v => ({ v, s: getStockQty(other, v) })).sort((a, b) => b.s - a.s)[0];
+    const best = vs.map(v => ({ v, s: shelfAvailable(other, v) })).sort((a, b) => b.s - a.s)[0];
     if (best && best.s >= qty && !out.some(o => o.p.id === other)) out.push({ p, vi: best.v });
   });
   return out.slice(0, 2);
@@ -6016,7 +6109,7 @@ function nwFindHTML(){
   const F = nwFocus(r); if (!F) return '';
   const p = F.p, vi = F.vi, qty = F.qty;
   const line = makeLine(p.id, vi, qty, { qtyIn: F.qtyIn }), su = F.su;
-  const shelf = getStockQty(p.id, vi), toc = !line || linePriceToConfirm(line), sell = toc ? 0 : quoteItemSellPrice(line);
+  const shelf = shelfAvailable(p.id, vi), held = heldForOrders(p.id, vi), toc = !line || linePriceToConfirm(line), sell = toc ? 0 : quoteItemSellPrice(line);
   const unit = (line && line.unit) || su.unit || nwUnitGuess(p), pq = Number(line && line.packQty) || su.packQty || 0, pu = (line && line.packUnit) || su.packUnit;
   const hasPack = pq > 0 && !!pu && cmpUnitKey(pu) !== cmpUnitKey(unit);
   const short = shelf > 0 && shelf < qty, bought = !!(line && line.supplierId && line.supplierId !== '__stock__');
@@ -6027,13 +6120,17 @@ function nwFindHTML(){
   const attrs = nwAttrs(p);
   const chips = attrs.length ? `<div class="nw-attrs">${attrs.map((a, ai) => (ai ? '<span class="nw-asep"></span>' : '') + a.values.map(v => { const on = vi != null && String(((p.variants[vi] || {}).combo || {})[a.name]) === v, live = nwOptionLive(p, vi, a.name, v);
     return `<button class="nw-opt ${on ? 'on' : ''} ${live ? '' : 'dead'}" data-act="nwvar" data-a="${esc(a.name)}" data-v="${esc(v)}" aria-pressed="${on}" ${live ? '' : 'aria-label="' + esc(v) + ', no price or stock"'}>${esc(v)}</button>`; }).join('')).join('')}</div>` : '';
-  const sub = state === 'np' ? `sold by the ${esc(unit || 'piece')} · ${shelf > 0 ? n0(shelf) + ' on shelf' : 'bought in'}` : `${shelf > 0 ? `<b class="nw-gk">${n0(shelf)}</b> on shelf` : '<span class="nw-a">bought in</span>'}${hasPack ? ` · ${n0(pq)} a ${esc(pu)}` : ''}`;
+  const heldW = held > 0 ? ` · ${n0(held)} held for orders` : '';
+  const sub = state === 'np' ? `sold by the ${esc(unit || 'piece')} · ${shelf > 0 ? n0(shelf) + ' on shelf' + heldW : 'bought in'}` : `${shelf > 0 ? `<b class="nw-gk">${n0(shelf)}</b> on shelf${heldW}` : '<span class="nw-a">bought in</span>'}${hasPack ? ` · ${n0(pq)} a ${esc(pu)}` : ''}`;
   const stepper = big => `<span class="nw-fstep ${big ? 'big' : ''}"><button data-act="nwfstep" data-d="-1" aria-label="Fewer">−</button><span class="nw-fq"><span class="m">${nwNum(qty)}</span>${hasPack && qty >= pq ? `<small>${nwNum(qty / pq)} ${esc(nwAbbr(pu))}</small>` : ''}</span><button data-act="nwfstep" data-d="1" aria-label="More">+</button></span>`;
   const addAttrs = (q2, u) => `data-act="addres" data-pid="${esc(p.id)}" data-vi="${vi == null ? '' : vi}" data-q="${q2}" data-u="${u || F.qtyIn}"`;
   h += `<div class="nw-find ${state}" data-key="find-${esc(p.id)}">
     <div class="nw-fhead">${nwTile(p, state === 'ok' ? 42 : 52)}<span class="nw-ct"><span class="nw-fname">${esc(p.name)}</span><span class="nw-fsub">${state === 'short' && !toc ? `<span class="m nw-ink">${n0(sell)}</span> ${nwPer(esc(unit))} · ` : ''}${sub}</span></span>${state === 'ok' ? `<span class="nw-fprice"><span class="m">${n0(sell)}</span><span>${nwPer(esc(unit))}</span></span>` : ''}</div>
     ${chips}`;
   if (state === 'ok') h += `<div class="nw-fact">${stepper(false)}<button class="nw-fadd" ${addAttrs(qty)}>Add · <span class="m">${n0(qty * sell)}</span></button></div>`;
+  const pk = state !== 'short' ? linePackOnly(line) : null, pkLine = pk && pk.extra > 0 ? makeLine(p.id, vi, pk.units) : null;
+  const pkHTML = pkLine ? `<span class="nw-fnote">The supplier sells it by the <b>${esc(pk.packUnit)} of ${n0(pk.pack)}</b> — the shop buys ${n0(pk.units)} anyway.</span><button class="nw-fsec" ${addAttrs(pk.units, 'unit')}>Make it ${n0(pk.units)} · the full ${esc(pk.packUnit)} <span class="m">${linePriceToConfirm(pkLine) ? '' : n0(pk.units * quoteItemSellPrice(pkLine))}</span></button>` : '';
+  if (state === 'ok') h += pkHTML;
   else if (state === 'short') {
     const l2 = makeLine(p.id, vi, shelf), toc2 = !l2 || linePriceToConfirm(l2), tot2 = toc2 ? '' : n0(shelf * quoteItemSellPrice(l2));
     const w = Math.max(6, Math.min(94, Math.round(shelf / qty * 100)));
@@ -6043,7 +6140,7 @@ function nwFindHTML(){
         : `<button class="nw-fadd" ${addAttrs(shelf, 'unit')}>Make it ${n0(shelf)} · from the shelf <span class="m">${tot2}</span></button><button class="nw-fsec" ${addAttrs(qty)}>Add ${nwNum(qty)} anyway</button>`}`;
   } else {
     h += `<div class="nw-np"><span class="nw-npi">${ic('nwtag', 20)}</span><span class="nw-ct"><b>No selling price yet</b><span>${esc(mgrName())} prices it before it goes out</span></span><span class="m nw-npd">— —</span></div>
-      <div class="nw-fact">${stepper(true)}<button class="nw-fadd navy" ${addAttrs(qty)}>Add · price to confirm</button></div>`;
+      <div class="nw-fact">${stepper(true)}<button class="nw-fadd navy" ${addAttrs(qty)}>Add · price to confirm</button></div>${pkHTML}`;
   }
   h += `</div>`;
   if (state === 'np') h += `<div class="nw-shows" data-key="shows"><span class="nw-lab">ON THE ORDER IT SHOWS AS</span><div class="nw-showrow">${nwTile(p, 40)}<span class="nw-ct">${nameHTML(nameParts(p.id, vi, productVariantLabel(p, vi)))}<span class="m nw-qtx">${nwNum(qty)} ${esc(unit || 'pc')} × <b>?</b></span></span><span class="nw-tocchip">price to confirm</span></div></div>`;
@@ -6080,7 +6177,7 @@ ACT.nwfstep = t => {
 };
 ACT.nwfocus = t => { NW.find = { pid: t.dataset.pid, vi: t.dataset.vi === '' ? null : Number(t.dataset.vi), qty: Number(t.dataset.q) || 1, qtyIn: 'unit' }; haptic('light'); nwRefreshFind(); const pg = document.querySelector('#sx_pages .sx-page:last-child'); if (pg) pg.scrollTop = 0; };
 ACT.nwrowadd = t => {
-  const pid = t.dataset.pid, vi = t.dataset.vi === '' ? null : Number(t.dataset.vi), q = Number(t.dataset.q) || 1, sh = getStockQty(pid, vi);
+  const pid = t.dataset.pid, vi = t.dataset.vi === '' ? null : Number(t.dataset.vi), q = Number(t.dataset.q) || 1, sh = shelfAvailable(pid, vi);
   if (sh > 0 && sh < q) { ACT.nwfocus(t); return; } // short: the choice first
   nwAddAndBack(() => addLine(pid, vi, q, 'unit'));
 };
@@ -6181,11 +6278,11 @@ ACT.nwchdel = t => { S.draft.charges = (S.draft.charges || []).filter(x => Numbe
 /* ---------------- the one screen (QOrder) ---------------- */
 function bandHTML(it){
   const d = S.draft, toc = linePriceToConfirm(it), qw = lineQtyWords(it), open = d.openLine === Number(it.lineId);
-  const shelf = getStockQty(it.productId, it.variantIdx), qty = Number(it.qty) || 0;
+  const shelf = shelfAvailable(it.productId, it.variantIdx), qty = Number(it.qty) || 0;
   const pq = Number(it.packQty) || 0, hasPack = pq > 0 && it.packUnit && cmpUnitKey(it.packUnit) !== cmpUnitKey(it.unit);
   let chip;
   if (it.supplierId === '__stock__') chip = shelf >= qty ? `<span class="nw-c g">${n0(shelf)} on shelf</span>${hasPack && qty >= pq ? `<span class="ell">· ${nwNum(qty / pq)} ${esc(nwPlural(it.packUnit, qty / pq))}</span>` : ''}` : `<span class="nw-c a">${n0(shelf)} on shelf</span><span class="ell">· ${n0(qty - shelf)} short</span>`;
-  else if (it.supplierId) chip = `<span class="nw-c a">bought in</span><span class="ell">· shop checks for supplier</span>`;
+  else if (it.supplierId) { const pk = linePackOnly(it); chip = `<span class="nw-c a">bought in</span><span class="ell">· ${pk && pk.extra > 0 ? `comes by the ${esc(pk.packUnit)} of ${n0(pk.pack)}` : 'shop checks for supplier'}</span>`; }
   else chip = `<span class="nw-c a">to find</span><span class="ell">· shop finds a supplier</span>`;
   const sell = toc ? 0 : quoteItemSellPrice(it);
   let seg = `<span class="nw-each">${toc ? '<b class="m nw-a">?</b><small>no price yet</small>' : `<b class="m">${n0(sell)}</b><small>${esc(nwPer(it.unit || 'piece'))}</small>`}</span>`;
@@ -6312,8 +6409,8 @@ function nwRestHTML(){
 }
 function nwDockHTML(){
   const d = S.draft, n = d.items.length, pct = shopCreditPct();
-  const q = draftQuote(), pv = pricedView(q);
-  const other = d.credit ? pricedView({ ...q, credit: null }).total : pricedView({ ...q, credit: pct > 0 ? { pct, days: custTermsDays() } : null }).total;
+  const q = draftQuote(), pv = pricedLive(q);
+  const other = d.credit ? pricedLive({ ...q, credit: null }).total : pricedLive({ ...q, credit: pct > 0 ? { pct, days: custTermsDays() } : null }).total;
   const sub = n && !(pv.total > 0) && pv.toConfirm ? 'price to confirm' : pct > 0 && n ? (d.credit ? `${d.creditWhy === 'habit' ? 'they buy on credit · ' : ''}cash <span class="m">${n0(other)}</span>` : `on credit <span class="m">${n0(other)}</span>`) : `<span class="m">${n}</span> line${n === 1 ? '' : 's'}`;
   // Each add gets its own chip (keyed by when), so a second add plays it again instead of retexting a fading one.
   const delta = NW.delta && Date.now() - NW.delta.t < 1700 ? `<span class="nw-delta m" data-key="dl-${NW.delta.t}" aria-live="polite">${esc(NW.delta.text)}</span>` : '';
@@ -6385,7 +6482,7 @@ function nwAisleItems(cat){ return memo('nwaisle', cat, () => nwAisleItemsNow(ca
 function nwAisleItemsNow(cat){
   const sold = nwSold(), out = [];
   D().products.filter(p => nwCatOf(p) === cat).forEach(p => { const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((v, i) => i) : [null];
-    vs.forEach(vi => out.push({ p, vi, label: productVariantLabel(p, vi), shelf: getStockQty(p.id, vi), sold: sold[nwLineKey({ productId: p.id, variantIdx: vi })] || 0 })); });
+    vs.forEach(vi => out.push({ p, vi, label: productVariantLabel(p, vi), shelf: shelfAvailable(p.id, vi), sold: sold[nwLineKey({ productId: p.id, variantIdx: vi })] || 0 })); });
   return out.sort((a, b) => b.sold - a.sold || a.label.localeCompare(b.label));
 }
 ACT.nwaisles = () => push('aisles', {});
@@ -6444,7 +6541,7 @@ ACT.nwafocus = t => {
 ACT.nwaadd = t => {
   const pid = t.dataset.pid, vi = t.dataset.vi === '' ? null : Number(t.dataset.vi), p = productById(pid); if (!p || !S.draft) return;
   const ex = S.draft.items.find(it => it.productId === pid && (it.variantIdx == null ? null : Number(it.variantIdx)) === vi);
-  const step = ex && ex.qtyIn === 'pack' && Number(ex.packQty) > 0 ? Number(ex.packQty) : 1, want = (ex ? Number(ex.qty) || 0 : 0) + step, sh = getStockQty(pid, vi);
+  const step = ex && ex.qtyIn === 'pack' && Number(ex.packQty) > 0 ? Number(ex.packQty) : 1, want = (ex ? Number(ex.qty) || 0 : 0) + step, sh = shelfAvailable(pid, vi);
   // One more than the shelf holds: the Short choice, not a silent buy-in.
   if (sh > 0 && want > sh && (!ex || ex.supplierId === '__stock__')) {
     S.draft.q = nwNum(want) + ' ' + p.name; NW.find = { pid, vi, qty: want, qtyIn: 'unit', replace: ex ? ex.lineId : null };
@@ -6493,12 +6590,12 @@ ACT['slide:place'] = async el => {
 function nwShelfOnly(d){
   const its = (d && d.items) || [];
   if (!its.length || nwCreditHeld(d)) return false;
-  return its.every(it => it.supplierId === '__stock__' && getStockQty(it.productId, it.variantIdx) >= (Number(it.qty) || 0)
+  return its.every(it => it.supplierId === '__stock__' && shelfAvailable(it.productId, it.variantIdx) >= (Number(it.qty) || 0)
     && !linePriceToConfirm(it) && !priceReviewState(it) && it.priceNote !== 'nocost');
 }
 function nwCreditHeld(d){
   const c = d && d.customerId != null && d.customerId !== '' ? customerById(d.customerId) : null;
-  return !!creditHoldFor(c, pricedView(draftQuote()).total);
+  return !!creditHoldFor(c, pricedLive(draftQuote()).total);
 }
 async function nwSendPicture(id, convId){
   const q = quoteById(id); if (!q || typeof orderPictureBlob !== 'function') return;
@@ -6676,7 +6773,7 @@ function payQuote(id){ return D().savedQuotes.find(x => String(x.id) === String(
 function payView(a){
   if (a.orderId != null) {
     const q = payQuote(a.orderId); if (!q) return null;
-    const c = payOrderCustomer(q), pv = pricedView(q), owed = Math.max(0, Math.round(pv.total - (Number(q.amountPaid) || 0))), amt = Math.round(Number(a.amt) || 0);
+    const c = payOrderCustomer(q), pv = pricedLive(q), owed = Math.max(0, Math.round(pv.total - (Number(q.amountPaid) || 0))), amt = Math.round(Number(a.amt) || 0);
     return { kind: 'order', q, c, name: (c && c.name) || (q.client && q.client.name) || 'Walk-in', phone: (c && (c.phone || c.phone2)) || (q.client && q.client.phone) || '',
       owed, after: Math.max(0, owed - amt), over: Math.max(0, amt - owed), toConfirm: pv.toConfirm };
   }
@@ -6951,7 +7048,7 @@ async function payOrderSlide(a){
     if (cur.data.invoiced) throw new Error('this order has just been invoiced — take it from the customer\'s bills.');
     const payload = cur.data.payload || {};
     const q = rowToQuote({ id: v.q.id, status: cur.data.status, invoiced: false, amount_paid: cur.data.amount_paid, payload });
-    const toPay = Math.max(0, Math.round(pricedView(q).total - (Number(q.amountPaid) || 0)));
+    const toPay = Math.max(0, Math.round(pricedLive(q).total - (Number(q.amountPaid) || 0)));
     const pay = Math.min(amount, toPay); if (!(pay > 0)) throw new Error('nothing is left to pay on this order.');
     const ctx = { date, time, method, cashMax: D().cashTxns.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) };
     const cashTxnId = await payCashRow(ctx, pay, 'Invoice Payment', `Payment — order ${orderNo(q)}`, q.id); written = pay;
@@ -7106,7 +7203,7 @@ function paidFromTxn(id){
   const bills = group.map(x => {
     const q = x.quoteId != null ? payQuote(x.quoteId) : null;
     if (!q) return { label: 'On account', pay: x.amount, onAccount: true, left: 0 };
-    const due = q.invoiced ? balanceDue(q) : Math.max(0, Math.round(pricedView(q).total - (Number(q.amountPaid) || 0)));
+    const due = q.invoiced ? balanceDue(q) : Math.max(0, Math.round(pricedLive(q).total - (Number(q.amountPaid) || 0)));
     return { quoteId: q.id, label: q.invoiced ? invoiceLabel(q) : 'Order ' + orderNo(q), pay: x.amount, left: due, cleared: !(due > 0.5) };
   });
   const kind = q0 && !q0.invoiced && group.length === 1 ? 'order' : 'cust';
@@ -7906,7 +8003,7 @@ SHEET.chatorders = ({ id }) => {
   const c = customerById(id), list = customerOrdersFor(id).slice().sort((a, b) => createdMs(b) - createdMs(a));
   return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">${esc(c ? firstWord(c.name) + '’s orders' : 'Their orders')} · ${list.length}</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
     <div class="sx-card sx-list" style="max-height:60vh;overflow:auto">${list.map(q => { const st = stageOf(q), paid = q.invoiced && balanceDue(q) === 0;
-      return `<button class="sx-row" data-act="chatorder" data-id="${q.id}"><span class="m" style="font-size:13px;font-weight:600;width:52px;flex:none">${orderNo(q)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;gap:6px;align-items:center"><span class="cht-chip" style="background:${st.col}22;color:${st.key === 'draft' ? 'var(--amberInk)' : st.col}"><i style="width:6px;height:6px;border-radius:9px;background:${st.col}"></i>${st.label}</span>${q.invoiced ? chatChip(paid ? 'paid' : 'owes ' + short(balanceDue(q)), paid ? ['var(--greenSoft)', 'var(--green)'] : null) : ''}</span><span class="sx-sub">${esc(dayLabel(q.date || isoOf(createdMs(q))))} · ${(q.items || []).length} item${(q.items || []).length === 1 ? '' : 's'}</span></span><span class="m" style="font-size:14px;font-weight:600">${n0(pricedView(q).total)}</span></button>`; }).join('') || '<div class="sx-empty">No orders yet</div>'}</div>`;
+      return `<button class="sx-row" data-act="chatorder" data-id="${q.id}"><span class="m" style="font-size:13px;font-weight:600;width:52px;flex:none">${orderNo(q)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;gap:6px;align-items:center"><span class="cht-chip" style="background:${st.col}22;color:${st.key === 'draft' ? 'var(--amberInk)' : st.col}"><i style="width:6px;height:6px;border-radius:9px;background:${st.col}"></i>${st.label}</span>${q.invoiced ? chatChip(paid ? 'paid' : 'owes ' + short(balanceDue(q)), paid ? ['var(--greenSoft)', 'var(--green)'] : null) : ''}</span><span class="sx-sub">${esc(dayLabel(q.date || isoOf(createdMs(q))))} · ${(q.items || []).length} item${(q.items || []).length === 1 ? '' : 's'}</span></span><span class="m" style="font-size:14px;font-weight:600">${n0(pricedLive(q).total)}</span></button>`; }).join('') || '<div class="sx-empty">No orders yet</div>'}</div>`;
 };
 ACT.chatorder = t => { closeSheet(true); renderSheet(); push('order', { id: Number(t.dataset.id) }); };
 
@@ -8132,7 +8229,7 @@ const CT_METHODS = [['cash', 'Cash'], ['momo', 'MoMo'], ['bank', 'Bank']];
 ICON.ctLock = '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>';
 ICON.ctMinus = '<path d="M5 12h14"/>';
 ICON.ctDown = '<path d="M6 9l6 6 6-6"/>';
-function ctOffShelf(d){ return (d.items || []).filter(it => it.supplierId !== '__stock__' || getStockQty(it.productId, it.variantIdx) < (Number(it.qty) || 0)); }
+function ctOffShelf(d){ return (d.items || []).filter(it => it.supplierId !== '__stock__' || shelfAvailable(it.productId, it.variantIdx) < (Number(it.qty) || 0)); }
 function ctMethodWord(m){ return (CT_METHODS.find(x => x[0] === m) || CT_METHODS[0])[1]; }
 function ctLineName(it){ const np = nameParts(it.productId, it.variantIdx, it.productName); return np.base + (np.variant ? ' ' + np.variant : ''); }
 
@@ -8169,7 +8266,7 @@ function ctShelfPicksNow(){
   const sold = nwSold(), cnt = {}, cand = [];
   D().savedQuotes.forEach(q => { if (!q.counter || q.voided) return; (q.items || []).forEach(it => { const k = nwLineKey(it); cnt[k] = (cnt[k] || 0) + (Number(it.qty) || 0); }); });
   D().products.forEach(p => { (Array.isArray(p.variants) && p.variants.length ? p.variants.map((_, i) => i) : [null]).forEach(vi => {
-    const st = getStockQty(p.id, vi); if (!(st > 0)) return;
+    const st = shelfAvailable(p.id, vi); if (!(st > 0)) return;
     const k = p.id + '|' + (vi == null ? '' : vi); cand.push({ p, vi, st, k, a: cnt[k] || 0, b: sold[k] || 0 }); }); });
   cand.sort((x, y) => y.a - x.a || y.b - x.b || y.st - x.st);
   const out = [];
@@ -8191,7 +8288,7 @@ function ctTileHTML(x){
 }
 ACT.ctadd = t => {
   const d = S.draft; if (!d) return;
-  const pid = t.dataset.pid, vi = t.dataset.vi === '' ? null : Number(t.dataset.vi), on = ctOnCounter(pid, vi), sh = getStockQty(pid, vi);
+  const pid = t.dataset.pid, vi = t.dataset.vi === '' ? null : Number(t.dataset.vi), on = ctOnCounter(pid, vi), sh = shelfAvailable(pid, vi);
   if (on && (Number(on.qty) || 0) + 1 > sh) { toast(`Only ${nwNum(sh)} on the shelf`); return; }
   addLine(pid, vi, 1, 'unit'); d.given = null; saveDraft(); render();
 };
@@ -8255,7 +8352,7 @@ function ctHeadRight(d, q){
   return '<span class="ok">all at the shop’s price</span>';
 }
 function ctLineHTML(it){
-  const qw = lineQtyWords(it), toc = linePriceToConfirm(it), sell = toc ? 0 : quoteItemSellPrice(it), sh = getStockQty(it.productId, it.variantIdx);
+  const qw = lineQtyWords(it), toc = linePriceToConfirm(it), sell = toc ? 0 : quoteItemSellPrice(it), sh = shelfAvailable(it.productId, it.variantIdx);
   const short = it.supplierId !== '__stock__' || sh < (Number(it.qty) || 0), step = it.qtyIn === 'pack' && Number(it.packQty) > 0 ? Number(it.packQty) : 1;
   const last = (Number(it.qty) || 0) <= step, name = ctLineName(it);
   return `<div class="ct-cl" data-key="cl-${it.lineId}">
@@ -8300,7 +8397,7 @@ ACT['in:q'] = t => {
 };
 function ctDockFor(){ const d = S.draft; return !d || !d.items.length || (d.q || '').trim() ? ctSlimHTML() : counterDockHTML(); }
 function ctSlimHTML(){
-  const d = S.draft, n = d ? d.items.length : 0, total = n ? Math.round(pricedView(draftQuote()).total) : 0;
+  const d = S.draft, n = d ? d.items.length : 0, total = n ? Math.round(pricedLive(draftQuote()).total) : 0;
   if (!n) return `<div class="ct-slim" data-key="dock-slim"><span class="tx"><b>Nothing on the counter yet</b><span>Tap an item, or search for it</span></span><span class="m n">0</span></div>`;
   return `<div class="ct-slim" data-key="dock-slim"><span class="tx"><b><span class="m">${n}</span> line${n === 1 ? '' : 's'} on the counter</b><span>Pick one to add it</span></span><span class="m n on">${n0(total)}</span></div>`;
 }
@@ -8410,9 +8507,9 @@ PAGE.counterwait = a => {
   const q = quoteById(a.id);
   if (!q) return `<div class="sx-empty" style="padding-top:30vh"><b>That sale is not here any more</b><button class="sx-btn navy" data-act="back" style="margin:16px auto 0">Back</button></div>`;
   const its = q.items || [], wait = pricesWaiting(q), decided = its.filter(it => priceReviewState(it) === 'approved' || priceReviewState(it) === 'changed');
-  const m = a.method || 'cash', total = Math.round(pricedView(q).total), mgr = mgrName(), since = createdMs(q), secs = Math.max(0, Math.floor((Date.now() - since) / 1000));
+  const m = a.method || 'cash', total = Math.round(pricedLive(q).total), mgr = mgrName(), since = createdMs(q), secs = Math.max(0, Math.floor((Date.now() - since) / 1000));
   const no = decided.some(it => priceReviewState(it) === 'changed'), paid = q.status === 'completed';
-  const rows = its.map((it, i) => { const qw = ordQty(it), sell = linePriceToConfirm(it) ? 0 : quoteItemSellPrice(it), r = it.priceReview || {}, sh = getStockQty(it.productId, it.variantIdx);
+  const rows = its.map((it, i) => { const qw = ordQty(it), sell = linePriceToConfirm(it) ? 0 : quoteItemSellPrice(it), r = it.priceReview || {}, sh = shelfAvailable(it.productId, it.variantIdx, q.id);
     return `<div class="ct-cl ro" data-key="l-${i}"><span class="nm"><b class="ell">${esc(ordItemName(it))}</b><span class="sub"><span class="m">${nwNum(sh)}</span> on shelf · ${priceReviewState(it) === 'changed' && Number(r.was) > 0 ? `<s class="m">${n0(r.was)}</s> ` : ''}<span class="m">${n0(sell)}</span></span>${priceTagHTML(it, true)}</span>
       <span class="m am">${n0((Number(it.qty) || 0) * sell)}</span><span class="ct-qpill"><span class="m">${nwNum(qw.n)}</span> <small>${esc(qw.u || 'pc')}</small></span></div>`; }).join('');
   const w0 = wait[0] || decided[0], cost = w0 ? lineCost(w0) : null, shop = w0 ? shopSellPrice(w0) : null, mine = w0 ? Number((w0.priceReview && w0.priceReview.was) || w0.sellPrice) : null;
@@ -8423,7 +8520,7 @@ PAGE.counterwait = a => {
       <i style="left:${at(shop)}%;background:#6FDCB0"></i><small style="left:${at(shop)}%;top:30px;color:#6FDCB0">shop’s <span class="m">${n0(shop)}</span></small></div>` : '';
   const step = (ok, word, sub, now) => `<span class="ct-step"><span class="d${ok ? ' ok' : now ? ' now ord-ring' : ''}">${ok ? ic('tick', 12, 'style="stroke-width:2.8"') : ic('chClock', 13)}</span><b>${word}</b><small class="m">${sub}</small></span>`;
   const rev = decided.map(priceReviewMs).reduce((x, y) => Math.max(x, y), 0);
-  const shopTotal = wait.length ? Math.round(pricedView({ ...q, items: its.map(it => priceReviewState(it) === 'wait' && shopSellPrice(it) != null ? { ...it, sellPrice: shopSellPrice(it) } : it) }).total) : 0;
+  const shopTotal = wait.length ? Math.round(pricedLive({ ...q, items: its.map(it => priceReviewState(it) === 'wait' && shopSellPrice(it) != null ? { ...it, sellPrice: shopSellPrice(it) } : it) }).total) : 0;
   const name = (q.client && q.client.name) || 'Walk-in';
   const head = wait.length ? `<span class="amb">${wait.length} under the shop’s price</span>` : no ? `<span>${esc(mgr)} set the price</span>` : `<span class="ok">${esc(mgr)} said yes</span>`;
   const wn = wait[0] ? `${esc(nameParts(wait[0].productId, wait[0].variantIdx, wait[0].productName).base)} at <span class="m">${n0(mine)}</span> · on their phone` : '';
