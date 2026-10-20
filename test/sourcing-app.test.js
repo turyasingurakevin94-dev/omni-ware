@@ -147,9 +147,9 @@ const BOARDS = ['Main', 'Asks', 'AsksDropped', 'NewAsk', 'HuntDropped', 'Hunts',
   // Round 3: the hunt's quotes side by side moved to Quotes (Hunt is its way to the shelf).
   'Quotes', 'Suppliers', 'Item', 'Search'];
 BOARDS.forEach(b => t.check(html.includes(`SCREENS.${b} = {`), `the ${b} board is a screen`));
-['Main', 'Asks', 'Hunts', 'Prices'].forEach(b => {
+['Main', 'Hunts', 'Prices', 'Suppliers'].forEach(b => {
   const start = html.indexOf(`SCREENS.${b} = {`), end = html.indexOf('SCREENS.', start + 10);
-  t.check(/<nav aria-label="Sourcing"/.test(html.slice(start, end > 0 ? end : undefined)), `${b} carries the shared tab bar`);
+  t.check(/<nav aria-label="Sourcing"|\$\{V2NAV\('/.test(html.slice(start, end > 0 ? end : undefined)), `${b} carries the shared tab bar`);
 });
 {
   const code = html.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
@@ -175,8 +175,8 @@ t.check(/supabase\/functions|next_row_id_blocks/.test(html) && html.includes("sb
   // and a found hunt with no price is never "Found · 0 quotes".
   const start = html.indexOf('SCREENS.AsksDropped = {'), end = html.indexOf('SCREENS.AtShop = {', start);
   const scr = html.slice(start, end);
-  t.check(/<nav aria-label="Sourcing"/.test(scr) && /nav: navVals\(\)/.test(scr), 'From orders carries the shared tab bar (fix 16)');
-  t.check(/position: absolute; left: 0; right: 0; bottom: calc\(84px \+ var\(--safe-b\)\); z-index: 20; background: #16203C/.test(scr) && !/position: absolute; left: 0; right: 0; bottom: 0; background: #16203C/.test(scr), 'the "All being hunted" dock sits above the tab bar, never over it (fix 16)');
+  t.check(/<nav aria-label="Sourcing"|\$\{V2NAV\('/.test(scr) && /nav: navVals\(\)/.test(scr), 'From orders carries the shared tab bar (fix 16)');
+  t.check(/position: absolute; left: 0; right: 0; bottom: calc\(86px \+ var\(--safe-b\)\); z-index: 20; background: #16203C/.test(scr) && !/position: absolute; left: 0; right: 0; bottom: 0; background: #16203C/.test(scr), 'the "All being hunted" dock sits above the tab bar, never over it (fix 16)');
   const pill = (bg, ink) => bg + ink;
   const mk = (lead, quotes) => compileScope([fnOf(html, 'adState', 'sourcing.html')], {
     leadSuppliers: l => l.candidates, candidateHasPrice: c => !!c.price, leadFacts: l => ({ supplier: l.candidates.length > 0, importer: false }),
@@ -240,7 +240,7 @@ if (!chromium) {
   await page.waitForFunction(() => window.SX && window.SX.started, null, { timeout: 10000 });
   for (const b of BOARDS) {
     for (const props of [null, b === 'Hunt' || b === 'Quotes' || b === 'PriceIt' || b === 'Decide' ? { leadId: 'SRC-007' } : b === 'Search' ? { q: 'a' } : null].filter((x, i) => i === 0 || x)) {
-      await page.evaluate(([n, p]) => { if (['Main', 'Asks', 'Hunts', 'Prices'].includes(n) && !p) A.tab(n); else { A.tab('Main'); A.go(n, p || {}); } }, [b, props]);
+      await page.evaluate(([n, p]) => { if (['Main', 'Hunts', 'Prices', 'Suppliers'].includes(n) && !p) A.tab(n); else { A.tab('Main'); A.go(n, p || {}); } }, [b, props]);
       await page.waitForTimeout(150);
       const res = await page.evaluate(() => { const h = document.getElementById('sx_screen'); return { err: h.getAttribute('data-sv-error'), screen: h.getAttribute('data-screen'), text: h.innerText.length, wide: h.scrollWidth > h.clientWidth + 1 }; });
       t.check(!res.err && res.screen === b && res.text > 20, `${b}${props ? ' ' + JSON.stringify(props) : ''} draws from the sample shop${res.err ? ' — ' + res.err : ''}`);
