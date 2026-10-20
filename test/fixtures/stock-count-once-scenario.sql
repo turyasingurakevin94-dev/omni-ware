@@ -1,4 +1,4 @@
--- 0141, asked of a real database: a stock count accepted while orders are
+-- 0142, asked of a real database: a stock count accepted while orders are
 -- packed or delivered but not invoiced counts their goods back in, so the
 -- invoice takes them off once, and only a real loss comes off at the count.
 grant all on all tables in schema public to authenticated;

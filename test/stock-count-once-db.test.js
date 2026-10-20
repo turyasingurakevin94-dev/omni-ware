@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * A stock count no longer counts delivered goods out twice (0141): what
+ * A stock count no longer counts delivered goods out twice (0142): what
  * orders packed, out or delivered but not yet invoiced have taken off the
  * shelf is counted back in when the count is accepted, so the invoice takes
  * it off once.
  *
  *   1. The SQL text: accept_stock_count is 0115's but for the marked change.
- *   2. A REAL database, when OW_PG names one: every migration in order, 0141
+ *   2. A REAL database, when OW_PG names one: every migration in order, 0142
  *      run twice, then test/fixtures/stock-count-once-scenario.sql.
  *
  * Run: node test/stock-count-once-db.test.js
@@ -18,8 +18,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('a stock count counts once (0141)');
-const raw = read('supabase/migrations/0141_stock_count_counts_once.sql');
+const t = createReporter('a stock count counts once (0142)');
+const raw = read('supabase/migrations/0142_stock_count_counts_once.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the change, and only it ---------------- */
@@ -27,7 +27,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   const strip = (x) => x.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
   const fnOf = (s) => { const a = s.indexOf('create or replace function accept_stock_count('); return s.slice(a, s.indexOf('$$;', s.indexOf('end;', a)) + 3); };
   const was = strip(fnOf(read('supabase/migrations/0115_store_role.sql')));
-  // 0115 sets after from the count before it reads the books; 0141 reads the books first,
+  // 0115 sets after from the count before it reads the books; 0142 reads the books first,
   // then sets after from the count's own difference (or, for an older count, adds back what is out).
   const was0 = was.replace(" after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6));", '');
   const now = strip(fnOf(raw))
@@ -50,10 +50,10 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/data\.stock && typeof data\.stock === 'object'/.test(store) && /pickStatus === 'short' && !q\.pickShortfallAckAt/.test(store),
     'the Store shows what the books say after acceptance, and counts an acknowledged short in full');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
-  t.check(/\| 0141 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0141 for this build');
+  t.check(/\| 0142 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0142 for this build');
   const others = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort()
     .filter((f) => /create or replace function accept_stock_count\(/.test(read('supabase/migrations/' + f)));
-  t.check(others[others.length - 1] === '0141_stock_count_counts_once.sql', 'in number order, 0141 is the last word on accept_stock_count');
+  t.check(others[others.length - 1] === '0142_stock_count_counts_once.sql', 'in number order, 0142 is the last word on accept_stock_count');
 }
 
 /* ---------------- 2. on a real database ---------------- */
@@ -78,8 +78,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0141_stock_count_counts_once.sql')]);
-t.check(again.status === 0, `0141 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0142_stock_count_counts_once.sql')]);
+t.check(again.status === 0, `0142 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'stock-count-once-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

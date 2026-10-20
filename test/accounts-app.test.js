@@ -125,6 +125,47 @@ function fakeDb(tb){
         trips.forEach(t => { writes.push(['update', 'collection_trips', { cash_count: clone(count) }]); t.cash_count = clone(count); });
         return { data: { given, paid, counted, diff, cashTxnId, paidTxns, bills, count, cashRows }, error: null };
       }
+      // 0141: the treasurer's six one-write actions, as the database does them.
+      const today = new Date().toISOString().slice(0, 10), rows = tname => (tb[tname] || (tb[tname] = []));
+      const cash = (account, type, category, amount, description, quote_id) => { const row = { id: nextId++, shop_id: a.p_shop_id, date: today, account, type, category, amount: Math.round(amount), description, time: '09:00', quote_id: quote_id == null ? null : quote_id }; writes.push(['insert', 'cash_txns', clone(row)]); rows('cash_txns').push(clone(row)); return row; };
+      const upd = (tname, row, patch) => { writes.push(['update', tname, clone(patch)]); Object.assign(row, clone(patch)); };
+      if (name === 'pay_dues') {
+        const cashRows = [], out = []; let paid = 0;
+        for (const d of a.p_dues) {
+          let row = rows('dues').find(x => (d.id != null && String(x.id) === String(d.id)) || (x.kind === d.kind && String(x.ref_id) === String(d.refId) && x.period === d.period));
+          if (!row) { row = { id: nextId++, shop_id: a.p_shop_id, kind: d.kind, ref_id: String(d.refId), period: d.period, due_date: d.dueDate, amount: d.amount, days: d.days, rate: d.rate, paid: 0, notes: d.notes, payload: { payments: [], absences: d.absences || [], basis: d.basis } }; writes.push(['insert', 'dues', clone(row)]); rows('dues').push(row); }
+          const pay = Math.round(Math.min(d.pay == null ? Infinity : d.pay, Math.max(0, (Number(row.amount) || 0) - (Number(row.paid) || 0)))); if (!(pay > 0)) continue;
+          const c = cash(a.p_account, 'payment', d.kind === 'rent' ? 'Rent' : 'Salaries & Wages', pay, (d.kind === 'rent' ? 'Rent' : 'Wages') + ' — ' + d.refId + ' — ' + d.period); cashRows.push(c);
+          upd('dues', row, { paid: (Number(row.paid) || 0) + pay, payload: { ...row.payload, payments: (row.payload.payments || []).concat([{ date: today, amount: pay, account: a.p_account, cashTxnId: c.id }]) } });
+          paid += pay; out.push(clone(row));
+        }
+        return { data: { paid, dues: out, cashRows }, error: null };
+      }
+      if (name === 'repay_loan') {
+        const l = rows('loans').find(x => String(x.id) === String(a.p_loan_id)); if (!l) return { data: null, error: { message: 'That loan is no longer in the books.' } };
+        const c = cash(a.p_account, 'payment', 'Loan Repayment', a.p_amount, l.lender + ' — repayment');
+        upd('loans', l, { payload: { ...(l.payload || {}), repayments: ((l.payload || {}).repayments || []).concat([{ date: today, amount: Math.round(a.p_amount), note: '', cashTxnId: c.id }]) } });
+        return { data: { loan: clone(l), cashTxnId: c.id, cashRows: [c] }, error: null };
+      }
+      if (name === 'receive_loan') {
+        const r = a.p_row, c = cash(a.p_account, 'receipt', 'Loan Received', r.principal - (r.fees || 0), r.lender);
+        const l = { id: nextId++, shop_id: a.p_shop_id, lender: r.lender, principal: r.principal, rate_pct: r.ratePct, method: 'reducing_balance', term_months: r.termMonths, fees: r.fees || 0, round_to: 1000, frequency: 'monthly', fee_per_instalment: 0, started_on: today, closed_on: null, notes: null, cash_txn_id: c.id, payload: { repayments: [] } };
+        writes.push(['insert', 'loans', clone(l)]); rows('loans').push(l);
+        return { data: { loan: clone(l), cashTxnId: c.id, cashRows: [c] }, error: null };
+      }
+      if (name === 'buy_asset') {
+        const r = a.p_row, c = cash(a.p_account, 'payment', 'Equipment purchase', r.cost, r.name + ' — ' + r.category);
+        const x = { id: nextId++, shop_id: a.p_shop_id, name: r.name, category: r.category, cost: r.cost, acquired_on: today, method: 'straight_line', life_months: (r.years || 5) * 12, rate_pct: null, salvage: 0, disposed_on: null, disposal_proceeds: null, notes: r.from ? 'From ' + r.from : null, cash_txn_id: c.id, disposal_cash_txn_id: null, loan_id: null };
+        writes.push(['insert', 'fixed_assets', clone(x)]); rows('fixed_assets').push(x);
+        return { data: { asset: clone(x), cashTxnId: c.id, cashRows: [c] }, error: null };
+      }
+      if (name === 'dispose_asset') {
+        const x = rows('fixed_assets').find(y => String(y.id) === String(a.p_asset_id)); if (!x) return { data: null, error: { message: 'That asset is no longer in the books.' } };
+        const c = a.p_how === 'sold' && a.p_proceeds > 0 ? cash(a.p_account, 'receipt', 'Asset Sale', a.p_proceeds, 'Sold ' + x.name) : null;
+        upd('fixed_assets', x, { disposed_on: today, disposal_proceeds: c ? Math.round(a.p_proceeds) : null, disposal_cash_txn_id: c ? c.id : null });
+        return { data: { asset: clone(x), cashTxnId: c ? c.id : null, cashRows: c ? [c] : [] }, error: null };
+      }
+      if (name === 'settle_agent') return { data: { cashIn: 0, paidOut: 0, orders: [], claims: [], cashRows: [] }, error: null };
       return { data: null, error: { message: 'no rpc' } };
     } };
 }

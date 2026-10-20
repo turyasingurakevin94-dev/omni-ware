@@ -67,7 +67,7 @@ begin
 end $$;
 revoke all on function ow_held_gone(uuid, text) from public, anon;
 
--- accept_stock_count: 0115's, with the marked change (0141:).
+-- accept_stock_count: 0115's, with the marked change (0142:).
 create or replace function accept_stock_count(p_id uuid)
 returns jsonb
 language plpgsql
@@ -102,7 +102,7 @@ begin
     if k is null then continue; end if;
     select qty into before from stock where shop_id = c.shop_id and key = k for update;
     before := coalesce(before, 0);
-    -- 0141: what live orders had already taken off the shelf is still in the books, and
+    -- 0142: what live orders had already taken off the shelf is still in the books, and
     -- their invoices will take it off. A count the Store saved with `held` (what was out
     -- on such orders when it counted; its `system` is the books less that) applies only
     -- the difference it found to the books as they are now, so an order packed, out or
@@ -157,7 +157,7 @@ begin
   end loop;
 
   update stock_counts set status = 'accepted', decided_by = auth.uid(), decided_at = now() where id = p_id;
-  -- 0141: what each counted item now stands at in the books, for the phone that accepted it.
+  -- 0142: what each counted item now stands at in the books, for the phone that accepted it.
   return jsonb_build_object('ok', true, 'changed', changed, 'stock', now_qty);
 end;
 $$;
