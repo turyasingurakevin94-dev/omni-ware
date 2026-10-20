@@ -1079,7 +1079,13 @@ function candidateTiers(c){
   return [{ minQty: Math.max(1, Number(c && c.moq) || 1), price: p }];
 }
 function candidateHasPrice(c){ return candidateTiers(c).length > 0 || (Array.isArray(c && c.variantOverrides) && c.variantOverrides.some(o => Array.isArray(o) && o.some(t => Number(t.price) > 0))); }
-function candidateUnitPriceAt(c, qty){ const n = Number(qty) || 0; let best = null, bm = -1; candidateTiers(c).forEach(t => { if (n >= t.minQty && t.minQty > bm) { best = t.price; bm = t.minQty; } }); return best; }
+// A supplier who quotes by the dozen (unit 'dozen', piecesPerUnit 12, v2's
+// packing builder) has a ladder per dozen. Everything that compares
+// suppliers or works out cash reads it per piece: a dozen's price is never
+// a piece's. candidateTiers itself stays the console's (the parity test).
+function candidatePieces(c){ return (c && Number(c.piecesPerUnit) > 1 && !/^(pc|pcs|piece|pieces)$/i.test(String(c.unit || ''))) ? Number(c.piecesPerUnit) : 1; }
+function candidatePieceTiers(c){ const k = candidatePieces(c); return k === 1 ? candidateTiers(c) : candidateTiers(c).map(t => ({ ...t, minQty: t.minQty * k, price: t.price / k })); }
+function candidateUnitPriceAt(c, qty){ const n = Number(qty) || 0; let best = null, bm = -1; candidatePieceTiers(c).forEach(t => { if (n >= t.minQty && t.minQty > bm) { best = t.price; bm = t.minQty; } }); return best; }
 function candName(c){ const s = c && c.supplierId && supplierById(c.supplierId); return String((s && s.name) || (c && c.supplierName) || '').trim(); }
 function leadFacts(l){
   // A supplier who said they can't supply (noStock) does not have it.
@@ -1092,8 +1098,8 @@ function leadFacts(l){
     photo: !!(l && l.image),
   };
 }
-function leadBestCost(l){ const p = leadSuppliers(l).filter(c => !c.noStock).map(c => (candidateTiers(c)[0] || {}).price).filter(x => x > 0); return p.length ? Math.min(...p) : 0; }
-function leadBestCand(l){ let best = null; leadSuppliers(l).filter(c => !c.noStock).forEach(c => { const t = candidateTiers(c)[0]; if (t && (!best || t.price < candidateTiers(best)[0].price)) best = c; }); return best; }
+function leadBestCost(l){ const p = leadSuppliers(l).filter(c => !c.noStock).map(c => (candidatePieceTiers(c)[0] || {}).price).filter(x => x > 0); return p.length ? Math.min(...p) : 0; }
+function leadBestCand(l){ let best = null; leadSuppliers(l).filter(c => !c.noStock).forEach(c => { const t = candidatePieceTiers(c)[0]; if (t && (!best || t.price < candidatePieceTiers(best)[0].price)) best = c; }); return best; }
 // The gates (index.html SOURCING_GATES): a stage cannot claim what the data does not show.
 function stageGateBlock(l, status){
   const f = leadFacts(l);
@@ -1209,7 +1215,7 @@ function leadVerdict(l, shelf){
   sc.push({ k: 'margin', label: 'Margin', w: 25, s: cost ? clamp(pct / 0.3 * 100) : 0, value: cost ? Math.round(pct * 100) + '%' : '—', missing: !cost });
   sc.push({ k: 'price', label: 'Price vs rivals', w: 20, s: !rivals.length ? 45 : !cost ? 50 : clamp(50 + (ref - shelfV) / ref * 400), value: !rivals.length || !cost ? '—' : (shelfV < ref ? '−' : '+') + Math.abs(Math.round((ref - shelfV) / ref * 100)) + '%', missing: rivals.length < 2 });
   sc.push({ k: 'comp', label: 'Competition', w: 10, s: !rivals.length ? 50 : clamp(90 - inStock.length * 18 + outStock.length * 10), value: inStock.length + ' in stock' });
-  const minBlock = priced.length ? priced.every(c => { const t = candidateTiers(c); return t.length && Math.min(...t.map(x => x.minQty)) > q; }) : false;
+  const minBlock = priced.length ? priced.every(c => { const t = candidatePieceTiers(c); return t.length && Math.min(...t.map(x => x.minQty)) > q; }) : false;
   sc.push({ k: 'supply', label: 'Supply', w: 10, s: clamp((priced.length >= 2 ? 85 : priced.length === 1 ? 55 : cands.length ? 30 : 5) - (minBlock ? 40 : 0)), value: plural(priced.length, 'quote'), missing: priced.length < 2 });
   const cash = cost * q, prof = (shelfV - cost) * q;
   sc.push({ k: 'cash', label: 'Cash payback', w: 10, s: !cost || !cash ? 0 : clamp(100 - cash / 50000 + prof / cash * 60), value: cost ? short(cash) : '—' });
@@ -1661,7 +1667,7 @@ async function listLead(l, form){
     const had = D().prices.find(p => p.productId === product.id && p.variantIdx == null && String(p.supplierId) === String(sup.id));
     const d = deriveWholesaleRetail(tiers, pack.packQty);
     const pr = { ...(had || {}), id: had ? had.id : null, productId: product.id, variantIdx: null, supplierId: sup.id, wholesale: d.wholesale, retail: d.retail, date: todayISO(),
-      unit: pack.unit, packUnit: pack.packUnit, packQty: pack.packQty, piecesPerUnit: null, priceSource: 'manual', outOfStock: false, supplierSku: '', tiers };
+      unit: pack.unit, packUnit: pack.packUnit, packQty: pack.packQty, piecesPerUnit: Number(c.piecesPerUnit) > 0 ? Number(c.piecesPerUnit) : null, priceSource: 'manual', outOfStock: false, supplierSku: '', tiers };
     await savePrice(pr); written.push(pr);
   }
   const next = JSON.parse(JSON.stringify(l));
@@ -1797,7 +1803,7 @@ function huntSteps(l){
   const meta = leadResearch(l).meta, hold = meta.hold || null, sample = meta.sample || null;
   const listed = l.status === 'listed';
   const askers = leadAskers(l), q = leadDemandQty(l);
-  const best = leadBestCand(l), bestT = best ? candidateTiers(best)[0] : null;
+  const best = leadBestCand(l), bestT = best ? candidatePieceTiers(best)[0] : null;
   const pass = !!(hold && hold.kind === 'pass');
   const needSample = !!(hold && (hold.kind === 'stock' || hold.kind === 'small') && !(sample && sample.verdict === 'pass'));
   const told = leadTold(l), rule = shopRule(), known = leadKnown(l), seller = known.sellers[0] || null;
@@ -2202,7 +2208,7 @@ function addItemPick(l){
   const q = Math.max(1, leadDemandQty(l));
   let best = null;
   leadSuppliers(l).filter(candidateHasPrice).forEach(c => {
-    const tiers = candidateTiers(c); if (!tiers.length) return;
+    const tiers = candidatePieceTiers(c); if (!tiers.length) return;
     const cost = candidateUnitPriceAt(c, q) || tiers[0].price;
     const rung = tiers.filter(t => q >= t.minQty).pop() || tiers[0];
     if (!best || cost < best.cost) best = { c, cost, rung, tiers, q };
@@ -3883,8 +3889,8 @@ function decideLead(props){
 function decideQtys(l){
   const q = leadDemandQty(l), cands = leadSuppliers(l).filter(candidateHasPrice);
   const packC = cands.find(c => Number(c.packQty) > 0) || leadSuppliers(l).find(c => Number(c.packQty) > 0);
-  const pack = packC ? Number(packC.packQty) : 0;
-  const moq = cands.length ? Math.min(...cands.map(c => (candidateTiers(c)[0] || {}).minQty || 1)) : 1;
+  const pack = packC ? Number(packC.packQty) * candidatePieces(packC) : 0;
+  const moq = cands.length ? Math.min(...cands.map(c => (candidatePieceTiers(c)[0] || {}).minQty || 1)) : 1;
   if (!(q > 0)) return { q: 0, pack, small: null, stock: null, special: null };
   const up = (x) => pack ? Math.ceil(x / pack) * pack : x <= 10 ? x : Math.ceil(x / 5) * 5;
   const small = Math.max(up(q), moq);
@@ -4006,7 +4012,7 @@ SCREENS.Decide = {
       const packC = cands.find(c => Number(c.packQty) === Q.pack && c.packUnit) || null;
       const packUnit = packC ? String(packC.packUnit) : '';
       const packs = (qty) => Q.pack && packUnit ? `${n0(Math.ceil(qty / Q.pack))} ${Math.ceil(qty / Q.pack) === 1 ? packUnit : cPluralWord(packUnit)}` : `${n0(qty)} ${cUnitWord(unit, qty)}`;
-      const best = priced.slice().sort((a, b) => (candidateTiers(a)[0] || {}).price - (candidateTiers(b)[0] || {}).price)[0] || null;
+      const best = priced.slice().sort((a, b) => (candidatePieceTiers(a)[0] || {}).price - (candidatePieceTiers(b)[0] || {}).price)[0] || null;
       const supFirst = best ? firstWord(candName(best)) : '';
       const days = best && best.leadTimeDays != null && best.leadTimeDays !== '' ? Number(best.leadTimeDays) : null;
       const saved = (leadMeta(JSON.parse(JSON.stringify(l))).hold || {}).kind;
@@ -4752,7 +4758,7 @@ SCREENS.HuntDropped = {
 /* Hunts: every open request, by stage, built for 30+ a step -- the board
    "Hunts — every item, by stage" (waffle chart). */
 SCREENS.Hunts = {
-  // The v2 Pipeline. The tab bar is the shared one, V2NAV('Hunts'): <nav aria-label="Sourcing" class="sx-nav">.
+  // The v2 Pipeline. The tab bar is the shared one, V2NAV('Hunts').
   markup: String.raw`
 <div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
   <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 22px 18px 16px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; flex-direction: column; gap: 14px">
@@ -6361,7 +6367,7 @@ function priceItPick(l, candId){
   const q = Math.max(1, leadDemandQty(l));
   let best = null;
   leadSuppliers(l).filter(candidateHasPrice).forEach(c => {
-    const tiers = candidateTiers(c); if (!tiers.length) return;
+    const tiers = candidatePieceTiers(c); if (!tiers.length) return;
     const cost = candidateUnitPriceAt(c, q) || tiers[0].price;
     const rung = tiers.filter(t => q >= t.minQty).pop() || tiers[0];
     const x = { c, cost, rung, q };
@@ -6791,6 +6797,8 @@ SCREENS.Profile = {
   Component: class extends SrvLogic {
     renderVals() {
       const d = D(), now = new Date();
+      // This phone's notifications row (pushState: On, Checking, or Not on and why).
+      const [pushWord, pushSub] = pushState(), pushLit = pushWord === 'On';
       const me = myStaff(), name = me ? me.name : myName();
       // Yours: the hunts assigned to you, or to nobody (the desk's).
       const mineL = (l) => !me || !l.assignedStaffId || String(l.assignedStaffId) === String(me.id);
@@ -6840,7 +6848,6 @@ SCREENS.Profile = {
         other('owner', [lit('sees the log', 'Watches and sets policy, gets a log, never a queue')].concat(mineToday ? [lit(plural(mineToday, 'line') + ' from you today', 'Your lines in the owner’s log today')] : [])),
       ];
       const on = !!S.prefs.sound;
-      const [pushWord, pushSub] = pushState(), pushLit = pushWord === 'On';
       return {
         ini: initials(name), name, roleWord, shop: S.shopName || 'The shop',
         weeks, weeksWord: `${sum} in 6 weeks`, weeksLabel: 'Items listed per week: ' + counts.join(', '), tiles, rights,
@@ -8288,8 +8295,8 @@ SCREENS.Supplier = {
       const mine = [];
       openLeads().forEach(l => leadSuppliers(l).forEach(c => { if (String(c.supplierId) === sid) mine.push({ l, c }); }));
       const qrows = mine.map(({ l, c }) => {
-        const t = candidateTiers(c)[0], valid = Number(c.validDays) || 7, age = daysSince(c.quotedAt || c.at), left = valid - age;
-        const priced = leadSuppliers(l).filter(candidateHasPrice).map(x => (candidateTiers(x)[0] || {}).price).filter(Boolean).sort((a, b) => a - b);
+        const t = candidatePieceTiers(c)[0], valid = Number(c.validDays) || 7, age = daysSince(c.quotedAt || c.at), left = valid - age;
+        const priced = leadSuppliers(l).filter(candidateHasPrice).map(x => (candidatePieceTiers(x)[0] || {}).price).filter(Boolean).sort((a, b) => a - b);
         const rank = t ? priced.indexOf(t.price) + 1 : 0;
         const ink = left > 2 ? '#0F6B43' : left > 0 ? '#95530C' : '#8E2A22';
         let sub = '', subCol = '#6B7480';
