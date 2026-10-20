@@ -897,9 +897,11 @@ async function selectAll(table, keyCol, filter){
   return rows;
 }
 // index.html 45190 / 45222 / 45240 / 45385 / 45400 / 45418: the console's own mapping.
-function rowToSupplier(s){ return { id: s.id, name: s.name || '', phone: s.phone || '', phone2: s.phone2 || '', location: s.location || '', shopNo: s.shop_no || '', notes: s.notes || '',
+// A name saved with escaped quotes (4\\" for 4") is shown as written.
+function cleanName(n){ return String(n || '').replace(/\\(["'])/g, '$1'); }
+function rowToSupplier(s){ return { id: s.id, name: cleanName(s.name), phone: s.phone || '', phone2: s.phone2 || '', location: s.location || '', shopNo: s.shop_no || '', notes: s.notes || '',
   termsDays: s.terms_days == null ? null : Number(s.terms_days), deliveryDays: s.delivery_days == null ? null : Number(s.delivery_days) }; }
-function rowToProduct(p){ return { id: p.id, name: p.name || '', type: p.type || 'simple', category: p.category || '', subcategory: p.subcategory || '', notes: p.notes || '', image: p.image || null,
+function rowToProduct(p){ return { id: p.id, name: cleanName(p.name), type: p.type || 'simple', category: p.category || '', subcategory: p.subcategory || '', notes: p.notes || '', image: p.image || null,
   wholesaleMarkupType: p.wholesale_markup_type, wholesaleMarkupValue: Number(p.wholesale_markup_value) || 0, retailMarkupType: p.retail_markup_type, retailMarkupValue: Number(p.retail_markup_value) || 0,
   variantAttributes: p.variant_attributes || [], variants: p.variants || [], createdAt: p.created_at || null }; }
 function rowToPrice(pr){ return { id: pr.id, productId: pr.product_id, variantIdx: pr.variant_idx == null || pr.variant_idx === '' ? null : Number(pr.variant_idx),
@@ -907,7 +909,7 @@ function rowToPrice(pr){ return { id: pr.id, productId: pr.product_id, variantId
   date: pr.date || null, unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, piecesPerUnit: pr.pieces_per_unit == null ? null : Number(pr.pieces_per_unit),
   priceSource: pr.price_source || '', outOfStock: !!pr.out_of_stock, supplierSku: pr.supplier_sku || '', outOfStockSince: pr.out_of_stock_since || null,
   lastAskedAt: pr.last_asked_at || null, tiers: Array.isArray(pr.tiers) ? pr.tiers : [] }; }
-function rowToLead(r){ return { id: r.id, name: r.name || '', notes: r.notes || '', status: r.status || 'asked', assignedStaffId: r.assigned_staff_id || null, productId: r.product_id || null,
+function rowToLead(r){ return { id: r.id, name: cleanName(r.name), notes: r.notes || '', status: r.status || 'asked', assignedStaffId: r.assigned_staff_id || null, productId: r.product_id || null,
   graduatedAt: r.graduated_at || null, createdAt: r.created_at || null, stageEnteredAt: r.stage_entered_at == null ? null : Number(r.stage_entered_at),
   requests: Array.isArray(r.requests) ? r.requests : [], candidates: Array.isArray(r.candidates) ? r.candidates : [], variantAttrs: Array.isArray(r.variant_attrs) ? r.variant_attrs : [],
   image: r.image || null, voided: !!r.voided, droppedReason: r.dropped_reason || '', droppedAt: r.dropped_at || null }; }
@@ -964,6 +966,11 @@ function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('
 
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
 function myName(){ const s = myStaff(); return (s && s.name) || (S.user && S.user.email ? S.user.email.split('@')[0] : 'You'); }
+// A person's name to greet or sign with: the staff row's, else the name on
+// the login; never the email (an owner without a staff row has none).
+function myPersonName(){ const s = myStaff(); if (s && s.name) return s.name; const m = (S.user && S.user.user_metadata) || {}; return String(m.full_name || m.name || '').trim(); }
+// "this is <name> from <the shop>" -- or just the shop when no name is known.
+function signWord(){ const n = myPersonName(); return n ? `this is ${n} from ${S.shopName || 'the shop'}` : `this is ${S.shopName || 'the shop'}`; }
 function customerById(id){ return D().customers.find(c => String(c.id) === String(id)) || null; }
 function supplierById(id){ return D().suppliers.find(s => String(s.id) === String(id)) || null; }
 function productById(id){ return D().products.find(p => String(p.id) === String(id)) || null; }
@@ -1667,6 +1674,50 @@ async function confirmPrice(r, newTiers, how){
   return next;
 }
 
+/* ---------------- what the shop already knows about a hunt ----------------
+   A hunt can be for something already in the catalogue: linked (the
+   product it became, or a dropped order line's product), else the same
+   name (findProductsByText, every word of the hunt's name in the
+   product's). Its stock and who sells it on the price list are then known,
+   and every screen says so rather than sending Sourcing to ask everyone. */
+function leadProducts(l){
+  const d = D(), out = [];
+  const add = (p) => { if (p && !out.includes(p)) out.push(p); };
+  add(leadCatalogueProduct(l));
+  if (l.productId) add(productById(l.productId));
+  (l.requests || []).forEach(r => { if (r.productId) add(productById(r.productId)); });
+  if (!out.length) {
+    const n = normName(l.name), exact = d.products.find(p => normName(p.name) === n);
+    if (exact) add(exact);
+    else {
+      const want = searchTokens(l.name).filter(t => t.length > 1);
+      d.products.filter(p => { const hay = searchTokens(p.name); return want.length && want.every(t => hay.some(h => h.includes(t) || t.includes(h))); }).slice(0, 3).forEach(add);
+    }
+  }
+  return out;
+}
+function productStock(p){ return Object.keys(D().stock).filter(k => k === p.id || k.indexOf(p.id + '::') === 0).reduce((a, k) => a + (D().stock[k] || 0), 0); }
+function leadKnown(l){
+  const products = leadProducts(l);
+  const stock = products.reduce((n, p) => n + productStock(p), 0);
+  const ids = new Set(products.map(p => String(p.id)));
+  const sellers = D().prices.filter(r => ids.has(String(r.productId)) && !r.outOfStock && priceRowCost(r) > 0 && supplierById(r.supplierId))
+    .map(r => ({ r, sup: supplierById(r.supplierId), cost: priceRowCost(r), unit: (r.unit || 'pc') === 'pc' ? 'piece' : r.unit, age: priceAgeDays(r) }))
+    .sort((a, b) => a.cost - b.cost);
+  const bySup = []; sellers.forEach(x => { if (!bySup.some(y => String(y.sup.id) === String(x.sup.id))) bySup.push(x); });
+  return { products, stock, sellers: bySup };
+}
+// "Maria sells it at 10,000 a piece" / "1 in stock": what is known, in words.
+function knownWord(k){
+  const parts = [];
+  if (k.stock > 0) parts.push(`${n0(k.stock)} in stock`);
+  if (k.sellers.length) parts.push(`${firstWord(k.sellers[0].sup.name)} sells it at ${n0(k.sellers[0].cost)}` + (k.sellers.length > 1 ? ` (+${k.sellers.length - 1})` : ''));
+  return parts.join(' · ');
+}
+// The same "clients waiting" everywhere: different people across the open hunts.
+function clientKey(r){ return r.customerId ? 'c:' + r.customerId : phoneDigits(r.phone) ? 'p:' + phoneDigits(r.phone) : 'n:' + askerName(r).toLowerCase(); }
+function clientsWaiting(leads){ const set = new Set(); (leads || openLeads()).forEach(l => (l.requests || []).forEach(r => { if (!r.withdrawn) set.add(clientKey(r)); })); return set.size; }
+
 /* ---------------- what next ----------------
    Round 3 of the canvas ("Today, led by your next jobs", "A hunt's way to
    the shelf"): a hunt's seven steps and the day's next jobs, read from
@@ -1684,7 +1735,7 @@ function quoteLeft(c){ return (Number(c.validDays) || 7) - daysSince(c.quotedAt 
 function shopRule(){ return effectiveMarkupRule({ wholesaleMarkupValue: 0, retailMarkupValue: 0, variants: [] }, null, 'wholesale'); }
 function ruleWord(rule){ return !rule ? 'at cost until a markup is set' : rule.type === 'fixed' ? `+${n0(rule.value)}` : `${n0(rule.value)}%`; }
 const HUNT_ICON = {
-  ask: 'M4 5h16v11H9l-5 4z', quote: 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z',
+  ask: 'M4 5h16v11H9l-5 4z', record: 'M12 5v14M5 12h14', quote: 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z',
   decide: 'M12 3v18M5 8l7-5 7 5M5 8l-2 6a4 4 0 0 0 4 0zM19 8l-2 6a4 4 0 0 0 4 0z', list: 'M4 7l8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10',
   tell: 'M4 5h16v11H9l-5 4zM9 10.5l2 2 4-4', prices: 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z',
   lapse: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 7.5V12l3 2', chase: 'M4 5h16v11H9l-5 4zM9 10h6',
@@ -1702,15 +1753,18 @@ function huntSteps(l){
   const best = leadBestCand(l), bestT = best ? candidateTiers(best)[0] : null;
   const pass = !!(hold && hold.kind === 'pass');
   const needSample = !!(hold && (hold.kind === 'stock' || hold.kind === 'small') && !(sample && sample.verdict === 'pass'));
-  const told = leadTold(l), rule = shopRule();
+  const told = leadTold(l), rule = shopRule(), known = leadKnown(l), seller = known.sellers[0] || null;
+  // The stage the books hold: a hunt moved to Found or Priced (on the console) with no supplier written down.
+  const staged = STAGES.indexOf(l.status) >= STAGES.indexOf('sourced');
   const firstAsked = asked.map(c => msOf(c.askedAt || c.quotedAt || c.at)).filter(Boolean);
   const names = (list) => list.map(c => firstWord(candName(c))).filter(Boolean);
   const holdWord = { stock: 'stock it', small: 'a small first batch', special: 'special order only', pass: 'not stocking it' };
   const steps = [
-    { title: askers.length ? `Asked for by ${askers.length}` : 'Asked for', sub: askers.map(a => firstWord(a.name)).join(', ') || 'no client named', done: true },
-    { title: asked.length ? `${plural(asked.length, 'supplier')} asked` : 'Ask suppliers', done: asked.length > 0,
-      sub: asked.length ? names(asked).slice(0, 3).join(', ') + (asked.length > 3 ? ` +${asked.length - 3}` : '') + (firstAsked.length ? ' · ' + dayWord(isoOf(new Date(Math.min(...firstAsked)).toISOString())) : '') : 'one message to each who might have it',
-      href: 'AskSuppliers', word: 'Ask suppliers' },
+    { title: askers.length ? `Asked for by ${askers.length}` : 'Asked for', sub: (askers.map(a => firstWord(a.name)).join(', ') || 'no client named') + (known.stock > 0 ? ` · ${n0(known.stock)} in stock` : ''), done: true },
+    asked.length ? { title: `${plural(asked.length, 'supplier')} asked`, done: true, sub: names(asked).slice(0, 3).join(', ') + (asked.length > 3 ? ` +${asked.length - 3}` : '') + (firstAsked.length ? ' · ' + dayWord(isoOf(new Date(Math.min(...firstAsked)).toISOString())) : ''), href: 'AskSuppliers', word: 'Ask suppliers' }
+      : staged ? { title: 'No supplier recorded', done: false, sub: `marked ${STAGE_WORD[l.status]}` + (knownWord(known) ? ' · ' + knownWord(known) : ' · add who has it'), href: 'Quote', word: 'Add who has it' }
+      : seller ? { title: `${firstWord(seller.sup.name)} sells it`, done: false, sub: `${n0(seller.cost)} a ${seller.unit} on the price list` + (known.stock > 0 ? ` · ${n0(known.stock)} in stock` : ''), href: 'AskSuppliers', word: `Ask ${firstWord(seller.sup.name)}` }
+      : { title: 'Ask suppliers', done: false, sub: known.stock > 0 ? `${n0(known.stock)} in stock · ask who else has it` : 'one message to each who might have it', href: 'AskSuppliers', word: 'Ask suppliers' },
     { title: priced.length ? `${plural(priced.length, 'quote')} in` : asked.length ? `Waiting on ${asked.length}` : 'Quotes in', done: priced.length > 0,
       sub: bestT ? `best ${firstWord(candName(best)) || 'quote'} ${n0(bestT.price)}${q ? ' for ' + n0(q) : ''}` : asked.length ? 'log a price when one answers' : 'once suppliers are asked',
       href: 'Quote', word: 'Log a quote', doneHref: 'Quotes', doneWord: 'Compare' },
@@ -1724,7 +1778,7 @@ function huntSteps(l){
     { title: `Tell the ${askers.length || ''} who asked`.replace('  ', ' '), done: listed && told.left === 0, sub: listed ? `${told.told} of ${told.want} told` : 'one tap each, on WhatsApp', href: 'TellAsked', word: 'Tell them' },
   ];
   const next = l.voided ? -1 : steps.findIndex(s => !s.done);
-  return { steps, next, sx, asked: asked.length, priced: priced.length, askers, q, listed, told };
+  return { steps, next, sx, asked: asked.length, priced: priced.length, askers, q, listed, told, known, staged };
 }
 // Today's next jobs: one per hunt (its next step), people to tell, today's
 // prices, quotes about to lapse. Most waiting first.
@@ -1735,7 +1789,12 @@ function nextJobs(){
     const h = huntSteps(l), k = h.next; if (k < 0) return;
     const step = h.steps[k], people = leadDistinctAskers(l), t = late(l), sx = h.sx;
     const waiting = plural(people, 'client') + ' waiting';
-    if (k === 1) jobs.push({ kind: 'ask', score: 100 + people * 10 + t.over * 5, verb: 'Ask suppliers for', obj: l.name, sub: waiting + ' · nobody asked yet', href: 'AskSuppliers', sx, word: 'Ask', ...t, lead: l });
+    if (k === 1) {
+      const kw = knownWord(h.known), seller = h.known.sellers[0];
+      if (h.staged) jobs.push({ kind: 'record', score: 90 + people * 5 + t.over * 3, verb: 'Add who has it for', obj: l.name, sub: `marked ${STAGE_WORD[l.status]}, no supplier recorded` + (kw ? ' · ' + kw : ''), href: 'Quote', sx, word: 'Add', ...t, lead: l });
+      else if (seller) jobs.push({ kind: 'ask', score: 100 + people * 10 + t.over * 5, verb: `Ask ${firstWord(seller.sup.name)} about`, obj: l.name, sub: `${kw} · ${waiting}`, href: 'AskSuppliers', sx, word: 'Ask', ...t, lead: l, seller });
+      else jobs.push({ kind: 'ask', score: 100 + people * 10 + t.over * 5, verb: 'Ask suppliers for', obj: l.name, sub: waiting + (h.known.stock > 0 ? ` · ${n0(h.known.stock)} in stock` : ' · no supplier asked yet'), href: 'AskSuppliers', sx, word: 'Ask', ...t, lead: l });
+    }
     else if (k === 2) {
       const since = Math.max(0, ...leadSuppliers(l).map(c => msOf(c.askedAt)).filter(Boolean));
       if (since && daysSince(new Date(since).toISOString()) >= 2) jobs.push({ kind: 'chase', score: 40 + people * 3 + t.over * 3, verb: 'Chase replies for', obj: l.name, sub: `${plural(h.asked, 'supplier')} asked ${agoWord(new Date(since).toISOString())} · no price yet`, href: 'Hunt', sx, word: 'Open', ...t, lead: l });
@@ -2519,9 +2578,12 @@ function askSupLead(props){
 }
 // A round number above n, for the "how many" choices.
 function askSupNice(n){ if (n <= 10) return 10; const step = n <= 50 ? 10 : n <= 200 ? 50 : 100; return Math.ceil(n / step) * step; }
+// The next round number strictly above n: 1 → 10 → 50, 22 → 50 → 100.
+function askSupNext(n){ const r = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]; return r.find(x => x > n) || Math.ceil(n * 2 / 1000) * 1000; }
 // Every supplier on file, ranked for this item (sourcing-console.js sups / supHits).
 function askSupRank(l){
   const d = D(), want = askSupWords(l.name);
+  const known = new Set(leadKnown(l).sellers.map(x => String(x.sup.id)));
   const importers = new Set();
   d.leads.forEach(x => leadSuppliers(x).forEach(c => { if ((c.role === 'importer' || c.role === 'both') && c.supplierId) importers.add(String(c.supplierId)); }));
   const onLead = {}; leadSuppliers(l).forEach(c => { if (c.supplierId) onLead[String(c.supplierId)] = c; });
@@ -2531,8 +2593,18 @@ function askSupRank(l){
     const hitProds = prods.filter(p => askSupWords(p.name).some(w => want.includes(w)));
     const hit = [...new Set(hitProds.flatMap(p => askSupWords(p.name)).filter(w => want.includes(w)))].slice(0, 3);
     const cats = {}; hitProds.forEach(p => { const c = String(p.category || '').trim().toLowerCase(); if (c) cats[c] = (cats[c] || 0) + 1; });
-    return { s, rows: rows.length, prods, hitProds, hit, cats, importer: importers.has(String(s.id)), cand: onLead[String(s.id)] || null };
-  }).sort((a, b) => b.hit.length - a.hit.length || (b.importer ? 1 : 0) - (a.importer ? 1 : 0) || b.rows - a.rows || a.s.name.localeCompare(b.s.name));
+    return { s, rows: rows.length, prods, hitProds, hit, cats, importer: importers.has(String(s.id)), cand: onLead[String(s.id)] || null, sells: known.has(String(s.id)) };
+  }).sort((a, b) => (b.sells ? 1 : 0) - (a.sells ? 1 : 0) || b.hit.length - a.hit.length || (b.importer && b.hit.length ? 1 : 0) - (a.importer && a.hit.length ? 1 : 0) || b.rows - a.rows || a.s.name.localeCompare(b.s.name));
+}
+// Who is ticked to start with: of the five shown, those who sell it or
+// something like it -- an importer only when they carry the line -- and
+// not one who already answered. Today's "Ask the N" counts the same list.
+function askSupOff(x){ return !!(x.cand && (candidateHasPrice(x.cand) || x.cand.cantAt || x.cand.noStock)); }
+function askSupDefaults(l, ranked){
+  ranked = ranked || askSupRank(l);
+  const anyHit = ranked.some(x => x.hit.length || x.sells);
+  const shown = ranked.slice(0, 5);
+  return (anyHit ? shown.filter(x => x.hit.length || x.sells) : shown.slice(0, 3)).filter(x => !askSupOff(x) && !(x.cand && x.cand.askedAt));
 }
 
 SCREENS.AskSuppliers = {
@@ -2603,10 +2675,11 @@ SCREENS.AskSuppliers = {
       if (!l) return { none: true, has: false, subtitle: 'one message, every supplier you pick', sx: '{}' };
       const sx = JSON.stringify({ leadId: l.id });
       const q = leadDemandQty(l);
-      const unitWord = ((l.requests || []).map(r => r.unit).find(Boolean)) || 'pieces';
+      const unitOne = String(((l.requests || []).map(r => r.unit).find(Boolean)) || 'piece').trim().toLowerCase().replace(/^pcs?$/, 'piece');
+      const unitFor = (n) => n === 1 ? unitOne : /s$/.test(unitOne) ? unitOne : unitOne + 's';
       // The three "how many" choices: what was asked for, then two round
       // steps up. A choice of the message, never a number from the books.
-      const base = q > 0 ? q : 10, opts = [[base, q > 0 ? 'For ' + n0(base) : n0(base)], [askSupNice(base * 2), n0(askSupNice(base * 2))], [askSupNice(base * 4), n0(askSupNice(base * 4)) + '+']];
+      const base = q > 0 ? q : 1, n2 = askSupNext(base), n3 = askSupNext(n2), opts = [[base, 'For ' + n0(base)], [n2, n0(n2)], [n3, n0(n3) + '+']];
       const qty = st.qty == null ? base : st.qty;
       const qtys = opts.map(([n, label], i) => {
         const on = qty === n;
@@ -2617,20 +2690,21 @@ SCREENS.AskSuppliers = {
       // The words: what it is, how many, and what we want back -- their
       // price, how it is packed and how soon. Never a price we expect.
       const shop = S.shopName || 'the shop';
-      const msg = `Hello, do you have ${l.name}${l.image ? ' like in the photo' : ''}?\nWe need ${qtyWord} ${unitWord}. Your price a piece and for a full pack, how it is packed, and how soon you can have it?\n— ${shop}`;
+      const msg = `Hello, do you have ${l.name}${l.image ? ' like in the photo' : ''}?\nWe need ${qtyWord} ${unitFor(qty)}. Your price a piece and for a full pack, how it is packed, and how soon you can have it?\n— ${shop}`;
       const waMsg = l.image ? msg + '\n' + l.image : msg;
 
       const ranked = askSupRank(l);
-      const anyHit = ranked.some(x => x.hit.length);
+      const knownL = leadKnown(l);
+      const anyHit = ranked.some(x => x.hit.length || x.sells);
       const catCount = {}; ranked.forEach(x => Object.keys(x.cats).forEach(c => { catCount[c] = (catCount[c] || 0) + x.cats[c]; }));
       const cat = Object.keys(catCount).sort((a, b) => catCount[b] - catCount[a])[0] || '';
-      const hitters = ranked.filter(x => x.hit.length || x.importer);
+      const hitters = ranked.filter(x => x.hit.length || x.sells);
       // Who can be asked: not one who already quoted it or said they can't.
-      const offOf = (x) => !!(x.cand && (candidateHasPrice(x.cand) || x.cand.cantAt || x.cand.noStock));
-      const shown = (st.all ? ranked : ranked.slice(0, 5));
+      const offOf = askSupOff;
+      const shown = st.all ? (anyHit ? hitters : ranked) : ranked.slice(0, 5);
       // Only who is on screen is ticked to start with, and only a tick you can
       // see is asked: the count on the button is the ticks in the list.
-      const defOn = {}; (anyHit ? shown.filter(x => x.hit.length || x.importer) : shown.slice(0, 3)).forEach(x => { if (!offOf(x) && !(x.cand && x.cand.askedAt)) defOn[x.s.id] = true; });
+      const defOn = {}; askSupDefaults(l, ranked).forEach(x => { defOn[x.s.id] = true; });
       const on = st.on || defOn;
       const tags = { supplier: 'background: #F1EEE8; color: #5F6980', importer: 'background: #E4E6FA; color: #3A3F9B', new: 'background: #E4F4EA; color: #0F6B43', asked: 'background: #FBE5E2; color: #8E2A22', quoted: 'background: #E4F4EA; color: #0F6B43', waiting: 'background: #FDEEE1; color: #95530C' };
       const sups = shown.map((x, i) => {
@@ -2639,6 +2713,7 @@ SCREENS.AskSuppliers = {
         if (c && (c.cantAt || c.noStock)) { tag = 'asked'; why = `said “can’t supply” on ${dayWord(isoOf(c.cantAt))}`; }
         else if (c && candidateHasPrice(c)) { tag = 'quoted'; const t = candidateTiers(c)[0]; why = `quoted ${n0(t ? t.price : 0)} · ${agoWord(c.quotedAt || c.at)}`; }
         else if (c && c.askedAt) { tag = 'waiting'; why = `asked ${agoWord(c.askedAt)} · no answer yet`; }
+        else if (x.sells) { const k = knownL.sellers.find(y => String(y.sup.id) === String(x.s.id)); why = `sells it to us at ${n0(k.cost)} a ${k.unit}` + (k.age != null ? ` · ${k.age === 0 ? 'today' : k.age + 'd ago'}` : ''); }
         else if (x.hit.length) why = 'sells our ' + x.hitProds.slice(0, 2).map(p => p.name).join(' and ');
         else if (x.importer) why = 'brings things in · an importer';
         else if (!x.rows) why = 'no prices on file yet' + (supplierWhere(x.s) ? ' · ' + supplierWhere(x.s) : '');
@@ -2842,8 +2917,7 @@ SCREENS.Asks = {
       const d = D();
       const open = openLeads();
       const agentOpen = d.agentRequests.filter(r => r.status === 'open');
-      const waiting = new Set();
-      open.forEach(l => (l.requests || []).forEach(r => { if (!r.withdrawn) waiting.add(asksAskerKey(r)); }));
+      const waiting = { size: clientsWaiting(open) };
       const ordersN = open.filter(l => (l.requests || []).some(r => r.source === 'dropped' && !r.withdrawn)).length;
       const asked = open.filter(l => l.status === 'asked');
       const pair = asksJoinPair();
@@ -2905,9 +2979,10 @@ SCREENS.Asks = {
         return { isLead: true, isAgent: false, sx: JSON.stringify({ leadId: l.id }), rowStyle, name: l.name, tile: tile.style, path: tile.path, sub: asksSubOf(l, r),
           hasPhoto: !!l.image, noPhoto: !l.image, photo: photoStyle(l.image), photoLabel: `${firstWord(askerName(r))}’s photo of the ${l.name}`,
           top: over ? leadDaysInStage(l) + 'd · over' : 'new hunt', topStyle: `font-size: 11px; font-weight: 700; color: ${over ? '#95530C' : '#C93A30'}`,
-          bottom: n + ' asked' };
+          bottom: plural(n, 'client') };
       });
-      const strip = [['Sales', '#95530C'], ['Agents', '#0F6B43'], ['Chats', '#1A5A8A'], ['Orders', '#C93A30']].map(([w, c]) => ({ word: w, n: count[w], dot: `width: 7px; height: 7px; border-radius: 999px; background: ${c}` }));
+      // The key names only the kinds in the list below it.
+      const strip = [['Sales', '#95530C'], ['Agents', '#0F6B43'], ['Chats', '#1A5A8A'], ['Orders', '#C93A30']].filter(([w]) => count[w] > 0).map(([w, c]) => ({ word: w, n: count[w], dot: `width: 7px; height: 7px; border-radius: 999px; background: ${c}` }));
       return {
         nav: navVals(), busy: S.busy,
         openN: open.length, waitingN: waiting.size, waitingWord: waiting.size === 1 ? 'client waiting' : 'clients waiting',
@@ -4383,7 +4458,7 @@ SCREENS.Hunts = {
     <div style="display: flex; align-items: center; gap: 6px">
       <span style="font-size: 12px; font-weight: 700; color: #6B7480; margin-right: 2px">Sort</span>
       <sc-for list="{{ sorts }}" as="o" hint-placeholder-count="3"><button type="button" aria-pressed="{{ o.on }}" onClick="{{ o.pick }}" style="{{ o.style }}">{{ o.label }}</button></sc-for>
-      <span style="margin-left: auto; font-size: 12px; font-weight: 600; color: #6B7480">limit <span style="font-family: 'IBM Plex Mono', monospace; color: #1C2233">{{ limit }}</span> d</span>
+      <span style="margin-left: auto; font-size: 12px; font-weight: 600; color: #6B7480"><sc-if value="{{ hasLimit }}">limit <span style="font-family: 'IBM Plex Mono', monospace; color: #1C2233">{{ limit }}</span> d</sc-if><sc-if value="{{ noLimit }}">no time limit</sc-if></span>
     </div>
   </div>
 
@@ -4445,7 +4520,8 @@ SCREENS.Hunts = {
       // What it is worth: each asker's own line price, else the best cost at
       // the shop's markup, times what they asked for (Today's sum). No price known: "— —".
       const valueOf = (l) => {
-        const best = leadBestCost(l), q = leadDemandQty(l);
+        // A quote on the hunt, else the price list's seller of the same item.
+        const kn = leadKnown(l), best = leadBestCost(l) || (kn.sellers[0] ? kn.sellers[0].cost : 0), q = leadDemandQty(l) || (best ? 1 : 0);
         const sell = Math.max(0, ...(l.requests || []).filter(r => !r.withdrawn).map(r => Number(r.sellPrice) || 0)) || (best ? best * (1 + markup / 100) : 0);
         return sell && q ? sell * q : null;
       };
@@ -4497,7 +4573,7 @@ SCREENS.Hunts = {
           name: it.l.name, sx: JSON.stringify({ leadId: it.l.id }),
           who: listed ? (it.want ? it.told + '/' + it.want + ' told' : 'none on file') : plural(it.people, 'client'),
           days: listed ? it.days + 'd ago' : it.days + '/' + it.lim + 'd',
-          val: it.value == null ? '— —' : n0(it.value),
+          val: it.value == null ? 'no price' : n0(it.value),
           valInk: it.value == null ? 'color: #95530C' : '',
           rowStyle: 'display: grid; grid-template-columns: minmax(0, 1fr) 58px 48px 76px; align-items: center; gap: 8px; min-height: 48px; ' + (last ? '' : 'border-bottom: 1px solid #F1EEE8'),
           bar: 'position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; width: ' + Math.max(4, Math.round(pct)) + '%; background: ' + (listed ? (it.told >= it.want ? '#0F6B43' : '#F5B26B') : col[t]),
@@ -4525,7 +4601,7 @@ SCREENS.Hunts = {
         nav: navVals(),
         total, overAll, hasOver: overAll > 0, noOver: overAll === 0, stages, sorts, waffle, waffleEmpty: !byDays.length, nOver, nNear, nOk, bands,
         notShelf: !listed, nearWord: listed ? 'to tell' : 'near', okWord: listed ? 'told' : 'fine',
-        limit: listed ? '—' : lim[s.stage],
+        limit: listed ? '' : lim[s.stage], hasLimit: !listed && !!lim[s.stage], noLimit: listed || !lim[s.stage],
         empty: !list.length, emptyWord: listed ? 'Nothing listed in the last 90 days' : 'Nothing at ' + st[1] + ' right now',
         waffleLabel: listed ? `${st[1]}: ${byDays.length} items. ${nOk} with everyone told, ${nNear} still to tell.`
           : `${st[1]}: ${byDays.length} items. ${nOver} over their time, ${nNear} near it, ${nOk} fine.`,
@@ -4768,7 +4844,7 @@ SCREENS.Item = {
       if (!targets.length) targets = askable(rowsAll);
       const left = targets.filter(s => !st.asked.includes(String(s.id)));
       const nextSup = left[0] || null;
-      const msg = (s) => `Hello ${s.name}, this is ${myName()} from ${S.shopName || 'the shop'}. Please send me your price for:\n• ${p.name}\nWith the pack and how long the price holds. Thank you.`;
+      const msg = (s) => `Hello ${s.name}, ${signWord()}. Please send me your price for:\n• ${p.name}\nWith the pack and how long the price holds. Thank you.`;
       const ask = () => {
         if (!nextSup) return;
         openWA(nextSup.phone, msg(nextSup));
@@ -5103,7 +5179,7 @@ SCREENS.Main = {
     renderVals() {
       const me = myStaff();
       const hour = new Date().getHours();
-      const greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + ', ' + (firstWord(me ? me.name : myName()) || 'there');
+      const who = firstWord(myPersonName()), greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + (who ? ', ' + who : '');
       const jobs = nextJobs(), done = doneToday();
       const doneN = done.reduce((s, x) => s + x[1], 0), total = doneN + jobs.length;
       // The day bar: one block a job while they fit, else one run a kind.
@@ -5126,17 +5202,18 @@ SCREENS.Main = {
       const legend = done.slice(0, 3).map((x, i) => ({ word: `${x[1]} ${x[2]}`, dot: `width: 8px; height: 8px; border-radius: 2px; background: ${SHADES[i]}` }));
       const ctaFor = (j) => {
         if (j.kind === 'ask') {
-          const n = typeof askSupRank === 'function' ? askSupRank(j.lead).filter(x => x.hit.length || x.importer).length : 0;
+          if (j.seller) return `Ask ${firstWord(j.seller.sup.name)}`;
+          const n = typeof askSupDefaults === 'function' ? askSupDefaults(j.lead).length : 0;
           return n > 1 ? `Ask the ${n} who sell it` : n === 1 ? 'Ask the one who sells it' : 'Ask suppliers';
         }
-        return { fix: 'See the fixes', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Ask for a fresh price', chase: 'Open the hunt', decide: j.word === 'Decide' ? 'See the verdict' : j.word, list: j.word === 'Price' ? 'Price it' : 'Put it in the catalogue' }[j.kind] || 'Open';
+        return { fix: 'See the fixes', record: 'Add who has it', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Ask for a fresh price', chase: 'Open the hunt', decide: j.word === 'Decide' ? 'See the verdict' : j.word, list: j.word === 'Price' ? 'Price it' : 'Put it in the catalogue' }[j.kind] || 'Open';
       };
       let now = {};
       if (jobs.length) {
         const j = jobs[0], hasLate = !!j.limit;
         const scale = hasLate ? Math.max(j.days, j.limit, 1) : 1, inPct = hasLate ? Math.min(j.days, j.limit) / scale * 100 : 0, limPct = hasLate ? j.limit / scale * 100 : 0;
         now = {
-          eyebrow: j.over > 0 ? `NOW · ${j.over} ${j.over === 1 ? 'DAY' : 'DAYS'} LATE` : 'NOW',
+          eyebrow: j.over > 0 ? `NOW · DAY ${j.days} OF ${j.limit} · LATE` : 'NOW',
           verb: j.verb, obj: j.obj, hasObj: !!j.obj, sub: j.sub, hasWarn: !!j.warn, warn: j.warn || '',
           hasLate, lateLabel: hasLate ? `${plural(j.days, 'day')} in this step against a ${plural(j.limit, 'day')} limit` : '',
           lateIn: `position: absolute; left: 0; width: ${inPct.toFixed(1)}%; top: 7px; height: 4px; border-radius: 999px 0 0 999px; background: #1C2233`,
@@ -5206,7 +5283,7 @@ function mrPlanKey(){ return 'ow-sourcing-run:' + (S.shopId || '') + ':' + today
 function mrPlanLoad(){ try { const p = JSON.parse(localStorage.getItem(mrPlanKey())); return p && typeof p === 'object' ? p : {}; } catch (_e) { return {}; } }
 function mrPlanSave(p){ try { localStorage.setItem(mrPlanKey(), JSON.stringify(p)); } catch (_e) {} }
 function mrIsToday(ts){ return !!ts && isoOf(ts) === todayISO(); }
-function mrShort(name){ const s = String(name || '').split(' · ')[0].trim(); return s && !/^[A-Z0-9]{2}/.test(s) ? s[0].toLowerCase() + s.slice(1) : s; }
+function mrShort(name){ return String(name || '').split(' · ')[0].trim(); }
 // sourcing-console.js quoteAgeOf / quoteValidOf: days left on a quote.
 function mrQuoteLeft(c){ return (Number(c.validDays) || 7) - daysSince(c.quotedAt || c.at); }
 function mrCandAt(l, sup){ return leadSuppliers(l).find(x => (x.supplierId && String(x.supplierId) === String(sup.id)) || (!x.supplierId && normName(x.supplierName) === normName(sup.name))) || null; }
@@ -5297,12 +5374,19 @@ function mrRun(){
     st.done = st.left === 0;
     st.importer = st.type === 'sup' && openLeads().some(l => { const c = mrCandAt(l, st.sup); return c && (c.role === 'importer' || c.role === 'both'); });
   });
+  // One area per place: "city market" and "City Market " are the same market, named
+  // as most of its suppliers write it, first letter up.
+  const areaKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const spell = {};
+  stops.forEach(st => { const k = areaKey(st.area); (spell[k] = spell[k] || {})[st.area.trim()] = ((spell[k] || {})[st.area.trim()] || 0) + 1; });
+  const areaName = (k) => { const w = Object.entries(spell[k]).sort((a, b) => b[1] - a[1] || (/^[A-Z]/.test(b[0]) - /^[A-Z]/.test(a[0])))[0][0]; return w.charAt(0).toUpperCase() + w.slice(1); };
+  stops.forEach(st => { st.area = areaName(areaKey(st.area)); });
   const areaMap = {};
   stops.forEach(st => { (areaMap[st.area] || (areaMap[st.area] = [])).push(st); });
   const areas = Object.keys(areaMap).map(name => ({ name, stops: areaMap[name] }))
     .map(a => ({ ...a, sups: a.stops.filter(x => x.type === 'sup'), asks: a.stops.filter(x => x.type === 'sup').reduce((s, x) => s + x.own.length, 0) }))
     // Where the most suppliers are, then the most to ask there; a rivals-only area last.
-    .sort((a, b) => b.sups.length - a.sups.length || b.asks - a.asks || b.stops.length - a.stops.length || a.name.localeCompare(b.name));
+    .sort((a, b) => (a.name === 'No area') - (b.name === 'No area') || b.sups.length - a.sups.length || b.asks - a.asks || b.stops.length - a.stops.length || a.name.localeCompare(b.name));
   const area = areas.find(a => a.name === plan.area) || areas[0] || null;
   const order = plan.order || [], off = new Set(plan.off || []);
   const pos = (st) => { const i = order.indexOf(st.key); return i < 0 ? 1e6 : i; };
@@ -5446,7 +5530,8 @@ SCREENS.MarketRun = {
         };
       });
       // "Anyone with these": the hunts nobody has a price for, asked at every shop.
-      const anyone = openLeads().filter(l => mrNobodyHasIt(l, null) && !leadSuppliers(l).some(c => !c.noStock && candName(c)));
+      // A hunt whose item someone on the price list sells is not "no known supplier".
+      const anyone = openLeads().filter(l => mrNobodyHasIt(l, null) && !leadSuppliers(l).some(c => !c.noStock && candName(c)) && !leadKnown(l).sellers.length);
       const act = run.active;
       const toGet = act.reduce((n, st) => n + st.ownLeft, 0);
       const expireN = act.reduce((n, st) => n + st.own.filter(x => x.kind === 'recheck' && !x.answered && x.left <= 1).length, 0);
@@ -5872,7 +5957,7 @@ SCREENS.NewSupplier = {
           rowStyle: `display: flex; align-items: center; gap: 10px; min-height: 46px${i < arr.length - 1 ? '; border-bottom: 1px solid #F1EEE8' : ''}` };
       });
       const dup = !editing && st.name.trim() ? D().suppliers.find(x => normName(x.name) === normName(st.name)) : (editing && st.name.trim() ? D().suppliers.find(x => x.id !== this.editing.id && normName(x.name) === normName(st.name)) : null);
-      const hello = `Hello ${st.name.trim() || ''}, this is ${myName()} from ${S.shopName || 'the shop'}. Good to meet you today — I will send you what we are looking for.`.replace('Hello ,', 'Hello,');
+      const hello = `Hello ${st.name.trim() || ''}, ${signWord()}. Good to meet you today — I will send you what we are looking for.`.replace('Hello ,', 'Hello,');
       const kindsDef = [['shop', 'A shop'], ['importer', 'An importer'], ['person', 'A person']];
       const n = picksOn.filter(id => !(this.editing && leadById(id) && H.on(leadById(id)))).length;
       const goSave = () => guarded('Save the supplier', async () => {
@@ -6425,7 +6510,7 @@ SCREENS.Prices = {
         buyerIni: buyer ? initials(buyer.name) : 'B', buyerAv: avStyle(buyer ? buyer.name : 'buyer', 28) + '; font-size: 11px',
         buyerWord: buyer ? firstWord(buyer.name) + ', Buyer' : 'The Buyer',
         whoLabel: `Who confirms: you, ${buyer ? 'the Buyer ' + buyer.name : 'the Buyer'} by phone for a supplier who is slow, and later the suppliers themselves in a supplier app`,
-        footTitle: sup ? (share.left ? share.left + ' left today' : `Today’s ${perDay} done`) + ' · ' + share.next.length + ' due' : plural(neverN, 'rival tag') + ' to see',
+        footTitle: sup ? (share.left ? share.left + ' left today' : `Today’s ${perDay} done`) + (share.next.length ? ` · ${share.next.length} more after today` : '') : plural(neverN, 'rival tag') + ' to see',
         footSub: sup ? 'each one goes in the owner’s log' : (shops.length ? shops.join(' and ') + ' seen before' : 'no rival shop on file yet'),
       };
     }
@@ -6494,8 +6579,9 @@ SCREENS.Profile = {
       const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
       // Landed this month: requests that became a product this month.
       const landed = d.leads.filter(l => !l.voided && l.status === 'listed' && msOf(l.graduatedAt) >= m0).length;
-      // Clients told this month: every follow-up contact recorded since the 1st.
-      const told = d.followUps.reduce((s, f) => s + (f.contacts || []).filter(c => msOf(c.at) >= m0).length, 0);
+      // Clients told: as Hunts' Shelf counts them -- each client who asked,
+      // told since the item went on the shelf, over the last 90 days.
+      const told = d.leads.filter(l => !l.voided && l.status === 'listed' && daysSince(l.graduatedAt) <= 90).reduce((s, l) => s + leadTold(l).told, 0);
       // A hunt takes: the median days from the first ask to listed, last 90 days.
       const spans = d.leads.filter(l => !l.voided && l.status === 'listed' && l.graduatedAt && daysSince(l.graduatedAt) <= 90)
         .map(l => (msOf(l.graduatedAt) - leadFirstAskedAt(l)) / DAY).filter(x => x >= 0).sort((a, b) => a - b);
@@ -6535,9 +6621,9 @@ SCREENS.Profile = {
         pushIco: `flex: none; color: ${pushLit ? '#0F6B43' : '#6B7480'}`,
         pushChip: `flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: ${pushLit ? '#E4F4EA' : '#F1EEE8'}; color: ${pushLit ? '#0F6B43' : '#5F6980'}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap`,
         ini: initials(name), name, roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : S.role === 'admin' ? 'Admin' : 'Sourcing', shop: S.shopName || 'The shop',
-        month, landed, told, takes: median == null ? '— —' : Math.round(median), hasTakes: median != null,
-        landedLabel: `${landed} new items landed on the shelf this month`, toldLabel: `${told} times a client was told this month`,
-        takesLabel: median == null ? 'Not enough hunts in the last 90 days to say how long one takes' : `A hunt takes ${Math.round(median)} days, the middle of ${plural(spans.length, 'hunt')} in the last 90 days`,
+        month, landed, told, takes: median == null ? '— —' : median < 1 ? '<1' : Math.round(median), hasTakes: median != null,
+        landedLabel: `${landed} new items landed on the shelf this month`, toldLabel: `${plural(told, 'client')} told their item is on the shelf, last 90 days`,
+        takesLabel: median == null ? 'Not enough hunts in the last 90 days to say how long one takes' : `A hunt takes ${median < 1 ? 'under a day' : Math.round(median) + ' days'}, the middle of ${plural(spans.length, 'hunt')} in the last 90 days`,
         tiles, locked,
         soundOn: on ? 'true' : 'false', soundWave: on ? 'M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11' : 'M16 9.5l5 5M21 9.5l-5 5',
         track: `width: 44px; height: 26px; flex: none; border-radius: 999px; position: relative; background: ${on ? '#0F6B43' : '#E0DCD4'}; transition: background .2s`,
@@ -6583,7 +6669,8 @@ function quoteCand(l, props, st){
   if (props.supplierId) return cands.find(c => String(c.supplierId) === String(props.supplierId)) || null;
   if (st.supplierId) return null;
   const waiting = cands.filter(c => c.askedAt && !candidateHasPrice(c)).sort((a, b) => msOf(b.askedAt) - msOf(a.askedAt));
-  return waiting[0] || cands[0] || null;
+  // Only one who was asked and has not answered; anyone else is picked by hand.
+  return waiting.length === 1 ? waiting[0] : null;
 }
 // A ladder step from a stored tier (base pieces) and back.
 function quoteStepsOf(c){
@@ -7869,7 +7956,9 @@ SCREENS.Spotted = {
       });
       // "New" sits right after the likeliest two, as drawn -- never past
       // the edge of the row where nobody would find it.
-      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: firstWord(s.name), full: s.name, bg: t[0], ink: t[1] }; });
+      // Two words of the name, so "Shafik TRADE" and "Shafik Hardware" are not both "Shafik".
+      const shortName = (n) => String(n || '').trim().split(/\s+/).slice(0, 2).join(' ');
+      const supDefs = ordered.map(s => { const t = tintFor(s.id); return { id: s.id, ini: initials(s.name), name: shortName(s.name), full: s.name, bg: t[0], ink: t[1] }; });
       supDefs.splice(Math.min(2, supDefs.length), 0, { id: 'NEW', ini: '+', name: 'New', full: 'A new supplier', bg: '#F1EEE8', ink: '#5F6980' });
       const sups = supDefs.map(x => { const on = String(x.id) === String(st.sup); return { ini: x.ini, name: x.name, full: x.full, on: on ? 'true' : 'false',
         pick: () => { FEEL.tick(); set({ sup: x.id }); },
@@ -7924,7 +8013,7 @@ SCREENS.Spotted = {
         perWord: 'a ' + u[0],
         sups, isSup: st.who === 'sup', isRival: st.who === 'rival',
         rival: st.rival, setRival: (e) => set({ rival: e.target.value }), rivalIni: rival ? initials(rival) : '?', rivalChips, hasRivalChips: rivalChips.length > 0,
-        packQty: st.packQty, unitPlural: st.packQty === 1 ? u[0] : u[1], packName: loose ? 'loose' : packsN[st.pack],
+        packQty: st.packSet ? st.packQty : '?', unitPlural: st.packQty === 1 ? u[0] : u[1], packName: loose ? 'loose' : packsN[st.pack],
         packTotal: !st.packSet && !loose ? 'tap to set' : loose ? 'sold loose' : (pieces ? '= ' + n0(pieces) + ' pc a ' + packsN[st.pack] : st.packQty + ' ' + u[1] + ' a ' + packsN[st.pack]),
         qtyOpen: st.open === 'qty' ? 'true' : 'false', unitOpen: st.open === 'unit' ? 'true' : 'false', packOpen: st.open === 'pack' ? 'true' : 'false',
         qtyTok: tok(st.open === 'qty') + "; font-family: 'IBM Plex Mono', monospace; min-width: 52px; justify-content: center", unitTok: tok(st.open === 'unit'), packTok: tok(st.open === 'pack'),
@@ -8155,8 +8244,8 @@ SCREENS.Supplier = {
       // Ask for prices: their lapsing or missing quotes, then the hunts in their line.
       const toAsk = qrows.filter(q => q.left <= 2).map(q => q.name).concat(may.map(l => l.name));
       const msg = toAsk.length
-        ? `Hello ${s.name}, this is ${myName()} from ${S.shopName || 'the shop'}. Please send me your price for:\n${toAsk.map(n => '• ' + n).join('\n')}\nWith the pack and how long the price holds. Thank you.`
-        : `Hello ${s.name}, this is ${myName()} from ${S.shopName || 'the shop'}.`;
+        ? `Hello ${s.name}, ${signWord()}. Please send me your price for:\n${toAsk.map(n => '• ' + n).join('\n')}\nWith the pack and how long the price holds. Thank you.`
+        : `Hello ${s.name}, ${signWord()}.`;
       const t = tintFor(s.id), ph = phoneDigits(s.phone);
       // The Buyer's open fixes for them: each field, was → should be.
       const canFix = canCloseFix(), editSx = JSON.stringify({ supplierId: s.id });
@@ -8247,7 +8336,7 @@ SCREENS.Suppliers = {
         <a href="Supplier.dc.html" data-sx="{{ r.sx }}" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px">
           <span style="{{ r.avatar }}">{{ r.ini }}</span>
           <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px"><span style="display: flex; align-items: baseline; gap: 8px; min-width: 0"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" title="{{ r.name }}">{{ r.name }}</span><span style="{{ r.tagStyle }}">{{ r.tag }}</span></span>
-            <span style="display: flex; align-items: center; gap: 8px"><span role="img" aria-label="{{ r.barLabel }}" style="{{ r.bar }}"><span class="u-bar" style="{{ r.fill }}"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 11px; color: #6B7480; white-space: nowrap"><sc-if value="{{ r.hasRows }}"><span style="{{ r.oldInk }}">{{ r.old }}</span>/{{ r.total }} old</sc-if><sc-if value="{{ r.noRows }}"><span style="font-family: Figtree, sans-serif">no prices yet</span></sc-if></span></span></span>
+            <span style="display: flex; align-items: center; gap: 8px"><span role="img" aria-label="{{ r.barLabel }}" style="{{ r.bar }}"><span class="u-bar" style="{{ r.fill }}"></span></span><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 11px; color: #6B7480; white-space: nowrap"><sc-if value="{{ r.hasRows }}"><span style="{{ r.oldInk }}">{{ r.old }}</span>/{{ r.total }} old</sc-if><sc-if value="{{ r.lapsing }}"><span style="font-family: Figtree, sans-serif; font-weight: 600; color: #95530C"> · quote lapses</span></sc-if><sc-if value="{{ r.noRows }}"><span style="font-family: Figtree, sans-serif">no prices yet</span></sc-if></span></span></span>
         </a>
         <sc-if value="{{ r.canAsk }}"><a href="Supplier.dc.html" data-sx="{{ r.sx }}" aria-label="{{ r.askLabel }}" style="height: 36px; padding: 0 14px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px #1C2233; color: #1C2233; font-size: 13px; font-weight: 600; display: flex; align-items: center">Ask</a></sc-if>
         <sc-if value="{{ r.canCall }}"><a href="{{ r.tel }}" aria-label="{{ r.callLabel }}" style="width: 36px; height: 36px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></a></sc-if>
@@ -8285,7 +8374,8 @@ SCREENS.Suppliers = {
       const filters = { all: () => true, check, importers: (x) => x.importer };
       const counts = { all: all.filter(hit).length, check: all.filter(x => hit(x) && check(x)).length, importers: all.filter(x => hit(x) && x.importer).length };
       const list = all.filter(x => hit(x) && filters[st.tab](x))
-        .sort((a, b) => (b.share - a.share) || (b.old - a.old) || a.s.name.localeCompare(b.s.name));
+        // The most old prices first (83 of 87 before 1 of 1), then the larger share old.
+        .sort((a, b) => (b.old - a.old) || (b.share - a.share) || a.s.name.localeCompare(b.s.name));
       const tabs = [['all', 'All'], ['check', 'Need a check'], ['importers', 'Importers']].map(([k, w]) => {
         const on = st.tab === k;
         return { word: w, n: String(counts[k]), on: on ? 'true' : 'false', dot: k === 'check',
@@ -8300,8 +8390,8 @@ SCREENS.Suppliers = {
         return {
           sx: JSON.stringify({ supplierId: s.id }), name: s.name, ini: initials(s.name),
           avatar: `width: 40px; height: 40px; flex: none; border-radius: 999px; background: ${t[0]}; color: ${t[1]}; font-size: 13px; font-weight: 700; letter-spacing: .02em; display: flex; align-items: center; justify-content: center`,
-          tag: x.lapsing ? 'quote lapses' : x.importer ? 'importer' : where,
-          tagStyle: `flex: none; max-width: 40%; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${x.lapsing ? 'font-weight: 600; color: #95530C' : x.importer ? 'font-weight: 600; color: #3A3F9B' : 'color: #6B7480'}`,
+          tag: x.importer ? 'importer' : where, lapsing: x.lapsing,
+          tagStyle: `flex: none; max-width: 40%; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${x.importer ? 'font-weight: 600; color: #3A3F9B' : 'color: #6B7480'}`,
           hasRows: x.total > 0, noRows: !x.total, old: String(x.old), total: String(x.total),
           oldInk: x.old ? 'color: #95530C; font-weight: 600' : 'color: #0F6B43; font-weight: 600',
           bar: x.total ? 'flex: 1; height: 4px; border-radius: 999px; background: #F5B26B; overflow: hidden' : 'flex: 1; height: 4px; border-radius: 999px; background: repeating-linear-gradient(90deg, #E6E3DD 0 4px, transparent 4px 8px)',
