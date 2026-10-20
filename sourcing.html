@@ -3299,130 +3299,141 @@ function atsUnitsFor(it){
 function atsNum(v){ return Number(String(v == null ? '' : v).replace(/[^0-9.]/g, '')) || 0; }
 function atsGrad(name){ const t = tintFor(name); return `linear-gradient(160deg, ${t[0]}, ${t[1]})`; }
 
+/* ---- v2 group E helpers ---- */
+/* The v2 run, the stop and the item page (the v2 boards "Plan the run",
+   "At a shop" and "An item on the shelf"). Read from the same records the
+   run is built from (mrRun / mrItemsFor); nothing here writes. */
+
+// The samples to pick up at a supplier: a hunt at Found whose best price is
+// theirs and has no sample yet, or one whose sample was started here today
+// (leadMeta(l).sample, the Sample screen's record).
+function eSamplesAt(sup){
+  if (!sup) return [];
+  const out = [];
+  openLeads().forEach(l => {
+    if (l.status !== 'sourced') return;
+    const c = mrCandAt(l, sup);
+    if (!c || c.noStock || !candidateHasPrice(c) || leadBestCand(l) !== c) return;
+    const sm = leadResearch(l).meta.sample;
+    if (sm && !(mrIsToday(sm.at) && String(sm.supplierId) === String(sup.id))) return;
+    out.push({ key: 'S:' + l.id, lead: l, cand: c, got: !!sm });
+  });
+  return out;
+}
+// A hunt priced today on the Quote screen from this stop drops out of the
+// run's list (it has a price now); it is kept here as answered, so the
+// stop's count does not shrink under the person standing in the shop.
+function eQuotedHere(st){
+  if (!st || st.type !== 'sup') return [];
+  const sup = supplierById(st.id);
+  if (!sup) return [];
+  const have = new Set(st.items.map(i => i.key));
+  return D().leads.filter(l => !l.voided && !have.has('L:' + l.id)).map(l => {
+    const c = mrCandAt(l, sup);
+    if (!c || c.noStock || !mrIsToday(c.quotedAt) || mrIsToday(c.askedAt) || !candidateHasPrice(c)) return null;
+    return { key: 'L:' + l.id, kind: 'hunt', lead: l, cand: c, name: l.name, answered: { no: false, val: short((candidateTiers(c)[0] || {}).price) } };
+  }).filter(Boolean);
+}
+// What one stop holds: its items, the samples to bring back, how far along.
+function eStop(st){
+  const items = st ? st.items.concat(eQuotedHere(st)) : [];
+  const samples = st && st.type === 'sup' ? eSamplesAt(supplierById(st.id)) : [];
+  const total = items.length + samples.length;
+  const done = items.filter(i => i.answered).length + samples.filter(s => s.got).length;
+  return { items, samples, total, done };
+}
+// An answered item's figure, in full (money is never shortened): the price
+// confirmed, the quote renewed or the tag read today.
+function eAnswerWord(it, st){
+  if (it.kind === 'price') { const r = D().prices.find(p => String(p.id) === String(it.row.id)) || it.row; return n0(priceRowCost(r)); }
+  if (it.kind === 'rival') {
+    const R = normName(st.name);
+    const seen = it.lead ? leadResearch(leadById(it.lead.id) || it.lead).rivals.find(r => normName(r.name) === R && mrIsToday(r.seenAt))
+      : D().rivals.find(r => r.productId === it.product.id && (r.variantIdx == null ? null : r.variantIdx) === it.variantIdx && normName(r.rival) === R && r.seenOn === todayISO());
+    return seen ? n0(seen.price) : 'seen';
+  }
+  const l = leadById(it.lead.id) || it.lead, sup = st.type === 'sup' ? supplierById(st.id) : null;
+  const c = sup ? mrCandAt(l, sup) : it.cand, t = c ? candidateTiers(c)[0] : null;
+  return t ? n0(t.price) : 'asked';
+}
+// "a piece", "a carton": the unit a price is for, in words.
+function eUnitWord(u){ u = String(u || 'pc').trim().toLowerCase(); return ({ pc: 'piece', pcs: 'piece', piece: 'piece', m: 'metre', kg: 'kg' })[u] || u; }
+function ePlural(n, u){ const w = eUnitWord(u); return Number(n) === 1 ? w : w === 'box' ? 'boxes' : /s$/.test(w) ? w : w + 's'; }
+// How long ago a price was checked, and whether that is old.
+function eAge(days){
+  const stale = priceStaleDays();
+  if (days == null) return { word: 'never checked', old: true };
+  return { word: days === 0 ? 'checked today' : days === 1 ? 'checked yesterday' : `checked ${days} days ago`, old: days > stale };
+}
+
 SCREENS.AtShop = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column; --ats-h: clamp(300px, calc(100vh - var(--safe-t) - var(--safe-b) - 292px), 510px)">
-  <div style="flex: none; padding: 14px 16px 0; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; gap: 8px">
-      <a href="MarketRun.dc.html" data-back aria-label="Back to the run" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-      <div style="flex: 1; min-width: 0; height: 52px; border-radius: 14px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 8px">
-        <span style="position: relative; width: 40px; height: 40px; flex: none">
-          <svg width="40" height="40" viewBox="0 0 40 40" style="transform: rotate(-90deg)" role="img" aria-label="{{ ringLabel }}"><circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="4"></circle><circle cx="20" cy="20" r="16" fill="none" stroke="#6FDCB0" stroke-width="4" stroke-linecap="round" pathLength="100" style="{{ ringStyle }}"></circle></svg>
-          <span style="{{ ringText }}">{{ done }}/{{ total }}</span>
-        </span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ shopName }}</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ stopWord }}<sc-if value="{{ hasShopNo }}"> · shop <span style="font-family: 'IBM Plex Mono', monospace">{{ shopNo }}</span></sc-if> · <span style="{{ savedInk }}">{{ savedWord }}</span></span></span>
-        <sc-if value="{{ hasPhone }}"><a href="{{ tel }}" aria-label="{{ callLabel }}" style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></a></sc-if>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <a href="MarketRun.dc.html" data-back aria-label="Back to the run" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
+  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: linear-gradient(180deg, #F6F3EE 0%, #F8F6F2 100%); border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
+    <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
+      <div style="display: flex; align-items: center; gap: 14px">
+        <span role="img" aria-label="{{ ringLabel }}" style="{{ ring }}"><span class="m" style="{{ ringText }}">{{ done }}/{{ total }}</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="t1" style="font-size: 20px; overflow-wrap: anywhere">{{ title }}</span><span style="font-size: 12px; color: #B3BCD2">{{ stopWord }}</span></span>
+        <sc-if value="{{ hasPhone }}"><a href="{{ tel }}" aria-label="{{ callLabel }}" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></a></sc-if>
+        <a href="MarketRun.dc.html" data-back aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
       </div>
-    </div>
-  </div>
-
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(96px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
-    <div style="{{ stackStyle }}">
-      <sc-if value="{{ hasCard }}">
-        <sc-if value="{{ peek2 }}"><span aria-hidden="true" style="position: absolute; left: 22px; right: 22px; top: 22px; height: calc(var(--ats-h) - 20px); border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; opacity: .55"></span></sc-if>
-        <sc-if value="{{ peek1 }}"><span aria-hidden="true" style="position: absolute; left: 11px; right: 11px; top: 11px; height: calc(var(--ats-h) - 10px); border-radius: 26px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD, 0 6px 14px rgba(22,32,60,.06)"></span></sc-if>
-
-        <div class="{{ cardClass }}" data-ats-card onPointerDown="{{ down }}" onPointerMove="{{ move }}" onPointerUp="{{ up }}" onPointerLeave="{{ up }}" onPointerCancel="{{ cancel }}" style="{{ cardStyle }}">
-          <div style="{{ photoStyle }}">
-            <sc-if value="{{ c.noPhoto }}"><span aria-hidden="true" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.85)"><svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="width: min(120px, 45%); height: min(120px, 45%)" stroke-linecap="round" stroke-linejoin="round"><path d="{{ c.icon }}"></path></svg></span></sc-if>
-            <span style="position: absolute; left: 12px; top: 12px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(22,32,60,.72); color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px">{{ c.badge }}</span>
-            <span style="position: absolute; right: 12px; top: 12px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.88); color: #1C2233; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; display: flex; align-items: center">{{ c.pos }}</span>
-            <span style="{{ yesStamp }}">{{ c.yesWord }}</span>
-            <span style="{{ noStamp }}">{{ c.noWord }}</span>
-          </div>
-          <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px">
-            <span style="font-size: 19px; font-weight: 700; letter-spacing: -.01em">{{ c.name }}</span>
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-              <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: #F7F5F2"><span style="font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #6B7480">{{ c.needLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">{{ c.need }}</span></span>
-              <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: #F7F5F2"><span style="font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #6B7480">{{ c.whoLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600">{{ c.who }}</span></span>
-              <span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: #F7F5F2"><span style="font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #6B7480">{{ c.lastLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; {{ c.lastInk }}">{{ c.last }}</span></span>
-            </div>
-          </div>
-        </div>
-      </sc-if>
-      <sc-if value="{{ allDone }}">
-        <div class="s-in" style="position: absolute; inset: 0; border-radius: 26px; background: #16203C; color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 0 20px; text-align: center">
-          <span style="width: 64px; height: 64px; border-radius: 999px; background: #6FDCB0; color: #16203C; display: flex; align-items: center; justify-content: center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span>
-          <span style="font-size: 20px; font-weight: 700">{{ doneTitle }}</span>
-          <span style="font-size: 13px; color: #B3BCD2">{{ summary }}</span>
-          <sc-if value="{{ canAgain }}"><button type="button" onClick="{{ reset }}" style="margin-top: 6px; height: 36px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.1); color: #FFFFFF; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer">Go again</button></sc-if>
-        </div>
-      </sc-if>
+      <div role="img" aria-label="{{ stripLabel }}" style="display: flex; gap: 4px"><sc-for list="{{ strip }}" as="b"><span style="{{ b.style }}"></span></sc-for></div>
     </div>
 
-    <sc-if value="{{ pricing }}">
-      <div class="s-in" style="display: flex; flex-direction: column; gap: 6px">
-        <div role="list" aria-label="Their prices so far" style="display: flex; flex-direction: column; gap: 4px">
-          <sc-for list="{{ ladder }}" as="r">
-            <span role="listitem" class="r-up" style="{{ r.row }}">
-              <span style="{{ r.step }}"></span>
-              <span style="width: 86px; flex: none; display: flex; flex-direction: column; line-height: 1.15"><span style="font-size: 12px; font-weight: 700; color: #1C2233">{{ r.from }}</span><span style="font-size: 10px; font-weight: 600; color: #6B7480">{{ r.fromSub }}</span></span>
-              <span style="flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 3px"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600">{{ r.price }}</span><span style="font-size: 10px; font-weight: 700; color: #6B7480">{{ r.per }}</span></span>
-              <span style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #5F6980">{{ r.each }}</span><span style="{{ r.badge }}">{{ r.note }}</span></span>
-              <button type="button" onClick="{{ r.remove }}" aria-label="{{ r.removeLabel }}" style="width: 28px; height: 28px; flex: none; border: none; border-radius: 8px; background: transparent; color: #6B7480; font-size: 13px; cursor: pointer">✕</button>
-            </span>
-          </sc-for>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 0 0 2px #0F6B43, 0 8px 18px rgba(15,107,67,.12)">
-          <div role="radiogroup" aria-label="Price for which unit" style="display: flex; gap: 4px; padding: 3px; border-radius: 11px; background: #F1EEE8">
-            <sc-for list="{{ unitTabs }}" as="u"><button type="button" role="radio" aria-checked="{{ u.on }}" onClick="{{ u.pick }}" style="{{ u.style }}">{{ u.label }}<span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; opacity: .7">{{ u.sub }}</span></button></sc-for>
-          </div>
-          <sc-if value="{{ askN }}">
-            <label style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 11px; background: #FDEEE1; color: #95530C; font-size: 12px; font-weight: 700">1 {{ unitWord }} =<input type="text" inputmode="numeric" value="{{ nShown }}" onChange="{{ setN }}" placeholder="?" aria-label="{{ nAria }}" style="width: 48px; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #1C2233">{{ baseWord }}</label>
-          </sc-if>
-          <div style="display: flex; gap: 6px">
-            <label style="width: 92px; flex: none; display: flex; flex-direction: column; justify-content: center; padding: 4px 8px; border-radius: 11px; background: #F1EEE8"><span style="font-size: 10px; font-weight: 700; letter-spacing: .04em; color: #6B7480">FROM</span><span style="display: flex; align-items: baseline; gap: 3px"><input type="text" inputmode="numeric" value="{{ fromShown }}" onChange="{{ setFrom }}" aria-label="From how many" style="width: 36px; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600; color: #1C2233"><span style="font-size: 11px; font-weight: 700; color: #6B7480">{{ unitWord }}</span></span></label>
-            <label style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 8px"><span style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: .04em; color: #6B7480"><span>{{ priceHead }}</span><span style="color: #0F6B43">{{ liveEach }}</span></span><input type="text" inputmode="numeric" value="{{ lineShown }}" onChange="{{ setLine }}" placeholder="type it" aria-label="{{ priceAria }}" style="width: 100%; min-width: 0; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: #1C2233"></label>
-            <button type="button" onClick="{{ addRung }}" aria-label="Add this price and start the next" style="{{ addStyle }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></button>
-          </div>
-        </div>
-        <div style="display: flex; gap: 6px">
-          <sc-if value="{{ canPhoto }}"><button type="button" onClick="{{ snap }}" aria-label="Take a photo of it" style="{{ snapStyle }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></button></sc-if>
-          <span style="flex: 1; min-width: 0; display: flex; align-items: center; padding: 0 4px; font-size: 12px; color: #6B7480">{{ hint }}</span>
-          <button type="button" onClick="{{ gotIt }}" style="{{ doneStyle }}">Got it</button>
-        </div>
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{ samples }}" as="x">
+      <div class="card n-in" style="{{ x.card }}">
+        <span style="width: 42px; height: 42px; flex: none; border-radius: 12px; background: linear-gradient(160deg, #F1C27D, #D98A1C); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.95)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ x.icon }}"></path></svg></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="eb" style="color: #95530C">For a hunt</span><span style="font-size: 14px; font-weight: 700">{{ x.name }} · bring a sample</span><span class="sub">they quoted <span class="m" style="color: #1C2233; font-weight: 600">{{ x.price }}</span> a {{ x.unit }}</span></span>
+        <sc-if value="{{ x.todo }}"><button type="button" onClick="{{ x.got }}" aria-label="{{ x.gotLabel }}" style="height: 36px; padding: 0 14px; flex: none; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: #16203C; color: #FFFFFF; display: flex; align-items: center">Got it</button></sc-if>
+        <sc-if value="{{ x.done }}"><a href="Sample.dc.html" data-sx="{{ x.sx }}" aria-label="{{ x.checkLabel }}" style="height: 36px; padding: 0 12px; flex: none; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; gap: 4px">✓ Got it<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a></sc-if>
       </div>
-    </sc-if>
-    <sc-if value="{{ deciding }}">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 18px">
-        <button type="button" onClick="{{ no }}" aria-label="{{ noLabel }}" style="width: 64px; height: 64px; border: none; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 2px #FBE5E2, 0 8px 18px rgba(142,42,34,.12); color: #8E2A22; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
-        <sc-if value="{{ c.recheck }}">
-          <button type="button" onClick="{{ newPrice }}" aria-label="They have it at a new price" style="width: 52px; height: 52px; border: none; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 2px #FDEEE1, 0 6px 14px rgba(149,83,12,.12); color: #95530C; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4"></circle></svg></button>
-        </sc-if>
-        <button type="button" onClick="{{ yes }}" aria-label="{{ yesLabel }}" style="width: 64px; height: 64px; border: none; border-radius: 999px; background: #0F6B43; box-shadow: 0 10px 22px rgba(15,107,67,.3); color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></button>
-      </div>
-      <span style="display: flex; justify-content: space-between; padding: 0 30px; font-size: 11px; font-weight: 700; color: #6B7480"><span>← {{ noHint }}</span><span>{{ yesHint }} →</span></span>
-    </sc-if>
-    <sc-if value="{{ showExtras }}">
-      <div style="display: flex; gap: 8px">
-        <a href="Spotted.dc.html" data-sx="{{ spotSx }}" style="flex: 1; min-width: 0; height: 44px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>Not on the list</a>
-        <a href="NewSupplier.dc.html" data-sx="{{ newSupSx }}" style="flex: 1; min-width: 0; height: 44px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20a6 6 0 0 1 12 0M18 8v6M15 11h6"></path></svg>New supplier met</a>
-      </div>
-    </sc-if>
-  </div>
-
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px calc(22px + var(--safe-b)); display: flex; align-items: center; gap: 10px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
-    <div role="list" aria-label="This stop, item by item" class="s-tray" style="flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; padding: 6px 20px 0 4px; margin: -6px 0 0 -4px; scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent)">
-      <sc-for list="{{ slots }}" as="t">
-        <span role="listitem" aria-label="{{ t.label }}" data-cur="{{ t.cur }}" style="flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px">
-          <span class="{{ t.cls }}" style="{{ t.box }}"><span style="{{ t.badge }}">{{ t.mark }}</span></span>
-          <span style="{{ t.valStyle }}">{{ t.val }}</span>
-        </span>
       </sc-for>
+
+      <sc-for list="{{ groups }}" as="g">
+      <div class="card n-in" style="padding: 10px 14px 4px; animation-delay: .05s">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 0 4px"><span class="eb">{{ g.title }}</span><span class="sub">{{ g.sub }}</span></div>
+        <sc-for list="{{ g.rows }}" as="p">
+        <div style="{{ p.line }}">
+          <div style="display: flex; align-items: center; gap: 8px; min-height: 58px">
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{ p.name }}</span><span style="display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 6px"><sc-if value="{{ p.hasPrice }}"><span class="m" style="font-size: 13px; font-weight: 600">{{ p.price }}</span></sc-if><span class="sub">{{ p.per }}</span><span style="{{ p.ageStyle }}">{{ p.age }}</span></span></span>
+            <sc-if value="{{ p.open }}">
+              <sc-if value="{{ p.canSame }}"><button type="button" onClick="{{ p.same }}" aria-label="{{ p.sameLabel }}" style="height: 34px; padding: 0 12px; flex: none; border-radius: 10px; font-size: 12px; font-weight: 700; background: #FFFFFF; color: #1C2233; box-shadow: 0 0 0 1px #DCD6CC">Same</button></sc-if>
+              <sc-if value="{{ p.newLink }}"><a href="Quote.dc.html" data-sx="{{ p.quoteSx }}" aria-label="{{ p.newLabel }}" style="height: 34px; padding: 0 12px; flex: none; border-radius: 10px; font-size: 12px; font-weight: 700; background: #FFFFFF; box-shadow: 0 0 0 1px #DCD6CC; display: flex; align-items: center">{{ p.newWord }}</a></sc-if>
+              <sc-if value="{{ p.newHere }}"><button type="button" onClick="{{ p.openFig }}" aria-label="{{ p.newLabel }}" aria-expanded="{{ p.figOn }}" style="{{ p.newStyle }}">{{ p.newWord }}</button></sc-if>
+              <button type="button" onClick="{{ p.no }}" aria-label="{{ p.noLabel }}" style="width: 34px; height: 34px; flex: none; border-radius: 10px; background: #FFFFFF; color: #8E2A22; box-shadow: 0 0 0 1px #DCD6CC; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+            </sc-if>
+            <sc-if value="{{ p.closed }}"><span class="pill" style="{{ p.doneStyle }}">{{ p.doneWord }}</span></sc-if>
+          </div>
+          <sc-if value="{{ p.figOpen }}">
+          <div class="well" style="padding: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px">
+            <sc-for list="{{ p.fig }}" as="f"><label style="display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 0 0 1.5px #16203C"><span style="font-size: 11px; font-weight: 700; color: #5F6980; white-space: nowrap">{{ f.word }}</span><input type="text" inputmode="numeric" value="{{ f.val }}" onInput="{{ f.set }}" placeholder="type it" aria-label="{{ f.label }}" class="m" style="flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-size: 17px; font-weight: 600; color: #1C2233; text-align: right"></label></sc-for>
+            <div style="display: flex; gap: 6px"><button type="button" onClick="{{ p.saveFig }}" class="btn ink" style="height: 42px; border-radius: 12px; font-size: 14px">{{ p.saveWord }}</button><button type="button" onClick="{{ p.closeFig }}" aria-label="Cancel" class="btn2" style="width: 48px; height: 42px; flex: none; border-radius: 12px">✕</button></div>
+          </div>
+          </sc-if>
+        </div>
+        </sc-for>
+      </div>
+      </sc-for>
+
+      <sc-if value="{{ nothing }}">
+      <div class="card" style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+        <span style="width: 48px; height: 48px; border-radius: 16px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+        <span class="t2">{{ nothingTitle }}</span>
+        <span class="sub" style="font-size: 13px">{{ nothingWord }}</span>
+      </div>
+      </sc-if>
+
+      <a href="NewAsk.dc.html" class="n-in" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #C9C4BA; animation-delay: .1s"><span style="width: 36px; height: 36px; flex: none; border-radius: 12px; background: #EEF0F5; color: #3B4566; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13.5px; font-weight: 700">Saw something we don’t sell?</span><span class="sub">note it · it lands with the asks</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A8290" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
     </div>
-    <a href="#" onClick="{{ next }}" style="{{ nextStyle }}">{{ nextLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+
+    <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b))"><button type="button" onClick="{{ next }}" class="{{ footCls }}"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ footWord }}</span></button></div>
   </div>
 </div>`,
   Component: class extends SrvLogic {
-    // The item in hand stays in sight on the tray.
-    afterRender(host){ const t = host.querySelector('.s-tray'), c = t && t.querySelector('[data-cur="yes"]'); if (!c || c === this._trayAt) return; this._trayAt = c; const tb = t.getBoundingClientRect(), cb = c.getBoundingClientRect(); if (cb.right > tb.right - 24 || cb.left < tb.left) t.scrollLeft += cb.left - tb.left - 44; }
-    constructor(props) {
-      super(props);
-      this.state = { dx: 0, drag: false, pricing: false, newFig: false, ladder: [], from: '1', line: '', ui: 0, per: {}, photo: null, review: false, ri: 0 };
-      this._x0 = null;
-    }
-    fmt(n) { return Math.round(n).toLocaleString('en-US'); }
-    fresh() { return { dx: 0, drag: false, pricing: false, newFig: false, ladder: [], from: '1', line: '', ui: 0, per: {}, photo: null }; }
+    constructor(props) { super(props); this.state = { fig: null }; }
     // The stop this screen is at: the one asked for, else the run's next.
     stop(run) {
       const p = this.props || {};
@@ -3440,13 +3451,11 @@ SCREENS.AtShop = {
       }
       return st;
     }
-    units(it) { return atsUnitsFor(it); }
-    unitN(units, ui) { const u = units[ui] || units[0]; return u[1] || atsNum(this.state.per[u[0]]) || 0; }
-    // One answer, written as it is given.
-    commit(st, it, how, ladder) {
-      const s = this.state, units = this.units(it), base = units[0][0];
+    // One answer, written as it is given (the run's own records: see the
+    // AtShop note above atsUnitsFor).
+    commit(st, it, how, tiers) {
+      const base = atsUnitsFor(it)[0][0];
       const now = new Date().toISOString();
-      const tiers = (ladder || []).map(r => ({ minQty: r.min, price: Math.round(r.each * 100) / 100 }));
       const shopName = st.name;
       return guarded('Saving the answer', async () => {
         if (it.kind === 'price') {
@@ -3457,20 +3466,22 @@ SCREENS.AtShop = {
             FEEL.no(); toast(`${shopName} can’t supply ${priceRowName(row)} — marked on their price list`);
           } else {
             await confirmPrice(row, how === 'new' ? tiers : null, 'in person');
-            FEEL.yes(); toast(how === 'new' ? `${priceRowName(row)}: ${n0(tiers[0].price)} a ${base} now — confirmed` : `${priceRowName(row)} still ${n0(priceRowCost(row))} — confirmed`);
+            FEEL.yes(); toast(how === 'new' ? `${priceRowName(row)}: ${n0(tiers[0].price)} a ${eUnitWord(base)} now — confirmed` : `${priceRowName(row)} still ${n0(priceRowCost(row))} — confirmed`);
           }
         } else if (it.kind === 'rival') {
           if (how === 'no') { mrSkip(st.key, it.key); FEEL.no(); toast(`Not on ${shopName}’s shelf — nothing recorded`); }
           else if (it.product) {
-            await addRivalPrice({ productId: it.product.id, variantIdx: it.variantIdx, rival: shopName, price: tiers[0].price, unit: base, source: 'tag', inStock: 'yes', note: s.photo ? 'photo: ' + s.photo : null });
+            await addRivalPrice({ productId: it.product.id, variantIdx: it.variantIdx, rival: shopName, price: tiers[0].price, unit: base, source: 'tag', inStock: 'yes', note: null });
             FEEL.yes(); toast(`${shopName}: ${it.name} at ${n0(tiers[0].price)} — rival price saved`);
           } else {
             const l = leadById(it.lead.id), l2 = JSON.parse(JSON.stringify(l));
-            l2.candidates.push({ kind: 'rival', name: shopName, price: tiers[0].price, unit: base, stock: 'In stock', area: st.area && st.area !== 'Rivals' ? st.area : '', how: 'visit', seenAt: now, ...(s.photo ? { photo: s.photo } : {}) });
+            l2.candidates.push({ kind: 'rival', name: shopName, price: tiers[0].price, unit: base, stock: 'In stock', area: st.area && st.area !== 'Rivals' ? st.area : '', how: 'visit', seenAt: now });
             await saveLead(l2);
             FEEL.yes(); toast(`${shopName}: ${l.name} at ${n0(tiers[0].price)} — added to the hunt`);
           }
         } else {
+          // A hunt, a quote to re-check, or "anyone with it": only "no" and
+          // "same price" are answered here; a figure goes through Quote.
           const l = leadById(it.lead.id), l2 = JSON.parse(JSON.stringify(l)), sup = supplierById(st.id);
           const had = mrCandAt(l2, sup);
           if (had && !had.supplierId) had.supplierId = sup.id;
@@ -3479,212 +3490,129 @@ SCREENS.AtShop = {
           const c = candidateFor(l2, sup, { role: how === 'no' && !had ? 'none' : 'supplier' });
           c.askedAt = now; c.runKind = it.kind; c.how = 'visit';
           if (!mrIsToday(c.runAt)) { c.leadWas = l.status; c.runAt = now; }
-          if (how === 'no') {
-            c.noStock = true;
-          } else {
-            delete c.noStock;
-            if (c.role === 'none') c.role = 'supplier';
-            c.quotedAt = now;
-            c.runNew = how === 'new' || it.kind !== 'recheck';
-            if (ladder && ladder.length) {
-              c.tiers = tiers; c.unit = base; c.ladder = ladder.map(r => ({ unit: r.unit, n: r.n, qty: r.qty, price: r.price, each: r.each, min: r.min }));
-              const pack = ladder.filter(r => r.n > 1).sort((a, b) => b.n - a.n)[0];
-              if (pack) { c.packUnit = pack.unit; c.packQty = pack.n; }
-            }
-            if (s.photo) c.photo = s.photo;
-          }
+          if (how === 'no') c.noStock = true;
+          else { delete c.noStock; c.quotedAt = now; c.runNew = false; }
           await saveLead(l2);
-          let moved = '';
-          if (how !== 'no' && STAGES.indexOf(l2.status) < STAGES.indexOf('sourced')) { await moveLead(l2, 'sourced'); moved = ' — moved to Found'; }
           if (how === 'no') { FEEL.no(); toast(`${shopName} doesn’t have ${l.name}`); }
-          else if (it.kind === 'recheck' && how === 'yes') { FEEL.yes(); toast(`${shopName} still at ${n0((candidateTiers(c)[0] || {}).price)} for ${l.name} — quote renewed`); }
-          else { FEEL.yes(); toast(`${shopName} has ${l.name}: ${plural(tiers.length, 'price')} saved${moved}`); }
+          else { FEEL.yes(); toast(`${shopName} still at ${n0((candidateTiers(c)[0] || {}).price)} for ${l.name} — quote renewed`); }
         }
-        const nx = this.fresh();
-        if (this.state.review) { nx.ri = this.state.ri + 1; }
-        this.setState(nx);
+        this.setState({ fig: null });
+      });
+    }
+    // The sample is in hand: started on the hunt (leadMeta(l).sample), as
+    // the Sample screen keeps it; its checks and cost are said there.
+    gotSample(l, sup) {
+      return guarded('The sample', async () => {
+        const cur = leadById(l.id) || l, l2 = JSON.parse(JSON.stringify(cur));
+        const m = leadMeta(l2), was = m.sample || {};
+        m.sample = Object.assign({}, was, { at: was.at || new Date().toISOString(), by: myName(), cost: Number(was.cost) || 0, checks: was.checks || {}, supplierId: sup.id });
+        await saveLead(l2);
+        FEEL.yes(); toast(`Sample of ${l.name} from ${sup.name} — check it when you are back`);
       });
     }
     renderVals() {
       const s = this.state, run = mrRun(), st = this.stop(run);
-      const list = st ? st.items : [];
-      const doneN = list.filter(i => i.answered).length;
-      let idx = -1;
-      if (s.review) idx = s.ri < list.length ? s.ri : -1;
-      else idx = list.findIndex(i => !i.answered);
-      const it = idx >= 0 ? list[idx] : null;
-      const hasCard = !!it, allDone = !hasCard;
-      const units = it ? this.units(it) : [['pc', 1]];
-      const base = units[0][0];
-      const ui = Math.min(s.ui || 0, units.length - 1);
-      const unitN = this.unitN(units, ui);
-      // The card.
-      let c = { recheck: false, yesWord: 'HAS IT', noWord: 'CAN’T SUPPLY', noPhoto: true, icon: '', badge: '', pos: '', name: '', needLabel: 'WE NEED', need: '— —', whoLabel: 'WAITING', who: '— —', lastLabel: 'PRICE', last: 'none', lastInk: 'color: #B9B2A6' };
-      let bg = 'background: linear-gradient(160deg, #B9BFC9, #7E8796)';
-      if (it) {
-        const img = it.lead ? it.lead.image : it.product ? it.product.image : it.row ? (productById(it.row.productId) || {}).image : null;
-        bg = photoStyle(s.photo || img, 'background: ' + atsGrad(it.name));
-        c = Object.assign(c, { name: it.name, icon: itemIconPath(it.name), noPhoto: !(s.photo || img), pos: (idx + 1) + ' of ' + list.length });
-        if (it.lead) {
-          const q = leadDemandQty(it.lead), unit = (it.cand && it.cand.unit) || (it.lead.requests || []).map(r => r.unit).find(Boolean) || 'pc';
-          c.need = q ? n0(q) + ' ' + unit : '— —';
-          c.who = String(leadDistinctAskers(it.lead));
-        }
-        if (it.kind === 'hunt' || it.kind === 'anyone') {
-          const r0 = (it.lead.requests || []).filter(r => !r.withdrawn)[0] || {};
-          c.badge = it.kind === 'anyone' ? 'anyone with it' : r0.source === 'dropped' && r0.orderId ? 'dropped from Q-' + r0.orderId : 'from ' + sourceOf(r0)[0] + ' · ' + plural(leadDistinctAskers(it.lead), 'client');
+      const sup = st && st.type === 'sup' ? supplierById(st.id) : null;
+      const isRival = !!st && st.type === 'rival';
+      const E = eStop(st);
+      const pos = st ? run.active.findIndex(x => x.key === st.key) : -1;
+      const nextStop = st ? run.active.filter((x, k) => k > pos && !x.done && x.key !== st.key)[0] || null : null;
+      const allDone = !!st && E.done === E.total;
+      const pct = E.total ? Math.round(E.done / E.total * 100) : 0;
+      // The samples to bring back.
+      const samples = E.samples.map(x => {
+        const t = candidateTiers(x.cand)[0] || {};
+        return { name: x.lead.name, icon: itemIconPath(x.lead.name), price: n0(t.price), unit: eUnitWord(x.cand.unit || 'pc'),
+          todo: !x.got, done: x.got, sx: JSON.stringify({ leadId: x.lead.id }),
+          gotLabel: `Got the sample of ${x.lead.name}`, checkLabel: `Sample of ${x.lead.name} in hand: check it`,
+          got: () => { if (!S.busy) this.gotSample(x.lead, sup); },
+          card: `padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: ${x.got ? '0 0 0 2px #1E9D57' : '0 0 0 2px #16203C'}` };
+      });
+      // The rows: each item to ask here, by what kind of ask it is.
+      const row = (it, i) => {
+        const a = it.answered, key = it.key, figOn = !!(s.fig && s.fig.key === key);
+        const base = atsUnitsFor(it)[0][0];
+        const v = { name: it.name, line: i ? 'box-shadow: inset 0 1px 0 #F0ECE6' : '', open: !a, closed: !!a,
+          hasPrice: false, price: '', per: '', age: '', ageStyle: 'font-size: 11px; color: #6B7480',
+          canSame: false, newLink: false, newHere: false, newWord: 'New', quoteSx: '{}', figOn: figOn ? 'true' : 'false', figOpen: figOn && !a,
+          noLabel: isRival ? `${it.name}: not on their shelf` : `${it.name}: they can’t supply it`,
+          doneWord: '', doneStyle: '', fig: [], saveWord: 'Save' };
+        if (a) Object.assign(v, a.no ? { doneWord: a.skipped || isRival ? 'not here' : 'can’t supply', doneStyle: 'background: #FBE5E2; color: #8E2A22' }
+          : { doneWord: '✓ ' + eAnswerWord(it, st), doneStyle: 'background: #E4F4EA; color: #0F6B43' });
+        const quote = () => Object.assign(v, { newLink: true, quoteSx: JSON.stringify({ leadId: it.lead.id, supplierId: st.id }) });
+        if (it.kind === 'price') {
+          const ag = eAge(it.age == null ? priceAgeDays(it.row) : it.age);
+          const tiers = priceRowTiers(it.row);
+          Object.assign(v, { hasPrice: true, price: n0(priceRowCost(it.row)), per: 'a ' + eUnitWord(it.row.unit || base), age: ag.word, ageStyle: `font-size: 11px; color: ${ag.old ? '#C93A30' : '#6B7480'}`,
+            canSame: true, newHere: true, sameLabel: `${it.name}: still ${n0(priceRowCost(it.row))}`, newLabel: `${it.name}: a new price`,
+            same: () => { if (!S.busy) this.commit(st, it, 'same', null); },
+            fig: (figOn ? s.fig.vals : []).map((val, k) => ({ val, word: tiers.length > 1 ? `from ${n0(tiers[k].minQty)} · a ${eUnitWord(it.row.unit || base)}` : `a ${eUnitWord(it.row.unit || base)}`,
+              label: `New price for ${it.name}, from ${tiers[k] ? tiers[k].minQty : 1}`, set: (e) => this.figSet(k, e) })),
+            save: () => {
+              const vals = this.state.fig.vals.map(x => Number(String(x || '').replace(/[^0-9.]/g, '')));
+              if (!vals.length || vals.some(x => !(x > 0))) { FEEL.no(); toast('Type each price first'); return; }
+              const next = tiers.length ? tiers.map((t, k) => ({ minQty: t.minQty, price: vals[k] })) : [{ minQty: 1, price: vals[0] }];
+              if (!S.busy) this.commit(st, it, 'new', next);
+            },
+            seed: tiers.length ? tiers.map(t => String(Math.round(t.price))) : [''] });
         } else if (it.kind === 'recheck') {
           const t0 = candidateTiers(it.cand)[0], left = it.left == null ? mrQuoteLeft(it.cand) : it.left;
-          Object.assign(c, { recheck: true, yesWord: 'SAME PRICE', lastLabel: 'THEIR LAST', last: t0 ? n0(t0.price) : '— —', lastInk: 'color: #95530C',
-            badge: left < 0 ? 'quote lapsed ' + plural(-left, 'day') + ' ago' : left === 0 ? 'quote ends today' : left === 1 ? 'quote ends tomorrow' : 'quote ends in ' + left + ' days' });
-        } else if (it.kind === 'price') {
-          const k = stockKey(it.row.productId, it.row.variantIdx), age = priceAgeDays(it.row);
-          Object.assign(c, { recheck: true, yesWord: 'STILL RIGHT', needLabel: 'ON SHELF', need: D().stock[k] != null ? n0(D().stock[k]) + ' ' + base : '— —',
-            whoLabel: 'CHECKED', who: age == null ? 'never' : age + 'd ago', lastLabel: 'THEIR LAST', last: n0(priceRowCost(it.row)), lastInk: 'color: #95530C',
-            badge: 'today’s share · oldest first' });
+          quote();
+          Object.assign(v, { hasPrice: !!t0, price: t0 ? n0(t0.price) : '', per: 'a ' + eUnitWord(it.cand.unit || base),
+            age: left < 0 ? 'quote lapsed ' + plural(-left, 'day') + ' ago' : left === 0 ? 'quote ends today' : left === 1 ? 'quote ends tomorrow' : 'quote ends in ' + left + ' days',
+            ageStyle: 'font-size: 11px; color: #95530C', canSame: !!t0, sameLabel: `${it.name}: same price as before`, newLabel: `${it.name}: log their new price`,
+            same: () => { if (!S.busy) this.commit(st, it, 'same', null); } });
+        } else if (it.kind === 'hunt' || it.kind === 'anyone') {
+          quote();
+          const n = leadDistinctAskers(it.lead);
+          Object.assign(v, { per: it.kind === 'anyone' ? 'nobody has a price yet' : 'no price from them yet', age: n ? plural(n, 'client') + ' waiting' : '', ageStyle: 'font-size: 11px; color: #95530C',
+            newWord: 'Has it', newLabel: `${it.name}: they have it — log the price` });
         } else if (it.kind === 'rival') {
           const cost = it.lead ? leadBestCost(it.lead) : Math.min(...D().prices.filter(p => p.productId === it.product.id).map(priceRowCost).filter(x => x > 0).concat([Infinity]));
           const seen = it.lead ? leadResearch(it.lead).rivals.length : D().rivals.filter(r => r.productId === it.product.id && r.price > 0).length;
-          Object.assign(c, { yesWord: 'GOT THE TAG', noWord: 'NOT ON SHELF', needLabel: 'OUR COST', need: isFinite(cost) && cost ? n0(cost) : '— —', whoLabel: 'RIVALS SEEN', who: String(seen),
-            lastLabel: 'THEIRS', badge: it.lead ? 'rival tag · a hunt' : 'rival tag · a key line' });
+          Object.assign(v, { hasPrice: isFinite(cost) && cost > 0, price: isFinite(cost) && cost ? n0(cost) : '', per: isFinite(cost) && cost ? 'our cost' : 'no cost on file', age: seen ? plural(seen, 'rival tag') + ' so far' : 'no rival tag yet',
+            newHere: true, newWord: 'Tag', newLabel: `${it.name}: the price on their tag`, saveWord: 'Save the tag',
+            fig: figOn ? [{ val: s.fig.vals[0], word: `their tag · a ${eUnitWord(base)}`, label: `${it.name}: the price on their tag`, set: (e) => this.figSet(0, e) }] : [],
+            save: () => { const p = Number(String(this.state.fig.vals[0] || '').replace(/[^0-9.]/g, '')); if (!(p > 0)) { FEEL.no(); toast('Type the price on the tag first'); return; } if (!S.busy) this.commit(st, it, 'new', [{ minQty: 1, price: p }]); },
+            seed: [''] });
         }
-      }
-      const dx = s.dx;
-      const yesA = Math.max(0, Math.min(1, dx / 90)), noA = Math.max(0, Math.min(1, -dx / 90));
-      const stamp = (side, col, a) => 'position: absolute; top: 120px; ' + side + ': 18px; padding: 6px 12px 5px; border: 3px double ' + col + '; border-radius: 10px; color: ' + col + '; background: rgba(255,255,255,.9); font-size: 18px; font-weight: 700; letter-spacing: .14em; transform: rotate(' + (side === 'left' ? '-12' : '12') + 'deg); opacity: ' + a.toFixed(2);
-      const yes = () => { if (!it || S.busy) return; if (c.recheck) this.commit(st, it, 'yes', null); else { FEEL.open(); this.setState({ pricing: true, newFig: false, dx: 0, drag: false }); } };
-      const no = () => { if (!it || S.busy) return; this.commit(st, it, 'no', null); };
-      // The slots strip: this stop, item by item.
-      const slots = list.map((x, k) => {
-        const a = x.answered, cur = k === idx;
-        const stt = a && !cur ? (a.no ? 'no' : 'yes') : cur ? 'cur' : 'next';
-        const img = x.lead ? x.lead.image : x.product ? x.product.image : null;
-        return {
-          label: x.name + ': ' + (stt === 'no' ? (x.kind === 'rival' ? 'not on their shelf' : 'can’t supply') : stt === 'yes' ? a.val : stt === 'cur' ? 'asking now' : 'to ask'),
-          cls: a ? 's-chip' : '',
-          box: 'position: relative; width: 44px; height: 44px; border-radius: 12px; ' + photoStyle(img, 'background: ' + atsGrad(x.name)) + '; ' + (stt === 'cur' ? 'box-shadow: 0 0 0 2px #16203C, 0 0 0 4px #FFFFFF' : stt === 'next' ? 'opacity: .35' : stt === 'no' ? 'filter: grayscale(1); opacity: .55' : ''),
-          badge: 'position: absolute; right: -5px; top: -5px; width: 18px; height: 18px; border-radius: 999px; font-size: 10px; font-weight: 700; display: ' + (a && !cur ? 'flex' : 'none') + '; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #16203C; ' + (stt === 'no' ? 'background: #E5483D; color: #FFFFFF' : 'background: #6FDCB0; color: #16203C'),
-          mark: stt === 'no' ? '✕' : '✓',
-          cur: stt === 'cur' ? 'yes' : '', val: stt === 'yes' ? a.val : stt === 'no' ? 'none' : stt === 'cur' ? 'now' : '',
-          valStyle: 'height: 12px; font-family: \'IBM Plex Mono\', monospace; font-size: 10px; font-weight: 600; white-space: nowrap; color: ' + (stt === 'no' ? '#F59A92' : stt === 'cur' ? '#FFFFFF' : '#6FDCB0'),
-        };
+        v.no = () => { if (!S.busy) this.commit(st, it, 'no', null); };
+        v.openFig = () => { FEEL.tick(); this.setState({ fig: figOn ? null : { key, vals: v.seed || [''] } }); };
+        v.closeFig = () => { FEEL.back(); this.setState({ fig: null }); };
+        v.saveFig = () => v.save && v.save();
+        v.newStyle = `height: 34px; padding: 0 12px; flex: none; border-radius: 10px; font-size: 12px; font-weight: 700; ${figOn ? 'background: #16203C; color: #FFFFFF' : 'background: #FFFFFF; box-shadow: 0 0 0 1px #DCD6CC'}`;
+        return v;
+      };
+      const own = E.items.filter(x => x.kind !== 'anyone'), anyone = E.items.filter(x => x.kind === 'anyone');
+      const left = (list) => list.filter(x => !x.answered).length;
+      const groups = [];
+      if (own.length) groups.push({ title: isRival ? 'Tags to read here' : 'Prices to check here', sub: !left(own) ? 'all asked' : left(own) + (isRival ? ' left · read the shelf' : ' left · ask at the counter'), rows: own.map(row) });
+      if (anyone.length) groups.push({ title: 'Anyone with these?', sub: left(anyone) ? left(anyone) + ' to ask' : 'all asked', rows: anyone.map(row) });
+      const strip = (pos >= 0 ? run.active : st ? [st] : []).map(x => {
+        const cur = st && x.key === st.key, ok = cur ? allDone : x.done;
+        return { style: `flex: 1; height: 4px; border-radius: 999px; background: ${ok ? '#6FDCB0' : cur ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.18)'}` };
       });
-      const got = list.filter(x => x.answered && !x.answered.no).length;
-      // The ladder: each step {unit, n, qty, price, each = price/n, min = qty*n}.
-      const ladder = (() => {
-        const b0 = s.ladder[0] ? s.ladder[0].each : 0;
-        return s.ladder.map((r, k) => {
-          const off = b0 && k > 0 ? Math.round((1 - r.each / b0) * 100) : 0;
-          return {
-            from: (r.qty === 1 ? '1 ' : r.qty + '+ ') + r.unit,
-            fromSub: r.n > 1 ? '= ' + this.fmt(r.qty * r.n) + ' ' + base : (r.qty > 1 ? 'or more' : 'single'),
-            price: this.fmt(r.price), per: 'a ' + r.unit,
-            each: r.n > 1 ? this.fmt(r.each) + '/' + base : '',
-            note: k === 0 ? 'base' : (off > 0 ? '−' + off + '%' : off < 0 ? '+' + (-off) + '%' : 'same'),
-            badge: 'margin-top: 2px; height: 16px; padding: 0 5px; border-radius: 5px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; ' + (k === 0 ? 'background: #F1EEE8; color: #5F6980' : off > 0 ? 'background: #E4F4EA; color: #0F6B43' : 'background: #FBE5E2; color: #8E2A22'),
-            removeLabel: 'Remove the price from ' + r.qty + ' ' + r.unit,
-            remove: () => this.setState({ ladder: this.state.ladder.filter((x, j) => j !== k) }),
-            step: 'width: 6px; align-self: stretch; border-radius: 3px; background: #0F6B43; opacity: ' + (0.35 + 0.65 * (k + 1) / s.ladder.length).toFixed(2),
-            row: 'display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 3px 4px 3px 6px; box-sizing: border-box; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; margin-left: ' + (k * 8) + 'px',
-          };
-        });
-      })();
-      const lineV = atsNum(s.line);
-      const rung = () => {
-        const st2 = this.state, u = units[Math.min(st2.ui || 0, units.length - 1)], n = this.unitN(units, Math.min(st2.ui || 0, units.length - 1));
-        const price = atsNum(st2.line), qty = atsNum(st2.from) || 1;
-        if (!price) return null;
-        if (!n) { toast('How many ' + base + ' in one ' + u[0] + '?'); return null; }
-        return { unit: u[0], n, qty, price, each: price / n, min: qty * n };
-      };
-      const addRung = () => {
-        const r = rung(); if (!r) return;
-        const st2 = this.state, cu = Math.min(st2.ui || 0, units.length - 1);
-        const lad = st2.ladder.filter(x => x.min !== r.min).concat([r]).sort((x, y) => x.min - y.min);
-        const nextUi = cu + 1 < units.length ? cu + 1 : cu;
-        FEEL.tick();
-        this.setState({ ladder: lad, line: '', ui: nextUi, from: nextUi === cu ? String(r.qty * 2) : '1' });
-      };
-      const gotIt = () => {
-        let lad = this.state.ladder;
-        const r = rung();
-        if (r) lad = lad.filter(x => x.min !== r.min).concat([r]).sort((x, y) => x.min - y.min);
-        if (!lad.length || S.busy) return;
-        this.commit(st, it, 'new', it.kind === 'rival' ? [lad[0]] : lad);
-      };
-      const sup = st && st.type === 'sup' ? supplierById(st.id) : null;
-      const pos = st ? run.active.findIndex(x => x.key === st.key) : -1;
-      const nextStop = st ? run.active.filter((x, k) => k > pos && !x.done && x.key !== st.key)[0] || null : null;
-      const isRival = st && st.type === 'rival';
-      const canAgain = list.length > 0 && !s.review;
+      const where = sup ? [sup.shopNo ? 'shop ' + sup.shopNo : '', sup.location || ''].filter(Boolean).join(', ') : isRival ? 'rival · look only' : '';
+      const footWord = !st ? 'Back to the run' : nextStop ? (allDone ? 'Done here · next: ' : 'Next stop · ') + nextStop.name : allDone ? 'Done here · see the run' : 'Finish the run';
       return {
-        shopName: st ? st.name : 'No stop today',
-        stopWord: !st ? 'nothing on the run' : pos >= 0 ? 'stop ' + (pos + 1) + ' of ' + run.active.length : isRival ? 'rival · look only' : 'not on today’s run',
-        hasShopNo: !!(sup && sup.shopNo), shopNo: sup ? sup.shopNo : '',
-        savedWord: doneN ? 'all saved' : 'nothing asked yet', savedInk: doneN ? 'color: #6FDCB0' : 'color: #B3BCD2',
-        hasPhone: !!(sup && sup.phone), tel: sup ? telUrl(sup.phone) : '', callLabel: sup ? 'Call ' + sup.name : '',
-        c, hasCard, allDone, done: doneN, total: list.length,
-        peek1: !s.pricing && idx >= 0 && list.slice(idx + 1).some(x => !x.answered || s.review),
-        peek2: !s.pricing && idx >= 0 && list.slice(idx + 1).filter(x => !x.answered || s.review).length > 1,
-        cardClass: idx === 0 && !s.drag && doneN === 0 ? 's-hint' : 's-in',
-        cardStyle: 'position: absolute; left: 0; right: 0; top: 0; height: ' + (s.pricing ? '286px' : 'var(--ats-h)') + '; display: flex; flex-direction: column; border-radius: 26px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 4px rgba(22,32,60,.06), 0 18px 40px rgba(22,32,60,.14), inset 0 0 0 1px #E6E3DD; touch-action: pan-y; user-select: none; cursor: grab; transform: translateX(' + dx + 'px) rotate(' + (dx / 18).toFixed(2) + 'deg); transition: ' + (s.drag ? 'none' : 'transform .3s cubic-bezier(.2,.9,.3,1), height .35s cubic-bezier(.2,.9,.3,1)'),
-        stackStyle: 'position: relative; flex: none; transition: height .35s cubic-bezier(.2,.9,.3,1); height: ' + (s.pricing ? '290px' : 'calc(var(--ats-h) + 14px)'),
-        photoStyle: 'position: relative; overflow: hidden; flex: 1 1 auto; min-height: 0; border-radius: 26px 26px 0 0; transition: height .35s cubic-bezier(.2,.9,.3,1); ' + bg + '; max-height: ' + (s.pricing ? 170 : 394) + 'px',
-        yesStamp: stamp('left', '#0F6B43', yesA), noStamp: stamp('right', '#8E2A22', noA),
-        down: (e) => { if (this.state.pricing || !it || S.busy) return; this._x0 = e.clientX; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_e) {} this.setState({ drag: true, dx: 0 }); },
-        move: (e) => { if (this._x0 == null) return; this.setState({ dx: e.clientX - this._x0 }); },
-        up: (e) => {
-          if (this._x0 == null) return;
-          const d = e && e.clientX != null ? e.clientX - this._x0 : this.state.dx;
-          this._x0 = null;
-          if (d > 90) { this.setState({ dx: 0, drag: false }); yes(); }
-          else if (d < -90) { this.setState({ dx: 0, drag: false }); no(); }
-          else this.setState({ dx: 0, drag: false });
-        },
-        cancel: () => { this._x0 = null; this.setState({ dx: 0, drag: false }); },
-        yes, no,
-        newPrice: () => { FEEL.open(); this.setState({ pricing: true, newFig: true }); },
-        yesLabel: c.recheck ? 'Same price as before' : isRival ? 'They have a price tag' : 'They have it',
-        yesHint: c.recheck ? 'same price' : isRival ? 'has a tag' : 'has it',
-        noLabel: isRival ? 'Not on their shelf' : 'They can’t supply it', noHint: isRival ? 'not on shelf' : 'can’t supply',
-        deciding: hasCard && !s.pricing, pricing: hasCard && s.pricing,
-        showExtras: !s.pricing && !!st,
-        spotSx: '{}', newSupSx: '{}',
-        ladder,
-        unitTabs: units.map(([w, n], k) => {
-          const on = ui === k, nn = n || atsNum(s.per[w]);
-          return { label: w, sub: k === 0 ? '' : nn ? ' ' + nn : ' ?', on: on ? 'true' : 'false', pick: () => { FEEL.tick(); this.setState({ ui: k, from: '1' }); },
-            style: 'flex: 1; min-width: 0; height: 32px; border: none; border-radius: 9px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 2px; ' + (on ? 'background: #FFFFFF; color: #1C2233; box-shadow: 0 1px 2px rgba(22,32,60,.1)' : 'background: transparent; color: #5F6980') };
-        }),
-        askN: ui > 0 && !units[ui][1], nShown: s.per[units[ui][0]] || '', baseWord: base, nAria: 'How many ' + base + ' in one ' + units[ui][0],
-        setN: (e) => { const per = Object.assign({}, this.state.per); per[units[ui][0]] = e && e.target ? e.target.value.replace(/[^0-9]/g, '') : ''; this.setState({ per }); },
-        unitWord: units[ui][0],
-        priceHead: 'PRICE A ' + String(units[ui][0]).toUpperCase(),
-        priceAria: 'Their price for one ' + units[ui][0],
-        liveEach: lineV && unitN > 1 ? this.fmt(lineV / unitN) + '/' + base : '',
-        fromShown: s.from, lineShown: lineV ? this.fmt(lineV) : '',
-        setFrom: (e) => this.setState({ from: e && e.target ? e.target.value.replace(/[^0-9]/g, '') : '' }),
-        setLine: (e) => this.setState({ line: e && e.target ? e.target.value : '' }),
-        addRung,
-        addStyle: 'width: 48px; height: 48px; flex: none; border: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (lineV ? 'background: #0F6B43; color: #FFFFFF' : 'background: #F1EEE8; color: #6B7480'),
-        hint: it && it.kind === 'rival' ? 'the price on their tag, for one' : s.ladder.length ? s.ladder.length + (s.ladder.length === 1 ? ' price' : ' prices') + ' · add another or done' : 'price from 1 first, then bigger quantities',
-        doneStyle: 'height: 48px; padding: 0 20px; border: none; border-radius: 14px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; ' + (s.ladder.length || lineV ? 'background: #0F6B43; color: #FFFFFF' : 'background: #F1EEE8; color: #6B7480'),
-        gotIt,
-        canPhoto: !!it && it.kind !== 'price',
-        snap: async () => { try { const url = await takePhoto('camera'); if (url) { this.setState({ photo: url }); toast('Photo kept with this answer'); } } catch (e) { FEEL.no(); toast(failWord(e), 6000); } },
-        snapStyle: 'width: 48px; height: 48px; flex: none; border: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (s.photo ? 'background: #E4F4EA; color: #0F6B43; box-shadow: inset 0 0 0 1px #0F6B43' : 'background: #FFFFFF; color: #1C2233; box-shadow: inset 0 0 0 1px #E6E3DD'),
-        slots,
-        doneTitle: !st ? 'Nothing to ask today' : !list.length ? 'Nothing to ask here' : firstWord(st.name) + ' done',
-        summary: !st ? 'No supplier has an open hunt, a lapsing quote or a price from today’s share.' : !list.length ? 'No open hunt, quote or price waits on ' + st.name + ' today.' : isRival ? got + ' tags seen · ' + (doneN - got) + ' not on the shelf' : got + ' priced · ' + (doneN - got) + ' can’t supply',
-        canAgain,
-        reset: () => { FEEL.tick(); this.setState(Object.assign(this.fresh(), { review: true, ri: 0 })); },
-        ringStyle: 'stroke-dasharray: ' + (list.length ? Math.round(doneN / list.length * 100) : 0) + ' 100',
-        ringLabel: doneN + ' of ' + list.length + ' asked here',
-        ringText: "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-weight: 600; letter-spacing: -.04em; font-size: " + (String(doneN).length + String(list.length).length > 3 ? 10 : 12) + 'px',
-        nextLabel: allDone ? (nextStop ? 'Next stop' : 'Run done') : 'Skip',
-        next: (e) => { if (e) e.preventDefault(); if (nextStop) A.replace('AtShop', mrStopProps(nextStop)); else A.replace('RunDone', {}); },
-        nextStyle: 'height: 48px; padding: 0 14px; border-radius: 14px; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 4px; flex: none; ' + (allDone ? 'background: #C93A30; color: #FFFFFF' : 'background: rgba(255,255,255,.1); color: #FFFFFF'),
+        title: st ? 'At ' + st.name : 'No stop today',
+        stopWord: !st ? 'nothing on the run' : [pos >= 0 ? `stop ${pos + 1} of ${run.active.length}` : 'not on today’s run', where].filter(Boolean).join(' · '),
+        hasPhone: !!(sup && telUrl(sup.phone)), tel: sup ? telUrl(sup.phone) : '', callLabel: sup ? 'Call ' + sup.name : '',
+        done: E.done, total: E.total, ringLabel: `${E.done} of ${E.total} done here`,
+        ring: `width: 48px; height: 48px; flex: none; border-radius: 999px; background: conic-gradient(#6FDCB0 0 ${pct}%, rgba(255,255,255,.14) ${pct}% 100%); display: flex; align-items: center; justify-content: center`,
+        ringText: `width: 38px; height: 38px; border-radius: 999px; background: #1E2848; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: ${String(E.done).length + String(E.total).length > 3 ? 11 : 13}px`,
+        strip, stripLabel: pos >= 0 ? `Stop ${pos + 1} of ${run.active.length}; ${run.active.filter(x => x.done).length} done` : 'This stop',
+        samples, groups,
+        nothing: !E.total, nothingTitle: st ? 'Nothing to ask here' : 'Nothing to ask today',
+        nothingWord: st ? `No open hunt, quote or price waits on ${st.name} today.` : 'No supplier has an open hunt, a lapsing quote or a price from today’s share.',
+        footCls: 'btn ' + (allDone ? 'go' : 'ink'), footWord,
+        next: () => { if (!st) { A.back(); return; } if (nextStop) A.replace('AtShop', mrStopProps(nextStop)); else A.replace('RunDone', {}); },
       };
+    }
+    figSet(k, e) {
+      const f = this.state.fig; if (!f) return;
+      const vals = f.vals.slice(); vals[k] = e && e.target ? e.target.value.replace(/[^0-9.]/g, '') : '';
+      this.state = Object.assign({}, this.state, { fig: Object.assign({}, f, { vals }) });
     }
   },
 };
@@ -4692,180 +4620,177 @@ function itemProduct(props){
 }
 SCREENS.Item = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <a href="Search.dc.html" data-back aria-label="Back" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
+  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: linear-gradient(180deg, #F6F3EE 0%, #F8F6F2 100%); border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
   <sc-if value="{{ none }}">
     <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center">
-      <span style="font-size: 16px; font-weight: 700">{{ noneWord }}</span>
-      <a href="Search.dc.html" data-back style="height: 48px; padding: 0 18px; border-radius: 14px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700; display: flex; align-items: center">Back</a>
+      <span class="t2">{{ noneWord }}</span>
+      <a href="Search.dc.html" data-back class="btn ink" style="width: auto; padding: 0 22px">Back</a>
     </div>
   </sc-if>
   <sc-if value="{{ has }}">
-  <div data-navy-top style="flex: none; background: linear-gradient(180deg, #1B2747 0%, #16203C 100%); color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 16px">
-    <div style="display: flex; align-items: center; gap: 10px">
-      <a href="Search.dc.html" data-back aria-label="Back" style="width: 40px; height: 40px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-      <span style="flex: 1"></span>
-      <button type="button" onClick="{{ openEdit }}" aria-label="Edit its details: name, aisle, photo" style="height: 40px; padding: 0 16px 0 14px; border: none; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>Edit details</button>
-    </div>
-    <div style="display: flex; align-items: center; gap: 16px">
-      <span style="{{ photo }}" role="img" aria-label="{{ photoLabel }}"><sc-if value="{{ noPhoto }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ icon }}"></path></svg></sc-if></span>
-      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px"><span style="font-size: 20px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15">{{ name }}</span><span style="font-size: 12px; font-weight: 500; color: #B3BCD2">{{ meta }}</span></span>
-    </div>
-    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-top: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,.08)">
-      <span style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #B3BCD2">{{ sellsWord }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 34px; font-weight: 500; letter-spacing: -.04em; line-height: 1">{{ sells }}</span></span>
-      <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12px; font-weight: 500; color: #B3BCD2; text-align: right"><span style="display: inline-flex; align-items: center; gap: 5px; color: #6FDCB0; font-weight: 600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>{{ lockWord }}</span><span>{{ ruleLine }}</span></span>
-    </div>
-  </div>
-
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
-    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">{{ everyWord }}</span><span style="font-size: 12px; font-weight: 500; color: #6B7480">tap one to put it right</span></div>
-
-    <sc-if value="{{ noRows }}">
-      <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 20px 18px; font-size: 13px; color: #5F6980; text-align: center">No supplier price on file for it yet — add one with “A price”.</div>
-    </sc-if>
-
-    <sc-if value="{{ hasChart }}">
-    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 16px 18px 12px">
-      <div role="img" aria-label="{{ chartLabel }}" style="position: relative; height: 70px">
-        <span style="position: absolute; left: 0; right: 0; top: 34px; height: 1px; background: #E6E3DD"></span>
-        <sc-for list="{{ ticks }}" as="t"><span style="{{ t.mark }}"></span></sc-for>
-        <span style="{{ band }}"></span>
-        <sc-for list="{{ dots }}" as="p"><span class="i-drop" style="{{ p.box }}"><span style="{{ p.labelStyle }}">{{ p.label }}</span><span style="{{ p.dot }}"></span></span></sc-for>
-        <sc-if value="{{ hasSell }}"><span style="{{ sellMark }}"></span></sc-if>
-        <span style="position: absolute; left: 0; right: 0; bottom: 0; height: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6B7480"><sc-for list="{{ ticks }}" as="t"><span style="{{ t.labelStyle }}">{{ t.word }}</span></sc-for><sc-if value="{{ hasSell }}"><span style="{{ sellLabelStyle }}">{{ sellLabel }}</span></sc-if></span>
+    <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
+      <div style="display: flex; align-items: center; gap: 14px">
+        <span style="{{ photo }}" role="img" aria-label="{{ photoLabel }}"><sc-if value="{{ noPhoto }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ icon }}"></path></svg></sc-if></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="t1" style="font-size: 20px; overflow-wrap: anywhere">{{ name }}</span><span style="font-size: 12px; color: #B3BCD2">{{ meta }}</span></span>
+        <button type="button" onClick="{{ openEdit }}" aria-label="Edit its details: name, aisle, photo" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"></path></svg></button>
+        <a href="Search.dc.html" data-back aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
       </div>
     </div>
-    </sc-if>
 
-    <sc-if value="{{ hasRows }}">
-    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 6px">
-      <sc-for list="{{ rows }}" as="r">
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+      <div class="card n-in" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: #F7EBD3"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9C7438" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"></path></svg><span style="font-size: 13.5px; font-weight: 700; color: #6B4A1A">{{ packWord }}</span></div>
+        <sc-if value="{{ hasSell }}">
+        <div role="img" aria-label="{{ sellLabel }}" style="{{ tilesGrid }}">
+          <sc-for list="{{ tiles }}" as="t"><span style="{{ t.style }}"><span class="m" style="font-size: 15px; font-weight: 600">{{ t.v }}</span><span style="{{ t.kStyle }}">a {{ t.k }}</span></span></sc-for>
+        </div>
+        <div role="img" aria-label="{{ marginLabel }}" style="display: flex; align-items: center; gap: 8px"><span style="flex: 1; min-width: 40px; height: 8px; border-radius: 999px; background: #ECE8E1; overflow: hidden; display: flex"><span style="{{ costBar }}"></span><span style="{{ marginBar }}"></span></span><span class="sub" style="white-space: nowrap">cost <b class="m" style="color: #1C2233">{{ cost }}</b> · <b style="{{ marginInk }}">{{ marginWord }}</b></span></div>
+        </sc-if>
+        <sc-if value="{{ noSell }}"><span class="sub" style="font-size: 13px">No live supplier price, so nothing to sell it on yet.</span></sc-if>
+        <span class="sub" style="display: flex; align-items: center; gap: 6px; font-size: 11px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>{{ lockWord }}</span>
+      </div>
+
+      <div class="card n-in" style="padding: 12px 14px; display: flex; gap: 14px; align-items: flex-end; animation-delay: .05s">
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="eb">In stock</span><span style="display: flex; align-items: baseline; gap: 6px"><span class="m" style="font-size: 26px; font-weight: 600">{{ stock }}</span><span class="sub">{{ stockUnit }}</span></span><sc-if value="{{ noStock }}"><span class="pill" style="background: #FBE5E2; color: #8E2A22">none on the shelf</span></sc-if></span>
+        <sc-if value="{{ hasWorth }}"><span class="well" style="padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-end"><span class="m" style="font-size: 15px; font-weight: 600">{{ worth }}</span><span style="font-size: 10px; color: #5F6980">at cost, on the shelf</span></span></sc-if>
+      </div>
+
+      <div class="card n-in" style="padding: 8px 14px 4px; animation-delay: .1s">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0"><span class="eb">Who sells it to us</span><span class="sub">{{ perWord }}</span></div>
+        <sc-if value="{{ noRows }}"><span class="sub" style="display: block; padding: 8px 0 12px; font-size: 13px">No supplier price on file yet — log one.</span></sc-if>
+        <sc-for list="{{ rows }}" as="r">
         <div style="{{ r.wrap }}">
-          <button type="button" onClick="{{ r.pick }}" aria-pressed="{{ r.on }}" aria-label="{{ r.pickLabel }}" style="width: 100%; border: none; background: transparent; padding: 0; font-family: inherit; color: inherit; text-align: left; display: flex; align-items: center; gap: 12px; min-height: 56px; cursor: pointer">
-            <span style="{{ r.dot }}"></span>
-            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.sup }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="{{ r.ageInk }}">{{ r.age }}</span>{{ r.note }}</span></span>
-            <span style="{{ r.priceStyle }}">{{ r.price }}</span>
+          <button type="button" onClick="{{ r.pick }}" aria-pressed="{{ r.on }}" aria-label="{{ r.pickLabel }}" style="width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px">
+            <span class="ava" style="{{ r.ava }}">{{ r.ini }}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13.5px; font-weight: 700">{{ r.sup }}</span><span style="{{ r.ageStyle }}"><span style="{{ r.dot }}"></span>{{ r.age }}</span></span>
+            <sc-if value="{{ r.cheapest }}"><span class="pill" style="background: #E4F4EA; color: #0F6B43">cheapest</span></sc-if>
+            <span class="m" style="{{ r.priceStyle }}">{{ r.price }}</span>
           </button>
           <sc-if value="{{ r.showActs }}">
-          <div role="group" aria-label="{{ r.actsLabel }}" style="display: grid; grid-template-columns: 1fr 1fr 1fr; height: 40px; margin-bottom: 12px; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECE8E1; overflow: hidden">
-            <button type="button" onClick="{{ r.ok }}" style="border: none; background: transparent; color: #0F6B43; font-family: inherit; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: inset -1px 0 0 #ECE8E1; cursor: pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>{{ r.okWord }}</button>
-            <button type="button" onClick="{{ r.newFig }}" style="border: none; background: transparent; color: #1C2233; font-family: inherit; font-size: 13px; font-weight: 600; box-shadow: inset -1px 0 0 #ECE8E1; cursor: pointer">New figure</button>
-            <button type="button" onClick="{{ r.cant }}" disabled="{{ r.cantOff }}" data-why="Already marked can’t supply" style="{{ r.cantStyle }}">Can’t supply</button>
+          <div role="group" aria-label="{{ r.actsLabel }}" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px">
+            <button type="button" onClick="{{ r.ok }}" class="btn2" style="height: 38px; border-radius: 11px; font-size: 12.5px; color: #0F6B43; font-weight: 700">{{ r.okWord }}</button>
+            <button type="button" onClick="{{ r.newFig }}" class="btn2" style="height: 38px; border-radius: 11px; font-size: 12.5px; font-weight: 700">New figure</button>
+            <button type="button" onClick="{{ r.cant }}" disabled="{{ r.cantOff }}" data-why="Already marked can’t supply" class="btn2" style="{{ r.cantStyle }}">Can’t supply</button>
           </div>
           </sc-if>
           <sc-if value="{{ r.showFig }}">
-          <div style="display: flex; gap: 6px; margin-bottom: 12px">
-            <label style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 12px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 0 0 1.5px #1C2233"><span style="font-size: 11px; font-weight: 600; color: #6B7480; white-space: nowrap">{{ r.figWord }}</span><input type="text" inputmode="numeric" aria-label="{{ r.figLabel }}" value="{{ r.fig }}" onInput="{{ r.typeFig }}" placeholder="{{ r.price }}" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500; color: #1C2233; outline: none; text-align: right"></label>
-            <button type="button" onClick="{{ r.saveFig }}" style="height: 44px; padding: 0 16px; border: none; border-radius: 12px; background: #16203C; color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer">Save</button>
-            <button type="button" onClick="{{ r.cancelFig }}" aria-label="Cancel" style="width: 44px; height: 44px; border: none; border-radius: 12px; background: #F2EFEA; color: #5F6980; font-family: inherit; cursor: pointer">✕</button>
+          <div style="display: flex; gap: 6px; margin-bottom: 10px">
+            <label style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 42px; padding: 0 12px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 0 0 1.5px #16203C"><span style="font-size: 11px; font-weight: 700; color: #5F6980; white-space: nowrap">{{ r.figWord }}</span><input type="text" inputmode="numeric" aria-label="{{ r.figLabel }}" value="{{ r.fig }}" onInput="{{ r.typeFig }}" placeholder="type it" class="m" style="flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-size: 16px; font-weight: 600; color: #1C2233; text-align: right"></label>
+            <button type="button" onClick="{{ r.saveFig }}" class="btn ink" style="width: auto; height: 42px; padding: 0 16px; border-radius: 11px; font-size: 13px">Save</button>
+            <button type="button" onClick="{{ r.cancelFig }}" aria-label="Cancel" class="btn2" style="width: 42px; height: 42px; flex: none; border-radius: 11px">✕</button>
           </div>
           </sc-if>
         </div>
-      </sc-for>
-      <sc-for list="{{ rivals }}" as="v">
-        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px; box-shadow: inset 0 1px 0 #F2EFEA">
-          <span style="width: 8px; height: 8px; flex: none; border-radius: 2px; background: #7A3268; transform: rotate(45deg)"></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ v.title }}</span><span style="font-size: 12px; color: #6B7480">{{ v.sub }}</span></span>
-          <span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 500; letter-spacing: -.02em; color: #7A3268">{{ v.price }}</span>
+        </sc-for>
+        <sc-for list="{{ rivals }}" as="v">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; box-shadow: inset 0 1px 0 #F0ECE6">
+          <span style="width: 30px; display: flex; justify-content: center; flex: none"><span style="width: 9px; height: 9px; border-radius: 2px; background: #7A3268; transform: rotate(45deg)"></span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13.5px; font-weight: 700">{{ v.title }}</span><span class="sub" style="font-size: 11px">{{ v.sub }}</span></span>
+          <span class="m" style="font-size: 14px; font-weight: 600; color: #7A3268; white-space: nowrap">{{ v.price }}</span>
         </div>
-      </sc-for>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ hasLinks }}">
+      <div class="n-in" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; animation-delay: .15s"><span class="eb">Goes with</span><sc-for list="{{ links }}" as="k"><a href="Item.dc.html" data-sx="{{ k.sx }}" class="pill" style="{{ k.style }}">{{ k.name }}</a></sc-for></div>
+      </sc-if>
+    </div>
+
+    <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
+      <button type="button" onClick="{{ ask }}" disabled="{{ askOff }}" data-why="{{ askWhy }}" aria-label="{{ askLabel }}" class="btn2" style="{{ askStyle }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"></path></svg><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ askWord }}</span></button>
+      <a href="Spotted.dc.html" data-sx="{{ spotSx }}" class="btn ink"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4"></circle></svg>Log a price</a>
+    </div>
+
+    <sc-if value="{{ editing }}">
+    <div style="position: absolute; inset: 0; z-index: 40; background: rgba(22,32,60,.38); display: flex; flex-direction: column; justify-content: flex-end">
+      <button type="button" onClick="{{ closeEdit }}" aria-label="Close" style="flex: 1"></button>
+      <div class="sheet" style="background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 18px calc(22px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <span class="t2" style="font-size: 18px">Its details</span>
+        <label class="well" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 14px"><span class="eb">Name</span><input type="text" aria-label="Name" value="{{ eName }}" onInput="{{ typeName }}" style="border: none; background: transparent; outline: none; font-family: inherit; font-size: 16px; font-weight: 600; color: #1C2233"></label>
+        <div class="well" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 14px">
+          <span class="eb">Aisle</span>
+          <div role="radiogroup" aria-label="Aisle" style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{ aisles }}" as="a"><button type="button" role="radio" aria-checked="{{ a.on }}" onClick="{{ a.pick }}" class="{{ a.cls }}" style="height: 32px">{{ a.word }}</button></sc-for>
+          </div>
+          <input type="text" aria-label="Or a new aisle" placeholder="or type a new aisle" value="{{ eNewAisle }}" onInput="{{ typeAisle }}" style="height: 40px; padding: 0 12px; border: none; border-radius: 10px; background: #FFFFFF; font-family: inherit; font-size: 14px; color: #1C2233; outline: none">
+        </div>
+        <div class="well" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px">
+          <span style="{{ ePhoto }}"></span>
+          <span style="flex: 1; font-size: 14px; font-weight: 600">{{ ePhotoWord }}</span>
+          <button type="button" onClick="{{ snap }}" class="chip">Take one</button>
+        </div>
+        <button type="button" onClick="{{ saveEdit }}" class="btn">Save its details</button>
+      </div>
     </div>
     </sc-if>
-  </div>
-
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 16px calc(22px + var(--safe-b)); background: linear-gradient(180deg, rgba(247,245,242,0), #F7F5F2 30px); display: flex; gap: 8px; pointer-events: none">
-    <a href="Spotted.dc.html" data-sx="{{ spotSx }}" style="pointer-events: auto; height: 52px; padding: 0 18px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECE8E1; color: #1C2233; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>A price</a>
-    <button type="button" onClick="{{ ask }}" disabled="{{ askOff }}" data-why="{{ askWhy }}" style="{{ askStyle }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>{{ askWord }}</button>
-  </div>
-
-  <sc-if value="{{ editing }}">
-  <div style="position: absolute; inset: 0; z-index: 40; background: rgba(22,32,60,.45); display: flex; flex-direction: column; justify-content: flex-end">
-    <button type="button" onClick="{{ closeEdit }}" aria-label="Close" style="flex: 1; border: none; background: transparent; cursor: pointer"></button>
-    <div style="background: #F7F5F2; border-radius: 26px 26px 0 0; padding: 10px 16px calc(20px + var(--safe-b)); display: flex; flex-direction: column; gap: 14px">
-      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #D9D4CB"></span>
-      <span style="padding: 0 4px; font-size: 18px; font-weight: 700; letter-spacing: -.01em">Its details</span>
-      <label style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECE8E1"><span style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">Name</span><input type="text" aria-label="Name" value="{{ eName }}" onInput="{{ typeName }}" style="border: none; background: transparent; font-family: inherit; font-size: 16px; font-weight: 600; color: #1C2233; outline: none"></label>
-      <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECE8E1">
-        <span style="font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">Aisle</span>
-        <div role="radiogroup" aria-label="Aisle" style="display: flex; flex-wrap: wrap; gap: 6px">
-          <sc-for list="{{ aisles }}" as="a"><button type="button" role="radio" aria-checked="{{ a.on }}" onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.word }}</button></sc-for>
-        </div>
-        <input type="text" aria-label="Or a new aisle" placeholder="or type a new aisle" value="{{ eNewAisle }}" onInput="{{ typeAisle }}" style="height: 40px; padding: 0 12px; border: none; border-radius: 10px; background: #F2EFEA; font-family: inherit; font-size: 14px; color: #1C2233; outline: none">
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #ECE8E1">
-        <span style="{{ ePhoto }}"></span>
-        <span style="flex: 1; font-size: 14px; font-weight: 600">{{ ePhotoWord }}</span>
-        <button type="button" onClick="{{ snap }}" style="height: 36px; padding: 0 14px; border: none; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px #1C2233; color: #1C2233; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Take one</button>
-      </div>
-      <button type="button" onClick="{{ saveEdit }}" style="height: 52px; border: none; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer">Save its details</button>
-    </div>
-  </div>
   </sc-if>
-  </sc-if>
+  </div>
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) { super(props); this.state = { sel: null, figFor: null, fig: '', asked: [], edit: null }; }
     renderVals() {
       const p = itemProduct(this.props);
       if (!p) return { none: true, has: false, noneWord: this.props.productId ? 'That item is not on file any more' : 'Nothing in the catalogue yet' };
-      const d = D(), st = this.state, stale = priceStaleDays();
+      const d = D(), st = this.state;
       const rule = effectiveMarkupRule(p, null, 'wholesale');
       const rowsAll = d.prices.filter(r => String(r.productId) === String(p.id))
         .map(r => ({ r, cost: priceRowCost(r), age: priceAgeDays(r), sup: supplierById(r.supplierId) }))
         .sort((a, b) => (a.r.outOfStock - b.r.outOfStock) || ((a.cost || Infinity) - (b.cost || Infinity)));
       const live = rowsAll.filter(x => !x.r.outOfStock && x.cost > 0);
       const costRow = live[0] || null;
-      const unitOf = (r) => { const u = (r && r.unit) || 'pc'; return u === 'pc' ? 'piece' : u; };
+      const base = costRow ? (costRow.r.unit || 'pc') : 'pc';
+      // What it sells for: the cheapest live cost at the Manager's markup
+      // (effectiveMarkupRule), shown as it is set and never changed here.
       const sell = costRow ? sellAt(costRow.cost, rule) : 0;
+      const packQty = costRow ? Number(costRow.r.packQty) || 0 : 0, packUnit = costRow ? costRow.r.packUnit || '' : '';
+      const tiles = [];
+      if (sell) {
+        tiles.push({ k: eUnitWord(base), v: n0(sell) });
+        if (packUnit && packQty > 1) {
+          // A pack sells at the markup on what a pack costs us (the tier at that quantity).
+          const at = priceRowTiers(costRow.r).filter(t => t.minQty <= packQty).pop();
+          tiles.push({ k: eUnitWord(packUnit), v: n0(sellAt(at ? at.price : costRow.cost, rule) * packQty) });
+        }
+      }
+      const vTiles = tiles.map((t, i) => {
+        const last = i === tiles.length - 1 && tiles.length > 1;
+        return { ...t, style: 'padding: 8px 10px; border-radius: 14px; display: flex; flex-direction: column; ' + (last ? 'background: #16203C; color: #FFFFFF' : 'background: #F2EFEA'),
+          kStyle: 'font-size: 10px; ' + (last ? 'color: #C5CDDF' : 'color: #5F6980') };
+      });
+      const marginPct = sell && costRow ? Math.round((sell - costRow.cost) / sell * 100) : 0;
+      const onTop = sell && costRow ? Math.round((sell - costRow.cost) / costRow.cost * 100) : 0;
+      // Stock: every count on file for it (each variant too).
+      const keys = Object.keys(d.stock).filter(k => k === String(p.id) || k.startsWith(p.id + '::'));
+      const stockN = keys.reduce((n, k) => n + (Number(d.stock[k]) || 0), 0);
+      const stale = priceStaleDays();
       const isOld = (x) => x.age === null || x.age > stale;
-      const selId = st.sel != null && rowsAll.some(x => String(x.r.id) === String(st.sel)) ? String(st.sel)
-        : String(((rowsAll.find(x => !x.r.outOfStock && isOld(x)) || costRow || rowsAll[0] || { r: {} }).r.id));
-      // The line: every live supplier price, what we sell at, the rivals' tags.
+      const selId = st.sel != null && rowsAll.some(x => String(x.r.id) === String(st.sel)) ? String(st.sel) : null;
       const rivalsBy = {};
       d.rivals.filter(v => String(v.productId) === String(p.id) && v.price > 0).forEach(v => { const k = normName(v.rival) || 'rival'; if (!rivalsBy[k] || msOf(v.seenOn) > msOf(rivalsBy[k].seenOn)) rivalsBy[k] = v; });
       const rivals = Object.values(rivalsBy).sort((a, b) => msOf(b.seenOn) - msOf(a.seenOn)).slice(0, 2);
-      const vals = live.map(x => x.cost).concat(sell ? [sell] : [], rivals.map(v => v.price));
-      let chart = { hasChart: false };
-      if (vals.length) {
-        const mn = Math.min(...vals), mx = Math.max(...vals), pad = (mx - mn) * 0.15 || mx * 0.1;
-        const step = Math.pow(10, Math.max(0, String(Math.round(mx)).length - 2));
-        const lo = Math.max(0, Math.floor((mn - pad) / step) * step), hi = Math.ceil((mx + pad) / step) * step || 1;
-        const pos = (v) => Math.max(3, Math.min(97, (v - lo) / (hi - lo) * 100));
-        const ticks = [lo, (lo + hi) / 2, hi].map((v, i) => ({ word: short(v),
-          mark: `position: absolute; ${i === 2 ? 'right: 0' : 'left: ' + (i * 50) + '%'}; top: 30px; width: 1px; height: 9px; background: #C9C4BA`,
-          labelStyle: `position: absolute; ${i === 0 ? 'left: 0' : i === 2 ? 'right: 0' : 'left: 50%; transform: translateX(-50%)'}` }));
-        const dots = live.map((x, i) => {
-          const on = String(x.r.id) === selId, old = isOld(x), ink = old ? '#6B7480' : '#0F6B43';
-          return { label: initials(x.sup ? x.sup.name : String(x.r.supplierId)),
-            box: `position: absolute; left: ${pos(x.cost).toFixed(1)}%; top: 4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; animation-delay: ${(i * 0.06).toFixed(2)}s`,
-            labelStyle: `font-size: 10px; font-weight: 700; letter-spacing: .04em; color: ${ink}`,
-            dot: `width: 12px; height: 12px; border-radius: 999px; ${old ? 'background: #FFFFFF; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 3px #FFFFFF' : 'background: #0F6B43; box-shadow: 0 0 0 3px #FFFFFF'}${on ? ', 0 0 0 4.5px #1C2233' : ''}` };
-        }).concat(rivals.map(v => ({ label: 'RIVAL',
-          box: `position: absolute; left: ${pos(v.price).toFixed(1)}%; top: 4px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px`,
-          labelStyle: 'font-size: 10px; font-weight: 700; letter-spacing: .04em; color: #7A3268',
-          dot: 'width: 10px; height: 10px; margin-top: 1px; border-radius: 2px; background: #7A3268; box-shadow: 0 0 0 3px #FFFFFF; transform: rotate(45deg)' })));
-        const cheapest = live.length ? live[0].cost : 0;
-        chart = { hasChart: true, ticks, dots,
-          band: live.length && sell ? `position: absolute; left: ${pos(cheapest).toFixed(1)}%; width: ${Math.max(0, pos(sell) - pos(cheapest)).toFixed(1)}%; top: 33px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, rgba(15,107,67,.55), rgba(15,107,67,.08))` : 'display: none',
-          hasSell: !!sell, sellMark: `position: absolute; left: ${pos(sell).toFixed(1)}%; top: 16px; width: 2px; height: 36px; margin-left: -1px; border-radius: 1px; background: #C93A30`,
-          sellLabel: 'we sell ' + short(sell), sellLabelStyle: `position: absolute; left: ${pos(sell).toFixed(1)}%; transform: translateX(-50%); color: #A82D24; font-weight: 600; white-space: nowrap; background: #FFFFFF; padding: 0 2px`,
-          chartLabel: `Prices a ${unitOf(costRow && costRow.r)}: ` + live.map(x => `${x.sup ? x.sup.name : 'a supplier'} ${n0(x.cost)}${isOld(x) ? ' (old)' : ''}`).join('; ') + (sell ? `; we sell at ${n0(sell)}` : '') + (rivals.length ? '; ' + rivals.map(v => `${v.rival || 'a rival'} ${n0(v.price)}`).join('; ') : '') };
-      }
       const act = (label, fn) => () => guarded(label, fn);
       const rows = rowsAll.map((x, i) => {
         const r = x.r, on = String(r.id) === selId, sname = x.sup ? x.sup.name : 'Supplier ' + r.supplierId;
-        const vi = r.variantIdx == null ? '' : productVariantLabel(p, r.variantIdx).slice(p.name.length + 3) + ' · ';
-        const old = isOld(x), today = x.age === 0;
-        const age = r.outOfStock ? 'can’t supply' + (r.outOfStockSince ? ' since ' + dayWord(r.outOfStockSince) : '') : x.age === null ? 'no date' : today ? (r.priceSource === 'confirmed' ? 'confirmed today' : 'priced today') : old ? `${x.age} days old` : `${x.age} days ago`;
+        const old = isOld(x);
+        const age = r.outOfStock ? 'can’t supply' + (r.outOfStockSince ? ' since ' + dayWord(r.outOfStockSince) : '') : x.age === null ? 'never checked' : x.age === 0 ? 'checked today' : `checked ${x.age} ${x.age === 1 ? 'day' : 'days'} ago${old ? ' · old' : ''}`;
+        const ink = r.outOfStock ? '#8E2A22' : old ? '#C93A30' : '#0F6B43';
         const figOpen = st.figFor != null && String(st.figFor) === String(r.id);
         const tiers = priceRowTiers(r);
+        const t = tintFor(r.supplierId);
+        const vi = r.variantIdx == null ? '' : productVariantLabel(p, r.variantIdx).slice(p.name.length + 3);
         return {
-          on: on ? 'true' : 'false', sup: sname, age, note: (costRow && costRow.r === r ? ' · the cost we sell on' : '') + (vi ? ' · ' + vi.replace(/ · $/, '') : ''),
-          ageInk: r.outOfStock ? 'color: #8E2A22; font-weight: 600' : old ? '' : 'color: #0F6B43; font-weight: 600',
+          on: on ? 'true' : 'false', sup: sname + (vi ? ' · ' + vi : ''), ini: initials(sname), age, cheapest: costRow && costRow.r === r && live.length > 1,
+          ava: `width: 30px; height: 30px; font-size: 10px; background: ${t[0]}; color: ${t[1]}`,
+          ageStyle: `display: flex; align-items: center; gap: 5px; font-size: 11px; color: ${ink}`,
+          dot: `width: 6px; height: 6px; flex: none; border-radius: 999px; background: ${ink}`,
           price: x.cost ? n0(x.cost) : '— —',
-          priceStyle: `font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 500; letter-spacing: -.02em; ${r.outOfStock ? 'color: #B9B2A6; text-decoration: line-through' : old ? 'color: #6B7480' : ''}`,
-          dot: `width: 8px; height: 8px; flex: none; border-radius: 999px; ${r.outOfStock ? 'box-shadow: inset 0 0 0 1.5px #8E2A22' : old ? 'box-shadow: inset 0 0 0 1.5px #C9C4BA' : 'background: #0F6B43'}`,
-          wrap: on ? 'padding: 0 12px; border-radius: 17px; background: #FEF8F2; box-shadow: inset 0 0 0 1px #F3D9BE' : `padding: 0 12px${i < rowsAll.length - 1 ? '; box-shadow: inset 0 -1px 0 #F2EFEA' : ''}`,
-          pick: () => { if (on) return; FEEL.tick(); this.setState({ sel: r.id, figFor: null, fig: '' }); },
+          priceStyle: `flex: none; min-width: 54px; text-align: right; font-size: 14px; font-weight: 600; white-space: nowrap; ${r.outOfStock ? 'color: #6B7480; text-decoration: line-through' : ''}`,
+          wrap: i ? 'box-shadow: inset 0 1px 0 #F0ECE6' : '',
+          pick: () => { FEEL.tick(); this.setState({ sel: on ? null : r.id, figFor: null, fig: '' }); },
           pickLabel: `${sname}: ${x.cost ? n0(x.cost) : 'no price'}, ${age}. Tap to put it right`,
           showActs: on && !figOpen, showFig: on && figOpen, actsLabel: `Put ${sname}'s price right`,
           okWord: r.outOfStock ? 'Has it again' : 'Still right',
@@ -4879,13 +4804,13 @@ SCREENS.Item = {
             FEEL.yes(); toast(`${sname}: still ${n0(x.cost)} — in the owner’s log`);
           }),
           newFig: () => { FEEL.tick(); this.setState({ figFor: r.id, fig: '' }); },
-          figWord: `${tiers.length > 1 ? n0(tiers[0].minQty) + '+ · ' : ''}a ${unitOf(r)}`, fig: figOpen ? st.fig : '', figLabel: `New price a ${unitOf(r)} from ${sname}`,
-          typeFig: (e) => this.setState({ fig: e && e.target ? e.target.value : '' }),
+          figWord: `${tiers.length > 1 ? n0(tiers[0].minQty) + '+ · ' : ''}a ${eUnitWord(r.unit)}`, fig: figOpen ? st.fig : '', figLabel: `New price a ${eUnitWord(r.unit)} from ${sname}`,
+          typeFig: (e) => { this.state = { ...this.state, fig: e && e.target ? e.target.value : '' }; },
           cancelFig: () => { FEEL.back(); this.setState({ figFor: null, fig: '' }); },
           saveFig: () => {
-            const v = Number(String(st.fig || '').replace(/[^0-9.]/g, ''));
+            const v = Number(String(this.state.fig || '').replace(/[^0-9.]/g, ''));
             if (!(v > 0)) { FEEL.no(); toast('Type the new price first'); return; }
-            const next = tiers.length ? tiers.map((t, k) => k === 0 ? { minQty: t.minQty, price: v } : t) : [{ minQty: 1, price: v }];
+            const next = tiers.length ? tiers.map((tt, k) => k === 0 ? { minQty: tt.minQty, price: v } : tt) : [{ minQty: 1, price: v }];
             guarded('save a new figure', async () => {
               await confirmPrice(r, next, 'in person');
               this.state = { ...this.state, figFor: null, fig: '' };
@@ -4898,11 +4823,11 @@ SCREENS.Item = {
             FEEL.no(); toast(`${sname} can’t supply ${p.name} — marked on their price list`);
           }),
           cantOff: r.outOfStock ? 'true' : null,
-          cantStyle: `border: none; background: transparent; color: ${r.outOfStock ? '#B9B2A6' : '#8E2A22'}; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer`,
+          cantStyle: `height: 38px; border-radius: 11px; font-size: 12.5px; font-weight: 700; color: ${r.outOfStock ? '#6B7480' : '#8E2A22'}`,
         };
       });
-      const rivalRows = rivals.map(v => ({ title: `A rival's tag${v.rival ? ' · ' + v.rival : ''}`, price: n0(v.price),
-        sub: `seen ${dayWord(v.seenOn)}` + (sell ? ` · we're ${n0(Math.abs(v.price - sell))} ${v.price >= sell ? 'under' : 'over'}` : '') }));
+      const rivalRows = rivals.map(v => ({ title: `A rival’s tag${v.rival ? ' · ' + v.rival : ''}`, price: n0(v.price),
+        sub: `seen ${dayWord(v.seenOn)}` + (sell ? ` · ${n0(Math.abs(v.price - sell))} ${v.price >= sell ? 'over' : 'under'} what we sell at` : '') }));
       // Ask for a fresh price: the suppliers whose price for it is old, one
       // WhatsApp each; with none old, everyone who prices it.
       const askable = (list) => [...new Map(list.filter(x => x.sup && phoneDigits(x.sup.phone)).map(x => [String(x.sup.id), x.sup])).values()];
@@ -4920,7 +4845,7 @@ SCREENS.Item = {
           FEEL.yes(); toast(`${nextSup.name} asked on WhatsApp` + (left.length > 1 ? ` — ${plural(left.length - 1, 'more')} to go` : ''));
         });
       };
-      const askWord = !targets.length ? 'No supplier phone on file' : !nextSup ? `${plural(targets.length, 'supplier')} asked` : st.asked.length ? `Ask ${firstWord(nextSup.name)} next` : `Ask ${targets.length} for a fresh price`;
+      const askWord = !targets.length ? 'No phone on file' : !nextSup ? 'All asked' : st.asked.length ? `Ask ${firstWord(nextSup.name)}` : 'Ask for prices';
       // Edit details (product.edit): name, aisle, photo -- never the markup.
       const e = st.edit;
       const aisleNames = [...new Set(d.products.map(x => String(x.category || '').trim()).filter(Boolean))].sort().slice(0, 12);
@@ -4928,9 +4853,8 @@ SCREENS.Item = {
         editing: true, eName: e.name, eNewAisle: e.newAisle || '',
         typeName: (ev) => this.setState({ edit: { ...this.state.edit, name: ev && ev.target ? ev.target.value : '' } }),
         typeAisle: (ev) => this.setState({ edit: { ...this.state.edit, newAisle: ev && ev.target ? ev.target.value : '', aisle: '' } }),
-        aisles: aisleNames.map(a => { const on = !e.newAisle && e.aisle === a; return { word: a, on: on ? 'true' : 'false',
-          pick: () => { FEEL.tick(); this.setState({ edit: { ...this.state.edit, aisle: a, newAisle: '' } }); },
-          style: `height: 34px; padding: 0 12px; border: none; border-radius: 999px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ${on ? 'background: #16203C; color: #FFFFFF' : 'background: #F2EFEA; color: #1C2233'}` }; }),
+        aisles: aisleNames.map(a => { const on = !e.newAisle && e.aisle === a; return { word: a, on: on ? 'true' : 'false', cls: on ? 'chip on' : 'chip',
+          pick: () => { FEEL.tick(); this.setState({ edit: { ...this.state.edit, aisle: a, newAisle: '' } }); } }; }),
         ePhoto: 'width: 48px; height: 48px; flex: none; border-radius: 12px; ' + photoStyle(e.image, 'background: linear-gradient(160deg, #C3C9D2, #858D9B)'),
         ePhotoWord: e.image ? (e.image === p.image ? 'Its photo' : 'New photo, not saved yet') : 'No photo yet',
         snap: async () => {
@@ -4945,23 +4869,39 @@ SCREENS.Item = {
           FEEL.yes(); toast(`${p.name}: details saved — in the owner’s log`);
         }),
       };
-      const links = d.links.filter(x => x.active && (x.fromId === p.id || x.toId === p.id)).length;
-      const pack = costRow && costRow.r.packUnit && costRow.r.packQty ? `${costRow.r.packUnit} of ${n0(costRow.r.packQty)}` : costRow ? `by the ${unitOf(costRow.r)}` : '';
+      // Goes with: the product links either way.
+      const linked = [];
+      d.links.filter(x => x.active && (String(x.fromId) === String(p.id) || String(x.toId) === String(p.id))).forEach(x => {
+        const o = productById(String(x.fromId) === String(p.id) ? x.toId : x.fromId);
+        if (o && o.id !== p.id && !linked.includes(o)) linked.push(o);
+      });
+      const since = p.createdAt ? new Date(msOf(p.createdAt)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '';
+      const unitPl = ePlural(2, base);
       return {
         none: false, has: true, name: p.name, icon: itemIconPath(p.name),
-        photo: p.image ? 'width: 64px; height: 64px; flex: none; border-radius: 18px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); ' + photoStyle(p.image)
-          : 'width: 64px; height: 64px; flex: none; border-radius: 18px; background: linear-gradient(160deg, #C3C9D2, #858D9B); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); color: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center',
+        photo: 'width: 48px; height: 48px; flex: none; border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); ' + (p.image ? photoStyle(p.image)
+          : 'background: linear-gradient(160deg, #9ED8B7, #1E9D57); color: rgba(255,255,255,.95); display: flex; align-items: center; justify-content: center'),
         noPhoto: !p.image, photoLabel: p.image ? 'Its photo' : 'No photo yet',
-        meta: [p.category ? p.category + ' aisle' : 'no aisle yet', pack, links ? 'goes with ' + links : ''].filter(Boolean).join(' · '),
-        sellsWord: costRow ? `Sells for · a ${unitOf(costRow.r)}` : 'Sells for', sells: sell ? n0(sell) : '— —',
-        lockWord: `${firstWord(managerName())} sets the markup`,
-        ruleLine: !costRow ? 'no live supplier price' : !rule ? `at cost, ${n0(costRow.cost)}, until a markup is set` : `${rule.source === 'default' ? 'shop’s' : 'its own'} ${ruleWord(rule)} on ${n0(costRow.cost)}`,
-        everyWord: costRow ? `Every price · a ${unitOf(costRow.r)}` : 'Every price',
-        noRows: !rowsAll.length, hasRows: rowsAll.length > 0, rows, rivals: rivalRows,
-        ...chart,
+        meta: ['on the shelf', p.category ? p.category + ' aisle' : 'no aisle yet', since ? 'since ' + since : ''].filter(Boolean).join(' · '),
+        packWord: !costRow ? 'No packing on file' : packUnit && packQty > 1 ? `${n0(packQty)} ${ePlural(packQty, base)} in a ${eUnitWord(packUnit)}` : `Sold by the ${eUnitWord(base)}`,
+        hasSell: !!sell, noSell: !sell, tiles: vTiles,
+        tilesGrid: `display: grid; grid-template-columns: repeat(${Math.max(1, tiles.length)}, minmax(0, 1fr)); gap: 6px`,
+        sellLabel: 'We sell it at ' + tiles.map(t => `${t.v} a ${t.k}`).join(', '),
+        cost: costRow ? n0(costRow.cost) : '', costBar: `width: ${sell ? 100 - Math.max(0, marginPct) : 100}%; background: #C9CEDB`,
+        marginBar: `width: ${Math.max(0, marginPct)}%; background: #1E9D57`,
+        marginWord: !rule ? 'at cost, no markup yet' : `${onTop}% on top`, marginInk: !rule ? 'color: #95530C' : 'color: #0F6B43',
+        marginLabel: costRow ? `Costs us ${n0(costRow.cost)}, sells at ${n0(sell)}: ${rule ? onTop + '% on top' : 'no markup set yet'}` : '',
+        lockWord: `${managerName()} sets the selling price`,
+        stock: n0(stockN), stockUnit: keys.length ? (stockN === 1 ? eUnitWord(base) : unitPl) : unitPl + ' · no count on file', noStock: keys.length > 0 && stockN <= 0,
+        hasWorth: stockN > 0 && !!costRow, worth: costRow ? n0(stockN * costRow.cost) : '',
+        perWord: costRow ? 'a ' + eUnitWord(base) : '',
+        noRows: !rowsAll.length, rows, rivals: rivalRows,
+        hasLinks: linked.length > 0,
+        links: linked.slice(0, 4).map((o, i) => ({ name: o.name, sx: JSON.stringify({ productId: o.id }), style: i ? 'background: #EEF0F5; color: #3B4566' : 'background: #FDEEE1; color: #95530C' })),
         spotSx: JSON.stringify({ name: p.name }),
-        ask, askWord, askOff: nextSup ? null : 'true', askWhy: targets.length ? 'Everyone has been asked — log their answers as they come' : 'None of its suppliers has a phone on file',
-        askStyle: `pointer-events: auto; flex: 1; height: 52px; border: none; border-radius: 14px; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; ${nextSup ? 'background: #C93A30; color: #FFFFFF' : 'background: #E0DCD4; color: #FFFFFF'}`,
+        ask, askWord, askOff: nextSup ? null : 'true', askLabel: nextSup ? `Ask ${nextSup.name} for a fresh price on WhatsApp` : askWord,
+        askWhy: targets.length ? 'Everyone has been asked — log their answers as they come' : 'None of its suppliers has a phone on file',
+        askStyle: nextSup ? '' : 'color: #6B7480',
         openEdit: () => { FEEL.tick(); this.setState({ edit: { name: p.name, aisle: p.category || '', newAisle: '', image: p.image || null } }); },
         ...editVals,
       };
@@ -5470,39 +5410,38 @@ function mrStopProps(st){ return st.type === 'sup' ? { supplierId: st.id } : { r
 
 SCREENS.MarketRun = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-  <div style="flex: none; background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 10px">
-      <a href="Main.dc.html" data-back aria-label="Back" style="width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-      <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 20px; font-weight: 700">Market run</span><span style="font-size: 12px; color: #B3BCD2">{{ dateWord }} · built from your open hunts</span></span>
-      <span style="display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(111,220,176,.14); color: #6FDCB0; font-size: 11px; font-weight: 700"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>on phone</span>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 20px 18px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="Main.dc.html" data-back aria-label="Back" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="t1" style="font-size: 24px">Market run</span><span style="font-size: 13px; color: #B3BCD2">{{ subWord }}</span></span>
     </div>
     <sc-if value="{{ hasAreas }}">
-    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent)">
-      <sc-for list="{{ areas }}" as="a"><button type="button" role="tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" style="{{ a.style }}">{{ a.name }} <span style="font-family: 'IBM Plex Mono', monospace">{{ a.n }}</span></button></sc-for>
+    <div role="tablist" aria-label="Area" class="r-tabs" style="display: flex; gap: 6px; overflow-x: auto; margin: 0 -20px; padding: 0 20px; scroll-padding: 0 40px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 22px), transparent)">
+      <sc-for list="{{ areas }}" as="a"><button type="button" role="tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" class="{{ a.cls }}" style="{{ a.style }}">{{ a.name }} <span class="m" style="font-size: 12px; opacity: .8">{{ a.n }}</span></button></sc-for>
     </div>
     </sc-if>
-    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-      <span style="display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">{{ stopsN }}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">{{ stopsWord }}</span></span>
-      <span style="display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">{{ toGet }}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">prices to get</span></span>
-      <span style="display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="{{ expireStyle }}">{{ expireN }}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">expire today</span></span>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <span class="glass" style="padding: 8px 10px; border-radius: 12px; display: flex; flex-direction: column"><span class="m" style="font-size: 18px; color: #FFFFFF">{{ stopsN }}</span><span style="font-size: 10.5px; color: #B3BCD2">{{ stopsWord }}</span></span>
+      <span class="glass" style="padding: 8px 10px; border-radius: 12px; display: flex; flex-direction: column"><span class="m" style="font-size: 18px; color: #FFFFFF">{{ toGet }}</span><span style="font-size: 10.5px; color: #B3BCD2">{{ toGetWord }}</span></span>
+      <span class="glass" style="padding: 8px 10px; border-radius: 12px; display: flex; flex-direction: column"><span class="m" style="{{ tagsInk }}">{{ tagsN }}</span><span style="font-size: 10.5px; color: #B3BCD2">{{ tagsWord }}</span></span>
     </div>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding-bottom: calc(116px + var(--safe-b))">
-  <div style="position: relative; padding: 14px 16px 0 16px; display: flex; flex-direction: column; gap: 10px">
-    <sc-if value="{{ hasStops }}"><span class="r-line" aria-hidden="true" style="position: absolute; left: 35px; top: 34px; bottom: 30px; width: 2px; background: repeating-linear-gradient(180deg, #C9C4BA 0 6px, transparent 6px 11px)"></span></sc-if>
+  <div style="flex: 1; min-height: 0; overflow-y: auto">
+  <div style="position: relative; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px">
 
     <sc-for list="{{ stops }}" as="s">
-    <a href="{{ s.href }}" data-sx="{{ s.sx }}" aria-label="{{ s.label }}" class="r-in" style="{{ s.rowStyle }}">
-      <span style="{{ s.dotStyle }}"><sc-if value="{{ s.isNum }}">{{ s.num }}</sc-if><sc-if value="{{ s.isRival }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.4"></circle></svg></sc-if><sc-if value="{{ s.isDone }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></sc-if></span>
+    <a href="{{ s.href }}" data-sx="{{ s.sx }}" aria-label="{{ s.label }}" class="n-in" style="{{ s.rowStyle }}">
+      <sc-if value="{{ s.hasNext }}"><span aria-hidden="true" style="position: absolute; left: 17px; top: 42px; bottom: -16px; width: 2px; background: repeating-linear-gradient(180deg, #C9C4BA 0 5px, transparent 5px 10px)"></span></sc-if>
+      <span class="m" style="{{ s.dotStyle }}"><sc-if value="{{ s.isNum }}">{{ s.num }}</sc-if><sc-if value="{{ s.isDone }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></sc-if></span>
       <span style="{{ s.cardStyle }}">
-        <span style="display: flex; align-items: baseline; gap: 8px"><span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ s.name }}</span><sc-if value="{{ s.hasWhere }}"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #6B7480">{{ s.where }}</span></sc-if><sc-if value="{{ s.importer }}"><span style="height: 20px; padding: 0 7px; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center">importer</span></sc-if><sc-if value="{{ s.isRivalStop }}"><span style="font-size: 11px; font-weight: 700; color: #7A3268">rival · look only</span></sc-if></span>
-        <span style="display: flex; flex-wrap: wrap; gap: 4px"><sc-for list="{{ s.chips }}" as="c"><span style="{{ c.style }}">{{ c.t }}</span></sc-for></span>
+        <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span style="min-width: 0; font-size: 14px; font-weight: 700">{{ s.name }}</span><span class="sub" style="{{ s.whereStyle }}">{{ s.where }}</span></span>
+        <span class="sub">{{ s.what }}</span>
         <sc-if value="{{ reorder }}">
-        <span style="display: flex; gap: 6px; padding-top: 2px">
-          <button type="button" onClick="{{ s.up }}" aria-label="Earlier in the run" style="height: 32px; width: 40px; border: none; border-radius: 10px; background: #F1EEE8; color: #1C2233; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
-          <button type="button" onClick="{{ s.down }}" aria-label="Later in the run" style="height: 32px; width: 40px; border: none; border-radius: 10px; background: #F1EEE8; color: #1C2233; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+        <span style="display: flex; gap: 6px; padding-top: 4px">
+          <button type="button" onClick="{{ s.up }}" aria-label="Earlier in the run" style="height: 32px; width: 40px; border-radius: 10px; background: #F1EEE8; color: #1C2233; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg></button>
+          <button type="button" onClick="{{ s.down }}" aria-label="Later in the run" style="height: 32px; width: 40px; border-radius: 10px; background: #F1EEE8; color: #1C2233; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
           <button type="button" onClick="{{ s.toggle }}" style="{{ s.toggleStyle }}">{{ s.toggleWord }}</button>
         </span>
         </sc-if>
@@ -5511,27 +5450,27 @@ SCREENS.MarketRun = {
     </sc-for>
 
     <sc-if value="{{ hasAnyone }}">
-    <a href="Hunts.dc.html" class="r-in" style="position: relative; display: flex; gap: 12px; align-items: center; animation-delay: .24s">
-      <span style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #F7F5F2; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 4px #F7F5F2; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg></span>
-      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 16px; box-shadow: inset 0 0 0 1.5px #C9C4BA; border: none; background: transparent"><span style="font-size: 14px; font-weight: 700">Anyone with these</span><span style="font-size: 12px; color: #6B7480">{{ anyoneWord }} — no known supplier</span></span>
+    <a href="Hunts.dc.html" class="n-in" style="position: relative; display: flex; gap: 12px; align-items: flex-start">
+      <span class="m" style="width: 36px; height: 36px; flex: none; border-radius: 999px; background: #FFFFFF; color: #3B4566; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 4px #F7F5F2; display: flex; align-items: center; justify-content: center">?</span>
+      <span style="flex: 1; min-width: 0; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 0 0 1px rgba(28,34,51,.08); display: flex; flex-direction: column; gap: 3px"><span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span style="font-size: 14px; font-weight: 700">Anyone with these</span><span class="sub" style="white-space: nowrap">ask any shop</span></span><span class="sub">{{ anyoneWord }}</span></span>
     </a>
     </sc-if>
 
     <sc-if value="{{ empty }}">
-      <div style="background: #FFFFFF; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
-        <span style="width: 52px; height: 52px; border-radius: 16px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-        <span style="font-size: 15px; font-weight: 700">No stops today</span>
-        <span style="font-size: 13px; color: #5F6980">No supplier has an unpriced hunt, a lapsing quote or a price from today’s share.</span>
+      <div class="card" style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+        <span style="width: 48px; height: 48px; border-radius: 16px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+        <span class="t2">No stops today</span>
+        <span class="sub" style="font-size: 13px">No supplier has an unpriced hunt, a lapsing quote or a price from today’s share.</span>
       </div>
     </sc-if>
   </div>
   </div>
 
   <sc-if value="{{ hasStops }}">
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 16px calc(22px + var(--safe-b)); background: linear-gradient(180deg, rgba(247,245,242,0), #F7F5F2 30px); display: flex; gap: 8px; pointer-events: none"><div style="flex: 1; display: flex; gap: 8px; pointer-events: auto">
-    <button type="button" onClick="{{ toggleReorder }}" aria-label="Reorder the stops" aria-pressed="{{ reorderOn }}" style="{{ reorderStyle }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"></path></svg></button>
-    <a href="{{ startHref }}" data-sx="{{ startSx }}" style="flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.3"></circle></svg>{{ startWord }}</a>
-  </div></div>
+  <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b)); display: flex; gap: 8px">
+    <button type="button" onClick="{{ toggleReorder }}" aria-label="Reorder the stops" aria-pressed="{{ reorderOn }}" class="btn2" style="{{ reorderStyle }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"></path></svg></button>
+    <a href="{{ startHref }}" data-sx="{{ startSx }}" aria-disabled="{{ startOff }}" class="{{ startCls }}" style="flex: 1; min-width: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9l1.5-5h13L20 9M4 9h16v11H4zM9 20v-6h6v6"></path></svg><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ startWord }}</span></a>
+  </div>
   </sc-if>
 </div>`,
   Component: class extends SrvLogic {
@@ -5542,80 +5481,80 @@ SCREENS.MarketRun = {
       const run = mrRun(), s = this.state;
       const plan = run.plan;
       const save = (patch) => { mrPlanSave(Object.assign(mrPlanLoad(), patch)); FEEL.tick(); this.forceUpdate(); };
-      const areas = run.areas.map(a => {
+      const areas = run.areas.length > 1 ? run.areas.map(a => {
         const on = run.area && a.name === run.area.name;
-        return { name: a.name, n: a.stops.length, on: on ? 'true' : 'false', pick: () => save({ area: a.name }),
-          style: 'flex: none; height: 34px; padding: 0 12px; border: none; border-radius: 999px; font-family: inherit; font-size: 13px; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #16203C; font-weight: 700' : 'background: rgba(255,255,255,.08); color: #FFFFFF; font-weight: 600') };
-      });
-      const chip = (bg, ink) => `height: 22px; padding: 0 7px; border-radius: 7px; background: ${bg}; color: ${ink}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center`;
-      const GREY = chip('#F1EEE8', '#1C2233'), AMBER = chip('#FDEEE1', '#95530C'), PINK = chip('#F6E4F1', '#7A3268'), DONE = chip('#E4F4EA', '#0F6B43'), DONEN = chip('#E4F4EA', '#0F6B43');
+        return { name: a.name, n: a.stops.length, on: on ? 'true' : 'false', pick: () => save({ area: a.name }), cls: 'chip',
+          style: 'flex: none; height: 32px; ' + (on ? 'background: #FFFFFF; color: #16203C; font-weight: 700' : 'background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); color: #FFFFFF') };
+      }) : [];
       const keys = run.list.map(st => st.key);
       const move = (key, by) => {
         const k = keys.slice(), i = k.indexOf(key), j = i + by;
         if (i < 0 || j < 0 || j >= k.length) return;
         k.splice(i, 1); k.splice(j, 0, key); save({ order: k });
       };
-      let num = 0;
-      const stops = run.list.map((st, i) => {
-        if (!st.off && st.type === 'sup') num++;
-        const cur = run.current && run.current.key === st.key;
-        const chips = [];
-        if (st.type === 'sup') {
-          st.own.filter(x => x.kind === 'recheck').forEach(x => chips.push({ t: (x.answered ? '✓ ' : 're-check ') + mrShort(x.name), style: x.answered ? DONE : AMBER }));
-          st.own.filter(x => x.kind === 'hunt').forEach(x => chips.push({ t: (x.answered ? '✓ ' : '') + mrShort(x.name), style: x.answered ? DONE : GREY }));
-          const pr = st.own.filter(x => x.kind === 'price'), prLeft = pr.filter(x => !x.answered).length;
-          if (prLeft) chips.push({ t: '+' + prLeft + (prLeft === 1 ? ' price' : ' prices') + ' to confirm', style: AMBER });
-          if (pr.length - prLeft) chips.push({ t: '✓ ' + (pr.length - prLeft) + ' confirmed', style: DONEN });
-        } else {
-          const hunts = st.own.filter(x => x.lead), lines = st.own.filter(x => x.product);
-          hunts.forEach(x => chips.push({ t: (x.answered ? '✓ ' : '') + mrShort(x.name) + ' tag', style: x.answered ? DONE : PINK }));
-          const ll = lines.filter(x => !x.answered);
-          if (ll.length) chips.push({ t: '+ ' + ll.slice(0, 2).map(x => mrShort(x.name)).join(', ') + (ll.length > 2 ? ' +' + (ll.length - 2) : ''), style: PINK });
-          if (lines.length - ll.length) chips.push({ t: '✓ ' + (lines.length - ll.length) + ' seen', style: DONEN });
-        }
-        const dotBase = 'width: 40px; height: 40px; flex: none; border-radius: 999px; font-family: \'IBM Plex Mono\', monospace; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; ';
-        const dotStyle = st.off ? dotBase + 'background: #F7F5F2; color: #5F6980; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 4px #F7F5F2'
-          : st.done ? dotBase + 'background: #0F6B43; color: #FFFFFF; box-shadow: 0 0 0 4px #F7F5F2'
-          : st.type === 'rival' ? dotBase + 'background: #F6E4F1; color: #7A3268; box-shadow: 0 0 0 4px #F7F5F2'
-          : cur ? dotBase + 'background: #C93A30; color: #FFFFFF; box-shadow: 0 0 0 4px #F7F5F2'
-          : dotBase + 'background: #FFFFFF; box-shadow: inset 0 0 0 2px #16203C, 0 0 0 4px #F7F5F2';
-        const cardBase = 'flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; ';
-        const where = st.type === 'sup' ? (st.sup.shopNo || '') : '';
-        return {
-          name: st.name, where, hasWhere: !!where, importer: st.importer, isRivalStop: st.type === 'rival',
-          num: st.off ? '–' : num, isNum: !st.done && st.type === 'sup', isRival: !st.done && st.type === 'rival', isDone: st.done,
-          chips,
-          href: s.reorder ? '#' : 'AtShop.dc.html', sx: JSON.stringify(mrStopProps(st)),
-          label: st.name + ': ' + plural(st.left, 'thing') + ' to ask' + (st.off ? ', left out today' : ''),
-          rowStyle: `position: relative; display: flex; gap: 12px; align-items: flex-start; animation-delay: ${(i * 0.06).toFixed(2)}s${st.off ? '; opacity: .5' : ''}`,
-          dotStyle, cardStyle: cardBase + (cur && !s.reorder ? 'box-shadow: 0 0 0 2px #16203C, 0 8px 18px rgba(22,32,60,.08)' : 'box-shadow: inset 0 0 0 1px #E6E3DD'),
-          up: () => move(st.key, -1), down: () => move(st.key, 1),
-          toggle: () => { const off = new Set(plan.off || []); if (off.has(st.key)) off.delete(st.key); else off.add(st.key); save({ off: [...off] }); },
-          toggleWord: st.off ? 'Put back' : 'Leave out today',
-          toggleStyle: 'height: 32px; padding: 0 10px; margin-left: auto; border: none; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; ' + (st.off ? 'background: #16203C; color: #FFFFFF' : 'background: #FBE5E2; color: #8E2A22'),
-        };
-      });
+      const names = (list, tail) => list.slice(0, 2).map(x => mrShort(x) + (tail || '')).join(' · ') + (list.length > 2 ? ' +' + (list.length - 2) : '');
       // "Anyone with these": the hunts nobody has a price for, asked at every shop.
       // A hunt whose item someone on the price list sells is not "no known supplier".
       const anyone = openLeads().filter(l => mrNobodyHasIt(l, null) && !leadSuppliers(l).some(c => !c.noStock && candName(c)) && !leadKnown(l).sellers.length);
+      const hasAnyoneRow = anyone.length > 0;
+      let num = 0;
+      const stops = run.list.map((st, i) => {
+        if (!st.off) num++;
+        const cur = run.current && run.current.key === st.key;
+        // What this stop is for, in a line.
+        const parts = [];
+        if (st.type === 'sup') {
+          const smp = eSamplesAt(st.sup).filter(x => !x.got).map(x => x.lead.name);
+          if (smp.length) parts.push(names(smp, ' sample'));
+          const hunts = st.own.filter(x => (x.kind === 'hunt' || x.kind === 'recheck') && !x.answered).map(x => x.name);
+          if (hunts.length) parts.push(names(hunts));
+          const pr = st.own.filter(x => x.kind === 'price' && !x.answered).length;
+          if (pr) parts.push(plural(pr, 'price') + ' to check');
+        } else {
+          const tags = st.own.filter(x => !x.answered).map(x => x.name);
+          if (tags.length) parts.push(names(tags, ' tag'));
+        }
+        const asked = st.items.filter(x => x.answered).length;
+        const what = st.done ? '✓ all asked · ' + plural(asked, 'answer') : parts.join(' · ') + (asked ? ' · ' + asked + ' done' : '');
+        const dotBase = 'width: 36px; height: 36px; flex: none; border-radius: 999px; font-size: 14px; display: flex; align-items: center; justify-content: center; ';
+        const dotStyle = st.off ? dotBase + 'background: #F7F5F2; color: #6B7480; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 4px #F7F5F2'
+          : st.done ? dotBase + 'background: #0F6B43; color: #FFFFFF; box-shadow: 0 0 0 4px #F7F5F2'
+          : cur ? dotBase + 'background: #C93A30; color: #FFFFFF; box-shadow: 0 0 0 5px rgba(201,58,48,.18)'
+          : dotBase + 'background: #FFFFFF; color: #3B4566; box-shadow: inset 0 0 0 2px #C9C4BA, 0 0 0 4px #F7F5F2';
+        const where = st.type === 'sup' ? [st.sup.shopNo, st.area !== 'No area' ? st.area : ''].filter(Boolean).join(' · ') : 'rival · look only';
+        return {
+          name: st.name, where, whereStyle: 'white-space: nowrap; flex: none' + (st.type === 'rival' ? '; color: #7A3268; font-weight: 600' : ''),
+          what, hasNext: i < run.list.length - 1 || hasAnyoneRow, num: st.off ? '–' : num, isNum: !st.done, isDone: st.done,
+          href: s.reorder ? '#' : 'AtShop.dc.html', sx: JSON.stringify(mrStopProps(st)),
+          label: st.name + ': ' + plural(st.left, 'thing') + ' to ask' + (st.off ? ', left out today' : ''),
+          rowStyle: `position: relative; display: flex; gap: 12px; align-items: flex-start; animation-delay: ${(i * 0.06).toFixed(2)}s${st.off ? '; opacity: .5' : ''}`,
+          dotStyle,
+          cardStyle: 'flex: 1; min-width: 0; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; display: flex; flex-direction: column; gap: 3px; ' + (cur && !s.reorder ? 'box-shadow: 0 0 0 2px #16203C' : 'box-shadow: 0 0 0 1px rgba(28,34,51,.08)'),
+          up: () => move(st.key, -1), down: () => move(st.key, 1),
+          toggle: () => { const off = new Set(plan.off || []); if (off.has(st.key)) off.delete(st.key); else off.add(st.key); save({ off: [...off] }); },
+          toggleWord: st.off ? 'Put back' : 'Leave out today',
+          toggleStyle: 'height: 32px; padding: 0 10px; margin-left: auto; border-radius: 10px; font-size: 12px; font-weight: 700; ' + (st.off ? 'background: #16203C; color: #FFFFFF' : 'background: #FBE5E2; color: #8E2A22'),
+        };
+      });
       const act = run.active;
-      const toGet = act.reduce((n, st) => n + st.ownLeft, 0);
-      const expireN = act.reduce((n, st) => n + st.own.filter(x => x.kind === 'recheck' && !x.answered && x.left <= 1).length, 0);
+      const toGet = act.filter(st => st.type === 'sup').reduce((n, st) => n + st.ownLeft, 0);
+      const tagsN = act.filter(st => st.type === 'rival').reduce((n, st) => n + st.ownLeft, 0);
       const cur = run.current;
       const allDone = act.length > 0 && !cur;
       return {
-        dateWord: dayWord(todayISO()),
+        subWord: [run.area ? run.area.name : dayWord(todayISO()), 'built from your open hunts', 'saved on phone'].join(' · '),
         hasAreas: areas.length > 0, areas,
-        stopsN: act.length, stopsWord: act.length === 1 ? 'stop' : 'stops', toGet, expireN,
-        expireStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600" + (expireN ? '; color: #F5B26B' : ''),
+        stopsN: act.length, stopsWord: act.length === 1 ? 'stop' : 'stops', toGet, toGetWord: toGet === 1 ? 'price to get' : 'prices to get',
+        tagsN, tagsWord: tagsN === 1 ? 'rival tag' : 'rival tags', tagsInk: 'font-size: 18px; color: ' + (tagsN ? '#F5C77E' : '#FFFFFF'),
         stops, hasStops: stops.length > 0, empty: !stops.length,
-        hasAnyone: anyone.length > 0, anyoneWord: anyone.slice(0, 3).map(l => mrShort(l.name)).join(' · ') + (anyone.length > 3 ? ' +' + (anyone.length - 3) : ''),
+        hasAnyone: anyone.length > 0, anyoneWord: names(anyone.map(l => l.name)) + ' · no known supplier',
         reorder: s.reorder, reorderOn: s.reorder ? 'true' : 'false',
         toggleReorder: () => { FEEL.tick(); this.setState({ reorder: !s.reorder }); },
-        reorderStyle: 'width: 56px; height: 56px; flex: none; border: none; border-radius: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (s.reorder ? 'background: #16203C; color: #FFFFFF' : 'background: #FFFFFF; color: #1C2233; box-shadow: inset 0 0 0 1px #E6E3DD'),
+        reorderStyle: 'width: 54px; height: 54px; flex: none; border-radius: 16px' + (s.reorder ? '; background: #16203C; color: #FFFFFF' : ''),
         startHref: allDone ? 'RunDone.dc.html' : cur ? 'AtShop.dc.html' : '#',
-        startSx: cur ? JSON.stringify(mrStopProps(cur)) : '{}',
-        startWord: allDone ? 'Run done — see what came back' : cur ? ((act.some(st => st.done) || cur.left < cur.items.length) ? 'Carry on at ' : 'Start at ') + firstWord(cur.name) : 'Every stop left out',
+        startSx: cur ? JSON.stringify(mrStopProps(cur)) : '{}', startOff: !allDone && !cur ? 'true' : 'false',
+        startCls: 'btn' + (allDone ? ' go' : ''),
+        startWord: allDone ? 'Run done — see what came back' : cur ? 'I’m at ' + cur.name : 'Every stop left out',
       };
     }
   },
@@ -7340,47 +7279,48 @@ function rdToday(){
 
 SCREENS.RunDone = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #16203C; font-family: Figtree, system-ui, sans-serif; color: #FFFFFF; display: flex; flex-direction: column">
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 22px 20px calc(150px + var(--safe-b)); display: flex; flex-direction: column; gap: 14px">
-    <div class="d-up" style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700; letter-spacing: .14em; color: #6FDCB0">{{ eyebrow }}</span><span style="font-size: 26px; font-weight: 700; letter-spacing: -.02em">{{ title }}</span></div>
-
-    <div class="d-print" style="filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); margin: 0 6px">
-      <div style="height: 8px; background: linear-gradient(45deg, transparent 50%, #FFFFFF 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-45deg, transparent 50%, #FFFFFF 50%) 0 0 / 12px 8px repeat-x"></div>
-      <div style="position: relative; background: #FFFFFF; color: #1C2233; padding: 6px 16px 8px">
-        <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1.5px solid #1C2233; font-size: 11px; font-weight: 700; letter-spacing: .12em"><span>WHAT YOU BROUGHT BACK</span><span style="font-family: 'IBM Plex Mono', monospace; letter-spacing: 0">{{ shopsWord }}</span></div>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">Prices got</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{ got }}</span></div>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">Quotes still good</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{ good }}</span></div>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">Rival price tags</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: #7A3268">{{ tags }}</span></div>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #E0DCD4"><span style="font-size: 14px; font-weight: 600">{{ newSupLabel }}</span><span style="{{ newSupStyle }}">{{ newSup }}</span></div>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; color: #8E2A22"><span style="font-size: 14px; font-weight: 600">Can’t supply</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600">{{ cant }}</span></div>
-        <sc-if value="{{ hasStamp }}"><div style="display: flex; justify-content: flex-end; padding: 6px 4px 6px"><span class="d-stamp" style="{{ stampStyle }}">{{ stamp }}</span></div></sc-if>
-      </div>
-      <div style="height: 8px; background: linear-gradient(135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x"></div>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 18px 20px 18px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="MarketRun.dc.html" data-back aria-label="Back to the run" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="eb" style="color: #6FDCB0">{{ eyebrow }}</span><span class="t1" style="font-size: 24px">{{ title }}</span></span>
+      <sc-if value="{{ hasStamp }}"><span class="pill" style="{{ stampStyle }}">{{ stamp }}</span></sc-if>
     </div>
-
-    <div class="d-up" style="animation-delay: 1s; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 20px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)">
-      <span style="font-size: 12px; font-weight: 700; color: #B3BCD2">Hunts that moved</span>
-      <sc-for list="{{ moved }}" as="m">
-      <a href="Hunt.dc.html" data-sx="{{ m.sx }}" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600"><span style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ m.name }}</span><span style="height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(255,255,255,.1); color: #B3BCD2; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{ m.from }}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg><span style="height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(111,220,176,.16); color: #6FDCB0; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center">{{ m.to }}</span></a>
-      </sc-for>
-      <sc-if value="{{ noMoved }}"><span style="font-size: 13px; font-weight: 600; color: #5C6788">No hunt changed step today</span></sc-if>
+    <div role="img" aria-label="{{ barLabel }}" style="display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.12); gap: 2px"><sc-for list="{{ bar }}" as="b"><span style="{{ b.style }}"></span></sc-for></div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{ tiles }}" as="t"><span class="glass" style="padding: 8px 8px; border-radius: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="display: flex; align-items: center; gap: 5px"><span style="{{ t.dot }}"></span><span class="m" style="font-size: 18px; color: #FFFFFF">{{ t.n }}</span></span><span style="font-size: 10.5px; color: #B3BCD2; line-height: 1.2">{{ t.word }}</span></span></sc-for>
     </div>
-
-    <sc-if value="{{ hasSample }}">
-    <div class="d-up" style="animation-delay: 1.15s; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: rgba(245,178,107,.12); box-shadow: inset 0 0 0 1px rgba(245,178,107,.3)">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F5B26B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h19v12h-19zM12 9.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2z"></path></svg>
-      <span style="flex: 1; font-size: 13px; font-weight: 600">Sample bought · <span style="font-family: 'IBM Plex Mono', monospace">{{ sampleCash }}</span> cash</span>
-      <span style="font-size: 12px; font-weight: 700; color: #F5B26B">hand the receipt in</span>
-    </div>
-    </sc-if>
   </div>
 
-  <div class="d-up" style="animation-delay: 1.3s; position: absolute; left: 16px; right: 16px; bottom: calc(26px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
-    <sc-if value="{{ anySent }}"><span style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: #B3BCD2"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>Everything sent to the shop</span></sc-if>
-    <div style="display: flex; gap: 8px">
-      <a href="Hunts.dc.html" style="flex: 1; height: 56px; border-radius: 18px; background: rgba(255,255,255,.08); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">See the hunts</a>
-      <a href="Main.dc.html" style="flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center">Done</a>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px">
+    <div class="card n-in" style="padding: 10px 14px 6px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0 4px"><span class="eb">Hunts that moved</span><span class="sub">{{ shopsWord }}</span></div>
+      <sc-for list="{{ moved }}" as="m">
+      <a href="Hunt.dc.html" data-sx="{{ m.sx }}" style="{{ m.line }}"><span style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700">{{ m.name }}</span><span class="pill" style="background: #EEF0F5; color: #3B4566">{{ m.from }}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg><span class="pill" style="background: #E4F4EA; color: #0F6B43">{{ m.to }}</span></a>
+      </sc-for>
+      <sc-if value="{{ noMoved }}"><span class="sub" style="display: block; padding: 6px 0 10px; font-size: 13px">No hunt changed step today</span></sc-if>
     </div>
+
+    <sc-if value="{{ hasNewSup }}">
+    <div class="card n-in" style="padding: 12px 14px; display: flex; align-items: center; gap: 12px; animation-delay: .05s">
+      <span style="width: 36px; height: 36px; flex: none; border-radius: 12px; background: #E4E6FA; color: #3A3F9B; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20a6 6 0 0 1 12 0M18 8v6M15 11h6"></path></svg></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span class="eb">{{ newSupLabel }}</span><span style="font-size: 14px; font-weight: 700">{{ newSup }}</span></span>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ hasSample }}">
+    <div class="card n-in" style="padding: 12px 14px; display: flex; align-items: center; gap: 12px; animation-delay: .1s; box-shadow: 0 0 0 1.5px #F3D9BE">
+      <span style="width: 36px; height: 36px; flex: none; border-radius: 12px; background: #FDEEE1; color: #95530C; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h19v12h-19zM12 9.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2z"></path></svg></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 700">Sample bought · <span class="m">{{ sampleCash }}</span> cash</span><span class="sub">hand the receipt in · Accounts records it</span></span>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ anySent }}"><span class="sub" style="display: flex; align-items: center; justify-content: center; gap: 6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>Everything sent to the shop</span></sc-if>
+  </div>
+
+  <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
+    <a href="Hunts.dc.html" class="btn2" style="height: 54px; border-radius: 16px">See the hunts</a>
+    <a href="Main.dc.html" class="btn">Done</a>
   </div>
 </div>`,
   Component: class extends SrvLogic {
@@ -7388,22 +7328,27 @@ SCREENS.RunDone = {
       const r = rdToday(), run = mrRun();
       const total = r.got + r.good + r.cant + r.tags;
       const areas = [...new Set(r.shops.map(s => String(s.area || '').trim()).filter(Boolean))];
-      const areaWord = (areas.length ? areas.slice(0, 2).join(' · ') + (areas.length > 2 ? ' +' + (areas.length - 2) : '') : (run.area ? run.area.name : 'Market')).toUpperCase();
+      const areaWord = areas.length ? areas.slice(0, 2).join(' · ') + (areas.length > 2 ? ' +' + (areas.length - 2) : '') : (run.area ? run.area.name : 'Market');
       const left = run.active.filter(st => !st.done).length;
       const allIn = run.active.length > 0 && left === 0;
+      // The answers brought back, as one bar: new prices, quotes still good,
+      // rival tags, can't supply.
+      const parts = [['got', r.got, 'prices got', '#6FDCB0'], ['good', r.good, 'still good', '#9DB4F0'], ['tags', r.tags, 'rival tags', '#F0A6DA'], ['cant', r.cant, 'can’t supply', '#F59A92']];
       return {
         eyebrow: areaWord + (r.from ? ' · ' + hm(r.from) + (r.to && hm(r.to) !== hm(r.from) ? ' – ' + hm(r.to) : '') : ''),
         title: total ? 'Run done' : 'Nothing brought back yet',
-        shopsWord: plural(r.shops.length, 'shop'),
-        got: r.got, good: r.good, tags: r.tags, cant: r.cant,
-        newSupLabel: r.newSups.length > 1 ? 'New suppliers' : 'New supplier',
-        newSup: r.newSups.length ? r.newSups.slice(0, 2).join(', ') + (r.newSups.length > 2 ? ' +' + (r.newSups.length - 2) : '') : 'none',
-        newSupStyle: r.newSups.length ? 'font-size: 13px; font-weight: 700; text-align: right' : 'font-size: 13px; font-weight: 700; color: #B9B2A6',
+        shopsWord: plural(r.shops.length, 'shop') + ' visited',
+        bar: total ? parts.filter(p => p[1] > 0).map(p => ({ style: `flex: ${p[1]} 1 0; background: ${p[3]}` })) : [],
+        barLabel: total ? parts.map(p => `${p[1]} ${p[2]}`).join(', ') : 'Nothing answered yet',
+        tiles: parts.map(p => ({ n: p[1], word: p[2], dot: `width: 7px; height: 7px; flex: none; border-radius: 999px; background: ${p[3]}` })),
         hasStamp: total > 0,
         stamp: allIn ? 'ALL IN' : plural(left, 'STOP', 'STOPS') + ' LEFT',
-        stampStyle: 'display: inline-block; transform: rotate(-6deg); padding: 4px 10px 3px; border-radius: 9px; mix-blend-mode: multiply; font-size: 16px; font-weight: 700; letter-spacing: .16em; ' + (allIn ? 'border: 3px double #0F6B43; color: #0F6B43; background: rgba(228,244,234,.4)' : 'border: 3px double #95530C; color: #95530C; background: rgba(253,238,225,.4)'),
-        moved: r.moved.map(m => ({ name: m.l.name, from: STAGE_WORD[m.from] || m.from, to: STAGE_WORD[m.l.status] || m.l.status, sx: JSON.stringify({ leadId: m.l.id }) })),
+        stampStyle: allIn ? 'background: rgba(111,220,176,.16); color: #6FDCB0; letter-spacing: .1em' : 'background: rgba(245,178,107,.16); color: #F5B26B; letter-spacing: .1em',
+        moved: r.moved.map((m, i) => ({ name: m.l.name, from: STAGE_WORD[m.from] || m.from, to: STAGE_WORD[m.l.status] || m.l.status, sx: JSON.stringify({ leadId: m.l.id }),
+          line: 'display: flex; align-items: center; gap: 6px; min-height: 46px' + (i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : '') })),
         noMoved: !r.moved.length,
+        hasNewSup: r.newSups.length > 0, newSupLabel: r.newSups.length > 1 ? 'New suppliers met' : 'New supplier met',
+        newSup: r.newSups.slice(0, 2).join(', ') + (r.newSups.length > 2 ? ' +' + (r.newSups.length - 2) : ''),
         hasSample: r.sampleCash > 0, sampleCash: n0(r.sampleCash),
         anySent: total > 0,
       };
@@ -7445,17 +7390,17 @@ function sampleDigits(v){ const n = Number(String(v == null ? '' : v).replace(/[
 
 SCREENS.Sample = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
   <a href="Hunts.dc.html" data-back aria-label="Back to the hunts" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
-  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: #F7F5F2; border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
+  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: linear-gradient(180deg, #F6F3EE 0%, #F8F6F2 100%); border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
     <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column">
-    <div style="flex: none; background: #16203C; color: #FFFFFF; padding: 10px 16px 18px; display: flex; flex-direction: column; gap: 12px">
-      <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
+    <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
       <div style="display: flex; align-items: center; gap: 12px">
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 12px; font-weight: 700; letter-spacing: .1em; color: #F5B26B">{{ eyebrow }}</span><span style="font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ name }}</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ fromWord }}</span><span style="display: flex; align-items: center; gap: 8px; margin-top: 4px" role="img" aria-label="{{ trackLabel }}">
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="eb" style="color: #F5B26B">{{ eyebrow }}</span><span class="t1" style="font-size: 20px; overflow-wrap: anywhere">{{ name }}</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ fromWord }}</span><span style="display: flex; align-items: center; gap: 8px; margin-top: 4px" role="img" aria-label="{{ trackLabel }}">
           <sc-for list="{{ track }}" as="t" hint-placeholder-count="3"><sc-if value="{{ t.join }}"><span style="width: 10px; height: 2px; background: rgba(255,255,255,.2)"></span></sc-if><span style="{{ t.style }}"><span style="{{ t.dot }}"><sc-if value="{{ t.done }}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></sc-if></span>{{ t.word }} <span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #B3BCD2">{{ t.n }}</span></span></sc-for>
         </span></span>
-        <a href="Hunts.dc.html" data-back aria-label="Close" style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+        <a href="Hunts.dc.html" data-back aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
       </div>
       <button type="button" onClick="{{ snap }}" aria-label="{{ photoLabel }}" style="{{ photoStyle }}; position: relative; height: 132px; border: none; padding: 0; border-radius: 18px; overflow: hidden; display: block; width: 100%; cursor: pointer">
         <sc-if value="{{ noPhoto }}">
@@ -7472,27 +7417,25 @@ SCREENS.Sample = {
     </div>
 
     <sc-if value="{{ none }}">
-      <div style="margin: 16px; background: #FFFFFF; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
-        <span style="font-size: 15px; font-weight: 700">No sample to check</span>
-        <span style="font-size: 13px; color: #5F6980">Nothing found is waiting on a sample.</span>
-        <a href="Hunts.dc.html" style="height: 48px; padding: 0 18px; border-radius: 14px; background: #16203C; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center">The hunts</a>
+      <div class="card" style="margin: 16px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+        <span class="t2">No sample to check</span>
+        <span class="sub" style="font-size: 13px">Nothing found is waiting on a sample.</span>
+        <a href="Hunts.dc.html" class="btn ink" style="width: auto; height: 48px; padding: 0 22px">The hunts</a>
       </div>
     </sc-if>
 
     <sc-if value="{{ has }}">
     <div style="padding: 12px 16px 12px; display: flex; flex-direction: column; gap: 10px">
-      <div style="filter: drop-shadow(0 1px 1px rgba(22,32,60,.08)) drop-shadow(0 6px 14px rgba(22,32,60,.08)); margin: 0 4px">
-        <div style="height: 8px; background: linear-gradient(45deg, transparent 50%, #FFFFFF 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-45deg, transparent 50%, #FFFFFF 50%) 0 0 / 12px 8px repeat-x"></div>
-        <div style="position: relative; background: #FFFFFF; padding: 6px 16px 8px">
-          <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 8px; border-bottom: 1.5px solid #1C2233"><span style="font-size: 11px; font-weight: 700; letter-spacing: .12em">THE TRIAL</span><span style="{{ passStyle }}">{{ passWord }}</span></div>
+      <div class="card n-in">
+        <div style="position: relative; padding: 10px 14px 4px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 2px 0 6px"><span class="eb">The trial</span><span style="{{ passStyle }}">{{ passWord }}</span></div>
           <sc-for list="{{ checks }}" as="c" hint-placeholder-count="4">
           <button type="button" onClick="{{ c.cycle }}" aria-label="{{ c.aria }}" style="{{ c.row }}"><span style="{{ c.box }}"><sc-if value="{{ c.pass }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></sc-if><sc-if value="{{ c.fail }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></sc-if></span><span style="font-size: 14px; font-weight: 600; text-align: left">{{ c.label }}</span><span style="{{ c.howStyle }}">{{ c.how }}</span></button>
           </sc-for>
           <sc-if value="{{ hasStamp }}"><span class="s-stamp" style="{{ stampStyle }}"><span style="font-size: 20px; font-weight: 700; letter-spacing: .18em; line-height: 1; padding-left: .18em">{{ stamp }}</span><span style="font-size: 9px; font-weight: 700; letter-spacing: .14em">{{ stampSub }}</span></span></sc-if>
         </div>
-        <div style="height: 8px; background: linear-gradient(135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x, linear-gradient(-135deg, #FFFFFF 50%, transparent 50%) 0 0 / 12px 8px repeat-x"></div>
       </div>
-      <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-size: 12px; color: #5F6980">
+      <label class="card" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px; font-size: 12px; color: #5F6980">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6h19v12h-19zM12 9.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2z"></path></svg>
         <span style="flex: 1; display: flex; align-items: center; gap: 4px; white-space: nowrap">Sample paid <input inputmode="numeric" aria-label="What the sample cost" placeholder="0" value="{{ cost }}" onInput="{{ onCost }}" style="width: 72px; border: none; background: transparent; padding: 0; outline: none; box-shadow: inset 0 -1px 0 #C9C4BA; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #1C2233; text-align: center"> cash</span>
         <span style="font-weight: 700; color: #1C2233; white-space: nowrap">Accounts records it</span>
@@ -7503,7 +7446,7 @@ SCREENS.Sample = {
 
     <sc-if value="{{ has }}">
     <div style="flex: none; padding: 10px 16px calc(22px + var(--safe-b)); display: flex; gap: 8px">
-      <a href="Dropped.dc.html" data-sx="{{ sx }}" onClick="{{ failed }}" style="height: 56px; padding: 0 16px; border-radius: 18px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; color: #8E2A22; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center">It failed</a>
+      <a href="Dropped.dc.html" data-sx="{{ sx }}" onClick="{{ failed }}" class="btn2" style="height: 54px; padding: 0 18px; border-radius: 16px; color: #8E2A22; font-weight: 700">It failed</a>
       <a href="{{ passHref }}" data-sx="{{ sx }}" onClick="{{ passed }}" aria-disabled="{{ passOff }}" data-why-self style="{{ passBtn }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4"></circle></svg>{{ passLabel }}</a>
     </div>
     </sc-if>
@@ -7609,7 +7552,7 @@ SCREENS.Sample = {
         cost: cost ? n0(sampleDigits(cost)) : '', onCost: (e) => { this.setState({ cost: String(sampleDigits(e.target.value) || '') }); this.later(l); },
         failed: verdict('fail'), passed: verdict('pass'), passOff: passOff ? 'true' : 'false',
         passHref: hasPrice ? 'PriceIt.dc.html' : 'Quote.dc.html', passLabel: hasPrice ? 'It passed · price it' : 'It passed · get a price',
-        passBtn: `flex: 1; height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px${passOff ? '; opacity: .5' : ''}`,
+        passBtn: `flex: 1; height: 54px; border-radius: 16px; background: linear-gradient(180deg, #D9483D 0%, #BC342B 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 10px 22px -8px rgba(201,58,48,.6); color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px${passOff ? '; opacity: .5' : ''}`,
       };
     }
   },
