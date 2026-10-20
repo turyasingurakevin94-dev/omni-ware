@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -106,7 +106,7 @@ function fakeDb(tables){
   function Q(table){ this.t = table; this.f = []; this.op = 'select'; this.one = false; }
   Q.prototype.select = function(){ return this; };
   Q.prototype.eq = function(k, v){ this.f.push(r => String(r[k]) === String(v)); return this; };
-  Q.prototype.gt = Q.prototype.gte = Q.prototype.order = Q.prototype.limit = function(){ return this; };
+  Q.prototype.gt = Q.prototype.gte = Q.prototype.order = Q.prototype.limit = Q.prototype.or = function(){ return this; };
   Q.prototype.maybeSingle = function(){ this.one = true; return this; };
   Q.prototype.insert = function(row){ this.op = 'insert'; this.row = row; return this; };
   Q.prototype.update = function(row){ this.op = 'update'; this.row = row; return this; };
@@ -414,6 +414,107 @@ const P = page(fakeDb({}));
     t.check(/waits for Ruth/.test(vis) && /Esther/.test(vis), 'hand-offs name the person in the role that takes them');
     t.check(!/\bthe owner (pays|checks|keeps)/i.test(vis), 'nothing day-to-day waits for the owner');
     t.check(!/sell(ing)? ?price|margin %|markup/i.test(X.PAGE.swap({ id: 50, lineId: 1, q: '', pick: null, why: 'client' }).replace(/<[^>]*>/g, ' ')), 'switching an item never draws the selling price or a margin');
+  }
+
+  // 7. The 19 Oct 2026 end-to-end test (Q-0541)
+  // 7a. Fix 3, rule A: the shelf to sell is the count less what live orders' invoices will take.
+  {
+    const data = fixture();
+    data.stock = { P2: 20, 'P1::0': 40, P3: 5 };
+    const X = page(fakeDb({}), data);
+    const recv = { receivedAt: NOW - 3600e3, receivedQty: 3 };
+    X.D().savedQuotes = [
+      X.rowToQuote(orderRow(60, [it(1, 'P2', null, 3, 'S2', 28000, recv), it(2, 'P1', 0, 2, 'S1', 140000, { unit: 'bundle', receivedAt: NOW, receivedQty: 2 }), it(3, 'P3', null, 9, '__stock__', 4600)], {}, { status: 'completed' })),
+      X.rowToQuote(orderRow(61, [it(1, 'P2', null, 5, '__stock__', 28000)], {}, { status: 'preparing', invoiced: true })),
+      X.rowToQuote(orderRow(62, [it(1, 'P2', null, 4, '__stock__', 28000)], {}, { status: 'preparing', voided: true })),
+      X.rowToQuote(orderRow(63, [it(1, 'P2', null, 6, '__stock__', 28000)])),
+      X.rowToQuote(orderRow(64, [it(1, 'P2', null, 2, 'S2', 28000)], {}, { status: 'awaiting_goods' })),
+    ];
+    t.check(X.heldForOrders('P2', null) === 3 && X.shelfAvailable('P2', null) === 17, 'a delivered, uninvoiced order holds what it took (3): 17 are on the shelf to sell, not 20');
+    t.check(X.heldForOrders('P1', 0) === 20 && X.shelfAvailable('P1', 0) === 20, 'a line counted in bundles holds its pieces (2 bundles of 10 = 20)');
+    t.check(X.shelfAvailable('P3', null) === 0, 'what is held is never shown as less than nothing on the shelf');
+    t.check(X.heldForOrders('P2', null, 60) === 0, 'an order\'s own hold can be left out when its own lines are drawn');
+    const draft = X.rowToQuote(orderRow(65, [it(1, 'P2', null, 10, 'S2', 28000)]));
+    X.D().savedQuotes.push(draft);
+    const sh = X.shelfFor(draft, draft.items[0]);
+    t.check(sh && sh.free === 11, 'Our shelf for a line in Checking: 20 on the books, 3 held by the delivered order, 6 promised by another in Checking = 11 free: ' + (sh && sh.free));
+    X.D().savedQuotes = [X.D().savedQuotes[0], X.rowToQuote(orderRow(66, [it(1, 'P2', null, 4, '__stock__', 28000)]))];
+    const h = X.PAGE.order({ id: 66 }).replace(/<[^>]*>/g, ' ');
+    t.check(/on the shelf 17 · 3 held for orders/.test(h), 'the order\'s shelf card says what is free and what is held for orders');
+  }
+  // 7b. Fix 6: a supplier delivery is named by its supplier, and a handed-in trip says it waits for the Store.
+  {
+    const data = fixture(); data.staff.push({ id: 'W7', name: 'Juma Store', phone: '', role: 'store', unavailable: false, userId: null });
+    const db = fakeDb({ saved_quotes: [], collection_trips: [] }), X = page(db, data);
+    const sup = { id: 'TRIP-S', supplier_id: 'S1', status: 'collected', assigned_worker_id: '__supplier__', created_at: new Date(NOW - 7200e3).toISOString(), collected_at: new Date(NOW - 600e3).toISOString(), lines: [{ orderId: 70, lineId: 1, productId: 'P2', variantIdx: null, productName: 'Gutter, 4m PVC', unit: 'pc', packUnit: '', packQty: 0, qtyIn: '', clientName: 'Kato', qty: 6, expectedPrice: 28000, gotQty: 6, gotPrice: 28000 }], cash_given: null };
+    X.D().collectionTrips = [X.rowToTrip(sup)];
+    t.check(X.staffName('__supplier__', 'S1') === 'Kikuubo Steel Mart' && X.tripWho(X.D().collectionTrips[0]) === 'Kikuubo Steel Mart', 'the supplier carrier is the supplier\'s name, never "(removed staff)"');
+    const h = X.PAGE.trip({ id: 'TRIP-S' });
+    t.check(/Handed in · waiting for Juma/.test(h) && !/removed staff/.test(h) && !/is on it/.test(h), 'a handed-in trip\'s footer says it waits for the Store, by name');
+    X.D().collectionTrips = [X.rowToTrip({ ...sup, status: 'collecting', collected_at: null, lines: sup.lines.map(l => ({ ...l, gotQty: 6 })) })];
+    db.tables.collection_trips = [JSON.parse(JSON.stringify({ ...sup, shop_id: SH, status: 'collecting', collected_at: null }))];
+    X.S.stack = [{ type: 'trip', args: { id: 'TRIP-S' } }];
+    const before = X.refreshLive.seq || 0;
+    await X.ACT['slide:handin']();
+    t.check(db.tables.collection_trips[0].status === 'collected' && (X.refreshLive.seq || 0) > before, 'after a hand-in the trips are read again, so the chips stop saying "Out"');
+    const stale = X.refreshLive(), fresh = X.refreshLive();
+    await Promise.all([stale, fresh]);
+    t.check(X.D().collectionTrips[0].status === 'collected', 'only the newest read lands');
+  }
+  // 7c. Fix 7: pack rounding is said, on the Check slip and on the trip.
+  {
+    const X = page(fakeDb({}));
+    const line = it(1, 'P3', null, 30, 'S1', 5000, { qtyIn: '' });
+    t.check(X.linePackSplit(line) === '30 for the order + 20 to the shelf (sold by the 25)', 'a carton-only supplier: ' + X.linePackSplit(line));
+    t.check(X.linePackSplit(it(1, 'P2', null, 6, 'S2', 28000)) === '', 'a supplier who sells loose: nothing to say');
+    t.check(X.packSplitText(3, 20, 20) === '3 for the order + 17 to the shelf (sold by the 20)', 'the words of the report: 3 for the order + 17 to the shelf (sold by the 20)');
+    X.D().savedQuotes = [X.rowToQuote(orderRow(71, [line]))];
+    t.check(/30 for the order \+ 20 to the shelf \(sold by the 25\)/.test(X.PAGE.order({ id: 71 })), 'the Check slip shows it under the line');
+    const tr = X.rowToTrip({ id: 'TRIP-P', supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(NOW).toISOString(), lines: [{ orderId: 71, lineId: 1, productId: 'P3', variantIdx: null, productName: 'Roofing nails', unit: 'kg', packUnit: 'box', packQty: 25, qtyIn: '', clientName: 'Nansana Hardware', qty: 50, expectedPrice: 5000, gotQty: null, gotPrice: null }, { orderId: 71, lineId: 1, productId: 'P3', variantIdx: null, productName: 'Roofing nails', unit: 'kg', packUnit: 'box', packQty: 25, qtyIn: '', clientName: 'Nansana Hardware', qty: 50, expectedPrice: 5000, gotQty: null, gotPrice: null }] });
+    X.D().collectionTrips = [tr];
+    t.check(X.tripLinePackSplit(tr, tr.lines[0]) === '30 for the order + 20 to the shelf (sold by the 25)', 'a trip line knows the order line it buys for');
+    t.check(/30 for Nansana \+ 20 to the shelf/.test(X.PAGE.trip({ id: 'TRIP-P' })), 'and the trip row says it');
+    X.D().savedQuotes = [X.rowToQuote(orderRow(72, [line], {}, { status: 'awaiting_goods' }))];
+    X.D().collectionTrips = [];
+    t.check(/30 \+ 20 to the shelf/.test(X.PAGE.plan({ sid: 'S1' })), 'Plan a trip says why a stop carries more than the order');
+  }
+  // 7d. Fix 8: an owner with no staff row adds themself in one tap; a buyer cannot.
+  {
+    const data = fixture(); data.staff = data.staff.filter(s => s.userId !== 'u1');
+    const db = fakeDb({ staff: [] }), X = page(db, data);
+    X.S.role = 'owner';
+    t.check(X.canAddMe() && /Add me to the team/.test(X.PAGE.me({})) && /tap · add me/.test(X.PAGE.plan({})) === !!X.runsToGo().length, 'the owner\'s You page offers "Add me to the team"');
+    await X.ACT.addme();
+    const ins = db.writes.find(w => w[0] === 'insert' && w[1] === 'staff');
+    t.check(ins && ins[2].user_id === 'u1' && ins[2].role === 'buyer' && ins[2].id === 'ST001' && ins[2].shop_id === SH && ins[2].name, 'one staff row for this login, as a buyer, with an ST id');
+    t.check(!X.canAddMe() && !/Add me to the team/.test(X.PAGE.me({})), 'and the offer is gone');
+    const Y = page(fakeDb({ staff: [] }), (() => { const d = fixture(); d.staff = d.staff.filter(s => s.userId !== 'u1'); return d; })());
+    t.check(!Y.canAddMe() && !/Add me to the team/.test(Y.PAGE.me({})), 'a buyer login is not offered it: staff rows are the owner\'s to write');
+  }
+  // 7e. Fix 14: a second slide while the first saves is queued, never lost.
+  {
+    const row = orderRow(73, [it(1, 'P1', 0, 12, 'S1', 14500), it(2, 'P2', null, 6, 'S2', 28000), it(3, 'P1', 0, 2, 'S3', 15000)]);
+    const db = fakeDb({ saved_quotes: [row] }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    const a = X.ACT.answer(73, 'S1', 'yes'), b = X.ACT.answer(73, 'S2', 'yes');
+    const q0 = X.D().savedQuotes[0], g = { supplierId: 'S2', lines: q0.items.filter(i => i.supplierId === 'S2'), a: X.answerOf(q0, 'S2') };
+    t.check(/data-pos="yes"/.test(X.triHTML(q0, g)), 'a slide waiting to be written stays where it was let go');
+    await Promise.all([a, b]);
+    const sc = db.tables.saved_quotes[0].payload.supplierConfirms;
+    t.check(sc.S1 && sc.S1.state === 'confirmed' && sc.S2 && sc.S2.state === 'confirmed', 'both answers are on the order');
+  }
+  // 7f. Fix 15: the supplier's price on the Check slip opens the re-price page.
+  {
+    const row = orderRow(74, [it(1, 'P2', null, 6, 'S2', 2300)]);
+    const X = page(fakeDb({ saved_quotes: [row] }));
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    t.check(/data-act="lineprice"[^>]*data-line="1"[^>]*>@ 2,300/.test(X.PAGE.order({ id: 74 })), 'the "@ 2,300" on the slip is a button');
+    X.S.stack = [{ type: 'order', args: { id: 74 } }];
+    X.ACT.lineprice({ dataset: { id: '74', sid: 'S2', line: '1' } });
+    const top = X.S.stack[X.S.stack.length - 1];
+    t.check(top.type === 'price' && top.args.id === 74 && top.args.lineId === '1' && top.args.sid === 'S2', 'tapping it opens the page to type their new price (line.reprice)');
+    X.D().savedQuotes[0].status = 'awaiting_goods';
+    t.check(!/data-act="lineprice"/.test(X.PAGE.order({ id: 74 })), 'past Checking it is only a figure');
   }
 
   process.exit(t.done() ? 1 : 0);
