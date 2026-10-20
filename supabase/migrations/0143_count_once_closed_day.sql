@@ -1,4 +1,4 @@
--- 0142: two "(verify)" items of the audit's section 4, reproduced on the rig
+-- 0143: two "(verify)" items of the audit's section 4, reproduced on the rig
 -- and fixed.
 --
 -- 1. A stock count is accepted once, from 'sent', and a surplus is valued.
@@ -12,7 +12,9 @@
 --    299 on the books made lot 47, 6 bags, cost null, beside lot 38 at
 --    32,500.
 --
---    Now: only a count that is 'sent' is accepted ('recount': "accept the
+--    Now, on 0142's function (a count applies only its own difference, so
+--    goods out on orders not yet invoiced are never counted out twice):
+--    only a count that is 'sent' is accepted ('recount': "accept the
 --    recount when it comes"; 'accepted': as before, nothing changes); a
 --    surplus lot takes the last cost the shop knew for that item -- its
 --    newest lot, else the newest restock or correction in the stock log,
@@ -42,6 +44,7 @@ language sql stable as $$
        and coalesce(p.variant_idx::text, '') = coalesce(nullif(p_vi, ''), '') and coalesce(p.wholesale, p.retail) is not null))
 $$;
 
+-- accept_stock_count: 0142's, with the marked changes (0143:).
 create or replace function accept_stock_count(p_id uuid) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -54,8 +57,10 @@ declare
   left_to_take numeric;
   lot record;
   log_id bigint;
-  v_cost numeric;
   changed int := 0;
+  gone numeric;
+  now_qty jsonb := '{}'::jsonb;
+  v_cost numeric;
 begin
   select * into c from stock_counts where id = p_id for update;
   if not found then raise exception 'That count is gone.' using errcode = 'P0002'; end if;
@@ -63,6 +68,7 @@ begin
     raise exception 'Correcting stock is for the owner or a manager.' using errcode = '42501';
   end if;
   if c.status = 'accepted' then return jsonb_build_object('ok', true, 'changed', 0, 'already', true); end if;
+  -- 0143: a count is accepted once, from 'sent'.
   if c.status = 'recount' then
     raise exception 'This count was sent back for a recount — accept the recount when it comes.' using errcode = '22023';
   end if;
@@ -73,11 +79,22 @@ begin
   for l in select * from jsonb_array_elements(c.lines)
   loop
     k := l ->> 'key';
-    after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6));
     if k is null then continue; end if;
     select qty into before from stock where shop_id = c.shop_id and key = k for update;
     before := coalesce(before, 0);
+    -- 0142: what live orders had already taken off the shelf is still in the books, and
+    -- their invoices will take it off. A count the Store saved with `held` applies only
+    -- the difference it found to the books as they are now; an older count, saved
+    -- without it, counts back in what such orders hold now.
+    if l ? 'held' and ow_num(l ->> 'system') is not null then
+      gone := coalesce(ow_num(l ->> 'held'), 0);
+      after := greatest(0, round(before + coalesce((l ->> 'counted')::numeric, 0) - ow_num(l ->> 'system'), 6));
+    else
+      gone := ow_held_gone(c.shop_id, k);
+      after := greatest(0, round(coalesce((l ->> 'counted')::numeric, 0), 6)) + gone;
+    end if;
     delta := round(after - before, 6);
+    now_qty := now_qty || jsonb_build_object(k, after);
     if delta = 0 then continue; end if;
 
     insert into stock (shop_id, key, product_id, variant_idx, qty)
@@ -99,23 +116,26 @@ begin
         end if;
       end loop;
     else
-      -- A surplus is worth what the shop last paid for the item, never nothing.
+      -- 0143: a surplus is worth what the shop last paid for the item, never nothing.
       v_cost := ow_last_known_cost(c.shop_id, k, l ->> 'productId', l ->> 'variantIdx');
       insert into stock_lots (shop_id, key, qty, cost) values (c.shop_id, k, delta, v_cost);
     end if;
 
+    -- 0143: the log id from the one allocator (0138).
     log_id := ow_next_row_id(c.shop_id, 'row:stock_log', 0);
     insert into stock_log (id, shop_id, key, product_id, variant_idx, label, type, delta, qty_after, note, date, at, cost)
          values (log_id, c.shop_id, k, l ->> 'productId', nullif(l ->> 'variantIdx', ''), l ->> 'name', 'count',
                  delta, after,
                  'Stock take' || coalesce(' · ' || c.aisle, '') || coalesce(' · counted by ' || c.counted_by_name, '')
+                   || case when gone > 0 then ' · ' || trim_scale(gone) || ' out on orders not yet invoiced' else '' end
                    || case when delta > 0 then case when v_cost is null then ' · surplus, no cost known' else ' · surplus valued at ' || ow_money(v_cost) end else '' end,
                  current_date, now(), case when delta > 0 then v_cost end);
     changed := changed + 1;
   end loop;
 
   update stock_counts set status = 'accepted', decided_by = auth.uid(), decided_at = now() where id = p_id;
-  return jsonb_build_object('ok', true, 'changed', changed);
+  -- 0142: what each counted item now stands at in the books, for the phone that accepted it.
+  return jsonb_build_object('ok', true, 'changed', changed, 'stock', now_qty);
 end $$;
 
 /* ---------------- 2. the closed day ---------------- */

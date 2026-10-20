@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * 0142 and the app fixes beside it: the audit's section 4 items 4, 5, 7, 9
+ * 0143 and the app fixes beside it: the audit's section 4 items 4, 5, 7, 9
  * and 11, reproduced on the rig and fixed.
  *
  *   4. accept_stock_count takes a count once, from 'sent'; a surplus lot is
@@ -11,13 +11,13 @@
  *   9. buyer.html opens the order from a supplier.answered push.
  *  11. owner.html names sales.html as the Sales app.
  *
- * Run: node test/audit-0142.test.js
+ * Run: node test/audit-0143.test.js
  */
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('a count once, a closed day closed (0142)');
-const sql = read('supabase/migrations/0142_count_once_closed_day.sql');
-const fn = name => { const at = sql.indexOf('create or replace function ' + name + '('); if (at < 0) throw new Error('0142 has no ' + name); const open = sql.indexOf('$$', at); return sql.slice(at, sql.indexOf('$$;', open + 2)); };
+const t = createReporter('a count once, a closed day closed (0143)');
+const sql = read('supabase/migrations/0143_count_once_closed_day.sql');
+const fn = name => { const at = sql.indexOf('create or replace function ' + name + '('); if (at < 0) throw new Error('0143 has no ' + name); const open = sql.indexOf('$$', at); return sql.slice(at, sql.indexOf('$$;', open + 2)); };
 
 const lk = fn('ow_last_known_cost');
 t.check(/from stock_lots l where l\.shop_id = p_shop_id and l\.key = p_key and l\.cost is not null order by l\.id desc limit 1/.test(lk) && /from stock_log g where g\.shop_id = p_shop_id and g\.key = p_key and g\.cost is not null and g\.type in \('restock', 'correction'\) order by g\.id desc limit 1/.test(lk) && /select min\(coalesce\(p\.wholesale, p\.retail\)\) from prices p/.test(lk), 'the last cost known: newest lot, else newest restock or correction, else the lowest list price');
@@ -45,6 +45,6 @@ t.check(/function mergeRequests\(server, local\)\{/.test(sourcing) && /const cur
 }
 t.check(/else if \(d\.kind === 'supplier\.answered'\) \{ const q = quoteById\(id\); if \(q\) at\('order', \{ id: Number\(q\.id\) \}\); else at\('plan', \{\}\); \}/.test(read('buyer.html')), "buyer: a supplier's answer opens the order");
 t.check(/sales:\s*\{ label: 'Sales',[^\n]*app: 'sales\.html' \}/.test(read('owner.html')), 'owner: the Sales app is sales.html');
-t.check(/\| 0142 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0142 for it');
+t.check(/\| 0143 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0143 for it');
 
 process.exit(t.done() ? 1 : 0);

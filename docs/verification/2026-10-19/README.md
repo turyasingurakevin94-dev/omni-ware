@@ -169,11 +169,11 @@ next round starts there, not from zero.
    `invoice.make`, once a day.
 4. ~~`0115 accept_stock_count`: accepts a count already sent back for a
    recount, and a surplus lot is created with `cost null`.~~ **Reproduced and
-   fixed in 0142**: a count is accepted once, from 'sent'; a surplus lot takes
+   fixed in 0143**: a count is accepted once, from 'sent'; a surplus lot takes
    the last cost the shop knew (its newest lot, the newest restock or
    correction, else the lowest list price), and the log line says so.
 5. ~~`0123 cash_txns_accounts_guard` runs only on UPDATE: an expense can be
-   inserted on a closed day.~~ **Reproduced and fixed in 0142**: the guard
+   inserted on a closed day.~~ **Reproduced and fixed in 0143**: the guard
    runs on INSERT too.
 6. ~~`0125 trip_prices_to_list` writes the trip's `gotPrice` … into the list's
    base `wholesale`.~~ **Verified sound, no change**: the Buyer's price sheet

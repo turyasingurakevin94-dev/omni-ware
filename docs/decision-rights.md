@@ -515,7 +515,8 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0139 | The end-to-end test of 19 Oct 2026, fix 2: invoicing refuses a line still to price (`OWTPC`), never makes a debtor of a generic name like "Walk-in" (`OWWLK`), keeps a supplier bill already on the order instead of refusing it (fix 4, no more `OWBIL`), dates its bills by the supplier's terms (fix 10), and the hourly run pushes the Manager each order it skips (`invoice.held`) |
 | 0140 | A customer's payment as one write (`receive_payment`, 0140): the receipts, the invoices' payments and share of the debt, the debt and its log, the rest on account, or one receipt on an order before its invoice; Sales, Manager and Accounts call it |
 | 0141 | The treasurer's cash-first actions as one write each: wages and rent (`pay_dues`), a loan repaid or received (`repay_loan`, `receive_loan`), an asset bought, sold or gone (`buy_asset`, `dispose_asset`), an agent settled (`settle_agent`); each writes the cash line, the row and the owner's log line together |
-| 0142 | A stock count is accepted once, from 'sent', and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
+| 0142 | A stock count counts delivered goods once: accepting it adds back what orders packed, out or delivered but not yet invoiced took off the shelf (`ow_held_gone`), so their invoices take it off the books once |
+| 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
