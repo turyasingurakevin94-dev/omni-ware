@@ -101,7 +101,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, flowNow, restockKind, supplierStages, askAllMessage };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, flowNow, restockKind, supplierStages, askAllMessage, flowJobs, hm, staffCall, staffSub, recommendedRow, holdWords, supplierTidy, picksToFollow, followPicks, viewCheck, navHTML };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -577,6 +577,52 @@ const P = page(fakeDb({}));
     const X = page(fakeDb({}), data);
     const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
     t.check(!r.tie && r.better === 'S1' && /Kikuubo is \d+% cheaper/.test(r.text), 'outside the cheapest band there is no tie: ' + r.text);
+  }
+
+  {
+    // Today: the buyer's jobs only, every one of them; Back is the Store's
+    const data = fixture(); data.handoffs = []; data.restockBuys = [];
+    data.collectionTrips = [1, 2].map(i => ({ id: 'T' + i, supplierId: 'S3', status: 'collected', createdAt: new Date(NOW - 30 * 3600e3).toISOString(), collectedAt: new Date(NOW - 26 * 3600e3).toISOString(), lines: [{ orderId: 70 + i, lineId: 1, productId: 'P2', productName: 'Gutter', qty: 1, gotQty: 1, expectedPrice: 1 }], voided: false }));
+    const rows = [orderRow(80, [it(1, 'P3', null, 4, 'S1', 5000)]), orderRow(82, [it(1, 'P2', null, 6, 'S2', 28000)], { supplierConfirms: { S2: { state: 'pending', askedAt: NOW - 90 * 60e3 } } })];
+    const X = page(fakeDb({ saved_quotes: JSON.parse(JSON.stringify(rows)) }), data);
+    X.D().savedQuotes = rows.map(r => X.rowToQuote(JSON.parse(JSON.stringify(r))));
+    const jobs = X.flowJobs(X.flowNow()), today = X.viewToday();
+    t.check(!jobs.some(j => j.k === 'back') && !/Check it in/.test(today) && /AT THE YARD/.test(today), 'Today: back trips are the Store\'s, shown as "at the yard", never a job');
+    t.check(jobs[0].k === 'toask' && (today.match(/class="bx-jobrow"/g) || []).length === jobs.length - 1, 'Today: To ask leads and every job is on the screen (' + jobs.length + ')');
+    t.check(/yesterday \d+:\d\d/.test(X.hm(NOW - 26 * 3600e3)) || /\w{3} \d+:\d\d/.test(X.hm(NOW - 26 * 3600e3)), 'a time from an earlier day carries its day: ' + X.hm(NOW - 26 * 3600e3));
+    t.check(!/badge">1</.test(X.navHTML().split('Check')[0].slice(-200)) && /To ask/.test(X.viewCheck()) && !/asking|to ask</.test(X.viewCheck().replace(/To ask/g, '')), 'Check speaks the same words and does not count what Asking counts');
+  }
+  {
+    // two people called Kevin are never mixed up
+    const data = fixture();
+    data.staff = [{ id: 'K1', name: 'Kevin Atuhaire', phone: '0772000111', role: 'accounts', unavailable: false }, { id: 'K2', name: 'Kevin Atuhaire', phone: '0772000222', role: 'accounts', unavailable: false }, { id: 'K3', name: 'Kevin Mugisha', phone: '', role: 'store', unavailable: false }, { id: 'W2', name: 'Musa K', phone: '', role: 'worker', unavailable: false }];
+    const X = page(fakeDb({}), data), st = X.D().staff;
+    t.check(X.staffCall(st[2]) === 'Kevin Mugisha' && X.staffCall(st[3]) === 'Musa', 'a shared first name gives the whole name');
+    t.check(X.staffSub(st[0]) !== X.staffSub(st[1]) && /…111/.test(X.staffSub(st[0])), 'twins with one name and role differ by their phone: ' + X.staffSub(st[0]) + ' / ' + X.staffSub(st[1]));
+  }
+  {
+    // the default follows the recommendation: a line not yet asked moves to the better pick
+    const data = fixture(); data.handoffs = [];
+    data.prices.push({ id: 9, productId: 'P2', variantIdx: null, supplierId: 'S3', wholesale: 28000, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [], date: new Date().toISOString().slice(0, 10) });
+    data.purchaseInvoices = [{ id: 11, supplierId: 'S2', date: new Date(NOW - 60 * 864e5).toISOString().slice(0, 10), items: [{ qty: 100, price: 28000 }], amountPaid: 0, voided: false }];
+    const rows = [orderRow(96, [it(1, 'P2', null, 6, 'S2', 28000)])], db = fakeDb({ saved_quotes: JSON.parse(JSON.stringify(rows)) }), X = page(db, data);
+    X.D().savedQuotes = rows.map(r => X.rowToQuote(JSON.parse(JSON.stringify(r))));
+    t.check(String(X.recommendedRow('P2', null, 6).supplierId) === 'S3', 'What to buy and the order name the same supplier: Katwe');
+    t.check(X.picksToFollow().length === 1, 'a line nobody has asked about yet follows the recommendation');
+    await X.followPicks();
+    const line = db.tables.saved_quotes.find(r => r.id === 96).payload.items[0];
+    t.check(line.supplierId === 'S3', 'the order now defaults to Katwe');
+    line.supplierId = 'S2'; line.pickKept = 'S2'; X.D().savedQuotes = db.tables.saved_quotes.map(r => X.rowToQuote(JSON.parse(JSON.stringify(r)))); X.S.followTried.clear();
+    t.check(X.picksToFollow().length === 0, 'a supplier picked by hand stays');
+  }
+  {
+    const data = fixture(); data.suppliers.push({ id: 'S4', name: 'Isaac Hardware', phone: '' }, { id: 'S5', name: 'Issac Hardware', phone: '' }, { id: 'S6', name: 'Bright PAM', phone: '' }); data.handoffs = [];
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(97, [it(1, 'P3', null, 4, 'S1', 5000)]))]; X.D().savedQuotes[0].client = { name: 'Bright PAM' };
+    const tidy = X.supplierTidy();
+    t.check(tidy.some(x => x.k === 'twin' && x.a.id === 'S4' && x.b.id === 'S5') && tidy.some(x => x.k === 'client' && x.a.id === 'S6'), 'Isaac ≈ Issac and a client on the supplier list are flagged for Sourcing');
+    t.check(X.holdWords('Cover is 0.2 months') === 'Cover is 6 days', 'a hold reason reads in days: ' + X.holdWords('Cover is 0.2 months'));
+    t.check(/No phone saved for Isaac/.test(X.PAGE.supplier({ sid: 'S4' })), 'a phone can be added on the supplier\'s own page');
   }
 
   process.exit(t.done() ? 1 : 0);
