@@ -154,10 +154,11 @@ next round starts there, not from zero.
 
 **Money and flow**
 
-1. `accounts.html`: the five cash-first flows (payroll, loan repayment, agent
-   settlement, trip cash, asset sale) should be one database function each,
-   the way the counter sale is now, so a lost signal cannot leave a cash line
-   without its counterpart. The message is honest now; the write is still two.
+1. ~~`accounts.html`: the five cash-first flows (payroll, loan repayment, agent
+   settlement, trip cash, asset sale) should be one database function each.~~
+   **Done**: the trip's cash in 0138 (`trip_cash_count`); wages and rent, a
+   loan repaid or received, an asset bought, sold or gone, and an agent
+   settled in 0141 (section 7, the third follow-up).
 2. ~~`sales.html` / `manager.html` / `accounts.html` receive-payment: three to
    five sequential writes with no transaction.~~ **Done in 0140**:
    `receive_payment` is the one write all three apps call (section 7, the
@@ -384,3 +385,20 @@ receipt, no debt touched), Esther took 1,000,000 on account for Lubowa
 Builders. `test/audit-0140.test.js` pins the function and the wiring;
 `test/_fake-receive-payment.js` mirrors it for the app tests, which read the
 same rows as before. The three apps lost 211 lines of hand-rolled writes.
+
+**The third follow-up: the treasurer's six cash-first actions (0141).**
+Wages and rent, a loan repaid, a loan received, an asset bought, an asset
+sold or gone, and an agent settled each wrote the cash line first and the
+row it belonged to second, with nothing holding the two together. `pay_dues`,
+`repay_loan`, `receive_loan`, `buy_asset`, `dispose_asset` and
+`settle_agent` do each in one transaction, with the owner's log line, and
+hand the phone back the rows they wrote. Probed as Esther on the rig (inside
+a rolled-back transaction): Musa's October wages as a Salaries & Wages line
+with the due raised and paid; a 2,000,000 loan in net of 50,000 fees and
+180,000 repaid on it; a generator bought for 1,850,000 and sold for
+1,500,000, the sale line and the disposal on the asset; an agent settled with
+200,000 cash onto their order and a 60,000 claim paid from it. The screen's
+"… is in the book, but the rest did not save" can no longer happen on these
+six; `addCash` remains for the single-line actions (an expense, other income,
+a transfer). `test/audit-0141.test.js` pins it; the Accounts app test's fake
+answers the six the way the database does.

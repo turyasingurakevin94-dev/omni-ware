@@ -5696,13 +5696,12 @@ ACT['slide:income'] = async () => {
   if (!needTask(a.kind === 'loan' ? 'loan.edit' : 'cash.income')) return render();
   try { S.busy = true;
     if (a.kind === 'loan') {
+      // One write (0141 receive_loan): the cash line net of fees, the loan, the owner's log.
       const lender = (a.lender || '').trim(), fees = Math.round(a.fees || 0);
-      const lid = await issueRowId('row:loan', (D().loans || []).reduce((m, l) => Math.max(m, Number(l.id) || 0), 0));
-      const cid = await addCash({ account: a.acct, type: 'receipt', category: 'Loan Received', amount: amt - fees, description: `${lender}${fees ? ` — ${n0(fees)} kept in fees` : ''}` });
-      const row = { id: lid, shop_id: S.shopId, lender, principal: amt, rate_pct: a.rate == null ? 20 : a.rate, method: 'reducing_balance', term_months: a.months || 12, fees, round_to: 1000, frequency: 'monthly', fee_per_instalment: 0, started_on: todayISO(), closed_on: null, notes: null, cash_txn_id: cid, payload: { repayments: [] } };
-      await insertRow('loans', row);
-      D().loans.push(rowToLoan(row)); booksChanged();
-      logDecision('loan.edit', `Loan received from ${lender}: ${n0(amt)} over ${a.months || 12} months`, { amount: amt, ref: { table: 'loans', id: lid } });
+      const r = await sb.rpc('receive_loan', { p_shop_id: S.shopId, p_row: { lender, principal: amt, ratePct: a.rate == null ? 20 : a.rate, termMonths: a.months || 12, fees }, p_account: a.acct });
+      if (r.error) throw r.error;
+      const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+      if (d.loan) D().loans.push(rowToLoan(d.loan)); booksChanged();
       FEEL.kaching(); toast(`The loan from ${lender} is in, and open to repay`);
     } else {
       const category = a.kind === 'owner' ? 'Owner Investment' : 'Other Income';
@@ -6223,27 +6222,17 @@ ACT.agents = () => { FEEL.open(); push('agents', {}); };
 ACT.agentpick = t => { topArgs().aid = t.dataset.v; FEEL.tick(); render(); };
 ACT['slide:agentsettle'] = async () => {
   const a = topArgs(); if (!needTask('agent.pay')) return render();
-  const due = agentsDue(), claims = due.claims.filter(c => String(c.agentId) === String(a.aid)), cash = due.cashIn.filter(o => String(o.agent.id) === String(a.aid));
   const ag = agentById(a.aid), nm = ag ? ag.name : 'agent';
   try { S.busy = true;
-    // Cash for each order, onto the order (agentPrepayConfirm).
-    for (const o of cash) {
-      const { row, q } = await rereadQuote(o.q.id), payload = row.payload || {};
-      const owed = Math.round(balanceDue(q)); if (!(owed > 0)) continue;
-      const cid = await addCash({ account: 'cash', type: 'receipt', category: 'Agent Payment', amount: owed, description: `Cash payment from ${nm} — order #${q.id}`, quoteId: q.id });
-      const payments = (payload.payments || []).concat([{ date: todayISO(), amount: owed, note: 'Cash', cashTxnId: cid }]);
-      const up = await sb.from('saved_quotes').update({ amount_paid: (Number(row.amount_paid) || 0) + owed, payload: { ...payload, payments, agentPaymentStatus: 'paid' } }).eq('shop_id', S.shopId).eq('id', q.id); if (up.error) throw up.error;
-    }
-    // Each claim paid (markClaimPaid), from cash when the agent nets it off, else the account picked.
-    const net = cash.reduce((s, o) => s + o.owed, 0) - claims.reduce((s, c) => s + c.amount, 0), from = net >= 0 ? 'cash' : (a.acct || 'cash');
-    for (const c of claims) {
-      const cid = await addCash({ account: from, type: 'payment', category: 'Agent Commission', amount: c.amount, description: `Bonus commission — ${nm} — ${claimMonthWord(c.month)}` });
-      const up = await sb.from('agent_commission_claims').update({ status: 'paid', paid_at: new Date().toISOString(), cash_txn_id: cid }).eq('shop_id', S.shopId).eq('id', c.id); if (up.error) throw up.error;
-      c.status = 'paid';
-    }
-    logDecision('agent.pay', `Settled with ${nm}: ${cash.length ? n0(cash.reduce((s, o) => s + o.owed, 0)) + ' cash in' : ''}${cash.length && claims.length ? ', ' : ''}${claims.length ? n0(claims.reduce((s, c) => s + c.amount, 0)) + ' commission paid' : ''}`, { amount: net, ref: { table: 'agents', id: a.aid } });
+    // One write (0141 settle_agent): the cash for each confirmed order onto the
+    // order (agentPrepayConfirm), each claim paid from cash when the agent nets
+    // it off what they brought, else from the account picked; the owner's log.
+    const r = await sb.rpc('settle_agent', { p_shop_id: S.shopId, p_agent_id: String(a.aid), p_account: a.acct || 'cash' });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    (d.claims || []).forEach(x => { const c = (D().claims || []).find(y => String(y.id) === String(x.id)); if (c) c.status = 'paid'; });
     await loadAll(); FEEL.kaching(); toast(`Settled with ${firstWord(nm)}`); a.aid = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ==================================================================
@@ -6417,18 +6406,17 @@ async function ensureDue(d){
 ACT['slide:payroll'] = async () => {
   const a = topArgs(), P = payrollMonth(); if (!needTask('payroll.run')) return render();
   const sel = P.dues.filter(x => a.sel[x.d.kind + ':' + x.d.refId] && P.bal(x.d) > 0);
-  let paid = 0;
+  if (!sel.length) return render();
   try { S.busy = true;
-    for (const x of sel) {
-      const d = await ensureDue(x.d), pay = Math.round(P.bal(d)); if (!(pay > 0)) continue;
-      const kind = CB().DUE_KINDS[d.kind] || CB().DUE_KINDS.wage, nm = CB().dueName(d);
-      const cid = await addCash({ account: a.acct, type: 'payment', category: kind.cashCategory, amount: pay, description: `${kind.label} — ${nm} — ${CB().periodLabel(d.period)}` });
-      d.payments = (d.payments || []).concat([{ date: todayISO(), amount: pay, account: a.acct, cashTxnId: cid }]); d.paid = (Number(d.paid) || 0) + pay;
-      const up = await sb.from('dues').update({ paid: d.paid, payload: dueRow(d).payload }).eq('shop_id', S.shopId).eq('id', d.id); if (up.error) throw up.error;
-      paid += pay; logDecision('payroll.run', `Paid ${kind.label.toLowerCase()}: ${nm}, ${CB().periodLabel(d.period)} — ${n0(pay)}`, { amount: pay, ref: { table: 'dues', id: d.id } });
-    }
-    booksChanged(); FEEL.kaching(); toast(`Paid ${n0(paid)} in wages and rent`); a.sel = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+    // One write (0141 pay_dues): a due the console only imagined gets its row,
+    // each is paid its balance as Wages or Rent, logged for the owner.
+    const dues = sel.map(({ d }) => ({ id: d.virtual ? null : d.id, kind: d.kind, refId: String(d.refId), period: d.period, dueDate: d.dueDate || null, amount: d.amount, days: d.days == null ? null : d.days, rate: d.rate, basis: d.basis || null, notes: d.notes || null, absences: d.absences || [], proposed: d.proposed || [], pay: Math.round(P.bal(d)) }));
+    const r = await sb.rpc('pay_dues', { p_shop_id: S.shopId, p_dues: dues, p_account: a.acct });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    (d.dues || []).forEach(row => { const got = rowToDue(row), i = (D().dues || []).findIndex(x => String(x.id) === String(got.id) || (x.kind === got.kind && String(x.refId) === String(got.refId) && x.period === got.period)); if (i < 0) D().dues.push(got); else D().dues[i] = got; });
+    booksChanged(); FEEL.kaching(); toast(`Paid ${n0(Number(d.paid) || 0)} in wages and rent`); a.sel = null; render(); }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- one person's days: record or change an absence (addDueAbsence) ---- */
@@ -6537,15 +6525,13 @@ ACT.newloan = () => { if (!needTask('loan.edit')) return; FEEL.open(); push('inc
 ACT['slide:loanrepay'] = async () => {
   const a = topArgs(), l = (D().loans || []).find(x => String(x.id) === String(a.lid)), amt = Math.round(a.amt || 0); if (!l || !(amt > 0) || !needTask('loan.edit')) return render();
   try { S.busy = true;
-    const cur = await sb.from('loans').select('payload').eq('shop_id', S.shopId).eq('id', l.id).maybeSingle(); if (cur.error) throw cur.error;
-    const payload = (cur.data && cur.data.payload) || {};
-    const cid = await addCash({ account: a.acct, type: 'payment', category: 'Loan Repayment', amount: amt, description: `${l.lender} — repayment` });
-    const repayments = (payload.repayments || []).concat([{ date: todayISO(), amount: amt, note: '', cashTxnId: cid }]);
-    const up = await sb.from('loans').update({ payload: { ...payload, repayments } }).eq('shop_id', S.shopId).eq('id', l.id); if (up.error) throw up.error;
-    l.repayments = repayments; booksChanged();
-    logDecision('loan.edit', `Repaid ${l.lender} ${n0(amt)} from ${ACCT_WORD[a.acct]}`, { amount: amt, ref: { table: 'loans', id: l.id } });
+    // One write (0141 repay_loan): the Loan Repayment line, the repayment on the loan, the owner's log.
+    const r = await sb.rpc('repay_loan', { p_shop_id: S.shopId, p_loan_id: Number(l.id), p_amount: amt, p_account: a.acct });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.loan) Object.assign(l, rowToLoan(d.loan)); booksChanged();
     FEEL.stamp(); toast(`${n0(amt)} repaid to ${l.lender}`); a.amt = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 PAGE.assets = a => {
@@ -6580,14 +6566,13 @@ ACT['slide:assetsell'] = async () => {
   const a = topArgs(), x = (D().fixedAssets || []).find(y => String(y.id) === String(a.aid)); if (!x || !needTask('asset.edit')) return render();
   const proceeds = a.how === 'sold' ? Math.round(a.amt || 0) : 0, nbv = Math.round(CB().assetNBVAt(x, todayISO()));
   try { S.busy = true;
-    let cid = null;
-    if (proceeds > 0) cid = await addCash({ account: a.acct, type: 'receipt', category: 'Asset Sale', amount: proceeds, description: `Sold ${x.name}` });
-    const patch = { disposed_on: todayISO(), disposal_proceeds: proceeds > 0 ? proceeds : null, disposal_cash_txn_id: cid, notes: [x.notes, a.how === 'stolen' ? 'Stolen' : a.how === 'gone' ? 'Thrown away' : ''].filter(Boolean).join(' · ') || null };
-    const up = await sb.from('fixed_assets').update(patch).eq('shop_id', S.shopId).eq('id', x.id); if (up.error) throw up.error;
-    Object.assign(x, { disposedOn: patch.disposed_on, disposalProceeds: patch.disposal_proceeds, disposalCashTxnId: cid, notes: patch.notes || '' }); booksChanged();
-    logDecision('asset.edit', `${x.name}: ${a.how === 'sold' ? 'sold for ' + n0(proceeds) : a.how === 'stolen' ? 'stolen' : 'thrown away'} (on the books at ${n0(nbv)})`, { amount: proceeds, ref: { table: 'fixed_assets', id: x.id } });
+    // One write (0141 dispose_asset): the Asset Sale line when sold, the asset off the books, the owner's log.
+    const r = await sb.rpc('dispose_asset', { p_shop_id: S.shopId, p_asset_id: Number(x.id), p_how: a.how || 'sold', p_proceeds: proceeds, p_account: a.acct, p_nbv: nbv });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.asset) Object.assign(x, rowToAsset(d.asset)); booksChanged();
     FEEL.stamp(); toast(a.how === 'sold' ? `${x.name} sold · ${proceeds - nbv >= 0 ? 'gain' : 'loss'} ${n0(Math.abs(proceeds - nbv))}` : `${x.name} is off the books`); a.aid = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- an asset bought (asset.edit): index.html fa_save ---- */
@@ -6625,13 +6610,13 @@ ACT.assetyears = t => { const a = topArgs(); a.years = Math.max(1, Math.min(30, 
 ACT['slide:assetbuy'] = async () => {
   const a = topArgs(), cost = Math.round(a.amt || 0), name = (a.name || '').trim(); if (!(cost > 0) || !name || !needTask('asset.edit')) return render();
   try { S.busy = true;
-    const id = await issueRowId('row:fixed_asset', (D().fixedAssets || []).reduce((m, x) => Math.max(m, Number(x.id) || 0), 0));
-    const cid = await addCash({ account: a.acct, type: 'payment', category: 'Equipment purchase', amount: cost, description: `${name} — ${a.cat}`, photo: a.photo });
-    const row = { id, shop_id: S.shopId, name, category: a.cat, cost, acquired_on: todayISO(), method: 'straight_line', life_months: (a.years || 5) * 12, rate_pct: null, salvage: 0, disposed_on: null, disposal_proceeds: null, notes: a.from ? 'From ' + a.from : null, cash_txn_id: cid, disposal_cash_txn_id: null, loan_id: null };
-    await insertRow('fixed_assets', row); D().fixedAssets.push(rowToAsset(row)); booksChanged();
-    logDecision('asset.edit', `Bought ${name} (${a.cat}) for ${n0(cost)} from ${ACCT_WORD[a.acct]}, over ${a.years} years`, { amount: cost, ref: { table: 'fixed_assets', id } });
+    // One write (0141 buy_asset): the Equipment purchase line (with the receipt's photo), the asset, the owner's log.
+    const r = await sb.rpc('buy_asset', { p_shop_id: S.shopId, p_row: { name, category: a.cat, cost, years: a.years || 5, from: a.from || '' }, p_account: a.acct, p_photo: a.photo || null });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.asset) D().fixedAssets.push(rowToAsset(d.asset)); booksChanged();
     FEEL.stamp(); toast(`${name} is on the books at ${n0(cost)}`); pop(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- Today's strip: where the money stands, one tap to all of it ---- */
