@@ -13,11 +13,17 @@
 --    A generic name (Walk-in, Cash, Counter, Customer ...) is nobody now:
 --    never matched, never created; a balance still owed with no customer
 --    to owe it is refused (OWWLK) and goes back to the Manager.
--- 3. The hourly run told nobody what it skipped (the audit's section 4,
+-- 3. Fix 4: an order with a supplier's bill already recorded against it
+--    (the console's bill form, "for a sale") could never be invoiced:
+--    OWBIL refused it, by the button and the hourly run, so its stock never
+--    left the shelf and no debt was raised (Q-0531, Q-0539, Q-0540). That
+--    bill is kept now, and only the suppliers without one are billed: one
+--    bill per supplier per order.
+-- 4. The hourly run told nobody what it skipped (the audit's section 4,
 --    item 3). Each order it cannot invoice pushes the Manager once a day:
 --    a price to set (price.approve), anything else (invoice.make).
 --
--- ow_invoice_core is 0136's, with the three marked changes (0138:).
+-- ow_invoice_core is 0136's, with the marked changes (0138:).
 -- Applied by hand after 0136. Safe to run twice.
 --
 -- CHECK AFTERWARDS:
@@ -115,10 +121,8 @@ begin
       case when ow_order_unpriced(p_shop_id, items, presets) = 1 then 'has' else 'have' end,
       case when ow_order_unpriced(p_shop_id, items, presets) = 1 then 'it' else 'them' end using errcode = 'OWTPC';
   end if;
-  if exists (select 1 from purchase_invoices b where b.shop_id = p_shop_id and b.quote_id = p_quote_id
-              and coalesce(b.payload ->> 'voided', 'false') <> 'true') then
-    raise exception 'Supplier bills for % are raised already.', inv_label using errcode = 'OWBIL';
-  end if;
+  -- 0138: a supplier bill already on the order (the console's "a supplier's bill ... for a sale")
+  -- is kept, and only the suppliers without one are billed below; it is no longer refused (OWBIL).
 
   -- orderIsBackdated: a late entry is invoiced on its own date.
   made := (ow_ts(coalesce(nullif(pay ->> 'createdAt', ''), pay ->> 'savedAt')) at time zone tz)::date;
@@ -176,6 +180,15 @@ begin
     if coalesce(sid, '') not in ('', '__stock__') and not (sid = any(sids)) then sids := sids || sid; end if;
   end loop;
   foreach sid in array sids loop
+    -- 0138: this supplier's bill for this order is on file already: keep it, raise no second one.
+    select b.id into bill_id from purchase_invoices b
+     where b.shop_id = p_shop_id and b.quote_id = p_quote_id and b.payload ->> 'supplierId' = sid
+       and coalesce(b.payload ->> 'voided', 'false') <> 'true'
+     order by b.id limit 1;
+    if found then
+      bills := bills || to_jsonb(bill_id);
+      continue;
+    end if;
     bill_items := '[]'::jsonb;
     for it in select e from jsonb_array_elements(out_items) e where e ->> 'supplierId' = sid loop
       select coalesce(jsonb_object_agg(k, it -> k), '{}'::jsonb) into base

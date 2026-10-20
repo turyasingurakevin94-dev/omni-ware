@@ -29,6 +29,8 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/ow_order_unpriced\(p_shop_id, items, presets\) > 0 then\s*raise exception[\s\S]*?errcode = 'OWTPC'/.test(core), 'a line still to price is refused (OWTPC)');
   t.check(core.indexOf("'OWTPC'") < core.indexOf('insert into purchase_invoices') && core.indexOf("'OWTPC'") < core.indexOf('ow_stock_move'),
     'before any bill is raised or any stock moves');
+  t.check(!/'OWBIL'/.test(core) && /b\.payload ->> 'supplierId' = sid[\s\S]*?if found then\s*bills := bills \|\| to_jsonb\(bill_id\);\s*continue;/.test(core),
+    'a supplier bill already on the order is kept and that supplier is not billed twice (fix 4: no more OWBIL)');
   t.check(/c\.id is null and client is not null and not ow_generic_client\(client\)/.test(core), 'a generic name is never matched or made a customer');
   t.check(/if c\.id is null and delta > 0 then\s*raise exception[\s\S]*?errcode = 'OWWLK'/.test(core), 'money owed with nobody to owe it is refused (OWWLK), not dropped');
   const prev = read('supabase/migrations/0136_counter_sale_one_write.sql');
@@ -37,8 +39,10 @@ const sql = raw.replace(/--[^\n]*/g, '');
   const was = strip(old.slice(0, old.indexOf('end $$;') + 7));
   const now = strip(core.slice(0, core.indexOf('end $$;') + 7))
     .replace(/ if ow_order_unpriced[\s\S]*?end if;/, '').replace(' and not ow_generic_client(client)', '')
-    .replace(/ if c\.id is null and delta > 0 then[\s\S]*?end if;/, '');
-  t.check(now === was, 'and is otherwise 0136\'s, line for line');
+.replace(/ if c\.id is null and delta > 0 then[\s\S]*?end if;/, '')
+    .replace(/ select b\.id into bill_id from purchase_invoices b[\s\S]*?continue; end if;/, '');
+  const wasNoBil = was.replace(/ if exists \(select 1 from purchase_invoices b where b\.shop_id = p_shop_id and b\.quote_id = p_quote_id and coalesce\(b\.payload ->> 'voided', 'false'\) <> 'true'\) then raise exception 'Supplier bills for % are raised already\.', inv_label using errcode = 'OWBIL'; end if;/, '');
+  t.check(wasNoBil !== was && now === wasNoBil, 'and is otherwise 0136\'s, line for line');
   const run = sql.slice(sql.indexOf('create or replace function ow_invoice_due_orders('));
   t.check(/perform ow_push\(r\.shop_id, 'invoice\.held'/.test(run) && /'invheld:' \|\| r\.id \|\| ':' \|\| v_code \|\| ':' \|\| ow_today\(\)/.test(run),
     'the hourly run pushes each order it skips, once a day');

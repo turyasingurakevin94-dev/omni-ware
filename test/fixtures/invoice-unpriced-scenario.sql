@@ -18,7 +18,7 @@ insert into staff(shop_id,id,name,role,user_id) values
 -- No default markup: a product with no markup of its own has no selling price.
 insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-111111111111','{}')
  on conflict (shop_id) do update set presets = excluded.presets;
-insert into suppliers(shop_id, id, name) values ('11111111-1111-1111-1111-111111111111','S1','Maria Building Materials');
+insert into suppliers(shop_id, id, name) values ('11111111-1111-1111-1111-111111111111','S1','Maria Building Materials'),('11111111-1111-1111-1111-111111111111','S2','Karddia');
 insert into products(shop_id,id,name) values
  ('11111111-1111-1111-1111-111111111111','P1','BB Silicone'),('11111111-1111-1111-1111-111111111111','P2','MEGGO Handles');
 insert into prices(id, shop_id, product_id, supplier_id, retail, unit) values
@@ -45,11 +45,20 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid
  (9504,'11111111-1111-1111-1111-111111111111','Kato Construction','completed',false,0,
   json_build_object('client', json_build_object('name','Kato Construction'), 'customerId','C001', 'deliveredAt', (now() - interval '2 hours')::text, 'items', json_build_array(
     json_build_object('productId','P1','productName','BB Silicone','qty',1,'price',40000,'sellPrice',50000,'unit','piece','supplierId','S1')))::jsonb),
+ -- fix 4: Maria's bill recorded on the console before invoicing, and a Karddia line too
+ (9507,'11111111-1111-1111-1111-111111111111','Kato Construction','completed',false,0,
+  json_build_object('client', json_build_object('name','Kato Construction'), 'customerId','C001', 'deliveredAt', (now() - interval '2 hours')::text, 'items', json_build_array(
+    json_build_object('productId','P1','productName','BB Silicone','qty',1,'price',40000,'sellPrice',50000,'unit','piece','supplierId','S1'),
+    json_build_object('productId','P2','productName','MEGGO Handles','qty',1,'price',10000,'sellPrice',13000,'unit','piece','supplierId','S2')))::jsonb),
  -- a short line settled to nothing, still with no price: not a line to bill
  (9506,'11111111-1111-1111-1111-111111111111','Walk-in','completed',false,50000,
   json_build_object('client', json_build_object('name','Walk-in'), 'deliveredAt', (now() - interval '30 hours')::text, 'items', json_build_array(
     json_build_object('productId','P1','productName','BB Silicone','qty',1,'price',40000,'sellPrice',50000,'unit','piece','supplierId','S1'),
     json_build_object('productId','P2','productName','Glass Door Locks','qty',0,'price',0,'unit','piece','supplierId','')))::jsonb);
+
+insert into purchase_invoices(id, shop_id, quote_id, date, payload) values
+ (7001,'11111111-1111-1111-1111-111111111111',9507,current_date,
+  '{"supplierId":"S1","supplierName":"Maria Building Materials","customerName":"Kato Construction","items":[{"productId":"P1","productName":"BB Silicone","qty":1,"price":40000}],"amountPaid":0,"payments":[],"voided":false}');
 
 create table _r(n serial, label text, expect text, got text);
 create function _try(label text, expect text, q text) returns void language plpgsql as $$
@@ -77,9 +86,11 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select _try('manager: invoice an order with a line still to price', 'refused: OWTPC', $q$select invoice_order('11111111-1111-1111-1111-111111111111', 9501)$q$);
 select _try('manager: invoice a walk-in that leaves money owed', 'refused: OWWLK', $q$select invoice_order('11111111-1111-1111-1111-111111111111', 9502)$q$);
 select _try('manager: invoice Kato''s order on credit', 'ok', $q$select invoice_order('11111111-1111-1111-1111-111111111111', 9504)$q$);
+select _try('manager: invoice an order with Maria''s bill already on file (fix 4)', 'ok', $q$select _is($c$(select r->'bills' @> '[7001]'::jsonb and jsonb_array_length(r->'bills') = 2 from (select invoice_order('11111111-1111-1111-1111-111111111111', 9507) r) x)$c$)$q$);
 reset role;
+select _try('check: Maria''s bill is kept, Karddia gets one, one bill per supplier', 'ok', $q$select _is($c$(select count(*) = 2 and count(distinct payload->>'supplierId') = 2 from purchase_invoices where quote_id = 9507) and exists(select 1 from purchase_invoices where id = 7001 and quote_id = 9507)$c$)$q$);
 select _try('check: nothing of 9501 or 9502 was written: not invoiced, no bills', 'ok', $q$select _is($c$not (select invoiced from saved_quotes where id=9501) and not (select invoiced from saved_quotes where id=9502) and not exists(select 1 from purchase_invoices where quote_id in (9501,9502))$c$)$q$);
-select _try('check: Kato owes the 50,000', 'ok', $q$select _is($c$(select debt from customers where id='C001') = 50000$c$)$q$);
+select _try('check: Kato owes the 50,000 and the 63,000', 'ok', $q$select _is($c$(select debt from customers where id='C001') = 113000$c$)$q$);
 
 -- ---- the hourly run (pg_cron: no login)
 set request.jwt.claim.sub = '';
