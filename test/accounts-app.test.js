@@ -111,7 +111,7 @@ function fakeDb(tb){
 /* ---------------- the page, in a sandbox ---------------- */
 const EXPORT = ['S', 'ACT', 'PAGE', 'D', 'loadAll', 'parseMoney', 'supplierKey', 'can', 'cbDayPosition', 'acctState', 'saveCount', 'closeDay', 'bookVariance', 'payBills', 'billDue', 'openBills', 'creditors', 'recordInvoiceSend', 'invoiceSent',
   'custAging', 'debtors', 'statementDue', 'summaryDebtors', 'summaryCreditors', 'TASK_WORDS', 'viewToday', 'viewOwed', 'viewBills', 'viewClose', 'billState', 'cameWord', 'inHandBy',
-  'CB', 'moneyPosition', 'payrollMonth', 'tripsToCount', 'topArgs', 'push', 'txnById'];
+  'CB', 'moneyPosition', 'payrollMonth', 'tripsToCount', 'topArgs', 'push', 'txnById', 'agingNoDate', 'owedRows', 'owedTotals', 'moneyStrip', 'weOweParts', 'dueSoonBills'];
 function loadPage(db){
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   const app = scripts.find(s => s.includes('function cbDayPosition'));
@@ -131,8 +131,9 @@ function loadPage(db){
   vm.runInContext(app + '\n;globalThis.__x = { ' + EXPORT.join(', ') + ' };', sandbox);
   return sandbox.__x;
 }
-async function page(){
-  const db = fakeDb(tables()), X = loadPage(db);
+async function page(edit){
+  const tb = tables(); if (edit) edit(tb);
+  const db = fakeDb(tb), X = loadPage(db);
   Object.assign(X.S, { shopId: SH, user: { id: 'u1', email: 'sarah@shop.ug' }, shopName: 'Mukwano', role: 'accounts' });
   await X.loadAll();
   return { X, db };
@@ -326,6 +327,48 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     const fa = db.tb.fixed_assets.find(a => a.name === 'Generator');
     t.check(fa && fa.life_months === 60 && fa.method === 'straight_line' && db.writes.filter(w => w[1] === 'cash_txns').pop()[2].category === 'Equipment purchase', 'an asset bought joins the assets and is booked as Equipment purchase');
     t.check(cashOk(), 'every cash line the treasurer writes is in a category the 0123 wall lets through');
+  }
+  /* ---------------- 7. the 19 Oct 2026 end-to-end test ---------------- */
+  {
+    // Fix 9: a log charge with no date is "no date", never aged 0 and never counted as new.
+    const { X } = await page(tb => {
+      tb.customers.push({ id: 'C3', shop_id: SH, name: 'Sadat', phone: '', location: '', debt: 70000 }, { id: 'C4', shop_id: SH, name: 'Ssendawula Sam', phone: '', location: '', debt: 50000 });
+      tb.customer_debt_log.push({ id: 31, shop_id: SH, customer_id: 'C3', date: null, type: 'charge', amount: 30000, quote_id: null }, { id: 32, shop_id: SH, customer_id: 'C3', date: iso(45), type: 'charge', amount: 40000, quote_id: null },
+        { id: 41, shop_id: SH, customer_id: 'C4', date: '', type: 'charge', amount: 50000, quote_id: null });
+    });
+    const c3 = X.D().customers.find(c => c.id === 'C3'), c4 = X.D().customers.find(c => c.id === 'C4');
+    const a3 = X.custAging(c3), a4 = X.custAging(c4);
+    t.check(a3.parts.b60 === 40000 && a3.parts.b30 === 0 && a3.unknown === 30000 && a3.oldest === 45, 'fix 9: a charge with no date is "no date" (30,000), not 0 days old; the dated one is 45 days');
+    t.check(a4.unknown === 50000 && a4.oldest === 0 && X.agingNoDate(a4) && !X.agingNoDate(a3), 'fix 9: a customer whose only charge has no date has no oldest age');
+    const tot = X.owedTotals();
+    t.check(tot.b30 === 150000 && tot.unknown === 80000 && tot.b60 === 120000, 'fix 9: undated debt never lands in "under 30"; it is its own "no date" total');
+    const owed = X.viewOwed();
+    t.check(/data-v="nodate"[\s\S]*?no date[\s\S]*?0\.08M/.test(owed) && /no date 80,000/.test(owed), 'fix 9: Who owes shows a "no date" segment and figure');
+    t.check(/Ssendawula Sam<\/span><span class="bx-sub ell"[^>]*>no date/.test(owed), 'fix 9: the row of someone with only undated debt reads "no date", not "oldest 0 days"');
+    X.S.ui.owesBand = 'nodate';
+    t.check(X.owedRows().map(c => c.id).sort().join() === 'C3,C4', 'fix 9: tapping "no date" lists who has undated debt');
+    X.S.ui.owesBand = null;
+    t.check(/30,000<\/span> of it has no date/.test(X.PAGE.account({ id: 'C3' })), 'fix 9: their account names the part with no date');
+  }
+  {
+    // Fix 10: a bill invoice_order raised (0138) carries payload.dueDate from the supplier's terms; Bills and Today read it.
+    const ahead = d => { const x = new Date(Date.now() + d * 864e5); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+    const { X } = await page(tb => tb.purchase_invoices.push({ id: 23, shop_id: SH, quote_id: 11, date: iso(27), payload: { supplierId: 'S1', supplierName: 'Steel & Tube', dueDate: ahead(3), items: [{ productId: 'P1', productName: 'Iron sheets', qty: 2, price: 30000 }], amountPaid: 0 } }));
+    const b = X.D().bills.find(x => x.id === 23);
+    t.check(b.dueDate === ahead(3) && X.billState(b).k === 'week', 'fix 10: an order\'s bill is due on its payload.dueDate, this week');
+    t.check(X.summaryCreditors().dueSoon === 360000 && X.dueSoonBills().some(x => x.id === 23), 'fix 10: it counts in "due this week" (with the late one)');
+    t.check(/<span class="m" style="font-size:22px;font-weight:600;">2<\/span>[\s\S]{0,200}?<span[^>]*>supplier bills due this week/.test(X.viewToday()), 'fix 10: Today counts 2 supplier bills due this week');
+  }
+  {
+    // Fix 11: Today's "We owe" names what it holds besides the bills, and its bills part is Bills' own "we owe".
+    const { X } = await page();
+    const p = X.moneyPosition(), parts = X.weOweParts(p), billsOwe = X.creditors().reduce((s, r) => s + r.due, 0);
+    const of = k => (parts.find(r => r[0] === k) || [k, 0])[1];
+    t.check(Math.abs(parts.reduce((s, r) => s + r[1], 0) - p.owe) < 1, 'fix 11: the parts add up to Today\'s "We owe"');
+    t.check(of('bills') === billsOwe && billsOwe === 405000 && of('loans') === p.loans && p.loans > 0, 'fix 11: its bills part is the Bills screen\'s "we owe" (405,000); the rest is the loan');
+    const strip = X.moneyStrip();
+    t.check(/we owe = bills <b class="m"[^>]*>405,000<\/b> \+ loans <b class="m"/.test(strip), 'fix 11: the Today bar says what the extra is: bills + loans');
+    t.check(X.viewBills().includes('405,000'), 'fix 11: Bills shows the same 405,000');
   }
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
