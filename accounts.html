@@ -2496,7 +2496,8 @@ function handoffs(){ return (D().handoffs || []); }
 function handoffById(id){ return handoffs().find(h => String(h.id) === String(id)) || null; }
 // Who passed it on: the staff row whose login made it, by first name.
 function handoffBy(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? firstWord(st.name) : 'The Buyer'; }
-function handoffSupplier(h){ const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
+// A round of stops (the Buyer's Plan the round) is one ask: "Karddia, Roto +2 · 4 stops".
+function handoffSupplier(h){ if (Array.isArray(h.p.supplierIds) && h.p.supplierIds.length > 1) return (h.p.supplier || h.p.supplierIds.length + ' suppliers') + ' · ' + h.p.supplierIds.length + ' stops'; const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
 function handoffWhen(h){ const iso = String(h.createdAt || '').slice(0, 10); return iso === todayISO() ? hm(Date.parse(h.createdAt)) : shortDay(iso); }
 function handoffCard(){
   const list = handoffs(); if (!list.length) return '';

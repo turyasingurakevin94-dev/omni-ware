@@ -1,4 +1,4 @@
--- 0144: Sourcing v2 -- two supplier records that are one supplier become
+-- 0145: Sourcing v2 -- two supplier records that are one supplier become
 -- one, and Sourcing sets how many prices it confirms a day.
 --
 -- The owner's decisions of 20 Oct 2026 (the v2 canvas):

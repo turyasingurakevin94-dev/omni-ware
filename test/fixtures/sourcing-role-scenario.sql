@@ -77,7 +77,7 @@ select _try('sourcing: touch stock', 'refused', $q$insert into stock(shop_id,key
 select _try('sourcing: a supplier bill', 'refused', $q$insert into purchase_invoices(shop_id,date,payload) values ('11111111-1111-1111-1111-111111111111',current_date,'{}')$q$);
 select _try('sourcing: add role_tasks rows', 'refused', $q$insert into role_tasks values ('sourcing','markup.set')$q$);
 
--- ---- 0144: two records that are one supplier, merged; prices a day set by Sourcing
+-- ---- 0145: two records that are one supplier, merged; prices a day set by Sourcing
 select _try('sourcing: a look-alike supplier', 'ok', $q$insert into suppliers(shop_id,id,name,phone) values ('11111111-1111-1111-1111-111111111111','S003','Namanve Sheets.','0701')$q$);
 select _try('sourcing: the look-alike''s price for an item the kept one lacks', 'ok', $q$insert into prices(shop_id,product_id,supplier_id,wholesale,date,price_source) values ('11111111-1111-1111-1111-111111111111','P002','S003',9000,current_date,'manual')$q$);
 select _try('sourcing: both have a price for the same item', 'ok', $q$insert into prices(shop_id,product_id,supplier_id,wholesale,date,price_source) values ('11111111-1111-1111-1111-111111111111','P001','S001',11000,current_date,'manual'),('11111111-1111-1111-1111-111111111111','P001','S003',99000,current_date,'manual')$q$);
