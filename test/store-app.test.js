@@ -81,7 +81,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, checkInTrip, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView, pickLines, heldForOrders, shelfAvailable, tripWho, lineShortNow };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, checkInTrip, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView, pickLines, heldForOrders, shelfAvailable, heldGone, tripWho, lineShortNow };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -288,6 +288,9 @@ const P = page(fakeDb({}));
     t.check(X.heldForOrders('P2', null) === 7 && X.shelfAvailable('P2', null) === 53, `fix 3: delivered and received lines of live, uninvoiced orders past Checking are held; drafts, invoiced, voided, cancelled, not-yet-received and no-supplier lines are not (60 on the shelf, ${X.heldForOrders('P2', null)} held, ${X.shelfAvailable('P2', null)} to sell)`);
     t.check(X.heldForOrders('P1', 0) === 40 && X.shelfAvailable('P1', 0) === 46, 'fix 3: a line sold by the bundle holds its pieces on the shelf (2 × 20 of 86)');
     t.check(X.shelfAvailable('P3', null) === 0, 'fix 3: available is never below nought');
+    // 0141: what has LEFT the shelf (packed, out, delivered) for orders not yet invoiced; a blind count expects the books less it.
+    X.D().savedQuotes.push(Q(orderRow(60, [it(1, 'P2', 2)], { pickingStatus: 'in_progress' }, { status: 'preparing' })));   // still being packed: on the shelf
+    t.check(X.heldGone('P2', null) === 7, 'a count expects the books less what packed, out or delivered orders took (not what Checking or Buying still waits on): ' + X.heldGone('P2', null));
     const stockTxt = X.PAGE.stock({ key: 'P2' }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
     t.check(/\b53\b/.test(stockTxt) && /7 held/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /delivered/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, with the part held for orders');
     const shelfTxt = X.viewShelf().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');

@@ -1182,6 +1182,23 @@ function heldIndex(){
 function promisedFor(pid, vi){ return heldIndex()[stockKey(pid, vi)] || []; }
 function heldForOrders(productId, variantIdx){ return promisedFor(productId, variantIdx).reduce((n, p) => n + p.n, 0); }
 function shelfAvailable(productId, variantIdx){ return Math.max(0, getStockQty(productId, variantIdx) - heldForOrders(productId, variantIdx)); }
+/* What has already LEFT the shelf for orders not yet invoiced: packed (picking
+   done), out, or delivered; at what was picked. The books still carry it, so a
+   count expects the books less this, and accepting the count adds it back
+   (0141 ow_held_gone, the same rule) so the invoice takes it off once. */
+function heldGone(productId, variantIdx){
+  const key = stockKey(productId, variantIdx); let n = 0;
+  (D().savedQuotes || []).forEach(q => {
+    if (!q || q.invoiced || q.voided || q.cancelledAt) return;
+    if (!(q.status === 'pending_delivery' || q.status === 'completed' || (q.status === 'preparing' && q.pickingStatus === 'done'))) return;
+    (q.items || []).forEach(it => {
+      if (!lineTakesShelf(it) || stockKey(it.productId, it.variantIdx) !== key) return;
+      const picked = it.pickStatus === 'short' ? Number(it.pickedQty) || 0 : Number(it.qty) || 0;
+      if (picked > 0) n += picked * shelfPackFor(it);
+    });
+  });
+  return n;
+}
 function stockItems(){
   return memo('items', () => {
     const seen = new Set(), out = [], aisles = {};
@@ -3006,7 +3023,8 @@ ACT.ctsave = () => {
   const { ct, x, L } = ctCur(), E = ct.entries[ct.i] || {};
   if (!L.some((_, k) => E[k] !== undefined && E[k] !== '')) return;
   ct.counts[ct.i] = Math.round(L.reduce((t, l, k) => t + (parseInt(E[k], 10) || 0) * l[2], 0) * 1e6) / 1e6;
-  ct.system[ct.i] = Number(D().stock[x.key]) || 0;  // taken now, shown only after the last item
+  // What the shelf should hold: the books less what has left for orders not yet invoiced (0141). Taken now, shown only after the last item.
+  ct.system[ct.i] = Math.max(0, (Number(D().stock[x.key]) || 0) - heldGone(x.productId, x.variantIdx));
   const last = Object.keys(ct.counts).length === ct.keys.length;
   if (last) { buzz([40, 60, 40, 60, 90]); sfxNotes([[523.25, 0, 0.4, 0.15], [659.25, 0.1, 0.4, 0.14], [783.99, 0.2, 0.7, 0.13]]); }
   else { buzz(30); sfxNotes([[880, 0, 0.1, 0.14], [1174.7, 0.07, 0.22, 0.11]]); }
