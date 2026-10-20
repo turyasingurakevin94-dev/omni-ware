@@ -298,6 +298,10 @@ the supplier price list automatically.
 - Everyone who asked is told.
 - **A line dropped at Checking** because nobody has it becomes a Sourcing
   request by itself, with the customer who asked.
+- **A line the client waits for** (the Buyer's "client waits", also how the
+  Buyer asks Sourcing to find a supplier for a line nobody sells) becomes a
+  Sourcing request the same way (0139). When Sourcing finds a supplier, the
+  Buyer who sent it gets a push (0144).
 - Agents' stock requests (`agent_requests`, kind `stock`) land there too.
 - Each day, **Sourcing confirms the owner's set number of supplier prices**
   (`presets.priceReview`), oldest first: still right, or the new figure.
@@ -517,6 +521,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0141 | The treasurer's cash-first actions as one write each: wages and rent (`pay_dues`), a loan repaid or received (`repay_loan`, `receive_loan`), an asset bought, sold or gone (`buy_asset`, `dispose_asset`), an agent settled (`settle_agent`); each writes the cash line, the row and the owner's log line together |
 | 0142 | A stock count counts delivered goods once: accepting it adds back what orders packed, out or delivered but not yet invoiced took off the shelf (`ow_held_gone`), so their invoices take it off the books once |
 | 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
+| 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
