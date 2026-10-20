@@ -29,6 +29,7 @@
  */
 const vm = require('vm');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
+const fakeReceivePayment = require('./_fake-receive-payment');
 
 const t = createReporter('sales app');
 const html = read('sales.html');
@@ -104,6 +105,8 @@ function fakeDb(tables){
       if (fn === 'next_row_id_blocks') { const k = a.p_kinds[0]; ids[k] = Math.max(ids[k], Number(a.p_floors[k]) || 0) + 1; return { data: { [k]: ids[k] }, error: null }; }
       if (fn === 'invoice_order') { const q = (tables.saved_quotes || []).find(r => Number(r.id) === Number(a.p_quote_id)); writes.push(['rpc', fn, a]); if (!q || q.status !== 'completed') return { data: null, error: { message: 'Only a delivered order is invoiced.' } }; q.invoiced = true; return { data: { ok: true, invoice: 'INV-' + String(q.id).padStart(4, '0') }, error: null }; }
       if (fn === 'next_entity_id') return { data: 'C' + String(++custN).padStart(3, '0'), error: null };
+      // 0139 receive_payment, as the database does it (test/_fake-receive-payment.js).
+      if (fn === 'receive_payment') { writes.push(['rpc', fn, a]); return fakeReceivePayment(tables, writes, k => ++ids[k], a, 'u1'); }
       // 0136 counter_sale, as the database does it: one write places, pays and invoices; a short shelf or a price under the shop's refuses or waits.
       if (fn === 'counter_sale') {
         writes.push(['rpc', fn, a]);

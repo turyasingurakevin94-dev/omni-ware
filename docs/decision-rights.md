@@ -106,6 +106,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes |
 | **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | yes |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
+| &nbsp;&nbsp;…as one write (`receive_payment`, 0139): the money spread oldest first or over the bills ticked, a receipt per bill, the bill's payments and share of the debt, the debt lowered and logged, the rest on account; nothing lands part-way | | | | | yes |
 | Send a statement | `statement.send` | Sales, Manager, Accounts | — | — | yes |
 
 ### Money: the treasurer
@@ -500,6 +501,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0136 | The audit of 19 Oct 2026, part one: the counter sale as one write (`counter_sale`), restock goods reaching the shelf (`receive_trip`), "cash first" holding until paid, phone and trip prices counting in the share, the restock hold on `restock_buys` (`hold_restock_buy`; `restock_lines` retired), a dropped line pushed to the salesperson (`line.dropped`), the invoice label past 9999 |
 | 0137 | The audit, part two: the indexes the apps' date windows, the live refresh and the hourly invoice run were missing |
 | 0138 | The audit, part three (one order driven through all five apps): row ids as one sequence per table (`ow_reserve_row_ids`, every table's identity sequence kept ahead), a trip's or a phone's price on the side it was bought on (`ow_price_side`), `price.changed` only when the line's price moved, a cash trip's money reaching the books (`trip_cash_count`, bills born paid by the trip), the invoice push (`order.invoiced`), and Accounts' payment guard (0123's bare array literal) |
+| 0139 | A customer's payment as one write (`receive_payment`): the receipts, the invoices' payments and share of the debt, the debt and its log, the rest on account, or one receipt on an order before its invoice; Sales, Manager and Accounts call it |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

@@ -168,7 +168,7 @@ function fnText(src, name){
   return d === 0 ? line : extractFunction(src, name, 'source');
 }
 const FROM_SALES = ['issueRowId', 'IX', 'memo', 'productById', 'nameParts', 'quoteItemSellPrice', 'goodsTotal', 'chargesTotal', 'quoteTotal', 'balanceDue', 'invoiceLabel', 'customerById', 'customerOrdersFor', 'outstandingInvoices',
-  'custTerms', 'custISO', 'custBillAge', 'custOpen', 'custLimit', 'custStmtRange', 'custStmtRows', 'custOpenCharges', 'custStmtRowDetail', 'custShopIdentity', 'custStmtPdfBytes', 'custRecordStatement', 'payPlan', 'insertRow', 'payNextPaymentId', 'payCashRow'];
+  'custTerms', 'custISO', 'custBillAge', 'custOpen', 'custLimit', 'custStmtRange', 'custStmtRows', 'custOpenCharges', 'custStmtRowDetail', 'custShopIdentity', 'custStmtPdfBytes', 'custRecordStatement', 'payPlan'];
 FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.check(a && a === b, `${n}() is the sales desk's own, word for word`); });
 
 (async () => {

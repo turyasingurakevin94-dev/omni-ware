@@ -940,7 +940,7 @@ async function loadAll(){
       unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, outOfStock: !!pr.out_of_stock, tiers: Array.isArray(pr.tiers) ? pr.tiers : [] })),
     stock: stockMap, stockLots: lotMap,
     savedQuotes: quotes.map(rowToQuote),
-    cashTxns: ((cashR && cashR.data) || []).map(t => ({ id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null })),
+    cashTxns: ((cashR && cashR.data) || []).map(rowToTxn),
     collectionTrips: trips.map(rowToTrip),
     targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
     statementsSent: (stmR && stmR.data) || [],
@@ -1282,7 +1282,6 @@ function payPlan(c, amount, picks){
   const over = Math.max(0, left - debt);
   return { bills, rest: left, loose, over, after: Math.max(0, debt - left), all: Math.max(debt0, sumDue + loose), oldest: open.length ? balanceDue(open[0]) : 0 };
 }
-function payNextPaymentId(payments){ return (payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1; }
 async function insertRow(table, row, optional){
   let r = await sb.from(table).insert(row);
   if (r.error && optional && /column|schema cache/i.test(r.error.message || '')) { const lean = { ...row }; optional.forEach(k => delete lean[k]); r = await sb.from(table).insert(lean); }
@@ -2643,6 +2642,8 @@ PAGE.pay = a => {
   </div>`;
 };
 PAGE.pay.bg = '#2A3350';
+// A cash line as the phone keeps it (boot, and a row a write hands back).
+function rowToTxn(t){ return { id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null }; }
 function payArgs(){ const t = S.stack[S.stack.length - 1]; return t && t.type === 'pay' ? t.args : null; }
 ACT['in:payamt'] = t => {
   const a = payArgs(); if (!a) return;
@@ -2657,76 +2658,28 @@ ACT.paymode = t => { const a = payArgs(); if (!a) return; const c = customerById
 ACT.paymethod = t => { const a = payArgs(); if (!a) return; a.method = t.dataset.m; FEEL.tick(); render(); };
 ACT.payreceipt = () => { const a = payArgs(); if (!a) return; a.receipt = !a.receipt; FEEL.tick(); render(); };
 
-async function payCashRow(ctx, amt, category, description, quoteId){
-  const id = await issueRowId('row:cash_txn', ctx.cashMax); ctx.cashMax = Math.max(ctx.cashMax, id);
-  await insertRow('cash_txns', { id, shop_id: S.shopId, date: ctx.date, account: ctx.method, type: 'receipt', category, amount: amt, description, time: ctx.time, quote_id: quoteId == null ? null : quoteId, entered_by: S.user ? String(S.user.id) : null }, ['entered_by']);
-  return id;
-}
-/* sales.html ACT['slide:pay'], a customer's payment: re-read what they owe
-   and each bill, spread the money oldest first, a receipt per bill, the
-   bill's payments and share of the debt, the debt lowered and logged. */
+/* sales.html ACT['slide:pay'], a customer's payment: one write (0139
+   receive_payment) re-reads what they owe, spreads the money oldest first,
+   writes a receipt per bill, the bills' payments and share of the debt, the
+   debt lowered and logged -- all or nothing. */
 ACT['slide:pay'] = async () => {
   const a = payArgs(); if (!a || S.paying || !can('payment.receive')) return;
   const c0 = customerById(a.id), amount = Math.round(Number(a.amt) || 0);
   if (!c0 || !(amount > 0)) return;
   S.paying = true; render();
-  const date = todayISO(), time = new Date().toTimeString().slice(0, 5), method = a.method || 'cash';
-  const done = []; let written = 0;
   try {
-    const fresh = await sb.from('customers').select('debt').eq('shop_id', S.shopId).eq('id', c0.id).maybeSingle();
-    if (fresh.error) throw fresh.error;
-    let debt = Number(fresh.data && fresh.data.debt) || 0; const debt0 = debt;
-    const plan = payPlan({ ...c0, debt }, amount, a.mode === 'pick' ? (a.picks || []) : null);
-    const ctx = { date, time, method, cashMax: D().cashTxns.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) };
-    let logMax = D().customers.reduce((m, c) => (c.debtLog || []).reduce((mm, l) => Math.max(mm, Number(l.id) || 0), m), 0);
-    const logRow = async (row) => {
-      const id = await issueRowId('row:debt_log', logMax); logMax = Math.max(logMax, id);
-      await insertRow('customer_debt_log', { id, shop_id: S.shopId, customer_id: c0.id, date, type: 'payment', ...row }, ['cash_txn_id', 'quote_id']);
-    };
-    for (const b of plan.bills) {
-      if (!(b.pay > 0)) continue;
-      const cur = await sb.from('saved_quotes').select('amount_paid, payload').eq('shop_id', S.shopId).eq('id', b.q.id).maybeSingle();
-      if (cur.error) throw cur.error;
-      const payload = (cur.data && cur.data.payload) || {};
-      const q = rowToQuote({ ...b.q, id: b.q.id, invoiced: true, amount_paid: cur.data ? cur.data.amount_paid : b.q.amountPaid, payload });
-      q.invoicedAt = b.q.invoicedAt; q.date = b.q.date;
-      const pay = Math.min(b.pay, balanceDue(q)); if (!(pay > 0)) continue;
-      const label = invoiceLabel(q), dueNow = balanceDue(q);
-      const cashTxnId = await payCashRow(ctx, pay, 'Debt Payment', `Payment — ${label}`, q.id); written += pay;
-      const prior = Array.isArray(payload.payments) ? payload.payments : [];
-      const payments = prior.concat([{ date, amount: pay, note: '', cashTxnId, method, id: payNextPaymentId(prior) }]);
-      const amountPaid = (Number(q.amountPaid) || 0) + pay;
-      const desired = Math.max(0, quoteTotal(q) - amountPaid), current = Number(payload.debtCharged) || 0;
-      const before = debt, after = Math.max(0, before + (desired - current)), applied = after - before;
-      const up = await sb.from('saved_quotes').update({ amount_paid: amountPaid, payload: { ...payload, payments, debtCharged: applied > 0 ? current : desired, customerId: c0.id } }).eq('shop_id', S.shopId).eq('id', q.id);
-      if (up.error) throw up.error;
-      if (applied < 0) {
-        await logRow({ amount: -applied, note: `Auto-sync — ${label}`, quote_id: q.id, cash_txn_id: null });
-        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
-        debt = after;
-      }
-      done.push({ quoteId: q.id, label, pay, cleared: pay >= dueNow, left: Math.max(0, dueNow - pay), total: quoteTotal(q) });
-    }
-    const rest = amount - done.reduce((s, d) => s + d.pay, 0);
-    if (rest > 0) {
-      const before = debt, after = Math.max(0, before - rest);
-      const cashTxnId = await payCashRow(ctx, rest, 'Debt Payment', `Payment — ${c0.name}`, null); written += rest;
-      if (before !== after) {
-        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
-        await logRow({ amount: before - after, note: '', cash_txn_id: cashTxnId, quote_id: null });
-        debt = after;
-      }
-      done.push({ label: 'On account', pay: rest, cleared: after === 0, left: after, onAccount: true });
-    }
+    const r = await sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: amount, p_method: a.method || 'cash', p_picks: a.mode === 'pick' ? (a.picks || []).map(Number) : null, p_order_id: null });
+    if (r.error) throw r.error;
+    const d = r.data || {};
+    (d.cashRows || []).forEach(row => { if (!D().cashTxns.some(x => String(x.id) === String(row.id))) D().cashTxns.push(rowToTxn(row)); });
     S.paying = false;
-    const p = { id: c0.id, name: c0.name, phone: c0.phone || c0.phone2 || '', amount, method, bills: done, before: debt0, after: debt, time, receipt: !!a.receipt };
+    const p = { id: c0.id, name: c0.name, phone: c0.phone || c0.phone2 || '', amount, method: d.method || a.method || 'cash', bills: d.bills || [], before: Number(d.before) || 0, after: Number(d.after) || 0, time: d.time || new Date().toTimeString().slice(0, 5), receipt: !!a.receipt };
     S.stack[S.stack.length - 1] = { type: 'paid', args: p };
     loadAll().then(render).catch(() => render());
     render(); FEEL.stamp(); playKaching();
   } catch (e) {
-    S.paying = false;
-    if (written > 0) { toast(`Stopped part-way: ${n0(written)} of ${n0(amount)} was recorded — ${(e && e.message) || e}. Tell Accounts before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
-    else { render(); toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000); }
+    S.paying = false; render();
+    toast(isNetworkError(e) ? 'No connection — nothing was recorded. Try again.' : 'Nothing was recorded: ' + (e.message || e), 6000);
   }
 };
 function receiptText(p){

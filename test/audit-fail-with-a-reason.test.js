@@ -53,9 +53,11 @@ t.check(/try\{ await api\('ask_pin', \{ phone: ph \}\); SI\.requested = true; SI
 // owner
 t.check(/const \{ error \} = await sb\.from\('decision_log'\)\.insert\(/.test(owner) && /toast\('Done — but the line for your log did not save: ' \+ \(\(e && e\.message\) \|\| e\), 6000\);/.test(owner), 'owner: a log line that did not save is said');
 
-// sales and manager partial payments
-t.check(/Stopped part-way: \$\{n0\(written\)\} of \$\{n0\(amount\)\} was recorded — \$\{\(e && e\.message\) \|\| e\}\. Tell Accounts before trying again\./.test(sales) && /The receipt for \$\{n0\(written\)\} was written but the order was not updated — \$\{\(e && e\.message\) \|\| e\}\./.test(sales), 'sales: a payment that stopped part-way says why');
-t.check(/Stopped part-way: \$\{n0\(written\)\} of \$\{n0\(amount\)\} was recorded — \$\{\(e && e\.message\) \|\| e\}\. Tell Accounts before trying again\./.test(manager), 'manager: the same');
+// sales and manager payments: one write since 0139, so a failure is whole and names its reason
+for (const [name, src] of [['sales', sales], ['manager', manager]]) {
+  t.check(!/Stopped part-way/.test(src) && /toast\(isNetworkError\(e\) \? 'No connection — nothing was recorded\. Try again\.' : 'Nothing was recorded: ' \+ \(e\.message \|\| e\), 6000\);/.test(src), `${name}: a payment that fails says nothing was recorded, and why`);
+}
+t.check(!/Stopped part-way/.test(accounts), 'accounts: the same');
 
 // the rule itself, mechanically: no write whose result is thrown away with an empty catch in the seven role apps
 for (const [name, src] of Object.entries({ sales, buyer, store, manager, accounts, owner, supplier })) {

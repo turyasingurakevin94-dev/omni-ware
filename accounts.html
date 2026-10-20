@@ -1332,13 +1332,6 @@ async function insertRow(table, row, optional){
   if (r.error && optional && /column|schema cache/i.test(r.error.message || '')) { const lean = { ...row }; optional.forEach(k => delete lean[k]); r = await sb.from(table).insert(lean); }
   if (r.error) throw r.error;
 }
-// index.html nextPaymentId: a payment's own number on its invoice.
-function payNextPaymentId(payments){ return (payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1; }
-async function payCashRow(ctx, amt, category, description, quoteId){
-  const id = await issueRowId('row:cash_txn', ctx.cashMax); ctx.cashMax = Math.max(ctx.cashMax, id);
-  await insertRow('cash_txns', { id, shop_id: S.shopId, date: ctx.date, account: ctx.method, type: 'receipt', category, amount: amt, description, time: ctx.time, quote_id: quoteId == null ? null : quoteId, entered_by: S.user ? String(S.user.id) : null }, ['entered_by']);
-  return id;
-}
 
 /* ==================================================================
    Who is signed in, which shop, and the books the owner's app reads
@@ -1383,6 +1376,8 @@ function rowToBill(pi){
   return { id: pi.id, quoteId: pi.quote_id, date: pi.date, customerName: '', supplierId: null, supplierName: '', items: [], amountPaid: 0, payments: [], voided: false, dueDate: null,
     transport: 0, credits: [], ...(pi.payload || {}) };
 }
+// index.html nextPaymentId: a payment's own number on its invoice (the payment edit still numbers by hand).
+function payNextPaymentId(payments){ return (payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1; }
 function rowToTxn(t){ return { id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '',
   quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null, photo: t.photo || null,
   transferId: t.transfer_id == null ? null : Number(t.transfer_id), coversFrom: t.covers_from || null, coversTo: t.covers_to || null }; }
@@ -1853,56 +1848,15 @@ async function recordInvoiceSend(q, via){
    ================================================================== */
 async function recordPayment(c0, amount, method, picks){
   if (!can('payment.receive')) throw new Error('recording a payment needs “Record payments in” — ask the owner to switch it on.');
-  const date = todayISO(), time = new Date().toTimeString().slice(0, 5);
-  const done = []; let written = 0;
-  try {
-    const fresh = await sb.from('customers').select('debt').eq('shop_id', S.shopId).eq('id', c0.id).maybeSingle();
-    if (fresh.error) throw fresh.error;
-    let debt = Number(fresh.data && fresh.data.debt) || 0; const debt0 = debt;
-    const plan = payPlan({ ...c0, debt }, amount, picks);
-    const ctx = { date, time, method, cashMax: D().cashTxns.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) };
-    let logMax = D().customers.reduce((m, c) => (c.debtLog || []).reduce((mm, l) => Math.max(mm, Number(l.id) || 0), m), 0);
-    const logRow = async (row) => {
-      const id = await issueRowId('row:debt_log', logMax); logMax = Math.max(logMax, id);
-      await insertRow('customer_debt_log', { id, shop_id: S.shopId, customer_id: c0.id, date, type: 'payment', ...row }, ['cash_txn_id', 'quote_id']);
-    };
-    for (const b of plan.bills) {
-      if (!(b.pay > 0)) continue;
-      const cur = await sb.from('saved_quotes').select('amount_paid, payload').eq('shop_id', S.shopId).eq('id', b.q.id).maybeSingle();
-      if (cur.error) throw cur.error;
-      const payload = (cur.data && cur.data.payload) || {};
-      const q = rowToQuote({ ...b.q, id: b.q.id, invoiced: true, amount_paid: cur.data ? cur.data.amount_paid : b.q.amountPaid, payload });
-      q.invoicedAt = b.q.invoicedAt; q.date = b.q.date;
-      const pay = Math.min(b.pay, balanceDue(q)); if (!(pay > 0)) continue;
-      const label = invoiceLabel(q), dueNow = balanceDue(q);
-      const cashTxnId = await payCashRow(ctx, pay, 'Debt Payment', `Payment — ${label}`, q.id); written += pay;
-      const prior = Array.isArray(payload.payments) ? payload.payments : [];
-      const payments = prior.concat([{ date, amount: pay, note: '', cashTxnId, method, id: payNextPaymentId(prior) }]);
-      const amountPaid = (Number(q.amountPaid) || 0) + pay;
-      const desired = Math.max(0, quoteTotal(q) - amountPaid), current = Number(payload.debtCharged) || 0;
-      const before = debt, after = Math.max(0, before + (desired - current)), applied = after - before;
-      const up = await sb.from('saved_quotes').update({ amount_paid: amountPaid, payload: { ...payload, payments, debtCharged: applied > 0 ? current : desired, customerId: c0.id } }).eq('shop_id', S.shopId).eq('id', q.id);
-      if (up.error) throw up.error;
-      if (applied < 0) {
-        await logRow({ amount: -applied, note: `Auto-sync — ${label}`, quote_id: q.id, cash_txn_id: null });
-        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
-        debt = after;
-      }
-      done.push({ quoteId: q.id, label, pay, cleared: pay >= dueNow, left: Math.max(0, dueNow - pay), total: quoteTotal(q) });
-    }
-    const rest = amount - done.reduce((s, d) => s + d.pay, 0);
-    if (rest > 0) {
-      const before = debt, after = Math.max(0, before - rest);
-      const cashTxnId = await payCashRow(ctx, rest, 'Debt Payment', `Payment — ${c0.name}`, null); written += rest;
-      if (before !== after) {
-        const cu = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', c0.id); if (cu.error) throw cu.error;
-        await logRow({ amount: before - after, note: '', cash_txn_id: cashTxnId, quote_id: null });
-        debt = after;
-      }
-      done.push({ label: 'On account', pay: rest, cleared: after === 0, left: after, onAccount: true });
-    }
-    return { name: c0.name, id: c0.id, phone: c0.phone || c0.phone2 || '', amount, method, bills: done, before: debt0, after: debt, time };
-  } catch (e) { e.partial = written; throw e; }
+  // One write (0139 receive_payment): the debt and each bill re-read and
+  // locked, a receipt per bill, the bills' payments and share of the debt,
+  // the debt lowered and logged, the rest on account -- all or nothing.
+  const r = await sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: Math.round(amount), p_method: method || 'cash', p_picks: picks && picks.length ? picks.map(Number) : null, p_order_id: null });
+  if (r.error) throw r.error;
+  const d = r.data || {};
+  (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+  S.loadedAt = Date.now(); saveSnapshot();
+  return { name: c0.name, id: c0.id, phone: c0.phone || c0.phone2 || '', amount: Math.round(amount), method: d.method || method, bills: d.bills || [], before: Number(d.before) || 0, after: Number(d.after) || 0, time: d.time || new Date().toTimeString().slice(0, 5) };
 }
 
 /* ==================================================================
@@ -3084,8 +3038,7 @@ ACT['slide:pay'] = async () => {
     loadAll().then(() => { if (S.stack.length && S.stack[S.stack.length - 1].type === 'paid') render(); }).catch(() => {});
   } catch (e) {
     S.busy = false;
-    if (e.partial > 0) { toast(`Stopped part-way: ${n0(e.partial)} of ${n0(a.amt)} was recorded — ${(e && e.message) || e}. Check the cash book before trying again.`, 9000); loadAll().then(render).catch(() => {}); }
-    else { render(); toast(failWord(e), 6000); }
+    render(); toast(failWord(e), 6000);
   }
 };
 function receiptText(p){

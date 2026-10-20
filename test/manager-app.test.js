@@ -28,6 +28,7 @@
  */
 const vm = require('vm');
 const { read, extractFunction, createReporter } = require('./_extract');
+const fakeReceivePayment = require('./_fake-receive-payment');
 
 const t = createReporter('manager app');
 const html = read('manager.html');
@@ -53,7 +54,7 @@ const same = (name, src, where) => {
 };
 ['goodsTotal', 'pricedView', 'chargeAmount', 'chargesTotal', 'cashTotal', 'creditCharge', 'quoteTotal', 'balanceDue', 'quoteItemSellPrice', 'lineHasRule', 'linePriceToConfirm',
   'effectiveMarkupRule', 'effectiveStockMarkupRule', 'applyRule', 'sellSideFor', 'productPriceRows', 'customerOrdersFor', 'outstandingInvoices',
-  'custTerms', 'custBillAge', 'custOldestAge', 'custOverdue', 'custLimit', 'custOverLimit', 'nmInvoiceSales', 'nmInvoicesIn', 'nmIsSale', 'salesTarget', 'payPlan', 'payNextPaymentId', 'insertRow', 'issueRowId',
+  'custTerms', 'custBillAge', 'custOldestAge', 'custOverdue', 'custLimit', 'custOverLimit', 'nmInvoiceSales', 'nmInvoicesIn', 'nmIsSale', 'salesTarget', 'payPlan', 'issueRowId',
   'supplierGroups', 'supplierTerms', 'confirmState'].forEach(n => same(n, salesSrc, 'sales.html'));
 same('orderStageOverdue', adminSrc, 'index.html');
 same('resetPickingProgress', workerSrc, 'shared-worker.js');
@@ -64,9 +65,9 @@ same('staffEligibleForRole', workerSrc, 'shared-worker.js');
   t.check(mine === theirs.replace("return b.metric === 'sales' &&", "return !b.who && b.metric === 'sales' &&"), "the shop's goal is the sales desk's, with one person's goal left out of it");
 }
 {
-  // The payment is the sales desk's customer payment, line for line.
-  const grab = (src, where) => { const i = src.indexOf("ACT['slide:pay'] = async"); if (i < 0) throw new Error('no slide:pay in ' + where); const j = src.indexOf('const rest = amount - done.reduce', i); return norm(src.slice(src.indexOf('const date = todayISO()', i), j)); };
-  t.check(grab(app, 'manager.html') === grab(salesSrc, 'sales.html'), 'a payment is spread and written exactly as the sales desk does it');
+  // The payment is the sales desk's customer payment: the same one write (0139 receive_payment), with the same arguments.
+  const grab = (src, where) => { const i = src.indexOf("ACT['slide:pay'] = async"); if (i < 0) throw new Error('no slide:pay in ' + where); const j = src.indexOf("sb.rpc('receive_payment'", i); if (j < 0) throw new Error('no receive_payment in ' + where); return norm(src.slice(j, src.indexOf('\n', j))); };
+  t.check(grab(app, 'manager.html') === grab(salesSrc, 'sales.html'), 'a payment is the one write the sales desk makes, with the same arguments');
 }
 
 /* ---------------- the fixture: one shop on a Thursday ---------------- */
@@ -135,7 +136,7 @@ function fakeDb(tables){
   };
   let nextId = 1000;
   return { writes, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb),
-    rpc: async (fn, args) => { if (fn !== 'next_row_id_blocks') return { data: null, error: { message: 'no rpc ' + fn } }; const k = args.p_kinds[0]; nextId = Math.max(nextId, Number(args.p_floors[k]) || 0) + 1; return { data: { [k]: nextId }, error: null }; } };
+    rpc: async (fn, args) => { if (fn === 'receive_payment') { writes.push(['rpc', fn, args]); return fakeReceivePayment(tables, writes, () => ++nextId, args, 'u1'); } if (fn !== 'next_row_id_blocks') return { data: null, error: { message: 'no rpc ' + fn } }; const k = args.p_kinds[0]; nextId = Math.max(nextId, Number(args.p_floors[k]) || 0) + 1; return { data: { [k]: nextId }, error: null }; } };
 }
 function page(db, data, role){
   const el = () => ({ innerHTML: '', textContent: '', value: '', children: [], style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, querySelector: () => null, querySelectorAll: () => [], appendChild() {}, remove() {}, focus() {} });
