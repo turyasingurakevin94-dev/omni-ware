@@ -2286,6 +2286,9 @@ function pushOpen(d){
     } else if (k === 'payment.ask') {
       const x = (D().payAsks || []).find(y => String(y.id) === id);
       go('today'); if (x && x.status === 'sent' && txnById(x.cashTxnId)) ACT.payaskfix({ dataset: { id: x.id } });
+    } else if (k === 'order.invoiced') {
+      // The Manager invoiced an order: send it (invoice.send).
+      go('today'); push('invoices', {});
     } else if (k === 'bill.paper') {
       // The Buyer's paper bill: its row on Today, and the bill screen filled from it. Recorded already: Bills.
       const h = handoffById(id);
@@ -6338,7 +6341,7 @@ PAGE.tripcash = a => {
       ${all.length > 1 ? `<div style="display:flex;gap:6px;overflow-x:auto">${all.map(x => `<button class="bx-chip" data-act="tripgroup" data-v="${esc(x.key)}" style="border:none;height:30px;padding:0 10px;${x === g ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${esc(firstWord((staffById(x.workerId) || {}).name || 'Trip'))} · <span class="m">${shortM(x.expected)}</span></button>`).join('')}</div>` : ''}
     </div>
     <div class="bx-dock">
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:#B3BCD2"><span>Into the cash drawer · <b class="m" style="color:#fff">${counted == null ? '—' : n0(counted)}</b></span><span>${Math.abs(diff) >= 1 ? 'short booked like a close' : 'nothing to book'}</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:#B3BCD2"><span>Into the cash drawer · <b class="m" style="color:#fff">${counted == null ? '—' : n0(counted)}</b></span><span>${g.paid ? n0(g.paid) + ' paid at the stops → the book' : 'nothing paid at the stops'}${Math.abs(diff) >= 1 ? ' · short booked like a close' : ''}</span></div>
       ${slideHTML('tripcash', counted == null ? 'Count what came back' : 'Slide to take in ' + n0(counted), 'in', { amber: true, disabled: counted == null || !can('trip.cash') })}
       ${logLine(`${managerName()[0].toUpperCase() + managerName().slice(1)} is told ${Math.abs(diff) >= 1 ? 'the ' + n0(Math.abs(diff)) : 'it agrees'} · the owner sees it in the log`)}</div>
   </div>`;
@@ -6348,16 +6351,22 @@ ACT.triprecount = () => { topArgs().counted = null; render(); const el = documen
 ACT.tripgroup = t => { replaceTop('tripcash', { key: t.dataset.v }); FEEL.tick(); };
 ACT['slide:tripcash'] = async () => {
   const a = topArgs(), g = tripsToCount().find(x => x.key === a.key) || tripsToCount()[0]; if (!g || a.counted == null || !needTask('trip.cash')) return render();
-  const counted = Math.round(a.counted), diff = counted - g.expected, who = staffById(g.workerId), nm = who ? who.name : 'the buyer';
+  const counted = Math.round(a.counted), diff = counted - g.expected;
+  // One write (0138 trip_cash_count): a Stock Purchase line per stop for what
+  // was paid there, the short/over line, the trips' count, the orders' bills
+  // marked paid by the trip, and the owner's log line.
   try { S.busy = true;
-    let cid = null;
-    if (Math.abs(diff) >= 1) cid = await addCash({ account: 'cash', type: diff < 0 ? 'payment' : 'receipt', category: diff < 0 ? CASH_SHORTAGE_CATEGORY : CASH_OVERAGE_CATEGORY, amount: Math.abs(diff), description: `${diff < 0 ? 'Short' : 'Over'} on ${poss(firstWord(nm))} trip cash — ${g.trips.map(t => t.id).join(', ')}` });
-    const count = { group: g.trips.map(t => t.id), given: g.given, paid: g.paid, expected: g.expected, counted, diff, cashTxnId: cid, by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString() };
-    for (const t of g.trips) { const up = await sb.from('collection_trips').update({ cash_count: count }).eq('shop_id', S.shopId).eq('id', t.id); if (up.error) throw up.error; t.cashCount = count; }
+    const r = await sb.rpc('trip_cash_count', { p_shop_id: S.shopId, p_trip_ids: g.trips.map(t => t.id), p_counted: counted });
+    if (r.error) throw r.error;
+    const res = r.data || {};
+    (res.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    g.trips.forEach(t => { t.cashCount = res.count || { counted, at: new Date().toISOString() }; });
+    (res.bills || []).forEach(x => { const b = (D().bills || []).find(y => String(y.id) === String(x.id)); if (b && !x.linked) { b.amountPaid = (Number(b.amountPaid) || 0) + (Number(x.amount) || 0); b.payments = (b.payments || []).concat([{ date: todayISO(), amount: Number(x.amount) || 0, note: 'Paid on trip', via: 'trip' }]); } });
     booksChanged();
-    logDecision('trip.cash', `${poss(nm)} trip cash: given ${n0(g.given)}, paid ${n0(g.paid)}, back ${n0(counted)}${Math.abs(diff) >= 1 ? ` — ${diff < 0 ? 'short' : 'over'} ${n0(Math.abs(diff))}, booked` : ', agrees'}`, { amount: diff, ref: { table: 'collection_trips', id: g.trips[0].id }, after: count });
-    (Math.abs(diff) >= 1 ? FEEL.short : FEEL.yes)(); toast(Math.abs(diff) >= 1 ? `Taken in · ${n0(Math.abs(diff))} ${diff < 0 ? 'short' : 'over'} booked` : 'Taken in · it agrees'); pop(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+    const paid = Number(res.paid) || 0;
+    (Math.abs(diff) >= 1 ? FEEL.short : FEEL.yes)();
+    toast(`Taken in · ${paid ? n0(paid) + ' paid at the stops is in the book' : 'nothing was paid at the stops'}${Math.abs(diff) >= 1 ? ` · ${n0(Math.abs(diff))} ${diff < 0 ? 'short' : 'over'} booked` : ' · it agrees'}`, 5000); pop(); }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ==================================================================

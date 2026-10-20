@@ -841,6 +841,8 @@ function rankedPriceRows(pid, vi){
 }
 // 59223 / 59229
 function tiersForKind(row, kind){ const pq = Number(row.packQty) || 0; return (Array.isArray(row.tiers) ? row.tiers : []).filter(t => kind === 'wholesale' ? (pq > 0 && t.minQty >= pq) : (pq === 0 || t.minQty < pq)); }
+// The side of the list a quantity buys on: wholesale from a pack up, else retail; the other side when that one is empty (0138 ow_price_side).
+function priceSideFor(row, units){ const pq = Number(row.packQty) || 0, nat = (pq > 0 && Number(units) >= pq) ? 'wholesale' : 'retail', oth = nat === 'wholesale' ? 'retail' : 'wholesale'; return row[nat] == null && row[oth] != null ? oth : nat; }
 function tieredUnitPrice(row, qty, kind){
   if (!row) return null;
   const base = row[kind], tiers = tiersForKind(row, kind);
@@ -2338,7 +2340,7 @@ ACT.pgo = async () => {
     let listed = null;
     if (a.phone) {
       const row = productPriceRows(it0.productId, it0.variantIdx).find(r => String(r.supplierId) === String(it0.supplierId));
-      if (row) listed = await sb.rpc('buyer_confirm_price', { p_shop_id: S.shopId, p_price_id: row.id, p_wholesale: each }).then(r => { if (r.error) throw r.error; row.wholesale = each; row.date = isoOf(new Date()); row.confirmedVia = 'phone'; saveSnapshot(); return true; }).catch(e => { a.listedWhy = (e && e.message) || String(e); return false; });
+      if (row) listed = await sb.rpc('buyer_confirm_price', { p_shop_id: S.shopId, p_price_id: row.id, p_wholesale: each, p_qty: Number(it0.qty) || null }).then(r => { if (r.error) throw r.error; row[priceSideFor(row, Number(it0.qty) || 0)] = each; row.date = isoOf(new Date()); row.confirmedVia = 'phone'; saveSnapshot(); return true; }).catch(e => { a.listedWhy = (e && e.message) || String(e); return false; });
     }
     S.busy = false;
     if (a.phone) { FEEL.yes(); toast('Confirmed for ' + supplierShort(it0.supplierId) + (listed ? ' · price list updated' : listed === false ? ' · the price list could not be updated (' + (a.listedWhy || 'no reason given') + ')' : ' · not on their price list') + (res.out && res.out.held ? ' · ' + orderHoldReason(res.q) : ''), 4500); if (res.out && res.out.moved) movedToast(res.q); }
@@ -2907,7 +2909,7 @@ async function pricesPaidToList(t){
     const r = await sb.rpc('trip_prices_to_list', { p_shop_id: S.shopId, p_trip_id: t.id });
     if (r.error) throw r.error;
     const today = isoOf(new Date());
-    tripLines(t).forEach(l => { if (l.gotPrice == null) return; const row = productPriceRows(l.productId, l.variantIdx == null ? null : l.variantIdx).find(x => String(x.supplierId) === String(t.supplierId)); if (row) { row.wholesale = Number(l.gotPrice); row.date = today; row.confirmedVia = 'trip'; } });
+    tripLines(t).forEach(l => { if (l.gotPrice == null) return; const row = productPriceRows(l.productId, l.variantIdx == null ? null : l.variantIdx).find(x => String(x.supplierId) === String(t.supplierId)); if (row) { row[priceSideFor(row, Number(l.qty) || 0)] = Number(l.gotPrice); row.date = today; row.confirmedVia = 'trip'; } });
     S.ui.listed[t.id] = Number(r.data) || 0; saveSnapshot();
   } catch (e) { S.ui.listed[t.id] = -1; }
 }

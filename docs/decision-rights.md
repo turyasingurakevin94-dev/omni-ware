@@ -315,6 +315,13 @@ handed in, **Accounts** counts the cash that came back against the cash given
 and what was paid at each stop (`trip.cash`). Any difference is booked the way a
 close difference is, and the Manager is told.
 
+The count is one write (`trip_cash_count`, 0138): what was paid at each stop
+becomes a Stock Purchase line in the cash book, the orders' supplier bills are
+marked paid by the trip (a bill the invoice raises later is born paid, and
+names the trip), the difference is the short or over line, and the owner's
+log gets the line. The cash given and brought back are not lines of their
+own: the book moves by what stayed at the suppliers.
+
 ### Push notifications are part of the system
 
 Every handoff in this file that waits for someone **sends that person a push**.
@@ -340,6 +347,11 @@ prices to confirm (Sourcing).
 0136 adds a line dropped at Checking, to the salesperson who took the order
 (`line.dropped`), and the Manager's hold and release of a restock line, to
 the Buyer (`restock.held`, `restock.released`, on `restock_buys`).
+
+0138 adds the invoice itself (`order.invoiced`): to Accounts to send it
+(`invoice.send`) and to the salesperson who took the order, with what is due
+or that it is paid. A price change (`price.changed`) now goes to the
+salesperson only when the price their line carries has moved.
 
 0134 adds the other four things the Buyer passes on (`buyer_handoffs`): a
 paper bill to record (Accounts, `bill.record`), a supplier's details to fix
@@ -487,6 +499,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0135 | A new customer's id past C999: invoicing (0119) and `next_entity_id` (0032) no longer cut C1000 to C100 |
 | 0136 | The audit of 19 Oct 2026, part one: the counter sale as one write (`counter_sale`), restock goods reaching the shelf (`receive_trip`), "cash first" holding until paid, phone and trip prices counting in the share, the restock hold on `restock_buys` (`hold_restock_buy`; `restock_lines` retired), a dropped line pushed to the salesperson (`line.dropped`), the invoice label past 9999 |
 | 0137 | The audit, part two: the indexes the apps' date windows, the live refresh and the hourly invoice run were missing |
+| 0138 | The audit, part three (one order driven through all five apps): row ids as one sequence per table (`ow_reserve_row_ids`, every table's identity sequence kept ahead), a trip's or a phone's price on the side it was bought on (`ow_price_side`), `price.changed` only when the line's price moved, a cash trip's money reaching the books (`trip_cash_count`, bills born paid by the trip), the invoice push (`order.invoiced`), and Accounts' payment guard (0123's bare array literal) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

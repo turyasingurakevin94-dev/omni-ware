@@ -373,7 +373,7 @@ const P = page(fakeDb({}));
     const q = X.rowToQuote(db.tables.saved_quotes[0]), rpc = db.writes.find(w => w[0] === 'rpc');
     t.check(q.items[0].price === 29000 && q.supplierConfirms.S2.state === 'confirmed' && q.supplierConfirms.S2.via === 'phone', '"they said it on the phone" re-prices the line and gives their yes on the new terms');
     t.check(q.status !== 'draft', 'and the order moves on');
-    t.check(rpc && rpc[1] === 'buyer_confirm_price' && rpc[2].p_price_id === 3 && rpc[2].p_wholesale === 29000, 'the price list is updated through buyer_confirm_price, never a direct write');
+    t.check(rpc && rpc[1] === 'buyer_confirm_price' && rpc[2].p_price_id === 3 && rpc[2].p_wholesale === 29000 && rpc[2].p_qty === q.items[0].qty, 'the price list is updated through buyer_confirm_price with the line\'s quantity (0138), never a direct write');
   }
   {
     const data = fixture();

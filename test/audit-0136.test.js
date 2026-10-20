@@ -99,7 +99,7 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
   const p3 = fn('saved_quotes_ow_push3');
   t.check(/perform ow_push\(new\.shop_id, 'line\.dropped', 'A line came off the bill'/.test(p3) && /taker, null, null, jsonb_build_object\('table', 'saved_quotes', 'id', new\.id\), 'dropped:' \|\| new\.id \|\| ':' \|\| i\)/.test(p3), 'line.dropped goes to takenBy, once per dropped line');
   t.check(/create trigger saved_quotes_ow_push3 after update on saved_quotes/.test(sql), 'as a trigger on the order');
-  t.check(/\['price\.decided', 'price\.changed', 'credit\.decided', 'line\.dropped'\]\.includes\(k\)/.test(sales), 'a tapped line.dropped opens the order in sales.html');
+  t.check(/\['price\.decided', 'price\.changed', 'credit\.decided', 'line\.dropped', 'order\.invoiced'\]\.includes\(k\)/.test(sales), 'a tapped line.dropped opens the order in sales.html');
 }
 
 /* ---------------- 7. the invoice label keeps every digit ---------------- */
