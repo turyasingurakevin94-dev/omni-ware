@@ -128555,15 +128555,12 @@ function receivablesAsAt(asOf){
 function payablesAsAt(asOf){
   const today = todayISO();
   if(!asOf || asOf >= today) return dashTotalCreditors() + consignmentOwedTotal();
-  /* Reached through the supplier list, the same way dashTotalCreditors
-     is. That rule loses an invoice whose supplier was deleted -- which
-     is deliberate elsewhere in the app, since a document pointing at a
-     deleted row has nowhere to appear -- and the point here is that BOTH
-     dates obey the same rule. Two sheets counting different sets of
-     invoices would show a movement between them that never happened. */
-  const known = new Set((data.suppliers||[]).map(s=> s.id));
+  /* Every open bill, as dashTotalCreditors counts them: its supplier on
+     file or a name only (the owner's call, 20 Oct 2026). The point is
+     that BOTH dates obey the same rule. Two sheets counting different sets
+     of invoices would show a movement between them that never happened. */
   return (data.purchaseInvoices||[])
-    .filter(pi=> !pi.voided && known.has(pi.supplierId) && String(pi.date||'') <= asOf)
+    .filter(pi=> !pi.voided && String(pi.date||'') <= asOf)
     .reduce((s,pi)=>{
       const paid = (pi.payments||[])
         .filter(p=> String(p.date||'') <= asOf)
@@ -136387,7 +136384,9 @@ function dashMonthlyBurn(){
   return out / Math.max(spanDays/30, 1/30);
 }
 function dashTotalDebtors(){ return data.customers.reduce((s,c)=>s+(Number(c.debt)||0),0); }
-function dashTotalCreditors(){ return data.suppliers.reduce((s,sup)=>s+creditorTotalOwed(sup.id),0); }
+// Every open bill counts, its supplier on file or a name only: money owed is owed (the owner's
+// call, 20 Oct 2026), so the balance sheet and Bills agree.
+function dashTotalCreditors(){ return (data.purchaseInvoices||[]).filter(pi=>!pi.voided).reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0); }
 /* HOW LONG A LINE HAS TO BE QUIET BEFORE IT IS DEAD. Sixty days is
    where this started and stays the default; it is the shop's own trade
    that decides, so it is a setting like every other threshold here. */
