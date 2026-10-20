@@ -145,7 +145,9 @@ const consoleSrc = read('sourcing-console.js');
 const BOARDS = ['Main', 'Asks', 'AsksDropped', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
   'MarketRun', 'AtShop', 'NewSupplier', 'RunDone', 'Spotted', 'Supplier', 'PriceIt', 'AddItem', 'Landed', 'Announce', 'TellAsked', 'Dropped', 'Profile',
   // Round 3: the hunt's quotes side by side moved to Quotes (Hunt is its way to the shelf).
-  'Quotes', 'Suppliers', 'Item', 'Search'];
+  'Quotes', 'Suppliers', 'Item', 'Search',
+  // v2: look-alike suppliers merged, and prices that look wrong.
+  'Twins', 'Fix'];
 BOARDS.forEach(b => t.check(html.includes(`SCREENS.${b} = {`), `the ${b} board is a screen`));
 ['Main', 'Hunts', 'Prices', 'Suppliers'].forEach(b => {
   const start = html.indexOf(`SCREENS.${b} = {`), end = html.indexOf('SCREENS.', start + 10);

@@ -952,7 +952,7 @@ function rowToQuote(q){ return { id: q.id, status: q.status || 'draft', voided: 
 
 async function loadAll(){
   const soft = (p) => p.catch(() => []);
-  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR, handoffs] = await Promise.all([
+  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR, handoffs, keptSup, keptPrice] = await Promise.all([
     selectAll('sourcing_leads'), selectAll('suppliers'), selectAll('products'), selectAll('prices'), selectAll('saved_quotes'),
     soft(selectAll('follow_ups')), soft(selectAll('rival_prices')), soft(selectAll('customers')), soft(selectAll('staff')), soft(selectAll('agents')),
     soft(selectAll('agent_requests', 'id', q => q.eq('kind', 'stock'))), soft(selectAll('product_links')), soft(selectAll('stock', 'key')),
@@ -960,6 +960,10 @@ async function loadAll(){
     sb.from('decision_log').select('*').eq('shop_id', S.shopId).gte('at', new Date(Date.now() - 31 * DAY).toISOString()).order('at', { ascending: false }).limit(500),
     // The Buyer's fixes to a supplier's details (0125 buyer_handoffs), still open.
     soft(selectAll('buyer_handoffs', 'id', q => q.eq('kind', 'sourcing_fix').eq('status', 'open'))),
+    // "Not the same" (Twins) and "No, it's right" (Fix) are kept for good,
+    // not only the 31 days above: read those two tasks' lines with no window.
+    soft(Promise.resolve(sb.from('decision_log').select('*').eq('shop_id', S.shopId).eq('task', 'supplier.edit').order('at', { ascending: false }).limit(2000))),
+    soft(Promise.resolve(sb.from('decision_log').select('*').eq('shop_id', S.shopId).eq('task', 'price.list').order('at', { ascending: false }).limit(2000))),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -980,7 +984,8 @@ async function loadAll(){
     stock: stockMap,
     handoffs: (handoffs || []).filter(h => h.kind === 'sourcing_fix' && h.status === 'open')
       .map(h => ({ id: h.id, kind: h.kind, ref: h.ref || null, payload: h.payload || {}, status: h.status, createdBy: h.created_by || null, createdAt: h.created_at })),
-    log: ((logR && logR.data) || []).map(x => ({ id: x.id, at: x.at, by: x.by, byName: x.by_name || '', role: x.role || '', task: x.task, what: x.what, amount: x.amount == null ? null : Number(x.amount), ref: x.ref || null, before: x.before || null, after: x.after || null })),
+    log: ((logR && logR.data) || []).concat([keptSup, keptPrice].flatMap(r => ((r && r.data) || []).filter(x => x.after && (x.after.keptApart || x.after.keptAsIs))))
+      .filter((x, i, all) => all.findIndex(y => y.id === x.id) === i).map(x => ({ id: x.id, at: x.at, by: x.by, byName: x.by_name || '', role: x.role || '', task: x.task, what: x.what, amount: x.amount == null ? null : Number(x.amount), ref: x.ref || null, before: x.before || null, after: x.after || null })),
     presets: {
       defaultMarkup: presets.defaultMarkup || null,
       priceReview: presets.priceReview || {},
