@@ -81,7 +81,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, checkInTrip, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, checkInTrip, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView, pickLines, heldForOrders, shelfAvailable, tripWho, lineShortNow };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -266,6 +266,66 @@ const P = page(fakeDb({}));
     const visible = (all + X.viewToday() + X.viewShelf()).replace(/<[^>]*>/g, ' ');
     t.check(!/UGX|sell(ing)? ?price|margin|markup|\bcost\b|1,500/i.test(visible), 'no price, cost or margin is drawn anywhere');
     t.check(!/204/.test(X.PAGE.count({}).replace(/<[^>]*>/g, ' ')), 'the count screen never shows what the books say');
+  }
+
+  // 6. The end-to-end test of 19 Oct 2026 (the report's fixes 3, 5, 6, 13).
+  {
+    // Fix 3, rule A: what is on the shelf to sell is the shelf less what the
+    // invoices of live orders past Checking will take, in the shelf's unit.
+    const data = fixture(), X = page(fakeDb({}), data), Q = (r) => X.rowToQuote(JSON.parse(JSON.stringify(r)));
+    X.D().savedQuotes = [
+      Q(orderRow(50, [it(1, 'P2', 4)], { pickingStatus: 'done', deliveredAt: iso(NOW) }, { status: 'completed' })),                          // delivered, not invoiced: held
+      Q(orderRow(51, [it(1, 'P2', 3, { supplierId: 'S1', receivedAt: iso(NOW), receivedQty: 3 })], {}, { status: 'pending_delivery' })),      // bought in and received: held
+      Q(orderRow(52, [it(1, 'P2', 7, { supplierId: 'S1' })])),                                                                                  // bought in, not received: not yet on the shelf
+      Q(orderRow(53, [it(1, 'P2', 5)], {}, { status: 'draft' })),                                                                               // still Checking
+      Q(orderRow(54, [it(1, 'P2', 10)], {}, { status: 'completed', invoiced: true, invoiced_ts: iso(NOW) })),                                 // invoiced: the stock is gone already
+      Q(orderRow(55, [it(1, 'P2', 6)], {}, { voided: true })),
+      Q(orderRow(56, [it(1, 'P2', 6)], { cancelledAt: iso(NOW) })),
+      Q(orderRow(57, [it(1, 'P1', 2, { unit: 'bundle' })])),                                                                                    // 2 bundles of 20 off the shelf
+      Q(orderRow(58, [it(1, 'P3', 300)])),                                                                                                       // more than the shelf has
+      Q(orderRow(59, [it(1, 'P2', 5, { supplierId: '', clientWaits: true })])),                                                               // no supplier, client waits
+    ];
+    t.check(X.heldForOrders('P2', null) === 7 && X.shelfAvailable('P2', null) === 53, `fix 3: delivered and received lines of live, uninvoiced orders past Checking are held; drafts, invoiced, voided, cancelled, not-yet-received and no-supplier lines are not (60 on the shelf, ${X.heldForOrders('P2', null)} held, ${X.shelfAvailable('P2', null)} to sell)`);
+    t.check(X.heldForOrders('P1', 0) === 40 && X.shelfAvailable('P1', 0) === 46, 'fix 3: a line sold by the bundle holds its pieces on the shelf (2 × 20 of 86)');
+    t.check(X.shelfAvailable('P3', null) === 0, 'fix 3: available is never below nought');
+    const stockTxt = X.PAGE.stock({ key: 'P2' }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    t.check(/\b53\b/.test(stockTxt) && /7 held/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /delivered/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, with the part held for orders');
+    const shelfTxt = X.viewShelf().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    t.check(/0 on the shelf · 300 held for orders/.test(shelfTxt), 'fix 3: "Needs a look" says what is on the shelf to sell and what is held');
+
+    // Fix 5: a line with no supplier that waits for the client is never picked, so never short.
+    const row = orderRow(60, [it(1, 'P2', 4), it(2, 'P3', 5, { supplierId: '', clientWaits: true })]);
+    const { db, X: Y } = withOrder(row);
+    await Y.takeOrder(60);
+    const q = Y.D().savedQuotes[0];
+    t.check(Y.pickView(q).length === 1 && Y.pickLines(q)[0].i === 0 && db.tables.saved_quotes[0].payload.items[1].pickStatus === undefined, 'fix 5: the client-waits line is off the pick list and is not made pending');
+    Y.setPick(q, 0, 'done');
+    t.check(!!(await Y.finishPack(60)), 'fix 5: the order finishes packing without an answer for the client-waits line');
+    const p = db.tables.saved_quotes[0].payload;
+    t.check(p.pickingStatus === 'done' && p.items[0].pickStatus === 'done' && p.items[1].pickStatus === undefined && !p.items.some(i => i.pickStatus === 'short'), 'fix 5: it is never marked short, so no short pick reaches the Manager');
+
+    // Fix 6: a trip the supplier brings is named for the supplier, with a time.
+    const Z = page(fakeDb({}), { ...fixture(), suppliers: [{ id: 'S1', name: 'Maria Building Materials', location: 'Kawempe' }] });
+    Z.D().savedQuotes = [Q(orderRow(61, [it(1, 'P2', 4, { supplierId: 'S1' })], {}, { status: 'awaiting_goods', client_name: 'Walk-in' }))];
+    Z.D().collectionTrips = [
+      Z.rowToTrip({ id: 'T20', supplier_id: 'S1', status: 'collecting', assigned_worker_id: '__supplier__', assigned_at: iso(NOW - 36e5), accepted_at: null, lines: [{ orderId: 61, lineId: 1, productId: 'P2', productName: 'Cement Hima 50kg', unit: 'bag', qty: 4 }] }),
+      Z.rowToTrip({ id: 'T21', supplier_id: 'S1', status: 'collected', assigned_worker_id: '__supplier__', collected_at: iso(NOW - 6e5), lines: [{ orderId: 61, lineId: 1, productId: 'P2', productName: 'Cement Hima 50kg', unit: 'bag', qty: 4, gotQty: 4 }] }),
+    ];
+    t.check(Z.tripWho(Z.D().collectionTrips[0]) === 'Maria Building Materials', 'fix 6: tripWho names the supplier for a trip the supplier brings');
+    Z.S.stack = [{ type: 'receive', args: { id: 'T21' } }];
+    const yardTxt = [Z.viewToday(), Z.PAGE.movein({}), Z.PAGE.receive({ id: 'T21' })].join(' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    t.check(/Unload Maria's trip/.test(yardTxt) && !/the's|\bthe supplier\b|since\s*(·|$|<)/i.test(yardTxt) && !/since\s+[^0-9]/.test(yardTxt), 'fix 6: "Unload Maria\'s trip", never "the\'s", "the supplier" or a "since" with no time');
+
+    // Fix 13: the gate's short banner compares with what the line bills now.
+    const W = page(fakeDb({}), fixture());
+    W.D().savedQuotes = [
+      Q(orderRow(62, [it(1, 'P2', 0, { pickStatus: 'short', pickedQty: 0 }), it(2, 'P3', 2, { pickStatus: 'short', pickedQty: 2 })], { pickingStatus: 'done', pickSettle: { pick: 'went', lines: [{ idx: 0, ordered: 5, picked: 0 }, { idx: 1, ordered: 4, picked: 2 }] } })),
+      Q(orderRow(63, [it(1, 'P3', 4, { pickStatus: 'short', pickedQty: 2 })], { pickingStatus: 'done' })),
+    ];
+    const gate = id => { W.S.ui.gc = null; W.S.stack = [{ type: 'collect', args: { id } }]; return W.PAGE.collect({ id }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '); };
+    const g62 = gate(62), g63 = gate(63);
+    t.check(!/is 0, not 0/.test(g62) && !/is 2, not 2/.test(g62) && !/Cement Hima/.test(g62) && /0\/1 handed/.test(g62), 'fix 13: after "Bill what went" the line settled to nothing is not counted out and nothing reads "is 0, not 0"');
+    t.check(/Door hinges 4(&quot;|") is 2, not 4/.test(g63), 'fix 13: a short not yet settled still shows what went against what was ordered');
   }
 
   process.exit(t.done() ? 1 : 0);

@@ -1700,12 +1700,15 @@ function bandOf(age){ return BANDS.find(b => age >= b.lo && age <= b.hi) || BAND
 function custAging(c){
   return memo('aging', c.id, () => {
     const parts = { b30: 0, b60: 0, b90: 0, b90p: 0 }; let oldest = 0, known = 0;
-    custOpenCharges(c).forEach(ch => { const age = ch.date ? Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())) : 0; parts[bandOf(age).k] += ch.remaining; known += ch.remaining; if (age > oldest) oldest = age; });
-    // What the log cannot place (a debt from before the log) is named, not dropped.
+    // A charge with no date cannot be aged: it stays in "no date" with what the log does not cover, never counted as new.
+    custOpenCharges(c).forEach(ch => { if (!ch.date) return; const age = Math.max(0, daysBetween(String(ch.date).slice(0, 10), todayISO())); parts[bandOf(age).k] += ch.remaining; known += ch.remaining; if (age > oldest) oldest = age; });
+    // What the log cannot place (a debt from before the log, or a charge with no date) is named "no date", not dropped.
     const unknown = Math.max(0, (Number(c.debt) || 0) - known);
     return { parts, oldest, unknown };
   });
 }
+// All of what they owe is "no date": there is no oldest age to show.
+function agingNoDate(a){ return a.unknown > 0.5 && BANDS.every(b => a.parts[b.k] <= 0.5); }
 function debtors(){ return memo('debtors', '', () => D().customers.filter(c => (Number(c.debt) || 0) > 0.5)); }
 function owedTotals(){
   return memo('owedTot', '', () => {
@@ -1848,7 +1851,7 @@ async function recordInvoiceSend(q, via){
    ================================================================== */
 async function recordPayment(c0, amount, method, picks){
   if (!can('payment.receive')) throw new Error('recording a payment needs “Record payments in” — ask the owner to switch it on.');
-  // One write (0139 receive_payment): the debt and each bill re-read and
+  // One write (0140 receive_payment): the debt and each bill re-read and
   // locked, a receipt per bill, the bills' payments and share of the debt,
   // the debt lowered and logged, the rest on account -- all or nothing.
   const r = await sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: Math.round(amount), p_method: method || 'cash', p_picks: picks && picks.length ? picks.map(Number) : null, p_order_id: null });
@@ -1951,10 +1954,10 @@ async function paintDebtors(){
   pt(x, 'Who owes us', 30, 100, { w: 700, size: 28, col: '#fff' });
   pt(x, `${s.count} customers · biggest first`, 30, 124, { size: 14, col: '#B3BCD2' });
   pt(x, n0(s.total), 510, 104, { mono: true, size: 34, col: '#fff', align: 'right' });
-  pbands(x, 30, 144, 480, 12, BANDS.map(b => ({ v: s.bands[b.k], col: BAND_SOLID[b.k] })));
-  pt(x, BANDS.map(b => `${b.label} ${(s.bands[b.k] / 1e6).toFixed(1)}M`).join('   '), 30, 178, { size: 11, col: '#B3BCD2' });
+  pbands(x, 30, 144, 480, 12, BANDS.map(b => ({ v: s.bands[b.k], col: BAND_SOLID[b.k] })).concat(s.bands.unknown > 0.5 ? [{ v: s.bands.unknown, col: '#C9C4BA' }] : []));
+  pt(x, BANDS.map(b => `${b.label} ${(s.bands[b.k] / 1e6).toFixed(1)}M`).concat(s.bands.unknown > 0.5 ? [`no date ${(s.bands.unknown / 1e6).toFixed(1)}M`] : []).join('   '), 30, 178, { size: 11, col: '#B3BCD2' });
   let Y = ptable(x, 236, ['CUSTOMER', 'NEW ORDER', 'PAID', 'BALANCE'],
-    s.rows.map(r => ({ name: r.name, sub: `oldest ${r.oldest} d`, subCol: BANDS.find(b => b.k === r.band).ink, tag: r.tag, ini: r.ini, round: true, figs: [{ v: r.added }, { v: r.paid, col: '#0F6B43' }, { v: r.balance }] }))
+    s.rows.map(r => ({ name: r.name, sub: r.noDate ? 'no date' : `oldest ${r.oldest} d`, subCol: r.noDate ? '#767F91' : BANDS.find(b => b.k === r.band).ink, tag: r.tag, ini: r.ini, round: true, figs: [{ v: r.added }, { v: r.paid, col: '#0F6B43' }, { v: r.balance }] }))
       .concat(s.others ? [{ name: `+ ${s.others.n} more customers`, figs: [{ v: s.others.added, col: '#767F91' }, { v: s.others.paid, col: '#767F91' }, { v: s.others.balance, col: '#767F91' }] }] : []),
     { label: `All ${s.count} · today`, figs: [{ v: s.totAdded }, { v: s.totPaid, col: '#0F6B43' }, { v: s.total }] });
   pfoot(x, H, 'From the books, after closing', s.sellers);
@@ -2055,7 +2058,7 @@ function summaryDebtors(){
   const t = todayISO(), list = debtors().slice().sort((a, b) => b.debt - a.debt);
   const addedFor = c => customerOrdersFor(c.id).filter(q => q.invoiced && !q.voided && invoicedOn(q) === t).reduce((s, q) => s + quoteTotal(q), 0);
   const paidFor = c => (c.debtLog || []).filter(l => l.type === 'payment' && l.date === t).reduce((s, l) => s + l.amount, 0);
-  const all = list.map(c => { const a = custAging(c), band = bandOf(a.oldest).k, sp = sellerOf(c); return { name: c.name, balance: c.debt, added: addedFor(c), paid: paidFor(c), oldest: a.oldest, band, tag: sp ? WHO_TINT(sp) : tintFor(c.name), ini: sp ? initials(sp) : initials(c.name) }; });
+  const all = list.map(c => { const a = custAging(c), band = bandOf(a.oldest).k, sp = sellerOf(c); return { name: c.name, balance: c.debt, added: addedFor(c), paid: paidFor(c), oldest: a.oldest, noDate: agingNoDate(a), band, tag: sp ? WHO_TINT(sp) : tintFor(c.name), ini: sp ? initials(sp) : initials(c.name) }; });
   const rows = all.slice(0, 6), rest = all.slice(6), sum = (xs, k) => xs.reduce((s, r) => s + (r[k] || 0), 0);
   const bands = owedTotals(), sellers = [...new Set(all.map(r => r.ini))].slice(0, 4).join(' · ');
   return { when: new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + new Date().toTimeString().slice(0, 5), count: all.length, total: sum(all, 'balance'), bands,
@@ -2794,7 +2797,7 @@ function agingRing(c, size){
 function owedRows(){
   const k = S.ui.owesSort || 'old', band = S.ui.owesBand;
   let list = debtors().slice();
-  if (band) list = list.filter(c => custAging(c).parts[band] > 0.5);
+  if (band) list = list.filter(c => (band === 'nodate' ? custAging(c).unknown : custAging(c).parts[band]) > 0.5);
   if (k === 'promised') list = list.filter(c => promiseFor(c.id));
   if (k === 'limit') list = list.filter(c => custLimit(c) > 0 && c.debt > custLimit(c));
   const q = String(S.ui.owesQ || '').trim().toLowerCase();
@@ -2811,8 +2814,8 @@ function viewOwed(){
     <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:26px;font-weight:700;letter-spacing:-.02em">Who owes <span class="m" style="font-size:16px;color:var(--navyInk2)">${debtors().length}</span></span><button class="bx-circle" data-act="invoices" aria-label="Invoices">${ic('doc', 20)}</button></div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">Owed to the shop, everyone</span><span class="m" style="font-size:26px;font-weight:600">${n0(tot.all)}</span></div>
-      <div role="img" aria-label="${BANDS.map(b => b.label + ' ' + n0(tot[b.k])).join(', ')}" style="display:flex;gap:3px;height:14px">${BANDS.map((b, i) => tot[b.k] > 0 ? `<i class="a-grow" style="flex:${tot[b.k]};border-radius:${i === 0 ? '999px 3px 3px 999px' : i === 3 ? '3px 999px 999px 3px' : '3px'};background:${b.col}"></i>` : '').join('')}${tot.unknown > 0.5 ? `<i style="flex:${tot.unknown};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.2) 0 3px,rgba(255,255,255,.08) 3px 6px)"></i>` : ''}</div>
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px">${BANDS.map(b => `<button data-act="owesband" data-v="${b.k}" aria-pressed="${S.ui.owesBand === b.k}" style="border:none;background:${S.ui.owesBand === b.k ? 'rgba(255,255,255,.12)' : 'transparent'};border-radius:10px;padding:4px;text-align:left;color:#fff;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--navyInk)"><i style="width:7px;height:7px;border-radius:999px;background:${b.col}"></i>${b.label}</span><span class="m" style="font-size:13px;font-weight:600">${(tot[b.k] / 1e6).toFixed(2)}M</span></button>`).join('')}</div>
+      <div role="img" aria-label="${BANDS.map(b => b.label + ' ' + n0(tot[b.k])).join(', ')}${tot.unknown > 0.5 ? ', no date ' + n0(tot.unknown) : ''}" style="display:flex;gap:3px;height:14px">${BANDS.map((b, i) => tot[b.k] > 0 ? `<i class="a-grow" style="flex:${tot[b.k]};border-radius:${i === 0 ? '999px 3px 3px 999px' : i === 3 ? '3px 999px 999px 3px' : '3px'};background:${b.col}"></i>` : '').join('')}${tot.unknown > 0.5 ? `<i style="flex:${tot.unknown};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.2) 0 3px,rgba(255,255,255,.08) 3px 6px)"></i>` : ''}</div>
+      <div style="display:grid;grid-template-columns:repeat(${tot.unknown > 0.5 ? 5 : 4},minmax(0,1fr));gap:4px">${BANDS.concat(tot.unknown > 0.5 ? [{ k: 'nodate', label: 'no date', col: 'repeating-linear-gradient(135deg,rgba(255,255,255,.2) 0 3px,rgba(255,255,255,.08) 3px 6px)' }] : []).map(b => `<button data-act="owesband" data-v="${b.k}" aria-pressed="${S.ui.owesBand === b.k}" style="border:none;background:${S.ui.owesBand === b.k ? 'rgba(255,255,255,.12)' : 'transparent'};border-radius:10px;padding:4px;text-align:left;color:#fff;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--navyInk)"><i style="width:7px;height:7px;border-radius:999px;background:${b.col}"></i>${b.label}</span><span class="m" style="font-size:13px;font-weight:600">${((b.k === 'nodate' ? tot.unknown : tot[b.k]) / 1e6).toFixed(2)}M</span></button>`).join('')}</div>
     </div>
     <label class="bx-search">${ic('search', 19, 'style="color:var(--navyInk)"')}<input id="owes_q" data-in="owesq" type="search" placeholder="Name, phone or place" value="${esc(S.ui.owesQ || '')}" aria-label="Find a customer"></label>
     <button data-act="statements" style="height:50px;border:none;border-radius:16px;background:var(--red);color:#fff;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;box-shadow:0 8px 18px rgba(201,58,48,.3)"><span aria-hidden="true" style="position:relative;width:26px;height:26px;flex:none"><i style="position:absolute;left:6px;top:0;width:18px;height:22px;border-radius:3px;background:rgba(255,255,255,.45)"></i><i style="position:absolute;left:2px;top:4px;width:18px;height:22px;border-radius:3px;background:#fff"></i></span><span style="flex:1;text-align:left;font-size:15px;font-weight:700">${stmtN ? `<span class="m">${stmtN}</span> statements ready to send` : 'Statements'}</span>${ic('chev', 18, 'style="stroke-width:2.2"')}</button>
@@ -2826,7 +2829,7 @@ function viewOwed(){
 function owedRow(c){
   const a = custAging(c), pr = promiseFor(c.id), l = lastStatement(c.id), over = custLimit(c) > 0 && c.debt > custLimit(c);
   const band = bandOf(a.oldest), bad = band.k === 'b90p';
-  let sub = `oldest <span class="m">${a.oldest}</span> days`;
+  let sub = agingNoDate(a) ? 'no date' : `oldest <span class="m">${a.oldest}</span> days`;
   if (pr) sub += ` · <span style="color:var(--sky)">promised ${pr.amount ? '<span class="m">' + n0(pr.amount) + '</span> ' : ''}${esc(shortDay(pr.promisedOn))}</span>`;
   else if (over) sub += ` · <span style="color:var(--amberInk)">over their limit</span>`;
   else if (!l) sub += ' · no statement yet';
@@ -2874,7 +2877,7 @@ PAGE.account = ({ id }) => {
     <div class="bx-body">
       <div class="bx-sec"><b>Invoices, and what paid them</b><span style="display:flex;gap:10px;font-size:11px"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--navy)"></i>paid</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--soft2);box-shadow:inset 0 0 0 1px #D9D4CB"></i>left</span></span></div>
       ${open.length || settled.length ? `<div class="bx-card" style="padding:0 14px">${(open.length > 8 && !(S.ui.acctAll === c.id) ? open.slice(0, 8) : open).map(q => invRow(q, false)).join('')}${open.length > 8 && S.ui.acctAll !== c.id ? `<button class="ac-more" data-act="acctall" data-id="${esc(c.id)}">${ic('down', 16)}<span>Show all <span class="m">${open.length}</span> open invoices</span><span class="m" style="margin-left:auto;color:var(--ink3)">+${n0(open.slice(8).reduce((s, q) => s + balanceDue(q), 0))}</span></button>` : ''}${settled.map(q => invRow(q, true)).join('')}</div>` : emptyCard('No invoices on file', 'What they owe came from before the invoices were kept here')}
-      ${custAging(c).unknown > 0.5 ? `<span class="bx-hint">${ic('clock', 14)}<span class="m">${n0(custAging(c).unknown)}</span> of it is from before the invoices were kept</span>` : ''}
+      ${custAging(c).unknown > 0.5 ? `<span class="bx-hint">${ic('clock', 14)}<span class="m">${n0(custAging(c).unknown)}</span> of it has no date</span>` : ''}
       <button class="bx-hint" data-act="propose" data-id="${esc(c.id)}" style="border:none;background:none;justify-content:center;color:var(--ink3);width:100%">${ic('lock', 13)}Void, credit note, limit, terms — ${esc(managerName())}<span style="color:var(--navy);font-weight:700;display:inline-flex;align-items:center;gap:2px">· ask ${ic('chev', 12)}</span></button>
     </div>
     <div class="bx-foot"><div class="row"><button class="bx-sq" data-act="stmt" data-id="${esc(c.id)}" aria-label="Statement">${ic('doc', 20)}</button><button class="bx-sq" data-act="promise" data-id="${esc(c.id)}" aria-label="Record a promise to pay">${ic('flag', 20)}</button>${can('payment.receive') ? `<button class="bx-btn red" data-act="receive" data-id="${esc(c.id)}">${ic('cash', 20)}Record a payment</button>` : `<button class="bx-btn ghost" aria-disabled="true">${ic('lock', 18)}Payments: owner</button>`}</div></div>
@@ -6632,12 +6635,20 @@ ACT['slide:assetbuy'] = async () => {
 };
 
 /* ---- Today's strip: where the money stands, one tap to all of it ---- */
+// What "We owe" is made of, so it reads against Bills' own "we owe": the
+// supplier bills (the same open bills), then what else the books owe.
+function weOweParts(p){
+  const cons = CB().consignmentOwedTotal();
+  return [['bills', p.suppliers - cons], ['consignors', cons], ['loans', p.loans]].filter(r => r[1] > 0.5);
+}
 function moneyStrip(){
-  let p; try { p = moneyPosition(); } catch (e) { console.warn(e); return ''; }
-  return `<button data-act="position" aria-label="Money position: in hand ${shortM(p.inHand)}, owed to us ${shortM(p.owedUs)}, we owe ${shortM(p.owe)}" class="bx-card" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;color:var(--ink);text-align:left">
+  let p, parts; try { p = moneyPosition(); parts = weOweParts(p); } catch (e) { console.warn(e); return ''; }
+  const extra = parts.some(r => r[0] !== 'bills');
+  return `<button data-act="position" aria-label="Money position: in hand ${shortM(p.inHand)}, owed to us ${shortM(p.owedUs)}, we owe ${shortM(p.owe)}${extra ? ': ' + parts.map(r => r[0] + ' ' + shortM(r[1])).join(', ') : ''}" class="bx-card" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;color:var(--ink);text-align:left">
     <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
       <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--ink2)"><span>In hand <b class="m" style="color:var(--ink)">${shortM(p.inHand)}</b></span><span>Owed to us <b class="m" style="color:var(--green)">${shortM(p.owedUs)}</b></span><span>We owe <b class="m" style="color:var(--crimson)">${shortM(p.owe)}</b></span></span>
-      <span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden"><i class="a-grow" style="flex:${Math.max(0, p.inHand)};background:var(--navy)"></i><i class="a-grow" style="flex:${p.owedUs};background:var(--mint)"></i><i class="a-grow" style="flex:${p.owe};background:#E5483D;opacity:.85"></i></span></span>
+      <span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden"><i class="a-grow" style="flex:${Math.max(0, p.inHand)};background:var(--navy)"></i><i class="a-grow" style="flex:${p.owedUs};background:var(--mint)"></i><i class="a-grow" style="flex:${p.owe};background:#E5483D;opacity:.85"></i></span>
+      ${extra ? `<span style="font-size:11px;font-weight:600;color:var(--ink3);text-align:right">we owe = ${parts.map(r => `${r[0]} <b class="m" style="color:var(--ink2)">${shortM(r[1])}</b>`).join(' + ')}</span>` : ''}</span>
     <span style="display:flex;flex-direction:column;align-items:flex-end;flex:none"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink3)">NET</span><span class="m" style="font-size:15px;font-weight:600;color:${p.net >= 0 ? 'var(--green)' : 'var(--crimson)'}">${p.net >= 0 ? '+' : '−'}${shortM(Math.abs(p.net))}</span></span>
     ${ic('chev', 14, 'style="color:#A9A398"')}</button>`;
 }

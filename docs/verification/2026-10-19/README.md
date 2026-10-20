@@ -159,7 +159,7 @@ next round starts there, not from zero.
    the way the counter sale is now, so a lost signal cannot leave a cash line
    without its counterpart. The message is honest now; the write is still two.
 2. ~~`sales.html` / `manager.html` / `accounts.html` receive-payment: three to
-   five sequential writes with no transaction.~~ **Done in 0139**:
+   five sequential writes with no transaction.~~ **Done in 0140**:
    `receive_payment` is the one write all three apps call (section 7, the
    second day's follow-up).
 3. `0119 ow_invoice_due_orders`: an order the hourly run skips (short pick
@@ -367,7 +367,7 @@ dispatching the click shows `askedAt` written).
 **Tests.** `test/audit-0138.test.js` pins all six; `test/buyer-app.test.js`
 and `test/audit-0136.test.js` were brought up to the new call and push list.
 
-**The follow-up: a payment as one write (0139).** The most-used money
+**The follow-up: a payment as one write (0140).** The most-used money
 action, a customer's payment, was three to five sequential writes in each of
 Sales, Manager and Accounts (the same code three times), with no transaction:
 a lost signal or a refused write between two of them (0138 item 5 was one)
@@ -381,6 +381,6 @@ rig: Grace paid 500,000 for Kyaligonza & Sons (200,000 cleared INV-901602,
 300,000 went on account, the debt fell from 3,400,000 to 2,900,000, the
 screen agreed), Grace took 100,000 on a draft order (one Invoice Payment
 receipt, no debt touched), Esther took 1,000,000 on account for Lubowa
-Builders. `test/audit-0139.test.js` pins the function and the wiring;
+Builders. `test/audit-0140.test.js` pins the function and the wiring;
 `test/_fake-receive-payment.js` mirrors it for the app tests, which read the
 same rows as before. The three apps lost 211 lines of hand-rolled writes.

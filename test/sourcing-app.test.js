@@ -169,6 +169,58 @@ t.check(/supabase\/functions|next_row_id_blocks/.test(html) && html.includes("sb
   t.check(!/markup/i.test(edit.replace(/\/\/.*$/gm, '')) && /logDecision\('product\.edit'/.test(edit), 'editing an item\'s details never writes a markup, and is logged under product.edit');
 }
 
+/* ---------------- 4c. the 19 Oct 2026 test: fixes 16 and 17 ---------------- */
+{
+  // Fix 16: Asks > From orders keeps the tab bar, its dock sits above it,
+  // and a found hunt with no price is never "Found · 0 quotes".
+  const start = html.indexOf('SCREENS.AsksDropped = {'), end = html.indexOf('SCREENS.AtShop = {', start);
+  const scr = html.slice(start, end);
+  t.check(/<nav aria-label="Sourcing"/.test(scr) && /nav: navVals\(\)/.test(scr), 'From orders carries the shared tab bar (fix 16)');
+  t.check(/position: absolute; left: 0; right: 0; bottom: calc\(84px \+ var\(--safe-b\)\); z-index: 20; background: #16203C/.test(scr) && !/position: absolute; left: 0; right: 0; bottom: 0; background: #16203C/.test(scr), 'the "All being hunted" dock sits above the tab bar, never over it (fix 16)');
+  const pill = (bg, ink) => bg + ink;
+  const mk = (lead, quotes) => compileScope([fnOf(html, 'adState', 'sourcing.html')], {
+    leadSuppliers: l => l.candidates, candidateHasPrice: c => !!c.price, leadFacts: l => ({ supplier: l.candidates.length > 0, importer: false }),
+    plural: (n, w) => n + ' ' + (n === 1 ? w : w + 's'), leadDaysInStage: () => 2,
+  }, ['adState']).adState;
+  const adState = mk();
+  const none = adState({ status: 'sourced', candidates: [{ name: 'A' }] })[0], two = adState({ status: 'sourced', candidates: [{ price: 1 }, { price: 2 }] })[0];
+  t.check(!/0 quotes/.test(none) && /no price yet/.test(none) && two === 'Found · 2 quotes', `a found hunt with no price says so, not "0 quotes" ("${none}" / "${two}") (fix 16)`);
+
+  // Fix 17: a hunt is linked to the catalogue product it names, plural or not.
+  const key = compileScope([fnOf(html, 'catalogueKey', 'sourcing.html')], {}, ['catalogueKey']).catalogueKey;
+  t.check(key('Bathroom Indicator Locks') === key('Bathroom indicator lock') && key('Butterfly Hinges') === key('Butterfly hinge') && key('Boxes of nails') === key('Box of nail'), 'a hunt\'s name matches its catalogue product, plural or singular (fix 17)');
+  t.check(key('Ridge cap G30 · red') !== key('Ridge cap G28') && key('PPR pipe 25mm · 4m') !== key('PPR pipe 20mm · 4m') && key('Glass') === 'glass', 'a different size or gauge is never the same product (fix 17)');
+  const names = ['msOf', 'isoOf', 'priceRowTiers', 'lineLanded', 'leadSuppliers', 'catalogueKey', 'leadCatalogueProduct', 'leadCatalogueEvidence'];
+  const day = d => { const x = new Date(Date.now() - d * 86400000); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+  const shop = {
+    products: [{ id: 'P7', name: 'Bathroom Indicator Lock' }, { id: 'P8', name: 'Butterfly Hinge' }, { id: 'P9', name: 'Door stopper' }],
+    suppliers: [{ id: 'S9', name: 'Maria Building Materials' }, { id: 'S3', name: 'Other' }],
+    prices: [{ id: 70, productId: 'P7', variantIdx: null, supplierId: 'S9', tiers: [{ minQty: 1, price: 2300 }], date: day(30) },
+      { id: 71, productId: 'P9', variantIdx: null, supplierId: 'S3', tiers: [{ minQty: 1, price: 900 }], date: day(30) },
+      { id: 72, productId: 'P8', variantIdx: null, supplierId: 'S3', tiers: [{ minQty: 1, price: 500 }], date: day(9), outOfStock: true }],
+    quotes: [{ id: 541, items: [{ productId: 'P8', supplierId: 'S9', qty: 6, receivedQty: 6, receivedAt: new Date().toISOString(), receivedPrice: 1800 }, { productId: 'P9', supplierId: 'S3', qty: 2, receivedQty: 0 }],
+      supplierConfirms: { S3: { state: 'none' } } }],
+  };
+  const sc = compileScope(names.map(n => fnOf(html, n, 'sourcing.html')), {
+    D: () => shop, productById: id => shop.products.find(p => p.id === id), supplierById: id => shop.suppliers.find(s => s.id === id),
+    adTried: q => Object.entries((q && q.supplierConfirms) || {}).filter(([, r]) => r.state !== 'confirmed').map(([sid]) => ({ sid })),
+  }, ['leadCatalogueProduct', 'leadCatalogueEvidence']);
+  const lock = { id: 'L1', name: 'Bathroom Indicator Locks', status: 'asked', requests: [], candidates: [] };
+  const hinge = { id: 'L2', name: 'Butterfly Hinges', status: 'asked', requests: [], candidates: [] };
+  const p7 = sc.leadCatalogueProduct(lock), p8 = sc.leadCatalogueProduct(hinge);
+  t.check(p7 && p7.id === 'P7' && p8 && p8.id === 'P8', `the 54-day hunts link to their products (${p7 && p7.id}, ${p8 && p8.id}) (fix 17)`);
+  const evL = sc.leadCatalogueEvidence(lock, p7), evH = sc.leadCatalogueEvidence(hinge, p8);
+  t.check(evL.length === 1 && evL[0].sid === 'S9' && evL[0].how === 'price' && evL[0].tiers[0].price === 2300, 'a supplier price on the list is evidence: Maria has it at 2,300 (fix 17)');
+  t.check(evH.length === 1 && evH[0].sid === 'S9' && evH[0].how === 'bought' && evH[0].tiers[0].price === 1800, 'a purchase that landed is evidence, and an out-of-stock row is not (fix 17)');
+  const dropped = { id: 'L3', name: 'Door stopper', status: 'asked', requests: [{ source: 'dropped', orderId: 541, at: new Date(Date.now() - 86400000).toISOString(), productId: 'P9' }], candidates: [] };
+  t.check(sc.leadCatalogueEvidence(dropped, sc.leadCatalogueProduct(dropped)).length === 0, 'a line dropped at Checking is not moved on by a price from before the drop, nor by a supplier who said no (fix 17)');
+  const run = extractFunction(html, 'huntsFromCatalogue', 'sourcing.html');
+  t.check(/hasTask\('sourcing\.lead'\)/.test(run) && /S\.busy/.test(run) && /stageGateBlock\(l, to\)/.test(run) && /logDecision\('sourcing\.lead'/.test(run), 'moving a hunt on from the books keeps the gates, waits for any save, and is logged for the owner under sourcing.lead (fix 17)');
+  t.check(/huntsFromCatalogue\(\)/.test(extractFunction(html, 'boot', 'sourcing.html')) && /loadAll\(\)\.then\(\(\) => \{ A\.redraw\(\); huntsFromCatalogue\(\); \}\)/.test(html), 'it runs after every load (fix 17)');
+  const list = extractFunction(html, 'listLead', 'sourcing.html');
+  t.check(/l\.productId && productById\(l\.productId\)/.test(list) && /c\.priceRowId/.test(list), 'listing a linked hunt adds to that product, and leaves a price already on the list as it is (fix 17)');
+}
+
 /* ---------------- 5. every screen draws ---------------- */
 let chromium = null;
 try { ({ chromium } = require('playwright')); } catch (_e) {}
@@ -207,6 +259,35 @@ if (!chromium) {
     return window.SX_WRITES.map(w => w.table + ':' + w.op).join(',');
   });
   t.check(/prices:upsert/.test(wrote) && /decision_log:insert/.test(wrote), `"Still right" writes the price row and the owner's log line (${wrote})`);
+  // Fix 16 in the browser: From orders shows the tab bar, the dock above it.
+  await page.evaluate(() => { A.tab('Asks'); A.go('AsksDropped', {}); });
+  await page.waitForTimeout(200);
+  const dock = await page.evaluate(() => {
+    const h = document.getElementById('sx_screen'), nav = h.querySelector('nav[aria-label="Sourcing"]');
+    const bar = [...h.querySelectorAll('div')].find(d => /being hunted|not hunted yet/.test(d.textContent) && getComputedStyle(d).position === 'absolute');
+    if (!nav || !bar) return { nav: !!nav, bar: !!bar };
+    return { nav: true, bar: true, gap: nav.getBoundingClientRect().top - bar.getBoundingClientRect().bottom, quotes0: /0 quotes/.test(h.innerText) };
+  });
+  t.check(dock.nav && dock.bar && dock.gap >= -1, `From orders: the tab bar shows and the dock ends where it starts (${JSON.stringify(dock)})`);
+  t.check(!dock.quotes0, 'From orders never says "0 quotes"');
+  // Fix 17 in the browser: a hunt for a product we sell, with a supplier
+  // price on file, moves to Priced and is linked; one bought today too.
+  const moved = await page.evaluate(async () => {
+    const d = A.data, now = new Date().toISOString();
+    d.products.push({ id: 'P077', name: 'Bathroom indicator lock', variants: [] }, { id: 'P078', name: 'Butterfly hinge', variants: [] });
+    d.prices.push({ id: 7701, productId: 'P077', variantIdx: null, supplierId: 'S002', tiers: [{ minQty: 1, price: 2300 }], date: now.slice(0, 10), unit: 'pc', packUnit: '', packQty: 0 });
+    d.quotes.push({ id: 2541, status: 'delivered', voided: false, items: [{ productId: 'P078', supplierId: 'S002', qty: 6, receivedQty: 6, receivedAt: now, receivedPrice: 1800 }] });
+    d.leads.push({ id: 'SRC-077', name: 'Bathroom Indicator Locks', status: 'asked', stageEnteredAt: Date.now() - 54 * 86400000, createdAt: now, requests: [], candidates: [] },
+      { id: 'SRC-078', name: 'Butterfly Hinges', status: 'looking', stageEnteredAt: Date.now() - 54 * 86400000, createdAt: now, requests: [], candidates: [] });
+    window.SX_WRITES.length = 0;
+    const n = await huntsFromCatalogue();
+    const a = d.leads.find(l => l.id === 'SRC-077'), b = d.leads.find(l => l.id === 'SRC-078');
+    const again = await huntsFromCatalogue();
+    return { n, again, a: [a.status, a.productId], b: [b.status, b.productId], writes: window.SX_WRITES.map(w => w.table + ':' + w.op).join(','), list: addItemExisting(a) && addItemExisting(a).id };
+  });
+  t.check(moved.n === 2 && moved.a.join() === 'priced,P077' && moved.b.join() === 'priced,P078', `hunts for products we sell link and move to Priced from the price list and from a purchase (${JSON.stringify(moved)})`);
+  t.check(/sourcing_leads:upsert/.test(moved.writes) && /decision_log:insert/.test(moved.writes) && moved.again === 0, `each move is saved and logged once (${moved.writes}; again ${moved.again})`);
+  t.check(moved.list === 'P077', 'putting a linked hunt in the catalogue adds to the product we already sell');
   await browser.close();
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

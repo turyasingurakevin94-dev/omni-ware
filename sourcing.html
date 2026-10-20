@@ -1089,6 +1089,58 @@ function findProductsByText(text, limit){
   return D().products.map(p => { const hay = searchTokens(p.name); const hit = tokens.filter(t => hay.some(h => h.includes(t) || t.includes(h))).length; return { p, hit: hit / tokens.length }; })
     .filter(x => x.hit >= 0.6).sort((a, b) => b.hit - a.hit).slice(0, limit || 4).map(x => x.p);
 }
+/* ---------------- a hunt for something we already sell ----------------
+   A hunt is linked to the catalogue product it names (productId): the
+   product a request already carries, else the one product whose name has
+   the same words (a plural counts as the one: "Locks" is "Lock"). */
+function catalogueKey(name){
+  const sing = w => w.length > 3 && /(s|x|z|ch|sh)es$/.test(w) ? w.slice(0, -2) : w.length > 3 && /[^s]s$/.test(w) ? w.slice(0, -1) : w;
+  return [...new Set(String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map(sing))].sort().join(' ');
+}
+function leadCatalogueProduct(l){
+  if (!l) return null;
+  if (l.productId && productById(l.productId)) return productById(l.productId);
+  const r = (l.requests || []).find(x => x.productId && productById(x.productId));
+  if (r) return productById(r.productId);
+  const want = catalogueKey(l.name);
+  if (!want) return null;
+  const hits = D().products.filter(p => catalogueKey(p.name) === want);
+  return hits.length === 1 ? hits[0] : null;
+}
+// A purchase that landed: the server's ow_line_received (0119).
+function lineLanded(it){ return !!it && String(it.receivedAt || '') !== '' && Number(it.receivedQty) > 0; }
+// Who the shop's own books say has it: a supplier price on the price list
+// (not out of stock), or a purchase of it that landed. For a line dropped
+// at Checking only what came after the drop counts, and never a supplier
+// who said no for that order (or on this hunt).
+function leadCatalogueEvidence(l, p){
+  if (!l || !p) return [];
+  const drops = (l.requests || []).filter(r => r.source === 'dropped' && !r.withdrawn);
+  const since = drops.length ? Math.max(...drops.map(r => msOf(r.at))) : 0, sinceDay = since ? isoOf(since) : '';
+  const saidNo = new Set();
+  drops.forEach(r => { const q = r.orderId != null ? D().quotes.find(x => String(x.id) === String(r.orderId)) : null; adTried(q).forEach(t => saidNo.add(String(t.sid))); });
+  leadSuppliers(l).filter(c => c.noStock && c.supplierId).forEach(c => saidNo.add(String(c.supplierId)));
+  const out = new Map();
+  D().prices.forEach(r => {
+    const sid = String(r.supplierId || '');
+    if (String(r.productId) !== String(p.id) || r.outOfStock || !sid || !supplierById(sid) || saidNo.has(sid)) return;
+    const tiers = priceRowTiers(r);
+    if (!tiers.length || (sinceDay && !(r.date && r.date >= sinceDay))) return;
+    const had = out.get(sid);
+    // The product's own row first (no variant), else the cheapest.
+    if (had && !(had.variantIdx != null && (r.variantIdx == null || tiers[0].price < had.tiers[0].price))) return;
+    out.set(sid, { sid, how: 'price', priceId: r.id, variantIdx: r.variantIdx, tiers, at: r.date ? r.date + 'T12:00:00' : null, unit: r.unit || '', packUnit: r.packUnit || '', packQty: Number(r.packQty) || 0 });
+  });
+  D().quotes.forEach(q => { if (q.voided) return; (q.items || []).forEach(it => {
+    const sid = String((it && it.supplierId) || '');
+    if (!it || String(it.productId) !== String(p.id) || !lineLanded(it) || !sid || sid === '__stock__' || !supplierById(sid) || out.has(sid)) return;
+    if (since && msOf(it.receivedAt) < since) return;
+    const price = Number(it.receivedPrice) || 0;
+    out.set(sid, { sid, how: 'bought', orderId: q.id, tiers: price > 0 ? [{ minQty: 1, price }] : [], at: it.receivedAt, unit: it.unit || '', packUnit: it.packUnit || '', packQty: Number(it.packQty) || 0 });
+  }); });
+  return [...out.values()];
+}
+
 // Where a request came from, in the console's words and the canvas's colours.
 const SOURCE_KIND = {
   sales: ['Sales', '#95530C'], sales_button: ['Sales', '#95530C'], 'sourcing.ask': ['Sales', '#95530C'],
@@ -1441,6 +1493,47 @@ async function moveLead(l, status){
   await saveLead(next);
   return next;
 }
+// After each load: every open hunt for something we already sell is linked
+// to it, and moves on by itself -- to Found when a supplier on file has it,
+// to Priced when one has a price or a purchase of it landed. Logged for
+// the owner (sourcing.lead). Never while a save is going.
+async function huntsFromCatalogue(){
+  if (!S.data || S.busy || huntsFromCatalogue.on || !hasTask('sourcing.lead')) return 0;
+  huntsFromCatalogue.on = true; S.busy = true; S.busyAt = Date.now();
+  let moved = 0;
+  try {
+    for (const l0 of openLeads()) {
+      const p = leadCatalogueProduct(l0);
+      if (!p) continue;
+      const ev = l0.status === 'priced' ? [] : leadCatalogueEvidence(l0, p);
+      if (String(l0.productId || '') === String(p.id) && !ev.length) continue;
+      const l = JSON.parse(JSON.stringify(l0));
+      l.productId = p.id;
+      ev.forEach(e => {
+        const c = candidateFor(l, supplierById(e.sid), {});
+        if (candidateHasPrice(c) || !e.tiers.length) return;
+        Object.assign(c, { tiers: e.tiers, quotedAt: e.at || new Date().toISOString(), unit: c.unit || e.unit, packUnit: c.packUnit || e.packUnit, packQty: Number(c.packQty) || e.packQty,
+          fromBooks: e.how === 'price' ? { priceId: e.priceId } : { orderId: e.orderId } });
+        if (e.how === 'price') c.priceRowId = e.priceId;
+      });
+      const to = !ev.length ? null : ev.some(e => e.tiers.length) && leadFacts(l).price ? 'priced' : 'sourced';
+      const from = l.status;
+      if (to && STAGES.indexOf(to) > STAGES.indexOf(from) && !stageGateBlock(l, to)) { l.status = to; l.stageEnteredAt = Date.now(); }
+      if (JSON.stringify(l) === JSON.stringify(l0)) continue;
+      await saveLead(l);
+      if (l.status !== from) {
+        moved++;
+        const who = ev.map(e => firstWord((supplierById(e.sid) || {}).name)).filter(Boolean).slice(0, 2).join(', ');
+        await logDecision('sourcing.lead', `“${l.name}” is ${p.name} in the catalogue — ${who} ${ev.some(e => e.how === 'bought') ? 'sold it to us' : 'has it'}; moved to ${STAGE_WORD[l.status]}`,
+          { ref: { table: 'sourcing_leads', id: l.id }, before: { status: from, productId: l0.productId || null }, after: { status: l.status, productId: p.id, suppliers: ev.map(e => e.sid) } });
+      }
+    }
+  } catch (e) { console.warn('huntsFromCatalogue', e); }
+  finally { S.busy = false; huntsFromCatalogue.on = false; }
+  if (moved) toast(`${plural(moved, 'hunt')} found in the catalogue — moved on`);
+  A.redraw();
+  return moved;
+}
 const DROP_REASONS = ['No supplier found', 'Minimum order too big', 'Rivals sell it cheaper', 'Asker went elsewhere'];
 async function dropLead(l, reason){
   if (l.status === 'listed') throw new Error('This one is already a product — move it back a step first.');
@@ -1490,7 +1583,7 @@ async function listLead(l, form){
   // A request for something we already sell (a dropped line) adds the
   // suppliers to that product rather than making a second one.
   const req = (l.requests || []).find(r => r.productId && productById(r.productId));
-  let product = req ? productById(req.productId) : null, made = false;
+  let product = (l.productId && productById(l.productId)) || (req ? productById(req.productId) : null), made = false;
   if (!product) {
     const id = await issueEntityId('product', 'P', D().products);
     product = { id, name, type: 'simple', category: String(form.category || '').trim(), subcategory: String(form.subcategory || '').trim(), notes: l.notes || '', image: l.image || null,
@@ -1507,6 +1600,9 @@ async function listLead(l, form){
     let sup = c.supplierId ? supplierById(c.supplierId) : D().suppliers.find(s => normName(s.name) === normName(c.supplierName));
     if (!sup) sup = await newSupplier({ name: c.supplierName, phone: c.phone, location: c.where, notes: `Found while sourcing ${name}.` });
     const tiers = candidateTiers(c).map(t => ({ minQty: Math.max(1, t.minQty), price: t.price }));
+    // A price taken from the price list (huntsFromCatalogue) is on it already.
+    const onList = c.priceRowId != null && D().prices.find(p => String(p.id) === String(c.priceRowId) && String(p.productId) === String(product.id));
+    if (onList && JSON.stringify(priceRowTiers(onList)) === JSON.stringify(tiers)) { written.push(onList); continue; }
     const pack = { unit: String(c.unit || form.unit || 'pc'), packUnit: String(c.packUnit || ''), packQty: Number(c.packQty) || 0 };
     const had = D().prices.find(p => p.productId === product.id && p.variantIdx == null && String(p.supplierId) === String(sup.id));
     const d = deriveWholesaleRetail(tiers, pack.packQty);
@@ -1867,7 +1963,7 @@ async function boot(){
   const snap = loadSnapshot(user.id);
   if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
   else splash(`<b>Opening the books…</b><span>${esc(S.shopName)}</span>`);
-  try { await loadAll(); if (!S.started) start(); else A.redraw(); }
+  try { await loadAll(); if (!S.started) start(); else A.redraw(); huntsFromCatalogue(); }
   catch (e) {
     if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000);
     else splash(`<b>Could not open the books</b><span>${esc(e.message || e)}</span><button type="button" onclick="location.reload()">Try again</button>`);
@@ -1955,7 +2051,7 @@ function start(){
   S.started = true;
   phonePush();
   A.tab('Main');
-  const refresh = () => loadAll().then(() => A.redraw()).catch(() => {});
+  const refresh = () => loadAll().then(() => { A.redraw(); huntsFromCatalogue(); }).catch(() => {});
   setInterval(() => { if (document.visibilityState === 'visible' && !S.busy) refresh(); }, 90000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000) refresh(); });
 }
@@ -1986,6 +2082,7 @@ function addItemPick(l){
 // A request for something we already sell (a dropped line) adds the
 // suppliers to that product (listLead does the same).
 function addItemExisting(l){
+  if (l.status !== 'listed' && l.productId && productById(l.productId)) return productById(l.productId);
   const r = (l.requests || []).find(x => x.productId && productById(x.productId));
   return r ? productById(r.productId) : null;
 }
@@ -2856,7 +2953,8 @@ function adState(l){
   if (l.voided) return ['Dropped', pill('#F1EEE8', '#5F6980')];
   if (l.status === 'listed') return ['On the shelf', pill('#E4F4EA', '#0F6B43')];
   if (l.status === 'priced') return ['Priced', pill('#E4F4EA', '#0F6B43')];
-  if (l.status === 'sourced' || f.supplier || f.importer) return ['Found · ' + plural(n, 'quote'), pill('#E4F4EA', '#0F6B43')];
+  // Found with no price yet is not "Found · 0 quotes": it waits on a quote.
+  if (l.status === 'sourced' || f.supplier || f.importer) return n ? ['Found · ' + plural(n, 'quote'), pill('#E4F4EA', '#0F6B43')] : ['Found · no price yet', pill('#FDEEE1', '#95530C')];
   if (l.status === 'looking') return ['Looking · ' + leadDaysInStage(l) + 'd', pill('#FDEEE1', '#95530C')];
   return ['not hunted yet', pill('#FBE5E2', '#8E2A22')];
 }
@@ -2878,7 +2976,7 @@ SCREENS.AsksDropped = {
     </div>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(110px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(210px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
     <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 18px; background: #16203C; color: #FFFFFF">
       <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #B3BCD2">DROPPED AT CHECKING · 30 DAYS</span><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; letter-spacing: -.03em">{{ lost }} <sc-if value="{{ hasUnpriced }}"><span style="font-size: 12px; font-weight: 600; color: #F5B26B; letter-spacing: 0">+ {{ unpriced }} unpriced</span></sc-if></span><span style="font-size: 12px; color: #B3BCD2">lost on <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ linesN }}</span> {{ linesWord }} · <span style="font-family: 'IBM Plex Mono', monospace; color: #FFFFFF">{{ itemsN }}</span> {{ itemsWord }}</span></span>
       <span role="img" aria-label="{{ barsLabel }}" style="display: flex; align-items: flex-end; gap: 4px; height: 40px">
@@ -2926,10 +3024,12 @@ SCREENS.AsksDropped = {
     </sc-if>
   </div>
 
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px calc(22px + var(--safe-b)); display: flex; align-items: center; gap: 12px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
+  <div style="position: absolute; left: 0; right: 0; bottom: calc(84px + var(--safe-b)); z-index: 20; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px 34px; display: flex; align-items: center; gap: 12px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
     <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">{{ barTitle }}</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ barSub }}</span></span>
     <sc-if value="{{ hasWaiting }}"><button type="button" onClick="{{ huntAll }}" disabled="{{ busy }}" style="height: 52px; padding: 0 18px; border: none; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex: none; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg>{{ huntWord }}</button></sc-if>
   </div>
+
+  <nav aria-label="Sourcing" class="sx-nav" style="position: absolute; left: 0; right: 0; bottom: 0; height: calc(84px + var(--safe-b)); padding-bottom: var(--safe-b); background: #FFFFFF; box-shadow: inset 0 1px 0 #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 96px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box; z-index: 30"><a href="Main.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"></path><path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M2.4 16.4h19.2M5.6 20.4h12.8" fill="none"></path></svg>Today</a><a href="Asks.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #16203C; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="#16203C" stroke="#16203C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6v.1" fill="none"></path></svg><sc-if value="{{ nav.hasAsks }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.asks }}</span></sc-if>Asks</a><a href="Spotted.dc.html" aria-label="Spotted something: photo, price, pack" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 4px #F7F5F2, 0 6px 20px rgba(201,58,48,.35)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></a><a href="Hunts.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h4V9H3zM10 18h4V5h-4zM17 18h4v-6h-4z"></path></svg>Hunts</a><a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4" fill="none"></circle></svg><sc-if value="{{ nav.hasPrices }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #F5B26B; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.prices }}</span></sc-if>Prices</a></nav>
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) { super(props); this.state = { reason: null }; }
@@ -3007,7 +3107,7 @@ SCREENS.AsksDropped = {
       });
       const w = waitingLeads.length;
       return {
-        busy: S.busy,
+        nav: navVals(), busy: S.busy,
         openN: open.length, waitingN: waitingKeys.size, waitingWord: waitingKeys.size === 1 ? 'client waiting' : 'clients waiting',
         newN: open.filter(l => l.status === 'asked').length + agentOpen.length, ordersN,
         lost: n0(lost), hasUnpriced: unpriced > 0, unpriced, linesN: recent.length, linesWord: recent.length === 1 ? 'line' : 'lines',

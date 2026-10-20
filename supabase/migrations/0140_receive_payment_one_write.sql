@@ -1,4 +1,4 @@
--- 0139: a customer's payment is one database write.
+-- 0140: a customer's payment is one database write.
 --
 -- sales.html, manager.html and accounts.html each carried the same payment,
 -- line for line: re-read the debt, spread the money over the open invoices

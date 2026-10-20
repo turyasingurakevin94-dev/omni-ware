@@ -309,6 +309,17 @@ the supplier price list automatically.
   confirmations go through server functions, the way agent orders do. Until
   that app exists, Sourcing and the Buyer cover it.
 
+### What is on the shelf to sell
+
+Stock leaves the books when the order is invoiced (`ow_invoice_core`), which
+can be a day after delivery, or later while a price or a short pick waits.
+Until then the goods are gone from the shelf but still counted on it. So every
+app shows what is **available**: the shelf less what the invoices of live
+orders will take (each line from the shelf, or bought in and received, on an
+order past Checking that is not invoiced, voided or cancelled), never below
+zero (`shelfAvailable`, `heldForOrders` in Sales, Store and Buyer). Nothing
+moves at delivery; the invoice still takes the stock, once.
+
 ### Cash for a buying trip
 
 The Buyer plans a trip with the cash for it (`trip.plan`). When the trip is
@@ -501,7 +512,8 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0136 | The audit of 19 Oct 2026, part one: the counter sale as one write (`counter_sale`), restock goods reaching the shelf (`receive_trip`), "cash first" holding until paid, phone and trip prices counting in the share, the restock hold on `restock_buys` (`hold_restock_buy`; `restock_lines` retired), a dropped line pushed to the salesperson (`line.dropped`), the invoice label past 9999 |
 | 0137 | The audit, part two: the indexes the apps' date windows, the live refresh and the hourly invoice run were missing |
 | 0138 | The audit, part three (one order driven through all five apps): row ids as one sequence per table (`ow_reserve_row_ids`, every table's identity sequence kept ahead), a trip's or a phone's price on the side it was bought on (`ow_price_side`), `price.changed` only when the line's price moved, a cash trip's money reaching the books (`trip_cash_count`, bills born paid by the trip), the invoice push (`order.invoiced`), and Accounts' payment guard (0123's bare array literal) |
-| 0139 | A customer's payment as one write (`receive_payment`): the receipts, the invoices' payments and share of the debt, the debt and its log, the rest on account, or one receipt on an order before its invoice; Sales, Manager and Accounts call it |
+| 0139 | The end-to-end test of 19 Oct 2026, fix 2: invoicing refuses a line still to price (`OWTPC`), never makes a debtor of a generic name like "Walk-in" (`OWWLK`), keeps a supplier bill already on the order instead of refusing it (fix 4, no more `OWBIL`), dates its bills by the supplier's terms (fix 10), and the hourly run pushes the Manager each order it skips (`invoice.held`) |
+| 0140 | A customer's payment as one write (`receive_payment`, 0140): the receipts, the invoices' payments and share of the debt, the debt and its log, the rest on account, or one receipt on an order before its invoice; Sales, Manager and Accounts call it |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

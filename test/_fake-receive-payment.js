@@ -1,6 +1,6 @@
 'use strict';
 /*
- * 0139 receive_payment, as the database does it, for the app tests' fake
+ * 0140 receive_payment, as the database does it, for the app tests' fake
  * database: a customer's payment spread over the open invoices (oldest
  * first, or the ones ticked) with a receipt per invoice, the invoice's
  * payments and share of the debt, the debt lowered and logged, the rest on

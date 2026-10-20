@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -105,7 +105,7 @@ function fakeDb(tables){
       if (fn === 'next_row_id_blocks') { const k = a.p_kinds[0]; ids[k] = Math.max(ids[k], Number(a.p_floors[k]) || 0) + 1; return { data: { [k]: ids[k] }, error: null }; }
       if (fn === 'invoice_order') { const q = (tables.saved_quotes || []).find(r => Number(r.id) === Number(a.p_quote_id)); writes.push(['rpc', fn, a]); if (!q || q.status !== 'completed') return { data: null, error: { message: 'Only a delivered order is invoiced.' } }; q.invoiced = true; return { data: { ok: true, invoice: 'INV-' + String(q.id).padStart(4, '0') }, error: null }; }
       if (fn === 'next_entity_id') return { data: 'C' + String(++custN).padStart(3, '0'), error: null };
-      // 0139 receive_payment, as the database does it (test/_fake-receive-payment.js).
+      // 0140 receive_payment, as the database does it (test/_fake-receive-payment.js).
       if (fn === 'receive_payment') { writes.push(['rpc', fn, a]); return fakeReceivePayment(tables, writes, k => ++ids[k], a, 'u1'); }
       // 0136 counter_sale, as the database does it: one write places, pays and invoices; a short shelf or a price under the shop's refuses or waits.
       if (fn === 'counter_sale') {
@@ -177,6 +177,13 @@ matrix.forEach(([what, it]) => {
   const base = { productId: 'P1', qty: 2, sellPrice: 165000, priceBy: 'u1', priceNote: 'under', priceShop: 172000 };
   t.check(P.priceReviewState(base) === 'wait', 'a price under the shop\'s waits for the Manager');
   t.check(P.priceReviewState({ ...base, priceNote: 'nocost' }) === null, 'a price with no cost yet is not the Manager\'s to decide first');
+  {
+    // Once the Manager prices a no-cost line (manager.html ncgo writes sellPrice and the review), Sales reads it as decided.
+    const nc = { ...base, priceNote: 'nocost', priceAsk: true, sellPrice: 51000, priceReview: { state: 'changed', price: 51000, was: 0, qty: 2, byName: 'Ruth Nakato', at: 1 } };
+    t.check(P.priceReviewState(nc) === 'changed' && P.priceToTell(nc) && /Ruth set/.test(P.priceTagHTML(nc, true)) && !/to be confirmed/.test(P.priceTagHTML(nc)),
+      'a no-cost line the Manager has priced shows the Manager\'s price, and is one to tell the customer');
+    t.check(P.priceReviewState({ ...nc, sellPrice: 50000 }) === null, 'and goes back to "to be confirmed" if the price moves after');
+  }
   t.check(P.priceReviewState({ ...base, priceReview: { state: 'approved', price: 165000, byName: 'Ruth Nakato', at: 1 } }) === 'approved', 'approved at the figure it names');
   const changed = { ...base, sellPrice: 172000, priceReview: { state: 'changed', price: 172000, was: 165000, byName: 'Ruth Nakato', at: '2026-10-17T12:31:00Z' } };
   t.check(P.priceReviewState(changed) === 'changed' && P.priceToTell(changed), 'the Manager\'s new price is one to tell the customer');
@@ -234,6 +241,14 @@ matrix.forEach(([what, it]) => {
     t.check(under && under.status === 'draft', 'a shelf line under the shop\'s price waits in Checking for the Manager');
     const held = await place(X => { X.S.data.customers[0].creditLimit = 400000; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 })]; });
     t.check(held && held.status === 'draft', 'a customer over their credit limit with the order waits in Checking (the credit hold)');
+    // A line placed "price to confirm" is tagged for the Manager, so the gate, the Manager's Prices and the invoice run see it.
+    const ask = await place(X => { X.S.data.presetDefaultMarkup = {}; X.S.draft.items = [X.makeLine('P1', null, 10, { lineId: 1 }), X.makeLine('P3', null, 30, { lineId: 2 })]; });
+    const asked = ask && ask.payload.items[1], priced = ask && ask.payload.items[0];
+    t.check(asked && asked.sellPrice == null && asked.priceBy === 'u1' && asked.priceAsk === true && ['nomargin', 'nocost'].includes(asked.priceNote), 'a line with no selling price is placed tagged for the Manager: ' + JSON.stringify(asked && { priceBy: asked.priceBy, priceNote: asked.priceNote }));
+    t.check(priced && !('priceBy' in priced) && !('priceAsk' in priced), 'a line the shop already prices carries no tag');
+    t.check(ask && ask.status === 'draft', 'an order with a line still to price waits in Checking');
+    t.check(asked.priceNote === 'nomargin' && P.priceReviewState(asked) === 'wait', 'the Manager has to decide it before it can leave Checking');
+    t.check(/to price/.test(P.priceTagHTML({ ...asked, priceNote: 'nomargin' })) && !/your price/.test(P.priceTagHTML({ ...asked, priceNote: 'nomargin' })), 'its tag says "to price", not "your price"');
   }
 
   // 3c. "We don't sell it": a request to Sourcing, in the shape the Sourcing app reads
@@ -423,6 +438,92 @@ matrix.forEach(([what, it]) => {
     const one = X.chatPriceLine('P2', 0, 1), bulk = X.chatPriceLine('P2', 0, 40), none = X.chatPriceLine('P3', null, 1);
     t.check(one && one.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 1))) && bulk.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 40))) && /^40 Iron sheets G28: /.test(bulk.text), 'a price is the selling price at the quantity they asked for');
     t.check(none && none.price === null && /price to confirm/.test(none.text) && !/90,000|3,600/.test(none.text), 'no selling rule: "price to confirm", never the cost');
+  }
+
+  // 7. the 19 Oct 2026 end-to-end test (docs/decision-rights.md rules A and B)
+  {
+    const X = loadPage(fakeDb({}));
+    const data = fixture(); Object.assign(X.S, { data, shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop', loadedAt: 1 });
+    const dayISO = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    const sq = (id, status, items, extra) => ({ id, status, invoiced: false, voided: false, amountPaid: 0, client: { name: 'Walk-in' }, items, charges: [], createdAt: new Date().toISOString(), ...(extra || {}) });
+
+    // fix 3: what the invoices of live orders will take is not on the shelf to sell
+    data.savedQuotes = [
+      sq(50, 'completed', [line('P1', null, 23, '__stock__', 31000)]),                                   // handed over, not invoiced: held
+      sq(51, 'preparing', [line('P3', null, 2, 'S1', 90000, { unit: 'carton', receivedAt: '2026-10-19T10:00:00Z', receivedQty: 2 })]),   // came in, by the carton
+      sq(52, 'draft', [line('P1', null, 5, '__stock__', 31000)]),                                        // still at Checking: not held
+      sq(53, 'completed', [line('P1', null, 7, '__stock__', 31000)], { invoiced: true }),               // invoiced: already off the shelf
+      sq(54, 'preparing', [line('P1', null, 4, '__stock__', 31000)], { voided: true }),
+      sq(55, 'awaiting_goods', [line('P1', null, 9, 'S1', 32000)]),                                     // bought in, not yet in: not held
+    ];
+    data.stock = { P1: 40, P3: 60 };
+    X.S.loadedAt = 2;
+    t.check(X.heldForOrders('P1', null) === 23 && X.shelfAvailable('P1', null) === 17, 'a delivered, uninvoiced order holds its shelf lines: 40 on the shelf, 23 held, 17 to sell');
+    t.check(X.heldForOrders('P3', null) === 50 && X.shelfAvailable('P3', null) === 10, 'a received line counted in cartons holds 2 × 25 kg of the shelf');
+    t.check(X.shelfAvailable('P1', null, 50) === 40, 'an order is never held against itself');
+    t.check(X.makeLine('P1', null, 17).supplierId === '__stock__' && X.makeLine('P1', null, 18).supplierId === 'S1', 'a new line comes off the shelf only while what is free covers it, else it is bought in');
+    data.stock = { P1: 10 }; X.S.loadedAt = 3;
+    t.check(X.shelfAvailable('P1', null) === 0, 'never below nothing');
+
+    // fix 7: a line the supplier sells only by the carton says so
+    data.stock = {}; data.savedQuotes = []; X.S.loadedAt = 4;
+    const nails = X.makeLine('P3', null, 30), pk = X.linePackOnly(nails);
+    t.check(pk && pk.pack === 25 && pk.units === 50 && pk.extra === 20, 'nails come only by the carton of 25: 30 makes the shop buy 50');
+    t.check(X.linePackOnly(X.makeLine('P2', 0, 3)) === null && X.linePackOnly(X.makeLine('P3', null, 50)).extra === 0, 'a loose price, or a full carton, has nothing to offer');
+    X.S.draft = X.newDraft(null); X.S.draft.items = [nails];
+    t.check(/comes by the carton of 25/.test(X.bandHTML(nails)), 'the line on the order shows the carton size so the full carton can be offered');
+    X.S.draft = null;
+
+    // fix 9: one rule for how old a debt is, Accounts' (custOpenCharges + custAging)
+    const acc = read('accounts.html'), normF = s2 => s2.replace(/^\s*\/\/.*$/gm, '').replace(/\s+/g, ' ').trim();
+    // a one-line function is taken as its own line (the shared extractor reads past it)
+    const fnOf = (src, n, where) => { const m = new RegExp('^function\\s+' + n + '\\s*\\(.*\\}\\s*$', 'm').exec(src); return m ? m[0] : extractFunction(src, n, where); };
+    ['custOpenCharges', 'custAging', 'bandOf', 'agingNoDate'].forEach(n => t.check(normF(fnOf(html, n, 'sales.html')) === normF(fnOf(acc, n, 'accounts.html')), `${n}() is accounts.html's, word for word`));
+    data.customers = [
+      { id: 'C1', name: 'Ken Bwaise', debt: 600000, termsDays: 7, creditLimit: null, phone: '', phone2: '', location: 'Bwaise', notes: '', debtLog: [
+        { id: 1, date: dayISO(42), type: 'charge', amount: 300000, quoteId: 1 },
+        { id: 2, date: null, type: 'charge', amount: 100000, quoteId: null },
+        { id: 3, date: dayISO(10), type: 'charge', amount: 200000, quoteId: 2 },
+        { id: 4, date: dayISO(5), type: 'payment', amount: 100000, quoteId: null }] },
+      { id: 'C2', name: 'Sadat', debt: 150000, termsDays: null, creditLimit: null, phone: '', phone2: '', location: '', notes: '', debtLog: [{ id: 9, date: '', type: 'charge', amount: 150000 }] },
+    ];
+    // An old invoice date on file must not age the debt: the log does.
+    data.savedQuotes = [sq(1, 'completed', [line('P1', null, 10, '__stock__', 31000)], { invoiced: true, customerId: 'C1', invoicedAt: dayISO(90) })];
+    X.S.loadedAt = 5;
+    const ken = X.custAging(data.customers[0]);
+    // FIFO: the undated charge sorts first, so the payment clears it; 100,000 of the debt the log does not cover is "no date".
+    t.check(X.custOldestAge(data.customers[0]) === 42 && ken.unknown === 100000 && ken.parts.b60 === 300000 && ken.parts.b30 === 200000, 'Ken: the oldest open charge is 42 days old (not the invoice\'s 90), and what the log does not cover is "no date" (' + ken.oldest + ', ' + ken.unknown + ')');
+    t.check(X.custOldestOrNull(data.customers[1]) === null && X.custAging(data.customers[1]).unknown === 150000, 'Sadat: a charge with no date is "no date", never age 0');
+    const b = X.custDebtBands(data.customers);
+    t.check(b.a === 200000 && b.b === 300000 && b.c === 0 && b.nd === 250000, 'the customers bar: under 30, 30–60, over 60 from the open charges, and a "no date" part: ' + JSON.stringify(b));
+    t.check(b.b + b.c === ken.parts.b60 + ken.parts.b90 + ken.parts.b90p, 'owing over 30 days is Accounts\' figure');
+    t.check(/no date/.test(X.custState(data.customers[1]).why) && /oldest bill 42 days/.test(X.custState(data.customers[0]).why), 'debtor rows: "oldest bill 42 days", and "no date" where nothing is dated');
+    t.check(!/Sadat/.test(X.viewToday()), 'an undated debt is not chased as overdue');
+    { const pg = X.PAGE.customer({ id: 'C1' }); t.check(/42<\/span> days/.test(pg) && /no date/.test(pg) && /INV-0001/.test(pg), 'the customer\'s bill bar is their open charges, the oldest 42 days, with a "no date" part'); }
+
+    // fix 12: one known-only total; a line still to price is never billed at cost
+    const open = sq(60, 'completed', [line('P1', null, 10, '__stock__', 31000), line('P3', null, 2, 'S1', 90000)]);
+    open.amountPaid = X.pricedLive(open).total;
+    data.savedQuotes = [open]; X.S.loadedAt = 6;
+    t.check(X.pricedLive(open).toConfirm === 1 && X.orderDue(open) === 0, 'paid what is priced: nothing more is due until the rest is priced (not the cost of the unpriced line)');
+    t.check(X.nmPaidWord(open)[0] === 'PART PAID', 'and it is not called PAID while a line waits for a price');
+    t.check(/1 TO PRICE/.test(X.ordStampHTML(open)) && !/<b>PAID<\/b>/.test(X.ordStampHTML(open)), 'the order\'s stamp says what is still to price');
+
+    // fix 13: a line "Bill what went" settled to nothing is struck through, not "to price"
+    const settled = sq(61, 'completed', [line('P1', null, 10, '__stock__', 31000, { pickStatus: 'done', pickedQty: 10 }), line('P3', null, 0, '', 0, { productName: 'Glass Door Locks', pickStatus: 'short', pickedQty: 0 })],
+      { pickSettle: { pick: 'went', lines: [{ idx: 1, ordered: 5, picked: 0 }] } });
+    data.savedQuotes = [settled]; X.S.loadedAt = 7;
+    const v = X.ordViews(settled), paper = X.ordPaperLine(settled, settled.items[1], v[1]);
+    t.check(v[1].k === 'out' && X.pricedLive(settled).toConfirm === 0, 'the settled line is off the order: not counted "to price"');
+    t.check(/ord-pl struck/.test(paper) && /NOT SENT/.test(paper) && !/to price/.test(paper) && !/GOT 0 OF 0/.test(paper) && /<span class="q m">5 /.test(paper), 'it is struck through at the 5 ordered, never "GOT 0 OF 0"');
+    t.check(X.ordPictureRows(settled).length === 1, 'and left off the picture the customer is sent');
+
+    // fix 18: the month's goal counts invoiced sales only, and says so
+    const ms = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })();
+    const me = (() => { const d = new Date(); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0); return e.getFullYear() + '-' + String(e.getMonth() + 1).padStart(2, '0') + '-' + String(e.getDate()).padStart(2, '0'); })();
+    data.targets = [{ id: 1, date: ms, body: { metric: 'sales', aim: 5000000, from: ms, to: me } }]; X.S.loadedAt = 8;
+    t.check(X.salesTarget() && /Shop sales invoiced/.test(X.viewToday()), 'Today\'s month card says its figure is invoiced sales');
+    t.check(/invoiced · of/.test(X.PAGE.goal()), 'and so does the goal page');
   }
 
   // the screens draw from the fixture without throwing

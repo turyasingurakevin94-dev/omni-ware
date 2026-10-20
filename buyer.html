@@ -779,9 +779,13 @@ function mergeQuotes(rows){
   rows.forEach(r => { const q = rowToQuote(r), i = at.get(Number(q.id)); if (i == null) list.push(q); else list[i] = q; });
   D().savedQuotes = list;
 }
+// Only the newest read lands: one that left before a write on this phone
+// (a hand-in) must not put the trip back the way it was.
 async function refreshLive(){
+  const seq = refreshLive.seq = (refreshLive.seq || 0) + 1;
   try {
     const [quotes, trips, handoffs, restock] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('collection_trips').catch(() => null), selectAll('buyer_handoffs').catch(() => null), selectAll('restock_buys').catch(() => null)]);
+    if (seq !== refreshLive.seq) return;
     mergeQuotes(quotes);
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (handoffs) S.data.handoffs = handoffs.map(rowToHandoff);
@@ -808,8 +812,13 @@ function supplierWhere(s){ return s ? [s.location, s.shopNo ? 'shop ' + s.shopNo
 function supplierPhone(id){ const s = supplierById(id); return s ? (contactPhones(s)[0] || '') : ''; }
 function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 // shared-worker.js 2173
-function staffName(id){ if (!id) return ''; const s = staffById(id); return s ? s.name : '(removed staff)'; }
+// A supplier delivery is carried by the supplier (TRIP_SUPPLIER_CARRIER):
+// named by the trip's supplier, never "(removed staff)".
+function staffName(id, supplierId){ if (!id) return ''; if (String(id) === TRIP_SUPPLIER_CARRIER) return supplierName(supplierId) || 'The supplier'; const s = staffById(id); return s ? s.name : '(removed staff)'; }
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
+// The owner opening the desk with no staff row: work they do is credited
+// to nobody until they are on the team (staff writes are the owner's, 0083).
+function canAddMe(){ return S.role === 'owner' && !!S.user && !myStaff(); }
 function myName(){
   const st = myStaff(); if (st && st.name) return st.name;
   const m = (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
@@ -1072,10 +1081,42 @@ function ofDroppedRecord(it, at){
    Only where the line counts in the shelf's own unit: converting a
    carton line into the shelf's pieces is the owner's board's job, and a
    guess here would promise goods that are not there. */
+// What is on the shelf to sell (rule A, the same in Sales, Store and the
+// Buyer): the books' count less what the invoices of live orders will take.
+// An order past Checking, not invoiced, voided or cancelled, takes every
+// line that comes off the shelf when it is invoiced -- off our stock, or
+// bought in and received (ow_line_received) -- in the shelf's own unit
+// (ow_on_shelf). Exactly what ow_invoice_core moves, so delivered goods
+// are never sold twice while the invoice is still to come.
+function orderHoldsShelf(o){ return !!o && !o.voided && !o.invoiced && !o.cancelledAt && o.status !== 'draft'; }
+function shelfPackFor(l){
+  const vi = l.variantIdx == null || l.variantIdx === '' ? null : Number(l.variantIdx);
+  const rows = productPriceRows(l.productId, vi).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  const packed = rows.filter(r => Number(r.packQty) > 0 && String(r.packUnit || '').trim() && cmpUnitKey(r.packUnit) !== cmpUnitKey(r.unit)).sort((a, b) => (a.outOfStock ? 1 : 0) - (b.outOfStock ? 1 : 0))[0] || null;
+  const shelfUnit = packed ? String(packed.unit || '').trim() : String((rows.find(r => String(r.unit || '').trim()) || {}).unit || '').trim();
+  const said = cmpUnitKey(l.unit);
+  if (!said || !shelfUnit || said === cmpUnitKey(shelfUnit)) return 1;
+  if (packed && said === cmpUnitKey(packed.packUnit)) return Number(l.packQty) > 0 && cmpUnitKey(l.packUnit) === said ? Number(l.packQty) : Number(packed.packQty);
+  return 1;
+}
+function heldForOrders(productId, variantIdx, exceptId){
+  const key = stockKey(productId, variantIdx);
+  let n = 0;
+  D().savedQuotes.forEach(o => {
+    if (!orderHoldsShelf(o) || (exceptId != null && Number(o.id) === Number(exceptId))) return;
+    (o.items || []).forEach(x => { if (x && (x.supplierId === '__stock__' || quoteLineReceived(x)) && stockKey(x.productId, x.variantIdx) === key) n += Math.max(0, (Number(x.qty) || 0) * shelfPackFor(x)); });
+  });
+  return n;
+}
+function shelfAvailable(productId, variantIdx, exceptId){ return Math.max(0, getStockQty(productId, variantIdx) - heldForOrders(productId, variantIdx, exceptId)); }
+// "17 · 3 held for orders": the shelf to sell, and what is already somebody's.
+function shelfWords(productId, variantIdx, exceptId){ const held = heldForOrders(productId, variantIdx, exceptId); return n0(shelfAvailable(productId, variantIdx, exceptId)) + (held > 0 ? ' · ' + n0(held) + ' held for orders' : ''); }
+// Promised off the shelf by an order still in Checking: an order past it
+// is already in heldForOrders, and is not counted twice.
 function shelfSpoken(pid, vi, exceptId){
   let n = 0;
   D().savedQuotes.forEach(o => {
-    if (o.voided || o.invoiced || Number(o.id) === Number(exceptId)) return;
+    if (o.voided || o.invoiced || Number(o.id) === Number(exceptId) || orderHoldsShelf(o)) return;
     (o.items || []).forEach(x => { if (x.supplierId === '__stock__' && x.productId === pid && (x.variantIdx == null ? null : x.variantIdx) === (vi == null ? null : vi)) n += Number(x.qty) || 0; });
   });
   return n;
@@ -1090,7 +1131,7 @@ function shelfFor(q, it){
   if (!(need > 0)) return null;
   const su = stockUnitFor(it.productId, vi);
   if (su && it.unit && cmpUnitKey(su) !== cmpUnitKey(it.unit)) return null;
-  const free = getStockQty(it.productId, vi) - shelfSpoken(it.productId, vi, q.id);
+  const free = shelfAvailable(it.productId, vi) - shelfSpoken(it.productId, vi, q.id);
   return free >= need ? { free, need, unit: it.unit || su } : null;
 }
 
@@ -1109,6 +1150,29 @@ function orderPurchaseLines(q){
       lineCost: unitCost == null ? null : unitCost * outstanding,
       movedFrom: (best && String(best.supplierId) !== String(it.supplierId)) ? it.supplierId : null, quotedUnitCost: Number(it.price) || 0 };
   });
+}
+// A supplier who sells only whole packs (ipLineOutlay's forcedPack): what
+// the order takes, and what the rest of the pack puts on our shelf.
+//   "3 for the order + 17 to the shelf (sold by the 20)"
+function packSplitText(need, units, per){
+  need = Number(need) || 0; units = Number(units) || 0; per = Number(per) || 0;
+  if (!(need > 0) || !(units > need)) return '';
+  return `${n0(need)} for the order + ${n0(Math.round((units - need) * 1e6) / 1e6)} to the shelf` + (per > 0 ? ` (sold by the ${n0(per)})` : '');
+}
+function supplierRowFor(pid, vi, sid){ return productPriceRows(pid, vi == null || vi === '' ? null : Number(vi)).find(r => String(r.supplierId) === String(sid) && !r.outOfStock) || null; }
+// An order line, at the supplier it is on.
+function linePackSplit(it){
+  if (!orderLineIsBoughtIn(it) || quoteLineReceived(it)) return '';
+  const qty = Number(it.qty) || 0, out = ipLineOutlay(supplierRowFor(it.productId, it.variantIdx, it.supplierId), qty);
+  return out && out.forcedPack ? packSplitText(qty, out.units, out.packQty) : '';
+}
+// A trip's line: its whole packs against the order line it buys for.
+function tripLinePackSplit(t, l){
+  if (!l || l.orderId === 'restock') return '';
+  const q = quoteById(l.orderId), it = q && (q.items || []).find(x => String(x.lineId) === String(l.lineId));
+  if (!it) return '';
+  const row = supplierRowFor(l.productId, l.variantIdx, t.supplierId);
+  return packSplitText(it.qty, l.qty, row && Number(row.packQty) > 0 ? row.packQty : l.packQty);
 }
 function beingPreparedOrders(){ return D().savedQuotes.filter(q => (q.status === 'awaiting_goods' || q.status === 'preparing') && !q.voided && !quoteAgedOffBoard(q)); }
 function buyingListRuns(orders){
@@ -1269,6 +1333,8 @@ function cashToCarry(){
     .concat(live.map(t => ({ sid: t.supplierId, total: Math.max(0, tripPlanned(t) - tripLines(t).reduce((s, l) => s + tripLinePaid(l), 0)), col: '#9BA3F0', trip: t })));
   return { total: parts.reduce((s, p) => s + p.total, 0), parts, runs, live };
 }
+// Who has the trip: the supplier's own name for a supplier delivery.
+function tripWho(t){ return t ? staffName(t.assignedWorkerId, t.supplierId) : ''; }
 function tripCarrierLabel(t){ if (tripIsSupplierDelivered(t)) return 'they bring it'; return t && t.assignedWorkerId ? (myStaff() && String(t.assignedWorkerId) === String(myStaff().id) ? 'you' : staffName(t.assignedWorkerId)) : 'nobody yet'; }
 function tripIsMine(t){ const me = myStaff(); return !!(t && me && String(t.assignedWorkerId) === String(me.id)); }
 
@@ -1547,7 +1613,8 @@ function emptyCard(title, sub){ return `<div class="bx-card"><div class="bx-empt
    asking. The knob clicks as it crosses into each zone and lands with
    the answer's own sound. Arrow keys move it one zone at a time. */
 function triHTML(q, g){
-  const a = g.a, pos = a.k === 'yes' ? 'yes' : a.k === 'no' ? 'no' : 'mid';
+  const a = g.a, waiting = (S.answering || {})[Number(q.id) + '|' + String(g.supplierId)];
+  const pos = waiting || (a.k === 'yes' ? 'yes' : a.k === 'no' ? 'no' : 'mid');
   const name = supplierName(g.supplierId);
   return `<div class="bx-tri settle" data-tri="${q.id}|${esc(g.supplierId)}" data-pos="${pos}">
     <span class="fl" aria-hidden="true"></span><span class="fr" aria-hidden="true"></span>
@@ -1584,7 +1651,7 @@ function bindTri(){
     };
     k.addEventListener('pointerdown', e => { drag = true; S.dragging = true; sx = e.clientX; x0 = x = posX(el.dataset.pos); zone = paintTri(el, x, max(), true); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(-max(), Math.min(max(), x0 + (e.clientX - sx))); const z = paintTri(el, x, max(), true); if (z !== zone) { zone = z; FEEL.tick(); } });
-    const end = () => { if (!drag) return; drag = false; S.dragging = false; const moved = Math.abs(x - x0) > 6; commit(moved ? zone : 'mid'); };
+    const end = () => { if (!drag) return; drag = false; S.dragging = false; const moved = Math.abs(x - x0) > 6; commit(moved ? zone : 'mid'); if (S.renderAfterDrag) { S.renderAfterDrag = false; render(); } };
     k.addEventListener('pointerup', end); k.addEventListener('pointercancel', end);
     k.addEventListener('keydown', e => {
       const order = ['no', 'mid', 'yes'], i = order.indexOf(el.dataset.pos);
@@ -1889,12 +1956,13 @@ function supplierSlipHTML(q, g){
     : a.k === 'no' ? (a.note ? a.note : 'tap Fix below') : a.k === 'again' ? 'changed since their yes — ask again'
     : a.k === 'asking' ? 'asked ' + waitWords(minsSince(a.askedAt)) + ' ago' : 'not asked yet';
   const lines = g.lines.map(it => {
-    const qt = quoteLineQtyText(it), c = quoteLineCount(it, it.qty), ea = quoteLineEach(it, Number(it.price) || 0);
+    const qt = quoteLineQtyText(it), c = quoteLineCount(it, it.qty), ea = quoteLineEach(it, Number(it.price) || 0), split = linePackSplit(it);
     return `<div class="bx-sl${a.k === 'no' ? ' struck' : ''}">
       ${itemTile(it.productName, tint)}
       <span class="q">${esc(c.n)} <small>${esc(c.unit)}</small></span>
       <span class="n">${nameHTML(lineName(it))}</span>
-      <span class="meta">${rankChipHTML(it)}<span class="ell" style="flex:1;font-size:12px;font-weight:600;color:${A.ink}">${it.switchedFrom ? 'was ' + esc(nameParts(null, null, it.switchedFrom.name).base) : it.repricedAt ? 'new price ' + hm(it.repricedAt) : ''}</span><span class="m" style="font-size:13px;font-weight:600">@ ${n0(ea.price)}${ea.unit && quoteLinePack(it) ? '<small style="font-family:Figtree;font-size:11px;color:var(--ink3)">/' + esc(ea.unit) + '</small>' : ''}</span></span>
+      <span class="meta">${rankChipHTML(it)}<span class="ell" style="flex:1;font-size:12px;font-weight:600;color:${A.ink}">${it.switchedFrom ? 'was ' + esc(nameParts(null, null, it.switchedFrom.name).base) : it.repricedAt ? 'new price ' + hm(it.repricedAt) : ''}</span>${q.status === 'draft' ? `<button class="m" data-act="lineprice" data-id="${q.id}" data-sid="${esc(g.supplierId)}" data-line="${esc(it.lineId)}" aria-label="${esc(supplierShort(it.supplierId))}'s price ${n0(ea.price)}. Tap to type their new price" style="border:none;background:none;padding:0;color:inherit;font-size:13px;font-weight:600;text-decoration:underline dotted;text-underline-offset:3px">@ ${n0(ea.price)}${ea.unit && quoteLinePack(it) ? '<small style="font-family:Figtree;font-size:11px;color:var(--ink3)">/' + esc(ea.unit) + '</small>' : ''}</button>` : `<span class="m" style="font-size:13px;font-weight:600">@ ${n0(ea.price)}${ea.unit && quoteLinePack(it) ? '<small style="font-family:Figtree;font-size:11px;color:var(--ink3)">/' + esc(ea.unit) + '</small>' : ''}</span>`}</span>
+      ${split ? `<span class="meta"><span class="ell" style="flex:1;font-size:12px;font-weight:600;color:var(--amberInk)">${esc(split)}</span></span>` : ''}
       ${q.status === 'draft' ? (() => { const why = pickReason(it); return `<span class="bx-why"><button data-act="why" data-id="${q.id}" data-line="${esc(it.lineId)}" aria-label="Why ${esc(supplierShort(it.supplierId))}: ${esc(why.text)}. Open the reason" class="w">${ic('spark', 12)}<span class="ell" style="flex:1;min-width:0">${esc(why.text)}</span><span aria-hidden="true">›</span></button><button data-act="swap" data-id="${q.id}" data-line="${esc(it.lineId)}" aria-label="Switch ${esc(lineName(it).base)} to another item" class="s">${ic('swap', 12)}Switch item</button></span>`; })() : ''}
     </div>`;
   }).join('');
@@ -2000,18 +2068,33 @@ function movedToast(q){ toast(`All suppliers confirmed — ${quoteClientName(q)}
 // The gate kept it in Checking: say so, and why, instead of "moved".
 function heldToast(q, held){ toast(`${quoteClientName(q)}'s order stays in Checking — ${held.why === 'credit' ? 'a credit hold waits for ' + whoRole('manager') : 'a price waits for ' + whoRole('manager')}.`, 6000); }
 
-// A supplier's answer, from the slider or the answer tiles.
-ACT.answer = async (qid, sid, to) => {
+// A supplier's answer, from the slider or the answer tiles. Answers are
+// queued and written one after another, each onto the order as the server
+// has it then, so a second slide made while the first is saving is never
+// lost. Until it is written the slider stays where it was let go
+// (S.answering), and nothing re-draws under a knob that is being dragged.
+let answerChain = Promise.resolve();
+function renderSoon(){ if (S.dragging) S.renderAfterDrag = true; else render(); }
+ACT.answer = (qid, sid, to) => {
+  const key = Number(qid) + '|' + String(sid);
+  (S.answering ||= {})[key] = to;
+  const run = () => answerNow(qid, sid, to).finally(() => { if (S.answering[key] === to) delete S.answering[key]; });
+  const p = answerChain.then(run, run);
+  answerChain = p.catch(() => {});
+  return p;
+};
+async function answerNow(qid, sid, to){
   const state = to === 'yes' ? 'confirmed' : to === 'no' ? 'problem' : 'pending';
   let res;
   try { res = await changeOrder(Number(qid), q => q.status !== 'draft' ? false : setOrderSupplierConfirm(q, sid, state, '')); }
-  catch (e) { toast(failWord(e), 5000); render(); return null; }
-  if (!res) { toast('That order has already left Checking'); render(); return null; }
+  catch (e) { delete S.answering[Number(qid) + '|' + String(sid)]; toast(failWord(e), 5000); renderSoon(); return null; }
+  if (!res) { delete S.answering[Number(qid) + '|' + String(sid)]; toast('That order has already left Checking'); renderSoon(); return null; }
   if (res.out.moved) { movedToast(res.q); setTimeout(FEEL.stamp, 350); } else if (res.held) heldToast(res.q, res.held);
   else if (res.out.held) toast(orderHoldReason(res.q) + ' · it moves once that is decided', 5000);
-  render();
+  delete S.answering[Number(qid) + '|' + String(sid)];
+  renderSoon();
   return res;
-};
+}
 // The ask went out: stamped when the WhatsApp tap leaves the app.
 ACT.asked = async t => {
   const id = Number(t.dataset.id), sid = t.dataset.sid;
@@ -2090,7 +2173,7 @@ PAGE.problem = (args) => {
       <button class="bx-pick" role="radio" aria-checked="${args.pick === 'shelf'}" ${shelf ? 'data-act="ppick" data-v="shelf"' : 'aria-disabled="true" style="color:var(--ink4);box-shadow:inset 0 0 0 1px var(--line)"'}>
         <span class="bx-tile" style="width:38px;height:38px;border-radius:12px;background:var(--soft2);color:${shelf ? 'var(--ink)' : 'var(--ink4)'}">${ic('shelf', 18)}</span>
         <span style="flex:1;font-size:14px;font-weight:700">Our shelf</span>
-        <span class="m" style="font-size:12px;font-weight:600">${shelf ? n0(shelf.free) + ' free' : n0(Math.max(0, getStockQty(it.productId, it.variantIdx) - shelfSpoken(it.productId, it.variantIdx, q.id))) + ' free'}</span>
+        <span class="m" style="font-size:12px;font-weight:600">${shelf ? n0(shelf.free) + ' free' : n0(Math.max(0, shelfAvailable(it.productId, it.variantIdx) - shelfSpoken(it.productId, it.variantIdx, q.id))) + ' free'}</span>
       </button>
       <button class="bx-pick" data-act="swap" data-id="${q.id}" data-line="${esc(it.lineId)}">
         <span class="bx-tile" style="width:38px;height:38px;border-radius:12px;background:#FDEEE1;color:var(--amberDeep)">${ic('swap', 18, 'style="stroke-width:2"')}</span>
@@ -2227,6 +2310,8 @@ ACT.atile = async t => {
 };
 
 /* ---------------- they said a new price ---------------- */
+// Tapping a line's "@ 2,300" on the Check slip: type the supplier's new price (line.reprice).
+ACT.lineprice = t => { const q = quoteById(t.dataset.id); if (!q || q.status !== 'draft' || S.busy) return; FEEL.open(); push('price', { id: Number(t.dataset.id), sid: t.dataset.sid, lineId: t.dataset.line }); };
 function priceUnits(it){
   const pq = Number(it.packQty) || 0, pu = String(it.packUnit || '').trim();
   const pack = pq > 0 && pu && cmpUnitKey(pu) !== cmpUnitKey(it.unit) ? { qty: pq, unit: pu } : null;
@@ -2566,7 +2651,7 @@ PAGE.plan = (args) => {
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(supplierName(r.supplierId))}</span><span class="ell" style="font-size:12px;color:var(--ink3)">${esc([s2 && supplierWhere(s2), r.lines.length + ' line' + (r.lines.length > 1 ? 's' : ''), orders + ' order' + (orders > 1 ? 's' : '')].filter(Boolean).join(' · '))}</span></span>
         <span class="m" style="font-size:14px;font-weight:600">${n0(r.total)}</span>
       </span>
-      ${on ? `<span style="display:flex;flex-wrap:wrap;gap:5px;width:100%">${r.lines.map(l => { const c = quoteLineCount(l.it, l.qty); return `<span style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:600;max-width:100%"><b class="m">${esc(c.n)}</b><span class="ell">${esc(lineName(l.it).base)}</span>${l.movedFrom ? `<span title="Quoted on ${esc(supplierName(l.movedFrom))}" style="color:var(--green);font-weight:700">↓</span>` : ''}</span>`; }).join('')}</span>` : ''}
+      ${on ? `<span style="display:flex;flex-wrap:wrap;gap:5px;width:100%">${r.lines.map(l => { const c = quoteLineCount(l.it, l.qty), split = l.order && l.order.id !== 'restock' && l.best ? packSplitText(l.quotedQty, l.qty, l.best.packQty) : ''; return `<span ${split ? `aria-label="${esc(lineName(l.it).base)}: ${esc(split)}" ` : ''}style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 8px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:600;max-width:100%"><b class="m">${esc(c.n)}</b><span class="ell">${esc(lineName(l.it).base)}</span>${split ? `<span class="ell" style="color:var(--amberInk)">${esc(n0(l.quotedQty) + ' + ' + n0(l.qty - l.quotedQty) + ' to the shelf')}</span>` : ''}${l.movedFrom ? `<span title="Quoted on ${esc(supplierName(l.movedFrom))}" style="color:var(--green);font-weight:700">↓</span>` : ''}</span>`; }).join('')}</span>` : ''}
     </button>`;
   }).join('');
   let who = '', cash = '', cta = '', tip = '', previewTrip = null;
@@ -2574,7 +2659,7 @@ PAGE.plan = (args) => {
     const others = D().staff.filter(s => !s.unavailable && !(me && String(s.id) === String(me.id)));
     const picked = args.who && args.who !== 'me' && args.who !== 'sup' ? staffById(args.who) : null;
     const opts = [
-      ['me', me ? initials(me.name) : '—', 'Me', me ? 'you go' : 'no staff row', !me, '#E4E6FA', '#3A3F9B'],
+      ['me', me ? initials(me.name) : '—', 'Me', me ? 'you go' : canAddMe() ? 'tap · add me' : 'no staff row', !me, '#E4E6FA', '#3A3F9B'],
       ['send', picked ? initials(picked.name) : '+', picked ? firstWord(picked.name) : 'Send someone', picked ? (liveTripsList().filter(t => String(t.assignedWorkerId) === String(picked.id)).length + ' on now') : others.length + ' free', !others.length, '#E4F4EA', '#0F6B43'],
       ['sup', '', 'They bring it', sup && sup.deliveryDays != null ? (sup.deliveryDays === 0 ? 'today' : 'in ' + sup.deliveryDays + ' day' + (sup.deliveryDays > 1 ? 's' : '')) : 'they deliver', false, tintFor(run.supplierId)[0], tintFor(run.supplierId)[1]],
     ];
@@ -2646,9 +2731,27 @@ ACT.cashask = async t => {
   S.busy = false; render();
 };
 ACT.pstop = t => { const a = topArgs(); if (String(a.sid) !== String(t.dataset.sid)) { FEEL.tick(); a.given = undefined; } a.sid = t.dataset.sid; render(); };
+ACT.addme = async () => {
+  if (!canAddMe() || S.busy) return;
+  S.busy = true; render();
+  try {
+    const floor = D().staff.reduce((m, s) => { const x = /^ST(\d+)$/.exec(String(s.id)); return x ? Math.max(m, Number(x[1])) : m; }, 0);
+    let id = null;
+    try { const r = await sb.rpc('next_entity_id', { p_shop_id: S.shopId, p_kind: 'staff', p_prefix: 'ST', p_pad: 3, p_floor: floor }); if (!r.error && typeof r.data === 'string' && r.data) id = r.data; } catch (_e) {}
+    if (!id) id = 'ST' + String(floor + 1).padStart(3, '0');
+    const row = { shop_id: S.shopId, id, name: myName(), phone: '', role: 'buyer', user_id: S.user.id };
+    const ins = await sb.from('staff').insert(row);
+    if (ins.error) throw ins.error;
+    D().staff.push({ id, name: row.name, phone: '', role: 'buyer', unavailable: false, userId: S.user.id });
+    saveSnapshot(); S.busy = false; FEEL.yes(); toast('You are on the team · your trips and checks count to you'); render();
+  } catch (e) {
+    S.busy = false;
+    toast(isNetworkError(e) ? 'No connection — you were not added. Try again with signal.' : 'Not added: ' + (e.message || e), 6000); render();
+  }
+};
 ACT.pwho = t => {
   const a = topArgs(), v = t.dataset.v;
-  if (t.getAttribute('aria-disabled') === 'true') { if (v === 'me') toast('Your login has no staff row yet — ask ' + whoShort('manager') + ' to link one'); return; }
+  if (t.getAttribute('aria-disabled') === 'true') { if (v === 'me' && canAddMe()) { ACT.addme(); return; } if (v === 'me') toast('Your login has no staff row yet — ask ' + whoShort('manager') + ' to link one'); return; }
   if (v === 'send') { openSheet('staff', {}); return; }
   if (a.who !== v) FEEL.tick(); a.who = v; render();
 };
@@ -2768,7 +2871,8 @@ PAGE.trip = ({ id }) => {
     const g = tripLineGot(l), open = g == null, isFull = g != null && g >= l.qty, isShort = g != null && g < l.qty, next = i === firstOpen && canAnswer;
     const c = quoteLineCount(l, l.qty), per = quoteLineCountPer(l), price = l.gotPrice != null ? l.gotPrice : l.expectedPrice, ea = quoteLineEach(l, Number(price) || 0), ct = tintFor(l.clientName);
     const gotC = g != null ? quoteLineCount(l, g).n : '';
-    const sub = isShort ? `${quoteLineCount(l, l.qty - g).n} short · back on the list` : next ? `for ${shortName(l.clientName)} · swipe ← →` : `for ${shortName(l.clientName)} · @ ${n0(ea.price)}${l.gotPrice != null && l.expectedPrice != null && Math.round(l.gotPrice) !== Math.round(l.expectedPrice) ? ' (was ' + n0(quoteLineEach(l, l.expectedPrice).price) + ')' : ''}`;
+    const split = tripLinePackSplit(t, l);
+    const sub = isShort ? `${quoteLineCount(l, l.qty - g).n} short · back on the list` : next ? `for ${shortName(l.clientName)} · ${split ? split + ' · ' : ''}swipe ← →` : `${split ? split.replace('for the order', 'for ' + shortName(l.clientName)) : 'for ' + shortName(l.clientName)} · @ ${n0(ea.price)}${l.gotPrice != null && l.expectedPrice != null && Math.round(l.gotPrice) !== Math.round(l.expectedPrice) ? ' (was ' + n0(quoteLineEach(l, l.expectedPrice).price) + ')' : ''}`;
     return `<div style="position:relative;border-radius:16px;overflow:hidden">
       <span aria-hidden="true" class="under" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;font-weight:700;border-radius:16px"><span style="display:flex;align-items:center;gap:6px;color:var(--green)">${ic('tick', 18, 'style="stroke-width:3"')}All ${esc(c.n)} came</span><span style="color:var(--amberInk)">Short</span></span>
       <div ${canAnswer && open ? `data-swipe="${esc(id)}|${i}"` : ''} class="${next ? 'a-next' : ''}${next && answered === 0 ? ' a-hint' : ''}" style="position:relative;display:flex;align-items:center;gap:10px;min-height:${isFull ? 46 : 56}px;padding:5px 8px 5px 10px;border-radius:16px;touch-action:pan-y;background:${isFull ? '#FCFBF9' : '#fff'};${next ? '' : isShort ? 'box-shadow:inset 0 0 0 1.5px #F5B26B' : open ? 'box-shadow:inset 0 0 0 1px var(--line),0 4px 12px rgba(22,32,60,.06)' : 'box-shadow:inset 0 0 0 1px var(--line)'}">
@@ -2784,9 +2888,11 @@ PAGE.trip = ({ id }) => {
   }).join('');
   const leftN = lines.length - answered, pending = Object.keys((S.tripDraft || {})[id] || {}).length;
   let foot;
-  if (t.status === 'open' || (t.status === 'assigned' && mine)) foot = me ? slideHTML('take', t.status === 'open' ? 'Slide to take this trip' : 'Slide to set off', 'truck', { disabled: S.busy }) : `<span class="bx-btn ghost" aria-disabled="true">No staff row for your login</span>`;
-  else if (t.status === 'assigned') foot = `<span class="bx-btn ghost" aria-disabled="true">Sent to ${esc(staffName(t.assignedWorkerId))} · not taken yet</span>`;
-  else if (!canAnswer) foot = `<span class="bx-btn ghost" aria-disabled="true">${esc(staffName(t.assignedWorkerId))} is on it</span>`;
+  if (t.status === 'open' || (t.status === 'assigned' && mine)) foot = me ? slideHTML('take', t.status === 'open' ? 'Slide to take this trip' : 'Slide to set off', 'truck', { disabled: S.busy }) : canAddMe() ? `<button class="bx-btn navy" data-act="addme" ${S.busy ? 'aria-disabled="true"' : ''}>Add me to the team</button>` : `<span class="bx-btn ghost" aria-disabled="true">No staff row for your login</span>`;
+  else if (t.status === 'assigned') foot = `<span class="bx-btn ghost" aria-disabled="true">Sent to ${esc(tripWho(t))} · not taken yet</span>`;
+  else if (t.status === 'collected') foot = `<span class="bx-btn ghost" aria-disabled="true">Handed in · waiting for ${esc(whoShort('store'))}</span>`;
+  else if (t.status === 'confirmed') foot = `<span class="bx-btn ghost" aria-disabled="true">Checked in · on the shelf</span>`;
+  else if (!canAnswer) foot = `<span class="bx-btn ghost" aria-disabled="true">${esc(tripWho(t))} is on it</span>`;
   else if (leftN > 0) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"><span style="display:flex;gap:3px">${Array.from({ length: Math.min(leftN, 6) }, () => '<i style="width:8px;height:8px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #8A93A3"></i>').join('')}</span>${leftN} line${leftN > 1 ? 's' : ''} still to load</span>`;
   else foot = slideHTML('handin', 'Slide to hand in', 'box', { disabled: S.busy });
   return `<div class="card" style="margin-top:0;min-height:100%;border-radius:0">
@@ -2896,6 +3002,8 @@ ACT['slide:handin'] = async () => {
     await pricesPaidToList(t);
     await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e), 7000));
     S.busy = false; S.ui.horn = id; replaceTop('done', { id });
+    // The chips (Plan › live trips, Today) read the server's trip, not an older read still on its way.
+    refreshLive();
   } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
 };
 
@@ -3088,7 +3196,7 @@ PAGE.me = () => {
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
           <span class="ell" style="font-size:20px;font-weight:700">${esc(myName())}</span>
           <span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="bx-chip" style="background:var(--indigoSoft);color:var(--indigo)">${ic('truck', 12, 'style="stroke-width:2.2"')}${esc(roleWord)}</span><span class="ell" style="font-size:13px;color:var(--navyInk)">${esc(S.shopName)}</span></span>
-          <span style="font-size:12px;color:var(--mint);font-weight:600">${f.lines ? `<span class="m">${f.pct}%</span> came in full this month` : me ? 'No trips handed in this month yet' : 'Your login has no staff row yet'}</span>
+          <span style="font-size:12px;color:var(--mint);font-weight:600">${f.lines ? `<span class="m">${f.pct}%</span> came in full this month` : me ? 'No trips handed in this month yet' : canAddMe() ? `<button data-act="addme" ${S.busy ? 'aria-disabled="true"' : ''} style="height:32px;padding:0 12px;border:none;border-radius:999px;background:var(--indigo);color:#fff;font-size:12px;font-weight:700">Add me to the team</button>` : 'Your login has no staff row yet'}</span>
         </span>${closeBtn()}
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
@@ -3361,10 +3469,10 @@ ACT.nonewait = async t => {
 /* ---------------- the order's own cards: shelf, the Manager, nobody has it ---------------- */
 function shelfCardHTML(q, shelf){
   if (!shelf.length) return '';
-  const rows = shelf.map(it => { const c = quoteLineCount(it, it.qty), have = getStockQty(it.productId, it.variantIdx), need = Number(it.qty) || 0, short = have < need;
+  const rows = shelf.map(it => { const c = quoteLineCount(it, it.qty), have = shelfAvailable(it.productId, it.variantIdx, q.id), need = Number(it.qty) || 0, short = have < need;
     return `<div style="display:flex;align-items:center;gap:10px;min-height:52px;padding:5px 10px;border-radius:14px;background:#fff;box-shadow:${short ? 'inset 0 0 0 1.5px #F5B26B' : 'inset 0 0 0 1px var(--line)'}">
       <span class="m" style="flex:none;font-size:15px;font-weight:600">${esc(c.n)} <span style="font-family:Figtree;font-size:11px;color:#6B7480">${esc(c.unit)}</span></span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(lineName(it).base)}</span><span class="ell" style="font-size:12px;font-weight:600;color:${short ? 'var(--amberInk)' : 'var(--ink3)'}">books say ${n0(have)} · ${short ? n0(need - have) + ' short' : whoShort('store') + ' counts it at packing'}</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(lineName(it).base)}</span><span class="ell" style="font-size:12px;font-weight:600;color:${short ? 'var(--amberInk)' : 'var(--ink3)'}">on the shelf ${shelfWords(it.productId, it.variantIdx, q.id)} · ${short ? n0(need - have) + ' short' : whoShort('store') + ' counts it at packing'}</span></span>
       ${short && q.status === 'draft' ? `<button data-act="findsup" data-id="${q.id}" data-line="${esc(it.lineId)}" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:var(--amberSoft);color:var(--amberInk);font-size:12px;font-weight:700">Buy it</button>` : `<span class="bx-chip" style="flex:none;height:28px;background:var(--greenSoft);color:var(--green)">on the shelf</span>`}
     </div>`; }).join('');
   return `<div style="display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:18px;background:#EFECE6">
@@ -3799,7 +3907,7 @@ function restockRows(){
   keys.forEach(key => {
     const i = key.indexOf('::'), pid = i < 0 ? key : key.slice(0, i), vi = i < 0 ? null : Number(key.slice(i + 2)), p = productById(pid); if (!p) return;
     const rule = restockRule(key), lineCover = rule && rule.coverDays ? rule.coverDays : cover, floor = (rule && rule.minUnits) || 0;
-    const rate = (sales.get(key) || 0) / 30, qty = getStockQty(pid, vi);
+    const rate = (sales.get(key) || 0) / 30, qty = shelfAvailable(pid, vi), held = heldForOrders(pid, vi);
     if (!(rate > 0) && !(floor > 0)) return;
     const plain = Math.max(1, Math.ceil(lineCover * rate - qty), floor ? Math.ceil(floor - qty) : 0);
     const best = rankedPurchaseRowsAtQty(pid, vi, plain).find(r => r.purchasePrice != null) || null;
@@ -3808,7 +3916,7 @@ function restockRows(){
     if (!(short > 0)) return;
     const coming = open.filter(r => stockKey(r.productId, r.variantIdx) === key).reduce((s, r) => s + r.qty, 0);
     const name = productVariantLabel(p, vi), left = rate > 0 ? qty / rate : null;
-    const row = { key, pid, vi, name, qty, rate, left, lead, floor, below: floor > 0 && qty < floor, best, need: Math.max(0, short - coming), coming, hold: restockHold(key) };
+    const row = { key, pid, vi, name, qty, held, rate, left, lead, floor, below: floor > 0 && qty < floor, best, need: Math.max(0, short - coming), coming, hold: restockHold(key) };
     row.tight = row.left != null ? row.left - lead <= 2 : row.below;
     rows.push(row);
   });
@@ -3821,7 +3929,7 @@ PAGE.restock = (args) => {
   const picked = buy.filter(r => args.picked.includes(r.key)), total = picked.reduce((s, r) => s + r.need * r.best.purchasePrice, 0), SPAN = 14, mgr = whoShort('manager');
   const card = (r, i) => { const on = args.picked.includes(r.key), t = tintFor(r.best.supplierId), c = quoteLineCount({ productId: r.pid, variantIdx: r.vi, unit: r.best.unit, packUnit: r.best.packUnit, packQty: r.best.packQty }, r.need);
     const left = r.left == null ? 0 : Math.min(SPAN, r.left), col = r.tight ? '#C93A30' : '#F5B26B';
-    const why = r.left == null ? 'under its ' + n0(r.floor) + ' floor' : n0(r.qty) + ' on the shelf · ' + (r.rate >= 1 ? n0(Math.round(r.rate)) + ' go a day' : 'about ' + n0(Math.round(r.rate * 7)) + ' a week') + (r.below ? ' · under its ' + n0(r.floor) + ' floor' : '');
+    const why = r.left == null ? 'under its ' + n0(r.floor) + ' floor' : n0(r.qty) + ' on the shelf' + (r.held > 0 ? ' · ' + n0(r.held) + ' held for orders' : '') + ' · ' + (r.rate >= 1 ? n0(Math.round(r.rate)) + ' go a day' : 'about ' + n0(Math.round(r.rate * 7)) + ' a week') + (r.below ? ' · under its ' + n0(r.floor) + ' floor' : '');
     return `<div class="a-up" style="animation-delay:${(i * .06).toFixed(2)}s;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:#fff;box-shadow:${on ? 'inset 0 0 0 1.5px var(--navy),0 8px 18px rgba(22,32,60,.08)' : 'inset 0 0 0 1px var(--line)'}">
       <div style="display:flex;align-items:center;gap:10px">${itemTile(r.name, t, 36)}
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700">${esc(nameParts(r.pid, r.vi, r.name).base)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(supplierName(r.best.supplierId))} · @ ${n0(r.best.purchasePrice)}</span></span>

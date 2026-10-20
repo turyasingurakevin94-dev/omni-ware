@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * 0139: a customer's payment is one database write (receive_payment).
+ * 0140: a customer's payment is one database write (receive_payment).
  *
  * sales.html, manager.html and accounts.html each carried the same payment
  * as three to five sequential writes with no transaction: a receipt per
@@ -20,12 +20,12 @@
  *   3. test/_fake-receive-payment.js mirrors it for the app tests, which
  *      still read the same rows.
  *
- * Run: node test/audit-0139.test.js
+ * Run: node test/audit-0140.test.js
  */
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('a payment as one write (0139)');
-const sql = read('supabase/migrations/0139_receive_payment_one_write.sql');
+const t = createReporter('a payment as one write (0140)');
+const sql = read('supabase/migrations/0140_receive_payment_one_write.sql');
 const sales = read('sales.html'), manager = read('manager.html'), accounts = read('accounts.html');
 const fn = (() => { const at = sql.indexOf('create or replace function receive_payment('); const open = sql.indexOf('$$', at); return sql.slice(at, sql.indexOf('$$;', open + 2)); })();
 
@@ -75,6 +75,6 @@ const fake = require('./_fake-receive-payment');
   t.check(o.error && /just been invoiced/.test(o.error.message), 'and refuses an invoiced order with the database\'s words');
 }
 
-t.check(/\| 0139 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0139 for it');
+t.check(/\| 0140 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0140 for it');
 
 process.exit(t.done() ? 1 : 0);
