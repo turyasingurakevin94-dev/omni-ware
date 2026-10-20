@@ -308,6 +308,17 @@ the supplier price list automatically.
   confirmations go through server functions, the way agent orders do. Until
   that app exists, Sourcing and the Buyer cover it.
 
+### What is on the shelf to sell
+
+Stock leaves the books when the order is invoiced (`ow_invoice_core`), which
+can be a day after delivery, or later while a price or a short pick waits.
+Until then the goods are gone from the shelf but still counted on it. So every
+app shows what is **available**: the shelf less what the invoices of live
+orders will take (each line from the shelf, or bought in and received, on an
+order past Checking that is not invoiced, voided or cancelled), never below
+zero (`shelfAvailable`, `heldForOrders` in Sales, Store and Buyer). Nothing
+moves at delivery; the invoice still takes the stock, once.
+
 ### Cash for a buying trip
 
 The Buyer plans a trip with the cash for it (`trip.plan`). When the trip is
