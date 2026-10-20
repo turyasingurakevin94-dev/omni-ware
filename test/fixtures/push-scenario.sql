@@ -26,8 +26,9 @@ insert into prices(id, shop_id, product_id, supplier_id, retail, unit) values (1
 insert into customers(shop_id,id,name,debt,credit_limit) values ('11111111-1111-1111-1111-111111111111','C001','Kato Construction',500000,1000000);
 insert into collection_trips(id, shop_id, supplier_id, status, lines) values
  ('T1','11111111-1111-1111-1111-111111111111','S1','collecting','[{"productId":"P1","productName":"Cement","qty":10,"gotQty":10}]');
-insert into restock_lines(id, shop_id, key, product_id, name, qty, created_by) values
- ('bbbbbbbb-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','P1','P1','Cement',20,'00000000-0000-0000-0000-00000000000a');
+-- The Buyer's restock line (0125 restock_buys; 0136 retired restock_lines and moved the hold here).
+insert into restock_buys(id, shop_id, product_id, qty, unit, supplier_id, status, created_by) values
+ ('bbbbbbbb-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','P1',20,'bag','S1','planned','00000000-0000-0000-0000-00000000000a');
 insert into sourcing_leads(id, shop_id, name, status, requests) values
  ('L1','11111111-1111-1111-1111-111111111111','Roofing nails 3"','priced','[{"source":"order","orderId":"9201","customerName":"Kato Construction"},{"source":"sourcing.ask","by":"00000000-0000-0000-0000-00000000000e","withdrawn":true},{"source":"sourcing.ask","by":"00000000-0000-0000-0000-00000000000f"}]');
 
@@ -95,7 +96,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: reports 2 bags damaged', 'ok', $q$insert into stock_reports(shop_id,key,product_id,name,qty,why,reported_by,reported_by_name,status) values ('11111111-1111-1111-1111-111111111111','P1','P1','Cement',2,'damaged','00000000-0000-0000-0000-00000000000e','Musa Kiggundu','sent')$q$);
 select _try('check: the report goes to the Manager', 'ok', $q$select _is($c$_to('stock.report')='0b' and (select body from push_outbox where kind='stock.report') = '2 Cement — Musa Kiggundu'$c$)$q$);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select _try('manager: holds a restock line', 'ok', $q$select hold_restock_line('bbbbbbbb-0000-0000-0000-000000000001', true)$q$);
+select _try('manager: holds a restock line', 'ok', $q$select hold_restock_buy('bbbbbbbb-0000-0000-0000-000000000001', true)$q$);
 select _try('check: a push for the Buyer (buy.restock: whoever holds it)', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='restock.held' and to_task='buy.restock')$c$)$q$);
 
 -- ---- a price changed, a request listed (written as the system)

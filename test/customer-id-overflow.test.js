@@ -12,8 +12,8 @@
  *      and next_entity_id keeps every digit too.
  *   2. A REAL database, when OW_PG names one: every migration in order, a
  *      shop with C001..C999 on file, then the shared-foundation scenario --
- *      whose invoices make new customers (a walk-in first) -- must pass, and
- *      they must be C1000, C1001 and C1002.
+ *      whose invoices make new customers -- must pass, and they must be
+ *      C1000 and C1001 (a walk-in is nobody since 0139, so it makes none).
  *
  * Run: node test/customer-id-overflow.test.js
  *      OW_PG="host=/tmp port=5544 user=postgres" node test/customer-id-overflow.test.js
@@ -49,8 +49,10 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
   const files = fs.readdirSync(path.join(__dirname, '..', 'supabase', 'migrations')).filter(f => /^\d{4}_.*\.sql$/.test(f)).sort();
   const last = re => files.filter(f => re.test(read('supabase/migrations/' + f))).pop();
   // 0136 re-states ow_invoice_core once more (the invoice label past 9999)
-  // and test/audit-0136.test.js holds it to 0135's text but for that line.
-  t.check(last(/create or replace function ow_invoice_core\(/) === '0136_counter_sale_one_write.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0136 is the last word on the core and 0135 on next_entity_id');
+  // and test/audit-0136.test.js holds it to 0135's text but for that line;
+  // 0139 re-states it again (no bill at cost, no walk-in debtor) and
+  // test/invoice-unpriced-db.test.js holds it to 0136's but for those.
+  t.check(last(/create or replace function ow_invoice_core\(/) === '0139_no_bill_at_cost_no_walkin_debtor.sql' && last(/create or replace function next_entity_id\(/) === '0135_customer_id_overflow.sql', 'in number order, 0139 is the last word on the core and 0135 on next_entity_id');
   t.check(/\| 0135 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0135 for it');
 }
 
@@ -86,7 +88,9 @@ t.check(rows.length >= 55, `the scenario ran (${rows.length} cases)`);
 const bad = rows.filter(l => !l.startsWith('PASS'));
 t.check(bad.length === 0, `every case passed with 999 customers on file (${bad.slice(0, 3).join(' | ')})`);
 const g = lines.find(l => l.startsWith('NEW\t'));
-t.check(g === 'NEW\tWalk-in=C1000,Ggaba Stores=C1001,Mukono Roofing=C1002', `the clients new at invoicing -- a walk-in first, as in the Manager app -- are C1000, C1001, C1002 (${g})`);
+// Since 0138 a walk-in is nobody: the paid counter sale makes no customer, so the
+// clients new at invoicing are the two named ones, numbered past C999.
+t.check(g === 'NEW\tGgaba Stores=C1000,Mukono Roofing=C1001', `the clients new at invoicing are C1000 and C1001, and no "Walk-in" customer is made (${g})`);
 
 psql(['-qAt', '-c', `drop database if exists ${db}`]);
 process.exit(t.done() ? 1 : 0);
