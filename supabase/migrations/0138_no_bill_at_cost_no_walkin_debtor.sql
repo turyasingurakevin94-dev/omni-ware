@@ -23,7 +23,9 @@
 --    "no date" for every one and "nothing due this week" was always true.
 --    It is due on the supplier's terms now (suppliers.terms_days, 0106),
 --    as Accounts' own bill form sets it. Older open bills: see BACKFILL.
--- 5. The hourly run told nobody what it skipped (the audit's section 4,
+-- 5. Fix 5: a line the client waits for (no supplier yet) becomes a
+--    Sourcing request by itself, and does not hold up the invoice.
+-- 6. The hourly run told nobody what it skipped (the audit's section 4,
 --    item 3). Each order it cannot invoice pushes the Manager once a day:
 --    a price to set (price.approve), anything else (invoice.make).
 --
@@ -51,6 +53,8 @@
 -- ROLLBACK: run 0136's ow_invoice_core and 0119's ow_invoice_due_orders again;
 --   drop function if exists ow_order_unpriced(uuid, jsonb, jsonb);
 --   drop function if exists ow_generic_client(text);
+--   drop trigger if exists saved_quotes_waiting_to_sourcing on saved_quotes;
+--   drop function if exists saved_quotes_waiting_to_sourcing(); drop function if exists sourcing_take_waiting_lines(uuid, bigint, text, text, jsonb);
 -- ---------------------------------------------------------------------
 
 -- A name that is nobody in particular.
@@ -72,7 +76,7 @@ language sql stable as $$
      and coalesce(ow_num(e ->> 'qty'), 0) > 0
      -- A line the client waits for (buyer.html "client waits": no supplier has it yet) is not
      -- part of this delivery: Sourcing hunts it, and it is sold when it is found.
-     and not (coalesce(e ->> 'clientWaits', '') in ('true', '1') and coalesce(e ->> 'supplierId', '') = '')
+     and not (coalesce(e -> 'clientWaits', 'null'::jsonb) not in ('null'::jsonb, 'false'::jsonb) and coalesce(e ->> 'supplierId', '') = '')
      and ow_line_to_confirm(p_shop_id, e, coalesce(p_presets, '{}'::jsonb))
 $$;
 revoke all on function ow_order_unpriced(uuid, jsonb, jsonb) from public, anon;
@@ -289,6 +293,72 @@ begin
   return jsonb_build_object('ok', true, 'id', p_quote_id, 'invoice', inv_label, 'invoicedAt', inv_at,
     'total', total, 'debtCharged', desired, 'bills', bills, 'shortOnShelf', shortfall, 'surplusStocked', surplus_total);
 end $$;
+-- ---------------------------------------------------------------------
+-- Fix 5: a line the client waits for (buyer.html "client waits": no
+-- supplier has it; the line carries clientWaits {at, by}) becomes a
+-- Sourcing request by itself, as a line dropped at Checking does (0126):
+-- one per line, keyed by the order, the line and the product, so saving
+-- the order again adds nothing. It rides 0126's 'dropped' source, so
+-- Sourcing's From orders and 0131's push to sourcing.lead see it.
+create or replace function sourcing_take_waiting_lines(p_shop_id uuid, p_quote_id bigint,
+  p_client_name text, p_client_phone text, p_payload jsonb)
+returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  e jsonb; i bigint; lid text; n integer := 0; at_ms bigint;
+begin
+  if to_regclass('public.sourcing_leads') is null then return 0; end if;
+  for e, i in select x.e, x.i from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'items') = 'array' then p_payload -> 'items' else '[]'::jsonb end) with ordinality as x(e, i) loop
+    if coalesce(e -> 'clientWaits', 'null'::jsonb) in ('null'::jsonb, 'false'::jsonb) or coalesce(e ->> 'supplierId', '') <> ''
+       or coalesce(ow_num(e ->> 'qty'), 0) <= 0 then continue; end if;
+    at_ms := coalesce(case when jsonb_typeof(e -> 'clientWaits') = 'object' then ow_num(e -> 'clientWaits' ->> 'at') end, extract(epoch from now()) * 1000)::bigint;
+    lid := 'CW-' || p_quote_id || '-' || coalesce(e ->> 'lineId', i::text) || '-' || coalesce(e ->> 'productId', '');
+    insert into sourcing_leads (id, shop_id, name, status, created_at, stage_entered_at, requests)
+    values (lid, p_shop_id, coalesce(nullif(btrim(e ->> 'productName'), ''), 'An item the client waits for'), 'asked',
+      to_timestamp(at_ms / 1000.0), at_ms,
+      jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+        'at', to_timestamp(at_ms / 1000.0),
+        'source', 'dropped',
+        'customerId', p_payload ->> 'customerId',
+        'customerName', coalesce(p_client_name, p_payload -> 'client' ->> 'name', ''),
+        'phone', coalesce(p_client_phone, p_payload -> 'client' ->> 'phone', ''),
+        'qty', e -> 'qty',
+        'orderId', p_quote_id,
+        'productId', e ->> 'productId',
+        'variantIdx', e -> 'variantIdx',
+        'unit', e ->> 'unit',
+        'reason', 'Nobody has it',
+        'droppedBy', case when jsonb_typeof(e -> 'clientWaits') = 'object' then e -> 'clientWaits' ->> 'by' end,
+        'note', 'The client waits for it'))))
+    on conflict (shop_id, id) do nothing;
+    if found then n := n + 1; end if;
+  end loop;
+  return n;
+end $$;
+revoke all on function sourcing_take_waiting_lines(uuid, bigint, text, text, jsonb) from public;
+
+create or replace function saved_quotes_waiting_to_sourcing() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(new.voided, false) or coalesce(new.payload::text, '') not like '%clientWaits%' then return null; end if;
+  begin
+    perform sourcing_take_waiting_lines(new.shop_id, new.id::bigint, new.client_name, new.client_phone, new.payload);
+  exception when others then
+    raise notice 'client waits to sourcing (order %): % (%)', new.id, sqlerrm, sqlstate;
+  end;
+  return null;
+end $$;
+do $$
+begin
+  if to_regclass('public.sourcing_leads') is null then
+    raise notice 'skipped saved_quotes_waiting_to_sourcing: sourcing_leads is not on this database yet (0126).';
+  else
+    drop trigger if exists saved_quotes_waiting_to_sourcing on saved_quotes;
+    create trigger saved_quotes_waiting_to_sourcing after insert or update on saved_quotes
+      for each row execute function saved_quotes_waiting_to_sourcing();
+  end if;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- The hourly run: 0119's, and each order it skips is told to the Manager,
 -- once a day (dedupe), by the task that clears it.
