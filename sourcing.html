@@ -2898,165 +2898,228 @@ function asksJoinPair(){
   return pairs.sort((a, b) => msOf(b.r.at) - msOf(a.r.at))[0] || null;
 }
 
+/* ---- v2 group a helpers ---- */
+/* Shared by Today, New chances, Capture, Search and You (the v2 canvas):
+   the five stages in the standard's words and colours, an item's tile, and
+   every chance still waiting on a first move. Read from the records only. */
+// [word, bar colour, ink on white (clears 4.5:1)] -- the v2 standard.
+const aSTAGE = { asked: ['Requested', '#7B61D9', '#5B4AA8'], looking: ['Looking', '#3C7BE0', '#2A5DB0'], sourced: ['Found', '#D98A1C', '#95530C'], priced: ['Priced', '#0E8A72', '#0B6B58'], listed: ['On the shelf', '#1E9D57', '#0F6B43'] };
+const aGRAD = { asked: '#B9AEEB, #7B61D9', looking: '#9DBDF0, #3C7BE0', sourced: '#F1C27D, #D98A1C', priced: '#8FD3C4, #0E8A72', listed: '#9ED8B7, #1E9D57' };
+function aStageOf(status){ return aSTAGE[status] || aSTAGE.asked; }
+// The five-step bar: the stages behind at .45, the one it is at full, the rest grey.
+function aStageBars(status){
+  const k = Math.max(0, STAGES.indexOf(status)), c = aStageOf(status)[1];
+  return STAGES.map((_, i) => `flex: 1; height: 5px; border-radius: 999px; background: ${i <= k ? c : '#E6E2DA'}${i < k ? '; opacity: .45' : ''}`);
+}
+function aStageLabel(status){ return `${aStageOf(status)[0]}, stage ${Math.max(0, STAGES.indexOf(status)) + 1} of 5`; }
+function aStagePill(status){ const s = aStageOf(status); return `background: ${s[1]}1A; color: ${s[2]}`; }
+// An item's tile: its photo, else the stage's gradient (grey when it has none).
+function aThumb(size, status, image){
+  const bg = image ? photoStyle(image) : `background: linear-gradient(160deg, ${aGRAD[status] || '#C9CED8, #7F889A'})`;
+  return `width: ${size}px; height: ${size}px; flex: none; border-radius: ${Math.round(size * .29)}px; ${bg}; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.95)`;
+}
+// Hunts that went on the shelf in the last n days (graduatedAt).
+function aListedSince(days){ const since = Date.now() - days * DAY; return D().leads.filter(l => !l.voided && l.status === 'listed' && msOf(l.graduatedAt) >= since); }
+// Clients told (a follow-up contact) in the last n days.
+function aToldSince(days){ const since = Date.now() - days * DAY; return D().followUps.reduce((n, f) => n + (f.contacts || []).filter(c => msOf(c.at) >= since).length, 0); }
+function aUnitKey(u){ u = String(u || 'pc').trim().toLowerCase(); return ['', 'pc', 'pcs', 'piece', 'pieces'].includes(u) ? 'pc' : u; }
+// The open hunt a request would join (findLeadByText), unless kept apart;
+// never one still at Requested that came in after it (they would point at each other).
+function aJoinOf(l){
+  const m = findLeadByText(l.name, l.id);
+  if (!m || m.voided || m.status === 'listed') return null;
+  const meta = (l.candidates || []).find(c => c && c.kind === 'meta') || {};
+  if (meta.keepApart && meta.keepApart.from === m.id) return null;
+  if (m.status === 'asked' && leadFirstAskedAt(m) > leadFirstAskedAt(l)) return null;
+  return m;
+}
+/* Every way an item comes in that nobody has started on:
+     asked   requests still at Requested, and agents' open stock asks
+     orders  a line dropped at Checking, still at Requested
+     chat    requests that came in on WhatsApp, still at Requested
+     rivals  a rival's latest shelf price (90 days) below our cheapest
+             supplier cost for the same item, in the same unit
+   There is no log of searches that found nothing yet, so that kind of
+   chance is not here. */
+function aChances(){
+  const d = D(), g = { asked: [], orders: [], chat: [], rivals: [] };
+  openLeads().filter(l => l.status === 'asked').forEach(l => {
+    const reqs = (l.requests || []).filter(r => !r.withdrawn);
+    const drop = reqs.filter(r => r.source === 'dropped').sort((a, b) => msOf(b.at) - msOf(a.at))[0];
+    const last = asksLastReq(l);
+    const chat = /^(whatsapp|wa|chat)$/i.test(String(last.source || '')) || last.channel === 'whatsapp';
+    const r = drop || last;
+    (drop ? g.orders : chat ? g.chat : g.asked).push({ kind: 'lead', l, r, join: aJoinOf(l), t: msOf(r.at) || msOf(l.createdAt) });
+  });
+  d.agentRequests.filter(a => a.status === 'open').forEach(a => {
+    const m = findLeadByText(a.words);
+    g.asked.push({ kind: 'agent', a, join: m && !m.voided && m.status !== 'listed' ? m : null, t: msOf(a.createdAt) });
+  });
+  const since = Date.now() - 90 * DAY, latest = new Map();
+  d.rivals.forEach(r => {
+    if (!(r.price > 0) || !String(r.rival || '').trim()) return;
+    const t = msOf(r.seenOn); if (t && t < since) return;
+    const k = stockKey(r.productId, r.variantIdx) + '|' + normName(r.rival), had = latest.get(k);
+    if (!had || t > msOf(had.seenOn)) latest.set(k, r);
+  });
+  const best = new Map();
+  latest.forEach(r => {
+    const p = productById(r.productId); if (!p) return;
+    const vi = r.variantIdx == null ? null : r.variantIdx;
+    const rows = d.prices.filter(x => String(x.productId) === String(r.productId) && (x.variantIdx == null ? null : x.variantIdx) === vi && !x.outOfStock && priceRowCost(x) > 0 && supplierById(x.supplierId) && aUnitKey(x.unit) === aUnitKey(r.unit));
+    if (!rows.length) return;
+    const row = rows.reduce((a, b) => priceRowCost(b) < priceRowCost(a) ? b : a), cost = priceRowCost(row);
+    if (r.price >= cost) return;
+    const k = stockKey(r.productId, vi), had = best.get(k);
+    if (!had || r.price < had.r.price) best.set(k, { kind: 'rival', r, p, vi, cost, sup: supplierById(row.supplierId), t: msOf(r.seenOn) });
+  });
+  g.rivals = [...best.values()];
+  Object.values(g).forEach(list => list.sort((a, b) => b.t - a.t));
+  const total = g.asked.length + g.orders.length + g.chat.length + g.rivals.length;
+  const words = [[g.asked.length, 'request', 'requests'], [g.orders.length, 'lost order line', 'lost order lines'], [g.chat.length, 'on WhatsApp', 'on WhatsApp'], [g.rivals.length, 'rival below cost', 'rivals below cost']]
+    .filter(x => x[0] > 0).map(x => x[0] + ' ' + (x[0] === 1 ? x[1] : x[2]));
+  return { g, total, words };
+}
+// The Today card for a job: a hunt's own tile, else the job's kind.
+const aJOB_TILE = { tell: ['#E4F4EA', '#0F6B43'], ask: ['#EFEBFB', '#5B4AA8'], record: ['#EFEBFB', '#5B4AA8'], prices: ['#FDF1DC', '#95530C'], decide: ['#E8EBF0', '#3D4A5C'],
+  list: ['#E4F4EA', '#0F6B43'], lapse: ['#FDEEE1', '#95530C'], chase: ['#DCEAF8', '#1A5A8A'], fix: ['#F6E4F1', '#7A3268'] };
+function aJobTile(kind){ const t = aJOB_TILE[kind] || aJOB_TILE.decide; return `width: 36px; height: 36px; flex: none; border-radius: 11px; background: ${t[0]}; color: ${t[1]}; display: flex; align-items: center; justify-content: center`; }
+// The words on a job's button (the old Today's own).
+function aJobCta(j){
+  if (j.kind === 'ask') {
+    if (j.seller) return `Ask ${firstWord(j.seller.sup.name)}`;
+    const n = typeof askSupDefaults === 'function' && j.lead ? askSupDefaults(j.lead).length : 0;
+    return n > 1 ? `Ask the ${n} who sell it` : n === 1 ? 'Ask the one who sells it' : 'Ask suppliers';
+  }
+  return { fix: 'See the fixes', record: 'Add who has it', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Ask for a fresh price', chase: 'Open the hunt',
+    decide: j.word === 'Decide' ? 'Open the verdict' : j.word, list: j.word === 'Price' ? 'Price it' : 'Put it in the catalogue' }[j.kind] || 'Open';
+}
+// A price row's packing in the standard's words: "20 dozens in a carton · 12 a dozen".
+function aPackWord(r){
+  if (!r || !(Number(r.packQty) > 0) || !r.packUnit) return '';
+  const u = (r.unit || 'pc') === 'pc' ? 'piece' : r.unit, many = Number(r.packQty) === 1 ? u : (/s$/.test(u) ? u : u + 's');
+  return `${n0(r.packQty)} ${many} in a ${r.packUnit}` + (Number(r.piecesPerUnit) > 1 && u !== 'piece' ? ` · ${n0(r.piecesPerUnit)} a ${u}` : '');
+}
+const aARROW = 'M5 12h14M13 6l6 6-6 6', aCHEV = 'M9 6l6 6-6 6';
+
 SCREENS.Asks = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-
-  <div style="flex: none; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; gap: 10px">
-      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -.02em">Asks</span><span style="font-size: 13px; color: #6B7480"><b style="color: #1C2233; font-family: 'IBM Plex Mono', monospace">{{ openN }}</b> open · <b style="color: #1C2233; font-family: 'IBM Plex Mono', monospace">{{ waitingN }}</b> {{ waitingWord }}</span></span>
-      <a href="NewAsk.dc.html" aria-label="Record an ask" style="height: 44px; padding: 0 14px 0 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ask</a>
-      <a href="Hunts.dc.html" data-push="1" data-sx='{"search":true}' aria-label="Search the asks" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></a>
-    </div>
-    <div role="tablist" aria-label="Which asks" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F1EEE8">
-      <a href="Asks.dc.html" role="tab" aria-selected="true" style="height: 36px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(22,32,60,.08); font-size: 13px; font-weight: 700; color: #1C2233; display: flex; align-items: center; justify-content: center; gap: 4px">New <span style="font-family: 'IBM Plex Mono', monospace; color: #C93A30">{{ newN }}</span></a>
-      <a href="AsksDropped.dc.html" role="tab" aria-selected="false" style="height: 36px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #5F6980; display: flex; align-items: center; justify-content: center; gap: 4px">From orders <span style="font-family: 'IBM Plex Mono', monospace">{{ ordersN }}</span></a>
-      <a href="Hunts.dc.html" role="tab" aria-selected="false" style="height: 36px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #5F6980; display: flex; align-items: center; justify-content: center; gap: 4px">All open <span style="font-family: 'IBM Plex Mono', monospace">{{ openN }}</span></a>
-    </div>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 20px 16px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; align-items: center; gap: 12px">
+    <a href="Main.dc.html" data-back aria-label="Back" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="t1" style="font-size: 24px">New chances</span><span style="font-size: 13px; color: #B3BCD2"><span class="m" style="color: #FFFFFF">{{ total }}</span> {{ totalWord }}</span></span>
+    <a href="Hunts.dc.html" class="pill glass" style="height: 32px; padding: 0 12px; color: #FFFFFF">Pipeline</a>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
-    <sc-if value="{{ hasJoin }}">
-    <div style="display: flex; flex-direction: column; gap: 0; padding: 14px; border-radius: 20px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-      <span style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #6B7480"><span style="width: 8px; height: 8px; border-radius: 999px; background: #C93A30"></span>DROPPED AT CHECKING · {{ j.time }}</span>
-      <div class="a-slide" style="margin: 10px 6px 0; filter: drop-shadow(0 1px 1px rgba(22,32,60,.08)) drop-shadow(0 4px 10px rgba(22,32,60,.08))">
-        <div style="height: 7px; background: linear-gradient(45deg, transparent 50%, #FFFFFF 50%) 0 0 / 10px 7px repeat-x, linear-gradient(-45deg, transparent 50%, #FFFFFF 50%) 0 0 / 10px 7px repeat-x"></div>
-        <div style="background: #FFFFFF; padding: 4px 12px 8px; display: flex; flex-direction: column; gap: 6px">
-          <span style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #5F6980"><span>{{ j.client }}</span><span style="font-family: 'IBM Plex Mono', monospace">{{ j.order }}</span></span>
-          <span style="display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; color: #6B7480"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; text-decoration: line-through">{{ j.qty }}</span><span style="font-size: 14px; font-weight: 600; text-decoration: line-through; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ j.name }}</span><span style="font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #8E2A22; white-space: nowrap">{{ j.reason }}</span></span>
-        </div>
-        <div style="height: 7px; background: linear-gradient(135deg, #FFFFFF 50%, transparent 50%) 0 0 / 10px 7px repeat-x, linear-gradient(-135deg, #FFFFFF 50%, transparent 50%) 0 0 / 10px 7px repeat-x"></div>
-      </div>
-      <span aria-hidden="true" class="a-drop" style="align-self: center; margin: 4px 0; color: #C9C4BA"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"></path></svg></span>
-      <a href="Hunt.dc.html" data-sx="{{ j.sx }}" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; background: #F7F5F2; box-shadow: inset 0 0 0 1.5px #16203C">
-        <span style="{{ j.photo }}; width: 44px; height: 44px; flex: none; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.035); color: #5F6980; display: flex; align-items: center; justify-content: center"><sc-if value="{{ j.noPhoto }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ j.icon }}"></path></svg></sc-if></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
-          <span style="font-size: 12px; font-weight: 600; color: #6B7480">Same as the hunt for</span>
-          <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ j.target }}</span>
-          <span style="display: flex; align-items: center; gap: 3px" role="img" aria-label="{{ j.dotsLabel }}"><sc-for list="{{ j.dots }}" as="d" hint-placeholder-count="4"><span style="width: 10px; height: 10px; border-radius: 999px; background: #16203C"></span></sc-for><span class="a-new" style="width: 10px; height: 10px; border-radius: 999px; background: #C93A30; box-shadow: 0 0 0 2px #FDE8E4"></span><span style="margin-left: 6px; font-size: 12px; font-weight: 700"><span style="font-family: 'IBM Plex Mono', monospace">{{ j.before }} → {{ j.after }}</span> clients</span></span>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{ groups }}" as="g">
+    <section aria-label="{{ g.title }}" class="card n-in" style="{{ g.box }}">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px"><span style="{{ g.badge }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ g.icon }}"></path></svg></span><span style="{{ g.titleStyle }}">{{ g.title }}</span><span class="m" style="margin-left: auto; font-size: 12px; color: #6B7480">{{ g.n }}</span><sc-if value="{{ g.hasAll }}"><a href="{{ g.allHref }}" class="pill" style="background: #F2EFEA; color: #3B4566">All</a></sc-if></div>
+      <sc-for list="{{ g.rows }}" as="r">
+      <div style="{{ r.rowStyle }}">
+        <a href="{{ r.openHref }}" data-sx="{{ r.openSx }}" aria-label="{{ r.openLabel }}" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{ r.name }}</span><span class="sub">{{ r.sub }}</span><sc-if value="{{ r.hasHint }}"><span style="{{ r.hintStyle }}">{{ r.hint }}</span></sc-if></a>
+        <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px">
+          <sc-if value="{{ r.isLink }}"><a href="{{ r.href }}" data-sx="{{ r.sx }}" style="{{ r.btnStyle }}">{{ r.word }}</a></sc-if>
+          <sc-if value="{{ r.isBtn }}"><button type="button" onClick="{{ r.act }}" disabled="{{ busy }}" style="{{ r.btnStyle }}">{{ r.word }}</button></sc-if>
+          <sc-if value="{{ r.canApart }}"><button type="button" onClick="{{ r.apart }}" disabled="{{ busy }}" style="font-size: 11.5px; font-weight: 600; color: #5F6980; text-decoration: underline; text-underline-offset: 2px">keep apart</button></sc-if>
         </span>
-      </a>
-      <div style="display: flex; gap: 8px; margin-top: 12px">
-        <button type="button" onClick="{{ keepApart }}" disabled="{{ busy }}" style="height: 52px; padding: 0 16px; border: none; border-radius: 16px; background: #F1EEE8; font-family: inherit; font-size: 14px; font-weight: 700; color: #1C2233; cursor: pointer">Keep apart</button>
-        <button type="button" onClick="{{ join }}" disabled="{{ busy }}" style="flex: 1; height: 52px; border: none; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l4-4 4 4M12 3v12M5 13v6h14v-6"></path></svg>{{ j.cta }}</button>
       </div>
-    </div>
-    </sc-if>
-
-    <sc-if value="{{ hasRows }}">
-    <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 0"><span style="font-size: 15px; font-weight: 700">{{ listTitle }}</span><span role="img" aria-label="{{ stripLabel }}" style="display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; color: #5F6980"><sc-for list="{{ strip }}" as="s" hint-placeholder-count="3"><span style="display: flex; align-items: center; gap: 4px"><span style="{{ s.dot }}"></span>{{ s.word }} <b style="font-family: 'IBM Plex Mono', monospace; color: #1C2233">{{ s.n }}</b></span></sc-for></span></div>
-    <div style="background: #FFFFFF; border-radius: 18px; box-shadow: inset 0 0 0 1px #E6E3DD; padding: 0 14px">
-      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="2">
-      <sc-if value="{{ r.isLead }}">
-      <a href="Hunt.dc.html" data-sx="{{ r.sx }}" style="{{ r.rowStyle }}">
-        <span style="{{ r.tile }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ r.path }}"></path></svg></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.sub }}</span></span>
-        <sc-if value="{{ r.hasPhoto }}"><span style="{{ r.photo }}; width: 40px; height: 40px; flex: none; border-radius: 10px; box-shadow: inset 0 0 0 2px #FFFFFF, 0 0 0 1px #E6E3DD" role="img" aria-label="{{ r.photoLabel }}"></span></sc-if>
-        <sc-if value="{{ r.noPhoto }}"><span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="{{ r.topStyle }}">{{ r.top }}</span><span style="font-size: 11px; color: #6B7480">{{ r.bottom }}</span></span></sc-if>
-      </a>
-      </sc-if>
-      <sc-if value="{{ r.isAgent }}">
-      <button type="button" onClick="{{ r.take }}" disabled="{{ busy }}" aria-label="{{ r.takeLabel }}" style="{{ r.btnStyle }}">
-        <span style="{{ r.tile }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ r.path }}"></path></svg></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-align: left"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.sub }}</span></span>
-        <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="font-size: 11px; font-weight: 700; color: #0F6B43">{{ r.top }}</span><span style="font-size: 11px; color: #6B7480">{{ r.bottom }}</span></span>
-      </button>
-      </sc-if>
       </sc-for>
-    </div>
-    </sc-if>
+    </section>
+    </sc-for>
 
     <sc-if value="{{ empty }}">
-      <div style="background: #FFFFFF; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
-        <span style="width: 52px; height: 52px; border-radius: 16px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
-        <span style="font-size: 15px; font-weight: 700">Nothing new</span>
-        <span style="font-size: 13px; color: #5F6980">Every ask has somebody on it.</span>
-        <a href="NewAsk.dc.html" style="height: 48px; padding: 0 18px; border-radius: 14px; background: #16203C; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center">Record an ask</a>
-      </div>
+    <div class="card n-in" style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+      <span style="width: 52px; height: 52px; border-radius: 16px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span class="t2">Nothing new</span>
+      <span class="sub" style="font-size: 13px">Every request has somebody on it.</span>
+      <a href="NewAsk.dc.html" class="chip on">Capture one</a>
+    </div>
     </sc-if>
+    <sc-if value="{{ hasOrders }}"><a href="AsksDropped.dc.html" class="btn2" style="margin-top: 2px">Every line lost at Checking · <span class="m">{{ ordersN }}</span></a></sc-if>
   </div>
 
-  <nav aria-label="Sourcing" class="sx-nav" style="position: absolute; left: 0; right: 0; bottom: 0; height: calc(84px + var(--safe-b)); padding-bottom: var(--safe-b); background: #FFFFFF; box-shadow: inset 0 1px 0 #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 96px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box; z-index: 30"><a href="Main.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"></path><path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M2.4 16.4h19.2M5.6 20.4h12.8" fill="none"></path></svg>Today</a><a href="Asks.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #16203C; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="#16203C" stroke="#16203C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6v.1" fill="none"></path></svg><sc-if value="{{ nav.hasAsks }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.asks }}</span></sc-if>Asks</a><a href="Spotted.dc.html" aria-label="Spotted something: photo, price, pack" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 4px #F7F5F2, 0 6px 20px rgba(201,58,48,.35)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></a><a href="Hunts.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h4V9H3zM10 18h4V5h-4zM17 18h4v-6h-4z"></path></svg>Hunts</a><a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4" fill="none"></circle></svg><sc-if value="{{ nav.hasPrices }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #F5B26B; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.prices }}</span></sc-if>Prices</a></nav>
+  ${V2NAV('Main')}
 </div>`,
   Component: class extends SrvLogic {
     renderVals() {
-      const d = D();
-      const open = openLeads();
-      const agentOpen = d.agentRequests.filter(r => r.status === 'open');
-      const waiting = { size: clientsWaiting(open) };
-      const ordersN = open.filter(l => (l.requests || []).some(r => r.source === 'dropped' && !r.withdrawn)).length;
-      const asked = open.filter(l => l.status === 'asked');
-      const pair = asksJoinPair();
-
-      let j = {};
-      if (pair) {
-        const { gone, keep, r } = pair;
-        const before = leadDistinctAskers(keep), after = leadDistinctAskers({ requests: (keep.requests || []).concat(gone.requests || []) });
-        const client = askerName(r);
-        j = { time: hm(msOf(r.at)) || '— —', client, order: r.orderId ? 'Q-' + r.orderId : '', qty: Number(r.qty) ? n0(r.qty) + ' ' + (r.unit || 'pc') : '— —',
-          name: gone.name, reason: String(r.reason || 'dropped').toUpperCase(), target: keep.name, sx: JSON.stringify({ leadId: keep.id }),
-          photo: photoStyle(keep.image, 'background: linear-gradient(145deg, #F1EEE8 0%, #FFFFFF 150%)'), noPhoto: !keep.image, icon: itemIconPath(keep.name),
-          dots: Array.from({ length: Math.min(after - 1, 12) }, () => ({})), before, after,
-          dotsLabel: after > before ? `${plural(before, 'client')} asked before, ${firstWord(client)} makes ${after}` : `${plural(before, 'client')}; ${firstWord(client)} asked for it before`,
-          cta: `Add ${firstWord(client)}’s ask` };
-      }
-      const keepApart = () => pair && guarded('Keep apart', async () => {
-        const g = JSON.parse(JSON.stringify(pair.gone));
-        leadMeta(g).keepApart = { from: pair.keep.id, at: new Date().toISOString(), by: (myStaff() || {}).id || null };
-        await saveLead(g);
-        FEEL.yes(); toast(`Kept apart — “${g.name}” stays its own hunt.`);
-      });
-      const join = () => pair && guarded('Join the hunt', async () => {
-        const k = await joinLeads(pair.keep, pair.gone);
-        FEEL.yes(); toast(`${askerName(pair.r)}’s ask is on “${k.name}” — ${plural(leadDistinctAskers(k), 'client')} now.`);
-        if (SCREENS.Hunt) A.go('Hunt', { leadId: k.id });
-      });
-
-      // Also new: requests nobody has started on, and agents' open stock asks.
-      const items = asked.filter(l => !pair || l.id !== pair.gone.id).map(l => ({ l, r: asksLastReq(l), t: msOf(asksLastReq(l).at) || msOf(l.createdAt) }))
-        .concat(agentOpen.map(a => ({ a, t: msOf(a.createdAt) })))
-        .sort((x, y) => y.t - x.t);
-      const count = { Sales: 0, Agents: 0, Chats: 0, Orders: 0 };
-      const rows = items.map((x, i, arr) => {
-        const last = i === arr.length - 1;
-        const rowStyle = `display: flex; align-items: center; gap: 12px; min-height: 68px${last ? '' : '; border-bottom: 1px solid #F1EEE8'}`;
-        if (x.a) {
-          const a = x.a, ag = agentById(a.agentId), tile = asksTile('Agents');
-          count.Agents++;
-          const take = () => guarded('Take the agent’s ask', async () => {
-            const cust = d.customers.find(c => normName(c.name) === normName(a.clientName));
-            const res = await captureAsk({ name: a.words, qty: a.qty, customerName: a.clientName, customerId: cust ? cust.id : null, source: 'agent', agentRequestId: a.id,
-              note: a.wanted ? 'wanted: ' + a.wanted : '', extra: { agentId: a.agentId } });
-            // captureAsk keeps the named fields only; the agent rides on the request too.
-            const l2 = JSON.parse(JSON.stringify(res.lead)), rq = l2.requests[l2.requests.length - 1];
-            if (rq && a.agentId && !rq.agentId) { rq.agentId = a.agentId; await saveLead(l2); res.lead = l2; }
-            await setAgentRequest(a, 'done');
-            FEEL.yes(); toast(captureWords(res));
-            if (SCREENS.Hunt) A.go('Hunt', { leadId: res.lead.id });
-          });
-          return { isAgent: true, isLead: false, name: a.words || 'An agent’s ask', tile: tile.style, path: tile.path,
-            sub: `${ag ? 'Agent ' + ag.name + '’s' : 'An agent’s'} stock ask${a.clientName ? ' · for ' + a.clientName : ''}${Number(a.qty) ? ' · ' + n0(a.qty) : ''}`,
-            top: 'take it', bottom: agoWord(a.createdAt), take, takeLabel: `Take ${a.words}: it becomes a hunt`,
-            btnStyle: 'width: 100%; border: none; background: transparent; padding: 0; ' + rowStyle + '; font-family: inherit; color: #1C2233; cursor: pointer' };
+      const d = D(), ch = aChances(), g = ch.g;
+      const DARK = 'height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap; background: #16203C; color: #FFFFFF';
+      const LIGHT = 'height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap; background: #FFFFFF; box-shadow: 0 0 0 1px #DCD6CC; color: #1C2233';
+      const hintOf = (ink) => `font-size: 11.5px; font-weight: 600; color: ${ink}`;
+      const row = (i) => `display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 0${i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}`;
+      // A request already a hunt at Requested: join the open hunt it names, else start on it.
+      const leadRow = (x, i, ink) => {
+        const l = x.l, r = x.r, m = x.join, sx = JSON.stringify({ leadId: l.id });
+        const base = { rowStyle: row(i), name: l.name, sub: asksSubOf(l, r), openHref: 'Hunt.dc.html', openSx: sx, openLabel: `Open the hunt for ${l.name}`, isLink: false, isBtn: false, canApart: false };
+        if (r.source === 'dropped') {
+          const q = r.orderId != null ? d.quotes.find(o => String(o.id) === String(r.orderId)) : null;
+          const line = q && (q.droppedLines || []).find(o => (r.productId && o.productId === r.productId) || normName(o.productName) === normName(l.name));
+          const each = Number(r.sellPrice) || (line && Number(line.sellPrice)) || 0, qty = Number(r.qty) || (line && Number(line.qty)) || 0;
+          const tried = adTried(q).map(t => firstWord(t.name));
+          base.sub = `${askerName(r)}’s order${qty ? ' · ' + n0(qty) + ' ' + (r.unit || 'pc') : ''}${each && qty ? ' · worth ' + n0(each * qty) : ''}`;
+          base.hint = `${r.reason || 'Nobody has it'} at Checking${tried.length ? ' · ' + tried.join(', ') + ' said no' : ''}`; base.hasHint = true; base.hintStyle = hintOf('#A82D24');
         }
-        const l = x.l, r = x.r, kind = sourceOf(r)[0], tile = asksTile(kind);
-        if (count[kind] != null) count[kind]++;
-        const over = leadOver(l), n = leadDistinctAskers(l);
-        return { isLead: true, isAgent: false, sx: JSON.stringify({ leadId: l.id }), rowStyle, name: l.name, tile: tile.style, path: tile.path, sub: asksSubOf(l, r),
-          hasPhoto: !!l.image, noPhoto: !l.image, photo: photoStyle(l.image), photoLabel: `${firstWord(askerName(r))}’s photo of the ${l.name}`,
-          top: over ? leadDaysInStage(l) + 'd · over' : 'new hunt', topStyle: `font-size: 11px; font-weight: 700; color: ${over ? '#95530C' : '#C93A30'}`,
-          bottom: plural(n, 'client') };
-      });
-      // The key names only the kinds in the list below it.
-      const strip = [['Sales', '#95530C'], ['Agents', '#0F6B43'], ['Chats', '#1A5A8A'], ['Orders', '#C93A30']].filter(([w]) => count[w] > 0).map(([w, c]) => ({ word: w, n: count[w], dot: `width: 7px; height: 7px; border-radius: 999px; background: ${c}` }));
+        if (m) {
+          return { ...base, hasHint: true, hint: `You’re already hunting ${m.name} · ${aStageOf(m.status)[0]}`, hintStyle: hintOf(ink),
+            isBtn: true, word: 'Add to hunt', btnStyle: LIGHT, canApart: true,
+            act: () => guarded('Add to the hunt', async () => {
+              const k = await joinLeads(m, l);
+              FEEL.yes(); toast(`${askerName(r)}’s ask is on “${k.name}” — ${plural(leadDistinctAskers(k), 'client')} now.`);
+            }),
+            apart: () => guarded('Keep apart', async () => {
+              const g2 = JSON.parse(JSON.stringify(l));
+              leadMeta(g2).keepApart = { from: m.id, at: new Date().toISOString(), by: (myStaff() || {}).id || null };
+              await saveLead(g2);
+              FEEL.yes(); toast(`Kept apart — “${g2.name}” stays its own hunt.`);
+            }) };
+        }
+        return { ...base, isLink: true, href: 'Hunt.dc.html', sx, word: 'Hunt it', btnStyle: DARK };
+      };
+      // An agent's stock ask: it joins the hunt it names, else Capture opens with it.
+      const agentRow = (x, i, ink) => {
+        const a = x.a, ag = agentById(a.agentId), m = x.join;
+        const base = { rowStyle: row(i), name: a.words || 'An agent’s ask', openHref: 'NewAsk.dc.html', openLabel: `Capture ${a.words}`,
+          sub: `${ag ? 'Agent ' + ag.name + '’s' : 'An agent’s'} stock ask${a.clientName ? ' · for ' + a.clientName : ''}${Number(a.qty) ? ' · ' + n0(a.qty) : ''}${a.wanted ? ' · wanted ' + a.wanted : ''}`,
+          isLink: false, isBtn: false, canApart: false };
+        const cust = d.customers.find(c => normName(c.name) === normName(a.clientName));
+        const prefill = JSON.stringify({ kind: 'client', text: a.words || '', qty: a.qty, customerId: cust ? cust.id : null, customerName: cust ? '' : a.clientName, agentRequestId: a.id });
+        base.openSx = prefill;
+        if (m) {
+          return { ...base, hasHint: true, hint: `You’re already hunting ${m.name}`, hintStyle: hintOf(ink), isBtn: true, word: 'Add to hunt', btnStyle: LIGHT,
+            act: () => guarded('Add to the hunt', async () => {
+              const res = await captureAsk({ name: a.words, leadId: m.id, qty: a.qty, customerName: a.clientName, customerId: cust ? cust.id : null, source: 'agent', agentRequestId: a.id,
+                note: a.wanted ? 'wanted: ' + a.wanted : '', extra: { agentId: a.agentId } });
+              await setAgentRequest(a, 'done');
+              FEEL.yes(); toast(captureWords(res));
+            }) };
+        }
+        return { ...base, isLink: true, href: 'NewAsk.dc.html', sx: prefill, word: 'Hunt it', btnStyle: DARK };
+      };
+      const rivalRow = (x, i) => {
+        const name = productVariantLabel(x.p, x.vi), sx = JSON.stringify({ productId: x.p.id });
+        return { rowStyle: row(i), name, sub: `${x.r.rival} sells at ${n0(x.r.price)} · we pay ${n0(x.cost)}${x.sup ? ' at ' + firstWord(x.sup.name) : ''}`,
+          hasHint: true, hint: 'A cheaper supplier must exist', hintStyle: hintOf('#7A3268'), openHref: 'Item.dc.html', openSx: sx, openLabel: `Open ${name}`,
+          isLink: true, isBtn: false, canApart: false, href: 'Item.dc.html', sx, word: 'Find cheaper', btnStyle: DARK };
+      };
+      const G = [
+        ['asked', 'Clients asked for these', '#7B61D9', '#5B4AA8', 'M4 5h16v11H9l-5 4z', (x, i) => x.kind === 'agent' ? agentRow(x, i, '#5B4AA8') : leadRow(x, i, '#5B4AA8')],
+        ['orders', 'Orders that lost a line', '#C93A30', '#A82D24', 'M12 3 2 20h20zM12 10v4M12 17v.1', (x, i) => leadRow(x, i, '#A82D24')],
+        ['chat', 'Asked for on WhatsApp', '#1E9D57', '#0F6B43', 'M4 20l1.3-4A8 8 0 1 1 8 18.7z', (x, i) => leadRow(x, i, '#0F6B43')],
+        ['rivals', 'Rivals sell it below our cost', '#7A3268', '#7A3268', 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z', rivalRow],
+      ];
+      const groups = G.filter(([k]) => g[k].length).map(([k, title, c, ink, icon, fn], gi) => ({
+        title, n: String(g[k].length), icon, rows: g[k].map((x, i) => fn(x, i)),
+        box: `padding: 10px 14px 6px; animation-delay: ${(gi * 0.04).toFixed(2)}s`,
+        badge: `width: 24px; height: 24px; flex: none; border-radius: 8px; background: ${c}1F; color: ${c}; display: flex; align-items: center; justify-content: center`,
+        titleStyle: `font-size: 14px; font-weight: 800; color: ${ink}`,
+        hasAll: k === 'orders', allHref: 'AsksDropped.dc.html',
+      }));
+      const ordersN = openLeads().filter(l => (l.requests || []).some(r => r.source === 'dropped' && !r.withdrawn)).length;
       return {
         nav: navVals(), busy: S.busy,
-        openN: open.length, waitingN: waiting.size, waitingWord: waiting.size === 1 ? 'client waiting' : 'clients waiting',
-        newN: asked.length + agentOpen.length, ordersN,
-        hasJoin: !!pair, j, keepApart, join,
-        hasRows: rows.length > 0, rows, listTitle: pair ? 'Also new' : 'New', strip,
-        stripLabel: 'Where they came from: ' + strip.map(s => `${s.n} from ${s.word}`).join(', '),
-        empty: !pair && !rows.length,
+        total: String(ch.total), totalWord: ch.total === 1 ? 'thing people want that nobody has started on' : 'things people want that nobody has started on',
+        groups, empty: !groups.length, hasOrders: ordersN > 0, ordersN: String(ordersN),
       };
     }
   },
@@ -3102,19 +3165,12 @@ function adState(l){
 
 SCREENS.AsksDropped = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
 
-  <div style="flex: none; padding: 16px 16px 0; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; gap: 10px">
-      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 26px; font-weight: 700; letter-spacing: -.02em">Asks</span><span style="font-size: 13px; color: #6B7480"><b style="color: #1C2233; font-family: 'IBM Plex Mono', monospace">{{ openN }}</b> open · <b style="color: #1C2233; font-family: 'IBM Plex Mono', monospace">{{ waitingN }}</b> {{ waitingWord }}</span></span>
-      <a href="NewAsk.dc.html" aria-label="Record an ask" style="height: 44px; padding: 0 14px 0 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Ask</a>
-      <a href="Hunts.dc.html" data-push="1" data-sx='{"search":true}' aria-label="Search the asks" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></a>
-    </div>
-    <div role="tablist" aria-label="Which asks" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F1EEE8">
-      <a href="Asks.dc.html" role="tab" aria-selected="false" style="height: 36px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #5F6980; display: flex; align-items: center; justify-content: center; gap: 4px">New <span style="font-family: 'IBM Plex Mono', monospace">{{ newN }}</span></a>
-      <a href="AsksDropped.dc.html" role="tab" aria-selected="true" style="height: 36px; border-radius: 10px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(22,32,60,.08); font-size: 13px; font-weight: 700; color: #1C2233; display: flex; align-items: center; justify-content: center; gap: 4px">From orders <span style="font-family: 'IBM Plex Mono', monospace; color: #C93A30">{{ ordersN }}</span></a>
-      <a href="Hunts.dc.html" role="tab" aria-selected="false" style="height: 36px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #5F6980; display: flex; align-items: center; justify-content: center; gap: 4px">All open <span style="font-family: 'IBM Plex Mono', monospace">{{ openN }}</span></a>
-    </div>
+  <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 20px 16px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; align-items: center; gap: 12px">
+    <a href="Asks.dc.html" data-back aria-label="Back to the new chances" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="t1" style="font-size: 24px">From orders</span><span style="font-size: 13px; color: #B3BCD2"><span class="m" style="color: #FFFFFF">{{ ordersN }}</span> lost at Checking · <span class="m" style="color: #FFFFFF">{{ waitingN }}</span> {{ waitingWord }}</span></span>
+    <a href="Hunts.dc.html" class="pill glass" style="height: 32px; padding: 0 12px; color: #FFFFFF">Pipeline</a>
   </div>
 
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(210px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
@@ -3165,12 +3221,12 @@ SCREENS.AsksDropped = {
     </sc-if>
   </div>
 
-  <div style="position: absolute; left: 0; right: 0; bottom: calc(84px + var(--safe-b)); z-index: 20; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px 34px; display: flex; align-items: center; gap: 12px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
+  <div style="position: absolute; left: 0; right: 0; bottom: calc(86px + var(--safe-b)); z-index: 20; background: #16203C; color: #FFFFFF; border-radius: 24px 24px 0 0; padding: 12px 14px 34px; display: flex; align-items: center; gap: 12px; box-shadow: 0 -8px 24px rgba(22,32,60,.18)">
     <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">{{ barTitle }}</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ barSub }}</span></span>
     <sc-if value="{{ hasWaiting }}"><button type="button" onClick="{{ huntAll }}" disabled="{{ busy }}" style="height: 52px; padding: 0 18px; border: none; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex: none; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4.2-4.2"></path></svg>{{ huntWord }}</button></sc-if>
   </div>
 
-  <nav aria-label="Sourcing" class="sx-nav" style="position: absolute; left: 0; right: 0; bottom: 0; height: calc(84px + var(--safe-b)); padding-bottom: var(--safe-b); background: #FFFFFF; box-shadow: inset 0 1px 0 #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 96px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box; z-index: 30"><a href="Main.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"></path><path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M2.4 16.4h19.2M5.6 20.4h12.8" fill="none"></path></svg>Today</a><a href="Asks.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #16203C; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="#16203C" stroke="#16203C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6v.1" fill="none"></path></svg><sc-if value="{{ nav.hasAsks }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.asks }}</span></sc-if>Asks</a><a href="Spotted.dc.html" aria-label="Spotted something: photo, price, pack" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 4px #F7F5F2, 0 6px 20px rgba(201,58,48,.35)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></a><a href="Hunts.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h4V9H3zM10 18h4V5h-4zM17 18h4v-6h-4z"></path></svg>Hunts</a><a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4" fill="none"></circle></svg><sc-if value="{{ nav.hasPrices }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #F5B26B; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.prices }}</span></sc-if>Prices</a></nav>
+  ${V2NAV('Main')}
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) { super(props); this.state = { reason: null }; }
@@ -5096,163 +5152,111 @@ SCREENS.Landed = {
    rest a tap away. Search and Suppliers open from the top. */
 SCREENS.Main = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-  <div data-navy-top style="flex: none; background: linear-gradient(180deg, #1B2747 0%, #16203C 100%); color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 18px">
-    <div style="display: flex; align-items: center; gap: 8px">
-      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
-        <span style="font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ dateWord }} · {{ roleWord }}</span>
-        <span style="font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15">{{ greeting }}</span>
-      </div>
-      <a href="Search.dc.html" aria-label="Search items, hunts, suppliers and clients" style="width: 44px; height: 44px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></a>
-      <a href="Suppliers.dc.html" aria-label="Suppliers" style="width: 44px; height: 44px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l2-5h14l2 5"></path><path d="M4 10v10h16V10"></path><path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"></path><path d="M10 20v-5h4v5"></path></svg></a>
-      <a href="Profile.dc.html" aria-label="You: profile and what your login opens" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: #F7F5F2; color: #16203C; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{ me }}</a>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 20px 18px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="eb" style="color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ dateWord }}</span><span class="t1" style="font-size: 26px">{{ greeting }}</span></span>
+      <a href="Search.dc.html" aria-label="Search items, hunts, suppliers and clients" class="glass" style="width: 42px; height: 42px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg></a>
+      <a href="Profile.dc.html" aria-label="You: your progress and who decides what" style="display: flex"><span class="ava" style="width: 42px; height: 42px; font-size: 14px; box-shadow: 0 0 0 2px rgba(255,255,255,.3); background: #FFFFFF; color: #16203C">{{ me }}</span></a>
     </div>
-
-    <div style="display: flex; flex-direction: column; gap: 12px">
-      <div style="display: flex; align-items: flex-end; justify-content: space-between">
-        <span style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 40px; font-weight: 500; letter-spacing: -.04em; line-height: 1">{{ doneN }}<span style="color: #5C6788">/{{ total }}</span></span><span style="font-size: 14px; font-weight: 500; color: #B3BCD2">{{ doneWord }}</span></span>
-        <span style="font-size: 12px; font-weight: 600; color: #6FDCB0">{{ toGoWord }}</span>
-      </div>
-      <div role="img" aria-label="{{ barLabel }}" style="{{ barBox }}">
-        <sc-for list="{{ segs }}" as="g"><span class="t-seg" style="{{ g }}"></span></sc-for>
-      </div>
-      <div style="display: flex; gap: 14px; font-size: 12px; font-weight: 500; color: #B3BCD2; min-height: 16px">
-        <sc-for list="{{ legend }}" as="k"><span style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap"><span style="{{ k.dot }}"></span>{{ k.word }}</span></sc-for>
-        <sc-if value="{{ hasNow }}"><span style="display: inline-flex; align-items: center; gap: 6px; margin-left: auto"><span style="width: 8px; height: 8px; border-radius: 2px; box-shadow: inset 0 0 0 1.5px #E5483D"></span>now</span></sc-if>
-      </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px"><span style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 40px; font-weight: 500; letter-spacing: -.05em; line-height: 1">{{ doneN }}<span style="color: #8D99B5">/{{ total }}</span></span><span style="font-size: 14px; color: #B3BCD2">{{ movesWord }}</span></span><span style="font-size: 12px; color: #6FDCB0; font-weight: 700; text-align: right">{{ weekWord }}</span></div>
+      <div role="img" aria-label="{{ barLabel }}" style="{{ barBox }}"><sc-for list="{{ segs }}" as="g"><span style="{{ g }}"></span></sc-for></div>
     </div>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px calc(104px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px">
-      <span style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">Next up</span>
-      <span style="font-size: 12px; font-weight: 500; color: #6B7480">most waiting first</span>
-    </div>
-
-    <sc-if value="{{ empty }}">
-      <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 24px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
-        <span style="width: 52px; height: 52px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span>
-        <span style="font-size: 17px; font-weight: 700">Nothing waiting</span>
-        <span style="font-size: 13px; color: #5F6980">Every ask is moving and today's prices are done.</span>
-        <a href="Hunts.dc.html" style="height: 40px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px #1C2233; font-size: 13px; font-weight: 600; display: flex; align-items: center">See every hunt</a>
-      </div>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+    <sc-if value="{{ hasNow }}">
+    <a href="{{ now.href }}" data-sx="{{ now.sx }}" class="card n-in" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 0 0 2px #16203C, 0 18px 36px -18px rgba(22,32,60,.5)">
+      <div style="display: flex; align-items: center; gap: 12px"><span style="{{ now.thumb }}"><sc-if value="{{ now.noPhoto }}"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ now.icon }}"></path></svg></sc-if></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="eb" style="{{ now.ebStyle }}">{{ now.eyebrow }}</span><span class="t2" style="font-size: 18px; line-height: 1.2">{{ now.title }}</span><span class="sub">{{ now.sub }}<sc-if value="{{ now.hasScore }}"> · score <b class="m" style="{{ now.scoreStyle }}">{{ now.score }}</b></sc-if></span></span></div>
+      <span class="btn">{{ now.cta }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+    </a>
     </sc-if>
 
-    <sc-if value="{{ hasNowJob }}">
-    <div class="t-in" style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 14px">
-      <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #A82D24"><span class="t-dot" style="width: 7px; height: 7px; border-radius: 999px; background: #E5483D"></span>{{ now.eyebrow }}</div>
-      <div style="display: flex; flex-direction: column; gap: 4px">
-        <span style="font-size: 19px; font-weight: 700; letter-spacing: -.015em; line-height: 1.2"><span style="display: block">{{ now.verb }}</span><sc-if value="{{ now.hasObj }}"><span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="{{ now.obj }}">{{ now.obj }}</span></sc-if></span>
-        <span style="font-size: 13px; font-weight: 500; color: #5F6980">{{ now.sub }}<sc-if value="{{ now.hasWarn }}"> · <span style="color: #95530C; font-weight: 600">{{ now.warn }}</span></sc-if></span>
-      </div>
-      <sc-if value="{{ now.hasLate }}">
-      <div role="img" aria-label="{{ now.lateLabel }}" style="position: relative; height: 18px">
-        <span style="position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 999px; background: #F2EFEA"></span>
-        <span style="{{ now.lateIn }}"></span>
-        <span style="{{ now.lateOver }}"></span>
-        <span style="{{ now.lateMark }}"></span>
-      </div>
-      </sc-if>
-      <a href="{{ now.href }}" data-sx="{{ now.sx }}" style="height: 52px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ now.icon }}"></path></svg>{{ now.cta }}</a>
+    <sc-if value="{{ empty }}">
+    <div class="card n-in" style="padding: 22px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+      <span style="width: 52px; height: 52px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span>
+      <span class="t2">Nothing waiting</span>
+      <span class="sub" style="font-size: 13px">Every hunt is moving and today’s prices are done.</span>
+      <a href="Hunts.dc.html" class="chip">See the pipeline</a>
     </div>
     </sc-if>
 
     <sc-if value="{{ hasRows }}">
-    <div class="t-in" style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 4px 16px; animation-delay: .08s">
-      <sc-for list="{{ rows }}" as="r">
-      <div style="{{ r.rowStyle }}">
-        <span style="width: 40px; height: 40px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px #E6E3DD; color: #1C2233; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ r.icon }}"></path></svg></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" title="{{ r.title }}">{{ r.title }}</span>
-          <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6B7480; min-width: 0"><sc-if value="{{ r.hasBars }}"><span style="display: flex; gap: 3px; flex: none" role="img" aria-label="{{ r.barsLabel }}"><sc-for list="{{ r.bars }}" as="b"><span style="{{ b }}"></span></sc-for></span></sc-if><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.sub }}<sc-if value="{{ r.hasWarn }}"> · <span style="color: #95530C; font-weight: 600">{{ r.warn }}</span></sc-if></span></span></span>
-        <a href="{{ r.href }}" data-sx="{{ r.sx }}" aria-label="{{ r.ctaLabel }}" style="height: 36px; padding: 0 14px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px #1C2233; color: #1C2233; font-size: 13px; font-weight: 600; display: flex; align-items: center">{{ r.word }}</a>
-      </div>
-      </sc-for>
+    <div class="card n-in" style="padding: 2px 14px; animation-delay: .05s">
+      <sc-for list="{{ rows }}" as="r"><a href="{{ r.href }}" data-sx="{{ r.sx }}" aria-label="{{ r.label }}" style="{{ r.rowStyle }}"><span style="{{ r.tile }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ r.icon }}"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.title }}</span><span class="sub" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.sub }}<sc-if value="{{ r.hasWarn }}"> · <b style="color: #95530C">{{ r.warn }}</b></sc-if></span></span><span style="color: #8D8676; display: flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a></sc-for>
+      <sc-if value="{{ hasMore }}"><button type="button" onClick="{{ toggleMore }}" aria-expanded="{{ moreOpen }}" style="width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; box-shadow: inset 0 1px 0 #F0ECE6; color: #5F6980"><span style="flex: 1; font-size: 13px; font-weight: 600">{{ moreWord }}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{ moreTurn }}"><path d="M9 6l6 6-6 6"></path></svg></button></sc-if>
     </div>
     </sc-if>
 
-    <sc-if value="{{ hasMore }}">
-    <button type="button" onClick="{{ toggleMore }}" aria-expanded="{{ moreOpen }}" class="t-in" style="border: none; background: transparent; font-family: inherit; display: flex; align-items: center; gap: 10px; padding: 0 4px; min-height: 40px; animation-delay: .16s; color: #5F6980; text-align: left; cursor: pointer">
-      <span style="flex: 1; font-size: 13px; font-weight: 500">{{ moreWord }}</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{ moreTurn }}"><path d="M9 6l6 6-6 6"></path></svg>
-    </button>
-    </sc-if>
+    <a href="Asks.dc.html" aria-label="{{ chanceLabel }}" class="n-in" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(160deg, #EFEBFB, #E6E0F8); box-shadow: inset 0 0 0 1px #DCD3F5; animation-delay: .1s"><span style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: #7B61D9; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{ chanceTitle }}</span><span style="font-size: 12px; color: #5B4AA8">{{ chanceSub }}</span></span><span style="color: #5B4AA8; display: flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+
+    <div class="n-in" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; animation-delay: .15s">
+      <sc-for list="{{ tiles }}" as="t"><a href="{{ t.href }}" aria-label="{{ t.label }}" class="card" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 1px; min-width: 0"><span class="m" style="{{ t.nStyle }}">{{ t.n }}</span><span class="sub">{{ t.word }}</span></a></sc-for>
+    </div>
   </div>
 
-  <nav aria-label="Sourcing" class="sx-nav" style="position: absolute; left: 0; right: 0; bottom: 0; height: calc(84px + var(--safe-b)); padding-bottom: var(--safe-b); background: #FFFFFF; box-shadow: inset 0 1px 0 #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 96px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box; z-index: 30"><a href="Main.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #16203C; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="#16203C" stroke="#16203C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z"></path><path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M2.4 16.4h19.2M5.6 20.4h12.8" fill="none"></path></svg>Today</a><a href="Asks.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 13.6v.1" fill="none"></path></svg><sc-if value="{{ nav.hasAsks }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.asks }}</span></sc-if>Asks</a><a href="Spotted.dc.html" aria-label="Spotted something: photo, price, pack" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 4px #F7F5F2, 0 6px 20px rgba(201,58,48,.35)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></a><a href="Hunts.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h4V9H3zM10 18h4V5h-4zM17 18h4v-6h-4z"></path></svg>Hunts</a><a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #5F6980; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z"></path><circle cx="7.9" cy="7.9" r="1.4" fill="none"></circle></svg><sc-if value="{{ nav.hasPrices }}"><span style="position: absolute; top: -4px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #F5B26B; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #FFFFFF">{{ nav.prices }}</span></sc-if>Prices</a></nav>
+  ${V2NAV('Main')}
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) { super(props); this.state = { more: false }; }
     renderVals() {
-      const me = myStaff();
-      const hour = new Date().getHours();
-      const who = firstWord(myPersonName()), greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + (who ? ', ' + who : '');
+      const me = myStaff(), now = new Date(), hour = now.getHours();
+      const who = firstWord(myPersonName());
+      const greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + (who ? ', ' + who : '');
       const jobs = nextJobs(), done = doneToday();
       const doneN = done.reduce((s, x) => s + x[1], 0), total = doneN + jobs.length;
-      // The day bar: one block a job while they fit, else one run a kind.
-      const SHADES = ['#6FDCB0', '#A7E9CC', '#C7F0DE', '#E2F8EE', '#F0FBF6'];
-      const segs = [];
-      let barBox;
-      if (total && total <= 16) {
-        barBox = `display: grid; grid-template-columns: repeat(${total}, minmax(0, 1fr)); gap: 4px; height: 22px`;
-        done.forEach((x, i) => { for (let j = 0; j < x[1]; j++) segs.push(`height: 22px; border-radius: 3px; background: ${SHADES[i]}; animation-delay: ${(segs.length * 0.03).toFixed(2)}s`); });
-        jobs.forEach((j, i) => segs.push(i === 0 ? 'height: 22px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px #E5483D; animation: none' : 'height: 22px; border-radius: 3px; background: rgba(255,255,255,.1); animation: none'));
-      } else if (total) {
-        barBox = 'display: flex; gap: 3px; height: 22px';
-        done.forEach((x, i) => segs.push(`flex: ${x[1]}; height: 22px; border-radius: 3px; background: ${SHADES[i]}`));
-        if (jobs.length) segs.push('flex: 1; min-width: 14px; height: 22px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px #E5483D; animation: none');
-        if (jobs.length > 1) segs.push(`flex: ${jobs.length - 1}; height: 22px; border-radius: 3px; background: rgba(255,255,255,.1); animation: none`);
-      } else {
-        barBox = 'display: flex; height: 22px';
-        segs.push('flex: 1; height: 22px; border-radius: 3px; background: rgba(255,255,255,.1); animation: none');
-      }
-      const legend = done.slice(0, 3).map((x, i) => ({ word: `${x[1]} ${x[2]}`, dot: `width: 8px; height: 8px; border-radius: 2px; background: ${SHADES[i]}` }));
-      const ctaFor = (j) => {
-        if (j.kind === 'ask') {
-          if (j.seller) return `Ask ${firstWord(j.seller.sup.name)}`;
-          const n = typeof askSupDefaults === 'function' ? askSupDefaults(j.lead).length : 0;
-          return n > 1 ? `Ask the ${n} who sell it` : n === 1 ? 'Ask the one who sells it' : 'Ask suppliers';
-        }
-        return { fix: 'See the fixes', record: 'Add who has it', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Ask for a fresh price', chase: 'Open the hunt', decide: j.word === 'Decide' ? 'See the verdict' : j.word, list: j.word === 'Price' ? 'Price it' : 'Put it in the catalogue' }[j.kind] || 'Open';
-      };
-      let now = {};
-      if (jobs.length) {
-        const j = jobs[0], hasLate = !!j.limit;
-        const scale = hasLate ? Math.max(j.days, j.limit, 1) : 1, inPct = hasLate ? Math.min(j.days, j.limit) / scale * 100 : 0, limPct = hasLate ? j.limit / scale * 100 : 0;
-        now = {
-          eyebrow: j.over > 0 ? `NOW · DAY ${j.days} OF ${j.limit} · LATE` : 'NOW',
-          verb: j.verb, obj: j.obj, hasObj: !!j.obj, sub: j.sub, hasWarn: !!j.warn, warn: j.warn || '',
-          hasLate, lateLabel: hasLate ? `${plural(j.days, 'day')} in this step against a ${plural(j.limit, 'day')} limit` : '',
-          lateIn: `position: absolute; left: 0; width: ${inPct.toFixed(1)}%; top: 7px; height: 4px; border-radius: 999px 0 0 999px; background: #1C2233`,
-          lateOver: j.over > 0 ? `position: absolute; left: ${limPct.toFixed(1)}%; right: 0; top: 7px; height: 4px; border-radius: 0 999px 999px 0; background: #E5483D` : 'display: none',
-          lateMark: `position: absolute; left: ${limPct.toFixed(1)}%; top: 2px; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; background: #FFFFFF; box-shadow: 0 0 0 1px #1C2233`,
-          href: j.href + '.dc.html', sx: j.sx, icon: HUNT_ICON[j.kind] || HUNT_ICON.ask, cta: ctaFor(j),
+      const week = aListedSince(7).length;
+      // The day bar: one block a move while they fit (done, the one now, to go), else one run each.
+      const seg = (flex, bg) => `flex: ${flex}; height: 8px; border-radius: 999px; background: ${bg}`;
+      let segs;
+      if (!total) segs = [seg(1, 'rgba(255,255,255,.14)')];
+      else if (total <= 12) segs = Array.from({ length: total }, (_, i) => seg(1, i < doneN ? '#6FDCB0' : i === doneN ? '#F5B26B' : 'rgba(255,255,255,.14)'));
+      else segs = [doneN ? seg(doneN, '#6FDCB0') : '', jobs.length ? seg(1, '#F5B26B') + '; min-width: 14px' : '', jobs.length > 1 ? seg(jobs.length - 1, 'rgba(255,255,255,.14)') : ''].filter(Boolean);
+      let nowV = {};
+      const j = jobs[0];
+      if (j) {
+        const l = j.lead || null;
+        const v = j.kind === 'decide' && l ? leadVerdict(l) : null;
+        nowV = {
+          eyebrow: 'Your next move' + (j.over > 0 ? ` · ${plural(j.over, 'day')} late` : ''), ebStyle: 'color: #C93A30',
+          title: j.obj ? `${j.verb} ${j.obj}` : j.verb, sub: j.sub + (j.warn ? ' · ' + j.warn : ''),
+          hasScore: !!(v && v.total != null), score: v && v.total != null ? String(v.total) : '', scoreStyle: `color: ${v ? v.ink : '#1C2233'}`,
+          thumb: aThumb(46, l ? l.status : '', l && l.image), noPhoto: !(l && l.image), icon: l ? itemIconPath(l.name) : (HUNT_ICON[j.kind] || HUNT_ICON.ask),
+          href: j.href + '.dc.html', sx: j.sx, cta: aJobCta(j),
         };
       }
-      const rowOf = (j, i, arr) => {
-        const sh = j.share, bars = sh ? Array.from({ length: Math.min(sh.perDay, 10) }, (_, k) => `width: ${sh.perDay > 6 ? 8 : 14}px; height: 4px; border-radius: 2px; background: ${k < Math.round(sh.done / sh.perDay * Math.min(sh.perDay, 10)) ? '#0F6B43' : '#E6E3DD'}`) : [];
-        return {
-          title: j.obj ? `${j.verb} ${j.obj}` : j.verb, sub: j.sub, hasWarn: !!j.warn, warn: j.warn || '', icon: HUNT_ICON[j.kind] || HUNT_ICON.ask,
-          hasBars: bars.length > 0, bars, barsLabel: sh ? `${sh.done} of today's ${sh.perDay} confirmed` : '',
-          href: j.href + '.dc.html', sx: j.sx, word: j.word, ctaLabel: (j.obj ? `${j.verb} ${j.obj}` : j.verb),
-          rowStyle: `display: flex; align-items: center; gap: 14px; min-height: 64px${i < arr.length - 1 ? '; box-shadow: inset 0 -1px 0 #F2EFEA' : ''}`,
-        };
-      };
-      const shownN = this.state.more ? jobs.length : 4;
-      const listed = jobs.slice(1, shownN);
-      const rest = jobs.slice(shownN);
+      const shown = this.state.more ? jobs.length : 4;
+      const listed = jobs.slice(1, shown), rest = jobs.slice(shown);
+      const rows = listed.map((x, i) => ({
+        title: x.obj ? `${x.verb} ${x.obj}` : x.verb, sub: x.sub, hasWarn: !!x.warn, warn: x.warn || '', icon: HUNT_ICON[x.kind] || HUNT_ICON.ask, tile: aJobTile(x.kind),
+        href: x.href + '.dc.html', sx: x.sx, label: `${x.obj ? x.verb + ' ' + x.obj : x.verb}: ${aJobCta(x)}`,
+        rowStyle: `display: flex; align-items: center; gap: 12px; min-height: 58px${i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}`,
+      }));
+      const ch = aChances();
+      const told = aToldSince(7), waiting = clientsWaiting();
+      const tiles = [
+        { n: String(week), word: 'on the shelf this week', nStyle: `font-size: 20px; font-weight: 600; color: ${week ? '#0F6B43' : '#1C2233'}`, href: 'Hunts.dc.html', label: `${plural(week, 'item')} went on the shelf in the last 7 days` },
+        { n: String(told), word: 'clients told this week', nStyle: 'font-size: 20px; font-weight: 600', href: 'Hunts.dc.html', label: `${plural(told, 'client')} told in the last 7 days` },
+        { n: String(waiting), word: waiting === 1 ? 'client waiting' : 'clients waiting', nStyle: 'font-size: 20px; font-weight: 600', href: 'Hunts.dc.html', label: `${plural(waiting, 'client')} waiting on an open hunt` },
+      ];
       return {
         nav: navVals(),
-        greeting, dateWord: dayWord(todayISO()), roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : 'Admin', me: initials(me ? me.name : myName()),
-        doneN: String(doneN), total: String(total), doneWord: doneN === 1 && total === 1 ? 'job done' : 'jobs done',
-        toGoWord: jobs.length ? `${jobs.length} to go` : 'all done',
-        barBox, segs, legend, hasNow: jobs.length > 0,
-        barLabel: `Today: ${doneN} of ${total} jobs done` + (done.length ? '. Done: ' + done.map(x => `${x[1]} ${x[2]}`).join(', ') : '') + `. ${jobs.length} to go.`,
-        empty: !jobs.length, hasNowJob: jobs.length > 0, now,
-        hasRows: listed.length > 0, rows: listed.map(rowOf),
+        dateWord: now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), greeting, me: initials(me ? me.name : myName()),
+        doneN: String(doneN), total: String(total), movesWord: total === 1 ? 'move today' : 'moves today',
+        weekWord: week ? `this week: ${week} on the shelf` : jobs.length ? `${jobs.length} to go` : 'all done',
+        barBox: `display: flex; gap: ${total > 12 ? 3 : 4}px`, segs,
+        barLabel: `Today: ${doneN} of ${total} moves done` + (done.length ? '. Done: ' + done.map(x => `${x[1]} ${x[2]}`).join(', ') : '') + `. ${jobs.length} to go.`,
+        hasNow: !!j, now: nowV, empty: !j,
+        hasRows: rows.length > 0, rows,
         hasMore: jobs.length > 4, moreOpen: this.state.more ? 'true' : 'false',
-        moreWord: this.state.more ? 'Show fewer' : `Then ${rest.length} more · ${rest.length ? (rest[0].obj ? rest[0].verb.toLowerCase() + ' ' + rest[0].obj : rest[0].verb.toLowerCase()) : ''}`,
+        moreWord: this.state.more ? 'Show fewer' : `Then ${rest.length} more` + (rest.length ? ' · ' + rest[0].verb.charAt(0).toLowerCase() + rest[0].verb.slice(1) + (rest[0].obj ? ' ' + rest[0].obj : '') : ''),
         moreTurn: this.state.more ? 'transform: rotate(-90deg)' : 'transform: rotate(90deg)',
         toggleMore: () => { FEEL.tick(); this.setState({ more: !this.state.more }); },
+        chanceTitle: ch.total ? `${ch.total} new ${ch.total === 1 ? 'chance' : 'chances'} caught for you` : 'No new chances',
+        chanceSub: ch.total ? ch.words.join(' · ') : 'every request has someone on it',
+        chanceLabel: ch.total ? `${ch.total} new chances: ${ch.words.join(', ')}` : 'New chances: none waiting',
+        tiles,
       };
     }
   },
@@ -5578,198 +5582,227 @@ function naRecentCustomers(limit){
 
 SCREENS.NewAsk = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-  <a href="Asks.dc.html" data-back aria-label="Back to the asks" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
-  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: #F7F5F2; border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
-    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 12px">
-      <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: #E0DCD4"></span>
-      <div style="display: flex; align-items: center; gap: 10px">
-        <span style="flex: 1; font-size: 20px; font-weight: 700; letter-spacing: -.01em">A client asked for…</span>
-        <a href="Asks.dc.html" data-back aria-label="Close" style="width: 40px; height: 40px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <a href="Main.dc.html" data-back aria-label="Back" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
+  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: linear-gradient(180deg, #F6F3EE 0%, #F8F6F2 100%); border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
+    <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
+      <div style="display: flex; align-items: center; gap: 14px"><span style="width: 46px; height: 46px; flex: none; border-radius: 13px; background: linear-gradient(160deg, #E0544A, #B5352C); display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="t1" style="font-size: 20px">Capture</span><span style="font-size: 12px; color: #B3BCD2">{{ headSub }}</span></span><a href="Main.dc.html" data-back aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a></div>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px">
+      <div role="radiogroup" aria-label="What came in" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{ kinds }}" as="k"><button type="button" role="radio" aria-checked="{{ k.on }}" onClick="{{ k.pick }}" style="{{ k.style }}"><span style="display: flex; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ k.icon }}"></path></svg></span><span style="font-size: 13px; font-weight: 700; line-height: 1.2">{{ k.label }}</span></button></sc-for>
       </div>
 
-      <div style="display: flex; gap: 8px">
-        <label style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 14px; border-radius: 18px; background: #FFFFFF; box-shadow: 0 0 0 2px #16203C, 0 6px 16px rgba(22,32,60,.08)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C2233" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-          <input type="text" value="{{ text }}" onChange="{{ setText }}" placeholder="what they want" aria-label="What they asked for" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 17px; font-weight: 600; color: #1C2233">
-        </label>
-        <button type="button" onClick="{{ openPhoto }}" aria-label="{{ photoLabel }}" style="{{ photoBtn }}"><sc-if value="{{ noPhoto }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></sc-if><sc-if value="{{ hasPhoto }}"><span class="k-pop" style="position: absolute; right: -4px; top: -4px; width: 18px; height: 18px; border-radius: 999px; background: #0F6B43; color: #FFFFFF; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #F7F5F2">✓</span></sc-if></button>
+      <sc-if value="{{ fromAgent }}"><span class="pill" style="align-self: flex-start; background: #E4F4EA; color: #0F6B43">{{ agentWord }}</span></sc-if>
+
+      <label style="height: 54px; border-radius: 15px; background: #FFFFFF; box-shadow: 0 0 0 2px #16203C, 0 6px 16px -8px rgba(22,32,60,.4); padding: 0 8px 0 14px; display: flex; align-items: center; gap: 10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="text" value="{{ text }}" onChange="{{ setText }}" placeholder="{{ textHint }}" aria-label="{{ textLabel }}" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 16px; font-weight: 600; color: #1C2233; outline: none">
+        <button type="button" onClick="{{ openPhoto }}" aria-label="{{ photoLabel }}" style="{{ photoBtn }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>{{ camWord }}</button>
+      </label>
+
+      <sc-if value="{{ hasChecks }}">
+      <div class="card n-in" style="padding: 4px 14px">
+        <sc-for list="{{ products }}" as="p"><a href="Item.dc.html" data-sx="{{ p.sx }}" style="{{ p.rowStyle }}"><span style="{{ p.thumb }}"><sc-if value="{{ p.noPhoto }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ p.icon }}"></path></svg></sc-if></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">We sell {{ p.name }}</span><span class="sub">{{ p.sub }}</span></span><span class="pill" style="{{ p.pill }}">{{ p.pillWord }}</span></a></sc-for>
+        <sc-if value="{{ matched }}">
+        <button type="button" onClick="{{ toggleJoin }}" aria-pressed="{{ joinOn }}" style="{{ m.rowStyle }}"><span style="{{ m.thumb }}"><sc-if value="{{ m.noPhoto }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ m.icon }}"></path></svg></sc-if></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; text-align: left"><span style="font-size: 14px; font-weight: 700">{{ m.title }}</span><span style="display: flex; align-items: center; gap: 8px"><span role="img" aria-label="{{ m.stageLabel }}" style="width: 54px; flex: none; display: flex; gap: 2px"><sc-for list="{{ m.bars }}" as="b"><span style="{{ b }}"></span></sc-for></span><span class="sub">{{ m.sub }}</span></span></span><span style="{{ m.joinPill }}">{{ m.joinWord }}</span></button>
+        </sc-if>
+        <sc-if value="{{ fresh }}"><div style="{{ freshStyle }}"><span style="width: 38px; height: 38px; flex: none; border-radius: 11px; background: #FDE8E4; color: #A82D24; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{ freshTitle }}</span><span class="sub">it starts at Requested</span></span></div></sc-if>
       </div>
-
-      <sc-if value="{{ matched }}">
-        <div class="k-in" style="{{ m.box }}">
-          <span style="{{ m.photo }}; width: 40px; height: 40px; flex: none; border-radius: 10px; color: #5F6980; display: flex; align-items: center; justify-content: center" role="img" aria-label="The hunt's photo"><sc-if value="{{ m.noPhoto }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ m.icon }}"></path></svg></sc-if></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="{{ m.kickStyle }}">{{ m.kick }}</span><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ m.name }}</span></span>
-          <span style="display: flex; align-items: center; gap: 2px" role="img" aria-label="{{ m.dotsLabel }}"><sc-for list="{{ m.dots }}" as="d" hint-placeholder-count="4"><span style="width: 8px; height: 8px; border-radius: 999px; background: #16203C"></span></sc-for><span style="width: 8px; height: 8px; border-radius: 999px; background: #C93A30"></span></span>
-        </div>
-      </sc-if>
-      <sc-if value="{{ fresh }}">
-        <div class="k-in" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px; background: #FDE8E4; color: #A82D24; font-size: 13px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Nobody asked for this before · starts a new hunt</div>
-      </sc-if>
-      <sc-if value="{{ hasProducts }}">
-        <div class="k-in" style="display: flex; flex-direction: column; gap: 0; padding: 0 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-          <sc-for list="{{ products }}" as="p" hint-placeholder-count="1"><span style="{{ p.row }}"><span style="width: 8px; height: 8px; flex: none; border-radius: 999px; background: #0F6B43"></span><span style="flex: 1; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.name }}</span><span style="{{ p.stockStyle }}">{{ p.stock }}</span></span></sc-for>
-        </div>
       </sc-if>
 
-      <div style="display: flex; flex-direction: column; gap: 6px">
-        <span style="display: flex; align-items: center; gap: 8px; padding-left: 2px"><span style="font-size: 12px; font-weight: 700; color: #5F6980">Who asked</span><input type="search" value="{{ q }}" onChange="{{ setQ }}" placeholder="find a client" aria-label="Find a client" style="flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: none; border-radius: 10px; background: #F1EEE8; font-family: inherit; font-size: 13px; color: #1C2233"></span>
-        <div style="display: flex; gap: 6px">
-          <sc-for list="{{ clients }}" as="c" hint-placeholder-count="4">
-            <button type="button" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}" style="{{ c.style }}"><span style="{{ c.av }}">{{ c.ini }}</span><span style="font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px">{{ c.name }}</span></button>
-          </sc-for>
-        </div>
-        <sc-if value="{{ isNew }}">
-          <div class="k-in" style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px">
-            <input type="text" value="{{ newName }}" onChange="{{ setNewName }}" placeholder="their name" aria-label="Their name" style="height: 44px; padding: 0 12px; border: none; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-family: inherit; font-size: 14px; font-weight: 600; color: #1C2233">
-            <input type="tel" value="{{ newPhone }}" onChange="{{ setNewPhone }}" placeholder="their number" aria-label="Their phone number" inputmode="tel" style="height: 44px; padding: 0 12px; border: none; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #1C2233">
-          </div>
+      <div class="card n-in" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; animation-delay: .05s">
+        <span class="eb">{{ whoLabel }}</span>
+        <sc-if value="{{ isClient }}">
+          <div style="display: flex; align-items: center; gap: 10px"><span style="{{ whoAv }}">{{ whoIni }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 700">{{ whoName }}</span><span class="sub">{{ whoSub }}</span></span><span style="display: flex; align-items: center; gap: 6px; flex: none"><button type="button" onClick="{{ less }}" aria-label="Fewer" style="width: 32px; height: 32px; border-radius: 9px; background: #F2EFEA; display: flex; align-items: center; justify-content: center; font-weight: 700">−</button><input type="text" inputmode="numeric" value="{{ qty }}" onChange="{{ setQty }}" aria-label="How many" class="m" style="width: 44px; border: none; background: transparent; text-align: center; font-size: 16px; font-weight: 600; color: #1C2233"><button type="button" onClick="{{ more }}" aria-label="More" style="width: 32px; height: 32px; border-radius: 9px; background: #F2EFEA; display: flex; align-items: center; justify-content: center; font-weight: 700">+</button></span></div>
+          <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 2px 14px"><input type="search" value="{{ q }}" onChange="{{ setQ }}" placeholder="find a client" aria-label="Find a client" style="flex: none; width: 120px; height: 34px; padding: 0 12px; border: none; border-radius: 999px; background: #F2EFEA; font-family: inherit; font-size: 13px; color: #1C2233"><sc-for list="{{ clients }}" as="c"><button type="button" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}" class="{{ c.cls }}" style="flex: none; max-width: 170px"><span style="overflow: hidden; text-overflow: ellipsis">{{ c.name }}</span></button></sc-for></div>
+          <sc-if value="{{ isNew }}"><div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px"><input type="text" value="{{ newName }}" onChange="{{ setNewName }}" placeholder="their name" aria-label="Their name" class="well" style="height: 44px; padding: 0 12px; border: none; font-family: inherit; font-size: 14px; font-weight: 600; color: #1C2233"><input type="tel" value="{{ newPhone }}" onChange="{{ setNewPhone }}" placeholder="their number" aria-label="Their phone number" inputmode="tel" class="well m" style="height: 44px; padding: 0 12px; border: none; font-size: 14px; color: #1C2233"></div></sc-if>
+          <div class="seg" role="radiogroup" aria-label="How they asked" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><sc-for list="{{ chans }}" as="h"><button type="button" role="radio" aria-checked="{{ h.on }}" onClick="{{ h.pick }}" class="{{ h.cls }}" style="font-size: 11.5px; text-align: center">{{ h.label }}</button></sc-for></div>
+          <label class="well" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px"><span style="font-size: 12px; font-weight: 700; color: #5F6980; white-space: nowrap">Will pay up to</span><input type="text" inputmode="numeric" value="{{ maxPrice }}" onChange="{{ setMax }}" placeholder="— —" aria-label="Will pay up to, a piece" class="m" style="flex: 1; min-width: 0; border: none; background: transparent; text-align: right; font-size: 16px; font-weight: 600; color: #1C2233"><span style="font-size: 11px; color: #6B7480">a piece</span></label>
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6B7480"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>{{ qtyWord }}</span>
+        </sc-if>
+        <sc-if value="{{ isSup }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{ sups }}" as="s"><button type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}" class="{{ s.cls }}" aria-label="{{ s.full }}" style="max-width: 170px"><span style="{{ s.dot }}">{{ s.ini }}</span><span style="overflow: hidden; text-overflow: ellipsis">{{ s.name }}</span></button></sc-for></div>
+          <span style="font-size: 12px; color: #6B7480">{{ supWord }}</span>
+        </sc-if>
+        <sc-if value="{{ isRival }}">
+          <label class="well" style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px"><span class="ava" style="width: 28px; height: 28px; font-size: 11px; background: #F6E4F1; color: #7A3268">{{ rivalIni }}</span><input type="text" value="{{ rival }}" onInput="{{ setRival }}" placeholder="the rival shop’s name" aria-label="Rival shop's name" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 700; color: #1C2233"></label>
+          <sc-if value="{{ hasRivalChips }}"><div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{ rivalChips }}" as="r"><button type="button" onClick="{{ r.pick }}" class="{{ r.cls }}">{{ r.label }}</button></sc-for></div></sc-if>
+          <span style="font-size: 12px; color: #6B7480">their shelf price comes next</span>
         </sc-if>
       </div>
-
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-          <span style="font-size: 11px; font-weight: 700; color: #6B7480">How many</span>
-          <span style="display: flex; align-items: center; justify-content: space-between"><button type="button" onClick="{{ less }}" aria-label="Fewer" style="width: 36px; height: 36px; flex: none; border: none; border-radius: 10px; background: #F1EEE8; font-family: inherit; font-size: 18px; color: #5F6980; cursor: pointer">−</button><input type="text" inputmode="numeric" value="{{ qty }}" onChange="{{ setQty }}" aria-label="How many" style="width: 100%; min-width: 0; border: none; background: transparent; text-align: center; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; color: #1C2233"><button type="button" onClick="{{ more }}" aria-label="More" style="width: 36px; height: 36px; flex: none; border: none; border-radius: 10px; background: #F1EEE8; font-family: inherit; font-size: 18px; cursor: pointer">+</button></span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-          <span style="font-size: 11px; font-weight: 700; color: #6B7480">Will pay up to</span>
-          <span style="display: flex; align-items: baseline; gap: 4px; height: 36px"><input type="text" inputmode="numeric" value="{{ maxPrice }}" onChange="{{ setMax }}" placeholder="— —" aria-label="Will pay up to, a piece" style="width: 100%; min-width: 0; border: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; line-height: 36px; color: #1C2233"><span style="flex: none; font-size: 11px; color: #6B7480">a pc</span></span>
-        </div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 6px">
-        <span style="font-size: 12px; font-weight: 700; color: #5F6980; padding-left: 2px">They asked</span>
-        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F1EEE8">
-          <sc-for list="{{ chans }}" as="h" hint-placeholder-count="4"><button type="button" aria-pressed="{{ h.on }}" onClick="{{ h.pick }}" style="{{ h.style }}">{{ h.label }}</button></sc-for>
-        </div>
-      </div>
     </div>
 
-    <div style="flex: none; padding: 10px 16px calc(22px + var(--safe-b)); display: flex; flex-direction: column; gap: 8px">
-      <span style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: #6B7480"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l3 2"></path><circle cx="12" cy="12" r="9"></circle></svg>{{ followLine }}</span>
-      <sc-if value="{{ saved }}">
-        <a href="Hunt.dc.html" data-sx="{{ savedSx }}" class="k-pop" style="height: 52px; border-radius: 14px; background: #0F6B43; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>{{ savedLabel }}</a>
-      </sc-if>
-      <sc-if value="{{ unsaved }}">
-        <button type="button" onClick="{{ save }}" disabled="{{ cantSave }}" data-why="{{ saveWhy }}" style="{{ saveStyle }}">{{ saveLabel }}</button>
-      </sc-if>
-    </div>
+    <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b))"><button type="button" onClick="{{ save }}" disabled="{{ cantSave }}" data-why="{{ saveWhy }}" class="btn">{{ saveWord }}</button></div>
+
+    <sc-if value="{{ sheet }}">
+      <button type="button" onClick="{{ closePhoto }}" aria-label="Close" style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></button>
+      <div class="sheet" role="dialog" aria-label="Add a photo" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 16px calc(20px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <span class="t2">A photo of it</span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px"><sc-for list="{{ sources }}" as="o"><button type="button" onClick="{{ o.pick }}" class="well" style="height: 86px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px"><span style="{{ o.icon }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ o.path }}"></path></svg></span><span style="font-size: 12px; font-weight: 700">{{ o.label }}</span></button></sc-for></div>
+        <span class="sub">{{ sheetNote }}</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ saved }}">
+      <div style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
+      <div class="sheet" role="dialog" aria-label="{{ doneTitle }}" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 20px calc(24px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <span style="width: 44px; height: 44px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span>
+        <span class="t1">{{ doneTitle }}</span>
+        <span style="font-size: 14px; color: #5F6980; line-height: 1.4">{{ doneSub }}</span>
+        <button type="button" onClick="{{ openHunt }}" class="btn ink">Open the hunt</button>
+        <button type="button" onClick="{{ again }}" class="btn2">Capture another</button>
+      </div>
+    </sc-if>
   </div>
-  <sc-if value="{{ sheet }}">
-    <button type="button" onClick="{{ closePhoto }}" aria-label="Close" style="position: absolute; inset: 0; border: none; padding: 0; background: rgba(14,22,48,.5); cursor: pointer"></button>
-    <div class="k-in" role="dialog" aria-label="Add a photo" style="position: absolute; left: 12px; right: 12px; bottom: calc(16px + var(--safe-b)); padding: 12px; border-radius: 22px; background: #FFFFFF; box-shadow: 0 18px 40px rgba(14,22,48,.35); display: flex; flex-direction: column; gap: 8px">
-      <span style="font-size: 13px; font-weight: 700; color: #5F6980; padding: 2px 4px">A photo of what they want</span>
-      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-        <sc-for list="{{ sources }}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{ o.pick }}" style="height: 86px; border: none; border-radius: 16px; background: #F1EEE8; font-family: inherit; color: #1C2233; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer"><span style="{{ o.icon }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ o.path }}"></path></svg></span><span style="font-size: 12px; font-weight: 700">{{ o.label }}</span></button></sc-for>
-      </div>
-      <span style="font-size: 11px; color: #6B7480; padding: 0 4px">{{ sheetNote }}</span>
-    </div>
-  </sc-if>
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) {
       super(props);
-      const p = this.props || {};
-      this.state = { text: p.text || '', who: p.customerId ? 'c:' + p.customerId : 'walkin', q: '', newName: '', newPhone: '', qty: '1', maxPrice: '', chan: 'counter', saved: null, sheet: false, photo: null };
+      const p = this.props || {}, l = p.leadId ? leadById(p.leadId) : null;
+      const who = p.customerId && customerById(p.customerId) ? 'c:' + p.customerId : String(p.customerName || '').trim() ? 'new' : 'walkin';
+      this.state = { kind: ['client', 'seen', 'offer', 'rival'].includes(p.kind) ? p.kind : 'client', text: l ? l.name : (p.text || ''), join: true,
+        who, q: '', newName: who === 'new' ? String(p.customerName || '') : '', newPhone: '', qty: p.qty ? String(p.qty) : '1', maxPrice: '', chan: 'counter',
+        sup: p.supplierId || null, rival: p.rival || '', saved: null, sheet: false, photo: null, agentRequestId: p.agentRequestId || null };
     }
     renderVals() {
-      const s = this.state, set = (patch) => this.setState({ ...patch, saved: null });
+      const s = this.state, set = (patch) => this.setState({ ...patch, saved: null }), d = D();
       const t = String(s.text || '').trim();
-      // What captureAsk will do with this name (findLeadByText): join it.
-      const hit = t.length > 2 ? findLeadByText(t) : null;
+      const named = this.props.leadId ? leadById(this.props.leadId) : null;
+      // The hunt captureAsk would join (findLeadByText), shown before saving.
+      const hit = named && normName(named.name) === normName(t) ? named : t.length > 2 ? findLeadByText(t) : null;
+      const joining = !!hit && s.join;
       const custId = s.who.indexOf('c:') === 0 ? s.who.slice(2) : null;
       const cust = custId ? customerById(custId) : null;
+      const isNew = s.who === 'new';
+      const agent = s.agentRequestId ? d.agentRequests.find(a => String(a.id) === String(s.agentRequestId) && a.status === 'open') || null : null;
+      const qty = Math.max(0, Number(String(s.qty).replace(/[^\d.]/g, '')) || 0);
+
+      const KINDS = [['client', 'A client wants it', 'M12 4a4 4 0 1 0 0 8a4 4 0 1 0 0-8M4 21c0-4 3.6-6 8-6s8 2 8 6'], ['seen', 'I saw it at a shop', 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6'],
+        ['offer', 'A supplier offered it', 'M4 9l1.5-5h13L20 9M4 9h16v11H4zM9 20v-6h6v6'], ['rival', 'A rival’s price', 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z']];
+      const kinds = KINDS.map(([id, label, icon]) => { const on = s.kind === id; return { label, icon, on: on ? 'true' : 'false', pick: () => { FEEL.tick(); set({ kind: id }); },
+        style: `height: 58px; border-radius: 16px; padding: 0 12px; display: flex; align-items: center; gap: 10px; text-align: left; ${on ? 'background: #16203C; color: #FFFFFF; box-shadow: 0 10px 20px -10px rgba(22,32,60,.7)' : 'background: #FFFFFF; color: #1C2233; box-shadow: 0 0 0 1px rgba(28,34,51,.1)'}` }; });
+
+      // What we already sell by that name, and the hunt it joins.
+      const prods = t.length > 2 ? findProductsByText(t, 2) : [];
+      const products = prods.map((p, i) => {
+        const n = productStock(p);
+        const rows = d.prices.filter(r => String(r.productId) === String(p.id) && !r.outOfStock && priceRowCost(r) > 0).sort((a, b) => priceRowCost(a) - priceRowCost(b));
+        const cost = rows.length ? `we pay ${n0(priceRowCost(rows[0]))} a ${(rows[0].unit || 'pc') === 'pc' ? 'piece' : rows[0].unit}` : 'no supplier price yet';
+        return { name: p.name, sx: JSON.stringify({ productId: p.id }), thumb: aThumb(38, 'listed', p.image), noPhoto: !p.image, icon: itemIconPath(p.name),
+          sub: `${n > 0 ? n0(n) + ' on the shelf' : 'none on the shelf'} · ${cost}`, pill: n > 0 ? 'background: #E4F4EA; color: #0F6B43' : 'background: #FBE5E2; color: #8E2A22', pillWord: n > 0 ? 'in stock' : 'out',
+          rowStyle: `display: flex; align-items: center; gap: 12px; min-height: 62px${i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}` };
+      });
       let m = {};
       if (hit) {
         const before = leadDistinctAskers(hit);
-        const already = cust && (hit.requests || []).some(r => !r.withdrawn && String(r.customerId) === String(cust.id));
-        const after = already ? before : before + 1;
-        const kick = hit.voided ? 'DROPPED BEFORE · BACK ON THE BOARD' : hit.status === 'listed' ? 'ON THE SHELF ALREADY' : 'ALREADY A HUNT · ' + STAGE_WORD[hit.status].toUpperCase();
-        const ink = hit.voided ? '#95530C' : '#0F6B43';
-        m = { name: hit.name, kick, kickStyle: `font-size: 11px; font-weight: 700; color: ${ink}`, photo: photoStyle(hit.image, 'background: linear-gradient(145deg, #F1EEE8 0%, #FFFFFF 150%)'), noPhoto: !hit.image, icon: itemIconPath(hit.name),
-          box: `display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px ${ink}`,
-          dots: Array.from({ length: Math.min(already ? before - 1 : before, 10) }, () => ({})), after,
-          dotsLabel: already ? `${plural(before, 'client')} asked; this client asked before` : `${plural(before, 'client')} asked, this makes ${after}` };
+        m = { title: hit.voided ? `Dropped before: ${hit.name}` : hit.status === 'listed' ? `On the shelf already: ${hit.name}` : `Already hunting ${hit.name}`,
+          thumb: aThumb(38, hit.status, hit.image), noPhoto: !hit.image, icon: itemIconPath(hit.name), bars: aStageBars(hit.status), stageLabel: aStageLabel(hit.status),
+          sub: `${hit.voided ? 'dropped' : aStageOf(hit.status)[0]} · ${plural(before, 'client')}`,
+          joinWord: s.join ? 'Joining ✓' : 'Join',
+          joinPill: `height: 34px; padding: 0 12px; flex: none; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap; ${s.join ? 'background: #16203C; color: #FFFFFF' : 'background: #FFFFFF; color: #1C2233; box-shadow: 0 0 0 1px #DCD6CC'}`,
+          rowStyle: `width: 100%; display: flex; align-items: center; gap: 12px; min-height: 62px${products.length ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}` };
       }
-      // Something we already sell by that name: said, so nobody hunts it twice.
-      const products = (t.length > 2 ? findProductsByText(t, 2) : []).map((p, i, arr) => {
-        const n = Object.keys(D().stock).filter(k => k === p.id || k.indexOf(p.id + '::') === 0).reduce((a, k) => a + (D().stock[k] || 0), 0);
-        return { name: 'We sell ' + p.name, stock: n > 0 ? n0(n) + ' in stock' : 'out of stock', stockStyle: `flex: none; font-size: 12px; font-weight: 700; color: ${n > 0 ? '#0F6B43' : '#8E2A22'}`,
-          row: `display: flex; align-items: center; gap: 10px; min-height: 40px${i < arr.length - 1 ? '; border-bottom: 1px solid #F1EEE8' : ''}` };
-      });
+      const fresh = t.length > 2 && !joining;
 
-      // Who: matches for what was typed (else the latest askers), walk-in, someone new.
+      // Who: a client (the old ask's chooser), a supplier, or a rival shop.
       const qn = normName(s.q);
-      let pool = qn ? D().customers.filter(c => normName(c.name).includes(qn) || phoneDigits(c.phone).includes(qn.replace(/\D/g, '') || '§')).slice(0, 2) : naRecentCustomers(2);
-      if (cust && !pool.some(c => c.id === cust.id)) pool = [cust].concat(pool).slice(0, 2);
-      const chip = (id, ini, name, av) => {
-        const on = s.who === id;
-        return { ini, name, on: on ? 'true' : 'false', pick: () => { FEEL.tick(); set({ who: id }); }, av,
-          style: 'flex: 1; min-width: 0; height: 70px; border: none; border-radius: 16px; font-family: inherit; color: #1C2233; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; background: #FFFFFF; ' + (on ? 'box-shadow: inset 0 0 0 2px #16203C' : 'box-shadow: inset 0 0 0 1px #E6E3DD') };
-      };
-      const grey = 'width: 36px; height: 36px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: #F1EEE8; color: #5F6980';
-      const clients = pool.map(c => chip('c:' + c.id, initials(c.name), c.name, avStyle('c:' + c.id, 36) + '; font-size: 12px'))
-        .concat([chip('walkin', 'W', 'Walk-in', grey), chip('new', '+', 'Someone new', grey)]);
-      const chans = NA_CHANNELS.map(([id, label]) => {
-        const on = s.chan === id;
-        return { label, on: on ? 'true' : 'false', pick: () => { FEEL.tick(); set({ chan: id }); },
-          style: 'height: 40px; border: none; border-radius: 10px; font-family: inherit; font-size: 11px; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #1C2233; font-weight: 700; box-shadow: 0 1px 2px rgba(22,32,60,.08)' : 'background: transparent; color: #5F6980; font-weight: 600') };
+      let pool = qn ? d.customers.filter(c => normName(c.name).includes(qn) || phoneDigits(c.phone).includes(qn.replace(/\D/g, '') || '§')).slice(0, 3) : naRecentCustomers(2);
+      if (cust && !pool.some(c => c.id === cust.id)) pool = [cust].concat(pool).slice(0, 3);
+      const chip = (id, name) => { const on = s.who === id; return { name, on: on ? 'true' : 'false', cls: on ? 'chip on' : 'chip', pick: () => { FEEL.tick(); set({ who: id }); } }; };
+      const clients = pool.map(c => chip('c:' + c.id, c.name)).concat([chip('walkin', 'Walk-in'), chip('new', '+ Someone new')]);
+      const SHORT = { counter: 'Counter', phone: 'Phone', whatsapp: 'WhatsApp', quote: 'On a quote' };
+      const chans = NA_CHANNELS.map(([id, label]) => { const on = s.chan === id; return { label: SHORT[id] || label, on: on ? 'true' : 'false', cls: on ? 'on' : '', pick: () => { FEEL.tick(); set({ chan: id }); } }; });
+      const whoName = cust ? cust.name : isNew ? (String(s.newName).trim() || 'Someone new') : 'Walk-in';
+      const unitWord = qty === 1 ? 'piece' : 'pieces';
+      const followLine = cust ? `${firstWord(cust.name)} wants ${n0(qty)} ${unitWord} · told when it moves`
+        : isNew ? (phoneDigits(s.newPhone) ? `${n0(qty)} ${unitWord} · their number stays on the ask` : `${n0(qty)} ${unitWord} · add their number to follow them up`)
+        : `${n0(qty)} ${unitWord} · a walk-in is counted, not followed up`;
+
+      // Suppliers: the ones already on the hunt or pricing the item first.
+      const rel = new Map();
+      if (hit) leadSuppliers(hit).forEach((c, i) => { if (c.supplierId) rel.set(String(c.supplierId), i); });
+      prods.forEach(p => d.prices.filter(r => String(r.productId) === String(p.id)).forEach((r, i) => { if (!rel.has(String(r.supplierId))) rel.set(String(r.supplierId), 10 + i); }));
+      const rank = (x) => String(x.id) === String(s.sup) ? -1 : rel.has(String(x.id)) ? rel.get(String(x.id)) : 999;
+      const sups = d.suppliers.slice().sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)).slice(0, 5).map(x => {
+        const on = String(x.id) === String(s.sup), tn = tintFor(x.id);
+        return { name: String(x.name).split(/\s+/).slice(0, 2).join(' '), full: x.name, ini: initials(x.name), on: on ? 'true' : 'false', cls: on ? 'chip on' : 'chip',
+          dot: `width: 22px; height: 22px; flex: none; border-radius: 999px; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: ${tn[0]}; color: ${tn[1]}`,
+          pick: () => { FEEL.tick(); set({ sup: on ? null : x.id }); } };
       });
-      const qty = Math.max(0, Number(String(s.qty).replace(/[^\d.]/g, '')) || 0);
+      const sp = s.sup ? supplierById(s.sup) : null;
+      const seen = {};
+      d.rivals.forEach(r => { if (r.rival) seen[r.rival] = (seen[r.rival] || 0) + 1; });
+      d.leads.forEach(l => leadResearch(l).rivals.forEach(r => { if (r.name) seen[r.name] = (seen[r.name] || 0) + 1; }));
+      const rivalChips = Object.keys(seen).sort((a, b) => seen[b] - seen[a] || a.localeCompare(b)).slice(0, 4).map(n => ({ label: n, cls: normName(n) === normName(s.rival) ? 'chip on' : 'chip', pick: () => { FEEL.tick(); set({ rival: n }); } }));
+
       const pick = (kind) => async () => {
         this.setState({ sheet: false });
         try { const url = await takePhoto(kind); if (url) set({ photo: url }); }
         catch (e) { FEEL.no(); toast(failWord(e), 6000); }
       };
-      const isNew = s.who === 'new';
-      const followLine = cust ? `${cust.name} goes on follow-ups · told when it moves`
-        : isNew ? (phoneDigits(s.newPhone) ? 'their number stays on the ask · told when it moves' : 'add their number to follow them up')
-        : 'a walk-in is counted, not followed up';
-      const nth = (n) => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
-      const save = () => guarded('Record the ask', async () => {
-        const res = await captureAsk({ name: t, qty: qty || null, customerId: cust ? cust.id : null,
-          customerName: cust ? cust.name : isNew ? s.newName : '', phone: cust ? cust.phone : isNew ? s.newPhone : '',
-          maxPrice: Number(String(s.maxPrice).replace(/[^\d.]/g, '')) || null, channel: s.chan, source: 'sourcing', image: s.photo || null });
+      const isClient = s.kind === 'client';
+      const saveClient = () => guarded('Record the ask', async () => {
+        const res = await captureAsk({ name: t, ...(joining ? { leadId: hit.id } : { forceNew: true }), qty: qty || null, customerId: cust ? cust.id : null,
+          customerName: cust ? cust.name : isNew ? s.newName : (agent ? agent.clientName : ''), phone: cust ? cust.phone : isNew ? s.newPhone : '',
+          maxPrice: Number(String(s.maxPrice).replace(/[^\d.]/g, '')) || null, channel: s.chan, source: agent ? 'agent' : 'sourcing', image: s.photo || null,
+          ...(agent ? { agentRequestId: agent.id, note: agent.wanted ? 'wanted: ' + agent.wanted : '', extra: { agentId: agent.agentId } } : {}) });
         // A photo for a hunt that has one already is kept beside it.
         if (s.photo && res.lead.image !== s.photo) {
           const l2 = JSON.parse(JSON.stringify(res.lead));
           const meta = leadMeta(l2); meta.photos = (meta.photos || []).concat([{ url: s.photo, at: new Date().toISOString(), from: cust ? cust.name : isNew ? s.newName : 'Walk-in' }]);
           await saveLead(l2); res.lead = l2;
         }
-        FEEL.yes(); toast(captureWords(res));
-        if (SCREENS.Hunt) A.replace('Hunt', { leadId: res.lead.id });
-        else this.setState({ saved: { id: res.lead.id, n: leadDistinctAskers(res.lead), isNew: res.isNew } });
+        if (agent) await setAgentRequest(agent, 'done');
+        FEEL.yes();
+        this.setState({ saved: { id: res.lead.id, name: res.lead.name, isNew: res.isNew, wasDropped: res.wasDropped, n: leadDistinctAskers(res.lead), q: leadDemandQty(res.lead), who: cust ? firstWord(cust.name) : isNew ? firstWord(s.newName) : '' } });
       });
-      const cantSave = !t || S.busy || (isNew && !String(s.newName).trim() && !phoneDigits(s.newPhone));
-      const saveWhy = !t ? 'Type what they asked for first' : (isNew && !String(s.newName).trim() && !phoneDigits(s.newPhone)) ? 'Give the new client a name or a phone number' : '';
+      // A supplier's price or a rival's tag: the price and its packing come next (Spotted).
+      const next = () => { FEEL.open(); A.go('Spotted', { name: t, who: s.kind === 'rival' ? 'rival' : 'sup', ...(joining && !hit.voided && hit.status !== 'listed' ? { leadId: hit.id } : {}), ...(hit && !s.join ? { newHunt: true } : {}),
+        ...(s.kind !== 'rival' && sp ? { supplierId: sp.id } : {}), ...(s.kind === 'rival' && String(s.rival).trim() ? { rival: String(s.rival).trim() } : {}), ...(s.photo ? { photo: s.photo } : {}) }); };
+      const cantSave = !t || S.busy || (isClient && isNew && !String(s.newName).trim() && !phoneDigits(s.newPhone));
+      const saveWhy = !t ? 'Type what it is first' : (isClient && isNew && !String(s.newName).trim() && !phoneDigits(s.newPhone)) ? 'Give the new client a name or a phone number' : '';
+      const sv = s.saved;
       return {
-        sheet: s.sheet, noPhoto: !s.photo, hasPhoto: !!s.photo,
+        headSub: { client: 'a client asked for something', seen: 'something you saw at a shop', offer: 'something a supplier offered', rival: 'a rival’s shelf price' }[s.kind],
+        kinds, fromAgent: !!agent, agentWord: agent ? `${agentById(agent.agentId) ? 'Agent ' + agentById(agent.agentId).name + '’s' : 'An agent’s'} stock ask` : '',
+        text: s.text, setText: (e) => set({ text: e && e.target ? e.target.value : '' }),
+        textHint: isClient ? 'what they want' : 'what is it?', textLabel: isClient ? 'What they asked for' : 'What is it',
         openPhoto: () => { FEEL.open(); this.setState({ sheet: true }); }, closePhoto: () => this.setState({ sheet: false }),
-        photoLabel: s.photo ? 'Photo added. Tap to change it' : 'Add their photo',
-        photoBtn: 'position: relative; width: 56px; height: 56px; flex: none; border: none; border-radius: 18px; color: #1C2233; display: flex; align-items: center; justify-content: center; cursor: pointer; ' + (s.photo ? photoStyle(s.photo) + '; box-shadow: 0 0 0 2px #0F6B43' : 'background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD'),
+        photoLabel: s.photo ? 'Photo added. Tap to change it' : 'Add a photo', camWord: s.photo ? '1 photo' : '',
+        photoBtn: `height: 40px; padding: 0 10px; flex: none; border-radius: 12px; display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 12px; font-weight: 700; ${s.photo ? 'background: #E4F4EA; color: #0F6B43' : 'background: #F2EFEA; color: #3B4566'}`,
+        sheet: s.sheet,
         sources: [
           ['camera', 'Take one', 'M4 8h3l2-3h6l2 3h3v11H4zM12 9.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z', '#16203C', '#FFFFFF'],
-          ['gallery', 'From their chat', 'M4 5h16v11H9l-5 4z', '#E4F4EA', '#0F6B43'],
-          ['gallery', 'From the phone', 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4', '#F1EEE8', '#5F6980'],
-        ].map(([kind, label, path, bg, ink]) => ({ label, path, pick: pick(kind),
-          icon: 'width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: ' + bg + '; color: ' + ink })),
-        sheetNote: hit && hit.image ? 'The hunt has a photo already · yours is added beside it' : hit ? 'It becomes the hunt’s photo' : 'It becomes the new hunt’s photo',
-        text: s.text, setText: (e) => set({ text: e && e.target ? e.target.value : '' }),
-        matched: !!hit, m, fresh: t.length > 2 && !hit, hasProducts: products.length > 0, products,
-        q: s.q, setQ: (e) => this.setState({ q: e && e.target ? e.target.value : '' }),
-        clients, isNew, newName: s.newName, newPhone: s.newPhone,
+          ['gallery', 'From a chat', 'M4 5h16v11H9l-5 4z', '#E4F4EA', '#0F6B43'],
+          ['gallery', 'From the phone', 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4', '#FFFFFF', '#5F6980'],
+        ].map(([kind, label, path, bg, ink]) => ({ label, path, pick: pick(kind), icon: `width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: ${bg}; color: ${ink}` })),
+        sheetNote: joining && hit.image ? 'The hunt has a photo already · yours is kept beside it' : joining ? 'It becomes the hunt’s photo' : 'It becomes the new hunt’s photo',
+        hasChecks: products.length > 0 || !!hit || fresh, products, matched: !!hit, m, joinOn: s.join ? 'true' : 'false',
+        toggleJoin: () => { FEEL.tick(); set({ join: !s.join }); },
+        fresh, freshTitle: hit ? `A new hunt for “${t}”, apart from ${hit.name}` : `Nobody asked for “${t}” before`,
+        freshStyle: `display: flex; align-items: center; gap: 12px; min-height: 62px${products.length || hit ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}`,
+        whoLabel: { client: 'Who wants it', seen: 'Where you saw it', offer: 'Who offered it', rival: 'Which shop' }[s.kind],
+        isClient, isSup: s.kind === 'seen' || s.kind === 'offer', isRival: s.kind === 'rival',
+        whoAv: cust ? avStyle('c:' + cust.id, 36) : 'width: 36px; height: 36px; flex: none; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: #FDEEE1; color: #95530C',
+        whoIni: cust ? initials(cust.name) : isNew ? '+' : 'W', whoName,
+        whoSub: cust ? (cust.phone ? 'phone on file' : 'on file, no phone') + (cust.location ? ' · ' + cust.location : '') : isNew ? 'name and number below' : 'counted, not followed up',
+        q: s.q, setQ: (e) => this.setState({ q: e && e.target ? e.target.value : '' }), clients, isNew, newName: s.newName, newPhone: s.newPhone,
         setNewName: (e) => set({ newName: e.target.value }), setNewPhone: (e) => set({ newPhone: e.target.value }),
         chans, qty: s.qty, setQty: (e) => set({ qty: e.target.value }), maxPrice: s.maxPrice, setMax: (e) => set({ maxPrice: e.target.value }),
-        less: () => { FEEL.tick(); set({ qty: String(Math.max(1, qty - 1)) }); },
-        more: () => { FEEL.tick(); set({ qty: String(qty + 1) }); },
-        followLine,
-        saveLabel: hit ? (m.after > leadDistinctAskers(hit) ? `Add to the hunt · ${nth(m.after)} client` : 'Add to the hunt') : 'Start the hunt',
-        saveWhy,
-        saveStyle: `height: 52px; border: none; border-radius: 14px; background: ${cantSave ? '#E0DCD4' : '#C93A30'}; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer`,
-        cantSave, save,
-        saved: !!s.saved, unsaved: !s.saved, savedSx: s.saved ? JSON.stringify({ leadId: s.saved.id }) : '',
-        savedLabel: s.saved ? (s.saved.isNew ? 'Hunt started' : `Added · ${plural(s.saved.n, 'client')} now`) : '',
+        less: () => { FEEL.tick(); set({ qty: String(Math.max(1, qty - 1)) }); }, more: () => { FEEL.tick(); set({ qty: String(qty + 1) }); },
+        qtyWord: followLine,
+        sups, supWord: sp ? `${sp.name}${supplierWhere(sp) ? ' · ' + supplierWhere(sp) : ''} · their price comes next, with its packing` : 'pick who, here or on the next step · their price comes next, with its packing',
+        rival: s.rival, setRival: (e) => set({ rival: e.target.value }), rivalIni: String(s.rival).trim() ? initials(s.rival) : '?', rivalChips, hasRivalChips: rivalChips.length > 0,
+        saveWord: !isClient ? 'Next: their price' : joining ? (cust || (isNew && String(s.newName).trim()) ? `Add ${firstWord(cust ? cust.name : s.newName)} to the hunt` : 'Add to the hunt') : 'Start a new hunt',
+        cantSave, saveWhy, save: isClient ? saveClient : next,
+        saved: !!sv, doneTitle: sv ? (sv.isNew ? 'New hunt started' : sv.wasDropped ? `${sv.name} is back` : `Joined ${sv.name}`) : '',
+        doneSub: sv ? (sv.isNew ? 'It starts at Requested. Ask suppliers next.' : `Now ${plural(sv.n, 'client')}${sv.q ? ' and ' + n0(sv.q) + ' pieces' : ''}.${sv.who ? ' ' + sv.who + ' is told when it moves.' : ''}`) : '',
+        openHunt: () => { if (sv) A.replace('Hunt', { leadId: sv.id }); },
+        again: () => { FEEL.tick(); this.setState({ saved: null, text: '', photo: null, qty: '1', maxPrice: '', who: 'walkin', newName: '', newPhone: '', agentRequestId: null, join: true }); },
       };
     }
   },
@@ -6529,48 +6562,39 @@ SCREENS.Prices = {
    login opens (per the decision rights)". */
 SCREENS.Profile = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-  <div style="flex: none; background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 14px" data-navy-top>
-    <div style="display: flex; align-items: center; gap: 10px">
-      <a href="Main.dc.html" data-back aria-label="Back" style="width: 40px; height: 40px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-    </div>
-    <div style="display: flex; align-items: center; gap: 14px">
-      <span style="width: 64px; height: 64px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 3px #6FDCB0; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{ ini }}</span>
-      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 21px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ name }}</span><span style="font-size: 13px; color: #B3BCD2; display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; flex: none; border-radius: 999px; background: #6FDCB0"></span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ roleWord }} · {{ shop }}</span></span></span>
-    </div>
-    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
-      <span role="img" aria-label="{{ landedLabel }}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">Landed · {{ month }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; color: #6FDCB0">{{ landed }}</span></span>
-      <span role="img" aria-label="{{ toldLabel }}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">Clients told</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">{{ told }}</span></span>
-      <span role="img" aria-label="{{ takesLabel }}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)"><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">A hunt takes</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">{{ takes }}<sc-if value="{{ hasTakes }}"> <span style="font-family: Figtree, sans-serif; font-size: 11px; color: #B3BCD2">days</span></sc-if></span></span>
-    </div>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 20px 18px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; align-items: center; gap: 12px">
+    <a href="Main.dc.html" data-back aria-label="Back" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="eb" style="color: #6FDCB0">You</span><span class="t1" style="font-size: 26px">{{ name }}</span><span style="font-size: 13px; color: #B3BCD2">{{ roleWord }} · {{ shop }}</span></span>
+    <span class="ava" style="width: 56px; height: 56px; font-size: 19px; background: #FFFFFF; color: #16203C">{{ ini }}</span>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px calc(24px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
-    <span style="font-size: 15px; font-weight: 700; padding: 0 2px">What your login opens</span>
-    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-      <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6">
-      <span style="{{ t.box }}" title="{{ t.title }}"><span style="display: flex; align-items: center; justify-content: space-between"><span style="{{ t.ico }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ t.path }}"></path></svg></span><span style="{{ t.verbInk }}">{{ t.verb }}</span></span><span style="font-size: 13px; font-weight: 700">{{ t.name }}</span><span style="font-size: 11px; color: #6B7480">{{ t.sub }}</span></span>
-      </sc-for>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px calc(28px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+    <div class="card n-in" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span class="t2" style="font-size: 15px">Items you put on the shelf</span><span class="m" style="font-size: 13px; color: #0F6B43; white-space: nowrap">{{ weeksWord }}</span></div>
+      <div role="img" aria-label="{{ weeksLabel }}" style="display: flex; align-items: flex-end; gap: 8px; height: 66px"><sc-for list="{{ weeks }}" as="w"><span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px"><span class="m" style="font-size: 10px; color: #6B7480">{{ w.n }}</span><span style="{{ w.bar }}"></span><span style="font-size: 10px; color: #6B7480; white-space: nowrap">{{ w.label }}</span></span></sc-for></div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{ tiles }}" as="t"><span role="img" aria-label="{{ t.label }}" class="card" style="padding: 10px 12px; display: flex; flex-direction: column; min-width: 0"><span class="m" style="font-size: 20px; font-weight: 600; white-space: nowrap">{{ t.n }}</span><span class="sub">{{ t.word }}</span></span></sc-for>
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: 0; padding: 4px 14px; border-radius: 16px; background: repeating-linear-gradient(135deg, #F7F5F2 0 8px, #F1EEE8 8px 16px); box-shadow: inset 0 0 0 1px #E6E3DD">
-      <sc-for list="{{ locked }}" as="k" hint-placeholder-count="4">
-      <span style="{{ k.rowStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg><span style="flex: 1">{{ k.what }}</span><span style="font-size: 11px">{{ k.who }}</span><sc-if value="{{ k.hasN }}"><span style="height: 20px; padding: 0 6px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; color: #1C2233; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; display: flex; align-items: center" title="{{ k.nTitle }}">{{ k.n }}</span></sc-if></span>
-      </sc-for>
+    <div class="card n-in" style="padding: 8px; display: flex; flex-direction: column; gap: 2px; animation-delay: .05s">
+      <span class="eb" style="padding: 6px 8px">Who decides what</span>
+      <sc-for list="{{ rights }}" as="r"><div style="{{ r.box }}"><span class="ava" style="{{ r.av }}">{{ r.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px"><span style="font-size: 13px; font-weight: 700">{{ r.who }}</span><span style="display: flex; gap: 4px; flex-wrap: wrap"><sc-for list="{{ r.pills }}" as="p"><span class="pill" style="{{ p.style }}" title="{{ p.title }}">{{ p.word }}</span></sc-for></span></span></div></sc-for>
     </div>
 
-    <div style="display: flex; flex-direction: column; padding: 4px 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-      <button type="button" role="switch" aria-checked="{{ soundOn }}" onClick="{{ toggleSound }}" style="border: none; background: transparent; padding: 0; font-family: inherit; color: #1C2233; display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid #F1EEE8; cursor: pointer; text-align: left">
+    <div class="card" style="padding: 2px 14px; display: flex; flex-direction: column">
+      <button type="button" role="switch" aria-checked="{{ soundOn }}" onClick="{{ toggleSound }}" style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-shadow: inset 0 -1px 0 #F0ECE6; text-align: left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"></path><path d="{{ soundWave }}"></path></svg>
         <span style="flex: 1; font-size: 13px; font-weight: 700">Sounds and buzz</span>
         <span style="{{ track }}"><span style="{{ knob }}"></span></span>
       </button>
-      <span role="status" aria-label="{{ pushLabel }}" style="padding: 0; font-family: inherit; color: #1C2233; display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid #F1EEE8; text-align: left">
+      <span role="status" aria-label="{{ pushLabel }}" style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-shadow: inset 0 -1px 0 #F0ECE6">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{ pushIco }}"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">Notifications</span><span style="font-size: 11px; color: #6B7480">{{ pushSub }}</span></span>
-        <span style="{{ pushChip }}">{{ pushWord }}</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700">Notifications</span><span class="sub">{{ pushSub }}</span></span>
+        <span class="pill" style="{{ pushChip }}">{{ pushWord }}</span>
       </span>
-      <button type="button" onClick="{{ signOut }}" style="border: none; background: transparent; padding: 0; font-family: inherit; color: #8E2A22; display: flex; align-items: center; gap: 10px; min-height: 52px; cursor: pointer; text-align: left">
+      <button type="button" onClick="{{ signOut }}" style="color: #8E2A22; display: flex; align-items: center; gap: 10px; min-height: 52px; text-align: left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"></path></svg>
         <span style="flex: 1; font-size: 13px; font-weight: 700">Sign out</span>
       </button>
@@ -6581,55 +6605,61 @@ SCREENS.Profile = {
     renderVals() {
       const d = D(), now = new Date();
       const me = myStaff(), name = me ? me.name : myName();
-      const m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      // Landed this month: requests that became a product this month.
-      const landed = d.leads.filter(l => !l.voided && l.status === 'listed' && msOf(l.graduatedAt) >= m0).length;
-      // Clients told: as Hunts' Shelf counts them -- each client who asked,
-      // told since the item went on the shelf, over the last 90 days.
-      const told = d.leads.filter(l => !l.voided && l.status === 'listed' && daysSince(l.graduatedAt) <= 90).reduce((s, l) => s + leadTold(l).told, 0);
-      // A hunt takes: the median days from the first ask to listed, last 90 days.
-      const spans = d.leads.filter(l => !l.voided && l.status === 'listed' && l.graduatedAt && daysSince(l.graduatedAt) <= 90)
-        .map(l => (msOf(l.graduatedAt) - leadFirstAskedAt(l)) / DAY).filter(x => x >= 0).sort((a, b) => a - b);
+      // Yours: the hunts assigned to you, or to nobody (the desk's).
+      const mineL = (l) => !me || !l.assignedStaffId || String(l.assignedStaffId) === String(me.id);
+      const listed = d.leads.filter(l => !l.voided && l.status === 'listed' && l.graduatedAt && mineL(l));
+      // Six weeks, Monday to Sunday, the last one this week.
+      const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate()); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+      const starts = Array.from({ length: 6 }, (_, i) => { const x = new Date(mon); x.setDate(x.getDate() - (5 - i) * 7); return x; });
+      const counts = starts.map(s0 => { const a = s0.getTime(), b = a + 7 * DAY; return listed.filter(l => { const t = msOf(l.graduatedAt); return t >= a && t < b; }).length; });
+      const top = Math.max(1, ...counts), sum = counts.reduce((a, b) => a + b, 0);
+      const weeks = starts.map((s0, i) => ({ n: counts[i] ? String(counts[i]) : '',
+        label: i === 0 || s0.getMonth() !== starts[i - 1].getMonth() ? s0.toLocaleDateString('en-GB', { month: 'short' }) + ' ' + s0.getDate() : String(s0.getDate()),
+        bar: `width: 100%; height: ${counts[i] ? Math.max(6, Math.round(counts[i] / top * 40)) : 3}px; border-radius: 6px 6px 3px 3px; background: ${i === 5 ? '#1E9D57' : counts[i] ? '#CFE9DA' : '#ECE8E1'}` }));
+      // A hunt takes: the middle of first ask to on the shelf, last 90 days.
+      const spans = listed.filter(l => daysSince(l.graduatedAt) <= 90).map(l => (msOf(l.graduatedAt) - leadFirstAskedAt(l)) / DAY).filter(x => x >= 0).sort((a, b) => a - b);
       const median = spans.length ? (spans.length % 2 ? spans[(spans.length - 1) / 2] : (spans[spans.length / 2 - 1] + spans[spans.length / 2]) / 2) : null;
-      const month = now.toLocaleDateString('en-GB', { month: 'short' });
-      // What the login opens: decision-rights section 2, Sourcing's rows,
-      // each lit only when the shop's role_tasks gives this login the task.
-      const T = [
-        { task: ['sourcing.lead'], name: 'Asks and hunts', sub: 'add, move, drop', verb: 'edit', bg: '#FDE8E4', ink: '#A82D24', path: 'M4 5h16v11H9l-5 4z' },
-        { task: ['supplier.edit', 'price.confirm'], name: 'Suppliers and prices', sub: 'add, edit, confirm daily', verb: 'confirm', bg: '#E4E6FA', ink: '#3A3F9B', path: 'M3 10l1.6-5h14.8L21 10M3 10h18M5 12.4V20h14v-7.6' },
-        { task: ['product.edit'], name: 'Catalogue', sub: 'from a hunt, with goes-with', verb: 'add new', bg: '#E4F4EA', ink: '#0F6B43', path: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10' },
-        { task: ['product.edit'], name: 'Selling price', sub: `shop’s markup · ${managerName()} sets it`, verb: 'list', bg: '#FDEEE1', ink: '#95530C', path: 'M3 12V4h8l10 10-8 8zM7.5 7.1a1.4 1.4 0 1 0 0 2.8a1.4 1.4 0 1 0 0-2.8' },
-        { task: ['sourcing.lead'], name: 'Who asked', sub: 'name, number, follow-ups', verb: 'tell', bg: '#DCEAF8', ink: '#1A5A8A', path: 'M9 4.8a3.2 3.2 0 1 0 0 6.4a3.2 3.2 0 1 0 0-6.4M3 19c0-3 2.7-5 6-5s6 2 6 5' },
-        { task: ['price.list'], name: 'Rival prices', sub: 'tags on key lines', verb: 'record', bg: '#F1EEE8', ink: '#5F6980', path: 'M6 3h9l4 4v14H6zM9 12h7M9 16h5' },
+      const told = listed.filter(l => daysSince(l.graduatedAt) <= 90).reduce((s, l) => s + leadTold(l).told, 0);
+      // With packing: of the items you listed, those with a pack on a supplier's price row.
+      const prods = [...new Set(listed.map(l => l.productId).filter(Boolean).map(String))];
+      const packed = prods.filter(pid => d.prices.some(r => String(r.productId) === pid && Number(r.packQty) > 0 && r.packUnit)).length;
+      const pct = prods.length ? Math.round(packed / prods.length * 100) : null;
+      const tiles = [
+        { n: median == null ? '— —' : median < 1 ? '<1 day' : plural(Math.round(median), 'day'), word: 'a hunt takes',
+          label: median == null ? 'Not enough hunts in the last 90 days to say how long one takes' : `A hunt takes ${median < 1 ? 'under a day' : Math.round(median) + ' days'}, the middle of ${plural(spans.length, 'hunt')} in the last 90 days` },
+        { n: String(told), word: 'clients told', label: `${plural(told, 'client')} told their item is on the shelf, last 90 days` },
+        { n: pct == null ? '— —' : pct + '%', word: 'with packing', label: pct == null ? 'No item of yours on the shelf yet' : `${packed} of ${prods.length} items you listed have their packing on a supplier price` },
       ];
-      const tiles = T.map(t => {
-        const on = t.task.every(hasTask);
-        return { name: t.name, sub: t.sub, path: t.path, verb: on ? t.verb : 'off', title: t.task.join(' + ') + (on ? '' : ' — not given to this login'),
-          box: `display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD${on ? '' : '; opacity: .55'}`,
-          ico: `width: 32px; height: 32px; border-radius: 10px; background: ${t.bg}; color: ${t.ink}; display: flex; align-items: center; justify-content: center`,
-          verbInk: `font-size: 11px; font-weight: 700; color: ${on ? '#0F6B43' : '#6B7480'}` };
-      });
-      // Your log today: the lines the owner sees from you.
-      const mine = d.log.filter(x => S.user && x.by === S.user.id && isoOf(x.at) === todayISO()).length;
-      const rows = [
-        { what: 'The books, cash and bank', who: 'accounts' },
-        { what: 'Supplier bills, what we owe', who: 'accounts' },
-        { what: 'Markups, selling below list', who: managerName() },
-        { what: 'Staff, policy, backups', who: 'owner · sees your log', n: mine, nTitle: plural(mine, 'line') + ' from you today' },
+      // Who decides what (docs/decision-rights.md section 2), names from the staff list.
+      const staffOf = (role) => d.staff.find(x => x.role === role && !x.unavailable) || d.staff.find(x => x.role === role) || null;
+      const mineToday = d.log.filter(x => S.user && x.by === S.user.id && isoOf(x.at) === todayISO()).length;
+      const lit = (word, title) => ({ word, title, style: 'background: #F2EFEA; color: #3B4566; font-weight: 600' });
+      const ROLE = { manager: ['Manager', '#E4F4EA', '#0F6B43'], buyer: ['Buyer', '#DCEAF8', '#1A5A8A'], accounts: ['Accounts', '#EEF0F5', '#3B4566'], owner: ['Owner', '#EEF0F5', '#3B4566'] };
+      const other = (role, pills) => {
+        const st = staffOf(role), r = ROLE[role];
+        return { who: st ? `${firstWord(st.name)} · ${r[0]}` : r[0], ini: st ? initials(st.name) : r[0][0], pills,
+          av: `width: 32px; height: 32px; font-size: 11px; background: ${r[1]}; color: ${r[2]}`, box: 'display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px' };
+      };
+      const MY = [['sourcing.lead', 'requests'], ['product.edit', 'new items'], ['supplier.edit', 'suppliers'], ['price.list', 'price list'], ['price.list', 'packing'], ['price.confirm', `${priceReviewPerDay()} prices a day`]];
+      const roleWord = S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : S.role === 'admin' ? 'Admin' : 'Sourcing';
+      const rights = [
+        { who: `You · ${roleWord}`, ini: initials(name), av: 'width: 32px; height: 32px; font-size: 11px; background: #FFFFFF; color: #16203C',
+          box: 'display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: #16203C; color: #FFFFFF',
+          pills: MY.map(([task, word]) => { const on = hasTask(task); return { word: on ? word : word + ' · off', title: task + (on ? '' : ' — not given to this login'),
+            style: on ? 'background: rgba(255,255,255,.14); color: #FFFFFF; font-weight: 600' : 'background: transparent; color: #B3BCD2; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(255,255,255,.2)' }; }) },
+        other('manager', [lit('selling prices', 'Decides prices at or above cost'), lit('markups', 'Sets each item’s markup')]),
+        other('buyer', [lit('orders to suppliers', 'Orders what we stock')]),
+        other('accounts', [lit('paying suppliers', 'Runs everything finance')]),
+        other('owner', [lit('sees the log', 'Watches and sets policy, gets a log, never a queue')].concat(mineToday ? [lit(plural(mineToday, 'line') + ' from you today', 'Your lines in the owner’s log today')] : [])),
       ];
-      const locked = rows.map((r, i) => ({ ...r, hasN: !!r.n,
-        rowStyle: 'display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 13px; font-weight: 600; color: #5F6980' + (i < rows.length - 1 ? '; border-bottom: 1px solid #E6E3DD' : '') }));
       const on = !!S.prefs.sound;
       const [pushWord, pushSub] = pushState(), pushLit = pushWord === 'On';
       return {
+        ini: initials(name), name, roleWord, shop: S.shopName || 'The shop',
+        weeks, weeksWord: `${sum} in 6 weeks`, weeksLabel: 'Items listed per week: ' + counts.join(', '), tiles, rights,
         pushWord, pushSub, pushLabel: `Notifications: ${pushWord}, ${pushSub}`,
         pushIco: `flex: none; color: ${pushLit ? '#0F6B43' : '#6B7480'}`,
-        pushChip: `flex: none; height: 24px; padding: 0 9px; border-radius: 999px; background: ${pushLit ? '#E4F4EA' : '#F1EEE8'}; color: ${pushLit ? '#0F6B43' : '#5F6980'}; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; white-space: nowrap`,
-        ini: initials(name), name, roleWord: S.role === 'sourcing' ? 'Sourcing' : S.role === 'owner' ? 'Owner' : S.role === 'admin' ? 'Admin' : 'Sourcing', shop: S.shopName || 'The shop',
-        month, landed, told, takes: median == null ? '— —' : median < 1 ? '<1' : Math.round(median), hasTakes: median != null,
-        landedLabel: `${landed} new items landed on the shelf this month`, toldLabel: `${plural(told, 'client')} told their item is on the shelf, last 90 days`,
-        takesLabel: median == null ? 'Not enough hunts in the last 90 days to say how long one takes' : `A hunt takes ${median < 1 ? 'under a day' : Math.round(median) + ' days'}, the middle of ${plural(spans.length, 'hunt')} in the last 90 days`,
-        tiles, locked,
+        pushChip: pushLit ? 'background: #E4F4EA; color: #0F6B43' : 'background: #F2EFEA; color: #5F6980',
         soundOn: on ? 'true' : 'false', soundWave: on ? 'M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11' : 'M16 9.5l5 5M21 9.5l-5 5',
         track: `width: 44px; height: 26px; flex: none; border-radius: 999px; position: relative; background: ${on ? '#0F6B43' : '#E0DCD4'}; transition: background .2s`,
         knob: `position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s`,
@@ -7572,134 +7602,95 @@ function searchMark(text, tokens){
 }
 SCREENS.Search = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
-  <div data-navy-top style="flex: none; background: linear-gradient(180deg, #1B2747 0%, #16203C 100%); color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; gap: 10px">
-      <a href="Main.dc.html" data-back aria-label="Back" style="width: 40px; height: 40px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-      <span style="font-size: 22px; font-weight: 700; letter-spacing: -.02em">Search</span>
-    </div>
-    <label style="display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 8px 0 16px; border-radius: 14px; background: #FFFFFF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="search" enterkeyhint="search" aria-label="Search items, hunts, suppliers and clients" placeholder="An item, aisle, supplier or client" value="{{ q }}" onInput="{{ onQ }}" style="flex: 1; min-width: 0; border: none; background: transparent; color: #1C2233; font-family: inherit; font-size: 17px; font-weight: 600; outline: none"><sc-if value="{{ hasQ }}"><button type="button" onClick="{{ clear }}" aria-label="Clear" style="width: 36px; height: 36px; flex: none; border: none; border-radius: 999px; background: #F2EFEA; color: #5F6980; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if></label>
-    <div role="tablist" aria-label="Show" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 3px; border-radius: 12px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)">
-      <sc-for list="{{ tabs }}" as="t"><button type="button" role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.word }} <span style="{{ t.nStyle }}">{{ t.n }}</span></button></sc-for>
-    </div>
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div data-navy-top style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 16px 18px 16px; border-radius: 0 0 28px 28px; box-shadow: 0 12px 30px -18px rgba(22,32,60,.6); display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px"><a href="Main.dc.html" data-back aria-label="Back" class="glass" style="width: 38px; height: 38px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a><span class="t1" style="font-size: 24px">Search</span></div>
+    <label style="height: 52px; border-radius: 15px; background: #FFFFFF; padding: 0 8px 0 14px; display: flex; align-items: center; gap: 10px; color: #1C2233"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg><input type="search" enterkeyhint="search" aria-label="Search items, hunts, suppliers and clients" placeholder="An item, aisle, supplier or client" value="{{ q }}" onInput="{{ onQ }}" style="flex: 1; min-width: 0; border: none; background: transparent; color: #1C2233; font-family: inherit; font-size: 17px; font-weight: 600; outline: none"><sc-if value="{{ hasQ }}"><button type="button" onClick="{{ clear }}" aria-label="Clear" style="width: 34px; height: 34px; flex: none; border-radius: 999px; background: #F2EFEA; display: flex; align-items: center; justify-content: center; color: #6B7480"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></sc-if></label>
+    <div role="tablist" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{ tabs }}" as="t"><button type="button" role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" class="{{ t.cls }}" style="{{ t.style }}">{{ t.word }} <span class="m">{{ t.n }}</span></button></sc-for></div>
   </div>
 
-  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px calc(110px + var(--safe-b)); display: flex; flex-direction: column; gap: 16px">
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(28px + var(--safe-b)); display: flex; flex-direction: column; gap: 8px">
     <sc-if value="{{ blank }}">
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 18px; text-align: center; color: #5F6980">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9C4BA" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-        <span style="font-size: 14px; font-weight: 600; color: #1C2233">{{ blankWord }}</span>
-        <span style="font-size: 13px">{{ blankSub }}</span>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 18px; text-align: center">
+        <span style="width: 52px; height: 52px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 0 0 1px #ECE8E1; color: #8D8676; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg></span>
+        <span class="t2">{{ blankWord }}</span>
+        <span class="sub" style="font-size: 13px">{{ blankSub }}</span>
       </div>
     </sc-if>
 
     <sc-if value="{{ showItems }}">
-    <section aria-label="In the catalogue" class="q-in" style="display: flex; flex-direction: column; gap: 8px">
-      <span style="padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">In the catalogue</span>
-      <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 4px 14px">
-        <sc-for list="{{ items }}" as="r">
-        <a href="Item.dc.html" data-sx="{{ r.sx }}" style="{{ r.rowStyle }}">
-          <span style="{{ r.thumb }}"></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.n.a }}<mark>{{ r.n.m }}</mark>{{ r.n.b }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.subA }}<span style="{{ r.subInk }}">{{ r.subB }}</span></span></span>
-          <sc-if value="{{ r.hasPrice }}"><span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span style="font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 500; letter-spacing: -.02em">{{ r.price }}</span><span style="font-size: 11px; color: #6B7480">{{ r.per }}</span></span></sc-if>
-          <sc-if value="{{ r.noPrice }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></sc-if>
-        </a>
-        </sc-for>
-      </div>
-    </section>
+    <span class="eb" style="padding: 4px 4px 0">We sell</span>
+    <div class="card n-in" style="padding: 2px 14px">
+      <sc-for list="{{ items }}" as="r"><a href="Item.dc.html" data-sx="{{ r.sx }}" style="{{ r.rowStyle }}"><span style="{{ r.thumb }}"><sc-if value="{{ r.noPhoto }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ r.icon }}"></path></svg></sc-if></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{ r.n.a }}<mark style="background: transparent; box-shadow: inset 0 -6px 0 #FDE3CB; color: inherit">{{ r.n.m }}</mark>{{ r.n.b }}</span><span class="sub" style="{{ r.subInk }}">{{ r.sub }}</span></span><sc-if value="{{ r.hasPrice }}"><span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px"><span class="m" style="font-size: 14px; font-weight: 600">{{ r.price }}</span><span style="font-size: 11px; color: #6B7480">{{ r.per }}</span></span></sc-if></a></sc-for>
+    </div>
     </sc-if>
 
     <sc-if value="{{ showHunts }}">
-    <section aria-label="Hunts" class="q-in" style="display: flex; flex-direction: column; gap: 8px; animation-delay: .05s">
-      <span style="padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">Hunts · not sold yet</span>
-      <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 4px 14px">
-        <sc-for list="{{ hunts }}" as="h">
-        <a href="Hunt.dc.html" data-sx="{{ h.sx }}" style="{{ h.rowStyle }}">
-          <span style="display: grid; grid-template-columns: repeat(7, 4px); gap: 2px; flex: none; height: 22px" role="img" aria-label="{{ h.stepLabel }}"><sc-for list="{{ h.bars }}" as="b"><span style="{{ b }}"></span></sc-for></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ h.n.a }}<mark>{{ h.n.m }}</mark>{{ h.n.b }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ h.sub }}</span></span>
-          <span style="flex: none; font-size: 12px; font-weight: 600; color: #A82D24; white-space: nowrap">{{ h.next }}</span>
-        </a>
-        </sc-for>
-      </div>
-    </section>
+    <span class="eb" style="padding: 6px 4px 0">In the pipeline</span>
+    <div class="card n-in" style="padding: 2px 14px; animation-delay: .04s">
+      <sc-for list="{{ hunts }}" as="h"><a href="Hunt.dc.html" data-sx="{{ h.sx }}" style="{{ h.rowStyle }}"><span style="{{ h.thumb }}"><sc-if value="{{ h.noPhoto }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ h.icon }}"></path></svg></sc-if></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{ h.n.a }}<mark style="background: transparent; box-shadow: inset 0 -6px 0 #FDE3CB; color: inherit">{{ h.n.m }}</mark>{{ h.n.b }}</span><span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span role="img" aria-label="{{ h.stageLabel }}" style="width: 54px; flex: none; display: flex; gap: 2px"><sc-for list="{{ h.bars }}" as="b"><span style="{{ b }}"></span></sc-for></span><span class="sub" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ h.sub }}</span></span></span><span class="pill" style="{{ h.pill }}"><span style="{{ h.dot }}"></span>{{ h.stage }}</span></a></sc-for>
+    </div>
     </sc-if>
 
     <sc-if value="{{ showPeople }}">
-    <section aria-label="People" class="q-in" style="display: flex; flex-direction: column; gap: 8px; animation-delay: .1s">
-      <span style="padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B7480">People</span>
-      <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #ECE8E1; padding: 4px 14px">
-        <sc-for list="{{ people }}" as="w">
-        <a href="{{ w.href }}" data-sx="{{ w.sx }}" style="{{ w.rowStyle }}">
-          <span style="{{ w.avatar }}">{{ w.ini }}</span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ w.n.a }}<mark>{{ w.n.m }}</mark>{{ w.n.b }}</span><span style="font-size: 12px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ w.sub }}</span></span>
-          <span style="flex: none; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #6B7480">{{ w.kind }}</span>
-        </a>
-        </sc-for>
-      </div>
-    </section>
+    <span class="eb" style="padding: 6px 4px 0">People</span>
+    <div class="card n-in" style="padding: 2px 14px; animation-delay: .08s">
+      <sc-for list="{{ people }}" as="w"><a href="{{ w.href }}" data-sx="{{ w.sx }}" style="{{ w.rowStyle }}"><span class="ava" style="{{ w.avatar }}">{{ w.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{ w.n.a }}<mark style="background: transparent; box-shadow: inset 0 -6px 0 #FDE3CB; color: inherit">{{ w.n.m }}</mark>{{ w.n.b }}</span><span class="sub">{{ w.sub }}</span></span><span class="pill" style="background: #EEF0F5; color: #3B4566">{{ w.kind }}</span></a></sc-for>
+    </div>
     </sc-if>
-  </div>
 
-  <sc-if value="{{ hasQ }}">
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 16px calc(22px + var(--safe-b)); background: linear-gradient(180deg, rgba(247,245,242,0), #F7F5F2 32px); pointer-events: none">
-    <a href="NewAsk.dc.html" data-sx="{{ askSx }}" style="pointer-events: auto; height: 52px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #1C2233; color: #1C2233; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ askWord }}</span></a>
+    <sc-if value="{{ hasQ }}"><a href="NewAsk.dc.html" data-sx="{{ askSx }}" class="btn2" style="margin-top: 4px; padding: 0 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 5v14M5 12h14"></path></svg><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ askWord }}</span></a></sc-if>
   </div>
-  </sc-if>
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) { super(props); this.state = { q: (props && props.q) || '', tab: 'all' }; }
     renderVals() {
       const d = D(), st = this.state, tokens = searchTokens(st.q), stale = priceStaleDays();
       const has = (text) => { const hay = searchTokens(text); return tokens.every(t => hay.some(h => h.includes(t))); };
-      const row = (i, n) => `display: flex; align-items: center; gap: 12px; min-height: 62px${i < n - 1 ? '; box-shadow: inset 0 -1px 0 #F2EFEA' : ''}`;
+      const row = (i) => `display: flex; align-items: center; gap: 12px; min-height: 58px${i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}`;
       let items = [], hunts = [], people = [];
       if (tokens.length) {
-        const itemHits = d.products.filter(p => has(p.name + ' ' + (p.category || '')));
-        items = itemHits.map((p, i, arr) => {
+        items = d.products.filter(p => has(p.name + ' ' + (p.category || ''))).map(p => {
           const rs = d.prices.filter(r => String(r.productId) === String(p.id));
           const live = rs.filter(r => !r.outOfStock && priceRowCost(r) > 0).sort((a, b) => priceRowCost(a) - priceRowCost(b));
+          // The selling price on the Manager's markup (read here, never set).
           const sell = live.length ? sellAt(priceRowCost(live[0]), effectiveMarkupRule(p, null, 'wholesale')) : 0;
           const unit = live.length ? ((live[0].unit || 'pc') === 'pc' ? 'piece' : live[0].unit) : '';
-          const today = rs.some(r => priceAgeDays(r) === 0), old = rs.filter(r => { const a = priceAgeDays(r); return a === null || a > stale; }).length;
+          const packed = live.find(r => r.packQty > 0 && r.packUnit);
+          const n = productStock(p), today = rs.some(r => priceAgeDays(r) === 0), old = rs.filter(r => { const a = priceAgeDays(r); return a === null || a > stale; }).length;
           const inName = searchMark(p.name, tokens).m;
-          return { sx: JSON.stringify({ productId: p.id }), n: searchMark(p.name, tokens),
-            subA: !inName && p.category ? 'in the ' + p.category + ' aisle · ' : '',
-            subB: !rs.length ? 'no supplier price yet' : today ? 'price confirmed today' : old ? `${plural(old, 'price')} old` : plural(rs.length, 'price'),
-            subInk: !rs.length || old && !today ? 'color: #95530C; font-weight: 600' : today ? 'color: #0F6B43; font-weight: 600' : '',
-            hasPrice: sell > 0, noPrice: !(sell > 0), price: n0(sell), per: 'a ' + unit,
-            thumb: 'width: 40px; height: 40px; flex: none; border-radius: 12px; ' + photoStyle(p.image, 'background: linear-gradient(160deg, #C3C9D2, #858D9B)'),
-            rowStyle: row(i, arr.length) };
+          const parts = [n > 0 ? 'on the shelf · ' + n0(n) : 'none on the shelf'];
+          if (!inName && p.category) parts.push('in ' + p.category);
+          if (packed) parts.push(aPackWord(packed));
+          parts.push(!rs.length ? 'no supplier price yet' : today ? 'price confirmed today' : old ? plural(old, 'price') + ' old' : plural(rs.length, 'price'));
+          return { p, sx: JSON.stringify({ productId: p.id }), n: searchMark(p.name, tokens), sub: parts.join(' · '),
+            subInk: !rs.length || (old && !today) ? 'color: #95530C; font-weight: 600' : today ? 'color: #0F6B43; font-weight: 600' : '',
+            hasPrice: sell > 0, price: n0(sell), per: 'a ' + unit, thumb: aThumb(38, 'listed', p.image), noPhoto: !p.image, icon: itemIconPath(p.name) };
         });
-        const huntHits = openLeads().filter(l => has(l.name));
-        hunts = huntHits.map((l, i, arr) => {
-          const h = huntSteps(l), k = h.next;
-          return { sx: JSON.stringify({ leadId: l.id }), n: searchMark(l.name, tokens),
-            sub: `${STAGE_WORD[l.status]} · ${plural(h.askers.length, 'client')}`,
-            next: k >= 0 ? 'Next: ' + (h.steps[k].word || h.steps[k].title).toLowerCase() : '',
-            stepLabel: k >= 0 ? `Step ${k + 1} of 7` : 'All steps done',
-            bars: h.steps.map((s, j) => `height: 22px; border-radius: 2px; background: ${s.done ? '#0F6B43' : j === k ? '#E5483D' : '#E6E3DD'}`),
-            rowStyle: row(i, arr.length) };
+        hunts = openLeads().filter(l => has(l.name)).map(l => {
+          const st0 = aStageOf(l.status), askers = leadDistinctAskers(l);
+          return { sx: JSON.stringify({ leadId: l.id }), n: searchMark(l.name, tokens), thumb: aThumb(38, l.status, l.image), noPhoto: !l.image, icon: itemIconPath(l.name),
+            bars: aStageBars(l.status), stageLabel: aStageLabel(l.status), stage: st0[0], pill: aStagePill(l.status),
+            dot: `width: 6px; height: 6px; border-radius: 999px; background: ${st0[1]}`,
+            sub: `${st0[0]} · ${plural(askers, 'client')}` + (leadOver(l) ? ` · ${leadDaysInStage(l)}d, over` : '') };
         });
         const sellsHit = (s) => d.prices.filter(r => String(r.supplierId) === String(s.id)).map(r => priceRowName(r)).find(n => has(n));
         const supHits = d.suppliers.map(s => ({ s, sells: sellsHit(s) })).filter(x => has([x.s.name, x.s.location].join(' ')) || x.sells);
         const custHits = d.customers.filter(c => has(c.name));
-        const waitingOn = (c) => { const l = openLeads().find(x => (x.requests || []).some(r => !r.withdrawn && String(r.customerId) === String(c.id))); return l ? 'waiting on ' + l.name : 'client'; };
-        const all = supHits.map(x => ({ kind: 'Supplier', name: x.s.name, sub: x.sells && !has(x.s.name) ? 'sells our ' + x.sells : supplierWhere(x.s) || 'supplier',
-          href: 'Supplier.dc.html', sx: JSON.stringify({ supplierId: x.s.id }), key: x.s.id }))
-          .concat(custHits.map(c => ({ kind: 'Client', name: c.name, sub: waitingOn(c), href: 'Asks.dc.html', sx: '{}', key: 'c' + c.id })));
-        people = all.map((w, i, arr) => { const t = tintFor(w.key); return { ...w, n: searchMark(w.name, tokens), ini: initials(w.name),
-          avatar: `width: 40px; height: 40px; flex: none; border-radius: 999px; background: ${t[0]}; color: ${t[1]}; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center`,
-          rowStyle: row(i, arr.length) }; });
+        // A client opens the hunt they wait on, else Capture with them picked.
+        const waitOn = (c) => openLeads().find(x => (x.requests || []).some(r => !r.withdrawn && String(r.customerId) === String(c.id))) || null;
+        people = supHits.map(x => ({ kind: 'supplier', name: x.s.name, sub: x.sells && !has(x.s.name) ? 'sells us ' + x.sells : supplierWhere(x.s) || 'supplier', href: 'Supplier.dc.html', sx: JSON.stringify({ supplierId: x.s.id }), key: x.s.id }))
+          .concat(custHits.map(c => { const l = waitOn(c); return { kind: 'client', name: c.name, sub: l ? 'waiting on ' + l.name : (c.location || 'client') + ' · capture what they want',
+            href: l ? 'Hunt.dc.html' : 'NewAsk.dc.html', sx: JSON.stringify(l ? { leadId: l.id } : { customerId: c.id }), key: 'c' + c.id }; }))
+          .map(w => { const t = tintFor(w.key); return { ...w, n: searchMark(w.name, tokens), ini: initials(w.name), avatar: `width: 38px; height: 38px; font-size: 13px; background: ${t[0]}; color: ${t[1]}` }; });
       }
       const counts = { items: items.length, hunts: hunts.length, people: people.length };
       counts.all = counts.items + counts.hunts + counts.people;
-      const tab = st.tab, cap = (list) => tab === 'all' ? list.slice(0, 6) : list;
-      const fix = (list) => list.map((x, i, arr) => ({ ...x, rowStyle: row(i, arr.length) }));
+      const tab = st.tab, cap = (list) => (tab === 'all' ? list.slice(0, 6) : list).map((x, i) => ({ ...x, rowStyle: row(i) }));
       const tabs = [['all', 'All'], ['items', 'Items'], ['hunts', 'Hunts'], ['people', 'People']].map(([k, w]) => {
         const on = tab === k;
-        return { word: w, n: String(counts[k]), on: on ? 'true' : 'false', pick: () => { FEEL.tick(); this.setState({ tab: k }); },
-          style: `height: 34px; border: none; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; ${on ? 'background: #FFFFFF; color: #16203C' : 'background: transparent; color: #FFFFFF'}`,
-          nStyle: `font-family: 'IBM Plex Mono', monospace; color: ${on ? '#5F6980' : '#B3BCD2'}` };
+        return { word: w, n: String(counts[k]), on: on ? 'true' : 'false', cls: on ? 'chip on' : 'chip', pick: () => { FEEL.tick(); this.setState({ tab: k }); },
+          style: on ? 'height: 30px' : 'height: 30px; background: rgba(255,255,255,.08); color: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14)' };
       });
       const show = (k) => (tab === 'all' || tab === k) && counts[k] > 0;
       const q = String(st.q || '').trim();
@@ -7709,9 +7700,9 @@ SCREENS.Search = {
         tabs,
         blank: !tokens.length || !(tab === 'all' ? counts.all : counts[tab]),
         blankWord: !tokens.length ? 'Find anything in one box' : `Nothing for “${q}”`,
-        blankSub: !tokens.length ? 'An item or an aisle, a hunt, a supplier or a client' : 'If a client asked for it, record it as an ask below',
-        showItems: show('items'), items: fix(cap(items)), showHunts: show('hunts'), hunts: fix(cap(hunts)), showPeople: show('people'), people: fix(cap(people)),
-        askSx: JSON.stringify({ text: q }), askWord: `Not here? Record “${q.length > 18 ? q.slice(0, 18) + '…' : q}” as an ask`,
+        blankSub: !tokens.length ? 'An item or an aisle, a hunt, a supplier or a client' : 'Not here? Capture it below',
+        showItems: show('items'), items: cap(items), showHunts: show('hunts'), hunts: cap(hunts), showPeople: show('people'), people: cap(people),
+        askSx: JSON.stringify({ text: q }), askWord: `Not here? Capture “${q.length > 18 ? q.slice(0, 18) + '…' : q}”`,
       };
     }
   },
@@ -7733,7 +7724,7 @@ SCREENS.Search = {
    comes back with this find kept (window.SX_SPOTTED_DRAFT). */
 SCREENS.Spotted = {
   markup: String.raw`
-<div style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
 
   <div style="flex: none; position: relative; height: 316px; background: #0E1630; overflow: hidden; border-radius: 0 0 28px 28px">
     <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 50% 55%, #4A4F5C 0%, #22283A 70%, #0E1630 100%)"></div>
@@ -7770,21 +7761,21 @@ SCREENS.Spotted = {
 
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
     <div style="display: flex; flex-direction: column; gap: 6px">
-      <label style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="text" value="{{ name }}" onChange="{{ setName }}" placeholder="what is it?" aria-label="What is it" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 16px; font-weight: 600; color: #1C2233"></label>
+      <label style="display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 14px; border-radius: 15px; background: #FFFFFF; box-shadow: 0 0 0 1px rgba(28,34,51,.1), 0 2px 6px -2px rgba(28,34,51,.12)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="text" value="{{ name }}" onChange="{{ setName }}" placeholder="what is it?" aria-label="What is it" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 16px; font-weight: 600; color: #1C2233"></label>
       <sc-if value="{{ hasMatches }}">
       <div role="radiogroup" aria-label="Which one is it" style="display: flex; gap: 6px">
         <sc-for list="{{ matches }}" as="m" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{ m.on }}" onClick="{{ m.pick }}" style="{{ m.style }}"><span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: left">{{ m.label }}</span><span style="{{ m.subStyle }}">{{ m.sub }}</span></button></sc-for>
       </div>
       </sc-if>
     </div>
-    <label style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 14px; border-radius: 18px; background: #FFFFFF; box-shadow: 0 0 0 2px #16203C, 0 6px 16px rgba(22,32,60,.08)">
+    <label style="display: flex; align-items: center; gap: 10px; height: 58px; padding: 0 14px; border-radius: 15px; background: #FFFFFF; box-shadow: 0 0 0 2px #16203C, 0 6px 16px -8px rgba(22,32,60,.4)">
       <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 11px; font-weight: 700; color: #6B7480">Their price</span><button type="button" onClick="{{ flipFor }}" aria-label="{{ forLabel }}" style="height: 22px; padding: 0 7px; border: none; border-radius: 7px; background: #F1EEE8; font-family: inherit; font-size: 11px; font-weight: 700; color: #1C2233; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap">{{ forWord }}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l-3 3 3 3M4 7h13M17 20l3-3-3-3M20 17H7"></path></svg></button></span>
       <input type="text" inputmode="numeric" value="{{ priceShown }}" onChange="{{ setPrice }}" aria-label="Their price, in shillings" placeholder="0" autocomplete="off" style="flex: 1; min-width: 0; border: none; background: transparent; text-align: right; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 600; letter-spacing: -.03em; color: #1C2233">
       <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #6B7480">UGX</span>
     </label>
 
-    <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD">
-      <span style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #5F6980"><span>How it’s packed</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #6B7480">{{ packTotal }}</span></span>
+    <div class="card" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px">
+      <span style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #5F6980"><span class="eb">How it’s packed</span><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #6B7480">{{ packTotal }}</span></span>
       <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #5F6980">
         <button type="button" onClick="{{ openQty }}" aria-expanded="{{ qtyOpen }}" aria-label="How many in the pack" style="{{ qtyTok }}">{{ packQty }}</button>
         <button type="button" onClick="{{ openUnit }}" aria-expanded="{{ unitOpen }}" aria-label="Unit" style="{{ unitTok }}">{{ unitPlural }}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
@@ -7799,7 +7790,7 @@ SCREENS.Spotted = {
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 6px">
-      <span style="display: flex; align-items: center; justify-content: space-between; padding-left: 2px"><span style="font-size: 12px; font-weight: 700; color: #5F6980">{{ whoTitle }}</span><span role="tablist" aria-label="Whose price" style="display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: #F1EEE8"><sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ k.on }}" onClick="{{ k.pick }}" style="{{ k.style }}">{{ k.label }}</button></sc-for></span></span>
+      <span style="display: flex; align-items: center; justify-content: space-between; padding-left: 2px"><span class="eb">{{ whoTitle }}</span><span role="tablist" aria-label="Whose price" style="display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: #F1EEE8"><sc-for list="{{ kinds }}" as="k" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ k.on }}" onClick="{{ k.pick }}" style="{{ k.style }}">{{ k.label }}</button></sc-for></span></span>
       <sc-if value="{{ isSup }}">
       <div style="display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-right: 16px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent)">
         <sc-for list="{{ sups }}" as="s" hint-placeholder-count="3">
@@ -7833,17 +7824,20 @@ SCREENS.Spotted = {
       <button type="button" onClick="{{ again }}" class="v-pop" style="height: 52px; padding: 0 16px; border: none; border-radius: 16px; background: #6FDCB0; color: #16203C; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex: none; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>Saved · next one</button>
     </sc-if>
     <sc-if value="{{ unsaved }}">
-      <button type="button" onClick="{{ save }}" disabled="{{ busy }}" style="height: 52px; padding: 0 18px; border: none; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; flex: none; cursor: pointer">Save the find</button>
+      <button type="button" onClick="{{ save }}" disabled="{{ busy }}" class="btn" style="width: auto; height: 52px; padding: 0 18px; flex: none">Save the find</button>
     </sc-if>
   </div>
 </div>`,
   Component: class extends SrvLogic {
     constructor(props) {
       super(props);
-      const l = props && props.leadId ? leadById(props.leadId) : null;
+      const p = props || {}, l = p.leadId ? leadById(p.leadId) : null;
       const draft = window.SX_SPOTTED_DRAFT; window.SX_SPOTTED_DRAFT = null;
-      this.state = draft || { photos: [], flash: 0, uploading: false, price: '', unit: 'pc', pack: 'carton', packQty: 10, priceFor: 'unit', open: null,
-        who: 'sup', sup: null, rival: '', saved: null, name: l ? l.name : String((props && props.name) || ''), pick: l ? 'lead:' + l.id : null };
+      // From Capture: what it is, whose price (a supplier or a rival shop),
+      // the hunt it joins (or a new one), and its photo, come along.
+      this.state = draft || { photos: p.photo ? [p.photo] : [], flash: 0, uploading: false, price: '', unit: 'pc', pack: 'carton', packQty: 10, priceFor: 'unit', open: null,
+        who: p.who === 'rival' ? 'rival' : 'sup', sup: p.supplierId && supplierById(p.supplierId) ? p.supplierId : null, rival: String(p.rival || ''), saved: null,
+        name: l ? l.name : String(p.name || ''), pick: l ? 'lead:' + l.id : p.newHunt ? 'new' : null };
       if (draft && draft.sup && draft.sup !== 'NEW' && !supplierById(draft.sup)) this.state.sup = null;
     }
     // What the typed name is: the hunt it joins, a product we sell, or new.
