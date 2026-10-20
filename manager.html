@@ -712,7 +712,14 @@ function tintFor(key){ let h = 0; String(key || '').split('').forEach(c => { h =
 // Each run on the buying list has its own colour on the money bar.
 const RUN_COLS = ['#5FC4CF', '#7FB3E0', '#9BA3F0', '#E3A9D3', '#F0C27B', '#8ED1A6'];
 function avatar(name, key, size, round){ const t = tintFor(key || name); size = size || 40; return `<span class="bx-av${round ? ' round' : ''}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]}">${esc(initials(name))}</span>`; }
-function firstWord(name){ return String(name || '').trim().split(/\s+/)[0] || ''; }
+function firstWord0(name){ return String(name || '').trim().split(/\s+/)[0] || ''; }
+// Staff who share a first name are told apart by their surname.
+function firstWord(name){
+  const f = firstWord0(name);
+  try { const st = S.data && S.data.staff; if (!st || !st.some(x => x.name === name)) return f;
+    if (st.filter(x => firstWord0(x.name) === f).length > 1) { const parts = String(name).trim().split(/\s+/); return parts.length > 1 ? parts[0] + ' ' + parts[1] : f; } } catch (_e) {}
+  return f;
+}
 function phoneDigits(p){ let d = String(p || '').replace(/[^0-9]/g, ''); if (d.startsWith('0')) d = '256' + d.slice(1); else if (d && !d.startsWith('256')) d = '256' + d; return d; }
 // index.html 63165
 function waComposeUrl(phone, msg){ const d = phoneDigits(phone); return d ? `https://wa.me/${d}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`; }
@@ -1352,8 +1359,17 @@ function staffEligibleForRole(s, role){
 }
 function staffById(id){ return id == null ? null : D().staff.find(s => String(s.id) === String(id)) || null; }
 function staffByUser(uid){ return uid ? D().staff.find(s => s.userId && String(s.userId) === String(uid)) || null : null; }
-function myStaff(){ return S.user ? staffByUser(S.user.id) : null; }
-function myName(){ const me = myStaff(); return (me && me.name) || (S.user && S.user.email ? S.user.email.split('@')[0] : 'Manager'); }
+// Who "you" are. A login linked to a staff card (staff.user_id) is that card;
+// one that is not (an owner using this app) says which card is theirs once.
+function meKey(){ return 'ow-manager-me:' + (S.user ? S.user.id : ''); }
+function myStaff(){
+  if (!S.user) return null;
+  const linked = staffByUser(S.user.id); if (linked) return linked;
+  let pick = null; try { pick = localStorage.getItem(meKey()); } catch (_e) {}
+  return pick ? staffById(pick) : null;
+}
+function isMe(s){ const me = myStaff(); return !!(me && s && String(me.id) === String(s.id)); }
+function myName(){ const me = myStaff(), md = (S.user && S.user.user_metadata) || {}; return (me && me.name) || md.full_name || md.name || (S.user && S.user.email ? S.user.email.split('@')[0] : 'Manager'); }
 
 /* The team, by job. A salesperson is a staff row with the sales job and
    a login (their orders carry it as payload.takenBy, sales.html 5228). */
@@ -1460,7 +1476,7 @@ function stageTimes(q){
 }
 
 /* ---- debts: by age, in the days and weeks this shop runs on ---- */
-const BANDS = [{ w: 'under 7d', to: 7, col: '#6FDCB0', ink: '#0F6B43' }, { w: '7–14', to: 14, col: '#F5B26B', ink: '#95530C' }, { w: '14–30', to: 30, col: '#E5483D', ink: '#8E2A22' }, { w: 'over 30', to: Infinity, col: '#F59A92', ink: '#8E2A22', hatch: true }];
+const BANDS = [{ w: 'under 7d', to: 7, col: '#6FDCB0', ink: '#0F6B43' }, { w: '7–13', to: 14, col: '#F5B26B', ink: '#95530C' }, { w: '14–30', to: 31, col: '#E5483D', ink: '#8E2A22' }, { w: 'over 30', to: Infinity, col: '#F59A92', ink: '#8E2A22', hatch: true }];
 function ageBand(age){ return BANDS.findIndex(b => age < b.to); }
 /* accounts.html custOpenCharges / custAging, the one rule for how old a
    debt is (Manager, Sales and Accounts age it the same way): FIFO over the
@@ -1501,6 +1517,8 @@ function custAging(c){
 // Nothing of it carries a date: the whole debt is "no date".
 function custUndated(c){ return c.debt > 0.5 && custAging(c).unknown >= c.debt - 0.5; }
 function debtors(){ return D().customers.filter(c => c.debt > 0).map(c => ({ c, age: custOldestAge(c) })).sort((a, b) => b.age - a.age || b.c.debt - a.c.debt); }
+// Owing over 30 days as this desk's age bar draws it: the open bills past 30 days.
+function overBand(c){ return custOpenCharges(c).reduce((s2, ch) => { const a2 = chargeAge(ch); return s2 + (a2 != null && ageBand(a2) === BANDS.length - 1 ? ch.remaining : 0); }, 0); }
 // Owing over 30 days: the part of each debt aged 30 days or more (accounts.html's "over 30").
 function over30(c){ const p = custAging(c).parts; return p.b60 + p.b90 + p.b90p; }
 // This desk's own bands (days and weeks), filled from the same open charges; "no date" is its own part.
@@ -2022,8 +2040,8 @@ function overBarHTML(q, w, h){
 function needsYou(){
   const out = [], stuck = stuckOrders(), T = team();
   T.sales.forEach(s => { const g = s.userId ? personGoal(s.userId) : null; if (g && g.ahead < 0 && !g.reached) out.push({ k: 'behind', s, g }); });
-  const old = debtors().filter(d => over30(d.c) > 0.5);
-  if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => over30(d.c)) });
+  const old = debtors().filter(d => overBand(d.c) > 0.5);
+  if (old.length) out.push({ k: 'old', n: old.length, v: sum(old, d => overBand(d.c)) });
   return { first: stuck[0] || null, rest: out, total: stuck.length + out.length };
 }
 function viewToday(){
@@ -2034,8 +2052,8 @@ function viewToday(){
   const f = ny.first;
   let featured = '';
   if (f) {
-    const h = holderOf(f), why = whyStuck(f), free = freeHandFor(f);
-    const primary = free ? `<button class="bx-btn red" style="height:52px;font-size:15px" data-act="handover" data-id="${f.id}" data-to="${free.id}">${ic('swap', 18, 'style="stroke-width:2.2"')}Hand it to ${esc(firstWord(free.name))}</button>`
+    const h = holderOf(f), why = whyStuck(f), free = freeHandFor(f), mine = isMe(h.staff);
+    const primary = mine ? `<button class="bx-btn red" style="height:52px;font-size:15px" data-act="push" data-p="order" data-id="${f.id}">${ic('orders', 18)}It’s yours · open it</button>` : free ? `<button class="bx-btn red" style="height:52px;font-size:15px" data-act="handover" data-id="${f.id}" data-to="${free.id}">${ic('swap', 18, 'style="stroke-width:2.2"')}Hand it to ${esc(firstWord(free.name))}</button>`
       : `<button class="bx-btn red" style="height:52px;font-size:15px" data-act="push" data-p="order" data-id="${f.id}">${ic('orders', 18)}See why</button>`;
     featured = `<div class="bx-card" style="border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.07),inset 0 0 0 1px var(--line)">
       <button data-act="push" data-p="order" data-id="${f.id}" style="display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;text-align:left;color:var(--ink)">
@@ -2043,8 +2061,8 @@ function viewToday(){
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700">${esc(clientName(f))}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(stageOf(f).label)} · ${esc(why.w)}</span></span>
         <span class="bx-chip" style="background:var(--crimsonSoft);color:var(--crimson)">${ic('clock', 12, 'style="stroke-width:2.2"')}<span class="m">${ageWords(inStageMins(f))}</span></span></button>
       <span role="img" aria-label="Limit ${limitWords(limitMins(f.status))}; waited ${ageWords(inStageMins(f))}" style="display:flex;flex-direction:column;gap:4px">${overBarHTML(f, '100%', 8)}
-        <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>limit <span class="m" style="color:var(--ink)">${limitWords(limitMins(f.status))}</span>${stageLimits().own ? '' : ' · suggested'}</span><span style="color:var(--crimson)"><span class="m">${ageWords(inStageMins(f) - limitMins(f.status))}</span> over</span></span></span>
-      <div style="display:flex;gap:8px"><button class="bx-sq" style="width:52px;height:52px;border-radius:16px;background:var(--soft);box-shadow:none" data-act="nudge" data-who="${h.staff ? h.staff.id : ''}" data-order="${f.id}" aria-label="Nudge ${esc(h.staff ? h.staff.name : 'them')}">${ic('nudge', 22)}</button>${primary}</div></div>`;
+        <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span style="color:var(--crimson)"><span class="m">${ageWords(inStageMins(f) - limitMins(f.status))}</span> over its <span class="m">${limitWords(limitMins(f.status))}</span> limit</span><span>waited <span class="m" style="color:var(--ink)">${ageWords(inStageMins(f))}</span></span></span></span>
+      <div style="display:flex;gap:8px">${mine || !h.staff ? '' : `<button class="bx-sq" style="width:52px;height:52px;border-radius:16px;background:var(--soft);box-shadow:none" data-act="nudge" data-who="${h.staff.id}" data-order="${f.id}" aria-label="Nudge ${esc(h.staff.name)} about this order">${ic('nudge', 22)}</button>`}${primary}</div></div>`;
   }
   const rows = ny.rest.map(n => {
     if (n.k === 'behind') return `<button class="bx-row" data-act="push" data-p="person" data-id="${n.s.id}">${pctRing(n.g.pct, 38, 3, '#95530C', pav(n.s, 28), '', '#EFECE6')}
@@ -2054,9 +2072,9 @@ function viewToday(){
       <span style="width:38px;height:38px;border-radius:12px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 19)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} ${pl(n.n, 'order')} need${n.n > 1 ? '' : 's'} a yes</span><span class="bx-sub" style="display:flex;min-width:0"><span class="ell">${esc(n.first)}</span>${n.n > 1 ? `<span style="flex:none">&nbsp;+${n.n - 1} more</span>` : ''}</span></span>
       <span class="mx-act soft" style="height:34px;border-radius:999px">See</span></button>`;
-    return `<button class="bx-row" data-act="tab" data-v="money">
+    return `<button class="bx-row" data-act="chase">
       <span style="width:38px;height:38px;border-radius:12px;background:var(--crimsonSoft);color:var(--crimson);display:flex;align-items:center;justify-content:center;flex:none">${ic('clock', 19)}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} owing 30+ days</span><span class="bx-sub"><span class="m">${short(n.v)}</span> to collect</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${n.n} ${pl(n.n, 'customer')} with bills over 30 days</span><span class="bx-sub"><span class="m">${short(n.v)}</span> of those bills to collect</span></span>
       <span class="mx-act soft" style="height:34px;border-radius:999px">Chase</span></button>`;
   }).join('');
   return `<div class="bx-hero" data-navy-top>
@@ -2065,10 +2083,10 @@ function viewToday(){
       <button class="mx-me" data-act="push" data-p="me" aria-label="You: profile and what your login opens">${esc(initials(myName()))}</button></div>
     <button class="mx-goal" data-act="tab" data-v="team">${teamRingHTML(m, 88, 8)}
       <span class="fig"><span class="mx-lbl">Team sales invoiced · ${esc(monthWord())}</span><span class="mx-big">${n0(m.actual)}</span>
-        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : (behind ? '−' : '+') + short(Math.abs(m.tg.ahead)) + (behind ? ' behind' : ' ahead')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">no shop goal yet</span>`}
+        ${m.tg ? `<span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk2)"><span>of <span class="m" style="color:#DDE3F0">${n0(m.tg.aim)}</span></span><span style="color:${behind ? 'var(--amber)' : 'var(--mint)'}">${m.tg.reached ? 'goal reached' : short(Math.abs(m.tg.ahead)) + (behind ? ' behind pace' : ' ahead of pace')}</span></span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk2)">no shop goal yet</span>`}
         ${legend}</span></button>
     <button class="bx-glass mx-day" data-act="push" data-p="teamday" aria-label="Today: sold ${n0(day.soldV)} in ${day.sold.length} ${pl(day.sold.length, 'order')}, money in ${n0(day.inV)}">
-      <span class="two"><span><span class="l">Sold today · <span class="m">${day.sold.length}</span></span><span class="v">${n0(day.soldV)}</span></span><span style="align-items:flex-end"><span class="l">Money in today</span><span class="v" style="color:var(--mint)">${n0(day.inV)}</span></span></span>
+      <span class="two"><span><span class="l">Sold today${day.sold.length ? ` · <span class="m">${day.sold.length}</span> ${pl(day.sold.length, 'order')}` : ''}</span><span class="v">${n0(day.soldV)}</span></span><span style="align-items:flex-end"><span class="l">Money in today</span><span class="v" style="color:var(--mint)">${n0(day.inV)}</span></span></span>
       <span class="mx-bar"><i class="a-grow" style="width:${day.soldV ? Math.min(100, Math.round(day.inV / day.soldV * 100)) : day.inV ? 100 : 0}%;background:var(--mint);border-radius:999px"></i></span></button>
   </div>
   <div class="bx-body">
@@ -2226,7 +2244,7 @@ function viewTeam(){
   const T = team(), off = T.all.filter(s => s.unavailable);
   const anyGoal = T.sales.some(s => s.userId && personGoal(s.userId));
   return `<div class="bx-hero" data-navy-top>
-    <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${T.all.length - off.length} in today${off.length ? ' · ' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
+    <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${off.length ? '' : 'nobody off today'}${off.length ? '' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
       <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -5 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-5px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())} invoiced</span>${can('goal.set') ? `<button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--mint)">${anyGoal ? 'Set goals' : 'Set each goal'}${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>
     ${sellingHTML(T)}
@@ -2269,7 +2287,7 @@ PAGE.person = a => {
       : `<div class="bx-empty" style="padding:20px"><b>Nothing in hand</b>${s.unavailable ? 'Off today.' : 'Free for the next job.'}</div>`}</div>`;
   }
   const ring = pm ? personRing(s, pm, 76, 4) : `<span style="width:76px;height:76px;display:flex;align-items:center;justify-content:center">${pav(s, 64)}</span>`;
-  const chip = pm ? (pm.g ? (pm.g.ahead < 0 && !pm.g.reached ? `<span class="bx-chip" style="background:rgba(245,178,107,.16);color:var(--amber)">${ic('downt', 13, 'style="stroke-width:2.2"')}<span class="m">${short(-pm.g.ahead)}</span>&nbsp;behind pace</span>` : `<span class="bx-chip" style="background:rgba(111,220,176,.14);color:var(--mint)">${ic('up', 13, 'style="stroke-width:2.2"')}${pm.g.reached ? 'Goal reached' : 'Ahead of pace'}</span>`) : '<span class="mx-prop dark">GOAL · PROPOSED</span>') : (s.unavailable ? '<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">Off today</span>' : '');
+  const chip = pm ? (pm.g ? (pm.g.ahead < 0 && !pm.g.reached ? `<span class="bx-chip" style="background:rgba(245,178,107,.16);color:var(--amber)">${ic('downt', 13, 'style="stroke-width:2.2"')}<span class="m">${short(-pm.g.ahead)}</span>&nbsp;behind pace</span>` : `<span class="bx-chip" style="background:rgba(111,220,176,.14);color:var(--mint)">${ic('up', 13, 'style="stroke-width:2.2"')}${pm.g.reached ? 'Goal reached' : 'Ahead of pace'}</span>`) : (can('goal.set') ? '<button class="bx-chip" data-act="push" data-p="teamrules" style="border:none;background:rgba(255,255,255,.08);color:var(--mint)">No goal · set one</button>' : '<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">No goal set</span>')) : (s.unavailable ? '<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">Off today</span>' : '');
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:14px">${ring}
@@ -2353,7 +2371,9 @@ PAGE.order = a => {
   const free = freeHandFor(q);
   const main = (q.status === 'preparing' || q.status === 'pending_delivery') ? `<button class="bx-btn red" data-act="reassign" data-id="${q.id}">${ic('swap', 20, 'style="stroke-width:2.2"')}${free ? 'Hand it to ' + esc(firstWord(free.name)) : 'Hand it to someone else'}</button>`
     : q.status === 'awaiting_goods' && h.trip && ['open', 'assigned'].includes(h.trip.status) ? `<button class="bx-btn red" data-act="reassigntrip" data-id="${esc(h.trip.id)}">${ic('swap', 20, 'style="stroke-width:2.2"')}Give it to another buyer</button>`
-    : `<button class="bx-btn red" data-act="nudge" data-who="${h.staff ? h.staff.id : ''}" data-order="${q.id}">${ic('nudge', 20)}Nudge ${esc(h.staff ? firstWord(h.staff.name) : 'them')}</button>`;
+    : isMe(h.staff) ? `<span class="bx-btn ghost" role="note">${ic('tick', 18)}It’s yours</span>`
+    : (h.staff || taker) && !isMe(h.staff || taker) ? `<button class="bx-btn red" data-act="nudge" data-who="${(h.staff || taker).id}" data-order="${q.id}">${ic('nudge', 20)}Nudge ${esc(firstWord((h.staff || taker).name))}${h.staff ? '' : ' · took it'}</button>`
+    : `<span class="bx-btn ghost" role="note">Nobody holds it yet</span>`;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px">${avatar(name, name, 46, true)}
@@ -2368,7 +2388,7 @@ PAGE.order = a => {
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
         <b style="font-size:13px">${stuck ? "Why it's stuck" : 'Who has it'}</b>
         <div style="display:flex;align-items:center">
-          <span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:68px">${taker ? pav(taker, 36) : avatar(name, name, 36, true)}<span style="font-size:11px;font-weight:600;color:var(--ink2)">took ${esc(hm(createdMs(q)))}</span></span>
+          <span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:68px">${taker ? pav(taker, 36) : `<span class="mx-av" style="width:36px;height:36px;box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink3)">?</span>`}<span style="font-size:11px;font-weight:600;color:var(--ink2);text-align:center">${taker ? '' : 'not on staff · '}took ${esc(hm(createdMs(q)))}</span></span>
           <span style="flex:1;height:2px;background:var(--green)"></span>
           <span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:76px">${h.staff ? pav(h.staff, 36, stuck ? '0 0 0 2px #fff,0 0 0 3.5px #E5483D' : '') : `<span class="mx-av" style="width:36px;height:36px;box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink3)">?</span>`}<span class="ell" style="font-size:11px;font-weight:600;color:var(--ink2);max-width:76px">${h.staff ? esc(firstWord(h.staff.name)) : 'nobody'}</span></span>
           <span style="flex:1;height:2px;background:${why.bad ? 'repeating-linear-gradient(90deg,#E5483D 0 5px,transparent 5px 9px)' : '#E6E3DD'}"></span>
@@ -2383,7 +2403,7 @@ PAGE.order = a => {
         <span class="bx-stamp" style="right:12px;top:auto;bottom:10px;color:${stamp.col};background:rgba(255,255,255,.6)">${stamp.w}${stamp.sub ? `<small>${esc(stamp.sub)}</small>` : ''}</span>
       </div></div>
     </div>
-    ${q.status !== 'completed' ? `<div class="bx-foot"><div class="row">${main.includes('data-act="nudge"') ? callBtn((h.staff || {}).phone, h.staff ? h.staff.name : '') : `<button class="bx-sq" data-act="nudge" data-who="${h.staff ? h.staff.id : ''}" data-order="${q.id}" aria-label="Nudge ${esc(h.staff ? h.staff.name : 'them')}">${ic('nudge', 22)}</button>`}${main}</div></div>` : ''}
+    ${q.status !== 'completed' ? `<div class="bx-foot"><div class="row">${!main.includes('data-act=') ? '' : main.includes('data-act="nudge"') ? (h.staff && !isMe(h.staff) ? callBtn(h.staff.phone, h.staff.name) : '') : `<button class="bx-sq" data-act="nudge" data-who="${h.staff ? h.staff.id : ''}" data-order="${q.id}" aria-label="Nudge ${esc(h.staff ? h.staff.name : 'them')}">${ic('nudge', 22)}</button>`}${main}</div></div>` : ''}
   </div>`;
 };
 
@@ -2494,7 +2514,10 @@ function nudgePeople(){
 SHEET.nudge = a => {
   const ppl = nudgePeople();
   if (!ppl.length) return `<div class="bx-empty" style="color:var(--navyInk)"><b style="color:#fff">Nobody to nudge</b>Staff in today show here.</div>`;
-  const cur = ppl.find(x => String(x.s.id) === String(a.who)) || ppl[0], s = cur.s, rs = reasonsFor(s);
+  const oq = a.order != null ? quoteById(a.order) : null, oh = oq ? holderOf(oq).staff || staffByUser(takenBy(oq)) : null;
+  const cur = ppl.find(x => String(x.s.id) === String(a.who)) || (oh && ppl.find(x => String(x.s.id) === String(oh.id))) || ppl[0], s = cur.s, rs = reasonsFor(s);
+  // Opened from an order: the message is about that order, whoever it goes to.
+  if (oq && !rs.some(r => String(r.order) === String(oq.id))) { const c2 = clientName(oq), age = ageWords(inStageMins(oq)); rs.unshift({ t: `${c2} · ${stageOf(oq).short}`, s: `${whyStuck(oq).w} · ${age}`, m: `${firstWord(s.name)}, the ${c2} order (Q-${String(oq.id).padStart(4, '0')}) has waited ${age} in ${stageOf(oq).label}. Can you help move it, or tell me what is in the way?`, order: oq.id }); }
   const ri = a.order != null ? Math.max(0, rs.findIndex(r => String(r.order) === String(a.order))) : Math.min(Number(a.why) || 0, rs.length - 1);
   const msg = a.text != null && a.textFor === s.id + ':' + ri ? a.text : rs[ri].m;
   const phone = s.phone;
@@ -2505,7 +2528,7 @@ SHEET.nudge = a => {
       ${rs.map((r, i) => `<button class="mx-reason" role="radio" aria-checked="${i === ri}" data-act="nwhy" data-i="${i}"><span style="width:18px;height:18px;flex:none;border-radius:999px;box-shadow:inset 0 0 0 ${i === ri ? '5px var(--mint)' : '2px rgba(255,255,255,.3)'}"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${esc(r.t)}</b><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(r.s)}</span></span></button>`).join('')}</div>
     <div style="display:flex;flex-direction:column;gap:6px"><label for="mx_nmsg" style="font-size:12px;font-weight:700;color:var(--navyInk2)">The message · you can change it</label><textarea id="mx_nmsg" class="mx-bubble" data-in="nmsg" rows="3">${esc(msg)}</textarea></div>
     <a class="bx-btn red" style="flex:none" id="mx_nsend" href="${esc(waComposeUrl(phone, msg))}" target="_blank" rel="noopener" data-act="nsent" data-keep>${ic('wa', 20)}Open WhatsApp to ${esc(firstWord(s.name))}</a>
-    <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:var(--navyInk2)">${phone ? 'You send it' : 'No phone on their staff card — pick the chat in WhatsApp'} · ${pushOn() ? 'it also lands as a push' : 'a push to their phone comes with push for every app'}</span>`;
+    <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:var(--navyInk2)">${phone ? 'You send it' : 'No phone on their staff card — pick the chat in WhatsApp'} · ${pushOn() ? 'it also lands as a push' : 'on WhatsApp'}</span>`;
 };
 SHEET.nudge.dark = true;
 ACT.nudge = t => { FEEL.open(); openSheet('nudge', { who: t.dataset.who || '', order: t.dataset.order != null && t.dataset.order !== '' ? Number(t.dataset.order) : null }); };
@@ -2533,6 +2556,7 @@ function moneyList(){
   if (area) list = list.filter(d => (custAreaOf(d.c) || '—') === area);
   if (f === 'promised') list = list.filter(d => promisesFor(d.c).some(p => promiseState(p, d.c) === 'open'));
   if (f === 'limit') list = list.filter(d => custOverLimit(d.c));
+  if (f === 'over30') list = list.filter(d => overBand(d.c) > 0.5);
   return list;
 }
 function viewMoney(){
@@ -2558,15 +2582,16 @@ function viewMoney(){
       <span class="mx-bands"${undated ? ' style="grid-template-columns:repeat(5,minmax(0,1fr))"' : ''}>${BANDS.map((b, i) => `<span style="${i === 3 && !undated ? 'text-align:right' : ''}"><b style="color:${i === 0 ? 'var(--mint)' : i === 1 ? 'var(--amber)' : 'var(--rose)'}">${short(bands[i])}</b>${b.w}</span>`).join('')}${undated ? `<span style="text-align:right"><b style="color:var(--navyInk)">${short(bands.unknown)}</b>no date</span>` : ''}</span></div>
     ${by.length ? `<div style="display:flex;flex-direction:column;gap:7px"><span class="mx-lbl">Who sold it</span>
       <span style="display:flex;gap:3px;height:10px">${by.map(x => `<i class="a-grow" style="flex:${x.v};border-radius:3px;background:${personCol(x.s)[2]}"></i>`).join('')}${older ? `<i style="flex:${older};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 3px,rgba(255,255,255,.22) 3px 6px)"></i>` : ''}</span>
-      <span class="mx-legend">${by.map(x => `<span><i style="background:${personCol(x.s)[2]}"></i>${esc(firstWord(x.s.name))} <b class="m" style="color:#fff">${short(x.v)}</b></span>`).join('')}${older ? `<span style="margin-left:auto">older <b class="m" style="color:#fff">${short(older)}</b></span>` : ''}</span></div>` : ''}
+      <span class="mx-legend">${by.map(x => `<span><i style="background:${personCol(x.s)[2]}"></i>${esc(firstWord(x.s.name))} <b class="m" style="color:#fff">${short(x.v)}</b></span>`).join('')}${older ? `<span style="margin-left:auto">not linked to a seller <b class="m" style="color:#fff">${short(older)}</b></span>` : ''}</span></div>` : ''}
   </div>
   <div class="bx-body">
-    <div class="mx-chips">${chip('old', 'Oldest first')}${chip('promised', 'Promised', promisedN)}${chip('limit', 'Over limit', limitN)}</div>
+    <div class="mx-chips">${chip('old', 'Oldest first')}${chip('over30', 'Over 30 days', all.filter(d => overBand(d.c) > 0.5).length)}${chip('promised', 'Promised', promisedN)}${chip('limit', 'Over limit', limitN)}</div>
     ${areaList.length > 1 ? `<div class="mx-chips" aria-label="Area"><button class="mx-chip area" aria-pressed="${!S.ui.area}" data-act="marea" data-v="">All areas <span class="n">${all.length}</span></button>${areaList.map(k => `<button class="mx-chip area" aria-pressed="${S.ui.area === k}" data-act="marea" data-v="${esc(k)}">${k === '—' ? '' : ic('pin', 15, 'style="stroke-width:2"')}${esc(k === '—' ? 'No area' : k)} <span class="n">${areas[k]}</span></button>`).join('')}</div>` : ''}
     ${rows ? `<div class="bx-card" style="border-radius:20px;padding:0 14px">${rows}${list.length > shown.length ? `<button class="mx-fold" data-act="mall"><span style="flex:1">+${list.length - shown.length} more</span>${ic('chev', 16)}</button>` : ''}</div>
       <span class="bx-hint" style="font-size:11px;color:var(--ink3)">Small face = who last sold to them</span>` : emptyCard(all.length ? 'Nobody here' : 'Nobody owes the shop', all.length ? 'Try another filter or area.' : 'Every bill is paid.')}
   </div>`;
 }
+ACT.chase = () => { S.ui.money = 'over30'; FEEL.tick(); go('money'); };
 ACT.mfilter = t => { S.ui.money = t.dataset.v; FEEL.tick(); render(); };
 ACT.marea = t => { S.ui.area = t.dataset.v; FEEL.tick(); render(); };
 ACT.mall = () => { S.ui.moneyAll = true; render(); };
@@ -2581,28 +2606,30 @@ PAGE.debtor = a => {
   const max = Math.max(limit, c.debt + pend) * 1.06 || 1, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const over = limit > 0 && c.debt + pend > limit;
   const st = (D().statementsSent || []).filter(x => String(x.customer_id) === String(c.id))[0];
-  const scale = 30, x = d => Math.max(4, Math.min(96, (scale - Math.min(d, scale)) / scale * 100));
+  // 0-30 days run across the chart; anything older sits in its own lane on the left, side by side.
+  const scale = 30, x = d => Math.max(30, Math.min(95, 30 + (scale - Math.min(d, scale)) / scale * 65));
+  let lane = 0;
   const bmax = Math.max(1, ...open.map(b => b.due));
-  const bills = open.slice(-6).map((b, i) => { const d = b.d, due = b.due, hgt = Math.max(18, Math.round(due / bmax * 52)), col = d <= terms ? '#0F6B43' : d > 30 ? '#8E2A22' : d > 14 ? '#E5483D' : '#F5B26B';
-    return `<span class="a-done" style="animation-delay:${.15 + i * .08}s;position:absolute;left:${x(d)}%;bottom:17px;transform:translateX(-50%);width:44px;height:${hgt}px;border-radius:8px 8px 3px 3px;background:${col};color:${col === '#F5B26B' ? 'var(--amberDeep)' : '#fff'};font-family:var(--mono);font-size:10px;font-weight:600;display:flex;align-items:flex-start;justify-content:center;padding-top:4px">${short(due)}</span>`; }).join('');
+  const bills = open.slice().sort((a, b) => b.d - a.d).slice(0, 8).map((b, i) => { const d = b.d, oldLane = d > scale, lx = oldLane ? (6 + 10 * lane++) : null, due = b.due, hgt = Math.max(18, Math.round(due / bmax * 52)), col = d <= terms ? '#0F6B43' : d > 30 ? '#8E2A22' : d > 14 ? '#E5483D' : '#F5B26B';
+    return `<span class="a-done" title="${d} days" style="animation-delay:${.15 + i * .08}s;position:absolute;left:${oldLane ? Math.min(24, lx) : x(d)}%;bottom:17px;transform:translateX(-50%);width:40px;height:${hgt}px;border-radius:8px 8px 3px 3px;background:${col};color:${col === '#F5B26B' ? 'var(--amberDeep)' : '#fff'};font-family:var(--mono);font-size:10px;font-weight:600;display:flex;align-items:flex-start;justify-content:center;padding-top:4px">${short(due)}</span>`; }).join('');
   const canPay = can('payment.receive');
   const pst = p => promiseState(p, c);
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${avatar(c.name, c.id, 46, true)}${sellerBadge(ls).replace('box-shadow:0 0 0 2px #fff', '')}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}terms <span class="m">${terms}</span> days${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${can('credit.set') || can('customer.edit') ? `<button class="bx-circle" data-act="push" data-p="custedit" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}: limit and terms">${ic('lines', 16)}</button>` : ''}${closeBtn()}</div>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}${terms ? `terms <span class="m">${terms}</span> days` : 'cash, no terms'}${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${can('credit.set') || can('customer.edit') ? `<button class="bx-circle" data-act="push" data-p="custedit" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}: limit and terms">${ic('lines', 16)}</button>` : ''}${closeBtn()}</div>
       <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Owes the shop</span><span class="mx-big" style="font-size:30px">${n0(c.debt)}</span></span>${c.debt > 0 ? (custUndated(c) ? `<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">no date</span>` : `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>`) : ''}</div>
       <div role="img" aria-label="Owes ${n0(c.debt)}${limit ? ' of a ' + n0(limit) + ' limit' : ', no credit limit set'}${pend ? '; orders on the way add ' + n0(pend) : ''}" style="display:flex;flex-direction:column;gap:6px">
         <span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${limit && c.debt > limit ? '#E5483D' : 'var(--amber)'}"></i>${pend ? `<i class="a-grow" style="animation-delay:.5s;position:absolute;left:${pc(c.debt)};top:0;bottom:0;width:${pc(pend)};border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,${over ? 'rgba(229,72,61,.7)' : 'rgba(245,178,107,.55)'} 0 4px,rgba(245,178,107,.2) 4px 7px)"></i>` : ''}${limit ? `<i style="position:absolute;left:${pc(limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff"></i>` : ''}</span>
-        <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>${pend ? `+ orders on the way <b class="m" style="color:#fff">${n0(pend)}</b>` : 'nothing else on the way'}</span><span style="display:inline-flex;align-items:center;gap:4px">${ic('lock', 11, 'style="stroke-width:2.2"')}${limit ? `limit <b class="m" style="color:#fff">${n0(limit)}</b>` : 'no limit set'}</span></span></div>
+        <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>${pend ? `+ orders on the way <b class="m" style="color:#fff">${n0(pend)}</b>` : 'no orders in progress'}</span><span style="display:inline-flex;align-items:center;gap:4px">${ic('lock', 11, 'style="stroke-width:2.2"')}${limit ? `limit <b class="m" style="color:#fff">${n0(limit)}</b>` : 'no limit set'}</span></span></div>
     </div>
     <div class="bx-body">
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Unpaid bills · how old</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">terms end at <span class="m">${terms}d</span></span></div>
         ${open.length ? `<div role="img" aria-label="${open.length} unpaid bills: ${open.map(b => short(b.due) + ' at ' + b.d + ' days').join(', ')}" style="position:relative;height:76px">
           <span style="position:absolute;left:0;right:0;bottom:16px;height:1px;background:var(--rule)"></span>
-          <span style="position:absolute;left:0;width:${(100 - x(Math.min(terms, scale))).toFixed(1)}%;top:0;bottom:16px;background:rgba(229,72,61,.05);border-right:1.5px dashed #E5483D"></span>${bills}
-          <span class="m" style="position:absolute;left:0;bottom:0;font-size:10px;color:var(--ink3)">30d+</span><span class="m" style="position:absolute;left:${(100 - x(Math.min(terms, scale))).toFixed(1)}%;bottom:0;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--crimson)">${terms}d</span><span class="m" style="position:absolute;right:0;bottom:0;font-size:10px;color:var(--ink3)">today</span></div>` : `<span class="bx-sub">No open bills${c.debt > 0 ? ' — the debt is on account' : ''}.</span>`}
+          ${terms ? `<span style="position:absolute;left:0;width:${x(Math.min(terms, scale)).toFixed(1)}%;top:0;bottom:16px;background:rgba(229,72,61,.05);border-right:1.5px dashed #E5483D"></span>` : ''}${bills}
+          <span style="position:absolute;left:26%;top:0;bottom:16px;width:1px;background:repeating-linear-gradient(180deg,#C9C4BA 0 3px,transparent 3px 6px)"></span><span class="m" style="position:absolute;left:0;bottom:0;font-size:10px;color:var(--crimson)">over 30d</span>${terms ? `<span class="m" style="position:absolute;left:${x(Math.min(terms, scale)).toFixed(1)}%;bottom:0;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--crimson)">${terms}d</span>` : ''}<span class="m" style="position:absolute;right:0;bottom:0;font-size:10px;color:var(--ink3)">today</span></div>` : `<span class="bx-sub">No open bills${c.debt > 0 ? ' — the debt is on account' : ''}.</span>`}
         ${aging.unknown > 0.5 ? `<span class="bx-hint" style="font-size:11px;color:var(--ink3)"><i style="width:7px;height:7px;flex:none;border-radius:999px;background:${NODATE_COL}"></i><span class="m" style="color:var(--ink)">${n0(aging.unknown)}</span> of it has no date</span>` : ''}
       </div>
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
@@ -3170,6 +3197,9 @@ function bindYesNo(){
   });
 }
 AFTER.push(bindYesNo);
+// The nudge row scrolls sideways: keep the chosen person in view after a redraw.
+function keepNudgePick(){ const on = document.querySelector('.mx-nudge-ppl [aria-checked="true"]'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+AFTER.push(keepNudgePick);
 
 /* ==================================================================
    AFTER DELIVERY · STOCK — invoices, short picks, a trip's count, damaged
@@ -3671,10 +3701,10 @@ PAGE.teamrules = () => {
   const canG = can('goal.set'), canL = can('team.limits'), canH = can('credit.set'), changed = Object.keys(ed).length;
   const step = (k, d, label, on) => on ? `<button class="bx-sq" style="width:34px;height:34px;border-radius:10px;font-size:16px" data-act="trstep" data-k="${k}" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
   return pageShell({ eyebrow: 'THE TEAM’S RULES', title: 'Goals, limits and the hold line', face: faceIcon('target'),
-    head: shopM != null ? `<div role="img" aria-label="Goals add up to ${sumM}M of the shop's ${shopM}M" style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:2px;height:12px">${goals.map(g => g.v ? `<i style="flex:${g.v};border-radius:3px;background:${personCol(g.s)[2]}"></i>` : '').join('')}${rest ? `<i style="flex:${rest};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 4px,rgba(255,255,255,.2) 4px 7px)"></i>` : ''}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${rest ? `With <b class="m" style="color:#fff">${rest}M</b> from the counter and agents, it makes the shop’s <b class="m" style="color:#fff">${shopM}M</b>` : sumM > shopM ? `<b class="m" style="color:var(--amber)">${sumM - shopM}M</b> over the shop’s ${shopM}M` : `Adds up to the shop’s <b class="m" style="color:#fff">${shopM}M</b>`}</span></div>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">The shop’s own goal is the owner’s; yours are each person’s.</span>`,
+    head: shopM != null ? `<div role="img" aria-label="Goals add up to ${sumM}M of the shop's ${shopM}M" style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:2px;height:12px">${goals.map(g => g.v ? `<i style="flex:${g.v};border-radius:3px;background:${personCol(g.s)[2]}"></i>` : '').join('')}${rest ? `<i style="flex:${rest};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 4px,rgba(255,255,255,.2) 4px 7px)"></i>` : ''}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${!sumM ? `No one has a goal yet · the shop’s is <b class="m" style="color:#fff">${shopM}M</b>` : rest ? `With <b class="m" style="color:#fff">${rest}M</b> from the counter and agents, it makes the shop’s <b class="m" style="color:#fff">${shopM}M</b>` : sumM > shopM ? `<b class="m" style="color:var(--amber)">${sumM - shopM}M</b> over the shop’s ${shopM}M` : `Adds up to the shop’s <b class="m" style="color:#fff">${shopM}M</b>`}</span></div>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">The shop’s own goal is the owner’s; yours are each person’s.</span>`,
     body: `<div class="bx-sec"><b style="font-size:13px">Each salesperson’s goal · ${esc(monthWord())}</b><span>in millions</span></div>
       <div class="bx-card bx-list">${goals.length ? goals.map(g => `<div class="bx-row" style="gap:10px">${pav(g.s, 34)}<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${esc(firstWord(g.s.name))}</b><span class="bx-sub">${g.v !== g.was ? `was <span class="m">${g.was}M</span>` : g.was ? 'set' : 'no goal yet'}</span></span>${step('g:' + g.s.id, -1, 'Lower ' + g.s.name + '’s goal', canG)}<span class="m" style="min-width:52px;text-align:center;font-size:17px;font-weight:600;${g.v !== g.was ? 'color:var(--sky)' : ''}">${g.v}M</span>${step('g:' + g.s.id, 1, 'Raise ' + g.s.name + '’s goal', canG)}</div>`).join('') : `<div class="bx-empty" style="padding:14px"><b>No salespeople with a login</b>A staff row with the sales job and a login shows here.</div>`}</div>
-      <div class="bx-sec"><b style="font-size:13px">How long an order may sit</b><span>then it shows as stuck</span></div>
+      <div class="bx-sec"><b style="font-size:13px">How long an order may sit</b><span>${stageLimits().own ? 'then it shows as stuck' : `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bx-chip" style="font-size:10.5px;padding:2px 7px;background:var(--amberBg,#FFF4E5);color:var(--amberInk,#8A4B08)">suggested</span>${canL ? `<button class="bx-link" data-act="trkeep" style="font-size:12px;font-weight:700;color:var(--sky);background:none;border:0;padding:0">Keep as ours</button>` : ''}</span>`}</span></div>
       <div class="bx-card bx-list">${STAGES.slice(0, 4).map(st => { const k = 'l:' + st.key, v = ed[k] != null ? ed[k] : Number(lim[st.key]) || SUGGESTED_LIMITS[st.key]; return `<div class="bx-row" style="gap:10px"><span style="width:10px;height:10px;border-radius:3px;flex:none;background:${st.col}"></span><b style="flex:1;font-size:14px">${st.label}</b>${step(k, -LIMIT_STEPS[st.key], 'Shorter in ' + st.label, canL)}<span class="m" style="min-width:56px;text-align:center;font-size:15px;font-weight:600;${ed[k] != null ? 'color:var(--sky)' : ''}">${limitWords(v)}</span>${step(k, LIMIT_STEPS[st.key], 'Longer in ' + st.label, canL)}</div>`; }).join('')}</div>
       <div class="bx-sec"><b style="font-size:13px">The credit hold line</b><span>an order waits for your yes</span></div>
       <div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px"><span style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:13px;font-weight:600;color:var(--ink2)">when the oldest bill is past</span>${step('hold', -1, 'Fewer days', canH)}<span class="m" style="min-width:50px;text-align:center;font-size:17px;font-weight:600;${ed.hold != null ? 'color:var(--sky)' : ''}">${hold}d</span>${step('hold', 1, 'More days', canH)}</span>
@@ -3687,6 +3717,7 @@ ACT.trstep = t => { const k = t.dataset.k, ed = S.ui.tr, d = Number(t.dataset.d)
   else if (k.startsWith('l:')) base = ed[k] != null ? ed[k] : Number(stageLimits().limits[k.slice(2)]) || SUGGESTED_LIMITS[k.slice(2)];
   else { const s = staffById(k.slice(2)), g = s && personGoal(s.userId); base = ed[k] != null ? ed[k] : g ? Math.round(g.aim / 1e6) : 0; }
   ed[k] = Math.max(k === 'hold' ? 1 : 0, base + d); FEEL.tick(); render(); };
+ACT.trkeep = () => { const ed = S.ui.tr || (S.ui.tr = {}); STAGES.slice(0, 4).forEach(st => { if (ed['l:' + st.key] == null) ed['l:' + st.key] = SUGGESTED_LIMITS[st.key]; }); FEEL.tick(); render(); };
 ACT.trsave = async () => {
   if (S.busy) return; S.busy = true; const ed = S.ui.tr || {}, from = monthStartISO(), to = nmMonthEnd(from);
   try {
@@ -3702,8 +3733,8 @@ ACT.trsave = async () => {
 /* ---------------- a customer's limit and terms (credit.set) ---------------- */
 PAGE.custedit = a => {
   const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
-  const k = 'ce:' + c.id, st = S.ui[k] || (S.ui[k] = { limit: Number(c.creditLimit) || 0, terms: c.termsDays != null ? Number(c.termsDays) : 7 });
-  const changed = st.limit !== (Number(c.creditLimit) || 0) || st.terms !== (c.termsDays != null ? Number(c.termsDays) : 7), can2 = can('credit.set');
+  const k = 'ce:' + c.id, st = S.ui[k] || (S.ui[k] = { limit: Number(c.creditLimit) || 0, terms: custTerms(c) });
+  const changed = st.limit !== (Number(c.creditLimit) || 0) || st.terms !== custTerms(c), can2 = can('credit.set');
   const pend = pendingFor(c), max = Math.max(st.limit, c.debt + pend, 1) * 1.08, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const st2 = (key, d, label) => can2 ? `<button class="bx-sq" style="width:40px;height:40px;border-radius:12px;font-size:18px" data-act="cestep" data-k="${k}" data-f="${key}" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
   return pageShell({ eyebrow: 'EDIT A CUSTOMER', title: esc(c.name), sub: esc(c.location || c.phone || ''), face: avatar(c.name, c.id, 44, true),
@@ -3711,7 +3742,7 @@ PAGE.custedit = a => {
     body: `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:14px">
         <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Credit limit</b><span class="bx-sub">what they may owe at once</span></span>${st2('limit', -500000, 'Lower the limit')}<span class="m" style="min-width:86px;text-align:center;font-size:16px;font-weight:600">${st.limit ? short(st.limit) : 'none'}</span>${st2('limit', 500000, 'Raise the limit')}</span>
         <span style="display:block;height:1px;background:#F1EEE8"></span>
-        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Payment terms</b><span class="bx-sub">days to pay each bill</span></span>${st2('terms', -1, 'Fewer days')}<span class="m" style="min-width:60px;text-align:center;font-size:16px;font-weight:600">${st.terms}d</span>${st2('terms', 1, 'More days')}</span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Payment terms</b><span class="bx-sub">days to pay each bill</span></span>${st2('terms', -1, 'Fewer days')}<span class="m" style="min-width:60px;text-align:center;font-size:16px;font-weight:600">${st.terms ? st.terms + 'd' : 'cash'}</span>${st2('terms', 1, 'More days')}</span>
         <div style="display:flex;gap:6px">${[0, 7, 14, 30].map(d => `<button data-act="ceset" data-k="${k}" data-v="${d}" ${can2 ? '' : 'disabled'} style="flex:1;height:34px;border:none;border-radius:10px;font-size:12px;font-weight:700;${st.terms === d ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${d ? d + ' days' : 'cash'}</button>`).join('')}</div></div>
       ${can2 ? '' : lockedHTML('credit.set', 'Setting a limit and terms')}
       <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}In the owner’s log, with what it was before</span>`,
@@ -3787,7 +3818,9 @@ PAGE.me = () => {
   const doorBtn = d => { const open = d.open(), on = sel === d.k;
     return `<button aria-pressed="${on}" data-act="door" data-v="${d.k}" style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:none;background:none;padding:0;color:${open ? 'var(--ink)' : 'var(--ink2)'}"><span style="width:46px;height:46px;border-radius:15px;display:flex;align-items:center;justify-content:center;${open ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2)'};${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--navy)' : ''}">${ic(d.icon, 20)}</span><span style="font-size:11px;font-weight:600;line-height:1.2">${esc(d.w)}</span></button>`; };
   const cur = DOORS.find(d => d.k === sel) || DOORS[DOORS.length - 1];
-  const phone = D().presetShopPhone;
+  const phone = D().presetShopPhone, ownerHere = /owner|admin/i.test(String(S.role || '')), linked = S.user && staffByUser(S.user.id), mine = myStaff();
+  const whoCard = linked || !T.all.length ? '' : `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Which card is you?</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${mine ? 'this phone' : 'so nudges skip you'}</span></div>
+        <div class="mx-scroll" style="display:flex;gap:12px;overflow-x:auto;padding:2px">${T.all.map(s => { const on = mine && String(mine.id) === String(s.id); return `<button data-act="iam" data-v="${esc(String(s.id))}" aria-pressed="${!!on}" aria-label="I am ${esc(s.name)}" style="flex:none;display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:none;padding:0;color:var(--ink);opacity:${!mine || on ? 1 : .55}"><span style="border-radius:999px;${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--sky)' : ''}">${pav(s, 44)}</span><span style="font-size:11px;font-weight:700;max-width:60px" class="ell">${esc(firstWord(s.name))}</span></button>`; }).join('')}</div></div>`;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:16px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:14px"><span style="position:relative;width:84px;height:84px;flex:none">${teamRingHTML(m, 84, 4, true)}<span style="position:absolute;inset:9px;border-radius:999px;background:linear-gradient(160deg,#2E3B66,#1D2747);color:#fff;font-size:23px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(myName()))}</span>${m.tg ? `<span class="m" style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);height:20px;padding:0 7px;border-radius:999px;background:var(--mint);color:var(--navy);font-size:11px;font-weight:600;display:flex;align-items:center;box-shadow:0 0 0 2px #1D2747">${pct(m.tg.pct)}</span>` : ''}</span>
@@ -3795,12 +3828,13 @@ PAGE.me = () => {
       <div class="bx-glass" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px">${[['Stuck now', stuckOrders().length, stuckOrders().length ? 'color:var(--amber)' : 'color:var(--mint)'], ['Handed over', log.moves, ''], ['Nudges sent', log.nudges, '']].map((x, i) => `<span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;${i ? 'border-left:1px solid rgba(255,255,255,.07)' : ''}"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">${x[0]}</span><span class="m" style="font-size:16px;font-weight:600;${x[2]}">${x[1]}</span></span>`).join('')}</div>
     </div>
     <div class="bx-body">
+      ${whoCard}
       <div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What you decide</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">nothing waits for the owner</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What you decide</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${ownerHere ? 'the manager’s desk' : 'nothing waits for the owner'}</span></div>
         <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 2px;justify-items:center">${DOORS.map(doorBtn).join('')}</div>
         <span class="a-up" style="display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur.open() ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}"><span style="flex:1">${esc(cur.open() ? cur.say : cur.say + ' Not on for this login yet.')}</span>${cur.open() && cur.p ? `<button class="mx-act navy" data-act="push" data-p="${cur.p}">Open${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</span>
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">Every decision goes in the <b style="color:var(--ink)">owner’s log</b>: who, when, and what it was before. The owner keeps hiring and pay, the policy numbers and backups.</span></div>
-        <div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(pushWhy() || 'each decision waiting · nudges reach staff the same way')}</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : pushWhy() ? 'Not on' : 'Coming with push'}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">Every decision goes in the <b style="color:var(--ink)">owner’s log</b>: who, when, and what it was before. ${ownerHere ? 'Hiring and pay, the policy numbers and backups stay in the Owner app.' : 'The owner keeps hiring and pay, the policy numbers and backups.'}</span></div>
+        ${pushOn() || pushWhy() ? `<div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(pushWhy() || 'each decision waiting · nudges reach staff the same way')}</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : pushWhy() ? 'Not on' : 'Coming with push'}</span></div>` : ''}
       </div>
       ${m.tg && m.tg.reached ? `<button class="bx-card" data-act="win" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('target', 20)}</span><span style="flex:1"><b style="font-size:14px">The team passed ${esc(monthWord())}</b><span class="bx-sub" style="display:block">Play the win again</span></span>${ic('chev', 16)}</button>` : ''}
       <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'chimes, stamps, the team win', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn]) => `<div class="bx-row" style="gap:12px"><span style="width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 19)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${w}</b><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}</div>
@@ -3809,6 +3843,7 @@ PAGE.me = () => {
         <button class="bx-btn ghost" style="flex:none;height:44px;font-size:14px;color:var(--crimson)" data-act="signout">${ic('out', 16)}${S.signoutSure ? 'Tap again to sign out' : 'Sign out'}</button></div>
     </div></div>`;
 };
+ACT.iam = t => { try { localStorage.setItem(meKey(), t.dataset.v); } catch (_e) {} FEEL.tick(); render(); };
 ACT.door = t => { const d = DOORS.find(x => x.k === t.dataset.v); if (S.ui.door === t.dataset.v && d && d.p && d.open()) { FEEL.open(); push(d.p, {}); return; } if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
 ACT.pref = t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k]; savePrefs(); applyPrefs(); if (k === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
 // One stray tap must not throw away the books on this phone: the first tap asks.
