@@ -26,6 +26,9 @@
  *      a switch to another item tells Sales; a phone confirm is the
  *      Buyer's yes; a tie on price goes to the best score; the shelf's
  *      buys ride the buying list; hand-offs go to the role that takes them.
+ *   8. One flow, one word: every screen counts from the same list, says the
+ *      same word for a supplier, asks a supplier once for every order, and
+ *      only lets an answer be marked once they have been asked.
  *
  * Runs the page's real script in a sandbox with a fake database; nothing
  * is copied into this file.
@@ -98,7 +101,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, flowNow, restockKind, supplierStages, askAllMessage };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -320,7 +323,7 @@ const P = page(fakeDb({}));
     pages.forEach(([pg, a]) => { try { const h = X.PAGE[pg]({ ...a }); t.check(typeof h === 'string' && h.length > 200 && !/undefined|NaN/.test(h.replace(/data-[a-z]+="[^"]*"/g, '')), 'page ' + pg + ' draws, with no undefined or NaN in it'); } catch (e) { t.fail('page ' + pg + ' threw: ' + e.stack); } });
     ['staff', 'cash'].forEach(sh => { try { X.S.stack = [{ type: 'plan', args: { sid: 'S1' } }]; X.SHEET[sh]({ v: '100', planned: 100 }); t.pass('sheet ' + sh + ' draws'); } catch (e) { t.fail('sheet ' + sh + ' threw: ' + e.message); } });
     const html2 = X.PAGE.order({ id: 20 });
-    t.check(/only one has it/.test(html2) && /cheapest of 2/.test(html2), 'each line says where its supplier ranks, or that they are the only one');
+    t.check(/Only [^<]+ sells it/.test(html2) && /Cheapest of 2, by \d+%/.test(html2), 'each line says where its supplier ranks, or that they are the only one');
     const visible = (X.viewToday() + html2 + X.PAGE.plan({})).replace(/<[^>]*>/g, ' ');
     t.check(!/sell(ing)? ?price|margin|markup/i.test(visible), 'no selling price or margin is drawn');
   }
@@ -382,7 +385,7 @@ const P = page(fakeDb({}));
     const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
     t.check(r.tie && /Tie on price/.test(r.text), 'two suppliers within 2% are a tie, and the reason says the score decided it: ' + r.text);
     data.prices.push({ id: 10, productId: 'P3', variantIdx: null, supplierId: 'S3', wholesale: 6000, retail: null, unit: 'kg', packUnit: '', packQty: 0, outOfStock: false, tiers: [] });
-    t.check(/Cheapest by \d+%/.test(X.pickReason(it(1, 'P3', null, 10, 'S1', 5000)).text), 'no tie: price alone picks, by how much');
+    t.check(/Cheapest of 2, by \d+%/.test(X.pickReason(it(1, 'P3', null, 10, 'S1', 5000)).text), 'no tie: price alone picks, by how much');
   }
   {
     const data = fixture();
@@ -515,6 +518,65 @@ const P = page(fakeDb({}));
     t.check(top.type === 'price' && top.args.id === 74 && top.args.lineId === '1' && top.args.sid === 'S2', 'tapping it opens the page to type their new price (line.reprice)');
     X.D().savedQuotes[0].status = 'awaiting_goods';
     t.check(!/data-act="lineprice"/.test(X.PAGE.order({ id: 74 })), 'past Checking it is only a figure');
+  }
+
+  // 8. one flow, one word
+  {
+    const data = fixture(); data.handoffs = []; data.restockBuys = [];
+    const rows = [orderRow(80, [it(1, 'P3', null, 4, 'S1', 5000)]), orderRow(81, [it(1, 'P3', null, 6, 'S1', 5000)]), orderRow(82, [it(1, 'P2', null, 6, 'S2', 28000)], { supplierConfirms: { S2: { state: 'pending', askedAt: NOW - 90 * 60e3 } } }), orderRow(83, [it(1, 'P1', 0, 12, 'S1', 14000)], {}, { status: 'awaiting_goods' })];
+    rows[1].client_name = 'Ggaba Stores'; rows[1].payload.client = { name: 'Ggaba Stores', phone: '' };
+    const db = fakeDb({ saved_quotes: JSON.parse(JSON.stringify(rows)), buyer_handoffs: [] }), X = page(db, data);
+    X.D().savedQuotes = rows.map(r => X.rowToQuote(JSON.parse(JSON.stringify(r))));
+    const f = X.flowNow();
+    t.check(f.toAsk.length === 1 && f.toAsk[0].orders.length === 2 && f.asked.length === 1 && f.runs.length === 1, 'one list: Kikuubo to ask for two orders, Ndeeba asked, one stop to plan');
+    const today = X.viewToday().replace(/<[^>]*>/g, ' '), trips = X.PAGE.plan({}).replace(/<[^>]*>/g, ' ');
+    const cash = (f.runs[0].total).toLocaleString('en-US');
+    t.check(today.includes(cash) && trips.includes(cash), 'Today and Trips carry the same cash to carry: ' + cash);
+    t.check(/To ask/.test(today) && /Asked/.test(today) && /To plan/.test(today) && !/settle|waited on/.test(today), 'Today says the same words as every screen, never "settle"');
+    t.check(X.supplierStages('S1').join() === 'toask,confirmed' && X.supplierStages('S2').join() === 'asked', 'a supplier\'s words are worked out once: ' + X.supplierStages('S1').join());
+    const msg = X.askAllMessage('S1', f.toAsk[0]);
+    t.check(/10 kg/.test(msg) && (msg.match(/Roofing nails/g) || []).length === 1, 'one message to Kikuubo, the two orders\' nails summed: ' + msg.split('\n').filter(l => l.startsWith('•')).join(' | '));
+    const ask = X.viewAsking();
+    t.check(/wa\.me\/256772410220/.test(ask) && /Ask on WhatsApp · 2 orders/.test(ask), 'the ask goes to their own number, once for both orders');
+    await X.ACT.askall({ dataset: { sid: 'S1' } });
+    const sc = id => (db.tables.saved_quotes.find(r => r.id === id).payload.supplierConfirms || {}).S1;
+    t.check(sc(80) && sc(80).askedAt && sc(81) && sc(81).askedAt, 'sending it marks every order waiting on them as asked');
+    t.check(/data-act="ans"[^>]*data-v="yes"/.test(X.PAGE.order({ id: 82 })), 'once asked, the answer can be marked');
+    X.D().savedQuotes = rows.map(r => X.rowToQuote(JSON.parse(JSON.stringify(r))));
+    const o = X.PAGE.order({ id: 80 });
+    t.check(!/data-act="ans"/.test(o) && /Ask first, then mark the answer/.test(o), 'before they are asked, Confirmed cannot be marked');
+  }
+  {
+    const data = fixture(); data.suppliers[1].phone = ''; data.suppliers[1].phone2 = ''; data.handoffs = [];
+    const X = page(fakeDb({ buyer_handoffs: [] }), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(90, [it(1, 'P2', null, 6, 'S2', 28000)]))];
+    const v = X.viewAsking();
+    t.check(/No phone saved for Ndeeba/.test(v) && !/wa\.me\/\?text/.test(v), 'a supplier with no number is never sent to WhatsApp\'s contact picker');
+  }
+  {
+    const data = fixture();
+    data.prices.push({ id: 9, productId: 'P2', variantIdx: null, supplierId: 'S3', wholesale: 28000, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [], date: new Date().toISOString().slice(0, 10) });
+    data.purchaseInvoices = [{ id: 11, supplierId: 'S2', date: new Date(NOW - 60 * 864e5).toISOString().slice(0, 10), items: [{ qty: 100, price: 28000 }], amountPaid: 0, voided: false }];
+    const X = page(fakeDb({}), data);
+    const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
+    t.check(r.tie && r.better === 'S3' && /^Same price at Katwe, nothing owed there/.test(r.text), 'on a tie, a 60-day bill counts against them: ' + r.text);
+  }
+  {
+    const data = fixture(); data.stock = { 'P1::0': 1 }; data.presetReorderRules = {}; data.restockBuys = [];
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(95, [it(1, 'P3', null, 60, '__stock__', 4600), it(2, 'P1', 0, 2, '__stock__', 14000)], { createdAt: new Date(NOW - 5 * 864e5).toISOString() }, { status: 'preparing' }))];
+    const rows = X.restockRows(), p3 = rows.find(r => r.pid === 'P3'), p1 = rows.find(r => r.pid === 'P1');
+    t.check(p3 && X.restockKind(p3) === 'nocount', 'an item with no shelf count is not offered as "0 days left"');
+    t.check(p1 && X.restockKind(p1) === 'slow', 'an item selling under one a week is hidden: ' + (p1 && p1.rate));
+  }
+
+  {
+    // a dearer pair close to each other is no tie: the cheapest is named
+    const data = fixture();
+    data.prices.push({ id: 21, productId: 'P2', variantIdx: null, supplierId: 'S1', wholesale: 23000, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [] }, { id: 22, productId: 'P2', variantIdx: null, supplierId: 'S3', wholesale: 28300, retail: null, unit: 'pc', packUnit: '', packQty: 0, outOfStock: false, tiers: [] });
+    const X = page(fakeDb({}), data);
+    const r = X.pickReason(it(1, 'P2', null, 6, 'S2', 28000));
+    t.check(!r.tie && r.better === 'S1' && /Kikuubo is \d+% cheaper/.test(r.text), 'outside the cheapest band there is no tie: ' + r.text);
   }
 
   process.exit(t.done() ? 1 : 0);
