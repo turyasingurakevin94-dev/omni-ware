@@ -29,6 +29,11 @@ operator in the Supabase **SQL editor**; no app can call them.
 | **Left in the old shop** | every order, invoice, payment, cash line, bill, stock movement, count, decision, chat and log | old shop (archive) |
 | **Moved on switch day** | team logins, agent logins, agents' public catalogues, WhatsApp numbers | new shop |
 
+**Not carried across, to set up again if still wanted:** customers' and
+suppliers' portal logins (each gets a new PIN in the new shop), Sourcing's
+open hunts, agents' promotions and pinned items, and supplier commissions.
+They stay readable in the old shop.
+
 Photos are shared, not copied: both shops show the same files from the old
 shop's storage folder. Deleting a photo from the new shop's library removes
 only the library entry; the file stays for the old shop.
