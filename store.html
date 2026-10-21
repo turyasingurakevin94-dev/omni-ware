@@ -940,8 +940,8 @@ function countsIntoLastCounted(map, rows){ (rows || []).forEach(c => { if (c.sta
 function rowToCount(c){ return { id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [],
   status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at }; }
 
-// 0155: the packed orders that wait on money -- a cash customer, not paid, no
-// yes from the Manager -- as id -> { owed, decision }. null before 0155.
+// 0156: the packed orders that wait on money -- a cash customer, not paid, no
+// yes from the Manager -- as id -> { owed, decision }. null before 0156.
 function moneyHoldsNow(){
   return sb.rpc('store_money_holds', { p_shop: S.shopId })
     .then(r => r.error ? null : Object.fromEntries((r.data || []).map(h => [String(h.id), { owed: Number(h.owed) || 0, decision: h.decision || null }])))
@@ -1154,7 +1154,7 @@ function waitingOnGoods(){ return boardOrders().filter(q => q.status === 'awaiti
 function orderIsPickup(q){ return orderIsCollected(q) || !orderDestination(q); }
 function loadQueue(){ return boardOrders().filter(q => q.status === 'preparing' && q.pickingStatus === 'done').sort((a, b) => msOf(a.pickingDoneAt) - msOf(b.pickingDoneAt)); }
 function onRoad(){ return boardOrders().filter(q => q.status === 'pending_delivery'); }
-/* ---- money at the gate (0155): a cash customer's unpaid order stays on
+/* ---- money at the gate (0156): a cash customer's unpaid order stays on
    the bay until it is paid or the Manager lets it go on credit. ---- */
 function moneyHold(q){ const m = D().moneyHolds; return m && q && q.status === 'preparing' ? m[String(q.id)] || null : null; }
 // The ask rides on the order as the Manager app reads it (payload.creditAsk = { at, by, byName, carrier });
@@ -2006,7 +2006,7 @@ function pushOpen(d){
     // 0150: a trip sent or given to this person opens it; one taken off them or cancelled opens Today.
     if (k === 'trip.sent') { const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id)); fresh('today'); if (t && myTrips().includes(t)) push('collect', { id: t.id }); return; }
     if (k === 'trip.taken' || k === 'trip.cancelled') { fresh('today'); return; }
-    // 0155: the Manager answered an ask to let an unpaid order go on credit.
+    // 0156: the Manager answered an ask to let an unpaid order go on credit.
     if (k === 'credit.ask.decided') { const q = quoteById(d.id); fresh('today'); if (q && orderIsPickup(q) && loadQueue().includes(q)) push('collect', { id: q.id }); else push('load', {}); return; }
     // 0131: the Manager wrote off or dismissed a loss this person reported.
     if (k === 'stock.report.decided') {

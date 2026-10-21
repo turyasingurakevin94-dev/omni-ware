@@ -1,4 +1,4 @@
--- 0155 · Store, second: nothing leaves the gate unpaid for a cash customer
+-- 0156 · Store, second: nothing leaves the gate unpaid for a cash customer
 -- unless the Manager said it goes on credit (the cross-app test of 21 Oct
 -- 2026: an unpaid order loaded for a brand-new cash-only customer).
 --

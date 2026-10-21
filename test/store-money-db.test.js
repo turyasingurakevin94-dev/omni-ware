@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Money at the gate (0155): nothing leaves unpaid for a cash customer until
+ * Money at the gate (0156): nothing leaves unpaid for a cash customer until
  * it is paid or the Manager lets it go on credit (docs/decision-rights.md:
  * credit is the Manager's). The Store asks; each side gets a push.
  *
  *   1. The SQL text, and the Store and Manager apps that use it.
  *   2. A REAL database, when OW_PG names one: every migration in order,
- *      0155 run twice, then test/fixtures/store-money-scenario.sql.
+ *      0156 run twice, then test/fixtures/store-money-scenario.sql.
  *
  * Run: node test/store-money-db.test.js
  *      OW_PG="host=/var/tmp/owpg port=5499 user=postgres" node test/store-money-db.test.js
@@ -17,8 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('money at the gate (0155)');
-const raw = read('supabase/migrations/0155_store_money_at_the_gate.sql');
+const t = createReporter('money at the gate (0156)');
+const raw = read('supabase/migrations/0156_store_money_at_the_gate.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the text ---------------- */
@@ -32,7 +32,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/security definer set search_path = public/.test(sql) && /revoke all on function ow_money_hold/.test(sql) && /grant execute on function store_money_holds\(uuid\) to authenticated/.test(sql), 'definer functions with a pinned path; the helper is nobody\'s to call');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   const doc = read('docs/decision-rights.md');
-  t.check(/\| 0155 \| /.test(doc) && /`credit\.release` \| Manager \| Sales, Store \|/.test(doc), 'docs/decision-rights.md reserves 0155 and has the Store propose credit');
+  t.check(/\| 0156 \| /.test(doc) && /`credit\.release` \| Manager \| Sales, Store \|/.test(doc), 'docs/decision-rights.md reserves 0156 and has the Store propose credit');
   const store = read('store.html'), mgr = read('manager.html');
   t.check(/sb\.rpc\('store_money_holds', \{ p_shop: S\.shopId \}\)/.test(store) && /'handoverCheckedAt', 'creditAsk'\]/.test(store), 'the Store app reads what waits on money and writes its ask on the order');
   t.check(/const go = all\.filter\(d => !moneyHold\(d\.q\)\)/.test(store) && /if \(moneyHold\(q\)\) \{ toast\(/.test(store), 'a held order is never picked for the truck or handed over');
@@ -64,8 +64,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0155_store_money_at_the_gate.sql')]);
-t.check(again.status === 0, `0155 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0156_store_money_at_the_gate.sql')]);
+t.check(again.status === 0, `0156 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'store-money-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

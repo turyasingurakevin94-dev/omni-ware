@@ -1,4 +1,4 @@
--- 0155 asked of a real database: a packed order a cash customer has not
+-- 0156 asked of a real database: a packed order a cash customer has not
 -- paid for stays on the bay for a Store login; the Store asks the Manager,
 -- the Manager's yes lets it go, and each side gets a push.
 grant all on all tables in schema public to authenticated;

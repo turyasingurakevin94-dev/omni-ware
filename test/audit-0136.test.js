@@ -49,7 +49,8 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
   t.check(/select coalesce\(max\(id\), 0\) into floor_id from saved_quotes;/.test(cs) && /select coalesce\(max\(id\), 0\) into floor_id from cash_txns;/.test(cs), 'row ids are issued above the whole table, which is one sequence across shops');
   t.check(sql.includes('grant execute on function counter_sale(uuid, bigint, jsonb, text, numeric) to authenticated;'), 'every login may call it; the function checks the task');
   // sales.html: the one call, and nothing of the old two-phase path
-  t.check(/sb\.rpc\('counter_sale', \{ p_shop_id: S\.shopId, p_quote_id: qid == null \? null : Number\(qid\), p_row: row \|\| null, p_method: method \|\| 'cash', p_given: Number\(given\) \|\| 0 \}\)/.test(sales), 'sales.html sells through counter_sale');
+  // Through payRpc: the same one call, with the transaction ID (0155) added only when one was typed.
+  t.check(/payRpc\('counter_sale', \{ p_shop_id: S\.shopId, p_quote_id: qid == null \? null : Number\(qid\), p_row: row \|\| null, p_method: method \|\| 'cash', p_given: Number\(given\) \|\| 0 \}, /.test(sales), 'sales.html sells through counter_sale');
   t.check(!/async function ctPlace\(/.test(sales) && !/async function ctPay\(/.test(sales), 'the two-phase ctPlace/ctPay path is gone');
   t.check(!/payCashRow\(ctx, pay, 'Sales Revenue'/.test(sales), 'the phone no longer writes the Sales Revenue receipt itself');
   t.check(/if \(r\.waiting\) \{ S\.stack = S\.stack\.filter\(x => x\.type !== 'neworder' && x\.type !== 'counter'\); push\('counterwait', \{ id: r\.id, method \}\)/.test(sales), 'a waiting sale opens the wait screen');
