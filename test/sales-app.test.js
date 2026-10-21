@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -383,6 +383,51 @@ matrix.forEach(([what, it]) => {
     t.check(X.myGivenName() === '', 'a login handle (lowercase, digits, no space) is no name to greet');
   }
 
+  // 3h. a supplier's price up past the sale waits on the Manager, in Sales as in the Buyer's app (order #0554)
+  {
+    const X = loadPage(fakeDb({ saved_quotes: [], cash_txns: [] }));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'grace@example.com' } });
+    X.S.data.members = [{ user_id: 'm1', role: 'manager' }];
+    X.S.data.staff = [{ id: 7, name: 'Ruth Nakato', userId: 'm1', role: 'manager' }];
+    const line = { lineId: 'a', productId: 'P3', productName: 'Nails', qty: 1, price: 165000, priceWas: 120000, repricedAt: Date.now(), sellPrice: 155000, supplierId: 'S1' };
+    const q = { id: 554, status: 'draft', invoiced: false, client: { name: 'Henry' }, items: [line], takenBy: 'u1', createdAt: new Date().toISOString() };
+    q.supplierConfirms = { S1: { state: 'confirmed', at: Date.now(), terms: X.supplierTerms(q, 'S1') } };
+    X.S.data.savedQuotes = [q];
+    t.check(X.lineBelowCost(line) && X.priceReviewState(line) === 'wait' && X.pricesWaiting(q).length === 1, 'an untagged line under its cost waits for the Manager');
+    t.check(/With Ruth · Manager<\/b> · price up/.test(X.ordWhoHas(q, X.ordViews(q))), 'the order says it is with Ruth for a price up, not going to Buying');
+    t.check(/Up · with Ruth/.test(X.ordGateHTML(q, X.ordViews(q))) && /1 price up · Ruth/.test(X.ordPaperHead(q, X.ordViews(q))[0]), 'the Prices gate and the slip head carry the hold');
+    t.check(/120,000/.test(X.ordPriceUpHTML(line)) && /165,000/.test(X.ordPriceUpHTML(line)) && /\+45,000/.test(X.ordPriceUpHTML(line)), 'the line shows the cost before and after');
+    t.check(/price up · waiting for Ruth/.test(X.priceTagHTML(line, true)), 'the line tag names the price up');
+    t.check(/with Ruth · price up/.test(X.orderRow(q)), 'the Orders row says who has it');
+    t.check(/With Ruth/.test(X.viewOrders()) && !/going to Buying/.test(X.viewOrders()), 'Checking lists it with Ruth, not as all found going to Buying');
+    t.check(/waiting on Ruth · price up/.test(X.nwPlacedNote(q)), 'the placed screen follows: all found, waiting on Ruth');
+    q.status = 'awaiting_goods';
+    t.check(/With Ruth · Manager/.test(X.ordWhoHas(q, X.ordViews(q))), 'a price up still waits on the Manager once buying has started');
+    // Ruth sets 170,000: the hold lifts and Grace tells Henry.
+    line.sellPrice = 170000; line.priceReview = { state: 'changed', price: 170000, was: 155000, qty: 1, byName: 'Ruth Nakato', at: new Date().toISOString() };
+    t.check(X.priceReviewState(line) === 'changed' && X.priceToTell(line) && !X.pricesWaiting(q).length, 'the Manager\'s new price is one to tell the customer');
+    t.check(/Tell Henry the new price/.test(X.viewToday()), 'Today asks the salesperson to tell them');
+    t.check(/Ruth set <span class="m">170,000<\/span> · was/.test(X.priceTagHTML(line, true)), 'the line says what Ruth set, and what it was');
+    // A price up that still sells above its cost is not the Manager's to decide.
+    const fine = { ...line, price: 130000, sellPrice: 155000, priceReview: null };
+    t.check(X.priceReviewState(fine) === null && !!X.linePriceUp(fine) && X.ordPriceUpHTML(fine) === '', 'a cost up that still sells above it holds nothing');
+  }
+  // 3i. the placed screen follows the order; search puts what sells first
+  {
+    const X = loadPage(fakeDb({ saved_quotes: [], cash_txns: [] }));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    const q = { id: 600, status: 'draft', invoiced: false, client: { name: 'Kato' }, items: [{ lineId: 'x', productId: 'P2', variantIdx: 0, productName: 'Iron sheets', qty: 10, price: 31000, supplierId: 'S2' }], createdAt: new Date().toISOString() };
+    X.S.data.savedQuotes = [q];
+    t.check(/checks .* with a supplier/.test(X.nwPlacedNote(q)), 'at placing: the shop checks with a supplier');
+    q.supplierConfirms = { S2: { state: 'confirmed', at: Date.now(), terms: X.supplierTerms(q, 'S2') } };
+    t.check(/All found — going to Buying/.test(X.nwPlacedNote(q)), 'once found, it says so');
+    q.status = 'awaiting_goods';
+    t.check(/Being bought in/.test(X.nwPlacedNote(q)), 'once buying, it says so');
+    X.S.data.products.push({ id: 'PF', name: 'Mulper Frog', variants: [] }, { id: 'PN', name: 'Normal Mulper', variants: [] });
+    X.S.data.savedQuotes.push({ id: 601, status: 'completed', invoiced: true, items: [{ productId: 'PN', qty: 2 }] }, { id: 602, status: 'completed', invoiced: true, items: [{ productId: 'PN', qty: 1 }] });
+    const g = X.nwSearch('mulper').groups.map(x => x.p.name);
+    t.check(g[0] === 'Normal Mulper' && g.includes('Mulper Frog'), 'search: what the shop sells comes before a name that only starts with the word');
+  }
   // 4. a payment over two bills and a loose balance
   {
     const iso = d => d;

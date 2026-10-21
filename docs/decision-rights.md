@@ -531,6 +531,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0148 | A fresh start: a new shop copied from the old one's reference data, never its balances (`ow_fresh_start`), and switch day moving the team, agent logins, catalogues and WhatsApp numbers (`ow_fresh_start_move`), both the operator's in the SQL editor (docs/fresh-start.md); then the Manager confirms each customer's old balance and enters it (`set_opening_balance`, debt.open) |
 | 0149 | A fresh start, choosing what stays behind: `ow_fresh_start` takes a list of groups to leave in the old shop (price list, team, settings, property); customers and suppliers always come across. The operator's, in the SQL editor |
 | 0150 | Buyer, fourth: a trip's runner is told — sent or given a trip (`trip.sent`, once per round), the trip given on to someone else (`trip.taken`), or the trip cancelled by the Buyer's chase (`trip.cancelled`) |
+| 0152 | Sales, third: a supplier's price up that puts a line under its sale pushes the Manager (`price.waits`, price.approve), and the Manager's new price on it pushes the salesperson to tell the customer (`price.decided`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

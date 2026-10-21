@@ -118,7 +118,10 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
     t.check(/tripId: h\.p\.tripId \|\| null/.test(acc) && /latestTripLines\(s\.id, a\.tripId\)/.test(acc) && /tripId == null \|\| String\(x\.id\) === String\(tripId\)/.test(acc),
       'accounts: a paper bill fills from its own trip, never a newer one to the same supplier');
   }
-  t.check(!/priceWas|priceNow|costWas/.test(sales), 'sales: a switch\'s buying costs are never read into the Sales app');
+  // The switch hand-off (rowToSwitch) carries the Buyer's priceWas/priceNow: Sales never reads them.
+  // (An order line's own priceWas, the cost a supplier's price up replaced, is the line's, not the switch's.)
+  const toSwitch = (sales.match(/function rowToSwitch\(h\)\{[^\n]*/) || [''])[0];
+  t.check(!!toSwitch && !/priceWas|priceNow|costWas/.test(toSwitch) && !/\.p(ayload)?\.(priceWas|priceNow|costWas)/.test(sales), 'sales: a switch\'s buying costs are never read into the Sales app');
 }
 
 process.exit(t.done() ? 1 : 0);
