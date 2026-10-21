@@ -66,4 +66,21 @@ t.check(/from\('stock_reports'\)\.insert\(\{[^}]*why: reason, photo_path: photo/
 t.check(/from\('invoice_asks'\)\.insert\(\{[^}]*kind: 'credit'/.test(store), 'goods back at the gate are a credit ask (0123)');
 t.check(/from\('road_names'\)\.upsert/.test(store), 'the Store app names directions');
 t.check(!/\b(gotPrice|expectedPrice|receivedPrice|cash_given)\b/.test(store.slice(store.indexOf('PAGE.ride'), store.indexOf("ACT['slide:ride']"))), 'riding a trip shows no price and no cash');
+/* ---------------- 4. returns count in the line's own unit ---------------- */
+// A "1 Ctn" line of screws is 20 boxes: one carton back is qty 20 and reads "1 Ctn", never "20 Ctn";
+// five boxes back is qty 5 and reads "5 box"; what is already on its way back is not offered twice.
+const R = { data: { returns: [] } };
+const rs = compileScope(['n0', 'quoteLinePack', 'quoteLineCountPer', 'backText', 'returnedQty'].map(f => extractFunction(store, f)), { D: () => R.data }, ['backText', 'returnedQty']);
+const ctn = { productName: 'ABC Black Screws', unit: 'box', qty: 20, packUnit: 'Ctn', packQty: 20, qtyIn: 'pack' };
+t.check(rs.backText(ctn, 20) === '1 Ctn', `one carton back reads "1 Ctn" (got "${rs.backText(ctn, 20)}")`);
+t.check(rs.backText(ctn, 5) === '5 box', `five boxes back read "5 box" (got "${rs.backText(ctn, 5)}")`);
+t.check(rs.backText(ctn, 25) === '1 Ctn + 5 box', `25 boxes read "1 Ctn + 5 box" (got "${rs.backText(ctn, 25)}")`);
+t.check(rs.backText({ unit: 'bag', qty: 4 }, 3) === '3 bag', 'a line with no pack reads in its own unit');
+const q494 = { id: 2494, items: [ctn], creditNotes: [] };
+R.data.returns = [{ id: 'a1', orderId: 2494, status: 'sent', lines: [{ idx: 0, qty: 5 }] }, { id: 'a2', orderId: 2494, status: 'withdrawn', lines: [{ idx: 0, qty: 20 }] }];
+t.check(rs.returnedQty(q494, 0) === 5, 'a pending return counts against the line; a withdrawn one does not');
+R.data.returns.push({ id: 'a3', orderId: 2494, status: 'accepted', lines: [{ idx: 0, qty: 3 }] });
+q494.creditNotes = [{ askId: 'a3', lines: [{ idx: 0, qty: 3 }] }];
+t.check(rs.returnedQty(q494, 0) === 8, 'an accepted return and the credit note it became count once');
+t.check(!/qty: ui\.back\[k\] \* /.test(store) && /shown: backText\(it, ui\.back\[k\]\)/.test(store), 'the return stores the count as entered and the receipt shows it in packs and units');
 process.exit(t.done() ? 1 : 0);
