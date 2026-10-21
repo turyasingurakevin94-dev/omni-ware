@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -427,6 +427,29 @@ matrix.forEach(([what, it]) => {
     X.S.data.savedQuotes.push({ id: 601, status: 'completed', invoiced: true, items: [{ productId: 'PN', qty: 2 }] }, { id: 602, status: 'completed', invoiced: true, items: [{ productId: 'PN', qty: 1 }] });
     const g = X.nwSearch('mulper').groups.map(x => x.p.name);
     t.check(g[0] === 'Normal Mulper' && g.includes('Mulper Frog'), 'search: what the shop sells comes before a name that only starts with the word');
+  }
+  // 3j. the QA audit, round 1 (SAL-xx)
+  {
+    const X = loadPage(fakeDb({ saved_quotes: [], cash_txns: [] }));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    t.check(X.qtyText(2.5) === '2.5' && X.qtyText(1.5) === '1.5' && X.qtyText(1200) === '1,200' && X.qtyText(0.125) === '0.13', 'SAL-02: a quantity is never rounded like money');
+    const q = { id: 9, status: 'draft', items: [{ productId: 'P1', productName: 'Cement', qty: 2.5, price: 30000, sellPrice: 34200, supplierId: '__stock__' }], charges: [{ id: 1, label: 'Delivery', type: 'fixed', value: 5000 }], credit: { pct: 3, days: 30 } };
+    const ex = X.orderExtraRows(q), lines = 2.5 * 34200 + ex.reduce((a, x) => a + x.amt, 0);
+    t.check(ex.length === 2 && ex[0].name === 'Delivery' && ex[1].name === 'Credit charge' && Math.round(lines) === Math.round(X.quoteTotal(q)), 'SAL-07: the items, the delivery and the credit charge add up to the total');
+    const it = { productId: 'P1', qty: 1, price: 30000, supplierId: '__stock__' };
+    const hi = X.nwPriceState(it, 1012000000);
+    t.check(hi.ok && hi.high && /check the number/.test(hi.hint), 'SAL-01: a price many times the shop\'s asks to be checked');
+    t.check(!X.nwPriceState(it, 36000).high, 'SAL-01: a price a little over the shop\'s goes straight through');
+    X.S.data.customers.push({ id: 'C009', name: 'Sadat', phone: '', debt: 290000, debtLog: [] });
+    t.check(X.custNearNames('sadaat').some(c => c.name === 'Sadat') && !X.custNearNames('zzzz').length, 'SAL-25: a typo finds the customer before a second one is made');
+    X.startFor(X.customerById('C001'), false, false); X.addLine('P2', 0, 2, 'unit');
+    const ln = X.S.draft.items[0];
+    if (Number(ln.packQty) > 1) {
+      X.ACT.lunit({ dataset: { lid: ln.lineId, u: 'pack' } }); const a = X.lineQtyWords(X.S.draft.items[0]);
+      X.ACT.lunit({ dataset: { lid: ln.lineId, u: 'unit' } }); const b = X.lineQtyWords(X.S.draft.items[0]);
+      t.check(a.n === 2 && b.n === 2 && b.u === ln.unit, 'SAL-06: 2 sheets to bundles and back is still 2 sheets');
+    }
+    t.check(X.WA_WAIT_MAX_MINS >= 7 * 24 * 60, 'SAL-08: an order asked on Sunday still waits on Wednesday');
   }
   // 4. a payment over two bills and a loose balance
   {
