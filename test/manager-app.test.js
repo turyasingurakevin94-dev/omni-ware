@@ -207,7 +207,9 @@ const quoteRow = (q) => {
     const m = X.creditCase(X.D().savedQuotes.find(q => q.id === 24));
     t.check(m.old && m.age === 26 && !m.over, 'the age check is the oldest open bill against the hold line (21 days unless the owner sets one)');
     const bands = X.debtBands(X.debtors());
-    t.check(bands[0] === 0 && bands[1] === 746000 && bands[2] === 1846000 && bands[3] === 0 && bands.unknown === 0, 'debts are aged by their open charges into days and weeks: ' + bands.join(', '));
+    // The owner's bands (Round 3): under 7 · 8–21 · 22–30 · over 30. Kyaligonza's 12-day bill and Mukono's
+    // 15-day bill are 8–21; Mukono's 26-day bill is 22–30, past the 21-day hold line.
+    t.check(bands[0] === 0 && bands[1] === 746000 + 726000 && bands[2] === 1120000 && bands[3] === 0 && bands.unknown === 0, 'debts are aged by their open charges into the owner\'s 7/21/30 bands: ' + bands.join(', '));
     t.check(X.lastSeller(X.customerById('C2')).id === 'S2', 'who last sold to a customer is the taker of their newest order');
     const tg = X.salesTarget();
     const inMonth = X.D().savedQuotes.filter(q => q.invoiced && !q.voided && q.invoicedAt >= M0).reduce((a, q) => a + X.quoteTotal(q), 0);
@@ -314,9 +316,10 @@ const quoteRow = (q) => {
     t.check(bands.unknown === 510000 && bands[0] === 300000 && bands[3] === 500000, 'the HOW OLD bands come from the open charges, with "no date" its own part: ' + bands.join(', ') + ' · no date ' + bands.unknown);
     const old = X.needsYou().rest.find(n => n.k === 'old');
     t.check(old && old.n === 1 && old.v === 500000, 'Watch "owing 30+ days" is the part aged 30 days or more (500,000), not the whole debt of anyone with an old bill');
+    X.S.ui.mside = 'out';
     const money = X.viewMoney();
-    t.check(/over 30 500K, no date 510K"/.test(money) && /<b style="color:var\(--navyInk\)">510K<\/b>no date<\/span>/.test(money), 'Money › How old draws a "no date" segment of its own (510K), not "under 7d"');
-    t.check(!/no dated bill/.test(money) && /no date · /.test(money), 'a debtor with nothing dated reads "no date", never as new');
+    t.check(/over 30 days 500K, no date 510K;/.test(money) && /<b style="color:var\(--navyInk\)">510K<\/b>no date<\/span>/.test(money), 'Money › How old draws a "no date" segment of its own (510K), not "under 7d"');
+    t.check(!/no dated bill/.test(money) && /white-space:nowrap;color:var\(--ink3\)">no date</.test(money), 'a debtor with nothing dated reads "no date" where the age goes, never as new');
     t.check(/>no date</.test(X.PAGE.debtor({ id: 'C4' })) && /200,000<\/span> of it has no date/.test(X.PAGE.debtor({ id: 'C6' })), 'one customer: "no date" instead of an oldest age, and the undated part named under the bills');
     // The same figures Accounts shows: accounts.html's own functions, run on the same customers.
     const pick = name => { const i = accountsSrc.indexOf(name); return accountsSrc.slice(i, accountsSrc.indexOf('\n}\n', i) + 2); };
