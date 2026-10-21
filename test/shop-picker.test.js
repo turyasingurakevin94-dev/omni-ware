@@ -59,13 +59,13 @@ function sandbox(){
   const store = () => { const m = new Map(); return { m, getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
   const overlays = [];
   const makeEl = cls => {
-    const el = { className: cls, innerHTML: '', buttons: [], signout: { onclick: null } };
+    const el = { className: cls, innerHTML: '', buttons: [], signout: { onclick: null }, keep: { onclick: null } };
     el.querySelectorAll = sel => {
       if (sel !== '[data-shop]') return [];
       el.buttons = [...el.innerHTML.matchAll(/data-shop="([^"]*)"/g)].map(x => ({ dataset: { shop: x[1] }, onclick: null }));
       return el.buttons;
     };
-    el.querySelector = sel => (sel === '[data-a=signout]' ? el.signout : null);
+    el.querySelector = sel => (sel === '[data-a=signout]' ? el.signout : sel === '[data-a=keep]' && /data-a="keep"/.test(el.innerHTML) ? el.keep : null);
     return el;
   };
   const ctx = {
@@ -104,6 +104,7 @@ const flush = () => new Promise(r => setImmediate(r));
     t.check(el && el.className === 'bx-auth' && /Which shop\?/.test(el.innerHTML), 'two shops and no choice yet: the person is asked which one');
     t.check(el.buttons.map(b => b.dataset.shop).join() === 'shop-new,shop-old', 'newest shop first, since after a fresh start that is the one to open');
     t.check(/Newest/.test(el.innerHTML) && !/Open now/.test(el.innerHTML), 'the newest is marked, and no shop is marked as open on a first choice');
+    t.check(!/data-a="keep"/.test(el.innerHTML), 'a first choice has no shop to go back to');
     t.check(el.innerHTML.indexOf('>OCT<') < el.innerHTML.indexOf('>MAR<') && /2026</.test(el.innerHTML) && /2025</.test(el.innerHTML),
       'each shop shows the month its books began, which tells an old shop from a fresh one of the same name');
     t.check(!el.innerHTML.includes('<fresh>') && el.innerHTML.includes('&lt;fresh&gt;'), 'a shop name is escaped where it is drawn');
@@ -123,6 +124,12 @@ const flush = () => new Promise(r => setImmediate(r));
     t.check(/Open now/.test(overlays[0].innerHTML) && ctx.sessionStorage.getItem('ow-shop-ask') === null, 'the picker comes back with the shop open now marked, and asks only once');
     overlays[0].buttons[0].onclick();
     t.check((await p2) === NEW && ctx.localStorage.getItem('ow-shop:u1') === 'shop-new', 'and the new choice is kept');
+    api.switchShop(); overlays.length = 0;
+    const p3 = api.chooseShop([OLD, NEW], UI);
+    await flush();
+    t.check(/Back to Mukasa Hardware &lt;fresh&gt;/.test(overlays[0].innerHTML), 'switching offers a way back to the shop open now');
+    overlays[0].keep.onclick();
+    t.check((await p3) === NEW && ctx.localStorage.getItem('ow-shop:u1') === 'shop-new', 'and going back opens the same shop again');
   }
   {
     const { ctx, api, overlays } = sandbox();
