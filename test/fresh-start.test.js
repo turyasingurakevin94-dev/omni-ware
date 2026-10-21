@@ -11,9 +11,12 @@
  *      never deleted; the decision-rights table holds the number.
  *   4. Photos are shared with the old shop, so the console only ever
  *      removes a photo from its own shop's storage folder.
+ *   5. The Manager app's checklist of the old books' debts, and an opening
+ *      balance sent as one write, only for a customer yet to trade.
  *
  * Run: node test/fresh-start.test.js   (or: npm test)
  */
+const vm = require('vm');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('a fresh start');
@@ -30,7 +33,15 @@ t.check(/function ow_fresh_start\(p_from uuid, p_name text, p_for_real boolean d
   && /function ow_fresh_start_move\(p_from uuid, p_to uuid, p_for_real boolean default false\)/.test(mig), 'both steps are a dry run unless told otherwise');
 t.check((mig.match(/raise exception using errcode = 'OWFSD'/g) || []).length === 2 && (mig.match(/exception when sqlstate 'OWFSD' then/g) || []).length === 2,
   'a dry run undoes its work by its own error, and only that error is caught');
-t.check(!/security definer/i.test(mig), 'none of them runs with powers beyond the operator\'s own');
+{
+  const body = (name) => { const i = mig.indexOf('create or replace function ' + name + '('); return mig.slice(i, mig.indexOf('$$;', mig.indexOf('as $$', i))); };
+  t.check(['ow_fs_copy', 'ow_fresh_start', 'ow_fresh_start_move'].every((n) => body(n).length > 100 && !/security definer/i.test(body(n))),
+    'the operator\'s steps run with no powers beyond the operator\'s own');
+  const ob = mig.slice(mig.indexOf('create or replace function set_opening_balance('));
+  t.check(/security definer/.test(ob.slice(0, 300)) && /has_task\(p_shop_id, 'debt\.open'\)/.test(ob) && /grant execute on function set_opening_balance\(uuid, text, numeric, date\) to authenticated;/.test(mig),
+    'the Manager\'s opening balance is a login\'s call, gated by debt.open');
+  t.check(/insert into role_tasks \(role, task\) values \('manager', 'debt\.open'\)/.test(mig), 'and the Manager holds debt.open');
+}
 t.check(/'customers', p_from, v_to, 'true', '\{"debt": 0\}'\)/.test(mig), 'every customer\'s debt starts at 0');
 t.check(!/'(stock|stock_lots|stock_log|cash_txns|cash_days|saved_quotes|purchase_invoices|customer_debt_log|loans|dues)', p_from/.test(mig),
   'no stock, cash, order, bill, debt history, loan or wage row is ever copied');
@@ -56,6 +67,70 @@ t.check(/'agents', p_from, v_to, 'x\.retired_at is null', '\{"user_id": null\}'\
   t.check(/^\| 0146 \| A fresh start/m.test(rights) && /docs\/fresh-start\.md/.test(rights), 'the decision-rights table holds 0146 and points at the runbook');
 }
 
+/* ---------------- 5. the Manager confirms each old balance (manager.html) ---------------- */
+let managerDone = Promise.resolve();
+function managerPage(rpcs, tasks){
+  const html = read('manager.html');
+  const app = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((x) => x.includes('function holderOf'));
+  const el = () => ({ innerHTML: '', textContent: '', value: '', children: [], style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, querySelector: () => null, querySelectorAll: () => [], appendChild() {}, remove() {}, focus() {} });
+  const store = {};
+  const db = { auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }) },
+    from: () => ({ select() { return this; }, eq() { return this; }, maybeSingle() { return this; }, then: (res) => res({ data: null, error: null }) }),
+    rpc: async (fn, args) => { rpcs.push([fn, args]); return fn === 'set_opening_balance' ? { data: { id: args.p_customer_id, debt: args.p_amount, logId: 77 }, error: null } : { data: null, error: { message: 'no rpc ' + fn } }; } };
+  const box = {
+    console, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, requestAnimationFrame: () => 0, Promise, Date, Math, JSON, URLSearchParams, encodeURIComponent, isFinite, isNaN,
+    location: { hostname: 'localhost', hash: '', reload() {} },
+    localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    navigator: {}, matchMedia: () => ({ matches: true }),
+    document: { getElementById: el, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, createElement: el, body: { appendChild() {}, style: {} }, documentElement: { classList: { toggle() {} } }, visibilityState: 'visible', activeElement: null },
+    supabase: { createClient: () => db },
+  };
+  box.window = box; box.window.open = () => {}; box.window.addEventListener = () => {};
+  vm.createContext(box);
+  vm.runInContext(app.replace(/\nboot\(\);\s*$/, '\n') + '\n;globalThis.__x = { S, ACT, PAGE, D, oldBooks, oldBooksCard };', box);
+  box.render = () => {};
+  const X = box.__x;
+  const cust = (id, name, debt, log) => ({ id, name, phone: '', phone2: '', location: '', notes: '', debt, termsDays: null, creditLimit: null, debtLog: log || [] });
+  Object.assign(X.S, { shopId: 'shop-new', user: { id: 'u1' }, role: 'manager', started: true, tasks, stack: [],
+    data: { customers: [cust('C001', 'Kato Construction', 0), cust('C002', 'Sarah Namono', 0), cust('C003', 'Opio Traders', 50000, [{ id: 5, date: '2026-10-21', type: 'charge', amount: 50000, note: 'Auto-sync — INV-0001' }])],
+      savedQuotes: [], staff: [], promises: [], statementsSent: [], products: [], prices: [], cashTxns: [], suppliers: [],
+      freshStart: { oldDebts: { C001: 2410000, C002: 350000, C003: 90000, C999: 10 }, confirmed: {}, madeAt: '2026-10-21' } } });
+  return X;
+}
+{
+  const rpcs = [], X = managerPage(rpcs, ['debt.open']);
+  const ob = X.oldBooks();
+  t.check(ob.rows.length === 3 && ob.left.length === 3 && ob.leftOld === 2410000 + 350000 + 90000, 'the checklist is the old books\' debtors still in the shop (a customer since removed is left out)');
+  t.check(/0\/3/.test(X.oldBooksCard()) && /data-p="oldbooks"/.test(X.oldBooksCard()), 'To collect shows how many are confirmed, and opens the checklist');
+  const list = X.PAGE.oldbooks();
+  t.check(list.indexOf('Kato Construction') < list.indexOf('Sarah Namono') && (list.match(/>to confirm<\/span><\/button>/g) || []).length === 3, 'the checklist puts the biggest old debts first, each marked to confirm');
+  const args = { id: 'C001' };
+  X.S.stack = [{ type: 'opening', args }];
+  const one = X.PAGE.opening(args);
+  t.check(args.amt === 2410000 && /Old books/.test(one) && /They agree/.test(one) && /Save · owes 2,410,000/.test(one), 'one customer: the old figure beside the one being entered, starting from the old figure');
+  X.ACT['in:obamt']({ value: '2,100,000x', style: {} });
+  X.ACT['in:obsince']({ value: '2026-09-01' });
+  managerDone = (async () => {
+    await X.ACT.obsave({ dataset: { id: 'C001' } });
+    const call = rpcs.find((r) => r[0] === 'set_opening_balance');
+    t.check(call && call[1].p_shop_id === 'shop-new' && call[1].p_customer_id === 'C001' && call[1].p_amount === 2100000 && call[1].p_since === '2026-09-01',
+      'saving sends the agreed figure and its date to set_opening_balance, one write');
+    const c = X.D().customers[0];
+    t.check(c.debt === 2100000 && c.debtLog.length === 1 && c.debtLog[0].note === 'Opening balance' && X.D().freshStart.confirmed.C001.amount === 2100000 && X.oldBooks().done === 1,
+      'and the phone shows them owing it, one opening line, and ticked off the checklist');
+    const a2 = { id: 'C002' }; X.S.stack = [{ type: 'opening', args: a2 }]; X.PAGE.opening(a2); X.ACT.obnone();
+    await X.ACT.obsave({ dataset: { id: 'C002' } });
+    t.check(rpcs.filter((r) => r[0] === 'set_opening_balance').pop()[1].p_amount === 0 && rpcs.filter((r) => r[0] === 'set_opening_balance').pop()[1].p_since === null, '"owes nothing" saves 0, with no date');
+    const traded = X.PAGE.opening({ id: 'C003' });
+    t.check(/Already trading in these books/.test(traded) && !/data-act="obsave"/.test(traded), 'a customer who has traded here cannot be given one');
+    const off = managerPage([], []);
+    const offOne = off.PAGE.opening({ id: 'C001' });
+    t.check(!/data-act="obsave"/.test(offOne) && /debt\.open/.test(offOne), 'a login without debt.open sees it, locked and named');
+    t.check(managerPage([], ['debt.open']).PAGE.opening && !/oldbooks/.test((() => { const Y = managerPage([], ['debt.open']); Y.D().freshStart = null; return Y.oldBooksCard(); })()), 'a shop that never started afresh shows no checklist');
+  })().catch((e) => { t.fail('the Manager\'s opening balance: ' + e.message); });
+}
+
 /* ---------------- 4. a shared photo is never removed from the other shop ---------------- */
 {
   const removed = [];
@@ -67,6 +142,7 @@ t.check(/'agents', p_from, v_to, 'x\.retired_at is null', '\{"user_id": null\}'\
   const api = compileScope([extractFunction(src, 'productImageStoragePath', 'index.html'), extractFunction(src, 'deleteProductImageIfStored', 'index.html')],
     env, ['deleteProductImageIfStored']);
   (async () => {
+    await managerDone;
     await api.deleteProductImageIfStored(env.PRODUCT_IMAGE_URL_PREFIX + 'new-shop/a.jpg');
     await api.deleteProductImageIfStored(env.PRODUCT_IMAGE_URL_PREFIX + 'old-shop/b.jpg');
     await api.deleteProductImageIfStored('data:image/png;base64,xx');

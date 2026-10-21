@@ -21,7 +21,7 @@ operator in the Supabase **SQL editor**; no app can call them.
 | | staff, agents, agents' clients, goals and settings | new shop |
 | | settings: categories, units, markups, credit and price policies, letterhead, switched-off tasks, mobile money keys | new shop |
 | | places and roads, rent still running, assets still owned, rivals' prices, id counters | new shop |
-| **Measured again** | what each customer owes | starts at 0, entered once confirmed |
+| **Measured again** | what each customer owes | starts at 0; the Manager enters each once the customer agrees it |
 | | what the shop owes each supplier | starts at 0, entered from their statement |
 | | stock | starts at 0, counted in the Store app |
 | | cash, bank and mobile money | counted and read from statements |
@@ -97,10 +97,13 @@ only the library entry; the file stays for the old shop.
 
 ## The first week
 
-- **Customers:** confirm each balance on the LEFT list with the customer.
-  The old shop still shows what its books said. *Not built yet:* a way to
-  give an existing customer a confirmed opening balance. Today the console
-  takes a balance only while a customer is being added.
+- **Customers:** the Manager app's **To collect** shows *Old books ·
+  balances to confirm*, with how many are done. The Manager rings each
+  customer, enters what they agree (or *Owes nothing*) and when it was owed
+  from, if known. The old books' figure sits beside it for reference, and
+  each one goes in the owner's log next to that figure. A balance can be
+  changed until the customer trades in the new shop; after that it is
+  locked.
 - **Suppliers:** enter each statement as an opening balance ("Opening
   balance — owed before this system").
 - **Prices:** they kept their dates, so Sourcing's daily share confirms the

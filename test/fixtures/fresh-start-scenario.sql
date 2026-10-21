@@ -91,7 +91,8 @@ select _c((select presets -> 'units' = '["bag","sheet"]' and presets ->> 'shopLe
   from app_settings a, nw where a.shop_id = nw.id), 'settings come across: units, letterhead, credit policy');
 select _c((select not (presets ? 'dayLog') and not (presets ? 'chaseLog') and not (presets ? 'stockCounts') and not (presets ? 'debtChases')
   from app_settings a, nw where a.shop_id = nw.id), 'running logs kept in the settings stay behind');
-select _c((select presets -> 'freshStart' ->> 'from' from app_settings a, nw where a.shop_id = nw.id) = 'aaaaaaaa-0000-0000-0000-000000000001', 'the new shop records where it came from');
+select _c((select from_shop from fresh_starts f, nw where f.shop_id = nw.id) = 'aaaaaaaa-0000-0000-0000-000000000001', 'the new shop records where it came from');
+select _c((select old_debts from fresh_starts f, nw where f.shop_id = nw.id) = '{"C001": 2410000}'::jsonb, 'and what each customer owed in the old books, as the Manager''s checklist');
 select _c(exists (select 1 from shop_task_off t, nw where t.shop_id = nw.id and t.task = 'day.close')
   and exists (select 1 from shop_payment_providers p, nw where p.shop_id = nw.id and p.credentials ->> 'apiKey' = 'k')
   and (select last_issued from entity_id_counters e, nw where e.shop_id = nw.id and e.kind = 'product') = 2,
@@ -159,8 +160,51 @@ select _c((select shop_id from catalogues where slug = 'joan-roofing') = (select
 create temp table mv2 as select * from ow_fresh_start_move('aaaaaaaa-0000-0000-0000-000000000001', (select id from nw), true);
 select _c((select count(*) from shop_members m, nw where m.shop_id = nw.id) = 3 and (select n from mv2 where what = 'agent logins moved') = 0, 'running the move again changes nothing');
 
--- ---- 5. no app login may call them
+-- ---- 5. the Manager confirms each balance (set_opening_balance, debt.open)
+grant select on nw to authenticated;
 set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a3', false);
+do $$ begin perform set_opening_balance((select id from nw), 'C001', 2000000); perform _c(false, 'a Store login cannot give an opening balance');
+exception when others then perform _c(sqlerrm like '%needs debt.open%', 'a Store login cannot give an opening balance'); end $$;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', false);
+do $$ begin perform set_opening_balance((select id from nw), 'C001', 2000000, current_date + 3); perform _c(false, 'a debt cannot start after today');
+exception when others then perform _c(sqlerrm like 'A debt cannot start after today%', 'a debt cannot start after today'); end $$;
+do $$ begin perform set_opening_balance((select id from nw), 'C001', -5); perform _c(false, 'a negative balance is refused');
+exception when others then perform _c(sqlerrm like 'An opening balance is what they owe%', 'a negative balance is refused'); end $$;
+select set_opening_balance((select id from nw), 'C001', 2000000, '2026-09-01');
+select set_opening_balance((select id from nw), 'C001', 2100000, '2026-09-01');
+reset role;
+select _c((select debt from customers c, nw where c.shop_id = nw.id and c.id = 'C001') = 2100000, 'the Manager''s figure is what the customer owes, set again before any trading');
+select _c((select count(*) from customer_debt_log l, nw where l.shop_id = nw.id and l.customer_id = 'C001') = 1
+  and (select type || ' ' || amount || ' ' || date || ' ' || note from customer_debt_log l, nw where l.shop_id = nw.id and l.customer_id = 'C001') = 'charge 2100000 2026-09-01 Opening balance',
+  'one opening line in their debt book, dated as confirmed, never two');
+select _c((select confirmed -> 'C001' ->> 'amount' from fresh_starts f, nw where f.shop_id = nw.id) = '2100000', 'the checklist marks them confirmed');
+select _c((select count(*) from decision_log d, nw where d.shop_id = nw.id and d.task = 'debt.open') = 2
+  and (select before ->> 'oldBooks' from decision_log d, nw where d.shop_id = nw.id and d.task = 'debt.open' order by at desc limit 1) = '2410000'
+  and (select by_name from decision_log d, nw where d.shop_id = nw.id and d.task = 'debt.open' limit 1) = 'Ruth Nakato',
+  'each is in the owner''s log, by name, with what the old books said');
+select _c((select debt from customers where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001' and id = 'C001') = 2410000, 'the old shop''s figure is untouched');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', false);
+select set_opening_balance((select id from nw), 'C002', 0);
+reset role;
+select _c((select debt from customers c, nw where c.shop_id = nw.id and c.id = 'C002') = 0
+  and not exists (select 1 from customer_debt_log l, nw where l.shop_id = nw.id and l.customer_id = 'C002')
+  and (select confirmed -> 'C002' ->> 'amount' from fresh_starts f, nw where f.shop_id = nw.id) = '0', '"owes nothing" is a confirmation too, with no line in the book');
+insert into customer_debt_log(id, shop_id, customer_id, date, type, amount, note) select 990001, id, 'C001', current_date, 'payment', 100000, '' from nw;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', false);
+do $$ begin perform set_opening_balance((select id from nw), 'C001', 5000000); perform _c(false, 'once a customer has traded, their opening balance is locked');
+exception when others then perform _c(sqlerrm like '%has traded in these books already%', 'once a customer has traded, their opening balance is locked'); end $$;
+select _c((select count(*) from fresh_starts f, nw where f.shop_id = nw.id) = 1, 'a member reads their shop''s checklist');
+select _c((select count(*) from fresh_starts where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 0, 'and nothing of a shop they are not in');
+do $$ begin update fresh_starts set old_debts = '{}' where true; perform _c(false, 'no login writes the checklist by hand');
+exception when insufficient_privilege then perform _c(true, 'no login writes the checklist by hand'); end $$;
+reset role;
+
+-- ---- 6. no app login may call the operator's steps
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', false);
 do $$ begin perform ow_fresh_start('aaaaaaaa-0000-0000-0000-000000000001', 'X'); perform _c(false, 'an app login cannot start a shop afresh');
 exception when insufficient_privilege then perform _c(true, 'an app login cannot start a shop afresh'); end $$;
 do $$ begin perform ow_fresh_start_move('aaaaaaaa-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001'); perform _c(false, 'nor move a team');

@@ -40,13 +40,46 @@
 --     open one shop only), and so do the agents' public catalogues and the
 --     shop's WhatsApp numbers. Safe to run again.
 --
+-- Then, in the Manager app (the owner's decision of 21 Oct 2026: the
+-- Manager enters each, never a copy of the old figure):
+--
+--   set_opening_balance(shop, customer, amount, since)    debt.open
+--     What a customer owed before these books, once confirmed with them:
+--     one 'Opening balance' line in their debt log, their debt set to it,
+--     and the owner's log line with what the old books said. Only while
+--     the customer has not traded in these books; until then it can be
+--     set again. 0 says "confirmed: owes nothing".
+--
+-- fresh_starts keeps, per new shop, the shop it came from, what each
+-- customer owed in the old books (the Manager's checklist, read-only),
+-- and which of those the Manager has confirmed.
+--
 -- docs/fresh-start.md is the runbook. Safe to re-run this file.
 --
 -- Rollback:
+--   drop function if exists set_opening_balance(uuid, text, numeric, date);
+--   delete from role_tasks where task = 'debt.open';
+--   drop table if exists fresh_starts;
 --   drop function if exists ow_fresh_start_move(uuid, uuid, boolean);
 --   drop function if exists ow_fresh_start(uuid, text, boolean);
 --   drop function if exists ow_fs_copy(text, uuid, uuid, text, jsonb, boolean);
 -- A shop made by ow_fresh_start goes with: delete from shops where id = '<new>';
+
+create table if not exists fresh_starts (
+  shop_id uuid primary key references shops(id) on delete cascade,
+  from_shop uuid references shops(id) on delete set null,
+  made_at timestamptz not null default now(),
+  old_debts jsonb not null default '{}'::jsonb,
+  confirmed jsonb not null default '{}'::jsonb
+);
+alter table fresh_starts enable row level security;
+drop policy if exists "shop members read their fresh start" on fresh_starts;
+create policy "shop members read their fresh start" on fresh_starts for select to authenticated using (is_shop_member(shop_id));
+-- Written only by the functions below.
+revoke insert, update, delete on fresh_starts from anon, authenticated;
+grant select on fresh_starts to authenticated;
+
+insert into role_tasks (role, task) values ('manager', 'debt.open') on conflict do nothing;
 
 -- Copies one table's rows for a shop into another shop, every column that
 -- exists today (a column added later comes along without an edit here).
@@ -95,12 +128,12 @@ declare
   to_lit text;
   -- Running records kept in the settings, not settings: they stay behind.
   history_keys text[] := array['dayLog', 'buyHolds', 'buyOrders', 'stockCounts', 'debtChases', 'chaseLog',
-    'msgUseLog', 'waPins', 'waSnooze', 'waNotes', 'analysisMarks', 'freshStart'];
+    'msgUseLog', 'waPins', 'waSnooze', 'waNotes', 'analysisMarks'];
 begin
   select * into old_shop from shops where id = p_from;
   if not found then raise exception 'There is no shop % to start from.', p_from using errcode = '22023'; end if;
   if coalesce(btrim(p_name), '') = '' then raise exception 'Give the new shop a name.' using errcode = '22023'; end if;
-  select a.shop_id into v_prior from app_settings a where a.presets -> 'freshStart' ->> 'from' = p_from::text limit 1;
+  select fs.shop_id into v_prior from fresh_starts fs where fs.from_shop = p_from limit 1;
   if v_prior is not null then
     raise exception 'Shop % was already started fresh from this one. To start again, delete it first: delete from shops where id = ''%'';', v_prior, v_prior
       using errcode = '23505';
@@ -117,15 +150,15 @@ begin
     get diagnostics c = row_count;
     out := out || jsonb_build_object('what', 'owners and admins', 'n', c, 'note', 'they see both shops and choose in the picker');
 
+    -- Where it came from, and the old books' debts as the Manager's
+    -- checklist. Its own table: the console rewrites the settings whole.
+    insert into fresh_starts(shop_id, from_shop, old_debts)
+      values (v_to, p_from, coalesce((select jsonb_object_agg(id, debt) from customers where shop_id = p_from and debt > 0), '{}'::jsonb));
+
     insert into app_settings(shop_id, presets, updated_at)
-      select v_to, (coalesce(a.presets, '{}'::jsonb) - history_keys)
-             || jsonb_build_object('freshStart', jsonb_build_object('from', p_from, 'at', now())), now()
+      select v_to, coalesce(a.presets, '{}'::jsonb) - history_keys, now()
         from app_settings a where a.shop_id = p_from;
     get diagnostics c = row_count;
-    if c = 0 then
-      insert into app_settings(shop_id, presets, updated_at)
-        values (v_to, jsonb_build_object('freshStart', jsonb_build_object('from', p_from, 'at', now())), now());
-    end if;
     out := out || jsonb_build_object('what', 'settings', 'n', c, 'note', 'categories, units, markups, policies, letterhead; running logs left behind');
 
     out := out || jsonb_build_object('what', 'tasks switched off', 'n', ow_fs_copy('shop_task_off', p_from, v_to), 'note', '');
@@ -181,7 +214,7 @@ begin
 
     -- What is left behind, and what to do about it. Read from the old shop.
     select count(*), coalesce(sum(debt), 0) into c, tot from customers where shop_id = p_from and debt > 0;
-    out := out || jsonb_build_object('what', 'LEFT: customers owing', 'n', c, 'note', 'the old books say ' || tot || ' in all: confirm each with the customer, then enter it');
+    out := out || jsonb_build_object('what', 'LEFT: customers owing', 'n', c, 'note', 'the old books say ' || tot || ' in all: the Manager confirms each with the customer and enters it (Manager app, To collect)');
     select count(*) into c from purchase_invoices where shop_id = p_from;
     out := out || jsonb_build_object('what', 'LEFT: supplier bills', 'n', c, 'note', 'ask each supplier for a statement; enter it as their opening balance');
     select count(*) into c from stock where shop_id = p_from and coalesce(qty, 0) <> 0;
@@ -219,7 +252,7 @@ declare
   c bigint;
   a record;
 begin
-  if not exists (select 1 from app_settings where shop_id = p_to and presets -> 'freshStart' ->> 'from' = p_from::text) then
+  if not exists (select 1 from fresh_starts where shop_id = p_to and from_shop = p_from) then
     raise exception 'Shop % was not started fresh from shop % (ow_fresh_start makes that link).', p_to, p_from using errcode = '22023';
   end if;
 
@@ -266,6 +299,62 @@ begin
   return query select x.what, x.n, x.note from jsonb_to_recordset(out) as x(what text, n bigint, note text);
 end;
 $$;
+
+-- What a customer owed before these books, as the Manager confirmed it.
+create or replace function set_opening_balance(p_shop_id uuid, p_customer_id text, p_amount numeric, p_since date default null)
+returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  amount numeric := round(p_amount);
+  c customers%rowtype;
+  old_books numeric;
+  log_id bigint;
+  saved jsonb;
+begin
+  if uid is null or not is_shop_member(p_shop_id) then
+    raise exception 'Not a member of this shop.' using errcode = '42501';
+  end if;
+  if not (is_shop_admin(p_shop_id) or has_task(p_shop_id, 'debt.open')) then
+    raise exception 'Giving a customer an opening balance needs debt.open.' using errcode = '42501';
+  end if;
+  if amount is null or amount < 0 then
+    raise exception 'An opening balance is what they owe: nothing, or more.' using errcode = '22023';
+  end if;
+  if p_since is not null and p_since > ow_today() then
+    raise exception 'A debt cannot start after today.' using errcode = '22023';
+  end if;
+  select * into c from customers where shop_id = p_shop_id and id = p_customer_id for update;
+  if not found then raise exception 'There is no customer % in this shop.', p_customer_id using errcode = '22023'; end if;
+  if exists (select 1 from customer_debt_log where shop_id = p_shop_id and customer_id = c.id and coalesce(note, '') <> 'Opening balance') then
+    raise exception '% has traded in these books already: what they owe comes from those bills and payments now.', coalesce(nullif(c.name, ''), c.id)
+      using errcode = '22023';
+  end if;
+
+  -- The right was checked above; the writes go in as the system, past the
+  -- desk guard that stops a login raising a debt by hand (0113).
+  saved := ow_system_begin();
+  delete from customer_debt_log where shop_id = p_shop_id and customer_id = c.id and note = 'Opening balance';
+  if amount > 0 then
+    log_id := ow_next_row_id(p_shop_id, 'row:debt_log', 0);
+    insert into customer_debt_log (id, shop_id, customer_id, date, type, amount, note)
+         values (log_id, p_shop_id, c.id, p_since, 'charge', amount, 'Opening balance');
+  end if;
+  update customers set debt = amount where shop_id = p_shop_id and id = c.id;
+  update fresh_starts set confirmed = confirmed || jsonb_build_object(c.id, jsonb_build_object('amount', amount, 'since', p_since, 'at', now(), 'by', uid))
+   where shop_id = p_shop_id;
+  perform ow_system_end(saved);
+
+  select (f.old_debts ->> c.id)::numeric into old_books from fresh_starts f where f.shop_id = p_shop_id;
+  perform ow_log(p_shop_id, uid, ow_staff_name_of(uid, p_shop_id), (select role from shop_members where shop_id = p_shop_id and user_id = uid),
+    'debt.open', 'Opening balance for ' || coalesce(nullif(c.name, ''), c.id), amount,
+    jsonb_build_object('table', 'customers', 'id', c.id),
+    jsonb_build_object('debt', c.debt, 'oldBooks', old_books),
+    jsonb_build_object('debt', amount, 'since', p_since));
+  return jsonb_build_object('id', c.id, 'debt', amount, 'since', p_since, 'logId', log_id);
+end $$;
+revoke all on function set_opening_balance(uuid, text, numeric, date) from public, anon;
+grant execute on function set_opening_balance(uuid, text, numeric, date) to authenticated;
 
 -- The operator's, from the SQL editor. No app login may call these.
 revoke all on function ow_fs_copy(text, uuid, uuid, text, jsonb, boolean) from public, anon, authenticated;
