@@ -47,6 +47,11 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
 const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0148_fresh_start.sql')]);
 t.check(again.status === 0, `0148 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
+// 0148 again brings back its three-value ow_fresh_start; 0149 after it
+// leaves the one, as pasting both in order does.
+const again2 = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0149_fresh_start_leave.sql')]);
+const fns = onDb(['-qAt', '-c', "select count(*) from pg_proc where proname = 'ow_fresh_start'"]);
+t.check(again2.status === 0 && fns.stdout.trim() === '1', `0149 runs after 0148 again and leaves one ow_fresh_start (${(again2.stderr || '').trim().split('\n')[0] || fns.stdout.trim()})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'fresh-start-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

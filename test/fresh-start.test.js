@@ -21,6 +21,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('a fresh start');
 const mig = read('supabase/migrations/0148_fresh_start.sql');
+const leaveMig = read('supabase/migrations/0149_fresh_start_leave.sql');
 const doc = read('docs/fresh-start.md');
 const rights = read('docs/decision-rights.md');
 const src = read('index.html');
@@ -46,6 +47,16 @@ t.check(/'customers', p_from, v_to, 'true', '\{"debt": 0\}'\)/.test(mig), 'every
 t.check(!/'(stock|stock_lots|stock_log|cash_txns|cash_days|saved_quotes|purchase_invoices|customer_debt_log|loans|dues)', p_from/.test(mig),
   'no stock, cash, order, bill, debt history, loan or wage row is ever copied');
 t.check(/'agents', p_from, v_to, 'x\.retired_at is null', '\{"user_id": null\}'\)/.test(mig), 'an agent\'s login never opens two shops (agents_user_unique)');
+
+/* ---------------- 1b. choosing what stays behind (0149) ---------------- */
+t.check(/drop function if exists ow_fresh_start\(uuid, text, boolean\);/.test(leaveMig)
+  && /create or replace function ow_fresh_start\(p_from uuid, p_name text, p_for_real boolean default false, p_leave text\[\] default '\{\}'\)/.test(leaveMig)
+  && /revoke all on function ow_fresh_start\(uuid, text, boolean, text\[\]\) from public, anon, authenticated;/.test(leaveMig),
+  '0149 replaces the copy with one that takes what to leave behind, still the operator\'s alone');
+t.check(/g not in \('price list', 'team', 'settings', 'property'\)/.test(leaveMig) && !/security definer/i.test(leaveMig), 'the four groups are named, anything else refused, with no powers beyond the operator\'s');
+t.check(/'customers', p_from, v_to, 'true', '\{"debt": 0\}'\)/.test(leaveMig) && /'suppliers', p_from, v_to\)/.test(leaveMig) && !/'customers' = any\(leave\)|'suppliers' = any\(leave\)/.test(leaveMig),
+  'customers and suppliers always come across, every debt at 0');
+t.check(/^\| 0149 \| A fresh start, choosing what stays behind/m.test(rights), 'the decision-rights table holds 0149');
 
 /* ---------------- 2. the settings ---------------- */
 {

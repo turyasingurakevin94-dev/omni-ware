@@ -213,4 +213,41 @@ do $$ begin perform ow_fs_copy('customers', 'aaaaaaaa-0000-0000-0000-00000000000
 exception when insufficient_privilege then perform _c(true, 'nor copy a table'); end $$;
 reset role;
 
+-- ---- 7. choosing what stays behind (0149): the owner's choice for the live shop
+-- Undo the first fresh start (the runbook's way: delete the new shop), then
+-- start again leaving the price list and the team in the old shop.
+delete from shops where id = (select id from nw);
+select _c((select count(*) from products where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 2
+  and not exists (select 1 from fresh_starts where from_shop = 'aaaaaaaa-0000-0000-0000-000000000001'), 'deleting the new shop undoes it, and the old shop is whole');
+do $$ begin perform ow_fresh_start('aaaaaaaa-0000-0000-0000-000000000001', 'X', false, array['stock']); perform _c(false, 'an unknown group is refused');
+exception when others then perform _c(sqlerrm like 'Nothing called "stock" can be left behind%', 'an unknown group is refused, naming the choices'); end $$;
+create temp table ldry as select * from ow_fresh_start('aaaaaaaa-0000-0000-0000-000000000001', 'Mukasa Hardware', false, array['price list', 'team']);
+select _c((select what from ldry limit 1) = 'DRY RUN: nothing was saved'
+  and (select n from ldry where what = 'products') = 0 and (select note from ldry where what = 'products') like 'left in the old shop, as chosen%'
+  and (select n from ldry where what = 'staff') = 0 and (select n from ldry where what = 'agents') = 0
+  and (select n from ldry where what = 'customers') = 2 and (select n from ldry where what = 'suppliers') = 1 and (select n from ldry where what = 'settings') = 1,
+  'the preview says what is left behind as chosen, and what still comes across');
+select _c((select note from ldry where what = 'LEFT: stock lines') like 'add the products first%' and (select note from ldry where what = 'LEFT: team logins') like 'they stay in the old shop%',
+  'and what that means for the stock count and the team');
+create temp table ldone as select * from ow_fresh_start('aaaaaaaa-0000-0000-0000-000000000001', 'Mukasa Hardware', true, array['price list', 'team']);
+create temp table lnw as select (select note::uuid from ldone where what = 'the new shop') id;
+select _c(not exists (select 1 from products p, lnw where p.shop_id = lnw.id) and not exists (select 1 from prices p, lnw where p.shop_id = lnw.id)
+  and not exists (select 1 from media m, lnw where m.shop_id = lnw.id) and not exists (select 1 from item_names i, lnw where i.shop_id = lnw.id)
+  and not exists (select 1 from product_links l, lnw where l.shop_id = lnw.id) and not exists (select 1 from rival_prices r, lnw where r.shop_id = lnw.id),
+  'no product, price, photo, item link, name or rival price comes across');
+select _c(not exists (select 1 from staff s, lnw where s.shop_id = lnw.id) and not exists (select 1 from agents a, lnw where a.shop_id = lnw.id)
+  and not exists (select 1 from agent_clients a, lnw where a.shop_id = lnw.id), 'no staff, agent or agent''s client comes across');
+select _c((select count(*) from customers c, lnw where c.shop_id = lnw.id) = 2 and (select sum(debt) from customers c, lnw where c.shop_id = lnw.id) = 0
+  and (select count(*) from suppliers s, lnw where s.shop_id = lnw.id) = 1 and exists (select 1 from app_settings a, lnw where a.shop_id = lnw.id)
+  and exists (select 1 from places p, lnw where p.shop_id = lnw.id) and (select count(*) from rent_agreements r, lnw where r.shop_id = lnw.id) = 1
+  and (select old_debts from fresh_starts f, lnw where f.shop_id = lnw.id) = '{"C001": 2410000}'::jsonb,
+  'customers (at 0, with the checklist), suppliers, settings, places and rent still come across');
+select _c((select count(*) from products where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 2
+  and (select count(*) from staff where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 2, 'and what was left behind is still in the old shop');
+delete from shops where id = (select id from lnw);
+create temp table l4 as select * from ow_fresh_start('aaaaaaaa-0000-0000-0000-000000000001', 'Mukasa Hardware', false, array['price list', 'team', 'settings', 'property']);
+select _c((select n from l4 where what = 'settings') = 0 and (select n from l4 where what = 'mobile money keys') = 0 and (select n from l4 where what = 'places and roads') = 0
+  and (select n from l4 where what = 'rent still running') = 0 and (select n from l4 where what = 'assets still owned') = 0 and (select n from l4 where what = 'customers') = 2,
+  'settings and property can be left behind too, and customers still come');
+
 select case when ok then 'PASS' else 'FAIL' end, label from _r order by n;

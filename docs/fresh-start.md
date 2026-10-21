@@ -59,11 +59,23 @@ only the library entry; the file stays for the old shop.
 
 5. **Close what is open in the old shop:** finish or cancel orders that are
    not yet invoiced. Ask each supplier for a statement of what you owe them.
+   Then paste `supabase/migrations/0149_fresh_start_leave.sql` the same
+   way: it lets the copy leave whole groups in the old shop. (Pasting 0148
+   again later? Paste 0149 after it, or the two versions clash.)
 6. **Look first (dry run).** This does the whole copy, reports it, and
    undoes it:
 
    ```sql
    select * from ow_fresh_start('<old shop id>', 'Mukasa Hardware');
+   ```
+
+   To leave groups in the old shop, add them as a fourth value: any of
+   `'price list'` (products, prices, item links, names, photos, rivals'
+   prices), `'team'` (staff, agents), `'settings'`, `'property'` (places,
+   rent, assets). Customers and suppliers always come across. For example:
+
+   ```sql
+   select * from ow_fresh_start('<old shop id>', 'Mukasa Hardware', false, array['price list', 'team']);
    ```
 
    The rows marked **LEFT** are your checklist: who owed what in the old
