@@ -1828,7 +1828,8 @@ const HUNT_ICON = {
 function huntSteps(l){
   const sx = JSON.stringify({ leadId: l.id });
   const cands = leadSuppliers(l);
-  const asked = cands.filter(c => c.askedAt || candidateHasPrice(c) || c.noStock || c.cantAt);
+  // A supplier written on the hunt counts as one who has it, asked or not (Feko on Crane Filler).
+  const asked = cands.filter(c => c.askedAt || candidateHasPrice(c) || c.noStock || c.cantAt || candName(c));
   const priced = cands.filter(c => candidateHasPrice(c) && !c.noStock);
   const meta = leadResearch(l).meta, hold = meta.hold || null, sample = meta.sample || null;
   const listed = l.status === 'listed';
@@ -1838,13 +1839,13 @@ function huntSteps(l){
   const needSample = !!(hold && (hold.kind === 'stock' || hold.kind === 'small') && !(sample && sample.verdict === 'pass'));
   const told = leadTold(l), rule = shopRule(), known = leadKnown(l), seller = known.sellers[0] || null;
   // The stage the books hold: a hunt moved to Found or Priced (on the console) with no supplier written down.
-  const staged = STAGES.indexOf(l.status) >= STAGES.indexOf('sourced');
+  const staged = STAGES.indexOf(l.status) >= STAGES.indexOf('sourced') && !cands.length;
   const firstAsked = asked.map(c => msOf(c.askedAt || c.quotedAt || c.at)).filter(Boolean);
   const names = (list) => list.map(c => firstWord(candName(c))).filter(Boolean);
   const holdWord = { stock: 'stock it', small: 'per client', special: 'per client', pass: 'not stocking it' };
   const steps = [
     { title: askers.length ? `Asked for by ${askers.length}` : 'Asked for', sub: (askers.map(a => firstWord(a.name)).join(', ') || 'no client named') + (known.stock > 0 ? ` · ${n0(known.stock)} in stock` : ''), done: true },
-    asked.length ? { title: `${plural(asked.length, 'supplier')} asked`, done: true, sub: names(asked).slice(0, 3).join(', ') + (asked.length > 3 ? ` +${asked.length - 3}` : '') + (firstAsked.length ? ' · ' + dayWord(isoOf(new Date(Math.min(...firstAsked)).toISOString())) : ''), href: 'AskSuppliers', word: 'Ask suppliers' }
+    asked.length ? { title: asked.some(c => c.askedAt || candidateHasPrice(c) || c.noStock || c.cantAt) ? `${plural(asked.length, 'supplier')} asked` : `${names(asked).slice(0, 2).join(' and ')} on the hunt`, done: true, sub: names(asked).slice(0, 3).join(', ') + (asked.length > 3 ? ` +${asked.length - 3}` : '') + (firstAsked.length ? ' · ' + dayWord(isoOf(new Date(Math.min(...firstAsked)).toISOString())) : ''), href: 'AskSuppliers', word: 'Ask suppliers' }
       : staged ? { title: 'No supplier recorded', done: false, sub: `marked ${STAGE_WORD[l.status]}` + (knownWord(known) ? ' · ' + knownWord(known) : ' · add who has it'), href: 'Quote', word: 'Add who has it' }
       : seller ? { title: `${firstWord(seller.sup.name)} sells it`, done: false, sub: `${n0(seller.cost)} a ${seller.unit} on the price list` + (known.stock > 0 ? ` · ${n0(known.stock)} in stock` : ''), href: 'AskSuppliers', word: `Ask ${firstWord(seller.sup.name)}` }
       : { title: 'Ask suppliers', done: false, sub: known.stock > 0 ? `${n0(known.stock)} in stock · ask who else has it` : 'one message to each who might have it', href: 'AskSuppliers', word: 'Ask suppliers' },

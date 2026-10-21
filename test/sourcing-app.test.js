@@ -296,6 +296,14 @@ if (!chromium) {
     out.sameLog = logw ? String((logw.row && (logw.row.what || (Array.isArray(logw.row) && logw.row[0].what))) || '') : '';
     return out;
   });
+  const r6b = await page.evaluate(() => {
+    // A hunt at Found with a supplier written on it (never asked, no price) is never "no supplier recorded".
+    const l = JSON.parse(JSON.stringify(D().leads.find(x => !x.voided && x.status !== 'listed')));
+    l.status = 'sourced'; l.candidates = [{ id: 'c-x', role: 'supplier', supplierId: D().suppliers[0].id, supplierName: D().suppliers[0].name }];
+    const h = huntSteps(l), nx = bNext(l);
+    return { step: h.steps[1].title, next: nx.word };
+  });
+  t.check(!/No supplier recorded/.test(r6b.step) && /price/.test(r6b.next), `a supplier on the hunt is never "no supplier recorded"; the move is to log their price (${JSON.stringify(r6b)})`);
   t.check(r6.onePerHunt && r6.sameMove, `Round 6: Today has one row per hunt, with the same move as the Pipeline and the hunt (${JSON.stringify(r6)})`);
   t.check(r6.noLapseRows, 'Round 6: a lapsed quote is never a second Today row');
   t.check(r6.spotted, 'Round 6: a hunt started from something seen counts no client');
