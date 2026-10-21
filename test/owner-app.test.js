@@ -190,7 +190,7 @@ const drawn = s => typeof s === 'string' && s.length > 200 && !/could not be dra
   t.check(rpcs().some(c => c.rpc === 'owner_set_preset' && c.args.p_key === 'digestHour' && c.args.p_value === 21), 'the digest\'s hour is the owner\'s');
 
   /* ---------- 5. who may open it ---------- */
-  t.check(/const pick = rows\.find\(m => m\.role === 'owner'\) \|\| rows\.find\(m => m\.role === 'admin'\);/.test(app), 'only an owner or an admin opens the owner\'s app');
+  t.check(/const pick = await chooseShop\(rows\.filter\(m => \['owner', 'admin'\]\.includes\(m\.role\)\)/.test(app), 'only an owner or an admin opens the owner\'s app');
   t.check(!/viewOwed|viewBills|viewClose/.test(app), 'none of the Accounts app\'s screens came along');
 
   process.exit(t.done() ? 1 : 0);

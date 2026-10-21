@@ -66,7 +66,7 @@ const buyer = read('buyer.html');
   t.check(/key:'buyer', name:'Buys'/.test(roles), 'the staff form offers "Buys"');
   const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(/const BUYER_APP_URL = Deno\.env\.get\("BUYER_APP_URL"\) \|\| "https:\/\/omni-ware\.vercel\.app\/buyer\.html"/.test(invite), 'a buyer\'s invite lands on buyer.html');
-  t.check(/const pick = rows\.find\(m => m\.role === 'buyer'\)/.test(buyer), 'and the Buyer app opens for a buyer membership');
+  t.check(/const pick = await chooseShop\(rows\.filter\(m => \['buyer', /.test(buyer), 'and the Buyer app opens for a buyer membership');
 }
 
 process.exit(t.done() ? 1 : 0);

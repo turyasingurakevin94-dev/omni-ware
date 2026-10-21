@@ -1182,6 +1182,24 @@ function heldIndex(){
 function promisedFor(pid, vi){ return heldIndex()[stockKey(pid, vi)] || []; }
 function heldForOrders(productId, variantIdx){ return promisedFor(productId, variantIdx).reduce((n, p) => n + p.n, 0); }
 function shelfAvailable(productId, variantIdx){ return Math.max(0, getStockQty(productId, variantIdx) - heldForOrders(productId, variantIdx)); }
+/* What has already LEFT the shelf for orders not yet invoiced: packed (picking
+   done), out, or delivered; at what was picked. The books still carry it, so a
+   count expects the books less this, and accepting the count adds it back
+   (0142 ow_held_gone, the same rule) so the invoice takes it off once. */
+function heldGone(productId, variantIdx){
+  const key = stockKey(productId, variantIdx); let n = 0;
+  (D().savedQuotes || []).forEach(q => {
+    if (!q || q.invoiced || q.voided || q.cancelledAt) return;
+    if (!(q.status === 'pending_delivery' || q.status === 'completed' || (q.status === 'preparing' && q.pickingStatus === 'done'))) return;
+    (q.items || []).forEach(it => {
+      if (!lineTakesShelf(it) || stockKey(it.productId, it.variantIdx) !== key) return;
+      // A short the Manager let stand as the full quantity (pickShortfallAckAt) is invoiced at qty.
+      const picked = it.pickStatus === 'short' && !q.pickShortfallAckAt ? Number(it.pickedQty) || 0 : Number(it.qty) || 0;
+      if (picked > 0) n += picked * shelfPackFor(it);
+    });
+  });
+  return n;
+}
 function stockItems(){
   return memo('items', () => {
     const seen = new Set(), out = [], aisles = {};
@@ -1372,6 +1390,69 @@ function setPasswordScreen(){
 function hideAuth(){ const el = document.querySelector('.st-auth'); if (el) el.remove(); }
 const initialLinkType = (() => { try { return new URLSearchParams(location.hash.slice(1)).get('type'); } catch (_e) { return null; } })();
 
+/* ---- which shop this login opens ----
+   A login can belong to more than one shop: the owner across the old books
+   and a fresh start, say. Taking whichever membership the database returned
+   first opened one of them at random and never said so. The person chooses,
+   once on this phone, and the choice is kept for every Omni-Ware app here
+   (one key for all of them) until they switch from the app's shop row. With
+   one shop no question is asked. This block is the same in every role app;
+   test/shop-picker.test.js holds them to it. */
+const SHOP_KEY = uid => 'ow-shop:' + uid;
+const SHOP_ASK = 'ow-shop-ask';
+const SHOP_ROLE_WORD = { owner: 'the owner', admin: 'an admin', manager: 'the manager', sales: 'in Sales', buyer: 'the buyer', store: 'in the store', accounts: 'in Accounts', sourcing: 'in Sourcing', staff: 'a worker' };
+function shopInitials(name){ const w = String(name || '').trim().split(/\s+/).filter(Boolean); return ((w[0] || '?')[0] + (w[1] ? w[1][0] : '')).toUpperCase(); }
+function shopStarted(at){ const d = at ? new Date(at) : null; return d && !isNaN(d) ? { mon: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), year: String(d.getFullYear()) } : null; }
+async function chooseShop(rows, ui){
+  S.shopCount = rows.length;
+  if (rows.length < 2) return rows[0] || null;
+  let last = null, ask = false;
+  try { last = localStorage.getItem(SHOP_KEY(S.user.id)); ask = sessionStorage.getItem(SHOP_ASK) === '1'; sessionStorage.removeItem(SHOP_ASK); } catch (_e) {}
+  const kept = rows.find(m => m.shop_id === last);
+  if (kept && !ask) return kept;
+  const m = await shopPicker(rows, kept ? last : null, ui);
+  try { localStorage.setItem(SHOP_KEY(S.user.id), m.shop_id); } catch (_e) {}
+  return m;
+}
+// Newest shop first, in mint: after a fresh start that is the one to open.
+// The tile is the month the shop's books began, since an old shop and a
+// fresh one usually share a name. The shop open now, when switching,
+// wears a ring and says so.
+function shopPicker(rows, open, ui){
+  const at = m => (m.shops && m.shops.created_at) || '';
+  const list = rows.slice().sort((a, b) => String(at(b)).localeCompare(String(at(a))));
+  const chev = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#B3BCD2"><path d="M9 6l6 6-6 6"></path></svg>';
+  return new Promise(resolve => {
+    let el = document.querySelector('.' + ui.box);
+    if (!el) { el = document.createElement('div'); el.className = ui.box; document.body.appendChild(el); }
+    el.innerHTML = `<div class="card" style="gap:12px">
+      <h1 style="margin:0;font-size:26px;letter-spacing:-.02em;color:#fff">Which shop?</h1>
+      <span style="font-size:14px;font-weight:600;color:#B3BCD2"><b style="color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace">${list.length}</b> shops on this login</span>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">${list.map((m, i) => {
+        const name = (m.shops && m.shops.name) || 'Unnamed shop', st = shopStarted(at(m)), here = m.shop_id === open;
+        return `<button type="button" data-shop="${esc(m.shop_id)}" aria-label="${esc(name + (st ? ', books from ' + st.mon + ' ' + st.year : ''))}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px;border:none;border-radius:16px;background:rgba(255,255,255,${i ? '.06' : '.1'});box-shadow:inset 0 0 0 ${here ? '2px #6FDCB0' : '1px rgba(255,255,255,.14)'};color:#fff;text-align:left;font:inherit;cursor:pointer">
+          <span aria-hidden="true" style="width:48px;height:48px;flex:none;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;background:${i ? 'rgba(255,255,255,.1)' : '#6FDCB0'};color:${i ? '#fff' : '#16203C'}">${st ? `<span style="font-size:10px;letter-spacing:.08em">${esc(st.mon)}</span><span style="font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em">${esc(st.year)}</span>` : `<span style="font-size:15px">${esc(shopInitials(name))}</span>`}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
+            <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
+      }).join('')}</div>
+      <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
+    el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
+    el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  });
+}
+function switchShop(){ try { sessionStorage.setItem(SHOP_ASK, '1'); } catch (_e) {} location.reload(); }
+/* What the phone keeps for later belongs to the shop it was made in: a
+   half-made order, a count, which staff row is "me". These keys carried
+   only the login before a second shop was possible, so the first read
+   after that change adopts the old value for the shop open now, the only
+   one it can have come from. */
+function shopScoped(base){
+  if (!S.shopId) return base;
+  const k = base + ':' + S.shopId;
+  try { const old = localStorage.getItem(base); if (old != null) { if (localStorage.getItem(k) == null) localStorage.setItem(k, old); localStorage.removeItem(base); } } catch (_e) {}
+  return k;
+}
+
 async function boot(){
   S.prefs = loadPrefs(); applyPrefs();
   let { data: u, error: ue } = await sb.auth.getUser();
@@ -1391,17 +1472,18 @@ async function boot(){
     await setPasswordScreen();
   }
   S.user = user;
-  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
+  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id);
   if (error) {
     const snap = loadSnapshot(user.id);
     if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at }); hideAuth(); start(); toast('Offline — showing what you last saw'); return; }
     toast('Could not reach the shop: ' + error.message, 6000); return;
   }
   const rows = ms || [];
-  // A store membership first; an owner, admin or manager may open the yard
-  // too, and so may a worker login -- this app does the worker app's
-  // picking and packing as well.
-  const pick = rows.find(m => m.role === 'store') || rows.find(m => ['owner', 'admin', 'manager'].includes(m.role)) || rows.find(m => m.role === 'staff');
+  // Opens for a store membership; an owner, admin or manager may open the
+  // yard too, and so may a worker login -- this app does the worker app's
+  // picking and packing as well. More than one such shop: the person chooses
+  // (chooseShop).
+  const pick = await chooseShop(rows.filter(m => ['store', 'owner', 'admin', 'manager', 'staff'].includes(m.role)), { box: 'st-auth', btn: 'st-btn' });
   if (!pick) { authScreen('denied'); return; }
   S.shopId = pick.shop_id; S.role = pick.role; S.shopName = (pick.shops && pick.shops.name) || 'The shop';
   hideAuth();
@@ -1534,7 +1616,7 @@ async function changeOrder(id, fn){
 }
 
 /* ---- picking: kept on the phone first, sent a moment later ---- */
-const DRAFT_KEY = () => 'ow-store-picks:' + (S.user && S.user.id);
+const DRAFT_KEY = () => shopScoped('ow-store-picks:' + (S.user && S.user.id));
 function restoreDrafts(){ try { S.pickDraft = JSON.parse(localStorage.getItem(DRAFT_KEY())) || {}; } catch (_e) { S.pickDraft = {}; } }
 function saveDrafts(){ try { localStorage.setItem(DRAFT_KEY(), JSON.stringify(S.pickDraft || {})); } catch (_e) {} }
 function setPick(q, v, s, n){
@@ -1761,11 +1843,13 @@ async function sendCount(aisle, lines){
   return rowToCount(data);
 }
 async function decideCount(id, accept){
-  const { error } = await sb.rpc(accept ? 'accept_stock_count' : 'ask_recount', { p_id: id });
+  const { data, error } = await sb.rpc(accept ? 'accept_stock_count' : 'ask_recount', { p_id: id });
   if (error) throw error;
   const c = (D().counts || []).find(x => x.id === id);
   if (c) { c.status = accept ? 'accepted' : 'recount'; c.decidedAt = new Date().toISOString(); c.decidedBy = S.user.id; }
-  if (accept && c) c.lines.forEach(l => { D().stock[l.key] = Number(l.counted) || 0; D().lastCounted[l.key] = Date.now(); });
+  // What the books now say (0142 returns it: the count's difference on today's books, what is out on orders kept).
+  const now = accept && data && data.stock && typeof data.stock === 'object' ? data.stock : null;
+  if (accept && c) c.lines.forEach(l => { D().stock[l.key] = now && now[l.key] != null ? Number(now[l.key]) || 0 : (Number(l.counted) || 0) + (Number(l.held) || 0); D().lastCounted[l.key] = Date.now(); });
   saveSnapshot();
 }
 
@@ -1830,6 +1914,9 @@ function pushOpen(d){
       const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id));
       fresh('today'); if (t) push('receive', { id: t.id }); else push('movein', {}); return;
     }
+    // 0150: a trip sent or given to this person opens it; one taken off them or cancelled opens Today.
+    if (k === 'trip.sent') { const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id)); fresh('today'); if (t && myTrips().includes(t)) push('collect', { id: t.id }); return; }
+    if (k === 'trip.taken' || k === 'trip.cancelled') { fresh('today'); return; }
     // 0131: the Manager wrote off or dismissed a loss this person reported.
     if (k === 'stock.report.decided') {
       const r = (D().reports || []).find(x => String(x.id) === String(d.id));
@@ -2931,7 +3018,7 @@ ACT.stocktab = t => { FEEL.tick(); replaceTop('stock', { key: t.dataset.key }); 
    is never on screen while counting: it is only taken at the moment the
    count is saved, and shown after the last item.
    ================================================================== */
-const CT_KEY = () => 'ow-store-count:' + (S.user && S.user.id);
+const CT_KEY = () => shopScoped('ow-store-count:' + (S.user && S.user.id));
 function saveCt(){ try { localStorage.setItem(CT_KEY(), JSON.stringify(S.ui.ct || null)); } catch (_e) {} }
 const PLURAL = { doz: 'dozens', ctn: 'cartons', pc: 'pieces', pcs: 'pieces', box: 'boxes', roll: 'rolls', bag: 'bags', bundle: 'bundles', pkt: 'packets', kg: 'kg', m: 'metres', ltr: 'litres', l: 'litres' };
 function plural(u){ const k = String(u || '').toLowerCase(); return PLURAL[k] || (/(s|x|ch|sh)$/.test(k) ? k + 'es' : k + 's'); }
@@ -3006,7 +3093,9 @@ ACT.ctsave = () => {
   const { ct, x, L } = ctCur(), E = ct.entries[ct.i] || {};
   if (!L.some((_, k) => E[k] !== undefined && E[k] !== '')) return;
   ct.counts[ct.i] = Math.round(L.reduce((t, l, k) => t + (parseInt(E[k], 10) || 0) * l[2], 0) * 1e6) / 1e6;
-  ct.system[ct.i] = Number(D().stock[x.key]) || 0;  // taken now, shown only after the last item
+  // What the shelf should hold: the books less what has left for orders not yet invoiced (0142). Taken now, shown only after the last item.
+  (ct.held ||= {})[ct.i] = heldGone(x.productId, x.variantIdx);
+  ct.system[ct.i] = Math.max(0, (Number(D().stock[x.key]) || 0) - ct.held[ct.i]);
   const last = Object.keys(ct.counts).length === ct.keys.length;
   if (last) { buzz([40, 60, 40, 60, 90]); sfxNotes([[523.25, 0, 0.4, 0.15], [659.25, 0.1, 0.4, 0.14], [783.99, 0.2, 0.7, 0.13]]); }
   else { buzz(30); sfxNotes([[880, 0, 0.1, 0.14], [1174.7, 0.07, 0.22, 0.11]]); }
@@ -3016,7 +3105,7 @@ ACT.ctsave = () => {
 ACT.ctreveal = () => { FEEL.stamp(); replaceTop('countresults', {}); sendCountOnce(); };
 async function sendCountOnce(){
   const ct = S.ui.ct; if (!ct || ct.sent || ct.sending) return; ct.sending = true;
-  const lines = ct.keys.map((k, i) => { const x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i] }; });
+  const lines = ct.keys.map((k, i) => { const x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i], held: (ct.held || {})[i] || 0 }; });
   try { const c = await sendCount(ct.aisle, lines); ct.sent = c.id; saveCt(); }
   catch (e) { ct.sendErr = failSay(e); }
   ct.sending = false; if (topType() === 'countresults') render();
@@ -3162,11 +3251,12 @@ PAGE.me = () => {
       <div class="st-card" style="padding:12px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;flex-wrap:wrap;gap:6px">${doors.map(([w, on]) => `<span class="st-chip" style="height:30px;${on ? 'background:var(--greenSoft);color:var(--green)' : 'background:#F2EFEA;color:var(--ink4);box-shadow:inset 0 0 0 1.5px #DDD8CF'}">${ic(on ? 'tick' : 'lock', 12, 'style="stroke-width:2.4"')}${w}</span>`).join('')}</div>
         <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink2)">${ic('eye', 16)}No prices, costs, payments or pay on this phone</span></div>
     </div>
-    <div class="st-foot"><div class="row"><button class="st-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div></div>`;
+    <div class="st-foot"><div class="row">${S.shopCount > 1 ? `<button class="st-btn ghost" style="height:52px;font-size:15px" data-act="switchshop">${ic('store', 18)}Switch shop</button>` : ''}<button class="st-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div></div>`;
 };
 ACT.pref = async t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k];
   if (k === 'push' && S.prefs.push) { const ok = await enablePush().catch(() => false); if (!ok) S.prefs.push = false; }
   savePrefs(); applyPrefs(); if (S.prefs[k]) FEEL.yes(); else FEEL.tick(); render(); };
+ACT.switchshop = () => switchShop();
 ACT.signout = async () => { try { await sb.auth.signOut(); } catch (_e) {} location.reload(); };
 
 /* ---------------- after start ---------------- */

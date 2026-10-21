@@ -142,14 +142,16 @@ const consoleSrc = read('sourcing-console.js');
 }
 
 /* ---------------- 4. the canvas ---------------- */
-const BOARDS = ['Main', 'Asks', 'AsksDropped', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
+const BOARDS = ['Main', 'Asks', 'AsksDropped', 'SearchMiss', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
   'MarketRun', 'AtShop', 'NewSupplier', 'RunDone', 'Spotted', 'Supplier', 'PriceIt', 'AddItem', 'Landed', 'Announce', 'TellAsked', 'Dropped', 'Profile',
   // Round 3: the hunt's quotes side by side moved to Quotes (Hunt is its way to the shelf).
-  'Quotes', 'Suppliers', 'Item', 'Search'];
+  'Quotes', 'Suppliers', 'Item', 'Search',
+  // v2: look-alike suppliers merged, and prices that look wrong.
+  'Twins', 'Fix'];
 BOARDS.forEach(b => t.check(html.includes(`SCREENS.${b} = {`), `the ${b} board is a screen`));
-['Main', 'Asks', 'Hunts', 'Prices'].forEach(b => {
+['Main', 'Hunts', 'Prices', 'Suppliers'].forEach(b => {
   const start = html.indexOf(`SCREENS.${b} = {`), end = html.indexOf('SCREENS.', start + 10);
-  t.check(/<nav aria-label="Sourcing"/.test(html.slice(start, end > 0 ? end : undefined)), `${b} carries the shared tab bar`);
+  t.check(/<nav aria-label="Sourcing"|\$\{V2NAV\('/.test(html.slice(start, end > 0 ? end : undefined)), `${b} carries the shared tab bar`);
 });
 {
   const code = html.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
@@ -175,8 +177,8 @@ t.check(/supabase\/functions|next_row_id_blocks/.test(html) && html.includes("sb
   // and a found hunt with no price is never "Found · 0 quotes".
   const start = html.indexOf('SCREENS.AsksDropped = {'), end = html.indexOf('SCREENS.AtShop = {', start);
   const scr = html.slice(start, end);
-  t.check(/<nav aria-label="Sourcing"/.test(scr) && /nav: navVals\(\)/.test(scr), 'From orders carries the shared tab bar (fix 16)');
-  t.check(/position: absolute; left: 0; right: 0; bottom: calc\(84px \+ var\(--safe-b\)\); z-index: 20; background: #16203C/.test(scr) && !/position: absolute; left: 0; right: 0; bottom: 0; background: #16203C/.test(scr), 'the "All being hunted" dock sits above the tab bar, never over it (fix 16)');
+  t.check(/<nav aria-label="Sourcing"|\$\{V2NAV\('/.test(scr) && /nav: navVals\(\)/.test(scr), 'From orders carries the shared tab bar (fix 16)');
+  t.check(/position: absolute; left: 0; right: 0; bottom: calc\(86px \+ var\(--safe-b\)\); z-index: 20; background: #16203C/.test(scr) && !/position: absolute; left: 0; right: 0; bottom: 0; background: #16203C/.test(scr), 'the "All being hunted" dock sits above the tab bar, never over it (fix 16)');
   const pill = (bg, ink) => bg + ink;
   const mk = (lead, quotes) => compileScope([fnOf(html, 'adState', 'sourcing.html')], {
     leadSuppliers: l => l.candidates, candidateHasPrice: c => !!c.price, leadFacts: l => ({ supplier: l.candidates.length > 0, importer: false }),
@@ -240,7 +242,7 @@ if (!chromium) {
   await page.waitForFunction(() => window.SX && window.SX.started, null, { timeout: 10000 });
   for (const b of BOARDS) {
     for (const props of [null, b === 'Hunt' || b === 'Quotes' || b === 'PriceIt' || b === 'Decide' ? { leadId: 'SRC-007' } : b === 'Search' ? { q: 'a' } : null].filter((x, i) => i === 0 || x)) {
-      await page.evaluate(([n, p]) => { if (['Main', 'Asks', 'Hunts', 'Prices'].includes(n) && !p) A.tab(n); else { A.tab('Main'); A.go(n, p || {}); } }, [b, props]);
+      await page.evaluate(([n, p]) => { if (['Main', 'Hunts', 'Prices', 'Suppliers'].includes(n) && !p) A.tab(n); else { A.tab('Main'); A.go(n, p || {}); } }, [b, props]);
       await page.waitForTimeout(150);
       const res = await page.evaluate(() => { const h = document.getElementById('sx_screen'); return { err: h.getAttribute('data-sv-error'), screen: h.getAttribute('data-screen'), text: h.innerText.length, wide: h.scrollWidth > h.clientWidth + 1 }; });
       t.check(!res.err && res.screen === b && res.text > 20, `${b}${props ? ' ' + JSON.stringify(props) : ''} draws from the sample shop${res.err ? ' — ' + res.err : ''}`);
@@ -248,6 +250,30 @@ if (!chromium) {
     }
   }
   t.check(errors.length === 0, `no script errors while drawing (${errors.slice(0, 3).join(' | ')})`);
+  // Round 5: the searches that missed group into one want, in Chances and on its own sheet.
+  const miss = await page.evaluate(() => {
+    const ws = smWants().filter(smShown);
+    A.tab('Main'); A.go('SearchMiss', {});
+    const h = document.getElementById('sx_screen');
+    return { wants: ws.map(w => w.label + ':' + w.misses.length), text: h.innerText };
+  });
+  await page.waitForTimeout(150);
+  const missText = await page.evaluate(() => document.getElementById('sx_screen').innerText);
+  t.check(miss.wants.length === 1 && /:7$/.test(miss.wants[0]), `wall plug, rawl plug, plug 6mm and wallplug 6 are one want of 7; pvc glue (one person) and blue gloss (once) wait (${miss.wants.join(', ')})`);
+  t.check(/rawl plug 6/.test(missText) && /Hunt it/.test(missText) && /Not ours/.test(missText), 'the want shows what they typed, Hunt it and Not ours');
+  // Log a price: "Someone else" is a picker sheet (search, likely first), never the phone's long list.
+  await page.evaluate(() => { A.tab('Hunts'); A.go('Quote', { leadId: 'SRC-007' }); });
+  await page.waitForTimeout(200);
+  const picker = await page.evaluate(async () => {
+    const h = document.getElementById('sx_screen'), noSelect = !h.querySelector('select');
+    h.querySelector('button[aria-haspopup="dialog"]').click(); await new Promise(r => setTimeout(r, 200));
+    const dlg = h.querySelector('[role=dialog]'), n = dlg ? dlg.querySelectorAll('button[aria-pressed]').length : 0;
+    const inp = dlg.querySelector('input'); inp.value = 'kiseka'; inp.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 200));
+    const hits = [...h.querySelectorAll('[role=dialog] button[aria-pressed]')]; const one = hits.length;
+    hits[0].click(); await new Promise(r => setTimeout(r, 200));
+    return { noSelect, n, one, closed: !h.querySelector('[role=dialog]'), save: (h.querySelector('[data-why]') || {}).textContent };
+  });
+  t.check(picker.noSelect && picker.n >= 3 && picker.one === 1 && picker.closed && /Kiseka/.test(picker.save), `Log a price: Someone else opens a searchable picker and picks (${JSON.stringify(picker)})`);
   // One write, end to end: "Still right" on today's share confirms the row and logs it.
   await page.evaluate(() => A.tab('Prices'));
   await page.waitForTimeout(200);

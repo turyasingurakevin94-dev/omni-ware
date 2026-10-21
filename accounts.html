@@ -2155,6 +2155,69 @@ function setPasswordScreen(){
 }
 function hideAuth(){ const el = document.querySelector('.bx-auth'); if (el) el.remove(); }
 const initialLinkType = (() => { try { return new URLSearchParams(location.hash.slice(1)).get('type'); } catch (_e) { return null; } })();
+/* ---- which shop this login opens ----
+   A login can belong to more than one shop: the owner across the old books
+   and a fresh start, say. Taking whichever membership the database returned
+   first opened one of them at random and never said so. The person chooses,
+   once on this phone, and the choice is kept for every Omni-Ware app here
+   (one key for all of them) until they switch from the app's shop row. With
+   one shop no question is asked. This block is the same in every role app;
+   test/shop-picker.test.js holds them to it. */
+const SHOP_KEY = uid => 'ow-shop:' + uid;
+const SHOP_ASK = 'ow-shop-ask';
+const SHOP_ROLE_WORD = { owner: 'the owner', admin: 'an admin', manager: 'the manager', sales: 'in Sales', buyer: 'the buyer', store: 'in the store', accounts: 'in Accounts', sourcing: 'in Sourcing', staff: 'a worker' };
+function shopInitials(name){ const w = String(name || '').trim().split(/\s+/).filter(Boolean); return ((w[0] || '?')[0] + (w[1] ? w[1][0] : '')).toUpperCase(); }
+function shopStarted(at){ const d = at ? new Date(at) : null; return d && !isNaN(d) ? { mon: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), year: String(d.getFullYear()) } : null; }
+async function chooseShop(rows, ui){
+  S.shopCount = rows.length;
+  if (rows.length < 2) return rows[0] || null;
+  let last = null, ask = false;
+  try { last = localStorage.getItem(SHOP_KEY(S.user.id)); ask = sessionStorage.getItem(SHOP_ASK) === '1'; sessionStorage.removeItem(SHOP_ASK); } catch (_e) {}
+  const kept = rows.find(m => m.shop_id === last);
+  if (kept && !ask) return kept;
+  const m = await shopPicker(rows, kept ? last : null, ui);
+  try { localStorage.setItem(SHOP_KEY(S.user.id), m.shop_id); } catch (_e) {}
+  return m;
+}
+// Newest shop first, in mint: after a fresh start that is the one to open.
+// The tile is the month the shop's books began, since an old shop and a
+// fresh one usually share a name. The shop open now, when switching,
+// wears a ring and says so.
+function shopPicker(rows, open, ui){
+  const at = m => (m.shops && m.shops.created_at) || '';
+  const list = rows.slice().sort((a, b) => String(at(b)).localeCompare(String(at(a))));
+  const chev = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#B3BCD2"><path d="M9 6l6 6-6 6"></path></svg>';
+  return new Promise(resolve => {
+    let el = document.querySelector('.' + ui.box);
+    if (!el) { el = document.createElement('div'); el.className = ui.box; document.body.appendChild(el); }
+    el.innerHTML = `<div class="card" style="gap:12px">
+      <h1 style="margin:0;font-size:26px;letter-spacing:-.02em;color:#fff">Which shop?</h1>
+      <span style="font-size:14px;font-weight:600;color:#B3BCD2"><b style="color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace">${list.length}</b> shops on this login</span>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">${list.map((m, i) => {
+        const name = (m.shops && m.shops.name) || 'Unnamed shop', st = shopStarted(at(m)), here = m.shop_id === open;
+        return `<button type="button" data-shop="${esc(m.shop_id)}" aria-label="${esc(name + (st ? ', books from ' + st.mon + ' ' + st.year : ''))}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px;border:none;border-radius:16px;background:rgba(255,255,255,${i ? '.06' : '.1'});box-shadow:inset 0 0 0 ${here ? '2px #6FDCB0' : '1px rgba(255,255,255,.14)'};color:#fff;text-align:left;font:inherit;cursor:pointer">
+          <span aria-hidden="true" style="width:48px;height:48px;flex:none;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;background:${i ? 'rgba(255,255,255,.1)' : '#6FDCB0'};color:${i ? '#fff' : '#16203C'}">${st ? `<span style="font-size:10px;letter-spacing:.08em">${esc(st.mon)}</span><span style="font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em">${esc(st.year)}</span>` : `<span style="font-size:15px">${esc(shopInitials(name))}</span>`}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
+            <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
+      }).join('')}</div>
+      <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
+    el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
+    el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  });
+}
+function switchShop(){ try { sessionStorage.setItem(SHOP_ASK, '1'); } catch (_e) {} location.reload(); }
+/* What the phone keeps for later belongs to the shop it was made in: a
+   half-made order, a count, which staff row is "me". These keys carried
+   only the login before a second shop was possible, so the first read
+   after that change adopts the old value for the shop open now, the only
+   one it can have come from. */
+function shopScoped(base){
+  if (!S.shopId) return base;
+  const k = base + ':' + S.shopId;
+  try { const old = localStorage.getItem(base); if (old != null) { if (localStorage.getItem(k) == null) localStorage.setItem(k, old); localStorage.removeItem(base); } } catch (_e) {}
+  return k;
+}
+
 async function boot(){
   S.prefs = loadPrefs(); applyPrefs();
   let { data: u, error: ue } = await sb.auth.getUser();
@@ -2174,15 +2237,16 @@ async function boot(){
     await setPasswordScreen();
   }
   S.user = user;
-  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
+  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id);
   if (error) {
     const snap = loadSnapshot(user.id);
     if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, tasks: snap.tasks || [], data: snap.data, loadedAt: snap.at }); hideAuth(); start(); toast('Offline — showing what you last saw'); return; }
     toast('Could not reach the shop: ' + error.message, 6000); return;
   }
   const rows = ms || [];
-  // An accounts membership first; an owner, admin or manager may open the desk too.
-  const pick = rows.find(m => m.role === 'accounts') || rows.find(m => ['owner', 'admin', 'manager'].includes(m.role));
+  // Opens for an accounts membership; an owner, admin or manager may open
+  // the desk too. More than one such shop: the person chooses (chooseShop).
+  const pick = await chooseShop(rows.filter(m => ['accounts', 'owner', 'admin', 'manager'].includes(m.role)), { box: 'bx-auth', btn: 'bx-btn' });
   if (!pick) { authScreen('denied'); return; }
   S.shopId = pick.shop_id; S.role = pick.role; S.shopName = (pick.shops && pick.shops.name) || 'The shop';
   hideAuth();
@@ -2496,7 +2560,8 @@ function handoffs(){ return (D().handoffs || []); }
 function handoffById(id){ return handoffs().find(h => String(h.id) === String(id)) || null; }
 // Who passed it on: the staff row whose login made it, by first name.
 function handoffBy(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? firstWord(st.name) : 'The Buyer'; }
-function handoffSupplier(h){ const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
+// A round of stops (the Buyer's Plan the round) is one ask: "Karddia, Roto +2 · 4 stops".
+function handoffSupplier(h){ if (Array.isArray(h.p.supplierIds) && h.p.supplierIds.length > 1) return (h.p.supplier || h.p.supplierIds.length + ' suppliers') + ' · ' + h.p.supplierIds.length + ' stops'; const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
 function handoffWhen(h){ const iso = String(h.createdAt || '').slice(0, 10); return iso === todayISO() ? hm(Date.parse(h.createdAt)) : shortDay(iso); }
 function handoffCard(){
   const list = handoffs(); if (!list.length) return '';
@@ -3675,10 +3740,11 @@ PAGE.me = () => {
       <div class="ac-keys" style="margin-top:4px"><button class="ac-key" data-act="backup" style="border:none;background:var(--greenSoft);color:var(--green);text-align:left">${ic('download', 16)}Download a backup</button></div>
       <div class="bx-card bx-list" style="margin-top:4px">${[['sound', 'Sounds & buzz', 'the till, the stamp, the chime', 'sound'], ['big', 'Big text', 'easier to read at the counter', 'big']].map(([k2, w, sub, icn], i) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;${i ? 'border-top:1px solid #F1EEE8' : ''}"><span style="width:32px;height:32px;border-radius:10px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k2]}" aria-label="${w}" data-act="pref" data-k="${k2}"></button></div>`).join('')}${(([chip, sub]) => `<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-top:1px solid #F1EEE8"><span style="width:32px;height:32px;border-radius:10px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 17)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">Notifications</span><span class="bx-sub">${esc(sub)}</span></span><span class="bx-chip" style="${chip === 'On' ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${chip}</span></div>`)(pushState())}</div>
     </div>
-    <div class="bx-foot"><div class="row"><button class="bx-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div>
+    <div class="bx-foot"><div class="row">${S.shopCount > 1 ? `<button class="bx-btn ghost" style="height:52px;font-size:15px" data-act="switchshop">${ic('store', 18)}Switch shop</button>` : ''}<button class="bx-btn ghost" style="height:52px;font-size:15px" data-act="signout">${ic('out', 18)}Sign out</button></div></div>
   </div>`;
 };
 ACT.pref = t => { const key = t.dataset.k; S.prefs[key] = !S.prefs[key]; savePrefs(); applyPrefs(); if (key === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
+ACT.switchshop = () => switchShop();
 ACT.signout = async () => { try { await sb.auth.signOut(); } catch (_e) {} location.reload(); };
 ACT.backup = async () => {
   try {
@@ -4800,9 +4866,8 @@ function receivablesAsAt(asOf){
 function payablesAsAt(asOf){
   const today = todayISO();
   if(!asOf || asOf >= today) return dashTotalCreditors() + consignmentOwedTotal();
-  const known = new Set((data.suppliers||[]).map(s=> s.id));
   return (data.purchaseInvoices||[])
-    .filter(pi=> !pi.voided && known.has(pi.supplierId) && String(pi.date||'') <= asOf)
+    .filter(pi=> !pi.voided && String(pi.date||'') <= asOf)
     .reduce((s,pi)=>{
       const paid = (pi.payments||[])
         .filter(p=> String(p.date||'') <= asOf)
@@ -5109,7 +5174,9 @@ function dashCashTxnsInRange(from, to){
   return data.cashTxns.filter(t=> t.date>=from && t.date<=to);
 }
 function dashTotalDebtors(){ return data.customers.reduce((s,c)=>s+(Number(c.debt)||0),0); }
-function dashTotalCreditors(){ return data.suppliers.reduce((s,sup)=>s+creditorTotalOwed(sup.id),0); }
+// Every open bill counts, its supplier on file or a name only: money owed is owed (the owner's
+// call, 20 Oct 2026), so the balance sheet and Bills agree.
+function dashTotalCreditors(){ return (data.purchaseInvoices||[]).filter(pi=>!pi.voided).reduce((s,pi)=>s+purchaseInvoiceBalanceDue(pi),0); }
   /* end of what is carried from index.html */
   return { ABSENCE_REASONS, ACCOUNTS, CASH_NOT_OPEX, CASH_NOT_REVENUE, CASH_OVERAGE_CATEGORY, CASH_OWNER_WITHDRAWAL, CASH_SHORTAGE_CATEGORY, CASH_VARIANCE_LINE, DEPRECIATION_MAX_MONTHS, DUE_KINDS, LOAN_FREQUENCIES, PAY_BASES, WAGE_DAYS_PER_MONTH, WAGE_DAYS_PER_WEEK, anInvoiceTotals, anInvoicesInRange, anOverallTotals, assetChargeBetween, assetCoverInMonth, assetDisposalResult, assetIsDisposed, assetMonthlyCharge, assetMonthsCharged, assetNBVAt, assetRowFraction, assetSchedule, balanceSheetAsAt, basisDayRate, basisMonthCost, cashAnchorFor, cashFlowStatement, cashHas, cashIsCashOverage, cashIsCashShortage, cashIsDebtCollection, cashIsMoneyIn, cashIsMoneyOut, cashIsOperatingExpense, cashIsOwnerWithdrawal, cashIsSpreadCost, cashIsTradingIncome, cashOnHandFor, cashOpexRows, chargeAmount, chargeCostOf, chargeCostTxn, chargeCostedCashIds, consignmentAccrued, consignmentDueNow, consignmentHeld, consignmentOwedTotal, consignmentRows, consignmentSettled, consignmentSettlementDue, consignmentSettlements, consignmentSoldLines, creditorTotalOwed, dashCashTxnsInRange, dashTotalCreditors, dashTotalDebtors, dayBeforeISO, daysBetweenISO, depreciationForPeriod, dueAbsences, dueAccruedAsAt, dueAccruedOutstanding, dueBalance, dueBasis, dueCostAccruedTo, dueCostBetween, dueCostOf, dueCostRows, dueDayRate, dueDeduction, dueGross, dueIsOverdue, dueIsSettled, dueName, dueOverpaid, duePaidBy, duePositionAsAt, duePrepaidAsAt, dueSettledCashIds, dueUnpaidAbsenceDays, duesOwedAsAt, duesPrepaidAsAt, effectiveMarkupRule, effectiveStockMarkupRule, fixedAssetsNBVAt, incomeStatement, inventoryValue, invoiceBackedCashTxnIds, invoiceBalanceDue, invoiceLineCost, liveFixedAssets, liveLoans, loanApplied, loanChargedTo, loanChargesForPeriod, loanChargesOwedAt, loanDueDate, loanDuePosition, loanEffectiveRate, loanFeePerInstallment, loanFees, loanFeesForPeriod, loanFrequency, loanInstallments, loanInstalmentChargesBetween, loanInterestChargedBetween, loanInterestForPeriod, loanLevelPI, loanNetAdvanced, loanOutstanding, loanPerformance, loanPeriodRate, loanPeriodsBetween, loanPeriodsPerYear, loanPrincipal, loanRateFor, loanRepayments, loanRound, loanRoundTo, loanSchedule, loanScheduledPayment, loanTotalInterest, loansChargesOwedAt, loansOutstandingAt, monthChargeFraction, monthsBetween, orderCharges, orderChargesCost, orderChargesTotal, orderCreditCharge, orderCreditTerms, panInvoicesInRange, payablesAsAt, payrollPosition, periodEndDate, periodLabel, productName, productPriceRows, purchaseInvoiceBalanceDue, purchaseInvoiceTotal, purchasePriceAtQty, purchaseSideAtQty, quoteItemSellPrice, quoteSuggestedPrice, quoteSuggestedStockPrice, receivablesAsAt, rentAgreementsFor, savedQuoteCashTotal, savedQuoteDiscount, savedQuoteGoodsTotal, savedQuoteTotal, sellSideFor, shelfValueForKey, shopDefaultMarkupRule, spreadAccruedAsAt, spreadAccruedOf, spreadCostBetween, spreadCostRows, spreadCostTxns, spreadDays, spreadPrepaidAsAt, spreadPrepaidOf, staffOnPayroll, staffWithoutPayRate, statementOpexRows, stockKey, stockValueAsAt, suggestedSellingPrice, suggestedStockSellingPrice, supplierName, tieredUnitPrice, tiersForKind, todayISO, uncostedDuesInRange, unlinkedDuePayments };
 };
@@ -5696,13 +5763,12 @@ ACT['slide:income'] = async () => {
   if (!needTask(a.kind === 'loan' ? 'loan.edit' : 'cash.income')) return render();
   try { S.busy = true;
     if (a.kind === 'loan') {
+      // One write (0141 receive_loan): the cash line net of fees, the loan, the owner's log.
       const lender = (a.lender || '').trim(), fees = Math.round(a.fees || 0);
-      const lid = await issueRowId('row:loan', (D().loans || []).reduce((m, l) => Math.max(m, Number(l.id) || 0), 0));
-      const cid = await addCash({ account: a.acct, type: 'receipt', category: 'Loan Received', amount: amt - fees, description: `${lender}${fees ? ` — ${n0(fees)} kept in fees` : ''}` });
-      const row = { id: lid, shop_id: S.shopId, lender, principal: amt, rate_pct: a.rate == null ? 20 : a.rate, method: 'reducing_balance', term_months: a.months || 12, fees, round_to: 1000, frequency: 'monthly', fee_per_instalment: 0, started_on: todayISO(), closed_on: null, notes: null, cash_txn_id: cid, payload: { repayments: [] } };
-      await insertRow('loans', row);
-      D().loans.push(rowToLoan(row)); booksChanged();
-      logDecision('loan.edit', `Loan received from ${lender}: ${n0(amt)} over ${a.months || 12} months`, { amount: amt, ref: { table: 'loans', id: lid } });
+      const r = await sb.rpc('receive_loan', { p_shop_id: S.shopId, p_row: { lender, principal: amt, ratePct: a.rate == null ? 20 : a.rate, termMonths: a.months || 12, fees }, p_account: a.acct });
+      if (r.error) throw r.error;
+      const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+      if (d.loan) D().loans.push(rowToLoan(d.loan)); booksChanged();
       FEEL.kaching(); toast(`The loan from ${lender} is in, and open to repay`);
     } else {
       const category = a.kind === 'owner' ? 'Owner Investment' : 'Other Income';
@@ -6223,27 +6289,17 @@ ACT.agents = () => { FEEL.open(); push('agents', {}); };
 ACT.agentpick = t => { topArgs().aid = t.dataset.v; FEEL.tick(); render(); };
 ACT['slide:agentsettle'] = async () => {
   const a = topArgs(); if (!needTask('agent.pay')) return render();
-  const due = agentsDue(), claims = due.claims.filter(c => String(c.agentId) === String(a.aid)), cash = due.cashIn.filter(o => String(o.agent.id) === String(a.aid));
   const ag = agentById(a.aid), nm = ag ? ag.name : 'agent';
   try { S.busy = true;
-    // Cash for each order, onto the order (agentPrepayConfirm).
-    for (const o of cash) {
-      const { row, q } = await rereadQuote(o.q.id), payload = row.payload || {};
-      const owed = Math.round(balanceDue(q)); if (!(owed > 0)) continue;
-      const cid = await addCash({ account: 'cash', type: 'receipt', category: 'Agent Payment', amount: owed, description: `Cash payment from ${nm} — order #${q.id}`, quoteId: q.id });
-      const payments = (payload.payments || []).concat([{ date: todayISO(), amount: owed, note: 'Cash', cashTxnId: cid }]);
-      const up = await sb.from('saved_quotes').update({ amount_paid: (Number(row.amount_paid) || 0) + owed, payload: { ...payload, payments, agentPaymentStatus: 'paid' } }).eq('shop_id', S.shopId).eq('id', q.id); if (up.error) throw up.error;
-    }
-    // Each claim paid (markClaimPaid), from cash when the agent nets it off, else the account picked.
-    const net = cash.reduce((s, o) => s + o.owed, 0) - claims.reduce((s, c) => s + c.amount, 0), from = net >= 0 ? 'cash' : (a.acct || 'cash');
-    for (const c of claims) {
-      const cid = await addCash({ account: from, type: 'payment', category: 'Agent Commission', amount: c.amount, description: `Bonus commission — ${nm} — ${claimMonthWord(c.month)}` });
-      const up = await sb.from('agent_commission_claims').update({ status: 'paid', paid_at: new Date().toISOString(), cash_txn_id: cid }).eq('shop_id', S.shopId).eq('id', c.id); if (up.error) throw up.error;
-      c.status = 'paid';
-    }
-    logDecision('agent.pay', `Settled with ${nm}: ${cash.length ? n0(cash.reduce((s, o) => s + o.owed, 0)) + ' cash in' : ''}${cash.length && claims.length ? ', ' : ''}${claims.length ? n0(claims.reduce((s, c) => s + c.amount, 0)) + ' commission paid' : ''}`, { amount: net, ref: { table: 'agents', id: a.aid } });
+    // One write (0141 settle_agent): the cash for each confirmed order onto the
+    // order (agentPrepayConfirm), each claim paid from cash when the agent nets
+    // it off what they brought, else from the account picked; the owner's log.
+    const r = await sb.rpc('settle_agent', { p_shop_id: S.shopId, p_agent_id: String(a.aid), p_account: a.acct || 'cash' });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    (d.claims || []).forEach(x => { const c = (D().claims || []).find(y => String(y.id) === String(x.id)); if (c) c.status = 'paid'; });
     await loadAll(); FEEL.kaching(); toast(`Settled with ${firstWord(nm)}`); a.aid = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ==================================================================
@@ -6417,18 +6473,17 @@ async function ensureDue(d){
 ACT['slide:payroll'] = async () => {
   const a = topArgs(), P = payrollMonth(); if (!needTask('payroll.run')) return render();
   const sel = P.dues.filter(x => a.sel[x.d.kind + ':' + x.d.refId] && P.bal(x.d) > 0);
-  let paid = 0;
+  if (!sel.length) return render();
   try { S.busy = true;
-    for (const x of sel) {
-      const d = await ensureDue(x.d), pay = Math.round(P.bal(d)); if (!(pay > 0)) continue;
-      const kind = CB().DUE_KINDS[d.kind] || CB().DUE_KINDS.wage, nm = CB().dueName(d);
-      const cid = await addCash({ account: a.acct, type: 'payment', category: kind.cashCategory, amount: pay, description: `${kind.label} — ${nm} — ${CB().periodLabel(d.period)}` });
-      d.payments = (d.payments || []).concat([{ date: todayISO(), amount: pay, account: a.acct, cashTxnId: cid }]); d.paid = (Number(d.paid) || 0) + pay;
-      const up = await sb.from('dues').update({ paid: d.paid, payload: dueRow(d).payload }).eq('shop_id', S.shopId).eq('id', d.id); if (up.error) throw up.error;
-      paid += pay; logDecision('payroll.run', `Paid ${kind.label.toLowerCase()}: ${nm}, ${CB().periodLabel(d.period)} — ${n0(pay)}`, { amount: pay, ref: { table: 'dues', id: d.id } });
-    }
-    booksChanged(); FEEL.kaching(); toast(`Paid ${n0(paid)} in wages and rent`); a.sel = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+    // One write (0141 pay_dues): a due the console only imagined gets its row,
+    // each is paid its balance as Wages or Rent, logged for the owner.
+    const dues = sel.map(({ d }) => ({ id: d.virtual ? null : d.id, kind: d.kind, refId: String(d.refId), period: d.period, dueDate: d.dueDate || null, amount: d.amount, days: d.days == null ? null : d.days, rate: d.rate, basis: d.basis || null, notes: d.notes || null, absences: d.absences || [], proposed: d.proposed || [], pay: Math.round(P.bal(d)) }));
+    const r = await sb.rpc('pay_dues', { p_shop_id: S.shopId, p_dues: dues, p_account: a.acct });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    (d.dues || []).forEach(row => { const got = rowToDue(row), i = (D().dues || []).findIndex(x => String(x.id) === String(got.id) || (x.kind === got.kind && String(x.refId) === String(got.refId) && x.period === got.period)); if (i < 0) D().dues.push(got); else D().dues[i] = got; });
+    booksChanged(); FEEL.kaching(); toast(`Paid ${n0(Number(d.paid) || 0)} in wages and rent`); a.sel = null; render(); }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- one person's days: record or change an absence (addDueAbsence) ---- */
@@ -6537,15 +6592,13 @@ ACT.newloan = () => { if (!needTask('loan.edit')) return; FEEL.open(); push('inc
 ACT['slide:loanrepay'] = async () => {
   const a = topArgs(), l = (D().loans || []).find(x => String(x.id) === String(a.lid)), amt = Math.round(a.amt || 0); if (!l || !(amt > 0) || !needTask('loan.edit')) return render();
   try { S.busy = true;
-    const cur = await sb.from('loans').select('payload').eq('shop_id', S.shopId).eq('id', l.id).maybeSingle(); if (cur.error) throw cur.error;
-    const payload = (cur.data && cur.data.payload) || {};
-    const cid = await addCash({ account: a.acct, type: 'payment', category: 'Loan Repayment', amount: amt, description: `${l.lender} — repayment` });
-    const repayments = (payload.repayments || []).concat([{ date: todayISO(), amount: amt, note: '', cashTxnId: cid }]);
-    const up = await sb.from('loans').update({ payload: { ...payload, repayments } }).eq('shop_id', S.shopId).eq('id', l.id); if (up.error) throw up.error;
-    l.repayments = repayments; booksChanged();
-    logDecision('loan.edit', `Repaid ${l.lender} ${n0(amt)} from ${ACCT_WORD[a.acct]}`, { amount: amt, ref: { table: 'loans', id: l.id } });
+    // One write (0141 repay_loan): the Loan Repayment line, the repayment on the loan, the owner's log.
+    const r = await sb.rpc('repay_loan', { p_shop_id: S.shopId, p_loan_id: Number(l.id), p_amount: amt, p_account: a.acct });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.loan) Object.assign(l, rowToLoan(d.loan)); booksChanged();
     FEEL.stamp(); toast(`${n0(amt)} repaid to ${l.lender}`); a.amt = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 PAGE.assets = a => {
@@ -6580,14 +6633,13 @@ ACT['slide:assetsell'] = async () => {
   const a = topArgs(), x = (D().fixedAssets || []).find(y => String(y.id) === String(a.aid)); if (!x || !needTask('asset.edit')) return render();
   const proceeds = a.how === 'sold' ? Math.round(a.amt || 0) : 0, nbv = Math.round(CB().assetNBVAt(x, todayISO()));
   try { S.busy = true;
-    let cid = null;
-    if (proceeds > 0) cid = await addCash({ account: a.acct, type: 'receipt', category: 'Asset Sale', amount: proceeds, description: `Sold ${x.name}` });
-    const patch = { disposed_on: todayISO(), disposal_proceeds: proceeds > 0 ? proceeds : null, disposal_cash_txn_id: cid, notes: [x.notes, a.how === 'stolen' ? 'Stolen' : a.how === 'gone' ? 'Thrown away' : ''].filter(Boolean).join(' · ') || null };
-    const up = await sb.from('fixed_assets').update(patch).eq('shop_id', S.shopId).eq('id', x.id); if (up.error) throw up.error;
-    Object.assign(x, { disposedOn: patch.disposed_on, disposalProceeds: patch.disposal_proceeds, disposalCashTxnId: cid, notes: patch.notes || '' }); booksChanged();
-    logDecision('asset.edit', `${x.name}: ${a.how === 'sold' ? 'sold for ' + n0(proceeds) : a.how === 'stolen' ? 'stolen' : 'thrown away'} (on the books at ${n0(nbv)})`, { amount: proceeds, ref: { table: 'fixed_assets', id: x.id } });
+    // One write (0141 dispose_asset): the Asset Sale line when sold, the asset off the books, the owner's log.
+    const r = await sb.rpc('dispose_asset', { p_shop_id: S.shopId, p_asset_id: Number(x.id), p_how: a.how || 'sold', p_proceeds: proceeds, p_account: a.acct, p_nbv: nbv });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.asset) Object.assign(x, rowToAsset(d.asset)); booksChanged();
     FEEL.stamp(); toast(a.how === 'sold' ? `${x.name} sold · ${proceeds - nbv >= 0 ? 'gain' : 'loss'} ${n0(Math.abs(proceeds - nbv))}` : `${x.name} is off the books`); a.aid = null; render(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- an asset bought (asset.edit): index.html fa_save ---- */
@@ -6625,13 +6677,13 @@ ACT.assetyears = t => { const a = topArgs(); a.years = Math.max(1, Math.min(30, 
 ACT['slide:assetbuy'] = async () => {
   const a = topArgs(), cost = Math.round(a.amt || 0), name = (a.name || '').trim(); if (!(cost > 0) || !name || !needTask('asset.edit')) return render();
   try { S.busy = true;
-    const id = await issueRowId('row:fixed_asset', (D().fixedAssets || []).reduce((m, x) => Math.max(m, Number(x.id) || 0), 0));
-    const cid = await addCash({ account: a.acct, type: 'payment', category: 'Equipment purchase', amount: cost, description: `${name} — ${a.cat}`, photo: a.photo });
-    const row = { id, shop_id: S.shopId, name, category: a.cat, cost, acquired_on: todayISO(), method: 'straight_line', life_months: (a.years || 5) * 12, rate_pct: null, salvage: 0, disposed_on: null, disposal_proceeds: null, notes: a.from ? 'From ' + a.from : null, cash_txn_id: cid, disposal_cash_txn_id: null, loan_id: null };
-    await insertRow('fixed_assets', row); D().fixedAssets.push(rowToAsset(row)); booksChanged();
-    logDecision('asset.edit', `Bought ${name} (${a.cat}) for ${n0(cost)} from ${ACCT_WORD[a.acct]}, over ${a.years} years`, { amount: cost, ref: { table: 'fixed_assets', id } });
+    // One write (0141 buy_asset): the Equipment purchase line (with the receipt's photo), the asset, the owner's log.
+    const r = await sb.rpc('buy_asset', { p_shop_id: S.shopId, p_row: { name, category: a.cat, cost, years: a.years || 5, from: a.from || '' }, p_account: a.acct, p_photo: a.photo || null });
+    if (r.error) throw r.error;
+    const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    if (d.asset) D().fixedAssets.push(rowToAsset(d.asset)); booksChanged();
     FEEL.stamp(); toast(`${name} is on the books at ${n0(cost)}`); pop(); }
-  catch (e) { await afterFail(e); } finally { S.busy = false; }
+  catch (e) { toast(failWord(e), 7000); } finally { S.busy = false; }
 };
 
 /* ---- Today's strip: where the money stands, one tap to all of it ---- */

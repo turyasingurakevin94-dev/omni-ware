@@ -120,12 +120,15 @@ const eq = (got, want, msg) => t.check(got === want, `${msg} (got ${JSON.stringi
   eq(scope.payablesAsAt('2026-07-31'), 0, 'a voided invoice was never owed');
   data.purchaseInvoices[0].voided = false;
 
-  /* Reached through the supplier list, the same way the live total is.
-     Two dates counting different sets of invoices would show a movement
-     between them that never happened. */
+  /* Every open bill counts, its supplier on file or a name only (the
+     owner's call, 20 Oct 2026; it was left out before). The live total
+     (dashTotalCreditors, index.html) counts the same set, so two dates
+     never show a movement between them that never happened. */
   data.suppliers = [];
-  eq(scope.payablesAsAt('2026-07-31'), 0,
-    'an invoice whose supplier is gone is out of both dates, not just one');
+  eq(scope.payablesAsAt('2026-07-31'), 1000000,
+    'an invoice whose supplier is not on file is still owed at the date, as the live total counts it');
+  t.check(/function dashTotalCreditors\(\)\{ return \(data\.purchaseInvoices\|\|\[\]\)\.filter\(pi=>!pi\.voided\)/.test(read('index.html')),
+    'and the live total counts every open bill too, not only those of suppliers on file');
   data.suppliers = [{ id: 'S1', name: 'Roofings' }];
 }
 

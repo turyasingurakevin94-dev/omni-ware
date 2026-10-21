@@ -104,6 +104,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | yes |
 | **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes |
+| **Give a customer an opening balance: what they owed before these books, once confirmed with them** (`set_opening_balance`, 0148; only before they trade) | `debt.open` | Manager | — | owner's log | yes |
 | **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | yes |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | &nbsp;&nbsp;…as one write (`receive_payment`, 0139): the money spread oldest first or over the bills ticked, a receipt per bill, the bill's payments and share of the debt, the debt lowered and logged, the rest on account; nothing lands part-way | | | | | yes |
@@ -164,10 +165,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | yes |
+| **Act on searches that found nothing: hunt them, set the words aside, or teach a name to an item we sell** (`search_misses`, `search_mutes`, `item_names`, 0146) | `sourcing.lead`, `product.edit` (a name) | Sourcing | Sales, agents, the website (by searching) | owner's log | yes |
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
-| **Add or edit suppliers** | `supplier.edit` | Sourcing | Buyer | — | yes |
+| **Add or edit suppliers, and merge two records that are one supplier** (`merge_suppliers`, 0145) | `supplier.edit` | Sourcing | Buyer | — | yes |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
-| **Confirm today's share of prices** (the owner sets how many); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
+| **Confirm today's share of prices, and set how many a day** (`set_prices_per_day`, 0145; the owner can still change it); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
 
 ### The team
 
@@ -298,9 +300,14 @@ the supplier price list automatically.
 - Everyone who asked is told.
 - **A line dropped at Checking** because nobody has it becomes a Sourcing
   request by itself, with the customer who asked.
+- **A line the client waits for** (the Buyer's "client waits", also how the
+  Buyer asks Sourcing to find a supplier for a line nobody sells) becomes a
+  Sourcing request the same way (0139). When Sourcing finds a supplier, the
+  Buyer who sent it gets a push (0144).
 - Agents' stock requests (`agent_requests`, kind `stock`) land there too.
-- Each day, **Sourcing confirms the owner's set number of supplier prices**
-  (`presets.priceReview`), oldest first: still right, or the new figure.
+- Each day, **Sourcing confirms its set number of supplier prices**
+  (`presets.priceReview`, set in the Sourcing app since 0145), oldest first:
+  still right, or the new figure.
 - **The Buyer confirms on a supplier's behalf** by phone when the supplier is
   slow or can't do it themselves. It counts toward the day's share, as does a
   price paid on a trip (`price_source` 'confirmed' and 'purchase', 0136).
@@ -401,8 +408,8 @@ key at a time. The console still saves the whole row from its own copy, so
 ## 4. What the owner keeps: governance, never operations
 
 - Hiring: staff records, pay rates, roles, and switching on each role's tasks
-- The policy numbers: how many prices Sourcing confirms per day, and the
-  shop's own goal
+- The policy numbers: the shop's own goal (how many prices Sourcing confirms
+  per day moved to Sourcing, 0145; the owner can still change it)
 - One-time shop set-up: receipt details, MoMo merchant set-up, the words and
   categories
 - Restoring a backup, clearing data, and every permanent delete (0058).
@@ -514,6 +521,16 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0138 | The audit, part three (one order driven through all five apps): row ids as one sequence per table (`ow_reserve_row_ids`, every table's identity sequence kept ahead), a trip's or a phone's price on the side it was bought on (`ow_price_side`), `price.changed` only when the line's price moved, a cash trip's money reaching the books (`trip_cash_count`, bills born paid by the trip), the invoice push (`order.invoiced`), and Accounts' payment guard (0123's bare array literal) |
 | 0139 | The end-to-end test of 19 Oct 2026, fix 2: invoicing refuses a line still to price (`OWTPC`), never makes a debtor of a generic name like "Walk-in" (`OWWLK`), keeps a supplier bill already on the order instead of refusing it (fix 4, no more `OWBIL`), dates its bills by the supplier's terms (fix 10), and the hourly run pushes the Manager each order it skips (`invoice.held`) |
 | 0140 | A customer's payment as one write (`receive_payment`, 0140): the receipts, the invoices' payments and share of the debt, the debt and its log, the rest on account, or one receipt on an order before its invoice; Sales, Manager and Accounts call it |
+| 0141 | The treasurer's cash-first actions as one write each: wages and rent (`pay_dues`), a loan repaid or received (`repay_loan`, `receive_loan`), an asset bought, sold or gone (`buy_asset`, `dispose_asset`), an agent settled (`settle_agent`); each writes the cash line, the row and the owner's log line together |
+| 0142 | A stock count counts delivered goods once: accepting it adds back what orders packed, out or delivered but not yet invoiced took off the shelf (`ow_held_gone`), so their invoices take it off the books once |
+| 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
+| 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
+| 0145 | Sourcing v2: two supplier records that are one supplier merged in one write (`merge_suppliers`, supplier.edit), and prices a day set by Sourcing (`set_prices_per_day`, price.confirm) |
+| 0146 | Sourcing v2, round 5: every search that finds nothing logged by itself (`search_misses`; `log_search_miss` for Sales, the console and agents, `ow_record_search_miss` for the website), read by Sourcing (sourcing.lead), who sets words aside (`search_mutes`) or teaches a name to an item (`item_names`, product.edit); an agent's "ask the shop to stock it" pushes Sourcing (`sourcing.request`) |
+| 0147 | Buyer, third: a round is handed in once, at the yard, so the Store and Accounts are told once per round (`ow_trip_round`), not once per stop |
+| 0148 | A fresh start: a new shop copied from the old one's reference data, never its balances (`ow_fresh_start`), and switch day moving the team, agent logins, catalogues and WhatsApp numbers (`ow_fresh_start_move`), both the operator's in the SQL editor (docs/fresh-start.md); then the Manager confirms each customer's old balance and enters it (`set_opening_balance`, debt.open) |
+| 0149 | A fresh start, choosing what stays behind: `ow_fresh_start` takes a list of groups to leave in the old shop (price list, team, settings, property); customers and suppliers always come across. The operator's, in the SQL editor |
+| 0150 | Buyer, fourth: a trip's runner is told — sent or given a trip (`trip.sent`, once per round), the trip given on to someone else (`trip.taken`), or the trip cancelled by the Buyer's chase (`trip.cancelled`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

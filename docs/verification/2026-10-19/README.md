@@ -154,41 +154,47 @@ next round starts there, not from zero.
 
 **Money and flow**
 
-1. `accounts.html`: the five cash-first flows (payroll, loan repayment, agent
-   settlement, trip cash, asset sale) should be one database function each,
-   the way the counter sale is now, so a lost signal cannot leave a cash line
-   without its counterpart. The message is honest now; the write is still two.
+1. ~~`accounts.html`: the five cash-first flows (payroll, loan repayment, agent
+   settlement, trip cash, asset sale) should be one database function each.~~
+   **Done**: the trip's cash in 0138 (`trip_cash_count`); wages and rent, a
+   loan repaid or received, an asset bought, sold or gone, and an agent
+   settled in 0141 (section 7, the third follow-up).
 2. ~~`sales.html` / `manager.html` / `accounts.html` receive-payment: three to
    five sequential writes with no transaction.~~ **Done in 0140**:
    `receive_payment` is the one write all three apps call (section 7, the
    second day's follow-up).
-3. `0119 ow_invoice_due_orders`: an order the hourly run skips (short pick
-   unsettled, price waiting) is returned to pg_cron and discarded; nobody is
-   pushed. (verify) Add a push to `pick.settle` / `price.approve` per skipped
-   order, de-duplicated per day.
-4. `0115 accept_stock_count`: accepts a count already sent back for a
-   recount, and a surplus lot is created with `cost null`, which the FIFO cost
-   then treats as zero. (verify)
-5. `0123 cash_txns_accounts_guard` runs only on UPDATE: an expense can be
-   inserted on a closed day. (verify) Move the closed-day check to INSERT too.
-6. `0125 trip_prices_to_list` writes the trip's `gotPrice` (which defaults to
-   the order line's cost, possibly a tier or pack price) into the list's base
-   `wholesale`. (verify) Write per base unit only when the line's unit is the
-   base unit.
-7. `sourcing.html saveLead` upserts the whole lead row from memory, so a
-   request Sales appended since the last load is overwritten. (verify) Append
-   through a function or re-read before saving.
-8. Row ids are one sequence across shops (`cash_txns`, `saved_quotes` …) but
-   `entity_id_counters` is per shop: two shops on one database collide. One
-   shop today; a latent fault.
+3. ~~`0119 ow_invoice_due_orders`: an order the hourly run skips is discarded;
+   nobody is pushed.~~ **Done in 0139** (the other session's): each skipped
+   order pushes `invoice.held` to `price.approve`, `pick.settle` or
+   `invoice.make`, once a day.
+4. ~~`0115 accept_stock_count`: accepts a count already sent back for a
+   recount, and a surplus lot is created with `cost null`.~~ **Reproduced and
+   fixed in 0143**: a count is accepted once, from 'sent'; a surplus lot takes
+   the last cost the shop knew (its newest lot, the newest restock or
+   correction, else the lowest list price), and the log line says so.
+5. ~~`0123 cash_txns_accounts_guard` runs only on UPDATE: an expense can be
+   inserted on a closed day.~~ **Reproduced and fixed in 0143**: the guard
+   runs on INSERT too.
+6. ~~`0125 trip_prices_to_list` writes the trip's `gotPrice` … into the list's
+   base `wholesale`.~~ **Verified sound, no change**: the Buyer's price sheet
+   divides a per-pack figure by the pack before storing (buyer.html `tpset`),
+   so `gotPrice` is always per base unit; the side it lands on was fixed in
+   0138.
+7. ~~`sourcing.html saveLead` upserts the whole lead row from memory, so a
+   request Sales appended since the last load is overwritten.~~ **Fixed**:
+   `saveLead` re-reads the lead's requests and merges them (the server's list
+   as the base, this phone's entries replacing their match or joining it).
+8. ~~Row ids are one sequence across shops but `entity_id_counters` is per
+   shop.~~ **Reproduced (the Manager's invoice failed) and fixed in 0138.**
 
 **Wiring**
 
-9. `buyer.html pushOpen` has no handler for `supplier.answered` (0133).
+9. ~~`buyer.html pushOpen` has no handler for `supplier.answered` (0133).~~
+   **Fixed**: the push opens the order.
 10. `notify-stock-count` addresses by role, not task, and nothing pushes the
     counter when a count is accepted or a recount asked. (verify)
-11. `owner.html` `ROLES.sales.app` points at `index.html`; the Sales app is
-    `sales.html`. The hire screen names the wrong app.
+11. ~~`owner.html` `ROLES.sales.app` points at `index.html`.~~ **Fixed** (the
+    field is not read anywhere yet; it now names `sales.html`).
 12. The client portal reads the shop's newest 60 / 200 / 400 orders for three
     different questions, so a customer with older orders sees nothing or a
     wrong count. (verify)
@@ -384,3 +390,20 @@ receipt, no debt touched), Esther took 1,000,000 on account for Lubowa
 Builders. `test/audit-0140.test.js` pins the function and the wiring;
 `test/_fake-receive-payment.js` mirrors it for the app tests, which read the
 same rows as before. The three apps lost 211 lines of hand-rolled writes.
+
+**The third follow-up: the treasurer's six cash-first actions (0141).**
+Wages and rent, a loan repaid, a loan received, an asset bought, an asset
+sold or gone, and an agent settled each wrote the cash line first and the
+row it belonged to second, with nothing holding the two together. `pay_dues`,
+`repay_loan`, `receive_loan`, `buy_asset`, `dispose_asset` and
+`settle_agent` do each in one transaction, with the owner's log line, and
+hand the phone back the rows they wrote. Probed as Esther on the rig (inside
+a rolled-back transaction): Musa's October wages as a Salaries & Wages line
+with the due raised and paid; a 2,000,000 loan in net of 50,000 fees and
+180,000 repaid on it; a generator bought for 1,850,000 and sold for
+1,500,000, the sale line and the disposal on the asset; an agent settled with
+200,000 cash onto their order and a 60,000 claim paid from it. The screen's
+"… is in the book, but the rest did not save" can no longer happen on these
+six; `addCash` remains for the single-line actions (an expense, other income,
+a transfer). `test/audit-0141.test.js` pins it; the Accounts app test's fake
+answers the six the way the database does.
