@@ -142,7 +142,7 @@ function fakeDb(tb){
         trips.forEach(t => { writes.push(['update', 'collection_trips', { cash_count: clone(count) }]); t.cash_count = clone(count); });
         return { data: { given, paid, counted, diff, cashTxnId, paidTxns, bills, count, cashRows }, error: null };
       }
-      // 0152: pay the Buyer back for an own-money round; take back cash no round used.
+      // 0153: pay the Buyer back for an own-money round; take back cash no round used.
       if (name === 'buyer_payback') {
         const h = tb.buyer_handoffs.find(x => x.id === a.p_handoff_id), date = new Date().toISOString().slice(0, 10), cashRows = [], paidTxns = [];
         if (!h || h.status !== 'open') return { data: null, error: { message: 'This hand-in is paid back already.' } };
@@ -425,7 +425,7 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     await X.ACT['slide:assetbuy']();
     const fa = db.tb.fixed_assets.find(a => a.name === 'Generator');
     t.check(fa && fa.life_months === 60 && fa.method === 'straight_line' && db.writes.filter(w => w[1] === 'cash_txns').pop()[2].category === 'Equipment purchase', 'an asset bought joins the assets and is booked as Equipment purchase');
-    // The Buyer's money (0152): own money is never in a count, it is paid back; cash no round used comes back.
+    // The Buyer’s money (0153): own money is never in a count, it is paid back; cash no round used comes back.
     t.check(X.tripsToCount().every(g => g.trips.every(tr => !String(tr.id).startsWith('TRIP-AB12'))), 'a stop paid on the Buyer’s own money is never in a trip’s count, even holding cash_given');
     t.check(X.looseCash().map(h => h.id).join() === 'h-loose', 'cash handed over from v 2 with no round is cash no round used; an older handover is not');
     const today = X.viewToday();

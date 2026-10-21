@@ -1396,7 +1396,7 @@ function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.s
 function rowToPayAsk(x){ return ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at }); }
 function accHandoff(h){ return { id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneBy: h.done_by || null, doneAt: h.done_at || null, cashBack: h.cash_back || null }; }
 function accHandoffs(rows){ return (rows || []).filter(h => h.status === 'open' && (h.kind === 'trip_cash' || h.kind === 'paper_bill' || h.kind === 'own_money')).map(accHandoff).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
-// Cash handed over that no round used (0151/0152): a done trip_cash from v 2 on, with no round and not counted back.
+// Cash handed over that no round used (0151/0153): a done trip_cash from v 2 on, with no round and not counted back.
 function accLooseCash(rows){ return (rows || []).filter(h => h.kind === 'trip_cash' && h.status === 'done' && Number((h.payload || {}).v) >= 2 && !(h.payload || {}).round && !h.cash_back).map(accHandoff).sort((a, b) => String(a.doneAt || a.createdAt).localeCompare(String(b.doneAt || b.createdAt))); }
 // Open hand-offs for Accounts, and the trip cash handed over in the last 30 days (to find any no round used).
 function handoffQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').or(`status.eq.open,and(kind.eq.trip_cash,status.eq.done,done_at.gte.${new Date(Date.now() - 30 * 864e5).toISOString()})`); }
@@ -1460,7 +1460,7 @@ async function loadAll(){
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
     // Sales and the Manager asking for a payment to be corrected (0130). Absent before 0130.
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
-    // What the Buyer passed on to Accounts (0125): open ones, and trip cash handed over lately (0152: cash no round used). Absent before 0125.
+    // What the Buyer passed on to Accounts (0125): open ones, and trip cash handed over lately (0153: cash no round used). Absent before 0125.
     handoffQuery().then(r => r.error ? [] : r.data || [], () => []),
   ]);
   const stockMap = {}; (stockRows || []).forEach(x => { stockMap[x.key] = Number(x.qty) || 0; });
@@ -2558,7 +2558,7 @@ function viewToday(){
     ${buyerSection()}
   </div>`;
 }
-/* ---- from the Buyer (buyer_handoffs, 0125; own money and cash back, 0152) ----
+/* ---- from the Buyer (buyer_handoffs, 0125; own money and cash back, 0153) ----
    What the Buyer passes on: the cash a trip needs (trip_cash: hand it over),
    a supplier's paper bill with its photo (paper_bill: record it), a round
    paid from their own pocket (own_money: pay them back), and cash handed
@@ -2685,7 +2685,7 @@ ACT.hophoto = async t => {
   catch (e) { toast(isNetworkError(e) ? 'No connection — try the photo again.' : 'The photo did not open: ' + (e.message || e)); }
 };
 
-/* ---- pay the Buyer back: their own money, stop by stop (buyer_payback, 0152) ---- */
+/* ---- pay the Buyer back: their own money, stop by stop (buyer_payback, 0153) ---- */
 ACT.payback = t => { const h = handoffById(t.dataset.id); if (!h) return; FEEL.open(); push('payback', { id: h.id }); };
 function stopBills(s){
   const orders = new Set(((s.t && s.t.lines) || []).map(l => Number(l.orderId)).filter(Boolean));
@@ -2726,7 +2726,7 @@ ACT.payacct = t => { if (t.getAttribute('aria-disabled') === 'true') return; top
 ACT['slide:payback'] = async () => {
   const a = topArgs(), h = handoffById(a.id); if (!h || !needTask('trip.cash') || S.busy) return render();
   const st = ownStops(h), first = handoffBy(h);
-  // One write (0152 buyer_payback): a Stock Purchase line per stop from the
+  // One write (0153 buyer_payback): a Stock Purchase line per stop from the
   // account picked, the orders' bills paid by the trip, the stops marked paid
   // back, the hand-off closed, the owner's log line.
   try { S.busy = true;
@@ -2742,7 +2742,7 @@ ACT['slide:payback'] = async () => {
   catch (e) { toast(failWord(e), 7000); render(); } finally { S.busy = false; }
 };
 
-/* ---- cash handed over that no round used: it comes back (buyer_cash_back, 0152) ---- */
+/* ---- cash handed over that no round used: it comes back (buyer_cash_back, 0153) ---- */
 ACT.cashback = t => { const h = handoffById(t.dataset.id); if (!h) return; FEEL.open(); push('cashback', { id: h.id }); };
 PAGE.cashback = a => {
   const h = looseCash().find(x => String(x.id) === String(a.id));
@@ -2784,7 +2784,7 @@ ACT.cashbackrecount = () => { topArgs().counted = null; render(); const el = doc
 ACT['slide:cashback'] = async () => {
   const a = topArgs(), h = looseCash().find(x => String(x.id) === String(a.id)); if (!h || a.counted == null || !needTask('trip.cash') || S.busy) return render();
   const counted = Math.round(a.counted), diff = counted - looseAmount(h);
-  // One write (0152 buyer_cash_back): the difference booked like a close
+  // One write (0153 buyer_cash_back): the difference booked like a close
   // difference, the handover marked counted back, the owner's log line.
   try { S.busy = true;
     const r = await sb.rpc('buyer_cash_back', { p_shop_id: S.shopId, p_handoff_id: h.id, p_counted: counted });
@@ -6525,7 +6525,7 @@ PAGE.tripcash = a => {
   const cols = ['#F5B26B', '#E3A9D3', '#B3BCD2', '#9BA3F0', '#8ED1A6'];
   const stops = g.trips.map((t, i) => ({ t, i, name: supplierById(t.supplierId) ? supplierById(t.supplierId).name : 'Supplier', paid: Math.round((t.lines || []).reduce((s, l) => s + tripLinePaid(l), 0)), col: cols[i % cols.length], lines: (t.lines || []).filter(l => tripLineGot(l) != null).length }));
   const back = counted == null ? Math.max(0, g.expected) : Math.max(0, Math.min(counted, g.expected)), missing = counted == null ? 0 : Math.max(0, -diff);
-  // Stops this buyer paid on their own money are not in this count: they are paid back (0152).
+  // Stops this buyer paid on their own money are not in this count: they are paid back (0153).
   const own = handoffs().filter(h => h.kind === 'own_money' && who && who.userId && String(h.createdBy) === String(who.userId));
   const ownNote = own.map(h => { const st = ownStops(h); return `<button data-act="payback" data-id="${esc(h.id)}" style="border:none;text-align:left;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-radius:14px;background:#FFF6EC;box-shadow:inset 0 0 0 1px rgba(245,178,107,.45)">
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:12px;font-weight:700;color:#7A4A02">Not in this count · their own money</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--amberDeep)">${esc(st.map(x => x.name).join(', '))} · <span class="m">${n0(ownTotal(h))}</span></span></span>
