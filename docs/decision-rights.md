@@ -522,6 +522,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0142 | A stock count counts delivered goods once: accepting it adds back what orders packed, out or delivered but not yet invoiced took off the shelf (`ow_held_gone`), so their invoices take it off the books once |
 | 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
 | 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
+| 0145 | Buyer, third: a round is handed in once, at the yard, so the Store and Accounts are told once per round (`ow_trip_round`), not once per stop |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
