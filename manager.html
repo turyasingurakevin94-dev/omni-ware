@@ -1684,12 +1684,17 @@ function paysInDays(c){
 function holdDays(){ const h = D().presetCreditHold; return h && Number(h.days) > 0 ? Number(h.days) : 21; }
 function holdIsOn(){ return !!(D().presetCreditHold && D().presetCreditHold.on !== false); }
 function creditCase(q){
-  if (!q || q.status !== 'draft' || q.voided) return null;
-  const c = customerById(q.customerId); if (!c) return null;
+  if (!q || q.voided) return null;
+  // 0155: the Store asks about a packed order a cash customer has not paid
+  // for -- it stays on the bay until this yes, or the money.
+  const ask = q.status === 'preparing' && !!q.loadAsk && q.loadAsk.state === 'sent';
+  if (q.status !== 'draft' && !ask) return null;
+  const c = customerById(q.customerId) || (ask ? { id: '', name: clientName(q), phone: '', debt: 0, creditLimit: null, termsDays: null, debtLog: [] } : null); if (!c) return null;
   const amt = Math.max(0, orderTotal(q) - (Number(q.amountPaid) || 0)), limit = custLimit(c), withIt = c.debt + amt;
   const over = limit > 0 && withIt > limit, age = c.debt > 0 ? custOldestAge(c) : 0, old = age > holdDays();
-  if (!over && !old) return null;
-  return { q, c, amt, limit, withIt, over, old, age, decision: q.creditCheck || null };
+  if (!over && !old && !ask) return null;
+  const answered = q.creditCheck && (!ask || Number(q.creditCheck.at) >= Number(q.loadAsk.at));
+  return { q, c, amt, limit, withIt, over, old, age, ask, decision: answered ? q.creditCheck : null };
 }
 function heldOrders(){ return liveOrders().map(creditCase).filter(Boolean).sort((a, b) => createdMs(a.q) - createdMs(b.q)); }
 function heldWaiting(){ return heldOrders().filter(x => !x.decision || x.decision.decision === 'hold'); }
@@ -1925,9 +1930,12 @@ function shopPicker(rows, open, ui){
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
             <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
       }).join('')}</div>
+      ${open ? `<button class="${ui.btn}" data-a="keep" style="flex:none;margin-top:6px">Back to ${esc(((list.find(m => m.shop_id === open) || {}).shops || {}).name || 'the shop')}</button>` : ''}
       <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
     el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
     el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    // Switching is not leaving: the shop open now is one tap away.
+    const keep = open && el.querySelector('[data-a=keep]'); if (keep) keep.onclick = () => resolve(list.find(m => m.shop_id === open));
   });
 }
 function switchShop(){ try { sessionStorage.setItem(SHOP_ASK, '1'); } catch (_e) {} location.reload(); }
@@ -2036,7 +2044,7 @@ function pushOpen(d){
       open(x.lines.some(l => l.kind === 'under') ? 'price' : 'pricenew', { id });
       return;
     }
-    if (k === 'credit.hold') { const i = caseList().findIndex(y => same(y.q.id)); if (i >= 0) S.ui.hold = i; open('approvals'); return; }
+    if (k === 'credit.hold' || k === 'credit.ask') { const i = caseList().findIndex(y => same(y.q.id)); if (i >= 0) S.ui.hold = i; open('approvals'); return; }
     if (k === 'pick.short') { if (shortPicks().some(y => same(y.q.id))) { S.ui.spPick = null; S.ui.spDone = null; open('shortpick', { id }); } else open(); return; }
     if (k === 'agent.change' || k === 'agent.cancel') { if (agentAsks().some(y => same(y.q.id))) { S.ui.agKeep = null; open('agentask', { id }); } else open(); return; }
     if (k === 'order.delivered') { open('invoices'); return; }
@@ -3541,7 +3549,7 @@ PAGE.approvals = () => {
   const max = Math.max(x.withIt, x.limit) * 1.06, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const proms = promisesFor(c).slice(-4), pays = paysInDays(c);
   const oldest = custOpenCharges(c).filter(ch => ch.date)[0], oldAge = oldest ? chargeAge(oldest) : 0;
-  const way = x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + oldAge + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${oldAge}-day bill (<b class="m">${n0(oldest.remaining)}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
+  const way = x.ask ? `${esc(firstWord(q.loadAsk.byName || 'The Store'))} has it packed at the gate · <b>not paid</b> · ${c.id ? 'no credit on file' : 'no customer record'}. Yes lets it go on credit; cash first keeps it on the bay.` : x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + oldAge + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${oldAge}-day bill (<b class="m">${n0(oldest.remaining)}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
   const dec = S.ui.decided[q.id];
   const stampCol = { RELEASED: '#0F6B43', ASKED: '#16203C', HELD: '#95530C' }[dec] || '#95530C';
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}
@@ -3565,7 +3573,7 @@ PAGE.approvals = () => {
       : canYes ? `<div class="mx-3btn"><button data-act="hdecide" data-v="hold" style="background:var(--soft);color:var(--ink)">${ic('lock', 16)}Keep held</button><button data-act="hdecide" data-v="cash" style="background:var(--navy);color:#fff">${ic('cash', 16, 'style="stroke:#6FDCB0"')}${x.over ? 'Cash first' : 'Old bill first'}</button><button data-act="hdecide" data-v="release" style="background:var(--red);color:#fff;font-size:15px;flex-direction:row;gap:6px;box-shadow:0 8px 18px rgba(201,58,48,.28)">${ic('tick', 18, 'style="stroke-width:2.6"')}Release</button></div>`
       : `<div class="mx-lock">${ic('lock', 16)}Saying yes is a Manager task (credit.release) not on for this login yet.</div>`}
     </div></div>
-    <div class="bx-body" style="margin-top:auto"><div style="display:flex;gap:8px"><button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="custedit" data-id="${esc(c.id)}">${ic('cust', 16)}Limit and terms</button><button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="teamrules">${ic('clock', 16)}Hold line · ${holdDays()}d</button></div></div>
+    <div class="bx-body" style="margin-top:auto"><div style="display:flex;gap:8px">${c.id ? `<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="custedit" data-id="${esc(c.id)}">${ic('cust', 16)}Limit and terms</button>` : ''}<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="push" data-p="teamrules">${ic('clock', 16)}Hold line · ${holdDays()}d</button></div></div>
   </div>`;
 };
 ACT.hpick = t => { S.ui.hold = Number(t.dataset.i); S.ui.holdAnim = true; FEEL.tick(); render(); S.ui.holdAnim = false; };
@@ -3575,7 +3583,7 @@ ACT.hdecide = async t => {
   const list = caseList(), x = list[Math.min(S.ui.hold || 0, list.length - 1)]; if (!x) return;
   const v = t.dataset.v; S.busy = true;
   try {
-    const res = await changeOrder(x.q.id, q => { if (q.status !== 'draft') return false; q.creditCheck = { decision: v, by: S.user ? S.user.id : null, byName: myName(), at: Date.now(), over: x.over, ageDays: x.age, limit: x.limit, withIt: x.withIt }; }, ['creditCheck']);
+    const res = await changeOrder(x.q.id, q => { if (q.status !== 'draft' && !(q.status === 'preparing' && q.loadAsk && q.loadAsk.state === 'sent')) return false; q.creditCheck = { decision: v, by: S.user ? S.user.id : null, byName: myName(), at: Date.now(), over: x.over, ageDays: x.age, limit: x.limit, withIt: x.withIt }; }, ['creditCheck']);
     if (!res) throw new Error('that order has already left Checking');
     S.ui.decided[x.q.id] = { release: 'RELEASED', cash: 'ASKED', hold: 'HELD' }[v];
     (v === 'release' ? FEEL.yes : v === 'hold' ? FEEL.no : FEEL.stamp)();

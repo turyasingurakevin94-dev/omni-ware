@@ -101,7 +101,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
-| Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
+| Release an order held for credit; **let a packed order a cash customer has not paid go on credit (the Store asks, 0155)** | `credit.release` | Manager | Sales, Store | Sales, Store | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | yes |
 | **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes |
 | **Give a customer an opening balance: what they owed before these books, once confirmed with them** (`set_opening_balance`, 0148; only before they trade) | `debt.open` | Manager | — | owner's log | yes |
@@ -545,6 +545,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0152 | Sourcing v2, round 7: one item, one name — Sourcing's verdict on two items that look like one (`item_twins`, product.edit): the same item (one name kept, the other taught as a name of it, `item_names`) or different; read by every member so the Buyer sees the shelf twin before buying. Both rows stay on the books; stock is never Sourcing's. (0151 is the Buyer's.) |
 | 0153 | Sales, third: a supplier's price up that puts a line under its sale pushes the Manager (`price.waits`, price.approve), and the Manager's new price on it pushes the salesperson to tell the customer (`price.decided`) |
 | 0154 | Accounts and the Buyer's money (the cross-app test of 21 Oct 2026; Buyer's side is 0151): pay the Buyer back for a round on their own money (`buyer_payback`: a Stock Purchase per stop, the orders' bills paid by the trip, the hand-off closed), take back cash handed over that no round used (`buyer_cash_back`, `buyer_handoffs.cash_back`), and a bill raised after the payback born paid |
+| 0155 | Store, second (the cross-app test of 21 Oct 2026): nothing leaves the gate unpaid for a cash customer (no credit limit, or no customer record) until it is paid or the Manager lets it go on credit — `ow_money_hold`, `store_money_holds` for the Store's Load and hand-over, a Store login stopped by `saved_quotes_ow_money_gate`, the Store's ask (`loadAsk`) pushed to the Manager (`credit.ask`, credit.release) and the answer back to the asker (`credit.ask.decided`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
