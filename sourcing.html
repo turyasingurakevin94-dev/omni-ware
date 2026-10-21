@@ -952,7 +952,7 @@ function rowToQuote(q){ return { id: q.id, status: q.status || 'draft', voided: 
 
 async function loadAll(){
   const soft = (p) => p.catch(() => []);
-  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR, handoffs, keptSup, keptPrice] = await Promise.all([
+  const [leads, suppliers, products, prices, quotes, followUps, rivals, customers, staff, agents, agentReqs, links, stock, settingsR, logR, handoffs, keptSup, keptPrice, misses, mutes, itemNames] = await Promise.all([
     selectAll('sourcing_leads'), selectAll('suppliers'), selectAll('products'), selectAll('prices'), selectAll('saved_quotes'),
     soft(selectAll('follow_ups')), soft(selectAll('rival_prices')), soft(selectAll('customers')), soft(selectAll('staff')), soft(selectAll('agents')),
     soft(selectAll('agent_requests', 'id', q => q.eq('kind', 'stock'))), soft(selectAll('product_links')), soft(selectAll('stock', 'key')),
@@ -964,6 +964,10 @@ async function loadAll(){
     // not only the 31 days above: read those two tasks' lines with no window.
     soft(Promise.resolve(sb.from('decision_log').select('*').eq('shop_id', S.shopId).eq('task', 'supplier.edit').order('at', { ascending: false }).limit(2000))),
     soft(Promise.resolve(sb.from('decision_log').select('*').eq('shop_id', S.shopId).eq('task', 'price.list').order('at', { ascending: false }).limit(2000))),
+    // Searches that found nothing in Sales, the agent app and the website
+    // (0146), the last 31 days; the words set aside; the names taught.
+    soft(selectAll('search_misses', 'id', q => q.gte('at', new Date(Date.now() - 31 * DAY).toISOString()))),
+    soft(selectAll('search_mutes')), soft(selectAll('item_names')),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -982,6 +986,10 @@ async function loadAll(){
       clientName: r.client_name || '', status: r.status || 'open', createdAt: r.created_at })),
     links: links.map(x => ({ id: x.id, fromId: x.from_id, verb: x.verb, toId: x.to_id, qty: x.qty == null ? null : Number(x.qty), per: x.per || null, active: x.active !== false })),
     stock: stockMap,
+    searchMisses: (misses || []).map(m => ({ id: m.id, words: m.words || '', norm: m.norm || String(m.words || '').toLowerCase(), source: m.source || 'sales', byUser: m.by_user || null,
+      agentId: m.agent_id || null, clientName: m.client_name || '', at: m.at })),
+    searchMutes: (mutes || []).map(m => ({ id: m.id, words: Array.isArray(m.words) ? m.words : [], at: m.at })),
+    itemNames: (itemNames || []).map(n => ({ id: n.id, word: String(n.word || '').toLowerCase(), productId: n.product_id })),
     handoffs: (handoffs || []).filter(h => h.kind === 'sourcing_fix' && h.status === 'open')
       .map(h => ({ id: h.id, kind: h.kind, ref: h.ref || null, payload: h.payload || {}, status: h.status, createdBy: h.created_by || null, createdAt: h.created_at })),
     log: ((logR && logR.data) || []).concat([keptSup, keptPrice].flatMap(r => ((r && r.data) || []).filter(x => x.after && (x.after.keptApart || x.after.keptAsIs))))
@@ -3133,7 +3141,7 @@ function aJoinOf(l){
    There is no log of searches that found nothing yet, so that kind of
    chance is not here. */
 function aChances(){
-  const d = D(), g = { asked: [], orders: [], chat: [], rivals: [] };
+  const d = D(), g = { asked: [], orders: [], chat: [], rivals: [], search: [] };
   openLeads().filter(l => l.status === 'asked').forEach(l => {
     const reqs = (l.requests || []).filter(r => !r.withdrawn);
     const drop = reqs.filter(r => r.source === 'dropped').sort((a, b) => msOf(b.at) - msOf(a.at))[0];
@@ -3165,9 +3173,10 @@ function aChances(){
     if (!had || r.price < had.r.price) best.set(k, { kind: 'rival', r, p, vi, cost, sup: supplierById(row.supplierId), t: msOf(r.seenOn) });
   });
   g.rivals = [...best.values()];
+  g.search = smWants().filter(smShown).map(w => ({ kind: 'search', w, t: w.last }));
   Object.values(g).forEach(list => list.sort((a, b) => b.t - a.t));
-  const total = g.asked.length + g.orders.length + g.chat.length + g.rivals.length;
-  const words = [[g.asked.length, 'request', 'requests'], [g.orders.length, 'lost order line', 'lost order lines'], [g.chat.length, 'on WhatsApp', 'on WhatsApp'], [g.rivals.length, 'rival below cost', 'rivals below cost']]
+  const total = g.asked.length + g.orders.length + g.chat.length + g.rivals.length + g.search.length;
+  const words = [[g.asked.length, 'request', 'requests'], [g.orders.length, 'lost order line', 'lost order lines'], [g.search.length, 'search that found nothing', 'searches that found nothing'], [g.chat.length, 'on WhatsApp', 'on WhatsApp'], [g.rivals.length, 'rival below cost', 'rivals below cost']]
     .filter(x => x[0] > 0).map(x => x[0] + ' ' + (x[0] === 1 ? x[1] : x[2]));
   return { g, total, words };
 }
@@ -3192,6 +3201,72 @@ function aPackWord(r){
   return `${n0(r.packQty)} ${many} in a ${r.packUnit}` + (Number(r.piecesPerUnit) > 1 && u !== 'piece' ? ` · ${n0(r.piecesPerUnit)} a ${u}` : '');
 }
 const aARROW = 'M5 12h14M13 6l6 6-6 6', aCHEV = 'M9 6l6 6-6 6';
+
+/* ---- search misses (0146): searches that found nothing, as wants ----
+   Every search in Sales, the agent app or the website that found nothing
+   is logged by itself. Misses typed differently are one want: the same
+   words with the spaces taken out ("wallplug 6"), or half their words
+   shared with the same numbers ("rawl plug 6" / "wall plug 6mm"), a word
+   one letter off counting as the same word. A want shows in Chances when 3
+   searched it in 7 days, or 2 different people did; not when we sell it
+   now, a name for it was taught, or it was set aside (until 10 more search
+   it). */
+function smTokens(t){
+  return String(t || '').toLowerCase().replace(/[^a-z0-9.\s]/g, ' ').split(/\s+/).filter(Boolean)
+    .map(w => w.replace(/^(\d+(?:\.\d+)?)(mm|cm|m|ml|l|kg|g|in|inch|w|v|pc|pcs)$/, '$1')).filter(w => !/^(the|a|an|of|for|and|with|in|to)$/.test(w));
+}
+function smNear(a, b){
+  if (a === b) return true;
+  if (a.length < 4 || b.length < 4 || Math.abs(a.length - b.length) > 1 || /\d/.test(a) || /\d/.test(b)) return false;
+  let i = 0, j = 0, miss = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++miss > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return miss + (a.length - i) + (b.length - j) <= 1;
+}
+function smSame(a, b){
+  const ta = smTokens(a), tb = smTokens(b);
+  if (ta.join('') === tb.join('')) return true;
+  const na = ta.filter(w => /^\d/.test(w)).sort().join(' '), nb = tb.filter(w => /^\d/.test(w)).sort().join(' ');
+  if (na !== nb) return false;
+  const shared = ta.filter(w => tb.some(x => smNear(w, x))).length;
+  return shared >= 2 && shared / new Set(ta.concat(tb)).size >= 0.5;
+}
+function smWho(m){
+  if (m.source === 'web') return { key: 'web', name: 'The website', ini: 'WB', role: 'website' };
+  if (m.source === 'agent') { const a = agentById(m.agentId); return { key: 'a:' + m.agentId, name: a ? firstWord(a.name) : 'An agent', ini: a ? initials(a.name) : 'AG', role: 'agent' }; }
+  const st = D().staff.find(x => x.userId && String(x.userId) === String(m.byUser));
+  return { key: 'u:' + m.byUser, name: st ? firstWord(st.name) : 'Sales', ini: st ? initials(st.name) : 'SA', role: m.source === 'console' ? 'console' : 'Sales' };
+}
+// Every want, newest first, with its misses: { key, label, misses, n7, people7, words, muted, sold }.
+function smWants(){
+  const d = D(), list = (d.searchMisses || []).slice().sort((a, b) => msOf(b.at) - msOf(a.at));
+  const groups = [];
+  list.forEach(m => { const g = groups.find(x => x.norms.some(n => smSame(n, m.norm))); if (g) { g.misses.push(m); if (!g.norms.includes(m.norm)) g.norms.push(m.norm); } else groups.push({ misses: [m], norms: [m.norm] }); });
+  const taught = new Set((d.itemNames || []).map(n => n.word));
+  const since7 = Date.now() - 7 * DAY;
+  return groups.map(g => {
+    const count = {}; g.misses.forEach(m => { count[m.norm] = (count[m.norm] || 0) + 1; });
+    const top = Object.keys(count).sort((a, b) => count[b] - count[a] || a.length - b.length)[0];
+    const typed = g.misses.find(m => m.norm === top);
+    const recent = g.misses.filter(m => msOf(m.at) >= since7);
+    const mute = (d.searchMutes || []).filter(x => (x.words || []).some(w => g.norms.includes(w))).sort((a, b) => msOf(b.at) - msOf(a.at))[0];
+    const afterMute = mute ? g.misses.filter(m => msOf(m.at) > msOf(mute.at)).length : 0;
+    const tok = smTokens(top), nums = tok.filter(w => /^\d/.test(w));
+    const sold = d.products.find(p => { const pt = smTokens(p.name); return tok.every(w => pt.some(x => smNear(w, x))) && nums.every(n => pt.includes(n)); }) || null;
+    return { key: top, label: typed ? typed.words : top, misses: g.misses, norms: g.norms, count, n7: recent.length, people7: new Set(recent.map(m => smWho(m).key)).size,
+      muted: !!mute && afterMute < 10, taught: g.norms.every(n => taught.has(n)), sold, last: msOf(g.misses[0].at) };
+  });
+}
+function smShown(w){ return !w.muted && !w.taught && !w.sold && (w.n7 >= 3 || w.people7 >= 2); }
+// What we sell that comes closest: most words in common, the same numbers first.
+function smClosest(w, n){
+  const tok = smTokens(w.key), nums = tok.filter(x => /^\d/.test(x));
+  return D().products.map(p => { const pt = smTokens(p.name); const sh = tok.filter(x => pt.some(y => smNear(x, y))).length; return { p, s: sh * 2 + (nums.length && nums.every(x => pt.includes(x)) ? 1 : 0) - (pt.some(y => /^\d/.test(y)) && !nums.some(x => pt.includes(x)) ? 0.5 : 0) }; })
+    .filter(x => x.s >= 2).sort((a, b) => b.s - a.s).slice(0, n || 1).map(x => x.p);
+}
 
 SCREENS.Asks = {
   markup: String.raw`
@@ -3293,9 +3368,20 @@ SCREENS.Asks = {
           hasHint: true, hint: 'A cheaper supplier must exist', hintStyle: hintOf('#7A3268'), openHref: 'Item.dc.html', openSx: sx, openLabel: `Open ${name}`,
           isLink: true, isBtn: false, canApart: false, href: 'Item.dc.html', sx, word: 'Find cheaper', btnStyle: DARK };
       };
+      // A search that found nothing: the want, how often this week and from where.
+      const searchRow = (x, i) => {
+        const w = x.w, src = { sales: 0, agent: 0, web: 0 };
+        w.misses.filter(m => daysSince(m.at) < 7).forEach(m => { src[m.source === 'console' ? 'sales' : m.source] = (src[m.source === 'console' ? 'sales' : m.source] || 0) + 1; });
+        const by = [['Sales', src.sales], ['agents', src.agent], ['the website', src.web]].filter(z => z[1]).map(z => z[0] + ' ' + z[1] + '×').join(', ');
+        const near = smClosest(w)[0], sx = JSON.stringify({ wantKey: w.key });
+        return { rowStyle: row(i), name: w.label, sub: `Searched ${plural(w.n7, 'time')} this week${by ? ' · by ' + by : ''}`, openHref: 'SearchMiss.dc.html', openSx: sx, openLabel: `See the searches for ${w.label}`,
+          hasHint: !!near, hint: near ? `Closest we sell: ${near.name}` : '', hintStyle: hintOf('#1A5A8A'), isLink: true, isBtn: false, canApart: false,
+          href: 'NewAsk.dc.html', sx: JSON.stringify({ kind: 'client', text: w.label }), word: 'Hunt it', btnStyle: DARK };
+      };
       const G = [
         ['asked', 'Clients asked for these', '#7B61D9', '#5B4AA8', 'M4 5h16v11H9l-5 4z', (x, i) => x.kind === 'agent' ? agentRow(x, i, '#5B4AA8') : leadRow(x, i, '#5B4AA8')],
         ['orders', 'Orders that lost a line', '#C93A30', '#A82D24', 'M12 3 2 20h20zM12 10v4M12 17v.1', (x, i) => leadRow(x, i, '#A82D24')],
+        ['search', 'Searched for, but we don’t sell', '#3C7BE0', '#1A5A8A', 'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4-4', searchRow],
         ['chat', 'Asked for on WhatsApp', '#1E9D57', '#0F6B43', 'M4 20l1.3-4A8 8 0 1 1 8 18.7z', (x, i) => leadRow(x, i, '#0F6B43')],
         ['rivals', 'Rivals sell it below our cost', '#7A3268', '#7A3268', 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z', rivalRow],
       ];
@@ -3316,6 +3402,139 @@ SCREENS.Asks = {
   },
 };
 
+
+/* ---- SearchMiss (round 5): one want that searches kept missing ----
+   Opened from Chances. How much it was searched this week and from where,
+   the words people typed (one want; ✕ takes out a spelling that is
+   something else), who searched, and the closest item we sell. Hunt it
+   opens Capture with the words; Not ours either teaches the words as a
+   name of an item we sell (item_names, product.edit) or sets them aside
+   (search_mutes, until 10 more search them). */
+SCREENS.SearchMiss = {
+  markup: String.raw`
+<div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <a href="Asks.dc.html" data-back aria-label="Back" style="position: absolute; inset: 0 0 auto 0; height: 40px; display: block"></a>
+  <div style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; background: linear-gradient(180deg, #F6F3EE 0%, #F8F6F2 100%); border-radius: 26px 26px 0 0; overflow: hidden; display: flex; flex-direction: column">
+    <div style="flex: none; background: ${V2HEAD}; color: #FFFFFF; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 14px">
+      <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.22)"></span>
+      <div style="display: flex; align-items: center; gap: 14px"><span style="width: 46px; height: 46px; flex: none; border-radius: 13px; background: linear-gradient(160deg, #8DB8F0, #3C7BE0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.95)"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="t1" style="font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap" title="{{ title }}">{{ title }}</span><span style="font-size: 12px; color: #B3BCD2"><span class="m" style="color: #FFFFFF">{{ n7 }}</span> {{ subWord }}</span></span><a href="Asks.dc.html" data-back aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a></div>
+    </div>
+    <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 12px">
+      <sc-if value="{{ none }}"><div class="card" style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center"><span class="t2">Nothing to show</span><span class="sub" style="font-size: 13px">These searches were set aside, taught as a name, or are too old.</span><a href="Asks.dc.html" data-back class="chip on">Back to chances</a></div></sc-if>
+      <sc-if value="{{ has }}">
+      <div class="card n-in" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="t2" style="font-size: 15px">Wanted this week</span><sc-if value="{{ hasTrend }}"><span class="pill" style="{{ trendStyle }}">{{ trendWord }}</span></sc-if></div>
+        <div role="img" aria-label="{{ daysLabel }}" style="display: flex; gap: 8px; align-items: flex-end"><sc-for list="{{ days }}" as="d"><span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="height: 70px; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px"><sc-for list="{{ d.segs }}" as="g"><span style="{{ g.style }}"></span></sc-for></span><span style="{{ d.lblStyle }}">{{ d.label }}</span></span></sc-for></div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap"><sc-for list="{{ legend }}" as="l"><span style="display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: #3B4566"><span style="{{ l.dot }}"></span>{{ l.word }} <b class="m">{{ l.n }}</b></span></sc-for></div>
+      </div>
+      <div class="card n-in" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; animation-delay: .05s">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span class="t2" style="font-size: 15px">What they typed</span><span class="sub">one want · tap ✕ if it isn’t</span></div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{ words }}" as="w"><span style="{{ w.style }}">“{{ w.t }}”<span class="m" style="font-size: 11px; opacity: .7">×{{ w.n }}</span><button type="button" onClick="{{ w.toggle }}" aria-label="{{ w.label }}" style="width: 24px; height: 24px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #6B7480">{{ w.x }}</button></span></sc-for></div>
+        <div style="display: flex; flex-direction: column; box-shadow: inset 0 1px 0 #F0ECE6"><sc-for list="{{ who }}" as="p"><div style="{{ p.row }}"><span class="ava" style="width: 30px; height: 30px; font-size: 11px; background: #EEF0F5; color: #3B4566">{{ p.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13.5px; font-weight: 700">{{ p.name }}</span><span class="sub">{{ p.sub }}</span></span><span class="m" style="{{ p.nStyle }}">{{ p.n }}×</span></div></sc-for></div>
+      </div>
+      <sc-if value="{{ hasNear }}"><a href="Item.dc.html" data-sx="{{ nearSx }}" class="n-in" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #E4F4EA; animation-delay: .1s"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13.5px; font-weight: 700; color: #0F6B43">Closest we sell: {{ nearName }}</span><span class="sub" style="color: #0F6B43">{{ nearSub }}</span></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6B43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a></sc-if>
+      </sc-if>
+    </div>
+    <sc-if value="{{ has }}"><div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px"><button type="button" onClick="{{ openNot }}" class="btn2">Not ours</button><a href="NewAsk.dc.html" data-sx="{{ huntSx }}" class="btn">Hunt it · {{ nIn }} {{ nWord }}</a></div></sc-if>
+    <sc-if value="{{ notOpen }}">
+      <div style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
+      <div class="sheet" style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 18px calc(22px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <div style="display: flex; align-items: center; justify-content: space-between"><span class="t2" style="font-size: 18px">{{ notTitle }}</span><button type="button" onClick="{{ closeNot }}" style="font-size: 14px; font-weight: 600; color: #5F6980">Cancel</button></div>
+        <sc-if value="{{ askWhy }}">
+          <button type="button" onClick="{{ pickName }}" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; box-shadow: 0 0 0 1px rgba(28,34,51,.12); text-align: left"><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">We sell it, under another name</span><span class="sub">Pick the item, and these words find it next time.</span></span></button>
+          <button type="button" onClick="{{ setAside }}" disabled="{{ busy }}" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; box-shadow: 0 0 0 1px rgba(28,34,51,.12); text-align: left"><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Not something we stock</span><span class="sub">Stop catching these words. It comes back if 10 more search for it.</span></span></button>
+        </sc-if>
+        <sc-if value="{{ askItem }}">
+          <label style="height: 46px; border-radius: 13px; background: #F2EFEA; padding: 0 14px; display: flex; align-items: center; gap: 10px"><input type="search" value="{{ q }}" onInput="{{ setQ }}" placeholder="Find the item we sell" aria-label="Find the item we sell" style="flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; outline: none"></label>
+          <sc-for list="{{ items }}" as="it"><button type="button" onClick="{{ it.pick }}" disabled="{{ busy }}" style="display: flex; align-items: center; gap: 12px; min-height: 52px; width: 100%; box-shadow: inset 0 1px 0 #F0ECE6; text-align: left"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{ it.name }}</span><span class="sub">{{ it.sub }}</span></span><span style="font-size: 13px; font-weight: 700; color: #3B4566">This one</span></button></sc-for>
+          <sc-if value="{{ noItems }}"><span class="sub">Nothing we sell matches. Try fewer words.</span></sc-if>
+        </sc-if>
+      </div>
+    </sc-if>
+    <sc-if value="{{ doneOpen }}">
+      <div style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
+      <div class="sheet" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 20px calc(24px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <span style="width: 44px; height: 44px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span>
+        <span class="t1">{{ doneTitle }}</span>
+        <span style="font-size: 14px; color: #5F6980; line-height: 1.4">{{ doneWords }}</span>
+        <a href="Asks.dc.html" data-back class="btn ink">Back to chances</a>
+      </div>
+    </sc-if>
+  </div>
+</div>`,
+  Component: class extends SrvLogic {
+    constructor(p) { super(p); this.state = { off: {}, sheet: null, q: '', done: null }; }
+    want() { const all = smWants(); return all.find(w => w.key === this.props.wantKey) || all.filter(smShown)[0] || null; }
+    renderVals() {
+      const s = this.state, w = this.want();
+      if (!w && !s.done) return { none: true, has: false, title: 'Searched, not found', n7: '', subWord: '', notOpen: false, doneOpen: false, busy: S.busy };
+      const ww = w || { misses: [], count: {}, norms: [], label: '', key: '' };
+      const inc = ww.misses.filter(m => !s.off[m.norm]), norms = ww.norms.filter(n => !s.off[n]);
+      const DAYN = 7, start = new Date(); start.setHours(0, 0, 0, 0);
+      const COL = { sales: '#3C7BE0', agent: '#7B61D9', web: '#0E8A72' };
+      const per = Array.from({ length: DAYN }, (_, i) => { const a = start.getTime() - (DAYN - 1 - i) * DAY, b = a + DAY; const ms = inc.filter(m => msOf(m.at) >= a && msOf(m.at) < b);
+        return { a, sales: ms.filter(m => m.source === 'sales' || m.source === 'console').length, agent: ms.filter(m => m.source === 'agent').length, web: ms.filter(m => m.source === 'web').length }; });
+      const top = Math.max(1, ...per.map(x => x.sales + x.agent + x.web));
+      const week = inc.filter(m => daysSince(m.at) < 7), prev = inc.filter(m => daysSince(m.at) >= 7 && daysSince(m.at) < 14);
+      const tally = { sales: week.filter(m => m.source === 'sales' || m.source === 'console').length, agent: week.filter(m => m.source === 'agent').length, web: week.filter(m => m.source === 'web').length };
+      const byWho = new Map(); inc.forEach(m => { const h = smWho(m); const x = byWho.get(h.key) || { ...h, n: 0, last: m, src: m.source }; x.n++; if (msOf(m.at) > msOf(x.last.at)) x.last = m; byWho.set(h.key, x); });
+      const near = w ? smClosest(w)[0] : null;
+      const q = s.q.trim(), qt = smTokens(q);
+      const pool = q ? D().products.filter(p => { const pt = smTokens(p.name); return qt.every(t => pt.some(x => x.startsWith(t) || smNear(t, x))); }).slice(0, 8) : (w ? smClosest(w, 6) : []);
+      const teach = (p) => guarded('Teach the name', async () => {
+        if (!hasTask('product.edit')) throw new Error('Teaching a name needs product.edit switched on for you');
+        const words = [...new Set(norms.map(n => n.slice(0, 60)))];
+        for (const word of words) {
+          const { data, error } = await sb.from('item_names').insert({ shop_id: S.shopId, word, product_id: p.id }).select().single();
+          if (error && !/duplicate|unique/i.test(error.message || '')) throw error;
+          D().itemNames.push({ id: data ? data.id : null, word, productId: p.id });
+        }
+        await logDecision('product.edit', `“${ww.label}”${words.length > 1 ? ` and ${words.length - 1} more spelling${words.length > 2 ? 's' : ''}` : ''} now find ${p.name} in search`, { ref: { table: 'products', id: p.id }, after: { names: words } });
+        FEEL.yes(); this.setState({ sheet: null, done: { kind: 'name', p: p.name } });
+      });
+      return {
+        none: false, has: !!w && !s.done, busy: S.busy,
+        title: ww.label, n7: String(week.length), subWord: (week.length === 1 ? 'search' : 'searches') + ' this week · none found it',
+        hasTrend: prev.length !== week.length, trendWord: week.length > prev.length ? `up from ${prev.length} last week` : `down from ${prev.length} last week`,
+        trendStyle: week.length > prev.length ? 'background: #FBE5E2; color: #A82D24' : 'background: #EEF0F5; color: #3B4566',
+        daysLabel: 'Searches a day, last 7 days: ' + per.map(x => x.sales + x.agent + x.web).join(', '),
+        days: per.map((x, i) => { const segs = [['web', x.web], ['agent', x.agent], ['sales', x.sales]].filter(z => z[1]).map(([k, n]) => ({ style: `height: ${Math.round(n / top * 62)}px; background: ${COL[k]}; border-radius: 4px` }));
+          return { segs: segs.length ? segs : [{ style: 'height: 3px; background: #E6E2DA; border-radius: 4px' }], label: new Date(x.a).toLocaleDateString('en-GB', { weekday: 'short' }),
+            lblStyle: `font-size: 10.5px; color: ${i === DAYN - 1 ? '#1C2233' : '#6B7480'}; font-weight: ${i === DAYN - 1 ? 700 : 500}` }; }),
+        legend: [['sales', 'Sales'], ['agent', 'Agents'], ['web', 'Website']].filter(([k]) => tally[k]).map(([k, word]) => ({ word, n: String(tally[k]), dot: `width: 8px; height: 8px; border-radius: 3px; background: ${COL[k]}` })),
+        words: Object.keys(ww.count).sort((a, b) => ww.count[b] - ww.count[a]).map(n => { const off = !!s.off[n], typed = (ww.misses.find(m => m.norm === n) || {}).words || n;
+          return { t: typed, n: String(ww.count[n]), x: off ? '↺' : '✕', label: off ? `Put “${typed}” back` : `“${typed}” is something else`,
+            style: `height: 32px; padding: 0 4px 0 12px; border-radius: 999px; background: ${off ? '#F7F5F2' : '#EEF0F5'}; color: ${off ? '#6B7480' : '#1C2233'}; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; text-decoration: ${off ? 'line-through' : 'none'}`,
+            toggle: () => this.setState({ off: Object.assign({}, s.off, { [n]: !off }) }) }; }),
+        who: [...byWho.values()].sort((a, b) => b.n - a.n).map((x, i) => ({ ini: x.ini, name: `${x.name} · ${x.role}`, n: String(x.n),
+          sub: [agoWord(x.last.at), x.last.clientName ? 'for ' + x.last.clientName : '', x.src === 'web' ? 'nobody signed in' : ''].filter(Boolean).join(' · '),
+          row: `display: flex; align-items: center; gap: 10px; min-height: 46px; ${i ? 'box-shadow: inset 0 1px 0 #F0ECE6' : ''}`,
+          nStyle: `font-size: 13px; font-weight: 600; color: ${COL[x.src === 'console' ? 'sales' : x.src] || '#3B4566'}` })),
+        hasNear: !!near, nearName: near ? near.name : '', nearSx: near ? JSON.stringify({ productId: near.id }) : '',
+        nearSub: near ? (() => { const st = cStockOf(near).n; return (st > 0 ? `${n0(st)} in stock` : 'none on the shelf') + ' · Sales could offer it meanwhile'; })() : '',
+        nIn: String(inc.length), nWord: inc.length === 1 ? 'search' : 'searches', huntSx: JSON.stringify({ kind: 'client', text: ww.label }),
+        notOpen: !!s.sheet, askWhy: s.sheet === 'why', askItem: s.sheet === 'item', notTitle: s.sheet === 'item' ? 'Which item is it?' : 'Why isn’t it ours?',
+        openNot: () => this.setState({ sheet: 'why' }), closeNot: () => this.setState({ sheet: null, q: '' }), pickName: () => this.setState({ sheet: 'item' }),
+        q: s.q, setQ: (e) => this.setState({ q: e.target.value }),
+        items: pool.map(p => { const st = cStockOf(p).n; return { name: p.name, sub: (p.category || 'no aisle') + ' · ' + (st > 0 ? n0(st) + ' in stock' : 'none on the shelf'), pick: () => teach(p) }; }),
+        noItems: !pool.length,
+        setAside: () => guarded('Set aside', async () => {
+          if (!hasTask('sourcing.lead')) throw new Error('Setting searches aside needs sourcing.lead switched on for you');
+          const { data, error } = await sb.from('search_mutes').insert({ shop_id: S.shopId, words: norms, by_user: S.user ? S.user.id : null }).select().single();
+          if (error) throw error;
+          D().searchMutes.push({ id: data ? data.id : null, words: norms, at: data && data.at ? data.at : new Date().toISOString() });
+          await logDecision('sourcing.lead', `Set aside “${ww.label}”: not something we stock`, { after: { muted: norms } });
+          FEEL.yes(); this.setState({ sheet: null, done: { kind: 'mute' } });
+        }),
+        doneOpen: !!s.done, doneTitle: s.done && s.done.kind === 'name' ? 'Search now finds it' : 'Set aside',
+        doneWords: s.done && s.done.kind === 'name' ? `Next time, “${ww.label}” and the other spellings find ${s.done.p} in the agent app and the console. The owner sees it in the log.`
+          : 'These words stop landing in your chances. If 10 more people search for them, they come back.',
+      };
+    }
+  },
+};
 
 /* ---- AsksDropped ---- */
 /* From orders -- every line dropped at Checking becomes a request by

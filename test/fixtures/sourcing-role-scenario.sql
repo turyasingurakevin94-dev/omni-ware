@@ -96,8 +96,20 @@ select _try('prices a day: 8, the month figure in step', 'ok', $q$do $d$ begin i
 select _try('prices a day: in the owner''s log', 'ok', $q$do $d$ begin if not exists (select 1 from decision_log where task='price.confirm' and what like 'Prices Sourcing confirms a day set to 8') then raise exception 'no line'; end if; end $d$$q$);
 select _try('sourcing: prices a day of 0 is refused', 'refused', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 0)$q$);
 
+-- ---- 0146: searches that found nothing, read by Sourcing; words set aside; names taught
+select _try('sourcing: reads search misses', 'ok', $q$do $d$ begin perform count(*) from search_misses; end $d$$q$);
+select _try('sourcing: never writes a miss by hand', 'refused', $q$insert into search_misses(shop_id,words,norm,source) values ('11111111-1111-1111-1111-111111111111','x y','x y','sales')$q$);
+select _try('sourcing: set words aside', 'ok', $q$insert into search_mutes(shop_id,words,by_user) values ('11111111-1111-1111-1111-111111111111',array['pvc glue 500ml'],'00000000-0000-0000-0000-00000000000d')$q$);
+select _try('sourcing: teach a name to an item', 'ok', $q$insert into item_names(shop_id,word,product_id) values ('11111111-1111-1111-1111-111111111111','rawl plug 6','P001')$q$);
+
 -- ---- as WORKER (staff): the same walls as before
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+select _try('worker: a search that found nothing is logged', 'ok', $q$select log_search_miss('11111111-1111-1111-1111-111111111111','Rawl  plug 6','sales',null,'Kato Construction')$q$);
+select _try('worker: the same words again within 10 minutes', 'ok', $q$select log_search_miss('11111111-1111-1111-1111-111111111111','rawl plug 6','sales')$q$);
+select _try('worker: a number alone is not a search', 'ok', $q$select log_search_miss('11111111-1111-1111-1111-111111111111','12','sales')$q$);
+select _try('worker: cannot read the misses', 'ok', $q$do $d$ begin if exists (select 1 from search_misses) then raise exception 'saw them'; end if; end $d$$q$);
+select _try('worker: cannot set words aside', 'refused', $q$insert into search_mutes(shop_id,words,by_user) values ('11111111-1111-1111-1111-111111111111',array['x'],'00000000-0000-0000-0000-00000000000c')$q$);
+select _try('worker: cannot teach a name', 'refused', $q$insert into item_names(shop_id,word,product_id) values ('11111111-1111-1111-1111-111111111111','zz','P001')$q$);
 select _try('worker: merge suppliers', 'refused', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S002')$q$);
 select _try('worker: set prices a day', 'refused', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 3)$q$);
 select _try('worker: add a supplier', 'refused', $q$insert into suppliers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','S009','W')$q$);
@@ -113,6 +125,8 @@ select _try('owner: delete a request', 'ok', $q$delete from sourcing_leads where
 -- the dropped line again: saved a second time, nothing new
 select _try('owner: the order saved again', 'ok', $q$update saved_quotes set status='preparing' where id=9101$q$);
 
+select _try('misses: logged once, words kept, client kept, the number left out', 'ok', $q$do $d$ begin if (select count(*) from search_misses) <> 1 or not exists (select 1 from search_misses where norm='rawl plug 6' and words='Rawl plug 6' and source='sales' and client_name='Kato Construction') then raise exception '%', (select string_agg(norm || '/' || source, ',') from search_misses); end if; end $d$$q$);
 reset role;
+select _try('an agent''s stock ask pushed Sourcing', 'ok', $q$do $d$ begin if not exists (select 1 from push_outbox where kind='sourcing.request' and to_task='sourcing.lead' and ref->>'table'='agent_requests' and body like '%asks for Door closer medium%') then raise exception 'no push'; end if; end $d$$q$);
 select _try('a second save made no second request', 'ok', $q$do $d$ begin if (select count(*) from sourcing_leads where id like 'DRP-9101-%') <> 1 then raise exception 'count changed'; end if; end $d$$q$);
 select case when (expect='ok' and got='ok') or (expect='refused' and got like 'refused%') then 'PASS' else 'FAIL' end, label, got from _r order by n;

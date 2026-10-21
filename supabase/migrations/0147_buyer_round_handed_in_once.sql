@@ -1,4 +1,4 @@
--- 0146 Buyer, third: a round is handed in once.
+-- 0147 Buyer, third: a round is handed in once.
 --
 -- The Buyer's round (Plan the round) is one trip per stop, started in one
 -- slide; their ids share a stem, TRIP-<stamp>-1, TRIP-<stamp>-2, ... The

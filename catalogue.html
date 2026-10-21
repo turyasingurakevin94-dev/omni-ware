@@ -289,6 +289,22 @@ function applyProductFilter(){
   ));
 }
 
+// A search that finds nothing tells the shop what people look for (0146):
+// once the words have stood still for a moment, once per words per visit.
+// Only the words go; nothing about who typed them.
+let webMissT = 0; const webMissSent = {};
+function logWebMiss(q){
+  const w = String(q || '').trim();
+  if(w.length < 2 || !slug) return;
+  clearTimeout(webMissT);
+  webMissT = setTimeout(()=>{
+    const now = (document.getElementById('productSearch').value || '').trim();
+    if(now !== w || webMissSent[w.toLowerCase()]) return;
+    webMissSent[w.toLowerCase()] = true;
+    callPublicFn({ action: 'miss', slug, words: w.slice(0, 120) }).catch(()=>{});
+  }, 2000);
+}
+
 function cleanPhone(p){ return String(p||'').replace(/[^\d+]/g,''); }
 
 function renderProductGrid(list){
@@ -307,6 +323,7 @@ function renderProductGrid(list){
         ? `Nothing matches &ldquo;${esc(q)}&rdquo;. Ask for it below and ${esc((catalogueData && catalogueData.agentName) || 'your agent')} will find out.`
         : 'No products listed yet.');
     empty.style.display = 'block';
+    if(q) logWebMiss(q);
     return;
   }
   empty.style.display = 'none';
