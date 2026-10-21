@@ -64,6 +64,13 @@
         s({ id: 'P008', name: 'Hima cement 50kg', type: 'simple', category: 'Cement', variants: [] }),
         s({ id: 'P009', name: 'PPR pipe 20mm · 4m', type: 'simple', category: 'Plumbing', variants: [] }),
         s({ id: 'P010', name: 'Roofing screws · with washer', type: 'simple', category: 'Fixings', variants: [] }),
+        // Round 7: the same anchor under two names (the Buyer flags it), and one filed in the wrong aisle.
+        s({ id: 'P050', name: 'SJS Nylon Anchors White/M10', type: 'simple', category: 'Fixings', variants: [] }),
+        s({ id: 'P051', name: 'Nylon anchors 10mm', type: 'simple', category: 'Furniture', variants: [] }),
+        s({ id: 'P052', name: 'Nylon anchor 8mm', type: 'simple', category: 'Fixings', variants: [] }),
+        s({ id: 'P053', name: 'Nylon anchors 12mm', type: 'simple', category: 'Fixings', variants: [] }),
+        s({ id: 'P054', name: 'Frame anchor 10x100', type: 'simple', category: 'Fixings', variants: [] }),
+        s({ id: 'P055', name: 'Hammer anchor 6x40', type: 'simple', category: 'Fixings', variants: [] }),
       ],
       prices: [
         price(1, 'P003', 'S001', [{ minQty: 1, price: 2100 }], day(58)),
@@ -77,7 +84,7 @@
         price(9, 'P009', 'S004', [{ minQty: 1, price: 12000 }], day(16)),
         price(10, 'P010', 'S003', [{ minQty: 1, price: 150 }], day(5)),
       ],
-      stock: ['P001', 'P002', 'P003', 'P004', 'P005', 'P006', 'P007', 'P008', 'P009'].map((k, i) => s({ key: k, product_id: k, qty: 10 + i })),
+      stock: ['P001', 'P002', 'P003', 'P004', 'P005', 'P006', 'P007', 'P008', 'P009'].map((k, i) => s({ key: k, product_id: k, qty: 10 + i })).concat([s({ key: 'P051', product_id: 'P051', qty: 196 })]),
       saved_quotes: [
         s({ id: 2400, client_name: 'Nansana Hardware', client_phone: '0772000111', status: 'awaiting_goods', voided: false, date: day(12), payload: { customerId: 'C006', items: [{ productId: 'P001', qty: 10 }], droppedLines: [{ productName: 'Valley flashing · 3m', qty: 6, reason: 'Nobody has it', droppedAt: ms(12), at: 1 }] } }),
         s({ id: 2402, client_name: 'Nansana Hardware', client_phone: '0772000111', status: 'checking', voided: false, date: day(0), payload: { customerId: 'C006', items: [{ productId: 'P005', qty: 5 }], droppedLines: [{ productId: 'P003', productName: 'Hinges · butt 4”', qty: 24, unit: 'pc', sellPrice: 2600, reason: 'Nobody has it', droppedAt: now - 5 * 3600000, at: 1 }], supplierConfirms: { S001: { state: 'cant', note: 'out until next month' } } } }),
@@ -115,6 +122,8 @@
       ],
       search_mutes: [],
       item_names: [],
+      item_twins: [],
+      buyer_handoffs: [s({ id: 'h-twin-1', kind: 'sourcing_fix', status: 'open', ref: 'P050', created_by: 'u-denis', created_at: ago(0, 3), payload: { how: 'saw', fixes: [{ tab: 'item', field: 'same', label: 'SAME ITEM', productId: 'P050', otherId: 'P051', item: 'SJS Nylon Anchors White/M10', was: 'SJS Nylon Anchors White/M10', now: 'Nylon anchors 10mm', note: 'A 200 carton was bought for an order while 196 packs sat on the shelf under the other name.' }] } })],
       decision_log: [
         s({ id: 'L1', at: new Date(now - 3 * 3600000).toISOString(), by: 'u-denis', by_name: 'Denis Okello', role: 'buyer', task: 'price.confirm', what: 'Angle line still 22,000', ref: { table: 'prices', id: 2 }, after: { how: 'phone' } }),
         s({ id: 'L2', at: new Date(now - 2 * 3600000).toISOString(), by: ME, by_name: 'Moses Lubega', role: 'sourcing', task: 'price.confirm', what: 'Roofing nails 6,900 → 7,200', ref: { table: 'prices', id: 3 }, after: { how: 'in person' } }),

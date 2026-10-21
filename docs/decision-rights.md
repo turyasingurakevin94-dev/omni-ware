@@ -169,6 +169,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
 | **Add or edit suppliers, and merge two records that are one supplier** (`merge_suppliers`, 0145) | `supplier.edit` | Sourcing | Buyer | — | yes |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
+| **Say two items are one item (or not), and put an item in its right aisle** (`item_twins`, 0152; the Buyer flags pairs as a sourcing_fix) | `product.edit` | Sourcing | Buyer | owner's log | yes |
 | **Confirm today's share of prices, and set how many a day** (`set_prices_per_day`, 0145; the owner can still change it); the Buyer confirms by phone for a supplier who is slow or can't | `price.confirm` | Sourcing, Buyer | — | owner's log | yes: Sourcing, Buyer |
 
 ### The team
@@ -532,6 +533,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0149 | A fresh start, choosing what stays behind: `ow_fresh_start` takes a list of groups to leave in the old shop (price list, team, settings, property); customers and suppliers always come across. The operator's, in the SQL editor |
 | 0150 | Buyer, fourth: a trip's runner is told — sent or given a trip (`trip.sent`, once per round), the trip given on to someone else (`trip.taken`), or the trip cancelled by the Buyer's chase (`trip.cancelled`) |
 | 0151 | Buyer, fifth: a round's own money and receipts kept on the trip (`collection_trips.pay`), the Buyer's pay-back passed to Accounts (`own_money` hand-off, pushed `trip.own_money`), Accounts' cash tied to the round it started (`payload.round`), and a carton far bigger than the sale asked of the Manager (`restock_buys.for_line`, held, pushed `carton.ask`) |
+| 0152 | Sourcing v2, round 7: one item, one name — Sourcing's verdict on two items that look like one (`item_twins`, product.edit): the same item (one name kept, the other taught as a name of it, `item_names`) or different; read by every member so the Buyer sees the shelf twin before buying. Both rows stay on the books; stock is never Sourcing's. (0151 is the Buyer's.) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

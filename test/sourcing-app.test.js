@@ -142,7 +142,7 @@ const consoleSrc = read('sourcing-console.js');
 }
 
 /* ---------------- 4. the canvas ---------------- */
-const BOARDS = ['Main', 'Asks', 'AsksDropped', 'SearchMiss', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
+const BOARDS = ['Main', 'Asks', 'AsksDropped', 'SearchMiss', 'ItemTwins', 'ItemSame', 'NewAsk', 'HuntDropped', 'Hunts', 'Prices', 'Hunt', 'AskSuppliers', 'Quote', 'Decide', 'Sample',
   'MarketRun', 'AtShop', 'NewSupplier', 'RunDone', 'Spotted', 'Supplier', 'PriceIt', 'AddItem', 'Landed', 'Announce', 'TellAsked', 'Dropped', 'Profile',
   // Round 3: the hunt's quotes side by side moved to Quotes (Hunt is its way to the shelf).
   'Quotes', 'Suppliers', 'Item', 'Search',
@@ -327,6 +327,32 @@ if (!chromium) {
     return document.getElementById('sx_screen').getAttribute('data-screen');
   });
   t.check(backTo === 'Main', `Round 6: a supplier opened from Today closes back to Today (${backTo})`);
+  // Round 7: one item, one name; an item in the wrong aisle; the best match first.
+  const r7 = await page.evaluate(async () => {
+    const out = {}, pairs = itPairs();
+    out.first = pairs[0] ? [pairs[0].a.id, pairs[0].b.id, !!pairs[0].h].join(',') : '';
+    out.job = (nextJobs().find(j => j.kind === 'twins') || {}).score || 0;
+    const ai = itAisle(productById('P051')); out.aisle = ai ? ai.to : '';
+    out.noAisle = !itAisle(productById('P052'));
+    A.tab('Suppliers'); A.go('ItemSame', { a: 'P050', b: 'P051' }); await new Promise(r => setTimeout(r, 150));
+    out.keepsShelf = /KEEP THIS NAME/.test(document.getElementById('sx_screen').innerText);
+    window.SX_WRITES.length = 0;
+    [...document.querySelectorAll('#sx_screen button')].find(b => /Same item · one name/.test(b.textContent)).click();
+    await new Promise(r => setTimeout(r, 400));
+    out.writes = window.SX_WRITES.map(w => w.table + ':' + w.op).join(',');
+    const tw = window.SX_WRITES.find(w => w.table === 'item_twins'), nm = window.SX_WRITES.find(w => w.table === 'item_names');
+    out.row = tw ? [tw.row.a, tw.row.b, tw.row.verdict, tw.row.keep].join(',') : '';
+    out.name = nm ? nm.row.word + '>' + nm.row.product_id : '';
+    out.after = itPairs().some(x => [x.a.id, x.b.id].sort().join() === 'P050,P051');
+    A.tab('Main'); A.go('Search', { q: 'nylon anchors' }); await new Promise(r => setTimeout(r, 150));
+    out.search = [...document.querySelectorAll('#sx_screen a[href="Item.dc.html"]')].map(a => a.innerText.split('\n')[0]).slice(0, 3).join(' | ');
+    return out;
+  });
+  t.check(r7.first === 'P050,P051,true' && r7.job > 80, `Round 7: the Buyer's flagged pair comes first and is a Today job (${JSON.stringify(r7)})`);
+  t.check(r7.aisle === 'Fixings' && r7.noAisle, `Round 7: an anchor filed in Furniture is flagged for Fixings; one already there is not (${r7.aisle})`);
+  t.check(r7.keepsShelf && r7.row === 'P050,P051,same,P051' && r7.name === 'sjs nylon anchors white/m10>P051', `Round 7: "same item" keeps the name on the shelf and teaches the other (${r7.row} · ${r7.name})`);
+  t.check(/item_twins:insert/.test(r7.writes) && /buyer_handoffs:update/.test(r7.writes) && /decision_log:insert/.test(r7.writes) && !r7.after, `Round 7: the verdict, the Buyer's flag closed, the owner's log, never flagged again (${r7.writes})`);
+  t.check(/^Nylon anchors/.test(r7.search) && !/^Nylon anchor 8mm/.test(r7.search), `Round 7: search puts every word whole first (${r7.search})`);
   // One write, end to end: "Still right" on today's share confirms the row and logs it.
   await page.evaluate(() => A.tab('Prices'));
   await page.waitForTimeout(200);
