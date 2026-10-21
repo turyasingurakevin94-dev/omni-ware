@@ -7,10 +7,16 @@
  *
  *   npm run backup
  *
- * Uses the Supabase CLI's own authenticated session (`npx supabase db
- * query --linked`), so it needs no secrets in the repo and works from any
- * machine that has run `supabase link`. Two round trips: one to list the
- * tables, one to pull them all as JSON in a single statement.
+ * Two ways in, neither with a secret in the repo:
+ *
+ *   - SUPABASE_ACCESS_TOKEN set (a personal access token, e.g. an
+ *     environment secret of a cloud session): straight to the Management
+ *     API's query endpoint, for the project in SUPABASE_PROJECT_REF or, by
+ *     default, the live one. No CLI to install. One request per table, so
+ *     no single answer grows too large.
+ *   - Otherwise the Supabase CLI's own authenticated session (`supabase db
+ *     query --linked`), from any machine that has run `supabase link`. Two
+ *     round trips: one to list the tables, one to pull them all at once.
  */
 const fs = require('fs');
 const path = require('path');
@@ -38,25 +44,46 @@ const findCli = () => {
 };
 const CLI = findCli();
 
-const run = (sql) => {
+// The live project (OW_ENV's PRODUCTION half in index.html).
+const LIVE_REF = 'hgywjaifdmgrcnwxstxg';
+const TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+const REF = process.env.SUPABASE_PROJECT_REF || LIVE_REF;
+
+const runCli = async (sql) => {
   const out = execFileSync(CLI, ['db', 'query', '--linked', sql],
     { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, timeout: 300000 });
   const m = out.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('no JSON in CLI output:\n' + out.slice(0, 500));
   return JSON.parse(m[0]).rows;
 };
+const runApi = async (sql) => {
+  const res = await fetch(`https://api.supabase.com/v1/projects/${REF}/database/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: sql }),
+  });
+  const text = await res.text();
+  if (res.status === 401 || res.status === 403) throw new Error(`Supabase refused the access token (${res.status}): is SUPABASE_ACCESS_TOKEN current, and does it reach project ${REF}?`);
+  if (!res.ok) throw new Error(`Supabase answered ${res.status}: ${text.slice(0, 300)}`);
+  return JSON.parse(text);
+};
+const run = TOKEN ? runApi : runCli;
 
-const tables = run(
+async function main() {
+const tables = (await run(
   "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE' order by table_name"
-).map((r) => r.table_name);
+)).map((r) => r.table_name);
 if (!tables.length) throw new Error('no tables found — is the project linked?');
 
-const union = tables.map((t) =>
-  `select '${t}' as t, coalesce((select json_agg(x) from "${t}" x), '[]'::json) as rows`
-).join(' union all ');
-const dump = run(union);
+const one = (t) => `select '${t}' as t, coalesce((select json_agg(x) from "${t}" x), '[]'::json) as rows`;
+const dump = [];
+if (TOKEN) {
+  for (const t of tables) dump.push(...await run(one(t)));
+} else {
+  dump.push(...await run(tables.map(one).join(' union all ')));
+}
 
-const snapshot = { takenAt: new Date().toISOString(), tables: {} };
+const snapshot = { takenAt: new Date().toISOString(), project: TOKEN ? REF : 'linked', tables: {} };
 let total = 0;
 dump.forEach((r) => {
   const rows = typeof r.rows === 'string' ? JSON.parse(r.rows) : (r.rows || []);
@@ -75,3 +102,6 @@ tables.forEach((t) => {
   const n = snapshot.tables[t].length;
   if (n) console.log(`  ${t}: ${n}`);
 });
+}
+
+main().catch((e) => { console.error('Backup failed: ' + e.message); process.exit(1); });
