@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -396,8 +396,10 @@ matrix.forEach(([what, it]) => {
     t.check(X.lineBelowCost(line) && X.priceReviewState(line) === 'wait' && X.pricesWaiting(q).length === 1, 'an untagged line under its cost waits for the Manager');
     t.check(/With Ruth · Manager<\/b> · price up/.test(X.ordWhoHas(q, X.ordViews(q))), 'the order says it is with Ruth for a price up, not going to Buying');
     t.check(/Up · with Ruth/.test(X.ordGateHTML(q, X.ordViews(q))) && /1 price up · Ruth/.test(X.ordPaperHead(q, X.ordViews(q))[0]), 'the Prices gate and the slip head carry the hold');
-    t.check(/120,000/.test(X.ordPriceUpHTML(line)) && /165,000/.test(X.ordPriceUpHTML(line)) && /\+45,000/.test(X.ordPriceUpHTML(line)), 'the line shows the cost before and after');
-    t.check(/price up · waiting for Ruth/.test(X.priceTagHTML(line, true)), 'the line tag names the price up');
+    // MUnder (round 2): under cost, one row -- what it sells for and how far under; only a new price will do.
+    t.check(/sells<\/span><b class="ink">155,000/.test(X.ordPriceUpHTML(line)) && /10,000<\/span> under cost/.test(X.ordPriceUpHTML(line)) && !/COST/.test(X.ordPriceUpHTML(line)), 'under cost, the line says what it sells for and how far under');
+    t.check(/Ruth sets a new price/.test(X.priceTagHTML(line, true)), 'the line tag says Ruth sets a new price');
+    t.check(/RUTH ANSWERS · THEN ON TO BUYING/.test(X.ordAnswersHTML(q)) && /165,000<\/span> or more · you tell Henry/.test(X.ordAnswersHTML(q)) && !/keeps/.test(X.ordAnswersHTML(q)), 'Ruth\'s only answer is a new price at the cost or more');
     t.check(/with Ruth · price up/.test(X.orderRow(q)), 'the Orders row says who has it');
     t.check(/With Ruth/.test(X.viewOrders()) && !/going to Buying/.test(X.viewOrders()), 'Checking lists it with Ruth, not as all found going to Buying');
     t.check(/waiting on Ruth · price up/.test(X.nwPlacedNote(q)), 'the placed screen follows: all found, waiting on Ruth');
@@ -410,7 +412,9 @@ matrix.forEach(([what, it]) => {
     t.check(/Ruth set <span class="m">170,000<\/span> · was/.test(X.priceTagHTML(line, true)), 'the line says what Ruth set, and what it was');
     // A price up that still sells above its cost is not the Manager's to decide.
     const fine = { ...line, price: 130000, sellPrice: 155000, priceReview: null };
-    t.check(X.priceReviewState(fine) === null && !!X.linePriceUp(fine) && X.ordPriceUpHTML(fine) === '', 'a cost up that still sells above it holds nothing');
+    t.check(X.priceReviewState(fine) === null && !!X.linePriceUp(fine), 'a cost up that still sells above it holds nothing');
+    // MPriceUp (round 2): the cost before and after, and what is left on each against what was.
+    t.check(/120,000/.test(X.ordPriceUpHTML(fine)) && /130,000/.test(X.ordPriceUpHTML(fine)) && /\+25,000 a /.test(X.ordPriceUpHTML(fine)) && /was \+35,000/.test(X.ordPriceUpHTML(fine)), 'a price up shows the cost before and after, and the margin left against what it was');
   }
   // 3i. the placed screen follows the order; search puts what sells first
   {
@@ -462,6 +466,61 @@ matrix.forEach(([what, it]) => {
     const made = X.ordMadeOf(q, X.orderExtraRows(q), X.quoteTotal(q));
     t.check(/goods <span class="m">68,000/.test(made) && /delivery/.test(made) && /credit/.test(made), 'OCredit: the total says what it is made of');
     t.check(/ON CREDIT/.test(X.ordStampHTML(q)) && /DUE 20 NOV/.test(X.ordStampHTML(q)), 'OCredit: an unpaid credit order is stamped with when it is due');
+  }
+  // 3l. the QA audit, round 2: built as the canvas drew it (row 14)
+  {
+    const X = loadPage(fakeDb({ saved_quotes: [], cash_txns: [] }));
+    const data = fixture();
+    Object.assign(X.S, { data, shopId: SH, user: { id: 'u1' }, shopName: 'Mukasa Hardware' });
+    const d54 = new Date(Date.now() - 54 * 864e5).toISOString().slice(0, 10), d60 = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+    // SAL-04: a bill matching an order already paid is in question, never in the Take
+    const g = { id: 'C009', name: 'Ggaba Stores', phone: '', phone2: '', location: 'Ggaba', notes: '', debt: 290000, termsDays: null, creditLimit: 500000,
+      debtLog: [{ id: 91, type: 'charge', amount: 165000, date: d60, note: 'Opening balance', quoteId: null }, { id: 92, type: 'charge', amount: 125000, date: d54, quoteId: null }] };
+    data.customers.push(g);
+    data.savedQuotes = [{ id: 264, status: 'completed', invoiced: true, invoicedAt: d54, date: d54, amountPaid: 125000, customerId: 'C009', client: { name: 'Ggaba Stores' }, items: [{ productId: 'P1', productName: 'Cement', qty: 1, price: 100000, sellPrice: 125000, supplierId: '__stock__' }], charges: [] }];
+    X.S.loadedAt = 21;
+    t.check(X.custInQuestion(g) === 125000 && X.custTakeable(g) === 165000, 'SAL-04: 125,000 is in question, 165,000 can be taken');
+    const sheet = X.PAGE.customer({ id: 'C009' });
+    t.check(/Take <span class="m">165,000<\/span>/.test(sheet) && /data-amt="165000"/.test(sheet) && !/Take <span class="m">290,000/.test(sheet), 'SAL-04: the Take leaves the disputed bill out');
+    t.check(/165,000<\/b> to take/.test(sheet) && /125,000<\/b> in question/.test(sheet) && /Opening balance/.test(sheet), 'SAL-04: the head splits to take and in question; the loose bill names its note');
+    const ask = X.needsYou().find(n => n.title === 'Ggaba Stores');
+    t.check(!!ask && /165,000/.test(ask.sub) && /125,000<\/span> in question/.test(ask.sub) && !/290,000/.test(ask.sub), 'SAL-04: Today asks to collect only what is clear');
+    // SAL-05: nothing billed, orders on the move: the ring counts them, the body lists them with what is paid
+    const k = { id: 'C010', name: 'Mukono Roofing', phone: '0772000010', phone2: '', location: 'Nakawa', notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
+    data.customers.push(k);
+    data.savedQuotes.push({ id: 2413, status: 'draft', invoiced: false, amountPaid: 50000, customerId: 'C010', client: { name: 'Mukono Roofing' }, items: [{ productId: 'P1', productName: 'Cement', qty: 4, price: 30000, sellPrice: 45000, supplierId: '__stock__' }], charges: [] },
+      { id: 2415, status: 'pending_delivery', invoiced: false, amountPaid: 0, customerId: 'C010', client: { name: 'Mukono Roofing' }, items: [{ productId: 'P1', productName: 'Cement', qty: 2, price: 30000, sellPrice: 45000, supplierId: '__stock__' }], charges: [] });
+    X.S.loadedAt = 22;
+    const open = X.PAGE.customer({ id: 'C010' });
+    t.check(/>2<\/span><span class="cu-rw"[^>]*>OPEN/.test(open) && !/ORDERS/.test(open), 'SAL-05: the ring counts the open orders, never "0 ORDERS"');
+    t.check(/ON THE MOVE/.test(open) && /50,000<\/b> paid/.test(open) && /still to pay <b class="m">220,000/.test(open), 'SAL-05: what is already paid on them shows');
+    t.check(/Billed · owes/.test(open) && /Open bills <span class="m">0/.test(open) && /data-act="custpayorders"/.test(open), 'SAL-05: billed nothing yet, and a payment can still be taken');
+    t.check(/k<\/span> on the move/.test(X.nwOwesChip(k)) && X.nwMovingDue(k) === 220000, 'SAL-05: New sale says what is on the move, never a blank');
+    t.check(/Billed, not paid/.test(X.viewCustomers()), 'SAL-05: the owe list says it is billed debt');
+    // SAL-25: a typo in Customers finds who they meant
+    X.S.custQuery = 'ggaba stors'; X.S.loadedAt = 23;
+    t.check(/did you mean/.test(X.viewCustomers()) && /Ggaba Stores/.test(X.viewCustomers()) && /Someone new/.test(X.viewCustomers()), 'SAL-25: Customers offers the one they meant, then someone new');
+    X.S.custQuery = '';
+    // SAL-11: no credit limit -> the order opens on Cash, and Credit says why
+    data.savedQuotes.push({ id: 2390, status: 'completed', invoiced: true, invoicedAt: d60, date: d60, customerId: 'C010', credit: { pct: 3, days: 30 }, createdAt: new Date(Date.now() - 1e9).toISOString(), client: { name: 'Mukono Roofing' }, items: [], charges: [] });
+    X.S.loadedAt = 24;
+    const dr = X.newDraft(k); X.nwApplyHabit(dr, k);
+    t.check(dr.credit === false, 'SAL-11: no limit set: the order opens on Cash, whatever they did last time');
+    X.S.draft = { ...dr, items: [X.makeLine('P1', null, 1, { lineId: 1 })] };
+    t.check(/no limit<\/small>/.test(X.nwDockHTML()) && /they have no credit limit/.test(X.nwDockHTML()), 'SAL-11: Credit says there is no limit');
+    // SAL-12 / SAL-13: a box comes whole; past the shelf the line asks
+    t.check(X.nwWholeUnit({ unit: 'box' }) && X.nwWholeUnit({ unit: 'bag' }) && !X.nwWholeUnit({ unit: 'kg' }) && !X.nwWholeUnit({ unit: 'm' }), 'SAL-12: boxes and bags come whole; kilos and metres do not');
+    // NEW-01: a part payment shows the whole sum
+    const sum = X.paySum({ bills: [{ quoteId: 2413, label: 'Order #2413', pay: 30000, left: 100000, total: 180000 }] });
+    t.check(sum && sum.total === 180000 && sum.before === 50000 && sum.now === 30000 && sum.left === 100000, 'NEW-01: total − paid before − paid now = still to pay');
+    t.check(/Order total/.test(X.paySumRows(sum, 'momo')) && /Paid before/.test(X.paySumRows(sum, 'momo')) && /Paid now · mobile money/.test(X.paySumRows(sum, 'momo')) && /Still to pay/.test(X.paySumRows(sum, 'momo')), 'NEW-01: the receipt lists all four');
+    t.check(X.paySum({ bills: [{ quoteId: 2413, pay: 180000, left: 0, total: 180000 }] }) === null, 'NEW-01: a bill paid in one go needs none of it');
+    // SAL-19: the transaction ID goes only with mobile money or bank
+    t.check(X.payRefOf({ method: 'momo', ref: ' 3829 ' }) === '3829' && X.payRefOf({ method: 'cash', ref: '3829' }) === '', 'SAL-19: a reference rides on mobile money and bank only');
+    // NEW-03: one Enter arms the slide; it never places
+    t.check(/SLIDE_ARM\[key\] = \{ at: now, key: true \}/.test(html) && /if \(a && a\.key && now - a\.at < SLIDE_KEY_MS\)/.test(html) && !/if \(e\.key === 'Enter' \|\| e\.key === ' '\) \{ e\.preventDefault\(\); done\(\); \}/.test(html), 'NEW-03: a first Enter only arms the slide; the second within 5 s does it');
+    // SAL-20: they gave -- two round notes and Other
+    t.check(X.ctGivenChoices(564000).slice(0, 2).length === 2 && X.counterDockHTML !== undefined, 'SAL-20: two round notes beside Exact, then Other');
   }
   // 4. a payment over two bills and a loose balance
   {

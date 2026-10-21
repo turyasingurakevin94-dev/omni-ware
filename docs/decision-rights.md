@@ -546,6 +546,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0152 | Sourcing v2, round 7: one item, one name — Sourcing's verdict on two items that look like one (`item_twins`, product.edit): the same item (one name kept, the other taught as a name of it, `item_names`) or different; read by every member so the Buyer sees the shelf twin before buying. Both rows stay on the books; stock is never Sourcing's. (0151 is the Buyer's.) |
 | 0153 | Sales, third: a supplier's price up that puts a line under its sale pushes the Manager (`price.waits`, price.approve), and the Manager's new price on it pushes the salesperson to tell the customer (`price.decided`) |
 | 0154 | Accounts and the Buyer's money (the cross-app test of 21 Oct 2026; Buyer's side is 0151): pay the Buyer back for a round on their own money (`buyer_payback`: a Stock Purchase per stop, the orders' bills paid by the trip, the hand-off closed), take back cash handed over that no round used (`buyer_cash_back`, `buyer_handoffs.cash_back`), and a bill raised after the payback born paid |
+| 0155 | Sales, fourth: a mobile money or bank payment carries its transaction ID — `counter_sale` and `receive_payment` take an optional `p_ref`, written on the cash line's description and the order's `payments[].ref` (the QA retest of 21 Oct 2026, SAL-19) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
