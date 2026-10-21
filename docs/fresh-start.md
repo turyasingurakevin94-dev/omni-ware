@@ -42,9 +42,12 @@ only the library entry; the file stays for the old shop.
 
 1. **Back up.** `npm run backup` (every table, as JSON), and Export backup
    from the console's Backup menu. Keep a copy off the computer.
-2. **Practise on staging**, never on a copy of live data
-   (docs/environments.md, Part 1 step 8, makes a staging shop). Run every
-   step below there first.
+2. **Put the app updates live** (this branch merged and deployed): the
+   shop picker in the role apps and the Manager's old-books checklist must
+   be on everyone's phone before there are two shops. A practice run on
+   staging is optional (the "Set up staging" button, what: rehearse, runs
+   it on a made-up shop); the owner chose to skip it because nothing is
+   deleted and the preview below is itself a run that saves nothing.
 3. **Put 0146 on the live project:** paste
    `supabase/migrations/0146_fresh_start.sql` into the SQL editor and run it.
    It only adds the two functions; nothing changes until they are called.
