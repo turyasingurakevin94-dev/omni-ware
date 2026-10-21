@@ -755,7 +755,7 @@ matrix.forEach(([what, it]) => {
     try { const h = X.PAGE.paid({ fromTxn: 11 }); t.check(h.includes('50,000'), 'page paid draws from a receipt in the books'); } catch (e) { t.fail('page paid (fromTxn) threw: ' + e.message); }
   }
 
-  // a new customer (v104): their card fills as it goes, and the areas are tiles with +1 on the one they join
+  // a new customer (v105): their card fills as it goes, and the areas are plain chips
   {
     const X = loadPage(fakeDb({}));
     Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
@@ -766,7 +766,7 @@ matrix.forEach(([what, it]) => {
     t.check(c1.includes('Kireka Building Supplies') && c1.includes('0772 664 019') && c1.includes('Kira') && (c1.match(/#6FDCB0/g) || []).length === 3 && (c0.match(/#6FDCB0/g) || []).length === 0, 'a full card shows them as saved, the ring closed in three');
     X.S.sheet = { type: 'addcust', args: { for: '', phone: '', name: '', area: '' } };
     const sh = X.SHEET.addcust(X.S.sheet.args);
-    t.check(/class="cu-ncareas"/.test(sh) ? /--w:\d+%/.test(sh) && /class="p1"> \+1/.test(sh) && /Another area/.test(sh) : /id="sx_nc_area"/.test(sh) && !/Another area/.test(sh), 'areas are tiles with a bar each and +1 for the one chosen; with none on the books, a box to type it');
+    t.check(/class="cu-ncareas"/.test(sh) ? /data-act="ncarea"/.test(sh) && /Other…/.test(sh) && !/--w:|\+1|customers there/.test(sh) : /id="sx_nc_area"/.test(sh) && !/Other…/.test(sh), 'areas are plain chips with Other… (no bars, counts or +1); with none on the books, a box to type it');
     t.check(/Just save/.test(sh) && /Save and sell/.test(sh) && /cu-ncdock/.test(sh), 'the two saves sit in the dock');
   }
 

@@ -766,25 +766,13 @@ button.cu-bl:active{background:var(--soft)}
 .cu-ncg i{flex:1;height:4px;border-radius:9px;background:transparent}
 .cu-ncr{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
 .cu-ncah{display:flex;align-items:center;gap:12px}
-.cu-ncah em{margin-left:auto;font-style:normal;font-size:11px;font-weight:600;color:var(--ink3)}
-.cu-ncareas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cu-ncareas button{position:relative;height:58px;border:none;border-radius:16px;padding:9px 12px;box-sizing:border-box;background:linear-gradient(180deg,#EFECE6,#fff);box-shadow:inset 0 0 0 1px #E6E3DD;color:var(--ink);font-family:inherit;display:flex;flex-direction:column;justify-content:space-between;text-align:left;overflow:hidden;min-width:0}
-.cu-ncareas .t{display:flex;align-items:center;gap:6px;width:100%;min-width:0}
-.cu-ncareas .t .ell{flex:1;min-width:0;font-size:14px;font-weight:600}
-.cu-ncareas .t .m{font-size:12px;font-weight:600;color:var(--ink3);flex:none}
-.cu-ncareas .ck,.cu-ncareas .p1{display:none}
-.cu-ncareas .bar{display:block;width:100%;height:5px;border-radius:999px;background:#E6E3DD;box-shadow:inset 0 1px 2px rgba(22,32,60,.12);overflow:hidden}
-.cu-ncareas .bar i{display:block;width:var(--w);height:100%;border-radius:999px;background:#A9B1C2}
-.cu-ncareas button[aria-pressed="true"]{background:linear-gradient(135deg,#24305A,#16203C);box-shadow:0 8px 18px rgba(22,32,60,.22);color:#fff}
-.cu-ncareas button[aria-pressed="true"]::before{content:"";position:absolute;right:-24px;top:-30px;width:90px;height:90px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.22),rgba(111,220,176,0) 70%);pointer-events:none}
-.cu-ncareas button[aria-pressed="true"] .t .ell{font-weight:700}
-.cu-ncareas button[aria-pressed="true"] .t .m{color:var(--navyInk)}
-.cu-ncareas button[aria-pressed="true"] .ck{display:flex;width:16px;height:16px;border-radius:999px;background:var(--mint);color:var(--navy);align-items:center;justify-content:center;flex:none}
-.cu-ncareas button[aria-pressed="true"] .p1{display:inline;color:var(--mint)}
-.cu-ncareas button[aria-pressed="true"] .bar{background:rgba(0,0,0,.28);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
-.cu-ncareas button[aria-pressed="true"] .bar i{background:linear-gradient(90deg,#4FC796,var(--mint))}
-.cu-ncoth{height:44px;border:none;border-radius:14px;background:transparent;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:#5F6980;font-family:inherit;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
-.cu-ncoth[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--navy);color:var(--navy);font-weight:700}
+.cu-ncareas{display:flex;flex-wrap:wrap;gap:8px;padding-left:50px}
+.cu-ncareas button{height:38px;padding:0 14px;border:none;border-radius:999px;background:linear-gradient(180deg,#EFECE6,#fff);box-shadow:inset 0 0 0 1px #E6E3DD;color:var(--ink);font-family:inherit;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;flex:none}
+.cu-ncareas .ck{display:none;width:18px;height:18px;border-radius:999px;background:var(--mint);color:var(--navy);align-items:center;justify-content:center;flex:none}
+.cu-ncareas button[aria-pressed="true"]{padding-left:10px;background:linear-gradient(135deg,#24305A,#16203C);box-shadow:0 6px 14px rgba(22,32,60,.2);color:#fff;font-weight:700}
+.cu-ncareas button[aria-pressed="true"] .ck{display:flex}
+.cu-ncareas button.oth{background:transparent;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:#5F6980}
+.cu-ncareas button.oth[aria-pressed="true"]{padding-left:14px;background:transparent;box-shadow:inset 0 0 0 2px var(--navy);color:var(--navy)}
 .cu-ncother{height:44px;padding:0 14px;border:none;border-radius:12px;background:#F4F2EE;box-shadow:inset 0 1px 2px rgba(22,32,60,.08);font-family:inherit;font-size:16px;font-weight:600;color:var(--ink);outline:none}
 .cu-nctiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cu-nctile{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:18px;background:linear-gradient(180deg,#EFECE6,#fff);box-shadow:inset 0 0 0 1px #E6E3DD;min-width:0}
@@ -6518,9 +6506,9 @@ function custNcNameCheck(a){
 }
 SHEET.addcust = args => {
   const areas = custAreas().slice(0, 4), tag = custNcTag(args), cur = (args.area || '').trim(), other = args.areaOther || (cur && !areas.some(x => x.a.toLowerCase() === cur.toLowerCase()));
-  const sell = !(args.for === 'pay' || args.for === 'switch' || args.for === 'chat'), most = Math.max(1, ...areas.map(x => x.n));
-  // Each area is a tile: a bar for how many customers are there already, and +1 on the one they join.
-  const tile = x => `<button data-act="ncarea" data-a="${esc(x.a)}" aria-pressed="${!other && cur.toLowerCase() === x.a.toLowerCase()}" style="--w:${Math.round(x.n / most * 100)}%"><span class="t"><span class="ck">${ic('tick', 9, 'style="stroke-width:3.6"')}</span><span class="ell">${esc(x.a)}</span><span class="m">${x.n}<span class="p1"> +1</span></span></span><span class="bar"><i></i></span></button>`;
+  const sell = !(args.for === 'pay' || args.for === 'switch' || args.for === 'chat');
+  // The areas most of their customers are in, as chips: the chosen one is navy with a tick.
+  const chip = x => `<button data-act="ncarea" data-a="${esc(x.a)}" aria-pressed="${!other && cur.toLowerCase() === x.a.toLowerCase()}"><span class="ck">${ic('tick', 11, 'style="stroke-width:3.2"')}</span>${esc(x.a)}</button>`;
   return `<div class="cu-nc">
     <div class="cu-nchead" data-navy-top><span class="cu-ncband" aria-hidden="true"></span><span class="cu-nchandle"></span>
       <div class="cu-nctop"><span class="cu-nctt"><span class="sx-eyebrow">New customer</span><b>Add them in three</b></span><span id="cu_ncready">${custNcReady(args)}</span><button class="cu-ncx" data-act="ncback" aria-label="Close">${ic('close', 14, 'style="stroke-width:2.4"')}</button></div>
@@ -6530,8 +6518,8 @@ SHEET.addcust = args => {
         <label class="cu-ncf"><span class="cu-nci g">${ic('chat', 18)}</span><span class="cu-ncin"><span>WhatsApp</span><input id="sx_nc_phone" class="m" data-in="ncphone" type="tel" inputmode="tel" aria-label="WhatsApp number" value="${esc(args.phone || '')}" placeholder="07__ ___ ___" autocomplete="off" autofocus><span id="cu_ncgauge">${tag.gauge}</span></span><span id="cu_nctag">${tag.html}</span></label>
         <div id="sx_nc_dup">${custNcDup(tag.twin)}</div>
         <label class="cu-ncf"><span class="cu-nci a">${ic('storefront', 18)}</span><span class="cu-ncin"><span>Business or name</span><input id="sx_nc_name" data-in="ncname" aria-label="Business or name" value="${esc(args.name || '')}" placeholder="Who they are" autocomplete="off"><span id="cu_ncname">${custNcNameCheck(args)}</span></span></label>
-        <div class="cu-ncf area"><span class="cu-ncah"><span class="cu-nci r">${ic('pin', 18)}</span><span>Where they are</span>${areas.length ? '<em>customers there</em>' : ''}</span>
-          ${areas.length ? `<span class="cu-ncareas">${areas.map(tile).join('')}</span><button class="cu-ncoth" data-act="ncother" aria-pressed="${!!other}">${ic('plus', 14, 'style="stroke-width:2.2"')}Another area</button>` : ''}
+        <div class="cu-ncf area"><span class="cu-ncah"><span class="cu-nci r">${ic('pin', 18)}</span><span>Where they are</span></span>
+          ${areas.length ? `<span class="cu-ncareas">${areas.map(chip).join('')}<button class="oth" data-act="ncother" aria-pressed="${!!other}">Other…</button></span>` : ''}
           <input id="sx_nc_area" data-in="ncarea" aria-label="Their area" ${other || !areas.length ? '' : 'type="hidden" '}value="${esc(args.area || '')}" placeholder="Their area" autocomplete="off" class="cu-ncother"${args.areaOther ? ' autofocus' : ''}></div>
       </div>
       <div class="cu-nctiles">
