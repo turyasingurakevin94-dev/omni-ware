@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * A round is handed in once (0145): the Buyer hands every stop of a round in
+ * A round is handed in once (0146): the Buyer hands every stop of a round in
  * together, back at the yard, and the Store and Accounts are told once for
  * the round, not once per stop.
  *
  *   1. The SQL text, and the Buyer app's one hand-in.
  *   2. A REAL database, when OW_PG names one: every migration in order,
- *      0145 run twice, then test/fixtures/push-round-once-scenario.sql.
+ *      0146 run twice, then test/fixtures/push-round-once-scenario.sql.
  *
  * Run: node test/push-round-once-db.test.js
  *      OW_PG="host=/var/tmp/owpg port=5499 user=postgres" node test/push-round-once-db.test.js
@@ -17,8 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('a round handed in once (0145)');
-const raw = read('supabase/migrations/0145_buyer_round_handed_in_once.sql');
+const t = createReporter('a round handed in once (0146)');
+const raw = read('supabase/migrations/0146_buyer_round_handed_in_once.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the text ---------------- */
@@ -30,7 +30,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/security definer set search_path = public/.test(sql) && /exception when others then/.test(sql), 'security definer, and a push that fails never stops the write');
   t.check(/perform ow_push\(/.test(sql) && !/insert into push_outbox/.test(sql), 'through 0120\'s ow_push, never straight into the outbox');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
-  t.check(/\| 0145 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0145 for this build');
+  t.check(/\| 0146 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0146 for this build');
   const buyer = read('buyer.html');
   t.check(/'TRIP-' \+ stamp \+ \(runs\.length > 1 \? '-' \+ \(i \+ 1\) : ''\)/.test(buyer), 'the Buyer app still names a round\'s stops TRIP-<stamp>-<n>');
   t.check(/Stops not reached are off the round first/.test(buyer), 'the Buyer app takes the stops not reached off before handing in, so the count is what came back');
@@ -58,8 +58,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0145_buyer_round_handed_in_once.sql')]);
-t.check(again.status === 0, `0145 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0146_buyer_round_handed_in_once.sql')]);
+t.check(again.status === 0, `0146 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'push-round-once-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);
