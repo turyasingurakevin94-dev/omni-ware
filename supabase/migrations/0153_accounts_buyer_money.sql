@@ -37,12 +37,17 @@
 /* ---------------- 1. a handover counted back is marked on it ---------------- */
 alter table buyer_handoffs add column if not exists cash_back jsonb;
 
--- Only buyer_cash_back writes it (0125's guard keeps the rest of the row as it was).
+-- Only buyer_cash_back writes it (0125's guard keeps the rest of the row as it was),
+-- and once it is written no round can claim that cash.
 create or replace function buyer_handoffs_cash_back_guard() returns trigger
 language plpgsql as $$
 begin
   if new.cash_back is distinct from old.cash_back and coalesce(current_setting('ow.cash_back', true), '') <> '1' then
     raise exception 'A handover is counted back from Accounts'' trip cash only.' using errcode = '42501';
+  end if;
+  -- Cash counted back is back in the drawer: no round can claim it after (0151 sets payload.round once).
+  if old.cash_back is not null and (new.payload ->> 'round') is distinct from (old.payload ->> 'round') then
+    raise exception 'This cash was counted back; no round can use it now.' using errcode = '42501';
   end if;
   return new;
 end $$;
