@@ -81,7 +81,8 @@ same('staffEligibleForRole', workerSrc, 'shared-worker.js');
 }
 {
   // The payment is the sales desk's customer payment: the same one write (0140 receive_payment), with the same arguments.
-  const grab = (src, where) => { const i = src.indexOf("ACT['slide:pay'] = async"); if (i < 0) throw new Error('no slide:pay in ' + where); const j = src.indexOf("sb.rpc('receive_payment'", i); if (j < 0) throw new Error('no receive_payment in ' + where); return norm(src.slice(j, src.indexOf('\n', j))); };
+  // Sales sends it through payRpc, which adds the transaction ID (0155) only when one was typed: the arguments are compared.
+  const grab = (src, where) => { const i = src.indexOf("ACT['slide:pay'] = async"); if (i < 0) throw new Error('no slide:pay in ' + where); const j = src.indexOf("('receive_payment', {", i); if (j < 0) throw new Error('no receive_payment in ' + where); const k = src.indexOf('}', j); return norm(src.slice(j, k + 1)); };
   t.check(grab(app, 'manager.html') === grab(salesSrc, 'sales.html'), 'a payment is the one write the sales desk makes, with the same arguments');
 }
 
