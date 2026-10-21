@@ -340,6 +340,7 @@ input{font-family:inherit;color:var(--ink)}
 .bx-why span.w{display:flex;align-items:center;gap:6px;min-height:36px;border-radius:9px;font-size:11px;font-weight:700}
 .bx-undo{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;bottom:calc(96px + var(--safe-area-inset-bottom));z-index:95;display:flex;flex-direction:column;border-radius:16px;background:var(--navy);color:#fff;box-shadow:0 14px 30px rgba(22,32,60,.35);overflow:hidden;animation:bxUndoIn .25s cubic-bezier(.2,.9,.3,1) both}
 .bx-undo .row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px}
+.bx-drain{transform-origin:left;animation:bxUndoBar 6s linear both}
 .bx-undo .bar{height:3px;background:rgba(255,255,255,.1)}.bx-undo .bar i{display:block;height:100%;background:var(--mint);transform-origin:left;animation:bxUndoBar 6s linear both}
 @keyframes bxUndoIn{from{transform:translateY(12px);opacity:0}}@keyframes bxUndoBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (prefers-reduced-motion: reduce){.bx-undo{animation:none}}
@@ -1607,6 +1608,9 @@ function pushOpen(d){
       const h = (D().handoffs || []).find(x => String(x.id) === String(d.id));
       at('plan', h && h.payload && h.payload.supplierId ? { sid: h.payload.supplierId } : {});
     } else if (d.kind === 'restock.held' || d.kind === 'restock.released') at('restock', { picked: null });
+    // 0150: a trip sent or given to you opens it; one taken off you or cancelled opens Trips.
+    else if (d.kind === 'trip.sent') { const t = tripById(id); if (t && tripIsLive(t)) at('trip', { id: t.id }); else at('trips', {}); }
+    else if (d.kind === 'trip.taken' || d.kind === 'trip.cancelled') at('trips', {});
     else if (d.kind === 'supplier.answered') { const q = quoteById(id); if (q) at('order', { id: Number(q.id) }); else at('plan', {}); }
     // Sourcing found a supplier for a line the client waits for (0144).
     else if (d.kind === 'sourcing.found') { const q = quoteById(id), it = q && (q.items || []).find(x => x && x.clientWaits && !x.supplierId); if (q && it) at('findsup', { id: Number(q.id), lineId: it.lineId }); else if (q) at('order', { id: Number(q.id) }); else go('check'); }
@@ -2935,19 +2939,34 @@ function viewSuppliers(){
     </div>
   </div>`;
 }
+// Every state a supplier is in, the most urgent first: a late trip and
+// goods back at the yard are two chips, not one.
+function supplierLateTrips(){ const k = D().collectionTrips; if (S.ui._lateOf !== k) { S.ui._lateOf = k; S.ui._late = outGroups(flowNow().out).filter(g => g.late); } return S.ui._late || []; }
+function moneyShort(n){ n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : n0(n); }
 function supplierRowHTML(x, i){
   const s = x.s, t = x.t, o = x.o, terms = x.terms, nophone = !supplierPhone(s.id), score = Math.round(supplierScore(s.id).total);
   const pct = o.owed ? Math.min(100, o.days / terms * 100) : 0, col = !o.owed ? '#E6E3DD' : o.days > terms ? '#8E2A22' : pct >= 80 ? '#F5B26B' : '#0F6B43';
-  const st = t.out ? ['out of stock', 'var(--crimsonSoft)', 'var(--crimson)', ''] : t.back ? ['back · yard', 'var(--greenSoft)', 'var(--green)', ''] : t.trip ? ['trip', 'var(--indigoSoft)', 'var(--indigo)', 'a-blink']
-    : t.ask != null ? ['asked ' + waitClock(t.ask), t.ask > 60 ? 'var(--amberSoft)' : 'var(--soft)', t.ask > 60 ? 'var(--amberInk)' : 'var(--ink2)', t.ask > 60 ? 'a-blink' : ''] : t.toAsk ? ['to ask', 'var(--soft)', 'var(--ink2)', ''] : nophone ? ['+ phone', '#FDF1E6', '#7A4A02', ''] : null;
-  return `<button class="bx-row a-up" data-act="supplier" data-sid="${esc(s.id)}" aria-label="${esc(s.name)}, record ${score} of 100, ${o.owed ? 'oldest bill ' + o.days + ' of ' + terms + ' days, ' + n0(o.owed) + ' owed' : 'nothing owed'}${st ? ', ' + esc(st[0]) : ''}" style="min-height:66px;animation-delay:${Math.min(i, 10) * .04}s">
+  const late = supplierLateTrips().find(g => g.out.some(y => String(y.supplierId) === String(s.id)));
+  const RED = ['var(--crimsonSoft)', 'var(--crimson)'], sts = [];
+  if (late) sts.push([(tripIsSupplierDelivered(late.out[0]) ? 'brings it' : 'trip') + ' · ' + late.days + ' d late', ...RED, 'a-blink']);
+  if (t.out) sts.push(['out of stock', ...RED, '']);
+  if (t.trip && !late) sts.push(['on a trip', 'var(--indigoSoft)', 'var(--indigo)', 'a-blink']);
+  if (t.back) sts.push(['back · yard', 'var(--greenSoft)', 'var(--green)', '']);
+  if (t.ask != null) sts.push(['asked ' + waitClock(t.ask), t.ask > 60 ? 'var(--amberSoft)' : 'var(--soft)', t.ask > 60 ? 'var(--amberInk)' : 'var(--ink2)', t.ask > 60 ? 'a-blink' : '']);
+  else if (t.toAsk) sts.push(['to ask', 'var(--soft)', 'var(--ink2)', '']);
+  if (nophone) sts.push(['+ phone', '#FDF1E6', '#7A4A02', '']);
+  const lab = w => `<span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#8A93A3">${w}</span>`;
+  return `<button class="bx-row a-up" data-act="supplier" data-sid="${esc(s.id)}" aria-label="${esc(s.name)}, score ${score} of 100, ${o.owed ? 'oldest bill ' + o.days + ' days into ' + terms + '-day terms, we owe ' + n0(o.owed) : 'nothing owed'}${sts.length ? ', ' + esc(sts.map(c => c[0]).join(', ')) : ''}" style="min-height:66px;align-items:center;animation-delay:${Math.min(i, 10) * .04}s">
     <span style="position:relative;width:44px;height:44px;flex:none"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="22" cy="22" r="20" fill="none" stroke="#EFECE6" stroke-width="3"/><circle cx="22" cy="22" r="20" fill="none" stroke="${score >= 75 ? '#0F6B43' : score >= 65 ? '#9BA3F0' : '#F5B26B'}" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="${score} 100"/></svg>
       <span style="position:absolute;inset:5px;border-radius:999px;background:${tintFor(s.id)[0]};color:${tintFor(s.id)[1]};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">${esc(initials(s.name))}</span></span>
-    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
-      <span style="display:flex;align-items:baseline;gap:6px;min-width:0"><b class="ell" style="font-size:14px">${esc(s.name)}</b><span class="m" style="flex:none;font-size:11px;font-weight:600;color:var(--ink3)">${score}</span></span>
-      <span style="display:flex;align-items:center;gap:8px"><span style="width:52px;height:4px;border-radius:999px;background:var(--soft2);overflow:hidden;flex:none"><i class="a-grow" style="display:block;height:100%;width:${pct.toFixed(0)}%;background:${col}"></i></span><span class="m ell" style="min-width:0;font-size:11px;color:${o.owed && o.days > terms ? 'var(--crimson)' : pct >= 80 && o.owed ? 'var(--amberInk)' : 'var(--ink2)'}">${o.owed ? o.days + '/' + terms + ' d · ' + n0(o.owed) : 'nothing owed'}</span></span>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+      <span style="display:flex;align-items:center;gap:6px;min-width:0"><b class="ell" style="flex:1;min-width:0;font-size:14px">${esc(s.name)}</b>${sts.slice(0, 2).map(c => `<span style="flex:none;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap;background:${c[1]};color:${c[2]}"><i class="${c[3]}" style="width:5px;height:5px;border-radius:999px;background:${c[2]}"></i>${esc(c[0])}</span>`).join('')}</span>
+      <span style="display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:end">
+        <span style="display:flex;flex-direction:column;gap:1px">${lab('SCORE')}<b class="m" style="font-size:14px;font-weight:600;line-height:1.1;color:${score >= 75 ? 'var(--green)' : score >= 65 ? 'var(--indigo)' : 'var(--amberInk)'}">${score}</b></span>
+        <span style="min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;justify-content:space-between;gap:4px">${lab('TERMS')}<span class="m" style="font-size:9.5px;font-weight:700;color:${o.owed && o.days > terms ? 'var(--crimson)' : pct >= 80 && o.owed ? 'var(--amberInk)' : 'var(--ink2)'}">${o.owed ? o.days + ' of ' + terms + ' d' : '—'}</span></span><span style="height:5px;border-radius:999px;background:var(--soft2);overflow:hidden"><i class="a-grow" style="display:block;height:100%;width:${pct.toFixed(0)}%;background:${col}"></i></span></span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">${lab('WE OWE')}<b class="m" style="font-size:14px;font-weight:600;line-height:1.1;white-space:nowrap;color:${o.owed ? 'var(--ink)' : '#9AA1AE'}">${o.owed ? moneyShort(o.owed) : '0'}</b></span>
+      </span>
     </span>
-    ${st ? `<span class="bx-chip" style="background:${st[1]};color:${st[2]}"><i class="${st[3]}" style="width:6px;height:6px;border-radius:999px;background:${st[2]}"></i>${esc(st[0])}</span>` : ''}
   </button>`;
 }
 ACT.supf = t => { if (S.ui.supF !== t.dataset.v) FEEL.tick(); S.ui.supF = t.dataset.v; S.ui.supMore = false; render(); };
@@ -2996,7 +3015,9 @@ function priceRowHTML(r, opts){
         <input id="bx_cprice" data-in="cprice" inputmode="numeric" autocomplete="off" aria-label="Their price now${r.unit ? ', a ' + esc(r.unit) : ''}" value="${v ? n0(v) : ''}" style="width:100%;min-width:0;height:48px;box-sizing:border-box;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #9BA3F0;text-align:center;font-family:var(--mono);font-size:20px;font-weight:600;color:var(--navy)">
         <button data-act="pstep" data-d="1" aria-label="Higher" style="height:48px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px #DCDDF7;font-size:20px;font-weight:700;color:var(--indigo)">+</button></span>
       <span style="display:flex;align-items:center;gap:8px"><span id="bx_cdelta" class="m" style="flex:none;height:28px;padding:0 9px;border-radius:999px;display:inline-flex;align-items:center;font-size:12px;font-weight:600;${d > 0 ? 'background:var(--amberSoft);color:var(--amberInk)' : d < 0 ? 'background:var(--greenSoft);color:var(--green)' : 'background:#fff;color:var(--ink3)'}">${d ? signed(d) : '±0'}</span><span style="flex:1;font-size:11.5px;font-weight:600;color:var(--ink2)">against the list${r.unit ? ', a ' + esc(r.unit) : ''}</span><button data-act="pedit" data-id="" style="height:36px;padding:0 10px;border:none;border-radius:11px;background:transparent;color:var(--ink2);font-size:12px;font-weight:700">Cancel</button><button data-act="pconfirm" data-id="${esc(r.id)}" data-new="1" ${S.busy ? 'aria-disabled="true"' : ''} style="height:36px;padding:0 14px;border:none;border-radius:11px;background:var(--navy);color:#fff;font-size:13px;font-weight:700">Save</button></span></span>`; }
-  if (done || back) tail = `<span style="display:flex;align-items:center;gap:8px;padding-left:18px;font-size:12px;font-weight:700;color:var(--green)">✓ ${done ? (wait && wait.nv != null && wait.nv !== Math.round(each || 0) ? 'new price saved · ' : '') + '1 of today’s share' : 'with ' + esc(whoShort('sourcing'))}${wait ? `<button data-act="pundo" data-id="${esc(r.id)}" style="margin-left:auto;height:28px;padding:0 10px;border:none;border-radius:999px;background:#F4F2EE;color:#4D566B;font-size:11px;font-weight:700">Undo</button>` : ''}</span>`;
+  // Six seconds to undo, shown as a bar running out; then it is saved.
+  if (wait) tail = `<span style="display:flex;flex-direction:column;gap:6px;padding-left:18px"><span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--green)">✓ ${wait.nv != null ? 'new price ' + n0(wait.nv) : 'still ' + (each != null ? n0(each) : 'the price')} · saving…<button data-act="pundo" data-id="${esc(r.id)}" style="margin-left:auto;height:32px;padding:0 14px;border:none;border-radius:999px;background:var(--navy);color:#fff;font-size:12px;font-weight:700">Undo</button></span><span role="img" aria-label="Saves in ${Math.max(1, Math.ceil((UNDO_MS - (Date.now() - wait.at)) / 1000))} seconds unless you undo" style="display:block;height:3px;border-radius:999px;background:#EDEAE4;overflow:hidden"><i class="bx-drain" style="display:block;height:100%;background:var(--green);animation-duration:${UNDO_MS}ms;animation-delay:-${Math.min(UNDO_MS, Date.now() - wait.at)}ms"></i></span></span>`;
+  else if (done || back) tail = `<span style="display:flex;align-items:center;gap:8px;padding-left:18px;font-size:12px;font-weight:700;color:var(--green)">✓ ${done ? (((S.ui.cnow || {})[r.id] || {}).nv != null ? 'new price saved' : 'saved') + ' · 1 of today’s share' : 'with ' + esc(whoShort('sourcing'))}</span>`;
   return `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0;${opts.last ? '' : 'border-bottom:1px solid #F1EEE8'}">
     <span style="display:flex;align-items:center;gap:10px"><i style="width:8px;height:8px;flex:none;border-radius:${tone === 'out' ? '2px' : '999px'};${tone === 'fresh' ? 'background:var(--green)' : tone === 'old' ? 'box-shadow:inset 0 0 0 2px var(--amberInk)' : 'background:var(--crimson)'}"></i>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:700;${tone === 'out' ? 'color:var(--ink4);text-decoration:line-through' : ''}">${esc(name)}</span><span class="ell" style="font-size:12px;font-weight:600;color:${done || back ? 'var(--green)' : tone === 'old' ? 'var(--amberInk)' : tone === 'out' ? 'var(--crimson)' : 'var(--ink3)'}">${esc(sub)}</span></span>
@@ -3084,6 +3105,12 @@ PAGE.confirm = (args) => {
   // What was confirmed here stays on the list, ticked, until you leave.
   let groups = staleBySupplier().map(g => ({ sid: g.sid, rows: g.rows.map(x => x.r) }));
   D().prices.filter(r => cnow[r.id] || pb[r.id]).forEach(r => { let g = groups.find(x => String(x.sid) === String(r.supplierId)); if (!g) groups.push(g = { sid: String(r.supplierId), rows: [] }); if (!g.rows.includes(r)) g.rows.push(r); });
+  // The order the page opened in holds: a confirmed row never moves, so
+  // the next row's button never slides under a finger.
+  const snap = args.order || (args.order = []);
+  groups.forEach(g => { let e = snap.find(x => x[0] === String(g.sid)); if (!e) snap.push(e = [String(g.sid), []]); g.rows.forEach(r => { if (!e[1].includes(String(r.id))) e[1].push(String(r.id)); }); });
+  const at = sid => snap.findIndex(x => x[0] === String(sid));
+  groups.sort((a, b) => at(a.sid) - at(b.sid)).forEach(g => { const e = snap[at(g.sid)][1]; g.rows.sort((a, b) => e.indexOf(String(a.id)) - e.indexOf(String(b.id))); });
   if (args.sid) groups = groups.filter(g => String(g.sid) === String(args.sid));
   const open = groups.reduce((n, g) => n + g.rows.filter(r => !cnow[r.id] && !pb[r.id] && !cWaitFor(r.id)).length, 0);
   const dots = shareMeterHTML(share, 11);
@@ -3095,7 +3122,7 @@ PAGE.confirm = (args) => {
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:14px">${share.done >= share.per ? 'Share done · ' + share.done + ' of ' + share.per + ' price checks today' : share.done + ' of ' + share.per + ' price checks today'}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">your share · ${esc(personFor('sourcing') ? personFor('sourcing') + ' (Sourcing)' : 'Sourcing')} does the rest · ${open ? open + ' here to confirm' : 'nothing left here'}</span></span></div>
     </div>
     <div class="bx-body" style="gap:12px">
-      ${groups.length ? groups.map(g => { const s = supplierById(g.sid) || { id: g.sid, name: supplierName(g.sid) }, ph = supplierPhone(g.sid), pend = g.rows.filter(r => !cnow[r.id] && !pb[r.id]);
+      ${groups.length ? groups.map(g => { const s = supplierById(g.sid) || { id: g.sid, name: supplierName(g.sid) }, ph = supplierPhone(g.sid), pend = g.rows.filter(r => !cnow[r.id] && !pb[r.id] && !cWaitFor(r.id));
         const msg = supplierPriceAskMessage(g.sid, pend.filter(r => !cWaitFor(r.id)).map(r => ({ row: { ...r, pname: productVariantLabel(productById(r.productId) || { name: 'Item' }, r.variantIdx) } })));
         return `<div class="bx-card a-up" style="padding:12px;border-radius:22px">
           <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #F1EEE8">${avatar(s.name, s.id, 40)}
@@ -3424,7 +3451,10 @@ function planJoinHTML(r){
 function outGroups(outs){
   const gs = [];
   outs.forEach(t => { const rt = tripIsSupplierDelivered(t) || !t.assignedWorkerId ? [t] : roundStops(t); if (gs.some(g => g.rt.includes(t))) return; gs.push({ rt, out: rt.filter(x => outs.includes(x)) }); });
-  gs.forEach(g => { const any = g.rt.some(x => stopIsDone(x) || tripLines(x).some(l => tripLineGot(l) != null)); g.late = !any && g.out.every(x => isoOf(x.createdAt) < todayISO()); g.days = Math.max(...g.out.map(x => Math.round((new Date(todayISO()) - new Date(isoOf(x.createdAt))) / 864e5))); });
+  gs.forEach(g => { const any = g.rt.some(x => stopIsDone(x) || tripLines(x).some(l => tripLineGot(l) != null)); g.days = Math.max(...g.out.map(x => Math.round((new Date(todayISO()) - new Date(isoOf(x.createdAt))) / 864e5)));
+    // A supplier bringing it is late past its delivery days, with anything still to come.
+    if (tripIsSupplierDelivered(g.out[0])) { const sp = supplierById(g.out[0].supplierId), dd = Math.max(1, Number(sp && sp.deliveryDays) || 1), all = g.out.every(x => tripLines(x).length && tripLines(x).every(l => tripLineGot(l) != null && tripLineGot(l) >= (Number(l.qty) || 0))); g.late = !all && g.days > dd; }
+    else g.late = !any && g.out.every(x => isoOf(x.createdAt) < todayISO()); });
   return gs;
 }
 // At the yard: one count and one bar by day, the names behind a tap. Older
@@ -3469,6 +3499,62 @@ function yardCard(back){
   </div>`;
 }
 ACT.yardopen = () => { S.ui.yardOpen = !S.ui.yardOpen; FEEL.tick(); render(); };
+// Chase a trip nobody is moving: reach the runner, give it to someone
+// else, or cancel it (its lines go back to To plan). 0150 pushes the runner
+// it goes to, the runner it is taken from, and the runner of one cancelled.
+function tripWaiters(t){ return [...new Set(tripLines(t).filter(l => l.orderId !== 'restock').map(l => { const q = quoteById(l.orderId); return shortName(q ? quoteClientName(q) : l.clientName || ''); }).filter(Boolean))]; }
+function chasePanelHTML(t){
+  const c = S.ui.chase, st = c.step || 'menu', w = staffById(t.assignedWorkerId), wn = w ? staffCall(w) : 'them', ph = w && w.phone, days = Math.max(1, Math.round((new Date(todayISO()) - new Date(isoOf(t.createdAt))) / 864e5));
+  const waits = tripWaiters(t), can = tripTakeable(t), sh = supplierShort(t.supplierId), names = waits.length > 1 ? waits.slice(0, -1).join(', ') + ' and ' + waits[waits.length - 1] : waits[0];
+  const msg = `Hello ${firstWord(wn)}, the ${sh} trip from ${dayLabel(isoOf(t.createdAt))} is still ${t.status === 'assigned' ? 'not taken' : 'not loaded'} — can you go today?${names ? ' ' + names + (waits.length > 1 ? ' are' : ' is') + ' waiting.' : ''}`;
+  const tile = (inner, extra) => `style="height:62px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11.5px;font-weight:700;text-align:center;${extra}"`;
+  const avs = waits.slice(0, 3).map((n, i) => { const tt = tintFor(n); return `<span class="bx-av round" style="width:22px;height:22px;font-size:8px;${i ? 'margin-left:-6px;' : ''}background:${tt[0]};color:${tt[1]};box-shadow:0 0 0 2px #FBF4F3">${esc(initials(n))}</span>`; }).join('');
+  let body = '';
+  if (st === 'menu') body = `<span style="display:grid;grid-template-columns:repeat(${can ? 3 : 2},minmax(0,1fr));gap:6px">
+      ${ph ? `<a href="${esc(waComposeUrl(ph, msg))}" target="_blank" rel="noopener" ${tile('', 'background:var(--green);color:#fff')}>${ic('wa', 18)}WhatsApp ${esc(firstWord(wn))}</a>` : `<span aria-disabled="true" ${tile('', 'background:#F4F2EE;color:var(--ink3)')}>${ic('wa', 18)}No phone for ${esc(firstWord(wn))}</span>`}
+      ${can ? `<button data-act="tchasego" data-step="give" ${tile('', 'border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--navy)')}>${ic('swap', 18)}Give to someone</button>
+      <button data-act="tchasego" data-step="cancel" ${tile('', 'border:none;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35);color:#A82D24')}>${ic('close', 18)}Cancel trip</button>` : `<button data-act="trip" data-id="${esc(t.id)}" ${tile('', 'border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--navy)')}>${ic('truck', 18)}Open the trip</button>`}</span>`;
+  else if (st === 'give') { const who = (D().staff || []).filter(x => !x.unavailable && String(x.id) !== String(t.assignedWorkerId));
+    body = `<span style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--ink3)">GIVE THE TRIP TO</span><span style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${who.map(x => { const me = myStaff() && String(x.id) === String(myStaff().id), tt = tintFor(x.name);
+      return `<button data-act="tchasegive" data-w="${esc(x.id)}" ${S.busy ? 'aria-disabled="true"' : ''} style="height:48px;border:none;border-radius:13px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--ink);text-align:left"><span class="bx-av round" style="width:30px;height:30px;font-size:10px;background:${tt[0]};color:${tt[1]}">${esc(initials(x.name))}</span><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:12.5px">${me ? 'You' : esc(staffCall(x))}</b><span class="ell" style="font-size:10.5px;font-weight:600;color:var(--ink3)">${esc(staffSub(x))}${staffOut(x) ? ' · out' : ' · free'}</span></span></button>`; }).join('')}</span></span>`; }
+  else if (st === 'cancel') body = `<span style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2)">Its ${tripLines(t).length} line${tripLines(t).length === 1 ? '' : 's'} go back to <b>To plan</b> · ${esc(firstWord(wn))} is told</span><button data-act="tchasecancel" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:38px;padding:0 12px;border:none;border-radius:12px;background:var(--red);color:#fff;font-size:12.5px;font-weight:700">Cancel it</button></span>`;
+  else body = `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--green)"><span style="flex:1">✓ ${st === 'gave' ? esc(c.toName) + ' ' + (c.toName === 'You' ? 'have' : 'has') + ' it now · ' + esc(c.fromName) + ' is told' : 'Cancelled · the lines are on To plan'}</span><button data-act="tchaseundo" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;min-height:28px;padding:0 8px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></span>`;
+  return `<div class="a-up" style="display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:10px;border-radius:16px;background:#FBF4F3;box-shadow:inset 0 0 0 1px rgba(201,58,48,.18)">
+    ${waits.length ? `<span role="img" aria-label="${esc(names)} ${waits.length > 1 ? 'have' : 'has'} waited ${days} day${days === 1 ? '' : 's'}" style="display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:#8E2A22"><span style="display:flex">${avs}</span>${esc(names)} wait${waits.length > 1 ? '' : 's'} · ${days} d</span>` : ''}
+    ${body}</div>`;
+}
+ACT.tchase = t => { const id = t.dataset.id; S.ui.chase = S.ui.chase && S.ui.chase.id === id && !['gave', 'cancelled'].includes(S.ui.chase.step) ? null : S.ui.chase && S.ui.chase.id === id ? null : { id, step: 'menu' }; FEEL.tick(); render(); };
+ACT.tchasego = t => { if (!S.ui.chase) return; S.ui.chase.step = t.dataset.step; FEEL.tick(); render(); };
+ACT.tchasegive = async t => {
+  const c = S.ui.chase, x = c && tripById(c.id), to = t.dataset.w; if (!x || S.busy || !tripTakeable(x)) return;
+  const was = x.assignedWorkerId, at = new Date().toISOString(); S.busy = true; render();
+  try {
+    const u = await sb.from('collection_trips').update({ assigned_worker_id: to, status: 'assigned', assigned_at: at, accepted_at: null }).eq('shop_id', S.shopId).eq('id', x.id); if (u.error) throw u.error;
+    D().collectionTrips = D().collectionTrips.map(y => y.id === x.id ? { ...y, assignedWorkerId: to, status: 'assigned', assignedAt: at, acceptedAt: null } : y); saveSnapshot();
+    const me = myStaff() && String(to) === String(myStaff().id), w0 = staffById(was);
+    S.ui.chase = { id: x.id, step: 'gave', was, toName: me ? 'You' : staffCall(staffById(to) || { name: staffName(to) }), fromName: w0 ? staffCall(w0) : 'they' }; S.busy = false; FEEL.yes();
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing changed. Try again with signal.' : 'Not changed: ' + (e.message || e), 6000); }
+  render();
+};
+ACT.tchasecancel = async () => {
+  const c = S.ui.chase, x = c && tripById(c.id); if (!x || S.busy || !tripTakeable(x)) return;
+  S.busy = true; render();
+  try { await dropStop(x, 'Cancelled: not taken', null); S.ui.chase = { id: x.id, step: 'cancelled' }; S.busy = false; FEEL.back(); }
+  catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing changed. Try again with signal.' : 'Not cancelled: ' + (e.message || e), 6000); }
+  render();
+};
+ACT.tchaseundo = async () => {
+  const c = S.ui.chase, x = c && tripById(c.id); if (!x || S.busy) return;
+  S.busy = true; render();
+  try {
+    if (c.step === 'gave') { const u = await sb.from('collection_trips').update({ assigned_worker_id: c.was }).eq('shop_id', S.shopId).eq('id', x.id); if (u.error) throw u.error; D().collectionTrips = D().collectionTrips.map(y => y.id === x.id ? { ...y, assignedWorkerId: c.was } : y); }
+    else { const u = await sb.from('collection_trips').update({ voided: false, note: null }).eq('shop_id', S.shopId).eq('id', x.id); if (u.error) throw u.error; D().collectionTrips = D().collectionTrips.map(y => y.id === x.id ? { ...y, voided: false, note: '' } : y); await restockOnTrip({ ...x, voided: false }); }
+    saveSnapshot(); S.ui.chase = { id: x.id, step: 'menu' }; S.busy = false; FEEL.back();
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing changed.' : 'Not changed: ' + (e.message || e), 6000); }
+  render();
+};
+// A trip just cancelled from Chase keeps its row, with Undo, until the panel closes.
+function chaseGone(){ const c = S.ui.chase, x = c && c.step === 'cancelled' && tripById(c.id); return x && x.voided ? [{ rt: [x], out: [x], late: true, days: Math.max(1, Math.round((new Date(todayISO()) - new Date(isoOf(x.createdAt))) / 864e5)) }] : []; }
 function roundNow(rt){ return rt.find(x => x.status === 'collecting' && !stopIsDone(x)) || rt[rt.length - 1]; }
 PAGE.trips = () => {
   const f = flowNow(), runs = f.runs, outs = f.out, back = f.back;
@@ -3480,7 +3566,9 @@ PAGE.trips = () => {
   // A stop on a round from an earlier day with nothing loaded is late on its own.
   const lateStops = gs.filter(g => !g.late && g.rt.length > 1 && !tripIsSupplierDelivered(g.rt[0])).flatMap(g => g.rt.filter(x => x.status === 'collecting' && !stopIsDone(x) && isoOf(x.createdAt) < todayISO() && !tripLines(tripView(x)).some(l => tripLineGot(l) != null))
     .map(x => ({ rt: [x], out: [x], late: true, ofRound: g, days: Math.round((new Date(todayISO()) - new Date(isoOf(x.createdAt))) / 864e5) })));
-  const mil = n => (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + ' M';
+  // Short money for the tiles: 730K, 1.45 M -- never "0 M" for what is under a million.
+  const mil = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + ' M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : n0(n);
+  const roadCash = gs.reduce((a, g) => a + groupCash(g), 0);
   const maxRun = Math.max(1, ...runs.map(r => r.total));
   // Out reads as the road: charcoal and amber. A round (or a trip of yours)
   // is one slim card, its stops on one line; a supplier bringing it is a row.
@@ -3498,14 +3586,14 @@ PAGE.trips = () => {
   // A trip somebody else brings, or one late, is a row: lines loaded, since when, and a chase when late.
   const bringRow = g => { const t = g.out[0], tt = tintFor(t.supplierId), del = tripIsSupplierDelivered(t), ls = g.out.flatMap(x => tripLines(tripView(x))), got = ls.filter(l => tripLineGot(l) != null).length, phone = supplierPhone(t.supplierId);
     const since = isoOf(t.createdAt) === todayISO() ? hm(msOf(t.createdAt)) : new Date(msOf(t.createdAt)).toLocaleDateString('en-GB', { weekday: 'short' });
-    const who = del ? '' : g.ofRound ? (tripIsMine(t) ? 'your round' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) }) + '’s round') + ' · ' : (tripIsMine(t) ? 'you' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) })) + ' · ';
-    const chase = g.late ? (del && phoneDigits(phone) ? `<a href="${esc(waComposeUrl(phone, supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Chase ${esc(supplierName(t.supplierId))} on WhatsApp" style="flex:none;height:30px;padding:0 10px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center">Chase</a>` : `<button data-act="trip" data-id="${esc(t.id)}" style="flex:none;height:30px;padding:0 10px;border:none;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700">Chase</button>`) : '';
+    const who = del ? '' : g.ofRound ? (tripIsMine(t) ? 'your round' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) }) + '’s round') + ' · ' : t.status === 'assigned' && !tripIsMine(t) ? 'Sent to ' + staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) }) + ' · not taken · ' : (tripIsMine(t) ? 'you' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) })) + ' · ';
+    const chase = g.late ? (del && phoneDigits(phone) ? `<a href="${esc(waComposeUrl(phone, supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Chase ${esc(supplierName(t.supplierId))} on WhatsApp" style="flex:none;height:30px;padding:0 10px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center">Chase</a>` : `<button data-act="tchase" data-id="${esc(t.id)}" aria-expanded="${!!(S.ui.chase && S.ui.chase.id === t.id)}" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;font-size:12px;font-weight:700;${S.ui.chase && S.ui.chase.id === t.id ? 'background:#F4F2EE;color:var(--ink2)' : 'background:var(--red);color:#fff'}">${S.ui.chase && S.ui.chase.id === t.id ? 'Close' : 'Chase'}</button>`) : '';
     return `<div style="display:flex;align-items:center;gap:10px;min-height:52px;border-top:1px solid #F1EEE8">
       <button data-act="trip" data-id="${esc(t.id)}" aria-label="${g.late ? 'Late: ' : ''}${esc(g.rt.length > 1 ? 'a round of ' + g.rt.length + ' stops from ' + supplierName(t.supplierId) : supplierName(t.supplierId))}${del ? ' delivers it themselves' : ''}, since ${esc(since)}, ${got} of ${ls.length} line${ls.length === 1 ? '' : 's'} ${del ? 'delivered' : 'loaded'}${g.late ? ', ' + g.days + ' days late' : ''}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;text-align:left;color:var(--ink)">
         <span style="position:relative;width:32px;height:32px;border-radius:10px;background:${tt[0]};color:${tt[1]};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(supplierName(t.supplierId)))}${g.late ? '<span style="position:absolute;right:-4px;top:-4px;width:14px;height:14px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff">!</span>' : ''}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:13.5px;font-weight:700">${esc(g.rt.length > 1 ? supplierShort(t.supplierId) + ' +' + (g.rt.length - 1) : supplierName(t.supplierId))}</span><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink3);white-space:nowrap;min-width:0"><span style="display:flex;gap:2px;flex:none">${ls.slice(0, 4).map(l => `<i style="width:10px;height:5px;border-radius:2px;${tripLineGot(l) != null ? 'background:var(--mint)' : g.late ? 'box-shadow:inset 0 0 0 1.5px #E3A29B' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA'}"></i>`).join('')}</span><span class="ell">${esc(who)}${g.ofRound ? esc(since) : got + ' of ' + ls.length + ' · since ' + esc(since)}</span></span></span>
         ${g.late ? `<span style="flex:none;height:22px;padding:0 7px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:800;letter-spacing:.06em;display:flex;align-items:center">${g.days} D LATE</span>` : `<span class="m" style="flex:none;font-size:12.5px;font-weight:600">${n0(g.out.reduce((s2, x) => s2 + tripPlanned(x), 0))}</span>`}
-      </button>${chase}</div>`; };
+      </button>${chase}</div>${!del && S.ui.chase && S.ui.chase.id === t.id ? chasePanelHTML(t) : ''}`; };
   const listCard = (head, icon, gsx, red) => gsx.length ? `<div style="flex:none;border-radius:20px;background:#fff;box-shadow:${red ? '0 0 0 1px rgba(201,58,48,.25),0 6px 16px -10px rgba(201,58,48,.3)' : '0 0 0 1px rgba(20,27,46,.06),0 6px 16px -10px rgba(20,27,46,.18)'};padding:4px 12px"><span style="display:flex;align-items:center;gap:6px;padding:8px 2px 4px;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:${red ? 'var(--crimson)' : 'var(--ink3)'}">${ic(icon, 13)}${esc(head)} · ${gsx.length}</span>${gsx.map(bringRow).join('')}</div>` : '';
   const planCard = (r, i) => { const tt = tintFor(r.supplierId), lines = r.lines.length;
     return `<button data-act="plan-for" data-sid="${esc(r.supplierId)}" aria-label="To plan: ${esc(supplierName(r.supplierId))}, ${n0(r.total)}, for ${esc(runClients(r).join(', '))}" style="display:flex;align-items:center;gap:12px;padding:12px 14px 12px 12px;border:none;border-radius:20px;background:#fff;text-align:left;box-shadow:${i === 0 ? '0 0 0 1.5px rgba(15,107,67,.35),0 14px 28px -16px rgba(15,107,67,.45)' : '0 0 0 1px rgba(20,27,46,.06),0 6px 16px -10px rgba(20,27,46,.18)'}">
@@ -3520,14 +3608,14 @@ PAGE.trips = () => {
         <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">CASH TODAY</span><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.03em;line-height:1">${n0(total)}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">today’s trips only</span></span>${closeBtn()}</div>
       <div role="img" aria-label="Cash today ${n0(total)}, today’s trips only: ${n0(outCash)} for ${live.length} out, ${n0(f.cash)} for ${runs.length} to plan, and ${back.length} back at the yard" style="display:grid;grid-template-columns:1.3fr 1fr .9fr;gap:6px">
         ${glass(runs.length, [mil(f.cash), '#8BE6C2'], 'To plan', `<span style="display:flex;gap:2px;height:4px">${runs.length ? runs.map((r, i) => `<i class="a-grow" style="flex:${Math.max(1, r.total)};border-radius:999px;background:#6FDCB0;opacity:${Math.max(.4, 1 - i * .25)}"></i>`).join('') : '<i style="flex:1;border-radius:999px;background:rgba(255,255,255,.12)"></i>'}</span>`)}
-        ${glass(gs.length, live.length ? [mil(outCash), '#F5C894'] : null, 'Out', rounds.length === 1 && live.length === 1 ? `<span style="display:flex;gap:2px;height:4px">${rounds[0].rt.map(x => `<i style="flex:1;border-radius:999px;background:${stopIsDone(x) ? '#6FDCB0' : x === roundNow(rounds[0].rt) ? '#F5B26B' : 'rgba(245,178,107,.3)'}"></i>`).join('')}</span>` : '<span style="height:4px;border-radius:999px;background:#F5B26B"></span>')}
+        ${glass(gs.length, gs.length ? [mil(roadCash), '#F5C894'] : null, 'Out', rounds.length === 1 && live.length === 1 ? `<span style="display:flex;gap:2px;height:4px">${rounds[0].rt.map(x => `<i style="flex:1;border-radius:999px;background:${stopIsDone(x) ? '#6FDCB0' : x === roundNow(rounds[0].rt) ? '#F5B26B' : 'rgba(245,178,107,.3)'}"></i>`).join('')}</span>` : '<span style="height:4px;border-radius:999px;background:#F5B26B"></span>')}
         ${glass(back.length, null, 'At the yard', '<span style="height:4px;border-radius:999px;background:repeating-linear-gradient(90deg,#6BCFD9 0 6px,transparent 6px 9px)"></span>', true)}
       </div>
     </div>
     <div class="bx-body" style="padding-top:16px;gap:10px">
       ${gs.length ? sec('#E09A4E', '#FBEBDD', 'Out', gs.length + ' on the road' + ((late.length + lateStops.length) ? ' · ' + (late.length + lateStops.length) + ' late' : '')) + gs.filter(g => !g.late && !tripIsSupplierDelivered(g.out[0])).map(tripCard).join('')
         + listCard('THEY BRING IT', 'truck', gs.filter(g => tripIsSupplierDelivered(g.out[0])).sort((a, b) => (b.late - a.late) || b.days - a.days))
-        + listCard('LATE', 'clock', gs.filter(g => g.late && !tripIsSupplierDelivered(g.out[0])).concat(lateStops), true) : ''}
+        + listCard('LATE', 'clock', gs.filter(g => g.late && !tripIsSupplierDelivered(g.out[0])).concat(lateStops, chaseGone()), true) : ''}
       ${sec('#0F6B43', '#E9F6EE', 'To plan', 'confirmed · nobody sent yet')}
       ${runs.length ? `<div style="position:relative;display:flex;flex-direction:column;gap:8px">${runs.length > 1 ? '<span aria-hidden="true" style="position:absolute;left:22px;top:28px;bottom:28px;border-left:2px dotted #D9D4CB"></span>' : ''}${runs.map(planCard).join('')}</div>` : emptyCard('Nothing to plan', 'Confirmed lines land here as stops, biggest first.')}
       ${back.length ? sec('#0E6470', '#E3F3F5', 'At the yard', 'not yours to do') + yardCard(back) : ''}
@@ -5619,25 +5707,35 @@ function supplierTidy(){
   sups.forEach((a, i) => sups.slice(i + 1).forEach(b => { const ka = nameKey(a.name), kb = nameKey(b.name); if (!ka.length || !kb.length) return;
     const [sh, lo] = ka.length <= kb.length ? [ka, kb] : [kb, ka];
     if (sh.every(x => lo.some(y => nearWord(x, y)))) { out.push({ k: 'twin', a, b }); seen.add(a.id); seen.add(b.id); } }));
+  // One phone number on two supplier records.
+  sups.forEach((a, i) => sups.slice(i + 1).forEach(b => { if (seen.has(a.id) && seen.has(b.id)) return; const pa = contactPhones(a).map(phoneDigits).filter(d => d.length >= 9), pb = contactPhones(b).map(phoneDigits); if (pa.some(d => pb.includes(d))) { out.push({ k: 'phone', a, b }); seen.add(a.id); seen.add(b.id); } }));
   const clients = new Set(D().savedQuotes.map(q => String(quoteClientName(q)).trim().toLowerCase()).filter(n => n && n !== 'unnamed client' && n.length > 3));
   sups.forEach(a => { if (clients.has(String(a.name).trim().toLowerCase())) out.push({ k: 'client', a }); });
   return out.filter(x => !handoffsFor('sourcing_fix', x.a.id).some(h => h.payload && h.payload.tidy));
 }
 function tidyCardHTML(){
-  const list = supplierTidy(); if (!list.length) return '';
-  const pill = n => `<span style="padding:2px 8px;border-radius:999px;background:#F4F2EE;color:var(--ink)">${esc(n)}</span>`;
-  return list.slice(0, 2).map(x => `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(224,154,78,.45)">
-    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:#7A4A02">${x.k === 'twin' ? 'LOOKS LIKE ONE SUPPLIER' : 'A CLIENT ON THE SUPPLIER LIST'} · ${esc(whoShort('sourcing').toUpperCase())} TIDIES IT</span>
-      <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700">${x.k === 'twin' ? pill(x.a.name) + '<span style="color:#9AA1AE">≈</span>' + pill(x.b.name) : pill(x.a.name) + '<span style="color:var(--ink3)">is also a client</span>'}</span></span>
-    <button data-act="tidy" data-sid="${esc(x.a.id)}" data-other="${esc(x.b ? x.b.id : '')}" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:36px;padding:0 12px;border:none;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">Flag</button>
-  </div>`).join('') + (list.length > 2 ? `<span style="padding:0 6px;font-size:11px;font-weight:600;color:var(--ink3)">${list.length - 2} more after these</span>` : '');
+  const list = supplierTidy(), told = S.ui.tidyTold || [];
+  if (!list.length && !told.length) return '';
+  const rows = list.length ? list : told, sq = (sid, round, client) => { const tt = client ? ['#F4F2EE', '#4D566B'] : tintFor(sid); return `<span class="bx-av${round ? ' round' : ''}" style="width:26px;height:26px;border-radius:${round ? '999px' : '8px'};font-size:9px;background:${tt[0]};color:${tt[1]}">`; };
+  const why = x => x.k === 'twin' ? ['names alike', 'var(--amberSoft)', 'var(--amberInk)'] : x.k === 'phone' ? ['same phone', 'var(--amberSoft)', 'var(--amberInk)'] : ['also a client', 'var(--crimsonSoft)', 'var(--crimson)'];
+  const sw = whoShort('sourcing');
+  return `<div role="group" aria-label="May be the same: ${rows.length} flag${rows.length === 1 ? '' : 's'}, all shown. ${esc(sw)} in Sourcing merges or removes them" style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:22px;background:#fff;box-shadow:0 0 0 1px rgba(20,27,46,.06)">
+    <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:10.5px;font-weight:800;letter-spacing:.14em;color:var(--amberInk)">MAY BE THE SAME · ${rows.length}</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(sw)} (Sourcing) merges or removes them</span></span>
+      ${list.length ? `<button data-act="tidyall" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:36px;padding:0 12px;border:none;border-radius:12px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:700">Tell ${esc(sw)}</button>` : `<span style="flex:none;height:36px;padding:0 12px;border-radius:12px;background:var(--greenSoft);color:var(--green);font-size:12.5px;font-weight:700;display:inline-flex;align-items:center">With ${esc(sw)} ✓</span>`}</span>
+    ${rows.map(x => { const w = why(x); return `<span style="display:flex;align-items:center;gap:8px;min-height:40px;border-top:1px solid #F1EEE8;padding-top:8px">
+      <span style="display:flex;align-items:center;flex:none">${sq(x.a.id)}${esc(initials(x.a.name))}</span><span style="width:18px;text-align:center;font-size:13px;font-weight:800;color:var(--amberInk)">≈</span>${x.b ? sq(x.b.id) + esc(initials(x.b.name)) : sq('', true, true) + esc(initials(x.a.name))}</span></span>
+      <span class="ell" style="flex:1;min-width:0;font-size:12.5px;font-weight:700">${esc(x.a.name)} · ${x.b ? esc(x.b.name) : 'a client too'}</span>
+      <span style="flex:none;height:22px;padding:0 8px;border-radius:999px;display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;background:${w[1]};color:${w[2]}">${w[0]}</span></span>`; }).join('')}
+  </div>`;
 }
-ACT.tidy = async t => {
-  const a = supplierById(t.dataset.sid), b = t.dataset.other ? supplierById(t.dataset.other) : null; if (!a || S.busy) return;
-  S.busy = true;
-  try { await passOn('sourcing_fix', 'sourcing', a.id, { supplierId: a.id, supplier: a.name, how: 'saw', tidy: true, fixes: [b ? { tab: 'sup', item: 'The supplier', field: 'name', label: 'SAME AS', was: a.name, now: b.name } : { tab: 'sup', item: 'The supplier', field: 'name', label: 'A CLIENT, NOT A SUPPLIER', was: a.name, now: '' }] });
-    S.busy = false; FEEL.yes(); toast('Flagged for ' + whoShort('sourcing') + ' · Sourcing tidies the list'); render(); }
-  catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — not flagged. Try again with signal.' : 'Not flagged: ' + (e.message || e), 5000); }
+ACT.tidyall = async () => {
+  const list = supplierTidy(); if (!list.length || S.busy) return;
+  S.busy = true; render();
+  try {
+    for (const x of list) await passOn('sourcing_fix', 'sourcing', x.a.id, { supplierId: x.a.id, supplier: x.a.name, how: 'saw', tidy: true, fixes: [x.b ? { tab: 'sup', item: 'The supplier', field: 'name', label: x.k === 'phone' ? 'SAME PHONE AS' : 'SAME AS', was: x.a.name, now: x.b.name } : { tab: 'sup', item: 'The supplier', field: 'name', label: 'A CLIENT, NOT A SUPPLIER', was: x.a.name, now: '' }] });
+    S.ui.tidyTold = list; S.busy = false; FEEL.yes();
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — not sent. Try again with signal.' : 'Not sent: ' + (e.message || e), 5000); }
+  render();
 };
 
 // A price older than a month is worth asking about while they're asked.

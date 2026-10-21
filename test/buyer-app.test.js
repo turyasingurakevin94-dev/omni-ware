@@ -565,7 +565,7 @@ const P = page(fakeDb({}));
     t.check(X.fmtPhone('0772410220') === '0772 410 220' && X.poss('St. Mary\'s') === 'St. Mary\'s' && X.poss('Moses') === 'Moses’' && X.poss('Kato') === 'Kato’s', 'phones and names read the way people say them');
     X.S.view = 'suppliers'; X.S.ui.supTab = 'all';
     const list = X.viewSuppliers();
-    t.check(/id="bx_supq"/.test(list) && /LOOKS LIKE ONE SUPPLIER/.test(list), 'the supplier list has its search out, and the tidy card');
+    t.check(/id="bx_supq"/.test(list) && /MAY BE THE SAME · 1/.test(list) && /names alike/.test(list) && /data-act="tidyall"/.test(list), 'the supplier list has its search out, and the tidy card');
     t.check(/\+ phone/.test(list), 'a supplier with no phone says so on the list');
     const one = X.PAGE.supplier({ sid: 'S8' });
     t.check(/data-act="savephone"/.test(one) && /No phone on file/.test(one) && !/wa\.me/.test(one), 'one supplier with no phone: the field sits where Call and WhatsApp go, and nothing opens WhatsApp yet');
@@ -1001,6 +1001,46 @@ const P = page(fakeDb({}));
     t.check(/>You</.test(h), 'Who collects says You');
     X.ACT.planown(); h = X.PAGE.plan(X.topArgs());
     t.check(/Your own money · /.test(h) && !/data-act="cashask"/.test(h) && !/I paid myself/.test(h), 'on your own money the cash card says so, and there is no Ask for it');
+  }
+
+  // 10l. Eighth review: a confirmed row holds its place; Chase reaches the runner; deliveries are late too; the Out tile in K.
+  {
+    const db = fakeDb({ __rpcOk: true }), X = page(db);
+    X.S.stack = [{ type: 'confirm', args: { sid: null, edit: null, v: null } }];
+    const order = h => (h.match(/data-act="(?:pconfirm|pundo)" data-id="(\d+)"/g) || []).map(x => x.replace(/\D/g, '')).filter((v, i, a) => a.indexOf(v) === i);
+    const before = order(X.PAGE.confirm(X.topArgs()));
+    X.ACT.pconfirm({ dataset: { id: before[0] } });
+    let h = X.PAGE.confirm(X.topArgs());
+    t.check(/saving…/.test(h) && /class="bx-drain"/.test(h) && /data-act="pundo"/.test(h), 'a confirm says saving…, with Undo and a bar running out');
+    await X.commitConfirm(X.cWaitFor(before[0]));
+    h = X.PAGE.confirm(X.topArgs());
+    t.check(h.indexOf('data-act="pconfirm" data-id="' + before[1] + '"') > h.indexOf('✓ saved'), 'once saved the row stays where it was, above the next one');
+  }
+  {
+    const X = page(fakeDb({ collection_trips: [] }));
+    const old = new Date(NOW - 5 * 864e5).toISOString();
+    X.D().staff = [{ id: 'W1', name: 'Okello Peter', phone: '', role: 'buyer', userId: 'u1' }, { id: 'W2', name: 'Andrew Ssali', phone: '0772000111', role: 'worker', userId: null }, { id: 'W3', name: 'Musa K', phone: '', role: 'store', userId: null }];
+    X.D().savedQuotes = [X.rowToQuote(orderRow(71, [it(1, 'P2', null, 1, 'S2', 28000)], {}, { client_name: 'Grace Hardware', status: 'awaiting_goods' }))];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-SJ', shop_id: SH, supplier_id: 'S2', status: 'assigned', assigned_worker_id: 'W2', created_at: old, lines: [{ orderId: 71, lineId: 1, productId: 'P2', qty: 1, expectedPrice: 28000 }] }),
+      X.rowToTrip({ id: 'TRIP-SH', shop_id: SH, supplier_id: 'S1', status: 'collecting', assigned_worker_id: '__supplier__', created_at: old, lines: [{ orderId: 72, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 14000 }] })];
+    X.S.stack = [{ type: 'trips', args: {} }];
+    let h = X.PAGE.trips();
+    t.check(/Sent to Andrew · not taken · /.test(h) && /data-act="tchase" data-id="TRIP-SJ"/.test(h), 'a trip sent and never taken says so, with Chase');
+    t.check((h.match(/D LATE/g) || []).length === 2, 'a supplier bringing it, out for days, is late too');
+    t.check(/>56K</.test(h) || />56K /.test(h) || /56K/.test(h), 'the Out tile shows what is on the road in K, never 0 M');
+    X.ACT.tchase({ dataset: { id: 'TRIP-SJ' } }); h = X.PAGE.trips();
+    t.check(/WhatsApp Andrew/.test(h) && /data-act="tchasego" data-step="give"/.test(h) && /data-act="tchasego" data-step="cancel"/.test(h) && /Nansana waits · 5 d/.test(h), 'Chase: WhatsApp the runner, give it to someone, or cancel it; who waits is named');
+    X.ACT.tchasego({ dataset: { step: 'give' } }); await X.ACT.tchasegive({ dataset: { w: 'W3' } });
+    t.check(X.tripById('TRIP-SJ').assignedWorkerId === 'W3' && /Musa has it now · Andrew is told/.test(X.PAGE.trips()), 'given to Musa: the trip is his, Andrew is told');
+    await X.ACT.tchaseundo();
+    t.check(X.tripById('TRIP-SJ').assignedWorkerId === 'W2', 'Undo gives it back');
+    X.ACT.tchasego({ dataset: { step: 'cancel' } }); await X.ACT.tchasecancel();
+    t.check(X.tripById('TRIP-SJ').voided && /^Cancelled/.test(X.tripById('TRIP-SJ').note) && /Cancelled · the lines are on To plan/.test(X.PAGE.trips()), 'cancelled: the lines go back to To plan, the note the push reads');
+  }
+  {
+    const X = page(fakeDb({}));
+    X.S.view = 'suppliers'; const h = X.viewSuppliers();
+    t.check(/>SCORE</.test(h) && />TERMS</.test(h) && />WE OWE</.test(h), 'a supplier row labels its score, its terms and what we owe');
   }
 
   // 10d. The greeting: the time of day it is, and a name, never a login.

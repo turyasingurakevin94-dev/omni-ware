@@ -1914,6 +1914,9 @@ function pushOpen(d){
       const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id));
       fresh('today'); if (t) push('receive', { id: t.id }); else push('movein', {}); return;
     }
+    // 0150: a trip sent or given to this person opens it; one taken off them or cancelled opens Today.
+    if (k === 'trip.sent') { const t = (D().collectionTrips || []).find(x => String(x.id) === String(d.id)); fresh('today'); if (t && myTrips().includes(t)) push('collect', { id: t.id }); return; }
+    if (k === 'trip.taken' || k === 'trip.cancelled') { fresh('today'); return; }
     // 0131: the Manager wrote off or dismissed a loss this person reported.
     if (k === 'stock.report.decided') {
       const r = (D().reports || []).find(x => String(x.id) === String(d.id));
