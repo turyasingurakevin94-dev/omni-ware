@@ -526,6 +526,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
 | 0145 | Sourcing v2: two supplier records that are one supplier merged in one write (`merge_suppliers`, supplier.edit), and prices a day set by Sourcing (`set_prices_per_day`, price.confirm) |
 | 0146 | Sourcing v2, round 5: every search that finds nothing logged by itself (`search_misses`; `log_search_miss` for Sales, the console and agents, `ow_record_search_miss` for the website), read by Sourcing (sourcing.lead), who sets words aside (`search_mutes`) or teaches a name to an item (`item_names`, product.edit); an agent's "ask the shop to stock it" pushes Sourcing (`sourcing.request`) |
+| 0147 | Buyer, third: a round is handed in once, at the yard, so the Store and Accounts are told once per round (`ow_trip_round`), not once per stop |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
