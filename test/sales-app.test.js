@@ -368,6 +368,21 @@ matrix.forEach(([what, it]) => {
     t.check(Number(bar.pct) === 40 && /pays/.test(bar.owedHTML) && /still to pay/.test(bar.afterHTML), 'the bar fills by what is paid: 2,000 of 5,000 is 40%');
   }
 
+  // 3g. the third retest: chats never hold the debts back; a login handle is no name
+  {
+    const db = fakeDb({ saved_quotes: [], cash_txns: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'someone@example.com' } });
+    X.S.data.customers[0].debt = 500000;
+    X.S.wa = { convs: [], msgs: [], threads: {}, media: {}, loadedAt: 0, error: null, configured: null };
+    const v = X.viewToday();
+    t.check(/data-key="hold"/.test(v) && /Chats still loading/.test(v) && !/tdy-hold" data-key="tdy-needs"/.test(v), 'while the chats load, one row keeps their place; the rest is not held');
+    X.S.wa.loadedAt = Date.now();
+    t.check(!/data-key="hold"/.test(X.viewToday()), 'once they are in, the placeholder goes');
+    X.S.data.staff = [{ userId: 'u1', name: 'turyasingurakevin94' }];
+    t.check(X.myGivenName() === '', 'a login handle (lowercase, digits, no space) is no name to greet');
+  }
+
   // 4. a payment over two bills and a loose balance
   {
     const iso = d => d;

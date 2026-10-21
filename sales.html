@@ -562,6 +562,8 @@ button.cht-plus{border:none;padding:0}
 .cht-byi .icon{stroke:#fff;stroke-width:2.4}
 .cht-ansl .cht-by{margin-right:2px}
 .cht-save{flex:none;height:36px;padding:0 12px;border:none;border-radius:999px;background:var(--greenSoft);color:var(--green);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+.cht-fail{align-self:flex-end;display:inline-flex;align-items:center;gap:5px;margin:-4px 4px 6px;font-size:12px;font-weight:700;color:var(--crimson)}
+.cht-fail button{border:none;background:none;padding:0;color:var(--crimson);font-size:12px;font-weight:700;text-decoration:underline}
 /* ---- customers (6_customers.js) ---- */
 .cu-av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
 .cu-hero{background:var(--navy);padding:calc(16px + var(--safe-area-inset-top)) 18px 18px;gap:14px}
@@ -2411,10 +2413,10 @@ button.py-row:active{background:var(--soft)}
 .tdy-holdrow i{width:40px;height:40px;border-radius:12px;background:var(--soft2);flex:none}
 .tdy-holdrow span{flex:1;display:flex;flex-direction:column;gap:6px}
 .tdy-holdrow b{height:12px;width:55%;border-radius:6px;background:var(--soft2)}
-.tdy-holdrow em{height:10px;width:35%;border-radius:6px;background:var(--soft)}
-.tdy-hold{animation:tdyHold 1.2s ease-in-out infinite alternate}
+.tdy-holdrow em{font-style:normal;font-size:12px;font-weight:600;color:var(--ink3)}
+.tdy-hold i,.tdy-hold b{animation:tdyHold 1.2s ease-in-out infinite alternate}
 @keyframes tdyHold{from{opacity:.6}to{opacity:1}}
-@media (prefers-reduced-motion: reduce){.tdy-hold{animation:none}}
+@media (prefers-reduced-motion: reduce){.tdy-hold i,.tdy-hold b{animation:none}}
 </style>
 </head>
 <body>
@@ -3554,7 +3556,7 @@ function start(){
   // The chats poll only on a shop that has WhatsApp (wa-send 'status', asked once), every
   // 15 s while Chats is open and every minute otherwise: 480 reads an hour, idle, before.
   let waTicks = 0;
-  const waTick = async () => { if (document.visibilityState !== 'visible') return; if (S.wa.configured == null) await waStatus(); if (!S.wa.configured) return; if (S.view !== 'chats' && (++waTicks % 4)) return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
+  const waTick = async () => { if (document.visibilityState !== 'visible') return; if (S.wa.configured == null) await waStatus(); if (!S.wa.configured) return; if (S.view !== 'chats' && S.wa.loadedAt && (++waTicks % 4)) return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
   waTick(); setInterval(waTick, 15000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - S.loadedAt > 30000) loadAll().then(render).catch(() => {}); });
 }
@@ -3562,7 +3564,7 @@ function start(){
 /* ---------------- navigation ---------------- */
 function go(view){ S.view = view; S.stack = []; closeSheet(true); render(); window.scrollTo(0, 0); }
 function push(type, args){ S.stack.push({ type, args: args || {} }); render(); const p = document.querySelector('.sx-page:last-of-type'); if (p) p.scrollTop = 0; }
-function pop(){ S.stack.pop(); render(); }
+function pop(){ const was = S.stack.pop(); render(); if (was && (was.type === 'neworder' || was.type === 'counter') && S.draft && S.draft.items && S.draft.items.length) toast(`${was.type === 'counter' ? 'The counter sale' : (firstWord(S.draft.client && S.draft.client.name) || 'The') + '’s order'} is kept · carry on from the + button`, 3500); }
 window.sxBack = function(){
   if (S.sheet) { closeSheet(); return true; }
   if (S.stack.length) { pop(); return true; }
@@ -3578,7 +3580,7 @@ function navHTML(){
   const waiting = waWaiting().length;
   // Today · Chats · + · Orders · Customers, as the canvas has it; You opens from the face on Today.
   return `<nav class="sx-nav${S.stack.length ? ' under' : ''}" aria-label="Sales"${S.stack.length ? ' aria-hidden="true"' : ''}>${b('today', 'Today', 'today')}
-    <button data-act="tab" data-v="chats" ${S.view === 'chats' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('chat', 24)}${waiting ? `<span class="sx-badge">${waiting}</span>` : ''}Chats</button>
+    <button data-act="tab" data-v="chats" aria-label="Chats${waiting ? `, ${waiting} waiting for a reply` : ''}" ${S.view === 'chats' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('chat', 24)}${waiting ? `<span class="sx-badge">${waiting}</span>` : ''}Chats</button>
     <button class="sx-plus" data-act="neworder" aria-label="Take an order">${ic('plus')}</button>
     <button data-act="tab" data-v="orders" ${S.view === 'orders' && !S.stack.length ? 'aria-current="page"' : ''}>${ic('orders', 24)}${due ? `<span class="sx-badge">${due}</span>` : ''}Orders</button>
     ${b('customers', 'Customers', 'people')}</nav>`;
@@ -3681,7 +3683,7 @@ function bindSliders(){
     const k = el.querySelector('.k'); let sx = 0, dx = 0, drag = false;
     const max = () => el.clientWidth - k.clientWidth - 8;
     const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; haptic('success'); const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
-    el.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; sx = e.clientX; dx = 0; k.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointerdown', e => { el._ptAt = Date.now(); if (el.getAttribute('aria-disabled') === 'true') return; drag = true; sx = e.clientX; dx = 0; k.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', e => { if (!drag) return; dx = Math.max(0, Math.min(max(), e.clientX - sx)); k.style.transform = `translateX(${dx}px)`; });
     const end = () => { if (!drag) return; drag = false; k.style.transition = ''; if (dx >= max() * 0.82) { k.style.transform = `translateX(${max()}px)`; setTimeout(done, 120); } else { k.style.transform = ''; if (dx < 6) tapped(); } };
     /* A tap is a slide's question: the first arms it for three seconds and
@@ -3695,6 +3697,8 @@ function bindSliders(){
     };
     el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
     el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); done(); } });
+    // A click that came without a pointer (a screen reader, a test tool) is a tap too; one after a real tap is not counted twice.
+    el.addEventListener('click', () => { if (Date.now() - (el._ptAt || 0) < 800 || el.getAttribute('aria-disabled') === 'true') return; tapped(); });
   });
 }
 
@@ -3708,7 +3712,9 @@ function myGivenName(){
   const st = D().staff.find(s => s.userId && S.user && s.userId === S.user.id);
   const mail = String((S.user && S.user.email) || '').split('@')[0].toLowerCase();
   const n = (st && st.name) || (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
-  return String(n).trim().toLowerCase() === mail ? '' : n;
+  const t = String(n).trim();
+  // A login handle (lowercase, digits, no space) is no name to call someone by.
+  return !t || t.toLowerCase() === mail || (/^[a-z0-9._-]+$/.test(t) && /\d/.test(t)) ? '' : t;
 }
 function myName(){
   const st = D().staff.find(s => s.userId && S.user && s.userId === S.user.id);
@@ -3757,9 +3763,12 @@ function viewToday(){
       <span class="m tdy-big" style="${tdyBigSize(monthSold)}">${n0(monthSold)}</span>
       <span class="tdy-of"><span><span class="m" style="color:#fff">${gone}</span> of ${month.length} delivered or on the road</span></span>`;
   }
-  // The chats come a moment after the books: until they have, the list
-  // waits in one piece, so no row lands above one about to be tapped.
+  // The chats come a moment after the books. The debts never wait for
+  // them: one row at the top keeps the chats' place, so nothing lands
+  // above a row about to be tapped. The count waits up to four seconds.
   const chatsReady = !S.wa || S.wa.loadedAt > 0 || !!S.wa.error || S.wa.configured === false;
+  const countReady = chatsReady || Date.now() - TDY_BOOT > 4000;
+  if (!countReady && !tdyHoldTimer) tdyHoldTimer = setTimeout(() => { if (S.view === 'today' && !S.stack.length) render(); }, Math.max(100, 4100 - (Date.now() - TDY_BOOT)));
   const waiting = (S.wa && S.wa.convs) ? waWaiting() : [];
   const ask = typeof waAsks === 'function' ? waAsks()[0] || null : null;
   const chatRows = tdyChatRows(waiting, ask);
@@ -3789,15 +3798,17 @@ function viewToday(){
     </div>
   </div>
   <div class="sx-body" style="gap:10px">
-    <div class="tdy-sec"><span>Needs you</span>${toDo ? `<span class="tdy-wait">${toDo} to do</span>` : ''}</div>
+    <div class="tdy-sec"><span>Needs you</span>${toDo && countReady ? `<span class="tdy-wait">${toDo} to do</span>` : ''}</div>
     ${tells.map(tdyTellCard).join('')}
     ${sws.map(swCard).join('')}
-    ${!chatsReady ? tdyHoldHTML(needs.length) : `${ask ? tdyAskCard(ask) : ''}
+    ${!chatsReady ? `<div class="sx-card sx-list" data-key="tdy-needs">${tdyHoldRow()}${needs.map(tdyNeedRow).join('')}</div>${owing ? `<button class="tdy-owe" data-act="custfilter" data-k="owe">Everyone who owes · <span class="m">${owing}</span>${ic('chev', 14, 'style="stroke-width:2.4"')}</button>` : ''}` : `${ask ? tdyAskCard(ask) : ''}
     ${chatRows.length || needs.length ? `<div class="sx-card sx-list" data-key="tdy-needs">${chatRows.concat(needs.map(tdyNeedRow)).join('')}</div>${owing ? `<button class="tdy-owe" data-act="custfilter" data-k="owe">Everyone who owes · <span class="m">${owing}</span>${ic('chev', 14, 'style="stroke-width:2.4"')}</button>` : ''}`
       : ask || tells.length || sws.length ? '' : `<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 26)}</span><b>All caught up</b><span>Nothing is waiting on you. Take an order with the red button.</span></div>`}`}
   </div>`;
 }
-function tdyHoldHTML(n){ return `<div class="sx-card sx-list tdy-hold" data-key="tdy-needs" aria-busy="true" aria-label="Reading the chats">${Array.from({ length: Math.max(2, Math.min(5, n + 1)) }, () => '<div class="tdy-holdrow"><i></i><span><b></b><em></em></span></div>').join('')}</div>`; }
+const TDY_BOOT = Date.now();
+let tdyHoldTimer = null;
+function tdyHoldRow(){ return `<div class="tdy-holdrow tdy-hold" data-key="hold" aria-busy="true"><i></i><span><b></b><em>Chats still loading…</em></span></div>`; }
 // Ten digits and more step the big figure down a size, so it never runs under the ring.
 function tdyBigSize(n){ const len = n0(n).length; return len > 11 ? 'font-size:24px' : len > 9 ? 'font-size:27px' : ''; }
 function tdyGoalRing(frac, pace){
@@ -3860,7 +3871,8 @@ function tdyChatRows(waiting, ask){
   return rows;
 }
 function tdyRow(n){
-  return `<button class="sx-row tdy-row" data-key="${esc(n.key || n.act + '-' + n.id)}" data-act="${n.act}" ${n.attrs || ''}>
+  const aria = n.label || [n.title, String(n.sub || '').replace(/<[^>]+>/g, ''), n.cta].filter(Boolean).join(' · ');
+  return `<button class="sx-row tdy-row" data-key="${esc(n.key || n.act + '-' + n.id)}" data-act="${n.act}" aria-label="${esc(aria)}" ${n.attrs || ''}>
     <span class="tdy-ico" style="background:${n.bg};color:${n.fg}">${ic(n.icon, 19)}</span>
     <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700" title="${esc(n.title)}">${esc(n.title)}</span><span class="ell sx-sub">${n.sub}</span></span>
     <span class="tdy-cta${n.primary ? ' p' : ''}">${esc(n.cta)}</span></button>`;
@@ -3978,7 +3990,7 @@ function ordIc(name, size, style){ return `<svg class="icon" viewBox="0 0 24 24"
 /* ---------------- small readers ---------------- */
 function ordName(q){ return (q && q.client && q.client.name) || 'Walk-in'; }
 function ordMs(v){ if (v == null || v === '') return 0; if (typeof v === 'number') return v; const n = Number(v); return isFinite(n) && n > 1e11 ? n : (Date.parse(v) || 0); }
-function ordStaffName(id){ if (id == null || id === '') return ''; const s = D().staff.find(x => String(x.id) === String(id)); return s ? s.name : ''; }
+function ordStaffName(id){ if (id == null || id === '') return ''; const s = D().staff.find(x => String(x.id) === String(id)); if (!s) return ''; return S.user && s.userId === S.user.id && !myGivenName() ? 'You' : s.name; }
 /* Ages in words a salesperson reads at a glance -- "3 h ago", "2 days ago",
    never a bare "70d". */
 function ordAgo(ms){ if (!ms) return ''; const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); if (m < 1) return 'just now'; if (m < 60) return m + ' min ago'; const h = Math.round(m / 60); if (h < 24) return h + ' h ago'; const d = Math.round(h / 24); return d === 1 ? '1 day ago' : d + ' days ago'; }
@@ -5168,7 +5180,7 @@ function viewMe(){
   const dayOfMonth = daysBetween(mStart, today) + 1;
   const monthFig = tg && nmIsWholeMonth(tg.from, tg.to) && tg.from === mStart ? tg.actual : orders.reduce((s, q) => s + pricedLive(q).total, 0);
   const collected = moneyIn(mStart, today).reduce((s, x) => s + x.amount, 0);
-  const name = myName(), tasks = nmTasks();
+  const name = myGivenName() || 'You', tasks = nmTasks();
   // the face, wrapped in the goal
   const R = 38, C = 2 * Math.PI * R, pc = tg ? Math.max(0, Math.min(1, tg.pct)) : 0;
   const face = `<button class="nm-face" data-act="nmgoal" aria-label="${tg ? `Goal: ${nmPct(tg.pct)} there` : 'Goal'}">
@@ -5542,9 +5554,9 @@ PAGE.customer = ({ id }) => {
     <button class="cu-pdf" data-act="custstmt" data-id="${esc(c.id)}" aria-label="Send a statement"${c.debt > 0 || hist.length ? '' : ' disabled'}>${ic('doc', 18)}PDF</button>
     ${pastTerms && c.debt > 0
       // A bill past its terms: the money first, selling one tap to the side.
-      ? `<button class="cu-sell2" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''} aria-label="${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(firstWord(c.name))}">${ic('plus', 17, 'style="stroke-width:2.4"')}${usual.length ? 'Usual' : 'Sell'}</button>
+      ? `<button class="cu-sell2" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''} aria-label="${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(c.name.length <= 18 ? c.name : firstWord(c.name))}">${ic('plus', 17, 'style="stroke-width:2.4"')}${usual.length ? 'Usual' : 'Sell'}</button>
         <button class="sx-btn red cu-sell" data-act="pay" data-id="${esc(c.id)}">${ic('cash', 20)}Take <span class="m">${n0(c.debt)}</span></button>`
-      : `<button class="sx-btn red cu-sell" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''}>${ic('plus', 20, 'style="stroke-width:2.4"')}${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(firstWord(c.name))}</button>`}</div>`;
+      : `<button class="sx-btn red cu-sell" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''}>${ic('plus', 20, 'style="stroke-width:2.4"')}${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(c.name.length <= 18 ? c.name : firstWord(c.name))}</button>`}</div>`;
 };
 /* ---------------- a promise to pay (promise.record, 0089 / 0121) ----------------
    How much and by when, in the customer's own words. Added, never
@@ -7839,7 +7851,14 @@ function chatPaidHow(text){ return /\b(momo|mobile money|mtn|airtel)\b/i.test(te
 function chatLate(mins){ return mins != null && mins >= 30; }
 function chatWaitInk(mins){ return chatLate(mins) ? 'var(--crimson)' : mins != null && mins >= 15 ? 'var(--amberInk)' : 'var(--ink2)'; }
 const CH_READ_TINT = { buy: ['var(--greenSoft)', 'var(--green)'], paid: ['var(--skySoft)', 'var(--sky)'], day: ['#FDE8E4', '#A82D24'], dispute: ['var(--crimsonSoft)', 'var(--crimson)'], stop: ['var(--soft)', 'var(--ink2)'] };
-function chatChip(label, tint){ const t = tint || ['var(--soft)', 'var(--ink2)']; return `<span class="cht-chip" style="background:${t[0]};color:${t[1]}">${label}</span>`; }
+function chatChip(label, tint, quote){ const t = tint || ['var(--soft)', 'var(--ink2)']; return `<span class="cht-chip" style="background:${t[0]};color:${t[1]}"${quote ? ` title="${esc(label + ' · ' + quote)}" aria-label="${esc(label + ': ' + quote)}"` : ''}>${label}</span>`; }
+// The message a tag was read from, as they wrote it, with its day: "I paid 160,000" (Sun).
+function chatReadQuote(run, key){
+  const re = (MSG_READS.find(x => x[0] === key) || [])[1]; if (!re || !run) return '';
+  const m = run.slice().reverse().find(x => x.msg_type === 'text' && x.body && re.test(x.body)); if (!m) return '';
+  const said = String(m.body).replace(/\s+/g, ' ').trim(), day = new Date(Date.parse(m.sent_at)).toLocaleDateString('en-GB', { weekday: 'short' });
+  return `“${said.length > 60 ? said.slice(0, 58) + '…' : said}” (${day})`;
+}
 function chatFace(name, size, grey){
   const t = grey ? ['#F1EEE8', '#5F6980'] : tintFor(name);
   return `<span class="cht-face" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]}">${esc(initials(name))}</span>`;
@@ -7949,7 +7968,7 @@ function chatRowHTML(c, w, shut){
   const mins = w ? w.mins : null;
   const time = w ? `<span class="m cht-time" style="color:${chatWaitInk(mins)};font-weight:600">${esc(chatWait(mins))}</span>` : `<span class="m cht-time">${esc(chatWhen(c.last_message_at || (last && last.sent_at)))}</span>`;
   const chips = [];
-  if (w) a.reads.slice(0, 2).forEach(r => chips.push(chatChip(r.label, CH_READ_TINT[r.key])));
+  if (w) a.reads.slice(0, 2).forEach(r => chips.push(chatChip(r.label, CH_READ_TINT[r.key], chatReadQuote(a.run, r.key))));
   const lo = chatLiveOrder(a.cust); if (lo) chips.push(chatChip(`Order ${orderNo(lo)} · ${stageOf(lo).short}`));
   if ((S.chatDraft[c.id] || '').trim()) chips.push(chatChip('reply drafted'));
   if (w && !shut) { const wc = chatWindowChip(c); if (wc) chips.push(wc); }
@@ -8050,7 +8069,16 @@ function chatMediaHTML(m){
   if (t === 'document') return chatTile(busy ? spin : ic('chDoc', 20), chatSaid(m), err || (has ? 'Tap to open' : ''), ['var(--skySoft)', 'var(--sky)'], act, 'button');
   return '';
 }
+/* A message that did not go says so under it, in words; words can go
+   back in the box to send again (never sent by themselves). */
 function chatBubble(m){
+  const html = chatBubbleCore(m);
+  if (m.direction !== 'out' || m.status !== 'failed') return html;
+  const words = m.msg_type === 'text' && m.body;
+  return html + `<span class="cht-fail" data-key="f-${m.id}">${ic('ordWarn', 13)}Not delivered${words ? ` · <button data-act="chatagain" data-conv="${m.conversation_id}" data-m="${m.id}">Put it back to send</button>` : ' · send it again from +'}</span>`;
+}
+ACT.chatagain = t => { const id = Number(t.dataset.conv), m = chatThread(id).find(x => String(x.id) === String(t.dataset.m)); if (!m) return; chatAppend(id, m.body); haptic('light'); render(); chatFocus(); };
+function chatBubbleCore(m){
   const t = m.msg_type, p = m.payload || {}, out = m.direction === 'out';
   let media = '', text = chatSaid(m);
   if (CH_FILE[t]) { media = chatMediaHTML(m); const cap = chatCaption(m); text = t === 'audio' || t === 'sticker' ? '' : t === 'document' ? (cap && cap !== text ? cap : '') : cap; }
@@ -8439,7 +8467,7 @@ ACT.srcask = () => {
 SHEET.srcask = a => {
   const d = S.draft, c = d && d.customerId != null ? customerById(d.customerId) : null;
   const who = c ? c.name : (d && d.client && d.client.name && d.client.name !== 'Walk-in' ? d.client.name : ''), first = firstWord(who);
-  const me = firstWord(myName()), lead = String(a.name || '').trim().length >= 3 ? srcMatch(a.name) : null, person = firstWord(srcPerson(lead)) || 'Sourcing';
+  const me = firstWord(myGivenName()), lead = String(a.name || '').trim().length >= 3 ? srcMatch(a.name) : null, person = firstWord(srcPerson(lead)) || 'Sourcing';
   const at = lead ? srcStageIdx(lead) : 0, before = lead ? (lead.requests || []).filter(r => !r.withdrawn).length : 0;
   return `<div class="src-head"><span class="src-ico">${ic('srcScope', 22)}</span><span class="tx"><b>We don’t sell it</b><span>Sourcing finds it, prices it and lists it</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
     <span class="src-lab">WHAT THEY ASKED FOR</span>
@@ -8905,7 +8933,7 @@ ACT['slide:counterpay'] = async () => {
 
 /* ---------------- sold, paid, invoiced ---------------- */
 PAGE.counterdone = a => {
-  const q = quoteById(a.id), its = (q && q.items) || [], me = myName();
+  const q = quoteById(a.id), its = (q && q.items) || [], me = myGivenName();
   const flow = a.invoiced ? `SOLD ${ic('chev', 11, 'style="stroke-width:2.6"')} PAID ${ic('chev', 11, 'style="stroke-width:2.6"')} INVOICED`
     : `SOLD ${ic('chev', 11, 'style="stroke-width:2.6"')} PAID ${ic('chev', 11, 'style="stroke-width:2.6"')} <span class="amb">NOT INVOICED YET</span>`;
   const back = a.method === 'cash' && a.given > a.total ? `<div class="ct-giveback"><span class="ico">${ic('cash', 22, 'style="stroke-width:1.9"')}</span><span class="tx"><b>GIVE BACK</b><span>They gave <span class="m">${n0(a.given)}</span></span></span><span class="m v">${n0(a.given - a.total)}</span></div>` : '';
