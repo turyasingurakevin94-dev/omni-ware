@@ -2792,7 +2792,8 @@ ACT.pgo = async () => {
       // Costs more than the client's price now: the line waits for the
       // Manager's price (decision-rights §3), the order stays in Checking,
       // and the Buyer never sees what it sells at.
-      if (lineCostsOverSell(it)) { it.priceNote = 'nomargin'; it.priceBy = it.priceBy || 'buyer'; it.priceReview = null; }
+      // Untagged on purpose: Sales' 0153 pushes the Manager, then the salesperson.
+      if (lineCostsOverSell(it)) { it.priceNote = 'nomargin'; it.priceReview = null; }
       // price.confirm: they said it on the phone, so the Buyer gives their
       // yes on the new terms, the same record a slide would write.
       if (a.phone) return setOrderSupplierConfirm(q, it.supplierId, 'confirmed', 'said it on the phone', { via: 'phone' });
