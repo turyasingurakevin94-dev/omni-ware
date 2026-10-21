@@ -841,7 +841,7 @@ const P = page(fakeDb({}));
     X.S.stack = [{ type: 'trip', args: { id: 'TRIP-RD-1' } }];
     t.check(/delivers these/.test(X.PAGE.trip({ id: 'TRIP-RD-1' })) && /data-act="stopdrop"/.test(X.PAGE.trip({ id: 'TRIP-RD-1' })), 'and the stop offers Take off the round');
     const html = X.PAGE.trips();
-    t.check(/LATE · 3 D/.test(html) && /ROUND · /.test(html) && (html.match(/data-act="trip" data-id="TRIP-RD-/g) || []).length === 1, 'Trips shows the round as one card, and the delivery from three days ago as late');
+    t.check(/3 D LATE/.test(html) && /THEY BRING IT · 1/.test(html) && /ROUND · /.test(html) && (html.match(/data-act="trip" data-id="TRIP-RD-/g) || []).length === 1, 'Trips shows the round as one card, and the delivery from three days ago as late');
     t.check(!/\(YOU\)/.test(html) && /today’s trips only/.test(html), 'no "(YOU)", and the cash counts today\'s trips only');
   }
   // 10f. At the yard: one card, a bar by day, the names behind a tap.
