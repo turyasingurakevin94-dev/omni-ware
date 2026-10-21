@@ -387,6 +387,7 @@ input{font-family:inherit;color:var(--ink)}
 @keyframes bxChev{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
 
 /* ---- pushed pages and sheets ---- */
+#bx_pages.on::before{content:'';position:fixed;inset:0;z-index:49;background:rgba(16,23,45,.55)}
 .bx-page{position:fixed;inset:0;z-index:50;background:#2A3350;overflow:auto;max-width:520px;margin:0 auto;animation:bxIn .32s cubic-bezier(.2,.9,.3,1)}
 .bx-page.flat{background:var(--bg)}
 .bx-page.still{animation:none}
@@ -1690,6 +1691,7 @@ function render(){
   }).join('');
   [...pages.children].forEach((el, i) => { if (prev[i] && prev[i].type === el.dataset.type) el.scrollTop = prev[i].top; });
   document.body.style.overflow = S.stack.length ? 'hidden' : '';
+  pages.classList.toggle('on', S.stack.length > 0);
   if (keepFocus) { const el = document.getElementById(keepFocus); if (el && el.focus) { el.focus(); if (el.setSelectionRange && el.value != null) { const n = el.value.length; try { el.setSelectionRange(n, n); } catch (_e) {} } } }
   afterRender();
 }
@@ -1704,6 +1706,8 @@ const PAGE = {}, SHEET = {}, ACT = {}, AFTER = [];
 function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); bindTri(); bindSlides(); bindSwipes(); }
 
 document.addEventListener('click', e => {
+  // Beside a page on a wide screen: a tap closes the page, never the app below.
+  if (e.target.id === 'bx_pages') { FEEL.back(); pop(); return; }
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
   if (a === 'tab') { if (S.view !== t.dataset.v || S.stack.length) FEEL.tick(); go(t.dataset.v); return; }
@@ -1944,7 +1948,11 @@ function nextUpHTML(f){
             <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700"><span class="ell">${esc(lineFull(up))} · ${esc(supplierShort(up.supplierId))}</span><span class="m" style="flex:none"><s style="color:#8A93A3;font-weight:500">${n0(was)}</s> → ${n0(now)}</span></span>
             <span style="position:relative;display:block;height:10px;border-radius:999px;background:var(--rule)"><i style="position:absolute;left:0;top:0;bottom:0;width:${(Math.min(now, sold || now) / top * 100).toFixed(1)}%;border-radius:999px;background:var(--navy)"></i>${sold != null && now > sold ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:0;bottom:0;width:${((now - sold) / top * 100).toFixed(1)}%;border-radius:0 999px 999px 0;background:#E5483D"></i>` : ''}${sold != null ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:-4px;bottom:-4px;border-left:2px dashed var(--green)"></i>` : ''}</span>
             <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>cost now <b class="m" style="color:var(--ink)">${n0(now)}</b></span><span>up <b class="m" style="color:var(--crimson)">+${n0(now - was)}</b></span></span></span>`; })() : ''}
-        <span style="font-size:12px;font-weight:600;color:var(--indigo)">Every supplier said yes · ${esc(orderHoldReason(q))} · you are told</span>`;
+        ${up && h.who === whoShort('manager') ? `<span role="img" aria-label="What the client pays is ${esc(h.who)}'s to set and to see. Once ${esc(h.who)} decides, you see kept above cost with a tick" style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700">
+          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo)">${ic('lock', 12, 'style="stroke-width:2.4"')}client price · ${esc(h.who)} only</span>
+          <i style="flex:1;min-width:10px;border-top:2px dotted #C9C4BA"></i>
+          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:var(--ink3)"><i style="width:8px;height:8px;border-radius:999px;box-shadow:inset 0 0 0 2px #9BA3F0"></i>then ‘kept above cost ✓’</span></span>`
+          : `<span style="font-size:12px;font-weight:600;color:var(--indigo)">Every supplier said yes · ${esc(orderHoldReason(q))} · you are told</span>`}`;
     } else if (j.k === 'ask') {
       const r = j.r, mins = Math.floor(minsSince(r.askedAt)), sid = r.supplierId, phone = supplierPhone(sid);
       kind = 'ASKED · NO REPLY'; kindInk = '#95530C'; node = '#F5B26B'; title = supplierName(sid); who = { name: title, key: sid };
@@ -3214,6 +3222,9 @@ ACT.pback = async t => {
    ================================================================== */
 ACT['plan-for'] = t => { FEEL.open(); push('plan', { sid: t.dataset.sid }); };
 function roundUp(n, step){ return Math.ceil((Number(n) || 0) / step) * step; }
+// The cash asked for a round: rounded to a sensible note, never a big
+// cushion -- an 11,000 stop asks for 11,000, not 50,000.
+function cashStep(n){ return n < 100000 ? 1000 : n < 1000000 ? 10000 : 50000; }
 function liveTripsList(){ return (D().collectionTrips || []).filter(t => tripIsLive(t)).sort((a, b) => msOf(b.createdAt) - msOf(a.createdAt)); }
 // The round: every confirmed stop, ticked, in order. One start, one cash
 // ask for all of it; stop 1 is the first on the road.
@@ -3265,7 +3276,7 @@ PAGE.plan = (args) => {
         <span class="m" style="font-size:14px;font-weight:600">${n0(r.total)}</span>
       </span>
       ${on ? `<span style="display:flex;flex-wrap:wrap;gap:5px;width:100%">${planItemsHTML(r)}</span>${planYardHTML(r)}${planJoinHTML(r)}${planRefillWaitHTML(r)}` : ''}
-    </button>`;
+    </button>${planOpenTripHTML(r, on, args)}`;
   }).join('');
   let who = '', cash = '', cta = '', tip = '', previewTrip = null, ownRow = '';
   if (first) {
@@ -3273,7 +3284,7 @@ PAGE.plan = (args) => {
     const pickedStaff = args.who && args.who !== 'me' && args.who !== 'sup' ? staffById(args.who) : null;
     const shown = pickedStaff || freeStaff(others)[0] || null, sup = supplierById(first.supplierId);
     const opts = [
-      ['me', me ? initials(myName()) : '—', me ? (personName(me.name) === 'You' ? 'You' : 'Me') : canAddMe() ? 'Add me, I go' : 'Me', me ? (personName(me.name) === 'You' ? 'you go' : personName(me.name)) : canAddMe() ? 'you go' : 'no staff row', !me && !canAddMe(), '#E4E6FA', '#3A3F9B'],
+      ['me', me ? initials(myName()) : '—', me ? 'You' : canAddMe() ? 'Add me, I go' : 'You', me ? (greetName() || 'you go') : canAddMe() ? 'you go' : 'no staff row', !me && !canAddMe(), '#E4E6FA', '#3A3F9B'],
       ['send', shown ? initials(shown.name) : '+', shown ? String(shown.name).trim() : 'Send someone', shown ? staffSub(shown) + ' · ' + (staffOut(shown) ? 'out' : 'free') : others.length + ' to choose from', !others.length, '#E4F4EA', '#0F6B43', shown ? shown.id : ''],
       ['sup', '', 'They bring it', nS > 1 ? 'each, on their day' : sup && sup.deliveryDays != null ? (sup.deliveryDays === 0 ? 'today' : 'in ' + sup.deliveryDays + ' day' + (sup.deliveryDays > 1 ? 's' : '')) : 'they deliver', false, tintFor(first.supplierId)[0], tintFor(first.supplierId)[1]],
     ];
@@ -3286,9 +3297,15 @@ PAGE.plan = (args) => {
     const carrier = args.who === 'me' ? (me && me.id) : args.who === 'sup' ? TRIP_SUPPLIER_CARRIER : pickedStaff ? pickedStaff.id : null;
     previewTrip = tripFromRun(first, carrier);
     if (args.who !== 'sup') {
-      const given = args.given === undefined ? roundUp(total, 50000) : args.given;
+      const given = args.given === undefined ? roundUp(total, cashStep(total)) : args.given;
       const spare = given != null ? given - total : null;
-      cash = `<button data-act="pcash" aria-label="${given != null ? `Cash for this round ${n0(given)}, planned ${n0(total)}, bring back at least ${n0(Math.max(0, spare))}` : 'No cash recorded. Tap to set it'}" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:none;border-radius:16px 16px ${given != null ? '0 0' : '16px 16px'};background:#fff;box-shadow:inset 0 0 0 1px var(--line);text-align:left;width:100%">
+      const h0 = roundCashAsk(picked.map(r => String(r.supplierId))), ownNow = args.who === 'me' && !!args.own && !(h0 && h0.status === 'done');
+      // On your own money there is no cash to ask for: one line says so.
+      if (ownNow) cash = `<div role="img" aria-label="Your own money, ${n0(total)}: ${esc(whoShort('accounts'))} pays you back at hand-in" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:#FFF6EC;box-shadow:inset 0 0 0 1.5px rgba(245,178,107,.6)">
+        <span style="width:34px;height:34px;border-radius:11px;background:var(--amberSoft);color:#7A4A02;display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 18)}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:#7A4A02">Your own money · <span class="m">${n0(total)}</span></b><span style="font-size:11.5px;font-weight:600;color:var(--amberInk)">${esc(whoShort('accounts'))} pays you back at hand-in · no cash to ask for</span></span>
+        <button data-act="planown" style="flex:none;min-height:32px;padding:0 8px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></div>`;
+      else cash = `<button data-act="pcash" aria-label="${given != null ? `Cash for this round ${n0(given)}, planned ${n0(total)}, bring back at least ${n0(Math.max(0, spare))}` : 'No cash recorded. Tap to set it'}" style="display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:none;border-radius:16px 16px ${given != null ? '0 0' : '16px 16px'};background:#fff;box-shadow:inset 0 0 0 1px var(--line);text-align:left;width:100%">
         <span style="display:flex;align-items:baseline;justify-content:space-between;width:100%"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink2)">${ic('cash', 14, 'style="stroke:#0F6B43"')}Cash for this round</span><span class="m" style="font-size:15px;font-weight:600">${given != null ? n0(given) : 'tap to set'}</span></span>
         ${given != null ? `<span style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden;width:100%;background:var(--soft2)"><i style="flex:${Math.max(1, Math.min(total, given))};background:var(--navy)"></i>${spare > 0 ? `<i style="flex:${spare};background:var(--mint)"></i>` : ''}${spare < 0 ? `<i style="flex:${-spare};background:#E5483D"></i>` : ''}</span>
         <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3);width:100%"><span>planned <span class="m" style="color:var(--ink)">${n0(total)}</span></span><span>${spare >= 0 ? `bring back at least <span class="m" style="color:var(--green)">${n0(spare)}</span>` : `short by <span class="m" style="color:var(--crimson)">${n0(-spare)}</span>`}</span></span>` : ''}
@@ -3300,8 +3317,7 @@ PAGE.plan = (args) => {
     const label = args.who === 'me' ? (nS > 1 ? 'Slide to start · ' + stopsW : 'Slide to start · ' + supplierShort(first.supplierId)) : args.who === 'sup' ? 'Slide · ' + (nS > 1 ? nS + ' suppliers deliver' : supplierShort(first.supplierId) + ' delivers') : pickedStaff ? 'Slide to send ' + staffCall(pickedStaff) + (nS > 1 ? ' · ' + stopsW : '') : 'Choose who goes';
     const h = args.who === 'sup' ? null : roundCashAsk(picked.map(r => String(r.supplierId)));
     const inHand = args.who === 'sup' || (h && h.status === 'done'), own = !inHand && args.who === 'me' && !!args.own;
-    ownRow = inHand ? '' : own ? `<span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:12px;background:#FFF6EC;box-shadow:inset 0 0 0 1px rgba(245,178,107,.5)"><span style="font-size:12px;font-weight:600;color:#7A4A02">Your own money · ${esc(whoShort('accounts'))} is told to pay you back</span><button data-act="planown" style="flex:none;min-height:28px;padding:0 8px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></span>`
-      : args.who === 'me' ? `<span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px"><span style="font-size:12px;font-weight:600;color:var(--ink3)">No cash yet? Go on your own money</span><button data-act="planown" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:#7A4A02;color:#fff;font-size:12px;font-weight:700">I paid myself</button></span>` : '';
+    ownRow = inHand || own ? '' : args.who === 'me' ? `<span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px"><span style="font-size:12px;font-weight:600;color:var(--ink3)">No cash yet? Go on your own money</span><button data-act="planown" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:#7A4A02;color:#fff;font-size:12px;font-weight:700">I paid myself</button></span>` : '';
     cta = inHand || own ? slideHTML('trip', label, 'truck', { disabled: !carrier || S.busy })
       : `<span class="bx-btn" role="status" aria-disabled="true" style="background:var(--rule);color:var(--ink2);box-shadow:none;border-radius:999px">${ic('lock', 18)}<span class="ell">${h ? 'Waiting for ' + esc(whoShort('accounts')) + '’s cash' : 'Ask ' + esc(whoShort('accounts')) + ' for the cash'}</span></span>`;
   }
@@ -3336,6 +3352,48 @@ function planRefillWaitHTML(r){
   const w = refillsWaiting(r.supplierId); if (!w.length) return '';
   return `<span style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border-radius:10px;background:var(--amberSoft);color:var(--amberInk);font-size:12px;font-weight:600;text-align:left"><i style="width:7px;height:7px;border-radius:999px;background:#E09A4E;flex:none"></i><span style="flex:1">Shelf refill · ${w.length} price${w.length > 1 ? 's' : ''} to confirm with ${esc(supplierShort(r.supplierId))} · ${w.length > 1 ? 'they join' : 'it joins'} once confirmed</span></span>`;
 }
+// Somebody already has a trip out to this supplier: never a second visit
+// unasked. Take its lines into this stop (that trip closes), or leave the
+// stop to them; either can be undone.
+function openTripFor(sid){ return liveTripsList().filter(t => String(t.supplierId) === String(sid) && !tripIsSupplierDelivered(t) && ['open', 'assigned', 'collecting'].includes(t.status)).sort((a, b) => msOf(a.createdAt) - msOf(b.createdAt))[0] || null; }
+function tripTakeable(t){ return !!t && !tripLines(t).some(l => tripLineGot(l) != null) && !(Number(t.cashGiven) > 0) && !stopIsDone(t); }
+function planOpenTripHTML(r, on, args){
+  const sid = String(r.supplierId); if (on && args.dup && args.dup[sid] && args.dup[sid].left) delete args.dup[sid];
+  const dup = (args.dup || {})[sid], t = dup && dup.took ? tripById(dup.took) : openTripFor(sid);
+  if (!t || (!on && !(dup && dup.left))) return '';
+  const who0 = tripCarrierLabel(t), who = who0 === 'you' ? who0 : shortName(who0) || who0, whoW = who === 'you' ? 'You' : who, poss2 = who === 'you' ? 'Your' : who + '’s', n = tripLines(t).length, got = tripLines(t).filter(l => tripLineGot(l) != null).length, sh = supplierShort(sid);
+  const took = dup && dup.took, left = dup && dup.left, can = tripTakeable(t);
+  const head = took ? poss2 + ' ' + sh + ' trip is closed' : left ? 'Left on ' + poss2 + ' trip' : whoW + ' already ' + (who === 'you' ? 'have' : 'has') + ' a trip to ' + sh;
+  const sub = took ? 'its ' + n + ' line' + (n === 1 ? '' : 's') + ' ride this stop · one visit' : left ? 'this stop waits for it · out of the round' : 'out since ' + dayLabel(isoOf(t.createdAt)) + ' · ' + got + ' of ' + n + ' loaded';
+  const btn = 'height:38px;border:none;border-radius:11px;font-size:12.5px;font-weight:700';
+  return `<div role="group" aria-label="${esc(head + ', ' + sub)}" style="margin:-2px 0 2px 34px;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:${took ? '#EEF7F1' : '#F3F1FC'};box-shadow:inset 0 0 0 1px ${took ? 'rgba(15,107,67,.25)' : 'rgba(58,63,155,.18)'}">
+    <span style="display:flex;align-items:center;gap:10px"><span class="bx-av" style="width:30px;height:30px;border-radius:10px;font-size:10px;background:var(--greenSoft);color:var(--green)">${esc(initials(who === 'you' ? myName() : who0))}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:12.5px">${esc(head)}</b><span class="ell" style="font-size:11.5px;font-weight:600;color:var(--ink3)">${esc(sub)}</span></span>
+      <span role="img" aria-label="${got} of ${n} lines loaded" style="flex:none;display:flex;gap:3px">${tripLines(t).slice(0, 6).map(l => `<i style="width:8px;height:14px;border-radius:3px;${tripLineGot(l) != null ? 'background:var(--green)' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA'}"></i>`).join('')}</span></span>
+    ${took || left ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:${took ? 'var(--green)' : 'var(--ink3)'}"><span style="flex:1">✓ ${took ? n + ' more line' + (n === 1 ? '' : 's') + ' on this stop' : esc(sh) + ' stays with ' + esc(who === 'you' ? 'you' : who)}</span><button data-act="planopenundo" data-sid="${esc(sid)}" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;min-height:28px;padding:0 8px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></span>`
+      : `<span style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${can ? `<button data-act="planopentake" data-sid="${esc(sid)}" data-id="${esc(t.id)}" ${S.busy ? 'aria-disabled="true"' : ''} style="${btn};background:var(--navy);color:#fff">Take its ${n} line${n === 1 ? '' : 's'}</button>` : `<button data-act="trip" data-id="${esc(t.id)}" style="${btn};background:var(--navy);color:#fff">Open that trip</button>`}<button data-act="planopenleave" data-sid="${esc(sid)}" style="${btn};background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink)">Leave it to ${esc(who === 'you' ? 'that trip' : who)}</button></span>`}
+  </div>`;
+}
+ACT.planopenleave = t => { const a = topArgs(), sid = t.dataset.sid; (a.dup ||= {})[sid] = { left: true }; a.sel = (a.sel || []).filter(x => String(x) !== sid); FEEL.back(); render(); };
+ACT.planopentake = async t => {
+  const a = topArgs(), sid = t.dataset.sid, x = tripById(t.dataset.id); if (!x || S.busy || !tripTakeable(x)) return;
+  S.busy = true; render();
+  try { await dropStop(x, 'Taken into a new round', null); (a.dup ||= {})[sid] = { took: x.id }; S.busy = false; FEEL.yes(); toast(supplierShort(sid) + '’s open trip is closed · its lines ride this stop'); }
+  catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing changed. Try again with signal.' : 'Not changed: ' + (e.message || e), 6000); }
+  render();
+};
+ACT.planopenundo = async t => {
+  const a = topArgs(), sid = t.dataset.sid, d = (a.dup || {})[sid]; if (!d || S.busy) return;
+  if (d.left) { delete a.dup[sid]; if (!(a.sel || []).includes(sid)) (a.sel ||= []).push(sid); FEEL.back(); render(); return; }
+  S.busy = true; render();
+  try {
+    const u = await sb.from('collection_trips').update({ voided: false, note: null }).eq('shop_id', S.shopId).eq('id', d.took); if (u.error) throw u.error;
+    const x = tripById(d.took); D().collectionTrips = D().collectionTrips.map(y => y.id === d.took ? { ...y, voided: false, note: '' } : y);
+    if (x) await restockOnTrip({ ...x, voided: false });
+    delete a.dup[sid]; saveSnapshot(); S.busy = false; FEEL.back();
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — nothing changed.' : 'Not changed: ' + (e.message || e), 6000); }
+  render();
+};
 // The yard already holds some of what a stop would buy: say so, and what is left to buy.
 function planYardHTML(r){
   const notes = r.lines.filter(l => l.fromYard > 0).map(l => `${n0(quoteLineCount(l.it, l.fromYard).n)} ${lineFull(l.it)} already at the yard, uncounted · take them from there, buy ${n0(quoteLineCount(l.it, l.qty).n)}`);
@@ -3802,6 +3860,7 @@ PAGE.trip = ({ id }) => {
   else if (!bySup && !hasPay) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('cash', 18)}Enter what you paid</span>`;
   // When the photo is all that is missing, the big button is the camera.
   else if (!bySup && !hasRec) foot = `<label style="position:relative;flex:1;height:56px;border-radius:999px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22);cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">${ic('camera', 20, 'style="stroke:#F5B26B"')}Photograph the receipt</label>`;
+  else if (!bySup && (() => { const o = payOdd(t); return o && !o.ok; })()) foot = `<span role="status" style="flex:1;min-width:0;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('lock', 15, 'style="stroke-width:2.2"')}<span class="ell">Check the amount first</span></span>`;
   else if (noCash) foot = `<span role="status" style="flex:1;min-width:0;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('lock', 15, 'style="stroke-width:2.2"')}<span class="ell">Done here waits for ${esc(acc)}’s cash</span></span>`;
   else if (!bySup && nextStop) foot = `<button data-act="stopdone" ${S.busy ? 'aria-disabled="true"' : ''} aria-label="Done at ${esc(short(t))}. The goods stay on the truck; on to ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0;height:56px;border:none;border-radius:999px;background:radial-gradient(120% 140% at 10% 50%,#26335E 0%,#16203C 70%);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22)"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell">Done here · on to ${esc(nextName)}</span><span aria-hidden="true" style="flex:none;color:#F59A92;letter-spacing:-.2em">›››</span></button>`;
   else foot = slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
@@ -3843,7 +3902,12 @@ PAGE.trip = ({ id }) => {
         ${P.photo ? `<span aria-hidden="true" style="position:absolute;right:2px;top:0;width:18px;height:18px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #1B2647">${ic('tick', 10, 'style="stroke-width:3.6"')}</span>` : ''}
       </label>
     </div>
-    <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(acc) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(acc) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(acc)}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>`; })() : '';
+    <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(acc) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(acc) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(acc)}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>
+    ${odd && !(P.oddOk && P.photo) ? `<div role="group" aria-label="The amount looks wrong: ${n0(P.amount)} against a plan of ${n0(plan)}${guess ? '. Did you mean ' + n0(guess) + '?' : ''}" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:16px;background:#FDF0EE;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35)">
+      <span style="display:flex;align-items:center;gap:10px"><span class="m" style="width:30px;height:30px;border-radius:10px;background:#FBE5E2;color:#A82D24;display:flex;align-items:center;justify-content:center;flex:none;font-size:14px;font-weight:700">?</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:#8E2A22">${guess ? 'Meant ' + n0(guess) + '?' : n0(P.amount) + ' is ' + Math.round(Math.abs(diff) / plan * 100) + '% ' + (diff > 0 ? 'over' : 'under') + ' the plan'}</b><span style="font-size:11.5px;font-weight:600;color:#A8473E">${guess ? n0(P.amount) + ' is ' + Math.round(Math.abs(diff) / plan * 100) + '% off the plan of ' + n0(plan) : 'the plan was ' + n0(plan) + ' · check the bill'}</span></span></span>
+      <span style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button data-act="toddfix" style="height:40px;border:none;border-radius:12px;background:var(--navy);color:#fff;font-size:13px;font-weight:700">${guess ? 'Use ' + n0(guess) : 'Type it again'}</button>${P.photo ? `<button data-act="toddok" style="height:40px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:12.5px;font-weight:700">Yes, ${n0(P.amount)} is right</button>` : `<label style="position:relative;height:40px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35);color:#8E2A22;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt to keep ${n0(P.amount)}" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">Photo the receipt to keep it</label>`}</span>
+    </div>` : ''}`; })() : '';
   // The stop is done: what it cost, and what the cash in hand is now for.
   const ownTotal = own ? rt.filter(x => x.status === 'collecting' && stopIsDone(x)).reduce((a, x) => a + tripPaidAt(x), 0) : 0;
   const doneCard = done ? (() => { const avail = rc ? rc.avail - paidNow : null, back = endNow || !nextStop, spare = avail != null ? avail - restPlan : null;
@@ -3880,7 +3944,7 @@ PAGE.trip = ({ id }) => {
     <div class="bx-hero" data-navy-top style="padding-top:calc(14px + var(--safe-area-inset-top));gap:12px">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="bx-circle" data-act="tripsback" aria-label="Back to Trips" style="background:rgba(255,255,255,.08)">${ic('back', 16, 'style="stroke-width:2.2"')}</button>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;font-weight:700;letter-spacing:.1em;line-height:1.3;color:var(--lilac)"><span class="${t.status === 'collecting' ? 'a-pulsel' : ''}" style="width:8px;height:8px;border-radius:999px;background:var(--lilac);flex:none"></span><span style="min-width:0">${esc((bySup ? 'THEY BRING IT' + (sup.location ? ' · ' + sup.location : '') : t.status === 'collecting' ? (isRound ? 'STOP ' + (myIdx + 1) + ' OF ' + rt.length + (done ? ' ✓' : '') : (done ? 'DONE AT ' : 'LOADING AT ') + supplierShort(t.supplierId)) + ' · OUT SINCE ' + hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)) : t.status === 'assigned' ? 'SENT TO ' + tripCarrierLabel(t) : 'TO SEND' + (sup.location ? ' · ' + sup.location : '')).toUpperCase())}</span></span><span class="ell" style="font-size:18px;font-weight:700">${esc(sup.name)}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;font-weight:700;letter-spacing:.1em;line-height:1.3;color:var(--lilac)"><span class="${t.status === 'collecting' ? 'a-pulsel' : ''}" style="width:8px;height:8px;border-radius:999px;background:var(--lilac);flex:none"></span><span style="min-width:0">${esc((S.ui.handing && S.ui.handing.id === id ? 'HANDING IN · ' + (isRound ? rt.length + ' STOPS' : supplierShort(t.supplierId)) : t.status === 'collected' || t.status === 'confirmed' ? 'HANDED IN · ' + supplierShort(t.supplierId) : bySup ? 'THEY BRING IT' + (sup.location ? ' · ' + sup.location : '') : t.status === 'collecting' ? (isRound ? 'STOP ' + (myIdx + 1) + ' OF ' + rt.length + (done ? ' ✓' : '') : (done ? 'DONE AT ' : 'LOADING AT ') + supplierShort(t.supplierId)) + ' · OUT SINCE ' + hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)) : t.status === 'assigned' ? 'SENT TO ' + tripCarrierLabel(t) : 'TO SEND' + (sup.location ? ' · ' + sup.location : '')).toUpperCase())}</span></span><span class="ell" style="font-size:18px;font-weight:700">${esc(sup.name)}</span></span>
         ${telUrl(phone) ? `<a href="${telUrl(phone)}" aria-label="Call ${esc(sup.name)}" style="width:44px;height:44px;border-radius:14px;background:${tt[0]};color:${tt[1]};display:flex;align-items:center;justify-content:center;flex:none">${ic('phone', 19)}</a>` : ''}
       </div>
       ${routeHTML}
@@ -3904,8 +3968,11 @@ PAGE.trip.bg = '#F7F5F2';
 // Back from a trip lands on Trips, wherever the trip was opened from.
 ACT.tripsback = () => { FEEL.back(); if (S.stack.length > 1 && S.stack[S.stack.length - 2].type === 'trips') pop(); else replaceTop('trips', {}); };
 function tripArgsLine(t){ const a = topArgs(), tr = tripById(a.id); if (!tr) return null; const i = Number(t.dataset.i), l = tripView(tr).lines[i]; return l ? { tr, i, l, per: quoteLineCountPer(l) } : null; }
-ACT['in:tpaid'] = t => { const a = topArgs(), n = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; setTripPay(a.id, { amount: n || null }); render(); };
-ACT.tnorec = () => { const a = topArgs(), was = (S.tripPay || {})[a.id] || {}; setTripPay(a.id, { noReceipt: !was.noReceipt, photo: was.noReceipt ? was.photo : null }); FEEL.tick(); render(); };
+ACT['in:tpaid'] = t => { const a = topArgs(), n = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; setTripPay(a.id, { amount: n || null, oddOk: false }); render(); };
+ACT.tnorec = () => { const a = topArgs(), was = (S.tripPay || {})[a.id] || {}; setTripPay(a.id, { noReceipt: !was.noReceipt, photo: was.noReceipt ? was.photo : null, oddOk: false }); FEEL.tick(); render(); };
+// The check card: use the likely figure, or keep the typed one (receipt photo required).
+ACT.toddfix = () => { const a = topArgs(), t = tripById(a.id), o = t && payOdd(tripView(t)); if (!o) return; setTripPay(a.id, { amount: o.guess || null, oddOk: false }); FEEL.tick(); render(); if (!o.guess) { const el = document.getElementById('bx_tpaid'); if (el) el.focus(); } };
+ACT.toddok = () => { const a = topArgs(); setTripPay(a.id, { oddOk: true }); FEEL.yes(); render(); };
 // "As planned" is the plan for what came: a short line pays for what was loaded.
 ACT.tpaidplan = () => { const a = topArgs(), tr = tripById(a.id); if (!tr) return; setTripPay(a.id, { amount: Math.round(tripPlanFor(tripView(tr))) || null }); FEEL.tick(); render(); };
 document.addEventListener('change', e => {
@@ -4011,6 +4078,14 @@ ACT['slide:take'] = async () => {
 };
 // A stop is ready to leave when every line is answered (0 is an answer),
 // what was paid is typed and the receipt is photographed or said to be none.
+// A paid amount more than 30% off the plan is most likely a slip of the
+// thumb: the likely figure (x10 or /10) is offered, and keeping the typed
+// one needs the receipt photo -- "no receipt" never lets a typo through.
+function payOdd(t){
+  const P = (S.tripPay || {})[t.id] || {}, plan = tripPlanFor(t), amt = Number(P.amount) || 0;
+  if (!(amt > 0) || !(plan > 0) || Math.abs(amt - plan) <= plan * 0.3) return null;
+  return { amt, plan, guess: [amt * 10, Math.round(amt / 10)].find(v => Math.abs(v - plan) < plan * 0.3) || null, pct: Math.round(Math.abs(amt - plan) / plan * 100), over: amt > plan, ok: !!P.oddOk && !!P.photo };
+}
 function stopReadyWhy(t){
   if (!tripAllAnswered(t)) { const left = tripLines(t).filter(l => tripLineGot(l) == null).length; return `Say what came back for ${left} more line${left === 1 ? '' : 's'} at ${supplierShort(t.supplierId)} first — 0 is an answer`; }
   if (tripIsSupplierDelivered(t)) return '';
@@ -4018,6 +4093,7 @@ function stopReadyWhy(t){
   const P = (S.tripPay || {})[t.id] || {};
   if (!(P.amount > 0)) return 'Enter what you paid at ' + supplierShort(t.supplierId) + ' first';
   if (!(P.photo || P.noReceipt)) return 'Add the receipt photo at ' + supplierShort(t.supplierId) + ', or say there was none';
+  const odd = payOdd(t); if (odd && !odd.ok) return 'Check the amount paid at ' + supplierShort(t.supplierId) + ' first: ' + n0(odd.amt) + ' is ' + odd.pct + '% off the plan';
   return '';
 }
 // Done here: the answers are written, the receipt photo goes up while there
@@ -4296,7 +4372,7 @@ PAGE.done = ({ id }) => {
           <span style="width:28px;height:28px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
           <span class="m" style="flex:none;font-size:12px;font-weight:600;color:var(--amber)">${n0(paid)} →</span>
           <span style="width:28px;height:28px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(myName()))}</span>
-          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:12px;font-weight:700;color:#fff">${esc(whoShort('accounts'))} owes you</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk2)">Accounts pays it back · ${H.length} bill${H.length === 1 ? '' : 's'} say own money</span></span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:12px;font-weight:700;color:#fff">${esc(whoShort('accounts'))} owes you</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk2)">Accounts pays it back · ${H.length} bill${H.length === 1 ? ' says' : 's say'} own money</span></span>
         </div>` : ''}
         ${given != null ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.06)">
           <span class="m" style="flex:none;font-size:12px;font-weight:600;color:${back < 0 ? 'var(--rose)' : 'var(--mint)'}">${back < 0 ? 'over ' + n0(-back) : n0(back) + ' →'}</span>
@@ -5256,6 +5332,10 @@ function restockRows(){
     const inc = shelfIncoming(pid, vi), coming = inc.all;
     const name = productVariantLabel(p, vi), left = rate > 0 ? qty / rate : null, comeDays = rate > 0 ? coming / rate : null;
     const row = { key, pid, vi, name, qty, held, rate, left, comeDays, yard: inc.yard, onTrip: inc.trip, lead, floor, below: floor > 0 && qty + coming < floor, best, need: Math.max(0, short - coming), coming, hold: restockHold(key) };
+    // A supplier who sells only whole cartons: the yard comes off first, then
+    // the rest rounds up to whole cartons -- never 1 kg from a 20 kg carton.
+    const pk = best && row.need > 0 ? ipLineOutlay(best, row.need) : null;
+    if (pk && pk.forcedPack) { row.pack = { short, coming, need: row.need, units: pk.units, cartons: Math.round(pk.units / (pk.packQty || 1)), packQty: pk.packQty }; row.need = pk.units; row.best = { ...best, purchasePrice: pk.rate }; }
     if (cheaper && row.need > 0) row.alt = { supplierId: cheaper.supplierId, price: cheaper.purchasePrice, age: priceAgeDays(cheaper.date), save: Math.round((best.purchasePrice - cheaper.purchasePrice) * row.need) };
     row.tight = row.left != null ? row.left + (comeDays || 0) - lead <= 2 : row.below;
     rows.push(row);
@@ -5285,6 +5365,11 @@ PAGE.restock = (args) => {
         <button role="checkbox" aria-checked="${on}" data-act="rspick" data-k="${esc(r.key)}" aria-label="${on ? 'On the list: ' : 'Add to the list: '}${esc(r.name)}" style="width:44px;height:44px;border:none;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:var(--green);color:#fff' : 'background:#F4F2EE;color:var(--ink2);box-shadow:inset 0 0 0 1px #E6E3DD'}">${ic(on ? 'tick' : 'plus', 20, 'style="stroke-width:2.6"')}</button></div>
       <span role="img" aria-label="${esc(r.name)}: ${r.left == null ? 'under its floor' : Math.floor(r.left) + ' days on the shelf' + (r.comeDays ? ' and ' + Math.floor(r.comeDays) + ' more at the yard or on a trip' : '')}, a refill takes ${r.lead} day${r.lead > 1 ? 's' : ''}" style="position:relative;display:block;height:10px;border-radius:999px;background:#F1EEE8"><span class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${(left / SPAN * 100).toFixed(1)}%;border-radius:999px;background:${col}"></span>${come > 0 ? `<span class="a-grow" style="position:absolute;top:0;bottom:0;left:${(left / SPAN * 100).toFixed(1)}%;width:${(come / SPAN * 100).toFixed(1)}%;border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,#2BA3B0 0 3px,#9FD9DF 3px 5px)"></span>` : ''}<span style="position:absolute;top:-4px;bottom:-4px;left:${(Math.min(SPAN, r.lead) / SPAN * 100).toFixed(1)}%;border-left:2px solid var(--navy)"></span></span>
       ${join ? `<span style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:var(--indigoSoft);color:#2E3388;font-size:12px;font-weight:600">${ic('truck', 13)}<span style="flex:1;min-width:0">${esc(join)}</span></span>` : ''}
+      ${r.pack ? (() => { const u = x => quoteLineCount({ productId: r.pid, variantIdx: r.vi, unit: r.best.unit }, x), cu = x => esc(u(x).n) + ' ' + esc(u(x).unit), pw = String(r.best.packUnit || 'carton').toLowerCase();
+        const chip = (bg, ink, inner) => `<span style="display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:8px;background:${bg};${ink}">${inner}</span>`;
+        return `<span role="img" aria-label="Short ${cu(r.pack.short)}${r.pack.coming ? ', less ' + n0(r.pack.coming) + (r.yard > 0 ? ' at the yard' : ' coming') : ''}, leaves ${cu(r.pack.need)}; ${esc(supplierShort(r.best.supplierId))} sells only whole ${esc(pw)}s of ${n0(r.pack.packQty)}, so buy ${r.pack.cartons} ${esc(pw)}${r.pack.cartons > 1 ? 's' : ''}, ${cu(r.pack.units)}" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:7px 9px;border-radius:10px;background:#F4F2EE;font-size:11.5px;font-weight:700;color:#4D566B">
+          ${chip('#fff', 'box-shadow:inset 0 0 0 1px #E6E3DD', `short <b class="m" style="color:var(--ink)">${cu(r.pack.short)}</b>`)}${r.pack.coming ? `<span aria-hidden="true">−</span>${chip(r.yard > 0 ? '#DDF1F3' : 'var(--greenSoft)', r.yard > 0 ? 'color:#0B5560' : 'color:var(--green)', `<b class="m">${n0(r.pack.coming)}</b> ${r.yard > 0 ? 'at the yard' : 'coming'}`)}<span aria-hidden="true">=</span>${chip('#fff', 'box-shadow:inset 0 0 0 1px #E6E3DD', `<b class="m" style="color:var(--ink)">${cu(r.pack.need)}</b>`)}` : ''}
+          <span aria-hidden="true" style="display:flex">${ic('chev', 13, 'style="stroke-width:2.4"')}</span>${chip('var(--navy)', 'color:#fff', `${ic('box', 12)}${r.pack.cartons} ${esc(pw)}${r.pack.cartons > 1 ? 's' : ''} · ${cu(r.pack.units)}`)}</span>`; })() : ''}
       ${r.alt ? `<span style="display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:10px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:600">${ic('clock', 13, 'style="flex:none"')}<span style="flex:1;min-width:0">${esc(supplierShort(r.alt.supplierId))} ${n0(r.alt.price)} · ${r.alt.age == null ? 'never dated' : r.alt.age + ' d old'} · ask to save ${n0(r.alt.save)}</span></span>` : ''}
       <span style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px"><span style="min-width:0;flex:1 1 150px;font-size:12px;font-weight:600;line-height:1.3;color:${r.tight ? 'var(--crimson)' : 'var(--amberInk)'}">${esc(why)}</span><span class="m" style="flex:none;font-size:12px;font-weight:600;color:var(--ink2)">buy ${esc(c.n)} ${esc(c.unit)} · ${n0(r.need * r.best.purchasePrice)}</span></span>
     </div>`; };
