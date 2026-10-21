@@ -37,6 +37,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/sb\.rpc\('store_money_holds', \{ p_shop: S\.shopId \}\)/.test(store) && /'handoverCheckedAt', 'creditAsk'\]/.test(store), 'the Store app reads what waits on money and writes its ask on the order');
   t.check(/const go = all\.filter\(d => !moneyHold\(d\.q\)\)/.test(store) && /if \(moneyHold\(q\)\) \{ toast\(/.test(store), 'a held order is never picked for the truck or handed over');
   t.check(!/q\.creditCheck = /.test(store), 'the Store app never decides credit');
+  t.check(/function canAskCredit\(q\)\{ return !!\(q && q\.customerId && /.test(store) && /if \(S\.busy \|\| !canAskCredit\(quoteById\(id\)\)\) return;/.test(store), 'an order with no customer record is never asked about: credit is set on a customer, so it waits for the money');
   t.check(/function creditAskOf\(q\)\{ const a = q && q\.creditAsk;/.test(mgr) && /k === 'credit\.ask' \|\| k === 'credit\.hold'/.test(mgr), 'the Manager app reads the Store\'s ask as payload.creditAsk, and the credit.ask push opens it');
   t.check(/function loadAskOf\(q\)\{ const a = q && q\.creditAsk; return a && typeof a === 'object' && a\.at && !a\.answer/.test(store), 'the Store app reads an ask as open the way the Manager app does');
 }
