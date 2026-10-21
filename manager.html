@@ -3785,12 +3785,16 @@ function reviewFresh(it){ const r = it && it.priceReview; return !!r && Number(r
 // A salesperson's own price, tagged (sales.html placedPriceTag); or a line with no selling price
 // at all that nobody tagged (an order made before the tag, or on the console): the invoice
 // refuses those since 0139 (OWTPC), so the Manager prices them here. A line settled to 0 is none.
+// Selling below what it costs, however the line got there (a supplier's new price the
+// buyer took in person, say): the Manager's call even when nothing tagged it.
+function lineBelowCost(it){ const c = lineCost(it), p = linePriceNow(it); return !!c && p > 0 && Number(it.qty) > 0 && p < c; }
 function lineWaitsPrice(it){
   if (!it || reviewFresh(it)) return false;
+  if (lineBelowCost(it)) return true;
   if (it.priceBy) return ['under', 'nomargin', 'nocost'].includes(it.priceNote);
   return Number(it.qty) > 0 && linePriceToConfirm(it);
 }
-function lineKind(it){ if (!lineCost(it)) return 'nocost'; if (it.priceNote === 'nomargin' || shopSellPrice(it) == null) return 'nomargin'; return 'under'; }
+function lineKind(it){ if (!lineCost(it)) return 'nocost'; if (lineBelowCost(it) || it.priceNote === 'nomargin' || shopSellPrice(it) == null) return 'nomargin'; return 'under'; }
 function priceCases(){
   return liveOrders().filter(q => !q.invoiced)
     .map(q => ({ q, lines: (q.items || []).map((it, idx) => ({ it, idx, kind: lineKind(it) })).filter(l => lineWaitsPrice(l.it)) }))
