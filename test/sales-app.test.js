@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -313,6 +313,40 @@ matrix.forEach(([what, it]) => {
     const it = X.makeLine('P1', null, 10, { lineId: 1 });
     X.S.draft = { ...X.newDraft(null), counter: true, items: [Object.assign(it, { sellPrice: it.sellPrice - 500, priceBy: 'u1', priceNote: 'under', priceShop: it.sellPrice })] };
     t.check(/data-slide="counterask"/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'under the shop’s price, the slide asks the Manager first');
+  }
+
+  // 3e. the browser review of 21 Oct: what a payment, a number, a size and a counter now say
+  {
+    const db = fakeDb({ saved_quotes: [], cash_txns: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+    const wq = X.rowToQuote({ id: 77, status: 'draft', invoiced: false, amount_paid: 0, voided: false, date: '2026-10-21', payload: { client: { name: 'Walk-in', phone: '' }, items: [X.makeLine('P1', null, 2, { lineId: 1 })], payments: [] } });
+    X.S.data.savedQuotes = [wq];
+    const a = X.payNorm({ orderId: 77 }), v = X.payView(a), owed = v.owed;
+    t.check(owed > 0 && !v.c, 'a walk-in order has no customer to owe a balance');
+    a.amt = owed - 1000;
+    t.check(X.payNeedsWho(a, X.payView(a)) && /Name who owes/.test(X.payDockHTML(a, X.payView(a))) && /who owes it\?/.test(X.payPaperHTML(a, X.payView(a))), 'a walk-in paying part names who owes the rest before the slide unlocks');
+    a.whoId = 'C001';
+    t.check(/Kato Construction owes the rest/.test(X.payPaperHTML(a, X.payView(a))) && /Slide to record/.test(X.payDockHTML(a, X.payView(a))), 'once named, the rest is theirs and the slide records');
+    a.whoId = null; a.amt = owed + 8500; a.method = 'cash';
+    t.check(X.payChange(a, X.payView(a)) === 8500 && /give back/.test(X.payDockHTML(a, X.payView(a))) && /GIVE BACK/.test(X.payPaperHTML(a, X.payView(a))), 'cash over the bill is change to hand back, not refused');
+    a.method = 'momo';
+    t.check(X.payChange(a, X.payView(a)) === 0 && /More than the order/.test(X.payDockHTML(a, X.payView(a))), 'mobile money over the bill is still refused: there is no change to give');
+    a.method = 'cash'; a.amt = owed;
+    t.check(/WILL CLEAR/.test(X.payPaperHTML(a, X.payView(a))) && !/CLEARED/.test(X.payPaperHTML(a, X.payView(a))), 'nothing reads cleared before the slide records it');
+    t.check(X.phoneOk('0772123456') && X.phoneOk('+256 772 123 456') && !X.phoneOk('07123') && X.phoneState('07123').typing && X.phoneState('12345').bad, 'a Ugandan number: 07 and 10 digits, or +256 and 9 more');
+    X.S.data.customers[0].debt = 500000;
+    t.check(!/· cash/.test(X.nwSubOf(X.S.data.customers[0], { habit: true })), 'someone who owes is never called cash');
+    X.S.data.leads = [];
+    X.S.draft = { ...X.newDraft(null), q: 'iron sheets' };
+    const f = X.nwFindHTML();
+    t.check(/class="m nw-os"/.test(f) && /nw-opt[^"]*none/.test(f), 'each size shows its shelf count; an empty one is marked');
+    t.check(/Ask Sourcing/.test(f), 'under any results, a way to ask Sourcing');
+    X.S.draft = X.newDraft(null);
+    t.check(/disabled/.test(X.nwMiniDock()), 'Review waits for a first item');
+    const cq = X.rowToQuote({ id: 78, status: 'draft', invoiced: false, amount_paid: 0, voided: false, payload: { client: { name: 'Kato' }, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] } });
+    t.check(/With the Buyer/.test(X.ordWhoHas(cq, X.ordViews(cq))), 'an order in Checking says who holds it');
+    t.check(/AT THE COUNTER TODAY/.test(X.ctHeroHTML()) && /No counter sales yet today/.test(X.ctHeroHTML()), 'the empty counter opens on the day, even a quiet one');
   }
 
   // 4. a payment over two bills and a loose balance
