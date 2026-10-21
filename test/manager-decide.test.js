@@ -93,6 +93,18 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     t.check(inv.length === 2 && inv.find(x => x.q.id === 2391).block.k === 'price' && !inv.find(x => x.q.id === 2402).block, 'the night run would skip Kato (no known cost) and bill Mukono');
   }
 
+  /* ---------------- 1b. a line selling below its cost, untagged ---------------- */
+  {
+    // Order #0554: a supplier's new price taken in person (165,000) above the sale (155,000), no priceNote on the line.
+    const data = fixture(), q = JSON.parse(JSON.stringify(data.savedQuotes.find(x => x.id === 2402)));
+    q.id = 2554; q.invoiced = false; q.status = 'awaiting_goods';
+    q.items = [{ productId: 'p-star', productName: 'Stuart Star', qty: 1, price: 165000, priceWas: 120000, sellPrice: 155000, priceBy: 'u9' }];
+    data.savedQuotes.push(q);
+    const X = page(fakeDb({}), data);
+    const hit = X.priceCases().find(x => x.q.id === 2554);
+    t.check(!!hit && hit.lines.length === 1 && hit.lines[0].kind === 'nomargin', 'a line selling under its cost waits for the Manager even with no price note');
+  }
+
   /* ---------------- 2. prices ---------------- */
   {
     const data = fixture(), db = fakeDb(tablesFor(data)), X = page(db, data);

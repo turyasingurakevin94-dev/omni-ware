@@ -10,6 +10,24 @@ const TODAY = iso(NOW), M0 = TODAY.slice(0, 8) + '01';
 const monthEnd = (() => { const d = new Date(); return iso(new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime()); })();
 const L = (lineId, pid, name, qty, cost, sell, extra) => ({ lineId, productId: pid, variantIdx: null, productName: name, unit: 'pc', packUnit: '', packQty: 0, qtyIn: 'unit', qty, supplierId: '__stock__', supplierName: 'Our stock', price: cost, sellPrice: sell, ...(extra || {}) });
 const ago = ms => new Date(NOW - ms).toISOString();
+// A dated bill on a customer's debt log, n days old.
+const chg = (id, days, amount, quoteId) => ({ id, date: iso(NOW - days * DAY), type: 'charge', amount, note: 'Auto-sync — INV-' + String(quoteId).padStart(4, '0'), cashTxnId: null, quoteId });
+// Delivered and billed over the last six days: [id, customer, name, days back, hours back, qty, unit price, paid, driver photo].
+const DEL = [[2380, 'C5', 'Kato Construction', 0, 1.5, 20, 109000, 2180000], [2381, 'C4', 'Lubowa Builders', 0, 3, 4, 134000, 536000], [2382, 'C3', 'Ggaba Stores', 0, 2, 3, 140000, 120000],
+  [2383, 'C1', 'Kyaligonza & Sons', 1, 4, 14, 121570, 0], [2384, 'C2', 'Mukono Roofing', 1, 6, 4, 97000, 388000], [2385, 'C6', 'Nansana Hardware', 3, 5, 10, 148000, 404000],
+  [2386, 'C5', 'Kato Construction', 3, 7, 8, 117500, 940000], [2387, 'C3', 'Ggaba Stores', 4, 3, 5, 55000, 275000], [2389, 'C2', 'Mukono Roofing', 5, 4, 6, 100000, 600000]];
+function DELIVERED(){
+  return DEL.map(([id, cid, name, d, h, qty, price, paid], i) => { const at = NOW - d * DAY - h * H;
+    return { id, status: 'completed', invoiced: true, invoicedAt: iso(at), date: iso(at), amountPaid: paid, voided: false, client: { name }, customerId: cid, items: [L(1, 'P1', 'Iron sheet G28 · 3 m', qty, 98000, price)], charges: [], payments: [],
+      takenBy: ['u2', 'u3', 'u4'][i % 3], createdAt: new Date(at - 5 * H).toISOString(), stageEnteredAt: at, deliveredAt: at, deliveredPhoto: i % 4 === 2 ? null : 'p.jpg', assignedDeliveryId: 'D1' }; });
+}
+// Money in: today's payments against those deliveries, and the days before.
+function RECEIPTS(){
+  const r = (id, d, account, amount, time, quoteId) => ({ id, date: iso(NOW - d * DAY), account, type: 'receipt', category: 'Debt Payment', amount, description: 'Payment — INV-' + String(quoteId).padStart(4, '0'), time, quoteId, enteredBy: 'u1' });
+  return [r(701, 0, 'cash', 2180000, '09:45', 2380), r(702, 0, 'mobile', 536000, '12:05', 2381), r(703, 0, 'cash', 120000, '14:10', 2382),
+    r(704, 1, 'cash', 388000, '16:20', 2384), r(705, 2, 'bank', 1300000, '11:00', 380), r(706, 3, 'bank', 404000, '13:30', 2385), r(707, 3, 'cash', 940000, '15:00', 2386),
+    r(708, 4, 'mobile', 275000, '10:10', 2387), r(709, 5, 'cash', 600000, '09:20', 2389)];
+}
 
 function fixture(){
   return {
@@ -25,11 +43,11 @@ function fixture(){
       { id: 'A1', name: 'Esther Auma', phone: '0772300400', role: 'accounts', unavailable: false, userId: 'u10' },
       { id: 'D1', name: 'Ssali Paul', phone: '0772300377', role: 'delivery', unavailable: false, userId: null }],
     customers: [
-      { id: 'C1', name: 'Kyaligonza & Sons', phone: '0700111222', phone2: '', location: 'Najjera', notes: '', debt: 746000, termsDays: 7, creditLimit: 600000, debtLog: [] },
-      { id: 'C2', name: 'Mukono Roofing', phone: '0700333444', phone2: '', location: 'Mukono', notes: '', debt: 2310000, termsDays: 7, creditLimit: 3000000, debtLog: [] },
-      { id: 'C3', name: 'Ggaba Stores', phone: '0700555666', phone2: '', location: 'Ggaba', notes: '', debt: 2448000, termsDays: 14, creditLimit: 4000000, debtLog: [] },
-      { id: 'C4', name: 'Lubowa Builders', phone: '', phone2: '', location: 'Lubowa', notes: '', debt: 0, termsDays: 7, creditLimit: 2000000, debtLog: [] },
-      { id: 'C5', name: 'Kato Construction', phone: '', phone2: '', location: 'Kireka', notes: '', debt: 0, termsDays: 7, creditLimit: null, debtLog: [] },
+      { id: 'C1', name: 'Kyaligonza & Sons', phone: '0700111222', phone2: '', location: 'Najjera', notes: '', debt: 746000, termsDays: 7, creditLimit: 600000, debtLog: [chg(1, 12, 746000, 405)] },
+      { id: 'C2', name: 'Mukono Roofing', phone: '0700333444', phone2: '', location: 'Mukono', notes: '', debt: 2310000, termsDays: 7, creditLimit: 3000000, debtLog: [chg(2, 38, 878000, 380), chg(3, 3, 1432000, 412)] },
+      { id: 'C3', name: 'Ggaba Stores', phone: '0700555666', phone2: '', location: 'Ggaba', notes: '', debt: 2448000, termsDays: 14, creditLimit: 4000000, debtLog: [chg(4, 4, 1224000, 418), chg(5, 4, 1224000, 419)] },
+      { id: 'C4', name: 'Lubowa Builders', phone: '', phone2: '', location: 'Lubowa', notes: '', debt: 560000, termsDays: 7, creditLimit: 2000000, debtLog: [chg(6, 16, 560000, 396)] },
+      { id: 'C5', name: 'Kato Construction', phone: '', phone2: '', location: 'Kireka', notes: '', debt: 615000, termsDays: 7, creditLimit: null, debtLog: [chg(7, 25, 615000, 388)] },
       { id: 'C6', name: 'Nansana Hardware', phone: '', phone2: '', location: 'Nansana', notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] }],
     products: [
       { id: 'P1', name: 'Iron sheet G28 · 3 m', type: 'simple', wholesaleMarkupType: 'percent', wholesaleMarkupValue: 14, stockWholesaleMarkupType: 'percent', stockWholesaleMarkupValue: 0, variants: [] },
@@ -65,8 +83,10 @@ function fixture(){
       { id: 2410, status: 'awaiting_goods', invoiced: false, voided: false, client: { name: 'Ggaba Stores' }, customerId: 'C3', originAgentName: 'Peter Sserwadda', amountPaid: 1120000,
         items: [L(1, 'P1', 'Iron sheet G28 · 3 m', 10, 98000, 112000)], charges: [], payments: [], takenBy: 'u2', createdAt: ago(6 * H), stageEnteredAt: NOW - 3 * H,
         agentChange: { state: 'asked', at: ago(H), lines: [{ productId: 'P1', variantIdx: null, productName: 'Iron sheet G28 · 3 m', from: 10, to: 6 }] } },
+      // the week's deliveries, already billed (Money › In today and Orders › Delivered)
+      ...DELIVERED(),
     ],
-    cashTxns: [],
+    cashTxns: RECEIPTS(),
     collectionTrips: [{ id: 'TRIP-K1', supplierId: 'SUP1', status: 'collected', assignedWorkerId: 'B1', createdAt: ago(8 * H), assignedAt: ago(8 * H), voided: false, yardCheckedAt: ago(4 * H), yardCheckedBy: 'u7',
       lines: [{ productId: 'P1', productName: 'Iron sheet G28 · 3 m', qty: 50, gotQty: 50, yardQty: 47, gotPrice: 98000 }, { productId: 'P6', productName: 'Ridge cap', qty: 12, gotQty: 12, yardQty: 13, gotPrice: 45000 }, { productId: 'P2', productName: 'Hima cement · 50 kg', qty: 30, gotQty: 30, yardQty: 30, gotPrice: 34500 }],
       cashCount: { given: 5000000, paid: 4690000, counted: 280000, diff: -30000, by: 'u10', byName: 'Esther Auma', at: ago(3 * H) } }],

@@ -69,7 +69,8 @@ for (const a of ['sales', 'buyer', 'store', 'manager']) t.check(/async function 
 for (const a of ['accounts', 'owner']) t.check(/if \(typeof since === 'function'\) q = since\(q\); else if \(since\) q = q\.gte\(since\[0\], since\[1\]\);/.test(apps[a]), `${a}: selectAll takes a filter or a since`);
 
 /* ---------------- 4. the WhatsApp poll ---------------- */
-t.check(/const waTick = async \(\) => \{ if \(document\.visibilityState !== 'visible'\) return; if \(S\.wa\.configured == null\) await waStatus\(\); if \(!S\.wa\.configured\) return; if \(S\.view !== 'chats' && \(\+\+waTicks % 4\)\) return;/.test(apps.sales), 'sales: the chats poll asks once whether the shop has WhatsApp, and ticks every minute unless Chats is open');
+// The first tick reads the chats at once (the retest of 21 Oct: skipping it held Today's chats back 45 s).
+t.check(/const waTick = async \(\) => \{ if \(document\.visibilityState !== 'visible'\) return; if \(S\.wa\.configured == null\) await waStatus\(\); if \(!S\.wa\.configured\) return; if \(S\.view !== 'chats' && S\.wa\.loadedAt && \(\+\+waTicks % 4\)\) return;/.test(apps.sales), 'sales: the chats poll asks once whether the shop has WhatsApp, reads them on the first tick, then ticks every minute unless Chats is open');
 
 /* ---------------- 5. the database client ---------------- */
 const fs = require('fs'), path = require('path');
