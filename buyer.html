@@ -1936,11 +1936,11 @@ function nextUpHTML(f){
       title = quoteClientName(q) + ' · ' + orderNo(q); who = { name: quoteClientName(q), round: true }; chip = priceUpBy(q) > 0 ? '+' + short(priceUpBy(q)) : h.kind; late = false;
       cta = h.who === whoShort('manager') ? 'See what ' + h.who + ' decides' : 'Open the order'; ctaAct = h.who === whoShort('manager') ? `data-act="ruth" data-id="${q.id}"` : `data-act="order" data-id="${q.id}"`; ctaInd = true;
       alt = { act: `data-act="order" data-id="${q.id}"`, icon: 'check', label: 'Open the whole order' };
-      detail = `${up ? (() => { const was = quoteLineEach(up, Number(up.priceWas)).price, now = quoteLineEach(up, Number(up.price)).price, sold = up.sellPrice != null ? quoteLineEach(up, Number(up.sellPrice)).price : null, top = Math.max(now, sold || 0) || 1;
-          return `<span role="img" aria-label="${esc(lineFull(up))}: ${esc(supplierShort(up.supplierId))} now ${n0(now)}, was ${n0(was)}${sold != null ? '; sold at ' + n0(sold) : ''}" style="display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--soft)">
+      detail = `${up ? (() => { const was = quoteLineEach(up, Number(up.priceWas)).price, now = quoteLineEach(up, Number(up.price)).price, sold = was, top = Math.max(now, sold || 0) || 1; // the Buyer sees what it costs, never what it sells at
+          return `<span role="img" aria-label="${esc(lineFull(up))}: ${esc(supplierShort(up.supplierId))} now ${n0(now)}, was ${n0(was)}, up ${n0(now - was)}" style="display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-radius:12px;background:var(--soft)">
             <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700"><span class="ell">${esc(lineFull(up))} · ${esc(supplierShort(up.supplierId))}</span><span class="m" style="flex:none"><s style="color:#8A93A3;font-weight:500">${n0(was)}</s> → ${n0(now)}</span></span>
             <span style="position:relative;display:block;height:10px;border-radius:999px;background:var(--rule)"><i style="position:absolute;left:0;top:0;bottom:0;width:${(Math.min(now, sold || now) / top * 100).toFixed(1)}%;border-radius:999px;background:var(--navy)"></i>${sold != null && now > sold ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:0;bottom:0;width:${((now - sold) / top * 100).toFixed(1)}%;border-radius:0 999px 999px 0;background:#E5483D"></i>` : ''}${sold != null ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:-4px;bottom:-4px;border-left:2px dashed var(--green)"></i>` : ''}</span>
-            <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>cost now <b class="m" style="color:var(--ink)">${n0(now)}</b></span>${sold != null ? `<span>sold at <b class="m" style="color:var(--green)">${n0(sold)}</b></span>` : ''}</span></span>`; })() : ''}
+            <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>cost now <b class="m" style="color:var(--ink)">${n0(now)}</b></span><span>up <b class="m" style="color:var(--crimson)">+${n0(now - was)}</b></span></span></span>`; })() : ''}
         <span style="font-size:12px;font-weight:600;color:var(--indigo)">Every supplier said yes · ${esc(orderHoldReason(q))} · you are told</span>`;
     } else if (j.k === 'ask') {
       const r = j.r, mins = Math.floor(minsSince(r.askedAt)), sid = r.supplierId, phone = supplierPhone(sid);
@@ -3563,6 +3563,8 @@ function setGot(tripId, idx, q, p){
 // shared-worker.js setTripLineGot, for each answer this phone holds.
 async function flushTrip(tripId){
   const d = (S.tripDraft || {})[tripId]; if (!d || !Object.keys(d).length) return true;
+  // What this write sends: a tap made while it is on its way stays a draft and goes next time.
+  const sent = {}; Object.keys(d).forEach(k => { sent[k] = JSON.stringify(d[k]); });
   const r = await sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('id', tripId).maybeSingle();
   if (r.error) throw r.error; if (!r.data) throw new Error('that trip is gone');
   if (r.data.status !== 'collecting') { D().collectionTrips = D().collectionTrips.map(x => x.id === tripId ? rowToTrip(r.data) : x); return false; }
@@ -3582,7 +3584,8 @@ async function flushTrip(tripId){
   if (u.error) throw u.error;
   const fresh = rowToTrip({ ...r.data, lines });
   D().collectionTrips = D().collectionTrips.map(x => x.id === tripId ? fresh : x);
-  done.forEach(k => delete d[k]); if (!Object.keys(d).length) delete S.tripDraft[tripId];
+  done.forEach(k => { if (JSON.stringify(d[k]) === sent[k]) delete d[k]; }); if (!Object.keys(d).length) delete S.tripDraft[tripId];
+  else { clearTimeout(setGot.timer); setGot.timer = setTimeout(() => flushTrip(tripId).catch(() => {}), 800); }
   saveTripDrafts(); saveSnapshot();
   return true;
 }
@@ -3681,19 +3684,21 @@ PAGE.trip = ({ id }) => {
     const c = quoteLineCount(l, l.qty), per = quoteLineCountPer(l), price = l.gotPrice != null ? l.gotPrice : l.expectedPrice, ea = quoteLineEach(l, Number(price) || 0), ct = tintFor(l.clientName);
     const gotC = g != null ? quoteLineCount(l, g).n : '';
     const split = tripLinePackSplit(t, l);
-    const sub = isShort ? `${quoteLineCount(l, l.qty - g).n} short · stays on the list for ${shortName(l.clientName)}` : next ? `for ${shortName(l.clientName)} · ${split ? split + ' · ' : ''}swipe → all came, ← short` : `${split ? split.replace('for the order', 'for ' + shortName(l.clientName)) : 'for ' + shortName(l.clientName)} · @ ${n0(ea.price)}${l.gotPrice != null && l.expectedPrice != null && Math.round(l.gotPrice) !== Math.round(l.expectedPrice) ? ' (was ' + n0(quoteLineEach(l, l.expectedPrice).price) + ')' : ''}`;
+    // The shelf already has some of a refill waiting at the yard: you may not need these.
+    const yardHas = open && l.orderId === 'restock' && canAnswer ? shelfIncoming(l.productId, l.variantIdx == null ? null : l.variantIdx).yard : 0;
+    const sub = isShort ? (g === 0 ? `none came · stays on the list for ${shortName(l.clientName)}` : `${quoteLineCount(l, l.qty - g).n} short · ${shortName(l.clientName)}`) : yardHas > 0 ? `${quoteLineCount(l, yardHas).n} already at the yard · you may not need these` : `${split ? split.replace('for the order', 'for ' + shortName(l.clientName)) : 'for ' + shortName(l.clientName)} · @ ${n0(ea.price)}${l.gotPrice != null && l.expectedPrice != null && Math.round(l.gotPrice) !== Math.round(l.expectedPrice) ? ' (was ' + n0(quoteLineEach(l, l.expectedPrice).price) + ')' : ''}`;
     return `<div style="position:relative;border-radius:16px;overflow:hidden">
       <span aria-hidden="true" class="under" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;font-weight:700;border-radius:16px"><span style="display:flex;align-items:center;gap:6px;color:var(--green)">${ic('tick', 18, 'style="stroke-width:3"')}All ${esc(c.n)} came</span><span style="color:var(--amberInk)">Short</span></span>
       <div ${canAnswer && open ? `data-swipe="${esc(id)}|${i}"` : ''} class="${next ? 'a-next' : ''}${next && answered === 0 ? ' a-hint' : ''}" style="position:relative;display:flex;align-items:center;gap:10px;min-height:${isFull ? 46 : 56}px;padding:5px 8px 5px 10px;border-radius:16px;touch-action:pan-y;background:${isFull ? '#FCFBF9' : '#fff'};${next ? '' : isShort ? 'box-shadow:inset 0 0 0 1.5px #F5B26B' : open ? 'box-shadow:inset 0 0 0 1px var(--line),0 4px 12px rgba(22,32,60,.06)' : 'box-shadow:inset 0 0 0 1px var(--line)'}">
         <span style="width:30px;height:30px;border-radius:999px;background:${ct[0]};color:${ct[1]};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${isFull ? 'opacity:.7' : ''}">${esc(initials(l.clientName))}</span>
         <button ${canAnswer ? `data-act="tprice" data-i="${i}"` : ''} style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;border:none;background:none;padding:0;text-align:left" aria-label="${esc(l.productName)}${canAnswer ? '. Tap to change what you paid' : ''}">
           <span style="min-width:0;font-size:14px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${isFull ? 'color:var(--ink2)' : ''}"><b class="m" style="font-size:14px;color:var(--ink);white-space:nowrap">${esc(isShort ? gotC + ' of ' + c.n : c.n)}</b> <span style="font-size:11px;font-weight:600;color:#6B7480">${esc(c.unit)}</span>&ensp;${esc(lineName(l).base)}${lineName(l).variant ? ' · ' + esc(lineName(l).variant) : ''}</span>
-          ${isFull ? '' : `<span style="font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:${isShort ? 'var(--amberInk)' : next ? 'var(--indigo)' : 'var(--ink3)'}">${esc(sub)}</span>`}
+          ${isFull ? '' : `<span style="font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:${isShort ? 'var(--amberInk)' : yardHas > 0 ? '#0B5560' : 'var(--ink3)'}">${esc(sub)}</span>`}
         </button>
         ${canAnswer && open ? `<span style="display:flex;gap:6px;flex:none"><button data-act="tshort" data-i="${i}" aria-label="Short: fewer than ${esc(c.n)} came" style="height:42px;padding:0 11px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B;color:var(--amberInk);font-size:13px;font-weight:700">Short</button><button data-act="tall" data-i="${i}" aria-label="All ${esc(c.n)} came" style="width:50px;height:42px;border:none;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center">${ic('tick', 20, 'style="stroke-width:3"')}</button></span>` : ''}
         ${isFull ? `<button ${canAnswer ? `data-act="tundo" data-i="${i}"` : ''} aria-label="All came${canAnswer ? '. Tap to undo' : ''}" style="width:34px;height:34px;border:none;border-radius:999px;background:var(--greenSoft);color:var(--green);display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 16, 'style="stroke-width:3"')}</button>` : ''}
-        ${isShort ? `<span style="display:flex;align-items:center;gap:2px;height:40px;padding:0 3px;border-radius:12px;background:var(--amberSoft);flex:none">${canAnswer ? `<button data-act="tdec" data-i="${i}" aria-label="One fewer" style="width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--amberInk);font-size:18px;font-weight:700">−</button>` : ''}<span class="m" style="min-width:42px;text-align:center;font-size:15px;font-weight:600;color:var(--amberDeep)">${esc(gotC)}<span style="font-size:11px;color:var(--amberInk)">/${esc(c.n)}</span></span>${canAnswer ? `<button data-act="tinc" data-i="${i}" aria-label="One more" style="width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--amberInk);font-size:18px;font-weight:700">+</button>` : ''}</span>` : ''}
-      </div></div>`;
+        ${isShort ? `<span style="display:flex;align-items:center;gap:2px;height:40px;padding:0 3px;border-radius:12px;background:var(--amberSoft);flex:none">${canAnswer ? `<button data-act="tdec" data-i="${i}" aria-label="One fewer" style="width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--amberInk);font-size:18px;font-weight:700">−</button>` : ''}<span class="m" style="min-width:46px;display:flex;align-items:baseline;justify-content:center;font-size:15px;font-weight:600;color:var(--amberDeep)">${canAnswer ? `<input id="bx_tgot_${i}" data-in="tgot" data-i="${i}" type="text" inputmode="numeric" autocomplete="off" aria-label="How many ${esc(c.unit)} came, of ${esc(c.n)}" value="${esc(gotC)}" style="width:30px;border:none;border-bottom:1.5px dashed #E09A4E;background:transparent;padding:0;text-align:right;font-family:var(--mono);font-size:15px;font-weight:600;color:var(--amberDeep);outline:none">` : esc(gotC)}<span style="font-size:11px;color:var(--amberInk)">/${esc(c.n)}</span></span>${canAnswer ? `<button data-act="tinc" data-i="${i}" aria-label="One more" style="width:34px;height:34px;border:none;border-radius:9px;background:#fff;color:var(--amberInk);font-size:18px;font-weight:700">+</button>` : ''}</span>` : ''}
+      </div>${isShort && g > 0 && canAnswer ? `<div style="display:flex;justify-content:flex-end;padding:4px 8px 2px"><button data-act="tnone" data-i="${i}" style="min-height:28px;padding:0 10px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px #F5B26B;color:var(--amberInk);font-size:11.5px;font-weight:700">None came</button></div>` : ''}</div>`;
   }).join('');
   const leftN = lines.length - answered, pending = Object.keys((S.tripDraft || {})[id] || {}).length;
   const acc = whoShort('accounts'), short = x => supplierShort(x.supplierId), nextName = nextStop ? short(nextStop) : '';
@@ -3704,6 +3709,7 @@ PAGE.trip = ({ id }) => {
   else if (t.status === 'confirmed') foot = `<span class="bx-btn ghost" aria-disabled="true">Checked in · on the shelf</span>`;
   // Done here: the goods ride on to the next stop; the round is handed in once, at the yard.
   else if (done) foot = nextStop && !endNow ? `<button class="bx-btn red" data-act="nextstop" data-id="${esc(nextStop.id)}" aria-label="Go to stop ${rt.indexOf(nextStop) + 1} of ${rt.length}, ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0">${(() => { const nt = tintFor(nextStop.supplierId); return `<span style="width:26px;height:26px;border-radius:999px;background:${nt[0]};color:${nt[1]};font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(supplierName(nextStop.supplierId)))}</span>`; })()}<span class="ell">Stop ${rt.indexOf(nextStop) + 1} · ${esc(supplierName(nextStop.supplierId))}</span>${ic('chev', 16, 'style="stroke-width:2.2;flex:none"')}</button>` : slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
+  else if (endNow && isRound && mine && rt.some(stopIsDone)) foot = slideHTML('handin', 'Slide to hand in the round', 'box', { disabled: S.busy });
   else if (!canAnswer) foot = `<span class="bx-btn ghost" aria-disabled="true">${esc(tripWho(t))} is on it</span>`;
   else if (leftN > 0) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"><span style="display:flex;gap:3px">${Array.from({ length: Math.min(leftN, 6) }, () => '<i style="width:8px;height:8px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #8A93A3"></i>').join('')}</span>${leftN} line${leftN > 1 ? 's' : ''} still to load</span>`;
   else if (!bySup && !hasPay) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('cash', 18)}Enter what you paid</span>`;
@@ -3713,6 +3719,8 @@ PAGE.trip = ({ id }) => {
   else if (!bySup && nextStop) foot = `<button data-act="stopdone" ${S.busy ? 'aria-disabled="true"' : ''} aria-label="Done at ${esc(short(t))}. The goods stay on the truck; on to ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0;height:56px;border:none;border-radius:999px;background:radial-gradient(120% 140% at 10% 50%,#26335E 0%,#16203C 70%);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22)"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell">Done here · on to ${esc(nextName)}</span><span aria-hidden="true" style="flex:none;color:#F59A92;letter-spacing:-.2em">›››</span></button>`;
   else foot = slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
   const seg = (n, bg) => n > 0 ? `<i style="flex:${n};background:${bg}"></i>` : '';
+  // The hand-in takes a while: it says so, stop by stop, until it is done.
+  if (S.ui.handing && S.ui.handing.id === id) foot = `<span class="bx-btn navy" role="status" aria-live="polite" aria-disabled="true" style="flex:1"><span class="a-spin" style="display:flex">${ic('refresh', 18, 'style="stroke:#F5B26B;stroke-width:2.6"')}</span>Handing in · ${Math.min(S.ui.handing.n, S.ui.handing.step + 1)} of ${S.ui.handing.n} stop${S.ui.handing.n === 1 ? '' : 's'}…</span>`;
   // Where the cash stands: Accounts' handover, or that there is none yet.
   const cashWord = rc ? `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap">in hand <b class="m" style="color:#DDE3F0">${n0(rc.avail)}</b><span style="display:inline-flex;align-items:center;gap:2px;color:var(--mint)">· ${esc(acc)}${ic('tick', 10, 'style="stroke-width:3.4"')}${esc(hm(msOf(rc.at)))}</span></span>`
     : own ? `<span class="ell" style="color:var(--amber)">your own money · ${esc(acc)} pays it back</span>`
@@ -3726,11 +3734,13 @@ PAGE.trip = ({ id }) => {
     </div>` : '';
   // What was paid, from the receipt, and the receipt itself: the hand-in waits for both.
   const payCard = canAnswer && !bySup ? (() => { const diff = hasPay ? P.amount - plan : 0, avail = rc ? rc.avail : null;
+    // More than 30% off the plan is most likely a slip of the thumb: say so, never in green.
+    const odd = hasPay && plan > 0 && Math.abs(diff) > plan * 0.3, guess = odd ? [P.amount * 10, P.amount / 10].find(v => Math.abs(v - plan) < plan * 0.3) : null;
     const restSpare = avail != null ? Math.max(0, avail - Math.max(paidNow, plan) - restPlan) : 0;
     return `<div style="position:relative;display:flex;gap:10px;padding:12px 12px 12px 14px;border-radius:20px;background:radial-gradient(130% 120% at 0% 0%,#26335E 0%,#16203C 65%);color:#fff;box-shadow:0 12px 26px rgba(22,32,60,.22)">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
-        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="min-width:0;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--navyInk2)"><span class="ell">YOU PAID ${esc(short(t).toUpperCase())}</span>${hasPay ? `<span role="status" style="flex:none;display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:9.5px;letter-spacing:.08em">${ic('tick', 9, 'style="stroke-width:3.4"')}SAVED</span>` : ''}</span><span style="white-space:nowrap;font-size:11px;font-weight:700;color:${!hasPay ? 'var(--navyInk2)' : diff > 0 ? 'var(--amber)' : 'var(--mint)'}">${!hasPay ? (shortLess ? n0(plan) + ' · −' + n0(shortLess) : 'planned ' + n0(plan)) : diff > 0 ? n0(diff) + ' over plan · ' + esc(acc) + ' sees it' : diff < 0 ? n0(-diff) + ' under plan' : left != null ? 'left ' + n0(left) : 'as planned'}</span></span>
-        <span style="display:flex;align-items:center;gap:6px;border-bottom:1.5px solid ${hasPay ? (diff > 0 ? 'var(--amber)' : 'var(--mint)') : 'rgba(255,255,255,.25)'};padding-bottom:2px">
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="min-width:0;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--navyInk2)"><span class="ell">YOU PAID ${esc(short(t).toUpperCase())}</span>${hasPay ? `<span role="status" style="flex:none;display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:9.5px;letter-spacing:.08em">${ic('tick', 9, 'style="stroke-width:3.4"')}SAVED</span>` : ''}</span><span style="white-space:nowrap;font-size:11px;font-weight:700;color:${!hasPay ? 'var(--navyInk2)' : odd ? 'var(--rose)' : diff > 0 ? 'var(--amber)' : 'var(--mint)'}">${!hasPay ? (shortLess ? n0(plan) + ' · −' + n0(shortLess) : 'planned ' + n0(plan)) : odd ? (guess ? 'meant ' + n0(guess) + '?' : 'check it · ' + Math.round(Math.abs(diff) / plan * 100) + '% off plan') : diff > 0 ? n0(diff) + ' over plan · ' + esc(acc) + ' sees it' : diff < 0 ? n0(-diff) + ' under plan' : left != null ? 'left ' + n0(left) : 'as planned'}</span></span>
+        <span style="display:flex;align-items:center;gap:6px;border-bottom:1.5px solid ${hasPay ? (odd ? 'var(--rose)' : diff > 0 ? 'var(--amber)' : 'var(--mint)') : 'rgba(255,255,255,.25)'};padding-bottom:2px">
           <input id="bx_tpaid" data-in="tpaid" type="text" inputmode="numeric" autocomplete="off" aria-label="Amount you paid ${esc(sup.name)}, from the receipt" placeholder="0" value="${hasPay ? n0(P.amount) : ''}" style="flex:1;min-width:0;width:100%;height:36px;border:none;background:transparent;padding:0;outline:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;letter-spacing:-.03em;color:#fff;caret-color:var(--amber)">
           <button data-act="tpaidplan" aria-label="Paid as planned${shortLess ? ' for what came' : ''}, ${n0(plan)}" style="flex:none;height:30px;padding:0 10px;border:none;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;${hasPay && !diff ? 'background:var(--mint);color:#0B3D27' : 'background:rgba(255,255,255,.12);color:#DDE3F0'}">${shortLess && !hasPay ? 'as planned · what came' : 'as planned'}</button>
         </span>
@@ -3748,7 +3758,7 @@ PAGE.trip = ({ id }) => {
     </div>
     <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(acc) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(acc) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(acc)}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>`; })() : '';
   // The stop is done: what it cost, and what the cash in hand is now for.
-  const ownTotal = own ? rt.filter(stopIsDone).reduce((a, x) => a + tripPaidAt(x), 0) : 0;
+  const ownTotal = own ? rt.filter(x => x.status === 'collecting' && stopIsDone(x)).reduce((a, x) => a + tripPaidAt(x), 0) : 0;
   const doneCard = done ? (() => { const avail = rc ? rc.avail - paidNow : null, back = endNow || !nextStop, spare = avail != null ? avail - restPlan : null;
     if (own) return `<div role="img" aria-label="${esc(short(t))} done: ${n0(paidNow)} paid from your own pocket. ${esc(acc)} pays you back ${n0(ownTotal)} for the round so far." style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:20px;background:radial-gradient(130% 120% at 0% 0%,#26335E 0%,#16203C 65%);color:#fff;box-shadow:0 12px 26px rgba(22,32,60,.22)">
       <span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell" style="flex:1;min-width:0;font-size:13px;font-weight:700">${esc(short(t))} done · <span class="m">${n0(paidNow)}</span> paid</span><span style="flex:none;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;background:${P.photo ? 'rgba(111,220,176,.14);color:var(--mint)' : 'rgba(255,255,255,.08);color:var(--navyInk)'};font-size:10.5px;font-weight:700">${ic('doc', 11, 'style="stroke-width:2.2"')}${P.photo ? 'receipt' : 'no receipt'}</span></span>
@@ -3766,6 +3776,9 @@ PAGE.trip = ({ id }) => {
         : `<span style="font-size:11px;font-weight:600;color:var(--amber)">No cash handed over by ${esc(acc)} is recorded</span>`}
     </div>
     <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span class="ell" style="display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--ink3)">${ic('truck', 13)}${nextStop && endNow ? esc(openRest.length > 1 ? openRest.length + ' stops go' : nextName + ' goes') + ' back to To plan' : 'Goods ride on · ' + esc(whoShort('store')) + ' counts once'}</span>${nextStop ? `<button data-act="endnow" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${endNow ? 'Keep ' + esc(nextName) : 'Hand in now'}</button>` : ''}</span>`; })() : '';
+  // The stop just done, on a strip at the top of the next one.
+  const ds = S.ui.doneStrip && S.ui.doneStrip.to === id ? tripById(S.ui.doneStrip.from) : null;
+  const doneStrip = ds ? `<div role="status" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--greenSoft);color:var(--green);font-size:12.5px;font-weight:700"><span style="width:22px;height:22px;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 11, 'style="stroke-width:3.2"')}</span><span class="ell" style="flex:1;min-width:0">${esc(supplierShort(ds.supplierId))} done · <span class="m">${n0(tripPaidAt(ds))}</span> paid</span><span style="flex:none;font-weight:600;color:#3E6B52">${rc ? `in hand <b class="m" style="color:var(--green)">${n0(rc.avail)}</b>` : own ? 'own money' : ''}</span></div>` : '';
   // The round, stop by stop, ending at the yard where it is handed in once.
   const routeHTML = isRound ? (() => { const many = rt.length > 3;
     const st = x => stopIsDone(x) ? 'done' : skipOf(x) || stopBoughtElsewhere(x) || (endNow && done && x.id !== id) ? 'skip' : (x.id === id || (done && nextStop && x.id === nextStop.id)) ? 'now' : 'next';
@@ -3792,12 +3805,12 @@ PAGE.trip = ({ id }) => {
           ${['26px', '58%', 'calc(100% - 52px)'].map(l => `<span style="position:absolute;left:${l};top:64px;width:28px;height:28px;border-radius:999px;background:#0E1630;box-shadow:inset 0 0 0 7px #3A4466"></span>`).join('')}
         </div>
         <span style="position:absolute;left:0;right:0;bottom:0;display:flex;align-items:baseline;gap:12px;font-size:12px;font-weight:600;color:var(--navyInk)"><span><b class="m" style="font-size:15px;color:#fff">${answered}</b>/${lines.length} loaded</span><span><b class="m" style="color:var(--mint)">${full}</b> in full</span><span><b class="m" style="color:var(--amber)">${shorts}</b> short</span>
-          <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--navyInk2)">${ic('cash', 13, 'style="stroke:#6FDCB0;stroke-width:2"')}${left != null ? `left <b class="m" style="color:${left < 0 ? 'var(--rose)' : 'var(--mint)'}">${n0(left)}</b>` : own ? `own money <b class="m" style="color:var(--amber)">${n0(paidNow)}</b>` : noCash ? '<span style="color:var(--amber)">no cash</span>' : `paid <b class="m" style="color:var(--mint)">${n0(paidNow)}</b>`}</span></span>
+          <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--navyInk2)">${ic('cash', 13, 'style="stroke:#6FDCB0;stroke-width:2"')}${left != null ? `left <b class="m" style="color:${left < 0 ? 'var(--rose)' : 'var(--mint)'}">${n0(left)}</b>` : own ? `own money${paidNow ? ` <b class="m" style="color:var(--amber)">${n0(paidNow)}</b>` : ''}` : noCash ? '<span style="color:var(--amber)">no cash</span>' : `paid <b class="m" style="color:var(--mint)">${n0(paidNow)}</b>`}</span></span>
       </div>
     </div>
-    <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:6px">${elseHTML}${rows}
+    <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:6px">${doneStrip}${elseHTML}${canAnswer && answered < lines.length ? `<span aria-hidden="true" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:0 4px 2px;font-size:11px;font-weight:700;color:#8A93A3;flex-wrap:wrap"><span style="color:var(--green)">swipe → all came</span><span style="color:var(--amberInk)">← short</span><span>tap a count to type it</span></span>` : ''}${rows}
       ${pending ? `<span class="bx-hint" style="color:${navigator.onLine === false ? 'var(--amberInk)' : 'var(--ink3)'}">${ic('refresh', 13)}${navigator.onLine === false ? `${pending} answer${pending > 1 ? 's' : ''} kept on this phone · sent when there is signal` : 'Saving…'}</span>` : ''}</div>
-    <div class="bx-foot">${noteHTML}${payCard}${doneCard}<div class="row"><a class="bx-sq" href="${esc(waComposeUrl(phone, t.status === 'collecting' && mine ? 'Hello ' + sup.name + ', ' + firstWord(myName()) + ' here at your shop.' : supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Message ${esc(sup.name)} on WhatsApp">${ic('wa', 22)}</a>${foot}</div></div>
+    <div class="bx-foot">${noteHTML}${payCard}${doneCard}${!done && isRound && t.status === 'collecting' && mine && rt.some(stopIsDone) ? `<span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px"><span class="ell" style="display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--ink3)">${ic('truck', 13)}${endNow ? esc(rt.filter(x => !stopIsDone(x)).length > 1 ? rt.filter(x => !stopIsDone(x)).length + ' stops go' : short(t) + ' goes') + ' back to To plan' : rt.filter(stopIsDone).length + ' done · the goods ride on'}</span><button data-act="endnow" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${endNow ? 'Keep going' : 'Hand in now'}</button></span>` : ''}<div class="row"><a class="bx-sq" href="${esc(waComposeUrl(phone, t.status === 'collecting' && mine ? 'Hello ' + sup.name + ', ' + firstWord(myName()) + ' here at your shop.' : supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Message ${esc(sup.name)} on WhatsApp">${ic('wa', 22)}</a>${foot}</div></div>
   </div>`;
 };
 PAGE.trip.bg = '#F7F5F2';
@@ -3843,6 +3856,8 @@ ACT.receiptsend = async () => {
   catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not sent: ' + (e.message || e)); }
   S.busy = false; render();
 };
+ACT.tnone = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, 0); S.ui.bump = { id: x.tr.id, idx: x.i }; FEEL.short(); render(); };
+ACT['in:tgot'] = t => { const x = tripArgsLine(t); if (!x) return; const raw = String(t.value).replace(/[^0-9.]/g, ''); if (raw === '') return; const n = Math.max(0, Math.min(Number(x.l.qty) || 0, Number(raw) * x.per)); setGot(x.tr.id, x.i, n); render(); };
 ACT.tall = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, Number(x.l.qty) || 0); S.ui.bump = { id: x.tr.id, idx: x.i }; FEEL.load(); render(); };
 ACT.tshort = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, Math.max(0, (Number(x.l.qty) || 0) - x.per)); S.ui.bump = { id: x.tr.id, idx: x.i }; FEEL.short(); render(); };
 ACT.tundo = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, null); FEEL.back(); render(); };
@@ -3929,7 +3944,12 @@ async function markStopDone(id){
 ACT.stopdone = async () => {
   const id = topArgs().id; if (S.busy) return;
   S.busy = true; render();
-  try { await markStopDone(id); S.busy = false; FEEL.yes(); render(); }
+  try {
+    await markStopDone(id); S.busy = false; FEEL.yes();
+    // One tap: the stop is done and the next one opens, the last stop's money on a strip at its top.
+    const t = tripById(id), rt = roundStops(t), next = nextOpenStop(rt, t, x => x.id !== id && x.status === 'collecting' && !stopIsDone(x) && !((S.tripPay || {})[x.id] || {}).skip && !stopBoughtElsewhere(x));
+    if (next) { S.ui.doneStrip = { from: id, to: next.id }; replaceTop('trip', { id: next.id }); } else render();
+  }
   catch (e) { S.busy = false; toast(e.soft ? e.message : isNetworkError(e) ? 'No connection — it is kept on this phone. Say done again with signal.' : 'Not done: ' + (e.message || e), 5000); render(); }
 };
 // Hand in now: the stops not reached go back to To plan at the hand-in.
@@ -3981,14 +4001,15 @@ ACT.tcashask = async () => {
 ACT['slide:handin'] = async () => {
   const id = topArgs().id; if (S.busy) return;
   const t0 = tripById(id); if (!t0) return;
-  S.busy = true;
+  S.busy = true; S.ui.handing = { id, step: 0, n: 1 }; render();
+  const step = (k, n) => { S.ui.handing = { id, step: k, n }; render(); };
   try {
     const own = tripIsMine(t0) && !tripIsSupplierDelivered(t0);
-    const P0 = (S.tripPay || {})[id] || {};
-    if (own && !P0.done) await markStopDone(id);
+    const P0 = (S.tripPay || {})[id] || {}, early = own && !P0.done && !!(S.ui.endNow || {})[roundStops(t0)[0].id];
+    if (own && !P0.done && !early) await markStopDone(id);
     else await flushTrip(id);
     const stops = own ? roundStops(t0).filter(x => x.status === 'collecting') : [t0];
-    const going = stops.filter(x => x.id === id || stopIsDone(x)), left = stops.filter(x => !going.includes(x));
+    const going = stops.filter(x => (x.id === id && !early) || stopIsDone(x)), left = stops.filter(x => !going.includes(x));
     const now = new Date().toISOString(), handed = [], ready = [];
     // Every stop going in is checked before anything is written.
     for (const x of going) {
@@ -3997,10 +4018,11 @@ ACT['slide:handin'] = async () => {
       if (r.error) throw r.error;
       const t = r.data && rowToTrip(r.data);
       if (!t || t.status !== 'collecting') continue;
-      const why = stopReadyWhy(t); if (why) { S.busy = false; toast(why); render(); return; }
+      const why = stopReadyWhy(t); if (why) { S.busy = false; S.ui.handing = null; toast(why); render(); return; }
       ready.push({ row: r.data, t });
     }
-    if (!ready.length) { S.busy = false; toast('That round has already been handed in'); await refreshLive(); return; }
+    if (!ready.length) { S.busy = false; S.ui.handing = null; toast('That round has already been handed in'); await refreshLive(); return; }
+    step(0, ready.length);
     // Stops not reached are off the round first, so the one push counts only what came back.
     for (const x of left) await dropStop(x, 'Left for a later round', ready[ready.length - 1].t).catch(e => toast('Handed in · ' + supplierShort(x.supplierId) + ' is still on the round — ' + (e.message || e)));
     for (const { row, t } of ready) {
@@ -4010,19 +4032,19 @@ ACT['slide:handin'] = async () => {
       if (u.error) throw u.error;
       const moved = tripById(t.id), fresh = rowToTrip({ ...row, ...(moved && moved.cashGiven != null ? { cash_given: moved.cashGiven } : {}), ...patch });
       D().collectionTrips = D().collectionTrips.map(y => y.id === t.id ? fresh : y); saveSnapshot();
-      handed.push(fresh);
+      handed.push(fresh); step(handed.length, ready.length);
     }
-    if (!handed.length) { S.busy = false; toast('That round has already been handed in'); await refreshLive(); return; }
+    if (!handed.length) { S.busy = false; S.ui.handing = null; toast('That round has already been handed in'); await refreshLive(); return; }
     for (const t of handed) {
       await pricesPaidToList(t);
       await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e)));
       await sendReceipt(t).catch(e => toast('Handed in · the receipt did not reach ' + whoShort('accounts') + (isNetworkError(e) ? ' — send it when there is signal' : ': ' + (e.message || e))));
     }
     if (S.ui.endNow) delete S.ui.endNow[(own ? roundStops(t0)[0] : t0).id];
-    S.busy = false; S.ui.horn = handed[0].id; replaceTop('done', { id: handed[0].id });
+    S.busy = false; S.ui.handing = null; S.ui.horn = handed[0].id; replaceTop('done', { id: handed[0].id });
     // The chips (Plan › live trips, Today) read the server's trip, not an older read still on its way.
     refreshLive();
-  } catch (e) { S.busy = false; toast(e.soft ? e.message : isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
+  } catch (e) { S.busy = false; S.ui.handing = null; toast(e.soft ? e.message : isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
 };
 
 /* "The Buyer's prices paid update the supplier price list automatically"
@@ -4122,6 +4144,9 @@ PAGE.done = ({ id }) => {
   const rows = H.flatMap(x => tripLines(x).map(l => ({ x, l }))), sh = H.flatMap(x => tripShortLines(x).map(r => ({ ...r, x }))), full = rows.length - sh.length;
   const paidOf = x => tripPaidAt(x), paid = H.reduce((a, x) => a + paidOf(x), 0), planned = H.reduce((a, x) => a + tripPlanned(x), 0);
   const h = roundHandover(t), given = h ? Number(h.payload.amount) || 0 : null, back = given != null ? given - paid : null;
+  // Paid from the buyer's own pocket: Accounts owes them what this hand-in cost.
+  const ownPaid = given == null && (roundOwn(t) || H.some(x => { const r = tripReceipt(x); return r && r.payload && r.payload.ownMoney; }));
+  const earlier = tripRound(t).filter(x => ['collected', 'confirmed'].includes(x.status) && !H.includes(x)).length;
   const recOf = x => { const r = tripReceipt(x), loc = (S.tripPay || {})[x.id]; return r ? (r.payload.noReceipt ? 'none' : 'photo') : loc && loc.photo ? 'photo' : loc && loc.noReceipt ? 'none' : ''; };
   const photos = H.filter(x => recOf(x) === 'photo').length, nones = H.filter(x => recOf(x) === 'none').length;
   const unsent = H.filter(x => !tripReceipt(x) && (S.tripPay || {})[x.id] && (S.tripPay[x.id].photo || S.tripPay[x.id].noReceipt));
@@ -4152,16 +4177,17 @@ PAGE.done = ({ id }) => {
       <span aria-hidden="true" class="a-stampbig" style="position:absolute;right:18px;top:4px;padding:6px 12px 5px;border:3px double var(--mint);border-radius:10px;color:var(--mint);display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(22,32,60,.6);transform:rotate(-12deg)"><span style="font-size:20px;font-weight:700;letter-spacing:.18em;line-height:1;padding-left:.18em">${confirmed ? 'CHECKED IN' : 'HANDED IN'}</span><span class="m" style="font-size:10px;font-weight:600;letter-spacing:.04em">${many ? 'ROUND · ' + H.length + ' STOPS' : esc(where)} · ${esc(at)}</span></span>
     </button>
     <div style="padding:12px 20px 0;display:flex;flex-direction:column;align-items:center">
-      <span class="a-up" style="animation-delay:1.7s;font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mint)">${many ? 'BACK FROM ' + H.length + ' STOPS · ONE HAND-IN' : 'BACK FROM ' + esc(where)}</span>
+      <span class="a-up" style="animation-delay:1.7s;font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mint)">${many ? 'BACK FROM ' + H.length + ' STOPS · ' + (earlier ? '+' + earlier + ' HANDED IN EARLIER' : 'ONE HAND-IN') : 'BACK FROM ' + esc(where) + (earlier ? ' · +' + earlier + ' EARLIER' : '')}</span>
       <span class="a-up" style="animation-delay:1.76s;margin-top:4px;display:flex;align-items:baseline;flex-wrap:wrap;justify-content:center;gap:8px"><span class="m" style="font-size:46px;font-weight:600;letter-spacing:-.04em">${full}</span><span class="m" style="font-size:18px;color:var(--navyInk2)">of ${rows.length} in full</span>${chip ? `<span style="align-self:center;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:rgba(245,178,107,.15);color:var(--amber);font-size:11.5px;font-weight:700;white-space:nowrap"><i style="width:8px;height:8px;border-radius:2px;background:repeating-linear-gradient(135deg,#F5B26B 0 2px,#E59A4E 2px 4px)"></i>${esc(chip)}</span>` : ''}</span>
       <div class="a-up" style="animation-delay:1.84s;width:100%;margin-top:16px;padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${many ? 'Paid' : 'You paid ' + esc(supplierShort(t.supplierId))}${photos || nones ? `<span role="img" aria-label="${photos} receipt photo${photos === 1 ? '' : 's'}${nones ? ', ' + nones + ' without a receipt' : ''}" style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:999px;background:${photos ? 'rgba(111,220,176,.15);color:var(--mint)' : 'rgba(255,255,255,.08);color:var(--navyInk)'};font-size:10px;font-weight:700">${ic('doc', 11, 'style="stroke-width:2.2"')}${many ? (photos ? photos + ' receipt' + (photos === 1 ? '' : 's') : 'no receipts') : photos ? 'receipt' : 'no receipt'}</span>` : ''}</span><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.03em">${n0(paid)}</span></span>
-          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">${given != null ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--navyInk)">${esc(acc)}${ic('tick', 11, 'style="stroke:#6FDCB0;stroke-width:3.2"')}<span class="m" style="color:var(--mint)">${esc(hm(msOf(h.doneAt || h.createdAt)))}</span></span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(given)}</span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">Planned</span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(planned)}</span>`}</span></div>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">${given != null ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--navyInk)">${esc(acc)}${ic('tick', 11, 'style="stroke:#6FDCB0;stroke-width:3.2"')}<span class="m" style="color:var(--mint)">${esc(hm(msOf(h.doneAt || h.createdAt)))}</span></span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(given)}</span>` : `${ownPaid ? `<span style="font-size:12px;font-weight:600;color:var(--amber)">your own money</span><span style="font-size:12px;color:var(--navyInk2)">no cash from ${esc(acc)}</span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">Planned</span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(planned)}</span>`}`}</span></div>
         ${given != null ? `<span role="img" aria-label="Of ${n0(given)} handed over: ${esc(H.map(x => supplierShort(x.supplierId) + ' ' + n0(paidOf(x)) + (recOf(x) === 'none' ? ' with no receipt' : '')).join(', '))}, and ${back >= 0 ? n0(back) + ' to bring back' : n0(-back) + ' over'}" style="display:flex;flex-direction:column;gap:5px">
           <span style="display:flex;height:10px;gap:2px;border-radius:999px;overflow:hidden">${many ? H.map(x => seg(paidOf(x), tintFor(x.supplierId)[0])).join('') : seg(Math.min(paid, given), '#DDE3F0')}${back > 0 ? seg(back, 'var(--mint)') : seg(-back, '#E5483D')}</span>
           ${many ? `<span style="display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;font-weight:600;color:var(--navyInk2)">${H.map(x => `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:2px;background:${tintFor(x.supplierId)[0]}"></i>${esc(supplierShort(x.supplierId))}${recOf(x) === 'none' ? ` <span class="m" style="color:#DDE3F0">${n0(paidOf(x))}</span> · no receipt` : ''}</span>`).join('')}</span>` : ''}
         </span>
         <span style="display:flex;justify-content:space-between;font-size:12px;color:var(--navyInk)"><span>${back < 0 ? `Over by <b class="m" style="color:var(--rose)">${n0(-back)}</b>` : `Bring back <b class="m" style="color:var(--mint)">${n0(back)}</b>`}</span><span>planned <span class="m">${n0(planned)}</span></span></span>`
+        : ownPaid ? `<span style="display:flex;align-items:baseline;justify-content:space-between;font-size:12px;color:var(--navyInk)"><span>${esc(acc)} owes you <b class="m" style="font-size:15px;color:var(--amber)">${n0(paid)}</b></span><span>planned <span class="m">${n0(planned)}</span></span></span>`
         : `<span style="font-size:12px;color:var(--navyInk)">No cash handed over by ${esc(acc)} is recorded${Math.round(paid) !== Math.round(planned) ? ` · <span class="m">${signed(paid - planned)}</span> against the plan` : ''}</span>`}
         ${unsent.length ? `<button data-act="receiptsend" ${S.busy ? 'aria-disabled="true"' : ''} style="height:40px;border:none;border-radius:12px;background:rgba(245,178,107,.16);color:var(--amber);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${ic('refresh', 15)}${unsent.length > 1 ? 'Send ' + unsent.length + ' receipts to ' + esc(acc) : unsent.every(x => (S.tripPay[x.id] || {}).noReceipt) ? 'Tell ' + esc(acc) + ' what you paid' : 'Send the receipt to ' + esc(acc)}</button>` : ''}
       </div>
@@ -4179,6 +4205,12 @@ PAGE.done = ({ id }) => {
             : `<span style="height:30px;border-radius:999px;display:inline-flex;align-items:center;padding:0 10px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.07);color:${counted ? 'var(--mint)' : 'var(--navyInk)'}">${counted ? 'yard = yours' : 'yard not counted yet'}</span>`}
           <span style="height:30px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.07);color:${listFail ? 'var(--amber)' : 'var(--navyInk)'}">${listFail ? '' : ic('refresh', 12, 'style="stroke:#6FDCB0;stroke-width:2.2"')}${listFail ? 'price list not updated' : 'prices → list · ' + (listN != null ? listN + ' ' : '') + 'full'}</span>
         </div>
+        ${ownPaid ? `<div role="img" aria-label="${esc(whoFull('accounts'))} owes you ${n0(paid)} for this hand-in: told, with ${H.length} bill${H.length === 1 ? '' : 's'} marked own money" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(245,178,107,.12);box-shadow:inset 0 0 0 1px rgba(245,178,107,.35)">
+          <span style="width:28px;height:28px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
+          <span class="m" style="flex:none;font-size:12px;font-weight:600;color:var(--amber)">${n0(paid)} →</span>
+          <span style="width:28px;height:28px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(myName()))}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:12px;font-weight:700;color:#fff">${esc(whoShort('accounts'))} owes you</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk2)">Accounts pays it back · ${H.length} bill${H.length === 1 ? '' : 's'} say own money</span></span>
+        </div>` : ''}
         ${given != null ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.06)">
           <span class="m" style="flex:none;font-size:12px;font-weight:600;color:${back < 0 ? 'var(--rose)' : 'var(--mint)'}">${back < 0 ? 'over ' + n0(-back) : n0(back) + ' →'}</span>
           <span style="width:28px;height:28px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
@@ -4188,7 +4220,7 @@ PAGE.done = ({ id }) => {
       ${sh.map((r, i) => { const ct = tintFor(r.l.clientName), g = quoteLineCount(r.l, r.got), sn = quoteLineCount(r.l, r.sent), miss = quoteLineCount(r.l, r.sent - r.got);
         return `<div class="a-up" style="animation-delay:${(2.04 + i * .06).toFixed(2)}s;width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(245,178,107,.1);box-shadow:inset 0 0 0 1px rgba(245,178,107,.3)">
           <span style="width:36px;height:36px;border-radius:999px;background:${ct[0]};color:${ct[1]};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(r.l.clientName))}</span>
-          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(g.n)} of ${esc(sn.n)}</span> ${esc(lineName(r.l).base)} came</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(shortName(r.l.clientName))} · ${esc(miss.n)} ${r.x.status === 'confirmed' ? 'back on the list' : 'back on the list once counted in'}</span></span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(g.n)} of ${esc(sn.n)}</span> ${esc(lineName(r.l).base)} came</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${r.l.orderId === 'restock' ? `the shelf · back on <b style="color:#fff">What to buy</b> now` : esc(shortName(r.l.clientName)) + ' · ' + esc(miss.n) + (r.x.status === 'confirmed' ? ' back on the list' : ' back once counted in')}</span></span>
           ${quoteById(r.l.orderId) && quoteById(r.l.orderId).takenBy ? `<span style="flex:none;padding:3px 8px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:11px;font-weight:700">${esc(sellerOf(quoteById(r.l.orderId)))} told</span>` : ''}
         </div>`; }).join('')}
       ${sh.length ? `<a class="a-up" href="${esc(waComposeUrl(shortTellPhone(sh), shortMessage(t)))}" target="_blank" rel="noopener" style="animation-delay:2.12s;width:100%;margin-top:10px;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;background:rgba(111,220,176,.12);color:var(--mint);font-size:14px;font-weight:700">${ic('bell', 18)}<span style="flex:1">Tell the shop what's short</span>${ic('wa', 18)}</a>` : ''}
