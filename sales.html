@@ -1642,6 +1642,11 @@ button.ord-stamp{cursor:pointer}
 .ord-whohas .av.mgr{background:var(--plumSoft);color:var(--plum)}
 .ord-whohas .tx{flex:1;min-width:0;font-size:12px;color:var(--navyInk)}
 .ord-whohas .tx b{color:#fff}
+.ord-whohas .ord-whowait{width:8px;height:8px;flex:none;border-radius:9px;background:#F5B26B}
+.ord-pup{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:4px;font-size:12px;font-weight:600;color:var(--amberInk)}
+.ord-pup s{color:#8A93A3}
+.ord-pup svg{stroke:var(--amber);flex:none}
+.ord-pup em{font-style:normal;padding:1px 6px;border-radius:999px;background:var(--amberSoft);font-size:11px}
 .ord-rno{color:var(--ink3);font-weight:600}
 /* ---- Pay (Take a payment / Choose orders) ---- */
 .sx-page[data-type="pay"],.sx-page[data-type="paid"]{padding-bottom:0}
@@ -3102,9 +3107,24 @@ function mgrFace(size, fullName){ const n = String(fullName || mgrFull() || 'Man
    where the shop has no selling rule, waits for it. An answer is for the
    figure it named: change the price after, and it waits again. */
 const PRICE_DECIDES = { under: true, nomargin: true };
+// What the line sells at now, each (manager.html linePriceNow).
+function linePriceNow(it){ return Math.round(Number(it.sellPrice) > 0 ? Number(it.sellPrice) : quoteItemSellPrice(it)); }
+// Selling below what it costs, however it got there (a supplier's new price
+// the Buyer took, say): the Manager's call even when nobody tagged it
+// (manager.html lineBelowCost).
+function lineBelowCost(it){ const c = lineCost(it), p = linePriceNow(it); return !!c && p > 0 && Number(it.qty) > 0 && p < c; }
+// The supplier's price went up after the order was built (buyer.html keeps
+// the old cost as priceWas when it re-prices a line).
+function linePriceUp(it){ return !!it && it.priceWas != null && Number(it.priceWas) > 0 && Number(it.price) > Number(it.priceWas) ? { was: Number(it.priceWas), now: Number(it.price), at: Number(it.repricedAt) || 0 } : null; }
 function priceReviewState(it){
-  if (!it || !it.priceBy) return null;
+  if (!it) return null;
   const r = it.priceReview;
+  if (!it.priceBy) {
+    // Untagged: only a line under its cost waits, and the answer counts for the figure it named.
+    const fresh = r && (r.state === 'approved' || r.state === 'changed') && Math.round(Number(r.price)) === linePriceNow(it) && (r.qty == null || Number(r.qty) === Number(it.qty));
+    if (fresh) return r.state;
+    return lineBelowCost(it) ? 'wait' : null;
+  }
   // For the figure and the quantity it named (manager.html writes both): change either after, and it waits again.
   const done = r && (r.state === 'approved' || r.state === 'changed') && Math.round(Number(r.price)) === Math.round(Number(it.sellPrice))
     && (r.qty == null || Number(r.qty) === Number(it.qty));
@@ -3120,12 +3140,14 @@ function priceToTell(it){ return priceReviewState(it) === 'changed' && !(Date.pa
 function pricesWaiting(q){ return (q.items || []).filter(it => priceReviewState(it) === 'wait'); }
 /* The tag under a line. chip: the order page's pill, with the Manager's face. */
 function priceTagHTML(it, chip){
-  if (!it || !it.priceBy) return '';
-  const st = priceReviewState(it), r = it.priceReview || {};
-  if (st === 'wait') return chip ? `<span class="sx-ptag chip wait">${mgrFace(18)}<i class="sx-blink"></i>${it.priceAsk ? 'to price · ' : ''}waiting for ${esc(mgrName())}</span>`
+  if (!it) return '';
+  const st = priceReviewState(it), r = it.priceReview || {}, up = !it.priceBy && st === 'wait';
+  if (!it.priceBy && !st) return '';
+  if (st === 'wait') return chip ? `<span class="sx-ptag chip wait">${mgrFace(18)}<i class="sx-blink"></i>${up ? 'price up · ' : it.priceAsk ? 'to price · ' : ''}waiting for ${esc(mgrName())}</span>`
+    : up ? `<span class="sx-ptag" style="color:var(--amberInk)"><i style="background:var(--amberInk)"></i>price up · waiting for ${esc(mgrName())}</span>`
     : `<span class="sx-ptag" style="color:var(--amberInk)"><i style="background:var(--amberInk)"></i>${it.priceAsk ? 'to price' : 'your price'} · waiting for ${esc(mgrName())}</span>`;
   if (st === 'approved') return `<span class="sx-ptag chip ok">${mgrFace(18, r.byName)}${ic('tick', 11, 'style="stroke-width:3"')}approved by ${esc(priceReviewer(it))}</span>`;
-  if (st === 'changed') return `<span class="sx-ptag chip chg">${mgrFace(18, r.byName)}<span>${esc(priceReviewer(it))} set <span class="m">${n0(r.price)}</span>${Number(r.was) > 0 ? ` · you said <span class="m">${n0(r.was)}</span>` : ''}</span></span>`;
+  if (st === 'changed') return `<span class="sx-ptag chip chg">${mgrFace(18, r.byName)}<span>${esc(priceReviewer(it))} set <span class="m">${n0(r.price)}</span>${Number(r.was) > 0 ? ` · ${it.priceBy ? 'you said' : 'was'} <span class="m">${n0(r.was)}</span>` : ''}</span></span>`;
   if (it.priceNote === 'nocost') return `<span class="sx-ptag" style="color:var(--ink3)"><i style="background:var(--ink3)"></i>to be confirmed</span>`;
   return '';
 }
@@ -4094,8 +4116,8 @@ function ordTotals(q){
 
 /* ---------------- Orders ---------------- */
 function ordGroups(list){
-  const g = { tell: [], ask: [], found: [] };
-  list.forEach(q => { const st = orderLineStates(q); if (st.some(s => s.k === 'no')) g.tell.push(q); else if (st.some(s => s.k !== 'ok')) g.ask.push(q); else g.found.push(q); });
+  const g = { tell: [], ask: [], mgr: [], found: [] };
+  list.forEach(q => { const st = orderLineStates(q); if (st.some(s => s.k === 'no')) g.tell.push(q); else if (st.some(s => s.k !== 'ok')) g.ask.push(q); else if (pricesWaiting(q).length) g.mgr.push(q); else g.found.push(q); });
   return g;
 }
 function ordStrip(views, w){
@@ -4137,9 +4159,9 @@ function viewOrders(){
   else if (sel === 'draft') {
     const g = ordGroups(list);
     const seg = (c, col, cls) => c ? `<i class="${cls || ''}" style="flex:${c};background:${col}"></i>` : '';
-    body = `<div class="ord-sum" data-key="osum" role="img" aria-label="${g.tell.length} not found, ${g.ask.length} asking, ${g.found.length} all found">
-      <span class="bar">${seg(g.tell.length, '#8E2A22')}${seg(g.ask.length, '#F5B26B', 'ord-blink')}${seg(g.found.length, '#0F6B43')}</span>
-      <span class="lg"><span><b class="m" style="color:#8E2A22">${g.tell.length}</b> not found</span><span><b class="m" style="color:#95530C">${g.ask.length}</b> asking</span><span><b class="m" style="color:#0F6B43">${g.found.length}</b> all found</span></span></div>`;
+    body = `<div class="ord-sum" data-key="osum" role="img" aria-label="${g.tell.length} not found, ${g.ask.length + g.mgr.length} asking, ${g.found.length} all found">
+      <span class="bar">${seg(g.tell.length, '#8E2A22')}${seg(g.ask.length + g.mgr.length, '#F5B26B', 'ord-blink')}${seg(g.found.length, '#0F6B43')}</span>
+      <span class="lg"><span><b class="m" style="color:#8E2A22">${g.tell.length}</b> not found</span><span><b class="m" style="color:#95530C">${g.ask.length + g.mgr.length}</b> ${g.mgr.length && !g.ask.length ? 'with ' + esc(mgrName()) : 'asking'}</span><span><b class="m" style="color:#0F6B43">${g.found.length}</b> all found</span></span></div>`;
     const head = (key, dot, title, count, hint) => `<div class="ord-gh" data-key="gh-${key}"><i style="background:${dot}"></i><b>${title}</b><span class="m">${count}</span><em>${hint}</em></div>`;
     const card = (key, qs, moreWord) => {
       if (S.ordOpen[key]) return ordPagedCard(key, qs, q => orderRow(q, key === 'tell')).replace(/<\/div>$/, `<button class="ord-more" data-act="ordmore" data-g="${key}" data-key="of-${key}"><span>Show fewer</span>${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(-90deg)')}</button></div>`);
@@ -4148,6 +4170,7 @@ function viewOrders(){
     };
     if (g.tell.length) body += head('tell', '#8E2A22', 'Tell them', g.tell.length, 'oldest first') + card('tell', g.tell, 'to tell');
     if (g.ask.length) body += head('ask', '#F5B26B', 'Still asking', g.ask.length, 'the buyer is on it') + card('ask', g.ask, 'asking');
+    if (g.mgr.length) body += head('mgr', '#F5B26B', 'With ' + esc(mgrName()), g.mgr.length, 'the price is theirs') + card('mgr', g.mgr, 'waiting');
     if (g.found.length) {
       if (S.ordOpen.found) body += `<button class="ord-gh btn" data-act="ordmore" data-g="found" data-key="gh-found" aria-expanded="true"><i style="background:#0F6B43"></i><b>All found</b><span class="m">${g.found.length}</span><em style="color:var(--green)">going to Buying</em>${ordIc('chev', 14, 'stroke:#9AA1AE;transform:rotate(-90deg)')}</button>${ordPagedCard('found', g.found, q => orderRow(q))}`;
       else body += `<button class="ord-foundbar" data-act="ordmore" data-g="found" data-key="fb-found" aria-expanded="false"><i></i><span class="t">All found <span class="m">${g.found.length}</span> <em>· going to Buying</em></span>${ordStack(g.found, 2)}${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>`;
@@ -4161,7 +4184,9 @@ function viewOrders(){
 function orderRow(q, tellBtn){
   const views = ordViews(q), c = ordCount(views), pv = pricedLive(q);
   let note = '', col = 'var(--ink3)';
-  if (q.status === 'draft') {
+  const waits = pricesWaiting(q), upWait = waits.some(it => !it.priceBy);
+  if (waits.length && !c.no && (q.status === 'draft' || upWait)) { note = `with ${mgrName()} · ${upWait ? 'price up' : waits.length === 1 ? 'a price' : waits.length + ' prices'}`; col = 'var(--amberInk)'; }
+  else if (q.status === 'draft') {
     if (c.no) { note = `${c.no} not found · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--crimson)'; }
     else if (c.ask || c.toask) {
       const asked = Object.values(q.supplierConfirms || {}).map(r => ordMs(r && r.askedAt)).filter(Boolean);
@@ -4294,11 +4319,12 @@ function ordLimitLine(q){
 function roleFull(role){ const m = (D().members || []).find(x => x.role === role); const st = m ? (D().staff || []).find(s => s.userId && s.userId === m.user_id) : null; return st && st.name ? String(st.name).trim() : ''; }
 function ordWhoHas(q, views){
   if (q.status !== 'draft' && q.status !== 'awaiting_goods') return '';
-  const c = ordCount(views), waitPrice = pricesWaiting(q).length;
+  const c = ordCount(views), waits = pricesWaiting(q), waitPrice = waits.length, up = waits.some(it => !it.priceBy);
   let role, name, why;
-  if (q.status === 'draft' && waitPrice) { role = 'Manager'; name = mgrFull(); why = `moves it on when ${waitPrice === 1 ? 'the price is' : 'the prices are'} decided`; }
+  // A supplier's price up waits on the Manager in any stage before the invoice; a salesperson's price, in Checking.
+  if (waitPrice && (q.status === 'draft' || up)) { role = 'Manager'; name = mgrFull(); why = up ? 'price up' : `moves it on when ${waitPrice === 1 ? 'the price is' : 'the prices are'} decided`; }
   else { role = 'Buyer'; name = roleFull('buyer'); why = q.status === 'draft' ? (c.ask || c.toask ? 'moves it on when the suppliers answer' : 'moves it on next') : 'brings it in, then it goes to Packing'; }
-  return `<div class="ord-whohas"><span class="av${role === 'Manager' ? ' mgr' : ''}" aria-hidden="true">${esc(initials(name || role))}</span><span class="tx"><b>With ${esc(name ? firstWord(name) + ' · ' + role : 'the ' + role)}</b> · ${why}</span></div>`;
+  return `<div class="ord-whohas"><span class="av${role === 'Manager' ? ' mgr' : ''}" aria-hidden="true">${esc(initials(name || role))}</span><span class="tx"><b>With ${esc(name ? firstWord(name) + ' · ' + role : 'the ' + role)}</b> · ${why}</span>${role === 'Manager' ? '<i class="ord-whowait sx-blink" aria-hidden="true"></i>' : ''}</div>`;
 }
 /* A number for an order that has none (a walk-in): on the order itself,
    so Tell can reach them. */
@@ -4370,11 +4396,17 @@ function ordPaperLine(q, it, v){
     return `<div class="ord-pl struck" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(was.n)} <small>${esc(was.u)}</small></span><span class="st" aria-hidden="true"></span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}</span><span class="ord-nf">NOT SENT</span></div>`; }
   const amt = v.k === 'no' ? '<span class="ord-nf">NOT FOUND</span>' : toc ? '<span class="ord-toprice">to price</span>' : `<span class="ord-amts"><span class="m amt">${n0((Number(it.qty) || 0) * quoteItemSellPrice(it))}</span>${was ? `<span class="m ord-was">${n0(was)}</span>` : ''}</span>`;
   return `<div class="ord-pl${v.struck ? ' struck' : ''}" data-key="l-${esc(it.lineId)}"><span class="q m">${n0(qw.n)} <small>${esc(qw.u)}</small></span>
-    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${priceTagHTML(it, true)}</span>${amt}</div>`;
+    <span class="st" aria-hidden="true">${ico}</span><span class="nm">${nameHTML(nameParts(it.productId, it.variantIdx, it.productName))}${v.word ? `<span class="w" style="color:${v.col}">${esc(v.word)}</span>` : ''}${ordPriceUpHTML(it)}${priceTagHTML(it, true)}</span>${amt}</div>`;
+}
+/* The supplier's price went up on a line the Manager has still to price: the cost, then and now. */
+function ordPriceUpHTML(it){
+  const u = linePriceUp(it); if (!u || priceReviewState(it) !== 'wait') return '';
+  return `<span class="ord-pup m" aria-label="Their price went up from ${n0(u.was)} to ${n0(u.now)} each"><s>${n0(u.was)}</s>${ordIc('arrow', 12, 'stroke-width:2.6')}<b>${n0(u.now)}</b><em>+${n0(u.now - u.was)}</em></span>`;
 }
 function ordPaperHead(q, views){
   const c = ordCount(views), n = views.length - (c.out || 0), all = n && c.in === n;
-  const wait = pricesWaiting(q).length;
+  const waits = pricesWaiting(q), wait = waits.length, up = waits.filter(it => !it.priceBy).length;
+  if (up && (q.status === 'draft' || q.status === 'awaiting_goods')) return [`${up} price up · ${mgrName()}`, '#95530C'];
   if (q.status === 'draft' && wait) return [`${wait} waiting for ${mgrName()}`, '#95530C'];
   if (q.status === 'draft') return [`${c.ok} of ${n} ready`, c.ok === n ? '#0F6B43' : c.ok ? '#0F6B43' : '#767F91'];
   if (q.status === 'awaiting_goods') return [`${c.in + c.short} of ${n} in`, '#3A3F9B'];
@@ -4486,9 +4518,9 @@ function ordGateHTML(q, views){
     : open ? ordGateTile('SUPPLIERS', false, `${open} to hear from`, c.ask ? 'asking now' : 'the Buyer asks') : ordGateTile('SUPPLIERS', true, bought.length ? 'All said yes' : 'All on our shelf', bought.length && lastYes ? 'by ' + ordClock(lastYes) : 'nothing to ask');
   // Prices: a decision on every price under the shop's.
   const decide = its.filter(it => priceReviewState(it)), wait = decide.filter(it => priceReviewState(it) === 'wait');
-  const since = wait.map(it => Date.parse(it.priceAt || '') || 0).filter(Boolean).reduce((m, x) => Math.min(m, x), Infinity);
-  const lastR = decide.map(priceReviewMs).reduce((m, x) => Math.max(m, x), 0);
-  const pri = wait.length ? ordGateTile('PRICES', false, `${wait.length} with ${mgr}`, isFinite(since) ? 'since ' + ordClock(since) : 'waiting', false, true)
+  const since = wait.map(it => Date.parse(it.priceAt || '') || (linePriceUp(it) || {}).at || 0).filter(Boolean).reduce((m, x) => Math.min(m, x), Infinity);
+  const lastR = decide.map(priceReviewMs).reduce((m, x) => Math.max(m, x), 0), upWait = wait.some(it => !it.priceBy);
+  const pri = wait.length ? ordGateTile('PRICES', false, upWait ? `Up · with ${mgr}` : `${wait.length} with ${mgr}`, isFinite(since) ? 'since ' + ordClock(since) : 'waiting', false, true)
     : decide.length ? ordGateTile('PRICES', true, 'Decided', esc(priceReviewer(decide[0])) + (lastR ? ' · ' + ordClock(lastR) : ''))
     : ordGateTile('PRICES', true, 'Shop’s prices', 'nothing to decide');
   // Credit: the hold the Manager's app reads, and their answer (payload.creditCheck).
@@ -5985,18 +6017,15 @@ ACT.ncsave = async t => {
     if (error) throw error;
     const c = { id, name, phone, phone2: '', location, notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
     D().customers.push(c); saveSnapshot(); haptic('success');
-    const forOrder = S.sheet && S.sheet.args.for === 'order', forPay = S.sheet && S.sheet.args.for === 'pay', forSwitch = S.sheet && S.sheet.args.for === 'switch', forChat = S.sheet && S.sheet.args.for === 'chat';
+    const forPay = S.sheet && S.sheet.args.for === 'pay', forSwitch = S.sheet && S.sheet.args.for === 'switch', forChat = S.sheet && S.sheet.args.for === 'chat';
     closeSheet(true); renderSheet(); S.custQuery = '';
     // From a payment: the new customer is who owes the rest.
     if (forChat) { render(); toast(name + ' saved'); return; }
     if (S.sheet == null && forSwitch) { openSheet('switch', { sel: id }); toast(name + ' added'); return; }
     if (forPay && typeof payArgs === 'function' && payArgs()) { const a = payArgs(); a.whoId = id; a.whoQ = ''; refreshPay(); toast(name + ' added · they owe the rest'); return; }
-    if (sell) {
-      // A basket already started for nobody in particular becomes theirs.
-      // Only a walk-in basket changes hands; someone else's order is kept in Drafts by startFor.
-      if (forOrder && S.draft && S.draft.items.length && S.draft.customerId == null) { S.draft.client = { name, phone }; S.draft.customerId = id; saveDraft(); openOrderPage(); }
-      else startFor(c, false, false);
-    } else push('customer', { id });
+    // A new sale starts empty: a walk-in basket already started stays in Drafts (startFor parks it).
+    if (sell) startFor(c, false, false);
+    else push('customer', { id });
     toast(name + ' added');
   } catch (e) {
     document.querySelectorAll('[data-act=ncsave]').forEach(b => { b.disabled = false; }); t.innerHTML = label;
@@ -6336,9 +6365,11 @@ function nwSearch(s){
       nameWordsOut = nameWords;
     });
   });
-  const by = new Map();
-  hits.forEach(h => { const g = by.get(h.p.id) || { p: h.p, hits: [], rank: 99 }; g.hits.push(h); g.rank = Math.min(g.rank, h.rank); by.set(h.p.id, g); });
-  const groups = [...by.values()].sort((a, b) => a.rank - b.rank || a.p.name.localeCompare(b.p.name));
+  // What the shop sells most comes first ("mulper": Normal Mulper before a Mulper Frog nobody buys),
+  // then a name that starts with the word, then what is on the shelf.
+  const by = new Map(), times = nwTimesSold();
+  hits.forEach(h => { const g = by.get(h.p.id) || { p: h.p, hits: [], rank: 99, sold: times[h.p.id] || 0 }; g.hits.push(h); g.rank = Math.min(g.rank, h.rank); by.set(h.p.id, g); });
+  const groups = [...by.values()].sort((a, b) => b.sold - a.sold || a.rank - b.rank || a.p.name.localeCompare(b.p.name));
   groups.forEach(g => g.hits.sort((a, b) => a.rank - b.rank));
   return { qty, words, nameWords: nameWordsOut, groups: groups.slice(0, 12), more: Math.max(0, groups.length - 12) };
 }
@@ -6815,6 +6846,8 @@ function nwCustCats(cid){
     const ik = nwLineKey(it), ie = e.items.get(ik) || { pid: it.productId, vi: it.variantIdx == null ? null : Number(it.variantIdx), name: it.productName, n: 0 }; ie.n++; e.items.set(ik, ie); per.set(k, e); }); });
   return [...per.values()].sort((a, b) => b.orders - a.orders).slice(0, 3).map(e => ({ name: e.name, orders: e.orders, of: hist.length, items: [...e.items.values()].sort((a, b) => b.n - a.n).slice(0, 3) }));
 }
+// How many orders each item went out on (any size), the ones that were billed.
+function nwTimesSold(){ return memo('nwtimes', '', () => { const m = {}; D().savedQuotes.forEach(q => { if (!q.invoiced || q.voided) return; new Set((q.items || []).map(it => it.productId)).forEach(pid => { if (pid != null) m[pid] = (m[pid] || 0) + 1; }); }); return m; }); }
 function nwSold(){ return memo('nwsold', '', nwSoldNow); }
 function nwSoldNow(){ const m = {}; D().savedQuotes.forEach(q => { if (!q.invoiced || q.voided) return; (q.items || []).forEach(it => { const k = nwLineKey(it); m[k] = (m[k] || 0) + (Number(it.qty) || 0); }); }); return m; }
 function nwAisleItems(cat){ return memo('nwaisle', cat, () => nwAisleItemsNow(cat)); }
@@ -6976,11 +7009,26 @@ function nwTrack(q){
   });
   return h + '</div><div class="nw-tlab">' + steps.map((s, i) => `<span class="${i < cur ? 'done' : i === cur ? 'now' : ''}">${s}</span>`).join('') + '</div>';
 }
+function nwPlacedLater(q, up){
+  const views = ordViews(q), c = ordCount(views), n = views.filter(v => v.k !== 'out').length, mgr = mgrName();
+  const upNote = up ? ` · price up, with ${mgr}` : '';
+  if (q.status === 'draft') {
+    if (c.no) return `${c.no} not found — tell them what was found`;
+    if (!c.ask && !c.toask && (q.items || []).some(orderLineIsBoughtIn)) return up ? `All found — waiting on ${mgr} · price up` : 'All found — going to Buying';
+    return '';
+  }
+  if (q.status === 'awaiting_goods') return `Being bought in — ${c.in + c.short} of ${n} in${c.way ? `, ${c.way} on the way` : ''}${upNote}`;
+  if (q.status === 'preparing') return (q.items || []).some(orderLineIsBoughtIn) ? `All in — packing${upNote}` : 'All from our shelf · straight to Packing';
+  if (q.status === 'pending_delivery') return 'Packed — on the road';
+  if (q.status === 'completed') return 'Delivered';
+  return '';
+}
 function nwPlacedNote(q){
   const its = q.items || [], base = it => nameParts(it.productId, it.variantIdx, it.productName).base;
   const bought = its.filter(orderLineIsBoughtIn), find = its.filter(it => !it.supplierId), toc = its.filter(linePriceToConfirm).length;
-  const wait = pricesWaiting(q).length;
-  if (q.status === 'preparing') return esc('All from our shelf · straight to Packing');
+  const waits = pricesWaiting(q), wait = waits.length, up = waits.some(it => !it.priceBy);
+  // The note follows the order: what was said at placing is wrong once it moves on.
+  const later = nwPlacedLater(q, up); if (later) return esc(later);
   let s = bought.length ? `The shop checks ${nwList(bought.map(base))} with a supplier — you’ll see what’s found` : find.length ? `The shop finds a supplier for ${nwList(find.map(base))}` : `All from the shelf — ${wait ? 'it waits in Checking for ' + mgrName() : 'the shop checks it and packs it'}`;
   if (wait && (bought.length || find.length)) s += ` · ${wait} price${wait === 1 ? '' : 's'} for ${mgrName()}`;
   if (toc) s += ` · ${toc} to price`;

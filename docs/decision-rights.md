@@ -534,6 +534,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0150 | Buyer, fourth: a trip's runner is told — sent or given a trip (`trip.sent`, once per round), the trip given on to someone else (`trip.taken`), or the trip cancelled by the Buyer's chase (`trip.cancelled`) |
 | 0151 | Buyer, fifth: a round's own money and receipts kept on the trip (`collection_trips.pay`), the Buyer's pay-back passed to Accounts (`own_money` hand-off, pushed `trip.own_money`), Accounts' cash tied to the round it started (`payload.round`), and a carton far bigger than the sale asked of the Manager (`restock_buys.for_line`, held, pushed `carton.ask`) |
 | 0152 | Sourcing v2, round 7: one item, one name — Sourcing's verdict on two items that look like one (`item_twins`, product.edit): the same item (one name kept, the other taught as a name of it, `item_names`) or different; read by every member so the Buyer sees the shelf twin before buying. Both rows stay on the books; stock is never Sourcing's. (0151 is the Buyer's.) |
+| 0153 | Sales, third: a supplier's price up that puts a line under its sale pushes the Manager (`price.waits`, price.approve), and the Manager's new price on it pushes the salesperson to tell the customer (`price.decided`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
