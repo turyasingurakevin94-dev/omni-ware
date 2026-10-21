@@ -129,7 +129,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Record and repay loans** | `loan.edit` | Accounts | — | owner's log | yes |
 | **Record assets, and their sale or disposal** | `asset.edit` | Accounts | — | owner's log | yes |
 | **Pay agents: commission claims, cash an agent brings in** | `agent.pay` | Accounts | — | the agent, owner's log | yes |
-| **Count a buying trip's cash back against the cash given** | `trip.cash` | Accounts | Buyer | Manager, owner's log | yes |
+| **Count a buying trip's cash back against the cash given; pay the Buyer back for stops paid on their own money (`buyer_payback`, 0154); take back cash handed over that no round used (`buyer_cash_back`, 0154)** | `trip.cash` | Accounts | Buyer | Manager, owner's log | yes |
 | **See every financial figure: P&L, balance sheet, cash flow, debtors, creditors** | `finance.see` | Accounts | — | — | yes |
 
 ### Stock and the yard
@@ -342,6 +342,16 @@ names the trip), the difference is the short or over line, and the owner's
 log gets the line. The cash given and brought back are not lines of their
 own: the book moves by what stayed at the suppliers.
 
+When the Buyer pays a round from their own pocket, the round's stops say so
+(`collection_trips.pay`, the Buyer's 0151) and are never in a count. The
+hand-in passes Accounts an `own_money` hand-off, and **Accounts** pays the
+Buyer back (`trip.cash`) in one write (`buyer_payback`, 0154): a Stock
+Purchase line per stop from the account picked, the orders' bills marked paid
+by the trip, the hand-off closed and the owner's log line. Cash handed over
+that no round used (a `trip_cash` hand-off with `v` 2 and no `round`) is
+counted back the same way as a trip's (`buyer_cash_back`, 0154). A stop with
+no receipt has no paper bill to record; its amount stands.
+
 ### Push notifications are part of the system
 
 Every handoff in this file that waits for someone **sends that person a push**.
@@ -534,6 +544,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0150 | Buyer, fourth: a trip's runner is told — sent or given a trip (`trip.sent`, once per round), the trip given on to someone else (`trip.taken`), or the trip cancelled by the Buyer's chase (`trip.cancelled`) |
 | 0152 | Sourcing v2, round 7: one item, one name — Sourcing's verdict on two items that look like one (`item_twins`, product.edit): the same item (one name kept, the other taught as a name of it, `item_names`) or different; read by every member so the Buyer sees the shelf twin before buying. Both rows stay on the books; stock is never Sourcing's. (0151 is the Buyer's.) |
 | 0153 | Sales, third: a supplier's price up that puts a line under its sale pushes the Manager (`price.waits`, price.approve), and the Manager's new price on it pushes the salesperson to tell the customer (`price.decided`) |
+| 0154 | Accounts and the Buyer's money (the cross-app test of 21 Oct 2026; Buyer's side is 0151): pay the Buyer back for a round on their own money (`buyer_payback`: a Stock Purchase per stop, the orders' bills paid by the trip, the hand-off closed), take back cash handed over that no round used (`buyer_cash_back`, `buyer_handoffs.cash_back`), and a bill raised after the payback born paid |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
