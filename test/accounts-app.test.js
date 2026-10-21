@@ -77,7 +77,19 @@ function tables(){
     rent_agreements: [{ id: 1, shop_id: SH, premises: 'Kikuubo', landlord: 'Mr Kasozi', amount: 1000000, due_day: 1, start_month: '2026-01' }],
     stock: [], stock_lots: [], agents: [], agent_commission_claims: [], invoice_asks: [], decision_log: [],
     collection_trips: [{ id: 'TRIP-1', shop_id: SH, supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', created_at: new Date().toISOString(), collected_at: new Date().toISOString(), cash_given: 500000, voided: false,
-      lines: [{ productName: 'Iron sheets', qty: 10, expectedPrice: 30000, gotQty: 10, gotPrice: 30000 }] }],
+      lines: [{ productName: 'Iron sheets', qty: 10, expectedPrice: 30000, gotQty: 10, gotPrice: 30000 }] },
+      // A round Denis paid on his own money (0151's pay); one stop carries cash_given from a handover it should not have used.
+      { id: 'TRIP-AB12-1', shop_id: SH, supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', created_at: new Date().toISOString(), collected_at: new Date().toISOString(), cash_given: 150000, voided: false,
+        lines: [{ productName: 'Steel bars', qty: 10, gotQty: 10, gotPrice: 30000 }], pay: { own: true, amount: 300000, receipt: 'photo' } },
+      { id: 'TRIP-AB12-2', shop_id: SH, supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', created_at: new Date().toISOString(), collected_at: new Date().toISOString(), cash_given: null, voided: false,
+        lines: [{ productName: 'Brackets', qty: 1, gotQty: 1, gotPrice: 165000 }], pay: { own: true, amount: 165000, receipt: 'none' } }],
+    buyer_handoffs: [
+      { id: 'h-own', shop_id: SH, kind: 'own_money', for_role: 'accounts', ref: 'round:TRIP-AB12', status: 'open', created_by: 'u2', created_at: new Date().toISOString(),
+        payload: { buyer: 'Denis Okello', amount: 465000, round: 'TRIP-AB12', stops: [{ tripId: 'TRIP-AB12-1', supplier: 'Steel & Tube', amount: 300000, receipt: 'photo' }, { tripId: 'TRIP-AB12-2', supplier: 'Steel & Tube', amount: 165000, receipt: 'none' }] } },
+      { id: 'h-loose', shop_id: SH, kind: 'trip_cash', for_role: 'accounts', ref: 'round:x7k2m9qa', status: 'done', created_by: 'u2', created_at: new Date().toISOString(), done_by: 'u1', done_at: new Date().toISOString(), cash_back: null,
+        payload: { v: 2, amount: 150000, supplier: 'Nakawa Cement Depot' } },
+      { id: 'h-old', shop_id: SH, kind: 'trip_cash', for_role: 'accounts', ref: 'round:old', status: 'done', created_by: 'u2', created_at: new Date().toISOString(), done_by: 'u1', done_at: new Date().toISOString(), payload: { amount: 90000 } },
+      { id: 'h-norec', shop_id: SH, kind: 'paper_bill', for_role: 'accounts', status: 'open', created_by: 'u2', created_at: new Date().toISOString(), payload: { supplierId: 'S1', total: 318000, noReceipt: true } }],
     app_settings: [{ shop_id: SH, presets: { ownerPhone: '0772555666' } }],
     role_tasks: [...mig.matchAll(/\('accounts',\s*'([a-z.]+)'\)/g)].map(m => ({ role: 'accounts', task: m[1] })),
     shop_members: [{ shop_id: SH, user_id: 'u1', role: 'accounts' }],
@@ -93,6 +105,11 @@ function fakeDb(tb){
   Q.prototype.gte = function(k, v){ this.f.push(r => r[k] >= v); return this; };
   Q.prototype.in = function(k, v){ this.f.push(r => v.map(String).includes(String(r[k]))); return this; };
   Q.prototype.not = function(k){ this.f.push(r => r[k] != null); return this; };
+  // PostgREST's or=(a.eq.x,and(b.eq.y,c.gte.z)): eq and gte, nested and().
+  const split = s => { const out = []; let d = 0, cur = ''; for (const ch of s) { if (ch === ',' && !d) { out.push(cur); cur = ''; continue; } if (ch === '(') d++; if (ch === ')') d--; cur += ch; } if (cur) out.push(cur); return out; };
+  const term = s => { if (s.startsWith('and(')) { const all = split(s.slice(4, -1)).map(term); return r => all.every(f => f(r)); }
+    const [k, op, ...v] = s.split('.'), val = v.join('.'); return op === 'gte' ? (r => r[k] != null && String(r[k]) >= val) : (r => String(r[k]) === val); };
+  Q.prototype.or = function(s){ const any = split(s).map(term); this.f.push(r => any.some(f => f(r))); return this; };
   Q.prototype.order = Q.prototype.limit = function(){ return this; };
   Q.prototype.maybeSingle = function(){ this.one = true; return this; };
   Q.prototype.insert = function(row){ this.op = 'insert'; this.row = row; return this; };
@@ -124,6 +141,25 @@ function fakeDb(tb){
         const count = { group: a.p_trip_ids, given, paid, expected: given - paid, counted, diff, cashTxnId, paidTxns, at: new Date().toISOString() };
         trips.forEach(t => { writes.push(['update', 'collection_trips', { cash_count: clone(count) }]); t.cash_count = clone(count); });
         return { data: { given, paid, counted, diff, cashTxnId, paidTxns, bills, count, cashRows }, error: null };
+      }
+      // 0154: pay the Buyer back for an own-money round; take back cash no round used.
+      if (name === 'buyer_payback') {
+        const h = tb.buyer_handoffs.find(x => x.id === a.p_handoff_id), date = new Date().toISOString().slice(0, 10), cashRows = [], paidTxns = [];
+        if (!h || h.status !== 'open') return { data: null, error: { message: 'This hand-in is paid back already.' } };
+        let total = 0;
+        h.payload.stops.forEach(st => { const t = tb.collection_trips.find(x => x.id === st.tripId); const amt = Math.round(t.pay.amount); total += amt;
+          const row = { id: nextId++, shop_id: a.p_shop_id, date, account: a.p_account, type: 'payment', category: 'Stock Purchase', amount: amt, description: 'Paid back to Denis Okello', time: '09:00' };
+          writes.push(['insert', 'cash_txns', clone(row)]); tb.cash_txns.push(clone(row)); cashRows.push(row); paidTxns.push({ tripId: t.id, cashTxnId: row.id, amount: amt });
+          t.cash_count = { own: true, paidBack: amt, cashTxnId: row.id }; writes.push(['update', 'collection_trips', { cash_count: clone(t.cash_count) }]); });
+        h.status = 'done'; writes.push(['update', 'buyer_handoffs', { status: 'done' }]);
+        return { data: { total, stops: paidTxns.length, paidTxns, bills: [], cashRows }, error: null };
+      }
+      if (name === 'buyer_cash_back') {
+        const h = tb.buyer_handoffs.find(x => x.id === a.p_handoff_id), date = new Date().toISOString().slice(0, 10), cashRows = [];
+        const given = Math.round(h.payload.amount), counted = Math.round(a.p_counted), diff = counted - given;
+        if (Math.abs(diff) >= 1) { const row = { id: nextId++, shop_id: a.p_shop_id, date, account: 'cash', type: diff < 0 ? 'payment' : 'receipt', category: diff < 0 ? 'Cash Shortage' : 'Cash Overage', amount: Math.abs(diff), description: 'Short on cash no round used', time: '09:00' }; writes.push(['insert', 'cash_txns', clone(row)]); tb.cash_txns.push(clone(row)); cashRows.push(row); }
+        h.cash_back = { given, counted, diff }; writes.push(['update', 'buyer_handoffs', { cash_back: clone(h.cash_back) }]);
+        return { data: { given, counted, diff, cashRows }, error: null };
       }
       // 0141: the treasurer's six one-write actions, as the database does them.
       const today = new Date().toISOString().slice(0, 10), rows = tname => (tb[tname] || (tb[tname] = []));
@@ -173,7 +209,7 @@ function fakeDb(tb){
 /* ---------------- the page, in a sandbox ---------------- */
 const EXPORT = ['S', 'ACT', 'PAGE', 'D', 'loadAll', 'parseMoney', 'supplierKey', 'can', 'cbDayPosition', 'acctState', 'saveCount', 'closeDay', 'bookVariance', 'payBills', 'billDue', 'openBills', 'creditors', 'recordInvoiceSend', 'invoiceSent',
   'custAging', 'debtors', 'statementDue', 'summaryDebtors', 'summaryCreditors', 'TASK_WORDS', 'viewToday', 'viewOwed', 'viewBills', 'viewClose', 'billState', 'cameWord', 'inHandBy',
-  'CB', 'moneyPosition', 'payrollMonth', 'tripsToCount', 'topArgs', 'push', 'txnById', 'agingNoDate', 'owedRows', 'owedTotals', 'moneyStrip', 'weOweParts', 'dueSoonBills'];
+  'CB', 'moneyPosition', 'payrollMonth', 'tripsToCount', 'topArgs', 'push', 'txnById', 'agingNoDate', 'owedRows', 'owedTotals', 'moneyStrip', 'weOweParts', 'dueSoonBills', 'looseCash', 'handoffs', 'greetName', 'viewToday'];
 function loadPage(db){
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   const app = scripts.find(s => s.includes('function cbDayPosition'));
@@ -327,7 +363,7 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
       invoices: {}, invoice: { id: 13 }, share: {}, supplier: { sid: 'S1' }, bill: { id: 21 }, me: {},
       billpaid: { sid: 'S1', name: 'Steel & Tube', from: 'bank', paid: 300000, hand: 3000000, after: 2700000, owedAfter: 105000, at: Date.now(), lines: [{ ref: 'ST/1', pay: 300000, cleared: true }] },
       paid: { name: 'Mulongo Builders', id: 'C1', phone: '', amount: 100000, method: 'cash', bills: [], before: 300000, after: 200000, time: '10:00' },
-      position: {}, reports: {}, days: {}, expense: {}, income: {}, transfer: {}, payedit: { id: 5 }, propose: { cid: 'C1' }, billrec: { sid: 'S1' }, consign: {}, agents: {}, tripcash: {}, payroll: {}, absence: { sid: 'W1' }, loans: {}, assets: {}, assetbuy: {} };
+      position: {}, reports: {}, days: {}, expense: {}, income: {}, transfer: {}, payedit: { id: 5 }, propose: { cid: 'C1' }, billrec: { sid: 'S1' }, consign: {}, agents: {}, tripcash: {}, payback: { id: 'h-own' }, cashback: { id: 'h-loose' }, payroll: {}, absence: { sid: 'W1' }, loans: {}, assets: {}, assetbuy: {} };
     Object.keys(X.PAGE).forEach(k => draw('the ' + k + ' page', () => { X.S.stack = [{ type: k, args: args[k] || {} }]; return X.PAGE[k](args[k] || {}); }));
     t.check(Object.keys(X.PAGE).every(k => k in args), 'every page the app has is drawn here');
   }
@@ -389,6 +425,25 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
     await X.ACT['slide:assetbuy']();
     const fa = db.tb.fixed_assets.find(a => a.name === 'Generator');
     t.check(fa && fa.life_months === 60 && fa.method === 'straight_line' && db.writes.filter(w => w[1] === 'cash_txns').pop()[2].category === 'Equipment purchase', 'an asset bought joins the assets and is booked as Equipment purchase');
+    // The Buyer’s money (0154): own money is never in a count, it is paid back; cash no round used comes back.
+    t.check(X.tripsToCount().every(g => g.trips.every(tr => !String(tr.id).startsWith('TRIP-AB12'))), 'a stop paid on the Buyer’s own money is never in a trip’s count, even holding cash_given');
+    t.check(X.looseCash().map(h => h.id).join() === 'h-loose', 'cash handed over from v 2 with no round is cash no round used; an older handover is not');
+    const today = X.viewToday();
+    t.check(/From Denis · the Buyer/.test(today) && /Pay Denis back · own money/.test(today) && /no round used/.test(today) && /data-act="honoted"/.test(today) && !/data-act="horec" data-id="h-norec"/.test(today),
+      'Today shows what Denis passed on: pay him back, the cash no round used, and an old no-receipt bill to note, not to record');
+    X.S.stack = [{ type: 'payback', args: { id: 'h-own', acct: 'momo' } }];
+    await X.ACT['slide:payback']();
+    const pb = db.writes.filter(w => w[1] === 'cash_txns').slice(-2).map(w => w[2]);
+    t.check(pb.length === 2 && pb.every(r => r.category === 'Stock Purchase' && r.type === 'payment' && r.account === 'momo') && pb[0].amount + pb[1].amount === 465000 && pb.every(r => X.txnById(r.id)),
+      'paying Denis back books a Stock Purchase per stop, 465,000 from the account picked, on the phone at once');
+    t.check(!X.handoffs().some(h => h.id === 'h-own') && db.tb.buyer_handoffs.find(h => h.id === 'h-own').status === 'done', 'and the own-money hand-in is closed');
+    X.S.stack = [{ type: 'cashback', args: { id: 'h-loose', counted: 140000 } }];
+    await X.ACT['slide:cashback']();
+    const cb = db.writes.filter(w => w[1] === 'cash_txns').pop()[2];
+    t.check(cb.category === 'Cash Shortage' && cb.amount === 10000 && !X.looseCash().length, 'cash no round used, 10,000 short, is booked as a Cash Shortage and leaves the list');
+    X.S.user = { id: 'u9', email: 'turyasingurakevin94@gmail.com' };
+    t.check(X.greetName() === '' && !/turyasingurakevin94/.test(X.viewToday()), 'a login with no staff record is never greeted by its email handle');
+    X.S.user = { id: 'u1', email: 'sarah@shop.ug' };
     t.check(cashOk(), 'every cash line the treasurer writes is in a category the 0123 wall lets through');
   }
   /* ---------------- 7. the 19 Oct 2026 end-to-end test ---------------- */

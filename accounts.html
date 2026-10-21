@@ -1392,9 +1392,14 @@ function rowToDue(d){ return { id: d.id, kind: d.kind, refId: d.ref_id, period: 
   payments: (d.payload && Array.isArray(d.payload.payments)) ? d.payload.payments : [], absences: (d.payload && Array.isArray(d.payload.absences)) ? d.payload.absences : [], basis: (d.payload && d.payload.basis) || null,
   proposed: (d.payload && Array.isArray(d.payload.proposed)) ? d.payload.proposed : [] }; }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
-  cashGiven: r.cash_given == null ? null : Number(r.cash_given), cashCount: r.cash_count || null }; }
+  cashGiven: r.cash_given == null ? null : Number(r.cash_given), cashCount: r.cash_count || null, pay: r.pay && typeof r.pay === 'object' ? r.pay : null }; }
 function rowToPayAsk(x){ return ({ id: x.id, cashTxnId: Number(x.cash_txn_id), customerId: x.customer_id, quoteId: x.quote_id == null ? null : Number(x.quote_id), amount: Number(x.amount) || 0, what: x.what, want: x.want || {}, note: x.note || '', askedBy: x.asked_by, askedByName: x.asked_by_name || '', status: x.status, createdAt: x.created_at }); }
-function accHandoffs(rows){ return (rows || []).filter(h => h.kind === 'trip_cash' || h.kind === 'paper_bill').map(h => ({ id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, createdBy: h.created_by, createdAt: h.created_at })).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
+function accHandoff(h){ return { id: h.id, kind: h.kind, ref: h.ref, p: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneBy: h.done_by || null, doneAt: h.done_at || null, cashBack: h.cash_back || null }; }
+function accHandoffs(rows){ return (rows || []).filter(h => h.status === 'open' && (h.kind === 'trip_cash' || h.kind === 'paper_bill' || h.kind === 'own_money')).map(accHandoff).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))); }
+// Cash handed over that no round used (0151/0154): a done trip_cash from v 2 on, with no round and not counted back.
+function accLooseCash(rows){ return (rows || []).filter(h => h.kind === 'trip_cash' && h.status === 'done' && Number((h.payload || {}).v) >= 2 && !(h.payload || {}).round && !h.cash_back).map(accHandoff).sort((a, b) => String(a.doneAt || a.createdAt).localeCompare(String(b.doneAt || b.createdAt))); }
+// Open hand-offs for Accounts, and the trip cash handed over in the last 30 days (to find any no round used).
+function handoffQuery(){ return sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').or(`status.eq.open,and(kind.eq.trip_cash,status.eq.done,done_at.gte.${new Date(Date.now() - 30 * 864e5).toISOString()})`); }
 function rowToAsk(x){ return { id: x.id, quoteId: x.quote_id, customerId: x.customer_id, kind: x.kind, amount: Number(x.amount) || 0, lines: x.lines || [], reason: x.reason || '', status: x.status, askedBy: x.asked_by, createdAt: x.created_at, decidedAt: x.decided_at || null }; }
 
 
@@ -1417,7 +1422,7 @@ async function refreshLive(){
     selectAll('cash_txns', 'id', ['date', daysAgoISO(2)]),
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? null : r.data || [], () => null),
-    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').eq('status', 'open').then(r => r.error ? null : r.data || [], () => null),
+    handoffQuery().then(r => r.error ? null : r.data || [], () => null),
   ]);
   mergeQuotes(quotes);
   const list = D().cashTxns || [], at = new Map(list.map((t, i) => [Number(t.id), i]));
@@ -1425,7 +1430,7 @@ async function refreshLive(){
   D().cashTxns = list;
   if (asks) D().asks = asks.map(rowToAsk);
   if (payAsks) D().payAsks = payAsks.map(rowToPayAsk);
-  if (handoffs) D().handoffs = accHandoffs(handoffs);
+  if (handoffs) { D().handoffs = accHandoffs(handoffs); D().looseCash = accLooseCash(handoffs); }
   S.loadedAt = Date.now(); saveSnapshot();
 }
 async function loadAll(){
@@ -1455,8 +1460,8 @@ async function loadAll(){
     sb.from('invoice_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 120 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
     // Sales and the Manager asking for a payment to be corrected (0130). Absent before 0130.
     sb.from('payment_asks').select('*').eq('shop_id', S.shopId).gte('created_at', new Date(Date.now() - 60 * 864e5).toISOString()).then(r => r.error ? [] : r.data || [], () => []),
-    // What the Buyer passed on to Accounts and is still open (0125): a trip's cash, a supplier's paper bill. Absent before 0125.
-    sb.from('buyer_handoffs').select('*').eq('shop_id', S.shopId).eq('for_role', 'accounts').eq('status', 'open').then(r => r.error ? [] : r.data || [], () => []),
+    // What the Buyer passed on to Accounts (0125): open ones, and trip cash handed over lately (0154: cash no round used). Absent before 0125.
+    handoffQuery().then(r => r.error ? [] : r.data || [], () => []),
   ]);
   const stockMap = {}; (stockRows || []).forEach(x => { stockMap[x.key] = Number(x.qty) || 0; });
   const lotMap = {}; (lots || []).forEach(l => { const lot = { qty: Number(l.qty) || 0, cost: l.cost == null ? null : Number(l.cost) }; if (l.consign) lot.consign = l.consign; (lotMap[l.key] ||= []).push(lot); });
@@ -1490,7 +1495,7 @@ async function loadAll(){
     asks: (asks || []).map(rowToAsk),
     payAsks: (payAsks || []).map(rowToPayAsk),
     members: (membersR && membersR.data) || [],
-    handoffs: accHandoffs(handoffs),
+    handoffs: accHandoffs(handoffs), looseCash: accLooseCash(handoffs),
     cashTxns: txns.map(rowToTxn),
     cashDays,
     bills: bills.map(rowToBill),
@@ -1524,6 +1529,8 @@ const TASK_WORDS = {
 };
 function myStaff(){ return S.user ? (D().staff || []).find(s => s.userId && s.userId === S.user.id) || null : null; }
 function myName(){ const m = myStaff(); return (m && m.name) || (S.user && S.user.email ? S.user.email.split('@')[0] : 'You'); }
+// The name to greet: the staff record's, else the name on the login; never the email handle.
+function greetName(){ const m = myStaff(), md = (S.user && S.user.user_metadata) || {}; return firstWord((m && m.name) || md.full_name || md.name || ''); }
 function whoName(uid){
   if (!uid) return '';
   if (S.user && String(uid) === String(S.user.id)) return 'you';
@@ -2501,7 +2508,6 @@ function viewToday(){
   const carried = carriedOpening(t);
   if (pos.rec.openingSet && carried && ACCOUNTS.some(a => Math.round(carried.values[a.key]) !== Math.round(Number(pos.rec.opening[a.key]) || 0)))
     issues.push({ act: 'days', tone: 'warn', icon: 'book', title: 'Today didn’t open where yesterday ended', sub: 'check the opening in Days', fig: '' });
-  tripsToCount().forEach(g => { const st = (D().staff || []).find(s => String(s.id) === String(g.workerId)); issues.unshift({ act: 'trips', tone: 'warn', icon: 'truck', title: `${st ? firstWord(st.name) + '’s' : 'A'} trip is back · count its cash`, sub: `<span class="m">${g.trips.length}</span> stop${g.trips.length === 1 ? '' : 's'} · <span class="m">${n0(g.expected)}</span> should come back`, cta: 'Count' }); });
   // Asked to correct a payment (0130): who asked, what is wrong, what it should be.
   (D().payAsks || []).filter(x => x.status === 'sent' && txnById(x.cashTxnId)).forEach(x => { const tr = txnTrace(txnById(x.cashTxnId));
     issues.unshift({ act: 'payaskfix', id: x.id, tone: 'warn', icon: 'swap', title: `${firstWord(x.askedByName) || 'Sales'} asks: correct ${PAYASK_WHAT[x.what] || 'a payment'}`, sub: `${esc(tr.cust ? tr.cust.name : 'A payment')} · <span class="m">${n0(x.amount)}</span> · ${esc(payAskWant(x))}`, cta: 'Fix' }); });
@@ -2515,7 +2521,7 @@ function viewToday(){
   return `<div class="bx-hero" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
-        <span style="font-size:20px;font-weight:700;letter-spacing:-.01em" class="ell">${greeting()}, ${esc(firstWord(myName()))}</span>
+        <span style="font-size:20px;font-weight:700;letter-spacing:-.01em" class="ell">${greeting()}${greetName() ? ', ' + esc(greetName()) : ''}</span>
         <span style="font-size:13px;color:var(--navyInk);display:flex;align-items:center;gap:6px">${esc(dayLabel(t))} · <span class="m">${hm(Date.now())}</span><i class="bx-dot" style="width:3px;height:3px;background:#5C6788"></i><span style="color:var(--mint);display:inline-flex;align-items:center;gap:5px"><i class="bx-dot" style="background:var(--mint)"></i>Accounts</span></span>
       </div>
       <button class="bx-circle" data-act="invoices" aria-label="Find an invoice or a customer">${ic('search', 20)}</button>
@@ -2542,7 +2548,6 @@ function viewToday(){
         ${i.cta ? `<span class="bx-chip" style="height:34px;padding:0 14px;background:var(--navy);color:#fff;font-size:13px">${i.cta}</span>` : i.fig ? `<span class="m" style="font-size:15px;font-weight:600;${i.tone === 'bad' ? 'color:var(--crimson)' : ''}">${esc(i.fig)}</span>` : ''}</button>`).join('')}
       ${issues.length > 5 ? `<div class="bx-sub" style="text-align:center;padding:8px 0 10px">+ <span class="m">${issues.length - 5}</span> more on the Cash book</div>` : ''}</div>`
       : `<div class="bx-card" style="padding:16px;display:flex;align-items:center;gap:12px"><span class="bx-av" style="background:var(--greenSoft);color:var(--green)">${ic('tick', 20, 'style="stroke-width:2.6"')}</span><span class="bx-sub" style="font-size:13px">Every count agrees and every payment found its invoice.</span></div>`}
-    ${handoffCard()}
     <span style="font-size:13px;font-weight:700;color:var(--ink2);padding:4px 2px 0">Due</span>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
       ${dueTile('owedlate', lateInv, 'invoices past their terms', lateInv ? '<i class="bx-dot" style="width:8px;height:8px;background:var(--amber)"></i>' : '')}
@@ -2550,32 +2555,102 @@ function viewToday(){
       ${dueTile('invoices', notSent, 'of today’s invoices not sent', ic('send', 16, 'style="color:var(--ink2)"'))}
       ${dueTile('tab', dueBills.length, 'supplier bills due this week', dueSum ? `<span class="m" style="font-size:11px;font-weight:600;color:var(--ink2)">${(dueSum / 1e6).toFixed(1)}M</span>` : '', 'bills')}
     </div>
+    ${buyerSection()}
   </div>`;
 }
-/* ---- from the Buyer (buyer_handoffs, 0125) ----
-   The cash a trip needs (trip_cash: hand it over) and a supplier's paper
-   bill with its photo (paper_bill: record it on the supplier's bill).
-   Closing one sets status 'done'; the guard stamps who and when. */
+/* ---- from the Buyer (buyer_handoffs, 0125; own money and cash back, 0154) ----
+   What the Buyer passes on: the cash a trip needs (trip_cash: hand it over),
+   a supplier's paper bill with its photo (paper_bill: record it), a round
+   paid from their own pocket (own_money: pay them back), and cash handed
+   over that no round used (a done trip_cash with v 2 and no round: count it
+   back). Whether a stop was own money, and its receipt, is on the trip
+   (collection_trips.pay, the Buyer's 0151). Closing one sets status 'done';
+   the guard stamps who and when. */
 function handoffs(){ return (D().handoffs || []); }
-function handoffById(id){ return handoffs().find(h => String(h.id) === String(id)) || null; }
+function looseCash(){ return (D().looseCash || []); }
+function handoffById(id){ return handoffs().concat(looseCash()).find(h => String(h.id) === String(id)) || null; }
 // Who passed it on: the staff row whose login made it, by first name.
-function handoffBy(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? firstWord(st.name) : 'The Buyer'; }
+function handoffBy(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? firstWord(st.name) : (firstWord(h.p.buyer) || 'The Buyer'); }
+function handoffByFull(h){ const st = (D().staff || []).find(x => x.userId && String(x.userId) === String(h.createdBy)); return st ? st.name : (h.p.buyer || 'The Buyer'); }
 // A round of stops (the Buyer's Plan the round) is one ask: "Karddia, Roto +2 · 4 stops".
-function handoffSupplier(h){ if (Array.isArray(h.p.supplierIds) && h.p.supplierIds.length > 1) return (h.p.supplier || h.p.supplierIds.length + ' suppliers') + ' · ' + h.p.supplierIds.length + ' stops'; const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || 'a supplier'; }
+function handoffSupplier(h){ if (Array.isArray(h.p.supplierIds) && h.p.supplierIds.length > 1) return (h.p.supplier || h.p.supplierIds.length + ' suppliers') + ' · ' + h.p.supplierIds.length + ' stops'; const s = supplierById(h.p.supplierId); return (s && s.name) || h.p.supplier || h.p.for || 'a supplier'; }
 function handoffWhen(h){ const iso = String(h.createdAt || '').slice(0, 10); return iso === todayISO() ? hm(Date.parse(h.createdAt)) : shortDay(iso); }
-function handoffCard(){
-  const list = handoffs(); if (!list.length) return '';
-  return `<div class="bx-sec"><b style="font-size:17px">From the Buyer</b><span class="bx-chip" style="background:var(--amberSoft);color:var(--amberInk)"><span class="m">${list.length}</span> to do</span></div>
-    <div class="bx-card bx-list">${list.map(h => {
-      const Who = handoffBy(h), cash = h.kind === 'trip_cash';
-      const title = cash ? `${Who} needs cash · ${handoffSupplier(h)}` : `${handoffSupplier(h)}’s paper bill`;
-      const sub = cash ? `<span class="m">${n0(Number(h.p.amount) || 0)}</span>${h.p.for ? ' · for ' + esc(firstWord(h.p.for)) : ''} · ${esc(handoffWhen(h))}`
-        : `${h.p.billNo ? `no. <span class="m">${esc(h.p.billNo)}</span> · ` : ''}<span class="m">${n0(Number(h.p.total) || 0)}</span> · ${esc(Who)} · ${esc(handoffWhen(h))}`;
-      return `<div class="bx-row" id="ho_${esc(h.id)}" style="min-height:64px">
-        <span class="bx-av" style="width:38px;height:38px;background:var(--amberSoft);color:var(--amberInk)">${ic(cash ? 'cash' : 'doc', 19)}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(title)}</span><span class="bx-sub ell">${sub}</span></span>
-        ${!cash && h.p.photoPath ? `<button class="ac-open" data-act="hophoto" data-id="${esc(h.id)}" aria-label="Photo of their paper bill">${ic('cam', 16)}</button>` : ''}
-        <button class="bx-chip" data-act="${cash ? 'hocash' : 'horec'}" data-id="${esc(h.id)}" style="border:none;height:34px;padding:0 14px;background:var(--navy);color:#fff;font-size:13px">${cash ? 'Cash handed over' : 'Record it'}</button></div>`; }).join('')}</div>`;
+// What the Buyer's phone said about a stop (0151): { own, amount, receipt: 'photo' | 'none' }.
+function tripPay(t){ return t && t.pay && typeof t.pay === 'object' ? t.pay : null; }
+function tripOwn(t){ const p = tripPay(t); return !!(p && p.own); }
+function tripRoundOf(id){ const m = String(id || '').match(/^(TRIP-[A-Za-z0-9]+)-[0-9]+$/); return m ? m[1] : String(id || ''); }
+function roundTag(id){ return 'T-' + tripRoundOf(id).replace(/^TRIP-/, '').slice(-4).toUpperCase(); }
+function tripStopPaid(t){ const p = tripPay(t), a = p && Number(p.amount); return Math.round(a > 0 ? a : (t.lines || []).reduce((s, l) => s + tripLinePaid(l), 0)); }
+// The stops of an own-money hand-in: the ones it names, else its round's own-money stops.
+function ownStops(h){
+  const trips = D().trips || [], named = Array.isArray(h.p.stops) ? h.p.stops : [];
+  const fromTrip = (t, s) => ({ tripId: t ? t.id : s.tripId, t: t || null, supplierId: t ? t.supplierId : null,
+    name: (t && supplierById(t.supplierId) ? supplierById(t.supplierId).name : s && s.supplier) || 'Supplier',
+    amount: t && tripPay(t) ? tripStopPaid(t) : Number(s && s.amount) || 0, receipt: (t && tripPay(t) || {}).receipt || (s && s.receipt) || '' });
+  const list = named.length ? named.map(s => fromTrip(trips.find(x => String(x.id) === String(s.tripId)), s))
+    : trips.filter(t => h.p.round && tripRoundOf(t.id) === h.p.round && tripOwn(t)).map(t => fromTrip(t, null));
+  return list.filter(s => !(s.t && s.t.voided));
+}
+function ownTotal(h){ const s = ownStops(h); return s.length ? s.reduce((a, x) => a + x.amount, 0) : Math.round(Number(h.p.amount) || 0); }
+function looseAmount(h){ return Math.round(Number(h.p.amount) || 0); }
+function looseAt(h){ return h.doneAt || h.createdAt; }
+const STOP_COLS = ['#F5B26B', '#E3A9D3', '#B3BCD2', '#9BA3F0', '#8ED1A6'];
+// A stop's receipt, drawn: a photo of their paper, or none given (the amount stands).
+function receiptMark(kind){
+  return kind === 'photo' ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--green)">${ic('cam', 11, 'style="stroke-width:2.4"')}receipt · photo</span>`
+    : kind === 'none' ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--ink3)">${ic('doc', 11, 'style="stroke-width:2.2"')}no receipt · the amount stands</span>` : '';
+}
+function stopRow(i, col, name, sub, amt, last){
+  return `<div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 0;${last ? '' : 'border-bottom:1px dashed #E2DED6'}"><span style="width:22px;height:22px;border-radius:999px;background:${col};color:var(--navy);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i + 1}</span><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:600">${esc(name)}</span>${sub}</span><span class="m" style="font-size:14px;font-weight:600">${n0(amt)}</span></div>`;
+}
+
+/* ---- Today, below Due: what the Buyer passed on ---- */
+function buyerSection(){
+  const list = handoffs(), loose = looseCash(), groups = tripsToCount();
+  const own = list.filter(h => h.kind === 'own_money'), cashAsk = list.filter(h => h.kind === 'trip_cash'), papers = list.filter(h => h.kind === 'paper_bill');
+  // Stops on the rounds still waiting here that gave no receipt: nothing to record.
+  const noRec = groups.flatMap(g => g.trips.filter(t => (tripPay(t) || {}).receipt === 'none').map(t => ({ name: (supplierById(t.supplierId) || {}).name || 'Supplier', amount: tripStopPaid(t) })))
+    .concat(own.flatMap(h => ownStops(h).filter(s => s.receipt === 'none').map(s => ({ name: s.name, amount: s.amount }))));
+  const n = own.length + groups.length + loose.length + cashAsk.length + papers.length;
+  if (!n) return '';
+  const names = new Set(own.concat(loose, cashAsk, papers).map(handoffByFull).concat(groups.map(g => (staffById(g.workerId) || {}).name || 'The Buyer')));
+  const one = names.size === 1 ? [...names][0] : null, who = one ? firstWord(one) : 'the Buyer';
+  const back = groups.reduce((s, g) => s + Math.max(0, g.expected), 0) + loose.reduce((s, h) => s + looseAmount(h), 0), owe = own.reduce((s, h) => s + ownTotal(h), 0);
+  const ownN = own.reduce((s, h) => s + ownStops(h).length, 0);
+  const between = back + owe > 0 ? `<div class="bx-card" role="img" aria-label="Between you and ${esc(who)}: ${n0(back)} of the shop’s cash comes back; the shop pays back ${n0(owe)} of their own money" style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;color:var(--green)">COMES BACK TO US</span><span class="m" style="font-size:18px;font-weight:600;${back ? '' : 'color:var(--ink4)'}">${n0(back)}</span></span>
+        ${one ? avatar(one, 'buyer:' + one, 36, true) : ''}
+        <span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end"><span style="font-size:11px;font-weight:700;color:var(--amberInk)">WE PAY ${esc(one ? firstWord(one).toUpperCase() : 'THEM')} BACK</span><span class="m" style="font-size:18px;font-weight:600;${owe ? '' : 'color:var(--ink4)'}">${n0(owe)}</span></span>
+      </div>
+      <div style="display:grid;grid-template-columns:${back}fr 4px ${owe}fr;align-items:center;height:16px">
+        <span class="a-grow" style="display:flex;gap:2px;height:16px;border-radius:6px 0 0 6px;overflow:hidden;transform-origin:right">${groups.map(g => `<i style="flex:${Math.max(0, g.expected)};background:var(--mint)"></i>`).join('')}${loose.map(h => `<i style="flex:${looseAmount(h)};background:#A9E9CF"></i>`).join('')}</span>
+        <span style="height:24px;width:2px;justify-self:center;background:var(--ink);border-radius:2px"></span>
+        <span class="a-grow" style="display:flex;gap:2px;height:16px;border-radius:0 6px 6px 0;overflow:hidden">${own.flatMap(h => ownStops(h)).map((s, i) => `<i style="flex:${s.amount};background:${i % 2 ? '#F8CC9C' : 'var(--amber)'}"></i>`).join('')}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:600;color:var(--ink3)"><span class="ell">${groups.map(g => `${esc(roundTag(g.trips[0].id))} <span class="m">${n0(Math.max(0, g.expected))}</span>`).concat(loose.map(h => `${esc(hm(Date.parse(looseAt(h))))} <span class="m">${n0(looseAmount(h))}</span>`)).join(' · ') || 'nothing out'}</span><span style="white-space:nowrap">${ownN ? `own money · <span class="m">${ownN}</span> stop${ownN === 1 ? '' : 's'}` : 'nothing owed'}</span></div>
+    </div>` : '';
+  const todo = (act, id, icon, tint, ink, title, sub, cta, dark) => `<button class="bx-row" data-act="${act}" data-id="${esc(id)}" style="min-height:62px">
+      <span class="bx-av" style="width:38px;height:38px;background:${tint};color:${ink}">${ic(icon, 19)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="bx-t ell">${esc(title)}</span><span class="bx-sub ell">${sub}</span></span>
+      <span class="bx-chip" style="height:34px;padding:0 14px;background:${dark ? '#7A4A02' : 'var(--navy)'};color:#fff;font-size:13px">${cta}</span></button>`;
+  const rows = own.map(h => { const st = ownStops(h); return todo('payback', h.id, 'hand', 'var(--amberSoft)', 'var(--amberInk)', `Pay ${handoffBy(h)} back · own money`, `${esc(roundTag(st[0] ? st[0].tripId : h.p.round))} · <span class="m">${st.length}</span> stop${st.length === 1 ? '' : 's'} · <span class="m">${n0(ownTotal(h))}</span>`, 'Pay back', true); })
+    .concat(groups.map(g => todo('tripopen', g.key, 'truck', 'var(--greenSoft)', 'var(--green)', `${roundTag(g.trips[0].id)} is back · count its cash`, `<span class="m">${g.trips.length}</span> stop${g.trips.length === 1 ? '' : 's'} · <span class="m">${n0(g.expected)}</span> should come back`, 'Count')))
+    .concat(loose.map(h => todo('cashback', h.id, 'cash', 'var(--greenSoft)', 'var(--green)', `${n0(looseAmount(h))} no round used`, `handed over <span class="m">${esc(hm(Date.parse(looseAt(h))))}</span> · ${esc(handoffSupplier(h))}`, 'Count')))
+    .concat(cashAsk.map(h => todo('hocash', h.id, 'cash', 'var(--amberSoft)', 'var(--amberInk)', `${handoffBy(h)} needs cash · ${handoffSupplier(h)}`, `<span class="m">${n0(Number(h.p.amount) || 0)}</span>${h.p.for ? ' · for ' + esc(firstWord(h.p.for)) : ''} · ${esc(handoffWhen(h))}`, 'Cash handed over')));
+  // Their paper: a bill with its photo to record; an old "no receipt" hand-off to note; a stop with no receipt, nothing to do.
+  const face = photo => photo ? `<span aria-hidden="true" style="height:46px;border-radius:8px 8px 0 0;background:#fff;box-shadow:inset 0 0 0 1px #E2DED6;display:flex;flex-direction:column;gap:4px;padding:8px 8px 0;box-sizing:border-box;transform:rotate(-3deg)"><i style="height:4px;width:70%;border-radius:2px;background:var(--indigo)"></i><i style="height:3px;border-radius:2px;background:#E2DED6"></i><i style="height:3px;width:80%;border-radius:2px;background:#E2DED6"></i><i style="height:3px;border-radius:2px;background:#E2DED6"></i></span>`
+    : `<span aria-hidden="true" style="height:46px;border-radius:8px 8px 0 0;box-shadow:inset 0 0 0 1.5px #D9D4CB;background:repeating-linear-gradient(-45deg,transparent 0 6px,#EFECE6 6px 7px);display:flex;align-items:center;justify-content:center;color:var(--ink4)">${ic('doc', 18)}</span>`;
+  const tileText = (name, amt, foot, col) => `<span style="display:flex;flex-direction:column;gap:1px;padding:0 2px;text-align:left"><span class="ell" style="font-size:11px;font-weight:700">${esc(name)}</span><span class="m" style="font-size:11px;font-weight:600">${n0(amt)}</span><span style="font-size:10px;font-weight:700;color:${col}">${foot}</span></span>`;
+  const toRecord = papers.filter(h => !h.p.noReceipt), noted = papers.filter(h => h.p.noReceipt);
+  const tiles = toRecord.map(h => `<button data-act="horec" data-id="${esc(h.id)}" aria-label="${esc(handoffSupplier(h))}’s paper bill, ${n0(Number(h.p.total) || 0)}: record it" style="border:none;background:none;padding:0;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--ink)">${face(true)}${tileText(firstWord(handoffSupplier(h)), Number(h.p.total) || 0, 'Record', 'var(--navy)')}</button>`)
+    .concat(noted.map(h => `<button data-act="honoted" data-id="${esc(h.id)}" aria-label="${esc(handoffSupplier(h))}: no receipt, ${n0(Number(h.p.total) || 0)}. Mark it noted" style="border:none;background:none;padding:0;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--ink3)">${face(false)}${tileText(firstWord(handoffSupplier(h)), Number(h.p.total) || 0, 'Noted', 'var(--navy)')}</button>`))
+    .concat(noRec.map(s => `<div role="img" aria-label="${esc(s.name)}: no receipt, ${n0(s.amount)}. Nothing to record" style="min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--ink3)">${face(false)}${tileText(firstWord(s.name), s.amount, 'no receipt', 'var(--ink4)')}</div>`));
+  return `<div class="bx-sec" style="padding-top:6px"><b style="font-size:17px">From ${esc(one ? firstWord(one) + ' · the Buyer' : 'the Buyer')}</b><span class="bx-chip" style="background:var(--amberSoft);color:var(--amberInk)"><span class="m">${rows.length + toRecord.length + noted.length}</span> to do</span></div>
+    ${between}
+    ${rows.length ? `<div class="bx-card bx-list">${rows.join('')}</div>` : ''}
+    ${tiles.length ? `<div style="display:flex;align-items:baseline;justify-content:space-between;padding:4px 2px 0"><span style="font-size:13px;font-weight:700;color:var(--ink2)">Their paper${toRecord.length ? ` · <span class="m">${toRecord.length}</span> to record` : ''}</span>${noRec.length || noted.length ? '<span style="font-size:12px;font-weight:600;color:var(--ink3)">no receipt: nothing to record</span>' : ''}</div>
+    <div class="bx-card" style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(58px,1fr);gap:8px;padding:12px 12px 10px;overflow-x:auto">${tiles.join('')}</div>` : ''}`;
 }
 // Close a hand-off: only its status changes (0125 guard). Throws when nothing was closed.
 async function handoffDone(id){
@@ -2591,6 +2666,15 @@ ACT.hocash = async t => {
     FEEL.stamp(); toast(`Handed over · ${who} is told`); render(); }
   catch (e) { await afterFail(e); } finally { S.busy = false; }
 };
+// An old "no receipt" paper bill (before 0151): nothing to record, so it is noted and closed.
+ACT.honoted = async t => {
+  const h = handoffById(t.dataset.id); if (!h || !needTask('bill.record') || S.busy) return;
+  try { S.busy = true; await handoffDone(h.id);
+    logDecision('bill.record', `${handoffSupplier(h)}: no receipt, ${n0(Number(h.p.total) || 0)} noted`, { amount: Number(h.p.total) || null, ref: { table: 'buyer_handoffs', id: h.id } });
+    FEEL.tick(); toast('Noted · the amount stands'); render(); }
+  catch (e) { await afterFail(e); } finally { S.busy = false; }
+};
+ACT.tripopen = t => { FEEL.open(); push('tripcash', { key: t.dataset.id }); };
 // The record-a-bill screen, filled from the Buyer's paper: the supplier, their number, the photo, what it totals.
 function handoffBillArgs(h){ const s = supplierById(h.p.supplierId);
   return { ...(s ? { sid: s.id } : {}), hid: h.id, ref: String(h.p.billNo || '').trim(), photo: h.p.photoPath || null, paperTotal: Number(h.p.total) || 0, tripId: h.p.tripId || null }; }
@@ -2599,6 +2683,117 @@ ACT.hophoto = async t => {
   const h = handoffById(t.dataset.id); if (!h || !h.p.photoPath) return;
   try { const { data, error } = await sb.storage.from('bill-photos').createSignedUrl(h.p.photoPath, 3600); if (error) throw error; window.open(data.signedUrl, '_blank'); }
   catch (e) { toast(isNetworkError(e) ? 'No connection — try the photo again.' : 'The photo did not open: ' + (e.message || e)); }
+};
+
+/* ---- pay the Buyer back: their own money, stop by stop (buyer_payback, 0154) ---- */
+ACT.payback = t => { const h = handoffById(t.dataset.id); if (!h) return; FEEL.open(); push('payback', { id: h.id }); };
+function stopBills(s){
+  const orders = new Set(((s.t && s.t.lines) || []).map(l => Number(l.orderId)).filter(Boolean));
+  return (D().bills || []).filter(b => !b.voided && String(b.supplierId) === String(s.supplierId) && orders.has(Number(b.quoteId)));
+}
+PAGE.payback = a => {
+  const h = handoffById(a.id);
+  if (!h || h.kind !== 'own_money') return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-empty" style="padding-top:28vh"><b>Paid back</b><br><button class="bx-btn ghost" style="flex:none;margin:0 auto" data-act="back">Back</button></div></div>`;
+  const st = ownStops(h), total = ownTotal(h), full = handoffByFull(h), first = firstWord(full) || 'The Buyer';
+  a.acct = a.acct || 'cash';
+  const books = st.map(s => ({ s, bills: stopBills(s) }));
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">Own money · ${esc(roundTag(st[0] ? st[0].tripId : h.p.round))} · handed in <span class="m">${esc(handoffWhen(h))}</span></span><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Pay ${esc(first)} back</span></span>${closeBtn()}</div>
+      <div style="display:flex;align-items:center;gap:10px">${avatar(full, 'buyer:' + full, 36, true)}<span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${esc(full)}</span><span style="font-size:12px;color:#B3BCD2">paid <span class="m">${st.length}</span> stop${st.length === 1 ? '' : 's'} on their own money</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:10px;font-weight:700;color:var(--amber)">WE OWE</span><span class="m" style="font-size:17px;font-weight:600">${n0(total)}</span></span></div>
+      <div role="img" aria-label="${n0(total)}: ${esc(st.map(s => s.name + ' ' + n0(s.amount)).join(', '))}" style="display:flex;height:20px;gap:2px;border-radius:6px;overflow:hidden">${st.map((s, i) => `<i class="a-grow" style="flex:${s.amount};background:${STOP_COLS[(i + 3) % STOP_COLS.length]};animation-delay:${(.1 + i * .14).toFixed(2)}s"></i>`).join('')}</div>
+    </div>
+    <div class="bx-body">
+      <div class="bx-slip"><div class="bx-slip-in">
+        <div class="ac-sliphead"><span>FROM ${esc(poss(first).toUpperCase())} POCKET</span><span style="font-weight:600;color:var(--ink3);letter-spacing:0">no shop cash went</span></div>
+        ${st.map((s, i) => stopRow(i, STOP_COLS[(i + 3) % STOP_COLS.length], s.name, receiptMark(s.receipt), s.amount, i === st.length - 1)).join('')}
+        <div class="ac-sliptotal"><span>We owe ${esc(first)}</span><span class="m">${n0(total)}</span></div>
+      </div></div>
+      <div class="bx-card" role="img" aria-label="In the book: ${st.length} Stock Purchase line${st.length === 1 ? '' : 's'} out of ${esc(ACCT_WORD[a.acct] || 'cash')}; the orders’ bills marked paid by the trip" style="display:grid;grid-template-columns:minmax(0,1.35fr) 14px minmax(0,1fr);align-items:center;gap:6px;padding:10px 12px">
+        <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink3)">CASH BOOK</span>${st.map(s => `<span style="display:flex;justify-content:space-between;gap:6px;font-size:12px;font-weight:600"><span class="ell">Stock Purchase</span><span class="m" style="color:var(--crimson)">−${n0(s.amount)}</span></span>`).join('')}</span>
+        <span style="color:var(--ink4);display:flex;justify-content:center">${ic('arrow', 16)}</span>
+        <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink3)">THEIR BILLS</span>${books.map(x => `<span style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;font-weight:600"><span class="ell">${esc(firstWord(x.s.name))}</span>${x.bills.length ? `<span style="display:inline-flex;align-items:center;gap:3px;color:var(--green)">${ic('tick', 11, 'style="stroke-width:3"')}paid</span>` : '<span style="color:var(--ink3);white-space:nowrap">when billed</span>'}</span>`).join('')}</span>
+      </div>
+    </div>
+    <div class="bx-dock">
+      <span style="font-size:12px;font-weight:600;color:#B3BCD2">Pay ${esc(first)} from</span>
+      ${acctPicker('payacct', a.acct, -total, { needs: true, label: 'Pay from' })}
+      ${slideHTML('payback', `Slide to pay ${first} ${n0(total)}`, 'out', { amber: true, disabled: !total || afterAcct(a.acct, -total) < 0 || !can('trip.cash') })}
+      ${logLine(`${first} sees it paid · the owner sees it in the log`)}</div>
+  </div>`;
+};
+ACT.payacct = t => { if (t.getAttribute('aria-disabled') === 'true') return; topArgs().acct = t.dataset.v; FEEL.tick(); render(); };
+ACT['slide:payback'] = async () => {
+  const a = topArgs(), h = handoffById(a.id); if (!h || !needTask('trip.cash') || S.busy) return render();
+  const st = ownStops(h), first = handoffBy(h);
+  // One write (0154 buyer_payback): a Stock Purchase line per stop from the
+  // account picked, the orders' bills paid by the trip, the stops marked paid
+  // back, the hand-off closed, the owner's log line.
+  try { S.busy = true;
+    const r = await sb.rpc('buyer_payback', { p_shop_id: S.shopId, p_handoff_id: h.id, p_account: a.acct || 'cash' });
+    if (r.error) throw r.error;
+    const res = r.data || {};
+    (res.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    (res.paidTxns || []).forEach(x => { const t = (D().trips || []).find(y => String(y.id) === String(x.tripId)); if (t) t.cashCount = { own: true, paidBack: x.amount, cashTxnId: x.cashTxnId }; });
+    (res.bills || []).forEach(x => { const b = (D().bills || []).find(y => String(y.id) === String(x.id)); if (b) { b.amountPaid = (Number(b.amountPaid) || 0) + (Number(x.amount) || 0); b.payments = (b.payments || []).concat([{ date: todayISO(), amount: Number(x.amount) || 0, note: 'Paid on trip', via: 'trip' }]); } });
+    D().handoffs = handoffs().filter(x => String(x.id) !== String(h.id));
+    booksChanged(); FEEL.kaching();
+    toast(`Paid ${first} back ${n0(Number(res.total) || ownTotal(h))} · ${st.length} stop${st.length === 1 ? '' : 's'} in the book`, 5000); pop(); }
+  catch (e) { toast(failWord(e), 7000); render(); } finally { S.busy = false; }
+};
+
+/* ---- cash handed over that no round used: it comes back (buyer_cash_back, 0154) ---- */
+ACT.cashback = t => { const h = handoffById(t.dataset.id); if (!h) return; FEEL.open(); push('cashback', { id: h.id }); };
+PAGE.cashback = a => {
+  const h = looseCash().find(x => String(x.id) === String(a.id));
+  if (!h) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card"><div class="bx-empty" style="padding-top:28vh"><b>Counted back</b><br><button class="bx-btn ghost" style="flex:none;margin:0 auto" data-act="back">Back</button></div></div>`;
+  const full = handoffByFull(h), first = firstWord(full) || 'The Buyer', given = looseAmount(h), at = hm(Date.parse(looseAt(h)));
+  const by = whoName(h.doneBy) || 'Accounts', counted = a.counted == null ? null : a.counted, diff = counted == null ? 0 : counted - given;
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
+    <div class="bx-sheethead"><span class="bx-grip"></span>
+      <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">Handed over <span class="m">${esc(at)}</span> · by ${esc(by)}</span><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">Cash no round used</span></span>${closeBtn()}</div>
+      <div style="display:flex;align-items:center;gap:10px">${avatar(full, 'buyer:' + full, 36, true)}<span style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${esc(full)}</span><span style="font-size:12px;color:#B3BCD2">for ${esc(handoffSupplier(h))} · <span class="m">0</span> stops</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-size:10px;font-weight:700;color:var(--navyInk2)">GIVEN</span><span class="m" style="font-size:17px;font-weight:600">${n0(given)}</span></span></div>
+      <div role="img" aria-label="Of ${n0(given)} given: nothing paid at any stop, all of it comes back" style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;height:20px;border-radius:6px;overflow:hidden"><i class="a-grow" style="flex:1;background:var(--mint)"></i></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk2)"><span>paid at the stops <b class="m" style="color:#fff">0</b></span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--mint)"></i>back</span></div>
+      </div>
+    </div>
+    <div class="bx-body">
+      <div class="bx-card" role="list" aria-label="What happened to it" style="padding:4px 14px">
+        <div role="listitem" style="display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;padding:10px 0;border-bottom:1px solid #F1EEE8;align-items:center"><span style="width:22px;height:22px;border-radius:999px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center">${ic('out', 12, 'style="stroke-width:2.4"')}</span><span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600">Handed to ${esc(first)}</span><span class="bx-sub">out of cash · by ${esc(by)}</span></span><span style="display:flex;flex-direction:column;align-items:flex-end"><span class="m" style="font-size:14px;font-weight:600">${n0(given)}</span><span class="m" style="font-size:11px;color:var(--ink3)">${esc(at)}</span></span></div>
+        <div role="listitem" style="display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;padding:10px 0;align-items:center"><span style="width:22px;height:22px;border-radius:999px;box-shadow:inset 0 0 0 2px #D9D4CB"></span><span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600;color:var(--ink2)">No round used it</span><span class="bx-sub">no stop paid from it · not on a hand-in</span></span><span class="m" style="font-size:14px;font-weight:600;color:var(--ink4)">0</span></div>
+      </div>
+      <div class="bx-slip"><div class="bx-slip-in">
+        <div class="ac-sliphead"><span>THIS CASH</span><span style="font-weight:600;color:var(--ink3);letter-spacing:0">with ${esc(first)} since <span class="m">${esc(at)}</span></span></div>
+        <div class="ac-sliptotal"><span>Should come back</span><span class="m">${n0(given)}</span></div>
+      </div></div>
+      <div class="bx-card" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+        <label style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:600;color:var(--ink3)">You counted</span><input id="cb_cnt" data-ch="cashbackcount" inputmode="numeric" aria-label="Cash that came back" placeholder="count it" value="${counted == null ? '' : n0(counted)}" style="width:100%;border:none;outline:none;background:transparent;padding:0;font-family:var(--mono);font-size:24px;font-weight:600;color:var(--ink)"></label>
+        ${counted == null ? '' : Math.abs(diff) < 1 ? `<span class="bx-chip" style="height:30px;padding:0 12px;background:var(--greenSoft);color:var(--green)">${ic('tick', 12, 'style="stroke-width:3"')}Agrees</span>` : `<span class="bx-chip" style="height:30px;padding:0 12px;background:${diff < 0 ? 'var(--crimsonSoft);color:var(--crimson)' : 'var(--amberSoft);color:var(--amberDeep)'}">${diff < 0 ? 'Short' : 'Over'}&#160;<span class="m">${n0(Math.abs(diff))}</span></span>`}
+        <button class="bx-sq" data-act="cashbackrecount" aria-label="Recount" style="width:44px;height:44px;border-radius:14px;background:var(--soft);box-shadow:none">${ic('refresh', 18)}</button>
+      </div>
+    </div>
+    <div class="bx-dock">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:#B3BCD2"><span>Into the cash drawer · <b class="m" style="color:#fff">${counted == null ? '—' : n0(counted)}</b></span><span>${Math.abs(diff) >= 1 ? (diff < 0 ? 'short' : 'over') + ' booked like a close' : 'nothing to book but the cash'}</span></div>
+      ${slideHTML('cashback', counted == null ? 'Count what came back' : 'Slide to take in ' + n0(counted), 'in', { amber: true, disabled: counted == null || !can('trip.cash') })}
+      ${logLine(counted != null && Math.abs(diff) >= 1 ? `${managerName()[0].toUpperCase() + managerName().slice(1)} is told the ${n0(Math.abs(diff))} · the owner sees it in the log` : 'It agrees · the owner sees it in the log')}</div>
+  </div>`;
+};
+ACT['ch:cashbackcount'] = t => { topArgs().counted = parseMoney(t.value); FEEL.tick(); render(); };
+ACT.cashbackrecount = () => { topArgs().counted = null; render(); const el = document.getElementById('cb_cnt'); if (el) el.focus(); };
+ACT['slide:cashback'] = async () => {
+  const a = topArgs(), h = looseCash().find(x => String(x.id) === String(a.id)); if (!h || a.counted == null || !needTask('trip.cash') || S.busy) return render();
+  const counted = Math.round(a.counted), diff = counted - looseAmount(h);
+  // One write (0154 buyer_cash_back): the difference booked like a close
+  // difference, the handover marked counted back, the owner's log line.
+  try { S.busy = true;
+    const r = await sb.rpc('buyer_cash_back', { p_shop_id: S.shopId, p_handoff_id: h.id, p_counted: counted });
+    if (r.error) throw r.error;
+    ((r.data || {}).cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
+    D().looseCash = looseCash().filter(x => String(x.id) !== String(h.id));
+    booksChanged(); (Math.abs(diff) >= 1 ? FEEL.short : FEEL.yes)();
+    toast(`Taken in · ${n0(counted)}${Math.abs(diff) >= 1 ? ` · ${n0(Math.abs(diff))} ${diff < 0 ? 'short' : 'over'} booked` : ' · it agrees'}`, 5000); pop(); }
+  catch (e) { toast(failWord(e), 7000); render(); } finally { S.busy = false; }
 };
 function dueTile(act, n, words, mark, v){
   return `<button data-act="${act}" ${v ? `data-v="${v}"` : ''} class="bx-card" style="border:none;text-align:left;padding:12px;display:flex;flex-direction:column;gap:6px;color:var(--ink)"><span style="display:flex;align-items:center;justify-content:space-between"><span class="m" style="font-size:22px;font-weight:600;${n ? '' : 'color:var(--ink4)'}">${n}</span>${mark || ''}</span><span style="font-size:12px;font-weight:600;line-height:1.3;color:var(--ink2)">${words}</span></button>`;
@@ -5198,7 +5393,7 @@ const TREASURER_TASKS = ['finance.see', 'day.open', 'cash.expense', 'cash.income
 Object.assign(TASK_WORDS, {
   'finance.see': 'Every report', 'day.open': 'Openings · reopen a day', 'cash.expense': 'Expenses', 'cash.income': 'Other money in',
   'cash.transfer': 'Move money', 'payment.edit': 'Correct a payment', 'promise.record': 'Record promises to pay', 'bill.record': 'Record a supplier bill',
-  'consign.settle': 'Settle consignors', 'agent.pay': 'Pay agents', 'trip.cash': 'Count a trip’s cash', 'payroll.run': 'Wages and rent',
+  'consign.settle': 'Settle consignors', 'agent.pay': 'Pay agents', 'trip.cash': 'Count a trip’s cash · pay the Buyer back', 'payroll.run': 'Wages and rent',
   'loan.edit': 'Loans', 'asset.edit': 'Assets',
 });
 // The console's categories, exactly (index.html 44776 / 44783 / 136230).
@@ -6310,7 +6505,7 @@ ACT['slide:agentsettle'] = async () => {
 function tripsToCount(){
   return memo('tripsToCount', '', () => {
     const groups = new Map();
-    (D().trips || []).filter(t => !t.voided && t.cashGiven != null && !t.cashCount && (t.status === 'collected' || t.status === 'confirmed') && String(t.assignedWorkerId) !== '__supplier__').forEach(t => {
+    (D().trips || []).filter(t => !t.voided && t.cashGiven != null && !t.cashCount && !tripOwn(t) && (t.status === 'collected' || t.status === 'confirmed') && String(t.assignedWorkerId) !== '__supplier__').forEach(t => {
       const k = t.assignedWorkerId + '|' + String(t.collectedAt || '').slice(0, 10);
       const g = groups.get(k) || { key: k, workerId: t.assignedWorkerId, trips: [], given: 0, paid: 0, at: t.collectedAt };
       g.trips.push(t); g.given += Number(t.cashGiven) || 0; g.paid += (t.lines || []).reduce((s, l) => s + tripLinePaid(l), 0);
@@ -6330,6 +6525,11 @@ PAGE.tripcash = a => {
   const cols = ['#F5B26B', '#E3A9D3', '#B3BCD2', '#9BA3F0', '#8ED1A6'];
   const stops = g.trips.map((t, i) => ({ t, i, name: supplierById(t.supplierId) ? supplierById(t.supplierId).name : 'Supplier', paid: Math.round((t.lines || []).reduce((s, l) => s + tripLinePaid(l), 0)), col: cols[i % cols.length], lines: (t.lines || []).filter(l => tripLineGot(l) != null).length }));
   const back = counted == null ? Math.max(0, g.expected) : Math.max(0, Math.min(counted, g.expected)), missing = counted == null ? 0 : Math.max(0, -diff);
+  // Stops this buyer paid on their own money are not in this count: they are paid back (0154).
+  const own = handoffs().filter(h => h.kind === 'own_money' && who && who.userId && String(h.createdBy) === String(who.userId));
+  const ownNote = own.map(h => { const st = ownStops(h); return `<button data-act="payback" data-id="${esc(h.id)}" style="border:none;text-align:left;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-radius:14px;background:#FFF6EC;box-shadow:inset 0 0 0 1px rgba(245,178,107,.45)">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:12px;font-weight:700;color:#7A4A02">Not in this count · their own money</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--amberDeep)">${esc(st.map(x => x.name).join(', '))} · <span class="m">${n0(ownTotal(h))}</span></span></span>
+        <span style="height:30px;padding:0 12px;border-radius:999px;background:#7A4A02;color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px">Pay back${ic('chev', 12, 'style="stroke-width:2.4"')}</span></button>`; }).join('');
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">${esc(g.trips.map(t => t.id).slice(0, 2).join(' · '))}${g.trips.length > 2 ? ' …' : ''} · back <span class="m">${esc(g.at ? new Date(g.at).toTimeString().slice(0, 5) : '')}</span></span><span style="font-size:22px;font-weight:700;letter-spacing:-.02em">The trip’s cash</span></span>${closeBtn()}</div>
@@ -6342,7 +6542,7 @@ PAGE.tripcash = a => {
     <div class="bx-body">
       <div class="bx-slip"><div class="bx-slip-in">
         <div class="ac-sliphead"><span>PAID AT EACH STOP</span><span style="font-weight:600;color:var(--ink3);letter-spacing:0">from ${esc(firstWord(nm))}’s trip</span></div>
-        ${stops.map(s => `<div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #E2DED6"><span style="width:22px;height:22px;border-radius:999px;background:${s.col};color:var(--navy);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${s.i + 1}</span><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:600">${esc(s.name)}</span><span style="font-size:11px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:4px">${ic('tick', 11, 'style="stroke-width:3.2"')}<span class="m">${s.lines}</span> line${s.lines === 1 ? '' : 's'} answered</span></span><span class="m" style="font-size:14px;font-weight:600">${n0(s.paid)}</span></div>`).join('')}
+        ${stops.map(s => `<div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #E2DED6"><span style="width:22px;height:22px;border-radius:999px;background:${s.col};color:var(--navy);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${s.i + 1}</span><span style="min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:14px;font-weight:600">${esc(s.name)}</span>${tripPay(s.t) && tripPay(s.t).receipt ? receiptMark(tripPay(s.t).receipt) : `<span style="font-size:11px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:4px">${ic('tick', 11, 'style="stroke-width:3.2"')}<span class="m">${s.lines}</span> line${s.lines === 1 ? '' : 's'} answered</span>`}</span><span class="m" style="font-size:14px;font-weight:600">${n0(s.paid)}</span></div>`).join('')}
         <div class="ac-sliptotal"><span>Should come back</span><span class="m">${n0(g.expected)}</span></div>
       </div></div>
       <div class="bx-card" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
@@ -6350,6 +6550,7 @@ PAGE.tripcash = a => {
         ${counted == null ? '' : Math.abs(diff) < 1 ? `<span class="bx-chip" style="height:30px;padding:0 12px;background:var(--greenSoft);color:var(--green)">${ic('tick', 12, 'style="stroke-width:3"')}Agrees</span>` : `<span class="bx-chip" style="height:30px;padding:0 12px;background:${diff < 0 ? 'var(--crimsonSoft);color:var(--crimson)' : 'var(--amberSoft);color:var(--amberDeep)'}">${diff < 0 ? 'Short' : 'Over'}&#160;<span class="m">${n0(Math.abs(diff))}</span></span>`}
         <button class="bx-sq" data-act="triprecount" aria-label="Recount" style="width:44px;height:44px;border-radius:14px;background:var(--soft);box-shadow:none">${ic('refresh', 18)}</button>
       </div>
+      ${ownNote}
       ${all.length > 1 ? `<div style="display:flex;gap:6px;overflow-x:auto">${all.map(x => `<button class="bx-chip" data-act="tripgroup" data-v="${esc(x.key)}" style="border:none;height:30px;padding:0 10px;${x === g ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${esc(firstWord((staffById(x.workerId) || {}).name || 'Trip'))} · <span class="m">${shortM(x.expected)}</span></button>`).join('')}</div>` : ''}
     </div>
     <div class="bx-dock">
