@@ -3701,7 +3701,8 @@ PAGE.trips = () => {
 function roundKey(sids){ return sids.map(String).sort().join(','); }
 function roundCashAsk(sids){
   const key = roundKey(sids), trips = D().collectionTrips || [];
-  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && !(h.payload || {}).round && roundKey((h.payload && h.payload.supplierIds) || []) === key && isoOf(h.createdAt) === todayISO()
+  // Cash Accounts has already counted back (0153 cash_back) is no round's any more.
+  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && !(h.payload || {}).round && h.cashBack == null && roundKey((h.payload && h.payload.supplierIds) || []) === key && isoOf(h.createdAt) === todayISO()
     && !trips.some(t => !t.voided && key.split(',').includes(String(t.supplierId)) && msOf(t.createdAt) > msOf(h.createdAt))).slice(-1)[0] || null;
 }
 function roundCashHTML(runs, given, who){
@@ -5225,7 +5226,7 @@ async function passOn(kind, forRole, ref, payload){
   return row;
 }
 function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at, heldBy: r.held_by || null, heldAt: r.held_at || null, forLine: r.for_line || null }; }
-function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at }; }
+function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at, cashBack: h.cash_back == null ? null : h.cash_back }; }
 function handoffsFor(kind, ref){ return (D().handoffs || []).filter(h => h.kind === kind && (ref == null || String(h.ref) === String(ref)) && h.status !== 'withdrawn'); }
 async function closeHandoff(id, status){
   const r = await sb.from('buyer_handoffs').update({ status }).eq('shop_id', S.shopId).eq('id', id);
