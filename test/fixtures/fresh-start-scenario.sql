@@ -134,7 +134,7 @@ select _c(not exists (select 1 from stock s, nw where s.shop_id = nw.id) and not
   'no stock, cash, orders, supplier bills, loans or debt history come across');
 select _c((select count(*) from stock where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 1
   and (select count(*) from saved_quotes where shop_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 1, 'and none of it leaves the old shop');
-select _c((select n from done where what = 'LEFT: customers owing') = 1 and (select note from done where what = 'LEFT: customers owing') like '%2410000%',
+select _c((select n from done where what = 'LEFT: customers owing') = 1 and (select note from done where what = 'LEFT: customers owing') like '%2,410,000%',
   'the report says who owed what in the old books, to confirm');
 select _c((select n from done where what = 'LEFT: stock lines') = 1 and (select n from done where what = 'LEFT: team logins') = 2, 'and how much stock and how many logins are left to move');
 select _c(exists (select 1 from wa_numbers where phone_number_id = 'pn-1' and shop_id = 'aaaaaaaa-0000-0000-0000-000000000001')

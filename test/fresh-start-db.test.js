@@ -58,5 +58,16 @@ rows.forEach((l) => {
   t.check(verdict === 'PASS', label);
 });
 
+/* The staging rehearsal (tools/staging-rehearsal.js), on this database
+   after the scenario: it must clean up after itself, run the runbook's
+   steps on its made-up shop, and pass its own checks, twice running. */
+for (const pass of ['first', 'second']) {
+  const r = spawnSync(process.execPath, [path.join(__dirname, '..', 'tools', 'staging-rehearsal.js')],
+    { env: { ...process.env, OW_PG: `${conn} dbname=${db}`, GITHUB_STEP_SUMMARY: '' }, encoding: 'utf8' });
+  t.check(r.status === 0 && /Every check passed/.test(r.stdout), `the staging rehearsal passes its own checks, ${pass} time (${((r.stderr || '') + (r.stdout.match(/❌.*$/m) || [''])[0]).trim().slice(0, 200) || 'ok'})`);
+}
+const practice = onDb(['-qAt', '-c', "select count(*) from shops where name like 'Mukasa Hardware (practice%'"]);
+t.check(practice.stdout.trim() === '2', 'and a second rehearsal replaces the first rather than adding to it');
+
 psql(['-qAt', '-c', `drop database if exists ${db}`]);
 process.exit(t.done() ? 1 : 0);

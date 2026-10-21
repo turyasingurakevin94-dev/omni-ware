@@ -214,7 +214,7 @@ begin
 
     -- What is left behind, and what to do about it. Read from the old shop.
     select count(*), coalesce(sum(debt), 0) into c, tot from customers where shop_id = p_from and debt > 0;
-    out := out || jsonb_build_object('what', 'LEFT: customers owing', 'n', c, 'note', 'the old books say ' || tot || ' in all: the Manager confirms each with the customer and enters it (Manager app, To collect)');
+    out := out || jsonb_build_object('what', 'LEFT: customers owing', 'n', c, 'note', 'the old books say ' || to_char(tot, 'FM999,999,999,990') || ' in all: the Manager confirms each with the customer and enters it (Manager app, To collect)');
     select count(*) into c from purchase_invoices where shop_id = p_from;
     out := out || jsonb_build_object('what', 'LEFT: supplier bills', 'n', c, 'note', 'ask each supplier for a statement; enter it as their opening balance');
     select count(*) into c from stock where shop_id = p_from and coalesce(qty, 0) <> 0;

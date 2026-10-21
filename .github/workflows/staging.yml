@@ -12,11 +12,15 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: What to push to the staging project
+        description: What to push to the staging project (rehearse = push the schema, then practise a fresh start on a made-up shop)
         type: choice
         default: both
-        options: [both, schema, functions]
+        options: [both, schema, functions, rehearse]
         required: true
+      owner_email:
+        description: For rehearse, your staging login's email, so you can open the practice shops on the staging site (optional)
+        type: string
+        required: false
 
 jobs:
   staging:
@@ -83,7 +87,7 @@ jobs:
         run: supabase link --project-ref "$STAGING_PROJECT_REF" --password "$STAGING_DB_PASSWORD"
 
       - name: Push the schema
-        if: ${{ inputs.what == 'both' || inputs.what == 'schema' }}
+        if: ${{ inputs.what == 'both' || inputs.what == 'schema' || inputs.what == 'rehearse' }}
         run: supabase db push --password "$STAGING_DB_PASSWORD"
 
       # All eighteen at once, which is only safe because config.toml now
@@ -94,7 +98,18 @@ jobs:
         if: ${{ inputs.what == 'both' || inputs.what == 'functions' }}
         run: supabase functions deploy
 
+      # A dress rehearsal of docs/fresh-start.md on a made-up shop
+      # (tools/staging/sample-shop.sql): the preview, the copy, the move,
+      # each checked against the database. The script refuses the live
+      # project by name too, and fails the run on any failed check.
+      - name: Practise a fresh start
+        if: ${{ inputs.what == 'rehearse' }}
+        env:
+          OWNER_EMAIL: ${{ inputs.owner_email }}
+        run: node tools/staging-rehearsal.js
+
       - name: What now
+        if: ${{ inputs.what != 'rehearse' }}
         run: |
           echo "### Staging project updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

@@ -131,6 +131,18 @@ function managerPage(rpcs, tasks){
   })().catch((e) => { t.fail('the Manager\'s opening balance: ' + e.message); });
 }
 
+/* ---------------- 6. the staging rehearsal never touches the live shop ---------------- */
+{
+  const { spawnSync } = require('child_process');
+  const path = require('path');
+  const env = { ...process.env, STAGING_PROJECT_REF: 'hgywjaifdmgrcnwxstxg', SUPABASE_ACCESS_TOKEN: 'x', OW_PG: '' };
+  const r = spawnSync(process.execPath, [path.join(__dirname, '..', 'tools', 'staging-rehearsal.js')], { env, encoding: 'utf8' });
+  t.check(r.status === 1 && /LIVE project/.test(r.stderr), 'the staging rehearsal refuses the live project by name, before any request');
+  const wf = read('.github/workflows/staging.yml');
+  t.check(/options: \[both, schema, functions, rehearse\]/.test(wf) && /if: \$\{\{ inputs\.what == 'rehearse' \}\}\n\s+env:\n\s+OWNER_EMAIL: \$\{\{ inputs\.owner_email \}\}\n\s+run: node tools\/staging-rehearsal\.js/.test(wf)
+    && wf.indexOf('Refuse to touch the live project') < wf.indexOf('Practise a fresh start'), 'the Set up staging button can practise it, after its own guard on the live project');
+}
+
 /* ---------------- 4. a shared photo is never removed from the other shop ---------------- */
 {
   const removed = [];
