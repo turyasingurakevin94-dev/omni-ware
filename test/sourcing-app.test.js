@@ -84,7 +84,7 @@ const consoleSrc = read('sourcing-console.js');
   // How many DIFFERENT people asked, and the same-name join.
   const customers = [{ id: 'C1', name: 'Kato' }];
   const lead = { requests: [{ customerId: 'C1' }, { customerId: 'C1' }, { phone: '0772 100 100' }, { phone: '+256772100100' }, { customerName: 'Walk-in Ann' }, {}] };
-  const mine = compileScope(['phoneDigits', 'sourcingPhoneKey', 'leadDistinctAskers'].map(n => fnOf(html, n, 'sourcing.html')), {}, ['leadDistinctAskers']);
+  const mine = compileScope(['phoneDigits', 'sourcingPhoneKey', 'reqIsClient', 'leadDistinctAskers'].map(n => fnOf(html, n, 'sourcing.html')), {}, ['leadDistinctAskers']);
   const theirs = compileScope(['sourcingPhoneKey', 'leadDistinctAskers'].map(n => fnOf(admin, n, 'index.html')), { data: { customers } }, ['leadDistinctAskers']);
   t.check(mine.leadDistinctAskers(lead) === theirs.leadDistinctAskers(lead), `distinct askers agree with the console (${mine.leadDistinctAskers(lead)})`);
   const leads = [{ id: 'A', name: 'Valley flashing 3m' }, { id: 'B', name: 'Gutter bracket PVC', voided: true }, { id: 'C', name: 'Gutter bracket PVC' }];
@@ -166,7 +166,9 @@ t.check(/supabase\/functions|next_row_id_blocks/.test(html) && html.includes("sb
   const steps = extractFunction(html, 'huntSteps', 'sourcing.html');
   t.check(/leadResearch\(l\)\.meta/.test(steps) && /hold/.test(steps) && /sample/.test(steps) && !/saveLead|sb\.from/.test(steps), 'a hunt\'s seven steps are read from the record (its hold and sample), never written');
   const jobs = extractFunction(html, 'nextJobs', 'sourcing.html');
-  t.check(/todaysShare\(\)/.test(jobs) && /leadTold\(l\)/.test(jobs) && /quoteLeft\(c\)/.test(jobs) && /fixesOpen\(\)/.test(jobs), 'Today\'s next jobs come from the hunts, today\'s prices, clients to tell, lapsing quotes and the Buyer\'s fixes');
+  t.check(/todaysShare\(\)/.test(jobs) && /leadTold\(l\)/.test(jobs) && /bNext\(l\)/.test(jobs) && /nx\.lapsed/.test(jobs) && /fixesOpen\(\)/.test(jobs), 'Today\'s next jobs come from each hunt\'s one next move (bNext, lapsed quotes folded in), today\'s prices, clients to tell and the Buyer\'s fixes');
+  t.check(!/daysSince\(l\.graduatedAt\) <= 30/.test(jobs) && !/const lapsing/.test(jobs), 'Round 6: a client still to tell reaches Today however long ago; lapsed quotes are never a second row');
+  t.check(/quoteLeft\(f\.best\) < 0/.test(extractFunction(html, 'bNext', 'sourcing.html')), 'Round 6: a lapsed best quote is the hunt\'s next move everywhere');
   const edit = extractFunction(html, 'saveProductDetails', 'sourcing.html');
   t.check(!/markup/i.test(edit.replace(/\/\/.*$/gm, '')) && /logDecision\('product\.edit'/.test(edit), 'editing an item\'s details never writes a markup, and is logged under product.edit');
 }
@@ -270,10 +272,61 @@ if (!chromium) {
     const dlg = h.querySelector('[role=dialog]'), n = dlg ? dlg.querySelectorAll('button[aria-pressed]').length : 0;
     const inp = dlg.querySelector('input'); inp.value = 'kiseka'; inp.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 200));
     const hits = [...h.querySelectorAll('[role=dialog] button[aria-pressed]')]; const one = hits.length;
-    hits[0].click(); await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 450)); hits[0].click(); await new Promise(r => setTimeout(r, 200));
     return { noSelect, n, one, closed: !h.querySelector('[role=dialog]'), save: (h.querySelector('[data-why]') || {}).textContent };
   });
   t.check(picker.noSelect && picker.n >= 3 && picker.one === 1 && picker.closed && /Kiseka/.test(picker.save), `Log a price: Someone else opens a searchable picker and picks (${JSON.stringify(picker)})`);
+  // Round 6 (the click-through review): one move per hunt, numbers that agree, nothing lost.
+  const r6 = await page.evaluate(async () => {
+    const out = {};
+    const jobs = nextJobs().filter(j => j.lead);
+    const ids = jobs.map(j => j.lead.id);
+    out.onePerHunt = new Set(ids).size === ids.length;
+    out.sameMove = jobs.filter(j => j.kind !== 'chase' && j.kind !== 'tell').every(j => j.verb === bNext(j.lead).word + ':');
+    out.noLapseRows = !nextJobs().some(j => j.kind === 'lapse' && !j.lead);
+    out.spotted = reqIsClient({ source: 'spotted' }) === false && reqIsClient({ source: 'spotted', customerName: 'Ann' }) === true && reqIsClient({ source: 'sales' }) === true;
+    out.near = dNameNear('Maria Building', 'Maria Building Materials') && !dNameNear('Mariam Traders', 'Maria Building Materials');
+    out.shop = (() => { const was = S.shopName; S.shopName = 'Omni-ware (old records)'; const w = publicShopName(); S.shopName = was; return w; })();
+    out.comparable = priceComparable({ unit: 'ctn' }) === false && priceComparable({ unit: 'ctn', packQty: 12, packUnit: 'carton' }) && priceComparable({ unit: 'pc' });
+    // A "new" price typed the same is a check: the owner's log says "still".
+    const r = D().prices.find(x => priceRowTiers(x).length);
+    window.SX_WRITES.length = 0;
+    await confirmPrice(r, priceRowTiers(r).map(t => ({ ...t })), 'phone');
+    const logw = window.SX_WRITES.find(w => w.table === 'decision_log');
+    out.sameLog = logw ? String((logw.row && (logw.row.what || (Array.isArray(logw.row) && logw.row[0].what))) || '') : '';
+    return out;
+  });
+  t.check(r6.onePerHunt && r6.sameMove, `Round 6: Today has one row per hunt, with the same move as the Pipeline and the hunt (${JSON.stringify(r6)})`);
+  t.check(r6.noLapseRows, 'Round 6: a lapsed quote is never a second Today row');
+  t.check(r6.spotted, 'Round 6: a hunt started from something seen counts no client');
+  t.check(r6.near, 'Round 6: "Maria Building" is caught as Maria Building Materials; "Mariam Traders" is not');
+  t.check(r6.shop === 'Omni-ware', `Round 6: suppliers read the shop's name without "(old records)" (${r6.shop})`);
+  t.check(r6.comparable, 'Round 6: a carton price with no count is never "cheapest"');
+  t.check(/still/.test(r6.sameLog) && !/→/.test(r6.sameLog), `Round 6: the same figure saved as "new" logs a check, not a change (${r6.sameLog})`);
+  // Decide: no weights, one name for "per client".
+  await page.evaluate(() => { A.tab('Hunts'); A.go('Decide', { leadId: 'SRC-007' }); });
+  await page.waitForTimeout(200);
+  const dec = await page.evaluate(() => document.getElementById('sx_screen').innerText);
+  t.check(!/×\d/.test(dec) && !/Special order/.test(dec) && !/Sure: \w+ · \d/.test(dec), 'Round 6: Decide shows no weights, no "Special order", no bare "sure %"');
+  // Log a price: closing after typing asks first.
+  await page.evaluate(() => { A.tab('Hunts'); A.go('Hunt', { leadId: 'SRC-007' }); A.go('Quote', { leadId: 'SRC-007' }); });
+  await page.waitForTimeout(200);
+  const leave = await page.evaluate(async () => {
+    const h = document.getElementById('sx_screen');
+    mounted.comp.setState({ price: 1234 }); await new Promise(r => setTimeout(r, 100));
+    h.querySelector('a[aria-label="Close"]').click(); await new Promise(r => setTimeout(r, 150));
+    const asked = !!h.querySelector('[role=dialog][aria-label="Leave without saving?"]') && h.getAttribute('data-screen') === 'Quote';
+    [...h.querySelectorAll('button')].find(b => /Discard it/.test(b.textContent)).click(); await new Promise(r => setTimeout(r, 150));
+    return { asked, after: document.getElementById('sx_screen').getAttribute('data-screen') };
+  });
+  t.check(leave.asked && leave.after === 'Hunt', `Round 6: Log a price asks before throwing a typed price away, then goes back where it came from (${JSON.stringify(leave)})`);
+  // ✕ goes back where it was opened from, even when drawn towards a tab.
+  const backTo = await page.evaluate(async () => {
+    A.tab('Main'); const sid = D().suppliers[0].id; A.go('Supplier', { supplierId: sid }); await new Promise(r => setTimeout(r, 120));
+    const a = [...document.querySelectorAll('#sx_screen a[data-back]')][0]; a.click(); await new Promise(r => setTimeout(r, 120));
+    return document.getElementById('sx_screen').getAttribute('data-screen');
+  });
+  t.check(backTo === 'Main', `Round 6: a supplier opened from Today closes back to Today (${backTo})`);
   // One write, end to end: "Still right" on today's share confirms the row and logs it.
   await page.evaluate(() => A.tab('Prices'));
   await page.waitForTimeout(200);

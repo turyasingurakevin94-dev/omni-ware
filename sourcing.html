@@ -1011,9 +1011,19 @@ function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId ===
 function myName(){ const s = myStaff(); return (s && s.name) || (S.user && S.user.email ? S.user.email.split('@')[0] : 'You'); }
 // A person's name to greet or sign with: the staff row's, else the name on
 // the login; never the email (an owner without a staff row has none).
-function myPersonName(){ const s = myStaff(); if (s && s.name) return s.name; const m = (S.user && S.user.user_metadata) || {}; return String(m.full_name || m.name || '').trim(); }
+// The name you go by in messages: the one you set on Profile, else the
+// staff list's unless it is only the email's first part, else the login's.
+function myPersonName(){
+  const m = (S.user && S.user.user_metadata) || {}, set = String(m.display_name || '').trim();
+  if (set) return set;
+  const s = myStaff(), local = String((S.user && S.user.email) || '').split('@')[0].toLowerCase();
+  if (s && s.name && !(local && String(s.name).trim().toLowerCase() === local)) return s.name;
+  return String(m.full_name || m.name || '').trim();
+}
+// The shop's name as a supplier should read it: no bracketed note (“(old records)”).
+function publicShopName(){ return String(S.shopName || '').replace(/\s*[([][^)\]]*[)\]]\s*/g, ' ').trim() || 'the shop'; }
 // "this is <name> from <the shop>" -- or just the shop when no name is known.
-function signWord(){ const n = myPersonName(); return n ? `this is ${n} from ${S.shopName || 'the shop'}` : `this is ${S.shopName || 'the shop'}`; }
+function signWord(){ const n = myPersonName(); return n ? `this is ${n} from ${publicShopName()}` : `this is ${publicShopName()}`; }
 function customerById(id){ return D().customers.find(c => String(c.id) === String(id)) || null; }
 function supplierById(id){ return D().suppliers.find(s => String(s.id) === String(id)) || null; }
 function productById(id){ return D().products.find(p => String(p.id) === String(id)) || null; }
@@ -1053,10 +1063,17 @@ function leadMeta(l){
 }
 function sourcingPhoneKey(phone){ return phoneDigits(phone); }
 // index.html leadDistinctAskers
+// A request that is a client asking. A hunt started from something seen
+// (at a supplier, or a rival's price) carries a request for its date and
+// source but nobody asked: it counts no client and no demand (Round 6).
+function reqIsClient(r){
+  if (!r || r.withdrawn || r.noClient) return false;
+  return !(r.source === 'spotted' && !r.customerId && !String(r.phone || '').trim() && !String(r.customerName || '').trim());
+}
 function leadDistinctAskers(l){
   const seen = new Set();
   ((l && l.requests) || []).forEach((r, i) => {
-    if (r.withdrawn) return;
+    if (!reqIsClient(r)) return;
     const phone = sourcingPhoneKey(r.phone), name = String(r.customerName || '').trim().toLowerCase();
     if (r.customerId) seen.add('c:' + String(r.customerId));
     else if (phone) seen.add('p:' + phone);
@@ -1070,14 +1087,14 @@ function askerName(r){ const typed = String((r && r.customerName) || '').trim();
 function leadAskers(l){
   const rows = [], idx = {};
   ((l && l.requests) || []).forEach(r => {
-    if (r.withdrawn) return;
+    if (!reqIsClient(r)) return;
     const k = r.customerId ? 'c:' + r.customerId : sourcingPhoneKey(r.phone) ? 'p:' + sourcingPhoneKey(r.phone) : askerName(r).toLowerCase();
     if (idx[k] == null) { idx[k] = rows.length; rows.push({ key: k, name: askerName(r), qty: Number(r.qty) || 0, source: r.source || 'sourcing', at: r.at, customerId: r.customerId || null, phone: r.phone || '', reqs: [r] }); }
     else { const x = rows[idx[k]]; x.qty += Number(r.qty) || 0; x.reqs.push(r); if (msOf(r.at) > msOf(x.at)) x.at = r.at; }
   });
   return rows;
 }
-function leadDemandQty(l){ return ((l && l.requests) || []).filter(r => !r.withdrawn).reduce((s, r) => s + (Number(r.qty) || 0), 0); }
+function leadDemandQty(l){ return ((l && l.requests) || []).filter(reqIsClient).reduce((s, r) => s + (Number(r.qty) || 0), 0); }
 function leadFirstAskedAt(l){ const t = ((l && l.requests) || []).map(r => msOf(r.at)).filter(Boolean); return t.length ? Math.min(...t) : msOf(l && l.createdAt); }
 // index.html candidateTiers / candidateHasPrice / leadFacts
 function candidateTiers(c){
@@ -1728,7 +1745,9 @@ async function confirmPrice(r, newTiers, how){
   const d = deriveWholesaleRetail(tiers, r.packQty);
   const next = { ...r, tiers, wholesale: d.wholesale, retail: d.retail, date: todayISO(), priceSource: 'confirmed', lastAskedAt: null };
   await savePrice(next);
-  const moved = newTiers && JSON.stringify(before.tiers) !== JSON.stringify(tiers);
+  // Moved only when a figure moved: a "new" price typed the same is a check, not a change.
+  const fig = (xs) => JSON.stringify((xs || []).map(t => [Number(t.minQty) || 1, Number(t.price) || 0]));
+  const moved = !!newTiers && fig(before.tiers) !== fig(tiers);
   const sup = supplierById(r.supplierId);
   await logDecision('price.confirm', moved ? `${priceRowName(r)} at ${sup ? sup.name : r.supplierId}: ${n0(before.tiers[0] && before.tiers[0].price)} → ${n0(tiers[0].price)}` : `${priceRowName(r)} at ${sup ? sup.name : r.supplierId} still ${n0(tiers[0].price)}`,
     { amount: tiers[0].price, ref: { table: 'prices', id: r.id }, before, after: { tiers, how: how || 'in person' } });
@@ -1777,7 +1796,7 @@ function knownWord(k){
 }
 // The same "clients waiting" everywhere: different people across the open hunts.
 function clientKey(r){ return r.customerId ? 'c:' + r.customerId : phoneDigits(r.phone) ? 'p:' + phoneDigits(r.phone) : 'n:' + askerName(r).toLowerCase(); }
-function clientsWaiting(leads){ const set = new Set(); (leads || openLeads()).forEach(l => (l.requests || []).forEach(r => { if (!r.withdrawn) set.add(clientKey(r)); })); return set.size; }
+function clientsWaiting(leads){ const set = new Set(); (leads || openLeads()).forEach(l => (l.requests || []).forEach(r => { if (reqIsClient(r)) set.add(clientKey(r)); })); return set.size; }
 
 /* ---------------- what next ----------------
    Round 3 of the canvas ("Today, led by your next jobs", "A hunt's way to
@@ -1801,6 +1820,7 @@ const HUNT_ICON = {
   tell: 'M4 5h16v11H9l-5 4zM9 10.5l2 2 4-4', prices: 'M11.6 3.2H5.4a2.2 2.2 0 0 0-2.2 2.2v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.2-6.2a2 2 0 0 0 0-2.8L13 3.8a2 2 0 0 0-1.4-.6z',
   lapse: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 7.5V12l3 2', chase: 'M4 5h16v11H9l-5 4zM9 10h6',
   fix: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z',
+  photo: 'M4 8h3l2-3h6l2 3h3v11H4zM12 9.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7',
 };
 // The seven steps of one hunt, each done or not, and which is next.
 function huntSteps(l){
@@ -1819,7 +1839,7 @@ function huntSteps(l){
   const staged = STAGES.indexOf(l.status) >= STAGES.indexOf('sourced');
   const firstAsked = asked.map(c => msOf(c.askedAt || c.quotedAt || c.at)).filter(Boolean);
   const names = (list) => list.map(c => firstWord(candName(c))).filter(Boolean);
-  const holdWord = { stock: 'stock it', small: 'a small first batch', special: 'special order only', pass: 'not stocking it' };
+  const holdWord = { stock: 'stock it', small: 'per client', special: 'per client', pass: 'not stocking it' };
   const steps = [
     { title: askers.length ? `Asked for by ${askers.length}` : 'Asked for', sub: (askers.map(a => firstWord(a.name)).join(', ') || 'no client named') + (known.stock > 0 ? ` · ${n0(known.stock)} in stock` : ''), done: true },
     asked.length ? { title: `${plural(asked.length, 'supplier')} asked`, done: true, sub: names(asked).slice(0, 3).join(', ') + (asked.length > 3 ? ` +${asked.length - 3}` : '') + (firstAsked.length ? ' · ' + dayWord(isoOf(new Date(Math.min(...firstAsked)).toISOString())) : ''), href: 'AskSuppliers', word: 'Ask suppliers' }
@@ -1847,26 +1867,37 @@ function nextJobs(){
   const d = D(), lim = stageLimits(), jobs = [];
   const late = (l) => { const days = leadDaysInStage(l), limit = lim[l.status] || 0; return { days, limit, over: limit ? Math.max(0, days - limit) : 0 }; };
   openLeads().forEach(l => {
-    const h = huntSteps(l), k = h.next; if (k < 0) return;
-    const step = h.steps[k], people = leadDistinctAskers(l), t = late(l), sx = h.sx;
-    const waiting = plural(people, 'client') + ' waiting';
-    if (k === 1) {
-      const kw = knownWord(h.known), seller = h.known.sellers[0];
-      if (h.staged) jobs.push({ kind: 'record', score: 90 + people * 5 + t.over * 3, verb: 'Add who has it for', obj: l.name, sub: `marked ${STAGE_WORD[l.status]}, no supplier recorded` + (kw ? ' · ' + kw : ''), href: 'Quote', sx, word: 'Add', ...t, lead: l });
-      else if (seller) jobs.push({ kind: 'ask', score: 100 + people * 10 + t.over * 5, verb: `Ask ${firstWord(seller.sup.name)} about`, obj: l.name, sub: `${kw} · ${waiting}`, href: 'AskSuppliers', sx, word: 'Ask', ...t, lead: l, seller });
-      else jobs.push({ kind: 'ask', score: 100 + people * 10 + t.over * 5, verb: 'Ask suppliers for', obj: l.name, sub: waiting + (h.known.stock > 0 ? ` · ${n0(h.known.stock)} in stock` : ' · no supplier asked yet'), href: 'AskSuppliers', sx, word: 'Ask', ...t, lead: l });
+    // A request nobody has started on is a chance (aChances), not yet a job.
+    if (l.status === 'asked' && !leadSuppliers(l).length) return;
+    const nx = bNext(l), people = leadDistinctAskers(l), t = late(l);
+    const waiting = people ? plural(people, 'client') + ' waiting' : 'nobody waiting yet';
+    const base = { obj: l.name, sx: nx.sx, ...t, lead: l, nx };
+    if (nx.who === 'sup') {
+      // Chased only when the hunt is late, so Today never says "chase" while the hunt says "on time".
+      if (t.over > 0) jobs.push({ ...base, kind: 'chase', score: 40 + people * 3 + t.over * 3, verb: `Chase ${nx.word.replace(/ to answer$/, '')}:`, sub: `${waiting} · ${plural(t.over, 'day')} late`, href: 'Hunt', sx: JSON.stringify({ leadId: l.id }), word: 'Open' });
+      return;
     }
-    else if (k === 2) {
-      const since = Math.max(0, ...leadSuppliers(l).map(c => msOf(c.askedAt)).filter(Boolean));
-      if (since && daysSince(new Date(since).toISOString()) >= 2) jobs.push({ kind: 'chase', score: 40 + people * 3 + t.over * 3, verb: 'Chase replies for', obj: l.name, sub: `${plural(h.asked, 'supplier')} asked ${agoWord(new Date(since).toISOString())} · no price yet`, href: 'Hunt', sx, word: 'Open', ...t, lead: l });
-    } else if (k === 3) {
-      const word = { 'See the verdict': 'Decide', 'Get a sample': 'Sample', 'The sample': 'Sample', 'Drop it': 'Drop' }[step.word] || 'Open';
-      const verb = step.title === 'Decide: stock it?' ? 'Decide: stock' : step.title + ':';
-      jobs.push({ kind: 'decide', score: 55 + people * 3 + t.over * 3, verb, obj: l.name + (step.title === 'Decide: stock it?' ? '?' : ''), sub: `${plural(h.priced, 'quote')} in · ${waiting}`, href: step.href, sx, word, ...t, lead: l });
+    if (nx.who !== 'me') return;
+    const verb = nx.word + ':';
+    if (nx.lapsed) {
+      const names = nx.lapsed.map(c => firstWord(candName(c))).filter(Boolean);
+      jobs.push({ ...base, kind: 'lapse', score: 78 + people * 4 + t.over * 3, verb, sub: `${names.slice(0, 3).join(', ')}${names.length > 3 ? ' +' + (names.length - 3) : ''} · then decide · ${waiting}`, href: nx.href, word: 'Re-check' });
+    } else if (nx.href === 'AskSuppliers') {
+      const seller = leadKnown(l).sellers[0];
+      jobs.push({ ...base, kind: 'ask', score: 100 + people * 10 + t.over * 5, verb, sub: waiting + (seller ? ' · ' + knownWord(leadKnown(l)) : ''), href: nx.href, word: 'Ask', seller });
+    } else if (nx.href === 'Quote') {
+      jobs.push({ ...base, kind: 'quote', score: 90 + people * 5 + t.over * 3, verb, sub: waiting + (nx.cand ? ` · ${candName(nx.cand)} has it` : ''), href: nx.href, word: nx.word });
+    } else if (nx.photo) {
+      jobs.push({ ...base, kind: 'photo', score: 50 + people * 3 + t.over * 3, verb, sub: waiting, href: 'Hunt', word: 'Add a photo' });
+    } else if (nx.href === 'PriceIt' || nx.href === 'AddItem') {
+      jobs.push({ ...base, kind: 'list', score: 60 + people * 3 + t.over * 3, verb, sub: waiting, href: nx.href, word: nx.href === 'PriceIt' ? 'Price' : 'List' });
+    } else {
+      const v = nx.href === 'Decide' ? leadVerdict(l) : null, priced = leadSuppliers(l).filter(c => candidateHasPrice(c) && !c.noStock).length;
+      jobs.push({ ...base, kind: 'decide', score: 55 + people * 3 + t.over * 3, verb, sub: `${plural(priced, 'quote')} in · ${waiting}`, href: nx.href, word: nx.href === 'Decide' ? 'Decide' : (nx.step && nx.step.word) || 'Open', v });
     }
-    else if (k === 4 || k === 5) jobs.push({ kind: 'list', score: 60 + people * 3 + t.over * 3, verb: k === 4 ? 'Price' : 'Put in the catalogue:', obj: l.name, sub: waiting, href: step.href, sx, word: k === 4 ? 'Price' : 'List', ...t, lead: l });
   });
-  d.leads.filter(l => !l.voided && l.status === 'listed' && daysSince(l.graduatedAt) <= 30).forEach(l => {
+  // Every hunt on the shelf with someone still to tell, however long ago (the Pipeline lists them too).
+  d.leads.filter(l => !l.voided && l.status === 'listed').forEach(l => {
     const t = leadTold(l); if (t.left <= 0) return;
     const who = leadAskers(l).map(a => firstWord(a.name)).slice(0, 2).join(', ');
     jobs.push({ kind: 'tell', score: 80 + t.left * 5, verb: `Tell ${t.left} it's on the shelf`, obj: '', sub: l.name + (who ? ' · ' + who : ''), href: 'TellAsked', sx: JSON.stringify({ leadId: l.id }), word: 'Tell', lead: l });
@@ -1876,17 +1907,7 @@ function nextJobs(){
     const oldest = share.today.filter(x => !x.done).map(x => x.age).reduce((a, b) => a === null || b === null ? null : Math.max(a, b), 0);
     jobs.push({ kind: 'prices', score: 70, verb: `Confirm ${share.left} more ${share.left === 1 ? 'price' : 'prices'}`, obj: '', sub: oldest === null ? 'one has no date' : `oldest ${oldest}d`, href: 'Prices', sx: '{}', word: 'Check', share });
   }
-  const lapsing = {};
-  openLeads().filter(l => l.status === 'sourced' || l.status === 'priced').forEach(l => leadSuppliers(l).forEach(c => {
-    if (!candidateHasPrice(c) || c.noStock || !c.supplierId || !supplierById(c.supplierId)) return;
-    const left = quoteLeft(c); if (left > 1) return;
-    const k = String(c.supplierId); (lapsing[k] = lapsing[k] || []).push({ l, left });
-  }));
-  Object.keys(lapsing).forEach(sid => {
-    const xs = lapsing[sid].sort((a, b) => a.left - b.left), s = supplierById(sid), first = xs[0];
-    const when = first.left < 0 ? 'lapsed' : first.left === 0 ? 'lapses today' : 'lapses tomorrow';
-    jobs.push({ kind: 'lapse', score: 75 - first.left * 5, verb: `Re-check ${firstWord(s.name)}'s ${xs.length > 1 ? xs.length + ' quotes' : 'quote'}`, obj: '', sub: first.l.name, warn: when, href: 'Supplier', sx: JSON.stringify({ supplierId: s.id }), word: 'Ask' });
-  });
+  // Lapsed quotes are each hunt's own move now (bNext), never a second row.
   // The Buyer's fixes to a supplier's details (buyer_handoffs sourcing_fix).
   if (typeof fixesOpen === 'function') fixesOpen().forEach(h => {
     const sup = supplierById(fixSupplierId(h)); if (!sup) return;
@@ -1898,6 +1919,14 @@ function nextJobs(){
 }
 // What was done today, for the day bar: prices confirmed, quotes logged,
 // suppliers asked, clients told, items listed.
+// The day's total, counted once (the first time Today opens that day) so
+// the bar never grows as you work; what comes in later waits for tomorrow.
+function dayTotal(now, doneN){
+  const key = 'ow-sourcing-day:' + S.shopId + ':' + todayISO();
+  let first = 0;
+  try { first = Number(localStorage.getItem(key)) || 0; if (!first && now) localStorage.setItem(key, String(now)); } catch (_e) {}
+  return Math.max(first || now, doneN);
+}
 function doneToday(){
   const d = D(), today = todayISO(), me = S.user && S.user.id, on = (t) => !!t && isoOf(t) === today;
   const prices = d.log.filter(x => x.task === 'price.confirm' && on(x.at) && (!me || x.by === me)).length;
@@ -2004,8 +2033,12 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   let props = {};
   try { props = a.dataset.sx ? JSON.parse(a.dataset.sx) : {}; } catch (_e) {}
-  if (TABS.includes(m[1]) && !a.dataset.push) A.tab(m[1]);
-  else if (a.dataset.back !== undefined || (S.stack.length > 1 && S.stack[S.stack.length - 2].name === m[1] && /back/i.test(a.getAttribute('aria-label') || ''))) A.back();
+  // A close or back goes back to wherever the screen was opened from --
+  // checked before the tabs, or a ✕ drawn towards "Suppliers" lands on
+  // that tab instead of the supplier it came from (Round 6).
+  if ((a.dataset.back !== undefined && S.stack.length > 1) || (S.stack.length > 1 && S.stack[S.stack.length - 2].name === m[1] && /back/i.test(a.getAttribute('aria-label') || ''))) A.back();
+  else if (TABS.includes(m[1]) && !a.dataset.push) A.tab(m[1]);
+  else if (a.dataset.back !== undefined) A.replace(m[1], props);
   else A.go(m[1], props);
 });
 
@@ -2822,7 +2855,14 @@ function bNext(l, four){
   const f = four || bFour(l), waiting = bWaiting(l);
   const wait = () => ({ who: 'sup', word: `${bNames(waiting)} to answer`, href: 'Quote', sx: JSON.stringify({ leadId: l.id, candId: waiting[0].id }) });
   if (!f.who) return waiting.length ? wait() : { who: 'me', word: 'Ask who has it', href: 'AskSuppliers', sx };
-  if (!f.price) return waiting.length ? wait() : { who: 'me', word: 'Log a price', href: 'Quote', sx: JSON.stringify({ leadId: l.id, candId: f.has[0].id }) };
+  if (!f.price) return waiting.length ? wait() : { who: 'me', word: `Log ${firstWord(candName(f.has[0])) || 'their'}’s price`, href: 'Quote', sx: JSON.stringify({ leadId: l.id, candId: f.has[0].id }), cand: f.has[0] };
+  // A lapsed best quote is re-checked before anything else is decided on
+  // it -- the same move on Today, the Pipeline and the hunt (Round 6).
+  const lapsed = f.priced.filter(c => quoteLeft(c) < 0);
+  if (f.best && quoteLeft(f.best) < 0) {
+    const c = lapsed.includes(f.best) ? f.best : lapsed[0];
+    return { who: 'me', word: lapsed.length > 1 ? `Re-check ${lapsed.length} lapsed quotes` : `Re-check ${firstWord(candName(c))}’s lapsed quote`, href: 'Quote', sx: JSON.stringify({ leadId: l.id, candId: c.id }), lapsed, cand: c };
+  }
   if (!f.pack) { const c = f.best || f.priced[0]; return { who: 'me', word: `Log ${firstWord(candName(c))}’s packing`, href: 'Quote', sx: JSON.stringify({ leadId: l.id, candId: c.id }) }; }
   if (!f.photo) return { who: 'me', word: 'Add a photo', href: 'Hunt', sx, photo: true };
   const h = huntSteps(l), k = h.next;
@@ -2886,10 +2926,12 @@ SCREENS.AskSuppliers = {
     <sc-if value="{{ has }}">
     <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px">
       <div class="n-in" style="flex: none; padding: 12px; border-radius: 20px; background: linear-gradient(160deg, #E9F3EC, #DDEDE3); display: flex; flex-direction: column; gap: 6px">
-        <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #0F6B43"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"></path></svg>ONE MESSAGE, EACH SUPPLIER</span>
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #0F6B43"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"></path></svg>ONE MESSAGE, EACH SUPPLIER<button type="button" onClick="{{ editMsg }}" class="pill" style="margin-left: auto; height: 26px; background: #FFFFFF; color: #1C2233; letter-spacing: 0">{{ editWord }}</button></span>
         <span style="align-self: flex-end; max-width: 94%; display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 14px 4px 14px 14px; background: #FFFFFF">
           <sc-if value="{{ hasPhoto }}"><span role="img" aria-label="The photo they will see" style="{{ photo }}"></span></sc-if>
-          <span style="padding: 2px 6px 4px; font-size: 13px; line-height: 1.45; color: #3B4566; white-space: pre-line">{{ msgA }}<b style="color: #1C2233">{{ msgItem }}</b>{{ msgB }}<b class="m" style="color: #1C2233">{{ msgQty }}</b>{{ msgC }}<b style="color: #1C2233">how it is packed</b>{{ msgD }}</span>
+          <sc-if value="{{ msgPlain }}"><span style="padding: 2px 6px 4px; font-size: 13px; line-height: 1.45; color: #3B4566; white-space: pre-line">{{ msgA }}<b style="color: #1C2233">{{ msgItem }}</b>{{ msgB }}<b class="m" style="color: #1C2233">{{ msgQty }}</b>{{ msgC }}<b style="color: #1C2233">how it is packed</b>{{ msgD }}</span></sc-if>
+          <sc-if value="{{ msgOwn }}"><span style="padding: 2px 6px 4px; font-size: 13px; line-height: 1.45; color: #3B4566; white-space: pre-line">{{ msgText }}</span></sc-if>
+          <sc-if value="{{ msgEditing }}"><textarea aria-label="The message each supplier gets" onInput="{{ typeMsg }}" rows="6" style="width: 100%; box-sizing: border-box; border: none; border-radius: 10px; background: #F4F1EC; padding: 8px 10px; font-family: inherit; font-size: 13px; line-height: 1.45; color: #1C2233; resize: vertical; outline: none">{{ msgText }}</textarea></sc-if>
         </span>
       </div>
 
@@ -2900,6 +2942,7 @@ SCREENS.AskSuppliers = {
             <span class="ava" style="{{ r.ava }}">{{ r.ini }}</span>
             <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ r.name }}</span><span class="sub" style="{{ r.whyInk }}">{{ r.why }}</span></span>
             <sc-if value="{{ r.isSent }}"><span class="pill" style="{{ r.pillStyle }}">{{ r.pill }}</span></sc-if>
+            <sc-if value="{{ r.needPhone }}"><a href="NewSupplier.dc.html" data-sx="{{ r.editSx }}" aria-label="{{ r.addPhoneLabel }}" class="pill" style="height: 34px; padding: 0 12px; background: #FDF1DC; color: #7A4A02; font-size: 12px">+ Add phone</a></sc-if>
             <sc-if value="{{ r.canSend }}"><button type="button" onClick="{{ r.send }}" aria-disabled="{{ r.off }}" data-why="{{ r.offWhy }}" style="height: 38px; padding: 0 14px; flex: none; border-radius: 999px; background: linear-gradient(180deg, #24305A, #16203C); color: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"></path></svg>{{ r.word }}</button></sc-if>
           </div>
         </sc-for>
@@ -3000,7 +3043,9 @@ SCREENS.AskSuppliers = {
       const msgA = hello + 'Do you have this ', msgItem = l.name, msgB = l.image ? ' (photo above)? ' : '? ';
       const msgB2 = q > 0 ? 'We need ' : '', msgC = (q > 0 ? pieces + '. ' : '') + `Your price a ${unitOne}, and `, msgD = ` (how many in a carton or bag)?`;
       const msg = msgA + msgItem + msgB + msgB2 + qtyW + msgC + 'how it is packed' + msgD;
-      const waMsg = l.image ? msg + '\n' + l.image : msg;
+      // Their own words, if they edited the message (kept while this screen is open).
+      const said = st.custom != null ? st.custom : msg;
+      const waMsg = l.image ? said + '\n' + l.image : said;
 
       // Who: everyone already on the hunt, then who sells something like it,
       // then any picked from our suppliers this time.
@@ -3047,7 +3092,8 @@ SCREENS.AskSuppliers = {
         return {
           ini: initials(x.s.name), name: x.s.name, why: why(x), ava: bAvatar(x.s.id, 38) + '; font-size: 13px',
           whyInk: st.not[x.s.id] && !sent ? 'color: #A82D24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis',
-          isSent: sent, canSend: !sent, word: st.not[x.s.id] ? 'Again' : 'Send',
+          isSent: sent, canSend: !sent && !noPhone, needPhone: !sent && noPhone, word: st.not[x.s.id] ? 'Again' : 'Send',
+          editSx: JSON.stringify({ supplierId: x.s.id }), addPhoneLabel: `Add a phone for ${x.s.name}`,
           pill: cant ? 'Can’t' : answered ? 'Answered ✓' : 'Sent ✓',
           pillStyle: `height: 30px; padding: 0 11px; ${cant ? 'background: #FBE5E2; color: #8E2A22' : 'background: #E4F4EA; color: #0F6B43'}`,
           off: noPhone ? 'true' : null, offWhy: noPhone ? `No phone on file for ${x.s.name} — add it in Suppliers` : '',
@@ -3082,6 +3128,7 @@ SCREENS.AskSuppliers = {
         });
       };
       const allLeft = left.filter(x => String(x.s.id) !== st.asking);
+      const noPhoneN = list.filter(x => !isSent(x) && !phoneDigits(x.s.phone)).length;
       return {
         none: false, has: true, sx, item: l.name, hasQty: q > 0, qty: n0(q), unit: unitOne === 'piece' ? 'pc' : bPl(unitOne, q), clients: plural(askers.length, 'client'),
         sentN, total: list.length, barsLabel: `${sentN} of ${list.length} sent`,
@@ -3089,6 +3136,10 @@ SCREENS.AskSuppliers = {
         photoTile: l.image ? 'width: 46px; height: 46px; flex: none; border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); ' + photoStyle(l.image) : 'width: 46px; height: 46px; flex: none; border-radius: 13px; background: linear-gradient(160deg, #B9AEEB, #7B61D9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.95)',
         hasPhoto: !!l.image, photo: 'height: 70px; border-radius: 10px; display: block; ' + photoStyle(l.image),
         msgA, msgItem, msgB: msgB + msgB2, msgQty: qtyW, msgC, msgD,
+        msgPlain: st.custom == null && !st.editing, msgOwn: st.custom != null && !st.editing, msgEditing: !!st.editing, msgText: said,
+        editWord: st.editing ? 'Done' : st.custom != null ? 'Edit again' : 'Edit',
+        editMsg: () => { FEEL.tick(); this.setState({ editing: !st.editing, custom: st.custom != null ? st.custom : msg }); },
+        typeMsg: (e) => { this.state.custom = e.target.value; },
         rows, hasRows: rows.length > 0, noRows: !rows.length,
         openPick: () => { FEEL.tick(); this.setState({ sheet: 'pick', pq: '' }); }, openNew: () => { FEEL.tick(); this.setState({ sheet: 'new' }); }, close: () => this.setState({ sheet: null }),
         pickOpen: st.sheet === 'pick', newOpen: st.sheet === 'new',
@@ -3111,7 +3162,8 @@ SCREENS.AskSuppliers = {
           if (!allLeft.length) { if (S.stack.length > 1) A.back(); else A.replace('Hunt', { leadId: l.id }); return; }
           start(allLeft[0], allLeft.slice(1).map(x => String(x.s.id)));
         },
-        allWord: allLeft.length ? (allLeft.length === 1 ? `Send to ${firstWord(allLeft[0].s.name)}` : `Send to all ${allLeft.length}, one after another`) : 'All asked · back to the hunt',
+        allWord: (allLeft.length ? (allLeft.length === 1 ? `Send to ${firstWord(allLeft[0].s.name)}` : `Send to ${allLeft.length}, one after another`) : noPhoneN ? 'Back to the hunt' : 'All asked · back to the hunt')
+          + (noPhoneN ? ` · ${noPhoneN} need${noPhoneN === 1 ? 's' : ''} a phone` : ''),
       };
     }
   },
@@ -3206,7 +3258,9 @@ function aJoinOf(l){
    chance is not here. */
 function aChances(){
   const d = D(), g = { asked: [], orders: [], chat: [], rivals: [], search: [] };
-  openLeads().filter(l => l.status === 'asked').forEach(l => {
+  // A request is a chance until someone starts on it (a supplier asked or
+  // written down); from then it is a hunt with its own move on Today.
+  openLeads().filter(l => l.status === 'asked' && !leadSuppliers(l).length).forEach(l => {
     const reqs = (l.requests || []).filter(r => !r.withdrawn);
     const drop = reqs.filter(r => r.source === 'dropped').sort((a, b) => msOf(b.at) - msOf(a.at))[0];
     const last = asksLastReq(l);
@@ -3246,7 +3300,7 @@ function aChances(){
 }
 // The Today card for a job: a hunt's own tile, else the job's kind.
 const aJOB_TILE = { tell: ['#E4F4EA', '#0F6B43'], ask: ['#EFEBFB', '#5B4AA8'], record: ['#EFEBFB', '#5B4AA8'], prices: ['#FDF1DC', '#95530C'], decide: ['#E8EBF0', '#3D4A5C'],
-  list: ['#E4F4EA', '#0F6B43'], lapse: ['#FDEEE1', '#95530C'], chase: ['#DCEAF8', '#1A5A8A'], fix: ['#F6E4F1', '#7A3268'] };
+  list: ['#E4F4EA', '#0F6B43'], quote: ['#FDF1DC', '#95530C'], photo: ['#E8EBF0', '#3D4A5C'], lapse: ['#FDEEE1', '#95530C'], chase: ['#DCEAF8', '#1A5A8A'], fix: ['#F6E4F1', '#7A3268'] };
 function aJobTile(kind){ const t = aJOB_TILE[kind] || aJOB_TILE.decide; return `width: 36px; height: 36px; flex: none; border-radius: 11px; background: ${t[0]}; color: ${t[1]}; display: flex; align-items: center; justify-content: center`; }
 // The words on a job's button (the old Today's own).
 function aJobCta(j){
@@ -3255,7 +3309,7 @@ function aJobCta(j){
     const n = typeof askSupDefaults === 'function' && j.lead ? askSupDefaults(j.lead).length : 0;
     return n > 1 ? `Ask the ${n} who sell it` : n === 1 ? 'Ask the one who sells it' : 'Ask suppliers';
   }
-  return { fix: 'See the fixes', record: 'Add who has it', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Ask for a fresh price', chase: 'Open the hunt',
+  return { fix: 'See the fixes', record: 'Add who has it', tell: 'Tell them', prices: 'Check today\'s prices', lapse: 'Re-check the price', quote: j.word, photo: 'Add a photo', chase: 'Open the hunt',
     decide: j.word === 'Decide' ? 'Open the verdict' : j.word, list: j.word === 'Price' ? 'Price it' : 'Put it in the catalogue' }[j.kind] || 'Open';
 }
 // A price row's packing in the standard's words: "20 dozens in a carton · 12 a dozen".
@@ -4217,12 +4271,12 @@ SCREENS.Decide = {
     <sc-if value="{{ has }}">
     <div class="card n-in" role="list" aria-label="The six things the verdict weighs" style="padding: 12px 16px; display: flex; flex-direction: column; gap: 6px">
       <sc-for list="{{ parts }}" as="p" hint-placeholder-count="6">
-      <div role="listitem" aria-label="{{ p.aria }}" style="display: grid; grid-template-columns: 96px minmax(0, 1fr) 30px; align-items: center; gap: 10px"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 13px; font-weight: 700">{{ p.label }}</span><span style="font-size: 11px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.why }}</span></span><span style="height: 8px; border-radius: 999px; background: #F2EFEA; overflow: hidden"><span style="{{ p.bar }}"></span></span><span class="m" style="font-size: 12px; color: #6B7480; text-align: right">×{{ p.w }}</span></div>
+      <div role="listitem" aria-label="{{ p.aria }}" style="display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 10px"><span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 13px; font-weight: 700">{{ p.label }}</span><span style="font-size: 11px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.why }}</span></span><span style="{{ p.track }}"><span style="{{ p.bar }}"></span></span></div>
       </sc-for>
     </div>
 
     <sc-if value="{{ hasTip }}">
-    <a href="{{ tipHref }}" data-sx="{{ sx }}" class="n-in" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 16px; background: #FDF1DC; box-shadow: inset 0 0 0 1px #F0D7A8; animation-delay: .05s">
+    <a href="{{ tipHref }}" data-sx="{{ tipSx }}" class="n-in" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 16px; background: #FDF1DC; box-shadow: inset 0 0 0 1px #F0D7A8; animation-delay: .05s">
       <span style="width: 34px; height: 34px; flex: none; border-radius: 10px; background: #FFFFFF; color: #95530C; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
       <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13px; font-weight: 700">{{ tipTitle }}</span><span style="font-size: 12px; color: #7A4A02">{{ tipSub }}</span></span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A4A02" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
@@ -4255,8 +4309,9 @@ SCREENS.Decide = {
       if (!l) return { none: true, has: false, item: 'Stock it?', title: 'Nothing open', strong: 'every request is on the shelf or dropped', score: '—', ring: ringOf(0, '#6FDCB0'), ringLabel: 'No score', parts: [], holds: [], dots: [] };
       const sx = JSON.stringify({ leadId: l.id });
       const v = leadVerdict(l), total = v.total;
-      const rivals = leadResearch(l).rivals, cands = leadSuppliers(l), priced = cands.filter(candidateHasPrice);
-      const TITLE = { stock: 'Stock it', small: 'Small first batch', special: 'Special order', pass: 'Don’t stock', none: 'Not enough yet' };
+      const rivals = leadResearch(l).rivals, cands = leadSuppliers(l), priced = cands.filter(c => candidateHasPrice(c) && !c.noStock);
+      const lapsedN = priced.filter(c => quoteLeft(c) < 0).length;
+      const TITLE = { stock: 'Stock it', small: 'Small first batch', special: 'Per client', pass: 'Don’t stock', none: 'Not enough yet' };
       const band = total == null ? '#B3BCD2' : total >= 70 ? '#6FDCB0' : total >= 40 ? '#F5B26B' : '#F59A92';
 
       // The six, each its share of its weight, said in the books' words.
@@ -4264,18 +4319,22 @@ SCREENS.Decide = {
       const ref = rivals.length ? rivals.reduce((a, b) => (Number(a.price) || 1e15) <= (Number(b.price) || 1e15) ? a : b) : null;
       const pv = (v.scores.find(x => x.k === 'price') || {}).value || '';
       const unit = (cands.find(c => c.unit) || {}).unit || 'pc';
+      // No markup set and no selling price: say so, never “0%”.
+      const noSell = !!v.cost && !(shopMarkupPct('wholesale') > 0);
       const WHY = {
         demand: ['Demand', `${plural(v.askers, 'client')}${v.qty ? ' · ' + n0(v.qty) + ' ' + (unit === 'pc' ? 'pc' : unit) : ''}`],
-        margin: ['Margin', v.cost ? `${shopMarkupPct('wholesale')}% on ${n0(v.cost)}` : 'no price yet'],
+        margin: ['Margin', !v.cost ? 'no price yet' : noSell ? `no selling price yet · cost ${n0(v.cost)}` : `${shopMarkupPct('wholesale')}% on ${n0(v.cost)}`],
         price: ['vs rivals', !rivals.length ? 'no rival price yet' : !v.cost ? 'no price of ours yet' : `${pv} vs ${firstWord(ref.name || 'a rival')}`],
         comp: ['Competition', !rivals.length ? 'no rival seen yet' : `${plural(inStock.length, 'shop')} ${inStock.length === 1 ? 'has' : 'have'} it`],
-        supply: ['Supply', priced.length ? `${plural(priced.length, 'price')} in${v.minBlock ? ' · least over the ask' : ''}` : cands.length ? `${plural(cands.length, 'supplier')}, no price` : 'nobody yet'],
+        supply: ['Supply', priced.length ? `${plural(priced.length, 'quote')} in${lapsedN ? ` · ${lapsedN} lapsed` : ''}${v.minBlock ? ' · least over the ask' : ''}` : cands.length ? `${plural(cands.length, 'supplier')}, no price` : 'nobody yet'],
         cash: ['Money back', v.cost && v.qty ? `${n0(v.cost * v.qty)} out` : v.cost ? 'no quantity yet' : 'no price yet'],
       };
       const parts = v.scores.map(x => {
         const r = Math.max(0, Math.min(100, x.s)), good = r >= 65;
-        return { label: WHY[x.k][0], why: WHY[x.k][1], w: x.w, aria: `${WHY[x.k][0]}: ${WHY[x.k][1]}, ${Math.round(r * x.w / 100)} of ${x.w}`,
-          bar: `display: block; width: ${r}%; height: 100%; border-radius: 999px; background: ${good ? '#1E9D57' : '#D98A1C'}` };
+        const blank = x.k === 'margin' && noSell;
+        return { k: x.k, label: WHY[x.k][0], why: WHY[x.k][1], aria: `${WHY[x.k][0]}: ${WHY[x.k][1]}`,
+          track: `height: 8px; border-radius: 999px; overflow: hidden; background: ${blank ? 'repeating-linear-gradient(135deg, #E6E2DA 0 6px, #F4F1EC 6px 12px)' : '#F2EFEA'}`,
+          bar: blank ? 'display: none' : `display: block; width: ${r}%; height: 100%; border-radius: 999px; background: ${good ? '#1E9D57' : '#D98A1C'}` };
       });
       const ranked = v.scores.slice().sort((a, b) => b.s - a.s);
       const strong = total == null ? 'Needs a supplier’s price to decide.' : `Strongest: ${WHY[ranked[0].k][0].toLowerCase()}. Weakest: ${WHY[ranked[ranked.length - 1].k][0].toLowerCase()}.`;
@@ -4285,10 +4344,11 @@ SCREENS.Decide = {
       const dotRow = (label, n, of, full) => ({ label, dots: Array.from({ length: of }, (_, i) => `width: 9px; height: 9px; border-radius: 999px; background: ${i < n ? (n >= full ? '#6FDCB0' : '#F5B26B') : 'rgba(255,255,255,.18)'}`) });
       const dots = [dotRow('Prices', sure.p, 3, 3), dotRow('Rivals', sure.r, 3, 3), dotRow('Clients', sure.c, 5, 5)];
       const sureInk = sure.word === 'high' ? ['rgba(111,220,176,.18)', '#6FDCB0'] : sure.word === 'medium' ? ['rgba(245,178,107,.18)', '#F5C77E'] : ['rgba(245,154,146,.18)', '#F59A92'];
-      let hasTip = false, tipTitle = '', tipSub = '', tipHref = 'MarketRun.dc.html';
-      if (total == null) { hasTip = true; tipTitle = 'Needs a supplier’s price first'; tipSub = cands.length ? `log ${firstWord(candName(cands[0]))}’s answer` : 'ask who has it'; tipHref = cands.length ? 'Quote.dc.html' : 'AskSuppliers.dc.html'; }
-      else if (sure.r < 3) { hasTip = true; tipTitle = 'To be surer: one more rival’s price'; tipSub = `sure goes ${sure.pct}% → ${cSure(priced.length, rivals.length + 1, v.askers).pct}% · on a market run`; }
-      else if (sure.p < 3) { hasTip = true; tipTitle = 'To be surer: another supplier’s price'; tipSub = `sure goes ${sure.pct}% → ${cSure(priced.length + 1, rivals.length, v.askers).pct}% · ask who else has it`; tipHref = 'AskSuppliers.dc.html'; }
+      let hasTip = false, tipTitle = '', tipSub = '', tipHref = 'Spotted.dc.html', tipSx = JSON.stringify({ leadId: l.id, name: l.name, who: 'rival' });
+      if (total == null) { hasTip = true; tipTitle = 'Needs a supplier’s price first'; tipSub = cands.length ? `log ${firstWord(candName(cands[0]))}’s answer` : 'ask who has it'; tipHref = cands.length ? 'Quote.dc.html' : 'AskSuppliers.dc.html'; tipSx = sx; }
+      else if (lapsedN) { hasTip = true; const c0 = priced.find(c => quoteLeft(c) < 0); tipTitle = `Re-check ${lapsedN === 1 ? firstWord(candName(c0)) + '’s lapsed quote' : lapsedN + ' lapsed quotes'} first`; tipSub = 'a lapsed price may have moved'; tipHref = 'Quote.dc.html'; tipSx = JSON.stringify({ leadId: l.id, candId: c0.id }); }
+      else if (sure.r < 3) { hasTip = true; tipTitle = `Log a rival’s price for ${l.name}`; tipSub = 'one more makes the verdict surer'; }
+      else if (sure.p < 3) { hasTip = true; tipTitle = 'To be surer: another supplier’s price'; tipSub = 'ask who else has it'; tipHref = 'AskSuppliers.dc.html'; tipSx = sx; }
 
       // How we hold it: kept on the request as leadMeta(l).hold.
       const Q = decideQtys(l), askers = v.askers;
@@ -4297,7 +4357,8 @@ SCREENS.Decide = {
       const packs = (qty) => Q.pack && packUnit ? `${n0(Math.ceil(qty / Q.pack))} ${Math.ceil(qty / Q.pack) === 1 ? packUnit : cPluralWord(packUnit)}` : `${n0(qty)} ${cUnitWord(unit, qty)}`;
       const best = priced.slice().sort((a, b) => (candidatePieceTiers(a)[0] || {}).price - (candidatePieceTiers(b)[0] || {}).price)[0] || null;
       const supFirst = best ? firstWord(candName(best)) : '';
-      const days = best && best.leadTimeDays != null && best.leadTimeDays !== '' ? Number(best.leadTimeDays) : null;
+      // A delivery time is only told from a quote that still holds.
+      const days = best && quoteLeft(best) >= 0 && best.leadTimeDays != null && best.leadTimeDays !== '' ? Number(best.leadTimeDays) : null;
       const saved = (leadMeta(JSON.parse(JSON.stringify(l))).hold || {}).kind;
       const fromSaved = { stock: 'stock', consign: 'consign', small: 'client', special: 'client' }[saved];
       const rec = v.kind === 'stock' ? 'stock' : 'client';
@@ -4319,6 +4380,8 @@ SCREENS.Decide = {
         batch = hold === 'client' && Q.q && h.qty > Q.q ? `Buy ${packs(h.qty)} · ${n0(Q.q)} for clients + ${n0(h.qty - Q.q)}` : `Buy ${packs(h.qty)}${Q.pack && packUnit ? ' · ' + n0(h.qty) + ' ' + cUnitWord(unit, h.qty) : ''}`;
         cash = buy ? n0(buy.cost) : priced.length ? 'nobody sells so few' : '— —';
       }
+      // Money back says the same money out as the buy line above it.
+      if (/^[\d,]+$/.test(cash) || cash === '0 today') parts.forEach(p => { if (p.k === 'cash') { p.why = `${cash === '0 today' ? 'nothing' : cash} out · ${h.label.toLowerCase()}`; p.aria = 'Money back: ' + p.why; } });
       const holds = Object.keys(H).map(k => {
         const on = hold === k;
         return { label: H[k].label, sub: H[k].sub, rec: k === rec, on: on ? 'true' : 'false',
@@ -4344,9 +4407,9 @@ SCREENS.Decide = {
         none: false, has: true, sx, item: l.name, title: TITLE[v.kind], strong,
         score: total == null ? '—' : total, ring: ringOf(total == null ? 0 : total, band),
         ringLabel: total == null ? 'No score yet: it needs a supplier’s price' : `Score ${total} of 100: ${v.title}`,
-        sureWord: `Sure: ${sure.word} · ${sure.pct}%`, surePill: `background: ${sureInk[0]}; color: ${sureInk[1]}`,
+        sureWord: `Sure: ${sure.word}`, surePill: `background: ${sureInk[0]}; color: ${sureInk[1]}`,
         sureLabel: `How sure: ${sure.pct}%. ${priced.length} of 3 supplier prices, ${rivals.length} of 3 rival prices, ${v.askers} of 5 clients`,
-        dots, parts, hasTip, tipTitle, tipSub, tipHref,
+        dots, parts, hasTip, tipTitle, tipSub, tipHref, tipSx,
         holds, why: h.why, batch, cash,
         notNow: keep('pass', 0, 'Dropped', 'Not now — drop it and tell them'),
         nextHref: nextName + '.dc.html', nextLabel,
@@ -4717,6 +4780,10 @@ SCREENS.Hunt = {
           thumb: f.photo ? 'width: 30px; height: 30px; flex: none; border-radius: 9px; ' + photoStyle(f.photos[0]) : '',
           tap: !f.photo && !l.voided ? () => this.addPhoto(l) : null, btn: 'Add', dark: true }),
       ];
+      // Rival prices, when any were seen (a hunt started from a rival's tag shows it here).
+      const rv = leadResearch(l).rivals.filter(r => Number(r.price) > 0).sort((a, b) => Number(a.price) - Number(b.price));
+      if (rv.length) know.push(row({ ok: true, label: 'Rivals', money: n0(rv[0].price), val: `a ${bUnit(rv[0].unit) || 'piece'} · ${rv[0].name || 'a rival'}` + (rv.length > 1 ? ` · ${plural(rv.length, 'rival')}` : ''),
+        href: open ? 'Spotted.dc.html' : '', btn: 'Add', sx: JSON.stringify({ leadId: l.id, name: l.name, who: 'rival' }) }));
       // Your next move: the first of the four missing, then the verdict.
       const nx = bNext(l, f);
       let move = null;
@@ -4732,7 +4799,7 @@ SCREENS.Hunt = {
           eb: theirs ? 'Waiting on' : 'Your next move', ebStyle: `color: ${theirs ? '#95530C' : '#C93A30'}`,
           title: nx.word,
           sub: v ? 'The verdict leans ' : theirs ? `asked ${agoWord(waiting.map(c => c.askedAt).sort()[0])} · log their price when they answer` : nx.href === 'AskSuppliers' ? 'one WhatsApp each, counted when it goes'
-            : nx.photo ? 'the camera opens; it is kept with the hunt' : nx.href === 'Quote' ? 'how it is packed, and their price' : step ? step.sub : '',
+            : nx.photo ? 'the camera opens; it is kept with the hunt' : nx.lapsed ? `${bNames(nx.lapsed)} · a fresh price, or “same as before”, before deciding` : nx.href === 'Quote' ? 'how it is packed, and their price' : step ? step.sub : '',
           hasLean: !!v, lean: v ? v.title : '', leanInk: v ? `color: ${v.ink}` : '', sure: v ? ` · sure: ${sure === 0 ? 'high' : sure === 1 ? 'medium' : 'low'}` : '',
           hasScore: !!(v && v.total != null), noScore: !(v && v.total != null), score: v && v.total != null ? String(v.total) : '',
           scoreLabel: v && v.total != null ? `Score ${v.total} of 100` : '',
@@ -5352,7 +5419,7 @@ SCREENS.Item = {
         const t = tintFor(r.supplierId);
         const vi = r.variantIdx == null ? '' : productVariantLabel(p, r.variantIdx).slice(p.name.length + 3);
         return {
-          on: on ? 'true' : 'false', sup: sname + (vi ? ' · ' + vi : ''), ini: initials(sname), age, cheapest: costRow && costRow.r === r && live.length > 1,
+          on: on ? 'true' : 'false', sup: sname + (vi ? ' · ' + vi : ''), ini: initials(sname), age, cheapest: costRow && costRow.r === r && live.length > 1 && priceComparable(r),
           ava: `width: 30px; height: 30px; font-size: 10px; background: ${t[0]}; color: ${t[1]}`,
           ageStyle: `display: flex; align-items: center; gap: 5px; font-size: 11px; color: ${ink}`,
           dot: `width: 6px; height: 6px; flex: none; border-radius: 999px; background: ${ink}`,
@@ -5594,14 +5661,14 @@ SCREENS.Main = {
       const who = firstWord(myPersonName());
       const greeting = (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + (who ? ', ' + who : '');
       const jobs = nextJobs(), done = doneToday();
-      const doneN = done.reduce((s, x) => s + x[1], 0), total = doneN + jobs.length;
+      const doneN = done.reduce((s, x) => s + x[1], 0), total = dayTotal(doneN + jobs.length, doneN), toGo = Math.max(0, total - doneN);
       const week = aListedSince(7).length;
       // The day bar: one block a move while they fit (done, the one now, to go), else one run each.
       const seg = (flex, bg) => `flex: ${flex}; height: 8px; border-radius: 999px; background: ${bg}`;
       let segs;
       if (!total) segs = [seg(1, 'rgba(255,255,255,.14)')];
       else if (total <= 12) segs = Array.from({ length: total }, (_, i) => seg(1, i < doneN ? '#6FDCB0' : i === doneN ? '#F5B26B' : 'rgba(255,255,255,.14)'));
-      else segs = [doneN ? seg(doneN, '#6FDCB0') : '', jobs.length ? seg(1, '#F5B26B') + '; min-width: 14px' : '', jobs.length > 1 ? seg(jobs.length - 1, 'rgba(255,255,255,.14)') : ''].filter(Boolean);
+      else segs = [doneN ? seg(doneN, '#6FDCB0') : '', toGo ? seg(1, '#F5B26B') + '; min-width: 14px' : '', toGo > 1 ? seg(toGo - 1, 'rgba(255,255,255,.14)') : ''].filter(Boolean);
       let nowV = {};
       const j = jobs[0];
       if (j) {
@@ -5632,10 +5699,10 @@ SCREENS.Main = {
       return {
         nav: navVals(),
         dateWord: now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), greeting, me: initials(me ? me.name : myName()),
-        doneN: String(doneN), total: String(total), movesWord: total === 1 ? 'move today' : 'moves today',
-        weekWord: week ? `this week: ${week} on the shelf` : jobs.length ? `${jobs.length} to go` : 'all done',
+        doneN: String(doneN), total: String(total), movesWord: total === 1 ? 'job done today' : 'jobs done today',
+        weekWord: week ? `${week} listed this week` : toGo ? `${toGo} to go` : 'all done',
         barBox: `display: flex; gap: ${total > 12 ? 3 : 4}px`, segs,
-        barLabel: `Today: ${doneN} of ${total} moves done` + (done.length ? '. Done: ' + done.map(x => `${x[1]} ${x[2]}`).join(', ') : '') + `. ${jobs.length} to go.`,
+        barLabel: `Today: ${doneN} of ${total} moves done` + (done.length ? '. Done: ' + done.map(x => `${x[1]} ${x[2]}`).join(', ') : '') + `. ${toGo} to go.`,
         hasNow: !!j, now: nowV, empty: !j,
         hasRows: rows.length > 0, rows,
         hasMore: jobs.length > 4, moreOpen: this.state.more ? 'true' : 'false',
@@ -6053,7 +6120,7 @@ SCREENS.NewAsk = {
       super(props);
       const p = this.props || {}, l = p.leadId ? leadById(p.leadId) : null;
       const who = p.customerId && customerById(p.customerId) ? 'c:' + p.customerId : String(p.customerName || '').trim() ? 'new' : 'walkin';
-      this.state = { kind: ['client', 'seen', 'offer', 'rival'].includes(p.kind) ? p.kind : 'client', text: l ? l.name : (p.text || ''), join: true,
+      this.state = { kind: ['client', 'seen', 'offer', 'rival'].includes(p.kind) ? p.kind : 'client', text: l ? l.name : (p.text || ''), join: !!l,
         who, q: '', newName: who === 'new' ? String(p.customerName || '') : '', newPhone: '', qty: p.qty ? String(p.qty) : '1', maxPrice: '', chan: 'counter',
         sup: p.supplierId || null, rival: p.rival || '', saved: null, sheet: false, photo: null, agentRequestId: p.agentRequestId || null };
     }
@@ -6191,7 +6258,7 @@ SCREENS.NewAsk = {
         saved: !!sv, doneTitle: sv ? (sv.isNew ? 'New hunt started' : sv.wasDropped ? `${sv.name} is back` : `Joined ${sv.name}`) : '',
         doneSub: sv ? (sv.isNew ? 'It starts at Requested. Ask suppliers next.' : `Now ${plural(sv.n, 'client')}${sv.q ? ' and ' + n0(sv.q) + ' pieces' : ''}.${sv.who ? ' ' + sv.who + ' is told when it moves.' : ''}`) : '',
         openHunt: () => { if (sv) A.replace('Hunt', { leadId: sv.id }); },
-        again: () => { FEEL.tick(); this.setState({ saved: null, text: '', photo: null, qty: '1', maxPrice: '', who: 'walkin', newName: '', newPhone: '', agentRequestId: null, join: true }); },
+        again: () => { FEEL.tick(); this.setState({ saved: null, text: '', photo: null, qty: '1', maxPrice: '', who: 'walkin', newName: '', newPhone: '', agentRequestId: null, join: false }); },
       };
     }
   },
@@ -6205,6 +6272,9 @@ SCREENS.NewAsk = {
 const D_UNIT = { pc: ['piece', 'pieces'], pcs: ['piece', 'pieces'], piece: ['piece', 'pieces'], m: ['metre', 'metres'], kg: ['kg', 'kg'], l: ['litre', 'litres'], litre: ['litre', 'litres'],
   dozen: ['dozen', 'dozens'], pair: ['pair', 'pairs'], set: ['set', 'sets'], sheet: ['sheet', 'sheets'], roll: ['roll', 'rolls'], bag: ['bag', 'bags'], length: ['length', 'lengths'] };
 function dUnit(u, many){ const k = String(u || 'pc').trim().toLowerCase(); const w = D_UNIT[k] || [k, /s$/.test(k) ? k : k + 's']; return many ? w[1] : w[0]; }
+// A price that can be put beside others: by the piece, or a pack whose
+// count is known. A carton price with no count is never "cheapest" (Round 6).
+function priceComparable(r){ const u = String((r && r.unit) || 'pc').trim().toLowerCase(); return ['pc', 'pcs', 'piece', 'pieces', 'pair', 'pairs', 'metre', 'm', 'kg', 'litre', 'l', 'sheet', 'length'].includes(u) || dHasPack(r); }
 function dHasPack(r){ return !!r && Number(r.packQty) > 0 && !!String(r.packUnit || '').trim(); }
 // The standard's packing words: "12 pieces in a box".
 function dPackWord(r){ return dHasPack(r) ? `${n0(r.packQty)} ${dUnit(r.unit, Number(r.packQty) !== 1)} in a ${String(r.packUnit).trim()}` : ''; }
@@ -6352,11 +6422,21 @@ function dHuntsForTags(tags, sid){
   }).sort((a, b) => leadDistinctAskers(b) - leadDistinctAskers(a) || leadFirstAskedAt(a) - leadFirstAskedAt(b));
 }
 // Already on file? A name that matches once tidied, or the same phone.
+// "Maria Building" and "Maria Building Materials": every word of the
+// shorter name begins a word of the longer, two words at least (or one long one).
+function dNameNear(a, b){
+  const ta = normName(a).split(' ').filter(w => w.length > 1), tb = normName(b).split(' ').filter(w => w.length > 1);
+  if (!ta.length || !tb.length) return false;
+  const [sh, lo] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  if (sh.length < 2 && !(sh[0] && sh[0].length >= 6)) return false;
+  return sh.every(w => lo.some(x => x.startsWith(w) || w.startsWith(x) && x.length >= 4));
+}
 function dLookAlike(name, phone, exceptId){
   const k = dSupKey(name), ph = phoneDigits(phone);
   return D().suppliers.filter(s => String(s.id) !== String(exceptId || '')).map(s => {
     const why = [];
     if (k && dSupKey(s.name) === k) why.push('name');
+    else if (dNameNear(name, s.name)) why.push('a name like it');
     if (ph.length >= 11 && dPhones(s).includes(ph)) why.push('phone');
     return { s, why };
   }).filter(x => x.why.length)[0] || null;
@@ -6397,7 +6477,11 @@ SCREENS.NewSupplier = {
       <sc-if value="{{ hasDup }}"><a href="{{ dupHref }}" data-sx="{{ dupSx }}" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: #FDF1DC; box-shadow: inset 0 0 0 1px #F0D7A8; color: #7A4A02; font-size: 12.5px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M12 8v5M12 16.5v.1"></path><circle cx="12" cy="12" r="9"></circle></svg><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span>{{ dupWord }}</span><span style="font-weight: 600">{{ dupSub }}</span></span><span style="flex: none">{{ dupGo }} ›</span></a></sc-if>
       <div class="card n-in" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
         <span class="eb">What they sell</span>
+        <sc-if value="{{ hasFromList }}"><span style="font-size: 11px; font-weight: 700; color: #6B7480">You set</span></sc-if>
         <div style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{ sells }}" as="c"><button type="button" onClick="{{ c.pick }}" aria-pressed="{{ c.on }}" style="height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: {{ c.bg }}; color: {{ c.fg }}; box-shadow: {{ c.sh }}">{{ c.label }}</button></sc-for></div>
+        <sc-if value="{{ hasFromList }}"><span style="font-size: 11px; font-weight: 700; color: #6B7480">From their price list</span>
+        <div role="list" aria-label="What their price list says they sell" style="display: flex; gap: 6px; flex-wrap: wrap"><sc-for list="{{ fromList }}" as="c"><span role="listitem" style="height: 32px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; background: #F4F1EC; color: #3B4566; display: inline-flex; align-items: center; gap: 6px">{{ c.t }}<span class="m" style="font-size: 11px; color: #7A8290">{{ c.n }}</span></span></sc-for></div>
+        <span class="sub">These follow what they sell us; change an item’s aisle to change them.</span></sc-if>
       </div>
       <sc-if value="{{ hasHunts }}">
       <div class="card n-in" style="padding: 4px 14px">
@@ -6494,6 +6578,7 @@ SCREENS.NewSupplier = {
         await saveLead(l2); onHunts.push(l.id);
       }
       const onWord = onHunts.length ? ` — on ${plural(onHunts.length, 'hunt')}` : '';
+      if (!this.editing) { try { window.SX_NEW_SUPPLIER = { id: s.id, leadId: this.props.leadId || null, at: Date.now() }; } catch (_e) {} }
       if (this.editing) toast(`Saved ${s.name}${onWord}`);
       else if (wasDup) toast(`${s.name} is already on file — kept as it was${onWord}`, 5000);
       else toast(`Added ${s.name}${onWord}`);
@@ -6558,10 +6643,14 @@ SCREENS.NewSupplier = {
         location: st.location, setLocation: (e) => this.setState({ location: e.target.value }),
         shopNo: st.shopNo, setShopNo: (e) => this.setState({ shopNo: e.target.value }),
         hasPhone: !!phoneDigits(st.phone), waHref: waUrl(st.phone, hello),
-        checkedClear: typed && !dup, clearWord: `Checked: no supplier on file with this name${phoneDigits(st.phone) ? ' or phone' : ''}`,
+        ...(() => { if (!editing) return { hasFromList: false, fromList: [] };
+          const n = {}; D().prices.filter(r => String(r.supplierId) === String(this.editing.id)).forEach(r => { const p = productById(r.productId); const c = String((p && p.category) || '').trim().toLowerCase(); if (c) n[c] = (n[c] || 0) + 1; });
+          const fromList = Object.keys(n).sort((a, b) => n[b] - n[a] || a.localeCompare(b)).map(t => ({ t, n: String(n[t]) }));
+          return { hasFromList: fromList.length > 0, fromList }; })(),
+        checkedClear: typed && !dup && !editing, clearWord: `Checked: no supplier on file with this name${phoneDigits(st.phone) ? ' or phone' : ''}`,
         hasDup: !!dup,
         dupWord: dup ? `Already on file? Is this ${dup.s.name}?` : '',
-        dupSub: dup ? ['same ' + dup.why.join(' and '), supplierWhere(dup.s)].filter(Boolean).join(' · ') + (!editing && dup.why.includes('name') && normName(dup.s.name) === normName(st.name) ? ' · saving uses them' : '') : '',
+        dupSub: dup ? [dup.why.map(w => w === 'a name like it' ? w : 'same ' + w).join(' and '), supplierWhere(dup.s)].filter(Boolean).join(' · ') + (!editing && dup.why.includes('name') && normName(dup.s.name) === normName(st.name) ? ' · saving uses them' : '') : '',
         dupHref: dup && editing && hasTask('supplier.edit') ? 'Twins.dc.html' : 'Supplier.dc.html',
         dupSx: dup ? JSON.stringify(editing ? { a: this.editing.id, b: dup.s.id } : { supplierId: dup.s.id }) : '{}',
         dupGo: dup && editing && hasTask('supplier.edit') ? 'Compare' : 'Open',
@@ -6941,7 +7030,11 @@ SCREENS.Prices = {
       };
       const sups = groups.map(g => {
         const sup = g.sup, name = sup ? sup.name : g.sid, t = tintFor(g.sid);
-        const how = s.how[g.sid], open = g.rows.filter(x => !x.done), all = !open.length;
+        // How you checked this supplier last time is picked to start with (the owner's log keeps it).
+        const lastHow = (() => { const ids = new Set(D().prices.filter(r => String(r.supplierId) === g.sid).map(r => String(r.id)));
+          const x = D().log.filter(e => e.task === 'price.confirm' && e.ref && ids.has(String(e.ref.id)) && e.after && e.after.how).sort((a, b) => msOf(b.at) - msOf(a.at))[0];
+          const k = x ? Object.keys(HOW).find(k => HOW[k] === x.after.how) : null; return k && k !== 'wa' ? k : k === 'wa' && sup && phoneDigits(sup.phone) ? k : null; })();
+        const how = s.how[g.sid] || lastHow, open = g.rows.filter(x => !x.done), all = !open.length;
         const oldest = Math.max(...open.map(x => x.age == null ? -1 : x.age), -1);
         const msg = `Hello ${name}, ${signWord()}. Are these prices still right?\n` + open.map(x => `• ${priceRowName(x.r)}: ${n0(priceRowCost(x.r))} a ${dUnit(x.r.unit)}` + (dHasPack(x.r) ? ` (${dPackWord(x.r)})` : '')).join('\n') + '\nPlease tell me any new price, with the packing. Thank you.';
         return {
@@ -6999,16 +7092,18 @@ SCREENS.Prices = {
           move: !(first > 0) ? 'Type the new price' : diff > 0 ? `Up ${n0(diff)}` : diff < 0 ? `Down ${n0(-diff)}` : 'The same as before',
           moveCol: diff > 0 ? '#A82D24' : diff < 0 ? '#0F6B43' : '#5F6980',
           newPack: (dHasPack(er) ? dPackWord(er) : 'packing not set') + ' · same packing',
-          saveWord: first > 0 ? 'Save ' + n0(first) : 'Save',
+          same: first > 0 && diff === 0 && rungs.every((t, k) => dr[k] == null || dr[k] === '' || Number(dr[k]) === t.price),
+          saveWord: !(first > 0) ? 'Save' : diff === 0 && rungs.every((t, k) => dr[k] == null || dr[k] === '' || Number(dr[k]) === t.price) ? `Still ${n0(cost)} · mark it checked` : 'Save ' + n0(first),
           cancel: () => { FEEL.back(); this.setState({ editing: null, drafts: {} }); },
           saveNew: () => {
             const dr2 = this.state.drafts || {};
             const tiers = rungs.map((t, k) => ({ minQty: t.minQty, price: dr2[k] != null && dr2[k] !== '' ? Number(dr2[k]) : t.price }));
             if (tiers.some(t => !(t.price > 0))) { FEEL.no(); toast('Each step needs a figure above 0'); return; }
+            const unchanged = tiers.every((t, k) => t.price === rungs[k].price);
             guarded('save a new figure', async () => {
-              await confirmPrice(er, tiers, this.state.editHow || 'in person');
+              await confirmPrice(er, unchanged ? null : tiers, this.state.editHow || 'in person');
               this.state = { ...this.state, editing: null, drafts: {} };
-              FEEL.yes(); toast(`${rname} at ${sup ? sup.name : 'the supplier'}: ${n0(cost)} → ${n0(tiers[0].price)} — in the owner’s log`);
+              FEEL.yes(); toast(unchanged ? `${rname} at ${sup ? sup.name : 'the supplier'}: still ${n0(cost)} — checked, no change` : `${rname} at ${sup ? sup.name : 'the supplier'}: ${n0(cost)} → ${n0(tiers[0].price)} — in the owner’s log`);
             });
           },
         };
@@ -7059,6 +7154,11 @@ SCREENS.Profile = {
       <sc-for list="{{ rights }}" as="r"><div style="{{ r.box }}"><span class="ava" style="{{ r.av }}">{{ r.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px"><span style="font-size: 13px; font-weight: 700">{{ r.who }}</span><span style="display: flex; gap: 4px; flex-wrap: wrap"><sc-for list="{{ r.pills }}" as="p"><span class="pill" style="{{ p.style }}" title="{{ p.title }}">{{ p.word }}</span></sc-for></span></span></div></sc-for>
     </div>
 
+    <div class="card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span style="font-size: 13px; font-weight: 700">Your name in messages</span><span class="sub">{{ nameHint }}</span></span>
+      <div style="display: flex; gap: 8px"><input aria-label="Your name in messages" value="{{ nameDraft }}" onInput="{{ typeName }}" placeholder="Your first name" style="flex: 1; min-width: 0; height: 44px; border: none; border-radius: 12px; background: #F2EFEA; padding: 0 12px; font-family: inherit; font-size: 15px; color: #1C2233; outline: none"><button type="button" onClick="{{ saveName }}" aria-disabled="{{ nameSame }}" style="{{ nameBtn }}">Save</button></div>
+    </div>
+
     <div class="card" style="padding: 2px 14px; display: flex; flex-direction: column">
       <button type="button" role="switch" aria-checked="{{ soundOn }}" onClick="{{ toggleSound }}" style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-shadow: inset 0 -1px 0 #F0ECE6; text-align: left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"></path><path d="{{ soundWave }}"></path></svg>
@@ -7082,11 +7182,13 @@ SCREENS.Profile = {
   </div>
 </div>`,
   Component: class extends SrvLogic {
+    constructor(props) { super(props); this.state = { nm: null }; }
     renderVals() {
       const d = D(), now = new Date();
       // This phone's notifications row (pushState: On, Checking, or Not on and why).
       const [pushWord, pushSub] = pushState(), pushLit = pushWord === 'On';
-      const me = myStaff(), name = me ? me.name : myName();
+      const me = myStaff(), name = myPersonName() || (me ? me.name : myName());
+      const nameDraft = this.state && this.state.nm != null ? this.state.nm : myPersonName(), nameSame = !String(nameDraft).trim() || String(nameDraft).trim() === myPersonName();
       // Yours: the hunts assigned to you, or to nobody (the desk's).
       const mineL = (l) => !me || !l.assignedStaffId || String(l.assignedStaffId) === String(me.id);
       const listed = d.leads.filter(l => !l.voided && l.status === 'listed' && l.graduatedAt && mineL(l));
@@ -7136,7 +7238,17 @@ SCREENS.Profile = {
       ];
       const on = !!S.prefs.sound;
       return {
-        ini: initials(name), name, roleWord, shop: S.shopName || 'The shop',
+        ini: initials(name), name, roleWord, shop: publicShopName(),
+        nameDraft, nameSame: nameSame ? 'true' : 'false', nameHint: `“this is ${firstWord(String(nameDraft).trim()) || '…'} from ${publicShopName()}”`,
+        nameBtn: `height: 44px; padding: 0 16px; flex: none; border-radius: 12px; font-size: 14px; font-weight: 700; ${nameSame ? 'background: #ECE8E1; color: #9AA0AA' : 'background: #16203C; color: #FFFFFF'}`,
+        typeName: (e) => this.setState({ nm: e.target.value }),
+        saveName: () => { const v = String(nameDraft).trim(); if (nameSame) return;
+          guarded('Your name', async () => {
+            const { data, error } = await sb.auth.updateUser({ data: { display_name: v } });
+            if (error) throw error;
+            if (data && data.user) S.user = data.user; else S.user = { ...S.user, user_metadata: { ...(S.user.user_metadata || {}), display_name: v } };
+            FEEL.yes(); toast(`Messages now say “this is ${v} from ${publicShopName()}”`); this.setState({ nm: null });
+          }); },
         weeks, weeksWord: `${sum} in 6 weeks`, weeksLabel: 'Items listed per week: ' + counts.join(', '), tiles, rights,
         pushWord, pushSub, pushLabel: `Notifications: ${pushWord}, ${pushSub}`,
         pushIco: `flex: none; color: ${pushLit ? '#0F6B43' : '#6B7480'}`,
@@ -7202,6 +7314,8 @@ function quoteTiersOf(steps){
 }
 function quotePerPieceAt(tiers, qty){ let best = null, bm = -1; tiers.forEach(t => { if (qty >= t.minQty && t.minQty > bm) { best = t.price; bm = t.minQty; } }); return best; }
 
+// What Log a price holds, to tell whether anything was typed since it opened.
+function quoteSnap(st){ return JSON.stringify([st.outer || '', Number(st.outerQty) || 0, st.mid || '', Number(st.innerQty) || 0, st.base || '', Number(st.price) || 0]); }
 SCREENS.Quote = {
   markup: String.raw`
 <div class="v2" style="width: 100%; height: 100%; position: relative; overflow: hidden; background: #2A3350; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
@@ -7212,7 +7326,7 @@ SCREENS.Quote = {
       <div style="display: flex; align-items: center; gap: 14px">
         <span style="{{ photo }}" role="img" aria-label="{{ photoLabel }}"><sc-if value="{{ noPhoto }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ icon }}"></path></svg></sc-if></span>
         <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span class="t2" style="font-size: 19px">Log a price</span><span style="font-size: 12px; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ item }}<sc-if value="{{ hasNeed }}"> · <span class="m" style="color: #FFFFFF">{{ need }}</span> pc requested</sc-if></span></span>
-        <a href="Hunt.dc.html" data-back data-sx="{{ sx }}" aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+        <a href="Hunt.dc.html" data-back data-sx="{{ sx }}" onClick="{{ tryClose }}" aria-label="Close" class="glass" style="width: 40px; height: 40px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: #FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
       </div>
     </div>
 
@@ -7244,13 +7358,13 @@ SCREENS.Quote = {
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="t2">Their price</span><span class="seg" role="group" aria-label="The price is for" style="grid-template-columns: repeat({{ forsN }}, auto); padding: 3px"><sc-for list="{{ fors }}" as="f" hint-placeholder-count="3"><button type="button" onClick="{{ f.pick }}" aria-pressed="{{ f.on }}" class="{{ f.cls }}" style="height: 28px; padding: 0 10px; font-size: 12px">a {{ f.label }}</button></sc-for></span></div>
         <button type="button" onClick="{{ edPrice }}" aria-label="{{ priceLabel }}" style="display: flex; align-items: baseline; gap: 8px; text-align: left"><span class="m" style="{{ priceStyle }}">{{ priceT }}</span><span style="font-size: 14px; font-weight: 600; color: #5F6980">a {{ priceFor }}</span><span style="margin-left: auto; font-size: 12px; font-weight: 700; color: #3B4566">{{ priceTap }}</span></button>
         <div role="img" aria-label="{{ perLabel }}" style="display: grid; grid-template-columns: repeat({{ forsN }}, minmax(0, 1fr)); gap: 6px">
-          <sc-for list="{{ per }}" as="p" hint-placeholder-count="3"><span style="{{ p.style }}"><span class="m" style="font-size: 15px; font-weight: 600; white-space: nowrap">{{ p.v }}</span><span style="font-size: 10px; font-weight: 700; opacity: .8">a {{ p.k }}</span></span></sc-for>
+          <sc-for list="{{ per }}" as="p" hint-placeholder-count="3"><button type="button" onClick="{{ p.tap }}" aria-label="{{ p.label }}" style="{{ p.style }}; text-align: left"><span class="m" style="font-size: 15px; font-weight: 600; white-space: nowrap">{{ p.v }}</span><span style="font-size: 10px; font-weight: 700; opacity: .8">a {{ p.k }}</span></button></sc-for>
         </div>
       </div>
     </div>
     <div style="flex: none; padding: 12px 16px calc(22px + var(--safe-b)); display: flex; flex-direction: column; gap: 8px">
       <span class="sub" style="text-align: center; color: {{ hintCol }}">{{ hint }}</span>
-      <button type="button" onClick="{{ save }}" class="btn" aria-disabled="{{ disabled }}" data-why="{{ why }}">{{ saveWord }}</button>
+      <button type="button" onClick="{{ save }}" class="btn" aria-disabled="{{ disabled }}" aria-busy="{{ busy }}" data-why="{{ why }}">{{ saveWord }}</button>
     </div>
     </sc-if>
 
@@ -7277,6 +7391,16 @@ SCREENS.Quote = {
       </div>
     </sc-if>
 
+    <sc-if value="{{ leaveOpen }}">
+      <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
+      <div class="sheet" role="dialog" aria-label="Leave without saving?" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 20px calc(24px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+        <span class="t2" style="font-size: 18px">Leave without saving?</span>
+        <span style="font-size: 14px; color: #5F6980; line-height: 1.4">{{ leaveWords }}</span>
+        <button type="button" onClick="{{ closeSheet }}" class="btn ink">Keep editing</button>
+        <button type="button" onClick="{{ discard }}" class="btn2" style="color: #A82D24">Discard it</button>
+      </div>
+    </sc-if>
     <sc-if value="{{ whoOpen }}">
       <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
       <div class="sheet" role="dialog" aria-label="Who answered?" style="position: absolute; left: 0; right: 0; bottom: 0; height: 86%; background: #F8F6F2; border-radius: 24px 24px 0 0; display: flex; flex-direction: column">
@@ -7325,6 +7449,7 @@ SCREENS.Quote = {
       const price = !t ? 0 : lvl === 'outer' ? perUnit * p.outerQty : lvl === 'inner' ? perUnit : perUnit / (p.inner ? p.ppu : 1);
       this.state = Object.assign({}, this.state, { seeded: key, sheet: null, draft: '', used: false,
         outer: p ? p.outer : '', outerQty: p ? p.outerQty : 0, mid: p ? p.inner : '', innerQty: p && p.inner ? p.ppu : 0, base: p ? p.base : 'piece', for: lvl, price: Math.round(price) });
+      this.seedSnap = quoteSnap(this.state);
     }
     renderVals() {
       const l = quoteLead(this.props);
@@ -7336,6 +7461,14 @@ SCREENS.Quote = {
       const key = c ? c.id : 'new:' + (supId || '');
       if (this.state.seeded !== key && !this.state.saved) this.seed(c, key);
       const st = this.state, set = (patch) => this.setState(patch);
+      // A supplier just added from the picker (on this hunt now) is the one picked.
+      const fresh = window.SX_NEW_SUPPLIER;
+      if (fresh && Date.now() - fresh.at < 10 * 60000 && (!fresh.leadId || String(fresh.leadId) === String(l.id))) {
+        window.SX_NEW_SUPPLIER = null;
+        const nc = leadSuppliers(l).find(x => String(x.supplierId) === String(fresh.id));
+        Object.assign(this.state, nc ? { candId: nc.id, supplierId: null, seeded: null } : { supplierId: fresh.id, candId: null, seeded: null });
+        return this.renderVals();
+      }
       const who = sup ? sup.name : c ? candName(c) : '';
       const q = leadDemandQty(l);
       // The packing as a sentence: "20 dozens in a carton · 12 a dozen".
@@ -7381,7 +7514,8 @@ SCREENS.Quote = {
             hasTag: !!tag, tag, tagStyle: 'height: 24px; padding: 0 9px; font-size: 11px; background: #E4F4EA; color: #0F6B43',
             ava: bAvatar(x.s.id, 38) + '; font-size: 12px',
             row: `width: 100%; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; ${i ? 'box-shadow: inset 0 1px 0 #F0ECE6' : ''}`,
-            pick: () => { FEEL.tick(); this.setState({ supplierId: x.s.id, candId: null, seeded: null, sheet: null, wq: '' }); } };
+            // Taps while the sheet is still sliding up are not picks (it moves under the finger).
+            pick: () => { if (Date.now() - (this.whoAt || 0) < 400) return; FEEL.tick(); this.setState({ supplierId: x.s.id, candId: null, seeded: null, sheet: null, wq: '' }); } };
         };
         const likelyX = wt.length ? [] : ranked.filter(x => x.sells || x.hit.length).slice(0, 4);
         const lk = new Set(likelyX.map(x => String(x.s.id)));
@@ -7464,6 +7598,7 @@ SCREENS.Quote = {
           this.setState({ saved: { who, perPiece: fmt(perPc), base: baseW, sentence, item: l.name, nWord: plural(n, 'price'), cta: n > 1 ? `Compare the ${n} prices` : 'See the price, a piece', hasGate: !!gate, gate: gate ? 'Still ' + STAGE_WORD[lead.status] + ': ' + gate : '' } });
         });
       };
+      const dirty = !st.saved && !!this.seedSnap && quoteSnap(st) !== this.seedSnap;
       const photos = bPhotos(l);
       return {
         none: false, has: true, sx, item: l.name, hasNeed: q > 0, need: n0(q), icon: itemIconPath(l.name),
@@ -7477,7 +7612,7 @@ SCREENS.Quote = {
         otherIni: otherOn ? initials(sup.name) : '+', otherLabel: otherOn ? `${sup.name} answered: change` : 'Someone else answered: pick who',
         otherAva: otherOn ? bAvatar(sup.id, 30) + '; font-size: 10px' : 'width: 30px; height: 30px; background: #F2EFEA; color: #5F6980; font-size: 14px',
         otherStyle: `flex: ${cands.length ? '0 0 auto' : '1'}; min-width: 150px; max-width: ${cands.length ? '190px' : 'none'}; height: 50px; border-radius: 14px; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; color: #1C2233; box-shadow: ${otherOn ? '0 0 0 2px #16203C' : '0 0 0 1px #E2DDD4'}`,
-        openWho: () => { FEEL.open(); this.setState({ sheet: 'who', wq: '' }); }, whoOpen: sh === 'who',
+        openWho: () => { FEEL.open(); this.whoAt = Date.now(); this.setState({ sheet: 'who', wq: '' }); }, whoOpen: sh === 'who',
         typeWq: (e) => this.setState({ wq: e.target.value }),
         okWord: ok ? `✓ ${n0(total)} ${bPl(baseW, total)}` : 'how many?', okStyle: ok ? 'background: #E4F4EA; color: #0F6B43' : 'background: #FDF1DC; color: #7A4A02',
         hasSug: !!sug, sugFrom: sug ? sug.from : '', sugWord: sug ? sug.p.sentence : '', sugIni: sug ? initials(sug.name) : '', sugAva: bAvatar(sug ? sug.key : '', 32) + '; font-size: 11px',
@@ -7497,10 +7632,14 @@ SCREENS.Quote = {
         priceT: price ? n0(price) : 'Tap to type', priceFor: (lv.find(x => x[0] === forKey) || lv[0])[1], priceTap: price ? 'change' : '',
         priceLabel: price ? `Their price: ${n0(price)}; tap to change` : 'Type their price',
         priceStyle: price ? 'font-size: 30px; font-weight: 500; letter-spacing: -.04em; line-height: 1; color: #1C2233' : 'font-family: Figtree, system-ui, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1; color: #A82D24',
-        per: lv.map(([k, w]) => ({ k: w, v: fmt(perOf[k]), style: `padding: 8px 10px; border-radius: 12px; min-width: 0; display: flex; flex-direction: column; gap: 1px; ${forKey === k ? 'background: #16203C; color: #FFFFFF' : 'background: #F4F1EC; color: #1C2233'}` })),
+        per: lv.map(([k, w]) => ({ k: w, v: fmt(perOf[k]), label: `Type their price a ${w}`, tap: () => { FEEL.tick(); set({ for: k, price: Math.round(perOf[k]) || 0, sheet: 'num:price', draft: '', draftTouched: false }); }, style: `padding: 8px 10px; border-radius: 12px; min-width: 0; display: flex; flex-direction: column; gap: 1px; ${forKey === k ? 'background: #16203C; color: #FFFFFF' : 'background: #F4F1EC; color: #1C2233'}` })),
         perLabel: lv.map(([k, w]) => `${fmt(perOf[k])} a ${w}`).join(', '),
         hint: ok ? 'Sales will see: ' + sentence : 'Finish the packing first: Sales sells by it', hintCol: ok ? '#6B7480' : '#A82D24',
-        disabled: ready ? 'false' : 'true', why, save, saveWord: who ? `Save ${firstWord(who)}’s price` : 'Save the price',
+        disabled: ready && !S.busy ? 'false' : 'true', busy: S.busy ? 'true' : 'false', why, save, saveWord: S.busy ? 'Saving… one moment' : who ? `Save ${firstWord(who)}’s price` : 'Save the price',
+        // Close asks first when something was typed and not saved.
+        tryClose: (e) => { if (!dirty) return; e.preventDefault(); e.stopPropagation(); FEEL.tick(); set({ sheet: 'leave' }); },
+        leaveOpen: sh === 'leave', leaveWords: `${who ? firstWord(who) + '’s ' : ''}${price ? n0(price) + ' a ' + ((lv.find(x => x[0] === forKey) || lv[0])[1]) : 'price'}${ok ? ', packed ' + sentence : ''}, isn’t saved yet.`,
+        discard: (e) => { e.preventDefault(); FEEL.back(); this.seedSnap = null; if (S.stack.length > 1) A.back(); else A.replace('Hunt', { leadId: l.id }); },
         padOpen: sh.startsWith('num'), unitOpen: sh.startsWith('unit'), closeSheet: () => set({ sheet: null, draft: '', draftTouched: false }),
         padQ, draftT: draft ? n0(Number(draft)) : '0', hasQuick: kind !== 'price', quick: [6, 10, 12, 20, 24, 50, 100].map(n => ({ label: String(n), pick: () => setNum(n) })), keys,
         unitQ: kind === 'outer' ? 'How does it come?' : 'What is inside?', uq: st.uq, typeUq: (e) => set({ uq: e.target.value }), unitGroups,
@@ -8066,7 +8205,8 @@ SCREENS.Search = {
     constructor(props) { super(props); this.state = { q: (props && props.q) || '', tab: 'all' }; }
     renderVals() {
       const d = D(), st = this.state, tokens = searchTokens(st.q), stale = priceStaleDays();
-      const has = (text) => { const hay = searchTokens(text); return tokens.every(t => hay.some(h => h.includes(t))); };
+      // A letter off still finds it: “cement” finds “Cemet” (smNear, words of 4 letters or more).
+      const has = (text) => { const hay = searchTokens(text); return tokens.every(t => hay.some(h => h.includes(t) || smNear(t, h))); };
       const row = (i) => `display: flex; align-items: center; gap: 12px; min-height: 58px${i ? '; box-shadow: inset 0 1px 0 #F0ECE6' : ''}`;
       let items = [], hunts = [], people = [];
       if (tokens.length) {
@@ -8316,7 +8456,7 @@ SCREENS.Spotted = {
       };
       if (pk.kind === 'lead' || pk.kind === 'new') {
         let l = pk.l, isNew = false;
-        if (pk.kind === 'new') { const res = await captureAsk({ name: sub.t, source: 'spotted', image: photo, forceNew: true }); l = res.lead; isNew = true; }
+        if (pk.kind === 'new') { const res = await captureAsk({ name: sub.t, source: 'spotted', image: photo, forceNew: true, extra: { noClient: true } }); l = res.lead; isNew = true; }
         const r = await onHunt(l);
         toast(sup ? `${isNew ? 'New hunt “' + r.l.name + '”: ' : ''}${sup.name} ${eachWord}${isNew ? '' : ' on “' + r.l.name + '”'}${r.moved ? ' — now Found' : ''}`
           : `${isNew ? 'New hunt “' + r.l.name + '”: ' : ''}${rival} sells it at ${eachWord}${isNew ? '' : ' — on “' + r.l.name + '”'}`, 5000);
@@ -8517,7 +8657,12 @@ SCREENS.Supplier = {
           <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="sub">{{ f.item }}</span><span role="img" aria-label="{{ f.aria }}" style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 14px; font-weight: 700"><span class="{{ f.cls }}" style="font-size: 12px; font-weight: 600; color: #767F91; text-decoration: line-through">{{ f.was }}</span><span aria-hidden="true" style="color: #0F6B43">→</span><span class="{{ f.cls }}" style="color: #0F6B43">{{ f.now }}</span></span></span>
           <sc-if value="{{ f.canEdit }}"><a href="NewSupplier.dc.html" data-sx="{{ f.editSx }}" aria-label="{{ f.editLabel }}" class="pill" style="height: 30px; background: #F2EFEA; color: #1C2233">Edit</a></sc-if>
         </div></sc-for>
-        <button type="button" onClick="{{ h.done }}" aria-disabled="{{ h.locked }}" data-why="Closing a fix needs price.list or supplier.edit" aria-label="{{ h.doneLabel }}" class="btn go" style="height: 46px; margin: 8px 0 14px">{{ h.doneWord }}</button>
+        <sc-if value="{{ h.isClient }}">
+          <span style="font-size: 12.5px; color: #3B4566; line-height: 1.4; padding-top: 6px">{{ h.clientWord }}</span>
+          <button type="button" onClick="{{ h.move }}" aria-disabled="{{ h.moveOff }}" data-why="{{ h.moveWhy }}" class="btn ink" style="height: 46px; margin-top: 8px">Not a supplier · take off our list</button>
+          <button type="button" onClick="{{ h.keep }}" aria-disabled="{{ h.locked }}" class="btn2" style="height: 44px; margin: 8px 0 14px">Keep as a supplier</button>
+        </sc-if>
+        <sc-if value="{{ h.plain }}"><button type="button" onClick="{{ h.done }}" aria-disabled="{{ h.locked }}" data-why="Closing a fix needs price.list or supplier.edit" aria-label="{{ h.doneLabel }}" class="btn go" style="height: 46px; margin: 8px 0 14px">{{ h.doneWord }}</button></sc-if>
       </div>
       </sc-for>
 
@@ -8612,7 +8757,8 @@ SCREENS.Supplier = {
       const wonKeys = new Set();
       new Set(own.map(p => p.productId + '::' + (p.variantIdx == null ? '' : p.variantIdx))).forEach(k => {
         const [pid, v] = k.split('::'); const r = ranked(pid, v === '' ? null : Number(v));
-        if (r.length && String(r[0].supplierId) === sid) wonKeys.add(k);
+        const rc = r.filter(priceComparable);
+        if (rc.length && String(rc[0].supplierId) === sid) wonKeys.add(k);
       });
       const days = (n) => n == null ? '— —' : plural(n, 'day');
       const stats = [
@@ -8680,6 +8826,43 @@ SCREENS.Supplier = {
       const canFix = canCloseFix(), editSx = JSON.stringify({ supplierId: s.id });
       const fixNum = v => Number(String(v == null ? '' : v).replace(/[^0-9]/g, '')) || 0;
       const fixShow = (f, v) => f.field === 'price' ? (fixNum(v) ? n0(fixNum(v)) : '— —') : (String(v == null ? '' : v).trim() || '— —');
+      // "A client, not a supplier": said so in the fix, or the name or phone
+      // is a client's and they sell us nothing. Taking them off the list is
+      // supplier.edit; their client record is the Manager's (decision-rights).
+      const cust = D().customers.find(c => normName(c.name) === normName(s.name) || (phoneDigits(s.phone) && phoneDigits(c.phone) === phoneDigits(s.phone))) || null;
+      const huntsOn = D().leads.filter(l => leadSuppliers(l).some(c => String(c.supplierId) === String(s.id))).length;
+      const clientFix = (h, list) => {
+        const said = list.some(f => /client|customer/i.test([f.label, f.field, f.now, f.was].join(' ')));
+        if (!said && !(cust && !own.length)) return { isClient: false, plain: true };
+        const orders = cust ? D().quotes.filter(q => !q.voided && (String(q.customerId || '') === String(cust.id) || normName(q.client && q.client.name) === normName(cust.name))).length : 0;
+        const stuck = own.length ? `${plural(own.length, 'price')} on file` : huntsOn ? `on ${plural(huntsOn, 'hunt')}` : '';
+        return { isClient: true, plain: false,
+          clientWord: (cust ? `${cust.name} is a client${orders ? ` · ${plural(orders, 'order')}` : ''}` : 'Not on the client list yet — the Manager adds clients')
+            + ` · sells us ${own.length ? plural(own.length, 'line') : 'nothing'}.`,
+          moveOff: !hasTask('supplier.edit') || stuck ? 'true' : null,
+          moveWhy: !hasTask('supplier.edit') ? 'Taking a supplier off needs supplier.edit' : stuck ? `${s.name} has ${stuck} — keep them, or move those first` : '',
+          move: () => {
+            if (!hasTask('supplier.edit') || stuck) { FEEL.no(); toast(!hasTask('supplier.edit') ? 'Taking a supplier off needs supplier.edit' : `${s.name} has ${stuck}`); return; }
+            guarded('Take them off the suppliers', async () => {
+              const { data, error } = await sb.from('suppliers').delete().eq('shop_id', S.shopId).eq('id', s.id).select('id');
+              if (error) throw error;
+              if (Array.isArray(data) && !data.length) throw new Error('Taking a supplier off needs the owner to allow it');
+              D().suppliers = D().suppliers.filter(x => String(x.id) !== String(s.id));
+              await closeFix(h);
+              await logDecision('supplier.edit', `Took ${s.name} off the suppliers: a client, not a supplier`, { ref: { table: 'suppliers', id: s.id }, before: { name: s.name, phone: s.phone || '' } });
+              FEEL.yes(); toast(`${s.name} is off the suppliers${cust ? ' — still on the client list' : ''}`);
+              if (S.stack.length > 1) A.back(); else A.replace('Suppliers', {});
+            });
+          },
+          keep: () => {
+            if (!canFix) { FEEL.no(); toast('Closing a fix needs price.list or supplier.edit'); return; }
+            guarded('Keep as a supplier', async () => {
+              await closeFix(h);
+              await logDecision('supplier.edit', `Kept ${s.name} as a supplier (flagged as a client)`, { ref: { table: 'suppliers', id: s.id } });
+              FEEL.yes(); toast(`${s.name} stays a supplier`);
+            });
+          } };
+      };
       const fixes = fixesFor(s.id).map(h => {
         const name = fixBy(h) || 'Buyer', who = fixByWord(h), list = Array.isArray(h.payload.fixes) ? h.payload.fixes : [], on = String(this.props.handoffId || '') === String(h.id), ft = tintFor(name);
         return { id: h.id, who: fixBy(h) ? who + ', the Buyer,' : 'The Buyer', ini: initials(name), bg: ft[0], fg: ft[1],
@@ -8688,7 +8871,8 @@ SCREENS.Supplier = {
           rows: list.map(f => ({ label: String(f.label || f.field || '').toUpperCase(), item: f.tab === 'sup' ? 'The supplier' : (f.item || ''),
             was: fixShow(f, f.was), now: fixShow(f, f.now), cls: f.field === 'price' ? 'm' : '', aria: `${String(f.label || f.field || '').toLowerCase()}: ${fixShow(f, f.was)} should be ${fixShow(f, f.now)}`,
             canEdit: f.tab === 'sup' && hasTask('supplier.edit'), editSx, editLabel: `Edit ${s.name}'s ${String(f.label || f.field || '').toLowerCase()}` })),
-          locked: canFix ? null : 'true', doneWord: canFix ? 'Checked · done' : 'Not your login’s to close',
+          locked: canFix ? null : 'true', doneWord: canFix ? 'Done · the changes are made' : 'Not your login’s to close',
+          ...clientFix(h, list),
           doneLabel: canFix ? `Mark ${who}’s ${plural(list.length, 'fix', 'fixes')} for ${s.name} done` : 'Closing a fix needs price.list or supplier.edit',
           done: () => {
             if (!canFix) { FEEL.no(); toast('Closing a fix needs price.list or supplier.edit'); return; }
