@@ -4735,6 +4735,9 @@ const AA_ICON = {
   shop: '<svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  other: '<svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 8h5M19.5 5.5v5"/></svg>',
+  chev: '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
 };
 function injectAgentAuthStyles(){
   if(document.getElementById('agAuthStyles')) return;
@@ -4799,6 +4802,22 @@ function injectAgentAuthStyles(){
   .ag-auth .aa-link .ln svg{width:13px;height:13px;stroke-width:3;}
   .ag-auth .aa-link .me{width:68px;height:68px;border-radius:999px;background:linear-gradient(160deg,#2E3B66,#1D2747);box-shadow:0 0 0 3px #6FDCB0;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;}
   .ag-auth .aa-meet h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em;}
+  .ag-auth .aa-link.no .sh{color:#8D99B5;background:rgba(255,255,255,.06);}
+  .ag-auth .aa-link.no .ln{background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 6px,transparent 6px 11px);}
+  .ag-auth .aa-link.no .ln i{background:#F5B26B;}
+  .ag-auth .aa-link.no .me{box-shadow:0 0 0 3px rgba(111,220,176,.55);}
+  .ag-auth .aa-who{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:34px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);font-size:13px;font-weight:600;color:#D5DBE8;}
+  .ag-auth .aa-who span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ag-auth .aa-who svg{width:15px;height:15px;stroke:#6FDCB0;stroke-width:2.4;}
+  .ag-auth .aa-pitch.no{margin-bottom:8px;}
+  .ag-auth .aa-pitch.no span{color:#F5B26B;}
+  .ag-auth .aa-why{margin:0 0 24px;font-size:14px;line-height:1.45;font-weight:500;color:#B3BCD2;}
+  .ag-auth a.aa-help{text-decoration:none;color:inherit;margin-top:0;}
+  .ag-auth .aa-help i.o{background:#FDE8E4;color:#A82D24;}
+  .ag-auth .aa-help > span{flex:1;min-width:0;}
+  .ag-auth .aa-help em{font-style:normal;display:flex;align-items:center;gap:2px;font-size:13px;font-weight:700;color:#A82D24;white-space:nowrap;}
+  .ag-auth .aa-help em svg{width:14px;height:14px;stroke-width:2.4;}
+  .ag-auth .aa-why.aa-fail {color:#FF9A8C;}
   .ag-auth .aa-meet p{margin:4px 0 0;font-size:14px;font-weight:600;color:#B3BCD2;}
   .ag-auth .aa-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .ag-auth .aa-row b{font-size:17px;}
@@ -5604,7 +5623,13 @@ async function ensureAgentAuth(){
     throw error;
   }
   if(!agentRows || !agentRows.length){
-    throw new Error("This login isn't linked to an agent account. Ask the shop to send you an invite.");
+    /* Not a failure to retry: the login is real and no shop has made it
+       an agent. Marked, so boot shows the screen that says so and offers
+       another login, rather than "Reload to try again". */
+    const err = new Error("This login isn't linked to an agent account. Ask the shop to send you an invite.");
+    err.code = 'not-agent';
+    err.email = user.email || '';
+    throw err;
   }
   if(agentRows.length > 1){
     throw new Error(`This login is linked to ${agentRows.length} different shops, so the app can't tell which one to open. Ask the shop to remove the duplicate agent account.`);
@@ -11732,14 +11757,70 @@ setInterval(()=>{
   if(liveIsBusy() && Date.now() - lastLiveAt > LIVE_FAST_MS) refreshLiveOrders();
 }, 4000);
 
+/* SIGNED IN, BUT NOT AN AGENT. The owner's own login, a typo'd invite,
+   an agent the shop has not added yet: the password worked and there is
+   no agent behind it. Reloading cannot fix that, so the way out is
+   another login, and the two people who land here are each told where
+   to go -- an agent to the shop for an invite, the shop to its own app. */
+function showNotAgentScreen(email){
+  injectAgentAuthStyles();
+  const el = ensureAuthOverlay();
+  el.className = 'ag-auth';
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;';
+  const who = String(email || '').trim();
+  const ini = (who[0] || '?').toUpperCase();
+  const shopApp = window.Capacitor ? 'https://omni-ware.vercel.app/' : location.origin + '/';
+  el.innerHTML = `
+    <div class="aa-shell">
+      <div class="aa-top">
+        <div class="aa-brand"><span class="aa-logo"><svg viewBox="0 0 192 192"><g transform="translate(96 96) scale(.86) translate(-96 -96)" stroke-width="21.8"><circle cx="46" cy="96" r="29.4"/><polyline points="108.5,66.6 125.1,125.4 142,90.1 158.8,125.4 175.4,66.6"/></g></svg></span><span><b>Omni-Ware</b><small>AGENT</small></span></div>
+        <div class="aa-meet" aria-hidden="true">
+          <span class="aa-link no"><span class="me">${esc(ini)}</span><span class="ln"><i>${AA_ICON.x}</i></span><span class="sh">${AA_ICON.shop}</span></span>
+          ${who ? `<span class="aa-who">${AA_ICON.check}<span>${esc(who)}</span></span>` : ''}
+        </div>
+        <h2 class="aa-pitch no">This login isn&rsquo;t<br><span>an agent account.</span></h2>
+        <p class="aa-why">It signed in, but no shop has made it an agent. Nothing is wrong with your password.</p>
+      </div>
+      <div class="aa-card"><div class="aa-in-wrap">
+        <button type="button" id="auth_other_btn" class="aa-primary">${AA_ICON.other}Use another login</button>
+        <div class="aa-help"><i>${AA_ICON.invite}</i><span><b>Selling for a shop?</b><small>Ask them to invite this email. The invite comes with its own link.</small></span></div>
+        <a class="aa-help" href="${esc(shopApp)}"><i class="o">${AA_ICON.shop}</i><span><b>Running the shop?</b><small>Your login opens the shop&rsquo;s own app. Agents are invited from there.</small></span><em>Open${AA_ICON.chev}</em></a>
+      </div></div>
+    </div>`;
+  el.querySelector('#auth_other_btn').addEventListener('click', (e)=>{ e.currentTarget.disabled = true; signOutAndReload(); });
+}
+/* Anything else that stopped the app opening: said once, without a
+   second full stop, with a reload and a way back to the door. */
+function showBootFailScreen(e){
+  injectAgentAuthStyles();
+  const el = ensureAuthOverlay();
+  el.className = 'ag-auth';
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;';
+  const why = String((e && e.message) || e || 'Something went wrong').trim().replace(/[.\s]+$/, '');
+  el.innerHTML = `
+    <div class="aa-shell">
+      <div class="aa-top">
+        <div class="aa-brand"><span class="aa-logo"><svg viewBox="0 0 192 192"><g transform="translate(96 96) scale(.86) translate(-96 -96)" stroke-width="21.8"><circle cx="46" cy="96" r="29.4"/><polyline points="108.5,66.6 125.1,125.4 142,90.1 158.8,125.4 175.4,66.6"/></g></svg></span><span><b>Omni-Ware</b><small>AGENT</small></span></div>
+        <h2 class="aa-pitch no" style="margin-top:48px">Couldn&rsquo;t open<br><span>your account.</span></h2>
+        <p class="aa-why aa-fail" role="alert">${esc(why)}.</p>
+      </div>
+      <div class="aa-card"><div class="aa-in-wrap">
+        <button type="button" id="auth_reload_btn" class="aa-primary">Reload and try again</button>
+        <button type="button" id="auth_other_btn" class="aa-forgot" style="align-self:center;margin:0">Use another login</button>
+      </div></div>
+    </div>`;
+  el.querySelector('#auth_reload_btn').addEventListener('click', ()=> location.reload());
+  el.querySelector('#auth_other_btn').addEventListener('click', (ev)=>{ ev.currentTarget.disabled = true; signOutAndReload(); });
+}
+
 async function boot(){
   updateOfflineBanner();
   try{
     await ensureAgentAuth();
   }catch(e){
     console.error('Failed to start app:', e);
-    const el = ensureAuthOverlay();
-    el.innerHTML = `<div style="color:#f66;font-family:inherit;max-width:400px;text-align:center;padding:0 20px;">Couldn't load your account: ${esc((e && e.message) || e)}. Reload to try again.</div>`;
+    if(e && e.code === 'not-agent'){ showNotAgentScreen(e.email); return; }
+    showBootFailScreen(e);
     return;
   }
   /* Applied only when the row was actually read: a cached boot carries
