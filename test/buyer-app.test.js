@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow, roundStops, stopIsDone, tripPlanFor, roundHandover, restoreTripPay, setTripPay, outGroups, greetName, greeting, handInOf, stopBoughtElsewhere };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -755,6 +755,117 @@ const P = page(fakeDb({}));
     t.check(/data-act="rsoff" data-id="rb1"/.test(X.PAGE.restock({ picked: [] })), 'a refill on the list whose stock just came in offers Take off');
     await X.ACT.rsoff({ dataset: { id: 'rb1' } });
     t.check(db.tables.restock_buys[0].status === 'cancelled', 'and Take off cancels it');
+  }
+
+  /* ---------------- 10. the round: one hand-in, at the yard ---------------- */
+  // 10a. Two stops: a short line pays for what came, each stop is done in turn, the round goes in once.
+  {
+    const a1 = orderRow(95, [it(1, 'P2', null, 6, 'S2', 28000)], {}, { status: 'awaiting_goods' }), a2 = orderRow(96, [it(1, 'P1', 0, 10, 'S1', 14500)], {}, { status: 'awaiting_goods' });
+    const data = fixture(); data.handoffs = [{ id: 'h10', kind: 'trip_cash', ref: 'round:r10', status: 'done', createdAt: new Date(NOW - 6e4).toISOString(), doneAt: new Date(NOW - 3e4).toISOString(), payload: { supplierIds: ['S1', 'S2'], amount: 400000 } }];
+    const db = fakeDb({ saved_quotes: [a1, a2], collection_trips: [], buyer_handoffs: [], __rpcOk: true }), X = page(db, data);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(a1))), X.rowToQuote(JSON.parse(JSON.stringify(a2)))];
+    X.S.stack = [{ type: 'plan', args: { who: 'me' } }];
+    await X.ACT['slide:trip']();
+    t.check(db.tables.collection_trips.length === 2, 'the round starts as two stops');
+    const [s1, s2] = X.roundStops(X.D().collectionTrips[0]);
+    X.S.stack = [{ type: 'trip', args: { id: s1.id } }];
+    const per = s1.supplierId === 'S1' ? 14500 : 28000, qty = s1.supplierId === 'S1' ? 10 : 6;
+    X.ACT.tshort({ dataset: { i: '0' } });
+    let html = X.PAGE.trip({ id: s1.id });
+    t.check(/STOP 1 OF 2/.test(html) && /aria-label="The round: 2 stops, handed in once at the yard"/.test(html), 'the stop says where it is in the round, with the route to the yard');
+    t.check(new RegExp((qty - 1) + ' of ' + qty).test(html) && /as planned · what came/.test(html), 'a short line reads "' + (qty - 1) + ' of ' + qty + '", and "as planned" pays for what came');
+    X.ACT.tpaidplan();
+    t.check(X.S.tripPay[s1.id].amount === (qty - 1) * per, '"as planned" on a short line fills in what came: ' + X.S.tripPay[s1.id].amount);
+    t.check(/in hand <b class="m"[^>]*>400,000<\/b>/.test(X.PAGE.trip({ id: s1.id })) && /SAVED/.test(X.PAGE.trip({ id: s1.id })), 'the cash in hand is Accounts\' handover, and what was typed is saved');
+    X.S.tripPay = {}; X.restoreTripPay();
+    t.check(X.S.tripPay[s1.id] && X.S.tripPay[s1.id].amount === (qty - 1) * per, 'what you typed survives stepping away');
+    X.ACT.tnorec();
+    t.check(/data-act="stopdone"/.test(X.PAGE.trip({ id: s1.id })) && !/data-slide="handin"/.test(X.PAGE.trip({ id: s1.id })), 'with another stop to go, the button is "Done here", not a hand-in');
+    await X.ACT.stopdone();
+    t.check(X.S.tripPay[s1.id].done, 'Done here marks the stop done');
+    t.check(db.tables.collection_trips.every(r => r.status === 'collecting') && !db.writes.some(w => w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill'), 'and nothing is handed in, nobody told: the goods ride on');
+    html = X.PAGE.trip({ id: s1.id });
+    t.check(/IN HAND FOR/.test(html) && new RegExp('data-act="nextstop" data-id="' + s2.id + '"').test(html) && /data-act="endnow"/.test(html), 'the stop shows the cash for the next stop, the way to it, and Hand in now');
+    X.S.stack = [{ type: 'trip', args: { id: s2.id } }];
+    X.ACT.tall({ dataset: { i: '0' } }); X.ACT.tpaidplan(); X.ACT.tnorec();
+    t.check(/Slide to hand in the round/.test(X.PAGE.trip({ id: s2.id })), 'the last stop hands in the round');
+    await X.ACT['slide:handin']();
+    t.check(db.tables.collection_trips.every(r => r.status === 'collected') && new Set(db.tables.collection_trips.map(r => r.collected_at)).size === 1, 'both stops go in at once, at one time');
+    const shortRow = db.tables.collection_trips.find(r => r.id === s1.id);
+    t.check(shortRow.lines[0].gotPrice == null && shortRow.lines[0].gotQty === qty - 1, 'a short line never updates the price list: its price paid is left to the plan');
+    t.check(db.writes.filter(w => w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill').length === 2, 'Accounts gets each stop\'s amount at the hand-in');
+    X.S.stack = [{ type: 'done', args: { id: s1.id } }];
+    html = X.PAGE.done({ id: s1.id });
+    t.check(/BACK FROM 2 STOPS · ONE HAND-IN/.test(html) && /ROUND · 2 STOPS/.test(html) && /told once/.test(html), 'the hand-in page is the round\'s');
+    t.check(new RegExp('\\+1 short · ' + (qty - 1) + ' of ' + qty).test(html) && /letter-spacing:-\.04em">1<\/span><span class="m" style="font-size:18px;color:var\(--navyInk2\)">of 2 in full/.test(html), 'and it says what came, never "0 of 1 in full": ' + (html.match(/\+1 short[^<]*/) || [''])[0]);
+  }
+  // 10e. Hand in now: the stop not reached goes back to To plan, and its cash stays counted on the round.
+  {
+    const a1 = orderRow(97, [it(1, 'P2', null, 6, 'S2', 28000)], {}, { status: 'awaiting_goods' }), a2 = orderRow(98, [it(1, 'P1', 0, 10, 'S1', 14500)], {}, { status: 'awaiting_goods' });
+    const data = fixture(); data.handoffs = [{ id: 'h11', kind: 'trip_cash', ref: 'round:r11', status: 'done', createdAt: new Date(NOW - 6e4).toISOString(), payload: { supplierIds: ['S1', 'S2'], amount: 400000 } }];
+    const db = fakeDb({ saved_quotes: [a1, a2], collection_trips: [], buyer_handoffs: [], __rpcOk: true }), X = page(db, data);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(a1))), X.rowToQuote(JSON.parse(JSON.stringify(a2)))];
+    X.S.stack = [{ type: 'plan', args: { who: 'me' } }];
+    await X.ACT['slide:trip']();
+    const given = db.tables.collection_trips.reduce((a, r) => a + (Number(r.cash_given) || 0), 0);
+    const [s1, s2] = X.roundStops(X.D().collectionTrips[0]);
+    X.S.stack = [{ type: 'trip', args: { id: s1.id } }];
+    X.ACT.tall({ dataset: { i: '0' } }); X.ACT.tpaidplan(); X.ACT.tnorec();
+    await X.ACT.stopdone();
+    X.ACT.endnow();
+    t.check(/Slide to hand in the round/.test(X.PAGE.trip({ id: s1.id })) && /BRING BACK TO/.test(X.PAGE.trip({ id: s1.id })) && /back to To plan/.test(X.PAGE.trip({ id: s1.id })), 'Hand in now: the cash in hand goes back, the next stop back to To plan');
+    await X.ACT['slide:handin']();
+    const r1 = db.tables.collection_trips.find(r => r.id === s1.id), r2 = db.tables.collection_trips.find(r => r.id === s2.id);
+    t.check(r1.status === 'collected' && r2.voided === true && r2.status === 'collecting', 'the stop reached is handed in, the one not reached is off the round');
+    t.check(Number(r1.cash_given) === given && given === 400000, 'and the whole handover is still counted on the round for Accounts: ' + r1.cash_given);
+    t.check(X.runsToGo().some(r => String(r.supplierId) === String(s2.supplierId)), 'the stop not reached is back on To plan');
+  }
+  // 10b. No handover from Accounts: no cash is shown as given.
+  {
+    const X = page(fakeDb({}));
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-NC-1', supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(NOW - 6e5).toISOString(), cash_given: 850000, lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 1000 }] })];
+    X.S.stack = [{ type: 'trip', args: { id: 'TRIP-NC-1' } }];
+    const html = X.PAGE.trip({ id: 'TRIP-NC-1' });
+    t.check(!/gave you|in hand <b/.test(html) && /No cash from .* · ask/.test(html), 'a cash figure on the trip is never "gave you": with no handover it says so, with an ask');
+  }
+  // 10c. A stop a supplier already delivers is off the round, and a trip out since an earlier day with nothing loaded is late.
+  {
+    const X = page(fakeDb({}));
+    const old = new Date(NOW - 3 * 864e5).toISOString(), now = new Date(NOW - 6e5).toISOString();
+    X.D().collectionTrips = [
+      X.rowToTrip({ id: 'TRIP-DL', supplier_id: 'S2', status: 'collecting', assigned_worker_id: '__supplier__', created_at: old, lines: [{ orderId: 7, lineId: 'L7-0', productId: 'P2', qty: 1, expectedPrice: 95000 }] }),
+      X.rowToTrip({ id: 'TRIP-RD-1', supplier_id: 'S2', status: 'collecting', assigned_worker_id: 'W1', created_at: now, lines: [{ orderId: 7, lineId: 'L7-0', productId: 'P2', qty: 1, expectedPrice: 95000 }] }),
+      X.rowToTrip({ id: 'TRIP-RD-2', supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: now, lines: [{ orderId: 8, lineId: 'L8-0', productId: 'P1', qty: 1, expectedPrice: 1000 }] }),
+    ];
+    t.check(X.stopBoughtElsewhere(X.D().collectionTrips[1]) && X.stopBoughtElsewhere(X.D().collectionTrips[1]).id === 'TRIP-DL', 'a stop whose lines a supplier already delivers is spotted');
+    X.S.stack = [{ type: 'trip', args: { id: 'TRIP-RD-1' } }];
+    t.check(/delivers these/.test(X.PAGE.trip({ id: 'TRIP-RD-1' })) && /data-act="stopdrop"/.test(X.PAGE.trip({ id: 'TRIP-RD-1' })), 'and the stop offers Take off the round');
+    const html = X.PAGE.trips();
+    t.check(/3 D LATE/.test(html) && /THEY BRING IT · 1/.test(html) && /ROUND · /.test(html) && (html.match(/data-act="trip" data-id="TRIP-RD-/g) || []).length === 1, 'Trips shows the round as one card, and the delivery from three days ago as late');
+    t.check(!/\(YOU\)/.test(html) && /today’s trips only/.test(html), 'no "(YOU)", and the cash counts today\'s trips only');
+  }
+  // 10f. At the yard: one card, a bar by day, the names behind a tap.
+  {
+    const X = page(fakeDb({}));
+    const back = (id, sid, h) => X.rowToTrip({ id, supplier_id: sid, status: 'collected', assigned_worker_id: 'W1', created_at: new Date(NOW - (h + 2) * 36e5).toISOString(), collected_at: new Date(NOW - h * 36e5).toISOString(), lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 1, gotQty: 1 }] });
+    X.D().collectionTrips = [back('Y1', 'S1', 1), back('Y2', 'S2', 1.2), back('Y3', 'S1', 80), back('Y4', 'S1', 80.5)];
+    let html = X.PAGE.trips();
+    t.check(/waiting<br>to count/.test(html) && /data-act="yardopen"/.test(html) && !/data-id="Y3"/.test(html), 'At the yard is one card, the trips folded behind a tap');
+    t.check(/oldest /.test(html) && /#E09A4E/.test(html), 'the oldest day is named, in amber when it has sat for days');
+    X.ACT.yardopen();
+    html = X.PAGE.trips();
+    t.check(/data-id="Y1"/.test(html) && /×2/.test(html) && (html.match(/data-id="Y[34]"/g) || []).length === 1, 'open, the trips show by day as chips, two from one supplier on one day as one "×2"');
+  }
+  // 10d. The greeting: the time of day it is, and a name, never a login.
+  {
+    const X = page(fakeDb({}));
+    X.D().staff = [{ id: 'W1', name: 'turyasingurakevin94', userId: 'u1' }];
+    t.check(X.greetName() === '', 'a login handle is not a name to greet by');
+    X.D().staff = [{ id: 'W1', name: 'Kevin Ackman', userId: 'u1' }];
+    t.check(X.greetName() === 'Kevin Ackman', 'the staff row\'s name is');
+    const real = Date.prototype.getHours; Date.prototype.getHours = () => 1;
+    t.check(X.greeting() === 'Working late', 'at 1 am it says Working late, not Good evening');
+    Date.prototype.getHours = real;
   }
 
   process.exit(t.done() ? 1 : 0);

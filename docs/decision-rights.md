@@ -104,7 +104,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Release an order held for credit | `credit.release` | Manager | Sales | Sales | yes |
 | **Set a customer's credit limit, payment terms, and the shop's hold days** | `credit.set` | Manager | Sales, Accounts | owner's log | yes |
 | **Record a customer's promise to pay** | `promise.record` | Sales, Manager, Accounts | — | Manager | yes |
-| **Give a customer an opening balance: what they owed before these books, once confirmed with them** (`set_opening_balance`, 0146; only before they trade) | `debt.open` | Manager | — | owner's log | yes |
+| **Give a customer an opening balance: what they owed before these books, once confirmed with them** (`set_opening_balance`, 0148; only before they trade) | `debt.open` | Manager | — | owner's log | yes |
 | **Decide an agent's change or cancel request** | `agent.change` | Manager | the agent | Buyer, the agent | yes |
 | Take a customer's payment | `payment.receive` | Sales, Manager, Accounts | — | — | yes |
 | &nbsp;&nbsp;…as one write (`receive_payment`, 0139): the money spread oldest first or over the bills ticked, a receipt per bill, the bill's payments and share of the debt, the debt lowered and logged, the rest on account; nothing lands part-way | | | | | yes |
@@ -165,6 +165,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | **Work a request: asked, looking, found, priced, listed** | `sourcing.lead` | Sourcing | Sales | Sales (who asked) | yes |
+| **Act on searches that found nothing: hunt them, set the words aside, or teach a name to an item we sell** (`search_misses`, `search_mutes`, `item_names`, 0146) | `sourcing.lead`, `product.edit` (a name) | Sourcing | Sales, agents, the website (by searching) | owner's log | yes |
 | **Add a new item to what we sell, or edit a product's details (not its markup)** | `product.edit` | Sourcing | — | Manager (to set the markup) | yes |
 | **Add or edit suppliers, and merge two records that are one supplier** (`merge_suppliers`, 0145) | `supplier.edit` | Sourcing | Buyer | — | yes |
 | **Keep the supplier price list and rival prices right** | `price.list` | Sourcing | Buyer | — | yes |
@@ -525,7 +526,9 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0143 | A stock count is accepted once, from 'sent' (on 0142's), and a surplus lot is valued at the last cost known (`ow_last_known_cost`); an Accounts login cannot book a cash line on a closed day (the 0123 guard on INSERT too) |
 | 0144 | Buyer, second: Sourcing finding a supplier for a line the client waits for pushes the Buyer who sent it (`sourcing.found`), and a trip handed in short pushes each short order's salesperson (`trip.short`) |
 | 0145 | Sourcing v2: two supplier records that are one supplier merged in one write (`merge_suppliers`, supplier.edit), and prices a day set by Sourcing (`set_prices_per_day`, price.confirm) |
-| 0146 | A fresh start: a new shop copied from the old one's reference data, never its balances (`ow_fresh_start`), and switch day moving the team, agent logins, catalogues and WhatsApp numbers (`ow_fresh_start_move`), both the operator's in the SQL editor (docs/fresh-start.md); then the Manager confirms each customer's old balance and enters it (`set_opening_balance`, debt.open) |
+| 0146 | Sourcing v2, round 5: every search that finds nothing logged by itself (`search_misses`; `log_search_miss` for Sales, the console and agents, `ow_record_search_miss` for the website), read by Sourcing (sourcing.lead), who sets words aside (`search_mutes`) or teaches a name to an item (`item_names`, product.edit); an agent's "ask the shop to stock it" pushes Sourcing (`sourcing.request`) |
+| 0147 | Buyer, third: a round is handed in once, at the yard, so the Store and Accounts are told once per round (`ow_trip_round`), not once per stop |
+| 0148 | A fresh start: a new shop copied from the old one's reference data, never its balances (`ow_fresh_start`), and switch day moving the team, agent logins, catalogues and WhatsApp numbers (`ow_fresh_start_move`), both the operator's in the SQL editor (docs/fresh-start.md); then the Manager confirms each customer's old balance and enters it (`set_opening_balance`, debt.open) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

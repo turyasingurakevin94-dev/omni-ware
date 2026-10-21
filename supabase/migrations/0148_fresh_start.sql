@@ -1,4 +1,4 @@
--- 0146: A fresh start -- a new shop that keeps what was right about the old
+-- 0148: A fresh start -- a new shop that keeps what was right about the old
 -- one, and leaves behind what has to be measured again.
 --
 -- The owner's decision of 21 Oct 2026: the books of the shop the apps were

@@ -1623,7 +1623,7 @@ function pushSub(){ return pushState()[1]; }
 function start(){
   S.started = true;
   phonePush();
-  restoreTripDrafts();
+  restoreTripDrafts(); restoreTripPay();
   render();
   setInterval(() => { if (document.visibilityState === 'visible' && !S.dragging) refreshLive(); }, 45000);
   setInterval(() => { if (document.visibilityState === 'visible' && !S.dragging && !S.sheet) tickClocks(); }, 30000);
@@ -1706,7 +1706,10 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => { const t = e.target.closest('[data-in]'); if (t && ACT['in:' + t.dataset.in]) ACT['in:' + t.dataset.in](t, e); });
 
 /* ---------------- shared pieces ---------------- */
-function greeting(){ const h = new Date().getHours(); return h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+function greeting(){ const h = new Date().getHours(); return h < 5 ? 'Working late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
+// The name to greet by: the staff row's, else the login's profile name; a login handle is no name.
+function greetName(){ const st = myStaff(), m = (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
+  return [st && st.name, m].map(n => personName(n)).find(n => n && n !== 'You') || ''; }
 // A ring of coloured arcs, each a share of the whole, with a label inside.
 function segRing(segs, size, stroke, inner, label){
   const total = segs.reduce((s, x) => s + x.n, 0) || 1, r = (size - stroke) / 2;
@@ -1822,13 +1825,18 @@ function viewToday(){
   const bars = rowsA.slice(0, 6).map((x, i) => `<i class="a-grow" style="display:block;width:${x.toask ? 100 : Math.max(6, Math.min(100, x.mins / W * 100)).toFixed(0)}%;height:5px;border-radius:999px;${x.toask ? 'box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)' : 'background:' + (x.mins >= CHASE_AFTER ? '#F5B26B' : 'rgba(245,178,107,.55)')};animation-delay:${i * .05}s"></i>`).join('') || '<i style="display:block;height:5px;border-radius:999px;background:rgba(255,255,255,.08)"></i>';
   const askBody = `<span aria-hidden="true" style="display:flex;flex-direction:column;gap:3px;position:relative;width:100%"><span style="position:absolute;left:${(CHASE_AFTER / W * 100).toFixed(0)}%;top:-3px;bottom:-3px;border-left:1px dashed rgba(255,255,255,.35)"></span>${bars}</span>`;
   const stops = Math.max(1, out + toGo);
-  const dots = Array.from({ length: Math.min(stops, 6) }, (_, i) => `<span style="position:absolute;left:${(i / Math.max(1, Math.min(stops, 6) - 1) * 100 * .9).toFixed(0)}%;top:15px;width:10px;height:10px;border-radius:999px;${i < out ? 'background:#9BA3F0' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)'}"></span>`).join('');
-  const tripBody = `<span style="position:relative;height:30px;width:100%;display:block"><span style="position:absolute;left:0;right:0;top:19px;border-top:2px dotted rgba(255,255,255,.22)"></span>${dots}<span class="${out ? 'a-drives' : ''}" style="position:absolute;top:0;left:4%;color:#9BA3F0;display:flex">${ic('truck', 18, 'style="stroke-width:2"')}</span></span>`;
+  // One round out reads as one round: its stops, the one it is at, the yard at the end.
+  const gsOut = outGroups(f.out).filter(g => !g.late), oneRound = gsOut.length === 1 && gsOut[0].rt.length > 1 ? gsOut[0].rt : null;
+  const rCur = oneRound ? roundNow(oneRound) : null, rIdx = oneRound ? oneRound.indexOf(rCur) : 0, rDone = oneRound ? oneRound.filter(stopIsDone).length : 0;
+  const rPos = i => (i / Math.max(1, Math.min(oneRound.length, 6)) * 100 * .9).toFixed(0);
+  const dots = oneRound ? `<span style="position:absolute;left:0;width:${rPos(rIdx)}%;top:19px;height:2px;border-radius:999px;background:var(--mint)"></span>` + oneRound.slice(0, 6).map((x, i) => `<span style="position:absolute;left:${rPos(i)}%;top:15px;width:10px;height:10px;border-radius:999px;${stopIsDone(x) ? 'background:var(--mint)' : x === rCur ? 'background:#fff;box-shadow:0 0 0 2px rgba(155,163,240,.5)' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)'}"></span>`).join('') + '<span style="position:absolute;right:-2px;top:13px;width:14px;height:14px;border-radius:4px;box-shadow:inset 0 0 0 2px rgba(245,178,107,.6)"></span>'
+    : Array.from({ length: Math.min(stops, 6) }, (_, i) => `<span style="position:absolute;left:${(i / Math.max(1, Math.min(stops, 6) - 1) * 100 * .9).toFixed(0)}%;top:15px;width:10px;height:10px;border-radius:999px;${i < out ? 'background:#9BA3F0' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)'}"></span>`).join('');
+  const tripBody = `<span style="position:relative;height:30px;width:100%;display:block"><span style="position:absolute;left:0;right:0;top:19px;border-top:2px dotted rgba(255,255,255,.22)"></span>${dots}<span class="${out && !oneRound ? 'a-drives' : ''}" style="position:absolute;top:0;left:${oneRound ? 'calc(' + rPos(rIdx) + '% - 4px)' : '4%'};color:#9BA3F0;display:flex">${ic('truck', 18, 'style="stroke-width:2"')}</span></span>`;
   const cols = RUN_COLS;
   return `<div class="bx-hero" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px;padding:0 2px">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
-        <span class="ell" style="font-size:clamp(17px, 5.4vw, 20px);font-weight:700;letter-spacing:-.01em">${greeting()}, ${esc(firstWord(myName()))}</span>
+        <span class="ell" style="font-size:clamp(17px, 5.4vw, 20px);font-weight:700;letter-spacing:-.01em">${greeting()}${greetName() ? ', ' + esc(firstWord(greetName())) : ''}</span>
         <span style="font-size:13px;color:var(--navyInk);display:flex;align-items:center;gap:6px;white-space:nowrap">${esc(d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))}<span style="width:3px;height:3px;border-radius:999px;background:#5C6788"></span><span style="display:inline-flex;align-items:center;gap:5px;color:var(--mint)"><span class="bx-dot" style="background:var(--mint)"></span>Buying desk</span></span>
       </div>
       <button class="bx-circle" style="width:44px;height:44px;background:rgba(255,255,255,.08)" data-act="findall" aria-label="Find a supplier or an item">${ic('search', 20)}</button>
@@ -1837,7 +1845,8 @@ function viewToday(){
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
       ${tile('tab-check', 'CHECK', co.length, `<span style="align-self:center">${checkRing}</span>`, `<span style="font-size:11px;font-weight:600;color:var(--navyInk);white-space:nowrap">answers${toFix ? ` · <span style="color:#F59A92">${toFix} to fix</span>` : ''}</span>`, 0, `Check: ${co.length} orders, ${yes + no} of ${groups.length} supplier answers in${toFix ? ', ' + toFix + ' to fix' : ''}`)}
       ${tile('tab-asking', 'ASKING', suppliersIn, askBody, `<span class="m" style="font-size:15px;font-weight:600;color:#fff">${f.toAsk.length}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">to ask${asked.length ? ` · <span class="m" style="color:var(--amber)">${asked.length}</span> wait` : ''}</span>`, .06, `Asking: ${suppliersIn} suppliers. ${f.toAsk.length} not asked yet.${asked.length ? ' ' + asked.length + ' asked and waiting, the longest ' + waitWords(longest) + '; ' + asked.filter(r => minsSince(r.askedAt) >= CHASE_AFTER).length + ' past the ' + CHASE_AFTER + ' minutes when a chase opens' : ''}`)}
-      ${tile('trips', 'TRIPS', out + toGo, tripBody, `<span class="m" style="font-size:15px;font-weight:600;color:var(--lilac)">${out}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">out · ${toGo} to go</span>`, .12, `Trips: ${out} out, ${toGo} to plan, ${f.back.length} back at the yard`)}
+      ${oneRound ? tile('trips', 'TRIPS', 1, tripBody, `<span class="m" style="font-size:15px;font-weight:600;color:var(--lilac)">${rIdx + 1}/${oneRound.length}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">round stops</span>`, .12, `Trips: 1 round out, stop ${rIdx + 1} of ${oneRound.length} at ${supplierShort(rCur.supplierId)}, ${rDone} done, one hand-in at the yard at the end; ${toGo} to plan; ${f.back.length} back at the yard`)
+        : tile('trips', 'TRIPS', out + toGo, tripBody, `<span class="m" style="font-size:15px;font-weight:600;color:var(--lilac)">${out}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">out · ${toGo} to go</span>`, .12, `Trips: ${out} out, ${toGo} to plan, ${f.back.length} back at the yard`)}
     </div>
     <button data-act="plan" aria-label="Cash to carry for the ${toGo} stop${toGo === 1 ? '' : 's'} to plan: ${n0(f.cash)}" style="display:flex;flex-direction:column;gap:7px;padding:0 2px;border:none;background:none;color:#fff;text-align:left">
       <span style="display:flex;align-items:baseline;justify-content:space-between;width:100%"><span style="font-size:12px;font-weight:600;color:var(--navyInk2)">Cash to carry · ${toGo ? toGo + ' stop' + (toGo === 1 ? '' : 's') + ' to plan' : 'nothing to plan'}</span><span class="m" style="font-size:18px;font-weight:600">${n0(f.cash)}</span></span>
@@ -1865,7 +1874,10 @@ ACT.trips = () => { FEEL.open(); push('trips', {}); };
 function todayJobs(f){
   f = f || flowNow();
   const jobs = [];
-  (D().collectionTrips || []).filter(t => tripIsLive(t) && ['collecting', 'assigned'].includes(t.status) && tripIsMine(t)).forEach(t => jobs.push({ k: 'trip', trip: t }));
+  // A round is one job: the stop it is at, and the stops around it.
+  (D().collectionTrips || []).filter(t => tripIsLive(t) && ['collecting', 'assigned'].includes(t.status) && tripIsMine(t)).forEach(t => {
+    const rt = t.status === 'collecting' ? roundStops(t) : [t]; if (rt.length > 1 && jobs.some(j => j.k === 'trip' && j.rt && j.rt.includes(t))) return;
+    jobs.push({ k: 'trip', trip: rt.length > 1 ? roundNow(rt) : t, rt: rt.length > 1 ? rt : null }); });
   f.toAsk.slice().sort((a, b) => toAskOldest(b) - toAskOldest(a)).forEach(r => jobs.push({ k: 'toask', r }));
   checkOrders().filter(o => o.no > 0).forEach(o => jobs.push({ k: 'check', o }));
   // Not yours, but in sight: an order every supplier said yes to that waits on someone else.
@@ -1944,12 +1956,13 @@ function nextUpHTML(f){
         ${still ? `<span style="font-size:12px;font-weight:600;color:var(--amberInk)">${esc(supplierShort(sid))} is still ${still.askedAt ? 'asked' : 'to ask'} for ${esc(still.orders.map(o => shortName(quoteClientName(o.q))).join(' + '))} · ${still.askedAt ? 'that joins this trip once they answer' : 'ask first, then one trip'}</span>` : ''}
         <span style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--ink2)"><span class="ell">${esc(runClients(run).join(' · '))} · ${run.lines.length} line${run.lines.length > 1 ? 's' : ''}</span><span class="m" style="color:var(--ink)">${n0(run.total)}</span></span>`;
     } else if (j.k === 'trip') {
-      const t = j.trip, lines = tripLines(t), ans = lines.filter(l => tripLineGot(l) != null).length;
-      kind = t.status === 'assigned' ? 'SENT TO YOU' : 'OUT · YOUR TRIP'; kindInk = '#3A3F9B'; node = '#9BA3F0'; title = supplierName(t.supplierId); who = { name: title, key: t.supplierId };
-      chip = ans + '/' + lines.length; cta = t.status === 'assigned' ? 'Take the trip' : 'Open the truck'; ctaAct = `data-act="trip" data-id="${esc(t.id)}"`;
+      const t = j.trip, lines = tripLines(tripView(t)), ans = lines.filter(l => tripLineGot(l) != null).length, rt = j.rt;
+      kind = t.status === 'assigned' ? 'SENT TO YOU' : rt ? 'ROUND · STOP ' + (rt.indexOf(t) + 1) + ' OF ' + rt.length : 'OUT · YOUR TRIP'; kindInk = '#3A3F9B'; node = '#9BA3F0'; title = supplierName(t.supplierId); who = { name: title, key: t.supplierId };
+      chip = rt ? rt.filter(stopIsDone).length + '/' + rt.length + ' stops' : ans + '/' + lines.length; cta = t.status === 'assigned' ? 'Take the trip' : 'Open the truck'; ctaAct = `data-act="trip" data-id="${esc(t.id)}"`;
       const phone = supplierPhone(t.supplierId); alt = phone ? { href: telUrl(phone), icon: 'phone', label: 'Call ' + title } : null;
       detail = `<span role="img" aria-label="${ans} of ${lines.length} lines loaded" style="display:flex;gap:3px">${lines.map(l => { const g = tripLineGot(l); return `<i style="flex:1;height:20px;border-radius:5px;${g == null ? 'box-shadow:inset 0 0 0 1.5px #D9D4CB' : g < l.qty ? 'box-shadow:inset 0 0 0 1.5px #F5B26B;background:repeating-linear-gradient(135deg,#FDEEE1 0 3px,#fff 3px 6px)' : 'background:linear-gradient(180deg,#8DE8C2,#5CCB9E)'}"></i>`; }).join('')}</span>
-        <span style="font-size:12px;font-weight:600;color:var(--ink3)">out since <span class="m">${esc(hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)))}</span></span>`;
+        ${rt ? `<span role="img" aria-label="The round: ${esc(rt.map(x => supplierShort(x.supplierId) + (stopIsDone(x) ? ' done' : x === t ? ' now' : '')).join(', '))}, then the yard" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:11.5px;font-weight:700">${rt.map(x => `<span style="display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:999px;${stopIsDone(x) ? 'background:var(--greenSoft);color:var(--green)' : x === t ? 'background:var(--navy);color:#fff' : 'box-shadow:inset 0 0 0 1px var(--line);color:var(--ink2)'}">${stopIsDone(x) ? ic('tick', 11, 'style="stroke-width:3"') : ''}${esc(supplierShort(x.supplierId))}</span>`).join('')}<span style="display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:999px;box-shadow:inset 0 0 0 1px #F5B26B;color:var(--amberInk)">${ic('box', 11)}yard</span></span>` : ''}
+        <span style="font-size:12px;font-weight:600;color:var(--ink3)">out since <span class="m">${esc(hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)))}</span>${rt ? ' · one hand-in at the yard' : ''}</span>`;
     } else {
       const rows = j.rows, cost = rows.reduce((s, r) => s + r.need * r.best.purchasePrice, 0);
       kind = 'WHAT TO BUY · SHELF'; kindInk = '#0F6B43'; node = '#6FDCB0'; title = rows.length + ' to refill now'; who = { name: 'The shelf', key: 'shelf' };
@@ -3249,52 +3262,117 @@ function planJoinHTML(r){
   return `<span style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border-radius:10px;background:var(--amberSoft);color:var(--amberInk);font-size:12px;font-weight:600;text-align:left"><i style="width:7px;height:7px;border-radius:999px;background:#E09A4E;flex:none"></i><span style="flex:1">${x.askedAt ? `${esc(who)} ${many ? 'have' : 'has'} more asked at ${esc(sh)} · ${many ? 'they join' : 'it joins'} this trip when ${esc(sh)} answers` : `${esc(who)} ${many ? 'have' : 'has'} more to ask at ${esc(sh)} · ask ${esc(sh)} first, then one trip`}</span></span>`;
 }
 /* ---------------- Trips: to plan, out, and back at the yard ---------------- */
+// The trips out, one entry per round: a round's stops in route order. A
+// trip from an earlier day with nothing loaded is late, flagged on its own.
+function outGroups(outs){
+  const gs = [];
+  outs.forEach(t => { const rt = tripIsSupplierDelivered(t) || !t.assignedWorkerId ? [t] : roundStops(t); if (gs.some(g => g.rt.includes(t))) return; gs.push({ rt, out: rt.filter(x => outs.includes(x)) }); });
+  gs.forEach(g => { const any = g.rt.some(x => stopIsDone(x) || tripLines(x).some(l => tripLineGot(l) != null)); g.late = !any && g.out.every(x => isoOf(x.createdAt) < todayISO()); g.days = Math.max(...g.out.map(x => Math.round((new Date(todayISO()) - new Date(isoOf(x.createdAt))) / 864e5))); });
+  return gs;
+}
+// At the yard: one count and one bar by day, the names behind a tap. Older
+// days are amber: the longer goods sit uncounted, the more it matters.
+function yardDays(back){
+  const today = todayISO(), y = new Date(); y.setDate(y.getDate() - 1); const yest = isoOf(y), by = new Map();
+  back.forEach(t => { const d = isoOf(t.collectedAt || t.createdAt); (by.get(d) || by.set(d, []).get(d)).push(t); });
+  return [...by.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([d, ts]) => {
+    const age = Math.round((new Date(today) - new Date(d)) / 864e5), old = age >= 2, wd = new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short' });
+    const who = t => tripIsSupplierDelivered(t) ? 'they' : tripIsMine(t) ? 'you' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) });
+    const chips = []; ts.slice().sort((a, b) => msOf(b.collectedAt) - msOf(a.collectedAt)).forEach(t => { const w = who(t), c = chips.find(x => String(x.sid) === String(t.supplierId) && x.who === w);
+      if (c) { c.n += 1; c.lines += tripLines(t).length; } else chips.push({ sid: t.supplierId, who: w, n: 1, lines: tripLines(t).length, id: t.id, at: t.collectedAt }); });
+    return { d, n: ts.length, old, mine: ts.some(tripIsMine),
+      day: d === today ? 'today' : d === yest ? 'yest.' : wd,
+      head: d === today ? 'TODAY' + (ts.some(tripIsMine) ? ' · YOUR ROUND' : '') : d === yest ? 'YESTERDAY' : new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long' }).toUpperCase() + (age >= 3 ? ' · ' + age + ' DAYS' : ''),
+      ink: old ? '#95530C' : '#0E6470', bar: d === today ? '#0E6470' : !old ? '#5FB3BD' : age >= 3 ? '#E09A4E' : '#E9B27A', chips };
+  });
+}
+function yardCard(back){
+  const days = yardDays(back), open = !!S.ui.yardOpen, n = back.length, sids = [];
+  back.slice().sort((a, b) => msOf(b.collectedAt) - msOf(a.collectedAt)).forEach(t => { if (!sids.includes(String(t.supplierId))) sids.push(String(t.supplierId)); });
+  const oldest = days[days.length - 1];
+  const stack = sids.slice(0, 4).map((sid, i) => { const tt = tintFor(sid); return `<span class="bx-av" style="width:28px;height:28px;border-radius:9px;margin-left:${i ? -6 : 0}px;font-size:9.5px;font-weight:800;background:${tt[0]};color:${tt[1]};box-shadow:0 0 0 2px #EEF6F7">${esc(initials(supplierName(sid)))}</span>`; }).join('') + (n > 4 ? `<span style="width:28px;height:28px;border-radius:9px;margin-left:-6px;background:#fff;color:#0B5560;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #EEF6F7">+${n - 4}</span>` : '');
+  return `<div style="flex:none;border-radius:20px;background:#EEF6F7;box-shadow:inset 0 0 0 1px rgba(14,100,112,.16);overflow:hidden">
+    <button data-act="yardopen" aria-expanded="${open}" aria-label="${n} trip${n === 1 ? '' : 's'} at the yard for ${esc(whoShort('store'))} to count in: ${esc(days.map(d => d.n + ' ' + d.head.toLowerCase()).join(', '))}. ${open ? 'Tap to fold' : 'Tap to see them'}" style="width:100%;border:none;background:transparent;padding:12px 12px 10px 14px;color:var(--ink);text-align:left;display:flex;flex-direction:column;gap:10px">
+      <span style="display:flex;align-items:center;gap:12px;width:100%">
+        <span style="display:flex;align-items:baseline;gap:6px;flex:none"><b class="m" style="font-size:26px;font-weight:600;letter-spacing:-.04em;line-height:1">${n}</b><span style="font-size:12px;font-weight:600;color:#4E6A70;line-height:1.2">waiting<br>to count</span></span>
+        <span style="flex:1;min-width:0;display:flex;justify-content:flex-end;padding-left:6px">${stack}</span>
+        ${ic('chev', 16, `style="flex:none;stroke:#4E6A70;stroke-width:2.2;transition:transform .2s;transform:rotate(${open ? -90 : 90}deg)"`)}
+      </span>
+      <span aria-hidden="true" style="display:flex;gap:3px;width:100%;height:8px">${days.map(d => `<i style="flex:${Math.max(2, d.n)};border-radius:999px;background:${d.bar}"></i>`).join('')}</span>
+      <span aria-hidden="true" style="display:flex;gap:3px;width:100%;margin-top:-6px">${days.map(d => `<span style="flex:${Math.max(2, d.n)};min-width:0;font-size:10.5px;font-weight:600;color:${d.ink};white-space:nowrap;overflow:hidden"><b class="m">${d.n}</b> ${esc(d.day)}</span>`).join('')}</span>
+    </button>
+    ${open ? `<div style="display:flex;flex-direction:column;gap:10px;padding:10px 12px 12px 14px;border-top:1px dashed rgba(14,100,112,.22)">${days.map(d => `<div style="display:flex;flex-direction:column;gap:6px">
+      <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.1em;color:${d.ink}"><i style="width:6px;height:6px;border-radius:999px;background:${d.ink}"></i>${esc(d.head)}</span>
+      <span style="display:flex;flex-wrap:wrap;gap:5px">${d.chips.map(c => { const tt = tintFor(c.sid); return `<button data-act="trip" data-id="${esc(c.id)}" aria-label="${esc(supplierName(c.sid))}${c.n > 1 ? ', ' + c.n + ' trips' : ''}, back ${esc(hm(msOf(c.at)))}, ${c.who === 'they' ? 'they delivered' : c.who === 'you' ? 'you brought it' : esc(c.who) + ' brought it'}, ${c.lines} line${c.lines === 1 ? '' : 's'}" style="display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 9px 0 3px;border:none;border-radius:999px;background:#fff;box-shadow:0 0 0 1px rgba(14,100,112,.12);font-size:12px;font-weight:700;color:var(--ink)"><span class="bx-av" style="width:24px;height:24px;border-radius:999px;font-size:8.5px;font-weight:800;background:${tt[0]};color:${tt[1]}">${esc(initials(supplierName(c.sid)))}</span>${esc(supplierShort(c.sid))}${c.n > 1 ? ' ×' + c.n : ''}<span style="font-size:10.5px;font-weight:600;color:${d.old ? 'var(--amberInk)' : 'var(--ink3)'}">${esc(c.who)} · ${c.lines}</span></button>`; }).join('')}</span></div>`).join('')}</div>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(14,100,112,.06);font-size:11.5px;font-weight:600;color:#4E6A70">
+      <span style="width:18px;height:18px;border-radius:999px;background:#E9F6EE;color:#0F6B43;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('store'))}</span>
+      <span class="ell" style="flex:1;min-width:0">${esc(whoShort('store'))} counts them in</span>
+      ${oldest && oldest.d !== todayISO() ? `<span style="flex:none;display:inline-flex;align-items:center;gap:4px;color:${oldest.old ? 'var(--amberInk)' : '#4E6A70'}"><i style="width:6px;height:6px;border-radius:999px;background:${oldest.old ? '#E09A4E' : '#5FB3BD'}"></i>oldest ${esc(oldest.day === 'yest.' ? 'yesterday' : oldest.day)}</span>` : ''}
+    </div>
+  </div>`;
+}
+ACT.yardopen = () => { S.ui.yardOpen = !S.ui.yardOpen; FEEL.tick(); render(); };
+function roundNow(rt){ return rt.find(x => x.status === 'collecting' && !stopIsDone(x)) || rt[rt.length - 1]; }
 PAGE.trips = () => {
   const f = flowNow(), runs = f.runs, outs = f.out, back = f.back;
-  const outCash = outs.reduce((s, t) => s + tripPlanned(t), 0), total = outCash + f.cash;
+  const gs = outGroups(outs), live = gs.filter(g => !g.late), late = gs.filter(g => g.late);
+  // Cash today counts today's trips only: Accounts' handover for a round, else its plan.
+  const groupCash = g => { const h = roundHandover(g.rt[0]); return h ? Number(h.payload.amount) || 0 : g.out.reduce((a, t) => a + tripPlanned(t), 0); };
+  const outCash = live.filter(g => g.out.some(x => isoOf(x.createdAt) === todayISO())).reduce((a, g) => a + groupCash(g), 0), total = outCash + f.cash;
+  const rounds = live.filter(g => g.rt.length > 1);
   const mil = n => (n / 1e6).toFixed(n >= 1e7 ? 1 : 2).replace(/\.?0+$/, '') + ' M';
   const maxRun = Math.max(1, ...runs.map(r => r.total));
-  const outCard = t => { const lines = tripLines(t), got = lines.filter(l => tripLineGot(l) != null).length, pct = lines.length ? got / lines.length * 100 : 0, tt = tintFor(t.supplierId), mine = tripIsMine(t);
-    const who = tripIsSupplierDelivered(t) ? 'THEY DELIVER' : t.status === 'open' ? 'NOBODY SENT YET' : mine ? 'OUT · ' + firstWord(myName()).toUpperCase() + ' (YOU)' : 'OUT · ' + staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) }).toUpperCase() + (t.status === 'assigned' ? ' · SENT' : '');
-    return `<button data-act="trip" data-id="${esc(t.id)}" aria-label="Out: ${esc(supplierName(t.supplierId))}, since ${esc(hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)))}, ${got} of ${lines.length} loaded, ${n0(tripPlanned(t))} planned" style="position:relative;overflow:hidden;flex:none;display:flex;flex-direction:column;gap:12px;padding:14px;border:none;border-radius:22px;background:radial-gradient(120% 140% at 100% 0%,#2E3388 0%,#1C2452 60%,#16203C 100%);color:#fff;text-align:left;box-shadow:0 18px 34px -16px rgba(22,32,60,.6)">
-      <span style="display:flex;align-items:center;gap:12px;width:100%"><span class="bx-av" style="width:44px;height:44px;border-radius:15px;font-size:14px;font-weight:800;background:${tt[0]};color:${tt[1]}">${esc(initials(supplierName(t.supplierId)))}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:#C3C8F7"><i class="a-blink" style="width:7px;height:7px;border-radius:999px;background:#9BA3F0"></i><span class="ell">${esc(who)}</span></span><span class="ell" style="font-size:16px;font-weight:700">${esc(supplierName(t.supplierId))}</span></span>
-        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none"><span style="font-size:9.5px;font-weight:800;letter-spacing:.12em;color:var(--navyInk2)">SINCE</span><span class="m" style="font-size:15px;font-weight:600">${esc(hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)))}</span></span></span>
-      <span role="img" aria-label="${got} of ${lines.length} lines loaded" style="position:relative;display:block;height:26px;width:100%">
-        <span style="position:absolute;left:0;right:0;top:12px;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 8px,transparent 8px 16px)"></span>
-        <span class="a-grow" style="position:absolute;left:0;width:${pct.toFixed(0)}%;top:11px;height:4px;border-radius:999px;background:linear-gradient(90deg,#9BA3F0,#C3C8F7)"></span>
-        <span style="position:absolute;left:0;right:0;top:7px;display:flex;justify-content:space-between">${lines.slice(0, 12).map(l => `<i style="width:10px;height:10px;border-radius:999px;${tripLineGot(l) != null ? 'background:#C3C8F7;box-shadow:0 0 0 2px #1C2452' : 'background:#1C2452;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3)'}"></i>`).join('')}</span>
-        <span style="position:absolute;left:calc(${pct.toFixed(0)}% - 12px);top:0;color:#fff;display:flex">${ic('truck', 24)}</span></span>
-      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;font-size:12px;font-weight:600;color:#C3CBE0;white-space:nowrap"><span style="flex:none"><b style="color:#fff">${got} of ${lines.length}</b> loaded</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">planned <b class="m" style="color:#fff">${n0(tripPlanned(t))}</b>${t.cashGiven != null ? ' · given ' + n0(t.cashGiven) : ''}</span></span></button>`; };
+  // Out reads as the road: charcoal and amber. A round (or a trip of yours)
+  // is one slim card, its stops on one line; a supplier bringing it is a row.
+  const tripCard = g => { const rt = g.rt, cur = roundNow(rt), ci = rt.indexOf(cur), a = rt[0], many = rt.length > 3, isR = rt.length > 1;
+    const rc = roundCash(cur), cashH = roundCashH(cur), mine = tripIsMine(a), who = mine ? (firstWord(greetName()) || 'you') : a.assignedWorkerId ? staffCall(staffById(a.assignedWorkerId) || { name: staffName(a.assignedWorkerId) }) : 'nobody yet';
+    const ls = tripLines(tripView(cur)), got = ls.filter(l => tripLineGot(l) != null).length;
+    const kick = (isR ? 'ROUND · ' : 'TRIP · ') + who.toUpperCase() + (isR ? ' · ' + rt.length + ' STOPS' : '') + (a.status === 'assigned' ? ' · SENT' : '');
+    const node = (x, i) => { const k = stopIsDone(x) ? 'done' : x === cur ? 'now' : 'next', on = k !== 'next';
+      return `${i ? `<span style="flex:1;min-width:4px;height:2px;margin:0 4px;border-radius:999px;background:${on ? 'var(--mint)' : 'repeating-linear-gradient(90deg,rgba(245,178,107,.4) 0 5px,transparent 5px 9px)'}"></span>` : ''}<span style="display:flex;align-items:center;gap:5px;flex:none"><span style="width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;${k === 'done' ? 'background:var(--mint);color:#0B3D27' : k === 'now' ? 'background:#fff;color:#1F1C19;box-shadow:0 0 0 3px rgba(245,178,107,.45)' : 'color:#E8DFD4;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)'}">${k === 'done' ? ic('tick', 11, 'style="stroke-width:3.2"') : esc(initials(supplierName(x.supplierId)))}</span>${!many || k === 'now' ? `<span style="font-size:11px;font-weight:${k === 'now' ? '700;color:#fff' : '600;color:' + (k === 'done' ? 'var(--mint)' : '#C9BFB3')};white-space:nowrap">${esc(supplierShort(x.supplierId))}</span>` : ''}</span>`; };
+    const money = !mine ? `planned <b class="m" style="color:#fff">${n0(rt.reduce((s2, x) => s2 + tripPlanned(x), 0))}</b>` : rc ? `in hand <b class="m" style="color:#fff">${n0(rc.avail)}</b><span style="color:var(--mint);display:inline-flex">${ic('tick', 11, 'style="stroke-width:3.2"')}</span>` : cashH ? 'asked ' + esc(whoShort('accounts')) : 'no cash from ' + esc(whoShort('accounts'));
+    return `<button data-act="trip" data-id="${esc(cur.id)}" aria-label="${isR ? 'Round out' : 'Trip out'}: ${esc(who)}, ${rt.length} stop${isR ? 's' : ''} since ${esc(hm(msOf(a.acceptedAt || a.assignedAt || a.createdAt)))}. ${esc(rt.map(x => supplierShort(x.supplierId) + (stopIsDone(x) ? ' done' : x === cur ? ' now' : '')).join(', '))}, then one hand-in at the yard. ${mine ? (rc ? n0(rc.avail) + ' in hand of the ' + n0(rc.given) + ' ' + esc(whoShort('accounts')) + ' handed over' : 'No cash handed over by ' + esc(whoShort('accounts'))) : ''}" style="position:relative;overflow:hidden;flex:none;display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:none;border-radius:20px;background:linear-gradient(135deg,#2E2924 0%,#1F1C19 100%);color:#fff;text-align:left;box-shadow:0 14px 28px -16px rgba(31,28,25,.7)">
+      <span style="display:flex;align-items:center;gap:8px;width:100%"><i class="a-blink" style="width:7px;height:7px;border-radius:999px;background:var(--amber);flex:none"></i><span class="ell" style="flex:1;min-width:0;font-size:10.5px;font-weight:800;letter-spacing:.14em;color:var(--amber)">${esc(kick)}</span><span class="m" style="flex:none;font-size:12px;font-weight:600;color:#C9BFB3">since ${esc(hm(msOf(a.acceptedAt || a.assignedAt || a.createdAt)))}</span></span>
+      <span role="img" aria-label="${isR ? 'Stop ' + (ci + 1) + ' of ' + rt.length : got + ' of ' + ls.length + ' loaded'}" style="display:flex;align-items:center;width:100%">${rt.map(node).join('')}<span style="flex:1;min-width:4px;height:2px;margin:0 4px;background:repeating-linear-gradient(90deg,rgba(245,178,107,.4) 0 5px,transparent 5px 9px)"></span><span style="width:22px;height:22px;border-radius:7px;color:var(--amber);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1.5px rgba(245,178,107,.55);flex:none">${ic('box', 12, 'style="stroke-width:2"')}</span></span>
+      <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;font-size:12px;font-weight:600;color:#C9BFB3;white-space:nowrap"><span style="flex:none">${isR ? `<b style="color:#fff">Stop ${ci + 1} of ${rt.length}</b> · at ${esc(supplierShort(cur.supplierId))}` : `<b style="color:#fff">${got} of ${ls.length}</b> loaded`}</span><span class="ell" style="min-width:0;display:inline-flex;align-items:center;gap:4px">${money}</span></span></button>`; };
+  // A trip somebody else brings, or one late, is a row: lines loaded, since when, and a chase when late.
+  const bringRow = g => { const t = g.out[0], tt = tintFor(t.supplierId), del = tripIsSupplierDelivered(t), ls = g.out.flatMap(x => tripLines(tripView(x))), got = ls.filter(l => tripLineGot(l) != null).length, phone = supplierPhone(t.supplierId);
+    const since = isoOf(t.createdAt) === todayISO() ? hm(msOf(t.createdAt)) : new Date(msOf(t.createdAt)).toLocaleDateString('en-GB', { weekday: 'short' });
+    const who = del ? '' : (tripIsMine(t) ? 'you' : staffCall(staffById(t.assignedWorkerId) || { name: staffName(t.assignedWorkerId) })) + ' · ';
+    const chase = g.late ? (del && phoneDigits(phone) ? `<a href="${esc(waComposeUrl(phone, supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Chase ${esc(supplierName(t.supplierId))} on WhatsApp" style="flex:none;height:30px;padding:0 10px;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center">Chase</a>` : `<button data-act="trip" data-id="${esc(t.id)}" style="flex:none;height:30px;padding:0 10px;border:none;border-radius:999px;background:var(--red);color:#fff;font-size:12px;font-weight:700">Chase</button>`) : '';
+    return `<div style="display:flex;align-items:center;gap:10px;min-height:52px;border-top:1px solid #F1EEE8">
+      <button data-act="trip" data-id="${esc(t.id)}" aria-label="${g.late ? 'Late: ' : ''}${esc(g.rt.length > 1 ? 'a round of ' + g.rt.length + ' stops from ' + supplierName(t.supplierId) : supplierName(t.supplierId))}${del ? ' delivers it themselves' : ''}, since ${esc(since)}, ${got} of ${ls.length} line${ls.length === 1 ? '' : 's'} ${del ? 'delivered' : 'loaded'}${g.late ? ', ' + g.days + ' days late' : ''}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:none;background:none;padding:0;text-align:left;color:var(--ink)">
+        <span style="position:relative;width:32px;height:32px;border-radius:10px;background:${tt[0]};color:${tt[1]};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(supplierName(t.supplierId)))}${g.late ? '<span style="position:absolute;right:-4px;top:-4px;width:14px;height:14px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff">!</span>' : ''}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:13.5px;font-weight:700">${esc(g.rt.length > 1 ? supplierShort(t.supplierId) + ' +' + (g.rt.length - 1) : supplierName(t.supplierId))}</span><span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--ink3);white-space:nowrap;min-width:0"><span style="display:flex;gap:2px;flex:none">${ls.slice(0, 4).map(l => `<i style="width:10px;height:5px;border-radius:2px;${tripLineGot(l) != null ? 'background:var(--mint)' : g.late ? 'box-shadow:inset 0 0 0 1.5px #E3A29B' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA'}"></i>`).join('')}</span><span class="ell">${esc(who)}${got} of ${ls.length} · since ${esc(since)}</span></span></span>
+        ${g.late ? `<span style="flex:none;height:22px;padding:0 7px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:800;letter-spacing:.06em;display:flex;align-items:center">${g.days} D LATE</span>` : `<span class="m" style="flex:none;font-size:12.5px;font-weight:600">${n0(g.out.reduce((s2, x) => s2 + tripPlanned(x), 0))}</span>`}
+      </button>${chase}</div>`; };
+  const listCard = (head, icon, gsx) => gsx.length ? `<div style="flex:none;border-radius:20px;background:#fff;box-shadow:0 0 0 1px rgba(20,27,46,.06),0 6px 16px -10px rgba(20,27,46,.18);padding:4px 12px"><span style="display:flex;align-items:center;gap:6px;padding:8px 2px 4px;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:var(--ink3)">${ic(icon, 13)}${esc(head)} · ${gsx.length}</span>${gsx.map(bringRow).join('')}</div>` : '';
   const planCard = (r, i) => { const tt = tintFor(r.supplierId), lines = r.lines.length;
     return `<button data-act="plan-for" data-sid="${esc(r.supplierId)}" aria-label="To plan: ${esc(supplierName(r.supplierId))}, ${n0(r.total)}, for ${esc(runClients(r).join(', '))}" style="display:flex;align-items:center;gap:12px;padding:12px 14px 12px 12px;border:none;border-radius:20px;background:#fff;text-align:left;box-shadow:${i === 0 ? '0 0 0 1.5px rgba(15,107,67,.35),0 14px 28px -16px rgba(15,107,67,.45)' : '0 0 0 1px rgba(20,27,46,.06),0 6px 16px -10px rgba(20,27,46,.18)'}">
       <span class="bx-av" style="position:relative;z-index:1;width:44px;height:44px;border-radius:15px;font-size:13px;font-weight:800;background:${tt[0]};color:${tt[1]};box-shadow:0 0 0 3px var(--bg)">${esc(initials(supplierName(r.supplierId)))}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="ell" style="font-size:14.5px;font-weight:700">${esc(supplierName(r.supplierId))}</span><span class="m" style="font-size:14px;font-weight:600;flex:none">${n0(r.total)}</span></span>
         <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:5px;border-radius:999px;background:#EEECE7"><i class="a-grow" style="display:block;height:5px;border-radius:999px;width:${(r.total / maxRun * 100).toFixed(0)}%;background:${i === 0 ? 'linear-gradient(90deg,#16804F,#6FDCB0)' : '#9FD9BD'}"></i></span><span style="font-size:11.5px;font-weight:600;color:var(--ink3);white-space:nowrap">${lines} line${lines === 1 ? '' : 's'}${i === 0 && runs.length > 1 ? ' · biggest' : ''}</span></span></span></button>`; };
-  const backRow = (t, i) => { const tt = tintFor(t.supplierId), lines = tripLines(t).length;
-    return `<button data-act="trip" data-id="${esc(t.id)}" style="display:flex;align-items:center;gap:10px;min-height:60px;border:none;background:none;padding:0;text-align:left;${i < back.length - 1 ? 'border-bottom:1px solid rgba(14,100,112,.12)' : ''}">
-      <span class="bx-av" style="width:38px;height:38px;border-radius:12px;font-size:12px;font-weight:800;background:${tt[0]};color:${tt[1]}">${esc(initials(supplierName(t.supplierId)))}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(supplierName(t.supplierId))}</span><span class="ell" style="font-size:12px;font-weight:600;color:#4E6A70">back <b class="m" style="color:var(--ink)">${esc(hm(msOf(t.collectedAt)))}</b> · ${esc(tripCarrierLabel(t))} · ${lines} line${lines === 1 ? '' : 's'}</span></span>
-      <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;background:#fff;color:#0B5560;font-size:11px;font-weight:700"><span style="width:16px;height:16px;border-radius:999px;background:#E9F6EE;color:#0F6B43;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center">${esc(whoIni('store'))}</span>Store</span></button>`; };
   const sec = (dot, ring, w, sub) => `<span style="display:flex;align-items:center;gap:8px;padding:6px 4px 0"><i style="width:8px;height:8px;border-radius:999px;background:${dot};box-shadow:0 0 0 4px ${ring}"></i><b style="font-size:15px;letter-spacing:-.01em">${w}</b>${sub ? `<span style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(sub)}</span>` : ''}</span>`;
   const glass = (n, cash, w, bar, dim) => `<span style="display:flex;flex-direction:column;gap:7px;padding:10px 11px;border-radius:14px;background:rgba(255,255,255,${dim ? '.04' : '.07'});box-shadow:inset 0 0 0 1px rgba(255,255,255,${dim ? '.07' : '.09'})"><span style="display:flex;align-items:baseline;justify-content:space-between"><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.04em;line-height:1;${dim ? 'color:#C3CBE0' : ''}">${n}</span>${cash ? `<span class="m" style="font-size:11px;font-weight:600;color:${cash[1]}">${cash[0]}</span>` : ''}</span><span style="font-size:11px;font-weight:700;color:${dim ? '#A9B3CC' : '#DDE3F0'}">${w}</span>${bar}</span>`;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
-      <div style="display:flex;align-items:flex-end;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="bx-eyebrow">Today’s round · ${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))}</span><span style="font-size:22px;font-weight:800;letter-spacing:-.02em">Trips</span></span>
-        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">CASH TODAY</span><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.03em;line-height:1">${n0(total)}</span></span>${closeBtn()}</div>
-      <div role="img" aria-label="Cash today ${n0(total)}: ${n0(outCash)} planned for ${outs.length} out, ${n0(f.cash)} for ${runs.length} to plan, and ${back.length} back at the yard" style="display:grid;grid-template-columns:1.3fr 1fr .9fr;gap:6px">
+      <div style="display:flex;align-items:flex-end;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span class="bx-eyebrow">Today · ${esc(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))}</span><span style="font-size:22px;font-weight:800;letter-spacing:-.02em">Trips</span></span>
+        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--navyInk2)">CASH TODAY</span><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.03em;line-height:1">${n0(total)}</span><span style="font-size:10px;font-weight:600;color:var(--navyInk2)">today’s trips only</span></span>${closeBtn()}</div>
+      <div role="img" aria-label="Cash today ${n0(total)}, today’s trips only: ${n0(outCash)} for ${live.length} out, ${n0(f.cash)} for ${runs.length} to plan, and ${back.length} back at the yard" style="display:grid;grid-template-columns:1.3fr 1fr .9fr;gap:6px">
         ${glass(runs.length, [mil(f.cash), '#8BE6C2'], 'To plan', `<span style="display:flex;gap:2px;height:4px">${runs.length ? runs.map((r, i) => `<i class="a-grow" style="flex:${Math.max(1, r.total)};border-radius:999px;background:#6FDCB0;opacity:${Math.max(.4, 1 - i * .25)}"></i>`).join('') : '<i style="flex:1;border-radius:999px;background:rgba(255,255,255,.12)"></i>'}</span>`)}
-        ${glass(outs.length, outs.length ? [mil(outCash), '#C3C8F7'] : null, 'Out', '<span style="height:4px;border-radius:999px;background:#9BA3F0"></span>')}
+        ${glass(gs.length, live.length ? [mil(outCash), '#F5C894'] : null, 'Out', rounds.length === 1 && live.length === 1 ? `<span style="display:flex;gap:2px;height:4px">${rounds[0].rt.map(x => `<i style="flex:1;border-radius:999px;background:${stopIsDone(x) ? '#6FDCB0' : x === roundNow(rounds[0].rt) ? '#F5B26B' : 'rgba(245,178,107,.3)'}"></i>`).join('')}</span>` : '<span style="height:4px;border-radius:999px;background:#F5B26B"></span>')}
         ${glass(back.length, null, 'At the yard', '<span style="height:4px;border-radius:999px;background:repeating-linear-gradient(90deg,#6BCFD9 0 6px,transparent 6px 9px)"></span>', true)}
       </div>
     </div>
     <div class="bx-body" style="padding-top:16px;gap:10px">
-      ${outs.length ? sec('#3A3F9B', '#EEEFFC', 'Out') + outs.map(outCard).join('') : ''}
+      ${gs.length ? sec('#E09A4E', '#FBEBDD', 'Out', gs.length + ' on the road') + gs.filter(g => !g.late && !tripIsSupplierDelivered(g.out[0])).map(tripCard).join('')
+        + listCard('THEY BRING IT', 'truck', gs.filter(g => tripIsSupplierDelivered(g.out[0])).sort((a, b) => (b.late - a.late) || b.days - a.days))
+        + listCard('LATE', 'clock', gs.filter(g => g.late && !tripIsSupplierDelivered(g.out[0]))) : ''}
       ${sec('#0F6B43', '#E9F6EE', 'To plan', 'confirmed · nobody sent yet')}
       ${runs.length ? `<div style="position:relative;display:flex;flex-direction:column;gap:8px">${runs.length > 1 ? '<span aria-hidden="true" style="position:absolute;left:22px;top:28px;bottom:28px;border-left:2px dotted #D9D4CB"></span>' : ''}${runs.map(planCard).join('')}</div>` : emptyCard('Nothing to plan', 'Confirmed lines land here as stops, biggest first.')}
-      ${back.length ? sec('#0E6470', '#E3F3F5', 'At the yard', 'not yours to do') + `<div style="display:flex;flex-direction:column;border-radius:20px;background:#EEF6F7;box-shadow:inset 0 0 0 1px rgba(14,100,112,.16);padding:2px 12px">${back.map(backRow).join('')}</div><span style="padding:0 6px;font-size:12px;font-weight:600;color:var(--ink3)">${esc(whoRole('store'))} counts these in · nothing here waits on you</span>` : ''}
+      ${back.length ? sec('#0E6470', '#E3F3F5', 'At the yard', 'not yours to do') + yardCard(back) : ''}
     </div>
-    ${runs.length ? `<div class="bx-foot"><div class="row"><button class="bx-btn red" data-act="plan-for" data-sid="${esc(runs[0].supplierId)}"><span class="ell">${runs.length > 1 ? 'Plan the round · ' + runs.length + ' stops' : 'Plan ' + esc(supplierShort(runs[0].supplierId))}</span>${ic('chev', 16, 'style="stroke-width:2.2;flex:none"')}</button></div></div>` : ''}
+    ${runs.length ? `<div class="bx-foot"><div class="row"><button class="bx-btn red" data-act="plan-for" data-sid="${esc(runs[0].supplierId)}"><span class="ell">${runs.length > 1 ? (live.length ? 'Plan the next round · ' : 'Plan the round · ') + runs.length + ' stops' : 'Plan ' + esc(supplierShort(runs[0].supplierId))}</span>${ic('chev', 16, 'style="stroke-width:2.2;flex:none"')}</button></div></div>` : ''}
   </div>`;
 };
 /* Cash comes from Accounts (trip.cash): ask for it, then say it is in hand.
@@ -3496,28 +3574,77 @@ function tripRound(t){
   const at = msOf(t.createdAt);
   return (D().collectionTrips || []).filter(x => !x.voided && String(x.assignedWorkerId) === String(t.assignedWorkerId) && Math.abs(msOf(x.createdAt) - at) < 2000).sort((a, b) => msOf(a.createdAt) - msOf(b.createdAt));
 }
+// The round in route order: one part of town at a time (roundOrder), so a
+// round planned before areas still visits Industrial Area once.
+// The stops already done lead, in the order they were done: what is behind
+// the truck, then what is ahead.
+function roundStops(t){
+  const rt = tripRound(t); if (rt.length < 2) return rt;
+  const doneAt = x => msOf(x.collectedAt) || msOf(((S.tripPay || {})[x.id] || {}).done) || 0;
+  const behind = rt.filter(stopIsDone).sort((a, b) => doneAt(a) - doneAt(b)), ahead = rt.filter(x => !behind.includes(x));
+  return behind.concat(roundOrder(ahead.map(x => ({ supplierId: x.supplierId, total: tripPlanned(x), t: x }))).map(r => r.t));
+}
+// A stop is done when it is handed in, or when the buyer said "Done here"
+// and drove on: the goods ride on the truck until the round's one hand-in.
+function stopIsDone(x){ return !!x && (x.status === 'collected' || x.status === 'confirmed' || !!((S.tripPay || {})[x.id] || {}).done); }
+// What a stop costs for what came: a short line counts what was loaded, a
+// line not answered yet still counts in full.
+function tripPlanFor(t){ return tripLines(t).reduce((s, l) => s + (tripLineGot(l) != null ? tripLinePaid(l) : (Number(l.qty) || 0) * (Number(l.expectedPrice) || 0)), 0); }
+function tripShortLess(t){ return tripLines(t).reduce((s, l) => { const g = tripLineGot(l); return s + (g != null && g < l.qty ? (l.qty - g) * (Number(l.gotPrice != null ? l.gotPrice : l.expectedPrice) || 0) : 0); }, 0); }
+// The stop's lines are already on another trip still live (a supplier
+// delivering it): buying it here would buy it twice.
+function stopBoughtElsewhere(x){
+  const rt = tripRound(x).map(y => y.id), ls = tripLines(x); if (!ls.length || stopIsDone(x)) return null;
+  const others = ls.map(l => tripsCoveringLine(l.orderId, l.lineId).filter(y => y.id !== x.id && !rt.includes(y.id)));
+  return others.every(o => o.length) ? others[0][0] : null;
+}
 // The receipt passed to Accounts at hand-in (a paper_bill hand-off naming the trip).
 function tripReceipt(t){ return handoffsFor('paper_bill').filter(h => h.payload && String(h.payload.tripId) === String(t.id)).slice(-1)[0] || null; }
 // What was paid at a stop: what the buyer said at hand-in, else the lines.
-function tripPaidAt(t){ const h = tripReceipt(t), typed = (S.tripPay || {})[t.id]; if (h && Number(h.payload.total) > 0) return Number(h.payload.total); if (typed && typed.amount > 0 && t.status !== 'collecting') return typed.amount; return tripLines(t).reduce((s, l) => s + tripLinePaid(l), 0); }
-// The cash for the whole round, and what is left of it before this stop.
-function roundCash(t){
-  const rt = tripRound(t), withCash = rt.filter(x => x.cashGiven != null);
-  if (!withCash.length) return null;
-  const given = withCash.reduce((s, x) => s + Number(x.cashGiven), 0), i = rt.findIndex(x => x.id === t.id);
-  const before = rt.slice(0, i).reduce((s, x) => s + tripPaidAt(x), 0);
-  return { given, before, avail: given - before, stops: rt.length, index: i, trips: rt };
+function tripPaidAt(t){ const h = tripReceipt(t), typed = (S.tripPay || {})[t.id]; if (h && Number(h.payload.total) > 0) return Number(h.payload.total); if (typed && typed.amount > 0 && (t.status !== 'collecting' || typed.done)) return typed.amount; return tripLines(t).reduce((s, l) => s + tripLinePaid(l), 0); }
+// Accounts' handover for the round (trip.cash): the round's cash ask, and
+// only once Accounts marked it done is it cash in hand. Nothing else counts:
+// a cash figure on the trip rows is the plan, never money given.
+function roundCashH(t){
+  const rt = tripRound(t); if (!rt.length || tripIsSupplierDelivered(rt[0])) return null;
+  const sids = rt.map(x => String(x.supplierId)), first = Math.min(...rt.map(x => msOf(x.createdAt))), day = isoOf(new Date(first));
+  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && (String((h.payload || {}).roundOf || '') === String(rt[0].id)
+    || (msOf(h.createdAt) <= first && isoOf(h.createdAt) === day && ((h.payload && h.payload.supplierIds) || []).map(String).some(x => sids.includes(x))))).slice(-1)[0] || null;
 }
+function roundHandover(t){ const h = roundCashH(t); return h && h.status === 'done' ? h : null; }
+// The cash for the whole round, and what is in hand at this stop: the
+// handover less what the other stops done so far cost.
+function roundCash(t){
+  const rt = roundStops(t), h = roundHandover(t); if (!h) return null;
+  const given = Number(h.payload.amount) || 0, i = rt.findIndex(x => x.id === t.id);
+  const before = rt.filter(x => x.id !== t.id && stopIsDone(x)).reduce((s, x) => s + tripPaidAt(x), 0);
+  return { given, before, avail: given - before, stops: rt.length, index: i, trips: rt, at: h.doneAt || h.createdAt };
+}
+// What the buyer typed at a stop is kept on the phone (amount, receipt or
+// none, done), so stepping away never loses it; a photo is kept as its
+// upload once the stop is done.
+const TRIP_PAY_KEY = () => 'ow-buyer-pay:' + (S.user && S.user.id);
+function restoreTripPay(){ try { S.tripPay = JSON.parse(localStorage.getItem(TRIP_PAY_KEY())) || {}; } catch (_e) { S.tripPay = {}; } }
+function saveTripPay(){ try { const out = {}; Object.entries(S.tripPay || {}).forEach(([k, v]) => { if (!v) return; out[k] = { amount: v.amount || null, noReceipt: !!v.noReceipt, done: v.done || null, skip: !!v.skip, photo: v.photo && v.photo.path ? { path: v.photo.path, at: v.photo.at } : null }; }); localStorage.setItem(TRIP_PAY_KEY(), JSON.stringify(out)); } catch (_e) {} }
+function setTripPay(id, patch){ S.tripPay = S.tripPay || {}; S.tripPay[id] = { ...(S.tripPay[id] || {}), ...patch }; saveTripPay(); }
 ACT.trip = t => { FEEL.open(); const tr = tripById(t.dataset.id); push(tr && (tr.status === 'collected' || tr.status === 'confirmed') ? 'done' : 'trip', { id: t.dataset.id }); };
 PAGE.trip = ({ id }) => {
   const t0 = tripById(id); if (!t0) return goneCard('That trip is no longer on the books');
   if (t0.voided) return goneCard('That trip was called off');
   const t = tripView(t0), sup = supplierById(t.supplierId) || { name: supplierName(t.supplierId) }, tt = tintFor(t.supplierId), phone = supplierPhone(t.supplierId);
   const lines = tripLines(t), mine = tripIsMine(t), bySup = tripIsSupplierDelivered(t), me = myStaff();
-  const canAnswer = t.status === 'collecting' && (mine || bySup);
+  const P = (S.tripPay || {})[id] || {}, done = !!P.done && t.status === 'collecting' && !bySup;
+  const canAnswer = t.status === 'collecting' && (mine || bySup) && !done;
   const answered = lines.filter(l => tripLineGot(l) != null).length, full = lines.filter(l => tripLineGot(l) != null && tripLineGot(l) >= l.qty).length, shorts = answered - full;
-  const paid = tripPlanned(t), rc = roundCash(t), P = (S.tripPay || {})[id] || {}, hasPay = P.amount > 0, paidNow = hasPay ? P.amount : 0, hasRec = !!P.photo || !!P.noReceipt;
+  const rc = roundCash(t), hasPay = P.amount > 0, paidNow = hasPay ? P.amount : 0, hasRec = !!P.photo || !!P.noReceipt;
   const left = rc ? rc.avail - paidNow : null;
+  // The round this stop is in, in route order, and what is still to do on it.
+  const rt = mine && !bySup ? roundStops(t0) : [t0], isRound = rt.length > 1, myIdx = Math.max(0, rt.findIndex(x => x.id === id)), rk = rt[0].id;
+  const skipOf = x => !!((S.tripPay || {})[x.id] || {}).skip, endNow = !!(S.ui.endNow || {})[rk];
+  const openRest = rt.filter(x => x.id !== id && x.status === 'collecting' && !stopIsDone(x) && !skipOf(x) && !stopBoughtElsewhere(x)), nextStop = openRest[0] || null;
+  const restPlan = openRest.reduce((a, x) => a + tripPlanFor(tripView(x)), 0);
+  const plan = tripPlanFor(t), shortLess = tripShortLess(t), cashH = mine && !bySup ? roundCashH(t0) : null;
+  const elsewhere = t.status === 'collecting' && mine && !bySup && !done ? stopBoughtElsewhere(t0) : null;
   const firstOpen = lines.findIndex(l => tripLineGot(l) == null);
   const bump = S.ui.bump && S.ui.bump.id === id ? S.ui.bump : null; S.ui.bump = null;
   const slots = lines.slice(0, 12).map((l, i) => { const g = tripLineGot(l), short = g != null && g < l.qty, ci = initials(l.clientName);
@@ -3533,7 +3660,7 @@ PAGE.trip = ({ id }) => {
       <div ${canAnswer && open ? `data-swipe="${esc(id)}|${i}"` : ''} class="${next ? 'a-next' : ''}${next && answered === 0 ? ' a-hint' : ''}" style="position:relative;display:flex;align-items:center;gap:10px;min-height:${isFull ? 46 : 56}px;padding:5px 8px 5px 10px;border-radius:16px;touch-action:pan-y;background:${isFull ? '#FCFBF9' : '#fff'};${next ? '' : isShort ? 'box-shadow:inset 0 0 0 1.5px #F5B26B' : open ? 'box-shadow:inset 0 0 0 1px var(--line),0 4px 12px rgba(22,32,60,.06)' : 'box-shadow:inset 0 0 0 1px var(--line)'}">
         <span style="width:30px;height:30px;border-radius:999px;background:${ct[0]};color:${ct[1]};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;${isFull ? 'opacity:.7' : ''}">${esc(initials(l.clientName))}</span>
         <button ${canAnswer ? `data-act="tprice" data-i="${i}"` : ''} style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;border:none;background:none;padding:0;text-align:left" aria-label="${esc(l.productName)}${canAnswer ? '. Tap to change what you paid' : ''}">
-          <span style="min-width:0;font-size:14px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${isFull ? 'color:var(--ink2)' : ''}"><b class="m" style="font-size:14px;color:var(--ink)">${esc(c.n)}</b> <span style="font-size:11px;font-weight:600;color:#6B7480">${esc(c.unit)}</span>&ensp;${esc(lineName(l).base)}${lineName(l).variant ? ' · ' + esc(lineName(l).variant) : ''}</span>
+          <span style="min-width:0;font-size:14px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;${isFull ? 'color:var(--ink2)' : ''}"><b class="m" style="font-size:14px;color:var(--ink);white-space:nowrap">${esc(isShort ? gotC + ' of ' + c.n : c.n)}</b> <span style="font-size:11px;font-weight:600;color:#6B7480">${esc(c.unit)}</span>&ensp;${esc(lineName(l).base)}${lineName(l).variant ? ' · ' + esc(lineName(l).variant) : ''}</span>
           ${isFull ? '' : `<span style="font-size:12px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:${isShort ? 'var(--amberInk)' : next ? 'var(--indigo)' : 'var(--ink3)'}">${esc(sub)}</span>`}
         </button>
         ${canAnswer && open ? `<span style="display:flex;gap:6px;flex:none"><button data-act="tshort" data-i="${i}" aria-label="Short: fewer than ${esc(c.n)} came" style="height:42px;padding:0 11px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B;color:var(--amberInk);font-size:13px;font-weight:700">Short</button><button data-act="tall" data-i="${i}" aria-label="All ${esc(c.n)} came" style="width:50px;height:42px;border:none;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center">${ic('tick', 20, 'style="stroke-width:3"')}</button></span>` : ''}
@@ -3542,47 +3669,78 @@ PAGE.trip = ({ id }) => {
       </div></div>`;
   }).join('');
   const leftN = lines.length - answered, pending = Object.keys((S.tripDraft || {})[id] || {}).length;
+  const acc = whoShort('accounts'), short = x => supplierShort(x.supplierId), nextName = nextStop ? short(nextStop) : '';
   let foot;
   if (t.status === 'open' || (t.status === 'assigned' && mine)) foot = me ? slideHTML('take', t.status === 'open' ? 'Slide to take this trip' : 'Slide to set off', 'truck', { disabled: S.busy }) : canAddMe() ? `<button class="bx-btn navy" data-act="addme" ${S.busy ? 'aria-disabled="true"' : ''}>Add me to the team</button>` : `<span class="bx-btn ghost" aria-disabled="true">No staff row for your login</span>`;
   else if (t.status === 'assigned') foot = `<span class="bx-btn ghost" aria-disabled="true">Sent to ${esc(tripWho(t))} · not taken yet</span>`;
   else if (t.status === 'collected') foot = `<span class="bx-btn ghost" aria-disabled="true">Handed in · waiting for ${esc(whoShort('store'))}</span>`;
   else if (t.status === 'confirmed') foot = `<span class="bx-btn ghost" aria-disabled="true">Checked in · on the shelf</span>`;
+  // Done here: the goods ride on to the next stop; the round is handed in once, at the yard.
+  else if (done) foot = nextStop && !endNow ? `<button class="bx-btn red" data-act="nextstop" data-id="${esc(nextStop.id)}" aria-label="Go to stop ${rt.indexOf(nextStop) + 1} of ${rt.length}, ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0">${(() => { const nt = tintFor(nextStop.supplierId); return `<span style="width:26px;height:26px;border-radius:999px;background:${nt[0]};color:${nt[1]};font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(supplierName(nextStop.supplierId)))}</span>`; })()}<span class="ell">Stop ${rt.indexOf(nextStop) + 1} · ${esc(supplierName(nextStop.supplierId))}</span>${ic('chev', 16, 'style="stroke-width:2.2;flex:none"')}</button>` : slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
   else if (!canAnswer) foot = `<span class="bx-btn ghost" aria-disabled="true">${esc(tripWho(t))} is on it</span>`;
   else if (leftN > 0) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"><span style="display:flex;gap:3px">${Array.from({ length: Math.min(leftN, 6) }, () => '<i style="width:8px;height:8px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #8A93A3"></i>').join('')}</span>${leftN} line${leftN > 1 ? 's' : ''} still to load</span>`;
   else if (!bySup && !hasPay) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('cash', 18)}Enter what you paid</span>`;
   // When the photo is all that is missing, the big button is the camera.
   else if (!bySup && !hasRec) foot = `<label style="position:relative;flex:1;height:56px;border-radius:999px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22);cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">${ic('camera', 20, 'style="stroke:#F5B26B"')}Photograph the receipt</label>`;
-  else foot = slideHTML('handin', 'Slide to hand in', 'box', { disabled: S.busy });
+  else if (!bySup && nextStop) foot = `<button data-act="stopdone" ${S.busy ? 'aria-disabled="true"' : ''} aria-label="Done at ${esc(short(t))}. The goods stay on the truck; on to ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0;height:56px;border:none;border-radius:999px;background:radial-gradient(120% 140% at 10% 50%,#26335E 0%,#16203C 70%);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22)"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell">Done here · on to ${esc(nextName)}</span><span aria-hidden="true" style="flex:none;color:#F59A92;letter-spacing:-.2em">›››</span></button>`;
+  else foot = slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
+  const seg = (n, bg) => n > 0 ? `<i style="flex:${n};background:${bg}"></i>` : '';
+  // Where the cash stands: Accounts' handover, or that there is none yet.
+  const cashWord = rc ? `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap">in hand <b class="m" style="color:#DDE3F0">${n0(rc.avail)}</b><span style="display:inline-flex;align-items:center;gap:2px;color:var(--mint)">· ${esc(acc)}${ic('tick', 10, 'style="stroke-width:3.4"')}${esc(hm(msOf(rc.at)))}</span></span>`
+    : cashH ? `<span style="white-space:nowrap;color:var(--amber)">asked ${esc(acc)} · not handed over</span>`
+    : `<button data-act="tcashask" ${S.busy ? 'aria-disabled="true"' : ''} style="height:22px;padding:0 8px;border:none;border-radius:999px;background:rgba(245,178,107,.16);color:var(--amber);font-size:10.5px;font-weight:700;white-space:nowrap">No cash from ${esc(acc)} · ask</button>`;
   // What was paid, from the receipt, and the receipt itself: the hand-in waits for both.
-  const payCard = canAnswer && !bySup ? (() => { const diff = hasPay ? P.amount - paid : 0, avail = rc ? rc.avail : null, base = avail != null && avail > 0 ? avail : Math.max(paid, paidNow, 1), shown = hasPay ? P.amount : 0;
-    const seg = (n, bg) => n > 0 ? `<i style="flex:${n};background:${bg}"></i>` : '';
+  const payCard = canAnswer && !bySup ? (() => { const diff = hasPay ? P.amount - plan : 0, avail = rc ? rc.avail : null;
+    const restSpare = avail != null ? Math.max(0, avail - Math.max(paidNow, plan) - restPlan) : 0;
     return `<div style="position:relative;display:flex;gap:10px;padding:12px 12px 12px 14px;border-radius:20px;background:radial-gradient(130% 120% at 0% 0%,#26335E 0%,#16203C 65%);color:#fff;box-shadow:0 12px 26px rgba(22,32,60,.22)">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
-        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="ell" style="font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--navyInk2)">YOU PAID ${esc(supplierShort(t.supplierId).toUpperCase())}</span><span style="white-space:nowrap;font-size:11px;font-weight:700;color:${!hasPay ? 'var(--navyInk2)' : diff > 0 ? 'var(--amber)' : 'var(--mint)'}">${!hasPay ? 'planned ' + n0(paid) : diff > 0 ? n0(diff) + ' over plan · ' + esc(whoShort('accounts')) + ' sees it' : diff < 0 ? n0(-diff) + ' under plan' : left != null ? 'left ' + n0(left) : 'as planned'}</span></span>
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="min-width:0;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--navyInk2)"><span class="ell">YOU PAID ${esc(short(t).toUpperCase())}</span>${hasPay ? `<span role="status" style="flex:none;display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 6px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:9.5px;letter-spacing:.08em">${ic('tick', 9, 'style="stroke-width:3.4"')}SAVED</span>` : ''}</span><span style="white-space:nowrap;font-size:11px;font-weight:700;color:${!hasPay ? 'var(--navyInk2)' : diff > 0 ? 'var(--amber)' : 'var(--mint)'}">${!hasPay ? (shortLess ? n0(plan) + ' · −' + n0(shortLess) : 'planned ' + n0(plan)) : diff > 0 ? n0(diff) + ' over plan · ' + esc(acc) + ' sees it' : diff < 0 ? n0(-diff) + ' under plan' : left != null ? 'left ' + n0(left) : 'as planned'}</span></span>
         <span style="display:flex;align-items:center;gap:6px;border-bottom:1.5px solid ${hasPay ? (diff > 0 ? 'var(--amber)' : 'var(--mint)') : 'rgba(255,255,255,.25)'};padding-bottom:2px">
           <input id="bx_tpaid" data-in="tpaid" type="text" inputmode="numeric" autocomplete="off" aria-label="Amount you paid ${esc(sup.name)}, from the receipt" placeholder="0" value="${hasPay ? n0(P.amount) : ''}" style="flex:1;min-width:0;width:100%;height:36px;border:none;background:transparent;padding:0;outline:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;letter-spacing:-.03em;color:#fff;caret-color:var(--amber)">
-          <button data-act="tpaidplan" aria-label="Paid as planned, ${n0(paid)}" style="flex:none;height:30px;padding:0 10px;border:none;border-radius:999px;font-size:11px;font-weight:700;${hasPay && !diff ? 'background:var(--mint);color:#0B3D27' : 'background:rgba(255,255,255,.12);color:#DDE3F0'}">as planned</button>
+          <button data-act="tpaidplan" aria-label="Paid as planned${shortLess ? ' for what came' : ''}, ${n0(plan)}" style="flex:none;height:30px;padding:0 10px;border:none;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;${hasPay && !diff ? 'background:var(--mint);color:#0B3D27' : 'background:rgba(255,255,255,.12);color:#DDE3F0'}">${shortLess && !hasPay ? 'as planned · what came' : 'as planned'}</button>
         </span>
-        <span role="img" aria-label="${hasPay ? 'Paid ' + n0(P.amount) : 'Not entered yet'}${avail != null ? ' of ' + n0(avail) + ' in hand' : ''}; planned ${n0(paid)}" style="display:flex;flex-direction:column;gap:4px">
-          <span style="display:flex;height:6px;gap:2px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1)">${seg(Math.min(shown, paid), '#DDE3F0')}${seg(Math.max(0, shown - paid), 'var(--amber)')}${hasPay && avail != null ? seg(Math.max(0, avail - shown), 'var(--mint)') : seg(base - shown, 'transparent')}</span>
-          <span style="display:flex;justify-content:space-between;font-size:10.5px;font-weight:600;color:var(--navyInk2)"><span>paid</span><span>${avail != null ? `of <b class="m" style="color:#DDE3F0">${n0(avail)}</b> ${rc.stops > 1 ? 'in hand' : 'from ' + esc(whoShort('accounts'))}` : 'no cash recorded'}</span></span>
+        <span role="img" aria-label="${hasPay ? 'Paid ' + n0(P.amount) + ' here' : 'Not entered yet; planned ' + n0(plan) + (shortLess ? ' for what came' : '')}${avail != null ? '. In hand ' + n0(avail) + ' from ' + esc(acc) + '’s handover' : '. No cash handed over by ' + esc(acc)}${restPlan ? '; ' + (openRest.length > 1 ? openRest.length + ' more stops need ' : esc(nextName) + ' next needs ') + n0(restPlan) : ''}" style="display:flex;flex-direction:column;gap:4px">
+          <span style="display:flex;height:6px;gap:2px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1)">${seg(Math.min(paidNow, plan), '#DDE3F0')}${seg(Math.max(0, paidNow - plan), 'var(--amber)')}${hasPay ? '' : seg(plan, 'rgba(255,255,255,.06)')}${avail != null ? seg(restPlan, 'rgba(155,163,240,.7)') + seg(restSpare, hasPay ? 'var(--mint)' : 'transparent') : ''}</span>
+          <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:600;color:var(--navyInk2)"><span class="ell" style="display:inline-flex;align-items:center;gap:5px;min-width:0">${restPlan ? `<i style="width:7px;height:7px;border-radius:2px;background:#9BA3F0;opacity:.7;flex:none"></i>${esc(openRest.length > 1 ? openRest.length + ' stops next' : nextName + ' next')}` : 'paid here'}</span>${cashWord}</span>
         </span>
       </div>
       <label aria-label="${P.photo ? 'Receipt photo taken. Tap to take it again' : 'Take a photo of the receipt'}" style="position:relative;flex:none;width:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer">
         <input id="bx_receipt" data-receipt type="file" accept="image/*" capture="environment" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">
-        <span aria-hidden="true" style="width:52px;height:62px;box-sizing:border-box;padding-bottom:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:${P.photo ? '#fff' : P.noReceipt ? '#E6E3DD' : 'var(--amber)'};border-radius:8px 8px 0 0;-webkit-mask:linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat,conic-gradient(from 135deg at 50% 0,#000 90deg,transparent 0) bottom / 8px 5px repeat-x;mask:linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat,conic-gradient(from 135deg at 50% 0,#000 90deg,transparent 0) bottom / 8px 5px repeat-x;transform:rotate(${P.photo ? '-4' : '0'}deg);transition:transform .3s cubic-bezier(.3,1.4,.5,1)">${P.photo ? `<img alt="" src="${esc(P.photo.url)}" style="width:100%;height:100%;object-fit:cover">` : P.noReceipt ? ic('doc', 22, 'style="stroke:#5F6980;stroke-width:2"') : ic('camera', 22, 'style="stroke:#16203C;stroke-width:1.9"')}</span>
+        <span aria-hidden="true" style="width:52px;height:62px;box-sizing:border-box;padding-bottom:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:${P.photo ? '#fff' : P.noReceipt ? '#E6E3DD' : 'var(--amber)'};border-radius:8px 8px 0 0;-webkit-mask:linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat,conic-gradient(from 135deg at 50% 0,#000 90deg,transparent 0) bottom / 8px 5px repeat-x;mask:linear-gradient(#000 0 0) top / 100% calc(100% - 5px) no-repeat,conic-gradient(from 135deg at 50% 0,#000 90deg,transparent 0) bottom / 8px 5px repeat-x;transform:rotate(${P.photo ? '-4' : '0'}deg);transition:transform .3s cubic-bezier(.3,1.4,.5,1)">${P.photo ? (P.photo.url ? `<img alt="" src="${esc(P.photo.url)}" style="width:100%;height:100%;object-fit:cover">` : ic('doc', 22, 'style="stroke:#16203C;stroke-width:2"')) : P.noReceipt ? ic('doc', 22, 'style="stroke:#5F6980;stroke-width:2"') : ic('camera', 22, 'style="stroke:#16203C;stroke-width:1.9"')}</span>
         <span aria-hidden="true" style="font-size:10px;font-weight:700;color:${P.photo ? 'var(--mint)' : P.noReceipt ? 'var(--navyInk2)' : 'var(--amber)'}">${P.photo ? 'receipt' : P.noReceipt ? 'none' : 'photo it'}</span>
         ${P.photo ? `<span aria-hidden="true" style="position:absolute;right:2px;top:0;width:18px;height:18px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #1B2647">${ic('tick', 10, 'style="stroke-width:3.6"')}</span>` : ''}
       </label>
     </div>
-    <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(whoShort('accounts')) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(whoShort('accounts')) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(whoShort('accounts'))}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>`; })() : '';
+    <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(acc) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(acc) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(acc)}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>`; })() : '';
+  // The stop is done: what it cost, and what the cash in hand is now for.
+  const doneCard = done ? (() => { const avail = rc ? rc.avail - paidNow : null, back = endNow || !nextStop, spare = avail != null ? avail - restPlan : null;
+    const head = back ? 'BRING BACK TO ' + acc.toUpperCase() : 'IN HAND FOR ' + (openRest.length > 1 ? openRest.length + ' STOPS' : nextName.toUpperCase());
+    return `<div role="img" aria-label="${esc(short(t))} done: ${n0(paidNow)} paid${P.photo ? ' with a receipt' : ', no receipt'}. ${avail == null ? 'No cash handed over by ' + esc(acc) + ' is recorded.' : back ? 'Handing in: all ' + n0(avail) + ' in hand goes back to ' + esc(acc) + '.' : 'In hand ' + n0(avail) + '; the rest of the round is planned at ' + n0(restPlan) + ', so ' + n0(Math.max(0, spare)) + ' is spare.'} The goods stay on the truck; ${esc(whoShort('store'))} is told once, at the yard." style="display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:20px;background:radial-gradient(130% 120% at 0% 0%,#26335E 0%,#16203C 65%);color:#fff;box-shadow:0 12px 26px rgba(22,32,60,.22)">
+      <span style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell" style="flex:1;min-width:0;font-size:13px;font-weight:700">${esc(short(t))} done · <span class="m">${n0(paidNow)}</span> paid</span><span style="flex:none;display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;background:${P.photo ? 'rgba(111,220,176,.14);color:var(--mint)' : 'rgba(255,255,255,.08);color:var(--navyInk)'};font-size:10.5px;font-weight:700">${ic('doc', 11, 'style="stroke-width:2.2"')}${P.photo ? 'receipt' : 'no receipt'}</span></span>
+      <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--navyInk2)">${esc(head)}</span><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em">${avail != null ? n0(avail) : '—'}</span></span>
+      ${avail != null ? `<span style="display:flex;height:6px;gap:2px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1)">${back ? seg(Math.max(1, avail), 'var(--mint)') : seg(Math.min(restPlan, Math.max(0, avail)), '#9BA3F0') + seg(Math.max(0, spare), 'var(--mint)')}</span>
+      <span style="display:flex;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:600;color:var(--navyInk2);white-space:nowrap"><span>${restPlan && !back ? `planned <b class="m" style="color:#DDE3F0">${n0(restPlan)}</b>` : ''}</span><span>${back ? 'all of it goes back' : spare < 0 ? `<b class="m" style="color:var(--rose)">${n0(-spare)}</b> short for the rest` : `spare <b class="m" style="color:var(--mint)">${n0(spare)}</b> · stays spare`}</span></span>`
+        : `<span style="font-size:11px;font-weight:600;color:var(--amber)">No cash handed over by ${esc(acc)} is recorded</span>`}
+    </div>
+    <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span class="ell" style="display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--ink3)">${ic('truck', 13)}${nextStop && endNow ? esc(openRest.length > 1 ? openRest.length + ' stops go' : nextName + ' goes') + ' back to To plan' : 'Goods ride on · ' + esc(whoShort('store')) + ' counts once'}</span>${nextStop ? `<button data-act="endnow" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${endNow ? 'Keep ' + esc(nextName) : 'Hand in now'}</button>` : ''}</span>`; })() : '';
+  // The round, stop by stop, ending at the yard where it is handed in once.
+  const routeHTML = isRound ? (() => { const many = rt.length > 3;
+    const st = x => stopIsDone(x) ? 'done' : skipOf(x) || stopBoughtElsewhere(x) || (endNow && done && x.id !== id) ? 'skip' : (x.id === id || (done && nextStop && x.id === nextStop.id)) ? 'now' : 'next';
+    const node = (x, i) => { const k = st(x), on = k === 'done' || k === 'now';
+      const dot = k === 'done' ? 'background:var(--mint);color:#0B3D27' : k === 'now' ? 'background:#fff;color:var(--navy);box-shadow:0 0 0 3px rgba(155,163,240,.45)' : k === 'skip' ? 'color:var(--navyInk2);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25);opacity:.6' : 'color:#DDE3F0;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)';
+      const name = !many || k === 'now' ? `<span style="font-size:11.5px;font-weight:${k === 'now' ? '700;color:#fff' : '600;color:' + (k === 'done' ? 'var(--mint)' : k === 'skip' ? 'var(--navyInk2);text-decoration:line-through' : 'var(--navyInk)')};white-space:nowrap">${esc(short(x))}</span>` : '';
+      return `${i ? `<span style="flex:1;min-width:6px;height:2px;margin:0 5px;border-radius:999px;background:${on ? 'var(--mint)' : 'repeating-linear-gradient(90deg,rgba(255,255,255,.28) 0 5px,transparent 5px 9px)'}"></span>` : ''}<button ${x.id === id ? 'aria-current="step"' : `data-act="nextstop" data-id="${esc(x.id)}"`} aria-label="Stop ${i + 1}, ${esc(supplierName(x.supplierId))}: ${k === 'done' ? 'done' : k === 'skip' ? 'off this round' : k === 'now' ? 'now' : 'to come'}" style="flex:none;display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;min-height:40px;min-width:40px"><span style="width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;flex:none;${dot}">${k === 'done' ? ic('tick', 12, 'style="stroke-width:3.2"') : esc(initials(supplierName(x.supplierId)))}</span>${name}</button>`; };
+    return `<div role="group" aria-label="The round: ${rt.length} stops, handed in once at the yard" style="display:flex;align-items:center;padding:0 2px">${rt.map(node).join('')}<span style="flex:1;min-width:6px;height:2px;margin:0 5px;border-radius:999px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.28) 0 5px,transparent 5px 9px)"></span><span style="flex:none;display:flex;align-items:center;gap:6px"><span style="width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--amber);display:flex;align-items:center;justify-content:center">${ic('box', 13, 'style="stroke-width:2"')}</span>${many ? '' : '<span style="font-size:11.5px;font-weight:600;color:var(--navyInk)">Yard</span>'}</span></div>`; })() : '';
+  // The same lines already on a trip still out: this stop would buy them twice.
+  const elseHTML = elsewhere ? `<div role="note" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--amberSoft);box-shadow:inset 0 0 0 1px #F5B26B"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:13px;color:var(--amberDeep)">${esc(supplierShort(elsewhere.supplierId))} ${tripIsSupplierDelivered(elsewhere) ? 'delivers' : 'is bringing'} these</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--amberInk)">out since ${esc(hm(msOf(elsewhere.createdAt)))} · buying here buys it twice</span></span><button data-act="stopdrop" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:36px;padding:0 12px;border:none;border-radius:999px;background:#fff;color:var(--amberDeep);font-size:12px;font-weight:700;box-shadow:inset 0 0 0 1.5px #F5B26B">Take off the round</button></div>` : '';
   return `<div class="card" style="margin-top:0;min-height:100%;border-radius:0">
     <div class="bx-hero" data-navy-top style="padding-top:calc(14px + var(--safe-area-inset-top));gap:12px">
       <div style="display:flex;align-items:center;gap:12px">
         <button class="bx-circle" data-act="tripsback" aria-label="Back to Trips" style="background:rgba(255,255,255,.08)">${ic('back', 16, 'style="stroke-width:2.2"')}</button>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;font-weight:700;letter-spacing:.1em;line-height:1.3;color:var(--lilac)"><span class="${t.status === 'collecting' ? 'a-pulsel' : ''}" style="width:8px;height:8px;border-radius:999px;background:var(--lilac);flex:none"></span><span style="min-width:0">${esc((bySup ? 'THEY BRING IT' + (sup.location ? ' · ' + sup.location : '') : t.status === 'collecting' ? 'LOADING AT ' + supplierShort(t.supplierId) + ' · OUT SINCE ' + hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)) : t.status === 'assigned' ? 'SENT TO ' + tripCarrierLabel(t) : 'TO SEND' + (sup.location ? ' · ' + sup.location : '')).toUpperCase())}</span></span><span class="ell" style="font-size:18px;font-weight:700">${esc(sup.name)}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:6px;min-width:0;font-size:10.5px;font-weight:700;letter-spacing:.1em;line-height:1.3;color:var(--lilac)"><span class="${t.status === 'collecting' ? 'a-pulsel' : ''}" style="width:8px;height:8px;border-radius:999px;background:var(--lilac);flex:none"></span><span style="min-width:0">${esc((bySup ? 'THEY BRING IT' + (sup.location ? ' · ' + sup.location : '') : t.status === 'collecting' ? (isRound ? 'STOP ' + (myIdx + 1) + ' OF ' + rt.length + (done ? ' ✓' : '') : (done ? 'DONE AT ' : 'LOADING AT ') + supplierShort(t.supplierId)) + ' · OUT SINCE ' + hm(msOf(t.acceptedAt || t.assignedAt || t.createdAt)) : t.status === 'assigned' ? 'SENT TO ' + tripCarrierLabel(t) : 'TO SEND' + (sup.location ? ' · ' + sup.location : '')).toUpperCase())}</span></span><span class="ell" style="font-size:18px;font-weight:700">${esc(sup.name)}</span></span>
         ${telUrl(phone) ? `<a href="${telUrl(phone)}" aria-label="Call ${esc(sup.name)}" style="width:44px;height:44px;border-radius:14px;background:${tt[0]};color:${tt[1]};display:flex;align-items:center;justify-content:center;flex:none">${ic('phone', 19)}</a>` : ''}
       </div>
+      ${routeHTML}
       <div role="img" aria-label="The truck: ${answered} of ${lines.length} lines loaded, ${full} in full, ${shorts} short" style="position:relative;height:104px">
         <div class="${bump ? 'a-bounce' : ''}" style="position:absolute;inset:0">
           <div style="position:absolute;left:0;right:78px;top:6px;height:64px;border-radius:10px 4px 4px 10px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14);padding:6px;display:flex;align-items:flex-end;gap:4px">${slots}</div>
@@ -3594,40 +3752,50 @@ PAGE.trip = ({ id }) => {
           <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--navyInk2)">${ic('cash', 13, 'style="stroke:#6FDCB0;stroke-width:2"')}${left != null ? `left <b class="m" style="color:${left < 0 ? 'var(--rose)' : 'var(--mint)'}">${n0(left)}</b>` : `paid <b class="m" style="color:var(--mint)">${n0(paidNow)}</b>`}</span></span>
       </div>
     </div>
-    <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:6px">${rows}
+    <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:6px">${elseHTML}${rows}
       ${pending ? `<span class="bx-hint" style="color:${navigator.onLine === false ? 'var(--amberInk)' : 'var(--ink3)'}">${ic('refresh', 13)}${navigator.onLine === false ? `${pending} answer${pending > 1 ? 's' : ''} kept on this phone · sent when there is signal` : 'Saving…'}</span>` : ''}</div>
-    <div class="bx-foot">${payCard}<div class="row"><a class="bx-sq" href="${esc(waComposeUrl(phone, t.status === 'collecting' && mine ? 'Hello ' + sup.name + ', ' + firstWord(myName()) + ' here at your shop.' : supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Message ${esc(sup.name)} on WhatsApp">${ic('wa', 22)}</a>${foot}</div></div>
+    <div class="bx-foot">${payCard}${doneCard}<div class="row"><a class="bx-sq" href="${esc(waComposeUrl(phone, t.status === 'collecting' && mine ? 'Hello ' + sup.name + ', ' + firstWord(myName()) + ' here at your shop.' : supplierTripMessage(t)))}" target="_blank" rel="noopener" aria-label="Message ${esc(sup.name)} on WhatsApp">${ic('wa', 22)}</a>${foot}</div></div>
   </div>`;
 };
 PAGE.trip.bg = '#F7F5F2';
 // Back from a trip lands on Trips, wherever the trip was opened from.
 ACT.tripsback = () => { FEEL.back(); if (S.stack.length > 1 && S.stack[S.stack.length - 2].type === 'trips') pop(); else replaceTop('trips', {}); };
 function tripArgsLine(t){ const a = topArgs(), tr = tripById(a.id); if (!tr) return null; const i = Number(t.dataset.i), l = tripView(tr).lines[i]; return l ? { tr, i, l, per: quoteLineCountPer(l) } : null; }
-ACT['in:tpaid'] = t => { const a = topArgs(), n = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; S.tripPay = S.tripPay || {}; S.tripPay[a.id] = { ...(S.tripPay[a.id] || {}), amount: n || null }; render(); };
-ACT.tnorec = () => { const a = topArgs(); S.tripPay = S.tripPay || {}; const was = S.tripPay[a.id] || {}; S.tripPay[a.id] = { ...was, noReceipt: !was.noReceipt, photo: was.noReceipt ? was.photo : null }; FEEL.tick(); render(); };
-ACT.tpaidplan = () => { const a = topArgs(), tr = tripById(a.id); if (!tr) return; const paid = tripPlanned(tr); S.tripPay = S.tripPay || {}; S.tripPay[a.id] = { ...(S.tripPay[a.id] || {}), amount: Math.round(paid) || null }; FEEL.tick(); render(); };
+ACT['in:tpaid'] = t => { const a = topArgs(), n = Number(String(t.value).replace(/[^0-9]/g, '')) || 0; setTripPay(a.id, { amount: n || null }); render(); };
+ACT.tnorec = () => { const a = topArgs(), was = (S.tripPay || {})[a.id] || {}; setTripPay(a.id, { noReceipt: !was.noReceipt, photo: was.noReceipt ? was.photo : null }); FEEL.tick(); render(); };
+// "As planned" is the plan for what came: a short line pays for what was loaded.
+ACT.tpaidplan = () => { const a = topArgs(), tr = tripById(a.id); if (!tr) return; setTripPay(a.id, { amount: Math.round(tripPlanFor(tripView(tr))) || null }); FEEL.tick(); render(); };
 document.addEventListener('change', e => {
   const el = e.target; if (!el || !el.hasAttribute || !el.hasAttribute('data-receipt')) return;
   const f = el.files && el.files[0], a = topArgs(); if (!f || !a.id) return;
-  S.tripPay = S.tripPay || {}; const was = S.tripPay[a.id] || {}; if (was.photo && was.photo.url) { try { URL.revokeObjectURL(was.photo.url); } catch (_e) {} }
-  S.tripPay[a.id] = { ...was, noReceipt: false, photo: { file: f, url: URL.createObjectURL(f), at: new Date().toISOString() } };
+  const was = (S.tripPay || {})[a.id] || {}; if (was.photo && was.photo.url) { try { URL.revokeObjectURL(was.photo.url); } catch (_e) {} }
+  setTripPay(a.id, { noReceipt: false, photo: { file: f, url: URL.createObjectURL(f), at: new Date().toISOString() } });
   FEEL.tick(); render();
 });
+// The receipt photo is uploaded once, when the stop is done; the hand-in
+// passes the same file on.
+async function uploadReceipt(t){
+  const P = (S.tripPay || {})[t.id]; if (!P || !P.photo) return null; if (P.photo.path) return P.photo.path;
+  if (!P.photo.file) throw new Error('the receipt photo is no longer on this phone — take it again');
+  const ext = (String(P.photo.file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
+  const path = S.shopId + '/' + newUuid() + '.' + ext;
+  const up = await sb.storage.from('bill-photos').upload(path, P.photo.file, { contentType: P.photo.file.type || 'image/jpeg' });
+  if (up.error) throw up.error;
+  P.photo.path = path; saveTripPay();
+  return path;
+}
 // The receipt goes to Accounts as the trip's paper bill (bill.record is theirs).
 async function sendReceipt(t){
   const P = (S.tripPay || {})[t.id]; if (!P || !(P.photo || P.noReceipt) || !(P.amount > 0) || tripReceipt(t)) return true;
-  if (!P.photo) { await passOn('paper_bill', 'accounts', t.supplierId, { supplierId: t.supplierId, supplier: supplierName(t.supplierId), billNo: '', total: P.amount, planned: Math.round(tripPlanned(t)), photoPath: null, noReceipt: true, tripId: t.id, receipt: false, termsDays: (supplierById(t.supplierId) || {}).termsDays || null }); return true; }
-  const ext = (String(P.photo.file.name || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
-  const path = S.shopId + '/' + newUuid() + '.' + ext, s = supplierById(t.supplierId);
-  const up = await sb.storage.from('bill-photos').upload(path, P.photo.file, { contentType: P.photo.file.type || 'image/jpeg' });
-  if (up.error) throw up.error;
+  if (!P.photo) { await passOn('paper_bill', 'accounts', t.supplierId, { supplierId: t.supplierId, supplier: supplierName(t.supplierId), billNo: '', total: P.amount, planned: Math.round(tripPlanFor(t)), photoPath: null, noReceipt: true, tripId: t.id, receipt: false, termsDays: (supplierById(t.supplierId) || {}).termsDays || null }); return true; }
+  const path = await uploadReceipt(t), s = supplierById(t.supplierId);
   await passOn('paper_bill', 'accounts', t.supplierId, { supplierId: t.supplierId, supplier: supplierName(t.supplierId), billNo: '', total: P.amount, planned: Math.round(tripLines(t).reduce((x, l) => x + tripLinePaid(l), 0)), photoPath: path, takenAt: P.photo.at, tripId: t.id, receipt: true, termsDays: s ? s.termsDays : null });
   return true;
 }
 ACT.receiptsend = async () => {
   const t = tripById(topArgs().id); if (!t || S.busy) return;
   S.busy = true; render();
-  try { await sendReceipt(t); FEEL.yes(); toast('Receipt with ' + whoShort('accounts')); }
+  try { for (const x of handInOf(t)) await sendReceipt(x); FEEL.yes(); toast('Receipts with ' + whoShort('accounts')); }
   catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not sent: ' + (e.message || e)); }
   S.busy = false; render();
 };
@@ -3695,30 +3863,120 @@ ACT['slide:take'] = async () => {
     S.busy = false; FEEL.go(); render();
   } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
 };
-// shared-worker.js finishCollectionTrip: every line answered, 0 included.
+// A stop is ready to leave when every line is answered (0 is an answer),
+// what was paid is typed and the receipt is photographed or said to be none.
+function stopReadyWhy(t){
+  if (!tripAllAnswered(t)) { const left = tripLines(t).filter(l => tripLineGot(l) == null).length; return `Say what came back for ${left} more line${left === 1 ? '' : 's'} at ${supplierShort(t.supplierId)} first — 0 is an answer`; }
+  if (tripIsSupplierDelivered(t)) return '';
+  const P = (S.tripPay || {})[t.id] || {};
+  if (!(P.amount > 0)) return 'Enter what you paid at ' + supplierShort(t.supplierId) + ' first';
+  if (!(P.photo || P.noReceipt)) return 'Add the receipt photo at ' + supplierShort(t.supplierId) + ', or say there was none';
+  return '';
+}
+// Done here: the answers are written, the receipt photo goes up while there
+// is signal, and the goods ride on. Nobody is told until the round's hand-in.
+async function markStopDone(id){
+  await flushTrip(id);
+  const t = tripView(tripById(id)), why = stopReadyWhy(t); if (why) throw Object.assign(new Error(why), { soft: true });
+  await uploadReceipt(t).catch(e => { if (!isNetworkError(e)) throw e; });
+  setTripPay(id, { done: new Date().toISOString(), skip: false });
+}
+ACT.stopdone = async () => {
+  const id = topArgs().id; if (S.busy) return;
+  S.busy = true; render();
+  try { await markStopDone(id); S.busy = false; FEEL.yes(); render(); }
+  catch (e) { S.busy = false; toast(e.soft ? e.message : isNetworkError(e) ? 'No connection — it is kept on this phone. Say done again with signal.' : 'Not done: ' + (e.message || e), 5000); render(); }
+};
+// Hand in now: the stops not reached go back to To plan at the hand-in.
+ACT.endnow = () => { const t = tripById(topArgs().id); if (!t) return; const k = roundStops(t)[0].id; S.ui.endNow = S.ui.endNow || {}; S.ui.endNow[k] = !S.ui.endNow[k]; FEEL.tick(); render(); };
+// A stop off the round: the trip is called off and its lines go back to
+// the buying list (a shelf line back to planned). The cash it carried moves
+// to a stop that stays, so Accounts still counts the whole handover.
+async function dropStop(x, note, keep){
+  if (keep && x.cashGiven != null && Number(x.cashGiven) > 0) {
+    const k = tripById(keep.id) || keep, to = (Number(k.cashGiven) || 0) + Number(x.cashGiven);
+    const m = await sb.from('collection_trips').update({ cash_given: to }).eq('shop_id', S.shopId).eq('id', k.id);
+    if (m.error) throw m.error;
+    D().collectionTrips = D().collectionTrips.map(y => y.id === k.id ? { ...y, cashGiven: to } : y);
+  }
+  const u = await sb.from('collection_trips').update({ voided: true, note, ...(keep && x.cashGiven != null ? { cash_given: 0 } : {}) }).eq('shop_id', S.shopId).eq('id', x.id);
+  if (u.error) throw u.error;
+  for (const l of tripLines(x).filter(l => l.orderId === 'restock')) { const r = (D().restockBuys || []).find(y => y.id === l.lineId); const v = await sb.from('restock_buys').update({ status: 'planned', trip_id: null }).eq('shop_id', S.shopId).eq('id', l.lineId); if (v.error) throw v.error; if (r) { r.status = 'planned'; r.tripId = null; } }
+  D().collectionTrips = D().collectionTrips.map(y => y.id === x.id ? { ...y, voided: true, note, ...(keep && x.cashGiven != null ? { cashGiven: 0 } : {}) } : y);
+  if (S.tripPay && S.tripPay[x.id]) { delete S.tripPay[x.id]; saveTripPay(); }
+  saveSnapshot();
+}
+ACT.stopdrop = async () => {
+  const t = tripById(topArgs().id); if (!t || S.busy) return;
+  const other = stopBoughtElsewhere(t), rest = roundStops(t).filter(x => x.id !== t.id && x.status === 'collecting' && !stopIsDone(x));
+  S.busy = true; render();
+  try {
+    await dropStop(t, other ? 'Off the round: ' + supplierName(other.supplierId) + ' brings it' : 'Off the round', rest[0] || roundStops(t).find(x => x.id !== t.id && !x.voided) || null);
+    S.busy = false; FEEL.back(); toast(supplierShort(t.supplierId) + ' is off the round');
+    rest.length ? replaceTop('trip', { id: rest[0].id }) : replaceTop('trips', {});
+  } catch (e) { S.busy = false; toast(failWord(e), 5000); render(); }
+};
+// No handover recorded for a round already out: ask Accounts for it now.
+ACT.tcashask = async () => {
+  const t = tripById(topArgs().id); if (!t || S.busy) return;
+  const rt = roundStops(t), sids = rt.map(x => String(x.supplierId)), names = rt.map(x => supplierShort(x.supplierId));
+  const v = Math.round(rt.filter(x => x.status === 'collecting').reduce((a, x) => a + tripPlanFor(tripView(x)), 0));
+  S.busy = true; render();
+  try {
+    await passOn('trip_cash', 'accounts', 'round:' + newUuid().slice(0, 8), { supplierId: sids[0], supplierIds: sids, supplier: names.length > 2 ? names.slice(0, 2).join(', ') + ' +' + (names.length - 2) : names.join(' and '), stops: rt.length, amount: v, for: myName(), roundOf: rt[0].id });
+    FEEL.ask(); toast('Asked ' + whoShort('accounts') + ' for ' + n0(v) + ' · they mark it handed over');
+  } catch (e) { toast(failWord(e), 5000); }
+  S.busy = false; render();
+};
+// The hand-in: once, at the yard, for every stop of the round that is done.
+// Stops not reached go back to To plan. The Store and Accounts are told once
+// for the round (0147). A short line never updates the price list: its price
+// paid is only written when it differs from the plan.
 ACT['slide:handin'] = async () => {
   const id = topArgs().id; if (S.busy) return;
+  const t0 = tripById(id); if (!t0) return;
   S.busy = true;
   try {
-    await flushTrip(id);
-    const r = await sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
-    if (r.error) throw r.error;
-    const t = r.data && rowToTrip(r.data);
-    if (!t || t.status !== 'collecting') { S.busy = false; toast('That trip has already been handed in'); await refreshLive(); return; }
-    if (!tripAllAnswered(t)) { S.busy = false; const left = tripLines(t).filter(l => tripLineGot(l) == null).length; toast(`Say what came back for ${left} more line${left === 1 ? '' : 's'} first — 0 is an answer`); render(); return; }
-    const P = (S.tripPay || {})[id] || {};
-    if (!tripIsSupplierDelivered(t) && (!(P.amount > 0) || !(P.photo || P.noReceipt))) { S.busy = false; toast(!(P.amount > 0) ? 'Enter what you paid first' : 'Add the receipt photo, or say there was none'); render(); return; }
-    const patch = { status: 'collected', collected_at: new Date().toISOString() };
-    const u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', id);
-    if (u.error) throw u.error;
-    D().collectionTrips = D().collectionTrips.map(x => x.id === id ? rowToTrip({ ...r.data, ...patch }) : x); saveSnapshot();
-    await pricesPaidToList(t);
-    await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e)));
-    await sendReceipt(t).catch(e => toast('Handed in · the receipt did not reach ' + whoShort('accounts') + (isNetworkError(e) ? ' — send it when there is signal' : ': ' + (e.message || e))));
-    S.busy = false; S.ui.horn = id; replaceTop('done', { id });
+    const own = tripIsMine(t0) && !tripIsSupplierDelivered(t0);
+    const P0 = (S.tripPay || {})[id] || {};
+    if (own && !P0.done) await markStopDone(id);
+    else await flushTrip(id);
+    const stops = own ? roundStops(t0).filter(x => x.status === 'collecting') : [t0];
+    const going = stops.filter(x => x.id === id || stopIsDone(x)), left = stops.filter(x => !going.includes(x));
+    const now = new Date().toISOString(), handed = [], ready = [];
+    // Every stop going in is checked before anything is written.
+    for (const x of going) {
+      await flushTrip(x.id);
+      const r = await sb.from('collection_trips').select('*').eq('shop_id', S.shopId).eq('id', x.id).maybeSingle();
+      if (r.error) throw r.error;
+      const t = r.data && rowToTrip(r.data);
+      if (!t || t.status !== 'collecting') continue;
+      const why = stopReadyWhy(t); if (why) { S.busy = false; toast(why); render(); return; }
+      ready.push({ row: r.data, t });
+    }
+    if (!ready.length) { S.busy = false; toast('That round has already been handed in'); await refreshLive(); return; }
+    // Stops not reached are off the round first, so the one push counts only what came back.
+    for (const x of left) await dropStop(x, 'Left for a later round', ready[ready.length - 1].t).catch(e => toast('Handed in · ' + supplierShort(x.supplierId) + ' is still on the round — ' + (e.message || e)));
+    for (const { row, t } of ready) {
+      const lines = tripLines(t).map(l => { const g = tripLineGot(l); return g != null && g < l.qty && l.gotPrice != null && Number(l.gotPrice) === Number(l.expectedPrice) ? { ...l, gotPrice: null } : l; });
+      const patch = { status: 'collected', collected_at: now, lines };
+      const u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', t.id);
+      if (u.error) throw u.error;
+      const moved = tripById(t.id), fresh = rowToTrip({ ...row, ...(moved && moved.cashGiven != null ? { cash_given: moved.cashGiven } : {}), ...patch });
+      D().collectionTrips = D().collectionTrips.map(y => y.id === t.id ? fresh : y); saveSnapshot();
+      handed.push(fresh);
+    }
+    if (!handed.length) { S.busy = false; toast('That round has already been handed in'); await refreshLive(); return; }
+    for (const t of handed) {
+      await pricesPaidToList(t);
+      await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e)));
+      await sendReceipt(t).catch(e => toast('Handed in · the receipt did not reach ' + whoShort('accounts') + (isNetworkError(e) ? ' — send it when there is signal' : ': ' + (e.message || e))));
+    }
+    if (S.ui.endNow) delete S.ui.endNow[(own ? roundStops(t0)[0] : t0).id];
+    S.busy = false; S.ui.horn = handed[0].id; replaceTop('done', { id: handed[0].id });
     // The chips (Plan › live trips, Today) read the server's trip, not an older read still on its way.
     refreshLive();
-  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
+  } catch (e) { S.busy = false; toast(e.soft ? e.message : isNetworkError(e) ? 'No connection — it is kept on this phone. Hand it in when you have signal.' : 'Not handed in: ' + (e.message || e), 6000); render(); }
 };
 
 /* "The Buyer's prices paid update the supplier price list automatically"
@@ -3798,9 +4056,15 @@ function shortTellPhone(sh){
   const st = (D().staff || []).find(x => x.userId && String(x.userId) === by[0]); return st && st.phone ? st.phone : '';
 }
 function shortMessage(t){
-  const sh = tripShortLines(t);
-  return [`Back from *${supplierName(t.supplierId)}*: ${tripLines(t).length - sh.length} of ${tripLines(t).length} lines in full.`, '',
+  const H = handInOf(t), sh = H.flatMap(x => tripShortLines(x)), n = H.reduce((a, x) => a + tripLines(x).length, 0);
+  return [`Back from *${H.map(x => supplierName(x.supplierId)).join(', ')}*: ${n - sh.length} of ${n} lines in full.`, '',
     ...(sh.length ? ['Short:', ...sh.map(r => { const g = quoteLineCount(r.l, r.got), s = quoteLineCount(r.l, r.sent); return `• ${r.l.productName} — got ${g.n} of ${s.n} ${s.unit} · for ${r.l.clientName}`; })] : ['Nothing short.'])].join('\n');
+}
+// The stops handed in together with this one: the round's one hand-in.
+function handInOf(t){
+  if (!t || !t.collectedAt) return t ? [t] : [];
+  const at = msOf(t.collectedAt), set = tripRound(t).filter(x => ['collected', 'confirmed'].includes(x.status) && Math.abs(msOf(x.collectedAt) - at) < 10000);
+  const order = roundStops(t); return set.length ? order.filter(x => set.includes(x)).concat(set.filter(x => !order.includes(x))) : [t];
 }
 AFTER.push(() => { if (S.ui.horn && S.stack.length && S.stack[S.stack.length - 1].type === 'done') { S.ui.horn = null; setTimeout(FEEL.hand, 850); } });
 // The next stop of the round opens in place, so Back never returns to this one.
@@ -3808,18 +4072,25 @@ ACT.nextstop = t => { FEEL.open(); replaceTop('trip', { id: t.dataset.id }); };
 ACT.plannext = () => { FEEL.open(); replaceTop('plan', {}); };
 PAGE.done = ({ id }) => {
   const t = tripById(id); if (!t) return goneCard('That trip is no longer on the books');
-  const lines = tripLines(t), sh = tripShortLines(t), full = lines.length - sh.length;
-  const paid = tripPaidAt(t), planned = tripPlanned(t), rc = roundCash(t), given = rc ? rc.given : null;
-  const rt = rc ? rc.trips : [t], after = rt.slice(rt.findIndex(x => x.id === t.id) + 1).filter(x => x.status === 'collecting' && tripIsMine(x));
-  const back = rc ? rc.avail - paid : null, more = after.length;
-  const receipt = tripReceipt(t), local = (S.tripPay || {})[t.id], noRec = receipt ? !!receipt.payload.noReceipt : !!(local && local.noReceipt), hasReceipt = !!receipt || !!(local && (local.photo || local.noReceipt));
-  const where = supplierShort(t.supplierId).toUpperCase(), nextRun = runsToGo()[0], nextTrip = after[0] || null;
-  const crates = lines.slice(0, 12).map((l, i) => { const g = tripLineGot(l), s = g != null && g < l.qty; return `<i class="a-crate" style="animation-delay:${(1 + i * .08).toFixed(2)}s;border-radius:5px;${g === 0 ? 'box-shadow:inset 0 0 0 2px rgba(245,154,146,.6)' : s ? 'background:repeating-linear-gradient(135deg,#F5B26B 0 4px,#E59A4E 4px 7px);box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)' : 'background:#6FDCB0;box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)'}"></i>`; }).join('');
-  const step = t.status === 'confirmed' ? 2 : 1;
+  const H = handInOf(t), many = H.length > 1, acc = whoShort('accounts'), store = whoShort('store');
+  const rows = H.flatMap(x => tripLines(x).map(l => ({ x, l }))), sh = H.flatMap(x => tripShortLines(x).map(r => ({ ...r, x }))), full = rows.length - sh.length;
+  const paidOf = x => tripPaidAt(x), paid = H.reduce((a, x) => a + paidOf(x), 0), planned = H.reduce((a, x) => a + tripPlanned(x), 0);
+  const h = roundHandover(t), given = h ? Number(h.payload.amount) || 0 : null, back = given != null ? given - paid : null;
+  const recOf = x => { const r = tripReceipt(x), loc = (S.tripPay || {})[x.id]; return r ? (r.payload.noReceipt ? 'none' : 'photo') : loc && loc.photo ? 'photo' : loc && loc.noReceipt ? 'none' : ''; };
+  const photos = H.filter(x => recOf(x) === 'photo').length, nones = H.filter(x => recOf(x) === 'none').length;
+  const unsent = H.filter(x => !tripReceipt(x) && (S.tripPay || {})[x.id] && (S.tripPay[x.id].photo || S.tripPay[x.id].noReceipt));
+  const where = supplierShort(t.supplierId).toUpperCase(), at = hm(msOf(t.collectedAt));
+  const confirmed = H.every(x => x.status === 'confirmed'), step = confirmed ? 2 : 1;
+  const crates = rows.slice(0, 15).map(({ l }, i) => { const g = tripLineGot(l), s2 = g != null && g < l.qty; return `<i class="a-crate" style="animation-delay:${(1 + i * .06).toFixed(2)}s;border-radius:5px;${g === 0 ? 'box-shadow:inset 0 0 0 2px rgba(245,154,146,.6)' : s2 ? 'background:repeating-linear-gradient(135deg,#F5B26B 0 4px,#E59A4E 4px 7px);box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)' : 'background:#6FDCB0;box-shadow:inset 0 0 0 2px rgba(22,32,60,.18)'}"></i>`; }).join('');
+  const sz = rows.length > 8 ? 22 : 28, cols = rows.length > 8 ? 5 : 4;
+  const sh1 = sh.length === 1 ? sh[0] : null, chip = sh.length ? `+${sh.length} short${sh1 ? ' · ' + quoteLineCount(sh1.l, sh1.got).n + ' of ' + quoteLineCount(sh1.l, sh1.sent).n : ''}` : '';
+  const listed = H.map(x => (S.ui.listed || {})[x.id]), listFail = listed.includes(-1), listN = listed.every(n => n == null) ? null : listed.reduce((a, n) => a + (n > 0 ? n : 0), 0);
+  const yd = H.find(x => tripYardDiffs(x).length), counted = H.some(tripYardCounted), ydSent = yd ? handoffsFor('yard_note', yd.id).length : 0;
+  const seg = (n, bg) => n > 0 ? `<i style="flex:${n};background:${bg}"></i>` : '';
   return `<div data-navy-top style="position:relative;min-height:100%;background:var(--navy);color:#fff;overflow:hidden;display:flex;flex-direction:column">
     <span aria-hidden="true" style="position:absolute;left:50%;top:10px;width:380px;height:300px;margin-left:-190px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.16) 0%,rgba(111,220,176,0) 62%)"></span>
     <button data-act="horn" aria-label="Play the horn again" style="position:absolute;top:calc(18px + var(--safe-area-inset-top));right:16px;width:40px;height:40px;border:none;border-radius:999px;background:rgba(255,255,255,.08);color:var(--navyInk);display:flex;align-items:center;justify-content:center;z-index:3">${ic('sound', 18)}</button>
-    <button data-act="horn" aria-label="The truck is back with ${full} lines in full and ${sh.length} short. Tap to hear the horn" style="position:relative;display:block;margin:calc(54px + var(--safe-area-inset-top)) 20px 0;width:calc(100% - 40px);height:170px;border:none;background:transparent;padding:0">
+    <button data-act="horn" aria-label="${many ? 'The round is back: ' + H.length + ' stops, ' : 'The truck is back with '}${full} of ${rows.length} lines in full${sh.length ? ', ' + sh.length + ' short' : ''}. Tap to hear the horn" style="position:relative;display:block;margin:calc(54px + var(--safe-area-inset-top)) 20px 0;width:calc(100% - 40px);height:170px;border:none;background:transparent;padding:0">
       <span aria-hidden="true" style="position:absolute;left:0;right:0;bottom:18px;border-top:2px dashed rgba(255,255,255,.12)"></span>
       <span aria-hidden="true" class="a-truck" style="position:absolute;left:8px;bottom:20px;width:190px;height:104px">
         <span style="position:absolute;inset:0;animation:bxBounce .2s linear .1s 4">
@@ -3831,20 +4102,24 @@ PAGE.done = ({ id }) => {
         <span class="a-gate" style="position:absolute;left:-2px;top:26px;width:6px;height:52px;border-radius:3px;background:#DDE3F0;animation-delay:.1s"></span>
         <span class="a-dust" style="position:absolute;left:-8px;bottom:4px;width:26px;height:14px;border-radius:999px;background:rgba(221,227,240,.25)"></span>
       </span>
-      <span aria-hidden="true" style="position:absolute;right:0;bottom:20px;width:128px;display:grid;grid-template-columns:repeat(4,28px);grid-auto-rows:28px;gap:4px;direction:rtl;align-content:end;height:92px">${crates}</span>
-      <span aria-hidden="true" class="a-stampbig" style="position:absolute;right:18px;top:4px;padding:6px 12px 5px;border:3px double var(--mint);border-radius:10px;color:var(--mint);display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(22,32,60,.6);transform:rotate(-12deg)"><span style="font-size:20px;font-weight:700;letter-spacing:.18em;line-height:1;padding-left:.18em">${t.status === 'confirmed' ? 'CHECKED IN' : 'HANDED IN'}</span><span class="m" style="font-size:10px;font-weight:600;letter-spacing:.04em">${esc(where)} · ${hm(msOf(t.collectedAt))}</span></span>
+      <span aria-hidden="true" style="position:absolute;right:0;bottom:20px;width:${cols * sz + (cols - 1) * 4}px;display:grid;grid-template-columns:repeat(${cols},${sz}px);grid-auto-rows:${sz}px;gap:4px;direction:rtl;align-content:end;height:92px">${crates}</span>
+      <span aria-hidden="true" class="a-stampbig" style="position:absolute;right:18px;top:4px;padding:6px 12px 5px;border:3px double var(--mint);border-radius:10px;color:var(--mint);display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(22,32,60,.6);transform:rotate(-12deg)"><span style="font-size:20px;font-weight:700;letter-spacing:.18em;line-height:1;padding-left:.18em">${confirmed ? 'CHECKED IN' : 'HANDED IN'}</span><span class="m" style="font-size:10px;font-weight:600;letter-spacing:.04em">${many ? 'ROUND · ' + H.length + ' STOPS' : esc(where)} · ${esc(at)}</span></span>
     </button>
     <div style="padding:12px 20px 0;display:flex;flex-direction:column;align-items:center">
-      <span class="a-up" style="animation-delay:1.7s;font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mint)">BACK FROM ${esc(where)}</span>
-      <span class="a-up" style="animation-delay:1.76s;margin-top:4px;display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:46px;font-weight:600;letter-spacing:-.04em">${full}</span><span class="m" style="font-size:18px;color:var(--navyInk2)">of ${lines.length} line${lines.length === 1 ? '' : 's'} in full</span></span>
+      <span class="a-up" style="animation-delay:1.7s;font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--mint)">${many ? 'BACK FROM ' + H.length + ' STOPS · ONE HAND-IN' : 'BACK FROM ' + esc(where)}</span>
+      <span class="a-up" style="animation-delay:1.76s;margin-top:4px;display:flex;align-items:baseline;flex-wrap:wrap;justify-content:center;gap:8px"><span class="m" style="font-size:46px;font-weight:600;letter-spacing:-.04em">${full}</span><span class="m" style="font-size:18px;color:var(--navyInk2)">of ${rows.length} in full</span>${chip ? `<span style="align-self:center;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:rgba(245,178,107,.15);color:var(--amber);font-size:11.5px;font-weight:700;white-space:nowrap"><i style="width:8px;height:8px;border-radius:2px;background:repeating-linear-gradient(135deg,#F5B26B 0 2px,#E59A4E 2px 4px)"></i>${esc(chip)}</span>` : ''}</span>
       <div class="a-up" style="animation-delay:1.84s;width:100%;margin-top:16px;padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">You paid ${esc(supplierShort(t.supplierId))}${hasReceipt ? `<span role="img" aria-label="Receipt photo ${receipt ? 'with ' + esc(whoShort('accounts')) : 'not sent yet'}" style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:999px;background:${receipt ? 'rgba(111,220,176,.15);color:var(--mint)' : 'rgba(245,178,107,.16);color:var(--amber)'};font-size:10px;font-weight:700">${ic('doc', 11, 'style="stroke-width:2.2"')}${noRec ? 'no receipt' : 'receipt'}</span>` : ''}</span><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.03em">${n0(paid)}</span></span>
-          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${given != null ? (rc.index > 0 ? 'In hand at this stop' : esc(whoShort('accounts')) + ' gave you') : 'Planned'}</span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(given != null ? rc.avail : planned)}</span></span></div>
-        ${given != null ? `<span role="img" aria-label="Of ${n0(rc.avail)} in hand, ${n0(paid)} paid and ${n0(back)} ${more ? 'left for ' + more + ' more stop' + (more > 1 ? 's' : '') : 'to bring back'}" style="display:flex;height:10px;gap:2px;border-radius:999px;overflow:hidden"><i style="flex:${Math.max(1, Math.min(paid, rc.avail))};background:#DDE3F0"></i>${back > 0 ? `<i style="flex:${back};background:var(--mint)"></i>` : ''}${back < 0 ? `<i style="flex:${-back};background:#E5483D"></i>` : ''}</span>
-        <span style="display:flex;justify-content:space-between;font-size:12px;color:var(--navyInk)"><span>${back < 0 ? `Over by <b class="m" style="color:var(--rose)">${n0(-back)}</b>` : more ? `In hand <b class="m" style="color:var(--mint)">${n0(back)}</b> · ${more} more stop${more > 1 ? 's' : ''}` : `Bring back <b class="m" style="color:var(--mint)">${n0(back)}</b>`}</span><span>planned <span class="m">${n0(planned)}</span>${sh.length ? ` · ${sh.length} short` : ''}</span></span>` : `<span style="font-size:12px;color:var(--navyInk)">No cash was recorded for this trip${Math.round(paid) !== Math.round(planned) ? ` · <span class="m">${signed(paid - planned)}</span> against the plan` : ''}</span>`}
-        ${local && (local.photo || local.noReceipt) && !receipt ? `<button data-act="receiptsend" ${S.busy ? 'aria-disabled="true"' : ''} style="height:40px;border:none;border-radius:12px;background:rgba(245,178,107,.16);color:var(--amber);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${ic('refresh', 15)}${noRec ? 'Tell ' + esc(whoShort('accounts')) + ' what you paid' : 'Send the receipt to ' + esc(whoShort('accounts'))}</button>` : ''}
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${many ? 'Paid' : 'You paid ' + esc(supplierShort(t.supplierId))}${photos || nones ? `<span role="img" aria-label="${photos} receipt photo${photos === 1 ? '' : 's'}${nones ? ', ' + nones + ' without a receipt' : ''}" style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:999px;background:${photos ? 'rgba(111,220,176,.15);color:var(--mint)' : 'rgba(255,255,255,.08);color:var(--navyInk)'};font-size:10px;font-weight:700">${ic('doc', 11, 'style="stroke-width:2.2"')}${many ? (photos ? photos + ' receipt' + (photos === 1 ? '' : 's') : 'no receipts') : photos ? 'receipt' : 'no receipt'}</span>` : ''}</span><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.03em">${n0(paid)}</span></span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">${given != null ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--navyInk)">${esc(acc)}${ic('tick', 11, 'style="stroke:#6FDCB0;stroke-width:3.2"')}<span class="m" style="color:var(--mint)">${esc(hm(msOf(h.doneAt || h.createdAt)))}</span></span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(given)}</span>` : `<span style="font-size:12px;font-weight:600;color:var(--navyInk)">Planned</span><span class="m" style="font-size:14px;color:#DDE3F0">${n0(planned)}</span>`}</span></div>
+        ${given != null ? `<span role="img" aria-label="Of ${n0(given)} handed over: ${esc(H.map(x => supplierShort(x.supplierId) + ' ' + n0(paidOf(x)) + (recOf(x) === 'none' ? ' with no receipt' : '')).join(', '))}, and ${back >= 0 ? n0(back) + ' to bring back' : n0(-back) + ' over'}" style="display:flex;flex-direction:column;gap:5px">
+          <span style="display:flex;height:10px;gap:2px;border-radius:999px;overflow:hidden">${many ? H.map(x => seg(paidOf(x), tintFor(x.supplierId)[0])).join('') : seg(Math.min(paid, given), '#DDE3F0')}${back > 0 ? seg(back, 'var(--mint)') : seg(-back, '#E5483D')}</span>
+          ${many ? `<span style="display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10.5px;font-weight:600;color:var(--navyInk2)">${H.map(x => `<span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="width:7px;height:7px;border-radius:2px;background:${tintFor(x.supplierId)[0]}"></i>${esc(supplierShort(x.supplierId))}${recOf(x) === 'none' ? ` <span class="m" style="color:#DDE3F0">${n0(paidOf(x))}</span> · no receipt` : ''}</span>`).join('')}</span>` : ''}
+        </span>
+        <span style="display:flex;justify-content:space-between;font-size:12px;color:var(--navyInk)"><span>${back < 0 ? `Over by <b class="m" style="color:var(--rose)">${n0(-back)}</b>` : `Bring back <b class="m" style="color:var(--mint)">${n0(back)}</b>`}</span><span>planned <span class="m">${n0(planned)}</span></span></span>`
+        : `<span style="font-size:12px;color:var(--navyInk)">No cash handed over by ${esc(acc)} is recorded${Math.round(paid) !== Math.round(planned) ? ` · <span class="m">${signed(paid - planned)}</span> against the plan` : ''}</span>`}
+        ${unsent.length ? `<button data-act="receiptsend" ${S.busy ? 'aria-disabled="true"' : ''} style="height:40px;border:none;border-radius:12px;background:rgba(245,178,107,.16);color:var(--amber);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${ic('refresh', 15)}${unsent.length > 1 ? 'Send ' + unsent.length + ' receipts to ' + esc(acc) : unsent.every(x => (S.tripPay[x.id] || {}).noReceipt) ? 'Tell ' + esc(acc) + ' what you paid' : 'Send the receipt to ' + esc(acc)}</button>` : ''}
       </div>
-      <div class="a-up" role="img" aria-label="${step === 2 ? 'Counted in and on the shelf' : 'Collected. Now waiting for the Store to count it in. Then it is on the shelf.'}" style="animation-delay:1.92s;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;gap:8px">
+      <div class="a-up" role="img" aria-label="${step === 2 ? 'Counted in and on the shelf' : 'Collected. ' + (many ? 'The Store is told once for the whole round and counts all ' + rows.length + ' lines in. ' : 'Now waiting for the Store to count it in. ') + 'Then it is on the shelf.'}" style="animation-delay:1.92s;width:100%;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;align-items:center;gap:4px">
           <span style="width:24px;height:24px;border-radius:999px;background:rgba(111,220,176,.18);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 12, 'style="stroke-width:2.8"')}</span>
           <span style="flex:1;height:3px;border-radius:999px;background:var(--mint)"></span>
@@ -3852,29 +4127,29 @@ PAGE.done = ({ id }) => {
           <span style="flex:1;height:3px;border-radius:999px;background:${step === 2 ? 'var(--mint)' : 'rgba(255,255,255,.14)'}"></span>
           <span style="width:24px;height:24px;border-radius:999px;${step === 2 ? 'background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center' : 'box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)'};flex:none">${step === 2 ? ic('shelf', 12) : ''}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk2)"><span style="color:var(--mint)">Collected</span><span class="ell" style="min-width:0;padding:0 6px;color:${step === 1 ? '#fff' : 'var(--mint)'}">${step === 1 ? esc(whoShort('store')) + ' told · counting in' : esc(whoShort('store')) + ' counted it in'}</span><span style="color:${step === 2 ? 'var(--mint)' : ''}">On the shelf</span></div>
-        <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:6px">
-          ${(() => { const yd = tripYardDiffs(t), counted = tripYardCounted(t), sent = handoffsFor('yard_note', t.id).length;
-            return yd.length ? `<button data-act="yard" data-id="${esc(t.id)}" style="min-width:0;height:34px;border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;font-size:12px;font-weight:700;${sent ? 'background:rgba(111,220,176,.14);color:var(--mint)' : 'background:rgba(155,163,240,.18);color:#C9CDF8;box-shadow:inset 0 0 0 1px rgba(155,163,240,.5)'}"><span class="ell">${sent ? 'yard ≠ yours · with ' + esc(whoShort('manager')) : 'yard ≠ yours → ' + esc(whoShort('manager'))}</span><span aria-hidden="true">›</span></button>`
-              : `<span style="min-width:0;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);color:${counted ? 'var(--mint)' : 'var(--navyInk2)'}"><span class="ell">${counted ? 'yard = yours' : 'yard not counted yet'}</span></span>`; })()}
-          ${(() => { const n = (S.ui.listed || {})[t.id]; return `<span style="min-width:0;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.05);color:${n === -1 ? 'var(--amber)' : 'var(--mint)'}">${n === -1 ? '' : ic('tick', 12, 'style="stroke-width:2.8"')}<span class="ell">${n === -1 ? 'price list not updated' : n != null ? 'prices paid → list · ' + n : 'prices paid → price list'}</span></span>`; })()}
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk2)"><span style="color:var(--mint)">Collected</span><span class="ell" style="min-width:0;padding:0 6px;color:${step === 1 ? '#fff' : 'var(--mint)'}">${step === 1 ? esc(store) + (many ? ' told once · ' + rows.length + ' lines' : ' told · counting in') : esc(store) + ' counted it in'}</span><span style="color:${step === 2 ? 'var(--mint)' : ''}">On the shelf</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${yd ? `<button data-act="yard" data-id="${esc(yd.id)}" style="min-width:0;height:30px;border:none;border-radius:999px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;font-size:11.5px;font-weight:700;${ydSent ? 'background:rgba(111,220,176,.14);color:var(--mint)' : 'background:rgba(155,163,240,.18);color:#C9CDF8;box-shadow:inset 0 0 0 1px rgba(155,163,240,.5)'}"><span class="ell">${ydSent ? 'yard ≠ yours · with ' + esc(whoShort('manager')) : 'yard ≠ yours → ' + esc(whoShort('manager'))}</span></button>`
+            : `<span style="height:30px;border-radius:999px;display:inline-flex;align-items:center;padding:0 10px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.07);color:${counted ? 'var(--mint)' : 'var(--navyInk)'}">${counted ? 'yard = yours' : 'yard not counted yet'}</span>`}
+          <span style="height:30px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;padding:0 10px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.07);color:${listFail ? 'var(--amber)' : 'var(--navyInk)'}">${listFail ? '' : ic('refresh', 12, 'style="stroke:#6FDCB0;stroke-width:2.2"')}${listFail ? 'price list not updated' : 'prices → list · ' + (listN != null ? listN + ' ' : '') + 'full'}</span>
         </div>
+        ${given != null ? `<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.06)">
+          <span class="m" style="flex:none;font-size:12px;font-weight:600;color:${back < 0 ? 'var(--rose)' : 'var(--mint)'}">${back < 0 ? 'over ' + n0(-back) : n0(back) + ' →'}</span>
+          <span style="width:28px;height:28px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:12px;font-weight:700;color:#fff">${esc(whoFull('accounts'))} counts the cash</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk2)">told · against <span class="m">${n0(given)}</span>${photos || nones ? ' · ' + [photos ? photos + ' receipt' + (photos === 1 ? '' : 's') : '', nones ? nones + ' none' : ''].filter(Boolean).join(', ') : ''}</span></span>
+        </div>` : ''}
       </div>
-      ${given != null && !more ? `<div class="a-up" style="animation-delay:2s;width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.05)">
-        <span style="width:36px;height:36px;border-radius:999px;background:var(--crimsonSoft);color:var(--crimson);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(whoIni('accounts'))}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:13px;line-height:1.3;color:#fff">${esc(whoShort('accounts'))} told · takes the <span class="m">${n0(Math.max(0, back))}</span></b><span style="font-size:12px;font-weight:600;line-height:1.3;color:var(--navyInk)">checks it against <span class="m" style="color:#fff">${n0(given)}</span>${hasReceipt ? ' and the receipt' : ''} · Accounts</span></span>
-      </div>` : ''}
-      ${sh.map((r, i) => { const c = quoteLineCount(r.l, r.sent - r.got), ct = tintFor(r.l.clientName);
+      ${sh.map((r, i) => { const ct = tintFor(r.l.clientName), g = quoteLineCount(r.l, r.got), sn = quoteLineCount(r.l, r.sent), miss = quoteLineCount(r.l, r.sent - r.got);
         return `<div class="a-up" style="animation-delay:${(2.04 + i * .06).toFixed(2)}s;width:100%;margin-top:10px;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(245,178,107,.1);box-shadow:inset 0 0 0 1px rgba(245,178,107,.3)">
           <span style="width:36px;height:36px;border-radius:999px;background:${ct[0]};color:${ct[1]};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(r.l.clientName))}</span>
-          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(c.n)}</span> ${esc(lineName(r.l).base)} short</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(shortName(r.l.clientName))} · ${t.status === 'confirmed' ? 'back on the buying list' : 'back on the list once counted in'}</span></span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700"><span class="m">${esc(g.n)} of ${esc(sn.n)}</span> ${esc(lineName(r.l).base)} came</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${esc(shortName(r.l.clientName))} · ${esc(miss.n)} ${r.x.status === 'confirmed' ? 'back on the list' : 'back on the list once counted in'}</span></span>
           ${quoteById(r.l.orderId) && quoteById(r.l.orderId).takenBy ? `<span style="flex:none;padding:3px 8px;border-radius:999px;background:rgba(111,220,176,.14);color:var(--mint);font-size:11px;font-weight:700">${esc(sellerOf(quoteById(r.l.orderId)))} told</span>` : ''}
         </div>`; }).join('')}
       ${sh.length ? `<a class="a-up" href="${esc(waComposeUrl(shortTellPhone(sh), shortMessage(t)))}" target="_blank" rel="noopener" style="animation-delay:2.12s;width:100%;margin-top:10px;display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;border-radius:14px;background:rgba(111,220,176,.12);color:var(--mint);font-size:14px;font-weight:700">${ic('bell', 18)}<span style="flex:1">Tell the shop what's short</span>${ic('wa', 18)}</a>` : ''}
     </div>
     <div class="a-up" style="animation-delay:2.1s;margin-top:auto;padding:20px 16px calc(24px + var(--safe-area-inset-bottom));display:flex;gap:8px">
       <button class="bx-btn glass" data-act="tab" data-v="today">Today</button>
-      ${nextTrip ? `<button class="bx-btn red" style="flex:1.6;min-width:0" data-act="nextstop" data-id="${esc(nextTrip.id)}"><span class="ell">Stop ${rt.indexOf(nextTrip) + 1} of ${rt.length} · ${esc(supplierShort(nextTrip.supplierId))}</span>${ic('chev', 18, 'style="stroke-width:2.2"')}</button>` : nextRun ? `<button class="bx-btn red" style="flex:1.6;min-width:0" data-act="plannext"><span class="ell">Next round</span>${ic('chev', 18, 'style="stroke-width:2.2"')}</button>` : ''}
+      ${runsToGo().length ? `<button class="bx-btn red" style="flex:1.6;min-width:0" data-act="plannext"><span class="ell">Plan the next round</span>${ic('chev', 18, 'style="stroke-width:2.2"')}</button>` : ''}
     </div>
   </div>`;
 };

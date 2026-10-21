@@ -1,4 +1,4 @@
--- A fresh start (0146), asked of a real database: an old shop with a bit
+-- A fresh start (0148), asked of a real database: an old shop with a bit
 -- of everything, a dry run, the copy, and switch day. Each check prints
 -- PASS or FAIL, a tab, and what it checks.
 create table _r(n serial, ok boolean, label text);

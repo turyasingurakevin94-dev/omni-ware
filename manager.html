@@ -926,7 +926,7 @@ async function loadAll(){
     selectAll('rival_prices').then(rows => ({ data: rows }), () => ({ data: [] })),
     // What the Buyer passed on to the Manager (0125 buyer_handoffs): a yard note, open.
     yardNotesQuery(),
-    // A shop started afresh (0146): the old books' debts, to confirm. None elsewhere.
+    // A shop started afresh (0148): the old books' debts, to confirm. None elsewhere.
     sb.from('fresh_starts').select('old_debts, confirmed, made_at').eq('shop_id', S.shopId).maybeSingle().then(r => r, () => ({ data: null })),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
@@ -1658,7 +1658,7 @@ const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge',
   // The Manager's decisions (docs/decision-rights.md, 0122) and stock.correct (0115).
   'price.approve', 'markup.set', 'margin.see', 'invoice.make', 'pick.settle', 'credit_note.raise', 'invoice.void', 'credit.set',
   'promise.record', 'agent.change', 'trip.difference', 'stock.writeoff', 'stock.correct', 'restock.hold', 'goal.set', 'team.limits',
-  // A customer's balance from before these books (0146).
+  // A customer's balance from before these books (0148).
   'debt.open'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
@@ -3829,7 +3829,7 @@ ACT.cesave = async t => {
   catch (e) { toast(failWord(e), 6000); } S.busy = false; render();
 };
 
-/* ---------------- the old books: balances to confirm (debt.open, 0146) ----------------
+/* ---------------- the old books: balances to confirm (debt.open, 0148) ----------------
    A shop started afresh copies its customers with every debt at 0, and
    keeps what the old books said each one owed (fresh_starts). The Manager
    rings each, agrees the figure, and enters it: one 'Opening balance' line

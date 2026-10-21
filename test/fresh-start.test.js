@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * A fresh start (0146), read where no database is at hand.
+ * A fresh start (0148), read where no database is at hand.
  * test/fresh-start-db.test.js runs it against a real one.
  *
  *   1. The two steps are the operator's: no app login may call them, and
@@ -20,7 +20,7 @@ const vm = require('vm');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('a fresh start');
-const mig = read('supabase/migrations/0146_fresh_start.sql');
+const mig = read('supabase/migrations/0148_fresh_start.sql');
 const doc = read('docs/fresh-start.md');
 const rights = read('docs/decision-rights.md');
 const src = read('index.html');
@@ -64,7 +64,7 @@ t.check(/'agents', p_from, v_to, 'x\.retired_at is null', '\{"user_id": null\}'\
     "select * from ow_fresh_start_move('<old shop id>', '<new shop id>', true);"];
   t.check(steps.every((s) => at(s) >= 0) && steps.every((s, i) => !i || at(s) > at(steps[i - 1])), 'the runbook gives every step to paste, in order: back up, look, do, look, move');
   t.check(/The old shop is never deleted/.test(doc) && /delete from shops where id = '<new shop id>';/.test(doc), 'and says the old shop is never deleted, and how to undo a copy before the move');
-  t.check(/^\| 0146 \| A fresh start/m.test(rights) && /docs\/fresh-start\.md/.test(rights), 'the decision-rights table holds 0146 and points at the runbook');
+  t.check(/^\| 0148 \| A fresh start/m.test(rights) && /docs\/fresh-start\.md/.test(rights), 'the decision-rights table holds 0148 and points at the runbook');
 }
 
 /* ---------------- 5. the Manager confirms each old balance (manager.html) ---------------- */

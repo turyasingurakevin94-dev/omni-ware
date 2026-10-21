@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * A dress rehearsal of the fresh start (0146, docs/fresh-start.md), on the
+ * A dress rehearsal of the fresh start (0148, docs/fresh-start.md), on the
  * STAGING project only, with a made-up shop -- never the real one.
  *
  *   1. Removes any earlier practice shop, and every shop copied from it.

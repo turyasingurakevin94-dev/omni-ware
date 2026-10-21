@@ -14591,7 +14591,7 @@ function renderOrderResults(){
   if(!catalog.length){ box.innerHTML = `<div class="ax-more"><div class="ag-spinner"></div></div>`; return; }
   if(findAisleFor !== q){ findAisle = null; findAisleFor = q; }
   const r = searchCatalog(q, { exact: findExactQ === q });
-  if(!r.hits.length){ box.innerHTML = findNoneHTML(q, r.read); return; }
+  if(!r.hits.length){ logFindMiss(q); box.innerHTML = findNoneHTML(q, r.read); return; }
   if(findQtyFor !== q){ findQtyN = r.read.qty; findQtyFor = q; }
   const qty = r.read.qty ? (findQtyN || r.read.qty) : null;
   const notes = [findReadHTML(r.read)];
@@ -14668,6 +14668,24 @@ document.getElementById('ag_orderResults').addEventListener('input', (e)=>{
     if(!orderQuery() && findFocus && !e.target.closest('input')) e.preventDefault();
   });
 })();
+
+/* ---- a search that finds nothing, counted for the shop's Sourcing (0146) ----
+   By itself, never a tap: once the words have stood still for a moment and
+   still find nothing, once per words per ten minutes. */
+const findMiss = { t: 0, sent: {} };
+function logFindMiss(q){
+  const w = String(q || '').trim();
+  if(w.length < 2 || !currentShopId) return;
+  clearTimeout(findMiss.t);
+  findMiss.t = setTimeout(()=>{
+    if(orderQuery() !== q) return;
+    const k = w.toLowerCase();
+    if(findMiss.sent[k] && Date.now() - findMiss.sent[k] < 600000) return;
+    findMiss.sent[k] = Date.now();
+    Promise.resolve(sb.rpc('log_search_miss', { p_shop_id: currentShopId, p_words: w, p_source: 'agent', p_order_id: null,
+      p_client: chosenClient ? String(chosenClient.name || '').slice(0, 120) : null })).catch(()=>{});
+  }, 1500);
+}
 
 /* ---- asking the shop, teaching it a word ---- */
 async function sendStockRequest(q){

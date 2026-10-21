@@ -93,11 +93,28 @@
       ],
       staff: [
         s({ id: 'ST01', name: 'Joseph Mukasa', role: 'owner' }), s({ id: 'ST02', name: 'Ruth Nakato', role: 'manager' }), s({ id: 'ST03', name: 'Denis Okello', role: 'buyer' }),
-        s({ id: 'ST04', name: 'Moses Lubega', role: 'sourcing', user_id: ME }), s({ id: 'ST05', name: 'Grace Akello', role: 'sales', user_id: 'u-grace' }), s({ id: 'ST06', name: 'Brian Ouma', role: 'sales' }), s({ id: 'ST07', name: 'Faith Nambi', role: 'sales' }),
+        s({ id: 'ST04', name: 'Moses Lubega', role: 'sourcing', user_id: ME }), s({ id: 'ST05', name: 'Grace Akello', role: 'sales', user_id: 'u-grace' }), s({ id: 'ST06', name: 'Brian Ouma', role: 'sales', user_id: 'u-brian' }), s({ id: 'ST07', name: 'Faith Nambi', role: 'sales' }),
       ],
       agents: [s({ id: 'A01', name: 'Aisha Namutebi', phone: '0752000001' }), s({ id: 'A02', name: 'Peter Sserwadda', phone: '0752000002' })],
       agent_requests: [s({ id: 7002, agent_id: 'A02', kind: 'stock', words: 'Wall plug · 8mm', qty: 200, wanted: 'week', client_name: 'Lubowa Builders', status: 'open', created_at: ago(0, 2) })],
       product_links: [],
+      // Searches that found nothing (0146): four spellings of one want from
+      // Sales, an agent and the website; one want at the threshold; one below it.
+      search_misses: [
+        s({ id: 9301, words: 'wall plug 6mm', norm: 'wall plug 6mm', source: 'sales', by_user: 'u-grace', client_name: 'Lubowa Builders', at: ago(0, 2) }),
+        s({ id: 9302, words: 'wall plug 6mm', norm: 'wall plug 6mm', source: 'sales', by_user: 'u-grace', at: ago(1, 1) }),
+        s({ id: 9303, words: 'Wall plug 6mm', norm: 'wall plug 6mm', source: 'sales', by_user: 'u-brian', at: ago(4) }),
+        s({ id: 9304, words: 'rawl plug 6', norm: 'rawl plug 6', source: 'agent', agent_id: 'A02', client_name: 'a client in Nansana', at: ago(1, 5) }),
+        s({ id: 9305, words: 'rawl plug 6', norm: 'rawl plug 6', source: 'agent', agent_id: 'A02', at: ago(3) }),
+        s({ id: 9306, words: 'plug 6mm', norm: 'plug 6mm', source: 'web', agent_id: 'A01', at: ago(4, 3) }),
+        s({ id: 9307, words: 'wallplug 6', norm: 'wallplug 6', source: 'sales', by_user: 'u-grace', at: ago(5) }),
+        s({ id: 9308, words: 'PVC glue 500ml', norm: 'pvc glue 500ml', source: 'sales', by_user: 'u-brian', at: ago(0, 6) }),
+        s({ id: 9309, words: 'pvc glue', norm: 'pvc glue', source: 'agent', agent_id: 'A01', at: ago(2) }),
+        s({ id: 9310, words: 'PVC glue 500ml', norm: 'pvc glue 500ml', source: 'sales', by_user: 'u-brian', at: ago(6) }),
+        s({ id: 9311, words: 'blue gloss paint', norm: 'blue gloss paint', source: 'web', agent_id: 'A01', at: ago(2) }),
+      ],
+      search_mutes: [],
+      item_names: [],
       decision_log: [
         s({ id: 'L1', at: new Date(now - 3 * 3600000).toISOString(), by: 'u-denis', by_name: 'Denis Okello', role: 'buyer', task: 'price.confirm', what: 'Angle line still 22,000', ref: { table: 'prices', id: 2 }, after: { how: 'phone' } }),
         s({ id: 'L2', at: new Date(now - 2 * 3600000).toISOString(), by: ME, by_name: 'Moses Lubega', role: 'sourcing', task: 'price.confirm', what: 'Roofing nails 6,900 → 7,200', ref: { table: 'prices', id: 3 }, after: { how: 'in person' } }),

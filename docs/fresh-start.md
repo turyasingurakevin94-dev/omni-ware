@@ -9,7 +9,7 @@ measured again rather than trusted.
 The old shop is never deleted. It stays readable from the shop picker, for
 the owner and admins, as the record of everything before the switch.
 
-Migration `0146_fresh_start.sql` holds the two steps. Both are run by the
+Migration `0148_fresh_start.sql` holds the two steps. Both are run by the
 operator in the Supabase **SQL editor**; no app can call them.
 
 ## What happens to each kind of data
@@ -48,8 +48,8 @@ only the library entry; the file stays for the old shop.
    staging is optional (the "Set up staging" button, what: rehearse, runs
    it on a made-up shop); the owner chose to skip it because nothing is
    deleted and the preview below is itself a run that saves nothing.
-3. **Put 0146 on the live project:** paste
-   `supabase/migrations/0146_fresh_start.sql` into the SQL editor and run it.
+3. **Put 0148 on the live project:** paste
+   `supabase/migrations/0148_fresh_start.sql` into the SQL editor and run it.
    It only adds the two functions; nothing changes until they are called.
 4. **Find the old shop's id:**
 

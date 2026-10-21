@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * A fresh start (0146), asked of a REAL database.
+ * A fresh start (0148), asked of a REAL database.
  *
  * The copy writes into ninety tables' worth of schema by reading each
  * table's own columns, so only a database can say it works: every
@@ -45,8 +45,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0146_fresh_start.sql')]);
-t.check(again.status === 0, `0146 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0148_fresh_start.sql')]);
+t.check(again.status === 0, `0148 runs a second time without error (${(again.stderr || '').trim().split('\n')[0] || 'ok'})`);
 
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'fresh-start-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);

@@ -94,6 +94,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // A search on the page that found nothing (0146): only the words, for the
+    // shop's Sourcing. ow_record_search_miss trims, groups, skips repeats
+    // within ten minutes and stops at 300 a day; a failure is not the
+    // visitor's problem, so it always answers ok.
+    if (action === "miss") {
+      const words = String(body.words || "").trim().slice(0, 120);
+      if (words.length >= 2) {
+        const { error } = await admin.rpc("ow_record_search_miss", {
+          p_shop_id: catalogue.shop_id, p_words: words, p_source: "web", p_user: null,
+          p_agent: catalogue.agent_id, p_order_id: null, p_client: null,
+        });
+        if (error) console.warn("search miss", error.message);
+      }
+      return json({ ok: true });
+    }
+
     if (action === "inquire") {
       const customerName = String(body.customerName || "").trim().slice(0, 120);
       const customerPhone = String(body.customerPhone || "").trim().slice(0, 40);
