@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -496,7 +496,18 @@ matrix.forEach(([what, it]) => {
     t.check(/ON THE MOVE/.test(open) && /50,000<\/b> paid/.test(open) && /still to pay <b class="m">220,000/.test(open), 'SAL-05: what is already paid on them shows');
     t.check(/Billed · owes/.test(open) && /Open bills <span class="m">0/.test(open) && /data-act="custpayorders"/.test(open), 'SAL-05: billed nothing yet, and a payment can still be taken');
     t.check(/k<\/span> on the move/.test(X.nwOwesChip(k)) && X.nwMovingDue(k) === 220000, 'SAL-05: New sale says what is on the move, never a blank');
-    t.check(/Billed, not paid/.test(X.viewCustomers()), 'SAL-05: the owe list says it is billed debt');
+    t.check(/To collect/.test(X.viewCustomers()) && /125,000<\/b> in question/.test(X.viewCustomers()), 'SAL-05 / R3-02: the owe list says what is to collect, and what is in question');
+    t.check(/165,000<\/span><small>TO COLLECT/.test(X.viewCustomers()) && /125,000<\/span> in question/.test(X.viewCustomers()), 'R3-02: a row splits the same way as the sheet and Today');
+    // R3-01: a bill near a paid order is in question only at the same sum; a different sum stays owed
+    const n = { id: 'C011', name: 'Nansana Two', phone: '', phone2: '', location: 'Nakawa', notes: '', debt: 20000, termsDays: null, creditLimit: 500000,
+      debtLog: [{ id: 95, type: 'charge', amount: 235000, date: d54, quoteId: null }, { id: 96, type: 'payment', amount: 215000, date: d54, quoteId: null }] };
+    data.customers.push(n);
+    data.savedQuotes.push({ id: 360, status: 'completed', invoiced: true, invoicedAt: d54, date: d54, amountPaid: 235000, customerId: 'C011', client: { name: 'Nansana Two' }, items: [{ productId: 'P1', productName: 'Cement', qty: 1, price: 200000, sellPrice: 235000, supplierId: '__stock__' }], charges: [] });
+    X.S.loadedAt = 25;
+    t.check(X.custInQuestion(n) === 0 && X.custTakeable(n) === 20000, 'R3-01: 20,000 beside a paid 235,000 is not in question');
+    t.check(/Not the same sum · it stays owed/.test(X.PAGE.customer({ id: 'C011' })) && /Take <span class="m">20,000/.test(X.PAGE.customer({ id: 'C011' })), 'R3-01: the sheet shows ≠ and takes the 20,000');
+    t.check(!!X.needsYou().find(x => x.title === 'Nansana Two'), 'R3-01: and Today still asks to collect it');
+    t.check(X.custInQuestion(g) === 125000, 'R3-01: the same sum is still in question');
     // SAL-25: a typo in Customers finds who they meant
     X.S.custQuery = 'ggaba stors'; X.S.loadedAt = 23;
     t.check(/did you mean/.test(X.viewCustomers()) && /Ggaba Stores/.test(X.viewCustomers()) && /Someone new/.test(X.viewCustomers()), 'SAL-25: Customers offers the one they meant, then someone new');
@@ -517,6 +528,7 @@ matrix.forEach(([what, it]) => {
     t.check(X.paySum({ bills: [{ quoteId: 2413, pay: 180000, left: 0, total: 180000 }] }) === null, 'NEW-01: a bill paid in one go needs none of it');
     // SAL-19: the transaction ID goes only with mobile money or bank
     t.check(X.payRefOf({ method: 'momo', ref: ' 3829 ' }) === '3829' && X.payRefOf({ method: 'cash', ref: '3829' }) === '', 'SAL-19: a reference rides on mobile money and bank only');
+    t.check(/ref <span class="m">38291045712/.test(X.paySumRows(sum, 'momo', '38291045712')) && /Ref 38291045712\./.test(X.payReceiptText({ name: 'Kato', amount: 1000, method: 'momo', ref: '38291045712', bills: [] })), 'SAL-19: the reference is on the receipt and in the words sent');
     // NEW-03: one Enter arms the slide; it never places
     t.check(/SLIDE_ARM\[key\] = \{ at: now, key: true \}/.test(html) && /if \(a && a\.key && now - a\.at < SLIDE_KEY_MS\)/.test(html) && !/if \(e\.key === 'Enter' \|\| e\.key === ' '\) \{ e\.preventDefault\(\); done\(\); \}/.test(html), 'NEW-03: a first Enter only arms the slide; the second within 5 s does it');
     // SAL-20: they gave -- two round notes and Other
