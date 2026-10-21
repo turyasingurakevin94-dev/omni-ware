@@ -64,7 +64,7 @@ const app = read('manager.html');
   t.check(/isManager \? "manager"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store", "manager"(?:, "accounts")?(?:, "sourcing")?\]/.test(invite), 'as a manager member, which a later role change may move');
   t.check(!/"owner"|"admin"/.test(/const DESK_ROLES = \[[^\]]*\]/.exec(invite)[0]), 'and an owner\'s or admin\'s membership is still never touched');
   t.check(/0116_manager_role\.sql/.test(invite), 'a database without the role is told which migration to paste');
-  t.check(/const pick = rows\.find\(m => m\.role === 'manager'\)/.test(app), 'and the Manager app opens for a manager membership');
+  t.check(/const pick = await chooseShop\(rows\.filter\(m => \['manager', /.test(app), 'and the Manager app opens for a manager membership');
 }
 
 process.exit(t.done() ? 1 : 0);

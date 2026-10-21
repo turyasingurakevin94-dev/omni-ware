@@ -64,7 +64,7 @@ const store = read('store.html');
   const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(/const STORE_APP_URL = Deno\.env\.get\("STORE_APP_URL"\) \|\| "https:\/\/omni-ware\.vercel\.app\/store\.html"/.test(invite) && /isStore \? STORE_APP_URL/.test(invite), 'a store invite lands on store.html');
   t.check(/isStore \? "store"/.test(invite) && /const DESK_ROLES = \["staff", "sales", "buyer", "store"(?:, "manager")?(?:, "accounts")?(?:, "sourcing")?\]/.test(invite), 'as a store member, which a later role change may move');
-  t.check(/const pick = rows\.find\(m => m\.role === 'store'\)/.test(store), 'and the Store app opens for a store membership');
+  t.check(/const pick = await chooseShop\(rows\.filter\(m => \['store', /.test(store), 'and the Store app opens for a store membership');
 }
 
 process.exit(t.done() ? 1 : 0);

@@ -905,7 +905,7 @@ function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, 
 function handoffRows(r){ return ((r && !r.error && r.data) || []).map(rowToHandoff).filter(h => h.kind === 'yard_note' && h.forRole === 'manager' && h.status === 'open'); }
 
 async function loadAll(){
-  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises, asksR, countsR, reportsR, restockR, rivalsR, handR] = await Promise.all([
+  const [suppliers, customers, debtLog, products, prices, stock, lots, quotes, settingsR, cashR, staff, trips, targetsR, stmR, promises, asksR, countsR, reportsR, restockR, rivalsR, handR, freshR] = await Promise.all([
     selectAll('suppliers'), selectAll('customers'), selectAll('customer_debt_log'), selectAll('products'), selectAll('prices'),
     selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'),
     sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
@@ -926,6 +926,8 @@ async function loadAll(){
     selectAll('rival_prices').then(rows => ({ data: rows }), () => ({ data: [] })),
     // What the Buyer passed on to the Manager (0125 buyer_handoffs): a yard note, open.
     yardNotesQuery(),
+    // A shop started afresh (0148): the old books' debts, to confirm. None elsewhere.
+    sb.from('fresh_starts').select('old_debts, confirmed, made_at').eq('shop_id', S.shopId).maybeSingle().then(r => r, () => ({ data: null })),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const debtBy = {};
@@ -965,6 +967,7 @@ async function loadAll(){
     restockLines: ((restockR && !restockR.error && restockR.data) || []).map(r => { const vi = r.variant_idx == null || r.variant_idx === '' ? null : Number(r.variant_idx), p = products.find(x => x.id === r.product_id);
       return { id: r.id, productId: r.product_id, variantIdx: vi, name: p ? (p.name || r.product_id) + (vi != null && p.variants && p.variants[vi] && p.variants[vi].combo ? ' · ' + Object.values(p.variants[vi].combo).join(' ') : '') : r.product_id, qty: Number(r.qty) || 0, unit: r.unit || '', cost: r.price == null ? null : Number(r.price), forDate: null, status: r.status, createdBy: r.created_by, heldBy: r.held_by || null }; }),
     handoffs: handoffRows(handR),
+    freshStart: freshR && !freshR.error && freshR.data ? { oldDebts: freshR.data.old_debts || {}, confirmed: freshR.data.confirmed || {}, madeAt: freshR.data.made_at } : null,
     rivals: ((rivalsR && !rivalsR.error && rivalsR.data) || []).map(r => ({ productId: r.product_id, variantIdx: r.variant_idx, price: Number(r.price) || 0 })),
   };
   S.loadedAt = Date.now();
@@ -1361,7 +1364,7 @@ function staffById(id){ return id == null ? null : D().staff.find(s => String(s.
 function staffByUser(uid){ return uid ? D().staff.find(s => s.userId && String(s.userId) === String(uid)) || null : null; }
 // Who "you" are. A login linked to a staff card (staff.user_id) is that card;
 // one that is not (an owner using this app) says which card is theirs once.
-function meKey(){ return 'ow-manager-me:' + (S.user ? S.user.id : ''); }
+function meKey(){ return shopScoped('ow-manager-me:' + (S.user ? S.user.id : '')); }
 function myStaff(){
   if (!S.user) return null;
   const linked = staffByUser(S.user.id); if (linked) return linked;
@@ -1654,7 +1657,9 @@ async function giveTrip(tripId, staffId){
 const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge', 'customer.edit', 'payment.receive', 'statement.send',
   // The Manager's decisions (docs/decision-rights.md, 0122) and stock.correct (0115).
   'price.approve', 'markup.set', 'margin.see', 'invoice.make', 'pick.settle', 'credit_note.raise', 'invoice.void', 'credit.set',
-  'promise.record', 'agent.change', 'trip.difference', 'stock.writeoff', 'stock.correct', 'restock.hold', 'goal.set', 'team.limits'];
+  'promise.record', 'agent.change', 'trip.difference', 'stock.writeoff', 'stock.correct', 'restock.hold', 'goal.set', 'team.limits',
+  // A customer's balance from before these books (0148).
+  'debt.open'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
   if (S.tasks) return S.tasks;
@@ -1748,6 +1753,69 @@ function setPasswordScreen(){
 function hideAuth(){ const el = document.querySelector('.bx-auth'); if (el) el.remove(); }
 const initialLinkType = (() => { try { return new URLSearchParams(location.hash.slice(1)).get('type'); } catch (_e) { return null; } })();
 
+/* ---- which shop this login opens ----
+   A login can belong to more than one shop: the owner across the old books
+   and a fresh start, say. Taking whichever membership the database returned
+   first opened one of them at random and never said so. The person chooses,
+   once on this phone, and the choice is kept for every Omni-Ware app here
+   (one key for all of them) until they switch from the app's shop row. With
+   one shop no question is asked. This block is the same in every role app;
+   test/shop-picker.test.js holds them to it. */
+const SHOP_KEY = uid => 'ow-shop:' + uid;
+const SHOP_ASK = 'ow-shop-ask';
+const SHOP_ROLE_WORD = { owner: 'the owner', admin: 'an admin', manager: 'the manager', sales: 'in Sales', buyer: 'the buyer', store: 'in the store', accounts: 'in Accounts', sourcing: 'in Sourcing', staff: 'a worker' };
+function shopInitials(name){ const w = String(name || '').trim().split(/\s+/).filter(Boolean); return ((w[0] || '?')[0] + (w[1] ? w[1][0] : '')).toUpperCase(); }
+function shopStarted(at){ const d = at ? new Date(at) : null; return d && !isNaN(d) ? { mon: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(), year: String(d.getFullYear()) } : null; }
+async function chooseShop(rows, ui){
+  S.shopCount = rows.length;
+  if (rows.length < 2) return rows[0] || null;
+  let last = null, ask = false;
+  try { last = localStorage.getItem(SHOP_KEY(S.user.id)); ask = sessionStorage.getItem(SHOP_ASK) === '1'; sessionStorage.removeItem(SHOP_ASK); } catch (_e) {}
+  const kept = rows.find(m => m.shop_id === last);
+  if (kept && !ask) return kept;
+  const m = await shopPicker(rows, kept ? last : null, ui);
+  try { localStorage.setItem(SHOP_KEY(S.user.id), m.shop_id); } catch (_e) {}
+  return m;
+}
+// Newest shop first, in mint: after a fresh start that is the one to open.
+// The tile is the month the shop's books began, since an old shop and a
+// fresh one usually share a name. The shop open now, when switching,
+// wears a ring and says so.
+function shopPicker(rows, open, ui){
+  const at = m => (m.shops && m.shops.created_at) || '';
+  const list = rows.slice().sort((a, b) => String(at(b)).localeCompare(String(at(a))));
+  const chev = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;color:#B3BCD2"><path d="M9 6l6 6-6 6"></path></svg>';
+  return new Promise(resolve => {
+    let el = document.querySelector('.' + ui.box);
+    if (!el) { el = document.createElement('div'); el.className = ui.box; document.body.appendChild(el); }
+    el.innerHTML = `<div class="card" style="gap:12px">
+      <h1 style="margin:0;font-size:26px;letter-spacing:-.02em;color:#fff">Which shop?</h1>
+      <span style="font-size:14px;font-weight:600;color:#B3BCD2"><b style="color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace">${list.length}</b> shops on this login</span>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">${list.map((m, i) => {
+        const name = (m.shops && m.shops.name) || 'Unnamed shop', st = shopStarted(at(m)), here = m.shop_id === open;
+        return `<button type="button" data-shop="${esc(m.shop_id)}" aria-label="${esc(name + (st ? ', books from ' + st.mon + ' ' + st.year : ''))}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px;border:none;border-radius:16px;background:rgba(255,255,255,${i ? '.06' : '.1'});box-shadow:inset 0 0 0 ${here ? '2px #6FDCB0' : '1px rgba(255,255,255,.14)'};color:#fff;text-align:left;font:inherit;cursor:pointer">
+          <span aria-hidden="true" style="width:48px;height:48px;flex:none;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;background:${i ? 'rgba(255,255,255,.1)' : '#6FDCB0'};color:${i ? '#fff' : '#16203C'}">${st ? `<span style="font-size:10px;letter-spacing:.08em">${esc(st.mon)}</span><span style="font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em">${esc(st.year)}</span>` : `<span style="font-size:15px">${esc(shopInitials(name))}</span>`}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
+            <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
+      }).join('')}</div>
+      <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
+    el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
+    el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  });
+}
+function switchShop(){ try { sessionStorage.setItem(SHOP_ASK, '1'); } catch (_e) {} location.reload(); }
+/* What the phone keeps for later belongs to the shop it was made in: a
+   half-made order, a count, which staff row is "me". These keys carried
+   only the login before a second shop was possible, so the first read
+   after that change adopts the old value for the shop open now, the only
+   one it can have come from. */
+function shopScoped(base){
+  if (!S.shopId) return base;
+  const k = base + ':' + S.shopId;
+  try { const old = localStorage.getItem(base); if (old != null) { if (localStorage.getItem(k) == null) localStorage.setItem(k, old); localStorage.removeItem(base); } } catch (_e) {}
+  return k;
+}
+
 async function boot(){
   S.prefs = loadPrefs(); applyPrefs();
   let { data: u, error: ue } = await sb.auth.getUser();
@@ -1767,15 +1835,16 @@ async function boot(){
     await setPasswordScreen();
   }
   S.user = user;
-  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name)').eq('user_id', user.id);
+  const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id);
   if (error) {
     const snap = loadSnapshot(user.id);
     if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at }); hideAuth(); start(); toast('Offline — showing what you last saw'); return; }
     toast('Could not reach the shop: ' + error.message, 6000); return;
   }
   const rows = ms || [];
-  // A manager membership first; an owner or admin may open the desk too.
-  const pick = rows.find(m => m.role === 'manager') || rows.find(m => ['owner', 'admin'].includes(m.role));
+  // Opens for a manager membership; an owner or admin may open the desk too.
+  // More than one such shop: the person chooses (chooseShop).
+  const pick = await chooseShop(rows.filter(m => ['manager', 'owner', 'admin'].includes(m.role)), { box: 'bx-auth', btn: 'bx-btn' });
   if (!pick) { authScreen('denied'); return; }
   S.shopId = pick.shop_id; S.role = pick.role; S.shopName = (pick.shops && pick.shops.name) || 'The shop';
   hideAuth();
@@ -2480,7 +2549,7 @@ ACT.handover = async t => {
   S.busy = false; render();
 };
 // What this phone did today, for the manager's own page.
-function dayLogKey(){ return 'ow-manager-day:' + (S.user && S.user.id) + ':' + todayISO(); }
+function dayLogKey(){ return shopScoped('ow-manager-day:' + (S.user && S.user.id) + ':' + todayISO()); }
 function dayLog(){ try { return { moves: 0, nudges: 0, ...(JSON.parse(localStorage.getItem(dayLogKey())) || {}) }; } catch (_e) { return { moves: 0, nudges: 0 }; } }
 function bumpDay(k){ const d = dayLog(); d[k] = (d[k] || 0) + 1; try { localStorage.setItem(dayLogKey(), JSON.stringify(d)); } catch (_e) {} }
 function logMove(){ bumpDay('moves'); }
@@ -2585,6 +2654,7 @@ function viewMoney(){
       <span class="mx-legend">${by.map(x => `<span><i style="background:${personCol(x.s)[2]}"></i>${esc(firstWord(x.s.name))} <b class="m" style="color:#fff">${short(x.v)}</b></span>`).join('')}${older ? `<span style="margin-left:auto">not linked to a seller <b class="m" style="color:#fff">${short(older)}</b></span>` : ''}</span></div>` : ''}
   </div>
   <div class="bx-body">
+    ${oldBooksCard()}
     <div class="mx-chips">${chip('old', 'Oldest first')}${chip('over30', 'Over 30 days', all.filter(d => overBand(d.c) > 0.5).length)}${chip('promised', 'Promised', promisedN)}${chip('limit', 'Over limit', limitN)}</div>
     ${areaList.length > 1 ? `<div class="mx-chips" aria-label="Area"><button class="mx-chip area" aria-pressed="${!S.ui.area}" data-act="marea" data-v="">All areas <span class="n">${all.length}</span></button>${areaList.map(k => `<button class="mx-chip area" aria-pressed="${S.ui.area === k}" data-act="marea" data-v="${esc(k)}">${k === '—' ? '' : ic('pin', 15, 'style="stroke-width:2"')}${esc(k === '—' ? 'No area' : k)} <span class="n">${areas[k]}</span></button>`).join('')}</div>` : ''}
     ${rows ? `<div class="bx-card" style="border-radius:20px;padding:0 14px">${rows}${list.length > shown.length ? `<button class="mx-fold" data-act="mall"><span style="flex:1">+${list.length - shown.length} more</span>${ic('chev', 16)}</button>` : ''}</div>
@@ -3759,6 +3829,88 @@ ACT.cesave = async t => {
   catch (e) { toast(failWord(e), 6000); } S.busy = false; render();
 };
 
+/* ---------------- the old books: balances to confirm (debt.open, 0148) ----------------
+   A shop started afresh copies its customers with every debt at 0, and
+   keeps what the old books said each one owed (fresh_starts). The Manager
+   rings each, agrees the figure, and enters it: one 'Opening balance' line
+   in their debt book, in the owner's log beside the old figure. Never a
+   copy of the old number; only before the customer trades in these books. */
+function oldBooks(){
+  const f = D().freshStart; if (!f) return null;
+  const rows = Object.keys(f.oldDebts).map(id => ({ c: customerById(id), old: Number(f.oldDebts[id]) || 0, done: f.confirmed[id] || null })).filter(x => x.c);
+  const left = rows.filter(x => !x.done);
+  return { rows, left, done: rows.length - left.length, leftOld: sum(left, x => x.old), confirmed: sum(rows.filter(x => x.done), x => Number(x.done.amount) || 0) };
+}
+function custTraded(c){ return (c.debtLog || []).some(l => l.note !== 'Opening balance'); }
+function oldBooksCard(){
+  const ob = oldBooks(); if (!ob || !ob.left.length) return '';
+  return `<button class="bx-card" data-act="push" data-p="oldbooks" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)">
+    ${pctRing(ob.done / ob.rows.length, 46, 4, 'var(--green)', `<span class="m" style="font-size:11px;font-weight:600">${ob.done}/${ob.rows.length}</span>`, `${ob.done} of ${ob.rows.length} confirmed`, '#EFECE6')}
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">Old books · balances to confirm</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--amberInk)">${ob.left.length}</span> to ring · the old books said <span class="m" style="color:var(--ink)">${short(ob.leftOld)}</span></span></span>${ic('chev', 16)}</button>`;
+}
+PAGE.oldbooks = () => {
+  const ob = oldBooks(); if (!ob) return goneCard('This shop has no old books to confirm');
+  const list = ob.left.slice().sort((a, b) => b.old - a.old).concat(ob.rows.filter(x => x.done).sort((a, b) => b.old - a.old));
+  const rows = list.map(({ c, old, done }) => {
+    const amt = done ? Number(done.amount) || 0 : null, moved = done && amt !== old;
+    return `<button class="mx-crow" data-act="push" data-p="opening" data-id="${esc(c.id)}"><span class="mx-face">${custAv(c, 42, done ? 'var(--green)' : 'var(--amber)')}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b class="ell" style="font-size:15px">${esc(c.name)}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${done ? (moved ? `old books <s class="m">${n0(old)}</s>` : 'as the old books said') : `old books <span class="m" style="color:var(--ink)">${n0(old)}</span>`}</span></span>
+      ${done ? `<span style="display:flex;align-items:center;gap:6px;color:var(--green)">${ic('tick', 14, 'style="stroke-width:2.6"')}<span class="m" style="font-size:15px;font-weight:600;color:var(--ink)">${n0(amt)}</span></span>` : `<span class="bx-chip" style="background:var(--amberSoft);color:var(--amberInk)">to confirm</span>`}</button>`; }).join('');
+  return pageShell({ eyebrow: 'THE OLD BOOKS', title: 'Balances to confirm', sub: `ring each customer · enter what they agree`, face: faceIcon('cash'),
+    head: `<div role="img" aria-label="${ob.done} of ${ob.rows.length} confirmed; ${ob.left.length} left, the old books said ${n0(ob.leftOld)} for them" style="display:flex;flex-direction:column;gap:6px">
+      <span style="display:flex;gap:3px;height:14px">${ob.done ? `<i class="a-grow" style="flex:${ob.done};border-radius:3px;background:var(--mint)"></i>` : ''}${ob.left.length ? `<i style="flex:${ob.left.length};border-radius:3px;background:repeating-linear-gradient(135deg,rgba(255,255,255,.1) 0 3px,rgba(255,255,255,.24) 3px 6px)"></i>` : ''}</span>
+      <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>confirmed <b class="m" style="color:#fff">${ob.done}</b> · <b class="m" style="color:#fff">${n0(ob.confirmed)}</b></span><span>to ring <b class="m" style="color:#fff">${ob.left.length}</b> · old books <b class="m" style="color:#fff">${n0(ob.leftOld)}</b></span></span></div>`,
+    body: `${rows ? `<div class="bx-card" style="border-radius:20px;padding:0 14px">${rows}</div>` : emptyCard('Nobody owed the shop', 'The old books had no debts to confirm.')}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}Each one in the owner’s log, beside what the old books said</span>` });
+};
+function openingArgs(){ const t = S.stack[S.stack.length - 1]; return t && t.type === 'opening' ? t.args : null; }
+PAGE.opening = a => {
+  const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
+  const f = D().freshStart || { oldDebts: {}, confirmed: {} }, old = f.oldDebts[c.id] != null ? Number(f.oldDebts[c.id]) || 0 : null, done = f.confirmed[c.id] || null;
+  const openLine = (c.debtLog || []).find(l => l.note === 'Opening balance');
+  if (a.amt == null) { a.amt = done ? Number(done.amount) || 0 : old || 0; a.since = (openLine && openLine.date) || (done && done.since) || ''; }
+  const amt = Math.round(Number(a.amt) || 0), traded = custTraded(c), can2 = can('debt.open') && !traded;
+  const max = Math.max(old || 0, amt, 1), w = v => Math.max(v ? 2 : 0, Math.min(100, v / max * 100)).toFixed(1) + '%';
+  const bar = (label, v, col, id) => `<span style="display:grid;grid-template-columns:82px 1fr auto;align-items:center;gap:10px"><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${label}</span><span style="position:relative;height:12px;border-radius:999px;background:rgba(255,255,255,.08)"><i ${id ? `id="${id}" ` : ''}style="position:absolute;left:0;top:0;bottom:0;width:${w(v)};border-radius:999px;background:${col};transition:width .3s"></i></span><b ${id ? `id="${id}_n" ` : ''}class="m" style="color:#fff;font-size:13px">${n0(v)}</b></span>`;
+  const quick = (act, label, on) => `<button data-act="${act}" ${can2 ? '' : 'disabled'} style="flex:1;height:38px;border:none;border-radius:12px;font-size:13px;font-weight:700;${on ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${label}</button>`;
+  return pageShell({ eyebrow: 'OPENING BALANCE', title: esc(c.name), sub: esc(c.phone || c.phone2 || c.location || ''), face: avatar(c.name, c.id, 44, true),
+    head: `<div role="img" aria-label="${old != null ? 'The old books said ' + n0(old) + '; ' : ''}entering ${n0(amt)}" style="display:flex;flex-direction:column;gap:8px">
+      ${old != null ? bar('Old books', old, 'repeating-linear-gradient(135deg,rgba(255,255,255,.25) 0 3px,rgba(255,255,255,.45) 3px 6px)') : ''}${bar('They agree', amt, 'var(--amber)', 'mx_obbar')}</div>`,
+    body: traded ? `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:6px"><b style="font-size:14px">Already trading in these books</b><span style="font-size:13px;color:var(--ink2);line-height:1.4">What ${esc(firstWord(c.name))} owes comes from their bills and payments now${openLine ? `, after the opening balance of <span class="m">${n0(openLine.amount)}</span>` : ''}.</span></div>`
+      : `<div class="bx-card" style="padding:16px 14px;display:flex;flex-direction:column;gap:14px">
+        <label style="display:flex;align-items:baseline;justify-content:center;gap:8px"><span class="m" style="font-size:15px;font-weight:600;color:var(--ink3)">UGX</span><input id="mx_obamt" data-in="obamt" inputmode="numeric" autocomplete="off" aria-label="What they owe" value="${amt ? n0(amt) : ''}" placeholder="0" ${can2 ? '' : 'disabled'} style="width:${Math.max(3, (amt ? n0(amt) : '0').length) + 1}ch;max-width:70vw;border:none;outline:none;background:transparent;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-size:34px;font-weight:600;color:var(--ink);text-align:center"></label>
+        <div style="display:flex;gap:6px">${old ? quick('obsame', 'As the old books', amt === old) : ''}${quick('obnone', 'Owes nothing', amt === 0)}</div>
+        <span style="display:block;height:1px;background:#F1EEE8"></span>
+        <label style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Owed since</b><span class="bx-sub">${a.since ? 'ages it in the debtors' : 'no date: shown as “no date”'}</span></span><input type="date" data-in="obsince" value="${esc(a.since || '')}" max="${todayISO()}" ${can2 && amt > 0 ? '' : 'disabled'} aria-label="Owed since" style="height:40px;border:none;border-radius:12px;padding:0 10px;background:var(--soft);font:inherit;font-size:14px;color:var(--ink)"></label></div>
+      ${can('debt.open') ? '' : lockedHTML('debt.open', 'Giving an opening balance')}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}In the owner’s log${old != null ? ', beside the old books’ figure' : ''} · can be changed until they trade</span>`,
+    foot: can2 ? `<button class="bx-btn red" data-act="obsave" data-id="${esc(c.id)}" ${S.busy ? 'disabled' : ''}>${ic('tick', 18, 'style="stroke-width:2.4"')}${amt ? 'Save · owes ' + n0(amt) : 'Save · owes nothing'}</button>` : '' });
+};
+ACT['in:obamt'] = t => {
+  const a = openingArgs(); if (!a) return;
+  const v = Number(String(t.value).replace(/[^0-9]/g, '')) || 0, s2 = v ? n0(v) : ''; a.amt = v;
+  if (t.value !== s2) t.value = s2;
+  t.style.width = Math.max(3, (s2 || '0').length) + 1 + 'ch';
+  clearTimeout(ACT._obT); ACT._obT = setTimeout(() => { render(); const el = document.getElementById('mx_obamt'); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (_e) {} } }, 500);
+};
+ACT['in:obsince'] = t => { const a = openingArgs(); if (a) a.since = t.value || ''; };
+ACT.obsame = () => { const a = openingArgs(); if (!a) return; a.amt = Number((D().freshStart || { oldDebts: {} }).oldDebts[a.id]) || 0; FEEL.tick(); render(); };
+ACT.obnone = () => { const a = openingArgs(); if (!a) return; a.amt = 0; a.since = ''; FEEL.tick(); render(); };
+ACT.obsave = async t => {
+  const a = openingArgs(), c = customerById(t.dataset.id); if (!a || !c || S.busy || !can('debt.open')) return;
+  const amount = Math.round(Number(a.amt) || 0), since = amount > 0 && a.since ? a.since : null;
+  S.busy = true; render();
+  try {
+    const r = await callFn('set_opening_balance', { p_shop_id: S.shopId, p_customer_id: c.id, p_amount: amount, p_since: since });
+    c.debt = amount;
+    c.debtLog = (c.debtLog || []).filter(l => l.note !== 'Opening balance')
+      .concat(amount > 0 ? [{ id: r && r.logId != null ? Number(r.logId) : 0, date: since, type: 'charge', amount, note: 'Opening balance', cashTxnId: null, quoteId: null }] : []);
+    if (D().freshStart) D().freshStart.confirmed[c.id] = { amount, since };
+    saveSnapshot(); FEEL.stamp(); toast('Saved · in the owner’s log'); pop();
+  } catch (e) { toast(failWord(e), 6000); }
+  S.busy = false; render();
+};
+
 /* ---------------- a promise to pay (promise.record) ---------------- */
 PAGE.promise = a => {
   const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
@@ -3838,7 +3990,7 @@ PAGE.me = () => {
       </div>
       ${m.tg && m.tg.reached ? `<button class="bx-card" data-act="win" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('target', 20)}</span><span style="flex:1"><b style="font-size:14px">The team passed ${esc(monthWord())}</b><span class="bx-sub" style="display:block">Play the win again</span></span>${ic('chev', 16)}</button>` : ''}
       <div class="bx-card bx-list">${[['sound', 'Sounds & buzz', 'chimes, stamps, the team win', 'sound'], ['big', 'Big text', 'for the yard in daylight', 'big']].map(([k, w, sub, icn]) => `<div class="bx-row" style="gap:12px"><span style="width:38px;height:38px;border-radius:12px;background:var(--soft);color:var(--ink2);display:flex;align-items:center;justify-content:center;flex:none">${ic(icn, 19)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${w}</b><span class="bx-sub">${sub}</span></span><button class="bx-switch" role="switch" aria-checked="${!!S.prefs[k]}" aria-label="${w}" data-act="pref" data-k="${k}"></button></div>`).join('')}</div>
-      <div class="bx-card" style="display:flex;align-items:center;gap:12px;padding:12px 14px"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('store', 20)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:15px">${esc(S.shopName)}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(D().presetShopAddress || 'Books read ' + waitWords(minsSince(S.loadedAt)) + ' ago')}</span></span>${phone ? callSmall(phone, 'the shop') : ''}</div>
+      <div class="bx-card" style="display:flex;align-items:center;gap:12px;padding:12px 14px"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('store', 20)}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b class="ell" style="font-size:15px">${esc(S.shopName)}</b><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(D().presetShopAddress || 'Books read ' + waitWords(minsSince(S.loadedAt)) + ' ago')}</span></span>${S.shopCount > 1 ? '<button class="mx-act navy" data-act="switchshop" aria-label="Switch to another shop">Switch</button>' : ''}${phone ? callSmall(phone, 'the shop') : ''}</div>
       <div style="display:flex;align-items:center;gap:10px;padding:4px 4px 0"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;color:var(--ink3)">Signed in as</span><span class="ell" style="font-size:13px;font-weight:600">${esc((S.user && S.user.email) || '')}</span></span>
         <button class="bx-btn ghost" style="flex:none;height:44px;font-size:14px;color:var(--crimson)" data-act="signout">${ic('out', 16)}${S.signoutSure ? 'Tap again to sign out' : 'Sign out'}</button></div>
     </div></div>`;
@@ -3847,6 +3999,7 @@ ACT.iam = t => { try { localStorage.setItem(meKey(), t.dataset.v); } catch (_e) 
 ACT.door = t => { const d = DOORS.find(x => x.k === t.dataset.v); if (S.ui.door === t.dataset.v && d && d.p && d.open()) { FEEL.open(); push(d.p, {}); return; } if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
 ACT.pref = t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k]; savePrefs(); applyPrefs(); if (k === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
 // One stray tap must not throw away the books on this phone: the first tap asks.
+ACT.switchshop = () => switchShop();
 ACT.signout = async () => {
   if (!S.signoutSure) { S.signoutSure = true; render(); setTimeout(() => { S.signoutSure = false; if (S.stack.length) render(); }, 4000); return; }
   try { localStorage.removeItem(snapKey()); } catch (_e) {} try { await sb.auth.signOut(); } catch (_e) {} location.reload();

@@ -44335,9 +44335,13 @@ function productImageStoragePath(url){
     : null;
 }
 
+// Only this shop's own folder is emptied. A fresh start (0148) shares the
+// old shop's photos with the new one instead of copying them, so a photo
+// in another shop's folder is still that shop's: dropping it from this
+// library must not take it from theirs.
 async function deleteProductImageIfStored(url){
   const path = productImageStoragePath(url);
-  if(!path) return;
+  if(!path || !currentShopId || !path.startsWith(currentShopId + '/')) return;
   const { error } = await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
   if(error) console.error('Failed to delete product image from storage:', error);
 }

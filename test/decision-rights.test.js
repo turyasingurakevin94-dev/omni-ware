@@ -125,7 +125,7 @@ t.check(rows.every((r) => r.who.length && r.who.every((w) => ROLES.includes(w)))
   const HOME = {
     manager: ['price.approve', 'markup.set', 'margin.see', 'credit.set', 'credit.release', 'invoice.make',
       'pick.settle', 'credit_note.raise', 'invoice.void', 'stock.writeoff', 'stock.correct', 'trip.difference',
-      'customer.edit', 'agent.change', 'goal.set', 'team.limits', 'restock.hold'],
+      'customer.edit', 'agent.change', 'goal.set', 'team.limits', 'restock.hold', 'debt.open'],
     accounts: ['cash.expense', 'cash.income', 'cash.transfer', 'payment.edit', 'day.open', 'bill.record', 'bill.pay',
       'consign.settle', 'payroll.run', 'loan.edit', 'asset.edit', 'agent.pay', 'finance.see', 'trip.cash'],
     sourcing: ['sourcing.lead', 'product.edit', 'supplier.edit', 'price.list', 'price.confirm'],
