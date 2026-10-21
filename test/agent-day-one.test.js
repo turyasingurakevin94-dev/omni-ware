@@ -132,6 +132,16 @@ const fn = (n) => extractFunction(src, n, 'agent.html');
   const setpw = fn('showSetPasswordScreen');
   t.check(/saveBtn\.disabled = true;/.test(setpw) && /catch\(e\)/.test(setpw), 'the invite\'s password cannot be double-sent, and a thrown save is reported');
   t.check(/pw1\.length < 6/.test(setpw) && /data-r="num"/.test(setpw), 'six characters is still the rule; the others are advice, ticked when taken');
+  /* Signed in, but not an agent -- the owner's own login, on 21 Oct. It
+     was a red line ending ".." and "Reload to try again", with no way to
+     another login: reloading signs the same login in again. */
+  const auth = fn('ensureAgentAuth'), boot = fn('boot');
+  t.check(/err\.code = 'not-agent';/.test(auth) && /if\(e && e\.code === 'not-agent'\)\{ showNotAgentScreen\(e\.email\); return; \}/.test(boot),
+    'a login with no agent behind it gets its own screen, not a failure to retry');
+  t.check(/signOutAndReload\(\)/.test(fn('showNotAgentScreen')) && /Running the shop\?/.test(fn('showNotAgentScreen')),
+    'which offers another login, and points the shop to its own app');
+  t.check(/replace\(\/\[\.\\s\]\+\$\/, ''\)/.test(fn('showBootFailScreen')) && !/Reload to try again<\/div>/.test(boot),
+    'and any other failure is said once, with one full stop and a way back to the door');
 }
 
 process.exit(t.done() ? 1 : 0);
