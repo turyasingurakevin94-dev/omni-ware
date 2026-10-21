@@ -7153,7 +7153,7 @@ SCREENS.Quote = {
     <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px">
       <div role="group" aria-label="Who answered" style="flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 2px">
         <sc-for list="{{ whos }}" as="w" hint-placeholder-count="3"><button type="button" onClick="{{ w.pick }}" aria-pressed="{{ w.on }}" style="{{ w.style }}"><span class="ava" style="{{ w.ava }}">{{ w.ini }}</span><span style="min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left"><span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ w.name }}</span><span style="font-size: 10px; color: #6B7480; white-space: nowrap">{{ w.sub }}</span></span></button></sc-for>
-        <label style="{{ otherStyle }}"><span class="ava" style="width: 30px; height: 30px; background: #F2EFEA; color: #5F6980; font-size: 14px">+</span><select onChange="{{ pickSup }}" aria-label="Someone else answered" style="flex: 1; min-width: 0; height: 40px; border: none; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; color: #1C2233"><option value="">{{ otherWord }}</option><sc-for list="{{ supOpts }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select></label>
+        <button type="button" onClick="{{ openWho }}" aria-label="{{ otherLabel }}" aria-haspopup="dialog" style="{{ otherStyle }}"><span class="ava" style="{{ otherAva }}">{{ otherIni }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left"><span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ otherWord }}</span><span style="font-size: 10px; color: #6B7480; white-space: nowrap">{{ otherSub }}</span></span><span style="flex: none; color: #6B7480; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span></button><span aria-hidden="true" style="flex: none; width: 2px"></span>
       </div>
 
       <div class="card n-in" style="flex: none; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 12px">
@@ -7208,6 +7208,28 @@ SCREENS.Quote = {
       </div>
     </sc-if>
 
+    <sc-if value="{{ whoOpen }}">
+      <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
+      <div class="sheet" role="dialog" aria-label="Who answered?" style="position: absolute; left: 0; right: 0; bottom: 0; height: 86%; background: #F8F6F2; border-radius: 24px 24px 0 0; display: flex; flex-direction: column">
+        <div style="flex: none; padding: 10px 18px 12px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-radius: 24px 24px 0 0; box-shadow: 0 1px 0 #ECE8E1">
+          <span style="align-self: center; width: 36px; height: 4px; border-radius: 999px; background: #DCD6CC"></span>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="display: flex; flex-direction: column; gap: 2px"><span class="t2" style="font-size: 18px">Who answered?</span><span class="sub">{{ whoSub }}</span></span><button type="button" onClick="{{ closeSheet }}" style="font-size: 14px; font-weight: 600; color: #5F6980">Cancel</button></div>
+          <label style="height: 46px; flex: none; border-radius: 13px; background: #F2EFEA; padding: 0 14px; display: flex; align-items: center; gap: 10px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg><input aria-label="Find a supplier" placeholder="Name, market or shop no." value="{{ wq }}" onInput="{{ typeWq }}" style="flex: 1; min-width: 0; height: 40px; border: none; background: transparent; font-family: inherit; font-size: 15px; color: #1C2233; outline: none"></label>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px calc(18px + var(--safe-b)); display: flex; flex-direction: column; gap: 10px">
+          <sc-if value="{{ hasLikely }}">
+            <span class="eb" style="display: flex; align-items: center; gap: 6px; color: #0F6B43"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"></path></svg>Likely to have it</span>
+            <div class="card" style="padding: 2px 12px; flex: none"><sc-for list="{{ likely }}" as="x" hint-placeholder-count="3"><button type="button" onClick="{{ x.pick }}" aria-pressed="{{ x.on }}" style="{{ x.row }}"><span class="ava" style="{{ x.ava }}">{{ x.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.name }}</span><span style="font-size: 11.5px; color: {{ x.subCol }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.sub }}</span></span><sc-if value="{{ x.hasTag }}"><span class="pill" style="{{ x.tagStyle }}">{{ x.tag }}</span></sc-if><sc-if value="{{ x.isOn }}"><span style="flex: none; width: 24px; height: 24px; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span></sc-if></button></sc-for></div>
+          </sc-if>
+          <sc-if value="{{ hasRest }}">
+            <span class="eb">{{ restTitle }}</span>
+            <div class="card" style="padding: 2px 12px; flex: none"><sc-for list="{{ rest }}" as="x" hint-placeholder-count="6"><button type="button" onClick="{{ x.pick }}" aria-pressed="{{ x.on }}" style="{{ x.row }}"><span class="ava" style="{{ x.ava }}">{{ x.ini }}</span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.name }}</span><span style="font-size: 11.5px; color: {{ x.subCol }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ x.sub }}</span></span><sc-if value="{{ x.hasTag }}"><span class="pill" style="{{ x.tagStyle }}">{{ x.tag }}</span></sc-if><sc-if value="{{ x.isOn }}"><span style="flex: none; width: 24px; height: 24px; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"></path></svg></span></sc-if></button></sc-for></div>
+          </sc-if>
+          <sc-if value="{{ noMatch }}"><div style="padding: 18px 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center"><span style="font-size: 14px; font-weight: 700">No supplier called “{{ wq }}”</span><span class="sub">Add them, and this price waits on the hunt for you.</span></div></sc-if>
+          <a href="NewSupplier.dc.html" data-sx="{{ newSupSx }}" style="flex: none; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 12px; box-sizing: border-box; border-radius: 16px; box-shadow: inset 0 0 0 1.5px #C9C4BA; color: #1C2233"><span style="width: 36px; height: 36px; flex: none; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span><span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ newSupWord }}</span></a>
+        </div>
+      </div>
+    </sc-if>
     <sc-if value="{{ unitOpen }}">
       <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(22,32,60,.38)"></div>
       <div class="sheet" style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 88%; overflow-y: auto; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 10px 18px calc(22px + var(--safe-b)); display: flex; flex-direction: column; gap: 12px">
@@ -7225,7 +7247,7 @@ SCREENS.Quote = {
   </div>
 </div>`,
   Component: class extends SrvLogic {
-    constructor(props) { super(props); this.state = { seeded: null, candId: null, supplierId: props && props.supplierId || null, sheet: null, draft: '', uq: '', added: [], saved: null }; }
+    constructor(props) { super(props); this.state = { seeded: null, candId: null, supplierId: props && props.supplierId || null, sheet: null, draft: '', uq: '', wq: '', added: [], saved: null }; }
     // The form starts from what is on file for this supplier, if anything.
     seed(c, key) {
       const p = c ? bPack(c) : null, t = c ? candidateTiers(c)[0] : null;
@@ -7271,6 +7293,33 @@ SCREENS.Quote = {
       const onLead = new Set(cands.map(x => String(x.supplierId)));
       const others = D().suppliers.filter(s => !onLead.has(String(s.id))).sort((a, b) => a.name.localeCompare(b.name));
       const otherOn = !c && !!sup;
+      // Someone else: a picker, not the phone's long list -- who is likely to
+      // have it first (askSupRank: sells it, or something like it), then
+      // everyone else A to Z; typing finds by name, market or shop number.
+      const whoPick = (() => {
+        if (this.state.sheet !== 'who') return { likely: [], rest: [], hasLikely: false, hasRest: false, noMatch: false };
+        const wq = String(this.state.wq || '').trim().toLowerCase(), wt = wq.split(/\s+/).filter(Boolean);
+        const known = leadKnown(l).sellers;
+        const ranked = askSupRank(l).filter(x => !onLead.has(String(x.s.id)));
+        const hay = (s) => [s.name, s.location, s.shopNo ? 'shop ' + s.shopNo : '', s.phone].filter(Boolean).join(' ').toLowerCase();
+        const match = (x) => wt.every(t => hay(x.s).includes(t));
+        const row = (x, i) => {
+          const k = known.find(y => String(y.sup.id) === String(x.s.id)), on = otherOn && String(sup.id) === String(x.s.id), where = supplierWhere(x.s);
+          const sub = k ? `sells it to us at ${n0(k.cost)} a ${k.unit}` : x.hitProds.length ? 'sells us ' + x.hitProds.slice(0, 2).map(p => p.name).join(' and ')
+            : [where, x.rows ? plural(x.prods.length, 'line') : 'no prices yet'].filter(Boolean).join(' · ');
+          const tag = x.sells ? 'sells it' : x.importer && x.hit.length ? 'importer' : '';
+          return { ini: initials(x.s.name), name: x.s.name, sub, subCol: k || x.hitProds.length ? '#0F6B43' : '#6B7480', on: on ? 'true' : 'false', isOn: on,
+            hasTag: !!tag, tag, tagStyle: 'height: 24px; padding: 0 9px; font-size: 11px; background: #E4F4EA; color: #0F6B43',
+            ava: bAvatar(x.s.id, 38) + '; font-size: 12px',
+            row: `width: 100%; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 0; ${i ? 'box-shadow: inset 0 1px 0 #F0ECE6' : ''}`,
+            pick: () => { FEEL.tick(); this.setState({ supplierId: x.s.id, candId: null, seeded: null, sheet: null, wq: '' }); } };
+        };
+        const likelyX = wt.length ? [] : ranked.filter(x => x.sells || x.hit.length).slice(0, 4);
+        const lk = new Set(likelyX.map(x => String(x.s.id)));
+        const restX = ranked.filter(x => !lk.has(String(x.s.id)) && match(x)).sort((a, b) => a.s.name.localeCompare(b.s.name));
+        return { likely: likelyX.map(row), rest: restX.map(row), hasLikely: likelyX.length > 0, hasRest: restX.length > 0, noMatch: !!wt.length && !restX.length,
+          restTitle: wt.length ? plural(restX.length, 'match', 'matches') : likelyX.length ? 'Everyone else · A to Z' : 'All suppliers · A to Z' };
+      })();
       // What this supplier, or another, packs it in -- one tap to use.
       const prods = new Set(leadProducts(l).map(p => String(p.id)));
       let sug = null;
@@ -7352,9 +7401,15 @@ SCREENS.Quote = {
         photo: photos.length ? 'width: 46px; height: 46px; flex: none; border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); ' + photoStyle(photos[0])
           : 'width: 46px; height: 46px; flex: none; border-radius: 13px; background: linear-gradient(160deg, #C9CED8, #7F889A); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 6px 14px -8px rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.95)',
         noPhoto: !photos.length, photoLabel: photos.length ? 'The photo of ' + l.name : 'No photo yet',
-        whos, supOpts: others.map(s => ({ id: s.id, name: s.name })), otherWord: otherOn ? sup.name : cands.length ? 'Someone else' : 'Who answered?',
-        otherStyle: `flex: ${cands.length ? '0 0 auto' : '1'}; min-width: 130px; height: 50px; border-radius: 14px; padding: 0 8px; display: flex; align-items: center; gap: 6px; background: #FFFFFF; box-shadow: ${otherOn ? '0 0 0 2px #16203C' : '0 0 0 1px #E2DDD4'}`,
-        pickSup: (e) => { const v = e.target.value; if (v) { FEEL.tick(); this.setState({ supplierId: v, candId: null, seeded: null }); } },
+        whoSub: `for ${l.name}`, newSupWord: String(this.state.wq || '').trim() ? `Add “${String(this.state.wq).trim()}” as a supplier` : 'Someone new? Add a supplier',
+        newSupSx: JSON.stringify({ leadId: l.id, name: String(this.state.wq || '').trim() }), wq: this.state.wq || '',
+        whos, ...whoPick, otherWord: otherOn ? sup.name : cands.length ? 'Someone else' : 'Who answered?',
+        otherSub: otherOn ? (supplierWhere(sup) || 'tap to change') : others.length ? plural(others.length, 'supplier') + ' on file' : 'none on file yet',
+        otherIni: otherOn ? initials(sup.name) : '+', otherLabel: otherOn ? `${sup.name} answered: change` : 'Someone else answered: pick who',
+        otherAva: otherOn ? bAvatar(sup.id, 30) + '; font-size: 10px' : 'width: 30px; height: 30px; background: #F2EFEA; color: #5F6980; font-size: 14px',
+        otherStyle: `flex: ${cands.length ? '0 0 auto' : '1'}; min-width: 150px; max-width: ${cands.length ? '190px' : 'none'}; height: 50px; border-radius: 14px; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; color: #1C2233; box-shadow: ${otherOn ? '0 0 0 2px #16203C' : '0 0 0 1px #E2DDD4'}`,
+        openWho: () => { FEEL.open(); this.setState({ sheet: 'who', wq: '' }); }, whoOpen: sh === 'who',
+        typeWq: (e) => this.setState({ wq: e.target.value }),
         okWord: ok ? `✓ ${n0(total)} ${bPl(baseW, total)}` : 'how many?', okStyle: ok ? 'background: #E4F4EA; color: #0F6B43' : 'background: #FDF1DC; color: #7A4A02',
         hasSug: !!sug, sugFrom: sug ? sug.from : '', sugWord: sug ? sug.p.sentence : '', sugIni: sug ? initials(sug.name) : '', sugAva: bAvatar(sug ? sug.key : '', 32) + '; font-size: 11px',
         useSug: () => { if (!sug) return; FEEL.tick(); set({ outer: sug.p.outer, outerQty: sug.p.outerQty, mid: sug.p.inner, innerQty: sug.p.inner ? sug.p.ppu : 0, base: sug.p.base }); },
