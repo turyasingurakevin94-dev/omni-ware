@@ -722,53 +722,94 @@ button.cu-bl:active{background:var(--soft)}
 .sx-sheet:has(.cu-nc){padding:0;height:calc(100% - 40px - var(--safe-area-inset-top));max-height:none;gap:0;overflow:hidden}
 .sx-sheet:has(.cu-nc)>.sx-handle{display:none}
 .cu-nc{display:flex;flex-direction:column;height:100%;min-height:0}
-.cu-nchead{background:var(--navy);color:#fff;padding:10px 18px 22px;display:flex;flex-direction:column;gap:16px;flex:none}
-.cu-nchandle{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22)}
-.cu-ncbar{display:flex;align-items:center;justify-content:space-between}
-.cu-ncx{width:36px;height:36px;border-radius:999px;border:none;background:rgba(255,255,255,.1);color:#fff;display:flex;align-items:center;justify-content:center}
-.cu-ncwho{display:flex;align-items:center;gap:14px;min-height:60px}
-.cu-ncsegs{display:flex;gap:8px;margin-top:16px}
-.cu-ncseg{flex:1;display:flex;flex-direction:column;gap:5px}
-.cu-ncseg i{height:4px;border-radius:999px;background:rgba(255,255,255,.14)}
-.cu-ncseg span{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--navyInk2)}
-.cu-ncseg.on i{background:var(--mint)}.cu-ncseg.on span{color:var(--mint)}
-.cu-ncav{width:64px;height:64px;border-radius:22px;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 10px 22px rgba(0,0,0,.25);transition:background .2s}
+/* A new customer (v104): their card floats over a navy glass band, the fields sit in one card, areas are tiles with a bar each, and the saves sit in a navy dock. */
+.cu-nchead{position:relative;color:#fff;padding:10px 16px 0;display:flex;flex-direction:column;gap:12px;flex:none}
+.cu-ncband{position:absolute;left:0;right:0;top:0;height:142px;background:linear-gradient(135deg,#1D2848,#16203C);overflow:hidden;pointer-events:none}
+.cu-ncband::after{content:"";position:absolute;right:-70px;top:-80px;width:240px;height:240px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.2),rgba(111,220,176,0) 68%)}
+.cu-nchandle,.cu-nctop,#cu_ncprev{position:relative}
+.cu-nctop{display:flex;align-items:center;gap:10px;padding:0 2px}
+.cu-nctt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.cu-nctt .sx-eyebrow{font-size:10px;letter-spacing:.14em}
+.cu-nctt b{font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cu-ncready{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);color:var(--navyInk);font-size:11px;font-weight:700;flex:none}
+.cu-ncready .m{color:#fff;font-weight:600}
+.cu-ncready.on{background:rgba(111,220,176,.14);box-shadow:inset 0 0 0 1px rgba(111,220,176,.35);color:var(--mint);animation:sxPop .4s cubic-bezier(.3,1.4,.5,1) both}
+.cu-ncx{width:36px;height:36px;border-radius:999px;border:none;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.cu-nccard{display:flex;align-items:center;gap:14px;padding:14px;border-radius:22px;background:linear-gradient(180deg,#fff,#FCFBF9);box-shadow:0 14px 30px rgba(22,32,60,.14),inset 0 0 0 1px rgba(22,32,60,.04);color:var(--ink)}
+.cu-ncav{position:relative;width:72px;height:72px;flex:none}
+.cu-ncav .ring{position:absolute;inset:0;width:72px;height:72px}
+.cu-ncav .ring circle{transition:stroke .25s}
+.cu-ncav .f{position:absolute;inset:8px;border-radius:999px;background-image:linear-gradient(160deg,rgba(255,255,255,.55),rgba(255,255,255,0));box-shadow:0 6px 14px rgba(22,32,60,.12);font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:background-color .2s}
 .cu-nct{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-.cu-ncn{font-size:20px;font-weight:700;letter-spacing:-.01em}
-.cu-ncn.ph{color:rgba(255,255,255,.3)}
-.cu-ncc{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cu-ncc>span{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:600;color:#DDE3F0;max-width:100%;animation:sxUpIn .25s ease-out both}
-.cu-ncc>span.m{font-weight:500}
-.cu-ncc>span.cash{color:var(--navyInk);animation:none}
-.cu-ncbody{flex:1;min-height:0;overflow:auto;padding:16px 16px 0;display:flex;flex-direction:column;gap:12px}
-.cu-ncform{border-radius:20px;padding:0 14px}
-.cu-ncf{display:flex;align-items:center;gap:12px;min-height:66px}
+.cu-ncn{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.cu-ncn.ph{color:#B9B3A8}
+.cu-ncl{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;color:var(--ink3)}
+.cu-ncl>svg{flex:none;stroke:#767F91}
+.cu-ncl .ck{width:18px;height:18px;border-radius:6px;background:#F4F2EE;box-shadow:inset 0 1px 2px rgba(22,32,60,.08);color:var(--green);display:flex;align-items:center;justify-content:center;flex:none}
+.cu-ncl.on .ck{background:var(--greenSoft);box-shadow:none}
+.cu-ncl .ell{color:var(--ink);font-weight:600}
+.cu-ncl .ell.ph{color:#B9B3A8;font-weight:500;font-family:inherit}
+.cu-ncbody{flex:1;min-height:0;overflow:auto;padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
 .cu-ncform .cu-ncf:not(.area){border-bottom:1px solid #F1EEE8}
+.cu-ncform{border-radius:22px;padding:0 14px;background:linear-gradient(180deg,#fff,#FCFBF9);box-shadow:0 6px 18px rgba(22,32,60,.06),inset 0 0 0 1px #ECE8E1;border:none}
+.cu-nci{width:38px;height:38px;border-radius:12px;box-shadow:inset 0 0 0 1px rgba(22,32,60,.06),0 2px 6px rgba(22,32,60,.06);display:flex;align-items:center;justify-content:center;flex:none}
+.cu-nci.g{background:linear-gradient(160deg,#fff,var(--greenSoft));color:var(--green)}
+.cu-nci.a{background:linear-gradient(160deg,#fff,var(--amberSoft));color:var(--amberInk)}
+.cu-nci.r{background:linear-gradient(160deg,#fff,#FDE8E4);color:var(--red)}
+.cu-ncin{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cu-ncin>span:first-child,.cu-ncah>span:nth-child(2){font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.cu-ncin input{border:none;outline:none;background:transparent;font-size:17px;font-weight:600;color:var(--ink);padding:0;width:100%}
+.cu-ncin input.m{font-size:20px}
+.cu-ncin input::placeholder{color:#C9C3B8;font-weight:500}
+.cu-new{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:999px;background:linear-gradient(180deg,#EDF8F1,var(--greenSoft));box-shadow:inset 0 0 0 1px rgba(15,107,67,.14);color:var(--green);font-size:11px;font-weight:700;flex:none;animation:sxPop .4s cubic-bezier(.3,1.4,.5,1) both}
+.cu-ncg{display:flex;gap:2px;width:132px;margin-top:2px;padding:2px;border-radius:9px;background:#EFECE6;box-shadow:inset 0 1px 2px rgba(22,32,60,.1);box-sizing:border-box}
+.cu-ncg i{flex:1;height:4px;border-radius:9px;background:transparent}
+.cu-ncr{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.cu-ncah{display:flex;align-items:center;gap:12px}
+.cu-ncah em{margin-left:auto;font-style:normal;font-size:11px;font-weight:600;color:var(--ink3)}
+.cu-ncareas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cu-ncareas button{position:relative;height:58px;border:none;border-radius:16px;padding:9px 12px;box-sizing:border-box;background:linear-gradient(180deg,#EFECE6,#fff);box-shadow:inset 0 0 0 1px #E6E3DD;color:var(--ink);font-family:inherit;display:flex;flex-direction:column;justify-content:space-between;text-align:left;overflow:hidden;min-width:0}
+.cu-ncareas .t{display:flex;align-items:center;gap:6px;width:100%;min-width:0}
+.cu-ncareas .t .ell{flex:1;min-width:0;font-size:14px;font-weight:600}
+.cu-ncareas .t .m{font-size:12px;font-weight:600;color:var(--ink3);flex:none}
+.cu-ncareas .ck,.cu-ncareas .p1{display:none}
+.cu-ncareas .bar{display:block;width:100%;height:5px;border-radius:999px;background:#E6E3DD;box-shadow:inset 0 1px 2px rgba(22,32,60,.12);overflow:hidden}
+.cu-ncareas .bar i{display:block;width:var(--w);height:100%;border-radius:999px;background:#A9B1C2}
+.cu-ncareas button[aria-pressed="true"]{background:linear-gradient(135deg,#24305A,#16203C);box-shadow:0 8px 18px rgba(22,32,60,.22);color:#fff}
+.cu-ncareas button[aria-pressed="true"]::before{content:"";position:absolute;right:-24px;top:-30px;width:90px;height:90px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.22),rgba(111,220,176,0) 70%);pointer-events:none}
+.cu-ncareas button[aria-pressed="true"] .t .ell{font-weight:700}
+.cu-ncareas button[aria-pressed="true"] .t .m{color:var(--navyInk)}
+.cu-ncareas button[aria-pressed="true"] .ck{display:flex;width:16px;height:16px;border-radius:999px;background:var(--mint);color:var(--navy);align-items:center;justify-content:center;flex:none}
+.cu-ncareas button[aria-pressed="true"] .p1{display:inline;color:var(--mint)}
+.cu-ncareas button[aria-pressed="true"] .bar{background:rgba(0,0,0,.28);box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.cu-ncareas button[aria-pressed="true"] .bar i{background:linear-gradient(90deg,#4FC796,var(--mint))}
+.cu-ncoth{height:44px;border:none;border-radius:14px;background:transparent;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:#5F6980;font-family:inherit;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
+.cu-ncoth[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--navy);color:var(--navy);font-weight:700}
+.cu-ncother{height:44px;padding:0 14px;border:none;border-radius:12px;background:#F4F2EE;box-shadow:inset 0 1px 2px rgba(22,32,60,.08);font-family:inherit;font-size:16px;font-weight:600;color:var(--ink);outline:none}
+.cu-nctiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cu-nctile{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:18px;background:linear-gradient(180deg,#EFECE6,#fff);box-shadow:inset 0 0 0 1px #E6E3DD;min-width:0}
+.cu-nctile .ic{position:relative;width:34px;height:34px;flex:none;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.cu-nctile .ic.g{background:linear-gradient(160deg,#fff,var(--greenSoft));box-shadow:inset 0 0 0 1px rgba(15,107,67,.12);color:var(--green)}
+.cu-nctile .ic.r{background:linear-gradient(160deg,#fff,#FDE8E4);box-shadow:inset 0 0 0 1px rgba(201,58,48,.12);color:var(--red)}
+.cu-nctile .fc{position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;border-radius:999px;background:var(--plumSoft);color:var(--plum);font-size:7px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff}
+.cu-nctile .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
+.cu-nctile b{font-size:13px}.cu-nctile .tx>span{font-size:11px;color:var(--ink3)}
+.cu-ncdock{position:relative;flex:none;display:flex;gap:8px;padding:14px 16px calc(22px + var(--safe-area-inset-bottom));background:linear-gradient(135deg,#1D2848,#16203C);border-radius:24px 24px 0 0;overflow:hidden}
+.cu-ncdock .glow{position:absolute;left:-40px;bottom:-90px;width:220px;height:180px;border-radius:999px;background:radial-gradient(circle,rgba(111,220,176,.14),rgba(111,220,176,0) 70%);pointer-events:none}
+.cu-ncdock .sx-btn{position:relative;height:56px;border-radius:18px}
+.cu-ncdock .ghost{flex:1;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);border:none;color:#fff}
+.cu-ncdock .red{flex:1.7;background:linear-gradient(180deg,#D2443A,#B23128);box-shadow:0 10px 24px rgba(201,58,48,.4),inset 0 1px 0 rgba(255,255,255,.18)}
+@media (max-height:600px){.cu-ncband{height:112px}.cu-nchead{gap:8px}.cu-nctt .sx-eyebrow{display:none}.cu-nccard{padding:10px 12px;gap:12px}.cu-ncav,.cu-ncav .ring{width:52px;height:52px}.cu-ncav .f{inset:6px;font-size:16px}.cu-nccard .cu-ncl{display:none}.cu-ncdock{padding-top:10px;padding-bottom:calc(10px + var(--safe-area-inset-bottom))}.cu-ncdock .sx-btn{height:50px}}
+.cu-nchandle{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22)}
+.cu-ncf{display:flex;align-items:center;gap:12px;min-height:66px}
 #sx_nc_dup:empty{display:none}
 .cu-ncf.area{flex-direction:column;align-items:stretch;gap:10px;padding:12px 0 14px}
 .cu-ncf.area>label{display:flex;align-items:center;gap:12px}
-.cu-nci{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none}
-.cu-ncin{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.cu-ncin>span{font-size:12px;font-weight:600;color:var(--ink3)}
-.cu-ncin input{border:none;outline:none;background:transparent;font-size:17px;font-weight:600;color:var(--ink);padding:0;width:100%}
-.cu-ncin input.m{font-size:18px}
-.cu-ncin input::placeholder{color:#C9C3B8;font-weight:500}
-.cu-new{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:11px;font-weight:700;flex:none;animation:sxPop .4s cubic-bezier(.3,1.4,.5,1) both}
-.cu-ncareas{display:flex;gap:6px;padding-left:48px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
-.cu-ncareas::-webkit-scrollbar{display:none}
-.cu-ncareas button{flex:none;height:34px;padding:0 12px;border:none;border-radius:999px;background:var(--soft);color:var(--ink);font-size:13px;font-weight:600}
-.cu-ncareas button[aria-pressed="true"]{background:var(--navy);color:#fff;font-weight:700}
 .cu-dup{display:flex;align-items:center;gap:10px;width:100%;border:none;margin:12px 0;padding:10px 12px;border-radius:14px;background:var(--amberSoft);color:var(--amberInk);text-align:left;font-size:13px;font-weight:600}
 .cu-dup>span:not(.cu-av){flex:1;min-width:0}
-.cu-ncdock{flex:none;display:flex;gap:8px;padding:12px 16px calc(22px + var(--safe-area-inset-bottom))}
-.cu-ncdock .sx-btn{height:58px;border-radius:18px}
-.cu-ncdock .ghost{flex:1}
-.cu-ncdock .red{flex:1.7}
 .cu-search input::-webkit-search-cancel-button{filter:invert(1) brightness(1.6);opacity:.6}
 /* the keyboard is up: the form, not the preview, gets the room */
-@media (max-height:520px){.cu-nchead{padding-bottom:10px;gap:8px}.cu-ncsegs{display:none}.cu-ncdock{padding-bottom:10px}.cu-ncdock .sx-btn{height:50px}}
 .cu-stn{font-size:17px;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.cu-ncnt{font-size:11px;font-weight:600;color:var(--ink3)}
 .cu-ncbad{font-size:11px;font-weight:700;color:var(--crimson);white-space:nowrap}
 .cu-hbs{gap:6px}
 .cu-hb{width:38px;height:38px}
@@ -799,32 +840,9 @@ button.cu-bl:active{background:var(--soft)}
 .cu-twin .go{flex:1;height:40px;border:none;border-radius:12px;background:#16203C;color:#fff;font-family:inherit;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px}
 .cu-twin .go .fc{width:22px;height:22px;border-radius:999px;background:var(--skySoft);color:var(--sky);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .cu-twin .op{height:40px;padding:0 14px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px #F2D7BC;color:var(--ink);font-family:inherit;font-size:13px;font-weight:700}
-.cu-ncav{position:relative;width:60px;height:60px;border-radius:20px}
-.cu-ncav .ok{position:absolute;right:-5px;bottom:-5px;width:24px;height:24px;border-radius:999px;background:var(--mint);color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--navy)}
-.cu-nct .sx-eyebrow{margin-bottom:-2px}
-.cu-ncg{display:flex;gap:2px;width:120px;margin-top:4px}
-.cu-ncg i{flex:1;height:3px;border-radius:9px;background:#E6E3DD}
-.cu-ncr{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
-.cu-ncr .ok{font-size:12px;font-weight:600;color:var(--green)}
 .cu-ncsame{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;margin-top:2px;padding:0;border:none;background:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--amberInk)}
 .cu-ncsame.ok{color:var(--green)}
 .cu-ncsame b{font-weight:700;text-decoration:underline}
-.cu-ncah{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:600;color:var(--ink3)}
-.cu-ncah em{margin-left:auto;font-style:normal;font-size:11px}
-.cu-ncareas{flex-wrap:wrap;padding-left:0;-webkit-mask-image:none;mask-image:none;overflow:visible}
-.cu-ncareas button{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 6px 0 12px}
-.cu-ncareas button .m{min-width:22px;height:24px;padding:0 6px;border-radius:999px;background:#fff;color:var(--ink3);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
-.cu-ncareas button[aria-pressed="true"] .m{background:rgba(255,255,255,.14);color:#fff}
-.cu-ncareas button.oth{padding:0 12px;background:transparent;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:#5F6980}
-.cu-ncareas button.oth[aria-pressed="true"]{background:var(--navy);box-shadow:none;color:#fff}
-.cu-ncother{height:44px;padding:0 14px;border:none;border-radius:12px;background:var(--soft);font-family:inherit;font-size:16px;font-weight:600;color:var(--ink);outline:none}
-.cu-nctiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cu-nctile{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px #ECE8E1}
-.cu-nctile .ic{position:relative;width:32px;height:32px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center}
-.cu-nctile .ic.g{background:var(--greenSoft);color:var(--green)}.cu-nctile .ic.r{background:#FDE8E4;color:var(--red)}
-.cu-nctile .fc{position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;border-radius:999px;background:var(--plumSoft);color:var(--plum);font-size:7px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff}
-.cu-nctile .tx{display:flex;flex-direction:column;gap:1px;min-width:0}
-.cu-nctile b{font-size:13px}.cu-nctile .tx>span{font-size:11px;color:var(--ink3)}
 /* Round 2: in question, on the move, did you mean */
 .cu-qbar i{position:absolute;top:0;bottom:0;border-radius:999px 0 0 999px;background:#E5483D}
 .cu-qbar i.s{border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,#F5B26B 0 5px,#FBD9B4 5px 10px)}
@@ -6459,13 +6477,20 @@ ACT.addcust = t => {
   openSheet('addcust', { for: t.dataset.for || '', name: q && !digits ? q : '', phone: digits ? q : '', area: '' });
 };
 function custNcDone(a){ const tw = phoneTwin(a.phone || ''); return { phone: phoneOk(a.phone) && !tw, name: !!String(a.name || '').trim(), area: !!String(a.area || '').trim() }; }
+// The card as it will be saved: a ring of three (number, name, area) round the face, and each line ticked once it is in.
 function custNcPreview(a){
-  const name = (a.name || '').trim(), t = tintFor(name || '?'), d = custNcDone(a), all = d.phone && d.name && d.area;
-  const seg = (k, w) => `<span class="cu-ncseg${d[k] ? ' on' : ''}"><i></i><span>${d[k] ? ic('tick', 11, 'style="stroke-width:3"') : ''}${w}</span></span>`;
-  return `<div class="cu-ncwho"><span class="cu-ncav" style="background:${name ? t[0] : 'rgba(255,255,255,.08)'};color:${name ? t[1] : 'var(--navyInk2)'}">${name ? esc(initials(name)) : ic('useradd', 26)}${all ? `<span class="ok">${ic('tick', 12, 'style="stroke-width:3"')}</span>` : ''}</span>
-    <span class="cu-nct"><span class="sx-eyebrow">New customer</span><span class="ell cu-ncn${name ? '' : ' ph'}">${name ? esc(name) : 'Their name'}</span></span>
-    <button class="cu-ncx" data-act="ncback" aria-label="Close">${ic('close', 14, 'style="stroke-width:2.4"')}</button></div>
-    <div class="cu-ncsegs" role="img" aria-label="${all ? 'Number, name and area are in: ready to save' : 'Still to fill: ' + ['phone', 'name', 'area'].filter(k => !d[k]).map(k => k === 'phone' ? 'number' : k).join(', ')}">${seg('phone', 'Number')}${seg('name', 'Name')}${seg('area', 'Area')}</div>`;
+  const name = (a.name || '').trim(), t = tintFor(name || '?'), d = custNcDone(a), phone = String(a.phone || '').trim(), area = String(a.area || '').trim();
+  const R = 33, C = 2 * Math.PI * R, seg = C / 3, gap = 6;
+  const ring = `<svg class="ring" viewBox="0 0 72 72" aria-hidden="true">${['phone', 'name', 'area'].map((k, i) => `<circle cx="36" cy="36" r="${R}" fill="none" stroke="${d[k] ? '#6FDCB0' : '#ECE8E1'}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(seg - gap).toFixed(1)} ${(C - seg + gap).toFixed(1)}" stroke-dashoffset="${(-(i * seg) + C / 4 - gap / 2).toFixed(1)}"></circle>`).join('')}</svg>`;
+  const line = (k, icon, v, ph, mono) => `<span class="cu-ncl${d[k] ? ' on' : ''}"><span class="ck">${d[k] ? ic('tick', 9, 'style="stroke-width:3.4"') : ''}</span>${ic(icon, 13, 'style="stroke-width:2"')}<span class="ell${mono ? ' m' : ''}${v ? '' : ' ph'}">${v ? esc(v) : ph}</span></span>`;
+  const left = ['phone', 'name', 'area'].filter(k => !d[k]).map(k => k === 'phone' ? 'number' : k);
+  return `<div class="cu-nccard" role="img" aria-label="Their card as it will show: ${esc(name || 'no name yet')}, ${esc(phone || 'no number yet')}, ${esc(area || 'no area yet')}. ${left.length ? 'Still to fill: ' + left.join(', ') : 'Number, name and area are all in'}">
+    <span class="cu-ncav">${ring}<span class="f" style="background-color:${name ? t[0] : '#F4F2EE'};color:${name ? t[1] : 'var(--ink3)'}">${name ? esc(initials(name)) : ic('useradd', 24)}</span></span>
+    <span class="cu-nct"><span class="ell cu-ncn${name ? '' : ' ph'}"${name ? ` title="${esc(name)}"` : ''}>${name ? esc(name) : 'Their name'}</span>${line('phone', 'chat', phone, 'Their number', true)}${line('area', 'pin', area, 'Their area')}</span></div>`;
+}
+function custNcReady(a){
+  const d = custNcDone(a), n = ['phone', 'name', 'area'].filter(k => d[k]).length;
+  return n === 3 ? `<span class="cu-ncready on">${ic('tick', 10, 'style="stroke-width:3.4"')}Ready<span class="m">3/3</span></span>` : `<span class="cu-ncready"><span class="m">${n}/3</span></span>`;
 }
 /* A Ugandan number: 07… with 10 digits, or +256 with 9 more. While it is
    being typed it counts up; a number that can't be one says so. */
@@ -6481,7 +6506,7 @@ function custNcTag(a){
   const need = st.need || (raw.startsWith('256') ? 12 : 10), n = st.ok ? need : Math.min(raw.length, need), col = st.bad ? 'var(--crimson)' : 'var(--green)';
   const gauge = `<span class="cu-ncg" role="img" aria-label="${n} of ${need} digits">${Array.from({ length: need }, (_, k) => `<i${k < n ? ` style="background:${col}"` : ''}></i>`).join('')}</span>`;
   if (twin) return { twin, html: '', gauge };
-  return { twin: null, gauge, html: st.ok ? `<span class="cu-ncr"><span class="m ok">${need}/${need}</span><span class="cu-new">${ic('tick', 11, 'style="stroke-width:3"')}nobody has it</span></span>`
+  return { twin: null, gauge, html: st.ok ? `<span class="cu-ncr"><span class="cu-new">${ic('tick', 11, 'style="stroke-width:3"')}nobody has it</span></span>`
     : st.typing ? `<span class="cu-ncr"><span class="m cu-ncnt">${st.n}/${st.need}</span></span>` : st.bad ? '<span class="cu-ncr"><span class="cu-ncbad">07… · 10 digits</span></span>' : '' };
 }
 // A name like one already on the books: say so before a second one is made (SAL-25).
@@ -6493,24 +6518,28 @@ function custNcNameCheck(a){
 }
 SHEET.addcust = args => {
   const areas = custAreas().slice(0, 4), tag = custNcTag(args), cur = (args.area || '').trim(), other = args.areaOther || (cur && !areas.some(x => x.a.toLowerCase() === cur.toLowerCase()));
-  const sell = !(args.for === 'pay' || args.for === 'switch' || args.for === 'chat');
+  const sell = !(args.for === 'pay' || args.for === 'switch' || args.for === 'chat'), most = Math.max(1, ...areas.map(x => x.n));
+  // Each area is a tile: a bar for how many customers are there already, and +1 on the one they join.
+  const tile = x => `<button data-act="ncarea" data-a="${esc(x.a)}" aria-pressed="${!other && cur.toLowerCase() === x.a.toLowerCase()}" style="--w:${Math.round(x.n / most * 100)}%"><span class="t"><span class="ck">${ic('tick', 9, 'style="stroke-width:3.6"')}</span><span class="ell">${esc(x.a)}</span><span class="m">${x.n}<span class="p1"> +1</span></span></span><span class="bar"><i></i></span></button>`;
   return `<div class="cu-nc">
-    <div class="cu-nchead" data-navy-top><span class="cu-nchandle"></span><div id="cu_ncprev">${custNcPreview(args)}</div></div>
+    <div class="cu-nchead" data-navy-top><span class="cu-ncband" aria-hidden="true"></span><span class="cu-nchandle"></span>
+      <div class="cu-nctop"><span class="cu-nctt"><span class="sx-eyebrow">New customer</span><b>Add them in three</b></span><span id="cu_ncready">${custNcReady(args)}</span><button class="cu-ncx" data-act="ncback" aria-label="Close">${ic('close', 14, 'style="stroke-width:2.4"')}</button></div>
+      <div id="cu_ncprev">${custNcPreview(args)}</div></div>
     <div class="cu-ncbody">
       <div class="sx-card cu-ncform">
-        <label class="cu-ncf"><span class="cu-nci" style="background:var(--greenSoft);color:var(--green)">${ic('chat', 18)}</span><span class="cu-ncin"><span>WhatsApp number</span><input id="sx_nc_phone" class="m" data-in="ncphone" type="tel" inputmode="tel" value="${esc(args.phone || '')}" placeholder="07__ ___ ___" autocomplete="off" autofocus><span id="cu_ncgauge">${tag.gauge}</span></span><span id="cu_nctag">${tag.html}</span></label>
+        <label class="cu-ncf"><span class="cu-nci g">${ic('chat', 18)}</span><span class="cu-ncin"><span>WhatsApp</span><input id="sx_nc_phone" class="m" data-in="ncphone" type="tel" inputmode="tel" aria-label="WhatsApp number" value="${esc(args.phone || '')}" placeholder="07__ ___ ___" autocomplete="off" autofocus><span id="cu_ncgauge">${tag.gauge}</span></span><span id="cu_nctag">${tag.html}</span></label>
         <div id="sx_nc_dup">${custNcDup(tag.twin)}</div>
-        <label class="cu-ncf"><span class="cu-nci" style="background:var(--amberSoft);color:var(--amberInk)">${ic('storefront', 18)}</span><span class="cu-ncin"><span>Business or name</span><input id="sx_nc_name" data-in="ncname" value="${esc(args.name || '')}" placeholder="Who they are" autocomplete="off"><span id="cu_ncname">${custNcNameCheck(args)}</span></span></label>
-        <div class="cu-ncf area"><span class="cu-ncah"><span class="cu-nci" style="background:#FDE8E4;color:var(--red)">${ic('pin', 18)}</span><span>Where they are</span>${areas.length ? '<em>customers there</em>' : ''}</span>
-          <span class="cu-ncareas">${areas.map(x => `<button data-act="ncarea" data-a="${esc(x.a)}" aria-pressed="${!other && cur.toLowerCase() === x.a.toLowerCase()}">${esc(x.a)}<span class="m">${x.n}</span></button>`).join('')}<button class="oth" data-act="ncother" aria-pressed="${!!other}">Other…</button></span>
-          <input id="sx_nc_area" data-in="ncarea" ${other || !areas.length ? '' : 'type="hidden" '}value="${esc(args.area || '')}" placeholder="Their area" autocomplete="off" class="cu-ncother"${args.areaOther ? ' autofocus' : ''}></div>
+        <label class="cu-ncf"><span class="cu-nci a">${ic('storefront', 18)}</span><span class="cu-ncin"><span>Business or name</span><input id="sx_nc_name" data-in="ncname" aria-label="Business or name" value="${esc(args.name || '')}" placeholder="Who they are" autocomplete="off"><span id="cu_ncname">${custNcNameCheck(args)}</span></span></label>
+        <div class="cu-ncf area"><span class="cu-ncah"><span class="cu-nci r">${ic('pin', 18)}</span><span>Where they are</span>${areas.length ? '<em>customers there</em>' : ''}</span>
+          ${areas.length ? `<span class="cu-ncareas">${areas.map(tile).join('')}</span><button class="cu-ncoth" data-act="ncother" aria-pressed="${!!other}">${ic('plus', 14, 'style="stroke-width:2.2"')}Another area</button>` : ''}
+          <input id="sx_nc_area" data-in="ncarea" aria-label="Their area" ${other || !areas.length ? '' : 'type="hidden" '}value="${esc(args.area || '')}" placeholder="Their area" autocomplete="off" class="cu-ncother"${args.areaOther ? ' autofocus' : ''}></div>
       </div>
       <div class="cu-nctiles">
         <span class="cu-nctile"><span class="ic g">${ic('cash', 16, 'style="stroke-width:2"')}<span class="fc">${esc(initials(mgrFull() || 'Manager'))}</span></span><span class="tx"><b>Cash to start</b><span>credit from ${esc(mgrName())}</span></span></span>
         ${sell ? `<span class="cu-nctile"><span class="ic r">${ic('doc', 16, 'style="stroke-width:2"')}</span><span class="tx"><b>A fresh order</b><span>drafts stay kept</span></span></span>` : ''}
       </div>
     </div>
-    <div class="cu-ncdock">${sell ? `<button class="sx-btn ghost" data-act="ncsave" data-then="save">Just save</button><button class="sx-btn red" data-act="ncsave" data-then="sell">Save and sell${ic('arrow', 18, 'style="stroke-width:2.4"')}</button>` : `<button class="sx-btn red" style="flex:1" data-act="ncsave" data-then="${args.for}">${args.for === 'pay' ? 'Save · they owe the rest' : args.for === 'switch' ? 'Save · the order is theirs' : 'Save them'}</button>`}</div>
+    <div class="cu-ncdock"><span class="glow" aria-hidden="true"></span>${sell ? `<button class="sx-btn ghost" data-act="ncsave" data-then="save">Just save</button><button class="sx-btn red" data-act="ncsave" data-then="sell">Save and sell${ic('arrow', 18, 'style="stroke-width:2.4"')}</button>` : `<button class="sx-btn red" style="flex:1" data-act="ncsave" data-then="${args.for}">${args.for === 'pay' ? 'Save · they owe the rest' : args.for === 'switch' ? 'Save · the order is theirs' : 'Save them'}</button>`}</div>
   </div>`;
 };
 function custNcDup(twin){
@@ -6520,6 +6549,7 @@ function custNcDup(twin){
 function custNcSync(){
   const a = S.sheet && S.sheet.type === 'addcust' ? S.sheet.args : null; if (!a) return;
   const p = document.getElementById('cu_ncprev'); if (p) p.innerHTML = custNcPreview(a);
+  const r = document.getElementById('cu_ncready'); if (r) r.innerHTML = custNcReady(a);
   const n = document.getElementById('cu_ncname'); if (n) n.innerHTML = custNcNameCheck(a);
 }
 ACT['in:ncphone'] = t => {
