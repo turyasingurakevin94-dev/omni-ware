@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -347,6 +347,25 @@ matrix.forEach(([what, it]) => {
     const cq = X.rowToQuote({ id: 78, status: 'draft', invoiced: false, amount_paid: 0, voided: false, payload: { client: { name: 'Kato' }, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] } });
     t.check(/With the Buyer/.test(X.ordWhoHas(cq, X.ordViews(cq))), 'an order in Checking says who holds it');
     t.check(/AT THE COUNTER TODAY/.test(X.ctHeroHTML()) && /No counter sales yet today/.test(X.ctHeroHTML()), 'the empty counter opens on the day, even a quiet one');
+  }
+
+  // 3f. the retest of 21 Oct: what a chat says, what a search finds, what a bar fills
+  {
+    const db = fakeDb({ saved_quotes: [], cash_txns: [] });
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'turyasingurakevin94@example.com' } });
+    const keys = s => X.chatReads(s).map(r => r.key);
+    t.check(!keys('i want 2ctns Normal Mulpers').includes('paid') && !keys('i want 2ctns Normal Mulpers').includes('day'), 'an ask for cartons neither says they paid nor names a day');
+    t.check(!keys('I sent you the list').includes('paid') && keys('I have sent the money').includes('paid') && keys('paid on momo').includes('paid'), '"sent" alone is not a payment; money sent is');
+    t.check(!keys('PVC pipe 1/2 inch').includes('day') && keys('pay you on 25th').includes('day') && keys('by friday').includes('day'), 'a size is not a date; a day still is');
+    X.S.data.staff = [{ userId: 'u1', name: 'turyasingurakevin94' }];
+    t.check(X.myGivenName() === '', 'a name made from an email address is no name to greet');
+    X.S.data.staff = [{ userId: 'u1', name: 'Grace Nalubega' }];
+    t.check(X.myGivenName() === 'Grace Nalubega', 'a given name is used');
+    X.S.wa = { convs: [], msgs: [], threads: {}, loadedAt: 1 };
+    t.check(/Items/.test(X.tdyFoundHTML('cement')) && /Cement/.test(X.tdyFoundHTML('cement')), 'the search finds items, with their price');
+    const bar = X.payBarParts({ amt: 2000 }, { kind: 'order', owed: 5000, after: 3000 });
+    t.check(Number(bar.pct) === 40 && /pays/.test(bar.owedHTML) && /still to pay/.test(bar.afterHTML), 'the bar fills by what is paid: 2,000 of 5,000 is 40%');
   }
 
   // 4. a payment over two bills and a loose balance
