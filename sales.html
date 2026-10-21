@@ -6102,9 +6102,25 @@ function nwWithChips(pid, vi, qty, unit, head2){
     const sub = w.rate ? nwRateWords(w.rate, w.per || unit) + (asPack ? ' · ' + n0(w.qty) : '') : (PAIR_WORD[w.verb] || 'goes with');
     return `<button class="nw-with" data-key="w-${esc(w.toId)}-${w.toVariantIdx == null ? '' : w.toVariantIdx}" data-act="addwith" data-pid="${esc(w.toId)}" data-vi="${w.toVariantIdx == null ? '' : w.toVariantIdx}" data-q="${w.qty || 1}" data-u="${asPack ? 'pack' : 'unit'}" aria-label="Add ${esc(np.base)}${main ? ', ' + main : ''}"><span class="nw-wplus">${ic('plus', 13, 'style="stroke-width:2.6"')}</span><span class="nw-wt"><span class="nw-wn"><span class="ell">${esc(np.base)}${np.variant ? ' ' + esc(np.variant) : ''}</span>${main ? ` <span class="m">${main}</span>` : ''}</span><span class="nw-ws">${esc(sub)}</span></span></button>`; }).join('')}</div><span class="nw-fade" aria-hidden="true"></span></div>`;
 }
+// A search that finds nothing is counted for Sourcing by itself (0146): once
+// the words have stood still for a moment and still find nothing, and once
+// per words per ten minutes. Never a tap, never the client's phone.
+const NW_MISS = { t: 0, sent: {} };
+function nwLogMiss(words){
+  const w = String(words || '').trim(); if (w.length < 2 || !S.shopId) return;
+  clearTimeout(NW_MISS.t);
+  NW_MISS.t = setTimeout(() => {
+    const d = S.draft; if (!d || String(d.q || '').trim() !== w || nwSearch(w).groups.length) return;
+    const k = w.toLowerCase(); if (NW_MISS.sent[k] && Date.now() - NW_MISS.sent[k] < 600000) return;
+    NW_MISS.sent[k] = Date.now();
+    const client = d.client && d.client.name && !/^walk-?in$/i.test(d.client.name) ? d.client.name : null;
+    Promise.resolve(sb.rpc('log_search_miss', { p_shop_id: S.shopId, p_words: w, p_source: 'sales', p_order_id: null, p_client: client })).catch(() => {});
+  }, 1500);
+}
 function nwFindHTML(){
   const d = S.draft, s = d && d.q; if (!s || !s.trim()) return '';
   const r = nwSearch(s);
+  if (!r.groups.length) nwLogMiss(s);
   if (!r.groups.length) return `<div class="sx-card sx-empty nw-none" data-key="none"><b>Nothing called “${esc(r.words.join(' ') || s)}”</b>${D().leads != null ? `<button class="sx-btn navy nw-nosell" data-act="srcask">${ic('srcScope', 18)}We don’t sell it · ask Sourcing</button>` : ''}<button class="sx-btn ghost" data-act="nwaisles" style="margin:12px auto 0">${ic('nwgrid', 18)}Browse the aisles</button></div>`;
   const F = nwFocus(r); if (!F) return '';
   const p = F.p, vi = F.vi, qty = F.qty;
