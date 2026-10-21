@@ -102,6 +102,11 @@ select _try('sourcing: never writes a miss by hand', 'refused', $q$insert into s
 select _try('sourcing: set words aside', 'ok', $q$insert into search_mutes(shop_id,words,by_user) values ('11111111-1111-1111-1111-111111111111',array['pvc glue 500ml'],'00000000-0000-0000-0000-00000000000d')$q$);
 select _try('sourcing: teach a name to an item', 'ok', $q$insert into item_names(shop_id,word,product_id) values ('11111111-1111-1111-1111-111111111111','rawl plug 6','P001')$q$);
 
+-- ---- 0152: two names, one item -- Sourcing's verdict
+select _try('sourcing: two items are one (verdict kept)', 'ok', $q$insert into item_twins(shop_id,a,b,verdict,keep,by_user) values ('11111111-1111-1111-1111-111111111111','P001','P002','same','P001','00000000-0000-0000-0000-00000000000d')$q$);
+select _try('sourcing: a pair is one row, a < b', 'refused', $q$insert into item_twins(shop_id,a,b,verdict,by_user) values ('11111111-1111-1111-1111-111111111111','P002','P001','different','00000000-0000-0000-0000-00000000000d')$q$);
+select _try('sourcing: never in someone else''s name', 'refused', $q$insert into item_twins(shop_id,a,b,verdict,by_user) values ('11111111-1111-1111-1111-111111111111','P001','P003','different','00000000-0000-0000-0000-00000000000c')$q$);
+
 -- ---- as WORKER (staff): the same walls as before
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
 select _try('worker: a search that found nothing is logged', 'ok', $q$select log_search_miss('11111111-1111-1111-1111-111111111111','Rawl  plug 6','sales',null,'Kato Construction')$q$);
@@ -110,6 +115,8 @@ select _try('worker: a number alone is not a search', 'ok', $q$select log_search
 select _try('worker: cannot read the misses', 'ok', $q$do $d$ begin if exists (select 1 from search_misses) then raise exception 'saw them'; end if; end $d$$q$);
 select _try('worker: cannot set words aside', 'refused', $q$insert into search_mutes(shop_id,words,by_user) values ('11111111-1111-1111-1111-111111111111',array['x'],'00000000-0000-0000-0000-00000000000c')$q$);
 select _try('worker: cannot teach a name', 'refused', $q$insert into item_names(shop_id,word,product_id) values ('11111111-1111-1111-1111-111111111111','zz','P001')$q$);
+select _try('worker: sees the verdict (the Buyer checks the shelf twin)', 'ok', $q$do $d$ begin if not exists (select 1 from item_twins where a='P001' and verdict='same') then raise exception 'not seen'; end if; end $d$$q$);
+select _try('worker: cannot judge two items', 'refused', $q$insert into item_twins(shop_id,a,b,verdict,by_user) values ('11111111-1111-1111-1111-111111111111','P001','P003','different','00000000-0000-0000-0000-00000000000c')$q$);
 select _try('worker: merge suppliers', 'refused', $q$select merge_suppliers('11111111-1111-1111-1111-111111111111','S001','S002')$q$);
 select _try('worker: set prices a day', 'refused', $q$select set_prices_per_day('11111111-1111-1111-1111-111111111111', 3)$q$);
 select _try('worker: add a supplier', 'refused', $q$insert into suppliers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','S009','W')$q$);

@@ -1,4 +1,4 @@
--- 0152 Sales, third: a supplier's price up that puts a line under its sale.
+-- 0153 Sales, third: a supplier's price up that puts a line under its sale.
 --
 -- When the Buyer takes a supplier's new price (in person, by phone, or from
 -- the supplier app) the line's cost rises (payload.items[].price, the old
@@ -22,7 +22,7 @@
 -- untagged lines, so nobody hears twice. Nothing else changes: the gate
 -- (ow_gate_reason) and invoicing read what they read before.
 --
--- Applied by hand, after 0150. Safe to run twice.
+-- Applied by hand, after 0152. Safe to run twice.
 --
 -- CHECK AFTERWARDS:
 --   select tgname from pg_trigger where tgname = 'saved_quotes_ow_price_up';
