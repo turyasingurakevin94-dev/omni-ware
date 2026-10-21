@@ -54,7 +54,7 @@ select _try('check: the cash customer and the walk-in wait; the credit customer,
 select _try('store: loads the credit customer, the paid order and the agent''s', 'ok', $q$update saved_quotes set status='pending_delivery' where id in (9555,9556,9558)$q$);
 select _try('store: may not load the unpaid cash customer', 'refused', $q$update saved_quotes set status='pending_delivery' where id=9554$q$);
 select _try('store: may not hand the unpaid walk-in over at the gate', 'refused', $q$update saved_quotes set status='completed' where id=9557$q$);
-select _try('store: asks the Manager to let it go on credit', 'ok', $q$update saved_quotes set payload = payload || '{"loadAsk":{"state":"sent","by":"00000000-0000-0000-0000-00000000000e","byName":"Musa Kiggundu","at":1}}' where id=9554$q$);
+select _try('store: asks the Manager to let it go on credit', 'ok', $q$update saved_quotes set payload = payload || '{"creditAsk":{"at":1,"by":"00000000-0000-0000-0000-00000000000e","byName":"Musa Kiggundu","carrier":null}}' where id=9554$q$);
 select _try('check: the Manager is pushed, with what is owed', 'ok', $q$select _is($c$_to('credit.ask') like '%0b%' and (select body from push_outbox where kind='credit.ask') like 'Musa has Ggaba Stores packed · owes 185,000 · cash customer%'$c$)$q$);
 select _try('store: the same ask again pushes nobody twice', 'ok', $q$update saved_quotes set payload = payload || '{"note":"x"}' where id=9554$q$);
 select _try('check: one push for one ask', 'ok', $q$select _is($c$(select count(*) from push_outbox where kind='credit.ask')=1$c$)$q$);

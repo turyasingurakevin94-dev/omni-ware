@@ -15,7 +15,8 @@
 --   3. saved_quotes_ow_money_gate: a Store login cannot move such an order
 --      out of Packing (loaded or handed over). The owner, an admin and the
 --      Manager (credit.release) are not stopped by it.
---   4. Pushes: the Store's ask (payload.loadAsk) to the Manager
+--   4. Pushes: the Store's ask (payload.creditAsk = { at, by, byName,
+--      carrier }, as the Manager app reads it) to the Manager
 --      (credit.ask, to credit.release); the Manager's answer back to the
 --      Store person who asked (credit.ask.decided).
 --
@@ -108,7 +109,7 @@ declare
   p jsonb := coalesce(new.payload, '{}'::jsonb);
   o jsonb := coalesce(old.payload, '{}'::jsonb);
   client text := coalesce(nullif(btrim(coalesce(new.client_name, '')), ''), nullif(btrim(coalesce(p -> 'client' ->> 'name', '')), ''), 'An order');
-  ask jsonb := p -> 'loadAsk';
+  ask jsonb := p -> 'creditAsk';
   dec text := p -> 'creditCheck' ->> 'decision';
   ref jsonb := jsonb_build_object('table', 'saved_quotes', 'id', new.id);
   h jsonb;
@@ -116,8 +117,8 @@ declare
 begin
   if coalesce(new.voided, false) then return null; end if;
   begin
-    if jsonb_typeof(ask) = 'object' and ask ->> 'state' = 'sent'
-       and (ask ->> 'at') is distinct from (o -> 'loadAsk' ->> 'at') then
+    if jsonb_typeof(ask) = 'object' and coalesce(ask ->> 'at', '') <> '' and not (ask ? 'answer')
+       and (ask ->> 'at') is distinct from (o -> 'creditAsk' ->> 'at') then
       h := ow_money_hold(new.shop_id, p, new.amount_paid);
       perform ow_push(new.shop_id, 'credit.ask', 'Not paid · let it go on credit?',
         coalesce(nullif(split_part(btrim(coalesce(ask ->> 'byName', '')), ' ', 1), ''), 'The Store')

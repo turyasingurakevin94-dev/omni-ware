@@ -742,7 +742,7 @@ function rowToSupplier(s){ return { id: s.id, name: s.name || '', phone: s.phone
   termsDays: s.terms_days == null ? null : Number(s.terms_days), stopAtDays: s.stop_at_days == null ? null : Number(s.stop_at_days), deliveryDays: s.delivery_days == null ? null : Number(s.delivery_days) }; }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
-  cashGiven: r.cash_given == null ? null : Number(r.cash_given) }; }
+  cashGiven: r.cash_given == null ? null : Number(r.cash_given), pay: r.pay && typeof r.pay === 'object' ? r.pay : null }; }
 function rowToPrice(pr){ return { id: pr.id, productId: pr.product_id, variantIdx: pr.variant_idx == null || pr.variant_idx === '' ? null : Number(pr.variant_idx),
   supplierId: pr.supplier_id, wholesale: pr.wholesale == null ? null : Number(pr.wholesale), retail: pr.retail == null ? null : Number(pr.retail),
   date: pr.date || null, unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, outOfStock: !!pr.out_of_stock, outOfStockSince: pr.out_of_stock_since || null,
@@ -1173,18 +1173,49 @@ function shelfFor(q, it){
   return free >= need ? { free, need, unit: it.unit || su } : null;
 }
 
+/* ---- a carton far bigger than the sale (0151): the shelf part over ten
+   times the order's waits for the Manager, as a held refill tied to the
+   line. Let go (planned) is the OK; cancelled is a no. ---- */
+const CARTON_ASK_X = 10;
+function cartonGate(q, it, need, out){
+  if (!out || !out.forcedPack || !(need > 0)) return null;
+  const shelf = out.units - need; if (!(shelf > need * CARTON_ASK_X)) return null;
+  const key = q.id + ':' + it.lineId, r = (D().restockBuys || []).filter(x => x.forLine === key).slice(-1)[0] || null;
+  const state = !r ? 'ask' : r.status === 'held' ? 'waiting' : r.status === 'cancelled' ? 'no' : 'ok';
+  return { state, shelf, units: out.units, rate: out.rate, row: r, key };
+}
+function cartonsHTML(){
+  const list = cartonsWaiting(); if (!list.length) return '';
+  const mgr = whoShort('manager');
+  return list.map(({ q, l }) => { const c = l.carton, it = l.it, cu = n => quoteLineCount(it, n), sh = supplierShort(l.best.supplierId), money = Math.round(c.shelf * (c.rate || l.unitCost || 0));
+    const head = c.state === 'no' ? firstWord(mgr) + ' said no to the carton' : 'A carton of ' + n0(cu(c.units).n) + ' for ' + n0(cu(l.quotedQty).n) + ' sold · ' + firstWord(mgr) + ' OKs the shelf part';
+    return `<div role="group" aria-label="${esc(lineFull(it))} from ${esc(supplierName(l.best.supplierId))}: ${esc(head)}" style="display:flex;flex-direction:column;gap:7px;padding:10px 12px;border-radius:14px;background:${c.state === 'no' ? '#FDF0EE' : '#F3F1FC'};box-shadow:inset 0 0 0 1px ${c.state === 'no' ? 'rgba(201,58,48,.3)' : 'rgba(58,63,155,.18)'}">
+      <span style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:${c.state === 'no' ? '#8E2A22' : '#2E3388'}"><span class="bx-av round" style="width:20px;height:20px;font-size:8px;background:#FDE8E4;color:#A82D24">${esc(whoIni('manager'))}</span><span style="flex:1;min-width:0">${esc(head)}</span>${c.state === 'waiting' ? `<span style="flex:none;font-size:10.5px;font-weight:700;color:var(--amberInk)">asked ${esc(hm(msOf(c.row.createdAt)))}</span>` : ''}</span>
+      <span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(lineFull(it))} · ${esc(sh)} sells only whole ${esc(String(l.best.packUnit || 'carton').toLowerCase())}s</span>
+      <span aria-hidden="true" style="display:flex;height:8px;gap:2px;border-radius:999px;overflow:hidden"><i style="flex:${Math.max(1, l.quotedQty)};min-width:6px;background:var(--navy)"></i><i style="flex:${Math.max(1, c.shelf)};background:${c.state === 'no' ? '#F59A92' : 'repeating-linear-gradient(135deg,#9BA3F0 0 3px,#DCDDF7 3px 6px)'}"></i></span>
+      <span style="display:flex;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:600;color:var(--ink3)"><span><b style="color:var(--navy)">${esc(cu(l.quotedQty).n)}</b> sold · ${esc(shortName(quoteClientName(q)))}</span><span><b style="color:var(--indigo)">${esc(cu(c.shelf).n)}</b> for the shelf · <span class="m">${n0(money)}</span></span></span>
+      ${c.state === 'ask' ? `<button data-act="cartonask" data-id="${q.id}" data-line="${esc(it.lineId)}" ${S.busy ? 'aria-disabled="true"' : ''} style="height:38px;border:none;border-radius:11px;background:var(--navy);color:#fff;font-size:12.5px;font-weight:700">Ask ${esc(firstWord(mgr))} to OK the carton</button>`
+        : c.state === 'no' ? `<button data-act="order" data-id="${q.id}" style="height:38px;border:none;border-radius:11px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:12.5px;font-weight:700">Open the order · switch the supplier or item</button>` : `<span style="font-size:11px;font-weight:700;color:var(--ink3)">It joins the round once ${esc(firstWord(mgr))} says yes · you are told</span>`}
+    </div>`; }).join('');
+}
+function cartonsWaiting(){ const out = []; beingPreparedOrders().forEach(q => orderPurchaseLines(q).forEach(l => { if (l.carton && l.carton.state !== 'ok' && !lineIsOnATrip(q.id, l.it.lineId)) out.push({ q, l }); })); return out; }
+
 /* ---- the buying list: index.html 55505 orderPurchaseLines, 55574 buyingListRuns ---- */
 function orderPurchaseLines(q){
   return (((q && q.items) || []).filter(orderLineIsBoughtIn)).map(it => {
     const quotedQty = Number(it.qty) || 0;
-    const best = rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty).find(r => r.purchasePrice != null) || null;
+    // A price agreed in the app (a new price they said, and their yes on it)
+    // is what the round carries and pays: never the older list price.
+    const agreed = it.repricedAt && it.supplierId && it.supplierId !== '__stock__' && Number(it.price) > 0 && orderSupplierConfirmState(q, it.supplierId).state === 'confirmed';
+    const best = agreed ? { ...(supplierRowFor(it.productId, it.variantIdx, it.supplierId) || {}), supplierId: it.supplierId, purchasePrice: Number(it.price), agreedAt: it.repricedAt }
+      : rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty).find(r => r.purchasePrice != null) || null;
     const unitCost = best ? Math.round(best.purchasePrice) : null;
     const out = best ? ipLineOutlay(best, quotedQty) : null;
     const received = quoteLineReceived(it);
     const qty = received ? Number(it.receivedQty) : (out ? out.units : quotedQty);
     const shortfall = quoteLineShortfall(it);
     const outstanding = received ? shortfall : qty;
-    return { it, qty, quotedQty, best, unitCost, received, shortfall, settled: received && shortfall === 0, surplus: Math.max(0, qty - quotedQty),
+    return { it, qty, quotedQty, best, unitCost, received, shortfall, settled: received && shortfall === 0, surplus: Math.max(0, qty - quotedQty), carton: cartonGate(q, it, quotedQty, received ? null : out),
       lineCost: unitCost == null ? null : unitCost * outstanding,
       movedFrom: (best && String(best.supplierId) !== String(it.supplierId)) ? it.supplierId : null, quotedUnitCost: Number(it.price) || 0 };
   });
@@ -1217,7 +1248,10 @@ function buyingListRuns(orders){
   const bySupplier = {};
   (orders || []).forEach(q => {
     orderPurchaseLines(q).forEach(l => {
-      if (l.lineCost == null) return;
+      // Nothing to pay is nothing to fetch (a line bought on a paper bill, or
+      // priced at 0); a big carton waits for the Manager's OK.
+      if (l.lineCost == null || !(l.lineCost > 0)) return;
+      if (l.carton && l.carton.state !== 'ok') return;
       const id = String(l.best.supplierId);
       if (!bySupplier[id]) bySupplier[id] = { supplierId: l.best.supplierId, total: 0, lines: [] };
       bySupplier[id].total += l.lineCost;
@@ -1719,6 +1753,7 @@ document.addEventListener('click', e => {
   const a = t.dataset.act;
   if (a === 'tab') { if (S.view !== t.dataset.v || S.stack.length) FEEL.tick(); go(t.dataset.v); return; }
   if (a === 'back') { pop(); return; }
+  if (a === 'closeall') { FEEL.back(); S.stack = []; closeSheet(); render(); return; }
   if (a === 'closesheet') { closeSheet(); return; }
   // A link that leaves the app (WhatsApp, a call) must go in the tap
   // itself; the act alongside it only records that it happened.
@@ -1743,7 +1778,8 @@ function pctRing(pct, size, stroke, col, inner, label, track){
   const r = (size - stroke) / 2, p = Math.max(0, Math.min(1, pct)) * 100;
   return `<span role="img" aria-label="${esc(label || '')}" style="position:relative;width:${size}px;height:${size}px;flex:none;display:block"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track || 'rgba(255,255,255,.12)'}" stroke-width="${stroke}"/><circle class="a-ring" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${stroke}" stroke-linecap="round" pathLength="100" stroke-dasharray="${p.toFixed(1)} 100"/></svg><span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">${inner || ''}</span></span>`;
 }
-function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
+// The cross closes every page opened on top of the tab; a tap above the sheet steps back one.
+function closeBtn(light){ return `<button class="bx-circle${light ? ' light' : ''}" data-act="closeall" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
 function waBtn(href, label, extraAct){ return `<a class="bx-btn red" href="${esc(href)}" target="_blank" rel="noopener"${extraAct ? ` data-act="${extraAct.act}" data-keep ${extraAct.attrs || ''}` : ''}>${ic('wa', 20)}${esc(label)}</a>`; }
 function callBtn(phone, name, cls){ const u = telUrl(phone); return u ? `<a class="${cls || 'bx-sq'}" href="${u}" aria-label="Call ${esc(name)}">${ic('phone', 20)}</a>` : `<span class="${cls || 'bx-sq'}" aria-label="No number for ${esc(name)}" style="opacity:.35">${ic('phone', 20)}</span>`; }
 function callSmall(phone, name){ const u = telUrl(phone); return `<a ${u ? `href="${u}"` : 'aria-disabled="true"'} aria-label="Call ${esc(name)}" style="width:36px;height:36px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;${u ? '' : 'opacity:.35'}">${ic('phone', 16)}</a>`; }
@@ -1955,10 +1991,10 @@ function nextUpHTML(f){
             <span style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700"><span class="ell">${esc(lineFull(up))} · ${esc(supplierShort(up.supplierId))}</span><span class="m" style="flex:none"><s style="color:#8A93A3;font-weight:500">${n0(was)}</s> → ${n0(now)}</span></span>
             <span style="position:relative;display:block;height:10px;border-radius:999px;background:var(--rule)"><i style="position:absolute;left:0;top:0;bottom:0;width:${(Math.min(now, sold || now) / top * 100).toFixed(1)}%;border-radius:999px;background:var(--navy)"></i>${sold != null && now > sold ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:0;bottom:0;width:${((now - sold) / top * 100).toFixed(1)}%;border-radius:0 999px 999px 0;background:#E5483D"></i>` : ''}${sold != null ? `<i style="position:absolute;left:${(sold / top * 100).toFixed(1)}%;top:-4px;bottom:-4px;border-left:2px dashed var(--green)"></i>` : ''}</span>
             <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink3)"><span>cost now <b class="m" style="color:var(--ink)">${n0(now)}</b></span><span>up <b class="m" style="color:var(--crimson)">+${n0(now - was)}</b></span></span></span>`; })() : ''}
-        ${up && h.who === whoShort('manager') ? `<span role="img" aria-label="What the client pays is ${esc(h.who)}'s to set and to see. Once ${esc(h.who)} decides, you see kept above cost with a tick" style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700">
-          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo)">${ic('lock', 12, 'style="stroke-width:2.4"')}client price · ${esc(h.who)} only</span>
-          <i style="flex:1;min-width:10px;border-top:2px dotted #C9C4BA"></i>
-          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:var(--ink3)"><i style="width:8px;height:8px;border-radius:999px;box-shadow:inset 0 0 0 2px #9BA3F0"></i>then ‘kept above cost ✓’</span></span>`
+        ${up && h.who === whoShort('manager') ? `<span role="img" aria-label="What the client pays is ${esc(h.who)}'s to set and to see. Once ${esc(h.who)} decides, you see kept above cost with a tick" style="display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;font-size:11.5px;font-weight:700">
+          <span style="flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo)">${ic('lock', 12, 'style="stroke-width:2.4;flex:none"')}<span class="ell">client price · ${esc(h.who)} only</span></span>
+          <i style="flex:1 1 6px;min-width:6px;border-top:2px dotted #C9C4BA"></i>
+          <span style="flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;box-shadow:inset 0 0 0 1.5px #D9D4CB;color:var(--ink3)"><i style="flex:none;width:8px;height:8px;border-radius:999px;box-shadow:inset 0 0 0 2px #9BA3F0"></i><span class="ell">then ‘above cost ✓’</span></span></span>`
           : `<span style="font-size:12px;font-weight:600;color:var(--indigo)">Every supplier said yes · ${esc(orderHoldReason(q))} · you are told</span>`}`;
     } else if (j.k === 'ask') {
       const r = j.r, mins = Math.floor(minsSince(r.askedAt)), sid = r.supplierId, phone = supplierPhone(sid);
@@ -2172,7 +2208,7 @@ function agentNameOf(q){ const a = (D().agents || []).find(x => x.id === q.origi
 function holdOf(q){
   const up = priceUpBy(q), upWords = up > 0 ? 'price up ' + n0(up) : '';
   if (noneOpen(q).length) return { who: 'you', kind: 'undecided', why: 'a line nobody sells is undecided' };
-  if (priceWaits(q).length) return { who: whoShort('manager'), kind: 'price', why: 'a price under the shop’s' + (upWords ? ' · ' + upWords : '') };
+  if (priceWaits(q).length) return { who: whoShort('manager'), kind: 'price', why: (priceWaits(q).some(lineCostsOverSell) ? 'costs more than it sells for' : 'a price under the shop’s') + (upWords ? ' · ' + upWords : '') };
   if (creditHolds(q)) return { who: whoShort('manager'), kind: 'credit', why: 'credit' + (upWords ? ' · ' + upWords : '') };
   if (agentOrderOnHold(q)) return { who: whoShort('manager'), kind: 'change', why: poss(agentNameOf(q)) + ' change' + (upWords ? ' · ' + upWords : '') };
   if (agentOrderNeedsShopCheck(q) || agentPaymentBlocksPreparing(q)) return { who: agentNameOf(q), kind: 'pay', why: 'to pay' + (upWords ? ' · ' + upWords : '') };
@@ -2677,6 +2713,7 @@ PAGE.price = (args) => {
       </div>
 ` : ''}
       <div class="bx-pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map(k => `<button data-act="pkey" data-k="${k}" aria-label="${k === 'del' ? 'Delete' : k}">${k === 'del' ? '⌫' : k}</button>`).join('')}</div>
+      <div id="bx_phold" style="${priceHolds(args, it) ? '' : 'display:none'}">${priceHoldHTML(q)}</div>
       ${(() => { const how = askedHowOf(q, sid), rec = q.supplierConfirms && q.supplierConfirms[String(sid)], at = rec && rec.askedAt ? ' · ' + hm(rec.askedAt) : '', sh = supplierShort(sid);
         const W = { wa: [sh + ' wrote it on WhatsApp', 'wa'], call: [sh + ' said it on a call', 'phone'], person: [sh + ' told you in person', 'user'], phone2: [sh + ' said it from another phone', 'device'] }[how] || [sh + ' gave the price', 'tag'];
         // How the price came is how they were asked; their new price is their answer.
@@ -2684,10 +2721,25 @@ PAGE.price = (args) => {
         <span style="width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;background:rgba(111,220,176,.2);color:var(--mint)">${ic(W[1], 15)}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700;color:#fff">${esc(W[0] + at)}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk)">Their new price is their answer · nothing to confirm after</span></span>
         <span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span></div>`; })()}
-      <button class="bx-btn ${priceSame(args, it) ? 'green' : 'red'}" id="bx_pgo" data-act="pgo" style="flex:none"><span id="bx_pword">${priceSame(args, it) ? 'Same price · that’s a yes' : 'Save their new price'}</span> · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
+      <button class="bx-btn ${priceSame(args, it) ? 'green' : 'red'}" id="bx_pgo" data-act="pgo" style="flex:none"><span id="bx_pword">${priceGoWord(args, it)}</span> · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
     </div>
   </div>`;
 };
+// The keyed price costs more than the client's price: the order will wait
+// for the Manager. Said without the selling price, which is the Manager's.
+function priceHolds(args, it){ const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1; return !priceSame(args, it) && lineCostsOverSell({ ...it, price: (Number(args.v) || 0) / per }); }
+function priceGoWord(args, it){ return priceSame(args, it) ? 'Same price · that’s a yes' : priceHolds(args, it) ? 'Save · ' + firstWord(whoShort('manager')) + ' decides' : 'Save their new price'; }
+function priceHoldHTML(q){
+  const mgr = whoShort('manager'), sw = sellerOf(q), me = myStaff();
+  const dot = (ini, bg, ink, extra) => `<span style="width:20px;height:20px;border-radius:999px;background:${bg};color:${ink};font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;${extra || ''}">${esc(ini)}</span>`;
+  return `<div role="img" aria-label="It now costs more than it sells for, so the order waits: you save the price, ${esc(mgr)} the Manager sets what ${esc(shortName(quoteClientName(q)))} pays, then ${esc(sw)} tells them" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(245,178,107,.12);box-shadow:inset 0 0 0 1px rgba(245,178,107,.45)">
+    <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#F5C894">${ic('lock', 14, 'style="stroke-width:2.4;flex:none"')}<span style="flex:1">Costs more than it sells for · the order waits</span></span>
+    <span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700">
+      <span style="display:flex;align-items:center;gap:5px;flex:none;color:#fff">${dot(me ? initials(me.name) : 'YOU', 'var(--mint)', '#0B3D27')}You save</span><i style="flex:1;height:2px;border-radius:999px;background:repeating-linear-gradient(90deg,rgba(245,178,107,.6) 0 5px,transparent 5px 9px)"></i>
+      <span style="display:flex;align-items:center;gap:5px;flex:none;color:#F5C894">${dot(whoIni('manager'), '#FDE8E4', '#A82D24', 'box-shadow:0 0 0 3px rgba(245,178,107,.3)')}<span class="ell">${esc(firstWord(mgr))} sets the price</span></span><i style="flex:1;height:2px;border-radius:999px;background:rgba(255,255,255,.18)"></i>
+      <span style="display:flex;align-items:center;gap:5px;flex:none;color:var(--navyInk2)">${dot(initials(sw), 'transparent', '#B3BCD2', 'box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)')}${esc(sw)} tells</span></span>
+  </div>`;
+}
 // Keyed in the same as the line has: nothing struck out, nothing stamped new.
 function priceSame(args, it){ const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1; return Math.round((Number(args.v) || 0) / per) === Math.round(Number(it.price) || 0); }
 function priceDynHTML(args, it){
@@ -2717,7 +2769,8 @@ function refreshPrice(){
   const s = document.getElementById('bx_pshown'); if (s) s.textContent = n0(n);
   const e = document.getElementById('bx_peach'); if (e) e.textContent = n0(n);
   const same = priceSame(a, it); ['bx_pold', 'bx_pstamp'].forEach(k => { const x = document.getElementById(k); if (x) x.style.visibility = same ? 'hidden' : ''; });
-  const w = document.getElementById('bx_pword'), b = document.getElementById('bx_pgo'); if (w) w.textContent = same ? 'Same price · that’s a yes' : 'Save their new price'; if (b) { b.classList.toggle('green', same); b.classList.toggle('red', !same); }
+  const h = document.getElementById('bx_phold'); if (h) h.style.display = priceHolds(a, it) ? '' : 'none';
+  const w = document.getElementById('bx_pword'), b = document.getElementById('bx_pgo'); if (w) w.textContent = priceGoWord(a, it); if (b) { b.classList.toggle('green', same); b.classList.toggle('red', !same); }
 }
 ACT.pkey = t => { const a = topArgs(), k = t.dataset.k; let v = String(a.v || ''); if (k === 'del') v = v.slice(0, -1); else if (v.length < 9) v = (v === '0' ? '' : v) + k; a.v = v.replace(/^0+(?=\d)/, ''); buzz(6); sfx('tick'); refreshPrice(); };
 ACT.pquick = t => { topArgs().v = t.dataset.v; FEEL.tick(); refreshPrice(); };
@@ -2739,6 +2792,11 @@ ACT.pgo = async () => {
       // The figure the order was built on is kept beside the new one, once.
       if (it.priceWas == null) it.priceWas = Number(it.price) || 0;
       it.price = each; it.repricedAt = Date.now(); if (S.user) it.repricedBy = S.user.id;
+      // Costs more than the client's price now: the line waits for the
+      // Manager's price (decision-rights §3), the order stays in Checking,
+      // and the Buyer never sees what it sells at.
+      // Untagged on purpose: Sales' 0153 pushes the Manager, then the salesperson.
+      if (lineCostsOverSell(it)) { it.priceNote = 'nomargin'; it.priceReview = null; }
       // price.confirm: they said it on the phone, so the Buyer gives their
       // yes on the new terms, the same record a slide would write.
       if (a.phone) return setOrderSupplierConfirm(q, it.supplierId, 'confirmed', 'said it on the phone', { via: 'phone' });
@@ -3366,6 +3424,7 @@ PAGE.plan = (args) => {
     <div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:8px">
       ${liveRow}
       ${(() => { const own = live.filter(t => tripIsSupplierDelivered(t) && t.status === 'collecting'); return own.length ? `<div role="note" style="display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:14px;background:#EEF6F7;box-shadow:inset 0 0 0 1px rgba(14,100,112,.18)"><span style="width:26px;height:26px;border-radius:8px;background:#DDF1F3;color:#0E6470;display:flex;align-items:center;justify-content:center;flex:none">${ic('truck', 14)}</span><span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:#0B5560"><b>${esc(own.length > 1 ? own.length + ' suppliers bring their own' : supplierName(own[0].supplierId) + ' brings its own')}</b> · since ${esc(dayLabel(isoOf(own[0].createdAt)))} · never a stop here</span></div>` : ''; })()}
+      ${cartonsHTML()}
       ${runs.length ? `<div role="group" aria-label="Stops in this round" style="display:flex;flex-direction:column;gap:8px">${stops}</div>` : emptyCard('Nothing on the buying list', 'Orders in Buying with lines still out at a supplier land here.')}
       ${who}${cash}
     </div>
@@ -3376,6 +3435,17 @@ PAGE.plan = (args) => {
 };
 // One chip per item: a stop buys each item once, whoever it is for. The same
 // item still to ask (or asked) from this supplier shows inside it.
+ACT.cartonask = async t => {
+  const q = quoteById(t.dataset.id), l = q && orderPurchaseLines(q).find(x => String(x.it.lineId) === String(t.dataset.line)); if (!l || !l.carton || l.carton.state !== 'ask' || S.busy) return;
+  const c = l.carton, it = l.it; S.busy = true; render();
+  try {
+    const row = { id: newUuid(), shop_id: S.shopId, product_id: it.productId, variant_idx: it.variantIdx == null ? null : it.variantIdx, qty: c.shelf, unit: it.unit || l.best.unit || '', supplier_id: String(l.best.supplierId), price: Math.round(c.rate || l.unitCost || 0), status: 'held', for_line: c.key, ...(S.user ? { created_by: S.user.id } : {}) };
+    const ins = await sb.from('restock_buys').insert(row); if (ins.error) throw ins.error;
+    (D().restockBuys ||= []).push(rowToRestock({ ...row, created_at: new Date().toISOString() })); saveSnapshot();
+    S.busy = false; FEEL.yes(); toast('Asked ' + whoShort('manager') + ' · the carton joins the round once they say yes');
+  } catch (e) { S.busy = false; toast(isNetworkError(e) ? 'No connection — not asked. Try again with signal.' : 'Not asked: ' + (e.message || e) + (/for_line|column|schema/i.test(String(e.message)) ? ' · migration 0151 is not on this database yet' : ''), 6000); }
+  render();
+};
 // A shelf refill on a price nobody has checked for a month waits to be
 // asked; it joins the stop once the price is confirmed.
 function planRefillWaitHTML(r){
@@ -3435,7 +3505,7 @@ function planItemsHTML(r){
   return [...by.values()].map(ls => { const l0 = ls[0], more = sameBuyFor(l0.it.productId, l0.it.variantIdx, r.supplierId).filter(x => x.st !== 'confirmed');
     const whoOf = l => l.order === RESTOCK_ORDER ? 'shelf' : shortName(quoteClientName(l.order));
     if (ls.length === 1 && !more.length) { const c = quoteLineCount(l0.it, l0.qty), per = l0.best ? Number(l0.best.packQty) || 0 : 0, real = l0.order && l0.order.id !== 'restock' && l0.best ? packSplitText(l0.quotedQty, l0.qty, l0.best.packQty) : '', split = real || (per > 1 ? 'sold by the ' + n0(per) : '');
-      return `<span ${split ? `aria-label="${esc(lineFull(l0.it))}: ${esc(split)}" ` : ''}style="display:inline-flex;align-items:center;gap:5px;max-width:100%;min-height:26px;padding:0 8px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:600"><b class="m">${esc(c.n)}</b><span class="ell">${esc(lineFull(l0.it))}</span>${l0.qtyWas ? `<span class="m" style="font-size:11px;color:#8A93A3;text-decoration:line-through">${esc(quoteLineCount(l0.it, l0.qtyWas).n)}</span>` : ''}${real ? `<span class="ell" style="font-size:11px;font-weight:700;color:#2E3388">· ${esc(n0(l0.quotedQty) + ' ' + whoOf(l0) + ' + ' + n0(l0.qty - l0.quotedQty) + ' shelf')}</span>` : split ? `<span class="ell" style="font-size:11px;font-weight:700;color:#2E3388">· ${esc(split)}</span>` : ''}${l0.order === RESTOCK_ORDER ? '<span style="color:var(--ink3)">· shelf</span>' : ''}</span>`; }
+      return `<span ${split ? `aria-label="${esc(lineFull(l0.it))}: ${esc(split)}" ` : ''}style="display:inline-flex;align-items:center;gap:5px;max-width:100%;min-height:26px;padding:0 8px;border-radius:8px;background:var(--soft);font-size:12px;font-weight:600"><b class="m">${esc(c.n)}</b><span class="ell">${esc(lineFull(l0.it))}</span>${l0.qtyWas ? `<span class="m" style="font-size:11px;color:#8A93A3;text-decoration:line-through">${esc(quoteLineCount(l0.it, l0.qtyWas).n)}</span>` : ''}${real ? `<span class="ell" style="font-size:11px;font-weight:700;color:#2E3388">· ${esc(n0(l0.quotedQty) + ' ' + whoOf(l0) + ' + ' + n0(l0.qty - l0.quotedQty) + ' shelf')}</span>` : split ? `<span class="ell" style="font-size:11px;font-weight:700;color:#2E3388">· ${esc(split)}</span>` : ''}${l0.order === RESTOCK_ORDER ? '<span style="color:var(--ink3)">· shelf</span>' : ''}${l0.best && l0.best.agreedAt ? `<span style="flex:none;display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:10.5px;font-weight:700"><span class="m">@ ${n0(l0.unitCost)}</span> agreed ${esc(hm(msOf(l0.best.agreedAt)))}</span>` : ''}</span>`; }
     const total = ls.reduce((n, l) => n + (Number(l.qty) || 0), 0), ct = quoteLineCount(l0.it, total);
     const parts = ls.map(l => { const c = quoteLineCount(l.it, l.qty); return `<span style="padding:1px 7px;border-radius:999px;background:#fff;color:var(--ink);font-size:11px;font-weight:700"><b class="m">${esc(c.n)}</b> ${esc(whoOf(l))}</span>`; })
       .concat(more.map(x => `<span style="padding:1px 7px;border-radius:999px;background:var(--amberSoft);color:var(--amberInk);font-size:11px;font-weight:700">${esc(x.who)} ${esc(x.n)} · ${esc(STAGE[x.st].word.toLowerCase())}</span>`));
@@ -3635,14 +3705,15 @@ PAGE.trips = () => {
 function roundKey(sids){ return sids.map(String).sort().join(','); }
 function roundCashAsk(sids){
   const key = roundKey(sids), trips = D().collectionTrips || [];
-  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && roundKey((h.payload && h.payload.supplierIds) || []) === key && isoOf(h.createdAt) === todayISO()
+  // Cash Accounts has already counted back (0153 cash_back) is no round's any more.
+  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && !(h.payload || {}).round && h.cashBack == null && roundKey((h.payload && h.payload.supplierIds) || []) === key && isoOf(h.createdAt) === todayISO()
     && !trips.some(t => !t.voided && key.split(',').includes(String(t.supplierId)) && msOf(t.createdAt) > msOf(h.createdAt))).slice(-1)[0] || null;
 }
 function roundCashHTML(runs, given, who){
   const sids = runs.map(r => String(r.supplierId)), h = roundCashAsk(sids), acc = whoFull('accounts');
   const cs = !h ? 'none' : h.status === 'done' ? 'given' : 'asked', amt = h ? Number(h.payload.amount) || given : given;
   const short = whoShort('accounts'), head = cs === 'given' ? n0(amt) + ' handed over · ' + short : cs === 'asked' ? 'Asked ' + short + ' for ' + n0(amt) : short + ' (Accounts) hands it over';
-  const sub = cs === 'given' ? 'marked in Accounts' + (h.doneAt ? ' · ' + hm(h.doneAt) : '') : cs === 'asked' ? (amt !== given ? 'you asked for ' + n0(amt) + ' · ask again for ' + n0(given) : 'they mark it in their app when ' + (who === 'you' ? 'you collect' : who + ' collects')) : 'one sum for ' + runs.length + ' stop' + (runs.length === 1 ? '' : 's') + ' · ask before ' + (who === 'you' ? 'you go' : who + ' goes');
+  const sub = cs === 'given' ? 'for this round only' + (h.doneAt ? ' · ' + hm(h.doneAt) : '') + ' · what is left goes back' : cs === 'asked' ? (amt !== given ? 'you asked for ' + n0(amt) + ' · ask again for ' + n0(given) : 'they mark it in their app when ' + (who === 'you' ? 'you collect' : who + ' collects')) : 'one sum for ' + runs.length + ' stop' + (runs.length === 1 ? '' : 's') + ' · ask before ' + (who === 'you' ? 'you go' : who + ' goes');
   const tile = (bg, icon, stroke, label) => `<span role="img" aria-label="${label}" style="flex:none;width:40px;height:40px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center">${ic(icon, 18, `style="stroke:${stroke};stroke-width:2.6"`)}</span>`;
   return `<div style="display:flex;align-items:center;gap:10px;margin-top:-8px;padding:8px 10px;border-radius:0 0 16px 16px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);border-top:1px dashed var(--dash)">
     <span class="bx-av round" style="width:30px;height:30px;font-size:10px;background:var(--crimsonSoft);color:var(--crimson)">${esc(whoIni('accounts'))}</span>
@@ -3663,7 +3734,7 @@ ACT.cashask = async t => {
     // A changed sum replaces the open ask, so Accounts never sees two.
     if (old) await closeHandoff(old.id, 'withdrawn');
     const names = runs.map(r => supplierShort(r.supplierId));
-    await passOn('trip_cash', 'accounts', 'round:' + newUuid().slice(0, 8), { supplierId: sids[0], supplierIds: sids, supplier: names.length > 2 ? names.slice(0, 2).join(', ') + ' +' + (names.length - 2) : names.join(' and '), stops: runs.length, amount: v, for: a.who === 'me' ? myName() : a.who === 'sup' ? null : staffName(a.who) });
+    await passOn('trip_cash', 'accounts', 'round:' + newUuid().slice(0, 8), { supplierId: sids[0], supplierIds: sids, supplier: names.length > 2 ? names.slice(0, 2).join(', ') + ' +' + (names.length - 2) : names.join(' and '), stops: runs.length, amount: v, for: a.who === 'me' ? myName() : a.who === 'sup' ? null : staffName(a.who), v: 2 });
     FEEL.ask(); toast('Asked ' + whoShort('accounts') + ' for ' + n0(v) + ' · they mark it handed over');
   } catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not passed on: ' + (e.message || e) + (/buyer_handoffs/.test(String(e.message)) ? ' · migration 0125 is not on this database yet' : '')); }
   S.busy = false; render();
@@ -3761,6 +3832,8 @@ ACT['slide:trip'] = async () => {
       await restockOnTrip(trip).catch(e => toast('The trip started, but the shelf lines on it were not marked — ' + (e.message || e) + '. Open the trip again.', 3000));
     }
     if (own) setTripPay('round:' + trips[0].id, { own: true });
+    // The cash belongs to this round from now on (0151): no other round takes it.
+    else if (cashH && cashH.status === 'done') { const p = { ...(cashH.payload || {}), round: tripRoundStem(trips[0].id), v: 2 }; const u = await sb.from('buyer_handoffs').update({ payload: p }).eq('shop_id', S.shopId).eq('id', cashH.id); if (!u.error) cashH.payload = p; }
     S.busy = false; FEEL.go();
     if (lostCash) toast('Round started — the cash given was not saved: migration 0114 is not on this database yet');
     const t0 = trips[0];
@@ -3866,11 +3939,16 @@ function tripPaidAt(t){ const h = tripReceipt(t), typed = (S.tripPay || {})[t.id
 // Accounts' handover for the round (trip.cash): the round's cash ask, and
 // only once Accounts marked it done is it cash in hand. Nothing else counts:
 // a cash figure on the trip rows is the plan, never money given.
+// Accounts' cash belongs to one round: the one that started on it (payload.round,
+// 0151). An own-money round never has any; an older ask (no v) is matched as before.
+function tripRoundStem(id){ const m = String(id || '').match(/^(TRIP-[A-Za-z0-9]+)-[0-9]+$/); return m ? m[1] : String(id || ''); }
 function roundCashH(t){
   const rt = tripRound(t); if (!rt.length || tripIsSupplierDelivered(rt[0])) return null;
-  const sids = rt.map(x => String(x.supplierId)), first = Math.min(...rt.map(x => msOf(x.createdAt))), day = isoOf(new Date(first));
-  return handoffsFor('trip_cash').filter(h => String(h.ref || '').startsWith('round:') && (String((h.payload || {}).roundOf || '') === String(rt[0].id)
-    || (msOf(h.createdAt) <= first && isoOf(h.createdAt) === day && ((h.payload && h.payload.supplierIds) || []).map(String).some(x => sids.includes(x))))).slice(-1)[0] || null;
+  if (roundOwn(t) || rt.some(x => x.pay && x.pay.own)) return null;
+  const stem = tripRoundStem(rt[0].id), sids = rt.map(x => String(x.supplierId)), first = Math.min(...rt.map(x => msOf(x.createdAt))), day = isoOf(new Date(first));
+  return handoffsFor('trip_cash').filter(h => { const p = h.payload || {}; if (!String(h.ref || '').startsWith('round:')) return false;
+    if (p.round) return String(p.round) === stem;
+    return String(p.roundOf || '') === String(rt[0].id) || (msOf(h.createdAt) <= first && isoOf(h.createdAt) === day && (p.supplierIds || []).map(String).some(x => sids.includes(x))); }).slice(-1)[0] || null;
 }
 // The buyer said they paid from their own pocket: Accounts is told to pay
 // them back, stop by stop, and the round goes on without a handover.
@@ -3948,11 +4026,11 @@ PAGE.trip = ({ id }) => {
   else if (endNow && isRound && mine && rt.some(stopIsDone)) foot = slideHTML('handin', 'Slide to hand in the round', 'box', { disabled: S.busy });
   else if (!canAnswer) foot = `<span class="bx-btn ghost" aria-disabled="true">${esc(tripWho(t))} is on it</span>`;
   else if (leftN > 0) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"><span style="display:flex;gap:3px">${Array.from({ length: Math.min(leftN, 6) }, () => '<i style="width:8px;height:8px;border-radius:3px;box-shadow:inset 0 0 0 1.5px #8A93A3"></i>').join('')}</span>${leftN} line${leftN > 1 ? 's' : ''} still to load</span>`;
-  else if (!bySup && !hasPay) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('cash', 18)}Enter what you paid</span>`;
+  else if (!bySup && !hasPay && !tripNoneCame(t)) foot = `<span style="flex:1;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('cash', 18)}Enter what you paid</span>`;
   // When the photo is all that is missing, the big button is the camera.
-  else if (!bySup && !hasRec) foot = `<label style="position:relative;flex:1;height:56px;border-radius:999px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22);cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">${ic('camera', 20, 'style="stroke:#F5B26B"')}Photograph the receipt</label>`;
+  else if (!bySup && !hasRec && !tripNoneCame(t)) foot = `<label style="position:relative;flex:1;height:56px;border-radius:999px;background:var(--navy);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22);cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">${ic('camera', 20, 'style="stroke:#F5B26B"')}Photograph the receipt</label>`;
   else if (!bySup && (() => { const o = payOdd(t); return o && !o.ok; })()) foot = `<span role="status" style="flex:1;min-width:0;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('lock', 15, 'style="stroke-width:2.2"')}<span class="ell">Check the amount first</span></span>`;
-  else if (noCash) foot = `<span role="status" style="flex:1;min-width:0;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('lock', 15, 'style="stroke-width:2.2"')}<span class="ell">Done here waits for ${esc(acc)}’s cash</span></span>`;
+  else if (noCash && !tripNoneCame(t)) foot = `<span role="status" style="flex:1;min-width:0;height:56px;border-radius:999px;background:var(--rule);color:var(--ink2);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('lock', 15, 'style="stroke-width:2.2"')}<span class="ell">Done here waits for ${esc(acc)}’s cash</span></span>`;
   else if (!bySup && nextStop) foot = `<button data-act="stopdone" ${S.busy ? 'aria-disabled="true"' : ''} aria-label="Done at ${esc(short(t))}. The goods stay on the truck; on to ${esc(supplierName(nextStop.supplierId))}" style="flex:1;min-width:0;height:56px;border:none;border-radius:999px;background:radial-gradient(120% 140% at 10% 50%,#26335E 0%,#16203C 70%);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(22,32,60,.22)"><span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span><span class="ell">Done here · on to ${esc(nextName)}</span><span aria-hidden="true" style="flex:none;color:#F59A92;letter-spacing:-.2em">›››</span></button>`;
   else foot = slideHTML('handin', isRound ? 'Slide to hand in the round' : 'Slide to hand in', 'box', { disabled: S.busy });
   const seg = (n, bg) => n > 0 ? `<i style="flex:${n};background:${bg}"></i>` : '';
@@ -3970,7 +4048,13 @@ PAGE.trip = ({ id }) => {
         : `<button data-act="tcashask" ${cashH || S.busy ? 'aria-disabled="true"' : ''} style="flex:none;height:32px;padding:0 10px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B;color:var(--amberDeep);font-size:12px;font-weight:700">${cashH ? 'Asked ✓' : 'Ask'}</button><button data-act="tcashown" style="flex:none;height:32px;padding:0 10px;border:none;border-radius:999px;background:var(--amberDeep);color:#fff;font-size:12px;font-weight:700;white-space:nowrap">I paid myself</button>`}
     </div>` : '';
   // What was paid, from the receipt, and the receipt itself: the hand-in waits for both.
-  const payCard = canAnswer && !bySup ? (() => { const diff = hasPay ? P.amount - plan : 0, avail = rc ? rc.avail : null;
+  // Nothing came at this stop: nothing paid, no receipt, Done here as it is.
+  const none = canAnswer && !bySup && tripNoneCame(t), noneOffer = canAnswer && !bySup && !none && lines.every(l => !(tripLineGot(l) > 0));
+  const payCard = none ? `<div role="img" aria-label="Nothing came at ${esc(short(t))}, so nothing was paid and there is no receipt" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:20px;background:radial-gradient(130% 120% at 0% 0%,#26335E 0%,#16203C 65%);color:#fff">
+      <span class="m" style="width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.08);color:var(--rose);display:flex;align-items:center;justify-content:center;flex:none;font-size:16px;font-weight:700">0</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Nothing came at ${esc(short(t))}</b><span style="font-size:11.5px;font-weight:600;color:var(--navyInk)">nothing paid · no receipt · the lines go back to To plan</span></span>
+      <button data-act="tnoneall" data-undo="1" style="flex:none;min-height:32px;padding:0 8px;border:none;background:transparent;color:#9BA3F0;font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></div>`
+    : canAnswer && !bySup ? (() => { const diff = hasPay ? P.amount - plan : 0, avail = rc ? rc.avail : null;
     // More than 30% off the plan is most likely a slip of the thumb: say so, never in green.
     const odd = hasPay && plan > 0 && Math.abs(diff) > plan * 0.3, guess = odd ? [P.amount * 10, P.amount / 10].find(v => Math.abs(v - plan) < plan * 0.3) : null;
     const restSpare = avail != null ? Math.max(0, avail - Math.max(paidNow, plan) - restPlan) : 0;
@@ -3994,11 +4078,15 @@ PAGE.trip = ({ id }) => {
       </label>
     </div>
     <span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px;margin-top:-2px"><span style="font-size:11px;font-weight:600;color:var(--ink3)">${P.photo ? 'The receipt goes to ' + esc(acc) + ' at hand-in' : P.noReceipt ? 'No receipt · ' + esc(acc) + ' is told, the amount stands' : 'A photo of the receipt goes to ' + esc(acc)}</span><button data-act="tnorec" style="flex:none;min-height:32px;padding:0 10px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${P.noReceipt ? 'I have a receipt' : 'No receipt given'}</button></span>
+    ${noneOffer ? `<button data-act="tnoneall" style="align-self:flex-start;height:32px;padding:0 12px;margin-top:-4px;border:none;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:#8E2A22;font-size:12px;font-weight:700">Nothing came here</button>` : ''}
     ${odd && !(P.oddOk && P.photo) ? `<div role="group" aria-label="The amount looks wrong: ${n0(P.amount)} against a plan of ${n0(plan)}${guess ? '. Did you mean ' + n0(guess) + '?' : ''}" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:16px;background:#FDF0EE;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35)">
       <span style="display:flex;align-items:center;gap:10px"><span class="m" style="width:30px;height:30px;border-radius:10px;background:#FBE5E2;color:#A82D24;display:flex;align-items:center;justify-content:center;flex:none;font-size:14px;font-weight:700">?</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:#8E2A22">${guess ? 'Meant ' + n0(guess) + '?' : n0(P.amount) + ' is ' + Math.round(Math.abs(diff) / plan * 100) + '% ' + (diff > 0 ? 'over' : 'under') + ' the plan'}</b><span style="font-size:11.5px;font-weight:600;color:#A8473E">${guess ? n0(P.amount) + ' is ' + Math.round(Math.abs(diff) / plan * 100) + '% off the plan of ' + n0(plan) : 'the plan was ' + n0(plan) + ' · check the bill'}</span></span></span>
       <span style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button data-act="toddfix" style="height:40px;border:none;border-radius:12px;background:var(--navy);color:#fff;font-size:13px;font-weight:700">${guess ? 'Use ' + n0(guess) : 'Type it again'}</button>${P.photo ? `<button data-act="toddok" style="height:40px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:12.5px;font-weight:700">Yes, ${n0(P.amount)} is right</button>` : `<label style="position:relative;height:40px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35);color:#8E2A22;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer"><input data-receipt type="file" accept="image/*" capture="environment" aria-label="Photograph the receipt to keep ${n0(P.amount)}" style="position:absolute;inset:0;opacity:0;width:100%;height:100%">Photo the receipt to keep it</label>`}</span>
-    </div>` : ''}`; })() : '';
+    </div>` : ''}
+    ${avail != null && hasPay && P.amount > avail ? `<div role="img" aria-label="You paid ${n0(P.amount)}, more than the ${n0(Math.max(0, avail))} in hand from ${esc(acc)}: the rest, ${n0(P.amount - Math.max(0, avail))}, is your own money, and ${esc(acc)} is told at hand-in" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:#FDF0EE;box-shadow:inset 0 0 0 1.5px rgba(201,58,48,.35)">
+      <span style="width:30px;height:30px;border-radius:10px;background:#FBE5E2;color:#A82D24;display:flex;align-items:center;justify-content:center;flex:none">${ic('cash', 16)}</span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:#8E2A22">Over the cash in hand by <span class="m">${n0(P.amount - Math.max(0, avail))}</span></b><span style="font-size:11.5px;font-weight:600;color:#A8473E">the rest is your own money · ${esc(acc)} is told at hand-in</span></span></div>` : ''}`; })() : '';
   // The stop is done: what it cost, and what the cash in hand is now for.
   const ownTotal = own ? rt.filter(x => x.status === 'collecting' && stopIsDone(x)).reduce((a, x) => a + tripPaidAt(x), 0) : 0;
   const doneCard = done ? (() => { const avail = rc ? rc.avail - paidNow : null, back = endNow || !nextStop, spare = avail != null ? avail - restPlan : null;
@@ -4089,6 +4177,8 @@ async function uploadReceipt(t){
 async function sendReceipt(t){
   const P = (S.tripPay || {})[t.id]; if (!P || !(P.photo || P.noReceipt) || !(P.amount > 0) || tripReceipt(t)) return true;
   const ownMoney = roundOwn(t) && !roundHandover(t) ? { ownMoney: true } : {};
+  // No receipt: no paper bill to record (0151). The stop's pay says it.
+  if (!P.photo) return true;
   if (!P.photo) { await passOn('paper_bill', 'accounts', t.supplierId, { ...ownMoney, supplierId: t.supplierId, supplier: supplierName(t.supplierId), billNo: '', total: P.amount, planned: Math.round(tripPlanFor(t)), photoPath: null, noReceipt: true, tripId: t.id, receipt: false, termsDays: (supplierById(t.supplierId) || {}).termsDays || null }); return true; }
   const path = await uploadReceipt(t), s = supplierById(t.supplierId);
   await passOn('paper_bill', 'accounts', t.supplierId, { ...ownMoney, supplierId: t.supplierId, supplier: supplierName(t.supplierId), billNo: '', total: P.amount, planned: Math.round(tripLines(t).reduce((x, l) => x + tripLinePaid(l), 0)), photoPath: path, takenAt: P.photo.at, tripId: t.id, receipt: true, termsDays: s ? s.termsDays : null });
@@ -4101,6 +4191,7 @@ ACT.receiptsend = async () => {
   catch (e) { toast(isNetworkError(e) ? 'No connection — try again with signal' : 'Not sent: ' + (e.message || e)); }
   S.busy = false; render();
 };
+ACT.tnoneall = t => { const a = topArgs(), tr = tripById(a.id); if (!tr) return; const undo = t.dataset.undo === '1'; tripLines(tr).forEach((l, i) => setGot(tr.id, i, undo ? null : 0)); FEEL[undo ? 'back' : 'short'](); render(); };
 ACT.tnone = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, 0); S.ui.bump = { id: x.tr.id, idx: x.i }; FEEL.short(); render(); };
 ACT['in:tgot'] = t => { const x = tripArgsLine(t); if (!x) return; const raw = String(t.value).replace(/[^0-9.]/g, ''); if (raw === '') return; const n = Math.max(0, Math.min(Number(x.l.qty) || 0, Number(raw) * x.per)); setGot(x.tr.id, x.i, n); render(); };
 ACT.tall = t => { const x = tripArgsLine(t); if (!x) return; setGot(x.tr.id, x.i, Number(x.l.qty) || 0); S.ui.bump = { id: x.tr.id, idx: x.i }; FEEL.load(); render(); };
@@ -4177,9 +4268,20 @@ function payOdd(t){
   if (!(amt > 0) || !(plan > 0) || Math.abs(amt - plan) <= plan * 0.3) return null;
   return { amt, plan, guess: [amt * 10, Math.round(amt / 10)].find(v => Math.abs(v - plan) < plan * 0.3) || null, pct: Math.round(Math.abs(amt - plan) / plan * 100), over: amt > plan, ok: !!P.oddOk && !!P.photo };
 }
+// A stop's payment as Accounts reads it (0151 collection_trips.pay).
+function stopPay(t, own, at){ const P = (S.tripPay || {})[t.id] || {}, none = tripNoneCame(t); return { own: !!own, amount: none ? 0 : Math.round(Number(P.amount) || 0), receipt: P.photo && !none ? 'photo' : 'none', ...(P.photo && P.photo.path ? { photoPath: P.photo.path } : {}), at }; }
+async function passOwnMoney(handed){
+  const stem = tripRoundStem(handed[0].id); if (handoffsFor('own_money', 'round:' + stem).length) return;
+  const stops = handed.filter(t => !tripIsSupplierDelivered(t)).map(t => ({ tripId: t.id, supplier: supplierName(t.supplierId), amount: (t.pay && t.pay.amount) || 0, receipt: (t.pay && t.pay.receipt) || 'none' })).filter(x => x.amount > 0);
+  const amount = stops.reduce((a, x) => a + x.amount, 0); if (!(amount > 0)) return;
+  await passOn('own_money', 'accounts', 'round:' + stem, { buyer: myName(), round: stem, amount, stops });
+}
+function tripNoneCame(t){ const ls = tripLines(t); return ls.length > 0 && ls.every(l => tripLineGot(l) === 0); }
 function stopReadyWhy(t){
   if (!tripAllAnswered(t)) { const left = tripLines(t).filter(l => tripLineGot(l) == null).length; return `Say what came back for ${left} more line${left === 1 ? '' : 's'} at ${supplierShort(t.supplierId)} first — 0 is an answer`; }
   if (tripIsSupplierDelivered(t)) return '';
+  // Nothing came: nothing paid, no receipt -- the stop is done as it is.
+  if (tripNoneCame(t)) return '';
   if (!roundHandover(t) && !roundOwn(t)) return 'No cash from ' + whoShort('accounts') + ' yet — ask for it, or say you paid yourself';
   const P = (S.tripPay || {})[t.id] || {};
   if (!(P.amount > 0)) return 'Enter what you paid at ' + supplierShort(t.supplierId) + ' first';
@@ -4243,7 +4345,7 @@ ACT.tcashask = async () => {
   const v = Math.round(rt.filter(x => x.status === 'collecting').reduce((a, x) => a + tripPlanFor(tripView(x)), 0));
   S.busy = true; render();
   try {
-    await passOn('trip_cash', 'accounts', 'round:' + newUuid().slice(0, 8), { supplierId: sids[0], supplierIds: sids, supplier: names.length > 2 ? names.slice(0, 2).join(', ') + ' +' + (names.length - 2) : names.join(' and '), stops: rt.length, amount: v, for: myName(), roundOf: rt[0].id });
+    await passOn('trip_cash', 'accounts', 'round:' + newUuid().slice(0, 8), { supplierId: sids[0], supplierIds: sids, supplier: names.length > 2 ? names.slice(0, 2).join(', ') + ' +' + (names.length - 2) : names.join(' and '), stops: rt.length, amount: v, for: myName(), roundOf: rt[0].id, round: tripRoundStem(rt[0].id), v: 2 });
     FEEL.ask(); toast('Asked ' + whoShort('accounts') + ' for ' + n0(v) + ' · they mark it handed over');
   } catch (e) { toast(failWord(e), 5000); }
   S.busy = false; render();
@@ -4279,10 +4381,14 @@ ACT['slide:handin'] = async () => {
     step(0, ready.length);
     // Stops not reached are off the round first, so the one push counts only what came back.
     for (const x of left) await dropStop(x, 'Left for a later round', ready[ready.length - 1].t).catch(e => toast('Handed in · ' + supplierShort(x.supplierId) + ' is still on the round — ' + (e.message || e)));
+    // What was paid at each stop, and from whose money, goes on the trip (0151):
+    // Accounts reads it, never this phone.
+    const ownRound = own && roundOwn(t0) && !roundHandover(t0);
     for (const { row, t } of ready) {
       const lines = tripLines(t).map(l => { const g = tripLineGot(l); return g != null && g < l.qty && l.gotPrice != null && Number(l.gotPrice) === Number(l.expectedPrice) ? { ...l, gotPrice: null } : l; });
-      const patch = { status: 'collected', collected_at: now, lines };
-      const u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', t.id);
+      const patch = { status: 'collected', collected_at: now, lines, ...(tripIsSupplierDelivered(t) ? {} : { pay: stopPay(t, ownRound, now) }) };
+      let u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', t.id);
+      if (u.error && patch.pay && /pay|column|schema cache/i.test(u.error.message || '')) { delete patch.pay; u = await sb.from('collection_trips').update(patch).eq('shop_id', S.shopId).eq('id', t.id); }
       if (u.error) throw u.error;
       const moved = tripById(t.id), fresh = rowToTrip({ ...row, ...(moved && moved.cashGiven != null ? { cash_given: moved.cashGiven } : {}), ...patch });
       D().collectionTrips = D().collectionTrips.map(y => y.id === t.id ? fresh : y); saveSnapshot();
@@ -4294,6 +4400,10 @@ ACT['slide:handin'] = async () => {
       await restockCollected(t).catch(e => toast('Handed in, but the shelf lines were not marked collected — ' + (e.message || e)));
       await sendReceipt(t).catch(e => toast('Handed in · the receipt did not reach ' + whoShort('accounts') + (isNetworkError(e) ? ' — send it when there is signal' : ': ' + (e.message || e))));
     }
+    // The receipt photos are up now: their paths join each stop's pay.
+    for (const t of handed) { const P = (S.tripPay || {})[t.id]; if (t.pay && P && P.photo && P.photo.path && !t.pay.photoPath) { const pay = { ...t.pay, photoPath: P.photo.path }; const u = await sb.from('collection_trips').update({ pay }).eq('shop_id', S.shopId).eq('id', t.id); if (!u.error) t.pay = pay; } }
+    // A round on the Buyer's own money: Accounts gets one task to pay them back.
+    if (ownRound) await passOwnMoney(handed).catch(e => toast('Handed in · ' + whoShort('accounts') + ' was not told to pay you back' + (/own_money|check/i.test(String(e.message)) ? ': migration 0151 is not on this database yet' : isNetworkError(e) ? ' — open the round again with signal' : ': ' + (e.message || e)), 6000));
     if (S.ui.endNow) delete S.ui.endNow[(own ? roundStops(t0)[0] : t0).id];
     S.busy = false; S.ui.handing = null; S.ui.horn = handed[0].id; replaceTop('done', { id: handed[0].id });
     // The chips (Plan › live trips, Today) read the server's trip, not an older read still on its way.
@@ -4582,6 +4692,8 @@ function sellerOf(q){ const s = q && q.takenBy ? (D().staff || []).find(x => x.u
    Manager's payload.creditCheck. An agent's change or cancel is the
    Manager's too. The buyer sees that they wait, never the margins. */
 const PRICE_WAIT_NOTES = ['under', 'nomargin', 'nocost'];
+// A typed selling price now under the line's cost (Manager's lineBelowCost).
+function lineCostsOverSell(it){ const sell = it && it.sellPrice != null && it.sellPrice !== '' ? Number(it.sellPrice) : 0; return sell > 0 && Number(it.price) > sell && Number(it.qty) > 0; }
 function priceWaits(q){
   return (q.items || []).filter(it => it && PRICE_WAIT_NOTES.includes(it.priceNote) && !(it.priceReview && it.priceReview.state));
 }
@@ -5117,8 +5229,8 @@ async function passOn(kind, forRole, ref, payload){
   (D().handoffs ||= []).push(rowToHandoff({ ...row, status: 'open', created_at: new Date().toISOString() })); saveSnapshot();
   return row;
 }
-function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at, heldBy: r.held_by || null, heldAt: r.held_at || null }; }
-function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at }; }
+function rowToRestock(r){ return { id: r.id, productId: r.product_id, variantIdx: r.variant_idx == null ? null : Number(r.variant_idx), qty: Number(r.qty) || 0, unit: r.unit || '', supplierId: r.supplier_id, price: r.price == null ? null : Number(r.price), status: r.status, tripId: r.trip_id || null, createdBy: r.created_by, createdAt: r.created_at, heldBy: r.held_by || null, heldAt: r.held_at || null, forLine: r.for_line || null }; }
+function rowToHandoff(h){ return { id: h.id, kind: h.kind, forRole: h.for_role, ref: h.ref, payload: h.payload || {}, status: h.status, createdBy: h.created_by, createdAt: h.created_at, doneAt: h.done_at, cashBack: h.cash_back == null ? null : h.cash_back }; }
 function handoffsFor(kind, ref){ return (D().handoffs || []).filter(h => h.kind === kind && (ref == null || String(h.ref) === String(ref)) && h.status !== 'withdrawn'); }
 async function closeHandoff(id, status){
   const r = await sb.from('buyer_handoffs').update({ status }).eq('shop_id', S.shopId).eq('id', id);
@@ -5444,7 +5556,7 @@ PAGE.restock = (args) => {
   const askFirst = [...new Set(picked.filter(r => { const a = priceAgeDays(r.best.date); return a == null || a > askPriceAge(); }).map(r => supplierShort(r.best.supplierId)))];
   const askWords = askFirst.length > 1 ? askFirst.slice(0, -1).join(', ') + ' and ' + askFirst[askFirst.length - 1] : askFirst.join('');
   // A refill already on the list, when the stock it was for has come in.
-  const covered = (D().restockBuys || []).filter(b => b.status === 'planned' && !lineIsOnATrip('restock', b.id)).map(b => { const inc = shelfIncoming(b.productId, b.variantIdx), mine = (D().restockBuys || []).filter(x => x.status === 'planned' && stockKey(x.productId, x.variantIdx) === stockKey(b.productId, b.variantIdx)).reduce((s, x) => s + x.qty, 0), other = inc.yard + inc.trip - mine; return { b, other, yard: inc.yard }; }).filter(x => x.other > 0);
+  const covered = (D().restockBuys || []).filter(b => b.status === 'planned' && !b.forLine && !lineIsOnATrip('restock', b.id)).map(b => { const inc = shelfIncoming(b.productId, b.variantIdx), mine = (D().restockBuys || []).filter(x => x.status === 'planned' && stockKey(x.productId, x.variantIdx) === stockKey(b.productId, b.variantIdx)).reduce((s, x) => s + x.qty, 0), other = inc.yard + inc.trip - mine; return { b, other, yard: inc.yard }; }).filter(x => x.other > 0);
   const card = (r, i) => { const on = args.picked.includes(r.key), t = tintFor(r.best.supplierId), c = quoteLineCount({ productId: r.pid, variantIdx: r.vi, unit: r.best.unit, packUnit: r.best.packUnit, packQty: r.best.packQty }, r.need);
     const left = r.left == null ? 0 : Math.min(SPAN, r.left), come = Math.min(SPAN - left, r.comeDays || 0), col = r.tight ? '#C93A30' : '#F5B26B';
     const pace = r.rate >= 1 ? n0(Math.round(r.rate)) + ' go a day' : 'about ' + n0(Math.max(1, Math.round(r.rate * 7))) + ' a week';
@@ -5541,21 +5653,23 @@ ACT.rsgo = async () => {
 // than the ask age is asked first (Prices to confirm), like an order's line.
 function refillPriceAge(r){ const row = productPriceRows(r.productId, r.variantIdx).find(x => String(x.supplierId) === String(r.supplierId)); return row ? priceAgeDays(row.date) : null; }
 function refillStale(r){ const a = refillPriceAge(r); return a == null || a > askPriceAge(); }
-function refillsWaiting(sid){ return (D().restockBuys || []).filter(r => r.status === 'planned' && !lineIsOnATrip('restock', r.id) && refillStale(r) && (sid == null || String(r.supplierId) === String(sid))); }
+function refillsWaiting(sid){ return (D().restockBuys || []).filter(r => r.status === 'planned' && !r.forLine && !lineIsOnATrip('restock', r.id) && refillStale(r) && (sid == null || String(r.supplierId) === String(sid))); }
 function restockRunLines(){
-  return (D().restockBuys || []).filter(r => r.status === 'planned' && !lineIsOnATrip('restock', r.id) && !refillStale(r)).map(r => {
+  return (D().restockBuys || []).filter(r => r.status === 'planned' && !r.forLine && !lineIsOnATrip('restock', r.id) && !refillStale(r)).map(r => {
     const p = productById(r.productId), best = productPriceRows(r.productId, r.variantIdx).find(x => String(x.supplierId) === String(r.supplierId)) || { supplierId: r.supplierId, unit: r.unit };
     const it = { lineId: r.id, productId: r.productId, variantIdx: r.variantIdx, productName: p ? productVariantLabel(p, r.variantIdx) : 'Item', unit: r.unit || best.unit || '', packUnit: best.packUnit || '', packQty: Number(best.packQty) || 0, qtyIn: '', qty: r.qty, supplierId: r.supplierId };
     return { order: RESTOCK_ORDER, it, qty: r.qty, quotedQty: r.qty, best: { ...best, supplierId: r.supplierId }, unitCost: r.price, lineCost: (r.price || 0) * r.qty, movedFrom: null, restock: r };
   });
 }
+// A carton's shelf part (for_line) rides inside its order line.
+function cartonRowIds(trip, status){ const keys = tripLines(trip).filter(l => l.orderId !== 'restock').map(l => l.orderId + ':' + l.lineId); return (D().restockBuys || []).filter(r => r.forLine && keys.includes(r.forLine) && r.status === status).map(r => r.id); }
 async function restockOnTrip(trip){
-  const ids = tripLines(trip).filter(l => l.orderId === 'restock').map(l => l.lineId); if (!ids.length) return;
+  const ids = tripLines(trip).filter(l => l.orderId === 'restock').map(l => l.lineId).concat(cartonRowIds(trip, 'planned')); if (!ids.length) return;
   for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'on_trip', trip_id: trip.id }).eq('shop_id', S.shopId).eq('id', id); if (u.error) throw u.error; if (r) { r.status = 'on_trip'; r.tripId = trip.id; } }
   saveSnapshot();
 }
 async function restockCollected(t){
-  const ids = tripLines(t).filter(l => l.orderId === 'restock').map(l => l.lineId);
+  const ids = tripLines(t).filter(l => l.orderId === 'restock').map(l => l.lineId).concat(cartonRowIds(t, 'on_trip'));
   for (const id of ids) { const r = (D().restockBuys || []).find(x => x.id === id); const u = await sb.from('restock_buys').update({ status: 'collected' }).eq('shop_id', S.shopId).eq('id', id); if (u.error) throw u.error; if (r) r.status = 'collected'; }
   if (ids.length) saveSnapshot();
 }

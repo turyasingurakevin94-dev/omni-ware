@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow, roundStops, stopIsDone, tripPlanFor, roundHandover, restoreTripPay, setTripPay, outGroups, greetName, greeting, handInOf, stopBoughtElsewhere, cWaitFor, commitConfirm, todayJobs, askTotal, askLines, payOdd, cashStep, openTripFor, tripTakeable, tripView, tripById };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow, roundStops, stopIsDone, tripPlanFor, roundHandover, restoreTripPay, setTripPay, outGroups, greetName, greeting, handInOf, stopBoughtElsewhere, cWaitFor, commitConfirm, todayJobs, askTotal, askLines, payOdd, cashStep, openTripFor, tripTakeable, tripView, tripById, roundCashH, setTripPay, orderPurchaseLines, cartonsWaiting, stopReadyWhy, holdOf };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -727,8 +727,8 @@ const P = page(fakeDb({}));
     t.check(/Photograph the receipt/.test(X.PAGE.trip({ id })) && /data-receipt type="file"/.test(X.PAGE.trip({ id }).split('Photograph the receipt')[0].slice(-600)), 'the big button is the camera when the photo is all that is missing');
     X.ACT.tnorec();
     await X.ACT['slide:handin']();
-    const nr = db.writes.find(w => w[0] === 'insert' && w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill');
-    t.check(db.tables.collection_trips[0].status === 'collected' && nr && nr[2].payload.noReceipt === true && nr[2].payload.total === 168000 && !nr[2].payload.photoPath, '"No receipt given" hands in, and Accounts is told the amount with no photo');
+    const nr = db.writes.find(w => w[0] === 'insert' && w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill'), pay0 = db.tables.collection_trips[0].pay;
+    t.check(db.tables.collection_trips[0].status === 'collected' && !nr && pay0 && pay0.receipt === 'none' && pay0.amount === 168000, '"No receipt given" hands in: the trip says 168,000 with no receipt, and no paper bill is asked for (0151)');
   }
   // 9b. A trip made before the order's lines had ids still covers them: no second stop.
   {
@@ -802,7 +802,7 @@ const P = page(fakeDb({}));
     t.check(db.tables.collection_trips.every(r => r.status === 'collected') && new Set(db.tables.collection_trips.map(r => r.collected_at)).size === 1, 'both stops go in at once, at one time');
     const shortRow = db.tables.collection_trips.find(r => r.id === s1.id);
     t.check(shortRow.lines[0].gotPrice == null && shortRow.lines[0].gotQty === qty - 1, 'a short line never updates the price list: its price paid is left to the plan');
-    t.check(db.writes.filter(w => w[1] === 'buyer_handoffs' && w[2].kind === 'paper_bill').length === 2, 'Accounts gets each stop\'s amount at the hand-in');
+    t.check(db.tables.collection_trips.every(r => r.pay && r.pay.amount > 0 && r.pay.receipt === 'none' && r.pay.own === false), 'Accounts gets each stop\'s amount at the hand-in, on the trip');
     X.S.stack = [{ type: 'done', args: { id: s1.id } }];
     html = X.PAGE.done({ id: s1.id });
     t.check(/BACK FROM 2 STOPS · ONE HAND-IN/.test(html) && /ROUND · 2 STOPS/.test(html) && /told once/.test(html), 'the hand-in page is the round\'s');
@@ -1041,6 +1041,44 @@ const P = page(fakeDb({}));
     const X = page(fakeDb({}));
     X.S.view = 'suppliers'; const h = X.viewSuppliers();
     t.check(/>SCORE</.test(h) && />TERMS</.test(h) && />WE OWE</.test(h), 'a supplier row labels its score, its terms and what we owe');
+  }
+
+  // 10m. The cross-app run: a cost over the client's price holds; the agreed price rides; own money never takes Accounts' cash; nothing came; big cartons wait.
+  {
+    const row = orderRow(34, [it(1, 'P2', null, 6, 'S2', 28000, { sellPrice: 30000 })]);
+    const db = fakeDb({ saved_quotes: [row], __rpcOk: true }), X = page(db);
+    X.D().savedQuotes = [X.rowToQuote(JSON.parse(JSON.stringify(row)))];
+    X.S.stack = [{ type: 'order', args: { id: 34 } }, { type: 'price', args: { id: 34, lineId: 1, v: '33000', unit: 'base', phone: true } }];
+    const h = X.PAGE.price(X.topArgs());
+    t.check(/Costs more than it sells for · the order waits/.test(h) && /decides/.test(h) && !/30,000/.test(h), 'a new price over the client\'s price shows the order will wait for the Manager, never the selling price');
+    await X.ACT.pgo();
+    const q = X.rowToQuote(db.tables.saved_quotes[0]);
+    t.check(q.status === 'draft' && q.items[0].priceNote === 'nomargin' && X.holdOf(q) && X.holdOf(q).kind === 'price', 'saved: the line waits for the Manager\'s price and the order stays in Checking');
+    q.status = 'awaiting_goods'; X.D().savedQuotes = [q];
+    const l = X.orderPurchaseLines(q)[0];
+    t.check(l.unitCost === 33000 && l.best.agreedAt, 'the round carries the agreed 33,000, not the list price');
+  }
+  {
+    const X = page(fakeDb({ collection_trips: [] }));
+    X.D().handoffs = [{ id: 'old', kind: 'trip_cash', ref: 'round:ab', status: 'done', createdAt: new Date(NOW - 36e5).toISOString(), doneAt: new Date(NOW - 35e5).toISOString(), payload: { supplierIds: ['S1'], amount: 150000 } }];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-OWN-1', shop_id: SH, supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(NOW - 6e5).toISOString(), lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 1000 }] })];
+    t.check(!!X.roundCashH(X.tripById('TRIP-OWN-1')), 'an older handover still reaches a round that paid with it');
+    X.setTripPay('round:TRIP-OWN-1', { own: true });
+    t.check(!X.roundCashH(X.tripById('TRIP-OWN-1')), 'a round on your own money never shows Accounts\' cash from an earlier ask');
+    X.S.stack = [{ type: 'trip', args: { id: 'TRIP-OWN-1' } }];
+    X.ACT.tnoneall({ dataset: {} });
+    const h = X.PAGE.trip({ id: 'TRIP-OWN-1' });
+    t.check(/Nothing came at /.test(h) && X.stopReadyWhy(X.tripView(X.tripById('TRIP-OWN-1'))) === '', 'Nothing came here: nothing paid, no receipt, and the stop can be done');
+  }
+  {
+    const data = fixture(); data.prices = data.prices.map(r => r.id === 4 ? { ...r, retail: null, date: new Date(NOW).toISOString().slice(0, 10) } : r);
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(81, [it(1, 'P3', null, 1, 'S1', 5000)], {}, { status: 'awaiting_goods' }))];
+    t.check(X.cartonsWaiting().length === 1 && X.cartonsWaiting()[0].l.carton.state === 'ask' && !X.runsToGo().some(r => r.lines.some(x => String(x.order.id) === '81')), '1 kg sold from a supplier who sells 25 kg boxes waits for the Manager\'s OK, off the round');
+    X.S.stack = [{ type: 'plan', args: { who: 'me' } }];
+    t.check(/data-act="cartonask"/.test(X.PAGE.plan(X.topArgs())), 'the plan asks the Manager in one tap');
+    X.D().restockBuys = [{ id: 'cb', productId: 'P3', variantIdx: null, qty: 24, supplierId: 'S1', price: 5000, status: 'planned', forLine: '81:1', createdAt: new Date(NOW).toISOString() }];
+    t.check(X.cartonsWaiting().length === 0 && X.runsToGo().some(r => r.lines.some(x => String(x.order.id) === '81')), 'once the Manager lets it go, the carton joins the round');
   }
 
   // 10d. The greeting: the time of day it is, and a name, never a login.

@@ -1157,7 +1157,9 @@ function onRoad(){ return boardOrders().filter(q => q.status === 'pending_delive
 /* ---- money at the gate (0155): a cash customer's unpaid order stays on
    the bay until it is paid or the Manager lets it go on credit. ---- */
 function moneyHold(q){ const m = D().moneyHolds; return m && q && q.status === 'preparing' ? m[String(q.id)] || null : null; }
-function loadAskOf(q){ return q && q.loadAsk && q.loadAsk.state === 'sent' ? q.loadAsk : null; }
+// The ask rides on the order as the Manager app reads it (payload.creditAsk = { at, by, byName, carrier });
+// the Manager answers with creditCheck and creditAsk.answer.
+function loadAskOf(q){ const a = q && q.creditAsk; return a && typeof a === 'object' && a.at && !a.answer ? a : null; }
 function moneyWaits(){ return loadQueue().filter(moneyHold); }
 function doneToday(){ return liveOrders().filter(q => q.status === 'completed' && isTodayMs(q.stageEnteredAt)); }
 function outToday(){ return onRoad().length + doneToday().length; }
@@ -1675,7 +1677,7 @@ function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empt
    delivery -> Completed with the delivery proof, and the gate handover.
    ================================================================== */
 const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt',
-  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt', 'loadAsk'];
+  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt', 'creditAsk'];
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
 function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? `This needs migration ${mig || '0115'} on the database — ask the owner to run it.` : failWord(e); }
@@ -2800,7 +2802,7 @@ PAGE.load.bg = '#2A3350';
 function holdCard(q){
   const h = moneyHold(q); if (!h) return '';
   const ask = loadAskOf(q), mgr = managerName(), m1 = firstWord(mgr) === 'the' ? 'the Manager' : mgr, mIni = initials(firstWord(mgr) === 'the' ? 'Manager' : mgr);
-  const dec = q.creditCheck && (h.decision === 'cash' || h.decision === 'hold') && (!q.loadAsk || Number(q.creditCheck.at) >= Number(q.loadAsk.at)) ? q.creditCheck : null;
+  const dec = q.creditCheck && (h.decision === 'cash' || h.decision === 'hold') && (!q.creditAsk || Number(q.creditCheck.at) >= (Number(q.creditAsk.at) || Date.parse(q.creditAsk.at) || 0)) ? q.creditCheck : null;
   const t = tintFor(q.id), waiting = S.ui.mnWait && S.ui.mnWait[q.id];
   const stamp = `<span aria-label="Not paid, owes ${n0(h.owed)}" style="display:flex;flex-direction:column;align-items:center;padding:3px 9px;border:2px solid #8E2A22;border-radius:8px;color:#8E2A22;transform:rotate(-4deg);flex:none"><b style="font-size:11px;letter-spacing:.06em">NOT PAID</b><span class="m" style="font-size:11px">${n0(h.owed)}</span></span>`;
   const who = `<span class="st-av round" style="width:42px;height:42px;font-size:13px;background:${t[0]};color:${t[1]}">${esc(initials(quoteClientName(q)))}</span>
@@ -2808,27 +2810,28 @@ function holdCard(q){
   if (waiting && !ask && !dec) return `<div class="a-card" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 12px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B">${who}
     <button data-act="mnask" data-id="${q.id}" style="height:36px;padding:0 12px;border:none;border-radius:11px;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Ask ${esc(m1)}</button></div>`;
   const state = dec ? `<span style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--amberSoft)">${ic('cash', 18, 'style="stroke:#95530C"')}<span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:var(--amberDeep)">${esc(firstWord(dec.byName || m1))} said cash first</b><span style="font-size:12px;font-weight:600;color:#95530C">It goes once it is paid</span></span></span>`
-    : ask ? `<span style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--indigoSoft)"><span class="st-av round" style="width:28px;height:28px;font-size:10px;background:#F6E4F1;color:#7A3268;flex:none">${esc(mIni)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:var(--indigo)">With ${esc(m1)} · ${esc(ago(Number(ask.at)))}</b><span style="font-size:12px;font-weight:600;color:var(--indigo)">${esc(m1)} has a push · on the bay till then</span></span></span>`
+    : ask ? `<span style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--indigoSoft)"><span class="st-av round" style="width:28px;height:28px;font-size:10px;background:#F6E4F1;color:#7A3268;flex:none">${esc(mIni)}</span><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:var(--indigo)">With ${esc(m1)} · ${esc(ago(Number(ask.at) || Date.parse(ask.at)))}</b><span style="font-size:12px;font-weight:600;color:var(--indigo)">${esc(m1)} has a push · on the bay till then</span></span></span>`
     : `<span style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--amberSoft)">${ic('cash', 18, 'style="stroke:#95530C"')}<span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:13px;color:var(--amberDeep)">Cash customer</b><span style="font-size:12px;font-weight:600;color:#95530C">No credit on file · ${esc(m1)} decides credit</span></span><span class="st-av round" style="width:28px;height:28px;font-size:10px;background:#F6E4F1;color:#7A3268;flex:none">${esc(mIni)}</span></span>`;
   const btns = dec ? '' : ask ? `<button data-act="mnback" data-id="${q.id}" style="height:44px;border:none;border-radius:12px;background:transparent;color:#8E2A22;font-size:13px;font-weight:700">Take the ask back</button>`
     : `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button data-act="mnask" data-id="${q.id}" ${S.busy ? 'disabled' : ''} style="height:52px;border:none;border-radius:14px;background:var(--navy);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px">${ic('out', 16, 'style="stroke:#6FDCB0"')}Ask ${esc(m1)} for credit</button><button data-act="mnwait" data-id="${q.id}" style="height:52px;border:none;border-radius:14px;background:#F1EEE8;color:var(--ink);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${ic('clock', 16)}Wait for payment</button></div>`;
   return `<div class="a-card" style="border-radius:20px;background:#fff;box-shadow:inset 0 0 0 2px ${ask ? '#C9CDF7' : '#F5B26B'};padding:14px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px">${who}${stamp}</div>${state}${btns}</div>`;
 }
-async function mnSet(id, state){
-  try { await changeOrder(id, q => { if (!q.loadAsk) return false; q.loadAsk = { ...q.loadAsk, state, [state + 'At']: Date.now() }; }); } catch (e) { toast(failSay(e), 5000); }
+// Taking the ask back takes it off the order, so the Manager's list drops it.
+async function mnWithdraw(id){
+  try { await changeOrder(id, q => { if (!loadAskOf(q)) return false; q.creditAsk = undefined; }); } catch (e) { toast(failSay(e), 5000); }
   render();
 }
 ACT.mnask = async t => {
   const id = Number(t.dataset.id); if (S.busy) return; S.busy = true;
   const m1 = firstWord(managerName()) === 'the' ? 'the Manager' : managerName();
   try {
-    const at = Date.now(), r = await changeOrder(id, q => { if (q.status !== 'preparing') return false; q.loadAsk = { state: 'sent', by: S.user ? S.user.id : null, byName: myName(), at }; });
+    const at = Date.now(), r = await changeOrder(id, q => { if (q.status !== 'preparing') return false; q.creditAsk = { at, by: S.user ? S.user.id : null, byName: myName(), carrier: S.ui.ld && S.ui.ld.carrier ? carrierRecord(S.ui.ld.carrier) : q.carrier || null }; });
     if (!r) toast('That order has moved on');
-    else { FEEL.stamp(); if (S.ui.mnWait) delete S.ui.mnWait[id]; undoToast(`Asked ${m1} · a push is on its way`, () => mnSet(id, 'withdrawn')); }
+    else { FEEL.stamp(); if (S.ui.mnWait) delete S.ui.mnWait[id]; undoToast(`Asked ${m1} · a push is on its way`, () => mnWithdraw(id)); }
   } catch (e) { toast(failSay(e), 5000); }
   S.busy = false; render();
 };
-ACT.mnback = t => { FEEL.tick(); mnSet(Number(t.dataset.id), 'withdrawn'); };
+ACT.mnback = t => { FEEL.tick(); mnWithdraw(Number(t.dataset.id)); };
 ACT.mnwait = t => { (S.ui.mnWait || (S.ui.mnWait = {}))[t.dataset.id] = true; FEEL.tick(); toast('Kept on the bay · it goes once paid'); render(); };
 function ldToggle(ids, on){ const ui = ldUI(); if (ui.sent) return; const cur = Object.keys(ui.sel).length, add = ids.filter(id => !ui.sel[id]).length;
   if (on && cur + add > MAX_DROPS) { buzz([20, 40, 20]); sfx('no'); toast(`The truck takes ${MAX_DROPS} drops`); return; }
