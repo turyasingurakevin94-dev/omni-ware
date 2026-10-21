@@ -2202,37 +2202,71 @@ function loadRing(q, size){
   const r = (size - 5) / 2;
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="position:absolute;inset:0;transform:rotate(-90deg)">${segs.map((c, i) => `<circle class="${c === '#16203C' || c === '#E5483D' ? 'a-ring' : ''}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${c}" stroke-width="4.5" pathLength="100" stroke-dasharray="17 83" stroke-dashoffset="${(-1.5 - i * 20).toFixed(1)}" stroke-linecap="round"/>`).join('')}</svg>`;
 }
+/* Buying as plain counts: lines asked of suppliers, lines answered, trips
+   planned. Checking orders are the first buyer's (holderOf); a trip is
+   whoever it is given to. */
+function buyingCounts(b){
+  const first = team().buyers[0], mineDrafts = first && String(first.id) === String(b.id);
+  let asked = 0, answered = 0;
+  if (mineDrafts) liveOrders().filter(q => q.status === 'draft').forEach(q => supplierGroups(q).forEach(g => { const cs = confirmState(q, g.supplierId); if (!cs.askedAt) return; asked += g.lines.length; if (cs.state !== 'pending') answered += g.lines.length; }));
+  const tr = tripsOf(b.id), planned = tr.filter(t => ['open', 'assigned'].includes(t.status)).length, out = tr.filter(t => t.status === 'collecting').length;
+  const inBuying = liveOrders().filter(q => q.status === 'awaiting_goods' && holderOf(q).staff && String(holderOf(q).staff.id) === String(b.id)).length;
+  return { asked, answered, planned, out, inBuying };
+}
+/* "Give a job": the one job best handed to this person, opened in the
+   hand-over sheet with them already picked. Only jobs nobody is working
+   on: not taken yet, nobody holds it, its holder is off, or it is late. */
+function jobToGive(s){
+  if (!s || s.unavailable) return null;
+  const mine = x => String(x) === String(s.id), off = id => { const h = staffById(id); return !h || h.unavailable; };
+  const order = (a, b) => (isStuck(b) - isStuck(a)) || stageEnteredMs(a) - stageEnteredMs(b);
+  if (staffEligibleForRole(s, 'worker') && packLoad(s.id).length < 2) {
+    const q = liveOrders().filter(q => q.status === 'preparing' && q.pickingStatus !== 'done' && !mine(q.assignedWorkerId) && (q.assignedWorkerId == null || q.pickingStatus === 'awaiting_accept' || off(q.assignedWorkerId) || isStuck(q))).sort(order)[0];
+    if (q) return { id: q.id };
+  }
+  if (staffEligibleForRole(s, 'delivery') && driveLoad(s.id).length < 2) {
+    const q = liveOrders().filter(q => q.status === 'pending_delivery' && !mine(q.assignedDeliveryId) && (q.assignedDeliveryId == null || off(q.assignedDeliveryId) || isStuck(q))).sort(order)[0];
+    if (q) return { id: q.id };
+  }
+  if (s.role === 'buyer' && !tripsOf(s.id).some(t => t.status === 'collecting')) {
+    const t = (D().collectionTrips || []).filter(t => tripIsLive(t) && ['open', 'assigned'].includes(t.status) && !mine(t.assignedWorkerId) && String(t.assignedWorkerId) !== TRIP_SUPPLIER_CARRIER).sort((a, b) => msOf(a.createdAt) - msOf(b.createdAt))[0];
+    if (t) return { id: t.id, kind: 'trip' };
+  }
+  return null;
+}
+function giveJobBtn(s, small){
+  const j = can('order.assign') ? jobToGive(s) : null;
+  return j ? `<button class="${small ? 'mx-sq" style="background:var(--greenSoft);color:var(--green);box-shadow:inset 0 0 0 1px #BFE6D0' : 'mx-act mint'}" data-act="givejob" data-who="${esc(String(s.id))}" data-id="${esc(String(j.id))}"${j.kind ? ` data-kind="${j.kind}"` : ''} aria-label="Give ${esc(firstWord(s.name))} a job">${ic('plus', small ? 16 : 14, 'style="stroke-width:2.4"')}${small ? '' : '<span class="t">Give a job</span>'}</button>` : '';
+}
+ACT.givejob = t => { if (!can('order.assign')) return; FEEL.open(); openSheet('reassign', { id: t.dataset.kind === 'trip' ? t.dataset.id : Number(t.dataset.id), kind: t.dataset.kind || undefined, sel: t.dataset.who }); };
 function floorHTML(T){
   const supTr = tripsOf(TRIP_SUPPLIER_CARRIER).filter(t => !t.collectedAt), supDone = tripsBackToday(TRIP_SUPPLIER_CARRIER);
   const buyCard = T.buyers.length || supTr.length || supDone ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-    <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--indigo)"></span><b style="font-size:13px">Buying</b><span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--ink3)">trips</span></span>
-    ${T.buyers.map(b => { const tr = tripsOf(b.id), asking = liveOrders().filter(q => q.status === 'draft').reduce((n, q) => n + supplierGroups(q).filter(g => confirmState(q, g.supplierId).askedAt && confirmState(q, g.supplierId).state === 'pending').length, 0);
-      const done = tripsBackToday(b.id);
-      const out = tr.find(t => t.status === 'collecting');
-      return `<button data-act="push" data-p="person" data-id="${b.id}" style="display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;border:none;background:none;padding:0;text-align:left;color:var(--ink)">${pav(b, 38)}
-        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">${esc(firstWord(b.name))} <span style="font-size:12px;font-weight:600;color:var(--ink3)">· ${asking ? `${asking} ${pl(asking, 'line')} asking` : 'nothing asked yet'}</span></span>
-          <span style="display:grid;grid-template-columns:repeat(${Math.max(3, done + tr.length)},minmax(0,1fr));gap:3px">${Array.from({ length: done }, () => '<i style="height:6px;border-radius:999px;background:var(--green)"></i>').join('')}${tr.map(t => `<i class="${t.status === 'collecting' ? 'a-blink' : ''}" style="height:6px;border-radius:999px;background:${t.status === 'collecting' ? 'var(--amber)' : '#C9C4BA'}"></i>`).join('')}${Array.from({ length: Math.max(0, 3 - done - tr.length) }, () => '<i style="height:6px;border-radius:999px;background:#EFECE6"></i>').join('')}</span>
-          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${done ? `${done} back today` : 'none back yet'}</span><span>${out ? `out · <span class="m" style="color:var(--amberInk)">${ageWords(minsSince(msOf(out.acceptedAt || out.assignedAt || out.createdAt)))}</span>` : tr.length ? tr.length + ' planned' : 'no trip planned'}</span></span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`; }).join('')}
+    <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--indigo)"></span><b style="font-size:13px">Buying</b><span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--ink3)">lines asked of suppliers · trips</span></span>
+    ${T.buyers.map(b => { const k = buyingCounts(b), tile = (n, w, bg, ink) => `<span style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;border-radius:10px;background:${bg}"><b class="m" style="font-size:15px;color:${ink}">${n}</b><span class="ell" style="max-width:100%;font-size:10px;font-weight:700;letter-spacing:.04em;color:${ink}">${w}</span></span>`, give = giveJobBtn(b, true);
+      return `<div style="display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:center"><button data-act="push" data-p="person" data-id="${b.id}" aria-label="${esc(b.name)}" style="border:none;background:none;padding:0">${pav(b, 38)}</button>
+        <button data-act="push" data-p="person" data-id="${b.id}" style="display:flex;flex-direction:column;gap:5px;min-width:0;border:none;background:none;padding:0;text-align:left;color:var(--ink)"><span class="ell" style="font-size:14px;font-weight:700">${esc(firstWord(b.name))} <span style="font-size:12px;font-weight:600;color:var(--ink3)">· ${b.unavailable ? 'off today' : `<span class="m">${k.inBuying}</span> ${pl(k.inBuying, 'order')} in Buying`}${k.out ? ` · <span style="color:var(--amberInk)">${k.out} out</span>` : ''}</span></span>
+          <span role="img" aria-label="Lines: ${k.asked} asked of suppliers, ${k.answered} answered, ${k.planned} ${pl(k.planned, 'trip')} planned" style="display:flex;gap:4px">${tile(k.asked, 'ASKED', '#E4E6FA', '#3A3F9B')}${tile(k.answered, 'ANSWERED', 'var(--greenSoft)', 'var(--green)')}${tile(k.planned, k.planned === 1 ? 'TRIP SET' : 'TRIPS SET', 'var(--amberSoft)', 'var(--amberInk)')}</span></button>${give || ic('chev', 16, 'style="color:#9AA1AE"')}</div>`; }).join('')}
     ${supTr.length || supDone ? (() => { const n = supDone + supTr.length, on = supTr.filter(t => t.status === 'collecting').length;
       return `<div style="display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;color:var(--ink)"><span style="width:38px;height:38px;border-radius:999px;background:var(--indigoSoft);color:var(--indigo);display:flex;align-items:center;justify-content:center">${ic('truck', 18, 'style="stroke-width:2"')}</span>
-        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">Suppliers <span style="font-size:12px;font-weight:600;color:var(--ink3)">· they bring it</span></span>
+        <span style="display:flex;flex-direction:column;gap:5px;min-width:0"><span class="ell" style="font-size:14px;font-weight:700">Suppliers <span style="font-size:12px;font-weight:600;color:var(--ink3)">· delivering to us</span></span>
           <span style="display:grid;grid-template-columns:repeat(${Math.max(3, n)},minmax(0,1fr));gap:3px">${Array.from({ length: supDone }, () => '<i style="height:6px;border-radius:999px;background:var(--green)"></i>').join('')}${supTr.map(t => `<i class="${t.status === 'collecting' ? 'a-blink' : ''}" style="height:6px;border-radius:999px;background:${t.status === 'collecting' ? 'var(--amber)' : '#C9C4BA'}"></i>`).join('')}${Array.from({ length: Math.max(0, 3 - n) }, () => '<i style="height:6px;border-radius:999px;background:#EFECE6"></i>').join('')}</span>
-          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${supDone ? `${supDone} back today` : 'none back yet'}</span><span>${on ? `<span class="m" style="color:var(--amberInk)">${on}</span> on the way` : supTr.length ? supTr.length + ' planned' : 'none on the way'}</span></span></span><span></span></div>`; })() : ''}</div>` : '';
+          <span style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink3)"><span>${supDone ? `${supDone} arrived today` : 'none arrived yet today'}</span><span>${on ? `<span class="m" style="color:var(--amberInk)">${on}</span> on the way` : supTr.length ? supTr.length + ' still to come' : 'none expected'}</span></span></span><span></span></div>`; })() : ''}</div>` : '';
   const packers = T.packers.map(p => { const jobs = packLoad(p.id), late = jobs.filter(isStuck).length, notTaken = jobs.find(q => q.pickingStatus === 'awaiting_accept' && isStuck(q)); return { p, jobs, late, notTaken, n: jobs.length, free: !p.unavailable && jobs.length < 2 }; });
   const held = sum(packers, x => x.n), lateAll = sum(packers, x => x.late), cap = Math.max(10, packers.filter(x => !x.p.unavailable).length * PACK_CAP);
   const free = packers.filter(x => x.free).sort((a, b) => a.n - b.n)[0];
   const storeCard = packers.length ? `<div class="bx-card" style="border-radius:20px;padding:12px 14px 6px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(22,32,60,.05),0 8px 22px rgba(22,32,60,.06),inset 0 0 0 1px var(--line)">
     <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px"><span style="width:32px;height:32px;border-radius:10px;background:var(--slateSoft);color:var(--slate);display:flex;align-items:center;justify-content:center;flex:none">${ic('box', 17)}</span>
       <span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;white-space:nowrap">Store · packing</b><span style="font-size:11px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${held}</span> in hand · <span class="m" style="color:var(--ink)">${packedOrdersToday().length}</span> packed today</span></span>
-      <span class="mx-shelfwrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px" role="img" aria-label="${held} of ${cap} packing slots in use, ${lateAll} late"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink3)">SHELF</span><span class="mx-shelf">${Array.from({ length: Math.min(12, cap) }, (_, i) => `<i class="${i < Math.min(lateAll, 12) ? 'late' : i < held ? '' : 'free'}"></i>`).join('')}</span></span></div>
+      <span class="mx-shelfwrap" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px" role="img" aria-label="${held} of ${cap} packing slots in use, ${lateAll} late"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink3)">SLOTS IN USE</span><span class="mx-shelf">${Array.from({ length: Math.min(12, cap) }, (_, i) => `<i class="${i < Math.min(lateAll, 12) ? 'late' : i < held ? '' : 'free'}"></i>`).join('')}</span></span></div>
     ${packers.map(x => { const p = x.p, off = p.unavailable;
       const pill = off ? `<span class="mx-pill idle">Off today</span>`
         : x.notTaken ? `<span class="mx-pill bad" title="${esc(clientName(x.notTaken))}: not taken for ${esc(ageWords(inStageMins(x.notTaken)))}"><span class="bx-dot a-blink" style="background:#E5483D"></span><span class="w">Not taken</span><span class="m">${ageWords(inStageMins(x.notTaken))}</span></span>`
         : x.late ? `<span class="mx-pill bad"><span class="bx-dot" style="background:#E5483D"></span><span class="w">${x.late} past the limit</span></span>`
-        : x.free ? `<span class="mx-pill ok"><span class="bx-dot" style="background:var(--green)"></span><span class="w">Room for</span><span class="m">${PACK_CAP - x.n}</span></span>`
+        : x.free ? `<span class="mx-pill ok"><span class="bx-dot" style="background:var(--green)"></span><span class="w">${x.n ? `Can take ${PACK_CAP - x.n} more` : 'Free'}</span></span>`
         : `<span class="mx-pill mid"><span class="w">Busy · ${x.n} in hand</span></span>`;
       const act = off ? '' : x.late || x.notTaken ? `<button class="mx-act navy" data-act="reassign" data-id="${(x.notTaken || x.jobs.find(isStuck)).id}">${ic('swap', 14, 'style="stroke:#6FDCB0;stroke-width:2.4"')}<span class="t">Move</span></button>`
-        : x === free ? `<span class="mx-act mint">${ic('plus', 14, 'style="stroke-width:2.4"')}<span class="t">Has room</span></span>` : '';
+        : x.free ? giveJobBtn(p) : '';
       return `<div class="mx-pack" style="${off ? 'opacity:.6' : ''}"><button data-act="push" data-p="person" data-id="${p.id}" aria-label="${esc(p.name)}: ${x.n} in hand${x.late ? ', ' + x.late + ' late' : ''}" style="position:relative;width:54px;height:54px;border:none;background:none;padding:0">${loadRing({ n: x.n, late: x.late, free: x.free }, 54)}
           <span style="position:absolute;inset:9px;border-radius:999px;background:${personCol(p)[0]};color:${personCol(p)[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(p.name))}</span>
           ${x.n ? `<span class="m" style="position:absolute;right:-2px;bottom:0;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff">${x.n}</span>` : ''}</button>
@@ -2242,15 +2276,25 @@ function floorHTML(T){
   const driveCard = drivers.length ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--ink2)"></span><b style="font-size:13px">Delivery</b></span>
     <div class="mx-drivegrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${drivers.map(d => { const jobs = driveLoad(d.id), late = jobs.filter(isStuck).length, off = d.unavailable;
-      return `<button data-act="push" data-p="person" data-id="${d.id}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;border:none;text-align:left;color:var(--ink);${off ? 'background:transparent;box-shadow:inset 0 0 0 1.5px var(--rule);opacity:.7' : 'background:#F7F5F2'}">${pav(d, 34)}
-        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:13px">${esc(firstWord(d.name))}</b><span class="ell" style="font-size:11px;font-weight:600;color:${off ? 'var(--ink3)' : late ? 'var(--crimson)' : jobs.length ? 'var(--ink2)' : 'var(--green)'}">${off ? 'Off today' : jobs.length ? `${jobs.length} out${late ? ' · ' + late + ' late' : ''}` : 'At the shop · free'}</span></span></button>`; }).join('')}</div></div>` : '';
-  return buyCard + storeCard + driveCard;
+      const give = off ? '' : giveJobBtn(d, true);
+      return `<div style="display:flex;align-items:center;gap:6px;padding-right:${give ? 6 : 0}px;border-radius:14px;min-width:0;${off ? 'background:transparent;box-shadow:inset 0 0 0 1.5px var(--rule);opacity:.7' : 'background:#F7F5F2'}"><button data-act="push" data-p="person" data-id="${d.id}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:10px;border:none;background:none;text-align:left;color:var(--ink)">${pav(d, 34)}
+        <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:13px">${esc(firstWord(d.name))}</b><span class="ell" style="font-size:11px;font-weight:600;color:${off ? 'var(--ink3)' : late ? 'var(--crimson)' : jobs.length ? 'var(--ink2)' : 'var(--green)'}">${off ? 'Off today' : jobs.length ? `${jobs.length} out${late ? ' · ' + late + ' late' : ''}` : give ? 'Free' : 'At the shop · free'}</span></span></button>${give}</div>`; }).join('')}</div></div>` : '';
+  const placed = new Set(T.sales.concat(T.buyers, T.packers, T.drivers).map(s => String(s.id)));
+  const others = T.all.filter(s => !placed.has(String(s.id)));
+  const JOB = { accounts: 'Accounts', sourcing: 'Sourcing', manager: 'Manager', owner: 'Owner', admin: 'Owner' };
+  const otherCard = others.length ? `<div class="bx-card" style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:3px;background:var(--ink3)"></span><b style="font-size:13px">Other jobs</b></span>
+    <div class="mx-drivegrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${others.map(o => `<button data-act="push" data-p="person" data-id="${o.id}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;border:none;text-align:left;color:var(--ink);${o.unavailable ? 'background:transparent;box-shadow:inset 0 0 0 1.5px var(--rule);opacity:.7' : 'background:#F7F5F2'}">${pav(o, 34)}
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><b class="ell" style="font-size:13px">${esc(firstWord(o.name))}</b><span class="ell" style="font-size:11px;font-weight:600;color:var(--ink3)">${o.unavailable ? 'Off today' : esc(JOB[o.role] || String(o.role || 'Staff').replace(/^./, c => c.toUpperCase()))}</span></span></button>`).join('')}</div></div>` : '';
+  return buyCard + storeCard + driveCard + otherCard;
 }
+// "Team N" over "on staff · Hassan marked off today": who is off is said; nobody is counted "in".
+function teamHeadWords(n, off){ return `on staff · ${off.length ? esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' marked off today' : 'nobody marked off today'}`; }
 function viewTeam(){
   const T = team(), off = T.all.filter(s => s.unavailable);
   const anyGoal = T.sales.some(s => s.userId && personGoal(s.userId));
   return `<div class="bx-hero" data-navy-top>
-    <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${off.length ? '' : 'nobody off today'}${off.length ? '' + esc(off.slice(0, 2).map(s => firstWord(s.name)).join(', ')) + (off.length > 2 ? ' +' + (off.length - 2) : '') + ' off' : ''}</span></span>
+    <div class="mx-top"><span class="t"><span style="font-size:26px;font-weight:700;letter-spacing:-.02em">Team <span class="m" style="font-size:16px;color:var(--navyInk2)">${T.all.length}</span></span><span style="font-size:13px;color:var(--navyInk)">${teamHeadWords(T.all.length, off)}</span></span>
       <span style="display:flex">${T.all.slice(0, 4).map((s, i) => `<span style="margin-left:${i ? -5 : 0}px;border-radius:999px;box-shadow:0 0 0 2px #16203C">${pav(s, 30)}</span>`).join('')}${T.all.length > 4 ? `<span class="m" style="margin-left:-5px;width:30px;height:30px;border-radius:999px;background:var(--navy2);color:var(--navyInk);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">+${T.all.length - 4}</span>` : ''}</span></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span class="mx-lbl" style="white-space:nowrap">Selling · <span class="m">${T.sales.length}</span> · ${esc(monthWord())} invoiced</span>${can('goal.set') ? `<button data-act="push" data-p="teamrules" style="border:none;background:none;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--mint)">${anyGoal ? 'Set goals' : 'Set each goal'}${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</div>
     ${sellingHTML(T)}
@@ -2263,7 +2307,7 @@ const TRIP_WORDS = { open: 'not given out', assigned: 'not started', collecting:
 PAGE.person = a => {
   const s = staffById(a.id); if (!s) return goneCard('That person is no longer on the staff list');
   const today = todayISO(), isSales = s.role === 'sales', pm = isSales ? personMonth(s) : null;
-  const jobWord = { sales: 'Sells', buyer: 'Buys', worker: 'Picks & delivers', delivery: 'Delivers', store: 'Runs the store', manager: 'Manages the team' }[s.role] || 'Staff';
+  const jobWord = { sales: 'Sells', buyer: 'Buys', worker: 'Picks & delivers', delivery: 'Delivers', store: 'Runs the store', manager: 'Manages the team', accounts: 'Runs the money', sourcing: 'Finds items and suppliers' }[s.role] || 'Staff';
   let stats = '', body = '';
   if (isSales) {
     const sold = s.userId ? takenOn(s.userId, today) : [], inV = s.userId ? sum(moneyInBy(s.userId, today, today), x => x.amount) : 0;
@@ -2291,6 +2335,10 @@ PAGE.person = a => {
         <button class="mx-sq navy" data-act="reassign" data-id="${q.id}" aria-label="Hand ${esc(clientName(q))}'s order to someone else">${ic('swap', 16, 'style="stroke-width:2.2"')}</button></div>`).join('')
       : trips.length ? trips.map(t => `<div class="mx-srow"><span class="mid"><b class="ell" style="font-size:14px">Trip to ${esc((D().suppliers.find(x => x.id === t.supplierId) || {}).name || 'a supplier')}</b><span style="font-size:12px;font-weight:600;color:var(--ink3)">${esc(TRIP_WORDS[t.status] || t.status)} · ${(t.lines || []).length} ${pl((t.lines || []).length, 'line')}</span></span>${['open', 'assigned'].includes(t.status) ? `<button class="mx-sq navy" data-act="reassigntrip" data-id="${esc(t.id)}" aria-label="Give this trip to another buyer">${ic('swap', 16, 'style="stroke-width:2.2"')}</button>` : ''}</div>`).join('')
       : `<div class="bx-empty" style="padding:20px"><b>Nothing in hand</b>${s.unavailable ? 'Off today.' : 'Free for the next job.'}</div>`}</div>`;
+    // Room for more: the job best handed to them, one tap from the hand-over sheet.
+    const gj = can('order.assign') ? jobToGive(s) : null;
+    if (gj) { const gq = gj.kind ? null : quoteById(gj.id), gt = gj.kind ? (D().collectionTrips || []).find(x => String(x.id) === String(gj.id)) : null;
+      body = `<button class="bx-card" data-act="givejob" data-who="${esc(String(s.id))}" data-id="${esc(String(gj.id))}"${gj.kind ? ` data-kind="${gj.kind}"` : ''} style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink);box-shadow:inset 0 0 0 1.5px #BFE6D0;background:var(--greenSoft)"><span style="width:38px;height:38px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">${ic('plus', 18, 'style="stroke-width:2.4"')}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Give ${esc(firstWord(s.name))} a job</b><span class="ell" style="font-size:12px;font-weight:600;color:#0B5435">${gq ? `${esc(clientName(gq))} · ${esc(stageOf(gq).short)} · <span class="m">${esc(ageWords(inStageMins(gq)))}</span>` : `Trip to ${esc(((D().suppliers || []).find(x => gt && x.id === gt.supplierId) || {}).name || 'a supplier')}`}</span></span>${ic('chev', 16, 'style="color:var(--green)"')}</button>` + body; }
   }
   const ring = pm ? personRing(s, pm, 76, 4) : `<span style="width:76px;height:76px;display:flex;align-items:center;justify-content:center">${pav(s, 64)}</span>`;
   const chip = pm ? (pm.g ? (pm.g.ahead < 0 && !pm.g.reached ? `<span class="bx-chip" style="background:rgba(245,178,107,.16);color:var(--amber)">${ic('downt', 13, 'style="stroke-width:2.2"')}<span class="m">${short(-pm.g.ahead)}</span>&nbsp;behind pace</span>` : `<span class="bx-chip" style="background:rgba(111,220,176,.14);color:var(--mint)">${ic('up', 13, 'style="stroke-width:2.2"')}${pm.g.reached ? 'Goal reached' : 'Ahead of pace'}</span>`) : (can('goal.set') ? '<button class="bx-chip" data-act="push" data-p="teamrules" style="border:none;background:rgba(255,255,255,.08);color:var(--mint)">No goal · set one</button>' : '<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">No goal set</span>')) : (s.unavailable ? '<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">Off today</span>' : '');
@@ -3737,33 +3785,132 @@ ACT.trsave = async () => {
   S.busy = false; render();
 };
 
-/* ---------------- a customer's limit and terms (credit.set) ---------------- */
+/* ---------------- edit a customer: details (customer.edit), limit and terms (credit.set) ----------------
+   The Save button counts the changes; a check sheet shows each one before
+   and after; then "Saved · <salesperson> told" with Undo, which writes the
+   old values back the same way and is logged the same way. */
+const CE_TERMS = [0, 7, 14, 30];
+function ceStart(c){ return { name: c.name || '', phone: c.phone || '', area: c.location || '', limit: Number(c.creditLimit) || 0, terms: custTerms(c) == null ? 0 : Number(custTerms(c)) }; }
+function ceDiffs(c, st){
+  const was = ceStart(c), out = [], tw = d => d ? d + ' days' : 'Cash';
+  if (String(st.name).trim() && String(st.name).trim() !== was.name) out.push({ f: 'name', k: 'Name', was: was.name || '—', now: String(st.name).trim() });
+  if (String(st.phone).trim() !== was.phone) out.push({ f: 'phone', k: 'Phone', was: was.phone || '—', now: String(st.phone).trim() || '—' });
+  if (String(st.area).trim() !== was.area) out.push({ f: 'area', k: 'Area', was: was.area || '—', now: String(st.area).trim() || '—' });
+  if (st.limit !== was.limit) out.push({ f: 'limit', k: 'Credit limit', was: was.limit ? n0(was.limit) : 'none', now: st.limit ? n0(st.limit) : 'none', m: true });
+  if (st.terms !== was.terms) out.push({ f: 'terms', k: 'Terms', was: tw(was.terms), now: tw(st.terms) });
+  return out;
+}
+// What the limit does to their open orders, in one line.
+function ceVerdict(c, lim){
+  const pend = pendingFor(c), withIt = c.debt + pend;
+  if (!lim) return { ok: true, w: `No limit: only the ${holdDays()}-day hold line stops an order.` };
+  if (pend > 0) return withIt <= lim ? { ok: true, w: `Within the limit with their open orders · ${short(lim - withIt)} to spare.` } : { ok: false, w: `At this limit their open orders take them ${n0(withIt - lim)} over: the next one waits for your yes.` };
+  return c.debt > lim ? { ok: false, w: `They already owe ${n0(c.debt - lim)} over this limit.` } : { ok: true, w: `Room for ${n0(lim - c.debt)} more before an order waits for you.` };
+}
+function ceSaveBtn(c, st){
+  const n = ceDiffs(c, st).length;
+  return `<button id="ce_save" class="bx-btn ${n ? 'red' : 'ghost'}" data-act="ceask" data-id="${esc(c.id)}" ${n ? '' : 'disabled'}>${ic('tick', 18, 'style="stroke-width:2.4"')}${n ? `Save ${n} ${pl(n, 'change')}` : 'Nothing changed'}</button>`;
+}
 PAGE.custedit = a => {
   const c = customerById(a.id); if (!c) return goneCard('That customer is no longer on the books');
-  const k = 'ce:' + c.id, st = S.ui[k] || (S.ui[k] = { limit: Number(c.creditLimit) || 0, terms: custTerms(c) });
-  const changed = st.limit !== (Number(c.creditLimit) || 0) || st.terms !== custTerms(c), can2 = can('credit.set');
-  const pend = pendingFor(c), max = Math.max(st.limit, c.debt + pend, 1) * 1.08, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
-  const st2 = (key, d, label) => can2 ? `<button class="bx-sq" style="width:40px;height:40px;border-radius:12px;font-size:18px" data-act="cestep" data-k="${k}" data-f="${key}" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
-  return pageShell({ eyebrow: 'EDIT A CUSTOMER', title: esc(c.name), sub: esc(c.location || c.phone || ''), face: avatar(c.name, c.id, 44, true),
-    head: `<div role="img" aria-label="Owes ${n0(c.debt)} against a limit of ${n0(st.limit)}" style="display:flex;flex-direction:column;gap:6px"><span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${st.limit && c.debt > st.limit ? '#E5483D' : 'var(--amber)'}"></i>${st.limit ? `<i style="position:absolute;left:${pc(st.limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff;transition:left .3s"></i>` : ''}</span><span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>owes <b class="m" style="color:#fff">${n0(c.debt)}</b></span><span>limit <b class="m" style="color:#fff">${st.limit ? n0(st.limit) : 'none'}</b></span></span></div>`,
-    body: `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:14px">
-        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Credit limit</b><span class="bx-sub">what they may owe at once</span></span>${st2('limit', -500000, 'Lower the limit')}<span class="m" style="min-width:86px;text-align:center;font-size:16px;font-weight:600">${st.limit ? short(st.limit) : 'none'}</span>${st2('limit', 500000, 'Raise the limit')}</span>
-        <span style="display:block;height:1px;background:#F1EEE8"></span>
-        <span style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">Payment terms</b><span class="bx-sub">days to pay each bill</span></span>${st2('terms', -1, 'Fewer days')}<span class="m" style="min-width:60px;text-align:center;font-size:16px;font-weight:600">${st.terms ? st.terms + 'd' : 'cash'}</span>${st2('terms', 1, 'More days')}</span>
-        <div style="display:flex;gap:6px">${[0, 7, 14, 30].map(d => `<button data-act="ceset" data-k="${k}" data-v="${d}" ${can2 ? '' : 'disabled'} style="flex:1;height:34px;border:none;border-radius:10px;font-size:12px;font-weight:700;${st.terms === d ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${d ? d + ' days' : 'cash'}</button>`).join('')}</div></div>
-      ${can2 ? '' : lockedHTML('credit.set', 'Setting a limit and terms')}
-      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}In the owner’s log, with what it was before</span>`,
-    foot: changed && can2 ? `<button class="bx-btn red" data-act="cesave" data-id="${esc(c.id)}">${ic('tick', 18, 'style="stroke-width:2.4"')}Save · ${st.limit ? short(st.limit) : 'no limit'} · ${st.terms}d</button>` : '' });
+  const k = 'ce:' + c.id, st = S.ui[k] || (S.ui[k] = ceStart(c)), was = ceStart(c);
+  const canC = can('credit.set'), canE = can('customer.edit');
+  const pend = pendingFor(c), max = Math.max(st.limit, was.limit, c.debt + pend, 1) * 1.12, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
+  const v = ceVerdict(c, st.limit), pays = paysInDays(c), opts = CE_TERMS;
+  const step = (d, label) => canC ? `<button class="bx-sq" style="width:44px;height:44px;border-radius:12px;font-size:20px" data-act="cestep" data-k="${k}" data-f="limit" data-d="${d}" aria-label="${label}">${d > 0 ? '+' : '−'}</button>` : '';
+  const field = (f, label, val, mono) => `<label style="display:flex;align-items:center;gap:10px;min-height:52px${f !== 'area' ? ';border-bottom:1px solid #F1EEE8' : ''}"><span style="width:64px;flex:none;font-size:12px;font-weight:700;color:var(--ink3)">${label}</span><input ${mono ? 'class="m" inputmode="tel"' : ''} type="text" autocomplete="off" data-in="cefield" data-k="${k}" data-f="${f}" data-id="${esc(c.id)}" value="${esc(val)}" ${canE ? '' : 'disabled'} aria-label="${label}" style="flex:1;min-width:0;height:36px;border:none;outline:none;border-radius:10px;padding:0 8px;font-size:15px;color:var(--ink);background:transparent"></label>`;
+  return pageShell({ eyebrow: 'EDIT A CUSTOMER', title: esc(c.name), sub: lastSeller(c) ? esc(firstWord(lastSeller(c).name)) + ' sells to them' : '', face: avatar(c.name, c.id, 44, true),
+    head: '',
+    body: `<div class="bx-card" style="padding:4px 14px">${field('name', 'Name', st.name)}${field('phone', 'Phone', st.phone, true)}${field('area', 'Area', st.area)}</div>
+      ${canE ? '' : lockedHTML('customer.edit', 'Changing a customer’s details')}
+      <div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
+        <span style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Credit limit</b><span style="font-size:11px;font-weight:700;color:${st.limit !== was.limit ? 'var(--amberInk)' : 'var(--ink3)'}">${st.limit !== was.limit ? 'was ' + (was.limit ? n0(was.limit) : 'none') : 'unchanged'}</span></span>
+        <div style="display:flex;align-items:center;gap:8px">${step(-500000, 'Lower the limit by 500,000')}<span class="m" style="flex:1;text-align:center;font-size:26px;font-weight:600;letter-spacing:-.03em">${st.limit ? n0(st.limit) : 'none'}</span>${step(500000, 'Raise the limit by 500,000')}</div>
+        <div role="img" aria-label="Owes ${n0(c.debt)}${pend ? ' plus open orders of ' + n0(pend) : ''}; limit ${st.limit ? n0(st.limit) : 'none'}" style="display:flex;flex-direction:column;gap:6px">
+          <span style="position:relative;height:16px;border-radius:999px;background:#EFECE6;overflow:visible"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:#F5B26B"></i>${pend ? `<i style="position:absolute;left:${pc(c.debt)};top:0;bottom:0;width:${(Math.min(100, (c.debt + pend) / max * 100) - Math.min(100, c.debt / max * 100)).toFixed(1)}%;background:repeating-linear-gradient(135deg,${v.ok ? '#16203C' : '#E5483D'} 0 4px,${v.ok ? '#C5CBD8' : '#F6C3BE'} 4px 7px)"></i>` : ''}${st.limit ? `<i style="position:absolute;left:${pc(st.limit)};top:-5px;bottom:-5px;width:3px;border-radius:2px;background:var(--ink);transition:left .3s"></i>` : ''}</span>
+          <span style="display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:600;color:var(--ink3)"><span>owes <b class="m" style="color:var(--ink)">${short(c.debt)}</b>${pend ? ` + open orders <b class="m" style="color:var(--ink)">${short(pend)}</b>` : ''}</span><span>limit <b class="m" style="color:var(--ink)">${st.limit ? short(st.limit) : 'none'}</b></span></span></div>
+        <span style="padding:10px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${v.ok ? 'background:var(--greenSoft);color:#0B4F31' : 'background:var(--amberSoft);color:#7A4A02'}">${esc(v.w)}</span></div>
+      <div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="font-size:13px">Payment terms${CE_TERMS.includes(st.terms) ? '' : ` <span class="m" style="font-size:11px;color:var(--amberInk)">now ${st.terms}d</span>`}</b>${pays != null ? `<span style="font-size:11px;font-weight:600;color:var(--ink3)">they usually pay in <b class="m" style="color:var(--ink)">~${pays}d</b></span>` : ''}</span>
+        <div role="radiogroup" aria-label="Payment terms" style="display:grid;grid-template-columns:repeat(${opts.length},minmax(0,1fr));gap:6px">${opts.map(d => `<button role="radio" aria-checked="${st.terms === d}" data-act="ceset" data-k="${k}" data-v="${d}" ${canC ? '' : 'disabled'} style="height:44px;border:none;border-radius:12px;font-size:13px;font-weight:700;${st.terms === d ? 'background:var(--navy);color:#fff' : 'background:var(--soft);color:var(--ink)'}">${d ? d + ' days' : 'Cash'}</button>`).join('')}</div></div>
+      ${canC ? '' : lockedHTML('credit.set', 'Setting a limit and terms')}
+      <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}The owner’s log keeps what it was before</span>`,
+    foot: canC || canE ? ceSaveBtn(c, st) : '' });
 };
 ACT.cestep = t => { const st = S.ui[t.dataset.k]; st[t.dataset.f] = Math.max(0, (st[t.dataset.f] || 0) + Number(t.dataset.d)); FEEL.tick(); render(); };
 ACT.ceset = t => { S.ui[t.dataset.k].terms = Number(t.dataset.v); FEEL.tick(); render(); };
+// Typing keeps the focus: only the Save button is redrawn, with its count.
+ACT['in:cefield'] = t => { const st = S.ui[t.dataset.k], c = customerById(t.dataset.id); if (!st || !c) return; st[t.dataset.f] = t.value; const b = document.getElementById('ce_save'); if (b) b.outerHTML = ceSaveBtn(c, st); };
+ACT.ceask = t => { const c = customerById(t.dataset.id), st = c && S.ui['ce:' + c.id]; if (!st || !ceDiffs(c, st).length) return; FEEL.open(); openSheet('cecheck', { id: c.id }); };
+SHEET.cecheck = a => {
+  const c = customerById(a.id), st = c && S.ui['ce:' + c.id];
+  if (!c || !st) return `<div class="bx-empty"><b>Nothing to save</b></div><button class="bx-btn ghost" style="flex:none" data-act="closesheet">Close</button>`;
+  const d = ceDiffs(c, st), v = ceVerdict(c, st.limit), credit = d.some(x => x.f === 'limit' || x.f === 'terms');
+  return `<span style="font-size:18px;font-weight:700">Save ${d.length > 1 ? 'these' : 'this'} for ${esc(c.name)}?</span>
+    <div style="display:flex;flex-direction:column;border-radius:16px;box-shadow:inset 0 0 0 1px var(--line);padding:2px 14px">${d.map((x, i) => `<span style="display:flex;align-items:center;gap:8px;min-height:48px;min-width:0;${i < d.length - 1 ? 'border-bottom:1px solid #F1EEE8' : ''}"><span style="width:84px;flex:none;font-size:12px;font-weight:700;color:var(--ink3)">${x.k}</span><span class="ell${x.m ? ' m' : ''}" style="min-width:0;font-size:13px;color:#8A93A3;text-decoration:line-through">${esc(x.was)}</span>${ic('arrow', 14, 'style="flex:none;color:#A9A398;stroke-width:2.4"')}<span class="ell${x.m ? ' m' : ''}" style="min-width:0;font-size:15px;font-weight:600;color:var(--ink)">${esc(x.now)}</span></span>`).join('')}</div>
+    ${credit ? `<span style="padding:10px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${v.ok ? 'background:var(--greenSoft);color:#0B4F31' : 'background:var(--amberSoft);color:#7A4A02'}">${esc(v.w)}</span>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:8px"><button class="bx-btn ghost" data-act="closesheet">Change</button><button class="bx-btn red" data-act="cesave" data-id="${esc(c.id)}">Yes, save</button></div>`;
+};
+/* One write for a customer's fields, the way every edit and its undo goes.
+   A limit or terms change is logged by 0122's customers guard; the
+   details are logged here. */
+async function ceWrite(c, vals, undo){
+  const was = ceStart(c), patch = {}, det = {};
+  if (vals.name !== undefined && vals.name && vals.name !== was.name) { patch.name = vals.name; det.name = [was.name, vals.name]; }
+  if (vals.phone !== undefined && vals.phone !== was.phone) { patch.phone = vals.phone; det.phone = [was.phone, vals.phone]; }
+  if (vals.area !== undefined && vals.area !== was.area) { patch.location = vals.area; det.location = [was.area, vals.area]; }
+  if (vals.limit !== undefined && vals.limit !== was.limit) patch.credit_limit = vals.limit || null;
+  if (vals.terms !== undefined && vals.terms !== was.terms) patch.terms_days = vals.terms;
+  if (!Object.keys(patch).length) return false;
+  const u = await sb.from('customers').update(patch).eq('shop_id', S.shopId).eq('id', c.id); if (u.error) throw u.error;
+  if ('name' in patch) c.name = patch.name; if ('phone' in patch) c.phone = patch.phone; if ('location' in patch) c.location = patch.location;
+  if ('credit_limit' in patch) c.creditLimit = patch.credit_limit; if ('terms_days' in patch) c.termsDays = patch.terms_days;
+  saveSnapshot();
+  const dk = Object.keys(det);
+  if (dk.length) logDecision('customer.edit', `${undo ? 'Undid: ' : ''}${c.name}: ${dk.map(f => `${f === 'location' ? 'area' : f} ${det[f][0] || '—'} → ${det[f][1] || '—'}`).join('; ')}`,
+    { ref: { table: 'customers', id: c.id }, before: Object.fromEntries(dk.map(f => [f, det[f][0]])), after: Object.fromEntries(dk.map(f => [f, det[f][1]])) });
+  return true;
+}
+/* The salesperson who last sold to them is told (a push). The server
+   function is new: until it is there, the save stands and nobody is told. */
+async function ceTell(c, what){
+  const s = lastSeller(c); if (!s || !s.userId) return null;
+  try { await callFn('tell_customer_change', { p_shop_id: S.shopId, p_customer_id: c.id, p_to: String(s.userId), p_what: String(what).slice(0, 200) }); return s; }
+  catch (e) { if (!rpcMissing(e)) console.warn('tell_customer_change', e); return false; }
+}
+let ceUndoTimer = null;
+function ceUndoToast(msg, c, before){
+  let el = document.getElementById('ce_undo');
+  if (!el) { el = document.createElement('div'); el.id = 'ce_undo'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  S.ceUndo = before ? { id: c.id, before } : null;
+  el.style.cssText = 'position:fixed;left:16px;right:16px;bottom:calc(96px + var(--safe-area-inset-bottom,0px));z-index:91;max-width:440px;margin:0 auto;border-radius:16px;background:var(--navy);color:#fff;overflow:hidden;box-shadow:0 12px 26px rgba(14,20,40,.3)';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;min-height:56px"><span style="color:var(--mint);display:flex">${ic('tick', 18, 'style="stroke-width:2.4"')}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:600">${esc(msg)}</span>${before ? `<button data-act="ceundo" style="height:38px;padding:0 14px;border:none;border-radius:999px;background:rgba(255,255,255,.1);color:var(--mint);font-size:13px;font-weight:700">Undo</button>` : ''}</div>${before ? '<span class="ce-drain" style="display:block;height:3px;background:var(--mint);transform-origin:left;transition:transform 7s linear"></span>' : ''}`;
+  const bar = el.querySelector('.ce-drain'); if (bar) requestAnimationFrame(() => { bar.style.transform = 'scaleX(0)'; });
+  clearTimeout(ceUndoTimer); ceUndoTimer = setTimeout(() => { el.innerHTML = ''; el.style.cssText = 'display:none'; S.ceUndo = null; }, before ? 7000 : 3200);
+}
 ACT.cesave = async t => {
-  const c = customerById(t.dataset.id), st = S.ui['ce:' + t.dataset.id]; if (!c || S.busy) return; S.busy = true;
-    try { const u = await sb.from('customers').update({ credit_limit: st.limit || null, terms_days: st.terms }).eq('shop_id', S.shopId).eq('id', c.id); if (u.error) throw u.error;
-    c.creditLimit = st.limit || null; c.termsDays = st.terms; saveSnapshot();
-    // 0122's customers guard logs a limit or terms change itself.
-    S.ui['ce:' + c.id] = null; FEEL.stamp(); toast('Saved · in the owner’s log'); pop(); }
-  catch (e) { toast(failWord(e), 6000); } S.busy = false; render();
+  const c = customerById(t.dataset.id), st = c && S.ui['ce:' + c.id]; if (!c || !st || S.busy) return;
+  const d = ceDiffs(c, st); if (!d.length) return;
+  const before = ceStart(c), credit = d.some(x => x.f === 'limit' || x.f === 'terms'), details = d.some(x => x.f === 'name' || x.f === 'phone' || x.f === 'area');
+  if ((credit && !can('credit.set')) || (details && !can('customer.edit'))) return;
+  S.busy = true;
+  try {
+    await ceWrite(c, { name: String(st.name).trim(), phone: String(st.phone).trim(), area: String(st.area).trim(), limit: st.limit, terms: st.terms });
+    S.ui['ce:' + c.id] = null; closeSheet(); FEEL.stamp(); pop();
+    const told = await ceTell(c, d.map(x => `${x.k} ${x.was} → ${x.now}`).join('; '));
+    ceUndoToast(told ? `Saved · ${firstWord(told.name)} told` : 'Saved · in the owner’s log', c, before);
+  } catch (e) { toast(failWord(e), 6000); }
+  S.busy = false; render();
+};
+ACT.ceundo = async () => {
+  const u = S.ceUndo, c = u && customerById(u.id); if (!c || S.busy) return; S.busy = true; S.ceUndo = null;
+  try {
+    const now = ceStart(c);
+    await ceWrite(c, u.before, true);
+    FEEL.tick(); await ceTell(c, 'Undone: back to ' + Object.keys(u.before).filter(f => u.before[f] !== now[f]).map(f => f + ' ' + (u.before[f] === '' ? '—' : u.before[f])).join('; '));
+    ceUndoToast('Undone · back to what it was', c, null);
+  } catch (e) { toast(failWord(e), 6000); }
+  S.busy = false; render();
 };
 
 /* ---------------- a promise to pay (promise.record) ---------------- */
@@ -3816,6 +3963,18 @@ const DOORS = [
   { k: 'hand', w: 'Hand over, nudge', icon: 'swap', open: () => can('order.assign') || can('order.move'), p: null, say: 'Give a packing job, a delivery or a buying trip to somebody free, and nudge who is holding things up.' },
   { k: 'see', w: 'See the team', icon: 'eye', open: () => true, p: null, say: 'Every order, who holds it, what each person sold and brought in, and what customers owe.' },
 ];
+/* What waits behind each door, counted from the same lists Decide and
+   Today's "needs you" read, so the numbers never disagree:
+   decideCounts() split by door, then stuck orders + people behind pace
+   (hand over, nudge) and old debts (customers). */
+function doorWaiting(){
+  const c = decideCounts(), ny = needsYou(), old = ny.rest.find(x => x.k === 'old');
+  const asks = openAsks('credit').length + openAsks('void').length, ag = agentAsks().length;
+  const w = { prices: c.prices, credit: c.credit, invoices: c.invoices + asks, stock: c.stock, margins: 0, goals: 0, agents: ag,
+    customers: old ? old.n : 0, hand: stuckOrders().length + ny.rest.filter(x => x.k === 'behind').length, see: 0 };
+  w.total = DOORS.reduce((s, d) => s + (d.open() ? w[d.k] || 0 : 0), 0);
+  return w;
+}
 function pushOn(){ return !!window.owPushReady; }
 // Why this phone is not signed up (phonePush keeps it in owPushError), in a few words.
 function pushWhy(){
@@ -3827,26 +3986,30 @@ function pushWhy(){
   return 'this phone could not be saved: open the app again';
 }
 PAGE.me = () => {
-  const m = teamMonth(), log = dayLog(), T = team(), sel = S.ui.door || 'see';
-  const doorBtn = d => { const open = d.open(), on = sel === d.k;
-    return `<button aria-pressed="${on}" data-act="door" data-v="${d.k}" style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:none;background:none;padding:0;color:${open ? 'var(--ink)' : 'var(--ink2)'}"><span style="width:46px;height:46px;border-radius:15px;display:flex;align-items:center;justify-content:center;${open ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2)'};${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--navy)' : ''}">${ic(d.icon, 20)}</span><span style="font-size:11px;font-weight:600;line-height:1.2">${esc(d.w)}</span></button>`; };
-  const cur = DOORS.find(d => d.k === sel) || DOORS[DOORS.length - 1];
+  const m = teamMonth(), log = dayLog(), T = team(), sel = S.ui.door || '', wait = doorWaiting();
+  // A red count of what waits behind the door, or a mint dot when nothing does.
+  const badge = (d, open) => { if (!open) return ''; const n = wait[d.k] || 0;
+    return n ? `<span class="m" aria-label="${n} waiting" style="position:absolute;top:-5px;right:-6px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#C93A30;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff">${n > 99 ? '99+' : n}</span>`
+      : `<span aria-label="nothing waiting" style="position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:999px;background:#6FDCB0;box-shadow:0 0 0 2px #fff"></span>`; };
+  const doorBtn = d => { const open = d.open(), on = sel === d.k && !open;
+    return `<button aria-pressed="${on}" data-act="door" data-v="${d.k}" style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:none;background:none;padding:0;color:${open ? 'var(--ink)' : 'var(--ink2)'}"><span style="position:relative;width:46px;height:46px;border-radius:15px;display:flex;align-items:center;justify-content:center;${open ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2)'};${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--navy)' : ''}">${ic(d.icon, 20)}${badge(d, open)}</span><span style="font-size:11px;font-weight:600;line-height:1.2">${esc(d.w)}</span></button>`; };
+  const cur = DOORS.find(d => d.k === sel) || null;
   const phone = D().presetShopPhone, ownerHere = /owner|admin/i.test(String(S.role || '')), linked = S.user && staffByUser(S.user.id), mine = myStaff();
   const whoCard = linked || !T.all.length ? '' : `<div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">Which card is you?</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${mine ? 'this phone' : 'so nudges skip you'}</span></div>
         <div class="mx-scroll" style="display:flex;gap:12px;overflow-x:auto;padding:2px">${T.all.map(s => { const on = mine && String(mine.id) === String(s.id); return `<button data-act="iam" data-v="${esc(String(s.id))}" aria-pressed="${!!on}" aria-label="I am ${esc(s.name)}" style="flex:none;display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:none;padding:0;color:var(--ink);opacity:${!mine || on ? 1 : .55}"><span style="border-radius:999px;${on ? 'box-shadow:0 0 0 2px #fff,0 0 0 4px var(--sky)' : ''}">${pav(s, 44)}</span><span style="font-size:11px;font-weight:700;max-width:60px" class="ell">${esc(firstWord(s.name))}</span></button>`; }).join('')}</div></div>`;
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
     <div class="bx-sheethead" style="gap:16px"><span class="bx-grip"></span>
-      <div style="display:flex;align-items:center;gap:14px"><span style="position:relative;width:84px;height:84px;flex:none">${teamRingHTML(m, 84, 4, true)}<span style="position:absolute;inset:9px;border-radius:999px;background:linear-gradient(160deg,#2E3B66,#1D2747);color:#fff;font-size:23px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(myName()))}</span>${m.tg ? `<span class="m" style="position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);height:20px;padding:0 7px;border-radius:999px;background:var(--mint);color:var(--navy);font-size:11px;font-weight:600;display:flex;align-items:center;box-shadow:0 0 0 2px #1D2747">${pct(m.tg.pct)}</span>` : ''}</span>
+      <div style="display:flex;align-items:center;gap:14px"><span style="position:relative;width:84px;height:84px;flex:none">${teamRingHTML(m, 84, 4, true)}<span style="position:absolute;inset:9px;border-radius:999px;background:linear-gradient(160deg,#2E3B66,#1D2747);color:#fff;font-size:23px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(initials(myName()))}</span>${m.tg ? `<span aria-label="The team has made ${pct(m.tg.pct)} of ${esc(monthWord())}’s goal" style="position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);height:20px;padding:0 7px;border-radius:999px;background:var(--mint);color:var(--navy);font-size:10px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:3px;box-shadow:0 0 0 2px #1D2747">team goal <span class="m" style="font-size:11px">${pct(m.tg.pct)}</span></span>` : ''}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span class="ell" style="font-size:21px;font-weight:700">${esc(myName())}</span><span class="ell" style="font-size:13px;font-weight:600;color:var(--navyInk)">${S.role === 'manager' ? 'Manager' : esc(String(S.role || '').replace(/^./, c => c.toUpperCase()))} · ${esc(S.shopName)}</span><span class="bx-chip" style="align-self:flex-start;background:rgba(111,220,176,.14);color:var(--mint)"><span class="m">${T.all.length}</span>&nbsp;on your team</span></span>${closeBtn()}</div>
       <div class="bx-glass" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:16px">${[['Stuck now', stuckOrders().length, stuckOrders().length ? 'color:var(--amber)' : 'color:var(--mint)'], ['Handed over', log.moves, ''], ['Nudges sent', log.nudges, '']].map((x, i) => `<span style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;${i ? 'border-left:1px solid rgba(255,255,255,.07)' : ''}"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">${x[0]}</span><span class="m" style="font-size:16px;font-weight:600;${x[2]}">${x[1]}</span></span>`).join('')}</div>
     </div>
     <div class="bx-body">
       ${whoCard}
       <div class="bx-card" style="padding:14px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What you decide</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${ownerHere ? 'the manager’s desk' : 'nothing waits for the owner'}</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:13px">What you decide</b><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--ink3)">${wait.total ? `<b class="m" style="color:#C93A30">${wait.total}</b> waiting on you` : `<span style="width:8px;height:8px;border-radius:999px;background:#6FDCB0"></span>nothing waiting on you`}</span></div>
         <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 2px;justify-items:center">${DOORS.map(doorBtn).join('')}</div>
-        <span class="a-up" style="display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;${cur.open() ? 'background:var(--greenSoft);color:#0B5435' : 'background:var(--soft2);color:var(--ink2)'}"><span style="flex:1">${esc(cur.open() ? cur.say : cur.say + ' Not on for this login yet.')}</span>${cur.open() && cur.p ? `<button class="mx-act navy" data-act="push" data-p="${cur.p}">Open${ic('chev', 12, 'style="stroke-width:2.4"')}</button>` : ''}</span>
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">Every decision goes in the <b style="color:var(--ink)">owner’s log</b>: who, when, and what it was before. ${ownerHere ? 'Hiring and pay, the policy numbers and backups stay in the Owner app.' : 'The owner keeps hiring and pay, the policy numbers and backups.'}</span></div>
+        ${cur && !cur.open() ? `<span class="a-up" style="display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:600;line-height:1.35;background:var(--soft2);color:var(--ink2)">${ic('lock', 14)}<span style="flex:1">${esc(cur.say + ' Not on for this login yet.')}</span></span>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--bg)"><span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('doc', 14)}</span><span style="flex:1;font-size:12px;font-weight:600;color:var(--ink2);line-height:1.35">You decide these. The owner gets the <b style="color:var(--ink)">log</b>: who, when, what it was before. ${ownerHere ? 'Hiring and pay, the policy numbers and backups stay in the Owner app.' : 'The owner keeps hiring and pay, the policy numbers and backups.'}</span></div>
         ${pushOn() || pushWhy() ? `<div style="display:flex;align-items:center;gap:10px;padding:0 2px"><span style="width:28px;height:28px;border-radius:9px;${pushOn() ? 'background:var(--navy);color:var(--mint)' : 'border:1.5px dashed #9AA1AE;color:var(--ink2);box-sizing:border-box'};display:flex;align-items:center;justify-content:center;flex:none">${ic('bell', 14)}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:12px">Push to your phone</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">${esc(pushWhy() || 'each decision waiting · nudges reach staff the same way')}</span></span><span class="bx-chip" style="${pushOn() ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--soft2);color:var(--ink2)'}">${pushOn() ? 'On' : pushWhy() ? 'Not on' : 'Coming with push'}</span></div>` : ''}
       </div>
       ${m.tg && m.tg.reached ? `<button class="bx-card" data-act="win" style="border:none;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;color:var(--ink)"><span style="width:42px;height:42px;border-radius:13px;background:var(--navy);color:var(--mint);display:flex;align-items:center;justify-content:center;flex:none">${ic('target', 20)}</span><span style="flex:1"><b style="font-size:14px">The team passed ${esc(monthWord())}</b><span class="bx-sub" style="display:block">Play the win again</span></span>${ic('chev', 16)}</button>` : ''}
@@ -3857,7 +4020,25 @@ PAGE.me = () => {
     </div></div>`;
 };
 ACT.iam = t => { try { localStorage.setItem(meKey(), t.dataset.v); } catch (_e) {} FEEL.tick(); render(); };
-ACT.door = t => { const d = DOORS.find(x => x.k === t.dataset.v); if (S.ui.door === t.dataset.v && d && d.p && d.open()) { FEEL.open(); push(d.p, {}); return; } if (S.ui.door !== t.dataset.v) FEEL.tick(); S.ui.door = t.dataset.v; render(); };
+/* One tap opens the door's own screen: the oldest thing waiting behind it
+   when there is one, else its list. A door not on for this login only
+   says what it is. */
+function doorGo(k){
+  const first = a => a && a[0];
+  if (k === 'prices') { const l = first(ladderCases()), o = first(openPriceCases()); return l ? push('price', { id: l.q.id }) : o ? push('pricenew', { id: o.q.id }) : push('decide', {}); }
+  if (k === 'credit') return heldWaiting().length ? push('approvals', {}) : go('money');
+  if (k === 'invoices') { const a = first(openAsks('credit')), v = first(openAsks('void')); return !invoiceQueue().length && a ? push('return', { id: a.id }) : !invoiceQueue().length && v ? push('void', { id: v.id }) : push('invoices', {}); }
+  if (k === 'stock') { const sp = first(shortPicks()), td = first(tripDiffs()), ct = first(openCounts()); return sp ? push('shortpick', { id: sp.q.id }) : td ? push('tripcount', { id: td.t.id }) : ct ? push('stocktake', { id: ct.id }) : push('writeoff', {}); }
+  if (k === 'margins') return push('margins', {});
+  if (k === 'goals') return push('teamrules', {});
+  if (k === 'agents') { const x = first(agentAsks()); return x ? push('agentask', { id: x.q.id }) : push('decide', {}); }
+  if (k === 'customers') return go('money');
+  if (k === 'hand') return go('orders');
+  return go('team');
+}
+ACT.door = t => { const d = DOORS.find(x => x.k === t.dataset.v); if (!d) return;
+  if (d.open()) { S.ui.door = null; FEEL.open(); doorGo(d.k); return; }
+  FEEL.tick(); S.ui.door = S.ui.door === d.k ? null : d.k; render(); };
 ACT.pref = t => { const k = t.dataset.k; S.prefs[k] = !S.prefs[k]; savePrefs(); applyPrefs(); if (k === 'sound' && S.prefs.sound) FEEL.yes(); render(); };
 // One stray tap must not throw away the books on this phone: the first tap asks.
 ACT.signout = async () => {
