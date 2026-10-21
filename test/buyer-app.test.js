@@ -826,7 +826,12 @@ const P = page(fakeDb({}));
     X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-NC-1', supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(NOW - 6e5).toISOString(), cash_given: 850000, lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 1000 }] })];
     X.S.stack = [{ type: 'trip', args: { id: 'TRIP-NC-1' } }];
     const html = X.PAGE.trip({ id: 'TRIP-NC-1' });
-    t.check(!/gave you|in hand <b/.test(html) && /No cash from .* · ask/.test(html), 'a cash figure on the trip is never "gave you": with no handover it says so, with an ask');
+    t.check(!/gave you|in hand <b/.test(html) && /No cash from /.test(html) && /data-act="tcashask"/.test(html) && /data-act="tcashown"/.test(html), 'a cash figure on the trip is never "gave you": with no handover it says so, with Ask and "I paid myself"');
+    X.D().collectionTrips[0].lines[0].gotQty = 2; X.setTripPay('TRIP-NC-1', { amount: 2000, noReceipt: true });
+    t.check(/Done here waits for/.test(X.PAGE.trip({ id: 'TRIP-NC-1' })) && !/data-slide="handin"/.test(X.PAGE.trip({ id: 'TRIP-NC-1' })), 'with no cash from Accounts, the stop is locked: no Done here, no hand-in');
+    X.ACT.tcashown();
+    const h2 = X.PAGE.trip({ id: 'TRIP-NC-1' });
+    t.check(/You paid from your own pocket/.test(h2) && /data-slide="handin"/.test(h2) && /own money/.test(h2), '"I paid myself" unlocks it, and says Accounts pays you back');
   }
   // 10c. A stop a supplier already delivers is off the round, and a trip out since an earlier day with nothing loaded is late.
   {
@@ -855,6 +860,36 @@ const P = page(fakeDb({}));
     X.ACT.yardopen();
     html = X.PAGE.trips();
     t.check(/data-id="Y1"/.test(html) && /×2/.test(html) && (html.match(/data-id="Y[34]"/g) || []).length === 1, 'open, the trips show by day as chips, two from one supplier on one day as one "×2"');
+  }
+  // 10g. The round keeps its order when a stop comes off; the yard refills the shelf first; late stops are flagged.
+  {
+    const X = page(fakeDb({ collection_trips: [] }));
+    const at = NOW - 6e5, mk = (id, sid, i, extra) => X.rowToTrip({ id, supplier_id: sid, status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(at + i).toISOString(), lines: [{ orderId: 50 + i, lineId: 'L' + i, productId: 'P1', qty: 2, expectedPrice: 1000 * (5 - i) }], ...(extra || {}) });
+    X.D().collectionTrips = [mk('R-1', 'S1', 0), mk('R-2', 'S2', 1), mk('R-3', 'S3', 2)];
+    const before = X.roundStops(X.D().collectionTrips[0]).map(x => x.id);
+    X.D().collectionTrips[1].voided = true;
+    const after = X.roundStops(X.D().collectionTrips[0]).map(x => x.id);
+    t.check(JSON.stringify(before.filter(id => id !== 'R-2')) === JSON.stringify(after), 'a stop taken off is skipped, the rest keep their order: ' + before.join(',') + ' → ' + after.join(','));
+    X.S.tripPay = {}; X.setTripPay('R-1', { done: new Date().toISOString(), amount: 1 });
+    t.check(JSON.stringify(X.roundStops(X.D().collectionTrips[0]).map(x => x.id)) === JSON.stringify(after), 'and a stop done does not move it either');
+    // a stop of a round from three days ago, nothing loaded, is late on its own
+    const old = NOW - 3 * 864e5, mo = (id, sid, i, got) => X.rowToTrip({ id, supplier_id: sid, status: 'collecting', assigned_worker_id: 'W2', created_at: new Date(old + i).toISOString(), lines: [{ orderId: 70 + i, lineId: 'L7' + i, productId: 'P1', qty: 2, expectedPrice: 1000, gotQty: got }] });
+    X.D().collectionTrips.push(mo('O-1', 'S1', 0, 2), mo('O-2', 'S2', 1, null));
+    const html = X.PAGE.trips();
+    t.check(/LATE · 1/.test(html) && /3 D LATE/.test(html) && /’s round · /.test(html), 'a stop on an old round with nothing loaded is flagged late on its own');
+    t.check(/TRIPS<\/span><span class="m"[^>]*>2 out</.test(X.viewToday()) || /2 out/.test(X.viewToday()), 'the Today tile counts trips, a round as one');
+  }
+  // 10h. A shelf refill buys only what the yard does not already hold.
+  {
+    const data = fixture(); data.restockBuys = [{ id: 'rb9', productId: 'P2', variantIdx: null, qty: 10, unit: 'pc', supplierId: 'S2', price: 28000, status: 'planned', createdAt: new Date(NOW - 36e5).toISOString() }];
+    data.prices = data.prices.map(r => r.id === 3 ? { ...r, date: new Date(NOW).toISOString().slice(0, 10) } : r);
+    const X = page(fakeDb({}), data);
+    X.D().savedQuotes = [X.rowToQuote(orderRow(61, [it(1, 'P2', null, 1, 'S2', 28000)], {}, { status: 'awaiting_goods' }))];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'YD', supplier_id: 'S2', status: 'collected', assigned_worker_id: 'W1', created_at: new Date(NOW - 864e5).toISOString(), collected_at: new Date(NOW - 8e7).toISOString(), lines: [{ orderId: 61, lineId: 1, productId: 'P2', variantIdx: null, qty: 7, expectedPrice: 28000, gotQty: 7 }] })];
+    const r = X.runsToGo().find(x => String(x.supplierId) === 'S2'), l = r && r.lines.find(x => x.restock);
+    t.check(l && l.qty === 4 && l.fromYard === 6, 'the yard holds 6 spare, so the refill of 10 buys 4: ' + (l && l.qty));
+    X.S.stack = [{ type: 'plan', args: {} }];
+    t.check(/already at the yard, uncounted · take them from there, buy 4/.test(X.PAGE.plan({})), 'and the plan says so');
   }
   // 10d. The greeting: the time of day it is, and a name, never a login.
   {
