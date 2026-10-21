@@ -128,8 +128,19 @@ be reached without a JWT — the thing a blanket deploy gets wrong.
    you test bounces the person to the live site.
 
 8. **Make yourself an owner and a shop.** Sign up through the staging site
-   as a new owner would, and add enough products, a customer and a
-   supplier to exercise a screen.
+   as a new owner would. That makes a login, not a shop: since 0059 a shop
+   is made only in the SQL editor. So in the **staging** project's SQL
+   editor, with your own email:
+
+   ```sql
+   with s as (insert into shops(name, created_by)
+              select 'Staging shop', id from auth.users where email = 'you@example.com'
+              returning id, created_by)
+   insert into shop_members(shop_id, user_id, role) select id, created_by, 'owner' from s;
+   ```
+
+   Then add enough products, a customer and a supplier to exercise a
+   screen.
 
    Do **not** restore a dump of the live database. Real customer names,
    phone numbers and debts in a test system is a leak looking for
