@@ -350,7 +350,7 @@ const quoteRow = (q) => {
       { id: 32, status: 'completed', invoiced: false, voided: false, client: { name: 'Walk-in' }, customerId: null, items: [line(1, 1, 1000)], charges: [], payments: [], takenBy: 'u2', pickingDoneAt: null,
         stageLog: [{ status: 'preparing', at: NOW - 3 * 60e3 }, { status: 'pending_delivery', at: recent }] });
     const X = page(fakeDb({}), data), floor = X.floorHTML(X.team());
-    t.check(/Suppliers/.test(floor) && /they bring it/.test(floor) && /1 back today/.test(floor) && /1<\/span> on the way/.test(floor), 'Buying shows the suppliers\' deliveries: one back today, one on the way');
+    t.check(/Suppliers/.test(floor) && /delivering to us/.test(floor) && /1 arrived today/.test(floor) && /1<\/span> on the way/.test(floor), 'Buying shows the suppliers\' deliveries: one arrived today, one on the way');
     const ids = X.packedOrdersToday().map(q => q.id).sort();
     t.check(ids.join() === '31,32' && />2<\/span> packed today/.test(floor), 'packed today counts every order packed today, whoever packed it, by pickingDoneAt or the stage log');
   }
