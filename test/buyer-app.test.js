@@ -844,6 +844,18 @@ const P = page(fakeDb({}));
     t.check(/LATE · 3 D/.test(html) && /ROUND · /.test(html) && (html.match(/data-act="trip" data-id="TRIP-RD-/g) || []).length === 1, 'Trips shows the round as one card, and the delivery from three days ago as late');
     t.check(!/\(YOU\)/.test(html) && /today’s trips only/.test(html), 'no "(YOU)", and the cash counts today\'s trips only');
   }
+  // 10f. At the yard: one card, a bar by day, the names behind a tap.
+  {
+    const X = page(fakeDb({}));
+    const back = (id, sid, h) => X.rowToTrip({ id, supplier_id: sid, status: 'collected', assigned_worker_id: 'W1', created_at: new Date(NOW - (h + 2) * 36e5).toISOString(), collected_at: new Date(NOW - h * 36e5).toISOString(), lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 1, gotQty: 1 }] });
+    X.D().collectionTrips = [back('Y1', 'S1', 1), back('Y2', 'S2', 1.2), back('Y3', 'S1', 80), back('Y4', 'S1', 80.5)];
+    let html = X.PAGE.trips();
+    t.check(/waiting<br>to count/.test(html) && /data-act="yardopen"/.test(html) && !/data-id="Y3"/.test(html), 'At the yard is one card, the trips folded behind a tap');
+    t.check(/oldest /.test(html) && /#E09A4E/.test(html), 'the oldest day is named, in amber when it has sat for days');
+    X.ACT.yardopen();
+    html = X.PAGE.trips();
+    t.check(/data-id="Y1"/.test(html) && /×2/.test(html) && (html.match(/data-id="Y[34]"/g) || []).length === 1, 'open, the trips show by day as chips, two from one supplier on one day as one "×2"');
+  }
   // 10d. The greeting: the time of day it is, and a name, never a login.
   {
     const X = page(fakeDb({}));
