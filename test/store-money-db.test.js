@@ -25,7 +25,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
 {
   t.check(/coalesce\(c\.credit_limit, 0\) > 0 then return null/.test(sql) && /if dec = 'release' then return null/.test(sql) && /originAgentId/.test(sql), 'a credit customer, a Manager\'s yes and an agent\'s order are not held');
   t.check(/ow_order_total\(p_shop_id, p, true\)/.test(sql) && /coalesce\(p_amount_paid, 0\)/.test(sql), 'what is owed is the order\'s total less what was paid, as the Checking gate reckons it');
-  t.check(/v_role is distinct from 'store' or has_task\(new\.shop_id, 'credit\.release'\)/.test(sql), 'only a Store login is stopped; the Manager and the owner are not');
+  t.check(/v_role not in \('store', 'staff'\) or has_task\(new\.shop_id, 'credit\.release'\)/.test(sql), 'a Store or worker login is stopped (store.html opens for both); the Manager and the owner are not');
   t.check(/old\.status = 'preparing' and new\.status in \('pending_delivery', 'completed'\)/.test(sql), 'it stops loading and the hand-over, nothing else');
   t.check(/'credit\.ask', 'Not paid · let it go on credit\?'/.test(sql) && /null, 'credit\.release', null/.test(sql), 'the ask goes to whoever decides credit');
   t.check(/'credit\.ask\.decided'/.test(sql) && /ow_uuid\(ask ->> 'by'\)/.test(sql), 'the answer goes back to the Store person who asked');
@@ -70,7 +70,7 @@ t.check(again.status === 0, `0155 runs a second time without error (${(again.std
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'store-money-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);
 const rows = (run.stdout || '').split('\n').filter((l) => /^(PASS|FAIL)\t/.test(l));
-t.check(rows.length >= 17, `the scenario ran (${rows.length} cases${run.stderr ? '; ' + run.stderr.trim().split('\n').filter((l) => /ERROR/.test(l)).slice(0, 2).join(' | ') : ''})`);
+t.check(rows.length >= 19, `the scenario ran (${rows.length} cases${run.stderr ? '; ' + run.stderr.trim().split('\n').filter((l) => /ERROR/.test(l)).slice(0, 2).join(' | ') : ''})`);
 rows.forEach((l) => {
   const [verdict, label, got] = l.split('\t');
   t.check(verdict === 'PASS', `${label} — ${got}`);

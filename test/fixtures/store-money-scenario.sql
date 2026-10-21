@@ -5,13 +5,15 @@ grant all on all tables in schema public to authenticated;
 grant all on all sequences in schema public to authenticated;
 insert into auth.users values
  ('00000000-0000-0000-0000-00000000000a','owner@x'),('00000000-0000-0000-0000-00000000000b','manager@x'),
- ('00000000-0000-0000-0000-00000000000d','sales@x'),('00000000-0000-0000-0000-00000000000e','store@x');
+ ('00000000-0000-0000-0000-00000000000d','sales@x'),('00000000-0000-0000-0000-00000000000e','store@x'),
+ ('00000000-0000-0000-0000-000000000012','worker@x');
 insert into shops(id, name, created_by) values ('11111111-1111-1111-1111-111111111111','Mukasa Hardware','00000000-0000-0000-0000-00000000000a');
 insert into shop_members(shop_id,user_id,role) values
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000a','owner'),
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000b','manager'),
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','sales'),
- ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000e','store');
+ ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000e','store'),
+ ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-000000000012','staff');
 insert into staff(shop_id,id,name,role,user_id) values
  ('11111111-1111-1111-1111-111111111111','W1','Ruth Nakato','manager','00000000-0000-0000-0000-00000000000b'),
  ('11111111-1111-1111-1111-111111111111','W3','Musa Kiggundu','store','00000000-0000-0000-0000-00000000000e');
@@ -54,6 +56,10 @@ select _try('check: the cash customer and the walk-in wait; the credit customer,
 select _try('store: loads the credit customer, the paid order and the agent''s', 'ok', $q$update saved_quotes set status='pending_delivery' where id in (9555,9556,9558)$q$);
 select _try('store: may not load the unpaid cash customer', 'refused', $q$update saved_quotes set status='pending_delivery' where id=9554$q$);
 select _try('store: may not hand the unpaid walk-in over at the gate', 'refused', $q$update saved_quotes set status='completed' where id=9557$q$);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000012';
+select _try('worker (staff) login in the Store app: sees what waits on money', 'ok', $q$select _is($c$(select count(*) from store_money_holds('11111111-1111-1111-1111-111111111111')) = 2$c$)$q$);
+select _try('worker (staff) login: may not load the unpaid cash customer either', 'refused', $q$update saved_quotes set status='pending_delivery' where id=9554$q$);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: asks the Manager to let it go on credit', 'ok', $q$update saved_quotes set payload = payload || '{"creditAsk":{"at":1,"by":"00000000-0000-0000-0000-00000000000e","byName":"Musa Kiggundu","carrier":null}}' where id=9554$q$);
 select _try('check: the Manager is pushed, with what is owed', 'ok', $q$select _is($c$_to('credit.ask') like '%0b%' and (select body from push_outbox where kind='credit.ask') like 'Musa has Ggaba Stores packed · owes 185,000 · cash customer%'$c$)$q$);
 select _try('store: the same ask again pushes nobody twice', 'ok', $q$update saved_quotes set payload = payload || '{"note":"x"}' where id=9554$q$);

@@ -12,8 +12,9 @@
 --   2. store_money_holds(shop): the packed orders that wait on money, with
 --      what is owed, for the Store's Load and hand-over screens. The Store
 --      sees the amount owed, never a price or a margin.
---   3. saved_quotes_ow_money_gate: a Store login cannot move such an order
---      out of Packing (loaded or handed over). The owner, an admin and the
+--   3. saved_quotes_ow_money_gate: a Store login -- or a worker login
+--      ('staff'), which store.html also opens for -- cannot move such an
+--      order out of Packing (loaded or handed over). The owner, an admin and the
 --      Manager (credit.release) are not stopped by it.
 --   4. Pushes: the Store's ask (payload.creditAsk = { at, by, byName,
 --      carrier }, as the Manager app reads it) to the Manager
@@ -63,7 +64,8 @@ create or replace function store_money_holds(p_shop uuid)
 returns table (id bigint, owed numeric, decision text)
 language plpgsql stable security definer set search_path = public as $$
 begin
-  if not (is_shop_admin(p_shop) or has_task(p_shop, 'order.load') or has_task(p_shop, 'order.pick') or has_task(p_shop, 'credit.release')) then
+  if not (is_shop_admin(p_shop) or has_task(p_shop, 'order.load') or has_task(p_shop, 'order.pick') or has_task(p_shop, 'credit.release')
+          or exists (select 1 from shop_members m where m.shop_id = p_shop and m.user_id = auth.uid() and m.role = 'staff')) then
     raise exception 'Seeing what waits on money is for the Store, the Manager or the owner.' using errcode = '42501';
   end if;
   return query
@@ -76,7 +78,7 @@ end $$;
 revoke all on function store_money_holds(uuid) from public, anon;
 grant execute on function store_money_holds(uuid) to authenticated;
 
--- 3. A Store login cannot send it out of Packing.
+-- 3. A Store or worker login cannot send it out of Packing.
 create or replace function saved_quotes_ow_money_gate() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -86,7 +88,7 @@ begin
   if not (old.status = 'preparing' and new.status in ('pending_delivery', 'completed')) then return new; end if;
   if coalesce(new.voided, false) or coalesce(new.invoiced, false) then return new; end if;
   select m.role into v_role from shop_members m where m.shop_id = new.shop_id and m.user_id = auth.uid() limit 1;
-  if v_role is distinct from 'store' or has_task(new.shop_id, 'credit.release') then return new; end if;
+  if v_role is null or v_role not in ('store', 'staff') or has_task(new.shop_id, 'credit.release') then return new; end if;
   begin
     h := ow_money_hold(new.shop_id, new.payload, new.amount_paid);
   exception when others then
