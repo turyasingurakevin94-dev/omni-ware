@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Two records, one supplier?</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Supplier.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-size: 16px; font-weight: 700">One supplier, or two?</span>
+  </div>
+
+  <div style="padding: 8px 16px 120px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: grid; grid-template-columns: 96px repeat(2, minmax(0, 1fr)); background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <span style="padding: 12px 10px; background: #F7F5F2"></span>
+      <span style="padding: 12px 10px; font-size: 13px; font-weight: 700; background: #F7F5F2; border-left: 1px solid #EFECE6">Owino Plumbing</span>
+      <span style="padding: 12px 10px; font-size: 13px; font-weight: 700; background: #F7F5F2; border-left: 1px solid #EFECE6">Owino Plumbing &amp; Sanitary</span>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <span style="padding: 11px 10px; font-size: 12px; color: #5F6980; border-top: 1px solid #EFECE6">{{r.k}}</span>
+        <span style="padding: 11px 10px; font-size: 13px; font-weight: 600; border-top: 1px solid #EFECE6; border-left: 1px solid #EFECE6; {{r.ink}}">{{r.a}}</span>
+        <span style="padding: 11px 10px; font-size: 13px; font-weight: 600; border-top: 1px solid #EFECE6; border-left: 1px solid #EFECE6; {{r.ink}}">{{r.b}}</span>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E6E3DD; font-size: 13px; line-height: 1.45">
+      <span style="font-weight: 700">If they are one</span>
+      <span style="color: #5F6980">Owino Plumbing is kept. Its <span class="m">3</span> lines move across; where both price the same line, Owino Plumbing's price stays. Orders and bills move too.</span>
+    </div>
+
+    <sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 12px 14px; border-radius: 14px; background: #E4F4EA; color: #0F6B43; font-size: 14px; font-weight: 700">{{result}}</div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px">
+    <button type="button" onClick="{{apart}}" style="all: unset; cursor: pointer; text-align: center; padding: 14px 8px; border-radius: 14px; background: #F1EEE8; font-size: 14px; font-weight: 700">Two suppliers</button>
+    <button type="button" onClick="{{merge}}" style="all: unset; cursor: pointer; text-align: center; padding: 14px 8px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Merge into one</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { res: null }; }
+  renderVals() {
+    const SAME = 'color:#0F6B43';
+    const rows = [
+      { k: 'Phone', a: 'same number', b: 'same number', ink: SAME },
+      { k: 'Where', a: 'Owino market', b: 'Owino market', ink: SAME },
+      { k: 'Lines', a: '24', b: '3', ink: '' },
+      { k: 'PPR elbow 25mm', a: '1,200', b: '1,250', ink: '' },
+      { k: 'Last order', a: '9 Oct', b: '3 Jun', ink: '' }
+    ];
+    const res = this.state.res;
+    return {
+      rows, done: !!res,
+      result: res === 'merge' ? 'Merged. One supplier: Owino Plumbing.' : 'Kept apart. They won’t be offered again.',
+      merge: () => this.setState({ res: 'merge' }),
+      apart: () => this.setState({ res: 'apart' })
+    };
+  }
+}
+</script>
+</body>
+</html>

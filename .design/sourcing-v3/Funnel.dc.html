@@ -15,57 +15,77 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 </style>
 </helmet>
-<div style="width: 390px; height: 1060px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+<div style="width: 390px; height: 1300px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
 
   <!-- header -->
   <div style="background: #16203C; color: #FFFFFF; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 14px">
     <div style="display: flex; align-items: center; justify-content: space-between">
       <span style="font-size: 20px; font-weight: 700">Funnel</span>
       <div role="group" aria-label="View" style="display: flex; padding: 3px; border-radius: 999px; background: #243052">
-        <button type="button" onClick="{{showOpen}}" style="{{openTab}}">Open</button>
-        <button type="button" onClick="{{showCertify}}" style="{{certTab}}">Certify</button>
+        <button type="button" onClick="{{showOpen}}" style="{{openTab}}">New items</button>
+        <button type="button" onClick="{{showCertify}}" style="{{certTab}}">Top sellers</button>
       </div>
     </div>
-    <div style="display: flex; gap: 6px; overflow: hidden">
-      <sc-for list="{{chips}}" as="c" hint-placeholder-count="7">
+    <div style="display: flex; gap: 6px; overflow-x: auto; margin-right: -16px; padding-right: 16px">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="8">
         <button type="button" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}} <span class="m">{{c.n}}</span></button>
       </sc-for>
     </div>
   </div>
 
-  <!-- legend: the six gates, once -->
-  <div style="display: flex; justify-content: space-between; padding: 12px 16px 4px; font-size: 11px; font-weight: 600; color: #5F6980">
+  <!-- legend: the six gates, in the order of the pips on every card -->
+  <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 12px 29px 2px; font-size: 11px; font-weight: 600; color: #5F6980; text-align: center">
     <span>Photo</span><span>Packing</span><span>Suppliers</span><span>Verdict</span><span>Name</span><span>Markup</span>
   </div>
 
   <div style="padding: 6px 16px 120px; display: flex; flex-direction: column; gap: 14px">
-    <sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
       <div style="display: flex; flex-direction: column; gap: 8px">
         <div style="display: flex; align-items: baseline; gap: 8px">
-          <span style="font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">{{g.label}}</span>
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; {{g.ink}}">{{g.label}}</span>
           <span class="m" style="font-size: 12px; color: #5F6980">{{g.n}}</span>
         </div>
         <sc-for list="{{g.items}}" as="it" hint-placeholder-count="2">
-          <a href="Passport.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px">
-            <span style="width: 52px; height: 52px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; {{it.thumb}}">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{it.icon}}"></path></svg>
-            </span>
-            <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
-              <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
-              <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.sub}}</span>
-              <span style="align-self: flex-start; margin-top: 3px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{it.goStyle}}">{{it.go}}</span>
-            </span>
-            <span role="img" aria-label="{{it.aria}}" style="width: 48px; height: 48px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: {{it.ring}}">
-              <span class="m" style="width: 36px; height: 36px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600">{{it.done}}/6</span>
-            </span>
-          </a>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <span style="width: 48px; height: 48px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; {{it.thumb}}">
+                <sc-if value="{{it.noPhoto}}" hint-placeholder-val="{{ true }}">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>
+                </sc-if>
+              </span>
+              <sc-if value="{{it.hasLink}}" hint-placeholder-val="{{ true }}">
+                <a href="{{it.href}}" style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
+                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
+                  <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.sub}}</span>
+                </a>
+              </sc-if>
+              <sc-if value="{{it.noLink}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
+                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
+                  <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.sub}}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{it.hasGo}}" hint-placeholder-val="{{ true }}">
+                <a href="{{it.goHref}}" style="flex: none; padding: 9px 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; white-space: nowrap">{{it.go}}</a>
+              </sc-if>
+              <sc-if value="{{it.hasStatus}}" hint-placeholder-val="{{ false }}">
+                <span style="flex: none; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; {{it.statusStyle}}">{{it.status}}</span>
+              </sc-if>
+            </div>
+            <div role="img" aria-label="{{it.aria}}" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px">
+              <sc-for list="{{it.pips}}" as="p" hint-placeholder-count="6"><i style="height: 6px; border-radius: 3px; {{p}}"></i></sc-for>
+            </div>
+          </div>
         </sc-for>
+        <sc-if value="{{g.hasMore}}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 13px; font-weight: 600; color: #5F6980; padding-left: 4px">+ <span class="m">{{g.more}}</span> more in {{g.label}}</span>
+        </sc-if>
       </div>
     </sc-for>
   </div>
 
   <!-- TAB BAR -->
-  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding: 8px 0 14px">
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding: 8px 0 14px">
     <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0z"></path><path d="M3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11"></path></svg>Today</a>
     <a href="Funnel.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 700; color: #1C2233">
@@ -74,70 +94,68 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
     <a href="Prices.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.5"></circle></svg>Prices</a>
-    <a href="Supplier.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
+    <a href="Suppliers.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12"></path><path d="M8 21v-7h8v7"></path></svg>Suppliers</a>
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1060}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
 class Component extends DCLogic {
   constructor(p) { super(p); this.state = { lane: 'all', view: 'open' }; }
   renderVals() {
-    const COL = { d: '#0F6B43', g: '#B86E12', t: '#E0DCD4' };
-    const ring = (s) => {
-      const parts = [];
-      s.split('').forEach((k, i) => {
-        const a = i * 60, b = a + 60;
-        parts.push('#FFFFFF ' + a + 'deg ' + (a + 4) + 'deg', COL[k] + ' ' + (a + 4) + 'deg ' + (b - 4) + 'deg', '#FFFFFF ' + (b - 4) + 'deg ' + b + 'deg');
-      });
-      return 'conic-gradient(' + parts.join(',') + ')';
-    };
-    const ICON = {
-      cam: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
-      box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9'
-    };
-    const DARK = 'background:#16203C;color:#FFFFFF';
-    const SOFT = 'background:#F1EEE8;color:#1C2233';
-    const RED = 'background:#C93A30;color:#FFFFFF';
-    const mk = (name, sub, gates, go, primary) => {
-      const done = gates.split('').filter(k => k === 'd').length;
-      const has = gates[0] === 'd';
+    // one gate string per item, the same on every screen: Photo Packing Suppliers Verdict Name&aisle Markup
+    const PIP = { d: 'background:#0F6B43', g: 'background:#95530C', t: 'background:#E0DCD4' };
+    const WORD = { d: 'done', g: 'a gap', t: 'not started' };
+    const GATES = ['Photo', 'Packing', 'Suppliers', 'Verdict', 'Name and aisle', 'Markup'];
+    const SOFT = 'background:#F1EEE8;color:#5F6980';
+    const mk = (o) => {
+      const s = o.gates.split('');
       return {
-        name, sub, go, done, ring: ring(gates),
-        goStyle: primary ? RED : (go === 'Waiting · 3h' ? 'background:#FDEEE1;color:#7A4A02' : SOFT),
-        thumb: has ? 'background:#DCEAF8;color:#1A5A8A' : 'background:#F1EEE8;color:#5F6980',
-        icon: has ? ICON.box : ICON.cam,
-        aria: done + ' of 6 gates done'
+        ...o,
+        href: o.href || o.goHref || '', hasLink: !!(o.href || o.goHref), noLink: !(o.href || o.goHref),
+        hasGo: !!o.go, hasStatus: !!o.status, statusStyle: o.statusStyle || SOFT,
+        noPhoto: s[0] !== 'd',
+        thumb: s[0] === 'd'
+          ? 'background:repeating-linear-gradient(45deg,#E0DCD4 0 6px,#EFECE6 6px 12px)'
+          : 'background:#F1EEE8;color:#5F6980',
+        pips: s.map(k => PIP[k]),
+        aria: s.map((k, i) => GATES[i] + ' ' + WORD[k]).join(', ')
       };
     };
     const open = [
-      { key: 'wanted', label: 'Wanted', items: [
-        mk('Gutter bracket, galvanised', '7 searches · 4 people', 'tttttt', 'Hunt it'),
-        mk('PPR pipe 25mm × 4m', 'Ggaba Stores · Nansana Hardware', 'ttttdt', 'Hunt it')
-      ], n: 9 },
-      { key: 'hunting', label: 'Hunting', items: [
-        mk('Ridge cap G28, maroon', '3 suppliers asked · no answer yet', 'tttgdt', 'Chase 3')
-      ], n: 6 },
-      { key: 'quoted', label: 'Quoted', items: [
-        mk('Wire mesh BRC A142', '2 quotes · 3 customers waiting', 'tddgdt', 'Take the photo', true),
-        mk('Self-drilling screws 10×25', '1 quote · Faith Nambi asked', 'dgdtdt', 'Set the packing')
-      ], n: 4 },
-      { key: 'ready', label: 'Ready', items: [
-        mk('Tile cutter 600mm', 'All five gates done', 'dddddt', 'Send to Manager', true)
-      ], n: 3 },
-      { key: 'manager', label: 'With Manager', items: [
-        mk('Paint roller 9"', 'Ruth Nakato · pushed', 'dddddt', 'Waiting · 3h')
-      ], n: 2 }
-    ];
+      { key: 'back', label: 'Sent back', n: 1, ink: 'color:#7A4A02', items: [
+        mk({ name: 'Door hinge 4" brass', sub: 'The Manager: photo too dark', gates: 'gddddt', go: 'Retake photo', goHref: 'SentBack.dc.html' })
+      ] },
+      { key: 'wanted', label: 'Wanted', n: 9, items: [
+        mk({ name: 'Gutter bracket, galvanised', sub: '7 searches · 4 named people', gates: 'tttttt', go: 'Hunt it', goHref: 'Hunt.dc.html' }),
+        mk({ name: 'PPR pipe 25mm × 4m', sub: 'Ggaba Stores · Nansana Hardware', gates: 'tttttt', go: 'Ask on the visit', goHref: 'Visit.dc.html' })
+      ] },
+      { key: 'hunting', label: 'Hunting', n: 6, items: [
+        mk({ name: 'Ridge cap G28, maroon', sub: 'Asked 2 days ago', gates: 'ttttdt', status: 'Waiting on 3' })
+      ] },
+      { key: 'quoted', label: 'Quoted', n: 4, items: [
+        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 3 customers waiting', gates: 'gddgdt', href: 'Passport.dc.html', go: 'Take the photo', goHref: 'PhotoGate.dc.html' }),
+        mk({ name: 'Self-drilling screws 10×25', sub: '1 price · Faith Nambi asked', gates: 'dgdtdt', go: 'Set the packing', goHref: 'PackingGate.dc.html' })
+      ] },
+      { key: 'ready', label: 'Ready', n: 3, items: [
+        mk({ name: 'Tile cutter 600mm', sub: 'Five gates done', gates: 'dddddt', go: 'Send to the Manager', goHref: 'SendToManager.dc.html' })
+      ] },
+      { key: 'manager', label: 'With the Manager', n: 2, items: [
+        mk({ name: 'Paint roller 9"', sub: 'Ruth Nakato was told', gates: 'dddddt', status: 'Sent 3 h ago', statusStyle: 'background:#FDEEE1;color:#7A4A02' })
+      ] },
+      { key: 'live', label: 'Live this week', n: 5, items: [
+        mk({ name: 'Tile adhesive 20kg', sub: 'On sale since Thursday', gates: 'dddddd', status: '2 askers told', statusStyle: 'background:#E4F4EA;color:#0F6B43' })
+      ] }
+    ].map(g => ({ ...g, ink: g.ink || 'color:#5F6980', more: g.n - g.items.length, hasMore: g.n > g.items.length }));
     const certify = [
-      { key: 'certify', label: 'Top sellers with gaps', items: [
-        mk('Iron sheet G28, 3m box profile', '#1 by sales · no verdict, no photo', 'tddtdd', 'Take the photo', true),
-        mk('Cement 50kg', '#2 by sales · one supplier', 'ddgddd', 'Find a second'),
-        mk('Y12 rebar, 12m', '#3 by sales · packing not set', 'dgdddd', 'Set the packing')
-      ], n: 59 }
-    ];
+      { key: 'certify', label: 'Top sellers with gaps', n: 59, items: [
+        mk({ name: 'Iron sheet G28, 3m box profile', sub: '#1 by sales', gates: 'gddgdd', status: '2 gaps' }),
+        mk({ name: 'Cement 50kg', sub: '#2 by sales · one supplier', gates: 'ddgddd', status: '1 gap' }),
+        mk({ name: 'Y12 rebar, 12m', sub: '#3 by sales', gates: 'dgdddd', status: '1 gap' })
+      ] }
+    ].map(g => ({ ...g, ink: 'color:#5F6980', more: g.n - g.items.length, hasMore: true }));
     const isOpen = this.state.view === 'open';
-    const lanes = [['all', 'All', 24], ['wanted', 'Wanted', 9], ['hunting', 'Hunting', 6], ['quoted', 'Quoted', 4], ['ready', 'Ready', 3], ['manager', 'Manager', 2]];
+    const lanes = [['all', 'All', 25], ['back', 'Sent back', 1], ['wanted', 'Wanted', 9], ['hunting', 'Hunting', 6], ['quoted', 'Quoted', 4], ['ready', 'Ready', 3], ['manager', 'With the Manager', 2], ['live', 'Live', 5]];
     const chips = isOpen ? lanes.map(([k, label, n]) => ({
       label, n,
       pick: () => this.setState({ lane: k }),
@@ -145,7 +163,7 @@ class Component extends DCLogic {
         (this.state.lane === k ? 'background:#FFFFFF;color:#16203C' : 'background:#243052;color:#B3BCD2')
     })) : [];
     const groups = isOpen ? open.filter(g => this.state.lane === 'all' || g.key === this.state.lane) : certify;
-    const tab = (on) => 'all:unset;cursor:pointer;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
+    const tab = (on) => 'all:unset;cursor:pointer;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
     return {
       chips, groups,
       openTab: tab(isOpen), certTab: tab(!isOpen),

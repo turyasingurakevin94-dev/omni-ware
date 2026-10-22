@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — A new item</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-size: 16px; font-weight: 700">A new item</span>
+  </div>
+
+  <div style="padding: 4px 16px 120px; display: flex; flex-direction: column; gap: 16px">
+    <div role="radiogroup" aria-label="Where it came from" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 14px; background: #F1EEE8">
+      <sc-for list="{{modes}}" as="mo" hint-placeholder-count="2">
+        <button type="button" role="radio" aria-checked="{{mo.on}}" onClick="{{mo.pick}}" style="{{mo.style}}">{{mo.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; gap: 12px; align-items: center">
+      <a href="PhotoGate.dc.html" aria-label="Add a photo" style="width: 76px; height: 76px; flex: none; border-radius: 14px; border: 1.5px dashed #C9C4BA; background: #F7F5F2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #5F6980; font-size: 11px; font-weight: 700">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>Photo</a>
+      <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0">
+        <label for="ni_name" style="font-size: 12px; font-weight: 700; color: #5F6980">What is it?</label>
+        <input id="ni_name" type="text" value="Tile spacers 3mm" style="box-sizing: border-box; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #E6E3DD; font: inherit; font-size: 16px; font-weight: 600">
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 600">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+      Not in the catalogue, and no hunt has it yet
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 12px; font-weight: 700; color: #5F6980">Aisle</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{aisles}}" as="a" hint-placeholder-count="5">
+          <button type="button" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{asked}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 700; color: #5F6980">Who asked</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <span style="padding: 8px 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">Ggaba Stores</span>
+          <span style="padding: 8px 12px; border-radius: 999px; background: #F1EEE8; font-size: 13px; font-weight: 700">Nansana Hardware</span>
+          <span style="padding: 8px 12px; border-radius: 999px; background: #F1EEE8; font-size: 13px; font-weight: 700">Someone else</span>
+        </div>
+        <label for="ni_qty" style="font-size: 12px; font-weight: 700; color: #5F6980; margin-top: 6px">How many</label>
+        <input id="ni_qty" type="text" inputmode="numeric" value="200" class="m" style="box-sizing: border-box; width: 140px; padding: 12px; border-radius: 12px; border: 1px solid #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">
+      </div>
+    </sc-if>
+
+    <sc-if value="{{seen}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 700; color: #5F6980">Where you saw it</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <span style="padding: 8px 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">Katwe Fabricators</span>
+          <span style="padding: 8px 12px; border-radius: 999px; background: #F1EEE8; font-size: 13px; font-weight: 700">At a rival</span>
+          <span style="padding: 8px 12px; border-radius: 999px; background: #F1EEE8; font-size: 13px; font-weight: 700">Pick a supplier</span>
+        </div>
+        <label for="ni_price" style="font-size: 12px; font-weight: 700; color: #5F6980; margin-top: 6px">Their price, if you have it</label>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <input id="ni_price" type="text" inputmode="numeric" value="3,500" style="box-sizing: border-box; width: 140px; padding: 12px; border-radius: 12px; border: 1px solid #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">
+          <span style="font-size: 14px; color: #5F6980">a bag of <span class="m">100</span></span>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px">
+    <a href="Funnel.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">{{cta}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { mode: 'seen', aisle: 'Tiles & finishing' }; }
+  renderVals() {
+    const { mode, aisle } = this.state;
+    const seg = (on) => 'all:unset;cursor:pointer;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:700;' + (on ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(27,36,56,.08)' : 'color:#5F6980');
+    const modes = [['seen', 'I saw it'], ['asked', 'Someone asked']].map(([k, label]) => ({
+      label, on: String(mode === k), pick: () => this.setState({ mode: k }), style: seg(mode === k)
+    }));
+    const aisles = ['Tiles & finishing', 'Fasteners', 'Plumbing', 'Steel & mesh', 'Roofing'].map(label => ({
+      label, pick: () => this.setState({ aisle: label }),
+      style: 'all:unset;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;' +
+        (aisle === label ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8')
+    }));
+    return {
+      modes, aisles, asked: mode === 'asked', seen: mode === 'seen',
+      cta: mode === 'asked' ? 'Add the ask' : 'Start the hunt'
+    };
+  }
+}
+</script>
+</body>
+</html>

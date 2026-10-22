@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Push back</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#8A90A0}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 900px; position: relative; overflow: hidden; background: #8A90A0; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; top: 90px; background: #FFFFFF; border-radius: 26px 26px 0 0; padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 16px">
+    <span aria-hidden="true" style="align-self: center; width: 40px; height: 5px; border-radius: 3px; background: #E0DCD4"></span>
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 20px; font-weight: 700">Push back</span>
+        <span style="font-size: 14px; color: #5F6980">PVC pipe 4" × 6m · Owino Plumbing</span>
+      </div>
+      <a href="Visit.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 999px; background: #F1EEE8; display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+    </div>
+
+    <!-- the three numbers on one line -->
+    <div style="position: relative; height: 84px; margin: 0 8px">
+      <div style="position: absolute; left: 0; right: 0; top: 40px; height: 4px; border-radius: 2px; background: #E6E3DD"></div>
+      <sc-for list="{{marks}}" as="k" hint-placeholder-count="3">
+        <div style="position: absolute; top: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; transform: translateX(-50%); {{k.pos}}">
+          <span style="font-size: 11px; font-weight: 700; white-space: nowrap; {{k.ink}}">{{k.label}}</span>
+          <span style="width: 14px; height: 14px; border-radius: 999px; border: 3px solid #FFFFFF; margin-top: 9px; {{k.dot}}"></span>
+          <span class="m" style="font-size: 12px; font-weight: 600">{{k.v}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 12px; font-weight: 700; color: #5F6980">Your counter</span>
+      <div style="display: flex; gap: 6px">
+        <sc-for list="{{offers}}" as="o" hint-placeholder-count="3">
+          <button type="button" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 12px; font-weight: 700; color: #5F6980">Why they should agree</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{reasons}}" as="r" hint-placeholder-count="3">
+          <button type="button" role="checkbox" aria-checked="{{r.on}}" onClick="{{r.toggle}}" style="{{r.style}}">{{r.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding: 12px 14px; border-radius: 14px; background: #F1EEE8; font-size: 13px; line-height: 1.45; color: #5F6980">Until they answer, <span class="m" style="color: #1C2233; font-weight: 600">42,000</span> stays on the price list.</div>
+
+    <button type="button" style="all: unset; cursor: pointer; margin-top: auto; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Send <span class="m">{{offer}}</span> to Owino</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { offer: 42500, why: { a: true, b: false, c: false } }; }
+  renderVals() {
+    const { offer, why } = this.state;
+    const fmt = (n) => n.toLocaleString('en-US');
+    const lo = 41000, hi = 45000;
+    const at = (v) => ((v - lo) / (hi - lo) * 100).toFixed(1) + '%';
+    const marks = [
+      { label: 'Was', v: '42,000', p: 42000, dot: 'background:#6B7480', ink: 'color:#5F6980' },
+      { label: 'Yours', v: fmt(offer), p: offer, dot: 'background:#16203C', ink: 'color:#1C2233' },
+      { label: 'They ask', v: '44,000', p: 44000, dot: 'background:#95530C', ink: 'color:#7A4A02' }
+    ].map(k => ({ ...k, pos: 'left:' + at(k.p) }));
+    const offers = [42000, 42500, 43000].map(v => ({
+      label: fmt(v), pick: () => this.setState({ offer: v }),
+      style: 'all:unset;cursor:pointer;flex:1;text-align:center;padding:12px 6px;border-radius:12px;font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;' +
+        (offer === v ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1px #E6E3DD')
+    }));
+    const reasons = [['a', 'We buy about 60 a month'], ['b', '22 orders in six months'], ['c', 'We pay on time']].map(([k, label]) => ({
+      label, on: String(!!why[k]),
+      toggle: () => this.setState({ why: { ...why, [k]: !why[k] } }),
+      style: 'all:unset;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;' +
+        (why[k] ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8')
+    }));
+    return { marks, offers, reasons, offer: fmt(offer) };
+  }
+}
+</script>
+</body>
+</html>

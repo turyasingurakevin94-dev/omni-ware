@@ -15,31 +15,40 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 </style>
 </helmet>
-<div style="width: 390px; height: 1180px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+<div style="width: 390px; height: 1250px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
 
   <!-- hero -->
   <div style="background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 14px">
     <div style="display: flex; align-items: center; justify-content: space-between">
-      <a href="Main.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
+      <a href="Suppliers.dc.html" aria-label="Back to Suppliers" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
-      <button type="button" aria-label="Edit terms and details" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
+      <button type="button" aria-label="Edit terms and delivery days" aria-expanded="{{editOn}}" onClick="{{toggleEdit}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
     </div>
     <div style="display: flex; flex-direction: column; gap: 4px">
-      <span style="font-size: 24px; font-weight: 700">Kiseka Steel</span>
-      <span style="font-size: 13px; color: #B3BCD2">7 days credit · about 3 days to deliver</span>
+      <span style="font-size: 20px; font-weight: 700">Owino Plumbing</span>
+      <span style="font-size: 13px; color: #B3BCD2"><span class="m">{{credit}}</span> days credit · delivers {{days}}</span>
     </div>
+    <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: #243052">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="flex: 1; font-size: 14px; font-weight: 600">Days of credit</span>
+          <sc-for list="{{creditOpts}}" as="c" hint-placeholder-count="3"><button type="button" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}}</button></sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap">
+          <span style="flex: 1; font-size: 14px; font-weight: 600">Delivers</span>
+          <sc-for list="{{dayOpts}}" as="d" hint-placeholder-count="6"><button type="button" onClick="{{d.pick}}" style="{{d.style}}">{{d.label}}</button></sc-for>
+        </div>
+      </div>
+    </sc-if>
     <div style="display: flex; flex-wrap: wrap; gap: 6px">
-      <span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700">Rebar</span>
-      <span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700">Mesh</span>
-      <span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700">Wire</span>
-      <span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700">Flat bar</span>
-      <span style="padding: 5px 10px; border-radius: 999px; border: 1px dashed #767F91; color: #B3BCD2; font-size: 12px; font-weight: 700">+ sells</span>
+      <sc-for list="{{tags}}" as="t" hint-placeholder-count="3"><span style="padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700">{{t}}</span></sc-for>
+      <button type="button" onClick="{{addTag}}" style="all: unset; cursor: pointer; padding: 5px 10px; border-radius: 999px; border: 1px dashed #6B7480; color: #B3BCD2; font-size: 12px; font-weight: 700">+ what they sell</button>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #2A3350; padding-top: 12px">
-      <div style="display: flex; flex-direction: column; gap: 2px"><span class="m" style="font-size: 20px; font-weight: 600">14</span><span style="font-size: 11px; color: #B3BCD2">orders with us</span></div>
-      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">31</span><span style="font-size: 11px; color: #B3BCD2">lines priced</span></div>
-      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">18</span><span style="font-size: 11px; color: #B3BCD2">cheapest on</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px"><span class="m" style="font-size: 20px; font-weight: 600">22</span><span style="font-size: 11px; color: #B3BCD2">orders in 6 months</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">24</span><span style="font-size: 11px; color: #B3BCD2">lines priced</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">12 d</span><span style="font-size: 11px; color: #B3BCD2">since a visit</span></div>
     </div>
   </div>
 
@@ -50,31 +59,31 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
       <span style="font-size: 15px; font-weight: 700">Scorecard</span>
       <sc-for list="{{score}}" as="s" hint-placeholder-count="4">
         <div style="display: flex; flex-direction: column; gap: 5px">
-          <span style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 14px; font-weight: 600">{{s.label}}</span><span class="m" style="font-size: 13px; font-weight: 600">{{s.fig}}</span></span>
+          <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><span style="font-size: 14px; font-weight: 600">{{s.label}}</span><span style="font-size: 12px; color: #5F6980"><span class="m" style="font-size: 13px; font-weight: 600; color: #1C2233">{{s.fig}}</span> {{s.of}}</span></span>
           <span style="position: relative; height: 8px; border-radius: 4px; background: #EFECE6; display: block">
             <span style="display: block; height: 8px; border-radius: 4px; {{s.bar}}"></span>
             <span style="position: absolute; top: -3px; width: 2px; height: 14px; background: #5F6980; {{s.avg}}"></span>
           </span>
         </div>
       </sc-for>
-      <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5F6980"><span style="width: 2px; height: 12px; background: #5F6980; display: inline-block"></span>average of our suppliers</span>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5F6980"><span style="width: 2px; height: 12px; background: #5F6980; display: inline-block"></span>the average of our suppliers · since 1 Sep</span>
     </div>
 
     <!-- look-alike -->
-    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FDEEE1; color: #7A4A02">
+    <a href="Twins.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FDEEE1; color: #7A4A02">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg>
       <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
-        <span style="font-size: 14px; font-weight: 700">"Kiseka Steel Ltd" — the same supplier?</span>
-        <span style="font-size: 12px">same phone · 3 lines of its own</span>
+        <span style="font-size: 14px; font-weight: 700">"Owino Plumbing &amp; Sanitary": the same?</span>
+        <span style="font-size: 12px">same phone · <span class="m">3</span> lines of its own</span>
       </span>
       <span style="padding: 8px 12px; border-radius: 12px; background: #FFFFFF; color: #1C2233; font-size: 13px; font-weight: 700">Compare</span>
-    </div>
+    </a>
 
     <!-- lines -->
     <div style="display: flex; flex-direction: column; gap: 8px">
       <div style="display: flex; align-items: baseline; justify-content: space-between">
         <span style="font-size: 15px; font-weight: 700">What we buy from them</span>
-        <span style="font-size: 12px; color: #5F6980">by sales</span>
+        <span style="font-size: 12px; color: #5F6980">line: what we paid, last <span class="m">6</span> buys</span>
       </div>
       <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
         <sc-for list="{{lines}}" as="l" hint-placeholder-count="5">
@@ -83,41 +92,56 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
               <span style="font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{l.name}}</span>
               <span style="font-size: 12px; {{l.noteInk}}">{{l.note}}</span>
             </span>
-            <svg width="54" height="20" viewBox="0 0 54 20" aria-hidden="true"><polyline points="{{l.spark}}" fill="none" stroke="#5F6980" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>
-            <span class="m" style="width: 70px; text-align: right; font-size: 14px; font-weight: 600">{{l.price}}</span>
+            <svg width="54" height="20" viewBox="0 0 54 20" aria-hidden="true"><polyline points="{{l.spark}}" fill="none" stroke="#6B7480" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></polyline><circle cx="53" cy="{{l.lastY}}" r="2.4" fill="#1C2233"></circle></svg>
+            <span class="m" style="width: 64px; text-align: right; font-size: 14px; font-weight: 600">{{l.price}}</span>
           </div>
         </sc-for>
       </div>
     </div>
   </div>
 
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; padding: 12px 16px 18px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px">
-    <button type="button" style="all: unset; cursor: pointer; text-align: center; padding: 14px 10px; border-radius: 14px; background: #F1EEE8; font-size: 15px; font-weight: 700">Call</button>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px">
+    <a href="tel:+256700000000" style="text-align: center; padding: 14px 10px; border-radius: 14px; background: #F1EEE8; font-size: 15px; font-weight: 700">Call</a>
     <a href="Visit.dc.html" style="text-align: center; padding: 14px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Start a visit</a>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1180}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1250}}'>
 class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { edit: false, credit: 14, days: ['Tue', 'Fri'], extra: false }; }
   renderVals() {
+    const S = this.state;
     const score = [
-      { label: 'Cheapest on', fig: '18 of 31 lines', v: 58, avg: 34 },
-      { label: 'Fills the order', fig: '47 of 50 lines', v: 94, avg: 81 },
-      { label: 'Prices fresh', fig: '26 of 31', v: 84, avg: 78 },
-      { label: 'Delivers in', fig: '3 days median', v: 62, avg: 55 }
-    ].map(s => ({ ...s, bar: 'width:' + s.v + '%;background:' + (s.v >= s.avg ? '#0F6B43' : '#B86E12'), avg: 'left:' + s.avg + '%' }));
+      { label: 'Cheapest on', fig: '15 of 19', of: 'lines we buy from 2+', v: 79, avg: 64 },
+      { label: 'Fills the order', fig: '41 of 44', of: 'lines', v: 93, avg: 89 },
+      { label: 'Prices fresh', fig: '21 of 24', of: 'lines', v: 88, avg: 82 },
+      { label: 'Delivers in', fig: '1 day', of: 'median', v: 85, avg: 70 }
+    ].map(s => ({ ...s, bar: 'width:' + s.v + '%;background:' + (s.v >= s.avg ? '#0F6B43' : '#95530C'), avg: 'left:' + s.avg + '%' }));
     const spark = (ys) => ys.map((y, i) => (i * 10.4 + 1).toFixed(1) + ',' + (18 - y).toFixed(1)).join(' ');
-    const OK = 'color:#0F6B43';
-    const DIM = 'color:#5F6980';
-    const WARN = 'color:#7A4A02';
-    const lines = [
-      { name: 'Y12 rebar, 12m', note: 'cheapest · confirmed today', noteInk: OK, price: '41,500', spark: spark([6, 6, 8, 9, 9, 10]) },
-      { name: 'Wire mesh BRC A142', note: 'cheapest · quoted 2 days ago', noteInk: OK, price: '118,000', spark: spark([9, 9, 9, 9, 9, 9]) },
-      { name: 'Binding wire 25kg', note: 'proposes 94,500', noteInk: DIM, price: '96,000', spark: spark([8, 10, 11, 12, 12, 12]) },
-      { name: 'Hoop iron 0.5mm', note: 'Katwe is 1,500 cheaper', noteInk: WARN, price: '23,500', spark: spark([5, 6, 7, 9, 11, 12]) },
-      { name: 'Flat bar 25 × 3', note: '52 days since a price', noteInk: WARN, price: '28,000', spark: spark([7, 7, 7, 7, 7, 7]) }
+    const OK = 'color:#0F6B43', DIM = 'color:#5F6980', WARN = 'color:#7A4A02';
+    const raw = [
+      { name: 'PPR elbow 25mm', note: 'cheapest · 21 days old', noteInk: OK, price: '1,200', ys: [8, 8, 9, 9, 9, 9] },
+      { name: 'Gate valve ½"', note: '34 days old · in today’s share', noteInk: WARN, price: '18,500', ys: [6, 7, 7, 8, 9, 9] },
+      { name: 'Ball valve ¾"', note: '40 days old · in today’s share', noteInk: WARN, price: '14,000', ys: [9, 9, 9, 9, 9, 9] },
+      { name: 'PVC pipe 4" × 6m', note: 'proposes 44,000', noteInk: DIM, price: '42,000', ys: [7, 8, 9, 10, 11, 11] },
+      { name: 'Pillar tap ½"', note: 'no photo yet', noteInk: WARN, price: '9,500', ys: [10, 10, 9, 9, 9, 9] }
     ];
-    return { score, lines };
+    const lines = raw.map(l => ({ ...l, spark: spark(l.ys), lastY: (18 - l.ys[5]).toFixed(1) }));
+    const chip = (on) => 'all:unset;cursor:pointer;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:700;' + (on ? 'background:#FFFFFF;color:#16203C' : 'background:#16203C;color:#B3BCD2');
+    const creditOpts = [7, 14, 30].map(n => ({ label: String(n), pick: () => this.setState({ credit: n }), style: chip(S.credit === n) }));
+    const dayOpts = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => ({
+      label: d, style: chip(S.days.includes(d)),
+      pick: () => this.setState({ days: S.days.includes(d) ? S.days.filter(x => x !== d) : S.days.concat(d) })
+    }));
+    const tags = ['Plumbing', 'PVC', 'Taps'].concat(S.extra ? ['Fittings'] : []);
+    const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return {
+      score, lines, tags, creditOpts, dayOpts,
+      credit: S.credit, days: S.days.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b)).join(', ') || 'no set days',
+      editing: S.edit, editOn: String(S.edit),
+      toggleEdit: () => this.setState({ edit: !S.edit }),
+      addTag: () => this.setState({ extra: true })
+    };
   }
 }
 </script>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — You</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 14px">
+    <a href="Main.dc.html" aria-label="Back to Today" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="width: 56px; height: 56px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700">ML</span>
+      <span style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 20px; font-weight: 700">Moses Lubega</span>
+        <span style="font-size: 13px; color: #B3BCD2">Sourcing · Mukasa Hardware</span>
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #2A3350; padding-top: 12px">
+      <div style="display: flex; flex-direction: column; gap: 2px"><span class="m" style="font-size: 20px; font-weight: 600">12</span><span style="font-size: 11px; color: #B3BCD2">went live in Oct</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">118</span><span style="font-size: 11px; color: #B3BCD2">prices confirmed</span></div>
+      <div style="display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #2A3350; padding-left: 12px"><span class="m" style="font-size: 20px; font-weight: 600">41</span><span style="font-size: 11px; color: #B3BCD2">asks sorted</span></div>
+    </div>
+  </div>
+
+  <div style="padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 12px">
+    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 14px">
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 15px; font-weight: 700">Prices to confirm a day</span>
+          <span style="font-size: 12px; color: #5F6980">oldest first; the owner can change it too</span>
+        </span>
+        <button type="button" aria-label="One fewer" onClick="{{less}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg></button>
+        <span class="m" style="width: 36px; text-align: center; font-size: 20px; font-weight: 600">{{perDay}}</span>
+        <button type="button" aria-label="One more" onClick="{{more}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"></path></svg></button>
+      </div>
+      <button type="button" role="switch" aria-checked="{{pushOn}}" onClick="{{togglePush}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px; border-top: 1px solid #EFECE6">
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 15px; font-weight: 700">Notifications</span>
+          <span style="font-size: 12px; color: #5F6980">new asks, items sent back, items live, proposals</span>
+        </span>
+        <span style="width: 48px; height: 28px; border-radius: 999px; position: relative; {{track}}"><span style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 999px; background: #FFFFFF; {{knob}}"></span></span>
+      </button>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 14px; border-top: 1px solid #EFECE6">
+        <span style="flex: 1; font-size: 15px; font-weight: 700">Shop</span>
+        <span style="font-size: 14px; color: #5F6980">Mukasa Hardware</span>
+      </div>
+    </div>
+
+    <sc-if value="{{confirmOut}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: #FDEEE1; color: #7A4A02">
+        <span style="font-size: 14px; font-weight: 700"><span class="m">2</span> captures are still only on this phone</span>
+        <span style="font-size: 13px">Signing out now loses them. Wait for signal, or sign out anyway.</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <a href="Outbox.dc.html" style="text-align: center; padding: 11px; border-radius: 12px; background: #FFFFFF; color: #1C2233; font-size: 14px; font-weight: 700">See them</a>
+          <button type="button" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #8E2A22; color: #FFFFFF; font-size: 14px; font-weight: 700">Sign out anyway</button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{notConfirming}}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{signOut}}" style="all: unset; cursor: pointer; text-align: center; padding: 14px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E6E3DD; color: #8E2A22; font-size: 15px; font-weight: 700">Sign out</button>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { perDay: 6, push: true, out: false }; }
+  renderVals() {
+    const S = this.state;
+    return {
+      perDay: S.perDay,
+      less: () => this.setState({ perDay: Math.max(1, S.perDay - 1) }),
+      more: () => this.setState({ perDay: S.perDay + 1 }),
+      pushOn: String(S.push), togglePush: () => this.setState({ push: !S.push }),
+      track: S.push ? 'background:#0F6B43' : 'background:#E0DCD4',
+      knob: S.push ? 'left:23px' : 'left:3px',
+      confirmOut: S.out, notConfirming: !S.out,
+      signOut: () => this.setState({ out: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

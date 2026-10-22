@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Suppliers</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1100px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="background: #16203C; color: #FFFFFF; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font-size: 20px; font-weight: 700">Suppliers <span class="m" style="font-size: 14px; color: #B3BCD2; font-weight: 500">6</span></span>
+      <button type="button" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-radius: 999px; background: #243052; font-size: 13px; font-weight: 700">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>New supplier</button>
+    </div>
+    <label for="sq" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Find a supplier</label>
+    <input id="sq" type="search" placeholder="Find a supplier or what they sell" style="box-sizing: border-box; width: 100%; padding: 12px 14px; border-radius: 12px; border: none; background: #243052; color: #FFFFFF; font: inherit; font-size: 15px">
+    <div style="display: flex; gap: 6px">
+      <sc-for list="{{sorts}}" as="s" hint-placeholder-count="3">
+        <button type="button" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding: 14px 16px 120px; display: flex; flex-direction: column; gap: 12px">
+    <a href="Twins.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FDEEE1; color: #7A4A02">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="5"></circle><circle cx="15" cy="12" r="5"></circle></svg>
+      <span style="flex: 1; font-size: 14px; font-weight: 700">Two records look like one supplier</span>
+      <span style="padding: 7px 11px; border-radius: 999px; background: #FFFFFF; color: #1C2233; font-size: 12px; font-weight: 700">Compare</span>
+    </a>
+
+    <div aria-hidden="true" style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #5F6980; padding: 0 4px">
+      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B"></i>Cheapest on</span>
+      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B; opacity: .6"></i>Fills orders</span>
+      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B; opacity: .35"></i>Prices fresh</span>
+    </div>
+
+    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <sc-for list="{{list}}" as="s" hint-placeholder-count="6">
+        <sc-if value="{{s.isLink}}" hint-placeholder-val="{{ false }}">
+          <a href="Supplier.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid #EFECE6">
+            <span style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0">
+              <span style="font-size: 15px; font-weight: 700">{{s.name}}</span>
+              <span style="font-size: 12px; color: #5F6980">{{s.sells}}</span>
+              <span style="display: flex; flex-direction: column; gap: 3px; width: 150px">
+                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="height: 4px; border-radius: 2px; background: #EFECE6; display: block"><span style="display: block; height: 4px; border-radius: 2px; {{b}}"></span></span></sc-for>
+              </span>
+            </span>
+            <span style="flex: none; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{s.jobStyle}}">{{s.jobs}}</span>
+          </a>
+        </sc-if>
+        <sc-if value="{{s.noLink}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid #EFECE6">
+            <span style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0">
+              <span style="font-size: 15px; font-weight: 700">{{s.name}}</span>
+              <span style="font-size: 12px; color: #5F6980">{{s.sells}}</span>
+              <span style="display: flex; flex-direction: column; gap: 3px; width: 150px">
+                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="height: 4px; border-radius: 2px; background: #EFECE6; display: block"><span style="display: block; height: 4px; border-radius: 2px; {{b}}"></span></span></sc-for>
+              </span>
+            </span>
+            <span style="flex: none; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{s.jobStyle}}">{{s.jobs}}</span>
+          </div>
+        </sc-if>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding: 8px 0 14px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0z"></path><path d="M3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11"></path></svg>Today</a>
+    <a href="Funnel.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg>Funnel</a>
+    <a href="Capture.dc.html" aria-label="Capture" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(201,58,48,.35)">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+    <a href="Prices.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.5"></circle></svg>Prices</a>
+    <a href="Suppliers.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 700; color: #1C2233">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12z"></path><path d="M8 21v-7h8v7" fill="#FFFFFF"></path></svg>Suppliers</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { sort: 'jobs' }; }
+  renderVals() {
+    const sort = this.state.sort;
+    const base = [
+      { name: 'Owino Plumbing', sells: 'Plumbing · PVC · Taps', jobs: 7, ch: 79, fill: 93, fresh: 88, link: true },
+      { name: 'Kiseka Steel', sells: 'Rebar · Mesh · Wire', jobs: 3, ch: 58, fill: 94, fresh: 84 },
+      { name: 'Namanve Sheets', sells: 'Iron sheets · Gutters · Roofing', jobs: 2, ch: 71, fill: 88, fresh: 90 },
+      { name: 'Nakawa Cement Depot', sells: 'Cement', jobs: 1, ch: 100, fill: 97, fresh: 100 },
+      { name: 'Katwe Fabricators', sells: 'Fabrication · Hoop iron · Fasteners', jobs: 1, ch: 44, fill: 76, fresh: 61 },
+      { name: 'Ndeeba Timber Works', sells: 'Timber', jobs: 0, ch: 66, fill: 90, fresh: 72 }
+    ];
+    const order = sort === 'jobs' ? (a, b) => b.jobs - a.jobs : sort === 'stale' ? (a, b) => a.fresh - b.fresh : (a, b) => a.name.localeCompare(b.name);
+    const list = base.slice().sort(order).map(s => ({
+      ...s, isLink: !!s.link, noLink: !s.link,
+      bars: [['width:' + s.ch + '%;background:#3A3F9B'], ['width:' + s.fill + '%;background:#3A3F9B;opacity:.6'], ['width:' + s.fresh + '%;background:#3A3F9B;opacity:.35']].map(x => x[0]),
+      jobs: s.jobs ? s.jobs + (s.jobs === 1 ? ' job' : ' jobs') : 'nothing today',
+      jobStyle: s.jobs ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8;color:#5F6980'
+    }));
+    const sorts = [['jobs', 'Most jobs today'], ['stale', 'Oldest prices'], ['az', 'A–Z']].map(([k, label]) => ({
+      label, pick: () => this.setState({ sort: k }),
+      style: 'all:unset;cursor:pointer;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;' +
+        (sort === k ? 'background:#FFFFFF;color:#16203C' : 'background:#243052;color:#B3BCD2')
+    }));
+    return { list, sorts };
+  }
+}
+</script>
+</body>
+</html>

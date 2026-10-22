@@ -10,7 +10,7 @@ for(const f of files){
   const style = s.match(/<style>([\s\S]*?)<\/style>/)[1];
   const link = s.match(/<link[^>]*>/)[0];
   const body = s.split('</helmet>')[1].split('</x-dc>')[0];
-  const m = body.match(/width:(\d+)px;height:(\d+)px/);
+  const m = body.match(/width:\s*(\d+)px;\s*height:\s*(\d+)px/);
   const html = `<!doctype html><html><head><meta charset="utf-8">${link}<style>*{box-sizing:border-box}${style}</style></head><body style="margin:0">${body}</body></html>`;
   const tmp = '/tmp/_r.html'; fs.writeFileSync(tmp, html);
   const p = await b.newPage({viewport:{width:+m[1], height:+m[2]}, deviceScaleFactor:1});
@@ -20,7 +20,7 @@ for(const f of files){
   const out = f.replace('.dc.html','.png');
   await p.screenshot({path:out, fullPage:false});
   // does content overflow the frame?
-  const over = await p.evaluate(()=>{const a=document.querySelector('.app');return {sh:a.scrollHeight, ch:a.clientHeight, bw:document.body.scrollWidth};});
+  const over = await p.evaluate(()=>{const a=document.querySelector('.app')||document.body.firstElementChild;return {sh:a.scrollHeight, ch:a.clientHeight, bw:document.body.scrollWidth};});
   console.log(out, JSON.stringify(over), errs.length?errs:'');
   await p.close();
 }

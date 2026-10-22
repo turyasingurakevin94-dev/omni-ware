@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — A supplier's price</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Visit.dc.html" aria-label="Back to the visit" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-size: 16px; font-weight: 700">Their price</span>
+  </div>
+
+  <div style="padding: 4px 16px 120px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; gap: 8px">
+      <a href="Suppliers.dc.html" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: #E4E6FA">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #3A3F9B">Supplier</span>
+        <span style="font-size: 14px; font-weight: 700">Owino Plumbing</span>
+      </a>
+      <a href="Search.dc.html" style="flex: 1.3; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: #F1EEE8">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Item</span>
+        <span style="font-size: 14px; font-weight: 700">PPR pipe 25mm × 4m</span>
+      </a>
+    </div>
+
+    <div role="radiogroup" aria-label="Do they have it?" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 14px; background: #F1EEE8">
+      <sc-for list="{{have}}" as="h" hint-placeholder-count="2">
+        <button type="button" role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" style="{{h.style}}">{{h.label}}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{has}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="sp_price" style="font-size: 12px; font-weight: 700; color: #5F6980">Price</label>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <input id="sp_price" type="text" inputmode="numeric" value="14,500" style="box-sizing: border-box; width: 170px; padding: 12px; border-radius: 12px; border: 1px solid #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">
+          <div style="display: flex; gap: 6px">
+            <sc-for list="{{units}}" as="u" hint-placeholder-count="2">
+              <button type="button" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 700; color: #5F6980">Cheaper when you buy more</span>
+        <div style="border: 1px solid #E6E3DD; border-radius: 14px; overflow: hidden">
+          <sc-for list="{{steps}}" as="s" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #EFECE6">
+              <span style="font-size: 14px; color: #5F6980; flex: 1"><span class="m" style="color: #1C2233; font-weight: 600">{{s.from}}</span> or more</span>
+              <span class="m" style="font-size: 15px; font-weight: 600">{{s.price}}</span>
+              <span style="width: 70px; height: 6px; border-radius: 3px; background: #EFECE6; overflow: hidden; display: block"><span style="display: block; height: 6px; background: #3A3F9B; {{s.w}}"></span></span>
+            </div>
+          </sc-for>
+          <button type="button" onClick="{{addStep}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 14px; color: #3A3F9B; font-size: 14px; font-weight: 700">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a step</button>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label for="sp_min" style="font-size: 12px; font-weight: 700; color: #5F6980">Least they sell</label>
+          <input id="sp_min" type="text" inputmode="numeric" value="10 lengths" style="box-sizing: border-box; width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid #E6E3DD; font: inherit; font-weight: 600">
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; font-weight: 700; color: #5F6980">Delivers in</span>
+          <div style="display: flex; gap: 4px">
+            <sc-for list="{{lead}}" as="l" hint-placeholder-count="3">
+              <button type="button" onClick="{{l.pick}}" style="{{l.style}}">{{l.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{hasNot}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: #F1EEE8">
+        <span style="font-size: 14px; font-weight: 700">Owino Plumbing does not sell it</span>
+        <span style="font-size: 13px; color: #5F6980">The hunt remembers, so nobody asks them again for <span class="m">90</span> days.</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px; display: flex; flex-direction: column; gap: 8px">
+    <span style="font-size: 12px; color: #5F6980; text-align: center">Saved on this phone first. It goes up when you have signal.</span>
+    <a href="Visit.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">{{cta}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { has: true, unit: 'a length', lead: 'Same day', extra: false }; }
+  renderVals() {
+    const { has, unit, lead, extra } = this.state;
+    const seg = (on) => 'all:unset;cursor:pointer;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:700;' + (on ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(27,36,56,.08)' : 'color:#5F6980');
+    const chip = (on) => 'all:unset;cursor:pointer;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8');
+    const have = [[true, 'They have it'], [false, 'They don’t']].map(([k, label]) => ({
+      label, on: String(has === k), pick: () => this.setState({ has: k }), style: seg(has === k)
+    }));
+    const units = ['a length', 'a bundle'].map(label => ({ label, pick: () => this.setState({ unit: label }), style: chip(unit === label) }));
+    const leadOpts = ['Same day', '2 d', 'A week'].map(label => ({ label, pick: () => this.setState({ lead: label }), style: chip(lead === label) }));
+    const raw = [{ from: '1', p: 14500 }, { from: '10', p: 13800 }].concat(extra ? [{ from: '50', p: 13200 }] : []);
+    const steps = raw.map(s => ({ from: s.from, price: s.p.toLocaleString('en-US'), w: 'width:' + Math.round(s.p / 14500 * 100) + '%' }));
+    return {
+      have, units, lead: leadOpts, steps, has, hasNot: !has,
+      addStep: () => this.setState({ extra: true }),
+      cta: has ? 'Save the price' : 'Save: they don’t sell it'
+    };
+  }
+}
+</script>
+</body>
+</html>
