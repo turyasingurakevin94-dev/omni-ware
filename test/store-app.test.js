@@ -260,7 +260,7 @@ const P = page(fakeDb({}));
     X.S.ui.ct = { aisle: 'Aisle C · Tools', keys: ['P3'], i: 0, entries: { 0: { 0: '20', 1: '4' } }, focus: 1, counts: { 0: 204 }, system: { 0: 204 }, at: NOW };
     X.S.ui.pk = { id: 40, i: 0 };
     ['viewToday', 'viewShelf'].forEach(v => { try { const h = X[v](); t.check(typeof h === 'string' && h.length > 400, v + ' draws'); } catch (e) { t.fail(v + ' threw: ' + e.stack); } });
-    const pages = [['movein', {}], ['movepack', {}], ['onroad', {}], ['receive', { id: 'T9' }], ['pack', { id: 40 }], ['load', {}], ['loadhired', {}], ['collect', { id: 43 }], ['deliver', { id: 42 }], ['delivered', { id: 42 }], ['stock', { key: 'P1::0' }], ['count', {}], ['countresults', {}], ['decide', { id: 'c1' }], ['me', {}]];
+    const pages = [['movein', {}], ['movepack', {}], ['onroad', {}], ['receive', { id: 'T9' }], ['pack', { id: 40 }], ['load', {}], ['loadhired', {}], ['collect', { id: 43 }], ['deliver', { id: 42 }], ['delivered', { id: 42 }], ['stock', { key: 'P1::0' }], ['count', {}], ['countresults', {}], ['decide', { id: 'c1' }], ['me', {}], ['agent', {}], ['ret', {}], ['handover', {}], ['close', {}]];
     let all = '';
     pages.forEach(([pg, a]) => { try { X.S.stack = [{ type: pg, args: a }]; const h = X.PAGE[pg]({ ...a }); all += h; t.check(typeof h === 'string' && h.length > 300 && !/undefined|NaN/.test(h.replace(/data-[a-z]+="[^"]*"/g, '')), 'page ' + pg + ' draws, with no undefined or NaN in it'); } catch (e) { t.fail('page ' + pg + ' threw: ' + e.stack); } });
     const visible = (all + X.viewToday() + X.viewShelf()).replace(/<[^>]*>/g, ' ');
