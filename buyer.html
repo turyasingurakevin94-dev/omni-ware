@@ -764,6 +764,15 @@ function withLineIds(q){
   (q.items || []).forEach((it, i) => { if (it && (it.lineId == null || it.lineId === '')) it.lineId = 'L' + q.id + '-' + i; });
   return q;
 }
+// The yard's asks for more of an item (Store 0157 store_asks, kind 'restock'):
+// before 0157 the table is not there, and that reads as no asks.
+async function loadStoreAsks(){
+  try {
+    const r = await sb.from('store_asks').select('*').eq('shop_id', S.shopId).eq('kind', 'restock').eq('status', 'sent');
+    if (r.error || !Array.isArray(r.data)) return null;
+    return r.data.map(a => ({ id: a.id, ref: a.ref, payload: a.payload || {}, askedBy: a.asked_by || null, askedByName: a.asked_by_name || '', createdAt: a.created_at }));
+  } catch (_e) { return null; }
+}
 async function loadAll(){
   const [suppliers, products, prices, stock, lots, quotes, trips, staff, invoices, agents, settingsR, handoffs, restock] = await Promise.all([
     selectAll('suppliers'), selectAll('products'), selectAll('prices'), selectAll('stock', 'key'), selectAll('stock_lots'), selectAll('saved_quotes'),
@@ -772,6 +781,7 @@ async function loadAll(){
     // 0125: until it is applied these read as empty, and nothing is passed on.
     selectAll('buyer_handoffs').catch(() => []), selectAll('restock_buys').catch(() => []),
   ]);
+  const yardAsks = await loadStoreAsks();
   readAppAnswers();
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const stockMap = {}; stock.forEach(s => { stockMap[s.key] = Number(s.qty) || 0; });
@@ -794,6 +804,7 @@ async function loadAll(){
     presetRestockCoverDays: presets.restockCoverDays == null ? null : presets.restockCoverDays,
     handoffs: (handoffs || []).map(rowToHandoff),
     restockBuys: (restock || []).map(rowToRestock),
+    storeAsks: yardAsks || [],
   };
   S.loadedAt = Date.now();
   saveSnapshot();
@@ -822,6 +833,7 @@ async function refreshLive(){
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
     if (handoffs) S.data.handoffs = handoffs.map(rowToHandoff);
     if (restock) S.data.restockBuys = restock.map(rowToRestock);
+    const yardAsks = await loadStoreAsks(); if (yardAsks) S.data.storeAsks = yardAsks;
     S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging) render();
     readAppAnswers();
   } catch (e) { if (!isNetworkError(e)) console.warn(e); }
@@ -1644,7 +1656,7 @@ function pushOpen(d){
     } else if (d.kind === 'trip.cash.ready') {
       const h = (D().handoffs || []).find(x => String(x.id) === String(d.id));
       at('plan', h && h.payload && h.payload.supplierId ? { sid: h.payload.supplierId } : {});
-    } else if (d.kind === 'restock.held' || d.kind === 'restock.released') at('restock', { picked: null });
+    } else if (d.kind === 'restock.held' || d.kind === 'restock.released' || d.kind === 'store.restock') at('restock', { picked: null });
     // 0150: a trip sent or given to you opens it; one taken off you or cancelled opens Trips.
     else if (d.kind === 'trip.sent') { const t = tripById(id); if (t && tripIsLive(t)) at('trip', { id: t.id }); else at('trips', {}); }
     else if (d.kind === 'trip.taken' || d.kind === 'trip.cancelled') at('trips', {});
@@ -5547,6 +5559,69 @@ function restockRows(){
   return rows.sort((a, b) => (days(a) - days(b)) || b.rate - a.rate);
 }
 ACT.restock = () => { FEEL.open(); push('restock', { picked: null }); };
+// The yard's asks for more of an item (Store 0157): the Buyer adds it to a
+// round or says not yet. The answer waits UNDO_MS, so Undo costs nothing;
+// answered, the asker is pushed store.ask.decided by answer_store_ask.
+const YARD_NOTES = ['Monday round', 'Next week', 'The yard has enough'];
+function yardAsks(){
+  const wait = S.ui.yardWait || {}, open = (D().storeAsks || []).filter(a => !wait[a.id]).map(a => ({ a, w: null }));
+  return open.concat(Object.values(wait).map(w => ({ a: w.ask, w }))).sort((x, y) => msOf(x.a.createdAt) - msOf(y.a.createdAt));
+}
+// The supplier and price a yard ask rides the round on: the recommended row,
+// rounded up to whole cartons like a refill.
+function yardBuy(a){
+  const p = a.payload || {}, pid = p.productId, vi = p.variantIdx == null ? null : Number(p.variantIdx), qty = Math.max(1, Math.ceil(Number(p.qty) || 1));
+  const best = pid && recommendedRow(pid, vi, qty); if (!best || best.purchasePrice == null) return null;
+  const pk = ipLineOutlay(best, qty), units = pk && pk.forcedPack ? pk.units : qty, price = pk && pk.forcedPack ? pk.rate : best.purchasePrice;
+  return { pid, vi, qty: units, unit: best.unit || p.unit || '', supplierId: String(best.supplierId), price: Math.round(price) };
+}
+function yardCardHTML(){
+  const list = yardAsks(); if (!list.length) return '';
+  const asker = (list.find(x => x.a.askedByName) || {}).a, who = shortName(asker ? asker.askedByName : '') || whoShort('store'), open = list.filter(x => !x.w || x.w.st === 'noting').length;
+  const rows = list.map(({ a, w }, i) => { const p = a.payload || {}, st = w ? w.st : null, done = st === 'add' || st === 'no', today = String(p.when || '').toLowerCase() === 'today';
+    const shorts = (Array.isArray(p.shortFor) ? p.shortFor : []).map(id => quoteById(id)).filter(Boolean).map(q => quoteClientName(q));
+    const left = w && !w.sent ? Math.max(0, UNDO_MS - (Date.now() - w.at)) : 0;
+    return `<div style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;${i ? 'border-top:1px solid #F1EEE8;' : ''}${st === 'no' ? 'opacity:.7' : ''}">
+      <span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;${st === 'add' ? 'background:var(--greenSoft);color:var(--green)' : 'background:#DDF1F3;color:#0E6470'}">${ic('box', 16)}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:baseline;gap:6px;min-width:0"><b class="m" style="font-size:14px">${n0(Number(p.qty) || 0)}</b><span style="font-size:11.5px;font-weight:600;color:var(--ink3)">${esc(p.unit || '')}</span><span class="ell" style="flex:1;min-width:0;font-size:13.5px;font-weight:700">${esc(p.name || 'Item')}</span></span>
+          <span style="display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;font-size:10.5px;font-weight:700;${today ? 'background:#FDEEE1;color:#95530C' : 'background:#F4F2EE;color:#5F6980'}">${today ? 'needed today' : esc(p.when || 'when it can')}</span>${shorts.map(n => `<span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px 0 3px;border-radius:999px;background:#FDF0EE;color:#8E2A22;font-size:10.5px;font-weight:700;max-width:100%"><span style="width:14px;height:14px;border-radius:999px;background:#FBE5E2;font-size:7px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(n))}</span><span class="ell">${esc(shortName(n))} short</span></span>`).join('')}</span></span></span>
+      ${!st ? `<span style="display:grid;grid-template-columns:1.4fr 1fr;gap:6px"><button data-act="yardadd" data-id="${esc(a.id)}" style="height:38px;border:none;border-radius:11px;background:var(--green);color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${ic('plus', 14, 'style="stroke-width:2.4"')}Add to a round</button><button data-act="yardno" data-id="${esc(a.id)}" style="height:38px;border:none;border-radius:11px;background:#fff;box-shadow:inset 0 0 0 1.5px #E6E3DD;color:var(--ink);font-size:12.5px;font-weight:700">Not yet</button></span>` : ''}
+      ${st === 'noting' ? `<span style="display:flex;flex-direction:column;gap:6px"><span style="display:flex;gap:5px;flex-wrap:wrap">${YARD_NOTES.map(t => `<button data-act="yardnote" data-id="${esc(a.id)}" data-t="${esc(t)}" aria-pressed="${w.note === t}" style="height:30px;padding:0 10px;border:none;border-radius:999px;font-size:11.5px;font-weight:700;${w.note === t ? 'background:var(--navy);color:#fff' : 'background:#F4F2EE;color:#4D566B'}">${esc(t)}</button>`).join('')}</span>
+        <span style="display:flex;gap:6px"><button data-act="yardundo" data-id="${esc(a.id)}" style="flex:1;height:36px;border:none;border-radius:11px;background:transparent;color:#5F6980;font-size:12px;font-weight:700">Back</button><button data-act="yardsend" data-id="${esc(a.id)}" style="flex:1.6;height:36px;border:none;border-radius:11px;background:var(--navy);color:#fff;font-size:12px;font-weight:700">Tell ${esc(who)} · not yet</button></span></span>` : ''}
+      ${done ? `<span style="display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:${st === 'add' ? 'var(--green)' : '#5F6980'}"><span style="flex:1;min-width:0">${st === 'add' ? '✓ On the restock list · rides your next round · ' + esc(who) + ' is told' : '✓ Not yet' + (w.note ? ' · ' + esc(w.note) : '') + ' · ' + esc(who) + ' is told'}</span>${w.sent ? '' : `<button data-act="yardundo" data-id="${esc(a.id)}" style="flex:none;min-height:26px;padding:0 6px;border:none;background:transparent;color:#3A3F9B;font-size:11.5px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button>`}</span>${w.sent ? '' : `<span role="img" aria-label="Sends in ${Math.max(1, Math.ceil(left / 1000))} seconds unless you undo" style="display:block;height:3px;border-radius:999px;background:#EDEAE4;overflow:hidden"><i class="bx-drain" style="display:block;height:100%;background:${st === 'add' ? 'var(--green)' : '#5F6980'};animation-duration:${UNDO_MS}ms;animation-delay:-${UNDO_MS - left}ms"></i></span>`}</span>` : ''}
+    </div>`; }).join('');
+  return `<div role="group" aria-label="${open} ask${open === 1 ? '' : 's'} from ${esc(who)} in the yard for the shelf; add each to a round or say not yet" style="flex:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1.5px rgba(14,100,112,.28);overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#EEF6F7"><span style="width:22px;height:22px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">${esc(initials(asker ? asker.askedByName : who))}</span><span style="flex:1;min-width:0;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#0B5560">FROM THE YARD · ${open}</span><span style="flex:none;font-size:11px;font-weight:600;color:#4E6A70">${esc(who)} asks · you decide</span></div>${rows}</div>`;
+}
+function yardWait(id){ return (S.ui.yardWait ||= {})[id]; }
+function yardStart(id, st, note){
+  const a = (D().storeAsks || []).find(x => String(x.id) === String(id)), old = yardWait(id), ask = a || (old && old.ask); if (!ask) return null;
+  if (old && old.timer) clearTimeout(old.timer);
+  const w = S.ui.yardWait[id] = { id, ask, st, note: note == null ? (old ? old.note : null) : note, at: Date.now(), timer: null, sent: false };
+  if (st === 'add' || st === 'no') w.timer = setTimeout(() => yardCommit(w), UNDO_MS);
+  return w;
+}
+async function yardCommit(w){
+  if (S.ui.yardWait[w.id] !== w) return;
+  w.timer = null;
+  try {
+    if (w.st === 'add') {
+      const b = yardBuy(w.ask); if (!b) throw new Error('nobody on the price list');
+      const row = { id: newUuid(), shop_id: S.shopId, product_id: b.pid, variant_idx: b.vi, qty: b.qty, unit: b.unit, supplier_id: b.supplierId, price: b.price, status: 'planned', ...(S.user ? { created_by: S.user.id } : {}) };
+      const ins = await sb.from('restock_buys').insert(row); if (ins.error) throw ins.error;
+      (D().restockBuys ||= []).push(rowToRestock({ ...row, created_at: new Date().toISOString() }));
+    }
+    const r = await sb.rpc('answer_store_ask', { p_id: w.ask.id, p_status: w.st === 'add' ? 'accepted' : 'declined', p_note: w.st === 'add' ? 'On the restock list · rides the next round' : (w.note || null) });
+    if (r.error) throw r.error;
+    w.sent = true; D().storeAsks = (D().storeAsks || []).filter(x => String(x.id) !== String(w.id)); saveSnapshot();
+  } catch (e) { delete S.ui.yardWait[w.id]; toast(isNetworkError(e) ? 'No connection — ' + whoShort('store') + ' was not told. Try again with signal.' : 'Not sent: ' + (e.message || e), 6000); }
+  render();
+}
+ACT.yardadd = t => { if (!yardBuy((D().storeAsks || []).find(x => String(x.id) === t.dataset.id) || {})) { toast('Nobody on the price list for it · ' + whoShort('sourcing') + ' finds one'); return; } if (yardStart(t.dataset.id, 'add')) { FEEL.yes(); render(); } };
+ACT.yardno = t => { if (yardStart(t.dataset.id, 'noting')) { FEEL.tick(); render(); } };
+ACT.yardnote = t => { const w = yardWait(t.dataset.id); if (!w || w.st !== 'noting') return; w.note = w.note === t.dataset.t ? null : t.dataset.t; FEEL.tick(); render(); };
+ACT.yardsend = t => { const w = yardWait(t.dataset.id); if (!w || w.st !== 'noting') return; yardStart(t.dataset.id, 'no', w.note); FEEL.yes(); render(); };
+ACT.yardundo = t => { const w = yardWait(t.dataset.id); if (!w || w.sent) return; if (w.timer) clearTimeout(w.timer); delete S.ui.yardWait[t.dataset.id]; FEEL.back(); render(); };
 PAGE.restock = (args) => {
   const all = restockRows(), by = k => all.filter(r => restockKind(r) === k);
   const buy = by('buy'), held = by('held'), coming = by('coming'), noPrice = by('noprice'), nocount = by('nocount'), slow = by('slow');
@@ -5585,6 +5660,7 @@ PAGE.restock = (args) => {
       </div>
     </div>
     <div class="bx-body" style="gap:10px">
+      ${yardCardHTML()}
       ${buy.length ? `<div class="bx-sec"><b style="font-size:14px;white-space:nowrap">Runs out first</b><span style="display:flex;gap:8px;font-size:11px;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:12px;height:6px;border-radius:999px;background:#F5B26B"></i>shelf</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:12px;height:6px;border-radius:999px;background:repeating-linear-gradient(135deg,#2BA3B0 0 3px,#9FD9DF 3px 5px)"></i>coming</span><span style="display:inline-flex;align-items:center;gap:4px"><i style="width:2px;height:10px;background:var(--navy)"></i>refill lands</span></span></div>${buy.map(card).join('')}` : emptyCard('The shelf is fine', 'Nothing runs out before a refill could land.')}
       ${slow.length ? `<span style="display:flex;align-items:center;gap:8px;min-height:36px;padding:0 4px;font-size:12px;font-weight:700;color:var(--ink3)">${slow.length} hidden · they sell under one a week</span>` : ''}
       ${covered.map(({ b, other, yard }) => { const p = productById(b.productId), name = p ? productVariantLabel(p, b.variantIdx) : 'Item', c = quoteLineCount({ productId: b.productId, variantIdx: b.variantIdx, unit: b.unit }, b.qty);
