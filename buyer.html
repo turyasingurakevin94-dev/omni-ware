@@ -1660,6 +1660,8 @@ function pushOpen(d){
     // 0150: a trip sent or given to you opens it; one taken off you or cancelled opens Trips.
     else if (d.kind === 'trip.sent') { const t = tripById(id); if (t && tripIsLive(t)) at('trip', { id: t.id }); else at('trips', {}); }
     else if (d.kind === 'trip.taken' || d.kind === 'trip.cancelled') at('trips', {});
+    // 0158: the Manager said no to a carton's shelf part: the order, else the plan.
+    else if (d.kind === 'carton.refused') { const q = quoteById(d.orderId); if (q) at('order', { id: Number(q.id) }); else at('plan', {}); }
     else if (d.kind === 'supplier.answered') { const q = quoteById(id); if (q) at('order', { id: Number(q.id) }); else at('plan', {}); }
     // Sourcing found a supplier for a line the client waits for (0144).
     else if (d.kind === 'sourcing.found') { const q = quoteById(id), it = q && (q.items || []).find(x => x && x.clientWaits && !x.supplierId); if (q && it) at('findsup', { id: Number(q.id), lineId: it.lineId }); else if (q) at('order', { id: Number(q.id) }); else go('check'); }
