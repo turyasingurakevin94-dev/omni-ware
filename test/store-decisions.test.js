@@ -83,4 +83,28 @@ R.data.returns.push({ id: 'a3', orderId: 2494, status: 'accepted', lines: [{ idx
 q494.creditNotes = [{ askId: 'a3', lines: [{ idx: 0, qty: 3 }] }];
 t.check(rs.returnedQty(q494, 0) === 8, 'an accepted return and the credit note it became count once');
 t.check(!/qty: ui\.back\[k\] \* /.test(store) && /shown: backText\(it, ui\.back\[k\]\)/.test(store), 'the return stores the count as entered and the receipt shows it in packs and units');
+/* ---------------- 5. rounds, one count back, a carton that splits ---------------- */
+// A Buyer round is several trips sharing an id stem (ow_trip_round, 0147): the shop sees one round.
+// "Back" is the Buyer's count: collected, not voided, not checked in. A carton bought for one pack
+// splits at check-in: the order's share by the order, the rest to the shelf.
+{
+  const T = { data: { collectionTrips: [], savedQuotes: [], units: [] } };
+  const msOf = v => v ? new Date(v).getTime() : 0;
+  const slice = (from, to) => { const i = store.indexOf(from); return store.slice(i, store.indexOf(to, i)); };
+  const rs = compileScope([extractFunction(store, 'cmpUnit'), extractFunction(store, 'shelfPackFor'), slice('function tripsBack(){', 'function roundWord('), slice('function rcShareOf(l){', 'PAGE.receive = ')],
+    { D: () => T.data, msOf, tripIsLive: t => !!t && !t.voided && t.status !== 'confirmed', quoteById: id => T.data.savedQuotes.find(q => String(q.id) === String(id)) || null }, ['tripsBack', 'tripRoundKey', 'roundsBack', 'rcShareOf']);
+  const trip = (id, status, w, extra) => ({ id, status, assignedWorkerId: w, collectedAt: '2026-10-21T10:05:00Z', lines: [], ...(extra || {}) });
+  T.data.collectionTrips = [trip('TRIP-MG3K2A-1', 'collected', 'W5'), trip('TRIP-MG3K2A-2', 'collected', 'W5'), trip('TRIP-MG3K2A-3', 'collected', 'W5'),
+    trip('TRIP-MG3K2A-4', 'collected', 'W5', { voided: true }), trip('T9', 'collected', 'W5', { yardCheckedAt: '2026-10-21T09:00:00Z' }), trip('T8', 'collecting', 'W5'), trip('TRIP-X', 'collected', 'W6')];
+  t.check(rs.tripsBack().length === 4, 'back at the gate is the Buyer\'s count: collected, not voided, not checked in');
+  t.check(rs.tripRoundKey({ id: 'TRIP-MG3K2A-3', assignedWorkerId: 'W5' }) === rs.tripRoundKey({ id: 'TRIP-MG3K2A-1', assignedWorkerId: 'W5' }) && rs.tripRoundKey({ id: 'TRIP-MG3K2A', assignedWorkerId: 'W5' }) === 'TRIP-MG3K2A|W5', 'a round is its stops\' shared stem, as ow_trip_round says');
+  t.check(rs.roundsBack().length === 2 && rs.roundsBack()[0].length === 3, 'three stops of one round are one round, not three trips');
+  T.data.savedQuotes = [{ id: 554, status: 'awaiting_goods', items: [{ lineId: 1, productId: 'P9', unit: 'pack', qty: 1 }] }, { id: 555, status: 'pending_delivery', items: [{ lineId: 1, productId: 'P9', unit: 'pack', qty: 1 }] },
+    { id: 556, status: 'awaiting_goods', items: [{ lineId: 1, productId: 'P9', unit: 'pack', qty: 200 }] }];
+  const sh = rs.rcShareOf({ orderId: 554, lineId: 1, productId: 'P9', unit: 'pack', qty: 200 });
+  t.check(sh && sh.need === 1 && !sh.gone, 'a carton of 200 bought for one pack: the order takes 1, the rest goes to the shelf');
+  t.check(rs.rcShareOf({ orderId: 556, lineId: 1, productId: 'P9', unit: 'pack', qty: 200 }) === null, 'an order that takes it all does not split');
+  t.check((rs.rcShareOf({ orderId: 555, lineId: 1, productId: 'P9', unit: 'pack', qty: 200 }) || {}).gone === true, 'an order already out the gate takes nothing from the trip: it all goes on the shelf');
+  t.check(!/lines on the road/.test(store), 'goods at the gate are never called "on the road"');
+}
 process.exit(t.done() ? 1 : 0);

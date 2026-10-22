@@ -1589,9 +1589,12 @@ function shopPicker(rows, open, ui){
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
             <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
       }).join('')}</div>
+      ${open ? `<button class="${ui.btn}" data-a="keep" style="flex:none;margin-top:6px">Back to ${esc(((list.find(m => m.shop_id === open) || {}).shops || {}).name || 'the shop')}</button>` : ''}
       <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
     el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
     el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    // Switching is not leaving: the shop open now is one tap away.
+    const keep = open && el.querySelector('[data-a=keep]'); if (keep) keep.onclick = () => resolve(list.find(m => m.shop_id === open));
   });
 }
 function switchShop(){ try { sessionStorage.setItem(SHOP_ASK, '1'); } catch (_e) {} location.reload(); }
