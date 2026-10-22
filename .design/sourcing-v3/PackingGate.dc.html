@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Packing gate</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#2A3350}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: rgba(22,32,60,.55); color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; top: 64px; background: #FFFFFF; border-radius: 26px 26px 0 0; padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 16px">
+    <span aria-hidden="true" style="align-self: center; width: 40px; height: 5px; border-radius: 3px; background: #E0DCD4"></span>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 20px; font-weight: 700">How it is packed</span>
+      <span style="font-size: 14px; color: #5F6980">Self-drilling screws 10×25</span>
+    </div>
+
+    <!-- nested boxes -->
+    <div style="display: flex; align-items: flex-end; justify-content: center; gap: 14px; padding: 14px 0 4px">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+        <div style="width: 112px; height: 92px; border-radius: 10px; background: #E4E6FA; border: 2px solid #3A3F9B; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; padding: 8px">
+          <sc-for list="{{tenBoxes}}" as="b" hint-placeholder-count="10"><span style="border-radius: 2px; background: #3A3F9B; opacity: .55"></span></sc-for>
+        </div>
+        <span style="font-size: 13px; font-weight: 700">Carton</span>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-bottom: 52px"><path d="M9 6l6 6-6 6"></path></svg>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+        <div style="width: 74px; height: 60px; border-radius: 8px; background: #FDE8E4; border: 2px solid #C93A30; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; padding: 6px">
+          <sc-for list="{{dots}}" as="d" hint-placeholder-count="18"><span style="border-radius: 999px; background: #A82D24; opacity: .6; aspect-ratio: 1"></span></sc-for>
+        </div>
+        <span style="font-size: 13px; font-weight: 700">Box <span style="padding: 2px 6px; border-radius: 999px; background: #C93A30; color: #FFFFFF; font-size: 11px">we sell</span></span>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-bottom: 52px"><path d="M9 6l6 6-6 6"></path></svg>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+        <div style="width: 30px; height: 30px; border-radius: 999px; background: #F1EEE8; border: 2px solid #5F6980"></div>
+        <span style="font-size: 13px; font-weight: 700">Piece</span>
+      </div>
+    </div>
+
+    <!-- steppers -->
+    <div style="display: flex; flex-direction: column; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #EFECE6">
+        <span style="flex: 1; font-size: 15px; font-weight: 600">Pieces in a box</span>
+        <button type="button" aria-label="Fewer pieces" onClick="{{lessP}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600">−</button>
+        <span class="m" style="width: 56px; text-align: center; font-size: 20px; font-weight: 600">{{pcs}}</span>
+        <button type="button" aria-label="More pieces" onClick="{{moreP}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600">+</button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px">
+        <span style="flex: 1; font-size: 15px; font-weight: 600">Boxes in a carton</span>
+        <button type="button" aria-label="Fewer boxes" onClick="{{lessB}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600">−</button>
+        <span class="m" style="width: 56px; text-align: center; font-size: 20px; font-weight: 600">{{boxes}}</span>
+        <button type="button" aria-label="More boxes" onClick="{{moreB}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 600">+</button>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: #5F6980">
+      <span>1 carton</span><span>=</span><span class="m" style="font-size: 16px; font-weight: 600; color: #1C2233">{{total}}</span><span>pieces</span>
+    </div>
+
+    <!-- every supplier row converts -->
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Every quote converts</span>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="2">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; {{r.tile}}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.mark}}"></path></svg>
+          <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.name}}</span>
+          <span class="m" style="font-size: 13px">{{r.says}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <a href="Passport.dc.html" style="margin-top: auto; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Packing is right</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { pcs: 100, boxes: 50 }; }
+  renderVals() {
+    const { pcs, boxes } = this.state;
+    const fmt = (n) => n.toLocaleString('en-US');
+    const OK = { tile: 'background:#E4F4EA;color:#0F6B43', mark: 'M5 12.5l4.5 4.5L19 7.5' };
+    const BAD = { tile: 'background:#FDEEE1;color:#7A4A02', mark: 'M12 7v6M12 17v.5' };
+    const katwe = 1000 % pcs === 0;
+    const rows = [
+      { name: 'Kiseka Steel', says: 'carton of ' + fmt(boxes * pcs), ...OK },
+      { name: 'Katwe Fabricators', says: katwe ? 'per 1,000 = ' + (1000 / pcs) + ' boxes' : '1,000 ≠ whole boxes', ...(katwe ? OK : BAD) }
+    ];
+    const step = (k, d, lo) => () => this.setState({ [k]: Math.max(lo, this.state[k] + d) });
+    return {
+      pcs, boxes, total: fmt(pcs * boxes), rows,
+      tenBoxes: Array.from({ length: 10 }, (_, i) => ({ i })),
+      dots: Array.from({ length: 18 }, (_, i) => ({ i })),
+      lessP: step('pcs', -50, 50), moreP: step('pcs', 50, 50),
+      lessB: step('boxes', -10, 10), moreB: step('boxes', 10, 10)
+    };
+  }
+}
+</script>
+</body>
+</html>

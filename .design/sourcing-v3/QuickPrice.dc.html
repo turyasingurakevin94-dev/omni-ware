@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Rival price</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-size: 17px; font-weight: 700">Rival price</span>
+  </div>
+
+  <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; gap: 8px">
+      <button type="button" style="all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: #F6E4F1; color: #7A3268">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase">Shop</span>
+        <span style="font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1C2233">Kikuubo Hardware Mart</span>
+      </button>
+      <button type="button" style="all: unset; cursor: pointer; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: #F1EEE8">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Item</span>
+        <span style="font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Wire mesh BRC A142</span>
+      </button>
+    </div>
+
+    <!-- the figure -->
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 8px">
+      <span class="m" style="font-size: 44px; font-weight: 600; line-height: 1">{{shown}}</span>
+      <div style="display: flex; gap: 6px">
+        <span style="padding: 6px 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">a sheet</span>
+        <span style="padding: 6px 12px; border-radius: 999px; background: #F1EEE8; font-size: 13px; font-weight: 700">a bundle</span>
+      </div>
+      <span style="font-size: 13px; color: #5F6980">last seen <span class="m">147,000</span> · 9 days ago <span class="m" style="{{deltaInk}}">{{delta}}</span></span>
+    </div>
+
+    <div role="radiogroup" aria-label="Do they have it?" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{stock}}" as="s" hint-placeholder-count="3">
+        <button type="button" role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- keypad -->
+  <div style="margin-top: auto; padding: 10px 16px 18px; display: flex; flex-direction: column; gap: 10px; background: #F7F5F2; border-top: 1px solid #E6E3DD">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+        <button type="button" aria-label="{{k.aria}}" onClick="{{k.press}}" class="m" style="all: unset; cursor: pointer; text-align: center; padding: 14px 0; border-radius: 12px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; box-shadow: inset 0 0 0 1px #E6E3DD">{{k.label}}</button>
+      </sc-for>
+    </div>
+    <a href="Passport.dc.html" style="text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Save the price</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { v: '149000', stock: 'Yes' }; }
+  renderVals() {
+    const v = this.state.v;
+    const n = Number(v || 0);
+    const fmt = (x) => x.toLocaleString('en-US');
+    const d = n - 147000;
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', '⌫'].map(label => ({
+      label, aria: label === '⌫' ? 'Delete a digit' : label,
+      press: () => this.setState({ v: label === '⌫' ? v.slice(0, -1) : (v + label).replace(/^0+/, '').slice(0, 9) })
+    }));
+    const stock = ['Yes', 'Low', 'Out'].map(label => ({
+      label, on: String(this.state.stock === label),
+      pick: () => this.setState({ stock: label }),
+      style: 'all:unset;cursor:pointer;text-align:center;padding:12px 6px;border-radius:12px;font-size:14px;font-weight:700;' +
+        (this.state.stock === label ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1px #E6E3DD')
+    }));
+    return {
+      shown: n ? fmt(n) : '0', keys, stock,
+      delta: !n ? '' : d === 0 ? '· same' : (d > 0 ? '▲ +' : '▼ −') + fmt(Math.abs(d)),
+      deltaInk: 'color:#1C2233;font-weight:600'
+    };
+  }
+}
+</script>
+</body>
+</html>
