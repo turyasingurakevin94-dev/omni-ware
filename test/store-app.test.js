@@ -328,8 +328,9 @@ const P = page(fakeDb({}));
     ];
     const gate = id => { W.S.ui.gc = null; W.S.stack = [{ type: 'collect', args: { id } }]; return W.PAGE.collect({ id }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '); };
     const g62 = gate(62), g63 = gate(63);
-    t.check(!/is 0, not 0/.test(g62) && !/is 2, not 2/.test(g62) && !/Cement Hima/.test(g62) && /0\/1 handed/.test(g62), 'fix 13: after "Bill what went" the line settled to nothing is not counted out and nothing reads "is 0, not 0"');
-    t.check(/Door hinges 4(&quot;|") is 2, not 4/.test(g63), 'fix 13: a short not yet settled still shows what went against what was ordered');
+    // The slip (the canvas's Load) counts lines ticked, and a short reads "2 of 4 short" under the line.
+    t.check(!/is 0, not 0/.test(g62) && !/0 of 0 short/.test(g62) && !/2 of 2 short/.test(g62) && !/Cement Hima/.test(g62) && /0 of 1 ticked/.test(g62), 'fix 13: after "Bill what went" the line settled to nothing is not counted out and nothing reads "0 of 0 short"');
+    t.check(/Door hinges 4(&quot;|")[\s\S]{0,40}2 of 4 short/.test(g63), 'fix 13: a short not yet settled still shows what went against what was ordered');
   }
 
   process.exit(t.done() ? 1 : 0);
