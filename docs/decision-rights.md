@@ -157,7 +157,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Drop a line nobody has | `line.drop` | Buyer | — | Sales | yes |
 | Plan a buying trip, with the cash for it | `trip.plan` | Buyer | — | — | yes |
 | Ride a trip and hand it in (**Store staff may ride one too**) | `trip.collect` | Buyer, Store | — | Store | yes |
-| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | — | Manager | yes |
+| **Buy to refill the shelf when no order needs it (what to buy)** | `buy.restock` | Buyer | Store | Manager | yes |
 | **Hold a restock line ("not yet")** | `restock.hold` | Manager | — | Buyer | yes |
 
 ### Sourcing
@@ -327,6 +327,12 @@ orders will take (each line from the shelf, or bought in and received, on an
 order past Checking that is not invoiced, voided or cancelled), never below
 zero (`shelfAvailable`, `heldForOrders` in Sales, Store and Buyer). Nothing
 moves at delivery; the invoice still takes the stock, once.
+
+When an item runs low or out, **the Store asks for more** ("We need more",
+with how soon and a rough count) and **the Buyer** decides what to buy and
+adds it to a round (`buy.restock`). The ask pushes the Buyer. The Manager's
+hold on a restock line still applies (`restock.hold`). The owner chose the
+Buyer for this on 22 Oct 2026; the Store app's ask is not built yet.
 
 ### Cash for a buying trip
 
