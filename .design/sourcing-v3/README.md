@@ -119,7 +119,6 @@ Two decisions are drawn into these screens:
 
 ## Still open
 
-- **Rival shops.** The two in the drawings are invented; the owner names real ones for `docs/canvas-cast.md`.
 - **Scorecards.** Only Owino and Kiseka are drawn. The other four supplier rows in the list are not links.
 - **Passports.** Only the wire mesh and the iron sheet have one. The other Funnel cards open their action, not a passport.
 - **The deal radar's "Next step" card** (Namanve's 100+ price) opens the Suppliers list, not a deal page.
@@ -169,5 +168,10 @@ Two decisions are drawn into these screens:
 - `payload.counter` on `supplier_proposals`, shown in the supplier app.
 
 PushBack's "We pay on time" is gone, because that is Accounts' data.
+
+**After the third look.** The reviewer confirmed round 4 and asked for three last fixes, now done:
+- **Visit:** the row wraps, so the Same price / New price buttons drop below the name, and "today's share" is no longer clipped. The age never breaks.
+- **Rival run:** the same wrap, so the last-seen line shows in full.
+- **Suppliers:** the board is 1,110 tall, so nothing is cut at the bottom.
 
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
