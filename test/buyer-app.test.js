@@ -98,7 +98,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow, roundStops, stopIsDone, tripPlanFor, roundHandover, restoreTripPay, setTripPay, outGroups, greetName, greeting, handInOf, stopBoughtElsewhere, cWaitFor, commitConfirm, todayJobs, askTotal, askLines, payOdd, cashStep, openTripFor, tripTakeable, tripView, tripById, roundCashH, setTripPay, orderPurchaseLines, cartonsWaiting, stopReadyWhy, holdOf };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, SHEET, D, render, orderSupplierTerms, orderSupplierConfirmState, supplierConfirmMessage, supplierTripMessage, ipLineOutlay, quoteLineQtyText, quoteLineCount, quoteLineEach, purchaseInvoiceTotal, purchaseInvoiceBalanceDue, tripShortLines, tripAllAnswered, orderPurchaseLines, buyingListRuns, beingPreparedOrders, runsToGo, tripFromRun, flushTrip, setGot, rowToQuote, rowToTrip, checkOrders, askingSuppliers, supplierOwed, viewToday, viewCheck, viewAsking, viewSuppliers, orderLeaveDraft, priceWaits, noneOpen, pickReason, restockRows, managerWaits, heldForOrders, shelfAvailable, shelfFor, packSplitText, linePackSplit, tripLinePackSplit, staffName, tripWho, canAddMe, refreshLive, triHTML, answerOf, topArgs, pushOpen, supplierTidy, fmtPhone, poss, go, restockKind, priceItems, supplierJobs, staleBySupplier, shareToday, fixAll, fixTabs, packWords, holdOf, orderHoldReason, lineIsOnATrip, flushYes, withLineIds, roundCashAsk, tripRound, roundCash, shelfIncoming, askAllMessage, askPack, flowNow, roundStops, stopIsDone, tripPlanFor, roundHandover, restoreTripPay, setTripPay, outGroups, greetName, greeting, handInOf, stopBoughtElsewhere, cWaitFor, commitConfirm, todayJobs, askTotal, askLines, payOdd, cashStep, openTripFor, tripTakeable, tripView, tripById, roundCashH, setTripPay, orderPurchaseLines, cartonsWaiting, stopReadyWhy, holdOf, yardCommit, yardBuy, yardCardHTML, loadStoreAsks };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -1079,6 +1079,38 @@ const P = page(fakeDb({}));
     t.check(/data-act="cartonask"/.test(X.PAGE.plan(X.topArgs())), 'the plan asks the Manager in one tap');
     X.D().restockBuys = [{ id: 'cb', productId: 'P3', variantIdx: null, qty: 24, supplierId: 'S1', price: 5000, status: 'planned', forLine: '81:1', createdAt: new Date(NOW).toISOString() }];
     t.check(X.cartonsWaiting().length === 0 && X.runsToGo().some(r => r.lines.some(x => String(x.order.id) === '81')), 'once the Manager lets it go, the carton joins the round');
+  }
+
+  // 10n. The yard's restock asks (Store 0157): add to a round or not yet, with Undo before anything is sent.
+  {
+    const db = fakeDb({ __rpcOk: true }), X = page(db);
+    { const la = await X.loadStoreAsks(); t.check(la === null || Array.isArray(la), 'loading the yard asks never throws · null when 0157 is not there'); }
+    X.D().storeAsks = [
+      { id: 'A1', ref: 'P2', askedByName: 'Musa Kato', createdAt: new Date(NOW - 6e5).toISOString(), payload: { key: 'P2', productId: 'P2', variantIdx: null, name: 'Gutter, 4m PVC', qty: 10, unit: 'pc', when: 'today', shortFor: [] } },
+      { id: 'A2', ref: 'P3', askedByName: 'Musa Kato', createdAt: new Date(NOW - 3e5).toISOString(), payload: { key: 'P3', productId: 'P3', variantIdx: null, name: 'Roofing nails', qty: 4, unit: 'kg', when: 'this week', shortFor: [] } }];
+    X.S.stack = [{ type: 'restock', args: { picked: null } }];
+    let h = X.PAGE.restock(X.topArgs());
+    t.check(/FROM THE YARD · 2/.test(h) && /needed today/.test(h) && /data-act="yardadd"/.test(h) && /data-act="yardno"/.test(h) && /Musa asks · you decide/.test(h), 'What to buy shows the yard\'s asks: qty, item, when, Add to a round and Not yet');
+    X.ACT.yardadd({ dataset: { id: 'A1' } });
+    h = X.PAGE.restock(X.topArgs());
+    t.check(/On the restock list · rides your next round · Musa is told/.test(h) && /data-act="yardundo"/.test(h) && !db.writes.length, 'Add to a round ticks at once with Undo · nothing is written yet');
+    X.ACT.yardundo({ dataset: { id: 'A1' } });
+    t.check(/FROM THE YARD · 2/.test(X.PAGE.restock(X.topArgs())), 'Undo puts the ask back, nothing sent');
+    X.ACT.yardadd({ dataset: { id: 'A1' } });
+    await X.yardCommit(X.S.ui.yardWait.A1);
+    const ins = db.writes.find(w => w[0] === 'insert' && w[1] === 'restock_buys'), rpc = db.writes.find(w => w[0] === 'rpc' && w[1] === 'answer_store_ask');
+    t.check(ins && ins[2].product_id === 'P2' && ins[2].status === 'planned' && ins[2].qty >= 10 && rpc && rpc[2].p_id === 'A1' && rpc[2].p_status === 'accepted', 'sent: a planned refill for the item, and the ask answered accepted');
+    X.ACT.yardno({ dataset: { id: 'A2' } });
+    h = X.PAGE.restock(X.topArgs());
+    t.check(/Monday round/.test(h) && /Tell Musa · not yet/.test(h), 'Not yet offers the note chips and tells Musa');
+    X.ACT.yardnote({ dataset: { id: 'A2', t: 'Next week' } });
+    X.ACT.yardsend({ dataset: { id: 'A2' } });
+    await X.yardCommit(X.S.ui.yardWait.A2);
+    const rpc2 = db.writes.filter(w => w[0] === 'rpc' && w[1] === 'answer_store_ask')[1];
+    t.check(rpc2 && rpc2[2].p_status === 'declined' && rpc2[2].p_note === 'Next week' && db.writes.filter(w => w[1] === 'restock_buys').length === 1, 'Not yet answers declined with the note and buys nothing');
+    t.check(!X.D().storeAsks.length && /FROM THE YARD · 0/.test(X.PAGE.restock(X.topArgs())) && !/data-act="yardundo"/.test(X.PAGE.restock(X.topArgs())), 'answered asks leave the open list; the done lines stay without Undo');
+    X.D().storeAsks = []; X.S.ui.yardWait = {};
+    t.check(X.yardCardHTML() === '', 'no asks (or no 0157 yet): no card');
   }
 
   // 10d. The greeting: the time of day it is, and a name, never a login.
