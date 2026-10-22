@@ -95,6 +95,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Settle a short pick: bill what went, or the full quantity** | `pick.settle` | Manager | Store | Sales | yes |
 | **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | yes |
 | **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | yes |
+| **Cancel an order before it is invoiced** (the Store puts back what was packed) | `order.cancel` | Manager | Sales | Store, Sales | no |
 | Send an invoice | `invoice.send` | Accounts | — | — | yes |
 
 ### Credit, debtors and agents
@@ -208,6 +209,11 @@ row in the same commit. The test fails on any mismatch, in either direction.
   without 0119. Taking an invoice back stays in the console: the server
   leaves on the order what that needs, and a copy that never saw the
   server's invoice cannot take it back.
+
+**Cancelling an order** that is not invoiced yet is the Manager's
+(`order.cancel`): the salesperson asks, the Manager decides, and the Store
+gets a push to stop and put back whatever was packed. Once invoiced, it is a
+void (`invoice.void`). The owner chose the Manager on 22 Oct 2026.
 
 ### The price decision
 
@@ -502,7 +508,7 @@ Built in 0127 and `owner.html`:
    - goals and stage limits
    - agent change requests
    - write-offs, with the Store's report
-   - returns, voids, credit notes
+   - returns, voids, credit notes, and cancelling an order (`order.cancel`)
 5. **Sourcing** (the role itself was added ahead of step 0, in 0128)
    - the staff form and the invite link for the role
    - the Sales "we don't sell it" button
