@@ -294,7 +294,8 @@ const P = page(fakeDb({}));
     const stockTxt = X.PAGE.stock({ key: 'P2' }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
     t.check(/\b53\b/.test(stockTxt) && /7 held/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /delivered/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, with the part held for orders');
     const shelfTxt = X.viewShelf().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    t.check(/0 on the shelf · 300 held for orders/.test(shelfTxt), 'fix 3: "Needs a look" says what is on the shelf to sell and what is held');
+    // "Needs a look" (the canvas's Stock tab) names the order that falls short.
+    t.check(/Out · #0058 is short/.test(shelfTxt), 'fix 3: "Needs a look" says the item is out and which order falls short');
 
     // Fix 5: a line with no supplier that waits for the client is never picked, so never short.
     const row = orderRow(60, [it(1, 'P2', 4), it(2, 'P3', 5, { supplierId: '', clientWaits: true })]);
