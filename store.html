@@ -1848,12 +1848,14 @@ async function takeOrder(id){
   });
 }
 // shared-worker.js finishPreparingOrder
-async function finishPack(id){
+// bay: where it waits for the truck (payload.bay, Today's bay map).
+async function finishPack(id, bay){
   await flushPicks(id);
   return changeOrder(id, q => {
     if (q.status !== 'preparing') return false;
     if (!(q.items || []).every(it => lineNotPicked(q, it) || PICK_ANSWERED.includes(it.pickStatus))) return false;
     q.pickingStatus = 'done'; q.pickingDoneAt = Date.now();
+    if (bay) q.bay = bay;
   });
 }
 
@@ -2291,6 +2293,7 @@ function roundBackFor(q){ return roundsBack().find(R => R.some(t => tripLines(t)
 function jobsNow(){
   if (!S.data) return { list: [], more: [] };
   const list = [], more = [];
+  putBacksNow().forEach(q => list.push({ kind: 'putback', q }));
   myTrips().length && list.push({ kind: 'ride', trips: myTrips() });
   roundsBack().forEach(R => list.push({ kind: 'round', R }));
   loadQueue().filter(q => orderIsPickup(q) && !moneyHold(q)).forEach(q => list.push({ kind: 'gate', q }));
@@ -2312,11 +2315,12 @@ function jobsNow(){
 }
 function nextJob(){
   const J = jobsNow(), j = J.list[0]; if (!j) return null;
-  const say = { ride: 'collect from ' + (j.trips && (supplierById(j.trips[0].supplierId) || {}).name || 'the supplier'), round: j.R && 'check in ' + (tripWho(j.R[0]) || 'a trip'), gate: j.q && 'hand over to ' + quoteClientName(j.q), pack: j.q && 'pack ' + quoteClientName(j.q), run: 'load the ' + (j.r && j.r.road || '') + ' run', drop: j.q && 'deliver to ' + quoteClientName(j.q) }[j.kind];
-  return { label: say, icon: { ride: 'truck', round: 'inbox', gate: 'pack', pack: 'pack', run: 'truck', drop: 'camera' }[j.kind], act: () => jobGo(j), n: J.n };
+  const say = { putback: j.q && 'put back ' + q4(j.q), ride: 'collect from ' + (j.trips && (supplierById(j.trips[0].supplierId) || {}).name || 'the supplier'), round: j.R && 'check in ' + (tripWho(j.R[0]) || 'a trip'), gate: j.q && 'hand over to ' + quoteClientName(j.q), pack: j.q && 'pack ' + quoteClientName(j.q), run: 'load the ' + (j.r && j.r.road || '') + ' run', drop: j.q && 'deliver to ' + quoteClientName(j.q) }[j.kind];
+  return { label: say, icon: { putback: 'pack', ride: 'truck', round: 'inbox', gate: 'pack', pack: 'pack', run: 'truck', drop: 'camera' }[j.kind], act: () => jobGo(j), n: J.n };
 }
 function jobGo(j){
-  if (j.kind === 'ride') { S.ui.rd = null; push('ride', {}); }
+  if (j.kind === 'putback') openPack(j.q.id);
+  else if (j.kind === 'ride') { S.ui.rd = null; push('ride', {}); }
   else if (j.kind === 'round') push('receive', { id: j.R[0].id });
   else if (j.kind === 'gate') push('collect', { id: j.q.id });
   else if (j.kind === 'pack') { if (j.round && !packQueue().includes(j.q)) push('receive', { id: j.round[0].id }); else openPack(j.q.id); }
@@ -2328,6 +2332,7 @@ function jobGo(j){
 function goodsWords(R, q){ const ks = [...new Set(R.flatMap(t => tripLines(t)).filter(l => !q || String(l.orderId) === String(q.id)).map(l => KIND_NOUN[kindOf(l.productName || (productById(l.productId) || {}).name)] || 'goods'))]; return 'the ' + (ks.slice(0, 2).join(' and ') || 'goods'); }
 function jobRow(j, i){
   const id = i;
+  if (j.kind === 'putback') return cvRow({ act: 'job', data: { i: id }, icon: CV.ret, soft: '#FBE5E2', ink: '#8E2A22', title: `Put back ${q4(j.q)} · called off`, sub: 'What you packed goes back to the shelf', subInk: '#8E2A22' });
   if (j.kind === 'ride') { const sup = supplierById(j.trips[0].supplierId); return cvRow({ act: 'job', data: { i: id }, icon: CV.truck, soft: '#E4E6FA', ink: '#3A3F9B', title: `Collect from ${esc((sup && sup.name) || 'the supplier')}${j.trips.length > 1 ? ' +' + (j.trips.length - 1) : ''}`, sub: esc(nLines(j.trips.flatMap(tripLines).length) + ' · ' + (theBuyer() ? firstWord(theBuyer().name) + ' sent you' : 'you are sent')) }); }
   if (j.kind === 'round') { const w = tripWho(j.R[0]); return cvRow({ act: 'job', data: { i: id }, icon: CV.inbox, soft: '#E4F4EA', ink: '#0F6B43', title: `Check in ${esc(firstWord(w) || 'the')}'s ${roundWord(j.R)}`, sub: esc(nLines(j.R.flatMap(tripLines).length) + ' · back ' + hm(msOf(j.R[0].collectedAt))) }); }
   if (j.kind === 'gate') { const ag = j.q.originAgentId && (D().agents || []).find(a => String(a.id) === String(j.q.originAgentId)); const who = ag ? ag.name : quoteClientName(j.q);
@@ -2420,7 +2425,11 @@ function jobCard(j, n){
   const go = (text) => `<button class="cv-white" data-act="job" data-i="0">${text}${sv(CV.chev, 16, 2.4)}</button>`;
   const faces = names => `<span class="cv-faces">${names.slice(0, 3).map(nm => face(nm, nm, 26, 'box-sizing:border-box')).join('')}</span>`;
   let body = '';
-  if (j.kind === 'round') {
+  if (j.kind === 'putback') {
+    const q = j.q, out = pickView(q).filter(it => PICK_ANSWERED.includes(it.pickStatus) && itemPicked(it) > 0);
+    body = head(tag(CV.ret, 'Called off', 'rgba(244,164,154,.16)', '#F4A49A'), faces([quoteClientName(q)])) + title(`Put back ${q4(q)}`, esc(quoteClientName(q) + ' · ' + managerName() + ' agreed'))
+      + stats([[out.length, out.length === 1 ? 'line out' : 'lines out'], [[...new Set(out.map(it => aisleOf(it.productId).letter))].length, 'aisles'], ['0', 'to pack']]) + go('Put it back');
+  } else if (j.kind === 'round') {
     const R = j.R, lines = R.flatMap(tripLines), sups = R.map(t => (supplierById(t.supplierId) || {}).name).filter(Boolean), orders = [...new Set(R.flatMap(tripOrders))];
     const shelf = lines.filter(l => !l.orderId || !quoteById(l.orderId) || rcShareOf(l)).length;
     body = head(tag(CV.van, `Back at the yard · ${hm(msOf(R[0].collectedAt))}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces(sups.length ? sups : [tripWho(R[0])]))
@@ -3117,123 +3126,219 @@ function goneSheet(msg){ return `<button class="tapback" data-act="back" aria-la
    PACKING -- full screen, one item at a time. Swipe sideways for the
    next; Picked stamps it, buzzes and chirps, and moves on by itself.
    ================================================================== */
+const W = () => Math.min(window.innerWidth, 520);
+// A tint paled toward white, for the card's ground.
+function paler(hex, k){ const h = String(hex).replace('#', ''), n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16), m = c => Math.round(c + (255 - c) * k);
+  return '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(m).map(c => c.toString(16).padStart(2, '0')).join(''); }
+/* What there is to pack from: the line's own goods when they were bought in
+   for it and came, else the shelf less what other packed orders already took
+   off it (heldGone), in the line's unit. The counter starts there, so a
+   shelf that cannot fill the line says so before anyone walks to it. */
+function packFrom(q, it){
+  if (orderLineIsBoughtIn(it)) return quoteLineReceived(it) ? Number(it.qty) || 0 : 0;
+  const key = stockKey(it.productId, it.variantIdx), mine = (q.items || []).filter(x => stockKey(x.productId, x.variantIdx) === key && x.pickStatus === 'done' && x !== it).reduce((n, x) => n + (Number(x.qty) || 0) * shelfPackFor(x), 0);
+  const phys = Math.max(0, (Number(D().stock[key]) || 0) - heldGone(it.productId, it.variantIdx) - mine);
+  return Math.floor(phys / Math.max(1e-9, shelfPackFor(it)) + 1e-9);
+}
+function pkPick(q, it, k){ const ui = S.ui.pk, per = quoteLineCountPer(it), qty = Number(it.qty) || 0;
+  if (ui.picked && ui.picked[k] != null) return ui.picked[k];
+  if (PICK_ANSWERED.includes(it.pickStatus)) return itemPicked(it);
+  const from = packFrom(q, it); return Math.min(qty, Math.floor(from / per) * per); }
+function orderCalledOff(q){ return !!q && (q.voided || !!q.cancelledAt || q.status === 'cancelled'); }
 async function openPack(id){
   const q = quoteById(id); if (!q) return;
   if (takenBySomeoneElse(q) && !canCorrect()) { toast(`${staffName(q.assignedWorkerId)} is packing this one`); return; }
   const p = packProgress(q), first = p.items.findIndex(it => !PICK_ANSWERED.includes(it.pickStatus));
-  S.ui.pk = { id, i: Math.max(0, first), shortOpen: false, draft: 0, toast: null, editing: false };
+  S.ui.pk = { id, i: Math.max(0, first), picked: {}, back: {} };
   push('pack', { id });
-  if (q.pickingStatus !== 'in_progress' || !orderIsMine(q)) {
+  if (!orderCalledOff(q) && (q.pickingStatus !== 'in_progress' || !orderIsMine(q))) {
     try { const r = await takeOrder(id); if (!r && quoteById(id).pickingStatus !== 'in_progress') toast('That order has moved on'); } catch (e) { toast(failSay(e), 5000); }
     render();
   }
 }
-const W = () => Math.min(window.innerWidth, 520);
 PAGE.pack = ({ id }) => {
   const q = quoteById(id); if (!q) return goneSheet('That order is gone');
-  const ui = S.ui.pk && S.ui.pk.id === id ? S.ui.pk : (S.ui.pk = { id, i: 0 });
-  const items = pickView(q), n = items.length, cur = items[ui.i] || items[0]; if (!cur) return goneSheet('This order has no lines');
-  const decided = items.filter(it => PICK_ANSWERED.includes(it.pickStatus)).length, shortN = items.filter(it => it.pickStatus === 'short').length;
-  const st = cur.pickStatus, isDone = PICK_ANSWERED.includes(st), a = aisleOf(cur.productId), aisleLeft = items.filter(it => aisleOf(it.productId).letter === a.letter && !PICK_ANSWERED.includes(it.pickStatus)).length;
-  const cq = quoteLineCount(cur, cur.qty), per = quoteLineCountPer(cur), stamped = S.ui.pkStamp === ui.i;
-  const note = (orderLineIsBoughtIn(cur) && quoteLineReceived(cur) && isTodayMs(msOf(cur.receivedAt))) ? 'came in today · front of the pile' : orderLineIsBoughtIn(cur) ? 'bought in for this order' : 'off our shelf';
-  const allDone = decided === n && !ui.editing && !ui.shortOpen;
-  const slides = items.map((it, k) => { const s = it.pickStatus, short = s === 'short', kind = kindOf(it.productName), img = lineImage(it);
-    return `<div class="pk-slide" style="width:${W()}px" aria-hidden="${k !== ui.i}"><span style="position:absolute;inset:0;${stageBg(kind)}"></span>
-      <span style="position:absolute;left:50%;top:58%;width:300px;height:40px;margin-left:-150px;border-radius:999px;background:radial-gradient(closest-side,rgba(22,32,60,.28),rgba(22,32,60,0))"></span>
-      ${img ? `<span class="pk-photo"><img src="${esc(img)}" alt=""></span>` : `<span style="position:absolute;left:0;right:0;top:15%;height:45%;display:flex;align-items:center;justify-content:center"><span class="${k === ui.i && !s ? 'pk-bob' : 'pk-still'}"><i style="display:block;${ART.big[kind]}"></i></span></span>`}
-      ${PICK_ANSWERED.includes(s) && k === ui.i ? `<span class="${stamped ? 'pk-flash' : ''}" style="position:absolute;inset:0;background:${short ? '#F5B26B' : '#6FDCB0'};opacity:0"></span>
-        <span class="${stamped ? 'pk-stamp' : ''}" style="position:absolute;left:50%;top:30%;margin-left:-130px;width:260px;padding:14px 0 10px;border:6px double currentColor;border-radius:20px;background:rgba(255,255,255,.9);display:flex;flex-direction:column;align-items:center;gap:4px;transform:rotate(-12deg);color:${short ? '#95530C' : '#0F6B43'}"><span style="font-size:42px;font-weight:700;letter-spacing:.16em;padding-left:.16em;line-height:1">${short ? 'SHORT' : 'PICKED'}</span><span class="m" style="font-size:12px;font-weight:600;letter-spacing:.08em">${esc(short ? `${quoteLineCount(it, itemPicked(it)).n} OF ${quoteLineCount(it, it.qty).n} · ${managerName().toUpperCase()} SETTLES` : `${quoteLineCount(it, it.qty).n} ${quoteLineCount(it, 1).unit.toUpperCase()} · AISLE ${aisleOf(it.productId).letter}`)}</span></span>` : ''}</div>`; }).join('');
-  const t = ui.toast && items[ui.toast.k];
-  let actions = '';
-  if (ui.shortOpen) actions = `<div class="pk-in" style="padding:10px;border-radius:20px;background:#FEF8F2;box-shadow:inset 0 0 0 1.5px #F5B26B;display:flex;flex-direction:column;gap:8px">
-      <span style="font-size:13px;font-weight:700;color:var(--amberDeep);text-align:center">How many did you find?</span>
-      <div style="display:flex;align-items:center;gap:8px"><button type="button" data-act="pkstep" data-d="-1" aria-label="One less" class="pk-step">${ic('minus', 22, 'style="stroke-width:2.6"')}</button>
-        <span class="m" style="flex:1;text-align:center;font-size:30px;font-weight:600">${esc(quoteLineCount(cur, ui.draft).n)}<span style="font-size:15px;color:#9AA1AE"> / ${esc(cq.n)}</span></span>
-        <button type="button" data-act="pkstep" data-d="1" aria-label="One more" class="pk-step">${ic('plus', 22, 'style="stroke-width:2.6"')}</button>
-        <button type="button" data-act="pkshortok" style="width:86px;height:60px;border:none;border-radius:16px;background:var(--navy);color:#fff;font-size:15px;font-weight:700">Pack ${esc(quoteLineCount(cur, ui.draft).n)}</button></div></div>`;
-  else if (allDone) actions = `<div class="pk-done" style="display:flex;flex-direction:column;gap:10px"><span style="align-self:center;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:14px;font-weight:700">${ic('tick', 16, 'style="stroke-width:3"')}${shortN ? `All ${n} done · ${shortN} short · ${esc(managerName())} settles` : `All ${n} picked`}</span>
-      <button data-act="pkfinish" class="pk-big" style="background:var(--red);color:#fff;box-shadow:0 12px 24px rgba(201,58,48,.32)" ${S.busy ? 'disabled' : ''}>${orderIsPickup(q) ? 'Packed · ready for pickup' : 'Packed · to the truck'}${ic('chev', 18, 'style="stroke-width:2.4"')}</button></div>`;
-  else if (isDone) actions = `<div class="pk-in" style="display:flex;gap:8px"><button type="button" data-act="pkundo" style="width:110px;flex:none;height:68px;border:none;border-radius:20px;background:#F1EEE8;color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:13px;font-weight:700">${ic('undo', 20, 'style="stroke-width:2"')}Not picked</button>
-      <button type="button" data-act="pkfix" class="pk-big" style="flex:1;background:#fff;box-shadow:inset 0 0 0 2px #16203C;color:var(--navy);font-size:15px">${st === 'short' ? `Found them all · ${esc(cq.n)} ${esc(cq.unit)}` : 'Change · it was short'}</button></div>`;
-  else actions = `<div style="display:flex;gap:8px"><button type="button" data-act="pkshort" aria-label="Not enough of this on the shelf" style="width:76px;flex:none;height:68px;border:none;border-radius:20px;background:#F1EEE8;color:var(--amberInk);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700">${ic('minus', 20, 'style="stroke-width:2.2"')}Short</button>
-      <button type="button" data-act="pkok" class="pk-big" style="flex:1;background:var(--red);color:#fff;box-shadow:0 12px 24px rgba(201,58,48,.32)">${ic('tick', 24, 'style="stroke-width:3"')}Picked ${esc(cq.n)} ${esc(cq.unit)}</button></div>`;
-  const fig = st === 'short' ? `${quoteLineCount(cur, itemPicked(cur)).n}/${cq.n}` : cq.n;
-  return `<div class="st-full" data-navy-top style="background:#16203C">
-    <div data-pkswipe style="position:absolute;inset:0;overflow:hidden;touch-action:pan-y"><div class="pk-track" style="width:${W() * n}px;transform:translateX(${-ui.i * W()}px)">${slides}</div></div>
-    <div style="position:absolute;left:0;right:0;top:0;padding:calc(14px + var(--safe-area-inset-top)) 16px 40px;background:linear-gradient(180deg,rgba(22,32,60,.82) 0%,rgba(22,32,60,.5) 60%,rgba(22,32,60,0) 100%);color:#fff;display:flex;flex-direction:column;gap:12px;pointer-events:none">
-      <div style="display:flex;align-items:center;gap:10px;pointer-events:auto">
-        <button class="st-x light" data-act="pkclose" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:15px;font-weight:700">${esc(quoteClientName(q))}</span><span class="m ell" style="font-size:12px;color:#DDE3F0">${orderNo(q)} · ${esc(howGoes(q))}</span></span>
-        <button class="st-x light" data-act="pksound" aria-pressed="${!!S.prefs.sound}" aria-label="${S.prefs.sound ? 'Sound on. Tap to mute' : 'Sound off. Tap for sound'}">${ic(S.prefs.sound ? 'sound' : 'mute', 18)}</button>
-        <span style="display:flex;align-items:baseline;gap:2px;flex:none"><span class="m" style="font-size:22px;font-weight:600">${decided}</span><span class="m" style="font-size:13px;color:#DDE3F0">/${n}</span></span></div>
-      <div role="img" aria-label="${decided} of ${nLines(n)} picked" style="display:flex;gap:4px">${items.map((it, k) => `<i style="flex:1;height:5px;border-radius:999px;transition:background .3s;background:${it.pickStatus === 'short' ? '#F5B26B' : it.pickStatus === 'done' ? '#6FDCB0' : k === ui.i ? '#FFFFFF' : 'rgba(255,255,255,.3)'}"></i>`).join('')}</div>
-      <div style="display:flex;align-items:center;gap:8px"><span style="height:32px;padding:0 12px 0 4px;border-radius:999px;background:rgba(255,255,255,.16);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><span style="width:24px;height:24px;border-radius:999px;background:#fff;color:var(--navy);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(a.letter)}</span>${esc(a.name)}</span><span style="font-size:12px;font-weight:600;color:#DDE3F0">${aisleLeft ? aisleLeft + ' to pick in this aisle' : 'aisle done'}</span></div>
+  const ui = S.ui.pk && S.ui.pk.id === id ? S.ui.pk : (S.ui.pk = { id, i: 0, picked: {}, back: {} });
+  ui.picked = ui.picked || {}; ui.back = ui.back || {};
+  const items = pickView(q), n = items.length;
+  if (orderCalledOff(q)) return pkCancel(q, items, ui);
+  if (ui.done) return pkDone(q, items, ui);
+  const cur = items[ui.i] || items[0]; if (!cur) return goneSheet('This order has no lines');
+  const decided = items.filter(it => PICK_ANSWERED.includes(it.pickStatus)).length, tk = takerOf(q), dest = orderDestination(q);
+  const pick = pkPick(q, cur, ui.i), qty = Number(cur.qty) || 0, shortBy = Math.max(0, qty - pick), cq = quoteLineCount(cur, qty), pq = quoteLineCount(cur, pick), from = packFrom(q, cur);
+  const tx = (W() - 300) / 2 - ui.i * 314;
+  const card = (it, k) => { const T = thumbOf(it), st = it.pickStatus, a = aisleOf(it.productId), c = quoteLineCount(it, it.qty), on = k === ui.i, img = lineImage(it), per = quoteLineCountPer(it);
+    const sub = orderLineIsBoughtIn(it) ? (quoteLineReceived(it) && isTodayMs(msOf(it.receivedAt)) ? "From today's trip" : 'Bought in for this order') + (per > 1 ? ` · ${n0(c.n)} ${quoteLinePack(it).packUnit}s of ${per}` : '') : per > 1 ? `${per} ${quoteLineCount(it, 1).unit} to a ${quoteLinePack(it).packUnit}` : localWord(it.productName) || 'Off our shelf';
+    const gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
+    return `<div aria-hidden="${!on}" style="width:300px;height:420px;flex:none;border-radius:28px;background:#fff;box-shadow:0 1px 2px rgba(22,32,60,.05),0 14px 34px rgba(22,32,60,.10),inset 0 0 0 1px #E6E3DD;overflow:hidden;display:flex;flex-direction:column;transform:scale(${on ? 1 : .9});opacity:${on ? 1 : .55};transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .35s">
+      <div style="position:relative;height:272px;flex:none;background:linear-gradient(160deg,${T[0]} 0%,${paler(T[0], .62)} 100%);display:flex;align-items:center;justify-content:center">
+        <span style="position:absolute;left:14px;top:14px;height:30px;padding:0 12px;border-radius:999px;background:#fff;color:#16203C;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M3 21V8l9-5 9 5v13M7 21v-8h10v8', 14, 2.2)}Aisle ${esc(a.letter)}</span>
+        <span class="m" style="position:absolute;right:14px;top:14px;font-size:12px;font-weight:600;color:var(--ink2)">${k + 1} of ${n}</span>
+        ${img ? `<img src="${esc(img)}" alt="" style="max-width:200px;max-height:180px;object-fit:contain">` : `<svg width="170" height="170" viewBox="0 0 120 120" aria-hidden="true">${T[1]}</svg>`}
+        ${st === 'done' ? `<span class="${S.ui.pkStamp === k ? 'pk-stamp' : ''}" style="position:absolute;right:16px;bottom:16px;height:34px;padding:0 12px;border-radius:10px;border:2px solid #0F6B43;color:#0F6B43;background:rgba(255,255,255,.85);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;transform:rotate(-8deg)">Packed</span>` : ''}
+        ${st === 'short' ? `<span class="${S.ui.pkStamp === k ? 'pk-stamp' : ''}" style="position:absolute;right:16px;bottom:16px;height:34px;padding:0 12px;border-radius:10px;border:2px solid #95530C;color:#7A4A02;background:rgba(255,255,255,.85);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;transform:rotate(-8deg)">${esc(gap)} short</span>` : ''}
+      </div>
+      <div style="flex:1;padding:16px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+        <span style="min-width:0;display:flex;flex-direction:column;gap:5px"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.2">${esc(fullName(it))}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">${esc(sub)}</span></span>
+        <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1">${esc(c.n)}</span><span style="font-size:13px;font-weight:700;color:var(--ink2)">${esc(c.unit)}</span></span>
+      </div></div>`; };
+  const dot = (it, k) => { const st = it.pickStatus, on = k === ui.i, gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
+    const bg = on ? '#FFFFFF' : st === 'done' ? 'rgba(111,220,176,.18)' : st === 'short' ? 'rgba(245,178,107,.18)' : 'rgba(255,255,255,.07)', ink = on ? '#16203C' : st === 'done' ? '#6FDCB0' : st === 'short' ? '#F5B26B' : '#B3BCD2';
+    return `<button type="button" data-act="pkto" data-i="${k}" aria-label="Item ${k + 1}: ${esc(lineName(it).base)}${st === 'done' ? ', packed' : st === 'short' ? ', short' : ''}" class="m" style="position:relative;flex:1 0 44px;min-width:44px;height:44px;border-radius:12px;border:none;background:${bg};color:${ink};box-shadow:${on ? '0 0 0 3px rgba(255,255,255,.18)' : 'none'};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:background .2s">${st === 'done' && !on ? sv(CV.tick, 18, 2.8) : st === 'short' && !on ? `<span style="font-size:13px">−${esc(gap)}</span>` : k + 1}</button>`; };
+  const warn = shortBy > 0, hint = warn ? (from < qty ? `Only ${n0(quoteLineCount(cur, from).n)} on the shelf · ${managerName()} settles the rest` : `${n0(quoteLineCount(cur, shortBy).n)} short · ${managerName()} settles the rest`) : 'Swipe to look back or ahead';
+  return `<div style="position:absolute;inset:0;background:var(--bg);overflow:hidden">
+    <div class="cv-hero tight" style="padding-bottom:18px;gap:14px" data-navy-top>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="cv-circ" data-act="pkclose" aria-label="Back to Today" style="background:rgba(255,255,255,.1)">${sv(CV.back, 18, 2.2)}</button>
+        <span style="width:40px;height:40px;flex:none;border-radius:999px;background:${tint(quoteClientName(q))[0]};color:${tint(quoteClientName(q))[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(quoteClientName(q))}</span>
+        <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))}</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk);white-space:nowrap;overflow:hidden">${orderIsMine(q) ? `<span style="flex:none;height:18px;padding:0 7px;border-radius:999px;background:rgba(111,220,176,.16);color:#6FDCB0;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px">${sv(CV.lock, 9, 3)}Yours</span>` : ''}<span class="ell">${q4(q)}${tk ? ' · ' + esc(firstWord(tk.name)) : ''} · ${dest ? 'to ' + esc(dest) : esc(howGoes(q))}</span></span></span>
+        <span class="m" style="flex:none;display:flex;align-items:baseline;gap:2px"><span style="font-size:20px;font-weight:600">${decided}</span><span style="font-size:13px;color:#8D99B5">/${n}</span></span>
+      </div>
+      <div class="pk-dots" style="display:flex;justify-content:space-between;gap:6px;overflow-x:auto;scrollbar-width:none">${items.map(dot).join('')}</div>
     </div>
-    <button type="button" class="pk-arrow" data-act="pkgo" data-d="-1" aria-label="Previous item" style="left:6px">${ic('back', 20, 'style="stroke-width:2.4"')}</button>
-    <button type="button" class="pk-arrow pk-hint" data-act="pkgo" data-d="1" aria-label="Next item" style="right:6px">${ic('chev', 20, 'style="stroke-width:2.4"')}</button>
-    <div class="pk-dock">
-      ${t ? `<div class="pk-in" role="status" style="display:flex;align-items:center;gap:10px;height:52px;padding:0 6px 0 14px;margin:-4px -4px 0;border-radius:18px;background:var(--navy);color:#fff">
-        <span style="width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex:none;background:${ui.toast.kind === 'short' ? '#F5B26B' : '#6FDCB0'}">${ic('tick', 12, 'style="stroke:#16203C;stroke-width:3.4"')}</span>
-        <span class="ell" style="flex:1;font-size:13px;font-weight:600">${ui.toast.kind === 'short' ? `Short · ${esc(lineName(t).base)} ${esc(quoteLineCount(t, itemPicked(t)).n)}/${esc(quoteLineCount(t, t.qty).n)}` : `Picked · ${esc(lineName(t).base)} ${esc(quoteLineCount(t, t.qty).n)} ${esc(quoteLineCount(t, 1).unit)}`}</span>
-        <span aria-hidden="true" style="width:34px;height:4px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;flex:none"><span class="pk-drain" style="display:block;width:100%;height:100%;background:var(--mint)"></span></span>
-        <button type="button" data-act="pktoastundo" style="height:40px;padding:0 14px;border:none;border-radius:12px;background:#fff;color:var(--navy);font-size:14px;font-weight:700;flex:none">Undo</button></div>` : ''}
-      <div class="pk-in" style="display:flex;align-items:flex-end;gap:12px">
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:21px;font-weight:700;letter-spacing:-.01em;line-height:1.2">${nameHTML(lineName(cur))}</span><span style="font-size:13px;font-weight:600;color:#6B7480">${esc(per > 1 ? `${quoteLinePack(cur).packUnit} of ${per} · ` : '')}${esc(note)}</span></span>
-        <span style="display:flex;align-items:baseline;gap:5px;flex:none"><span class="m" style="font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1;${st === 'short' ? 'color:#95530C' : st === 'done' ? 'color:#0F6B43' : ''}">${esc(fig)}</span><span style="font-size:15px;font-weight:700;color:var(--ink2)">${esc(cq.unit)}</span></span></div>
-      <div role="tablist" aria-label="All lines" style="display:flex;gap:6px;overflow-x:auto">${items.map((it, k) => `<button type="button" role="tab" aria-selected="${k === ui.i}" aria-label="${esc(lineName(it).base)}${it.pickStatus === 'short' ? ', short' : it.pickStatus === 'done' ? ', picked' : ', to pick'}" data-act="pkto" data-i="${k}" style="position:relative;flex:1 0 44px;max-width:64px;height:44px;border:none;border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;${k === ui.i ? 'background:#fff;box-shadow:inset 0 0 0 2.5px #16203C' : 'background:#F1EEE8'}"><span style="display:flex;${PICK_ANSWERED.includes(it.pickStatus) ? 'opacity:.45' : ''}">${art(it, 'small')}</span>${PICK_ANSWERED.includes(it.pickStatus) ? `<span style="position:absolute;right:3px;top:3px;width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:${it.pickStatus === 'short' ? '#95530C' : '#0F6B43'}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="${it.pickStatus === 'short' ? 'M6 12h12' : 'm5 12.5 4.5 4.5L19 7'}"/></svg></span>` : ''}</button>`).join('')}</div>
-      ${actions}
+    <div data-pkswipe style="position:absolute;left:0;right:0;top:calc(156px + var(--safe-area-inset-top));height:424px;touch-action:pan-y;cursor:grab">
+      <div class="pk-track" style="left:0;top:0;bottom:auto;gap:14px;transform:translateX(${tx}px)">${items.map(card).join('')}</div>
+    </div>
+    <div style="position:absolute;left:16px;right:16px;bottom:calc(28px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
+      <div style="height:64px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 6px 18px rgba(22,32,60,.06);display:flex;align-items:center;justify-content:space-between;padding:0 8px">
+        <button type="button" data-act="pkstep" data-d="-1" aria-label="One fewer" style="width:48px;height:48px;border-radius:999px;border:none;background:#F1EEE8;color:var(--ink);display:flex;align-items:center;justify-content:center">${sv('M5 12h14', 20, 2.4)}</button>
+        <span style="display:flex;align-items:baseline;gap:6px"><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.03em;color:${warn ? '#95530C' : 'var(--ink)'}">${esc(pq.n)}</span><span style="font-size:13px;font-weight:700;color:var(--ink2)">of ${esc(cq.n)} ${esc(cq.unit)}</span></span>
+        <button type="button" data-act="pkstep" data-d="1" aria-label="One more" style="width:48px;height:48px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 20, 2.4)}</button>
+      </div>
+      <div style="min-height:22px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:${warn ? '#7A4A02' : 'var(--ink2)'};text-align:center">${warn ? sv(CV.loss, 14, 2.2) : ''}${esc(hint)}</div>
+      <div style="display:flex;gap:8px">
+        <button type="button" data-act="pkscan" aria-label="Scan the label to pack it" style="width:58px;height:58px;flex:none;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(22,32,60,.22)">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10', 20, 2)}</button>
+        <button type="button" data-act="pkok" style="flex:1;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 20px rgba(201,58,48,.28)">${sv(CV.tick, 20, 2.6)}${warn ? `Pack ${esc(pq.n)} · ${esc(quoteLineCount(cur, shortBy).n)} short` : `Packed · ${esc(cq.n)} ${esc(cq.unit)}`}</button>
+      </div>
     </div></div>`;
 };
-PAGE.pack.bg = '#16203C';
+PAGE.pack.bg = '#F7F5F2';
 function pkQ(){ return quoteById(S.ui.pk && S.ui.pk.id); }
-function pkGo(i){ const q = pkQ(); if (!q) return; clearTimeout(pkMark.t); const n = pickLines(q).length, to = Math.max(0, Math.min(n - 1, i)); if (to !== S.ui.pk.i) sfxNotes([[520, 0, 0.06, 0.05]], 'triangle');
-  S.ui.pk = { ...S.ui.pk, i: to, shortOpen: false, editing: true }; S.ui.pkStamp = null; render(); }
+function pkGo(i){ const q = pkQ(); if (!q) return; const n = pickLines(q).length, to = Math.max(0, Math.min(n - 1, i)); if (to !== S.ui.pk.i) sfxNotes([[520, 0, 0.06, 0.05]], 'triangle');
+  S.ui.pk.i = to; S.ui.pkStamp = null; render(); const d = document.querySelectorAll('.pk-dots button')[to]; if (d && d.scrollIntoView) d.scrollIntoView({ block: 'nearest', inline: 'center' }); }
 function pkNextOpen(items, from){ for (let k = 1; k <= items.length; k++) { const j = (from + k) % items.length; if (!PICK_ANSWERED.includes(items[j].pickStatus)) return j; } return -1; }
-function pkMark(kind, got){
-  const q = pkQ(); if (!q) return; const ui = S.ui.pk, k0 = ui.i, items0 = pickView(q), was = PICK_ANSWERED.includes(items0[k0].pickStatus);
-  setPick(q, k0, kind, got);
+// Pack the card: in full, or what there was. The next open card comes up by itself;
+// the last one finishes the order (ten seconds, with Undo).
+function pkMark(k0, got){
+  const q = pkQ(); if (!q) return; const ui = S.ui.pk, it = pickView(q)[k0], qty = Number(it.qty) || 0, n = Math.max(0, Math.min(qty, got));
+  setPick(q, k0, n >= qty ? 'done' : 'short', n); ui.picked[k0] = n; ui.last = k0;
   const items = pickView(q), nxt = pkNextOpen(items, k0);
-  if (nxt === -1 && !was) { buzz([40, 60, 40, 60, 90]); sfxNotes([[523.25, 0, 0.5, 0.18], [659.25, 0.1, 0.5, 0.16], [783.99, 0.2, 0.6, 0.16], [1046.5, 0.32, 0.9, 0.14]], 'triangle'); }
-  else if (kind === 'done') { buzz(35); sfxNotes([[880, 0, 0.12, 0.16], [1318.5, 0.07, 0.25, 0.12]]); }
-  else { buzz([20, 50, 20]); sfxNotes([[330, 0, 0.18, 0.18], [262, 0.1, 0.28, 0.14]], 'triangle'); }
-  S.ui.pk = { ...ui, shortOpen: false, editing: false, toast: { k: k0, kind } }; S.ui.pkStamp = k0; render();
-  clearTimeout(pkMark.t); clearTimeout(pkMark.tt);
-  pkMark.tt = setTimeout(() => { if (S.ui.pk && S.ui.pk.toast && S.ui.pk.toast.k === k0) { S.ui.pk.toast = null; if (topType() === 'pack') render(); } }, 5000);
-  if (nxt !== -1) pkMark.t = setTimeout(() => { if (topType() === 'pack' && S.ui.pk.i === k0) { S.ui.pk.i = nxt; S.ui.pkStamp = null; render(); } }, 620);
+  if (n >= qty) FEEL.stamp(); else FEEL.short();
+  S.ui.pkStamp = k0;
+  if (nxt === -1) { pkFinish(q); return; }
+  render();
+  clearTimeout(pkMark.t); pkMark.t = setTimeout(() => { if (topType() === 'pack' && S.ui.pk && S.ui.pk.i === k0) { S.ui.pk.i = nxt; S.ui.pkStamp = null; render(); } }, 520);
 }
-function pkUndo(k){ const q = pkQ(); if (!q) return; clearTimeout(pkMark.t); clearTimeout(pkMark.tt); setPick(q, k, 'pending'); buzz(15); sfxNotes([[660, 0, 0.08, 0.1], [440, 0.06, 0.16, 0.1]], 'triangle');
-  S.ui.pk = { ...S.ui.pk, i: k, toast: null, shortOpen: false, editing: false }; S.ui.pkStamp = null; render(); }
+function pkFinish(q){
+  const ui = S.ui.pk; ui.done = true; ui.bay = Number(q.bay) || bayOf(q) || freeBay(); ui.wait = true; chimeDone(); render();
+  heldWrite('Finishing', async () => {
+    S.busy = true;
+    try { const r = await finishPack(q.id, ui.bay); ui.wait = false; if (!r) { ui.done = false; toast('Every line needs an answer first'); } }
+    catch (e) { ui.wait = false; ui.done = false; toast(failSay(e), 5000); }
+    S.busy = false; render();
+  }, () => { ui.wait = false; ui.done = false; const k = ui.last != null ? ui.last : 0; setPick(q, k, 'pending'); delete ui.picked[k]; ui.i = k; S.ui.pkStamp = null; }, 10000, true);
+}
 function topType(){ return S.stack.length ? S.stack[S.stack.length - 1].type : null; }
-ACT.pkok = () => pkMark('done');
-ACT.pkshort = () => { const q = pkQ(), it = pickView(q)[S.ui.pk.i]; buzz(15); S.ui.pk = { ...S.ui.pk, shortOpen: true, draft: Math.max(0, (Number(it.qty) || 0) - quoteLineCountPer(it)) }; render(); };
-ACT.pkstep = t => { const q = pkQ(), it = pickView(q)[S.ui.pk.i], per = quoteLineCountPer(it); FEEL.tick(); S.ui.pk.draft = Math.max(0, Math.min((Number(it.qty) || 0) - per, S.ui.pk.draft + Number(t.dataset.d) * per)); render(); };
-ACT.pkshortok = () => pkMark('short', S.ui.pk.draft);
-ACT.pkundo = () => pkUndo(S.ui.pk.i);
-ACT.pktoastundo = () => { if (S.ui.pk.toast) pkUndo(S.ui.pk.toast.k); };
-ACT.pkfix = () => { const q = pkQ(), it = pickView(q)[S.ui.pk.i]; if (it.pickStatus === 'short') pkMark('done'); else ACT.pkshort(); };
+ACT.pkok = () => { const q = pkQ(); if (!q) return; const it = pickView(q)[S.ui.pk.i]; pkMark(S.ui.pk.i, pkPick(q, it, S.ui.pk.i)); };
+ACT.pkstep = t => { const q = pkQ(), k = S.ui.pk.i, it = pickView(q)[k], per = quoteLineCountPer(it), qty = Number(it.qty) || 0; FEEL.tick();
+  S.ui.pk.picked[k] = Math.max(0, Math.min(qty, pkPick(q, it, k) + Number(t.dataset.d) * per)); render(); };
 ACT.pkgo = t => pkGo(S.ui.pk.i + Number(t.dataset.d));
 ACT.pkto = t => pkGo(Number(t.dataset.i));
-ACT.pksound = () => { S.prefs.sound = !S.prefs.sound; savePrefs(); if (S.prefs.sound) FEEL.tick(); render(); };
+ACT.pkscan = () => openScan('pack', {});
 ACT.pkclose = () => { const q = pkQ(); if (q) flushPicks(q.id).catch(e => toast(pickKeptWords(e), 6000)); FEEL.back(); pop(); };
 // A pick that did not reach the books stays on this phone (S.pickDraft) and
 // goes with the next tap; the picker is told, not left believing it is done.
 function pickKeptWords(e){ return isNetworkError(e) ? 'No signal — your picks are kept on this phone and go when it is back.' : 'Your picks are kept on this phone but not saved yet — ' + ((e && e.message) || e) + '. They go with your next tap.'; }
-ACT.pkfinish = async () => {
-  const q = pkQ(); if (!q) return; S.busy = true; render();
-  try { const r = await finishPack(q.id); if (!r) toast('Every line needs an answer first'); else { chimeDone(); S.stack = []; push('load', { fresh: q.id }); } }
-  catch (e) { toast(failSay(e), 5000); }
-  S.busy = false; render();
+SCAN_MODES.pack = {
+  title: 'Scan to pack', hint: 'Point at the label · then count what you packed',
+  count: () => { const q = pkQ(); const p = q ? packProgress(q) : { done: 0, n: 0 }; return { done: p.done, of: p.n }; },
+  read: key => {
+    const q = pkQ(); if (!q) return {}; const items = pickView(q), cur = items[S.ui.pk.i];
+    let k = stockKey(cur.productId, cur.variantIdx) === key && !PICK_ANSWERED.includes(cur.pickStatus) ? S.ui.pk.i : items.findIndex(it => stockKey(it.productId, it.variantIdx) === key && !PICK_ANSWERED.includes(it.pickStatus));
+    if (k >= 0) { const it = items[k], c = quoteLineCount(it, it.qty); S.ui.pk.i = k; return { pend: { k, it, name: fullName(it), sub: `Right item · card ${k + 1} wants ${c.n} ${c.unit}`, ask: 'How many did you pack?', verb: 'Pack', unit: c.unit, q: quoteLineCount(it, pkPick(q, it, k)).n } }; }
+    const j = items.findIndex(it => stockKey(it.productId, it.variantIdx) === key); if (j >= 0) return { hit: { name: fullName(items[j]), sub: 'Already packed · card ' + (j + 1) } };
+    const x = stockItems().find(s => s.key === key);
+    return { wrong: { title: 'Wrong item', name: x ? x.productName : 'A label this shop did not print', sub: `This card wants ${fullName(cur)} · aisle ${aisleOf(cur.productId).letter}` } };
+  },
+  tick: (p, n) => { const q = pkQ(), per = quoteLineCountPer(p.it), qty = Number(p.it.qty) || 0, got = Math.min(qty, n * per);
+    pkMark(p.k, got); const nx = pickView(q).find(it => !PICK_ANSWERED.includes(it.pickStatus));
+    return { hit: { name: p.name, sub: (got >= qty ? `Packed · ${n0(n)} ${p.unit}` : `Packed ${n0(n)} · ${n0((qty - got) / per)} short`) + (nx ? ' · next: ' + lineName(nx).base : ''), warn: got < qty, undo: () => { setPick(q, p.k, 'pending'); delete S.ui.pk.picked[p.k]; S.ui.pk.i = p.k; S.ui.pk.done = false; if (S.ui.held && S.ui.held.undo) S.ui.held.undo(); } } }; },
 };
-// Sideways drag on the picture moves item to item (pointer events, like the canvas).
+function pkDone(q, items, ui){
+  const mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), shorts = items.filter(it => it.pickStatus === 'short');
+  const slots = bayMap().slots, nextQ = packQueue().find(x => x.id !== q.id && !takenBySomeoneElse(x)), theirs = packQueue().find(takenBySomeoneElse), run = runsNow()[0];
+  const tile = it => { const st = it.pickStatus, c = quoteLineCount(it, itemPicked(it));
+    return `<span role="listitem" style="position:relative;height:70px;scroll-snap-align:start;border-radius:16px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+      <span style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:999px;background:${st === 'short' ? '#F5B26B' : '#6FDCB0'};color:#16203C;display:flex;align-items:center;justify-content:center">${sv(st === 'short' ? 'M6 12h12' : CV.tick, 12, 3.4)}</span>
+      <span style="display:flex;align-items:baseline;gap:4px"><span class="m" style="font-size:20px;font-weight:600;color:${st === 'short' ? '#F5B26B' : '#fff'}">${esc(c.n)}</span><span style="font-size:11px;font-weight:700;color:var(--navyInk)">${esc(c.unit)}</span></span>
+      <span title="${esc(fullName(it))}" style="max-width:88%;font-size:11px;font-weight:600;color:var(--navyInk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(fullName(it))}</span></span>`; };
+  const pages = Math.ceil(items.length / 6);
+  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
+    ${ui.wait ? `<button data-act="pkundofin" aria-label="Undo, for 10 seconds" style="position:absolute;top:calc(12px + var(--safe-area-inset-top));right:16px;z-index:2;height:40px;padding:0 14px 0 8px;border-radius:999px;border:none;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#6FDCB0" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8" transform="rotate(-90 13 13)" class="cv-undorun"></circle><path d="M10 10.5 8 12.5l2 2M8 12.5h6a3 3 0 0 1 0 6h-2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Undo</button>` : ''}
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;text-align:center">
+      <span class="cv-pop" style="position:relative;width:128px;height:128px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:16px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:64px;height:64px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.pack, 38, 2.6)}</span></span>
+      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${q4(q)} is packed</span>
+      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(quoteClientName(q))}${ui.bay ? ` · leave it on bay ${ui.bay}` : ' · every bay is full · leave it by the gate'}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div role="list" aria-label="What was packed" class="pk-grid" style="display:grid;grid-auto-flow:column;grid-template-rows:repeat(${items.length > 3 ? 2 : 1},70px);grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none">${items.map(tile).join('')}</div>
+      ${pages > 1 ? `<div style="display:flex;justify-content:center;gap:6px">${Array.from({ length: pages }, (_, p) => `<span style="width:${p === 0 ? 18 : 6}px;height:6px;border-radius:999px;background:${p === 0 ? '#fff' : 'rgba(255,255,255,.3)'}"></span>`).join('')}</div>` : ''}
+    </div>
+    ${shorts.length ? `<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:rgba(245,178,107,.12)"><span style="width:40px;height:40px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini((M && M.name) || mgr)}</span>
+      <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${shorts.map(it => `${esc(fullName(it))} · ${esc(quoteLineCount(it, itemPicked(it)).n)} of ${esc(quoteLineCount(it, it.qty).n)} ${esc(quoteLineCount(it, 1).unit)}`).join(', ')}</span><span style="font-size:12px;font-weight:600;color:#F5B26B">${esc(mgr)} decides: bill what went, or wait for the rest</span></span></div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="display:flex;justify-content:space-between;padding:0 2px;font-size:13px;font-weight:700;color:var(--navyInk)"><span>Leave it on</span><span style="font-size:12px;font-weight:600">the loader sees it here</span></span>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(slots.length, 4)},minmax(0,1fr));gap:6px">${slots.map(s => { const taken = s.q && s.q.id !== q.id, on = ui.bay === s.n;
+        return `<button type="button" data-act="pkbay" data-n="${s.n}" ${taken ? 'disabled' : ''} aria-pressed="${on}" style="position:relative;height:62px;border-radius:16px;border:none;background:${on ? '#fff' : taken ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.08)'};color:${on ? '#16203C' : taken ? '#8D99B5' : '#fff'};box-shadow:${on ? '0 0 0 3px rgba(111,220,176,.55)' : 'none'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;opacity:${taken ? .7 : 1}">
+          <span class="m" style="font-size:18px;font-weight:600;line-height:1">${s.n}</span><span style="font-size:11px;font-weight:700">${taken ? q4(s.q) : on ? 'picked' : 'free'}</span></button>`; }).join('')}</div>
+    </div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+      ${nextQ ? `<button data-act="pack" data-id="${nextQ.id}" style="height:60px;border:none;border-radius:999px;background:#fff;color:#16203C;padding:0 22px;display:flex;align-items:center;gap:12px;text-align:left;width:100%"><span class="cv-tx" style="gap:1px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Next order</span><span class="ell" style="font-size:16px;font-weight:700">${q4(nextQ)} · ${esc(quoteClientName(nextQ))} · ${pickLines(nextQ).length} items</span></span>${sv(CV.chev, 18, 2.4)}</button>` : ''}
+      ${theirs ? `<span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${face(staffName(theirs.assignedWorkerId), staffName(theirs.assignedWorkerId), 24, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}${q4(theirs)} is ${esc(firstWord(staffName(theirs.assignedWorkerId)))}'s, so it's skipped</span>` : ''}
+      ${run ? `<button data-act="open" data-page="load" style="height:48px;border:none;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);color:#fff;font-size:14px;font-weight:700">Load ${run.driver ? esc(firstWord(run.driver.name)) + "'s" : 'the'} run now</button>` : `<button data-act="home" style="height:48px;border:none;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);color:#fff;font-size:14px;font-weight:700">Back to Today</button>`}
+    </div></div>`;
+}
+ACT.pkundofin = () => { if (S.ui.held && S.ui.held.undo) S.ui.held.undo(); };
+ACT.pkbay = async t => { const ui = S.ui.pk, q = pkQ(); if (!ui || !q) return; ui.bay = Number(t.dataset.n); FEEL.tick(); render();
+  // Once the finish has gone through, a change of bay is its own small write.
+  if (!ui.wait) { try { await changeOrder(q.id, x => { if (x.status !== 'preparing') return false; x.bay = ui.bay; }); } catch (e) { toast(failSay(e), 5000); } render(); } };
+// Called off while it was being packed (the Manager decides a cancel, order.cancel):
+// what was already picked goes back, each tick as it lands on its shelf.
+function pkCancel(q, items, ui){
+  const out = items.map((it, k) => ({ it, k })).filter(x => PICK_ANSWERED.includes(x.it.pickStatus) && itemPicked(x.it) > 0), all = out.every(x => ui.back[x.k]);
+  const by = q.cancelledByName || '', at = msOf(q.cancelledAt), mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  return `<div class="cv" style="position:absolute;inset:0"><div class="cv-hero tight" style="padding:calc(18px + var(--safe-area-inset-top)) 18px 20px;gap:14px" data-navy-top>
+    <div style="display:flex;align-items:center;gap:12px"><span style="width:48px;height:48px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #1D2747,0 0 0 5px rgba(244,164,154,.6)">${ini((M && M.name) || mgr)}</span>
+      <span class="cv-tx"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">${q4(q)} is called off</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${by ? esc(firstWord(by)) + ' cancelled it · ' : ''}${esc(mgr)} agreed${at ? ' · ' + hm(at) : ''}</span></span></div>
+    <span style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:14px;background:rgba(244,164,154,.14);color:#F4A49A;font-size:13px;font-weight:700">${out.length ? "Stop packing · put back what's already out" : 'Stop packing · nothing was picked yet'}</span></div>
+    <div class="cv-body" style="padding:16px">
+      ${out.length ? `<span class="cv-sec first">Back to the shelf</span>
+      <div style="background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1px var(--rule),0 4px 14px rgba(22,32,60,.05);padding:4px 12px">${out.map(({ it, k }, j) => { const on = !!ui.back[k], c = quoteLineCount(it, itemPicked(it));
+        return `<button type="button" data-act="pkback" data-k="${k}" aria-pressed="${on}" style="width:100%;display:flex;align-items:center;gap:12px;min-height:66px;border:none;border-top:${j ? '1px solid #EFECE6' : 'none'};background:transparent;padding:0;color:var(--ink);text-align:left">
+          <span style="width:28px;height:28px;flex:none;border-radius:999px;box-shadow:inset 0 0 0 ${on ? '0 transparent' : '2px #C9C4BA'};background:${on ? '#0F6B43' : '#fff'};color:#fff;display:flex;align-items:center;justify-content:center">${on ? sv(CV.tick, 15, 3.2) : ''}</span>
+          <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${esc(fullName(it))}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(c.n)} ${esc(c.unit)}</span></span>
+          <span style="width:56px;height:48px;flex:none;border-radius:14px;background:#16203C;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1"><span style="font-size:11px;font-weight:700;color:var(--navyInk)">Aisle</span><span class="m" style="font-size:17px;font-weight:600">${esc(aisleOf(it.productId).letter)}</span></span></button>`; }).join('')}</div>
+      <span style="display:flex;align-items:center;gap:8px;padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${sv('M12 3v18M5 12h14', 14, 2.2)}The shelf takes it all back</span>` : ''}
+    </div>
+    <div style="flex:none;padding:12px 16px calc(26px + var(--safe-area-inset-bottom))"><button data-act="pkbackdone" style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;opacity:${all ? 1 : .55};box-shadow:0 10px 22px rgba(201,58,48,.24)">${all ? 'All back · to Today' : 'Tick each one as it goes back'}</button></div></div>`;
+}
+const PUTBACK_KEY = () => shopScoped('ow-store-putback:' + (S.user && S.user.id));
+function putBackDone(){ try { return JSON.parse(localStorage.getItem(PUTBACK_KEY())) || {}; } catch (_e) { return {}; } }
+ACT.pkback = t => { const ui = S.ui.pk, k = Number(t.dataset.k); ui.back[k] = !ui.back[k]; if (ui.back[k]) FEEL.tick(); else FEEL.back(); render(); };
+ACT.pkbackdone = () => { const q = pkQ(), ui = S.ui.pk; if (!q) return; const out = pickView(q).map((it, k) => ({ it, k })).filter(x => PICK_ANSWERED.includes(x.it.pickStatus) && itemPicked(x.it) > 0);
+  if (!out.every(x => ui.back[x.k])) { FEEL.no(); return; }
+  const d = putBackDone(); d[q.id] = Date.now(); try { localStorage.setItem(PUTBACK_KEY(), JSON.stringify(d)); } catch (_e) {} delete S.pickDraft[q.id]; saveDrafts(); FEEL.yes(); go('today'); };
+// Orders this person was packing that were called off, with goods still out.
+function putBacksNow(){ const me = myStaff(), done = putBackDone(); return (D().savedQuotes || []).filter(q => orderCalledOff(q) && me && String(q.assignedWorkerId) === String(me.id) && q.pickingStatus === 'in_progress' && !done[q.id] && (q.items || []).some(it => PICK_ANSWERED.includes(it.pickStatus) && itemPicked(it) > 0) && isTodayMs(msOf(q.cancelledAt) || Date.now())); }
+// Sideways drag on the cards moves item to item (pointer events, like the canvas).
 AFTER.push(() => {
   const el = document.querySelector('[data-pkswipe]'); if (!el || el._bound) return; el._bound = true;
-  const tr = el.querySelector('.pk-track'); let sx = null, sy = 0, dx = 0, horiz = null;
+  const tr = el.querySelector('.pk-track'), base = () => (W() - 300) / 2 - S.ui.pk.i * 314; let sx = null, sy = 0, dx = 0, horiz = null;
   el.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; dx = 0; horiz = null; });
   el.addEventListener('pointermove', e => { if (sx == null) return; const ddx = e.clientX - sx, ddy = e.clientY - sy;
     if (horiz == null && (Math.abs(ddx) > 8 || Math.abs(ddy) > 8)) horiz = Math.abs(ddx) > Math.abs(ddy);
-    if (!horiz) return; dx = ddx; tr.classList.add('drag'); tr.style.transform = `translateX(${-S.ui.pk.i * W() + dx}px)`; });
-  const up = () => { if (sx == null) return; sx = null; tr.classList.remove('drag'); if (horiz && dx < -50) pkGo(S.ui.pk.i + 1); else if (horiz && dx > 50) pkGo(S.ui.pk.i - 1); else tr.style.transform = `translateX(${-S.ui.pk.i * W()}px)`; };
+    if (!horiz) return; dx = ddx; tr.classList.add('drag'); tr.style.transform = `translateX(${base() + dx}px)`; });
+  const up = () => { if (sx == null) return; sx = null; tr.classList.remove('drag'); if (horiz && dx < -50) pkGo(S.ui.pk.i + 1); else if (horiz && dx > 50) pkGo(S.ui.pk.i - 1); else tr.style.transform = `translateX(${base()}px)`; };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('pointerleave', up);
 });
 
