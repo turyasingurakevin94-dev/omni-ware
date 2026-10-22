@@ -2160,6 +2160,9 @@ function pushOpen(d){
     if (k === 'trip.taken' || k === 'trip.cancelled') { fresh('today'); return; }
     // 0156: the Manager answered an ask to let an unpaid order go on credit.
     if (k === 'credit.ask.decided') { const q = quoteById(d.id); fresh('today'); if (q && orderIsPickup(q) && loadQueue().includes(q)) push('collect', { id: q.id }); else push('load', {}); return; }
+    // 0158: a delivery given to this person opens it once it is on the road with them; before that, Load.
+    if (k === 'job.given') { const q = quoteById(d.orderId || d.id); fresh('today'); if (!q) return;
+      if (myDrops().some(o => o.id === q.id)) push('deliver', { id: q.id }); else if (loadQueue().some(o => o.id === q.id)) push('load', {}); return; }
     // 0157: a colleague handed this person the yard (the card on Today takes it); an ask answered.
     if (k === 'store.handover') { fresh('today'); return; }
     if (k === 'store.ask.decided') { const a = (D().asks || []).find(x => String(x.id) === String(d.id)), x = a && a.kind === 'restock' && stockItems().find(i => i.key === a.ref);
