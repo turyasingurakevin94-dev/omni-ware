@@ -64,13 +64,15 @@
     // own dark ground -- the tap-to-go-back strip -- unless it is a page
     // whose navy hero has scrolled away under the clock.
     var page = document.querySelector('#st_pages .st-page:last-child');
-    var navy = (page || document).querySelector('[data-navy-top]:not([hidden])');
+    var navy = (page || document).querySelector('[data-navy-top]:not([hidden]), .cv-hero');
     var navyAtTop = !!navy && navy.getBoundingClientRect().top <= top && navy.getBoundingClientRect().bottom > top;
     var ground = page ? getComputedStyle(page).backgroundColor : '';
     var rgb = (ground.match(/\d+/g) || []).map(Number);
     var darkGround = !navyAtTop && !navy && rgb.length >= 3 && (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 < 90;
     var auth = !!document.querySelector('.st-auth');
-    strip.style.background = auth || navyAtTop ? NAVY : darkGround ? ground : 'var(--bg)';
+    // Over a header (or a page's own dark ground) the strip stays clear: the header runs up under the clock
+    // in its own colours. A flat band there read as a second, empty bar on phones that keep the clock apart.
+    strip.style.background = auth || navyAtTop || darkGround ? 'transparent' : 'var(--bg)';
     var style = auth || navyAtTop || darkGround || document.querySelector('.st-scrim') ? 'DARK' : 'LIGHT';
     if(style !== lastStyle && Bars){ lastStyle = style; Bars.setStyle({ style: style }).catch(function(){}); }
   }
@@ -1764,6 +1766,10 @@ function navHTML(){
     <button class="st-go" data-act="nextjob" aria-label="${esc(nj ? 'Start the next job: ' + nj.label : 'Nothing waiting')}">${nj ? `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="${CV.play}"></path></svg>` : sv(CV.tick, 26, 2.4)}${nj && nj.n > 1 ? `<span class="cv-fabn">${nj.n}</span>` : ''}</button>
     <button data-act="tab" data-v="shelf" ${cur('shelf')}><svg width="24" height="24" viewBox="0 0 24 24" fill="${S.view === 'shelf' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${CV.store}"${S.view === 'shelf' ? ' stroke="currentColor"' : ''}></path></svg>Stock</button></nav>`;
 }
+// A camera view shows nothing until the picture runs: Android's WebView otherwise draws its own
+// big grey video placeholder behind the "Allow camera" question.
+const CAM_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+document.addEventListener('playing', e => { const v = e.target; if (v && v.dataset && v.dataset.cam) v.style.opacity = v.dataset.cam; }, true);
 /* Drawing is a string; showing it is a patch. Only what changed is touched,
    so a tick does not send a list back to the top, replay every pop-in, or
    drop the keyboard and the camera (a phone's WebView shows every rebuild). */
@@ -1780,7 +1786,7 @@ function morphNode(a, b){
   [...a.attributes].forEach(x => { if (!b.hasAttribute(x.name) && !(keepSrc && x.name === 'src')) a.removeAttribute(x.name); });
   [...b.attributes].forEach(x => { if (a.getAttribute(x.name) !== x.value) a.setAttribute(x.name, x.value); });
   if (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') { const v = b.getAttribute('value') || (a.tagName === 'TEXTAREA' ? b.textContent : '') || ''; if (a !== document.activeElement && a.value !== v) a.value = v; if (a.type === 'checkbox' || a.type === 'radio') a.checked = b.hasAttribute('checked'); if (a.tagName === 'TEXTAREA') return; }
-  if (a.tagName === 'VIDEO') return;
+  if (a.tagName === 'VIDEO') { if (a.dataset.cam && !a.paused) a.style.opacity = a.dataset.cam; return; }
   morphKids(a, b);
 }
 function render(){
@@ -1808,7 +1814,7 @@ function renderSheet(){
   const host = document.getElementById('st_sheet');
   if (!S.sheet) { host.innerHTML = ''; return; }
   const f = SHEET[S.sheet.type];
-  host.innerHTML = `<div class="st-scrim" data-act="closesheet"></div><div class="st-sheet" role="dialog"><span class="st-grip"></span>${f ? f(S.sheet.args) : ''}</div>`;
+  morphInto(host, `<div class="st-scrim" data-act="closesheet"></div><div class="st-sheet" role="dialog" data-type="${esc(S.sheet.type)}"><span class="st-grip"></span>${f ? f(S.sheet.args) : ''}</div>`);
   afterRender();
 }
 const PAGE = {}, SHEET = {}, ACT = {}, AFTER = [];
@@ -2979,7 +2985,7 @@ PAGE.scan = () => {
   return `<div style="position:absolute;inset:0;background:radial-gradient(130% 70% at 50% 30%,#1E2948 0%,#0B1122 70%);color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 16px calc(24px + var(--safe-area-inset-bottom));gap:14px">
     <div class="cv-top"><button class="cv-circ" data-act="back" aria-label="Close the scanner">${sv('M6 6l12 12M18 6 6 18', 16, 2.2)}</button><b>${esc(M.title)}</b>${M.noCount ? '<span class="cv-circ blank"></span>' : `<span class="m" style="min-width:44px;height:30px;padding:0 10px;border-radius:999px;background:rgba(111,220,176,.16);color:#6FDCB0;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">${n.done}/${n.of}</span>`}</div>
     <button data-act="scshoot" aria-label="Scan the label" style="flex:1;position:relative;border:none;border-radius:28px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0;overflow:hidden;min-height:180px">
-      <video id="sc_video" playsinline muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55"></video>
+      <video id="sc_video" playsinline muted data-cam="0.55" poster="${CAM_POSTER}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s"></video>
       <span style="position:relative;width:250px;height:150px;display:block">
         <span style="position:absolute;left:0;top:0;width:34px;height:34px;border-left:4px solid #fff;border-top:4px solid #fff;border-radius:12px 0 0 0"></span><span style="position:absolute;right:0;top:0;width:34px;height:34px;border-right:4px solid #fff;border-top:4px solid #fff;border-radius:0 12px 0 0"></span>
         <span style="position:absolute;left:0;bottom:0;width:34px;height:34px;border-left:4px solid #fff;border-bottom:4px solid #fff;border-radius:0 0 0 12px"></span><span style="position:absolute;right:0;bottom:0;width:34px;height:34px;border-right:4px solid #fff;border-bottom:4px solid #fff;border-radius:0 0 12px 0"></span>
@@ -3187,6 +3193,9 @@ SHEET.extra = a => {
       <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${esc(x.productName)}</span><span style="font-size:12px;font-weight:600;color:${a.scanned ? '#0F6B43' : 'var(--ink2)'}">${a.scanned ? 'Scanned' : 'Picked'}${R && R.trips.length ? ' · from ' + esc((supplierById(R.trips[0].supplierId) || {}).name || who) : ''}</span></span>
       <span style="display:flex;align-items:center;gap:4px;flex:none"><button class="cv-pm" data-act="exstep" data-d="-1" aria-label="Fewer" style="background:#fff;box-shadow:inset 0 0 0 1px #E6E3DD;color:var(--ink)">${sv('M5 12h14', 14, 2.6)}</button><span class="m" style="min-width:30px;text-align:center;font-size:20px;font-weight:600">${n0(a.qty)}</span><button class="cv-pm" data-act="exstep" data-d="1" aria-label="More" style="background:#16203C;color:#fff">${sv('M12 5v14M5 12h14', 14, 2.6)}</button></span></div>`
     : `<label style="display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">${ic('search', 18)}<input id="ex_find" data-in="exfind" value="${esc(a.find || '')}" placeholder="What is it? Type a name" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px"></label>
+      ${!find ? (() => { const sup = R && R.t.supplierId, before = sup ? [...new Map((D().collectionTrips || []).filter(t => t.supplierId === sup).flatMap(tripLines).map(l => stockItems().find(x => String(x.productId) === String(l.productId) && String(x.variantIdx == null ? '' : x.variantIdx) === String(l.variantIdx == null ? '' : l.variantIdx))).filter(Boolean).map(x => [x.key, x])).values()].slice(0, 4) : [];
+        return `<button data-act="exscan" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border-radius:18px;border:none;background:#16203C;color:#fff;text-align:left"><span style="width:38px;height:38px;flex:none;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10', 18, 2)}</span><span class="cv-tx"><span class="cv-tt">Scan its label</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">The fastest way · it finds the item</span></span></button>
+          ${before.length ? `<span style="padding:4px 4px 0;font-size:13px;font-weight:700;color:var(--ink2)">${esc(shortName((supplierById(sup) || {}).name || 'This supplier'))} brought before</span><div class="cv-list">${before.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx"><span class="cv-tt">${esc(h.productName)}</span><span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('')}</div>` : ''}`; })() : ''}
       ${hits.length ? `<div class="cv-list">${hits.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx"><span class="cv-tt">${esc(h.productName)}</span><span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('')}</div>` : find ? '<span style="padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">Nothing by that name on the books · tell the manager</span>' : ''}`}
     ${x ? `<span style="padding:0 4px;font-size:13px;font-weight:700;color:var(--ink2)">Why is it here?</span>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
@@ -3196,6 +3205,7 @@ SHEET.extra = a => {
     <button data-act="exadd" style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(201,58,48,.26)">Add ${n0(a.qty)} ${esc(unit)} to the check-in</button>` : ''}`;
 };
 ACT['in:exfind'] = t => { if (!S.sheet) return; S.sheet.args.find = t.value; clearTimeout(ACT.exT); ACT.exT = setTimeout(() => { renderSheet(); const el = document.getElementById('ex_find'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250); };
+ACT.exscan = () => { closeSheet(); ACT.rcscan(); };
 ACT.expick = t => { S.sheet.args.key = t.dataset.key; FEEL.tick(); renderSheet(); };
 ACT.exstep = t => { const a = S.sheet.args; a.qty = Math.max(1, a.qty + Number(t.dataset.d)); FEEL.tick(); renderSheet(); };
 ACT.exwhy = t => { S.sheet.args.why = t.dataset.k; FEEL.tick(); renderSheet(); };
@@ -3302,23 +3312,23 @@ PAGE.pack = ({ id }) => {
   const card = (it, k) => { const T = thumbOf(it), st = it.pickStatus, a = aisleOf(it.productId), c = quoteLineCount(it, it.qty), on = k === ui.i, img = lineImage(it), per = quoteLineCountPer(it);
     const sub = orderLineIsBoughtIn(it) ? (quoteLineReceived(it) && isTodayMs(msOf(it.receivedAt)) ? "From today's trip" : 'Bought in for this order') + (per > 1 ? ` · ${n0(c.n)} ${quoteLinePack(it).packUnit}s of ${per}` : '') : per > 1 ? `${per} ${quoteLineCount(it, 1).unit} to a ${quoteLinePack(it).packUnit}` : localWord(it.productName) || 'Off our shelf';
     const gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
-    return `<div aria-hidden="${!on}" style="width:300px;height:420px;flex:none;border-radius:28px;background:#fff;box-shadow:0 1px 2px rgba(22,32,60,.05),0 14px 34px rgba(22,32,60,.10),inset 0 0 0 1px #E6E3DD;overflow:hidden;display:flex;flex-direction:column;transform:scale(${on ? 1 : .9});opacity:${on ? 1 : .55};transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .35s">
-      <div style="position:relative;height:272px;flex:none;background:linear-gradient(160deg,${T[0]} 0%,${paler(T[0], .62)} 100%);display:flex;align-items:center;justify-content:center">
+    return `<div aria-hidden="${!on}" style="width:300px;height:100%;max-height:420px;flex:none;align-self:center;border-radius:28px;background:#fff;box-shadow:0 1px 2px rgba(22,32,60,.05),0 14px 34px rgba(22,32,60,.10),inset 0 0 0 1px #E6E3DD;overflow:hidden;display:flex;flex-direction:column;transform:scale(${on ? 1 : .9});opacity:${on ? 1 : .55};transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .35s">
+      <div style="position:relative;flex:1 1 272px;min-height:96px;background:linear-gradient(160deg,${T[0]} 0%,${paler(T[0], .62)} 100%);display:flex;align-items:center;justify-content:center">
         <span style="position:absolute;left:14px;top:14px;height:30px;padding:0 12px;border-radius:999px;background:#fff;color:#16203C;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M3 21V8l9-5 9 5v13M7 21v-8h10v8', 14, 2.2)}Aisle ${esc(a.letter)}</span>
         <span class="m" style="position:absolute;right:14px;top:14px;font-size:12px;font-weight:600;color:var(--ink2)">${k + 1} of ${n}</span>
-        ${img ? `<img src="${esc(img)}" alt="" style="max-width:200px;max-height:180px;object-fit:contain">` : `<svg width="170" height="170" viewBox="0 0 120 120" aria-hidden="true">${T[1]}</svg>`}
+        ${img ? `<img src="${esc(img)}" alt="" style="max-width:200px;max-height:66%;object-fit:contain">` : `<svg viewBox="0 0 120 120" aria-hidden="true" style="width:170px;height:66%;max-height:170px">${T[1]}</svg>`}
         ${st === 'done' ? `<span class="${S.ui.pkStamp === k ? 'pk-stamp' : ''}" style="position:absolute;right:16px;bottom:16px;height:34px;padding:0 12px;border-radius:10px;border:2px solid #0F6B43;color:#0F6B43;background:rgba(255,255,255,.85);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;transform:rotate(-8deg)">Packed</span>` : ''}
         ${st === 'short' ? `<span class="${S.ui.pkStamp === k ? 'pk-stamp' : ''}" style="position:absolute;right:16px;bottom:16px;height:34px;padding:0 12px;border-radius:10px;border:2px solid #95530C;color:#7A4A02;background:rgba(255,255,255,.85);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;transform:rotate(-8deg)">${esc(gap)} short</span>` : ''}
       </div>
-      <div style="flex:1;padding:16px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
-        <span style="min-width:0;display:flex;flex-direction:column;gap:5px"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.2">${esc(fullName(it))}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">${esc(sub)}</span></span>
+      <div style="flex:none;padding:14px 18px 16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+        <span style="min-width:0;display:flex;flex-direction:column;gap:5px"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(fullName(it))}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">${esc(sub)}</span></span>
         <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:40px;font-weight:600;letter-spacing:-.04em;line-height:1">${esc(c.n)}</span><span style="font-size:13px;font-weight:700;color:var(--ink2)">${esc(c.unit)}</span></span>
       </div></div>`; };
   const dot = (it, k) => { const st = it.pickStatus, on = k === ui.i, gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
     const bg = on ? '#FFFFFF' : st === 'done' ? 'rgba(111,220,176,.18)' : st === 'short' ? 'rgba(245,178,107,.18)' : 'rgba(255,255,255,.07)', ink = on ? '#16203C' : st === 'done' ? '#6FDCB0' : st === 'short' ? '#F5B26B' : '#B3BCD2';
     return `<button type="button" data-act="pkto" data-i="${k}" aria-label="Item ${k + 1}: ${esc(lineName(it).base)}${st === 'done' ? ', packed' : st === 'short' ? ', short' : ''}" class="m" style="position:relative;flex:1 0 44px;min-width:44px;height:44px;border-radius:12px;border:none;background:${bg};color:${ink};box-shadow:${on ? '0 0 0 3px rgba(255,255,255,.18)' : 'none'};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:background .2s">${st === 'done' && !on ? sv(CV.tick, 18, 2.8) : st === 'short' && !on ? `<span style="font-size:13px">−${esc(gap)}</span>` : k + 1}</button>`; };
   const warn = shortBy > 0, hint = warn ? (from < qty ? `Only ${n0(quoteLineCount(cur, from).n)} on the shelf · ${managerName()} settles the rest` : `${n0(quoteLineCount(cur, shortBy).n)} short · ${managerName()} settles the rest`) : 'Swipe to look back or ahead';
-  return `<div style="position:absolute;inset:0;background:var(--bg);overflow:hidden">
+  return `<div style="position:absolute;inset:0;background:var(--bg);overflow:hidden;display:flex;flex-direction:column">
     <div class="cv-hero tight" style="padding-bottom:18px;gap:14px" data-navy-top>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="cv-circ" data-act="pkclose" aria-label="Back to Today" style="background:rgba(255,255,255,.1)">${sv(CV.back, 18, 2.2)}</button>
@@ -3326,12 +3336,12 @@ PAGE.pack = ({ id }) => {
         <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))}</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk);white-space:nowrap;overflow:hidden">${orderIsMine(q) ? `<span style="flex:none;height:18px;padding:0 7px;border-radius:999px;background:rgba(111,220,176,.16);color:#6FDCB0;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px">${sv(CV.lock, 9, 3)}Yours</span>` : ''}<span class="ell">${q4(q)}${tk ? ' · ' + esc(firstWord(tk.name)) : ''} · ${dest ? 'to ' + esc(dest) : esc(howGoes(q))}</span></span></span>
         <span class="m" style="flex:none;display:flex;align-items:baseline;gap:2px"><span style="font-size:20px;font-weight:600">${decided}</span><span style="font-size:13px;color:#8D99B5">/${n}</span></span>
       </div>
-      <div class="pk-dots" style="display:flex;justify-content:space-between;gap:6px;overflow-x:auto;scrollbar-width:none">${items.map(dot).join('')}</div>
+      ${n > 1 ? `<div class="pk-dots" style="display:flex;justify-content:space-between;gap:6px;overflow-x:auto;scrollbar-width:none">${items.map(dot).join('')}</div>` : ''}
     </div>
-    <div data-pkswipe style="position:absolute;left:0;right:0;top:calc(156px + var(--safe-area-inset-top));height:424px;touch-action:pan-y;cursor:grab">
-      <div class="pk-track" style="left:0;top:0;bottom:auto;gap:14px;transform:translateX(${tx}px)">${items.map(card).join('')}</div>
+    <div data-pkswipe style="position:relative;flex:1;min-height:0;touch-action:pan-y;cursor:grab">
+      <div class="pk-track" style="left:0;top:14px;bottom:12px;gap:14px;transform:translateX(${tx}px)">${items.map(card).join('')}</div>
     </div>
-    <div style="position:absolute;left:16px;right:16px;bottom:calc(28px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
+    <div style="flex:none;padding:0 16px calc(20px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
       <div style="height:64px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 6px 18px rgba(22,32,60,.06);display:flex;align-items:center;justify-content:space-between;padding:0 8px">
         <button type="button" data-act="pkstep" data-d="-1" aria-label="One fewer" style="width:48px;height:48px;border-radius:999px;border:none;background:#F1EEE8;color:var(--ink);display:flex;align-items:center;justify-content:center">${sv('M5 12h14', 20, 2.4)}</button>
         <span style="display:flex;align-items:baseline;gap:6px"><span class="m" style="font-size:26px;font-weight:600;letter-spacing:-.03em;color:${warn ? '#95530C' : 'var(--ink)'}">${esc(pq.n)}</span><span style="font-size:13px;font-weight:700;color:var(--ink2)">of ${esc(cq.n)} ${esc(cq.unit)}</span></span>
@@ -4024,7 +4034,7 @@ PAGE.deliver = ({ id }) => {
       <button data-act="dvkind" data-k="door" aria-pressed="${ui.kind === 'door'}" style="height:40px;border-radius:999px;border:none;${sel(ui.kind === 'door')};font-size:14px;font-weight:700">At the door</button></div></div>
     <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
       <div style="position:relative;height:330px;flex:none;border-radius:24px;background:#0F1629;overflow:hidden;display:flex;align-items:center;justify-content:center">
-        ${ui.shot ? `<img src="${ui.shot}" alt="The photo" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<video id="dv_video" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+        ${ui.shot ? `<img src="${ui.shot}" alt="The photo" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<video id="dv_video" playsinline muted autoplay data-cam="1" poster="${CAM_POSTER}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s"></video>
           <span id="dv_hint" style="position:absolute;left:0;right:0;top:46%;text-align:center;font-size:14px;font-weight:600;color:var(--navyInk)">${ui.kind === 'note' ? 'Point at the signed note' : 'Show the goods at the door'}</span>`}
         <span style="position:absolute;left:18px;top:18px;width:26px;height:26px;border-left:3px solid #fff;border-top:3px solid #fff;border-radius:6px 0 0 0"></span><span style="position:absolute;right:18px;top:18px;width:26px;height:26px;border-right:3px solid #fff;border-top:3px solid #fff;border-radius:0 6px 0 0"></span>
         <span style="position:absolute;left:18px;bottom:18px;width:26px;height:26px;border-left:3px solid #fff;border-bottom:3px solid #fff;border-radius:0 0 0 6px"></span><span style="position:absolute;right:18px;bottom:18px;width:26px;height:26px;border-right:3px solid #fff;border-bottom:3px solid #fff;border-radius:0 0 6px 0"></span>
@@ -4485,7 +4495,7 @@ ACT.rpdone = () => { S.ui.rp = null; FEEL.back(); pop(); };
 PAGE.rphoto = () => { const ui = S.ui.rp, x = ui && stockItems().find(i => i.key === ui.key);
   return `<div style="position:absolute;inset:0;background:#0B1122;color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 16px calc(26px + var(--safe-area-inset-bottom));gap:14px">
     <div style="display:flex;align-items:center;gap:10px">${cvBack()}<span class="cv-tx" style="gap:2px"><span style="font-size:18px;font-weight:700">Photo for ${esc(managerName())}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(x ? x.productName : '')} · show the ${esc(REASONS[ui ? ui.why : 0].word === 'damaged' ? 'damage' : 'place')}</span></span></div>
-    <div style="flex:1;position:relative;border-radius:24px;background:#0F1629;overflow:hidden"><video id="dv_video" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video><span id="dv_hint" style="position:absolute;left:0;right:0;top:46%;text-align:center;font-size:14px;font-weight:600;color:var(--navyInk)"></span>
+    <div style="flex:1;position:relative;border-radius:24px;background:#0F1629;overflow:hidden"><video id="dv_video" playsinline muted autoplay data-cam="1" poster="${CAM_POSTER}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s"></video><span id="dv_hint" style="position:absolute;left:0;right:0;top:46%;text-align:center;font-size:14px;font-weight:600;color:var(--navyInk)"></span>
       <span style="position:absolute;left:18px;top:18px;width:30px;height:30px;border-left:3px solid #fff;border-top:3px solid #fff;border-radius:6px 0 0 0"></span><span style="position:absolute;right:18px;top:18px;width:30px;height:30px;border-right:3px solid #fff;border-top:3px solid #fff;border-radius:0 6px 0 0"></span><span style="position:absolute;left:18px;bottom:18px;width:30px;height:30px;border-left:3px solid #fff;border-bottom:3px solid #fff;border-radius:0 0 0 6px"></span><span style="position:absolute;right:18px;bottom:18px;width:30px;height:30px;border-right:3px solid #fff;border-bottom:3px solid #fff;border-radius:0 0 6px 0"></span></div>
     <input id="dv_file" type="file" accept="image/*" capture="environment" hidden>
     <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><button data-act="rpshoot" aria-label="Take the photo" style="width:76px;height:76px;border-radius:999px;border:4px solid #fff;background:transparent;padding:0;display:flex;align-items:center;justify-content:center"><span style="width:60px;height:60px;border-radius:999px;background:#fff"></span></button><span style="font-size:13px;font-weight:600;color:var(--navyInk)">Tap to take it · it goes with the report</span></div></div>`; };
