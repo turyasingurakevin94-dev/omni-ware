@@ -786,5 +786,23 @@ matrix.forEach(([what, it]) => {
     } else t.fail('the fixture has an order in Checking');
   }
 
+  // review 5: a full phone gives up the cached copies before a draft; a sign out takes every copy with it
+  {
+    const mk = cap => { const m = new Map(); const used = () => [...m].reduce((n, [k, v]) => n + k.length + v.length, 0);
+      return { m, get length(){ return m.size; }, key: i => [...m.keys()][i] ?? null, getItem: k => (m.has(k) ? m.get(k) : null),
+        setItem(k, v){ const was = m.get(k); m.set(k, String(v)); if (used() > cap) { if (was == null) m.delete(k); else m.set(k, was); throw new Error('QuotaExceededError'); } }, removeItem: k => { m.delete(k); } }; };
+    const ls = mk(4000), st = {};
+    const F = compileScope(['owSnapKeys', 'owForgetCopies', 'owSave'].map(n => extractFunction(html, n, 'sales.html')), { localStorage: ls, S: st }, ['owSnapKeys', 'owForgetCopies', 'owSave']);
+    ls.setItem('ow-owner-snap:u1', 'o'.repeat(1500)); ls.setItem('ow-manager-snap:u1', 'm'.repeat(1500)); ls.setItem('ow-sales-snap:u1', 's'.repeat(600)); ls.setItem('ow-shop:u1', 'shop1');
+    const ok = F.owSave('ow-sales-draft:u1', 'd'.repeat(2000));
+    t.check(ok && ls.getItem('ow-sales-draft:u1') && ls.getItem('ow-sales-snap:u1') && !ls.getItem('ow-owner-snap:u1'), 'storage full: other apps\' cached copies give way and the draft is kept');
+    t.check(F.owSave('ow-sales-draft:u1', 'd'.repeat(5000)) === false, 'a draft that still cannot fit says so (false), never a silent success');
+    ls.setItem('ow-owner-snap:u1', 'o'); F.owForgetCopies();
+    t.check(F.owSnapKeys().length === 0 && ls.getItem('ow-shop:u1') === 'shop1', 'a sign out forgets every app\'s cached copy and keeps the rest');
+    t.check(/function saveDraft\(\)\{[^\n]*owSave\(draftKey\(\)[^\n]*owDraftNotKept\(\)/.test(html) && /function nwSaveDrafts\(a\)\{[^\n]*owSave\([^\n]*owDraftNotKept\(\)/.test(html), 'both draft saves warn when the phone could not keep them');
+    t.check((html.match(/owForgetCopies\(\); await sb\.auth\.signOut\(\)/g) || []).length === 2 && /localStorage\.removeItem\(k\)\); \} catch \(_e\) \{\} await sb\.auth\.signOut\(\)/.test(html), 'every Sign out in the app forgets the cached copies (the shop picker\'s, the same in every app)');
+    t.check(/\.ct-search input::-webkit-search-cancel-button\{-webkit-appearance:none;display:none\}/.test(html), 'the counter search shows one clear button, not the phone\'s as well');
+  }
+
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

@@ -231,6 +231,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Figtree,system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;overscroll-behavior-y:none}
+/* A long tab and a short one sit at the same width in a desktop browser: the scrollbar keeps its room. */
+html{scrollbar-gutter:stable}
 button{font-family:inherit;color:inherit;cursor:pointer}
 a{color:inherit;text-decoration:none}
 input,textarea{font-family:inherit;color:var(--ink)}
@@ -2628,6 +2630,9 @@ button.ct-qb{border:none;font-family:inherit;padding:0}
 .sx-toast.on{transform:translateX(-50%)}
 .sx-nav button{min-height:48px}
 .sx-circle{width:44px;height:44px}
+
+/* The counter search has its own clear button: the phone's own × is hidden, as on the order search. */
+.ct-search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
 /* ---- "We don't sell it": forwarded to Sourcing ---- */
 .nw-nosell{margin:12px auto 0;gap:8px}
 .src-head{display:flex;align-items:center;gap:12px}
@@ -3037,7 +3042,23 @@ async function refreshQuotes(){
 /* An offline start: the last books this login saw, so a phone that wakes
    on no signal still opens on Today. Never another login's. */
 function snapKey(){ return 'ow-sales-snap:' + (S.user && S.user.id); }
-function saveSnapshot(){ try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data })); } catch (_e) {} }
+function saveSnapshot(){ try { owSave(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data }), snapKey()); } catch (_e) {} }
+/* The cached copies of the books -- every Omni-Ware app's on a shared
+   browser (ow-<app>-snap:<user>). They come back from the server, so they
+   are what gives way when the phone's storage is full, and what a sign
+   out takes with it: owner-level figures never stay on a shared phone. */
+function owSnapKeys(){ const ks = []; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^ow-[a-z]+-snap:/.test(k)) ks.push(k); } } catch (_e) {} return ks; }
+function owForgetCopies(){ owSnapKeys().forEach(k => { try { localStorage.removeItem(k); } catch (_e) {} }); }
+// Save, and when the storage is full drop the cached copies one at a time -- other apps' first, then ours -- until it fits.
+function owSave(key, val, keep){
+  try { localStorage.setItem(key, val); return true; } catch (_e) {}
+  for (const k of owSnapKeys().filter(k => k !== keep).sort((a, b) => Number(a.startsWith('ow-sales-')) - Number(b.startsWith('ow-sales-')))) {
+    try { localStorage.removeItem(k); localStorage.setItem(key, val); return true; } catch (_e) {}
+  }
+  return false;
+}
+// A draft that could not be kept is said, once, never lost in silence.
+function owDraftNotKept(){ if (S.draftWarned) return; S.draftWarned = true; if (typeof toast === 'function') toast('Phone storage is full — this draft is not kept if the app closes. Place it or keep it short.', 6000); }
 function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('ow-sales-snap:' + userId)); return s && s.data ? s : null; } catch (_e) { return null; } }
 
 /* ---------------- ids, issued by the server (0034 / 0032) ---------------- */
@@ -3693,7 +3714,7 @@ function authScreen(kind){
         <h1 style="margin:0;font-size:26px">This login has no sales desk</h1>
         <p style="margin:0;color:var(--navyInk);font-size:14px;line-height:1.5">Ask the shop owner to invite you as a salesperson. Owners and admins use the full Omni-Ware app.</p>
         <button class="sx-btn ghost" data-a="signout" style="margin-top:8px">Sign out</button></div>`;
-      el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      el.querySelector('[data-a=signout]').onclick = async () => { owForgetCopies(); await sb.auth.signOut(); location.reload(); };
       return;
     }
     el.innerHTML = `<div class="card">
@@ -3795,7 +3816,7 @@ function shopPicker(rows, open, ui){
       ${open ? `<button class="${ui.btn}" data-a="keep" style="flex:none;margin-top:6px">Back to ${esc(((list.find(m => m.shop_id === open) || {}).shops || {}).name || 'the shop')}</button>` : ''}
       <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
     el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
-    el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    el.querySelector('[data-a=signout]').onclick = async () => { try { Object.keys(localStorage).filter(k => /^ow-[a-z]+-snap:/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (_e) {} await sb.auth.signOut(); location.reload(); };
     // Switching is not leaving: the shop open now is one tap away.
     const keep = open && el.querySelector('[data-a=keep]'); if (keep) keep.onclick = () => resolve(list.find(m => m.shop_id === open));
   });
@@ -5660,7 +5681,7 @@ ACT.switchshop = () => switchShop();
 ACT.signout = async () => {
   if (!S.nmSignout) { S.nmSignout = true; render(); clearTimeout(nmSignoutTimer); nmSignoutTimer = setTimeout(() => { S.nmSignout = false; if (S.view === 'me') render(); }, 4000); return; }
   clearTimeout(nmSignoutTimer); S.nmSignout = false;
-  try { localStorage.removeItem(snapKey()); } catch (_e) {} await sb.auth.signOut(); location.reload();
+  owForgetCopies(); await sb.auth.signOut(); location.reload();
 };
 
 /* ==================================================================
@@ -6572,7 +6593,7 @@ const NW = { delta: null, find: null, sent: {}, focusQ: false };
 function draftKey(){ return shopScoped('ow-sales-draft:' + (S.user && S.user.id)); }
 function nwDraftsKey(){ return shopScoped('ow-sales-drafts:' + (S.user && S.user.id)); }
 function nwKey(){ return 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
-function saveDraft(){ try { if (S.draft) localStorage.setItem(draftKey(), JSON.stringify({ ...S.draft, q: '' })); else localStorage.removeItem(draftKey()); } catch (_e) {} }
+function saveDraft(){ try { if (!S.draft) { localStorage.removeItem(draftKey()); return; } if (!owSave(draftKey(), JSON.stringify({ ...S.draft, q: '' }))) owDraftNotKept(); } catch (_e) {} }
 function restoreDraft(){
   try { const d = JSON.parse(localStorage.getItem(draftKey())); if (d && d.client) S.draft = { openLine: null, lastAdded: null, credit: false, items: [], charges: [], pic: null, ...d, q: '' }; } catch (_e) {}
   if (S.draft && !S.draft.dkey) S.draft.dkey = nwKey();
@@ -6582,7 +6603,7 @@ function newDraft(c){ return { dkey: nwKey(), client: c ? { name: c.name, phone:
 function nwWho(d){ if (!d) return ''; if (d.customerId != null && d.customerId !== '') return 'c:' + d.customerId; const ph = phone9(d.client && d.client.phone); return ph ? 'p:' + ph : 'k:' + d.dkey; }
 function nwDraftsRaw(){ try { const a = JSON.parse(localStorage.getItem(nwDraftsKey())); return Array.isArray(a) ? a.filter(d => d && d.client && Array.isArray(d.items)) : []; } catch (_e) { return []; } }
 function nwDrafts(){ const seen = new Set([S.draft && nwHasLines(S.draft) ? nwWho(S.draft) : '']); return nwDraftsRaw().filter(d => { const w = nwWho(d); if (seen.has(w) || (S.draft && d.dkey === S.draft.dkey)) return false; seen.add(w); return true; }); }
-function nwSaveDrafts(a){ try { if (a.length) localStorage.setItem(nwDraftsKey(), JSON.stringify(a.slice(0, 20))); else localStorage.removeItem(nwDraftsKey()); } catch (_e) {} }
+function nwSaveDrafts(a){ try { if (!a.length) { localStorage.removeItem(nwDraftsKey()); return; } if (!owSave(nwDraftsKey(), JSON.stringify(a.slice(0, 20)))) owDraftNotKept(); } catch (_e) {} }
 function nwHasLines(d){ return !!d && ((d.items || []).length > 0 || (d.charges || []).length > 0); }
 // Kept, never lost: an order set aside goes to the drafts list on this phone.
 function nwPark(d){ if (!nwHasLines(d)) return false; const w = nwWho(d); const a = nwDraftsRaw().filter(x => x.dkey !== d.dkey && nwWho(x) !== w); a.unshift({ ...d, q: '', openLine: null, fresh: null, savedAt: Date.now() }); nwSaveDrafts(a); return true; }
