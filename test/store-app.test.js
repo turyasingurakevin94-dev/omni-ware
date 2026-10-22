@@ -317,7 +317,8 @@ const P = page(fakeDb({}));
     t.check(Z.tripWho(Z.D().collectionTrips[0]) === 'Maria Building Materials', 'fix 6: tripWho names the supplier for a trip the supplier brings');
     Z.S.stack = [{ type: 'receive', args: { id: 'T21' } }];
     const yardTxt = [Z.viewToday(), Z.PAGE.movein({}), Z.PAGE.receive({ id: 'T21' })].join(' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    t.check(/Unload Maria's trip/.test(yardTxt) && !/the's|\bthe supplier\b|since\s*(·|$|<)/i.test(yardTxt) && !/since\s+[^0-9]/.test(yardTxt), 'fix 6: "Unload Maria\'s trip", never "the\'s", "the supplier" or a "since" with no time');
+    // The check-in screen is titled for whoever brought it ("Maria's trip", the canvas's "Denis's trip").
+    t.check(/Maria's trip/.test(yardTxt) && !/the's|\bthe supplier\b|since\s*(·|$|<)/i.test(yardTxt) && !/since\s+[^0-9]/.test(yardTxt), 'fix 6: "Maria\'s trip", never "the\'s", "the supplier" or a "since" with no time');
 
     // Fix 13: the gate's short banner compares with what the line bills now.
     const W = page(fakeDb({}), fixture());
