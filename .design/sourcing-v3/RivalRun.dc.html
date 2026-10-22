@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Rival run</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1200px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #B3BCD2">Rival run</span>
+    </div>
+    <div role="tablist" aria-label="Today's stops" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{stops}}" as="s" hint-placeholder-count="2">
+        <button type="button" role="tab" aria-selected="{{s.on}}" onClick="{{s.pick}}" style="{{s.style}}">
+          <span style="display: block; font-size: 14px; font-weight: 700; line-height: 1.25">{{s.name}}</span>
+          <span style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; margin-top: 8px">
+            <sc-for list="{{s.pips}}" as="p" hint-placeholder-count="5"><i style="height: 5px; border-radius: 3px; {{p}}"></i></sc-for>
+          </span>
+          <span style="display: block; margin-top: 6px; font-size: 12px; opacity: 1">{{s.left}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <span style="font-size: 16px; font-weight: 700">What to check here</span>
+      <span style="font-size: 12px; color: #5F6980">picked by sales and money at stake</span>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #EFECE6">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0">
+              <span style="display: flex; align-items: center; gap: 6px; min-width: 0">
+                <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.name}}</span>
+                <span style="flex: none; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; {{r.whyStyle}}">{{r.why}}</span>
+              </span>
+              <span style="font-size: 12px; color: #5F6980">{{r.last}}</span>
+            </span>
+            <sc-if value="{{r.isDone}}" hint-placeholder-val="{{ false }}">
+              <span style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.doneWord}}</span>
+            </sc-if>
+            <sc-if value="{{r.idle}}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{r.hasLast}}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{r.same}}" style="all: unset; cursor: pointer; padding: 10px 11px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">Same price</button>
+              </sc-if>
+              <button type="button" onClick="{{r.edit}}" style="all: unset; cursor: pointer; padding: 10px 11px; border-radius: 12px; background: #F1EEE8; font-size: 13px; font-weight: 700">{{r.newWord}}</button>
+            </sc-if>
+          </div>
+          <sc-if value="{{r.editing}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <label for="{{r.inputId}}" style="font-size: 13px; color: #5F6980">Their price</label>
+              <input id="{{r.inputId}}" type="text" inputmode="numeric" value="{{r.guess}}" style="box-sizing: border-box; flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #16203C; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">
+              <button type="button" onClick="{{r.save}}" style="all: unset; cursor: pointer; padding: 11px 14px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">Save</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size: 12px; color: #5F6980">Each price is saved on this phone first, with today's date.</span>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px">
+    <button type="button" onClick="{{next}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: block; text-align: center; padding: 15px 10px; border-radius: 14px; font-size: 15px; font-weight: 700; {{nextStyle}}">{{nextLabel}}</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { stop: 'k', res: {}, editing: null }; }
+  renderVals() {
+    const S = this.state;
+    const TOP = 'background:#E4E6FA;color:#3A3F9B', STAKE = 'background:#F6E4F1;color:#7A3268', HUNT = 'background:#FDE8E4;color:#A82D24';
+    const items = {
+      k: [
+        { id: 'k1', name: 'Iron sheet G28, 3m', why: 'top seller', whyStyle: TOP, last: '36,000 · 8 days ago', guess: '36,000' },
+        { id: 'k2', name: 'Cement 50kg', why: 'top seller', whyStyle: TOP, last: 'never checked here', guess: '' },
+        { id: 'k3', name: 'Y12 rebar, 12m', why: 'top seller', whyStyle: TOP, last: '47,500 · 7 days ago', guess: '47,500' },
+        { id: 'k4', name: 'Gate valve ½"', why: 'at stake', whyStyle: STAKE, last: '19,500 · 3 days ago', guess: '19,500' },
+        { id: 'k5', name: 'Shower mixer, chrome', why: 'a hunt', whyStyle: HUNT, last: 'never checked here', guess: '' }
+      ],
+      n: [
+        { id: 'n1', name: 'Y12 rebar, 12m', why: 'at stake', whyStyle: STAKE, last: '45,000 · 5 days ago', guess: '45,000' },
+        { id: 'n2', name: 'Iron sheet G28, 3m', why: 'top seller', whyStyle: TOP, last: '35,500 · 11 days ago', guess: '35,500' },
+        { id: 'n3', name: 'Wire mesh BRC A142', why: 'a hunt', whyStyle: HUNT, last: '152,000 · 4 days ago', guess: '152,000' },
+        { id: 'n4', name: 'Cement 50kg', why: 'top seller', whyStyle: TOP, last: '34,000 · 20 days ago', guess: '34,000' }
+      ]
+    };
+    const doneIn = (k) => items[k].filter(i => S.res[i.id]).length;
+    const stops = [['k', 'Kikuubo Hardware Mart'], ['n', 'Nateete Builders’ Centre']].map(([k, name]) => {
+      const n = items[k].length, d = doneIn(k), on = S.stop === k;
+      return {
+        name, on: String(on), pick: () => this.setState({ stop: k, editing: null }),
+        left: d === n ? 'all checked' : (n - d) + ' to check',
+        pips: Array.from({ length: 5 }, (_, i) => i >= n ? 'background:transparent' : i < d ? 'background:#6FDCB0' : (on ? 'background:#E0DCD4' : 'background:#2A3350')),
+        style: 'all:unset;cursor:pointer;box-sizing:border-box;padding:12px;border-radius:16px;text-align:left;' + (on ? 'background:#FFFFFF;color:#1C2233' : 'background:#243052;color:#FFFFFF')
+      };
+    });
+    const rows = items[S.stop].map(r => {
+      const res = S.res[r.id];
+      return {
+        ...r, inputId: 'rr_' + r.id, hasLast: !!r.guess,
+        newWord: r.guess ? 'New price' : 'Add price',
+        isDone: !!res, idle: !res && S.editing !== r.id, editing: !res && S.editing === r.id,
+        doneWord: res === 'new' ? 'New price' : 'Same price',
+        same: () => this.setState({ res: { ...S.res, [r.id]: 'same' } }),
+        edit: () => this.setState({ editing: r.id }),
+        save: () => this.setState({ res: { ...S.res, [r.id]: 'new' }, editing: null })
+      };
+    });
+    const allDone = doneIn('k') === items.k.length && doneIn('n') === items.n.length;
+    const hereDone = doneIn(S.stop) === items[S.stop].length;
+    return {
+      stops, rows,
+      next: () => this.setState({ stop: S.stop === 'k' ? 'n' : 'k', editing: null }),
+      nextLabel: allDone ? 'Run finished' : S.stop === 'k' ? 'Next stop: Nateete' : 'Back to Kikuubo',
+      nextStyle: hereDone ? 'background:#C93A30;color:#FFFFFF' : 'background:#F1EEE8;color:#1C2233'
+    };
+  }
+}
+</script>
+</body>
+</html>

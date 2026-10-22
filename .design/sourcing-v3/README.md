@@ -1,4 +1,4 @@
-# Sourcing engine — design canvas (v3, round 2)
+# Sourcing engine — design canvas (v3, round 3)
 
 These are the phone mockups for the Sourcing app, rebuilt from first principles and then
 revised against the independent review in `REVIEW.md`. Each `*.dc.html` file is one
@@ -17,13 +17,14 @@ six gates, in this order on every screen:
 | Name & aisle | set | Sourcing |
 | Markup | the Manager prices it, and it goes live in the same write | Manager |
 
-## Screens (25)
+## Screens (35)
 
 | Row | Artboards |
 |---|---|
 | The funnel | `Main` (Today), `Wanted` (sort the asks), `Hunt` (who to ask), `Funnel`, `Passport`, `Verdict`, `PhotoGate`, `PackingGate`, `SendToManager`, `ManagerItem` (Manager app), `SentBack`, `Live` |
 | In the field | `Capture`, `NewItem`, `SupplierPrice`, `QuickPrice`, `Search`, `Visit`, `PushBack`, `Outbox` |
 | Prices and suppliers | `Prices`, `Suppliers`, `Supplier` (Owino Plumbing), `Twins` (merge), `Profile` |
+| The rest | `NameAisle`, `SuppliersGate` (who sells it), `NewSupplier`, `Deal` (hoop iron: switch supplier), `RivalRun`, `SupplierKiseka`, `Certify` (iron sheet, a live top seller), `EmptyToday`, `ErrorState`, `LongNames` |
 
 ## The Sourcing score (review B2)
 
@@ -97,16 +98,31 @@ Confidence is 67. The hold is **Stock**: 16 days is under 21, and Kiseka takes 3
 | P10 shot.mjs | Reads `width: 390px` with spaces; no `.app` needed |
 | P11 | ManagerItem is titled "later that day"; PhotoGate is interactive |
 
-## Still to draw
+## Round 3: what was still to draw, now drawn
 
-- **Sheets:**
-  - Name & aisle sheet (with item twins, 0152)
-  - Suppliers-gate sheet
-  - New-supplier form
-  - Deal detail
-  - Rival run (several shops in a row)
-- **States:** empty, error and long-name.
-- **Other suppliers' scorecards:** the Suppliers list links only Owino's.
-- **Certify:** it reuses the passport, which is drawn for the wire mesh only.
+Each of these is now drawn and linked:
+
+| Item | Where it is reached from |
+|---|---|
+| Name & aisle sheet (teach a name, the look-alike check) | the Passport |
+| Suppliers gate (who sells it, two is the target, add a price) | the Passport |
+| New-supplier form (snap the card, look-alike by phone) | the Suppliers list, Hunt it, Who sells it |
+| Deal detail (hoop iron) | Today's deal card, the radar's Switch card, Kiseka's line |
+| Rival run (two shops, the items worth checking at each) | Capture |
+| Kiseka Steel's scorecard | the Suppliers list |
+| Certify (iron sheet G28: sales line, thin room, verdict from sales) | Today, the Funnel's Top sellers |
+| States: a new shop, loading failed, long names and big figures | (states, not reached from other screens) |
+
+Two decisions are drawn into these screens:
+- **The deal detail passes the deal to the Buyer** ("Pass to the Buyer"). Choosing which supplier to buy from is the Buyer's (`line.switch`, `buy.restock`), so Sourcing recommends rather than switches.
+- **Certify waits on nobody** when the Manager has already set the markup.
+
+## Still open
+
+- **Rival shops.** The two in the drawings are invented; the owner names real ones for `docs/canvas-cast.md`.
+- **Scorecards.** Only Owino and Kiseka are drawn. The other four supplier rows in the list are not links.
+- **Passports.** Only the wire mesh and the iron sheet have one. The other Funnel cards open their action, not a passport.
+- **The deal radar's "Next step" card** (Namanve's 100+ price) opens the Suppliers list, not a deal page.
+- **Wiring for the build:** the decision-rights rows, the migration and the push kinds (plan stage 1a).
 
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
