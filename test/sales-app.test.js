@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, tdySrcRow, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -505,7 +505,7 @@ matrix.forEach(([what, it]) => {
     data.savedQuotes.push({ id: 360, status: 'completed', invoiced: true, invoicedAt: d54, date: d54, amountPaid: 235000, customerId: 'C011', client: { name: 'Nansana Two' }, items: [{ productId: 'P1', productName: 'Cement', qty: 1, price: 200000, sellPrice: 235000, supplierId: '__stock__' }], charges: [] });
     X.S.loadedAt = 25;
     t.check(X.custInQuestion(n) === 0 && X.custTakeable(n) === 20000, 'R3-01: 20,000 beside a paid 235,000 is not in question');
-    t.check(/Not the same sum · it stays owed/.test(X.PAGE.customer({ id: 'C011' })) && /Take <span class="m">20,000/.test(X.PAGE.customer({ id: 'C011' })), 'R3-01: the sheet shows ≠ and takes the 20,000');
+    t.check(/Not the same sum · it stays owed/.test(X.PAGE.customer({ id: 'C011' })) && /data-act="pay" data-id="C011">/.test(X.PAGE.customer({ id: 'C011' })) && /Take payment/.test(X.PAGE.customer({ id: 'C011' })), 'R3-01: the sheet shows ≠ and takes the whole 20,000');
     t.check(!!X.needsYou().find(x => x.title === 'Nansana Two'), 'R3-01: and Today still asks to collect it');
     t.check(X.custInQuestion(g) === 125000, 'R3-01: the same sum is still in question');
     // SAL-25: a typo in Customers finds who they meant
@@ -840,6 +840,26 @@ matrix.forEach(([what, it]) => {
     const quiet = { id: 'C9', name: 'Zed Hardware', phone: '', location: 'Kira', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
     X.S.data.customers.push(quiet); X.S.loadedAt = 52;
     t.check(!/data-act="custstmt"/.test(X.PAGE.customer({ id: 'C9' })) && /Statement<\/button>/.test(X.PAGE.customer({ id: 'C001' })), 'a statement button only when there is something to put on it, and it says Statement, not PDF');
+  }
+
+  // rows 18-19: one customer page, the tidy Add customer, the message read into lines, aisle marks, Asked of Sourcing
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
+    X.S.loadedAt = 61;
+    const kc = X.PAGE.customer({ id: 'C001' });
+    t.check(/data-act="sellto"/.test(kc) && /Sell to Kato/.test(kc) && !/>Usual</.test(kc), 'CustOne: one red Sell to <name> in the dock, whatever they owe');
+    t.check(/Old balance/.test(kc) && /from the old book · no date/.test(kc) && /class="cu-bacts"/.test(kc), 'CustOne: the undated balance leads the bills, and Promise / Take sit at the card foot');
+    X.S.sheet = { type: 'addcust', args: { for: '', phone: '', name: '', area: '' } };
+    let add = ''; try { add = X.SHEET.addcust(X.S.sheet.args); } catch (e) { add = String(e); }
+    t.check(!/id="cu_ncready"/.test(add) && !/cu-nctiles/.test(add) && /sets credit<\/b>/.test(add) && /cu-ncline/.test(add), 'AddCustTidy: no Ready pill, no tiles, one quiet line');
+    t.check(/<path/.test(X.nwCatMark('Roofing')) && /<path/.test(X.nwCatMark('Plumbing pipes')) && X.nwCatMark('Garden') === '', 'AisleIcons: the common aisles draw a mark, any other keeps its initials');
+    const picked = X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }, { productId: 'P3', qty: 2, qtySaid: true }]);
+    t.check(picked.length === 1 && picked[0].productId === 'P3' && X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }]).length === 1, 'ChatToLines: a bare word is not an item when the message gives counts; alone, it still is');
+    let sr = ''; try { sr = X.tdySrcRow(); } catch (e) { sr = ''; }
+    t.check(typeof sr === 'string', 'TodaySrc: the Asked of Sourcing row draws (or hides) without throwing');
+    t.check(/data-act="srcopen"/.test(html) && /Ask for something/.test(html) && /Send to /.test(html) && /SUPPLIERS ASKED/.test(html), 'SReqList / SReqLook / SReqAsk: rows open a request, an ask needs no order');
+    t.check(/Sell at the counter/.test(html) && /data-act="tdyaddto"/.test(html) && /Take payment · /.test(html), 'FindItem and OrderPay: a found item sells or joins the order; an unpaid order takes payment');
   }
 
   process.exit(t.done() ? 1 : 0);
