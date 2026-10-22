@@ -260,7 +260,7 @@ const P = page(fakeDb({}));
     X.S.ui.ct = { aisle: 'Aisle C · Tools', keys: ['P3'], i: 0, entries: { 0: { 0: '20', 1: '4' } }, focus: 1, counts: { 0: 204 }, system: { 0: 204 }, at: NOW };
     X.S.ui.pk = { id: 40, i: 0 };
     ['viewToday', 'viewShelf'].forEach(v => { try { const h = X[v](); t.check(typeof h === 'string' && h.length > 400, v + ' draws'); } catch (e) { t.fail(v + ' threw: ' + e.stack); } });
-    const pages = [['movein', {}], ['movepack', {}], ['onroad', {}], ['receive', { id: 'T9' }], ['pack', { id: 40 }], ['load', {}], ['loadhired', {}], ['collect', { id: 43 }], ['deliver', { id: 42 }], ['delivered', { id: 42 }], ['stock', { key: 'P1::0' }], ['count', {}], ['countresults', {}], ['decide', { id: 'c1' }], ['me', {}]];
+    const pages = [['movein', {}], ['movepack', {}], ['onroad', {}], ['receive', { id: 'T9' }], ['pack', { id: 40 }], ['load', {}], ['loadhired', {}], ['collect', { id: 43 }], ['deliver', { id: 42 }], ['delivered', { id: 42 }], ['stock', { key: 'P1::0' }], ['count', {}], ['countresults', {}], ['decide', { id: 'c1' }], ['me', {}], ['agent', {}], ['ret', {}], ['handover', {}], ['close', {}]];
     let all = '';
     pages.forEach(([pg, a]) => { try { X.S.stack = [{ type: pg, args: a }]; const h = X.PAGE[pg]({ ...a }); all += h; t.check(typeof h === 'string' && h.length > 300 && !/undefined|NaN/.test(h.replace(/data-[a-z]+="[^"]*"/g, '')), 'page ' + pg + ' draws, with no undefined or NaN in it'); } catch (e) { t.fail('page ' + pg + ' threw: ' + e.stack); } });
     const visible = (all + X.viewToday() + X.viewShelf()).replace(/<[^>]*>/g, ' ');
@@ -294,7 +294,8 @@ const P = page(fakeDb({}));
     const stockTxt = X.PAGE.stock({ key: 'P2' }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
     t.check(/\b53\b/.test(stockTxt) && /7 held/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /delivered/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, with the part held for orders');
     const shelfTxt = X.viewShelf().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    t.check(/0 on the shelf · 300 held for orders/.test(shelfTxt), 'fix 3: "Needs a look" says what is on the shelf to sell and what is held');
+    // "Needs a look" (the canvas's Stock tab) names the order that falls short.
+    t.check(/Out · #0058 is short/.test(shelfTxt), 'fix 3: "Needs a look" says the item is out and which order falls short');
 
     // Fix 5: a line with no supplier that waits for the client is never picked, so never short.
     const row = orderRow(60, [it(1, 'P2', 4), it(2, 'P3', 5, { supplierId: '', clientWaits: true })]);
@@ -317,7 +318,8 @@ const P = page(fakeDb({}));
     t.check(Z.tripWho(Z.D().collectionTrips[0]) === 'Maria Building Materials', 'fix 6: tripWho names the supplier for a trip the supplier brings');
     Z.S.stack = [{ type: 'receive', args: { id: 'T21' } }];
     const yardTxt = [Z.viewToday(), Z.PAGE.movein({}), Z.PAGE.receive({ id: 'T21' })].join(' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    t.check(/Unload Maria's trip/.test(yardTxt) && !/the's|\bthe supplier\b|since\s*(·|$|<)/i.test(yardTxt) && !/since\s+[^0-9]/.test(yardTxt), 'fix 6: "Unload Maria\'s trip", never "the\'s", "the supplier" or a "since" with no time');
+    // The check-in screen is titled for whoever brought it ("Maria's trip", the canvas's "Denis's trip").
+    t.check(/Maria's trip/.test(yardTxt) && !/the's|\bthe supplier\b|since\s*(·|$|<)/i.test(yardTxt) && !/since\s+[^0-9]/.test(yardTxt), 'fix 6: "Maria\'s trip", never "the\'s", "the supplier" or a "since" with no time');
 
     // Fix 13: the gate's short banner compares with what the line bills now.
     const W = page(fakeDb({}), fixture());
@@ -327,8 +329,9 @@ const P = page(fakeDb({}));
     ];
     const gate = id => { W.S.ui.gc = null; W.S.stack = [{ type: 'collect', args: { id } }]; return W.PAGE.collect({ id }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' '); };
     const g62 = gate(62), g63 = gate(63);
-    t.check(!/is 0, not 0/.test(g62) && !/is 2, not 2/.test(g62) && !/Cement Hima/.test(g62) && /0\/1 handed/.test(g62), 'fix 13: after "Bill what went" the line settled to nothing is not counted out and nothing reads "is 0, not 0"');
-    t.check(/Door hinges 4(&quot;|") is 2, not 4/.test(g63), 'fix 13: a short not yet settled still shows what went against what was ordered');
+    // The slip (the canvas's Load) counts lines ticked, and a short reads "2 of 4 short" under the line.
+    t.check(!/is 0, not 0/.test(g62) && !/0 of 0 short/.test(g62) && !/2 of 2 short/.test(g62) && !/Cement Hima/.test(g62) && /0 of 1 ticked/.test(g62), 'fix 13: after "Bill what went" the line settled to nothing is not counted out and nothing reads "0 of 0 short"');
+    t.check(/Door hinges 4(&quot;|")[\s\S]{0,40}2 of 4 short/.test(g63), 'fix 13: a short not yet settled still shows what went against what was ordered');
   }
 
   process.exit(t.done() ? 1 : 0);
