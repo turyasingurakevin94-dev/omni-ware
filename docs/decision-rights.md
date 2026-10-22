@@ -338,7 +338,10 @@ When an item runs low or out, **the Store asks for more** ("We need more",
 with how soon and a rough count) and **the Buyer** decides what to buy and
 adds it to a round (`buy.restock`). The ask pushes the Buyer. The Manager's
 hold on a restock line still applies (`restock.hold`). The owner chose the
-Buyer for this on 22 Oct 2026; the Store app's ask is not built yet.
+Buyer for this on 22 Oct 2026. The Store app's ask is built (0157,
+`store_asks` kind `restock`, pushed `store.restock` to `buy.restock`); the
+Buyer answers it with `answer_store_ask`, and the asker is told
+(`store.ask.decided`). The Buyer app's screen for these asks is still to come.
 
 ### Cash for a buying trip
 
@@ -400,6 +403,14 @@ paper bill to record (Accounts, `bill.record`), a supplier's details to fix
 (Sourcing, `price.list`), an item switched (the salesperson on the order, else
 Sales by `quote.make`) and why the trip's count differs (the Manager,
 `trip.difference`).
+
+0157 adds what the yard asks of others (`store_asks`): more for the shelf to
+the Buyer (`store.restock`, `buy.restock`), goods on the truck that were not
+on the list to the Manager (`store.extra`, `trip.difference`), the yard handed
+to a colleague mid-shift to that colleague (`store.handover`; they tap "I've
+got it"), and the yard closed for the day to the Manager as a log line
+(`store.closed`, nothing to answer). Each answer goes back to the one who
+asked (`store.ask.decided`).
 
 A tap on a push opens the screen it is about: each app's `pushOpen` reads the
 push's kind and the ids it carries (push-send copies the ref into the data).
@@ -560,6 +571,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0154 | Accounts and the Buyer's money (the cross-app test of 21 Oct 2026; Buyer's side is 0151): pay the Buyer back for a round on their own money (`buyer_payback`: a Stock Purchase per stop, the orders' bills paid by the trip, the hand-off closed), take back cash handed over that no round used (`buyer_cash_back`, `buyer_handoffs.cash_back`), and a bill raised after the payback born paid |
 | 0155 | Sales, fourth: a mobile money or bank payment carries its transaction ID — `counter_sale` and `receive_payment` take an optional `p_ref`, written on the cash line's description and the order's `payments[].ref` (the QA retest of 21 Oct 2026, SAL-19) |
 | 0156 | Store, second (the cross-app test of 21 Oct 2026): nothing leaves the gate unpaid for a cash customer (no credit limit, or no customer record) until it is paid or the Manager lets it go on credit — `ow_money_hold`, `store_money_holds` for the Store's Load and hand-over, a Store login stopped by `saved_quotes_ow_money_gate`, the Store's ask (`loadAsk`) pushed to the Manager (`credit.ask`, credit.release) and the answer back to the asker (`credit.ask.decided`) |
+| 0157 | Store, third (the store app built to its canvas): what the yard asks of others — `store_asks` (restock to the Buyer, `store.restock`; an extra on the truck to the Manager, `store.extra`; the yard handed to a colleague, `store.handover`; the yard closed, `store.closed`), answered with `answer_store_ask` by the one whose decision it is and pushed back to the asker (`store.ask.decided`); and `receive_trip` v2 — a trip line with no order goes on the shelf instead of reading "missing", and the yard's reason for a count unlike the Buyer's rides on the line (`yardWhy`) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
