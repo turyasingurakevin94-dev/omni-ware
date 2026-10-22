@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -394,8 +394,8 @@ matrix.forEach(([what, it]) => {
     q.supplierConfirms = { S1: { state: 'confirmed', at: Date.now(), terms: X.supplierTerms(q, 'S1') } };
     X.S.data.savedQuotes = [q];
     t.check(X.lineBelowCost(line) && X.priceReviewState(line) === 'wait' && X.pricesWaiting(q).length === 1, 'an untagged line under its cost waits for the Manager');
-    t.check(/With Ruth · Manager<\/b> · price up/.test(X.ordWhoHas(q, X.ordViews(q))), 'the order says it is with Ruth for a price up, not going to Buying');
-    t.check(/Up · with Ruth/.test(X.ordGateHTML(q, X.ordViews(q))) && /1 price up · Ruth/.test(X.ordPaperHead(q, X.ordViews(q))[0]), 'the Prices gate and the slip head carry the hold');
+    t.check(/With Ruth · Manager · price up/.test(X.ordWhoHas(q, X.ordViews(q))), 'the order says it is with Ruth for a price up, not going to Buying');
+    t.check(/Price up · Ruth/.test(X.ordGateHTML(q, X.ordViews(q))) && /1 price up · Ruth/.test(X.ordPaperHead(q, X.ordViews(q))[0]), 'the Prices chip and the slip head carry the hold');
     // MUnder (round 2): under cost, one row -- what it sells for and how far under; only a new price will do.
     t.check(/sells<\/span><b class="ink">155,000/.test(X.ordPriceUpHTML(line)) && /10,000<\/span> under cost/.test(X.ordPriceUpHTML(line)) && !/COST/.test(X.ordPriceUpHTML(line)), 'under cost, the line says what it sells for and how far under');
     t.check(/Ruth sets a new price/.test(X.priceTagHTML(line, true)), 'the line tag says Ruth sets a new price');
@@ -492,7 +492,7 @@ matrix.forEach(([what, it]) => {
       { id: 2415, status: 'pending_delivery', invoiced: false, amountPaid: 0, customerId: 'C010', client: { name: 'Mukono Roofing' }, items: [{ productId: 'P1', productName: 'Cement', qty: 2, price: 30000, sellPrice: 45000, supplierId: '__stock__' }], charges: [] });
     X.S.loadedAt = 22;
     const open = X.PAGE.customer({ id: 'C010' });
-    t.check(/>2<\/span><span class="cu-rw"[^>]*>OPEN/.test(open) && !/ORDERS/.test(open), 'SAL-05: the ring counts the open orders, never "0 ORDERS"');
+    t.check(/<span class="m">2<\/span> open<\/span>/.test(open) && !/0 orders?</i.test(open), 'SAL-05: the chip counts the open orders, never "0 orders"');
     t.check(/ON THE MOVE/.test(open) && /50,000<\/b> paid/.test(open) && /still to pay <b class="m">220,000/.test(open), 'SAL-05: what is already paid on them shows');
     t.check(/Billed · owes/.test(open) && /Open bills <span class="m">0/.test(open) && /data-act="custpayorders"/.test(open), 'SAL-05: billed nothing yet, and a payment can still be taken');
     t.check(/k<\/span> on the move/.test(X.nwOwesChip(k)) && X.nwMovingDue(k) === 220000, 'SAL-05: New sale says what is on the move, never a blank');
@@ -741,7 +741,7 @@ matrix.forEach(([what, it]) => {
     const ms = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-01'; })();
     const me = (() => { const d = new Date(); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0); return e.getFullYear() + '-' + String(e.getMonth() + 1).padStart(2, '0') + '-' + String(e.getDate()).padStart(2, '0'); })();
     data.targets = [{ id: 1, date: ms, body: { metric: 'sales', aim: 5000000, from: ms, to: me } }]; X.S.loadedAt = 8;
-    t.check(X.salesTarget() && /Shop sales invoiced/.test(X.viewToday()), 'Today\'s month card says its figure is invoiced sales');
+    t.check(X.salesTarget() && /Invoiced · /.test(X.viewToday()), 'Today\'s month strip says its figure is invoiced sales');
     t.check(/invoiced · of/.test(X.PAGE.goal()), 'and so does the goal page');
   }
 
@@ -768,6 +768,59 @@ matrix.forEach(([what, it]) => {
     const sh = X.SHEET.addcust(X.S.sheet.args);
     t.check(/class="cu-ncareas"/.test(sh) ? /data-act="ncarea"/.test(sh) && /Other…/.test(sh) && !/--w:|\+1|customers there/.test(sh) : /id="sx_nc_area"/.test(sh) && !/Other…/.test(sh), 'areas are plain chips with Other… (no bars, counts or +1); with none on the books, a box to type it');
     t.check(/Just save/.test(sh) && /Save and sell/.test(sh) && /cu-ncdock/.test(sh), 'the two saves sit in the dock');
+  }
+
+  // the smaller navy tops (v109/v110/v113): Today is one strip; an order is who, a stage n/6 bar, and chips
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
+    const td = X.viewToday();
+    t.check(/class="tdy-strip"/.test(td) && /data-act="day" data-mode="sold"/.test(td) && !/paid in full<\/span>/.test(td) && !/Money in today/.test(td), 'Today is one strip: the month and today, no flow row, no separate tiles');
+    X.S.data.savedQuotes.push({ id: 2490, status: 'draft', invoiced: false, amountPaid: 0, customerId: 'C001', client: { name: 'Kato Construction' }, items: [{ productId: 'P1', productName: 'Cement', qty: 4, price: 32000, sellPrice: 36000, supplierId: '__stock__' }], charges: [] });
+    X.S.loadedAt = 31;
+    const q = X.S.data.savedQuotes.find(x => x.id === 2490);
+    if (q) {
+      const st = X.ordStage(q), ch = X.ordChipsHTML(q, X.ordViews(q));
+      t.check(/Checking<\/b><span class="m n">2\/6/.test(st) && (st.match(/<i/g) || []).length === 6, 'an order\'s stage is its name, 2/6 and a bar cut in six');
+      t.check(/class="ord-chips"/.test(ch) && /aria-label="Leaves Checking when all three say yes"/.test(ch) && !/ord-trk|ord-gate /.test(X.PAGE.order({ id: q.id })), 'Checking carries its three gates as chips, and the labelled stage dots are gone');
+    } else t.fail('the fixture has an order in Checking');
+  }
+
+  // review 5: a full phone gives up the cached copies before a draft; a sign out takes every copy with it
+  {
+    const mk = cap => { const m = new Map(); const used = () => [...m].reduce((n, [k, v]) => n + k.length + v.length, 0);
+      return { m, get length(){ return m.size; }, key: i => [...m.keys()][i] ?? null, getItem: k => (m.has(k) ? m.get(k) : null),
+        setItem(k, v){ const was = m.get(k); m.set(k, String(v)); if (used() > cap) { if (was == null) m.delete(k); else m.set(k, was); throw new Error('QuotaExceededError'); } }, removeItem: k => { m.delete(k); } }; };
+    const ls = mk(4000), st = {};
+    const F = compileScope(['owSnapKeys', 'owForgetCopies', 'owSave'].map(n => extractFunction(html, n, 'sales.html')), { localStorage: ls, S: st }, ['owSnapKeys', 'owForgetCopies', 'owSave']);
+    ls.setItem('ow-owner-snap:u1', 'o'.repeat(1500)); ls.setItem('ow-manager-snap:u1', 'm'.repeat(1500)); ls.setItem('ow-sales-snap:u1', 's'.repeat(600)); ls.setItem('ow-shop:u1', 'shop1');
+    const ok = F.owSave('ow-sales-draft:u1', 'd'.repeat(2000));
+    t.check(ok && ls.getItem('ow-sales-draft:u1') && ls.getItem('ow-sales-snap:u1') && !ls.getItem('ow-owner-snap:u1'), 'storage full: other apps\' cached copies give way and the draft is kept');
+    t.check(F.owSave('ow-sales-draft:u1', 'd'.repeat(5000)) === false, 'a draft that still cannot fit says so (false), never a silent success');
+    ls.setItem('ow-owner-snap:u1', 'o'); F.owForgetCopies();
+    t.check(F.owSnapKeys().length === 0 && ls.getItem('ow-shop:u1') === 'shop1', 'a sign out forgets every app\'s cached copy and keeps the rest');
+    t.check(/function saveDraft\(\)\{[^\n]*owSave\(draftKey\(\)[^\n]*owDraftNotKept\(\)/.test(html) && /function nwSaveDrafts\(a\)\{[^\n]*owSave\([^\n]*owDraftNotKept\(\)/.test(html), 'both draft saves warn when the phone could not keep them');
+    t.check((html.match(/owForgetCopies\(\); await sb\.auth\.signOut\(\)/g) || []).length === 2 && /localStorage\.removeItem\(k\)\); \} catch \(_e\) \{\} await sb\.auth\.signOut\(\)/.test(html), 'every Sign out in the app forgets the cached copies (the shop picker\'s, the same in every app)');
+    t.check(/\.ct-search input::-webkit-search-cancel-button\{-webkit-appearance:none;display:none\}/.test(html), 'the counter search shows one clear button, not the phone\'s as well');
+  }
+
+  // round 4 and review 5 (rows 16-17)
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
+    t.check(X.qtyJumps(12, 120) && X.qtyJumps(12, 125) && !X.qtyJumps(12, 13) && !X.qtyJumps(1, 10) && !X.qtyJumps(12, 24), 'R4-01: a digit too many (12 → 120) asks; an ordinary change does not');
+    const pq = X.parseQuery('-5 padlock');
+    t.check(pq.qty === 5 && pq.neg === true && pq.words.join(' ') === 'padlock' && X.parseQuery('5 padlock').neg === false, 'a count typed with a minus is read as the count, and marked to say so');
+    t.check(/SHORT/.test(X.ctChangeHTML(null, 30300)) && /30,300/.test(X.ctChangeHTML(null, 30300)) && /CHANGE/.test(X.ctChangeHTML(700, 0)), 'short cash: the change slot says how short');
+    X.S.offline = true;
+    const sl = X.sliderHTML('counter', 'Slide · paid 480,300 cash', { money: 'cash' });
+    t.check(/Back online to sell/.test(sl) && /aria-disabled="true"/.test(sl) && !/Back online/.test(X.sliderHTML('tell', 'Slide to send')), 'no connection: the slides that write wait, and say so');
+    X.S.offline = false;
+    X.S.data.savedQuotes.push({ id: 2601, status: 'completed', invoiced: true, amountPaid: 409000, client: { name: 'Walk-in' }, items: [{ productId: 'P1', productName: 'Cement', qty: 10, price: 30000, sellPrice: 40900, supplierId: '__stock__' }], charges: [] });
+    X.S.data.asks = [{ id: 'k1', quoteId: 2601, kind: 'void', amount: 409000, status: 'sent', createdAt: new Date().toISOString() }];
+    X.S.loadedAt = 41;
+    t.check(/Void asked/.test(X.orderRow(X.S.data.savedQuotes.find(q => q.id === 2601))), 'Done today: a row carries the void asked of the Manager');
+    t.check(X.custNcNameHit({ name: 'Kato Construction' }) && !X.custNcNameHit({ name: 'Zz' }), 'a name already on the books is found before a second one is saved');
   }
 
   process.exit(t.done() ? 1 : 0);

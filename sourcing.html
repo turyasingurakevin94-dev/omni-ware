@@ -2161,7 +2161,7 @@ function shopPicker(rows, open, ui){
       ${open ? `<button class="${ui.btn}" data-a="keep" style="flex:none;margin-top:6px">Back to ${esc(((list.find(m => m.shop_id === open) || {}).shops || {}).name || 'the shop')}</button>` : ''}
       <button class="${ui.btn} ghost" data-a="signout" style="flex:none;margin-top:6px">Sign out</button></div>`;
     el.querySelectorAll('[data-shop]').forEach(b => { b.onclick = () => resolve(list.find(m => m.shop_id === b.dataset.shop)); });
-    el.querySelector('[data-a=signout]').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    el.querySelector('[data-a=signout]').onclick = async () => { try { Object.keys(localStorage).filter(k => /^ow-[a-z]+-snap:/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (_e) {} await sb.auth.signOut(); location.reload(); };
     // Switching is not leaving: the shop open now is one tap away.
     const keep = open && el.querySelector('[data-a=keep]'); if (keep) keep.onclick = () => resolve(list.find(m => m.shop_id === open));
   });
