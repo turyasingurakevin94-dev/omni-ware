@@ -75,7 +75,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
     buyer: ['order.buying', 'trip.cash.ready', 'restock.held', 'trip.sent', 'trip.taken', 'trip.cancelled', 'store.restock', 'carton.refused'],
     accounts: ['trip.cash', 'trip.cash.ask', 'bill.due', 'payment.ask', 'bill.paper'],
     sourcing: ['sourcing.request', 'sourcing.dropped', 'prices.confirm', 'sourcing.fix'],
-    store: ['trip.back', 'stock.report.decided', 'stock_count', 'trip.sent', 'trip.taken', 'trip.cancelled', 'store.handover', 'store.ask.decided'],
+    store: ['trip.back', 'stock.report.decided', 'stock_count', 'trip.sent', 'trip.taken', 'trip.cancelled', 'store.handover', 'store.ask.decided', 'job.given'],
   };
   for (const [a, kinds] of Object.entries(KINDS)) {
     const src = read(`${a}.html`);

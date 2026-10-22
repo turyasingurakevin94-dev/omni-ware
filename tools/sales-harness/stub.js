@@ -9,11 +9,11 @@
   const ruth = { by: 'm1', byName: 'Ruth Nakato' };
   const tables = {
     shop_members: [{ shop_id: SH, user_id: 'u1', role: 'sales', shops: { name: 'Mukasa Hardware' } }, { shop_id: SH, user_id: 'm1', role: 'manager' }, { shop_id: SH, user_id: 'o1', role: 'owner' }, { shop_id: SH, user_id: 's1', role: 'sourcing' }, { shop_id: SH, user_id: 'a1', role: 'accounts', shops: { name: 'Mukasa Hardware' } }],
-    staff: [{ id: 1, shop_id: SH, name: 'Grace Namubiru', user_id: 'u1', role: 'sales' }, { id: 2, shop_id: SH, name: 'Ruth Nakato', user_id: 'm1', role: 'manager' }, { id: 3, shop_id: SH, name: 'Joseph Mukasa', user_id: 'o1', role: 'owner' }, { id: 6, shop_id: SH, name: 'Esther Auma', user_id: 'a1', role: 'accounts' }, { id: 4, shop_id: SH, name: 'Denis Okello', user_id: 'b1', role: 'buyer' }, { id: 5, shop_id: SH, name: 'Moses Lubega', user_id: 's1', role: 'sourcing' }],
-    suppliers: [{ id: 'S1', name: 'Roofings Ltd' }, { id: 'S2', name: 'Nsubuga Tools' }],
+    staff: [{ id: 1, shop_id: SH, name: 'Grace Akello', user_id: 'u1', role: 'sales' }, { id: 2, shop_id: SH, name: 'Ruth Nakato', user_id: 'm1', role: 'manager' }, { id: 3, shop_id: SH, name: 'Joseph Mukasa', user_id: 'o1', role: 'owner' }, { id: 6, shop_id: SH, name: 'Esther Auma', user_id: 'a1', role: 'accounts' }, { id: 4, shop_id: SH, name: 'Denis Okello', user_id: 'b1', role: 'buyer' }, { id: 5, shop_id: SH, name: 'Moses Lubega', user_id: 's1', role: 'sourcing' }],
+    suppliers: [{ id: 'S1', name: 'Namanve Sheets' }, { id: 'S2', name: 'Katwe Fabricators' }],
     customers: [
       { id: 'C001', name: 'Kato Construction', phone: '0772000001', location: 'Najjera', debt: 420000, terms_days: 30, credit_limit: 3000000 },
-      { id: 'C002', name: 'Kyaligonza & Sons', phone: '0772000002', location: 'Mukono', debt: 0 },
+      { id: 'C002', name: 'Kyaligonza & Sons', phone: '0772000002', location: 'Kawempe', debt: 0 },
       { id: 'C003', name: 'Lubowa Builders', phone: '0772000003', location: 'Lubowa', debt: 646000, credit_limit: 2000000 },
       { id: 'C004', name: 'Nansana Hardware', phone: '0772000004', location: 'Nansana', debt: 4120000, credit_limit: 6000000 },
       { id: 'C005', name: 'Ggaba Stores', phone: '0772000005', location: 'Ggaba', debt: 0 },
@@ -38,13 +38,13 @@
     saved_quotes: [
       // Q-2402: Kato, in Checking; the wheelbarrows wait for Ruth.
       mk(2402, 'draft', 'Kato Construction', 'C001', [
-        line(1, 'P1', null, 'Iron sheet G28 · 3m', 40, 'S1', 'Roofings Ltd', 35000, 38200),
-        line(2, 'P2', null, 'Wheelbarrow, heavy duty', 2, 'S2', 'Nsubuga Tools', 150000, 165000, { priceBy: 'u1', priceNote: 'nomargin', priceShop: null, priceAt: iso(now - 70 * 60e3) }),
+        line(1, 'P1', null, 'Iron sheet G28 · 3m', 40, 'S1', 'Namanve Sheets', 35000, 38200),
+        line(2, 'P2', null, 'Wheelbarrow, heavy duty', 2, 'S2', 'Katwe Fabricators', 150000, 165000, { priceBy: 'u1', priceNote: 'nomargin', priceShop: null, priceAt: iso(now - 70 * 60e3) }),
       ], { supplierConfirms: { S1: { state: 'confirmed', at: iso(now - 60 * 60e3) }, S2: { state: 'confirmed', at: iso(now - 50 * 60e3) } } }),
       // Q-2398: Kyaligonza, Buying; Ruth set a new price, not told yet.
       mk(2398, 'awaiting_goods', 'Kyaligonza & Sons', 'C002', [
-        line(1, 'P1', null, 'Iron sheet G28 · 3m', 20, 'S1', 'Roofings Ltd', 35000, 38200),
-        line(2, 'P2', null, 'Wheelbarrow, heavy duty', 2, 'S2', 'Nsubuga Tools', 150000, 172000, { priceBy: 'u1', priceNote: 'nomargin', priceShop: null, priceAt: iso(now - 3 * H), priceReview: Object.assign({ state: 'changed', price: 172000, was: 165000, at: iso(now - 25 * 60e3) }, ruth) }),
+        line(1, 'P1', null, 'Iron sheet G28 · 3m', 20, 'S1', 'Namanve Sheets', 35000, 38200),
+        line(2, 'P2', null, 'Wheelbarrow, heavy duty', 2, 'S2', 'Katwe Fabricators', 150000, 172000, { priceBy: 'u1', priceNote: 'nomargin', priceShop: null, priceAt: iso(now - 3 * H), priceReview: Object.assign({ state: 'changed', price: 172000, was: 165000, at: iso(now - 25 * 60e3) }, ruth) }),
       ], { stageLog: [{ status: 'draft', at: now - 4 * H }, { status: 'awaiting_goods', at: now - 25 * 60e3 }], stageEnteredAt: now - 25 * 60e3 }),
       // Q-2370: Kato's oldest bill, 18 days.
       mk(2370, 'completed', 'Kato Construction', 'C001', [line(1, 'P3', null, 'Hima cement 50kg', 6, '__stock__', 'Stock', 33000, 36333)], {}, { invoiced: true, invoiced_at: day(now - 18 * D), date: day(now - 18 * D) }),
@@ -56,9 +56,9 @@
       mk(2413, 'completed', 'Nansana Hardware', 'C004', [line(1, 'P3', null, 'Hima cement 50kg', 54, '__stock__', 'Stock', 33000, 36518.5)], {}, { invoiced: true, invoiced_at: today }),
     ],
     product_links: [], app_settings: [{ shop_id: SH, presets: { creditPct: 0, defaultMarkup: {}, creditHold: { days: 21 } } }], cash_txns: [{ id: 501, shop_id: SH, date: today, account: 'momo', type: 'receipt', category: 'Debt Payment', amount: 420000, description: 'Payment — Kato Construction', time: '12:14', quote_id: 2370, entered_by: 'u1' }], collection_trips: [], manager_notes: [], statements_sent: [],
-    payment_promises: [], invoice_asks: [], decision_log: [], payment_asks: window.__UID === 'a1' ? [{ id: 'pa1', shop_id: SH, cash_txn_id: 501, customer_id: 'C001', quote_id: 2370, amount: 420000, what: 'method', want: { from: 'momo', account: 'bank' }, note: 'Stanbic slip 4471', asked_by: 'u1', asked_by_name: 'Grace Namubiru', status: 'sent', created_at: iso(now - 20 * 60e3) }] : [],
+    payment_promises: [], invoice_asks: [], decision_log: [], payment_asks: window.__UID === 'a1' ? [{ id: 'pa1', shop_id: SH, cash_txn_id: 501, customer_id: 'C001', quote_id: 2370, amount: 420000, what: 'method', want: { from: 'momo', account: 'bank' }, note: 'Stanbic slip 4471', asked_by: 'u1', asked_by_name: 'Grace Akello', status: 'sent', created_at: iso(now - 20 * 60e3) }] : [],
     sourcing_leads: [
-      { id: 'SRC-A', shop_id: SH, name: 'Roof paint, maroon 20L', status: 'listed', voided: false, product_id: 'P6', assigned_staff_id: 5, created_at: iso(now - 5 * D), stage_entered_at: now - 3 * H, candidates: [{}, {}], requests: [{ at: iso(now - 5 * D), source: 'sourcing.ask', customerId: 'C005', customerName: 'Ggaba Stores', qty: 6, by: 'u1', salesName: 'Grace Namubiru' }] },
+      { id: 'SRC-A', shop_id: SH, name: 'Roof paint, maroon 20L', status: 'listed', voided: false, product_id: 'P6', assigned_staff_id: 5, created_at: iso(now - 5 * D), stage_entered_at: now - 3 * H, candidates: [{}, {}], requests: [{ at: iso(now - 5 * D), source: 'sourcing.ask', customerId: 'C005', customerName: 'Ggaba Stores', qty: 6, by: 'u1', salesName: 'Grace Akello' }] },
       { id: 'SRC-B', shop_id: SH, name: 'Tile cutter 600mm', status: 'sourced', voided: false, assigned_staff_id: 5, created_at: iso(now - 4 * D), stage_entered_at: now - D, candidates: [{}], requests: [{ at: iso(now - 4 * D), source: 'sourcing.ask', customerId: 'C004', customerName: 'Nansana Hardware', qty: 1, by: 'u1' }] },
       { id: 'SRC-C', shop_id: SH, name: 'Ceiling fan, 56 inch', status: 'looking', voided: false, assigned_staff_id: 5, created_at: iso(now - 3 * D), stage_entered_at: now - 2 * D, candidates: [{}, {}], requests: [{ at: iso(now - 3 * D), source: 'sourcing.ask', customerId: 'C003', customerName: 'Lubowa Builders', qty: 4, by: 'u1' }] },
     ],

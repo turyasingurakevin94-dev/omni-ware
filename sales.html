@@ -219,7 +219,7 @@
   href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{
-  --bg:#F7F5F2; --paper:#FFFFFF; --navy:#16203C; --navy2:#243052; --ink:#1C2233; --ink2:#5F6980; --ink3:#767F91;
+  --bg:#F7F5F2; --paper:#FFFFFF; --navy:#16203C; --navy2:#243052; --ink:#1C2233; --ink2:#5F6980; --ink3:#656E80;
   --line:#ECE8E1; --rule:#E6E3DD; --soft:#F4F2EE; --soft2:#EFECE6;
   --red:#C93A30; --mint:#6FDCB0; --amber:#F5B26B; --amberInk:#95530C; --amberSoft:#FDEEE1;
   --green:#0F6B43; --greenSoft:#E4F4EA; --crimson:#8E2A22; --crimsonSoft:#FBE5E2;
@@ -736,7 +736,7 @@ button.cu-bl:active{background:var(--soft)}
 .cu-ncn{font-size:17px;font-weight:700;letter-spacing:-.01em}
 .cu-ncn.ph{color:#B9B3A8}
 .cu-ncl{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px;color:var(--ink3)}
-.cu-ncl>svg{flex:none;stroke:#767F91}
+.cu-ncl>svg{flex:none;stroke:#656E80}
 .cu-ncl .ck{width:18px;height:18px;border-radius:6px;background:#F4F2EE;box-shadow:inset 0 1px 2px rgba(22,32,60,.08);color:var(--green);display:flex;align-items:center;justify-content:center;flex:none}
 .cu-ncl.on .ck{background:var(--greenSoft);box-shadow:none}
 .cu-ncl .ell{color:var(--ink);font-weight:600}
@@ -948,6 +948,8 @@ button.cu-bl:active{background:var(--soft)}
 .cu-ncdock.ask .bs{position:relative;display:flex;gap:8px}
 .cu-ncdock.ask .bs .ghost{flex:1}
 .cu-ncdock.ask .bs .red{flex:1.4;min-width:0}
+
+.cu-pdf{width:auto;min-width:64px;padding:0 10px}
 /* ==== new sale (7_neworder.js) ==== */
 @keyframes nwPop{0%{transform:scale(.6)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
 @keyframes nwArc{from{stroke-dashoffset:var(--c)}}
@@ -1339,7 +1341,7 @@ button.cu-bl:active{background:var(--soft)}
 .nw-pcard.bad b{color:#F59A92}
 .nw-retry{height:40px;padding:0 12px;border:none;border-radius:999px;background:#fff;color:var(--navy);font-size:13px;font-weight:700;flex:none}
 .nw-plcta{background:transparent;box-shadow:none;padding-top:12px;gap:10px}
-.nw-plcta.fresh{animation:sxUpIn .5s ease-out 1.4s both}
+.nw-plcta.fresh{animation:sxUpIn .25s ease-out both}
 .nw-next{height:58px;border-radius:18px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.35)}
 .nw-plrow{display:flex;gap:8px}
 .nw-plrow button{flex:1;height:52px;border-radius:16px;border:none;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:600}
@@ -1980,6 +1982,7 @@ button.ord-stamp{cursor:pointer}
 .ord-askchip .d{width:18px;height:18px;border-radius:999px;background:var(--plumSoft);color:var(--plum);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .ord-askchip > i{width:6px;height:6px;border-radius:9px;background:currentColor;flex:none}
 .ord-askchip .m{font-weight:600}
+.ord-findlab{display:block;padding:2px 4px 8px;font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--ink3)}
 /* ---- Pay (Take a payment / Choose orders) ---- */
 .sx-page[data-type="pay"],.sx-page[data-type="paid"]{padding-bottom:0}
 .py-top{display:block;width:100%;height:calc(40px + var(--safe-area-inset-top));border:none;background:transparent;padding:0}
@@ -2958,7 +2961,11 @@ function toast(msg, ms){
   let el = document.getElementById('sx_toast');
   if (!el) { el = document.createElement('div'); el.id = 'sx_toast'; el.className = 'sx-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
   // SAL-13: once it has gone, it is gone for a screen reader too -- hidden, and its words cleared.
-  el.textContent = msg; if (el.removeAttribute) el.removeAttribute('aria-hidden'); el.classList.add('on');
+  el.textContent = msg; if (el.removeAttribute) el.removeAttribute('aria-hidden');
+  // Above whatever dock is showing, so it never sits on a total or a figure (UX audit).
+  try { const docks = [...document.querySelectorAll('.sx-dock')].filter(d => d.offsetParent !== null), top = docks.length ? Math.min(...docks.map(d => d.getBoundingClientRect().top)) : 0;
+    el.style.bottom = top > 0 && top < window.innerHeight ? Math.max(124, Math.round(window.innerHeight - top + 12)) + 'px' : ''; } catch (_e) {}
+  el.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.classList.remove('on'); if (el.setAttribute) el.setAttribute('aria-hidden', 'true'); setTimeout(() => { if (!el.classList.contains('on')) el.textContent = ''; }, 300); }, ms || 3200);
 }
 function haptic(kind){ try { if (window.owHaptic) window.owHaptic(kind); } catch (_e) {} }
@@ -3689,7 +3696,7 @@ const STAGES = [
   { key: 'draft', label: 'Checking', short: 'Checking', col: '#F5B26B' },
   { key: 'awaiting_goods', label: 'Buying', short: 'Buying', col: '#3A3F9B' },
   { key: 'preparing', label: 'Packing', short: 'Packing', col: '#95530C' },
-  { key: 'pending_delivery', label: 'On the road', short: 'On road', col: '#1A5A8A' },
+  { key: 'pending_delivery', label: 'On the road', short: 'On the road', col: '#1A5A8A' },
   { key: 'completed', label: 'Delivered', short: 'Delivered', col: '#0F6B43' },
 ];
 function stageOf(q){ return STAGES.find(s => s.key === q.status) || STAGES[0]; }
@@ -3709,7 +3716,7 @@ function lineShort(it){ return orderLineIsBoughtIn(it) && lineReceived(it) ? Mat
 function lineState(q, it){
   if (lineSettledOut(q, it)) return { k: 'ok', word: 'not sent', col: '#8A93A3' };
   if (!it.supplierId) return { k: 'wait', word: 'waiting for a supplier', col: '#8A93A3' };
-  if (it.supplierId === '__stock__') return { k: 'ok', word: 'on the shelf', col: '#767F91' };
+  if (it.supplierId === '__stock__') return { k: 'ok', word: 'on the shelf', col: '#656E80' };
   if (q.status === 'draft') {
     const c = confirmState(q, it.supplierId);
     if (c.state === 'confirmed') return { k: 'ok', word: 'found' + (c.at ? ' · ' + timeOf(Date.parse(c.at) || c.at) : ''), col: '#0F6B43' };
@@ -4289,8 +4296,8 @@ function viewToday(){
     goalHTML = `<button class="tdy-sg" data-act="tdygoal" aria-label="Invoiced in ${esc(period)}: ${n0(tgt.actual)} of ${n0(tgt.aim)}, ${pctN}% of the goal, ${ahead ? 'ahead of' : 'behind'} pace. Open the goal">${sRing(frac, pctTxt)}
       <span class="tx"><span class="l ell">Invoiced · ${esc(period)}</span><span class="m v">${n0(tgt.actual)}</span><span class="s" style="color:${ahead ? 'var(--mint)' : 'var(--amber)'}">${ahead ? 'ahead of pace' : 'behind pace'}</span></span></button>`;
   } else {
-    goalHTML = `<div class="tdy-sg" role="img" aria-label="This month: ${month.length} orders, ${n0(monthSold)}, ${gone} delivered or on the road">${sRing(pct, Math.round(pct * 100) + '%')}
-      <span class="tx"><span class="l ell">This month · ${month.length}</span><span class="m v">${n0(monthSold)}</span><span class="s"><span class="m" style="color:#fff">${gone}</span> gone out</span></span></div>`;
+    goalHTML = `<div class="tdy-sg" role="img" aria-label="This month: ${month.length} orders, ${n0(monthSold)}, ${gone} delivered or on the road">${sRing(pct, `${gone}/${month.length}`)}
+      <span class="tx"><span class="l ell">This month · no goal yet</span><span class="m v">${n0(monthSold)}</span><span class="s"><span class="m" style="color:#fff">${gone}</span> of ${month.length} gone out</span></span></div>`;
   }
   // The chats come a moment after the books. The debts never wait for
   // them: one row at the top keeps the chats' place, so nothing lands
@@ -4333,13 +4340,16 @@ function tdyHoldRow(){ return `<div class="tdy-holdrow tdy-hold" data-key="hold"
    they said, and the two moves -- reply, or take the order. */
 function tdyAskCard(a){
   const c = a.conv, title = chatTitle(c), late = a.mins != null && a.mins >= 30;
+  // They already have an order on the move: open it first -- a second order is a choice, never the default (UX audit fix 2).
+  const live = typeof chatLiveOrder === 'function' && a.customer ? chatLiveOrder(a.customer) : null;
   return `<div class="tdy-ask" data-key="ask-${c.id}">
     <div style="display:flex;align-items:center;gap:10px">${chatFace(title, 42)}
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700" title="${esc(title)}">${esc(title)}</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">Wants to buy · on WhatsApp</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:15px;font-weight:700" title="${esc(title)}">${esc(title)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${live ? `Order <span class="m">${esc(orderNo(live))}</span> · ${esc(stageOf(live).label)} · on WhatsApp` : 'Wants to buy · on WhatsApp'}</span></span>
       ${a.mins != null ? `<span class="tdy-clock${late ? ' late' : ''}">${ic('chClock', 12, 'style="stroke-width:2.2"')}${esc(chatWait(a.mins))}</span>` : ''}</div>
     <div class="tdy-bub">${esc(a.text)}</div>
     <div style="display:flex;gap:8px"><button class="tdy-reply" data-act="openchat" data-conv="${c.id}" aria-label="Reply to ${esc(title)}">${ic('chat', 22)}</button>
-      <button class="sx-btn red" style="flex:1;box-shadow:none" data-act="takeorder" data-conv="${c.id}">${ic('chTag', 18, 'style="stroke-width:2.2"')}Take the order</button></div>
+      ${live ? `<button class="sx-btn red" style="flex:1;box-shadow:none" data-act="order" data-id="${live.id}">${ic('orders', 18)}Open <span class="m">${esc(orderNo(live))}</span></button><button class="tdy-reply" data-act="takeorder" data-conv="${c.id}" aria-label="Take a new order for ${esc(title)}">${ic('plus', 20, 'style="stroke-width:2.2"')}</button>`
+        : `<button class="sx-btn red" style="flex:1;box-shadow:none" data-act="takeorder" data-conv="${c.id}">${ic('chTag', 18, 'style="stroke-width:2.2"')}Take the order</button>`}</div>
   </div>`;
 }
 /* "Tell them": the Manager changed a price the customer was told, and
@@ -4445,7 +4455,7 @@ ACT.tdyrecord = t => { const c = customerById(t.dataset.id); if (!c) return; pus
 /* ---------------- Search: chats, customers, orders ---------------- */
 ACT.tdyfind = () => openSheet('tdyfind', { q: '' });
 SHEET.tdyfind = args => `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">Find</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-  <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="tdyq" type="search" placeholder="Chat, customer, order # or item" autocomplete="off" autofocus value="${esc(args.q || '')}"></label>
+  <label class="sx-search">${ic('search', 20, 'style="stroke:#656E80"')}<input data-in="tdyq" type="search" placeholder="Chat, customer, order # or item" autocomplete="off" autofocus value="${esc(args.q || '')}"></label>
   <div id="tdy_found" style="display:flex;flex-direction:column;gap:10px">${tdyFoundHTML(args.q || '')}</div>
   <button class="tdy-fresh" data-act="tdyrefresh">${ic('refresh', 15)}<span>Updated ${esc(agoWords(S.loadedAt) || 'just now')}</span><b>Refresh</b></button>`;
 function tdyFoundHTML(q){
@@ -4567,7 +4577,7 @@ function ordDeliveredMs(q){
 /* ---------------- one line, in the salesperson's words ---------------- */
 function ordLineView(q, it){
   const qty = Number(it.qty) || 0, shelf = it.supplierId === '__stock__';
-  const G = '#0F6B43', A = '#95530C', I = '#3A3F9B', M = '#767F91', F = '#8A93A3';
+  const G = '#0F6B43', A = '#95530C', I = '#3A3F9B', M = '#656E80', F = '#8A93A3';
   if (lineSettledOut(q, it)) return { k: 'out', icon: '', word: '', col: F, struck: true };
   if (q.status === 'draft') {
     const s = lineState(q, it);
@@ -4666,7 +4676,7 @@ function viewOrders(){
       return `<div class="sx-card ord-card" data-key="oc-${key}">${shown.map(q => orderRow(q, key === 'tell')).join('')}${rest.length ? `<button class="ord-more" data-act="ordmore" data-g="${key}" data-key="om-${key}">${ordStack(rest, 2)}<span>${rest.length} more ${moreWord}</span>${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>` : ''}</div>`;
     };
     if (g.tell.length) body += head('tell', '#8E2A22', 'Tell them', g.tell.length, 'oldest first') + card('tell', g.tell, 'to tell');
-    if (g.ask.length) body += head('ask', '#F5B26B', 'Still asking', g.ask.length, 'the buyer is on it') + card('ask', g.ask, 'asking');
+    if (g.ask.length) body += head('ask', '#F5B26B', 'Still asking', g.ask.length, (firstWord(roleFull('buyer')) || 'the Buyer') + ' is on it') + card('ask', g.ask, 'asking');
     if (g.mgr.length) body += head('mgr', '#F5B26B', 'With ' + esc(mgrName()), g.mgr.length, 'the price is theirs') + card('mgr', g.mgr, 'waiting');
     if (g.found.length) {
       if (S.ordOpen.found) body += `<button class="ord-gh btn" data-act="ordmore" data-g="found" data-key="gh-found" aria-expanded="true"><i style="background:#0F6B43"></i><b>All found</b><span class="m">${g.found.length}</span><em style="color:var(--green)">going to Buying</em>${ordIc('chev', 14, 'stroke:#9AA1AE;transform:rotate(-90deg)')}</button>${ordPagedCard('found', g.found, q => orderRow(q))}`;
@@ -4730,16 +4740,17 @@ function ordFindAll(qs){
 }
 const ORD_STAGE_TINT = { draft: ['#FDEEE1', '#95530C'], awaiting_goods: ['#E4E6FA', '#3A3F9B'], preparing: ['#FDEEE1', '#7A4A02'], pending_delivery: ['#DCEAF8', '#1A5A8A'], completed: ['#E4F4EA', '#0F6B43'] };
 function ordFindRows(qs){
-  if (!String(qs || '').trim()) return `<div class="sx-empty" style="padding:18px 8px">Type a client’s name or an order number</div>`;
-  const all = ordFindAll(qs), hits = all.slice(0, ORD_FIND_MAX).map(e => e.q);
+  // Before anything is typed, the newest orders are already there (UX audit): most finds are a recent one.
+  const blank = !String(qs || '').trim(), all = blank ? ordFindIndex().slice(0, 6) : ordFindAll(qs), hits = all.slice(0, ORD_FIND_MAX).map(e => e.q);
+  if (blank && !hits.length) return `<div class="sx-empty" style="padding:18px 8px">Type a customer’s name or an order number</div>`;
   if (!hits.length) return `<div class="sx-empty" style="padding:18px 8px"><b>No order matches</b>Try part of the name, or the number like 24</div>`;
-  return `<div class="sx-card ord-card">${hits.map(q => { const s = stageOf(q), tn = ORD_STAGE_TINT[s.key] || ORD_STAGE_TINT.draft, name = ordName(q);
+  return `${blank ? '<span class="ord-findlab">RECENT · or type a name or number</span>' : ''}<div class="sx-card ord-card">${hits.map(q => { const s = stageOf(q), tn = ORD_STAGE_TINT[s.key] || ORD_STAGE_TINT.draft, name = ordName(q);
     return `<div class="ord-row" data-key="f-${q.id}"><button class="ord-rmain" data-act="ordopen" data-id="${q.id}">${ordAv(name, 34)}<span class="ord-rtx"><span class="a"><span class="ell n" title="${esc(name)}">${esc(name)}</span><span class="m t">${n0(pricedLive(q).total)}</span></span>
       <span class="b"><span class="m" style="color:var(--ink3);flex:none">${orderNo(q)}</span><span class="ord-pill" style="color:${tn[1]};background:${tn[0]}"><i style="background:${tn[1]}"></i>${s.label}</span><span class="ell" style="color:var(--ink3)">${esc(ordWhen(createdMs(q)))}</span></span></span>${ordIc('chev', 16, 'stroke:#9AA1AE')}</button></div>`; }).join('')}
     ${all.length > hits.length ? `<div class="ord-findmore">The newest <span class="m">${hits.length}</span> of <span class="m">${n0(all.length)}</span> · type more of the name to narrow it</div>` : ''}</div>`;
 }
 SHEET.ordfind = () => `<div class="ord-shhead"><b>Find an order</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-  <label class="sx-search">${ordIc('search', 20, 'stroke:var(--ink3)')}<input id="ord_findq" data-in="ordfind" placeholder="Client name or order number" autocomplete="off" enterkeyhint="search" value="${esc(S.ordFindQ || '')}" autofocus></label>
+  <label class="sx-search">${ordIc('search', 20, 'stroke:var(--ink3)')}<input id="ord_findq" data-in="ordfind" placeholder="Customer name or order number" autocomplete="off" enterkeyhint="search" value="${esc(S.ordFindQ || '')}" autofocus></label>
   <div id="ord_findres" style="min-height:40vh">${ordFindRows(S.ordFindQ)}</div>`;
 ACT['in:ordfind'] = t => { S.ordFindQ = t.value; const r = document.getElementById('ord_findres'); if (r) morph(r, ordFindRows(t.value)); };
 ACT.ordopen = t => { closeSheet(true); renderSheet(); push('order', { id: Number(t.dataset.id) }); };
@@ -4776,7 +4787,7 @@ ACT.ordpay = t => push('pay', { orderId: Number(t.dataset.id) });
 
 /* The stage (v110): its name, n of 6, and one slim bar cut in six -- done
    in mint, the stage it is in its own colour, the rest dim. */
-const ORD_NOW = ['Taken', 'Checking', 'Buying', 'Packing', 'On road', 'Delivered'];
+const ORD_NOW = ['Taken', 'Checking', 'Buying', 'Packing', 'On the road', 'Delivered'];
 const ORD_CUR = { draft: ['#F5B26B', 'lens'], awaiting_goods: ['#9BA3F0', 'bag'], preparing: ['#F5B26B', 'box'], pending_delivery: ['#6FDCB0', 'truck'], completed: ['#6FDCB0', 'tick'] };
 function ordStage(q){
   const cur = stageIdx(q) + 1, done = q.status === 'completed', col = (ORD_CUR[q.status] || ORD_CUR.draft)[0], nm = stageOf(q).label;
@@ -4819,7 +4830,7 @@ function ordWhoHas(q, views){
 ACT.ordnumber = t => openSheet('ordphone', { id: Number(t.dataset.id), phone: '' });
 SHEET.ordphone = a => { const st = phoneState(a.phone);
   return `<div class="nw-row"><span class="nw-ttl dark"><b>Their number</b><span>On order ${esc(orderNo(quoteById(a.id) || { id: a.id }))} · for telling them</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <label class="sx-search">${ic('phone', 20, 'style="stroke:#767F91"')}<input id="sx_ordph" class="m" data-in="ordph" type="tel" inputmode="tel" placeholder="07__ ___ ___" autocomplete="off" value="${esc(a.phone || '')}" aria-label="Their phone number" autofocus><span id="sx_ordphtag">${st.ok ? `<span class="cu-new">${ic('tick', 11, 'style="stroke-width:3"')}ok</span>` : st.typing ? `<span class="cu-ncnt m">${st.n}/${st.need}</span>` : st.bad ? '<span class="cu-ncbad">07… · 10 digits</span>' : ''}</span></label>
+    <label class="sx-search">${ic('phone', 20, 'style="stroke:#656E80"')}<input id="sx_ordph" class="m" data-in="ordph" type="tel" inputmode="tel" placeholder="07__ ___ ___" autocomplete="off" value="${esc(a.phone || '')}" aria-label="Their phone number" autofocus><span id="sx_ordphtag">${st.ok ? `<span class="cu-new">${ic('tick', 11, 'style="stroke-width:3"')}ok</span>` : st.typing ? `<span class="cu-ncnt m">${st.n}/${st.need}</span>` : st.bad ? '<span class="cu-ncbad">07… · 10 digits</span>' : ''}</span></label>
     <button class="sx-btn red" data-act="ordphsave" style="width:100%">Save the number</button>`; };
 ACT['in:ordph'] = t => { const a = S.sheet && S.sheet.args; if (!a) return; a.phone = t.value; const st = phoneState(t.value), el = document.getElementById('sx_ordphtag');
   if (el) el.innerHTML = st.ok ? `<span class="cu-new">${ic('tick', 11, 'style="stroke-width:3"')}ok</span>` : st.typing ? `<span class="cu-ncnt m">${st.n}/${st.need}</span>` : st.bad ? '<span class="cu-ncbad">07… · 10 digits</span>' : ''; };
@@ -4915,7 +4926,7 @@ function ordPaperHead(q, views){
   const waits = pricesWaiting(q), wait = waits.length, up = waits.filter(it => !it.priceBy).length;
   if (up && (q.status === 'draft' || q.status === 'awaiting_goods')) return [`${up} price up · ${mgrName()}`, '#95530C'];
   if (q.status === 'draft' && wait) return [`${wait} waiting for ${mgrName()}`, '#95530C'];
-  if (q.status === 'draft') return [`${c.ok} of ${n} ready`, c.ok === n ? '#0F6B43' : c.ok ? '#0F6B43' : '#767F91'];
+  if (q.status === 'draft') return [`${c.ok} of ${n} ready`, c.ok === n ? '#0F6B43' : c.ok ? '#0F6B43' : '#656E80'];
   if (q.status === 'awaiting_goods') return [`${c.in + c.short} of ${n} in`, '#3A3F9B'];
   if (q.status === 'preparing') return (q.items || []).some(it => it.pickStatus) ? [`${c.in + c.short} of ${n} packed`, '#95530C'] : [`all ${n} in · packing`, '#0F6B43'];
   if (q.status === 'pending_delivery') return all ? [`all ${n} packed`, '#0F6B43'] : [`${c.in} of ${n} packed in full`, '#95530C'];
@@ -4981,7 +4992,7 @@ PAGE.order = ({ id }) => {
   const callName = name === 'Walk-in' ? 'them' : first;
   const cta = done ? 'Send the thanks' : `Tell ${callName}${tail && (callName.length + tail.length) <= 18 ? ' ' + tail : ''}`;
   const left = done
-    ? (cust ? `<button class="ord-sq" data-act="sellto" data-id="${esc(cust.id)}" aria-label="Sell to ${esc(name)} again">${ic('again', 18)}<span>Again</span></button>` : '')
+    ? (cust ? `<button class="ord-sq" data-act="sellto" data-id="${esc(cust.id)}" aria-label="Sell to ${esc(name)} again">${ic('again', 18)}<span>Sell again</span></button>` : '')
     : (phone ? `<a class="ord-sq" href="tel:${esc(phone)}" aria-label="Call ${esc(name)}">${ic('phone', 22)}</a>` : '');
   const stamp = ordStampHTML(q, done && q.invoiced), due = q.invoiced ? 0 : orderDue(q);
   return `<button class="ord-dimtap" data-act="back" aria-label="Back to orders"></button>
@@ -5748,7 +5759,7 @@ function viewMe(){
       <button data-act="nmgoal"><span class="l">${tg && !nmIsWholeMonth(tg.from, tg.to) ? 'Goal' : month}${tg && (!nmIsWholeMonth(tg.from, tg.to) || tg.from === mStart) ? ' invoiced' : ''}</span><span class="m v">${short(tg && !nmIsWholeMonth(tg.from, tg.to) ? tg.actual : monthFig)}</span>${tg ? `<span class="nm-strip-bar"><i class="sx-grow" style="width:${Math.round(pc * 100)}%"></i></span>` : `<span class="s">this month</span>`}</button>
       <button data-act="day" data-mode="sold"><span class="l">Orders</span><span class="m v">${orders.length}</span><span class="s"><span class="m">${(orders.length / dayOfMonth).toFixed(1)}</span> a day</span></button>
       <button data-act="day" data-mode="money"><span class="l">Collected</span><span class="m v" style="color:var(--mint)">${short(collected)}</span><span class="s">${monthFig > 0 ? `<span class="m">${nmPct(collected / monthFig)}</span> of sold` : 'this month'}</span></button></div>
-    <span class="nm-note">${ic('store', 12)}Whole-shop figures</span>
+    <span class="nm-note">${ic('store', 12)}The whole shop’s figures, not only yours</span>
   </div></div>
   <div class="sx-body">
     <div class="sx-card pad nm-doors"><div class="nm-card-h"><b>What your login opens</b><span>${ic('lock', 12)}${S.role === 'owner' ? 'switched on by you' : ownerName() ? `switched on by ${esc(ownerName())}, the owner` : 'switched on by the owner'}</span></div>
@@ -5891,7 +5902,7 @@ function custDebtBands(list){
 }
 
 /* ---------------- Customers ---------------- */
-const CU_FILTERS = [['owe', 'Billed · owe'], ['due', 'Due to buy'], ['quiet', 'Gone quiet'], ['all', 'All']];
+const CU_FILTERS = [['owe', 'Owe'], ['due', 'Due to buy'], ['quiet', 'Gone quiet'], ['all', 'All']];
 const CU_PAGE = 40;   // rows drawn at first; "Show more" draws the next lot
 function custInFilter(c, k){
   if (k === 'owe') return c.debt > 0;
@@ -5913,7 +5924,7 @@ function viewCustomers(){
   return `<div class="sx-hero cu-hero" data-navy-top>
     <div class="cu-hrow"><h1>Customers <span class="m">${all.length}</span></h1><button class="cu-add" data-act="addcust" aria-label="Add a customer">${ic('useradd', 20, 'style="stroke-width:2"')}</button></div>
     ${owed > 0 ? `<button class="cu-owed" data-act="custfilter" data-k="owe">
-      <span class="cu-owed-t"><span>${inQ > 0 ? 'To collect' : 'Billed, not paid'} · ${owe.length} customer${owe.length === 1 ? '' : 's'}</span><span class="m">${n0(owed - inQ)}</span></span>
+      <span class="cu-owed-t"><span>${inQ > 0 ? 'To collect' : 'Owe the shop'} · ${owe.length} customer${owe.length === 1 ? '' : 's'}</span><span class="m">${n0(owed - inQ)}</span></span>
       <span class="cu-bar sx-grow${inQ > 0 ? ' q' : ''}">${bar}${inQ > 0 ? `<i class="q" style="flex:${inQ}" title="in question · ${n0(inQ)}"></i>` : ''}</span>
       <span class="cu-leg">${shown.map(s => `<span><i style="background:${s[1]}"></i>${s[2]}</span>`).join('')}${inQ > 0 ? `<span class="cu-qpill"><i></i><b class="m">${n0(inQ)}</b> in question</span>` : ''}</span></button>`
       : `<div class="cu-owed-none"><span>${ic('tick', 14, 'style="stroke-width:2.6"')}</span>Nobody owes the shop</div>`}
@@ -6052,7 +6063,7 @@ PAGE.customer = ({ id }) => {
   let ringHTML = '';
   if (r.every && !moving) {
     const quiet = r.overdue, due = r.due && !quiet;
-    ringHTML = `<span class="cu-rchip${quiet ? ' q' : due ? ' d' : ''}" role="img" aria-label="${r.since} days since their last order; they come every ${r.every}${quiet ? ', gone quiet' : due ? ', due now' : ''}"><span class="m">${r.since}/${r.every}</span> ${quiet ? 'gone quiet' : due ? 'due now' : 'days'}</span>`;
+    ringHTML = `<span class="cu-rchip${quiet ? ' q' : due ? ' d' : ''}" role="img" aria-label="${r.since} days since their last order; they come every ${r.every}${quiet ? ', gone quiet' : due ? ', due now' : ''}">${quiet ? `gone quiet · <span class="m">${r.since}</span> days` : due ? `due now · every <span class="m">${r.every}</span> days` : `last <span class="m">${r.since}</span>d · every <span class="m">${r.every}</span>d`}</span>`;
   } else if (moving) ringHTML = custStageRing(live);
   const amtCol = !(c.debt > 0) ? '#6FDCB0' : over || pastTerms ? '#F59A92' : '#F5B26B';
   const capBits = [moving ? `nothing billed yet · ${limit > 0 ? `<b class="m">${n0(limit)}</b> credit` : 'cash, no credit limit'}` : limit > 0 ? `of <b class="m">${n0(limit)}</b> credit` : (c.debt > 0 ? 'no credit limit set' : (r.orders ? `last bought ${esc(dayLabel(custISO(r.last)))}` : 'on cash'))];
@@ -6084,7 +6095,7 @@ PAGE.customer = ({ id }) => {
     const note = q || twin ? '' : custChargeNote(c, ch);
     const label = q && q.invoiced ? invoiceLabel(q) : twin ? `${orderNo(twin)}?` : note || 'no order linked';
     return { amt: ch.remaining, age, col: custAgeCol(age), label, note: !!note, date: ch.date, twin: paidTwin ? twin : null, same, stripe: same, id: q ? q.id : twin ? twin.id : null, k: (q ? q.id : twin ? 't' + twin.id : 'a') + '-' + i }; });
-  const billsN = parts.length;
+  const billsN = parts.length + (loose > 0.5 ? 1 : 0); // an old balance with no date is a bill too (UX audit: never "Open bills 0" above an amount)
   let barParts = parts;
   if (parts.length > 12) { const by = new Map(); parts.forEach(p => { const e = by.get(p.col) || { amt: 0, col: p.col }; e.amt += p.amt; by.set(p.col, e); }); barParts = [...by.values()]; }
   // barParts is parts itself up to a dozen: the undated part goes into the bar once, not twice.
@@ -6121,7 +6132,7 @@ PAGE.customer = ({ id }) => {
         <span class="cu-whot"><span class="cu-whon">${esc(c.name)}</span><span class="cu-whos">${sub.map(x => `<span>${esc(x)}</span>`).join(' · ')}</span></span>
         <span class="cu-hbs">${ph ? `<a class="cu-hb" href="tel:${esc(ph)}" aria-label="Call ${esc(firstWord(c.name))}">${ic('phone', 18)}</a>` : ''}${chat}<button class="cu-hb" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button></span></div>
       <div class="cu-sum">
-        <span class="cu-owes"><span class="cu-or"><span class="cu-ol">${c.debt > 0 ? 'Owes' : moving ? 'Billed · owes' : 'Owes nothing'}</span><span class="m cu-ov" style="color:${moving ? '#fff' : amtCol}">${n0(c.debt)}</span>${ringHTML}</span>
+        <span class="cu-owes"><span class="cu-or"><span class="cu-ol">${c.debt > 0 || moving ? 'Owes' : 'Owes nothing'}</span><span class="m cu-ov" style="color:${moving ? '#fff' : amtCol}">${n0(c.debt)}</span>${ringHTML}</span>
           ${inQ > 0 ? custQBar(c, take, inQ, limit) : limit > 0 ? `<span class="cu-lim"><i class="sx-grow" style="width:${Math.max(2, Math.min(100, Math.round(c.debt / limit * 100)))}%;background:${over ? '#E5483D' : '#F5B26B'}"></i></span>` : moving ? '<span class="cu-lim"></span>' : ''}
           ${inQ > 0 ? `<span class="cu-cap cu-qleg"><span><i></i><b class="m">${n0(take)}</b> to take</span><span><i class="s"></i><b class="m" style="color:#F5B26B">${n0(inQ)}</b> in question</span></span>` : `<span class="cu-cap">${capBits.join(' · ')}${over ? ' · <b style="color:#F59A92">over the limit</b>' : ''}</span>`}</span></div>
       ${live.length && !moving ? custMovingRow(live, openDue) : ''}
@@ -6130,7 +6141,7 @@ PAGE.customer = ({ id }) => {
   <div class="sx-body cu-pbody">${moving ? custMovingPaper(live) : ''}${usualHTML}${billsHTML}${moving && !billsHTML ? `<div class="sx-card cu-nobill"><span class="ic">${ic('doc', 17)}</span><span class="tx"><b>Open bills <span class="m">0</span></b><span>each order is billed 24 h after it’s delivered</span></span></div>` : ''}
     ${!rows.length && !billsHTML && !moving ? `<div class="sx-card cu-empty"><b>Nothing on their account yet</b><span>Their usual shows here after a few orders.</span></div>` : ''}</div>
   <div class="sx-dock cu-dock">
-    <button class="cu-pdf" data-act="custstmt" data-id="${esc(c.id)}" aria-label="Send a statement"${c.debt > 0 || hist.length ? '' : ' disabled'}>${ic('doc', 18)}PDF</button>
+    ${c.debt > 0 || hist.length ? `<button class="cu-pdf" data-act="custstmt" data-id="${esc(c.id)}" aria-label="Send a statement">${ic('doc', 18)}Statement</button>` : ''}
     ${moving && openDue > 0.5
       ? `<button class="cu-sell2" data-act="sellto" data-id="${esc(c.id)}"${usual.length ? ' data-usual="1"' : ''} aria-label="${usual.length ? 'Sell them their usual' : 'Sell to ' + esc(c.name.length <= 18 ? c.name : firstWord(c.name))}">${ic('plus', 17, 'style="stroke-width:2.4"')}${usual.length ? 'Usual' : 'Sell'}</button>
         <button class="sx-btn red cu-sell" data-act="custpayorders" data-id="${esc(c.id)}">${ic('cash', 20)}Take a payment</button>`
@@ -6180,7 +6191,7 @@ SHEET.promise = a => {
     <div class="cu-pchips" role="radiogroup" aria-label="How much">${chip('all', `All · <span class="m">${short(c.debt)}</span>`)}${bill > 0 && bill < c.debt ? chip('bill', `${esc(invoiceLabel(inv[0]))} · <span class="m">${short(bill)}</span>`) : ''}${chip('other', 'Other')}</div>
     <div class="cu-pwhen"><span class="cu-plab"><span>BY WHEN</span><b>${esc(dd.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))} · ${inN === 0 ? 'today' : inN === 1 ? 'tomorrow' : 'in ' + inN + ' days'}</b></span>
       <div class="cu-pdays" role="radiogroup" aria-label="By when">${days.map(d => { const x = new Date(d + 'T00:00:00'), on = d === a.day;
-        return `<button role="radio" aria-checked="${on}" class="${on ? 'on' : ''}" data-act="promday" data-v="${d}"><small>${x.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 1)}</small><span class="m">${x.getDate()}</span></button>`; }).join('')}</div>
+        return `<button role="radio" aria-checked="${on}" class="${on ? 'on' : ''}" data-act="promday" data-v="${d}"><small>${x.toLocaleDateString('en-GB', { weekday: 'short' })}</small><span class="m">${x.getDate()}</span></button>`; }).join('')}</div>
       <label class="cu-plater">${ic('calendar', 14)}${days.includes(a.day) ? 'Another day' : 'Changed to ' + esc(dd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))}<input type="date" data-ch="promdate" min="${today}" aria-label="Another day"></label></div>
     <button class="sx-btn red" data-act="promsave" ${amount > 0 && !S.cuPromising ? '' : 'disabled'}>Record the promise</button>
     <span class="cu-pwho">${mgrFace(22)}On ${esc(first)}’s account · ${esc(mgrName())} sees it</span>`;
@@ -6983,7 +6994,7 @@ SHEET.switch = args => {
   const d = S.draft, n = d ? d.items.length : 0, cur = d ? (firstWord(d.client.name) || 'Walk-in') : '';
   const pv = d ? pricedLive(draftQuote()) : { total: 0, toConfirm: 0 }, parked = nwDrafts();
   return `<div class="nw-row"><span class="nw-ttl dark"><b>Who is this order for?</b><span>now ${esc(cur)} · <span class="m">${n}</span> line${n === 1 ? '' : 's'} · ${nwMoney(pv)}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <label class="sx-search nw-swsearch">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="nwswq" type="search" placeholder="Name or phone" aria-label="Name or phone" autocomplete="off" value="${esc(args.q || '')}"></label>
+    <label class="sx-search nw-swsearch">${ic('search', 20, 'style="stroke:#656E80"')}<input data-in="nwswq" type="search" placeholder="Name or phone" aria-label="Name or phone" autocomplete="off" value="${esc(args.q || '')}"></label>
     ${parked.length ? `<span class="nw-lab">YOUR OPEN DRAFTS <span class="m">${parked.length}</span></span><div class="nw-dchips ${parked.length > 2 ? 'scroll' : ''}">${parked.map(x => { const nm = x.client.name || 'Walk-in', p2 = pricedLive(nwQuoteOf(x)), k = x.items.length;
       return `<button class="nw-dchip" data-key="d-${esc(x.dkey)}" data-act="nwresume" data-k="${esc(x.dkey)}">${avatar(nm, 's')}<span class="nw-ct"><span class="ell nw-cn">${esc(nm)}</span><span class="sx-sub nw-dcs"><span class="m">${k}</span> item${k === 1 ? '' : 's'} · ${nwMoney(p2)}</span></span></button>`; }).join('')}</div>` : ''}
     <span class="nw-lab" id="nw_swlab">${args.q ? 'MATCHES' : 'RECENT'}</span>
@@ -8464,7 +8475,7 @@ PAGE.paid = args => {
     const billWords = settled.length <= 3 ? settled.map(billWord).join(' ') + (settled.length && !part.length ? ' settled' : '')
       : (cleared.length ? `<span class="pd-bw"><b class="ok">✓</b> ${cleared.length} bill${cleared.length === 1 ? '' : 's'} cleared</span> ` : '') + part.slice(0, 2).map(billWord).join(' ') + (part.length > 2 ? ` <span class="pd-bw">+${part.length - 2} more part-paid</span>` : '');
     const limit = p.kind === 'cust' && c && c.creditLimit != null && Number(c.creditLimit) > 0 ? Math.max(0, Number(c.creditLimit) - after) : null;
-    const title = p.kind === 'order' ? 'Left to pay on ' + esc(p.bills && p.bills[0] ? p.bills[0].label.replace(/^Order/, 'order') : 'the order') : p.rebuilt ? 'Outstanding now' : 'Outstanding balance';
+    const title = p.kind === 'order' ? 'Left to pay on ' + esc(p.bills && p.bills[0] ? p.bills[0].label.replace(/^Order/, 'order') : 'the order') : p.rebuilt ? 'Owes now' : 'Owes';
     bal = `<div class="pd-card pd-bal${up(1.3)}>
       <div class="pd-balt"><span class="pd-balk"><span class="pd-lab">${title}</span><span class="pd-balv"><span class="m pd-after${after === 0 ? ' z' : ''}">${n0(after)}</span>${hasBefore ? `<span class="m pd-before">${n0(before)}</span>` : ''}</span></span>
         ${after === 0 ? `<span class="pd-clear">${PAY_TICK}${p.kind === 'order' ? 'Paid in full' : 'All clear'}</span>` : ''}</div>
@@ -8809,7 +8820,7 @@ function viewChats(){
   return `<div class="cht-wrap">
     <div class="cht-head"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><h1>Chats</h1><span class="cht-hsub">${sub}</span></span>
       <button class="cht-round" data-act="chatnew" aria-label="New chat">${ic('chPen', 20)}</button></div>
-    <label class="cht-search">${ic('search', 19, 'style="stroke:#767F91"')}<input type="search" data-in="chatq" aria-label="Find a chat" placeholder="Name or phone" value="${esc(S.chatQ)}" autocomplete="off"></label>
+    <label class="cht-search">${ic('search', 19, 'style="stroke:#656E80"')}<input type="search" data-in="chatq" aria-label="Find a chat" placeholder="Name or phone" value="${esc(S.chatQ)}" autocomplete="off"></label>
     <div class="cht-tabs" role="tablist" aria-label="Which chats">${tab('waiting', 'Waiting', waiting.length)}${tab('unread', 'Unread', unread)}${tab('all', 'All')}</div>
     <div id="cht_list" style="display:flex;flex-direction:column;gap:12px">${chatListHTML()}</div>
   </div>`;
@@ -8877,7 +8888,7 @@ ACT.openchat = t => { const id = Number(t.dataset.conv); closeSheet(true); rende
 /* ---------------- New chat ---------------- */
 ACT.chatnew = () => openSheet('chatnew', { q: '' });
 SHEET.chatnew = args => `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">New chat</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-  <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="chatnewq" type="search" placeholder="Customer, or a phone number" autocomplete="off" autofocus value="${esc(args.q || '')}"></label>
+  <label class="sx-search">${ic('search', 20, 'style="stroke:#656E80"')}<input data-in="chatnewq" type="search" placeholder="Customer, or a phone number" autocomplete="off" autofocus value="${esc(args.q || '')}"></label>
   <div id="cht_newlist">${chatNewListHTML(args.q || '')}</div>
   <span class="cht-note">${ic('lock', 13)}The shop’s number can only write to someone who has written in the last 24 hours, so a new chat opens in WhatsApp on this phone.</span>`;
 function chatNewListHTML(q){
@@ -9180,7 +9191,7 @@ ACT.chatprodopen = t => openSheet('chatprod', { conv: Number(t.dataset.conv), q:
 SHEET.chatprod = a => {
   const n = a.added.length;
   return `<div style="display:flex;align-items:center;gap:10px"><b style="flex:1;font-size:18px">Send a price</b><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <label class="sx-search">${ic('search', 20, 'style="stroke:#767F91"')}<input data-in="chatprodq" type="search" placeholder="Cement, iron sheets…" autocomplete="off" value="${esc(a.q || '')}"></label>
+    <label class="sx-search">${ic('search', 20, 'style="stroke:#656E80"')}<input data-in="chatprodq" type="search" placeholder="Cement, iron sheets…" autocomplete="off" value="${esc(a.q || '')}"></label>
     <div id="cht_prodlist">${chatProdListHTML(a)}</div>
     <button class="sx-btn ${n ? 'navy' : 'ghost'}" data-act="chatproddone">${n ? `${ic('tick', 17)}Done · ${n} in the message` : 'Back to the chat'}</button>`;
 };
@@ -9349,8 +9360,10 @@ function srcBar(i){ return `<span class="src-bar${i === 4 ? ' done' : ''}">${SRC
 
 /* ---------------- the sheet: what, how many, who asked ---------------- */
 ACT.srcask = () => {
-  const d = S.draft, q = String((d && d.q) || '').trim();
-  openSheet('srcask', { name: q, qty: 1 });
+  // The count the search already read ("12 tile adhesive") is the quantity, not part of the name (UX audit fix 1).
+  const d = S.draft, q = String((d && d.q) || '').trim(), pq = typeof parseQuery === 'function' ? parseQuery(q) : { qty: null };
+  const name = pq.qty ? q.replace(/^\s*[-−]?\d+(\.\d+)?\s*[×x]?\s*/i, '').replace(/\s*[×x]?\s*\d+(\.\d+)?\s*$/i, '').trim() || q : q;
+  openSheet('srcask', { name, qty: pq.qty ? Math.max(1, Math.round(pq.qty)) : 1 });
 };
 SHEET.srcask = a => {
   const d = S.draft, c = d && d.customerId != null ? customerById(d.customerId) : null;
@@ -9610,7 +9623,7 @@ function ctTopHTML(name, sub, tap){
   const who = `${walk ? `<span class="sx-av s ct-walk">${ic('me', 16)}</span>` : avatar(name, 's')}<span class="ell">${esc(first)}</span>`;
   return `<div class="ct-head"><button class="ct-back" data-act="back" aria-label="Back">${ic('back', 18)}</button>
     <span class="ct-ttl"><span class="ey"><i></i>PAY AND GO</span><b>Counter sale</b><span class="ell">${sub}</span></span>
-    ${tap ? `<button class="ct-who" data-act="ctwho" aria-label="Who is buying: ${esc(name)}. Tap to name a customer">${who}${ic('ctDown', 14, 'style="stroke-width:2.2;stroke:#767F91"')}</button>` : `<span class="ct-who">${who}</span>`}</div>`;
+    ${tap ? `<button class="ct-who" data-act="ctwho" aria-label="Who is buying: ${esc(name)}. Tap to name a customer">${who}${ic('ctDown', 14, 'style="stroke-width:2.2;stroke:#656E80"')}</button>` : `<span class="ct-who">${who}</span>`}</div>`;
 }
 function ctHeadRight(d, q){
   const off = ctOffShelf(d).length, wait = pricesWaiting(q).length, mine = d.items.filter(it => it.priceBy).length;
