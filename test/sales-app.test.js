@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -802,6 +802,25 @@ matrix.forEach(([what, it]) => {
     t.check(/function saveDraft\(\)\{[^\n]*owSave\(draftKey\(\)[^\n]*owDraftNotKept\(\)/.test(html) && /function nwSaveDrafts\(a\)\{[^\n]*owSave\([^\n]*owDraftNotKept\(\)/.test(html), 'both draft saves warn when the phone could not keep them');
     t.check((html.match(/owForgetCopies\(\); await sb\.auth\.signOut\(\)/g) || []).length === 2 && /localStorage\.removeItem\(k\)\); \} catch \(_e\) \{\} await sb\.auth\.signOut\(\)/.test(html), 'every Sign out in the app forgets the cached copies (the shop picker\'s, the same in every app)');
     t.check(/\.ct-search input::-webkit-search-cancel-button\{-webkit-appearance:none;display:none\}/.test(html), 'the counter search shows one clear button, not the phone\'s as well');
+  }
+
+  // round 4 and review 5 (rows 16-17)
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'a@b.c' }, shopName: 'Shop' });
+    t.check(X.qtyJumps(12, 120) && X.qtyJumps(12, 125) && !X.qtyJumps(12, 13) && !X.qtyJumps(1, 10) && !X.qtyJumps(12, 24), 'R4-01: a digit too many (12 → 120) asks; an ordinary change does not');
+    const pq = X.parseQuery('-5 padlock');
+    t.check(pq.qty === 5 && pq.neg === true && pq.words.join(' ') === 'padlock' && X.parseQuery('5 padlock').neg === false, 'a count typed with a minus is read as the count, and marked to say so');
+    t.check(/SHORT/.test(X.ctChangeHTML(null, 30300)) && /30,300/.test(X.ctChangeHTML(null, 30300)) && /CHANGE/.test(X.ctChangeHTML(700, 0)), 'short cash: the change slot says how short');
+    X.S.offline = true;
+    const sl = X.sliderHTML('counter', 'Slide · paid 480,300 cash', { money: 'cash' });
+    t.check(/Back online to sell/.test(sl) && /aria-disabled="true"/.test(sl) && !/Back online/.test(X.sliderHTML('tell', 'Slide to send')), 'no connection: the slides that write wait, and say so');
+    X.S.offline = false;
+    X.S.data.savedQuotes.push({ id: 2601, status: 'completed', invoiced: true, amountPaid: 409000, client: { name: 'Walk-in' }, items: [{ productId: 'P1', productName: 'Cement', qty: 10, price: 30000, sellPrice: 40900, supplierId: '__stock__' }], charges: [] });
+    X.S.data.asks = [{ id: 'k1', quoteId: 2601, kind: 'void', amount: 409000, status: 'sent', createdAt: new Date().toISOString() }];
+    X.S.loadedAt = 41;
+    t.check(/Void asked/.test(X.orderRow(X.S.data.savedQuotes.find(q => q.id === 2601))), 'Done today: a row carries the void asked of the Manager');
+    t.check(X.custNcNameHit({ name: 'Kato Construction' }) && !X.custNcNameHit({ name: 'Zz' }), 'a name already on the books is found before a second one is saved');
   }
 
   process.exit(t.done() ? 1 : 0);
