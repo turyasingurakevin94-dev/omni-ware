@@ -30,6 +30,7 @@ apps show the real shop.
 | Customers | Kato Construction, Kyaligonza & Sons, Mukono Roofing, Lubowa Builders, Ggaba Stores, Nansana Hardware |
 | Suppliers | Namanve Sheets, Nakawa Cement Depot, Kiseka Steel, Owino Plumbing, Katwe Fabricators, Ndeeba Timber Works |
 | Landlord | Mr Kasozi |
+| Rival shops | Kikuubo Hardware Mart, Nateete Builders' Centre |
 
 Don't reuse a name across two roles. No "Sarah", no second "Peter", and
 "Mukasa" is only the shop and its owner.

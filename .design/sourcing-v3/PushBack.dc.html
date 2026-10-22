@@ -32,7 +32,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
     <div style="position: relative; height: 84px; margin: 0 8px">
       <div style="position: absolute; left: 0; right: 0; top: 40px; height: 4px; border-radius: 2px; background: #E6E3DD"></div>
       <sc-for list="{{marks}}" as="k" hint-placeholder-count="3">
-        <div style="position: absolute; top: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; transform: translateX(-50%); {{k.pos}}">
+        <div style="position: absolute; top: 0; display: flex; flex-direction: column; gap: 4px; {{k.pos}}">
           <span style="font-size: 11px; font-weight: 700; white-space: nowrap; {{k.ink}}">{{k.label}}</span>
           <span style="width: 14px; height: 14px; border-radius: 999px; border: 3px solid #FFFFFF; margin-top: 9px; {{k.dot}}"></span>
           <span class="m" style="font-size: 12px; font-weight: 600">{{k.v}}</span>
@@ -60,13 +60,13 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
     <div style="padding: 12px 14px; border-radius: 14px; background: #F1EEE8; font-size: 13px; line-height: 1.45; color: #5F6980">Until they answer, <span class="m" style="color: #1C2233; font-weight: 600">42,000</span> stays on the price list.</div>
 
-    <button type="button" style="all: unset; cursor: pointer; margin-top: auto; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Send <span class="m">{{offer}}</span> to Owino</button>
+    <button type="button" onClick="{{send}}" style="all: unset; cursor: pointer; margin-top: auto; text-align: center; padding: 15px 10px; border-radius: 14px; font-size: 15px; font-weight: 700; {{sendStyle}}">{{sendLabel}}</button>
   </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { offer: 42500, why: { a: true, b: false, c: false } }; }
+  constructor(p) { super(p); this.state = { offer: 42500, why: { a: true, b: false, c: false }, sent: false }; }
   renderVals() {
     const { offer, why } = this.state;
     const fmt = (n) => n.toLocaleString('en-US');
@@ -76,19 +76,32 @@ class Component extends DCLogic {
       { label: 'Was', v: '42,000', p: 42000, dot: 'background:#6B7480', ink: 'color:#5F6980' },
       { label: 'Yours', v: fmt(offer), p: offer, dot: 'background:#16203C', ink: 'color:#1C2233' },
       { label: 'They ask', v: '44,000', p: 44000, dot: 'background:#95530C', ink: 'color:#7A4A02' }
-    ].map(k => ({ ...k, pos: 'left:' + at(k.p) }));
+    ].map((k, i) => {
+      const a = parseFloat(at(k.p));
+      // "Was" hangs left of its dot, "Yours" right of it, "They ask" centred: the labels never meet
+      const pos = i === 0 ? 'right:calc(' + (100 - a).toFixed(1) + '% - 7px);align-items:flex-end'
+        : i === 1 ? 'left:calc(' + a.toFixed(1) + '% - 7px);align-items:flex-start'
+        : 'left:' + a.toFixed(1) + '%;transform:translateX(-50%);align-items:center';
+      return { ...k, pos };
+    });
     const offers = [42000, 42500, 43000].map(v => ({
       label: fmt(v), pick: () => this.setState({ offer: v }),
       style: 'all:unset;cursor:pointer;flex:1;text-align:center;padding:12px 6px;border-radius:12px;font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;' +
         (offer === v ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1px #E6E3DD')
     }));
-    const reasons = [['a', 'We buy about 60 a month'], ['b', '22 orders in six months'], ['c', 'We pay on time']].map(([k, label]) => ({
+    const reasons = [['a', 'We buy about 60 a month'], ['b', '22 orders in six months'], ['c', 'We buy every week']].map(([k, label]) => ({
       label, on: String(!!why[k]),
       toggle: () => this.setState({ why: { ...why, [k]: !why[k] } }),
       style: 'all:unset;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;' +
         (why[k] ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8')
     }));
-    return { marks, offers, reasons, offer: fmt(offer) };
+    const sent = this.state.sent;
+    return {
+      marks, offers, reasons, offer: fmt(offer),
+      send: () => this.setState({ sent: true }),
+      sendLabel: sent ? 'Sent · Owino answers in the supplier app' : 'Send ' + fmt(offer) + ' to Owino',
+      sendStyle: sent ? 'background:#E4F4EA;color:#0F6B43;font-size:14px' : 'background:#C93A30;color:#FFFFFF'
+    };
   }
 }
 </script>

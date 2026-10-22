@@ -61,12 +61,12 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
       </sc-for>
     </div>
 
-    <button type="button" role="switch" aria-checked="{{pinOn}}" onClick="{{pin}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E6E3DD">
+    <button type="button" onClick="{{pin}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E6E3DD">
       <span style="display: flex; flex-direction: column; gap: 2px; flex: 1">
-        <span style="font-size: 15px; font-weight: 700">Pin it on the agents' feed</span>
-        <span style="font-size: 12px; color: #5F6980">for <span class="m">14</span> days, so agents sell it</span>
+        <span style="font-size: 15px; font-weight: 700">Ask Ruth to pin it on the agents' feed</span>
+        <span style="font-size: 12px; color: #5F6980">{{pinSub}}</span>
       </span>
-      <span style="width: 48px; height: 28px; border-radius: 999px; position: relative; {{track}}"><span style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 999px; background: #FFFFFF; {{knob}}"></span></span>
+      <span style="flex: none; padding: 7px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; {{pinChip}}">{{pinWord}}</span>
     </button>
   </div>
 
@@ -77,13 +77,13 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pin: true }; }
+  constructor(p) { super(p); this.state = { pin: false }; }
   renderVals() {
     const told = [
       { ini: 'GA', name: 'Grace Akello', why: 'Sales · asked for Kato Construction', av: 'background:#DCEAF8;color:#1A5A8A' },
       { ini: 'BO', name: 'Brian Ouma', why: 'Sales · asked for Lubowa Builders', av: 'background:#F6E4F1;color:#7A3268' },
       { ini: 'AN', name: 'Aisha Namutebi', why: 'Agent · asked for Mukono Roofing', av: 'background:#DDF1EE;color:#0E5E57' },
-      { ini: 'DO', name: 'Denis Okello', why: 'Buyer · held as Stock, first batch 40', av: 'background:#E4E6FA;color:#3A3F9B' }
+      { ini: 'DO', name: 'Denis Okello', why: 'Buyer · decides the first batch (about 40 suggested)', av: 'background:#E4E6FA;color:#3A3F9B' }
     ];
     const customers = [
       { name: 'Kato Construction', q: '20', owner: 'Grace' },
@@ -92,10 +92,11 @@ class Component extends DCLogic {
     ];
     const on = this.state.pin;
     return {
-      told, customers, pinOn: String(on),
+      told, customers,
       pin: () => this.setState({ pin: !on }),
-      track: on ? 'background:#0F6B43' : 'background:#E0DCD4',
-      knob: on ? 'left:23px' : 'left:3px'
+      pinSub: on ? 'Asked · Ruth decides' : 'for 14 days, so agents sell it · the Manager decides',
+      pinWord: on ? 'Asked' : 'Ask',
+      pinChip: on ? 'background:#E4F4EA;color:#0F6B43' : 'background:#16203C;color:#FFFFFF'
     };
   }
 }

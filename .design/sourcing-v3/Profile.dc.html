@@ -15,7 +15,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 </style>
 </helmet>
-<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
 
   <div style="background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 14px">
     <a href="Main.dc.html" aria-label="Back to Today" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
@@ -66,7 +66,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
         <span style="font-size: 13px">Signing out now loses them. Wait for signal, or sign out anyway.</span>
         <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
           <a href="Outbox.dc.html" style="text-align: center; padding: 11px; border-radius: 12px; background: #FFFFFF; color: #1C2233; font-size: 14px; font-weight: 700">See them</a>
-          <button type="button" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #8E2A22; color: #FFFFFF; font-size: 14px; font-weight: 700">Sign out anyway</button>
+          <button type="button" onClick="{{outAnyway}}" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #8E2A22; color: #FFFFFF; font-size: 14px; font-weight: 700">{{outLabel}}</button>
         </div>
       </div>
     </sc-if>
@@ -76,9 +76,9 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { perDay: 6, push: true, out: false }; }
+  constructor(p) { super(p); this.state = { perDay: 6, push: true, out: false, gone: false }; }
   renderVals() {
     const S = this.state;
     return {
@@ -89,7 +89,8 @@ class Component extends DCLogic {
       track: S.push ? 'background:#0F6B43' : 'background:#E0DCD4',
       knob: S.push ? 'left:23px' : 'left:3px',
       confirmOut: S.out, notConfirming: !S.out,
-      signOut: () => this.setState({ out: true })
+      signOut: () => this.setState({ out: true }),
+      outAnyway: () => this.setState({ gone: true }), outLabel: S.gone ? 'Signed out' : 'Sign out anyway'
     };
   }
 }

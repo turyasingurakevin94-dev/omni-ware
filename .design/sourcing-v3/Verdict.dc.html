@@ -81,7 +81,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
         <span style="font-size: 14px; font-weight: 700">Kiseka Steel has to agree first</span>
         <span style="font-size: 13px">Until they do, the verdict gate stays open.</span>
         <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-          <button type="button" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #FFFFFF; color: #1C2233; font-size: 14px; font-weight: 700">Ask on WhatsApp</button>
+          <button type="button" onClick="{{ask}}" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #FFFFFF; color: #1C2233; font-size: 14px; font-weight: 700">{{askLabel}}</button>
           <button type="button" onClick="{{agree}}" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700">{{agreeLabel}}</button>
         </div>
       </div>
@@ -111,21 +111,21 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: 'Stock', agreed: false, reason: null }; }
+  constructor(p) { super(p); this.state = { pick: 'Stock', agreed: false, reason: null, asked: false }; }
   renderVals() {
-    const { pick, agreed, reason } = this.state;
+    const { pick, agreed, reason, asked } = this.state;
     // The Sourcing score: cost, rivals and demand only. Weights 30/30/10/15/15.
     const parts = [
       { label: 'Demand', w: 30, v: 43, basis: '3 buyers · 40 sheets · waiting 9 days' },
       { label: 'Room', w: 30, v: 88, basis: '31,000 under the cheapest rival in stock (26%)' },
       { label: 'Competition', w: 10, v: 54, basis: '2 rivals have it in stock' },
       { label: 'Supply', w: 15, v: 85, basis: '2 suppliers priced' },
-      { label: 'Cash back', w: 15, v: 73, basis: 'the batch sells in about 16 days' }
+      { label: 'Cash back', w: 15, v: 73, basis: 'about 16 days, counting none of the 40 as sure' }
     ].map(p => ({ ...p, bar: 'width:' + p.v + '%;background:' + (p.v >= 70 ? '#0F6B43' : p.v < 50 ? '#95530C' : '#5F6980') }));
     const AMB = 'color:#7A4A02';
     const opts = [
-      { k: 'Stock', rec: true, why: 'Sells in about 16 days, so the cash comes back fast. Kiseka takes 3 days to deliver, too slow to buy per order.',
-        facts: [{ k: 'Cash out', v: '4,720,000' }, { k: 'Cost', v: '118,000' }, { k: 'Room', v: '31,000' }, { k: 'They wait', v: '0 d' }] },
+      { k: 'Stock', rec: true, why: 'Sells in about 16 days, so the cash comes back fast. Kiseka takes 3 days to deliver, too slow to buy per order. The Buyer decides how many and when.',
+        facts: [{ k: 'Cash if 40', v: '4,720,000' }, { k: 'Cost', v: '118,000' }, { k: 'Room', v: '31,000' }, { k: 'They wait', v: '0 d' }] },
       { k: 'Per order', rec: false, why: 'No cash out, but each customer waits for Kiseka’s 3-day delivery.',
         facts: [{ k: 'Cash out', v: '0' }, { k: 'Cost', v: '118,000' }, { k: 'Room', v: '31,000' }, { k: 'They wait', v: '≈ 3 d', ink: AMB }] },
       { k: 'Consign', rec: false, why: 'No cash out, but consigned goods cost 6% more. Worth it when a batch takes over 21 days to sell.',
@@ -145,6 +145,7 @@ class Component extends DCLogic {
     const isConsign = pick === 'Consign';
     return {
       parts, options, reasons, isConsign,
+      ask: () => this.setState({ asked: true }), askLabel: asked ? 'Asked 18:20' : 'Ask on WhatsApp',
       overriding: pick !== 'Stock',
       agree: () => this.setState({ agreed: !agreed }),
       agreeLabel: agreed ? 'Kiseka agreed' : 'They agreed',

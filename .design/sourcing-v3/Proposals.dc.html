@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Supplier proposals</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Prices.dc.html" aria-label="Back to Prices" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="display: flex; flex-direction: column">
+      <span style="font-size: 16px; font-weight: 700">Supplier proposals</span>
+      <span style="font-size: 12px; color: #5F6980">sent from the supplier app · <span class="m">{{left}}</span> to answer</span>
+    </span>
+  </div>
+
+  <div style="padding: 8px 16px 40px; display: flex; flex-direction: column; gap: 12px">
+    <sc-for list="{{props}}" as="p" hint-placeholder-count="2">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px">
+        <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+          <span style="font-size: 15px; font-weight: 700">{{p.item}}</span>
+          <span style="font-size: 12px; color: #3A3F9B; font-weight: 700">{{p.sup}}</span>
+        </span>
+        <span style="display: flex; align-items: center; gap: 10px">
+          <span class="m" style="color: #5F6980; text-decoration: line-through">{{p.was}}</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          <span class="m" style="font-size: 16px; font-weight: 600">{{p.now}}</span>
+          <span class="m" style="padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; {{p.chip}}">{{p.pct}}</span>
+        </span>
+        <span style="font-size: 12px; color: #5F6980">{{p.note}}</span>
+        <sc-if value="{{p.open}}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <sc-if value="{{p.rise}}" hint-placeholder-val="{{ true }}">
+              <a href="PushBack.dc.html" style="text-align: center; padding: 11px; border-radius: 12px; background: #F1EEE8; font-size: 14px; font-weight: 700">Push back</a>
+            </sc-if>
+            <sc-if value="{{p.drop}}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{p.later}}" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #F1EEE8; font-size: 14px; font-weight: 700">Not now</button>
+            </sc-if>
+            <button type="button" onClick="{{p.accept}}" style="all: unset; cursor: pointer; text-align: center; padding: 11px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700">Accept</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{p.done}}" hint-placeholder-val="{{ false }}">
+          <span style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; {{p.resultStyle}}">
+            <span style="flex: 1">{{p.result}}</span>
+            <button type="button" onClick="{{p.undo}}" style="all: unset; cursor: pointer; font-weight: 700; text-decoration: underline">Undo</button>
+          </span>
+        </sc-if>
+      </div>
+    </sc-for>
+    <span style="font-size: 12px; color: #5F6980; padding: 0 4px">Accepting a rise tells the Manager about every order line it puts under its sale price.</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { res: {} }; }
+  renderVals() {
+    const res = this.state.res;
+    const set = (id, v) => () => this.setState({ res: { ...res, [id]: v } });
+    const base = [
+      { id: 'p1', item: 'PVC pipe 4" × 6m', sup: 'Owino Plumbing', was: '42,000', now: '44,000', pct: '+4.8%', rise: true,
+        chip: 'background:#FDEEE1;color:#7A4A02', note: 'Sent yesterday, 16:05 · we buy about 60 a month' },
+      { id: 'p2', item: 'Binding wire 25kg', sup: 'Kiseka Steel', was: '96,000', now: '94,500', pct: '−1.6%', rise: false,
+        chip: 'background:#E4F4EA;color:#0F6B43', note: 'Sent today, 09:40 · a lower price' }
+    ];
+    const props = base.map(p => {
+      const r = res[p.id];
+      return {
+        ...p, drop: !p.rise, open: !r, done: !!r,
+        result: r === 'later' ? 'Kept for later. It stays here.' : 'Accepted. It is on the price list now.',
+        resultStyle: r === 'later' ? 'background:#F1EEE8;color:#5F6980' : 'background:#E4F4EA;color:#0F6B43',
+        accept: set(p.id, 'yes'), later: set(p.id, 'later'), undo: set(p.id, undefined)
+      };
+    });
+    return { props, left: props.filter(p => p.open).length };
+  }
+}
+</script>
+</body>
+</html>

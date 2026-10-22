@@ -19,12 +19,17 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
   <div style="background: #FFFFFF; border-bottom: 1px solid #E6E3DD; padding: 12px 12px 12px 8px; display: flex; flex-direction: column; gap: 10px">
     <div style="display: flex; align-items: center; gap: 6px">
-      <a href="QuickPrice.dc.html" aria-label="Back" style="width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center">
+      <a href="{{backHref}}" aria-label="Back" style="width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
       <label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search items, suppliers, rivals and hunts</label>
       <input id="q" type="search" value="pvc" style="box-sizing: border-box; flex: 1; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #16203C; font: inherit; font-size: 16px; font-weight: 600">
     </div>
-    <span style="align-self: flex-start; margin-left: 50px; padding: 4px 10px; border-radius: 999px; background: #F6E4F1; color: #7A3268; font-size: 12px; font-weight: 700">Picking an item for a rival price</span>
+    <div role="radiogroup" aria-label="Picking an item for" style="display: flex; align-items: center; gap: 6px; margin-left: 50px; flex-wrap: wrap">
+      <span style="font-size: 12px; font-weight: 600; color: #5F6980">For</span>
+      <sc-for list="{{modes}}" as="mo" hint-placeholder-count="3">
+        <button type="button" role="radio" aria-checked="{{mo.on}}" onClick="{{mo.pick}}" style="{{mo.style}}">{{mo.label}}</button>
+      </sc-for>
+    </div>
   </div>
 
   <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 14px">
@@ -58,20 +63,32 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
 class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { mode: 'rival' }; }
   renderVals() {
+    const MODES = {
+      rival: { label: 'a rival price', href: 'QuickPrice.dc.html', on: 'background:#F6E4F1;color:#7A3268' },
+      photo: { label: 'a photo', href: 'PhotoGate.dc.html', on: 'background:#16203C;color:#FFFFFF' },
+      supplier: { label: 'a supplier price', href: 'SupplierPrice.dc.html', on: 'background:#E4E6FA;color:#3A3F9B' }
+    };
+    const mode = this.state.mode, go = MODES[mode].href;
+    const modes = Object.keys(MODES).map(k => ({
+      label: MODES[k].label, on: String(mode === k),
+      pick: () => this.setState({ mode: k }),
+      style: 'all:unset;cursor:pointer;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700;' + (mode === k ? MODES[k].on : 'background:#F1EEE8;color:#5F6980')
+    }));
     const ITEM = 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5 12 12l9-4.5M12 12v9';
     const SUP = 'M3 21V9l9-5 9 5v12M8 21v-7h8v7';
     const groups = [
       { label: 'Items', rows: [
-        { name: 'PVC pipe 4" × 6m', sub: 'Plumbing · 2 suppliers', href: 'QuickPrice.dc.html', well: 'background:#F1EEE8;color:#1C2233', icon: ITEM },
-        { name: 'Solvent cement 500ml', sub: 'also found as "pvc glue"', href: 'QuickPrice.dc.html', well: 'background:#F1EEE8;color:#1C2233', icon: ITEM },
-        { name: 'PVC elbow 4"', sub: 'Plumbing · 1 supplier', href: 'QuickPrice.dc.html', well: 'background:#F1EEE8;color:#1C2233', icon: ITEM }
+        { name: 'PVC pipe 4" × 6m', sub: 'Plumbing · 2 suppliers', href: go, well: 'background:#F1EEE8;color:#1C2233', icon: ITEM },
+        { name: 'Solvent cement 500ml', sub: 'also found as "pvc glue"', href: go, well: 'background:#F1EEE8;color:#1C2233', icon: ITEM },
+        { name: 'PVC elbow 4"', sub: 'Plumbing · 1 supplier', href: go, well: 'background:#F1EEE8;color:#1C2233', icon: ITEM }
       ] },
       { label: 'Suppliers', rows: [
         { name: 'Owino Plumbing', sub: 'sells PVC · 7 jobs today', href: 'Supplier.dc.html', well: 'background:#E4E6FA;color:#3A3F9B', icon: SUP }
       ] }
     ];
-    return { groups };
+    return { groups, modes, backHref: go };
   }
 }
 </script>

@@ -39,11 +39,6 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
       <span style="padding: 7px 11px; border-radius: 999px; background: #FFFFFF; color: #1C2233; font-size: 12px; font-weight: 700">Compare</span>
     </a>
 
-    <div aria-hidden="true" style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #5F6980; padding: 0 4px">
-      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B"></i>Cheapest on</span>
-      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B; opacity: .6"></i>Fills orders</span>
-      <span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 2px; background: #3A3F9B; opacity: .35"></i>Prices fresh</span>
-    </div>
 
     <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
       <sc-for list="{{list}}" as="s" hint-placeholder-count="6">
@@ -52,8 +47,8 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
             <span style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0">
               <span style="font-size: 15px; font-weight: 700">{{s.name}}</span>
               <span style="font-size: 12px; color: #5F6980">{{s.sells}}</span>
-              <span style="display: flex; flex-direction: column; gap: 3px; width: 150px">
-                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="height: 4px; border-radius: 2px; background: #EFECE6; display: block"><span style="display: block; height: 4px; border-radius: 2px; {{b}}"></span></span></sc-for>
+              <span style="display: flex; flex-direction: column; gap: 4px; width: 210px">
+                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="display: grid; grid-template-columns: 58px 1fr 26px; align-items: center; gap: 6px"><span style="font-size: 11px; color: #5F6980">{{b.k}}</span><span style="height: 5px; border-radius: 3px; background: #EFECE6; display: block"><span style="display: block; height: 5px; border-radius: 3px; background: #3A3F9B; {{b.w}}"></span></span><span class="m" style="font-size: 11px; text-align: right">{{b.v}}</span></span></sc-for>
               </span>
             </span>
             <span style="flex: none; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{s.jobStyle}}">{{s.jobs}}</span>
@@ -64,8 +59,8 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
             <span style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0">
               <span style="font-size: 15px; font-weight: 700">{{s.name}}</span>
               <span style="font-size: 12px; color: #5F6980">{{s.sells}}</span>
-              <span style="display: flex; flex-direction: column; gap: 3px; width: 150px">
-                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="height: 4px; border-radius: 2px; background: #EFECE6; display: block"><span style="display: block; height: 4px; border-radius: 2px; {{b}}"></span></span></sc-for>
+              <span style="display: flex; flex-direction: column; gap: 4px; width: 210px">
+                <sc-for list="{{s.bars}}" as="b" hint-placeholder-count="3"><span style="display: grid; grid-template-columns: 58px 1fr 26px; align-items: center; gap: 6px"><span style="font-size: 11px; color: #5F6980">{{b.k}}</span><span style="height: 5px; border-radius: 3px; background: #EFECE6; display: block"><span style="display: block; height: 5px; border-radius: 3px; background: #3A3F9B; {{b.w}}"></span></span><span class="m" style="font-size: 11px; text-align: right">{{b.v}}</span></span></sc-for>
               </span>
             </span>
             <span style="flex: none; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; {{s.jobStyle}}">{{s.jobs}}</span>
@@ -106,7 +101,7 @@ class Component extends DCLogic {
     const order = sort === 'jobs' ? (a, b) => b.jobs - a.jobs : sort === 'stale' ? (a, b) => a.fresh - b.fresh : (a, b) => a.name.localeCompare(b.name);
     const list = base.slice().sort(order).map(s => ({
       ...s, href: s.link || '', isLink: !!s.link, noLink: !s.link,
-      bars: [['width:' + s.ch + '%;background:#3A3F9B'], ['width:' + s.fill + '%;background:#3A3F9B;opacity:.6'], ['width:' + s.fresh + '%;background:#3A3F9B;opacity:.35']].map(x => x[0]),
+      bars: [['Cheapest', s.ch], ['Fills', s.fill], ['Fresh', s.fresh]].map(([k, v]) => ({ k, v, w: 'width:' + v + '%' })),
       jobs: s.jobs ? s.jobs + (s.jobs === 1 ? ' job' : ' jobs') : 'nothing today',
       jobStyle: s.jobs ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8;color:#5F6980'
     }));

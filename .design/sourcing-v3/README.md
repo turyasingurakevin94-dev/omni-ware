@@ -1,4 +1,4 @@
-# Sourcing engine — design canvas (v3, round 3)
+# Sourcing engine — design canvas (v3, round 4)
 
 These are the phone mockups for the Sourcing app, rebuilt from first principles and then
 revised against the independent review in `REVIEW.md`. Each `*.dc.html` file is one
@@ -17,13 +17,13 @@ six gates, in this order on every screen:
 | Name & aisle | set | Sourcing |
 | Markup | the Manager prices it, and it goes live in the same write | Manager |
 
-## Screens (35)
+## Screens (36)
 
 | Row | Artboards |
 |---|---|
 | The funnel | `Main` (Today), `Wanted` (sort the asks), `Hunt` (who to ask), `Funnel`, `Passport`, `Verdict`, `PhotoGate`, `PackingGate`, `SendToManager`, `ManagerItem` (Manager app), `SentBack`, `Live` |
 | In the field | `Capture`, `NewItem`, `SupplierPrice`, `QuickPrice`, `Search`, `Visit`, `PushBack`, `Outbox` |
-| Prices and suppliers | `Prices`, `Suppliers`, `Supplier` (Owino Plumbing), `Twins` (merge), `Profile` |
+| Prices and suppliers | `Prices`, `Suppliers`, `Supplier` (Owino Plumbing), `Twins` (merge), `Profile`, `Proposals` |
 | The rest | `NameAisle`, `SuppliersGate` (who sells it), `NewSupplier`, `Deal` (hoop iron: switch supplier), `RivalRun`, `SupplierKiseka`, `Certify` (iron sheet, a live top seller), `EmptyToday`, `ErrorState`, `LongNames` |
 
 ## The Sourcing score (review B2)
@@ -124,5 +124,50 @@ Two decisions are drawn into these screens:
 - **Passports.** Only the wire mesh and the iron sheet have one. The other Funnel cards open their action, not a passport.
 - **The deal radar's "Next step" card** (Namanve's 100+ price) opens the Suppliers list, not a deal page.
 - **Wiring for the build:** the decision-rights rows, the migration and the push kinds (plan stage 1a).
+
+## Round 4: the second review (REVIEW-2.md)
+
+**The owner's decisions on the rights (review B1):**
+- **The hold stays Sourcing's** (`product.edit`).
+- **The Buyer decides the first batch** (`buy.restock`). Sourcing only suggests it: "Suggested batch 40", "≈40 suggested".
+- **The Manager pins items to the agents' feed.** Sourcing asks from the Live board, and the Manager decides. This is a new task, `feed.pin`, in the build.
+- **Kikuubo Hardware Mart and Nateete Builders' Centre** are the sample shop's rivals, now listed in `docs/canvas-cast.md`.
+
+**What each finding became:**
+
+| Finding | Done on the canvas |
+|---|---|
+| B1 rights | Batch wording is a suggestion everywhere, the Buyer decides it, and Live asks Ruth to pin |
+| B2 tier cost | Kiseka has one price. Katwe's step (50+ 119,000) is out of a 40-sheet batch's reach, so the verdict stays 68 · Stock · 118,000 |
+| S1 photo path | Capture's Photo opens the camera, whose item chip opens Search. Search has a "For: a rival price · a photo · a supplier price" switch, and its rows go to the matching screen |
+| S2 clipped content | Today is 1,340 and the Funnel 1,520 |
+| S3 coach | "A photo and a hold, and it is ready for the Manager" |
+| S4 PushBack labels | "Was" hangs left of its dot and "Yours" right of it |
+| S5 dead buttons | Each now changes state: PushBack send, Hunt ask, Verdict ask, Deal ask, NewSupplier card and contacts, ErrorState retry, Profile sign-out |
+| S6 Proposals | New Proposals board, opened from Today's "Review 2" and Kiseka's "Review" |
+| S7 averages | One mean of the six suppliers everywhere: cheapest 70, fills 90, fresh 83 |
+| S8 screws | Katwe Fabricators (carton of 5,000) and Namanve Sheets (roofing screws by the 1,000); the Funnel says "2 prices" |
+| S9 cut names | The tag moves to the second line on Visit and RivalRun; the name has the row's full width |
+| S10 templates | The photo, packing and sent-back boards are titled as templates or examples |
+| S11 pronoun | Named, no pronoun |
+| S12 Packing tile | Opens the packing template |
+| P1 | 15px stays: ow-design §1 sets the phone body at 15px |
+| P2 | Radar figures are in the money face |
+| P3 | "Send · 2 gaps" |
+| P4 | "1 sent back" chip in Today's hero, beside "5 went live" |
+| P5 | "about 16 days, counting none of the 40 as sure" |
+| P6 | The agent's ask uses the Sell tint |
+| P7 | Supplier rows show three labelled bars with figures |
+| P8 | SendToManager, SentBack and Profile are 844; NewItem is 900 |
+| P9 | "Manager app · from a push" |
+| P10 | The wire mesh is "being priced" |
+
+**Data this canvas assumes, added to the build's migration:**
+- `supplier_visits`, written by a visit's Start and Finish, behind "since a visit" and "Plan a visit";
+- `suppliers.delivery_days`;
+- `suppliers.sells text[]`, replacing the "Sells:" lines in `notes`;
+- `payload.counter` on `supplier_proposals`, shown in the supplier app.
+
+PushBack's "We pay on time" is gone, because that is Accounts' data.
 
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
