@@ -57,3 +57,31 @@ Treat this as a persistent design requirement, not a one-time instruction. Apply
 ## Mockups
 
 Always make mockups with **/design**. Do not hand-build design canvases.
+
+## Audit loop (Store app)
+
+The Store app (`store.html`) is improved in rounds, one aspect per round:
+1. Data integrity
+2. Core workflows
+3. Reliability
+4. Search and navigation
+5. Roles and privacy
+6. Wording
+7. Premium UI at 360px
+8. Accessibility
+9. Speed
+10. Final regression
+
+Cowork tests the live site and sends a "Round N fix brief". When one arrives, use the `omni-ware-round` skill:
+- **Phase A**: design the changes on the canvas and write `docs/audit/ROUND-<N>.md`, then stop.
+- **Phase B**: implement only after Kevin says "go ahead".
+
+The history lives in `docs/audit/LOG.md`.
+
+## Design language (do not drift)
+
+- **Canvas first.** The design canvas is the source of truth. Every UI change is drawn there before it is coded, at 360px, with all states (default, pressed, disabled, sending, success, error, offline, empty).
+- **Reuse before inventing.** Use the existing tokens, components and icon set (24 box, round ends). A new component is added to the canvas first, with a reason.
+- **Navy hero, warm light body.** One primary action per screen. A slide is used for irreversible yard actions. End-of-flow screens use one button with one label, the same on every screen.
+- **Copy.** Short plain words for low-literacy users. One word per concept. The person's display name, never the email handle. Order numbers as #0550.
+- **Layout.** Tap targets at least 44px. Nothing clipped at 360px. Nothing hidden under the floating play button. Consistent spacing between list rows.
