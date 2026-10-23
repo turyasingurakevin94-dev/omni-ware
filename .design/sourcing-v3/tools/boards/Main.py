@@ -107,7 +107,7 @@ also = lst('\n'.join([
         '<span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px"><span class="m" style="font-size: 15px; font-weight: 600">210,000</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">a month</span></span>', href='Deal.dc.html'),
     row('Iron sheet G28 · certify', 'No photo yet · 1 to check', icon_well('star', 'green'), ring(4/6, '4/6', 40, 4, '#0F6B43', '#EFECE6', 11, '4 of 6 checks kept, 1 to check', part=1/6), href='Certify.dc.html'),
 ]))
-outbox = row('2 captures on this phone', 'They send when there is signal', icon_well('outbox', 'amber'), chev('#95530C'), href='Outbox.dc.html', sub_style='color: #7A4A02')
+outbox = row('2 captures on this phone', 'They go up when there is signal', icon_well('outbox', 'amber'), chev('#95530C'), href='Outbox.dc.html', sub_style='color: #7A4A02')
 coach_rows = '\n'.join(
     row(t, s, f'<span class="m" style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F6E4F1; color: #7A3268; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center">{n}</span>', '')
     for n, t, s in [(1, 'Wire mesh: a photo and a hold', '3 customers wait for 40 sheets'),
