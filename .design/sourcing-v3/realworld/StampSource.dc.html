@@ -64,30 +64,30 @@ button{font-family:inherit}
         </button>
       </sc-for>
     </div>
-    <!-- someone else: from the supplier book, or a supplier met in person -->
-    <sc-if value="{{showOtherBtn}}" hint-placeholder-val="{{ true }}">
-      <button type="button" onClick="{{openOther}}" style="all: unset; cursor: pointer; min-height: 48px; padding: 0 14px; border-radius: 16px; box-shadow: inset 0 0 0 1.5px #E3DACB; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #2B3A8C"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Someone else</button>
-    </sc-if>
-    <sc-if value="{{otherOpen}}" hint-placeholder-val="{{ false }}">
-    <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 14px; display: flex; flex-direction: column; gap: 12px; animation: owIn .25s ease-out">
-      <sc-if value="{{showBook}}" hint-placeholder-val="{{ true }}">
-        <span style="font-size: 12px; font-weight: 700; color: #6B5A43">From our supplier book</span>
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          <sc-for list="{{book}}" as="b" hint-placeholder-count="3">
-            <button type="button" onClick="{{b.add}}" style="all: unset; cursor: pointer; box-sizing: border-box; min-height: 48px; padding: 0 12px; border-radius: 12px; background: #F7F2E9; display: flex; align-items: center; gap: 10px">
-              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13px; font-weight: 700">{{b.name}}</span><span style="font-size: 11px; font-weight: 600; color: #6B5A43">{{b.sells}}</span></span>
-              <span style="font-size: 12px; font-weight: 700; color: #2B3A8C">Add to the ask</span>
-            </button>
-          </sc-for>
-        </div>
-      </sc-if>
-      <span style="font-size: 12px; font-weight: 700; color: #6B5A43">Or someone new, met in person</span>
-      <div style="display: flex; gap: 8px">
-        <input value="{{nn}}" aria-label="Supplier name" placeholder="Who" onInput="{{typeNN}}" style="flex: 1; min-width: 0; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 700; color: #1C2233">
-        <input value="{{np}}" inputmode="numeric" aria-label="Their price" placeholder="Price" onInput="{{typeNP}}" class="m" style="width: 112px; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: right">
+    <!-- one search bar: anyone in the book, or add them if they are new -->
+    <sc-if value="{{showSearch}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <label style="height: 50px; box-sizing: border-box; padding: 0 14px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E3DACB; display: flex; align-items: center; gap: 10px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B5A43" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg><input value="{{q}}" aria-label="Search any supplier" placeholder="Any other supplier" onInput="{{typeQ}}" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233"></label>
+      <sc-if value="{{hasHits}}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius: 16px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 2px 12px; animation: owIn .2s ease-out">
+        <sc-for list="{{hits}}" as="h" hint-placeholder-count="2">
+          <button type="button" onClick="{{h.add}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; min-height: 54px; display: flex; align-items: center; gap: 10px; border-top: {{h.rule}}">
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 700">{{h.name}}</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43">{{h.sells}}</span></span>
+            <span style="font-size: 12px; font-weight: 700; color: #2B3A8C">Add to the ask</span>
+          </button>
+        </sc-for>
       </div>
-      <button type="button" onClick="{{addNew}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; {{addStyle}}">Add their price</button>
-      <span style="font-size: 12px; font-weight: 600; color: #6B5A43">A price you got yourself counts now. They join the supplier book, and Denis is told.</span>
+      </sc-if>
+      <sc-if value="{{offerNew}}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius: 16px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 14px; display: flex; flex-direction: column; gap: 10px; animation: owIn .2s ease-out">
+        <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700"><span style="width: 30px; height: 30px; flex: none; border-radius: 9px; background: #E4E6FA; color: #2B3A8C; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>New supplier: {{qName}}</span>
+        <input value="{{fPhone}}" inputmode="tel" aria-label="Phone" placeholder="Phone" onInput="{{typePhone}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
+        <input value="{{fWhere}}" aria-label="Where they are" placeholder="Where: market, street, landmark" onInput="{{typeWhere}}" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 600; color: #1C2233">
+        <input value="{{fSells}}" aria-label="What they sell" placeholder="What they sell" onInput="{{typeSells}}" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 600; color: #1C2233">
+        <input value="{{fPrice}}" inputmode="numeric" aria-label="Their price for the tile cutter, if you have it" placeholder="Their price, if you have it" onInput="{{typePrice}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
+        <button type="button" onClick="{{saveNew}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; {{saveStyle}}">{{saveLabel}}</button>
+      </div>
+      </sc-if>
     </div>
     </sc-if>
     <sc-if value="{{canAsk}}" hint-placeholder-val="{{ false }}">
@@ -131,7 +131,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, otherOpen: false, nn: '', np: '' }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '' }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -171,25 +171,32 @@ class Component extends DCLogic {
         price: st === 'price', amount: ans ? ans.amount : '', per: ans ? ans.per : '', waiting: st === 'wait',
         rightInk: st === 'skip' ? 'opacity:.4' : '' };
     });
-    if (S.custom) rows.push({ i: S.custom.name.slice(0, 2).toUpperCase(), name: S.custom.name, on: 'true', pick: () => {}, sub: 'New · met in person · now in the book', subInk: 'color:#0F6B43',
-      box: false, boxStyle: '', price: true, amount: S.custom.price, per: 'one · your own price', waiting: false, rightInk: '' });
+    if (S.custom) rows.push({ i: S.custom.name.slice(0, 2).toUpperCase(), name: S.custom.name, on: 'true', pick: () => {},
+      sub: (S.custom.price ? 'New · ' : 'New · asked on WhatsApp · ') + S.custom.where + ' · ' + S.custom.phone, subInk: 'color:#0F6B43',
+      box: false, boxStyle: '', price: !!S.custom.price, amount: S.custom.price, per: 'one · you got it yourself', waiting: !S.custom.price, rightInk: '' });
     const sups = rows.map((r, n) => ({ ...r, rule: n ? '1px solid #F1EBE0' : 'none' }));
-    const book = BOOK.filter(x => !S.extra.includes(x[0])).map(([k, , name, sells]) => ({ name, sells,
-      add: () => this.setState({ extra: [...S.extra, k], pick: { ...S.pick, [k]: true } }) }));
-    const npv = parseInt(String(S.np).replace(/[^0-9]/g, ''), 10) || 0;
-    const canAdd = S.nn.trim().length > 1 && npv >= 1000;
+    const qq = S.q.trim().toLowerCase();
+    const listed = SUP.map(x => x[2].toLowerCase()).concat(S.custom ? [S.custom.name.toLowerCase()] : []);
+    const hitsRaw = qq.length < 2 ? [] : BOOK.filter(x => !S.extra.includes(x[0]) && (x[2].toLowerCase().includes(qq) || x[3].toLowerCase().includes(qq)));
+    const hits = hitsRaw.map(([k, , name, sells], n) => ({ name, sells, rule: n ? '1px solid #F1EBE0' : 'none',
+      add: () => this.setState({ extra: [...S.extra, k], pick: { ...S.pick, [k]: true }, q: '' }) }));
+    const offerNew = qq.length >= 3 && !hitsRaw.length && !listed.some(n => n.includes(qq)) && !S.custom;
+    const fpv = parseInt(String(S.fPrice).replace(/[^0-9]/g, ''), 10) || 0;
+    const canSave = S.fPhone.replace(/[^0-9]/g, '').length >= 9 && S.fWhere.trim().length > 2;
     const nPick = Object.values(S.pick).filter(Boolean).length;
-    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom ? 1 : 0);
+    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.price ? 1 : 0);
     const pending = asked && SUP.some(([k]) => S.pick[k] && !S.back[k]);
     const can = priced >= 1 && !pending;
     return {
       strip, askers, sups,
-      ring: SUP.filter(([k, , , , a]) => S.back[k] && a).map(([, , name, , a]) => name.split(' ')[0].toUpperCase() + ' ' + a.amount).concat(S.custom ? [S.custom.name.split(' ')[0].toUpperCase() + ' ' + S.custom.price] : []).join(' • ') + ' • ' + priced + ' PRICED • ',
-      book, showBook: !asked && book.length > 0, otherOpen: S.otherOpen && !S.inked, showOtherBtn: !S.otherOpen && !S.inked,
-      openOther: () => this.setState({ otherOpen: true }), nn: S.nn, np: S.np,
-      typeNN: (e) => this.setState({ nn: e.target.value }), typeNP: (e) => this.setState({ np: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
-      addNew: () => { if (canAdd) this.setState({ custom: { name: S.nn.trim(), price: npv.toLocaleString('en-US') }, otherOpen: false, nn: '', np: '' }); },
-      addStyle: canAdd ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
+      ring: SUP.filter(([k, , , , a]) => S.back[k] && a).map(([, , name, , a]) => name.split(' ')[0].toUpperCase() + ' ' + a.amount).concat(S.custom && S.custom.price ? [S.custom.name.split(' ')[0].toUpperCase() + ' ' + S.custom.price] : []).join(' • ') + ' • ' + priced + ' PRICED • ',
+      q: S.q, typeQ: (e) => this.setState({ q: e.target.value }), hits, hasHits: hits.length > 0, offerNew, showSearch: !S.inked,
+      qName: S.q.trim(), fPhone: S.fPhone, fWhere: S.fWhere, fSells: S.fSells, fPrice: S.fPrice,
+      typePhone: (e) => this.setState({ fPhone: e.target.value.replace(/[^0-9+ ]/g, '').slice(0, 16) }), typeWhere: (e) => this.setState({ fWhere: e.target.value }),
+      typeSells: (e) => this.setState({ fSells: e.target.value }), typePrice: (e) => this.setState({ fPrice: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
+      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: S.fSells.trim(), price: fpv ? fpv.toLocaleString('en-US') : '' }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '' }); },
+      saveLabel: fpv ? 'Add them, with their price' : 'Add them and ask on WhatsApp',
+      saveStyle: canSave ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
       stampSub: priced + (priced === 1 ? ' PRICE IN' : ' PRICES IN'), stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
       told: (priced > 1 ? 'The ' + priced + ' prices go' : 'The price goes') + ' to the price list. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
       stripAria: (S.inked ? 2 : 1) + ' of 9 stamps',
