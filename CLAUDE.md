@@ -73,10 +73,10 @@ The Store app (`store.html`) is improved in rounds, one aspect per round:
 10. Final regression
 
 Cowork tests the live site and sends a "Round N fix brief". When one arrives, use the `omni-ware-round` skill:
-- **Phase A**: design the changes on the canvas and write `docs/audit/ROUND-<N>.md`, then stop.
+- **Phase A**: design the changes on the canvas and write `docs/audit/<app>/ROUND-<N>.md`, then stop.
 - **Phase B**: implement only after Kevin says "go ahead".
 
-The history lives in `docs/audit/LOG.md`.
+The Store history lives in `docs/audit/store/LOG.md`; each app gets its own folder. The words every app shares are in `docs/audit/GLOSSARY.md`.
 
 ## Design language (do not drift)
 

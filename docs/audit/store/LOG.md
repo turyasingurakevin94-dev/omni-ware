@@ -1,6 +1,6 @@
 # Store app audit log
 
-One entry per round, newest last. Each round's checklist is in `docs/audit/ROUND-<N>.md`. The skill is `.claude/skills/omni-ware-round/SKILL.md`.
+One entry per round, newest last. Each round's checklist is in `docs/audit/store/ROUND-<N>.md`. The skill is `.claude/skills/omni-ware-round/SKILL.md`.
 
 Canvas: https://claude.ai/artifact/LVsyQEintezbVH3qn4cSVi
 
@@ -123,7 +123,7 @@ Deferred:
 
 Fixed: a person is named one way on every screen, the name they chose and never a login handle ("Someone" if none); the shift is passed, goods are handed over; an unpaid order says "Not paid yet" everywhere with one reason on the order; Today's numbers equal the screens they open; With Ruth shows every yard ask with who sent it; a trip difference is a check-in; durations and times have one format each; a trip is never a round; stock history names the order; units are lower case; the bell counts only what needs you, and opening Alerts reads it.
 
-Now part of the language (the glossary in `docs/audit/ROUND-6.md`):
+Now part of the language (the glossary in `docs/audit/store/ROUND-6.md`, now kept in `docs/audit/GLOSSARY.md`):
 - **One resolver for names.** `personName()` for everyone; `nameEveryone()` when the snapshot lands. No screen reads a staff record's name raw.
 - **One label, one reason.** `NOT_PAID` ("Not paid yet") on the bay, Today, Load and the slip; `notPaidWhy()` only on the order.
 - **One definition per count.** `counts()`: to pack is ready now; waiting on goods beside it; delivered includes collected.

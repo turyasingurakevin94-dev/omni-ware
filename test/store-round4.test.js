@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 4, search and navigation (0163; docs/audit/ROUND-4.md).
+ * Audit round 4, search and navigation (0163; docs/audit/store/ROUND-4.md).
  *
  *   NAV-03 a size like 1 1/4" is one tag: variants split on " / " only.
  *   NAV-02 phone and browser Back walk the app's own stack; on Today, "Leave Omni-ware?".

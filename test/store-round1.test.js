@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 1, data integrity (0161; docs/audit/ROUND-1.md).
+ * Audit round 1, data integrity (0161; docs/audit/store/ROUND-1.md).
  *
  *   DATA-01 one waiting count per place; a count done again replaces it when sent.
  *   DATA-02 a return reads in its order line's unit, on the phone and in the books.

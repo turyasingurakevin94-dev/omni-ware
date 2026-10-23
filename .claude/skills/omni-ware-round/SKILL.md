@@ -1,50 +1,59 @@
 ---
 name: omni-ware-round
-description: Run one fix round of the Omni-ware Store audit loop. Use when Kevin pastes a "Round N fix brief" from Cowork, or says "start the round", "go ahead" or "implement round N".
+description: Run one fix round of the Omni-ware audit loop for any Omni-ware app (store, owner, sales, buyer, manager). Use when Kevin pastes a "<App> round N fix brief" from Cowork, or says "start the round", "go ahead" or "implement round N".
 ---
 
-# Omni-ware Store: fix round
+# Omni-ware: fix round (any app)
 
-Cowork tests the live app at https://omni-ware.vercel.app/store.html one aspect at a time. It sends a fix brief with issue IDs (DATA-03, UI-07…), severity (P1/P2/P3), steps to reproduce, expected behaviour and an acceptance check.
+Cowork tests one live Omni-ware app at a time, one aspect per round. It sends a fix brief that starts with the app name, for example "Owner round 2 fix brief". Each issue has an ID with the app's prefix, for example `OWN-DATA-03` or `STO-UI-07`. Each issue also has a severity (P1/P2/P3), steps to reproduce, the expected behaviour and an acceptance check.
 
 Your job is to fix that brief in two phases. **Never start Phase B without Kevin's explicit go-ahead.**
 
-The goal across all rounds is a 10/10 app: correct books, reliable on bad signal, fast, easy for low-literacy yard staff, and premium at 360px. It must keep one design language throughout.
+The goal across all rounds and all apps is a 10/10 suite: correct books, reliable on bad signal, fast, easy for each role, and premium on its target screen. All apps share one design language and one glossary.
+
+## Files
+
+- **App file:** the app's own file (`store.html`, `owner.html`, …), named in the brief.
+- **Round checklist:** `docs/audit/<app>/ROUND-<N>.md`, one per round.
+- **App log:** `docs/audit/<app>/LOG.md`, which holds the rounds, design decisions and deferred items.
+- **Shared glossary:** `docs/audit/GLOSSARY.md`, one term per concept, shared by every app. Read it first. Add to it, never fork it.
+- **Design canvas:** the source of truth for every screen, in every app.
 
 ---
 
 ## Phase A: design and plan (no app code changes)
 
 1. **Read before designing.**
-   - Read the brief.
-   - Read `docs/audit/LOG.md`, which lists rounds so far, the design decisions taken and the open issues.
-   - Read the "Design language" section of CLAUDE.md.
-   - Open the design canvas and look at the boards the brief touches (Today, TodayIn, TodayPack, BayFree, ReceiveOver, ReceiveExtraNew, the slides, and so on).
+   - Read the brief, the app's LOG.md, GLOSSARY.md and the "Design language" section of CLAUDE.md.
+   - Open the canvas boards the brief touches.
+   - For the owner/sales screens, check what the store app already does for the same concept and reuse it.
 
 2. **Split the issues into two groups.**
-   - **UI-affecting**: anything that changes what a person sees or taps. This includes layout, copy, a new state (empty, error, sending, offline), a new confirm sheet, a changed flow or a new control.
-   - **Logic-only**: data, sync, search ranking, performance or security, with no visible change.
+   - **UI-affecting:** layout, copy, states, sheets, flows or controls.
+   - **Logic-only:** data, sync, search, performance or security.
 
-3. **Design every UI-affecting change on the canvas first.**
-   - Update an existing board, or add a new board named after the screen and state (for example `ReturnTakeBackConfirm`, `ReportSending`).
-   - Show the before and after side by side when it is a change to something that already exists.
-   - Draw every state the change needs: default, pressed, disabled, sending, success, error, offline and empty.
-   - Draw it at 360px wide. Make sure nothing is clipped and nothing sits under the floating play button.
-   - Use only existing tokens, components, icons and patterns. If something truly new is needed, add it to the canvas as a reusable component, with a one-line reason.
+3. **Design every UI-affecting change on the canvas.**
+   - Name each board `<App> · <Screen> · <State>`.
+   - Show before and after.
+   - Draw every state: default, pressed, disabled, sending, success, error, offline and empty.
+   - Draw it at the app's target width:
+     - 360px for phone apps: store, buyer, delivery.
+     - 360px **and** 1280px for owner, sales and manager, if they are used on a laptop.
+   - Use only existing tokens and components. Anything new becomes a reusable component on the canvas, with a reason.
 
-4. **Write the round checklist** to `docs/audit/ROUND-<N>.md`, using the template below. Every issue ID in the brief must appear exactly once.
+4. **Write `docs/audit/<app>/ROUND-<N>.md`** using the template below. Every issue ID must appear exactly once.
 
-5. **Stop.** Reply to Kevin with:
-   - the canvas boards you changed or added
-   - the checklist, or a link to it
-   - any question that blocks you (for example "should Take back undo instead of confirm?")
+5. **Stop.** Reply with:
+   - the boards you changed or added
+   - the checklist
+   - any blocking questions (for example data clean-ups that need Kevin's approval)
 
-   Then wait. Do not edit `store.html` in Phase A.
+   Do not edit app code in Phase A.
 
 ### ROUND-<N>.md template
 
 ```
-# Round <N>: <aspect>   (brief received <date>, build <last-modified>)
+# <App> · Round <N>: <aspect>   (brief received <date>, build <last-modified>)
 
 ## Design changes (canvas)
 | ID | Board(s) | Before → After | States drawn | Tokens/components used | New component? |
@@ -52,44 +61,48 @@ The goal across all rounds is a 10/10 app: correct books, reliable on bad signal
 ## Code changes planned
 | ID | Sev | File / function | Change (one line) | UI? | Acceptance check |
 
+## Server / SQL changes planned
+| ID | Migration / function / policy | Change | Test |
+
+## Glossary changes
+| Term | Meaning | Replaces |
+
 ## Not changing / pushed back
 | ID | Why |
 
-## Risks
-- …
-
 ## Phase B result (filled after implementing)
-| ID | Done? | What changed (function names) | How verified |
+| ID | Done? | What changed | How verified |
 ```
 
 ---
 
 ## Phase B: implement (only after Kevin says go ahead)
 
-1. **Implement in severity order** (P1, then P2, then P3), and stay inside the agreed plan.
-   - Make surgical, targeted edits. No rewrites, renames or reformatting of code you were not asked to touch.
-   - Match the canvas exactly: same copy, spacing, tokens and states.
-   - If the code needs something the canvas did not show, stop, add it to the canvas and tell Kevin before going on.
+1. **Implement in severity order** (P1, then P2, then P3), staying inside the plan.
+   - Make surgical edits only.
+   - Match the canvas exactly.
+   - If something the canvas didn't show is needed, stop, draw it, and tell Kevin.
 
-2. **Verify each item against its acceptance check.**
-   - Test logic directly where you can.
-   - For UI, check the screen at 360px and at desktop width.
+2. **Add a test for server changes.** For any SQL, policy or RPC change, write an SQL test that runs as each affected role.
 
-3. **Fill in "Phase B result"** in ROUND-<N>.md.
+3. **Verify every acceptance check.** Check UI changes at the app's target widths.
 
-4. **Append to `docs/audit/LOG.md`**: the round number, the aspect, the IDs fixed, the design decisions that are now part of the language, and anything deferred.
+4. **Record the round.**
+   - Fill in "Phase B result".
+   - Append to the app's LOG.md.
+   - Update GLOSSARY.md.
 
-5. **Commit with message** `Round <N>: <aspect> — <IDs>`.
+5. **Commit** with message `<App> round <N>: <aspect> — <IDs>`.
 
-6. **Reply with a short summary**: what to deploy, and what Cowork should re-check first.
+6. **Reply** with what to deploy and what Cowork should re-check first.
 
 ---
 
-## Rules that hold in every round
+## Rules for every app and every round
 
-- **One name per thing.** Use one word per concept everywhere: a line is a line, packed is packed. Use the person's display name, never the email handle. Use one order number format (#0550).
-- **No false success.** Never show a success screen before the server confirms. Show "Sending…", then the result. On failure, keep the work and offer Retry, or save it to the outbox.
+- **One name per thing.** Use one word per concept everywhere: a line is a line, packed is packed. Use the person's display name, never the email handle. Use one order number format (#0550). If the glossary has a term for it, use the term.
+- **No false success.** Show "Sending…", then the result. On failure, keep the work and offer Retry, or save it to the outbox.
 - **Protect against mistakes.** Destructive or irreversible actions get a confirm sheet or an Undo, and the list must not shift under the finger.
-- **Nothing lost.** Drafts survive reload, as check-in drafts already do.
-- **No prices or payments on the store phone.** This is enforced by role on the server, not just hidden in the UI.
-- **Do not regress earlier rounds.** Before committing, re-run the acceptance checks for the previous round's IDs that touch the same functions.
+- **Nothing lost.** Drafts survive reload.
+- **Money is shown only to roles allowed to see it.** This is enforced in SQL by role, never just hidden in the browser.
+- **Do not regress earlier rounds or other apps.** Before committing, re-run the previous round's checks that touch the same functions, and the store app's checks if shared code or SQL changed.
