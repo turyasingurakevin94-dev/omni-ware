@@ -87,11 +87,11 @@ See `docs/audit/round-6-data05-check.sql`.
 - **With Ruth gets longer.** With every yard ask on it, a busy day lists more rows; they are grouped by kind as today.
 - **The alert badge drops.** People may miss the routine "checked in" events they used to see as dots. They stay in the list under "In the yard today".
 
-## Questions for Kevin
+## Questions for Kevin (answered 23 Oct 2026)
 
-1. **The unpaid line:** "Sales take the money before it leaves, or Ruth lets it go on credit." OK?
-2. **To pack:** count ready orders only, with "+1 waiting" beside it (drawn)? Or "2 to pack (1 waiting)"?
-3. **Units:** all lower case ("1 ctn", "6 pcs", "2 box")?
+1. **The unpaid line:** "Sales take the money before it leaves, or Ruth lets it go on credit." **Yes.**
+2. **To pack:** ready orders only, with "+1 waiting" beside it. **As drawn.**
+3. **Units:** all lower case ("1 ctn", "6 pcs", "2 box"). **Yes.**
 
 ## Phase B result (filled after implementing)
 
