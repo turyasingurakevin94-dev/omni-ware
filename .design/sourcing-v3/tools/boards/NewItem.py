@@ -7,7 +7,7 @@ hd = head('A new item', circ('Capture.dc.html', 'back', 'Back'), '', segh)
 chips = lambda lst_, item: ('    <div style="display: flex; flex-wrap: wrap; gap: 6px">\n      <sc-for list="{{' + lst_ + '}}" as="' + item + '" hint-placeholder-count="3"><button type="button" aria-pressed="{{' + item + '.on}}" onClick="{{' + item + '.pick}}" style="{{' + item + '.style}}">{{' + item + '.label}}</button></sc-for>\n    </div>')
 photo = '    <a href="PhotoGate.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 0 14px; border-radius: 20px; box-shadow: inset 0 0 0 1.5px #C9C4BA; background: transparent">' + icon_well('camera', 'plain', 40, 12) + '<span style="flex: 1; font-size: 14px; font-weight: 700">Add a photo</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">optional now</span></a>'
 name = ('    <label style="display: flex; flex-direction: column; gap: 6px"><span style="padding: 0 4px; font-size: 13px; font-weight: 700; color: #5F6980">What is it?</span>'
-        '<input value="Tile spacers 3mm" aria-label="What is it?" style="box-sizing: border-box; height: 52px; padding: 0 14px; border-radius: 16px; border: none; box-shadow: inset 0 0 0 2px #16203C; background: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; color: #1C2233"></label>'
+        '<input value="Grout float, rubber" aria-label="What is it?" style="box-sizing: border-box; height: 52px; padding: 0 14px; border-radius: 16px; border: none; box-shadow: inset 0 0 0 2px #16203C; background: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; color: #1C2233"></label>'
         '\n    <span style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; font-weight: 700; color: #0F6B43">' + svg('tick', 13, 3) + 'Not in the catalogue, and no hunt has it yet</span>')
 seen = '''    <sc-if value="{{seen}}" hint-placeholder-val="{{ true }}">
     <div style="display: flex; flex-direction: column; gap: 10px">
@@ -25,12 +25,25 @@ asked = '''    <sc-if value="{{asked}}" hint-placeholder-val="{{ false }}">
     <div style="''' + LIST + '''; padding: 12px 14px">''' + stepper('ni_qty', '{{qty}}', 'pcs', '{{less}}', '{{more}}', 'How many they want') + '''</div>
     </div>
     </sc-if>'''
-bd = body('\n'.join([photo, name, sec('Aisle'), chips('aisles', 'a'), seen, asked]))
+more_btn = '<button type="button" onClick="{{toggleMore}}" aria-expanded="{{moreStr}}" style="all: unset; cursor: pointer; box-sizing: border-box; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; {{moreStyle}}">' + svg('search', 13, 2.4) + '{{moreLabel}}</button>'
+more = '''    <sc-if value="{{moreOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="''' + LIST + '''; padding: 10px; display: flex; flex-direction: column; gap: 8px">
+      <label style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border-radius: 14px; box-shadow: inset 0 0 0 2px #16203C; color: #5F6980">''' + svg('search', 16, 2.2) + '''<input value="" placeholder="Find an aisle" aria-label="Find an aisle" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233"><span style="font-size: 11px; font-weight: 600">all <span class="m">14</span></span></label>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{others}}" as="o" hint-placeholder-count="9"><button type="button" onClick="{{o.pick}}" style="all: unset; cursor: pointer; box-sizing: border-box; height: 36px; padding: 0 12px; border-radius: 999px; background: #F7F5F2; font-size: 13px; font-weight: 700; display: flex; align-items: center">{{o.label}}</button></sc-for></div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 16px; background: #F7F5F2">''' + svg('plus', 16, 2.4, '#5F6980') + '''<input value="Garden & outdoor" aria-label="A new aisle" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233"><button type="button" onClick="{{newAisle}}" style="all: unset; cursor: pointer; height: 40px; padding: 0 14px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">New aisle</button></div>
+      <span style="padding: 0 2px; font-size: 12px; font-weight: 600; color: #5F6980">Not sure? Leave it; you can set it on the passport later</span>
+    </div>
+    </sc-if>'''
+aisle_chips = chips('aisles', 'a')
+aisle_chips = aisle_chips[:aisle_chips.rindex('</div>')] + more_btn + '</div>'
+bd = body('\n'.join([photo, name, sec('Aisle', 'pick one, or leave it'), aisle_chips, more, seen, asked]))
 ft = foot('<a href="Funnel.dc.html" style="height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{ctaStyle}}">{{cta}}</a>')
 script = '''class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { mode: null, aisle: null, where: null, who: null, qty: 0 }; }
+  constructor(p) { super(p); this.state = { mode: null, aisle: null, where: null, who: null, qty: 0, more: false }; }
   renderVals() {
-    const { mode, aisle, where, who, qty } = this.state;
+    const { mode, aisle, where, who, qty, more } = this.state;
+    const TOP = ['Tiles & finishing', 'Fasteners', 'Plumbing', 'Steel & mesh', 'Roofing'];
+    const shown = !aisle || TOP.includes(aisle) ? TOP : TOP.slice(0, 4).concat([aisle]);
     const seg = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
     const chip = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #E6E3DD');
     const pickList = (key, cur, labels) => labels.map(label => ({ label, on: String(cur === label), pick: () => this.setState({ [key]: cur === label ? null : label }), style: chip(cur === label) }));
@@ -38,7 +51,11 @@ script = '''class Component extends DCLogic {
     const ready = !!mode && (mode === 'seen' || !!who);
     return {
       modes, seen: mode === 'seen', asked: mode === 'asked', qty,
-      aisles: pickList('aisle', aisle, ['Tiles & finishing', 'Fasteners', 'Plumbing', 'Steel & mesh', 'Roofing']),
+      aisles: pickList('aisle', aisle, shown),
+      moreOpen: more, moreStr: String(more), moreLabel: more ? 'Close' : 'Other aisle', toggleMore: () => this.setState({ more: !more }),
+      moreStyle: more ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+      others: ['Cement & sand', 'Timber', 'Paint', 'Electrical', 'Tools', 'Doors & locks', 'Gutters', 'Water tanks', 'Safety gear'].map(label => ({ label, pick: () => this.setState({ aisle: label, more: false }) })),
+      newAisle: () => this.setState({ aisle: 'Garden & outdoor', more: false }),
       wheres: pickList('where', where, ['Katwe Fabricators', 'At a rival', 'Another supplier']),
       whos: pickList('who', who, ['Ggaba Stores', 'Nansana Hardware', 'Someone else']),
       less: () => this.setState({ qty: Math.max(0, qty - 10) }), more: () => this.setState({ qty: qty + 10 }),
