@@ -28,8 +28,19 @@ legend = '''    <div style="display: flex; gap: 14px; font-size: 11px; font-weig
     </div>'''
 right = (f'<a href="Search.dc.html" aria-label="Search items, suppliers, rivals" style="width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center">{svg("search", 19, 2)}</a>'
          '<a href="Profile.dc.html" aria-label="You: Moses Lubega, settings" style="width: 46px; height: 46px; border-radius: 999px; background: #243052; box-shadow: 0 0 0 2px #16203C, 0 0 0 4px rgba(111,220,176,.55); color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">ML</a>')
-hd = home_head('Morning, Moses', f'Sat 17 Oct{DOT}Mukasa Hardware{DOT}{LIVE}', right,
-               f'    <div style="display: flex; align-items: center; gap: 18px">\n{ring_svg}\n{tiles}\n    </div>\n{legend}')
+# one hero figure, as the agent app leads with what you earned: items put on sale this week against
+# the week's goal (set by Ruth); the bar shows what is coming (with Ruth, striped) and what is left
+hero = f'''    <a href="Funnel.dc.html" style="display: flex; flex-direction: column; gap: 10px">
+      <span style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 12px; font-weight: 700; color: #B3BCD2">On sale this week</span><span style="display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(111,220,176,.12); color: #6FDCB0; font-size: 11px; font-weight: 700">{svg('M12 19V5M6 11l6-6 6 6', 11, 3)}2 on last week</span></span>
+      <span style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 52px; font-weight: 600; line-height: .9; letter-spacing: -.04em">5</span><span class="m" style="font-size: 20px; font-weight: 600; color: #B3BCD2">/ 8</span><span style="font-size: 13px; font-weight: 600; color: #B3BCD2">goal</span></span>
+      <span role="img" aria-label="5 on sale, 2 with Ruth, 1 to go of a goal of 8" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">{''.join('<span style="height: 8px; border-radius: 999px; background: ' + c + '"></span>' for c in ['#6FDCB0'] * 5 + ['repeating-linear-gradient(135deg, rgba(245,178,107,.9) 0 3px, rgba(245,178,107,.25) 3px 6px)'] * 2 + ['rgba(255,255,255,.14)'])}</span>
+      <span style="font-size: 12px; font-weight: 600; color: #B3BCD2">2 with Ruth would make it 7 · the goal is Ruth’s</span>
+    </a>'''
+strip = stats([('≈ 9.4 M', 'asks waiting', None), ('11 d', 'ask to sale', None), ('78%', 'prices fresh', '#6FDCB0')], height=62)
+standing = (f'    <a href="ReportCard.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,.06)">'
+            + ring(11 / 14, '', 26, 4, '#6FDCB0', 'rgba(255,255,255,.12)', 10, '11 of 14 calls right')
+            + f'<span style="flex: 1; font-size: 13px; font-weight: 700">Your calls: <span class="m">11</span> of <span class="m">14</span> right</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">report card</span>{chev("#B3BCD2")}</a>')
+hd = home_head('Morning, Moses', f'Sat 17 Oct{DOT}Mukasa Hardware{DOT}{LIVE}', right, hero + '\n' + strip + '\n' + standing, gap=16)
 
 def stop(n, kind, last=False):
     bg = '#A9AEF0' if kind == 'sup' else '#E7A6D6'
