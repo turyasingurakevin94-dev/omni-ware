@@ -37,6 +37,7 @@ t.check(/sellPrice/.test(fn('store_return_ask')) && /round\(price \* /.test(fn('
 t.check(/add column if not exists missing jsonb/.test(sql), 'a partial count keeps what it could not find apart from its lines');
 t.check(/'store\.new_item'/.test(fn('store_asks_ow_push')) && /'product\.edit'/.test(fn('store_asks_ow_push')), 'a new item at check-in tells Sourcing');
 t.check(/\| 0159 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0159');
+t.check(/\| 0160 \| /.test(read('docs/decision-rights.md')) && /function ow_store_payload/.test(read('supabase/migrations/0160_store_allow_list.sql')), 'docs/decision-rights.md reserves 0160, the allow-list');
 
 /* ---------------- 2. the app ---------------- */
 t.check(/sb\.rpc\('store_snapshot'/.test(store) && /sb\.rpc\('store_patch_order'/.test(store) && /sb\.rpc\('store_patch_trip'/.test(store) && /sb\.rpc\('store_return_ask'/.test(store), 'the Store app reads the snapshot and writes through the functions');
@@ -64,5 +65,10 @@ t.check(/^prices kept after patch\|32000\|done\|in_progress\|t\|10000$/m.test(ou
 t.check(/^trip row\|collected\|5\|29000\|150000$/m.test(out), 'handing a round in kept what the Buyer paid and the cash');
 t.check(/^return row\|64000\|32000\|Damaged after delivery\|burst$/m.test(out), 'the return was priced from the order, with its reason and note');
 t.check(/^manager reads quotes\|2$/m.test(out) && /^manager reads prices\|1$/m.test(out), 'the Manager still reads everything');
+// 0160: the allow-list, the wider money names, deliveredNote, and a return no bigger than the line.
+t.check(/^money keys 0160\|0$/m.test(out), 'no amt, rate, receipts, charges, owed, sum, value or price reaches the snapshot (0160)');
+t.check(/^allow list keeps\|credit\|x\|Cement$/m.test(out), 'and the allow-list keeps the credit answer, a credit note (its amount gone) and the line\'s name');
+t.check(/too big\|More than that line can take back: 3 left of 5/.test((r.stderr || '') + out), 'a return bigger than the line has left is refused (0160)');
+t.check(/^deliver note\|The camera will not open$/m.test(out), 'the Store can say why a delivery has no photo (0160)');
 psql(['-qAt', '-c', `drop database if exists ${db}`]);
 process.exit(t.done() ? 1 : 0);

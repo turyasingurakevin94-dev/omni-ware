@@ -388,6 +388,7 @@ html.st-covered #st_main{visibility:hidden}
 :focus-visible{outline:3px solid #16203C;outline-offset:2px}
 .cv-hero :focus-visible,[data-navy-top] :focus-visible,.cv-job :focus-visible,.cv-nav :focus-visible,.st-slide:focus-visible,.st-slide :focus-visible,[style*="background:#16203C"] :focus-visible,[style*="background:radial-gradient"] :focus-visible{outline-color:#FFFFFF}
 input:focus-visible,textarea:focus-visible{outline-offset:0}
+.cv-row:has(.pv){padding-top:10px;padding-bottom:10px}.cv-tx:has(.pv){gap:3px}
 .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 html.big .td-tile span{white-space:normal!important;line-height:1.1}
 @media (max-width:400px){.td-ic{display:none!important}.td-tile{padding:0 12px!important}.td-ring{width:100px!important;height:100px!important}.td-ring svg{width:100px;height:100px}}
@@ -1209,6 +1210,7 @@ async function refreshLive(){
     if (reports) S.data.reports = reports.map(rowToReport);
     if (returns) S.data.returns = returns.map(rowToReturn);
     S.offline = false; S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.ui.noRefresh) render();
+    flushOutbox();
   } catch (e) { if (isNetworkError(e)) { if (!S.offline) { S.offline = true; render(); } } else console.warn(e); }
 }
 /* What the phone last saw, kept in IndexedDB: localStorage holds 5 MB and a
@@ -1217,10 +1219,33 @@ async function refreshLive(){
 const SNAP_DB = 'ow-store', SNAP_OS = 'snap';
 function snapDb(){
   return snapDb.p || (snapDb.p = new Promise((ok, no) => {
-    try { const r = indexedDB.open(SNAP_DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(SNAP_OS); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }
+    try { const r = indexedDB.open(SNAP_DB, 2); r.onupgradeneeded = () => { const db = r.result; if (!db.objectStoreNames.contains(SNAP_OS)) db.createObjectStore(SNAP_OS); if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' }); }; r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }
     catch (e) { no(e); }
   }));
 }
+/* The outbox: a report or a return that could not go for want of signal is
+   kept here (photo and all) and goes by itself when the signal is back. The
+   screen says it is kept, never that it was sent. */
+async function outboxAll(){ try { const db = await snapDb(); return await new Promise((ok, no) => { const r = db.transaction('outbox').objectStore('outbox').getAll(); r.onsuccess = () => ok(r.result || []); r.onerror = () => no(r.error); }); } catch (_e) { return []; } }
+async function outboxPut(item){ const db = await snapDb(); await new Promise((ok, no) => { const tx = db.transaction('outbox', 'readwrite'); tx.objectStore('outbox').put(item); tx.oncomplete = ok; tx.onerror = () => no(tx.error); }); }
+async function outboxDel(id){ try { const db = await snapDb(); await new Promise(ok => { const tx = db.transaction('outbox', 'readwrite'); tx.objectStore('outbox').delete(id); tx.oncomplete = ok; tx.onerror = ok; }); } catch (_e) {} }
+function outboxAdd(kind, args){ const id = kind + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); return outboxPut({ id, kind, at: Date.now(), shopId: S.shopId, ...args }).then(() => { S.ui.outboxN = (S.ui.outboxN || 0) + 1; return id; }); }
+async function flushOutbox(){
+  if (flushOutbox.on || !S.data || !navigator.onLine) return; flushOutbox.on = true;
+  try {
+    for (const it of await outboxAll()) {
+      if (it.shopId && it.shopId !== S.shopId) continue;
+      try {
+        if (it.kind === 'report') { const x = stockItems().find(i => i.key === it.key) || { key: it.key, productId: it.productId, variantIdx: it.variantIdx, productName: it.name }; await sendReport(x, it.qty, it.reason, it.blob || null, it.note); toast(`Your report on ${it.name} reached ${managerName()}`, 4000); }
+        else if (it.kind === 'return') { const q = quoteById(it.orderId); if (!q) { await outboxDel(it.id); continue; } await sendReturn(q, it.lines, it.blob || null, it.why, it.note); toast(`The return for ${q4(q)} reached ${managerName()}`, 4000); }
+        await outboxDel(it.id);
+      } catch (e) { if (isNetworkError(e)) break; await outboxDel(it.id); toast('A kept ' + it.kind + ' could not go: ' + failSay(e), 6000); }
+    }
+    S.ui.outboxN = (await outboxAll()).length;
+  } finally { flushOutbox.on = false; }
+  if (S.started) render();
+}
+window.addEventListener('online', () => flushOutbox());
 function snapKey(){ return 'ow-store-snap:' + (S.user && S.user.id); }
 function saveSnapshot(){
   S.rev = (S.rev || 0) + 1;
@@ -1504,7 +1529,10 @@ function stockItems(){
       const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((_, i) => i) : [null];
       const aisle = aisles[p.category || 'Other'] || { name: p.category || 'Other', letter: '?' };
       vs.forEach(vi => { const key = stockKey(p.id, vi); if (seen.has(key)) return; seen.add(key);
-        out.push({ key, productId: p.id, variantIdx: vi, productName: productVariantLabel(p, vi), qty: Number(D().stock[key]) || 0, held: heldForOrders(p.id, vi), avail: shelfAvailable(p.id, vi), aisle }); });
+        // On the shelf is the books less what has already left it for orders not yet invoiced (packed, out,
+        // delivered): a pack delivered this morning is not on the shelf, though the invoice goes tomorrow.
+        const books = Number(D().stock[key]) || 0, gone = heldGone(p.id, vi);
+        out.push({ key, productId: p.id, variantIdx: vi, productName: productVariantLabel(p, vi), books, qty: Math.max(0, books - gone), held: Math.max(0, heldForOrders(p.id, vi) - gone), avail: shelfAvailable(p.id, vi), aisle }); });
     });
     return out;
   });
@@ -1806,7 +1834,7 @@ async function boot(){
   if (S.started) render();
   else if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
   else document.getElementById('st_main').innerHTML = `<div class="st-empty" style="padding-top:40vh"><b>Opening the books…</b>${esc(S.shopName)}</div>`;
-  try { await loadAll(); if (!S.started) start(); else render(); }
+  try { await loadAll(); if (!S.started) start(); else render(); flushOutbox(); }
   catch (e) { if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000); else document.getElementById('st_main').innerHTML = `<div class="st-empty" style="padding-top:35vh"><b>Could not open the books</b>${esc(e.message || e)}<br><br><button class="st-btn navy" style="flex:none;margin:0 auto" onclick="location.reload()">Try again</button></div>`; }
 }
 function start(){
@@ -1945,7 +1973,10 @@ SHEET.leave = a => `<span style="font-size:20px;font-weight:700">Leave ${esc(a.w
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
       <button data-act="closesheet" style="height:56px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:15px;font-weight:700">Keep filling it in</button>
       <button data-act="leaveyes" style="height:56px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:#8E2A22;font-size:15px;font-weight:700">Leave it</button></div>`;
-ACT.leaveyes = () => { closeSheet(); const top = S.stack[S.stack.length - 1]; if (top && top.type === 'report') S.ui.rp = null; if (top && top.type === 'ret') S.ui.rt = null; FEEL.back(); pop(); };
+ACT.leaveyes = () => { closeSheet(); const top = S.stack[S.stack.length - 1]; if (top && top.type === 'report') S.ui.rp = null;
+  // A return picked from the order list goes back to the list; one opened on its order closes.
+  if (top && top.type === 'ret') { const ui = S.ui.rt; if (ui && ui.id != null && !ui.direct && !ui.door) { Object.assign(ui, { id: null, back: {}, cond: {}, why: null, note: '', photo: null, blob: null }); FEEL.back(); render(); return; } S.ui.rt = null; }
+  FEEL.back(); pop(); };
 // A row that scrolls sideways fades at the edge that has more, so it never hides what is past it.
 function hscrollCue(el){ const more = el.scrollWidth - el.clientWidth - el.scrollLeft > 4, less = el.scrollLeft > 4; el.classList.toggle('more', more); el.classList.toggle('less', less); }
 AFTER.push(() => document.querySelectorAll('.hscroll').forEach(el => { hscrollCue(el); if (!el._cue) { el._cue = true; el.addEventListener('scroll', () => hscrollCue(el), { passive: true }); } }));
@@ -2552,7 +2583,8 @@ const CV = {
 };
 function sv(d, size, sw, extra){ return `<svg width="${size || 18}" height="${size || 18}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra ? ' ' + extra : ''}><path d="${d}"></path></svg>`; }
 function q4(q){ return '#' + String(q && q.id).padStart(4, '0'); }
-function ini(name){ return esc(initials(name)); }
+// A first name alone ("Warren") takes its person's full name, so the initials agree on every screen (WB, never WA).
+function ini(name){ const n = String(name || '').trim(), st = n && !/\s/.test(n) && S.data ? (D().staff || []).find(s => s.name && firstWord(s.name) === n && /\s/.test(s.name.trim())) : null; return esc(initials(st ? st.name : n)); }
 function tint(key){ return tintFor(key); }
 function face(name, key, size, extra){ const t = tint(key || name); return `<span style="width:${size}px;height:${size}px;background:${t[0]};color:${t[1]};${extra || ''}">${ini(name)}</span>`; }
 function online(){ return !(typeof navigator !== 'undefined' && navigator.onLine === false) && !S.offline; }
@@ -2794,8 +2826,13 @@ function jobCard(j, n){
 }
 function dayWithWork(J){
   const open = !!S.ui.todayMore, rest = J.list.slice(1), all = J.list.concat(J.more);
-  const extraFaces = J.more.slice(0, 3).map(j => j.kind === 'theirs' ? face((staffById(j.q.assignedWorkerId) || {}).name || '?', (staffById(j.q.assignedWorkerId) || {}).name, 24, 'border:2px solid #fff;font-size:11px;font-weight:700;border-radius:999px;display:flex;align-items:center;justify-content:center;box-sizing:border-box') : `<span style="width:22px;height:22px;border-radius:999px;background:${j.kind === 'hold' ? '#FDEEE1' : '#F1EEE8'};border:2px solid #fff;box-sizing:content-box"></span>`);
-  const moreWords = J.more.slice(0, 3).map(j => j.kind === 'theirs' ? `${firstWord((staffById(j.q.assignedWorkerId) || {}).name || '')}'s ${q4(j.q)}` : j.kind === 'hold' ? 'a hold' : j.kind === 'looks' ? 'stock' : j.kind === 'pack' ? q4(j.q) : j.kind === 'run' ? 'a run' : j.kind === 'gate' ? 'a pickup' : j.kind).join(', ');
+  // What else waits, by kind: a face for a colleague's order, the kind's own mark for the rest, and words that count ("2 pickups").
+  const MORE = { hold: ['a hold', 'holds', CV.clock, '#FDEEE1', '#95530C'], looks: ['stock to look at', 'stock to look at', CV.loss, '#F1EEE8', '#5F6980'], pack: ['an order to pack', 'orders to pack', CV.pack, '#E8EBF0', '#16203C'],
+    run: ['a run to load', 'runs to load', CV.van, '#E4F4EA', '#0F6B43'], gate: ['a pickup', 'pickups', CV.store, '#E4F4EA', '#0F6B43'], back: ['a return', 'returns', CV.ret, '#FBE5E2', '#8E2A22'] };
+  const kinds = []; J.more.forEach(j => { const k = j.kind === 'theirs' ? 'theirs:' + j.q.id : j.kind; const e = kinds.find(x => x.k === k); if (e) e.n++; else kinds.push({ k, j, n: 1 }); });
+  const extraFaces = kinds.slice(0, 3).map(({ j }) => { if (j.kind === 'theirs') { const nm = (staffById(j.q.assignedWorkerId) || {}).name || '?'; return face(nm, nm, 24, 'border:2px solid #fff;font-size:11px;font-weight:700;border-radius:999px;display:flex;align-items:center;justify-content:center;box-sizing:border-box'); }
+    const m = MORE[j.kind] || ['', '', CV.chev, '#F1EEE8', '#5F6980']; return `<span style="width:24px;height:24px;border-radius:999px;background:${m[3]};color:${m[4]};border:2px solid #fff;box-sizing:border-box;display:flex;align-items:center;justify-content:center">${sv(m[2], 11, 2.4)}</span>`; });
+  const moreWords = kinds.slice(0, 3).map(({ j, n }) => j.kind === 'theirs' ? `${firstWord((staffById(j.q.assignedWorkerId) || {}).name || '')}'s ${q4(j.q)}` : MORE[j.kind] ? (n > 1 ? `${n} ${MORE[j.kind][1]}` : MORE[j.kind][0]) : j.kind).join(', ');
   const slots = bayMap().slots, used = slots.filter(s => s.q).length;
   const bay = s => { const q = s.q, hold = q && moneyHold(q), st = !q ? 'free' : hold ? 'hold' : 'ready';
     const ag = q && q.originAgentId && (D().agents || []).find(a => String(a.id) === String(q.originAgentId));
@@ -3092,7 +3129,7 @@ PAGE.movepack = () => {
   const pq = packQueue(), mine = pq.filter(q => orderIsMine(q) && q.pickingStatus === 'in_progress'), theirs = pq.filter(takenBySomeoneElse), ready = pq.filter(q => !mine.includes(q) && !theirs.includes(q)).sort((a, b) => waitingSince(a) - waitingSince(b)), wait = waitingOnGoods();
   const all = pq.length + wait.length, lines = pq.reduce((n, q) => n + pickLines(q).length, 0), oldest = pq.length ? Math.max(...pq.map(q => minsSince(createdMs(q) || waitingSince(q)))) : 0;
   const seg = [[mine.length, '#fff', 'yours'], [ready.length, '#6FDCB0', 'ready'], [theirs.length, 'rgba(255,255,255,.3)', "someone's on it"], [wait.length, 'repeating-linear-gradient(135deg,rgba(201,205,247,.55) 0 4px,transparent 4px 8px)', 'waiting on goods']];
-  const head = `<div style="display:flex;align-items:baseline;gap:8px;padding:0 4px"><span class="m" style="font-size:40px;font-weight:600;line-height:1">${all}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${all === 1 ? 'order' : 'orders'} · ${nLines(lines)}${pq.length ? ' · oldest ' + esc(waitClock(oldest)) : ''}</span></div>
+  const head = `<div style="display:flex;align-items:baseline;gap:8px;padding:0 4px"><span class="m" style="font-size:40px;font-weight:600;line-height:1">${all}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${all === 1 ? 'order' : 'orders'} · ${[pq.length ? `${pq.length} to pack, ${nLines(lines)}` : '', wait.length ? `${wait.length} waiting on goods` : ''].filter(Boolean).join(' · ')}${pq.length ? ' · oldest ' + esc(waitClock(oldest)) : ''}</span></div>
     ${all ? `<div role="img" aria-label="${seg.map(s => s[0] + ' ' + s[2]).join(', ')}" style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;height:12px;border-radius:999px;overflow:hidden;gap:3px">${seg.filter(s => s[0]).map(s => `<span style="flex:${s[0]};background:${s[1]}"></span>`).join('')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;font-weight:600;color:var(--navyInk)">${seg.filter(s => s[0]).map(s => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:999px;background:${s[1].startsWith('repeating') ? '#C9CDF7' : s[1]}"></span>${s[2]}</span>`).join('')}</div></div>` : ''}`;
   const C = 2 * Math.PI * 19;
@@ -3778,7 +3815,7 @@ function pkDone(q, items, ui){
       <span style="display:flex;justify-content:space-between;padding:0 2px;font-size:13px;font-weight:700;color:var(--navyInk)"><span>Leave it on</span><span style="font-size:12px;font-weight:600">the loader sees it here</span></span>
       <div style="display:grid;grid-template-columns:repeat(${Math.min(slots.length, 4)},minmax(0,1fr));gap:6px">${slots.map(s => { const taken = s.q && s.q.id !== q.id, on = ui.bay === s.n;
         return `<button type="button" data-act="pkbay" data-n="${s.n}" ${taken ? 'disabled' : ''} aria-pressed="${on}" style="position:relative;height:62px;border-radius:16px;border:none;background:${on ? '#fff' : taken ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.08)'};color:${on ? '#16203C' : taken ? '#8D99B5' : '#fff'};box-shadow:${on ? '0 0 0 3px rgba(111,220,176,.55)' : 'none'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;opacity:${taken ? .7 : 1}">
-          <span class="m" style="font-size:18px;font-weight:600;line-height:1">${s.n}</span><span style="font-size:11px;font-weight:700">${taken ? q4(s.q) : on ? 'picked' : 'free'}</span></button>`; }).join('')}</div>
+          <span class="m" style="font-size:18px;font-weight:600;line-height:1">${s.n}</span><span style="font-size:11px;font-weight:700">${taken ? q4(s.q) : on ? 'yours' : 'free'}</span></button>`; }).join('')}</div>
     </div>
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
       ${nextQ ? `<button data-act="pack" data-id="${nextQ.id}" style="height:60px;border:none;border-radius:999px;background:#fff;color:#16203C;padding:0 22px;display:flex;align-items:center;gap:12px;text-align:left;width:100%"><span class="cv-tx" style="gap:1px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Next order</span><span class="ell" style="font-size:16px;font-weight:700">${q4(nextQ)} · ${esc(quoteClientName(nextQ))} · ${pickLines(nextQ).length} items</span></span>${sv(CV.chev, 18, 2.4)}</button>` : ''}
@@ -4059,7 +4096,10 @@ ACT.lrscan = () => openScan('load', {});
    it; an order that waits on money cannot leave and asks the Manager.
    ================================================================== */
 function slUI(id){ if (S.ui.sl && S.ui.sl.id === id) return S.ui.sl; const q = quoteById(id), r = q && runsNow().find(x => x.drops.some(d => d.q.id === id));
-  return (S.ui.sl = { id, who: q && orderIsPickup(q) ? 'client' : null, car: (r && staffCar(r.driver)) || staffCar(drivers()[0]) || null, ticks: {}, collector: q && orderIsPickup(q) ? (q.carrier && q.carrier.name) || '' : '', sent: null }); }
+  return (S.ui.sl = { id, who: q && orderIsPickup(q) ? 'client' : null, car: (r && staffCar(r.driver)) || staffCar(drivers()[0]) || null, ticks: {}, collector: q && orderIsPickup(q) ? slSaved(id) || (q.carrier && q.carrier.name) || '' : '', sent: null }); }
+// A name half-typed at the gate is kept on this phone until the order goes, so a reload does not lose it.
+function slSaved(id){ try { return localStorage.getItem(shopScoped('ow-store-sl:' + id)) || ''; } catch (_e) { return ''; } }
+function slSave(id, v){ try { if (v) localStorage.setItem(shopScoped('ow-store-sl:' + id), v); else localStorage.removeItem(shopScoped('ow-store-sl:' + id)); } catch (_e) {} }
 PAGE.collect = ({ id }) => {
   const q = quoteById(id); if (!q) return goneSheet('That order is gone');
   if (orderIsCollected(q) && PAGE.agent) return PAGE.agent({ id });
@@ -4130,7 +4170,10 @@ ACT.slwho = t => { const ui = S.ui.sl, k = t.dataset.k; if (!ui) return; FEEL.ti
   if (k === 'hired') { S.ui.drvFor = 'sl'; push('loadhired', {}); return; }
   if (k === 'me' || k === 'client') ui.who = k; else { ui.who = null; ui.car = staffCar(staffById(k.slice(2))); }
   render(); if (k === 'client') setTimeout(() => { const el = document.getElementById('sl_who'); if (el && !el.value) el.focus(); }, 60); };
-ACT['in:slwho'] = t => { const ui = S.ui.sl; if (!ui) return; const was = ui.collector.trim().length > 1; ui.collector = t.value; if (was !== (ui.collector.trim().length > 1)) render(); };
+ACT['in:slwho'] = t => { const ui = S.ui.sl; if (!ui) return; const was = ui.collector.trim().length > 1; ui.collector = t.value; slSave(ui.id, ui.collector.trim());
+  if (was !== (ui.collector.trim().length > 1)) { render(); return; }
+  // The slider follows the typing, letter by letter: never "Slide to hand over to Pe" once Peter is typed.
+  const b = document.querySelector('[data-slide="slgo"] .lab b'); if (b && ui.collector.trim().length > 1) b.textContent = `Slide to hand over to ${firstWord(ui.collector.trim())}`; };
 ACT.slscan = () => openScan('load', {});
 ACT['slide:slgo'] = () => {
   const ui = S.ui.sl, q = ui && quoteById(ui.id); if (!q || ui.sent) return;
@@ -4138,7 +4181,7 @@ ACT['slide:slgo'] = () => {
   const client = ui.who === 'client', agent = q.originAgentId ? (D().agents || []).find(a => String(a.id) === String(q.originAgentId)) : null;
   const car = client ? (q.deliveryMode === 'agent_pickup' ? { kind: 'agent', name: ui.collector.trim() || (agent && agent.name) } : { kind: 'client', name: ui.collector.trim(), phone: orderPhone(q) }) : ui.who === 'me' ? meCarrier() : ui.car;
   if (!car) return;
-  ui.sent = { car, at: Date.now(), gate: client, wait: true }; chimeDone(); render();
+  ui.sent = { car, at: Date.now(), gate: client, wait: true }; slSave(ui.id, ''); chimeDone(); render();
   heldWrite('Handing over', async () => {
     S.busy = true;
     try { const r = client ? await handOver(q.id, car, Date.now()) : (await loadOrders([q.id], car))[0]; ui.sent.wait = false; if (!r) { ui.sent = null; toast('That order has moved on'); } }
@@ -4202,7 +4245,8 @@ PAGE.loadhired = () => {
       ${hired.length ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${hired.slice(0, 4).map((h, i) => card('h:' + i, h.name, h.what, `${h.loads} load${h.loads === 1 ? '' : 's'} with us`, ['#FDEEE1', '#7A4A02'])).join('')}</div>
       <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9AA1AE"><span style="flex:1;height:1px;background:#EFECE6"></span>or someone new<span style="flex:1;height:1px;background:#EFECE6"></span></div>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px">${field('name', 'Name', 'text', "Driver's name")}<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${field('what', 'Plate', 'text', 'UBx 000x', true)}${field('phone', 'Phone', 'tel', '07…', true)}</div></div>
-      <button data-act="nwuse" style="margin-top:auto;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;opacity:${String(nw.name || '').trim() ? 1 : .5};box-shadow:0 10px 22px rgba(201,58,48,.25);flex:none">${String(nw.name || '').trim() ? 'Use ' + esc(String(nw.name).trim()) : 'Add their name first'}</button>
+      ${String(nw.phone || '').trim() && !phoneOk(nw.phone) ? `<span role="status" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}A phone is 10 figures, like 0772 123 456 · the drop goes there on WhatsApp</span>` : ''}
+      <button data-act="nwuse" style="margin-top:auto;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;opacity:${String(nw.name || '').trim() && phoneOk(nw.phone) ? 1 : .5};box-shadow:0 10px 22px rgba(201,58,48,.25);flex:none">${!String(nw.name || '').trim() ? 'Add their name first' : !phoneOk(nw.phone) ? 'Add their phone' : 'Use ' + esc(String(nw.name).trim())}</button>
     </div></div>`;
 };
 PAGE.loadhired.bg = '#16203C';
@@ -4211,8 +4255,11 @@ ACT.drvpick = t => { const [k, v] = t.dataset.k.split(':');
   if (k === 'me') return drvSet(meCarrier());
   if (k === 's') return drvSet(staffCar(staffById(v)));
   const x = pastHired()[Number(v)]; if (x) drvSet({ kind: 'hired', name: x.name, phone: x.phone, what: x.what }); };
-ACT['in:nw'] = t => { const nw = S.ui.newDriver || (S.ui.newDriver = {}); const had = !!String(nw.name || '').trim(); nw[t.dataset.k] = t.value; if (t.dataset.k === 'name' && had !== !!String(nw.name).trim()) render(); };
-ACT.nwuse = () => { const n = S.ui.newDriver; if (!n || !String(n.name || '').trim()) { FEEL.no(); return; } drvSet({ kind: 'hired', name: n.name.trim(), what: String(n.what || '').trim(), phone: String(n.phone || '').trim() }); };
+// A driver's phone: a Ugandan number (07… or +256…), since the drop goes to it on WhatsApp.
+function phoneOk(p){ return /^256[37]\d{8}$/.test(phoneDigits(p)); }
+ACT['in:nw'] = t => { const nw = S.ui.newDriver || (S.ui.newDriver = {}); const was = [!!String(nw.name || '').trim(), phoneOk(nw.phone), !!String(nw.phone || '').trim()].join(); nw[t.dataset.k] = t.value;
+  if (was !== [!!String(nw.name || '').trim(), phoneOk(nw.phone), !!String(nw.phone || '').trim()].join()) { clearTimeout(ACT.nwT); ACT.nwT = setTimeout(render, t.dataset.k === 'phone' ? 500 : 0); } };
+ACT.nwuse = () => { const n = S.ui.newDriver; if (!n || !String(n.name || '').trim() || !phoneOk(n.phone)) { FEEL.no(); return; } drvSet({ kind: 'hired', name: n.name.trim(), what: String(n.what || '').trim(), phone: String(n.phone || '').trim() }); };
 
 /* ==================================================================
    THE MONEY HOLD -- the ask rides on the order (creditAsk) for the
@@ -4648,12 +4695,13 @@ PAGE.stock = ({ key }) => {
   const pr = promisedFor(x.productId, x.variantIdx), need = ['short', 'out', 'low'].includes(L.why), sf = shortFor(x);
   const word = p => p.q.status === 'completed' ? 'delivered' : p.q.status === 'pending_delivery' ? 'on the road' : p.packed ? 'packed' : p.packing ? 'packing' : 'to pack';
   const tabs = sibs.length > 1 ? sibs : [];
-  return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero" style="border-radius:0 0 32px 32px;padding:calc(10px + var(--safe-area-inset-top)) 18px 22px;align-items:center;gap:12px" data-navy-top>
+  // The head scrolls away with the page (pinned, it took 40% of a small phone and hid the kinds); the actions stay at the foot.
+  return `<div class="cv" style="height:100%;min-height:0;overflow-y:auto;display:flex;flex-direction:column"><div class="cv-hero" style="flex:none;border-radius:0 0 32px 32px;padding:calc(10px + var(--safe-area-inset-top)) 18px 18px;align-items:center;gap:10px" data-navy-top>
     <div style="align-self:stretch;display:flex;align-items:center;justify-content:space-between">${cvBack('Back to stock')}<button data-act="aisle" data-a="${esc(x.aisle.letter)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">Aisle <span class="m" style="font-size:13px;font-weight:600">${esc(x.aisle.letter)}</span></button><span class="cv-circ blank"></span></div>
-    <span style="width:168px;height:168px;border-radius:999px;background:radial-gradient(closest-side,rgba(255,255,255,.08),rgba(255,255,255,0));display:flex;align-items:center;justify-content:center"><span style="width:150px;height:150px;border-radius:999px;background:${T[0]};display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.25)">${img ? `<img src="${esc(img)}" alt="" style="max-width:110px;max-height:110px;object-fit:contain">` : `<svg width="110" height="110" viewBox="0 0 120 120" aria-hidden="true">${T[1]}</svg>`}</span></span>
+    <span class="stk-pic" style="width:124px;height:124px;border-radius:999px;background:radial-gradient(closest-side,rgba(255,255,255,.08),rgba(255,255,255,0));display:flex;align-items:center;justify-content:center"><span style="width:108px;height:108px;border-radius:999px;background:${T[0]};display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(0,0,0,.25)">${img ? `<img src="${esc(img)}" alt="" style="max-width:110px;max-height:110px;object-fit:contain">` : `<svg width="110" height="110" viewBox="0 0 120 120" aria-hidden="true">${T[1]}</svg>`}</span></span>
     <span style="font-size:24px;font-weight:700;letter-spacing:-.01em;text-align:center">${esc(productById(x.productId).name)}</span>
     <span style="font-size:13px;font-weight:600;color:var(--navyInk);text-align:center">${esc(soldBy(x))}</span></div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 0;display:flex;flex-direction:column;gap:10px">
+  <div style="flex:1 0 auto;padding:16px 16px 0;display:flex;flex-direction:column;gap:10px">
     ${tabs.length ? `<div role="tablist" aria-label="Kind" class="cv-seg sh-aisles hscroll" style="display:flex;overflow-x:auto">${tabs.map(s => `<button role="tab" data-act="stocktab" data-key="${esc(s.key)}" aria-pressed="${s.key === key}" style="flex:none;padding:0 14px;white-space:nowrap">${esc(nameParts(s.productId, s.variantIdx, s.productName).variant || s.productName)}</button>`).join('')}</div>` : ''}
     ${due ? `<div style="border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 6px 18px rgba(22,32,60,.05);padding:16px;display:flex;align-items:center;gap:16px">
       <span style="width:88px;height:88px;flex:none;border-radius:999px;border:2px dashed #C9C4BA;color:#5F6980;display:flex;align-items:center;justify-content:center">${sv('M2 12s3.5-6.5 10-6.5c2 0 3.7.6 5.1 1.5M22 12s-3.5 6.5-10 6.5c-2 0-3.7-.6-5.1-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18', 30, 2)}</span>
@@ -4661,7 +4709,7 @@ PAGE.stock = ({ key }) => {
         <span style="font-size:13px;font-weight:600;line-height:1.4;color:var(--ink2)">${esc(dueWhy(x))} · the figures stay hidden until you count</span>
         ${L.why === 'short' || sf ? `<span style="align-self:flex-start;height:28px;padding:0 12px;border-radius:999px;background:#FBE5E2;color:#8E2A22;font-size:12px;font-weight:700;display:flex;align-items:center">Short for ${esc(sf || 'an order')}</span>` : ''}</span></div>`
     : `<div style="border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 6px 18px rgba(22,32,60,.05);padding:16px;display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;align-items:center;gap:18px"><span role="img" aria-label="${n0(x.qty)} ${esc(u)} on the shelf, ${n0(x.held)} held for orders, ${n0(x.avail)} free to sell" style="position:relative;width:96px;height:96px;flex:none;display:block">${ringHF(x, 96)}<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span class="m" style="font-size:24px;font-weight:600;line-height:1">${n0(x.qty)}</span><span class="ell" style="max-width:64px;font-size:11px;font-weight:600;color:var(--ink2)">${esc(u)} on shelf</span></span></span>
+      <div style="display:flex;align-items:center;gap:18px"><span role="img" aria-label="${n0(x.qty)} ${esc(u)} on the shelf, ${n0(x.held)} held for orders, ${n0(x.avail)} free to sell" style="position:relative;width:96px;height:96px;flex:none;display:block">${ringHF(x, 96)}<span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><span class="m" style="font-size:24px;font-weight:600;line-height:1">${n0(x.qty)}</span><span style="max-width:70px;font-size:11px;font-weight:600;line-height:1.15;text-align:center;color:var(--ink2)">${esc(u)}<br>on the shelf</span></span></span>
         <span style="display:flex;flex-direction:column;gap:10px"><span style="display:flex;align-items:baseline;gap:10px"><span style="width:10px;height:10px;border-radius:999px;background:#0F6B43;flex:none"></span><span class="m" style="font-size:22px;font-weight:600;line-height:1">${n0(x.avail)}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">free to sell</span></span>
           <span style="display:flex;align-items:baseline;gap:10px"><span style="width:10px;height:10px;border-radius:999px;background:#16203C;flex:none"></span><span class="m" style="font-size:22px;font-weight:600;line-height:1">${n0(x.held)}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">held for orders</span></span></span></div>
       </div>`}
@@ -4669,7 +4717,7 @@ PAGE.stock = ({ key }) => {
     <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);text-align:center">${sv('M5 5h14v15H5zM5 9h14M9 3v4M15 3v4', 14, 2)}${L.d == null ? 'Never counted' : L.d === 0 ? 'Counted today' : `Last counted ${L.d} day${L.d === 1 ? '' : 's'} ago`}${due ? '' : ' · a check-in adds stock, it is not a count'}</span>
     ${need || due ? cvRow({ act: 'restock', data: { key: x.key }, round: true, ini: initials(b ? b.name : 'Buyer'), soft: '#E4E6FA', ink: '#3A3F9B', title: `We need more · ask ${esc(b ? firstWord(b.name) : 'the buyer')}`, sub: `${esc(b ? firstWord(b.name) : 'The buyer')} adds it to a buying round` }).replace('class="cv-row"', 'class="cv-row" style="background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1px var(--rule);padding:0 14px;min-height:66px"') : ''}
   </div>
-  <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px">
+  <div style="flex:none;position:sticky;bottom:0;background:var(--bg);padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px">
     ${due ? `<button data-act="count" data-key="${esc(x.key)}" style="height:58px;border:none;border-radius:999px;background:var(--red);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(201,58,48,.26)">Count it now</button>` : ''}
     ${D().reports !== null ? `<button data-act="report" data-key="${esc(x.key)}" style="height:48px;border:none;background:none;font-size:14px;font-weight:700;color:var(--ink2)">Report damaged, lost or stolen</button>` : ''}
   </div></div>`;
@@ -4678,14 +4726,17 @@ PAGE.stock.bg = '#F7F5F2';
 /* Where the shelf's figure comes from (the canvas's StockItemHistory): the
    orders holding it, and the moves of the last five weeks, newest first.
    Never while a count is due: the figures stay hidden until it is counted. */
+function orderLeftShelf(q){ return ['pending_delivery', 'completed'].includes(q.status) || (q.status === 'preparing' && q.pickingStatus === 'done'); }
 function stockHistoryHTML(x, pr, word){
   const ST = { packed: ['#16203C', '#FFFFFF'], packing: ['#E4E6FA', '#3A3F9B'], 'to pack': ['#F1EEE8', '#5F6980'], 'on the road': ['#DCEAF8', '#1A5A8A'], delivered: ['#E4F4EA', '#0F6B43'] };
   const per = n => fmtLevels(levelsFor(x), n);
-  const held = pr.slice().sort((a, b) => (b.packed - a.packed) || (b.packing - a.packing)).slice(0, 8).map((p, i) => { const w = word(p), bay = p.packed && bayOf(p.q), c = ST[w] || ST['to pack'], dest = orderIsPickup(p.q) ? 'collects' : 'to ' + placeShort(p.q);
+  const waiting = pr.filter(p => !orderLeftShelf(p.q)), left = pr.filter(p => orderLeftShelf(p.q));
+  const rowsOf = list => list.slice().sort((a, b) => (b.packed - a.packed) || (b.packing - a.packing)).slice(0, 8).map((p, i) => { const w = word(p), bay = p.packed && bayOf(p.q), c = ST[w] || ST['to pack'], dest = orderIsPickup(p.q) ? 'collects' : 'to ' + placeShort(p.q);
     return `<button data-act="shorder" data-id="${p.q.id}" style="display:flex;align-items:center;gap:10px;min-height:58px;padding:0 12px;border:none;border-top:${i ? '1px solid #EFECE6' : 'none'};background:transparent;width:100%;text-align:left;color:var(--ink)">
       <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${q4(p.q)} · ${esc(quoteClientName(p.q))}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(dest)}</span></span>
       <span style="flex:none;height:24px;padding:0 9px;border-radius:999px;background:${c[0]};color:${c[1]};font-size:11px;font-weight:700;display:flex;align-items:center">${bay ? 'on bay ' + bay : esc(w)}</span>
       <span class="m" style="flex:none;min-width:44px;text-align:right;font-size:15px;font-weight:600">${esc(per(p.n))}</span></button>`; }).join('');
+  const held = rowsOf(waiting), gone = rowsOf(left);
   const up = 'M12 19V5M5 12l7-7 7 7', down = 'M12 5v14M5 12l7 7 7-7', cnt = 'M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 12h6';
   const moves = (D().stockLog || []).filter(r => r.key === x.key).sort((a, b) => (msOf(b.at) || msOf(b.date)) - (msOf(a.at) || msOf(a.date)) || (Number(b.id) || 0) - (Number(a.id) || 0)).slice(0, 8).map(r => {
     const d = Number(r.delta) || 0, t = String(r.type || '').toLowerCase(), note = String(r.note || '').trim(), at = msOf(r.at) || msOf(r.date);
@@ -4698,7 +4749,8 @@ function stockHistoryHTML(x, pr, word){
       <span style="position:relative;z-index:1;width:26px;height:26px;flex:none;border-radius:999px;background:${look[0]};color:${look[1]};display:flex;align-items:center;justify-content:center">${sv(look[2], 13, 2.4)}</span>
       <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:13px;font-weight:700">${esc(look[4])}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(when)}</span></span>
       <span class="m" style="flex:none;font-size:14px;font-weight:600;color:${look[3]}">${esc(look[5])}</span></div>`; }).join('');
-  return `${held ? `<span class="cv-sec" style="margin-top:4px">Held for · ${pr.length} order${pr.length === 1 ? '' : 's'}</span><div style="flex:none;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden">${held}</div>` : ''}
+  return `${held ? `<span class="cv-sec" style="margin-top:4px">Held for · ${waiting.length} order${waiting.length === 1 ? '' : 's'}</span><div style="flex:none;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden">${held}</div>` : ''}
+    ${gone ? `<span class="cv-sec" style="margin-top:4px">Left the shelf · not invoiced yet</span><div style="flex:none;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden">${gone}</div>` : ''}
     ${moves ? `<span class="cv-sec" style="margin-top:4px">What moved it</span><div style="position:relative;flex:none;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);padding:4px 0"><span aria-hidden="true" style="position:absolute;left:24px;top:22px;bottom:22px;width:2px;background:#EFECE6"></span>${moves}</div>` : ''}`;
 }
 // An order holding this item opens where it is in the yard.
@@ -4730,6 +4782,10 @@ ACT.count = t => {
   const k = t.dataset.key, a = t.dataset.aisle || (stockItems()[0] || { aisle: {} }).aisle.letter, saved = (() => { try { return JSON.parse(localStorage.getItem(CT_KEY())); } catch (_e) { return null; } })();
   const keys = k ? [k] : stockItems().filter(x => x.aisle.letter === a).sort((p, q) => p.productName.localeCompare(q.productName)).map(x => x.key);
   if (!keys.length) { toast('Nothing in this aisle to count'); return; }
+  // One count of a place at a time: a count still waiting on the Manager opens instead of a second one.
+  const label = k ? null : `Aisle ${a} · ${(aisleList().find(x => x.letter === a) || {}).name || ''}`;
+  const waiting = label && (D().counts || []).find(c => c.status === 'sent' && c.aisle === label);
+  if (waiting) { FEEL.open(); toast(`${label.split(' ·')[0]}'s count is still with ${managerName()}`, 4000); push('decide', { id: waiting.id }); return; }
   const same = saved && !saved.sent && JSON.stringify(saved.keys) === JSON.stringify(keys);
   const one = k ? stockItems().find(x => x.key === k) : null;
   S.ui.ct = same ? saved : { aisle: one ? `Spot count · ${one.productName}` : `Aisle ${a} · ${(aisleList().find(x => x.letter === a) || {}).name || ''}`, letter: one ? one.aisle.letter : a, keys, i: 0, entries: {}, focus: 0, counts: {}, system: {}, at: Date.now() };
@@ -4810,6 +4866,10 @@ ACT.ctsend = () => { const ct = S.ui.ct; if (!ct || ct.wait) return; if (Object.
   heldWrite('Sending the count', () => sendCountOnce(), () => { ct.wait = false; }, 10000, true); };
 async function sendCountOnce(){
   const ct = S.ui.ct; if (!ct || ct.sent || ct.sending) return; ct.sending = true;
+  // A try after a dropped signal first asks whether the last one arrived after all, so a count never goes twice.
+  if (ct.tries) { try { const { data } = await sb.from('stock_counts').select('id').eq('shop_id', S.shopId).eq('counted_by', S.user.id).eq('aisle', ct.aisle).gte('created_at', new Date(ct.at).toISOString()).limit(1);
+    if (data && data[0]) { ct.sent = data[0].id; ct.sendErr = null; ct.sentAt = Date.now(); ct.sending = false; ct.wait = false; saveCt(); if (['count', 'countresults'].includes(topType())) render(); return; } } catch (_e) {} }
+  ct.tries = (ct.tries || 0) + 1;
   // A partial count sends only what was counted; what could not be found rides apart and stays due.
   const idx = ct.keys.map((_, i) => i), got = idx.filter(i => ct.counts[i] !== undefined), lost = ct.partial ? idx.filter(i => ct.counts[i] === undefined && (ct.missing || {})[i]) : [];
   const lines = got.map(i => { const k = ct.keys[i], x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i], held: (ct.held || {})[i] || 0 }; });
@@ -4864,10 +4924,12 @@ const REASONS = [
   { k: 'lost', name: 'Lost', icon: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5M9 9a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2M11 14h.01', word: 'lost' },
   { k: 'stolen', name: 'Stolen', icon: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4M12 15v2', word: 'stolen' },
 ];
-ACT.report = t => { FEEL.open(); S.ui.rp = null; push('report', { key: t.dataset.key || '' }); };
+ACT.report = t => { FEEL.open(); S.ui.rp = null; push('report', { key: t.dataset.key || '' });
+  // Picking the item: the box takes typing straight away, as Stock search does.
+  if (!t.dataset.key) { const f = () => { const el = document.getElementById('rp_find'); if (el && document.activeElement !== el) el.focus(); }; f(); setTimeout(f, 340); } };
 PAGE.report = ({ key }) => {
   const ui = S.ui.rp && S.ui.rp.key === key ? S.ui.rp : (S.ui.rp = { key, why: null, n: 1, lv: null, note: '', photo: null, blob: null, find: '' }), mgr = managerName();
-  if (ui.sent) return sentScreen({ undo: ui.wait ? 'heldundo' : null, title: 'Report sent', line: `${n0(ui.n)} ${ui.unit} of ${ui.name} · ${REASONS[ui.why || 0].word}`, done: 'rpdone',
+  if (ui.sent) return sentScreen({ undo: ui.wait && !ui.going ? 'heldundo' : null, title: ui.queued ? 'Kept on this phone' : ui.wait ? 'Sending…' : 'Report sent', line: ui.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${n0(ui.n)} ${ui.unit} of ${ui.name} · ${REASONS[ui.why || 0].word}`, done: 'rpdone',
     body: trackDone({ who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'decides', last: 'Shelf', lastSub: 'if written off', foot: 'You get a buzz at each step' }) });
   const x = key ? stockItems().find(i => i.key === key) : null, u = x ? unitWord(x) : '';
   if (!x) { const f = String(ui.find || '').trim().toLowerCase(), hits = (f ? itemSearch(f) : stockItems()).slice(0, 12);
@@ -4905,7 +4967,7 @@ PAGE.report.dirtyWord = 'this report';
 PAGE.report.dirty = () => { const ui = S.ui.rp; return !!ui && !ui.sent && !!ui.key && (ui.why != null || !!String(ui.note || '').trim() || !!ui.photo || ui.n > 1); };
 ACT['in:rpfind'] = t => { S.ui.rp.find = t.value; clearTimeout(ACT.rpT); ACT.rpT = setTimeout(render, 200); };
 ACT.rppick = t => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: t.dataset.key }); };
-ACT.rpchange = () => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: '' }); };
+ACT.rpchange = () => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: '' }); const el = document.getElementById('rp_find'); if (el) el.focus(); };
 ACT.rpwhy = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; ui.why = Number(t.dataset.i); FEEL.tick(); render(); };
 // The most that can be lost is what the books hold, in the unit picked.
 /* The most that can be lost is what the books hold, in whole units of the one
@@ -4928,7 +4990,14 @@ ACT.rpsend = () => {
   const LV = levelsFor(x), lv = ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)), f = LV[lv] ? LV[lv][2] : 1, lu = LV[lv] ? LV[lv][1] : unitWord(x);
   const base = Math.round(ui.n * f * 1e6) / 1e6, said = f === 1 ? '' : `${n0(ui.n)} ${lu}`;
   Object.assign(ui, { sent: true, wait: true, unit: ui.n === 1 ? lu.replace(/s$/, '') : lu, name: x.productName }); chimeDone(); render();
-  heldWrite('Sending the report', async () => { S.busy = true; try { await sendReport(x, base, REASONS[ui.why].k, ui.blob, [said, String(ui.note || '').trim()].filter(Boolean).join(' · ')); ui.wait = false; } catch (e) { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } S.busy = false; render(); }, () => { ui.sent = false; ui.wait = false; }, 10000, true);
+  const note = [said, String(ui.note || '').trim()].filter(Boolean).join(' · ');
+  heldWrite('Sending the report', async () => { S.busy = true; ui.going = true; render();
+    try { await sendReport(x, base, REASONS[ui.why].k, ui.blob, note); ui.wait = false; ui.going = false; }
+    catch (e) { ui.going = false;
+      // No signal: kept on the phone and sent by itself later; the screen says so.
+      if (isNetworkError(e)) { try { await outboxAdd('report', { key: x.key, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, qty: base, reason: REASONS[ui.why].k, blob: ui.blob || null, note }); ui.wait = false; ui.queued = true; } catch (_e2) { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
+      else { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
+    S.busy = false; render(); }, () => { ui.sent = false; ui.wait = false; }, 10000, true);
 };
 ACT.rpdone = () => { S.ui.rp = null; FEEL.back(); pop(); };
 // The photo for the report: the camera, full screen.
@@ -4997,16 +5066,22 @@ function lev(a, b){ const m = a.length, n = b.length; if (Math.abs(m - n) > 2) r
   for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; } return prev[n]; }
 function fdHit(word, words, alias){
   for (const w of words) if (w.startsWith(word)) return 'name';
+  // A number is matched as written: 420 is never 425 or 450 by a typo (the report tapped the wrong screws).
+  if (/\d/.test(word)) { for (const a of alias) if (a.startsWith(word)) return 'alias'; return null; }
   for (const a of alias) if (a.startsWith(word) || (word.length >= 4 && lev(word, a) <= 1)) return 'alias';
   const room = word.length >= 7 ? 2 : 1;
   if (word.length >= 4) for (const w of words) { if (w.length < 3) continue; if (Math.min(lev(word, w), lev(word, w.slice(0, word.length)), lev(word, w.slice(0, word.length + 1))) <= room) return 'typo'; }
   return null;
 }
 // One search for every item list (Find, Report a loss, Extra on the truck): the same words find the same things.
+// Best match first: every word found as written beats a translation, which beats a typo; then the shorter name.
+const FD_RANK = { name: 0, alias: 1, typo: 3 };
+function fdScore(qw, x, words, alias){ let sc = 0; for (const w of qw) { if (w.length === 1 && /[a-z]/.test(w)) { if (x.aisle.letter.toLowerCase() !== w) return null; continue; }
+  const h = fdHit(w, words, alias); if (!h) return null; sc += FD_RANK[h]; if (h === 'name' && words.includes(w)) sc -= .5; } return sc; }
 function itemSearch(q){
   const qw = fdNorm(q).split(' ').filter(w => w && w !== 'aisle'); if (!qw.length) return [];
-  return stockItems().filter(x => { const words = fdNorm(x.productName).split(' '), alias = ALIASES.filter(([re]) => re.test(x.productName)).flatMap(a => a[1]).concat(labelShort(x).toLowerCase());
-    return qw.every(w => (w.length === 1 && /[a-z]/.test(w)) ? x.aisle.letter.toLowerCase() === w : !!fdHit(w, words, alias)); });
+  return stockItems().map(x => { const words = fdNorm(x.productName).split(' '), alias = ALIASES.filter(([re]) => re.test(x.productName)).flatMap(a => a[1]).concat(labelShort(x).toLowerCase());
+    return { x, sc: fdScore(qw, x, words, alias) }; }).filter(r => r.sc != null).sort((a, b) => a.sc - b.sc || a.x.productName.length - b.x.productName.length).map(r => r.x);
 }
 function fdStatus(x){ return countDue(x) ? 'due' : x.avail <= 0 && (x.held > 0 || lookOf(x).out4 > 0) ? 'out' : lookOf(x).why === 'low' ? 'low' : x.held > 0 ? 'held' : 'ok'; }
 PAGE.find = () => {
@@ -5014,9 +5089,11 @@ PAGE.find = () => {
   let translated = false;
   const all = stockItems().map(x => ({ x, words: fdNorm(x.productName).split(' '), alias: ALIASES.filter(([re]) => re.test(x.productName)).flatMap(a => a[1]).concat(labelShort(x).toLowerCase()), st: fdStatus(x) }));
   const matched = qw.length ? all.filter(it => qw.every(w => { if (w.length === 1 && /[a-z]/.test(w)) return it.x.aisle.letter.toLowerCase() === w; const h = fdHit(w, it.words, it.alias); if (h && h !== 'name') translated = true; return !!h; })) : [];
+  matched.forEach(it => { it.sc = fdScore(qw, it.x, it.words, it.alias) || 0; }); matched.sort((a, b) => a.sc - b.sc || a.x.productName.length - b.x.productName.length);
   const counts = { all: matched.length, out: 0, low: 0, held: 0, due: 0 }; matched.forEach(it => { if (it.st === 'out') counts.out++; if (it.st === 'low') counts.low++; if (it.st === 'due') counts.due++; if (it.x.held > 0) counts.held++; });
   const shown = matched.filter(it => ui.f === 'all' || (ui.f === 'held' ? it.x.held > 0 : it.st === ui.f)).slice(0, 60);
-  const groups = aisleList().map(a => ({ a, rows: shown.filter(it => it.x.aisle.letter === a.letter) })).filter(g => g.rows.length);
+  // The aisle holding the best match comes first.
+  const groups = aisleList().map(a => ({ a, rows: shown.filter(it => it.x.aisle.letter === a.letter) })).filter(g => g.rows.length).sort((p, q) => shown.indexOf(p.rows[0]) - shown.indexOf(q.rows[0]));
   const ow = String(ui.q || '').toLowerCase().replace(/[#&]/g, ' ').split(/\s+/).filter(Boolean);
   const orders = ow.length ? liveOrders().filter(q => ow.every(w => (/^\d{2,4}$/.test(w) && String(q.id).endsWith(w.replace(/^0+/, ''))) || (w.length >= 3 && quoteClientName(q).toLowerCase().split(/\s+/).some(cw => cw.startsWith(w))))).sort((a, b) => b.id - a.id).slice(0, 8) : [];
   const hint = translated && matched.length ? (matched.length > 1 ? lineName(matched[0].x).base.split(' ·')[0].replace(/ [A-Z]?\d.*$/, '').toLowerCase().replace(/([^s])$/, '$1s') : matched[0].x.productName) : '';
@@ -5289,7 +5366,7 @@ function doorBacks(){ const dr = doorReturns(); return Object.keys(dr).map(id =>
 function doorReturns(){ try { return JSON.parse(localStorage.getItem(DOORRET_KEY())) || {}; } catch (_e) { return {}; } }
 function saveDoorReturns(m){ try { localStorage.setItem(DOORRET_KEY(), JSON.stringify(m)); } catch (_e) {} }
 ACT.goret = t => { FEEL.open(); const id = t && t.dataset && t.dataset.id ? Number(t.dataset.id) : null, dr = id && doorReturns()[id];
-  S.ui.rt = { id, who: dr ? 'driver' : 'client', find: '', back: dr ? { ...dr.back } : {}, cond: dr ? { ...dr.cond } : {}, photo: null, blob: null, sent: null, door: dr ? dr.at : null, direct: !!id }; push('ret', {}); };
+  S.ui.rt = { id, who: dr ? 'driver' : 'client', find: '', back: dr ? { ...dr.back } : {}, cond: dr ? { ...dr.cond } : {}, photo: null, blob: null, sent: null, door: dr ? dr.at : null, direct: !!id }; S.ui.rtGone = new Set(); push('ret', {}); };
 // "1 bags" reads "1 bag"; a figure other than one keeps the unit as written.
 function oneOf(t){ return String(t || '').replace(/^1 ([a-z]+?[^es])s\b/i, '1 $1'); }
 function rtItems(q){ return (q.items || []).map((it, i) => ({ it, i, k: lineKey(it, i) })).filter(x => (Number(x.it.qty) || 0) > 0); }
@@ -5301,13 +5378,14 @@ PAGE.ret = () => {
   if (q && ui.sent) return rtDone(q, ui);
   if (!q) {
     const f = ui.find.trim().toLowerCase(), list = returnableOrders().filter(o => !f || quoteClientName(o).toLowerCase().includes(f) || String(o.id).includes(f.replace(/^#?q?-?0*/, ''))).slice(0, 30);
-    const open = pendingReturns(null);
+    // What was taken back on this visit stays in its place, marked, so the list never slides under a finger.
+    const gone = S.ui.rtGone || (S.ui.rtGone = new Set()), open = (D().returns || []).filter(a => a.status === 'sent' || (a.status === 'withdrawn' && gone.has(String(a.id))));
     const who = (k, d, w, sub) => { const on = ui.who === k; return `<button data-act="rtwho" data-k="${k}" aria-pressed="${on}" style="position:relative;height:96px;border-radius:20px;border:none;background:${on ? '#fff' : 'rgba(255,255,255,.07)'};color:${on ? '#16203C' : '#fff'};padding:12px;display:flex;flex-direction:column;justify-content:space-between;text-align:left"><span style="width:36px;height:36px;border-radius:999px;background:${on ? '#F1EEE8' : 'rgba(255,255,255,.1)'};display:flex;align-items:center;justify-content:center">${sv(d, 18, 2)}</span><span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700">${w}</span><span style="font-size:11px;font-weight:600;opacity:.7">${sub}</span></span>${on ? `<span style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:999px;background:#0F6B43;color:#fff;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 12, 3.4)}</span>` : ''}</button>`; };
     return `<div class="cv"><div class="cv-hero tight" style="gap:14px" data-navy-top><div class="cv-top">${cvBack()}<b>Returns</b><span class="cv-circ blank"></span></div>
       <span style="font-size:22px;font-weight:700;letter-spacing:-.01em;padding:0 4px">Who is bringing it back?</span>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${who('client', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', 'The client', 'at the gate')}${who('driver', CV.van, 'Our driver', 'refused at the door')}</div></div>
     <div class="cv-body">
-      ${open.length ? `<span class="cv-sec first">With ${esc(mgr)}</span><div class="cv-list">${open.slice(0, 5).map(r => { const o = quoteById(r.orderId); return cvRow({ icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `${o ? q4(o) + ' · ' + esc(quoteClientName(o)) : 'An order'}`, sub: `${esc((r.lines || []).map(l => returnLineWords(o, l)).join(', '))} · ${esc(ago(msOf(r.createdAt)))}`, right: r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Take back</button>` : canCorrect() ? `<button data-act="rtdecline" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Reject</button>` : cvChip('waiting', '#FDEEE1', '#7A4A02') }); }).join('')}</div>` : ''}
+      ${open.length ? `<span class="cv-sec first">With ${esc(mgr)}</span><div class="cv-list">${open.slice(0, 5).map(r => { const o = quoteById(r.orderId); return cvRow({ icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `${o ? q4(o) + ' · ' + esc(quoteClientName(o)) : 'An order'}`, sub: `${esc((r.lines || []).map(l => returnLineWords(o, l)).join(', '))} · ${esc(ago(msOf(r.createdAt)))}`, right: r.status === 'withdrawn' ? `<span style="height:28px;padding:0 10px;border-radius:999px;background:#F1EEE8;color:var(--ink2);font-size:12px;font-weight:700;flex:none;display:inline-flex;align-items:center">Taken back</span>` : r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Take back</button>` : canCorrect() ? `<button data-act="rtdecline" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Reject</button>` : cvChip('waiting', '#FDEEE1', '#7A4A02') }); }).join('')}</div>` : ''}
       <span class="cv-sec${open.length ? '' : ' first'}">Which order</span>
       <label style="height:52px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);display:flex;align-items:center;gap:10px;padding:0 8px 0 14px">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2, 'style="color:#9AA1AE"')}<input id="rt_find" data-in="rtfind" value="${esc(ui.find)}" placeholder="Order number or client" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px"></label>
       <div class="cv-list"><span style="padding:8px 8px 2px;font-size:12px;font-weight:600;color:var(--ink2)">Delivered lately</span>${list.map(o => cvRow({ act: 'rtpick', data: { id: o.id }, round: true, ini: initials(quoteClientName(o)), soft: tint(quoteClientName(o))[0], ink: tint(quoteClientName(o))[1], title: esc(quoteClientName(o)), sub: `${q4(o)} · ${o.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(o.deliveredAt)) ? 'today ' + hm(msOf(o.deliveredAt)) : esc(dayLabel(isoOf(msOf(o.deliveredAt) || waitingSince(o))))) : 'on the road'} · ${nLines(rtItems(o).length)}` })).join('') || '<div class="st-empty">No delivered orders by that name</div>'}</div>
@@ -5319,6 +5397,7 @@ PAGE.ret = () => {
       <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${q4(q)} · ${q.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(q.deliveredAt)) ? 'today' : esc(dayLabel(isoOf(msOf(q.deliveredAt))))) : 'on the road'}</span></span></div>
     <span style="align-self:flex-start;height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">${sv(ui.door ? CV.van : 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', 14, 2, 'style="color:#6FDCB0"')}${ui.door ? `Filled in at the door · ${hm(ui.door)} · check it` : ui.who === 'driver' ? 'Our driver brought it back' : 'The client brought it to the gate'}</span></div>
   <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px">
+    ${pendingReturns(q).map(r => `<div style="display:flex;align-items:center;gap:10px;min-height:60px;padding:8px 12px;margin-bottom:12px;border-radius:18px;background:#FDEEE1;color:#7A4A02">${sv(CV.ret, 18, 2.2)}<span class="cv-tx" style="gap:2px"><span style="font-size:13px;font-weight:700">Already with ${esc(mgr)} · sent ${esc(whenSaid(msOf(r.createdAt)))}</span><span style="font-size:12px;font-weight:600">${esc((r.lines || []).map(l => returnLineWords(q, l)).join(', '))}${r.reason ? ' · ' + esc(r.reason) : ''}</span></span>${r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="flex:none;height:34px;padding:0 12px;border-radius:999px;border:none;background:#fff;color:#7A4A02;font-size:12px;font-weight:700">Take back</button>` : ''}</div>`).join('')}
     <div style="filter:drop-shadow(0 10px 20px rgba(22,32,60,.12)) drop-shadow(0 1px 1px rgba(22,32,60,.06))"><div style="height:8px;background:conic-gradient(from 135deg at 50% 0,#FFFFFF 90deg,transparent 0) 0 0/14px 8px repeat-x"></div>
       <div style="background:#fff;padding:12px 16px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:6px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ink2)">WHAT ${esc(String(shortName(quoteClientName(q))).toUpperCase())} GOT</span><span style="font-size:11px;font-weight:600;color:var(--ink2);flex:none">tap + for what came back</span></div>
@@ -5336,7 +5415,7 @@ PAGE.ret = () => {
 };
 PAGE.ret.bg = '#F7F5F2';
 PAGE.ret.dirtyWord = 'this return';
-PAGE.ret.dirty = () => { const ui = S.ui.rt; return !!ui && !ui.sent && !ui.door && Object.values(ui.back || {}).some(n => n > 0); };
+PAGE.ret.dirty = () => { const ui = S.ui.rt; return !!ui && ui.id != null && !ui.sent && !ui.door && (Object.values(ui.back || {}).some(n => n > 0) || !!ui.why || !!String(ui.note || '').trim()); };
 // Why it came back: nothing picked for the person; the Manager reads it with the note.
 const RT_WHY = {
   client: [['Damaged after delivery', 'M12 4 2.5 20h19zM12 10v4M12 17h.01'], ['Wrong item sent', 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3'], ['Too many sent', 'M12 5v14M5 12h14'], ["Didn't need it", 'M6 6l12 12M18 6 6 18']],
@@ -5360,13 +5439,22 @@ ACT.rtwho = t => { S.ui.rt.who = t.dataset.k; FEEL.tick(); render(); };
 ACT['in:rtfind'] = t => { S.ui.rt.find = t.value; clearTimeout(ACT.rtT); ACT.rtT = setTimeout(render, 200); };
 ACT.rtpick = t => { const ui = S.ui.rt; ui.id = Number(t.dataset.id); FEEL.open(); render(); };
 // Opened on one order (from With Ruth, an alert, the door): Back goes back there, not to the order list.
-ACT.rtunpick = () => { const ui = S.ui.rt; if (ui.door || ui.direct) { if (!leaveGuard()) pop(); return; } ui.id = null; ui.back = {}; ui.cond = {}; ui.why = null; ui.note = ""; FEEL.back(); render(); };
+ACT.rtunpick = () => { const ui = S.ui.rt; if (ui.door || ui.direct) { if (!leaveGuard()) pop(); return; } if (leaveGuard()) return; ui.id = null; ui.back = {}; ui.cond = {}; ui.why = null; ui.note = ""; FEEL.back(); render(); };
 ACT.rtstep = t => { const ui = S.ui.rt, q = quoteById(ui.id); if (!q || ui.sent) return; const x = rtItems(q).find(y => y.k === t.dataset.k); if (!x) return;
   ui.back[x.k] = Math.max(0, Math.min(rtRoom(q, x), (ui.back[x.k] || 0) + Number(t.dataset.d) * rtStep(x))); if (ui.back[x.k] > 0 && ui.cond[x.k] == null && rtDamagedWhy(ui.why)) ui.cond[x.k] = 1; FEEL.tick(); render(); };
 ACT.rtcond = t => { const ui = S.ui.rt; ui.cond[t.dataset.k] = Number(t.dataset.c); FEEL.tick(); render(); };
 ACT.rtphoto = async () => { const ui = S.ui.rt; if (!ui || ui.sent) return; const p = await takePhoto(); if (!p) return; ui.photo = p.url; ui.blob = p.blob; FEEL.stamp(); render(); };
-ACT.rtwithdraw = async t => { if (S.busy) return; S.busy = true;
-  try { const { error } = await sb.rpc('withdraw_invoice_ask', { p_id: t.dataset.id }); if (error) throw error; const a = (D().returns || []).find(x => String(x.id) === t.dataset.id); if (a) a.status = 'withdrawn'; saveSnapshot(); FEEL.back(); toast('Return taken back'); }
+// Taking a return back asks first, naming the order, so a second tap never lands on someone else's.
+ACT.rtwithdraw = t => { const a = (D().returns || []).find(x => String(x.id) === t.dataset.id); if (!a) return; FEEL.open(); openSheet('rtback', { id: t.dataset.id }); };
+SHEET.rtback = a => { const r = (D().returns || []).find(x => String(x.id) === a.id), q = r && quoteById(r.orderId); if (!r) return '';
+  return `<span style="font-size:20px;font-weight:700">Take back this return?</span>
+    <span style="font-size:13px;font-weight:600;color:var(--ink2)">${q ? q4(q) + ' · ' + esc(quoteClientName(q)) : 'An order'} · ${esc((r.lines || []).map(l => returnLineWords(q, l)).join(', '))}</span>
+    <span style="font-size:13px;font-weight:600;color:var(--ink2)">${esc(managerName())} stops seeing it. Nothing is credited.</span>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <button data-act="closesheet" style="height:56px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:15px;font-weight:700">Keep it</button>
+      <button data-act="rtbackyes" data-id="${esc(a.id)}" ${S.busy ? 'disabled' : ''} style="height:56px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:#8E2A22;font-size:15px;font-weight:700">Take it back</button></div>`; };
+ACT.rtbackyes = async t => { if (S.busy) return; S.busy = true; renderSheet();
+  try { const { error } = await sb.rpc('withdraw_invoice_ask', { p_id: t.dataset.id }); if (error) throw error; const a = (D().returns || []).find(x => String(x.id) === t.dataset.id); if (a) a.status = 'withdrawn'; (S.ui.rtGone || (S.ui.rtGone = new Set())).add(String(t.dataset.id)); saveSnapshot(); FEEL.back(); closeSheet(); toast('Return taken back'); }
   catch (e) { FEEL.no(); toast(failSay(e, '0123'), 5000); } S.busy = false; render(); };
 ACT.rtdecline = async t => { if (S.busy) return; S.busy = true;
   try { const { error } = await sb.rpc('decide_invoice_ask', { p_id: t.dataset.id, p_status: 'declined' }); if (error) throw error; const a = (D().returns || []).find(x => String(x.id) === t.dataset.id); if (a) a.status = 'declined'; saveSnapshot(); FEEL.back(); toast('Return rejected'); }
@@ -5381,12 +5469,16 @@ ACT.rtsend = () => {
   if (!lines.length || !ui.why || rtClash(ui)) { FEEL.no(); if (lines.length) { const el = document.querySelector('[data-act="rtwhy"]'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
   ui.sent = { lines, wait: true, at: Date.now(), why: ui.why }; chimeDone(); render();
   heldWrite('Logging the return', async () => { S.busy = true;
-    try { const r = await sendReturn(q, lines, ui.blob, ui.why, ui.note); ui.sent.wait = false; ui.sent.id = r.id; const dr = doorReturns(); if (dr[q.id]) { delete dr[q.id]; saveDoorReturns(dr); } }
-    catch (e) { ui.sent = null; FEEL.no(); toast(failSay(e, '0124'), 5000); } S.busy = false; render(); }, () => { ui.sent = null; }, 10000, true);
+    const clearDoor = () => { const dr = doorReturns(); if (dr[q.id]) { delete dr[q.id]; saveDoorReturns(dr); } };
+    try { const r = await sendReturn(q, lines, ui.blob, ui.why, ui.note); ui.sent.wait = false; ui.sent.id = r.id; clearDoor(); }
+    catch (e) {
+      if (isNetworkError(e)) { try { await outboxAdd('return', { orderId: q.id, lines, blob: ui.blob || null, why: ui.why, note: ui.note || '' }); ui.sent.wait = false; ui.sent.queued = true; clearDoor(); } catch (_e2) { ui.sent = null; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
+      else { ui.sent = null; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
+    S.busy = false; render(); }, () => { ui.sent = null; }, 10000, true);
 };
 function rtDone(q, ui){
   const good = ui.sent.lines.filter(l => l.condition === 'good'), bad = ui.sent.lines.filter(l => l.condition === 'damaged'), tk = takerOf(q), mgr = managerName();
-  return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, title: 'Return logged', line: `${q4(q)} · ${quoteClientName(q)}`, done: 'rtdone',
+  return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, title: ui.sent.queued ? 'Kept on this phone' : ui.sent.wait ? 'Logging…' : 'Return logged', line: ui.sent.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${q4(q)} · ${quoteClientName(q)}`, done: 'rtdone',
     body: `<div style="width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
       <span style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span class="m" style="font-size:20px;font-weight:600;color:#6FDCB0">${esc(good.map(l => oneOf(l.shown)).join(' + ') || '0')}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">good · back to the shelf</span></span>
       <span style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:-1px 0 0 rgba(255,255,255,.07)"><span class="m" style="font-size:20px;font-weight:600;color:#F5B26B">${esc(bad.map(l => oneOf(l.shown)).join(' + ') || '0')}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">damaged · set aside</span></span></div>

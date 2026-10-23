@@ -292,7 +292,9 @@ const P = page(fakeDb({}));
     X.D().savedQuotes.push(Q(orderRow(60, [it(1, 'P2', 2)], { pickingStatus: 'in_progress' }, { status: 'preparing' })));   // still being packed: on the shelf
     t.check(X.heldGone('P2', null) === 7, 'a count expects the books less what packed, out or delivered orders took (not what Checking or Buying still waits on): ' + X.heldGone('P2', null));
     const stockTxt = X.PAGE.stock({ key: 'P2' }).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-    t.check(/\b53\b/.test(stockTxt) && /7 held/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /delivered/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, with the part held for orders');
+    // Round 4 of the browser test: what has left the shelf is not on it, though the invoice goes tomorrow;
+    // it is listed apart ("Left the shelf · not invoiced yet") and is not counted as held.
+    t.check(/\b53\b/.test(stockTxt) && /53 free to sell/.test(stockTxt) && /Left the shelf · not invoiced yet/.test(stockTxt) && /delivered/.test(stockTxt) && !/\b7 held/.test(stockTxt), 'fix 3: the item page shows what is on the shelf to sell, and what has left it for orders not yet invoiced apart from what is held');
     const shelfTxt = X.viewShelf().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
     // "Needs a look" (the canvas's Stock tab) names the order that falls short.
     t.check(/Out · #0058 is short/.test(shelfTxt), 'fix 3: "Needs a look" says the item is out and which order falls short');
