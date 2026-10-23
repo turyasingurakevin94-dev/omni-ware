@@ -1,0 +1,144 @@
+# Round 7: Premium UI at 360px   (brief received 23 Oct 2026, build 23 Oct 2026 20:56 UTC)
+
+Canvas: https://claude.ai/artifact/LVsyQEintezbVH3qn4cSVi, row "Audit round 7 · premium at 360" (bottom of the canvas, version 107).
+Migration: none planned (see the #0494 note at the end).
+Do not regress (round 6): names by member, "End my shift", "Not paid yet", shared counts, With Ruth lists every waiting ask, the quiet bell, "Order #…" in stock history, durations vs clock times, lower-case units.
+
+Reproduced in the harness before planning, with a new `#r7` fixture: #0574's 10 Dozen with 20 Dozen to a Ctn and its count due, #0566's 19 Box at the gate, a hired driver, the shop "Omni-ware (old records)". Every item below was seen at 360 px.
+
+## What was found
+
+| ID | Root cause |
+|---|---|
+| STO-UI-01 | A line sold "by the pack" (`qtyIn: 'pack'`) makes `quoteLinePack` return `whole: true` with `packs = qty / packQty`, even when that is not a whole number (10 / 20 = 0.5). `quoteLineCountPer` then counts in cartons, and `quoteLineCount` divides: "0.5 ctn", "0.95 ctn". Pack (card, counter, button), Hand over (the slip), the delivery receipt and the collect receipt all print through `quoteLineCount`. The card's "per pack" line is built from `quoteLineCount(it, 1).unit` (already the carton), so it reads "20 ctn to a Ctn". Round 2's FLOW-01 fixed check-in only (`lineLevels`). |
+| STO-UI-02 | `pkPick` opens a line at `floor(shelf / per) × per`. With per = 20 and 14 dozen on the books that is 0, so Pack opens at 0. The hint then says "short" and the main button becomes "Pack short · 0 of 0.5". A count-due item's shelf figure is the one we trust least, yet it decides the default. |
+| STO-UI-03 | The play button sits 26 px above the bar (`.st-nav .st-go { margin-top: -26px }`, plus a 4 px ring). `#st_app` keeps 132 px free at the end, which helps only once you have scrolled to the bottom. At rest the button covers whatever is at that height: bays 2 and 3 on Today, the 4th "Needs a look" row, the last On the road card, Returns' 4th row. |
+| STO-UI-04 | Measured at 360: Find's input 138×21 inside a 48 px box, Clear 32×32, filter chips 34 tall, the item page's Aisle pill 67×32, Pack's "See Aisle" pill 38 (and 34 on the next card), Returns' search input 278×21. |
+| STO-UI-05 | No scale. On the eight screens of this brief the harness counts these values. **Font sizes:** 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 28 and 40. **Gaps:** 1–22 px (13 values). **Radii:** 23 across the file. **Shadows:** 179 variants. Store has a few colour variables (`--navy`, `--ink2`, `--red`…), but most colours are written inline. |
+| STO-UI-06 | The header's second line is a wrapping flex row of "day · shop · yard" with a dot separator after each item, then the status. At 360 a long shop name wraps after a dot, and "Live" lands alone on the next line. The "to pack" tile puts "+1 waiting" on the number's line at 11 px. |
+| STO-UI-07 | The slip prints `S.shopName` in capitals at 11 px with .14em letter-spacing, two lines allowed. It prints `fullName(it)` as one string, so a variant like `2"` wraps alone. The people picker is one row of up to five 60 px tiles, with names cut by an ellipsis ("Munyar…"). |
+| STO-UI-08 | `thumbOf` picks a drawing by words in the name (`KINDS`); anything else gets the cube. A product with a photo URL that fails to load shows an empty beige tile, because `<img>` has no fallback. Silicone, saws, locks and screws have no drawing. |
+| STO-UI-09 | On the road's `stepDots` draws a home block, a line and one dot per stop still out. A driver with one or two stops shows "home ——— ○", which says nothing. A hired driver gets the same round avatar as staff, only "· hired" after the name. |
+
+## Design changes (canvas)
+
+| ID | Board(s) | Before → After | States drawn | Tokens/components used | New component? |
+|---|---|---|---|---|---|
+| STO-UI-05 | `Scale` | The scale, drawn first. **Type:** 12 / 14 / 16 / 20 / 28 / 40 with weights; figures in Plex Mono. **Radius:** 8 / 14 / 22 / pill. **Shadow:** card / raised / sheet. **Space:** 4 / 8 / 12 / 16 / 24 / 32. **Tap:** 44. **Colour:** the 18 colours in use, named. | one | all | Yes: the scale itself, as CSS variables. |
+| STO-UI-01 / 02 | `PackWholeUnits` | Before: "0.5 ctn", "20 ctn to a Ctn", opens at 0, "Pack short" main. After, count due: "10 dozen", "20 dozen to a ctn · off our shelf", opens at 10 with an amber "Count due · count as you pick", red "Packed · 10 dozen". After, a carton and some: "1 ctn + 4 box", counter in box, "Packed · 1 ctn + 4 box". | before, count due, mixed | Pack card, stepper, amber pill, red button | No |
+| STO-UI-01 / 07 | `HandOverWhole` | Before: "0.95 ctn", "OMNI-WARE (OLD / RECORDS)", name wraps mid-variant, "Munyar…". After at the gate: "19 box"; the shop on one line ("OMNI-WARE"); the name with its variant as tags (as Stock does); the picker 3 to a row with first names in full (2 lines at most). After, the delivery and collect receipts: the same formatter ("1 ctn + 4 box", "10 dozen", "19 box"). | before, after, receipts | slip, tags (`.pv`), picker | No |
+| STO-UI-03 | `PlayButtonRoom` | **Before:** at rest, the button sits on content. **Option A (chosen by Kevin):** the button stays floating, and every scrolling screen ends with room equal to the bar + the button's rise + 16 px (130 px), so the last row always scrolls clear of it. **Option B (not chosen):** dock the button inside the white bar. | before, A (scrolled to the end), B | nav bar, play button | No |
+| STO-UI-04 | `TapTargets44` | Before (red rings): field 21 px, Clear 32, chips 34 in two rows, Aisle 32 and 38. After: the whole 48 px box is the field; Clear has a 44 px hit area; the chips are 44 px tall and scroll on one line; both Aisle pills are 44 px. Dashed outlines show the hit areas. | before, after (focused field) | search box, chips, pills | No |
+| STO-UI-06 | `TodayHeader360` | Before: wraps, ends on "·", "Live" alone; the tile is cramped. After: "Sat 17 Oct · Omni-ware (old records)" on one line, giving way with "…"; the status as a pill (Live / Offline / Not sent · 2); the tile shows "1", then "to pack", then "+1 waiting" on its own line. | before, after, the pill's 3 states | hero, pill | No |
+| STO-UI-08 | `PictureFallback` | Before: blank tiles, cubes, photos and drawings mixed. After: a photo when there is one, else a drawing for the category on its tint. New drawings for locks, fixings, tools, and glue and sealant join bags and roofing. A photo that fails to load falls back to the drawing. | before, after, the drawing set | thumb, category tints | No (new drawings in the existing set) |
+| STO-UI-09 | `OnTheRoadStops` | Before: a line with one dot; staff Abudu and hired Abudu look alike. After: a segmented bar, "1 of 3 stops done", with the stop already done listed at its time; a hired driver reads "Abudu (hired)" with a square, dashed amber avatar. | before, after | segmented bar, avatar | No |
+
+## Code changes planned
+
+| ID | Sev | File / function | Change (one line) | UI? | Acceptance check |
+|---|---|---|---|---|---|
+| STO-UI-01 | P1 | `store.html`: `quoteLinePack` (whole packs only when `qty` is a whole number of packs), a new `lineQty(it, n)` that returns the levels ("1 ctn + 4 box") through `backText`/`lineLevels`, used by `PAGE.pack` (card, counter, button), `PAGE.slip`, the delivery receipt and the collect receipt; the card's sub reads `${packQty} ${unit} to a ${packUnit}` | One formatter: whole packs, then the rest in the line's unit. | yes | #0574 reads "10 dozen" and "20 dozen to a ctn"; #0566 reads "19 box". A harness grep finds no `0.` quantity on any screen. |
+| STO-UI-02 | P2 | `store.html`: `pkPick` opens every line at the ordered quantity (Kevin, Q2); the shelf figure becomes a hint ("Count due · count as you pick", or "The shelf shows 6 · count what you pick") | The packer counts; the books only hint. | yes | Opening #0574, or any line the books say is short, shows "Packed · N" as the main action; "Pack short" appears only after the packer lowers the count. |
+| STO-UI-03 | P2 | `store.html` CSS: `--nav-room` (the bar + the button's rise + 16 px = 130 px plus the safe area) as the bottom padding of `#st_app` and of every scrolling page body (`.cv-body`, Find's and Stock's lists, On the road, Returns); the button itself is unchanged (option A, Kevin) | The last row always scrolls clear of the play button. | yes | On Today, Stock, Find, On the road and Returns, scrolled to the end, no text or control's box overlaps the play button. On a screen short enough not to scroll, nothing overlaps it at rest either. A harness check measures both. |
+| STO-UI-04 | P2 | `store.html`: Find and Returns search (the input fills the 48 px box), Clear (44 hit area around a 28 px circle), filter chips (44 tall, one scrolling row), the item page's Aisle pill and Pack's Aisle pill (44 tall) | 44 × 44 everywhere. | yes | A harness check of every button, input and `[data-act]` on Today, Stock, Find, Item, Pack, Hand over, Returns and On the road reports none under 44 px. |
+| STO-UI-05 | P2 | `store.html` `:root`: `--t-12…40`, `--w-…`, `--r-8/14/22/pill`, `--sh-card/raised/sheet`, `--s-4…32`, `--c-*` (the 18 named colours). The eight screens' inline values are replaced by them, following the mapping below. | One scale, used on this brief's screens. | yes | A harness check of computed styles on the eight screens finds only token values (sizes, radii, gaps, shadows). The replaced values are listed in the Phase B result. |
+| STO-UI-06 | P3 | `store.html` `viewToday`: the date and shop as one ellipsis line, the status a pill beside it (`flex: none`); the tile's `extra` on its own line under the label | Never ends on a dot. | yes | At 360 with "Omni-ware (old records)", the line is one line and the pill sits beside it. |
+| STO-UI-07 | P3 | `store.html` `PAGE.slip`: `shopShort()` drops a bracketed part ("Omni-ware (old records)" → "OMNI-WARE", Kevin, Q3), one line, with an ellipsis if it is still too long; lines as `lineName(it).base` plus tags; the picker in rows of 3 with names on up to 2 lines | Fits at 360. | yes | "OMNI-WARE" on one line; `2"` is a tag; "Munyarugero" shows in full. |
+| STO-UI-08 | P3 | `store.html` `kindOf(name, category)`: name first, then category; new drawings `lock`, `fix`, `tool`, `tube` in `THUMB` and `ART`; `<img onerror>` swaps to the drawing | Never a blank tile. | yes | Silicone, G-MAN Bow Saw, ELEPHANT and a broken photo URL all show a drawing. |
+| STO-UI-09 | P3 | `store.html` `PAGE.onroad` `drv()`: a segmented bar plus "N of M stops done" in place of `stepDots`; a hired driver gets "(hired)" and a square, dashed amber avatar | The line means something. | yes | Hassan "1 of 3 stops done"; Abudu (hired) is told apart from staff at a glance. |
+
+### The mapping (STO-UI-05), applied only to the eight screens
+
+| Property | Was | Becomes |
+|---|---|---|
+| font-size | 11, 13 (meta, labels, chips) | 12 |
+| font-size | 13 (row titles, small buttons), 15 (body) | 14 |
+| font-size | 15, 17 (buttons, the leading row) | 16 |
+| font-size | 18, 22, 24 (titles, tile figures) | 20 |
+| font-size | 26, 28 (hero figures) | 28 |
+| font-size | 40, 44 (the one big figure) | 40 |
+| font-weight | 400, 500, 600, 700 | 600 (body, figures), 700 (titles, buttons) |
+| border-radius | 6, 7, 9, 10 | 8 |
+| border-radius | 11, 12, 13, 14, 16 | 14 |
+| border-radius | 18, 20, 24, 28, 30 | 22 |
+| border-radius | 999 | pill |
+| gap / padding | 1, 2, 3, 5 | 4 |
+| gap / padding | 6, 10 | 8 |
+| gap / padding | 10, 14 | 12 |
+| gap / padding | 14, 18 | 16 |
+| gap / padding | 20, 22 | 24 |
+| box-shadow | card variants (hairline + soft) | `--sh-card` |
+| box-shadow | buttons, the open card, floating | `--sh-raised` |
+| box-shadow | docks, sheets | `--sh-sheet` |
+| box-shadow | selection rings (`inset 0 0 0 2px`) | `--ring` (not an elevation) |
+
+## Not changing / pushed back
+
+| ID | Why |
+|---|---|
+| STO-UI-01 ("10 Dozen", "19 Box") | Units stay lower case ("10 dozen", "19 box", "1 ctn + 4 box"), as Kevin approved in round 6 (WORD-09). |
+| STO-UI-03 option B | Drawn and not chosen (Kevin chose A). Noted for the record: with A, a long list that runs past the bottom of the screen still passes under the floating button at rest; the room at the end lets every row scroll clear of it. |
+| STO-UI-05 (the rest of the app) | Only the eight screens this brief names move to the scale now. The other screens keep their values until later rounds, as the brief asks. |
+| NAV-08 | Still open: the aisle has a sticky header (round 4); the other long lists are not named yet. |
+| NAV-09 | Now described: removing a waiting item, and restoring the screen on reload. It is not part of this round's aspect, so it goes to the reliability or navigation follow-up. |
+| DATA-05 | Closed in round 6: Kevin ran the check and all 59 of 0161's moves landed. |
+| #0494 "Someone" | Needs the facts first. Please run `docs/audit/store/round-7-0494-check.sql` (read-only). It shows the name stored with the return, the sender's membership, chosen name, staff record and login name. If the sender is a member with a name on their login but none chosen, a small migration can add that name as a fallback in `ow_member_name`, and it would take a reserved row in decision-rights. If the stored name is a handle and nothing else names them, "Someone" is right. |
+
+## Risks
+
+- **The floating button still passes over a long list at rest** (option A). Every screen ends with 130 px free, so the last row can always be reached and read clear of it.
+- **Opening every line at the ordered quantity** (Q2) means a packer who does not look will tap "Packed" for goods that are not there. The hint names the shelf figure in amber, and the counter is one tap away.
+- **The scale changes many small sizes at once** on eight screens. Each screen is checked at 360 and at desktop width before and after, and the round 6 wording tests stay green.
+- **Category drawings** depend on the categories being right. Round 1's clean-up (0161) and DATA-05 make that likely; a product with no category keeps the cube.
+
+## Questions for Kevin (answered 23 Oct 2026)
+
+1. **The play button:** dock it in the bar, or keep it floating with room at the end? **Option A: room at the end.**
+2. **Opening a line in Pack:** at the ordered quantity for every line, or only count-due lines? **Every line.**
+3. **The receipt's shop name:** **"OMNI-WARE"** (drop the bracketed part).
+
+## Phase B result (filled after implementing)
+
+**How it was verified:**
+- **Tests:** `test/store-round7.test.js` (new; every ID).
+- **Fixture:** the `#r7` harness fixture: #0574's 10 dozen of a 20-dozen carton with its count due, #0566's 19 box with its `2"` size, a hired driver, the shop "Omni-ware (old records)".
+- **Screens checked:** Today, Stock, Find, the item page, Pack, Hand over, Returns and On the road, each at 360 and 1280.
+- **Automated checks on those eight screens:**
+  - no "0." quantity;
+  - no control under 44 × 44;
+  - no font size, corner radius or gap off the scale;
+  - no page errors.
+- **Regression walks:** the round 6 wording walk passes on the `#r6`, `''`, `#r4`, `#packed`, `#long` and `#r7` fixtures, with no banned words and no clipping.
+
+| ID | Done? | What changed (function names) | How verified |
+|---|---|---|---|
+| STO-UI-01 | Yes | New `lineQty(it, n)` gives whole packs, then the rest in the line's unit; `backText` and the new `lineCountWords` use it. `quoteLineCountPer` counts in packs only when the line is a whole number of packs, and `quoteLineCount` never divides into a part pack. `quoteLinePack` is unchanged, so it still matches the owner app. Pack: the card shows "10 dozen" (or "1 ctn" with "+ 4 box" under it); the sub line reads "20 dozen to a ctn · off our shelf"; the button reads "Packed · 10 dozen". Load, Hand over, the collect receipt (`agSlip`) and the delivery receipt (`dvDone`) print through `lineCountWords`. | Test: 10 dozen, 19 box, "1 ctn + 4 box", 2 ctn. Harness: #0574 and #0566 as asked, and no "0." on any screen. |
+| STO-UI-02 | Yes | `pkPick` opens every line at the ordered quantity (Kevin, Q2). The hint reads "Count due · count as you pick" (an amber pill), or "The shelf shows N · count what you pick" (amber). "Pack short · N of M" appears only once the packer lowers the count. | Harness: opening #0574 shows "Count due · count as you pick" and "Packed · 10 dozen". |
+| STO-UI-03 | Yes (option A) | `--nav-room` (130 px plus the safe area) is `#st_app`'s bottom padding. The play button is unchanged, as Kevin chose. | Harness, scrolled to the end: nothing under the button on Today or Stock. At rest, bays 2 and 3 on Today and the "Needs a look" rows on Stock still pass under it, as the plan said they would with option A. Find, Returns and On the road open as pages over the bar, so the button is not shown on them. |
+| STO-UI-04 | Yes | **Find:** the input fills the 48 px box; Clear is a 44 px target around a 28 px circle; the filter chips are 44 px, on one scrolling row; the suggestions are 44 px. **Returns:** the input fills its box. **Item page and Pack:** both Aisle pills are 44 px. | Harness: no button, input or `[data-act]` under 44 px on the eight screens. |
+| STO-UI-05 | Yes | **Tokens:** `:root` gains `--t-*`, `--r-*`, `--sh-*`, `--s-*`, `--tap`, `--c-*` (18 colours) and `--nav-room`. **Screens moved:** the eight screens' render functions, the helpers they are built from (`cvRow`, `cvChip`, `cvBack`, `navyHead`, `doneLines`, `darkDock`, `jobCard`, `slHoldDock`) and the CSS of their classes (`.cv-row`, `.cv-tt`, `.cv-sec`, `.cv-hero`, `.td-tile`, `.cv-job`, `.cv-stat`…) now use only those tokens: 624 values in all, listed below. | Harness: computed font sizes, corner radii and gaps on the eight screens are all scale values. Test: the screens' code sets no raw font size or corner radius. |
+| STO-UI-06 | Yes | `viewToday`: "Sat 17 Oct · Omni-ware (old records)" is one line that gives way with "…"; `.cv-live` is a pill (Live, Offline, Not sent · N). The tile shows the number, "to pack", then "+2 waiting" on its own line, and is 64 px tall. | Harness at 360: one line, the pill beside it, and the legend on one line. |
+| STO-UI-07 | Yes | New `shopShort()` drops the bracketed part, so the slip reads "OMNI-WARE" on one line (Kevin, Q3). Slip lines use `prodTT` (the name, then its size or colour as tags). The people picker is 3 to a row, with names on up to 2 lines. | Harness: "OMNI-WARE"; "ABC Black Screws Coarse" with a `2"` tag; names in full. |
+| STO-UI-08 | Yes | `kindOf(name, category)` and `kindOfItem` give new drawings: `lock`, `fix`, `tool` and `tube` (silicone, glue). A product that names nothing falls back to its category. `imgOr` swaps a photo that fails to load for the drawing, on the list tile, the Pack card and the item page. | Harness: Silicone shows a tube, G-MAN Bow Saw a tool, ELEPHANT a lock; a broken photo URL shows the drawing. |
+| STO-UI-09 | Yes | On the road's `drv`: a segmented bar with "N of M stops done" replaces `stepDots`. A hired driver reads "Abudu (hired)" and gets a square, dashed amber avatar. | Harness: Hassan "0 of 2 stops done"; Abudu (hired) is told apart at a glance. |
+
+### Values replaced (STO-UI-05), on the eight screens and the helpers they are built from
+
+| Property | Was → became (count) |
+|---|---|
+| font-size | 11 → 12 (31); 12 → 12 (53); 13 → 12 (19), 13 → 14 when bold (16); 14 → 14 (30); 15 → 16 when bold (9), 15 → 14 (4); 16 → 16 (12); 17 → 16 (8); 18 → 20 (7); 20 → 20 (6); 22 → 20 (6); 24 → 20 (3); 28 → 28 (1); 40 → 40 (1) |
+| font-weight | 400 → 600 (1) |
+| border-radius | 6, 7, 8, 9, 10 → 8 (11); 12, 13, 14, 16 → 14 (27); 18, 20, 22, 24, 26, 28, 32 → 22 (27); 999 → pill (76) |
+| gap | 2, 3, 4, 5 → 4 (40); 6, 8 → 8 (58); 10, 12 → 12 (50); 14, 16, 18 → 16 (16); 20 → 24 (1). A 1 px gap is a hairline and was kept. |
+| padding | 2, 3, 4, 5 → 4 (22); 6, 7, 8 → 8 (22); 10, 12 → 12 (33); 14, 16, 18 → 16 (53); 20, 22, 24 → 24 (9); 28 → 32 (1) |
+| box-shadow | card (7), raised (6), sheet (1). Inset rings and hairlines are borders, not elevation, and were kept. |
+
+### Also changed while here
+- `test/store-app.test.js`: the owner and the store count a whole pack the same. For a part pack the store now counts in the line's unit, by design (round 7).
+- `test/store-round4.test.js`: the Find chips are one 44 px scrolling row now, not two 34 px rows.
+
+### Left as is
+- **Option A and the brief's check:** a long list still passes under the floating button at rest; this is what Kevin chose. Docking the button in the bar (option B) is drawn on the canvas if he wants it later.
+- **#0494 "Someone":** waiting on `docs/audit/store/round-7-0494-check.sql`.
+- **NAV-08, NAV-09:** still open, as planned.
+- **Full suite:** 458 of 460 test files pass. The two that fail (the `store-money-db` and `manager-decisions-db` database scenarios) are the ones logged since round 5, and they fail the same way without this round's changes.

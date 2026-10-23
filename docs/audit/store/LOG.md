@@ -136,3 +136,32 @@ Deferred:
 - NAV-08 on lists other than the aisle (name them), and NAV-09 (no details yet).
 - `test/store-money-db.test.js` database scenario (as round 5), and `test/manager-decisions-db.test.js`'s "store: count a trip" step, which writes a trip directly as the store role, which 0164 now refuses (it should go through `store_patch_trip`). Both fail the same way without this round's changes.
 
+## Round 7 · Premium UI at 360px (23 Oct 2026) · STO-UI-01..09 · no migration
+
+The plan is in `docs/audit/store/ROUND-7.md`; later rounds' checklists go in `docs/audit/store/`.
+
+Fixed:
+- Quantities read in whole packs, then the rest in the line's unit ("10 dozen", "19 box", "1 ctn + 4 box"), on Pack, Hand over and both receipts; never "0.5 ctn".
+- Every Pack line opens at what was ordered, and the shelf only hints.
+- Every scrolling screen ends with room under the play button (option A).
+- Every control on the brief's screens is 44 × 44.
+- One scale (type, radius, shadow, space, colour) covers Today, Stock, Find, the item page, Pack, Hand over, Returns and On the road.
+- Today's header is one line, with the status as a pill.
+- The slip: "OMNI-WARE", names with tags, names in full.
+- One picture style, which never shows a blank tile.
+- On the road shows stops done, and tells a hired driver apart.
+
+Now part of the language:
+- **The scale.** `--t-12/14/16/20/28/40`, `--r-8/14/22/pill`, `--sh-card/raised/sheet`, `--s-4…32`, `--tap` 44 and the named `--c-*`. A screen a round touches moves onto it; no new raw values.
+- **Quantities go through `lineQty()`.** Packs only when whole, then the line's unit.
+- **The packer counts.** A line opens at what was ordered; the books hint in amber; "Pack short" follows a lowered count.
+- **Pictures.** A photo, else the category drawing on its tint (`kindOfItem`); a broken photo falls back (`imgOr`).
+- **The status is a pill** (Live, Offline, Not sent · N).
+
+Deferred:
+- The other screens move onto the scale in later rounds.
+- #0494's sender (run the check SQL).
+- NAV-08, NAV-09.
+- `store.handover` push text (round 6).
+- The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
+

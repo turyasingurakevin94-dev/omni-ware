@@ -149,7 +149,9 @@ const P = page(fakeDb({}));
 {
   [it(1, 'P1', 40), it(2, 'P1', 40, { qtyIn: 'pack' }), it(3, 'P1', 45, { qtyIn: '' }), it(4, 'P2', 10), it(5, 'P3', 24, { qtyIn: 'pack' })].forEach(l => {
     t.check(JSON.stringify(admin.quoteLinePack(l)) === JSON.stringify(P.quoteLinePack(l)), `a line's packs read the same as the owner's (${l.productName} × ${l.qty}, ${l.qtyIn || 'auto'})`);
-    t.check(JSON.stringify(admin.quoteLineCount(l, 20)) === JSON.stringify(P.quoteLineCount(l, 20)), `a count reads in the same unit (${l.productName})`);
+    // Round 7 (STO-UI-01): a whole number of packs reads as the owner's does; a part pack reads in the line's own unit, never "0.83 ctn".
+    const a = admin.quoteLineCount(l, 20), b = P.quoteLineCount(l, 20), part = /\./.test(a.n) || (l.qtyIn === 'pack' && l.packQty > 0 && (l.qty / l.packQty) % 1 !== 0);
+    t.check(part ? b.n === '20' && b.unit === String(l.unit || '').trim().toLowerCase() : JSON.stringify(a) === JSON.stringify(b), `a count reads in the same unit, or in the line's own unit for a part pack (${l.productName})`);
   });
   const rows = [
     orderRow(1, [it(1, 'P2', 4)]),
