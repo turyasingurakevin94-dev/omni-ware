@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One item, stage by stage</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Oswald:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.st text{font-family:Oswald,'Figtree',sans-serif}
+.st .d{font-family:'IBM Plex Mono',monospace}
+@keyframes owSlam{0%{transform:scale(1.9) rotate(var(--r));opacity:0}55%{transform:scale(.9) rotate(var(--r));opacity:1}75%{transform:scale(1.04) rotate(var(--r))}100%{transform:scale(1) rotate(var(--r))}}
+@keyframes owThud{0%{transform:scale(.6);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+@keyframes owGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes owPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,178,107,.7)}60%{box-shadow:0 0 0 6px rgba(245,178,107,0)}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+    <defs>
+      <filter id="ink2" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n"></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"></feDisplacementMap>
+        <feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="11" result="w"></feTurbulence>
+        <feColorMatrix in="w" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.6" result="wm"></feColorMatrix>
+        <feComposite in="d" in2="wm" operator="in"></feComposite>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- head: the item, and the nine-stage strip -->
+  <div style="flex: none; background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 30px 30px; padding: 12px 16px 18px; color: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span aria-hidden="true" style="width: 46px; height: 46px; flex: none; border-radius: 12px; background: #E9E5DE; display: flex; align-items: center; justify-content: center"><span style="width: 32px; height: 32px; background-color: #F6F3EE; background-image: repeating-linear-gradient(0deg, #6B7480 0 1.5px, transparent 1.5px 6px), repeating-linear-gradient(90deg, #6B7480 0 1.5px, transparent 1.5px 6px)"></span></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">Wire mesh BRC A142</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">Passport <span class="m" style="color: #FFFFFF">0412</span> · <span class="m" style="color: #FFFFFF">{{stampedN}}</span> of 9 stamped</span></span>
+      <button type="button" onClick="{{restart}}" aria-label="Start the journey again" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"></path></svg></button>
+    </div>
+    <div role="list" aria-label="Nine stages" style="display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 5px">
+      <sc-for list="{{strip}}" as="s" hint-placeholder-count="9">
+        <span role="listitem" aria-label="{{s.aria}}" style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+          <span style="width: 32px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{s.look}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.icon}}"></path></svg></span>
+          <span class="m" style="font-size: 10px; font-weight: 600; {{s.numInk}}">{{s.n}}</span>
+        </span>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px 20px; display: flex; flex-direction: column; gap: 12px">
+    <sc-if value="{{journeying}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 20px; font-weight: 700">Stage {{num}} · {{title}}</span><span style="font-size: 12px; font-weight: 700; {{whoInk}}">{{who}}</span></div>
+
+    <!-- the paper slot where the stamp lands -->
+    <div style="position: relative; height: 210px; border-radius: 18px; background: linear-gradient(160deg, #FBF7EE 0%, #F3ECDD 100%); box-shadow: inset 0 0 0 1px #E6DECB, 0 8px 20px rgba(22,32,60,.08); display: flex; align-items: center; justify-content: center; overflow: hidden">
+      <span class="m" style="position: absolute; left: 14px; top: 10px; font-size: 10px; font-weight: 600; color: #8A7A62">STAGE {{num}} OF 9</span>
+      <sc-if value="{{locked}}" hint-placeholder-val="{{ true }}">
+        <span style="width: 150px; height: 150px; border-radius: 999px; box-sizing: border-box; border: 2.5px dashed #CDBFA6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #8A7A62"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"></path></svg><span style="font-size: 12px; font-weight: 700">{{lockWord}}</span></span>
+      </sc-if>
+      <sc-if value="{{stampedNow}}" hint-placeholder-val="{{ false }}">
+        <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; margin: -90px 0 0 -90px; border-radius: 999px; background: radial-gradient(circle, {{thud}} 0%, transparent 65%); animation: owThud .5s ease-out forwards"></span>
+        <sc-if value="{{isCircle}}" hint-placeholder-val="{{ true }}">
+        <svg class="st" width="176" height="176" viewBox="0 0 140 140" role="img" aria-label="{{stampAria}}" style="--r: {{rot}}deg; transform: rotate({{rot}}deg); animation: owSlam .45s cubic-bezier(.2,.9,.3,1.2) both">
+          <g filter="url(#ink2)" fill="none" stroke="{{ink}}" opacity=".9">
+            <circle cx="70" cy="70" r="64" stroke-width="5"></circle><circle cx="70" cy="70" r="55" stroke-width="1.6"></circle>
+            <path id="jp-ring" d="M70 70 m-47 0 a47 47 0 1 1 94 0 a47 47 0 1 1 -94 0" stroke="none"></path>
+            <text fill="{{ink}}" stroke="none" font-size="10.5" font-weight="700" letter-spacing="2.2"><textPath href="#jp-ring">{{ring}}</textPath></text>
+            <line x1="28" y1="57" x2="112" y2="57" stroke-width="1.6"></line><line x1="28" y1="86" x2="112" y2="86" stroke-width="1.6"></line>
+            <text x="70" y="80" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="{{wordSize}}" font-weight="700" letter-spacing="1.5">{{word}}</text>
+            <text class="d" x="70" y="101" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="9.5" font-weight="600">{{date}}</text>
+            <text class="d" x="70" y="50" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="9" font-weight="600">{{sub}}</text>
+          </g>
+        </svg>
+        </sc-if>
+        <sc-if value="{{isRect}}" hint-placeholder-val="{{ false }}">
+        <svg class="st" width="214" height="146" viewBox="0 0 160 108" role="img" aria-label="{{stampAria}}" style="--r: {{rot}}deg; transform: rotate({{rot}}deg); animation: owSlam .45s cubic-bezier(.2,.9,.3,1.2) both">
+          <g filter="url(#ink2)" fill="none" stroke="{{ink}}" opacity=".9">
+            <rect x="4" y="4" width="152" height="100" rx="6" stroke-width="5"></rect><rect x="11" y="11" width="138" height="86" rx="3" stroke-width="1.5"></rect>
+            <text x="80" y="44" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="{{wordSize}}" font-weight="700" letter-spacing="3">{{word}}</text>
+            <line x1="22" y1="54" x2="138" y2="54" stroke-width="1.3"></line>
+            <text class="d" x="80" y="71" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="11" font-weight="600">{{sub}}</text>
+            <text x="80" y="84" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="8.5" font-weight="500" letter-spacing="1.5">{{ring}}</text>
+            <text class="d" x="80" y="95" text-anchor="middle" fill="{{ink}}" stroke="none" font-size="8" font-weight="600">{{date}}</text>
+          </g>
+        </svg>
+        </sc-if>
+      </sc-if>
+    </div>
+
+    <!-- what earns it -->
+    <span style="padding: 4px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">What earns this stamp</span>
+    <div style="border-radius: 20px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; padding: 4px 10px">
+      <sc-for list="{{reqs}}" as="q" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 58px; border-top: {{q.rule}}">
+          <span style="width: 26px; height: 26px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{q.box}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">{{q.label}}</span><span style="font-size: 12px; font-weight: 600; {{q.subInk}}">{{q.sub}}</span></span>
+          <sc-if value="{{q.can}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{q.act}}" style="all: unset; cursor: pointer; flex: none; height: 38px; padding: 0 14px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">{{q.verb}}</button></sc-if>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{finished}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 18px; border-radius: 24px; background: linear-gradient(160deg, #FBF7EE 0%, #F3ECDD 100%); box-shadow: inset 0 0 0 1px #E6DECB; text-align: center">
+      <svg class="st" width="214" height="128" viewBox="0 0 170 100" role="img" aria-label="Proven" style="transform: rotate(-7deg)">
+        <g filter="url(#ink2)" fill="none" stroke="#A3241C" opacity=".92"><rect x="4" y="4" width="162" height="92" rx="6" stroke-width="6"></rect>
+        <text x="85" y="52" text-anchor="middle" fill="#A3241C" stroke="none" font-size="40" font-weight="700" letter-spacing="4">PROVEN</text>
+        <text class="d" x="85" y="72" text-anchor="middle" fill="#A3241C" stroke="none" font-size="10" font-weight="600">38 OF 40 IN 30 DAYS</text>
+        <text class="d" x="85" y="86" text-anchor="middle" fill="#A3241C" stroke="none" font-size="8.5" font-weight="600">16 NOV 2026</text></g>
+      </svg>
+      <span style="font-size: 22px; font-weight: 700">Nine of nine</span>
+      <span style="font-size: 14px; font-weight: 600; color: #5F6980">The mesh leaves the New-in shelf for Steel &amp; mesh. Its passport is complete and kept.</span>
+      <a href="Passport.dc.html" style="height: 48px; padding: 0 20px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700; display: flex; align-items: center">Open the passport</a>
+    </div>
+    </sc-if>
+  </div>
+
+  <div style="flex: none; padding: 12px 16px 22px">
+    <sc-if value="{{showHold}}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{press}}" style="all: unset; cursor: pointer; position: relative; box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; overflow: hidden">
+        <sc-if value="{{holding}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position: absolute; left: 0; top: 0; bottom: 0; background: {{ink}}; animation: owGrow .9s linear forwards; width: 100%; transform-origin: left; opacity: .9"></span></sc-if>
+        <span style="position: relative; display: flex; align-items: center; gap: 10px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v6H9zM12 9v4M5 13h14v4H5zM4 20h16"></path></svg>{{holdWord}}</span>
+      </button>
+    </sc-if>
+    <sc-if value="{{showNext}}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{next}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; background: #C93A30; color: #FFFFFF; box-shadow: 0 10px 22px rgba(201,58,48,.3); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">{{nextWord}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+    </sc-if>
+    <sc-if value="{{showWait}}" hint-placeholder-val="{{ true }}">
+      <span style="box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; background: #F1EEE8; color: #5F6980; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"></path></svg>{{waitWord}}</span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { i: 0, r: {}, stamped: {}, holding: false }; }
+  renderVals() {
+    const S = this.state;
+    const BLUE = '#2B3A8C', GREEN = '#1E6E47', OX = '#9A2E24', PLUM = '#6E2A5E', RED = '#A3241C';
+    // who stamps: 'hold' = Moses presses and holds once the work is done; 'auto' = the app or Ruth stamps when the work is proved
+    const STAGES = [
+      { title: 'Asked', who: 'Moses takes it on', whoInk: 'color:#1A5A8A', mode: 'hold', shape: 'c', ink: OX, word: 'ASKED', wordSize: 24, sub: '40 SHEETS', date: '08 OCT 2026', ring: 'MUKASA HARDWARE • ASKED BY GRACE • ', rot: -9,
+        reqs: [['Who asked', 'Grace, for Kato Construction', null], ['How many', '40 sheets, in 2 weeks', null], ['Onto your desk', 'from the In tray', 'Take it on']] },
+      { title: 'Sourced', who: 'Moses, at the counter', whoInk: 'color:#1A5A8A', mode: 'hold', shape: 'c', ink: BLUE, word: 'SOURCED', wordSize: 20, sub: '121,500', date: '12 OCT 2026', ring: 'FIRST PRICE • KATWE FABRICATORS • ', rot: 6,
+        reqs: [['A supplier who has it', 'Katwe Fabricators', 'Found'], ['Their price, at the counter', '121,500 a sheet', 'Take it']] },
+      { title: 'Compared', who: 'the app proves it', whoInk: 'color:#0F6B43', mode: 'auto', shape: 'r', ink: GREEN, word: 'COMPARED', wordSize: 24, sub: 'ROOM 31,000', date: '15 OCT 2026', ring: '2 SUPPLIERS · 1 RIVAL', rot: -4,
+        reqs: [['A second supplier', 'Kiseka 118,000 · now the cheapest', 'Take it'], ['A rival’s price', 'Kikuubo 149,000', 'Read it']] },
+      { title: 'Packed', who: 'Moses, after looking', whoInk: 'color:#1A5A8A', mode: 'hold', shape: 'c', ink: BLUE, word: 'PACKED', wordSize: 23, sub: 'ML', date: '15 OCT 2026', ring: 'BY THE SHEET • 2.4 × 4.8 M • ', rot: 10,
+        reqs: [['Look at the real sheet', 'at Kiseka’s counter', 'Looked'], ['How it is sold', 'one sheet, not in bundles', 'Confirm']] },
+      { title: 'Photographed', who: 'the app proves it', whoInk: 'color:#0F6B43', mode: 'auto', shape: 'c', ink: GREEN, word: 'PASSED', wordSize: 22, sub: 'PHOTO 4/4', date: '17 OCT 2026', ring: 'CHECKED ON THE PHONE • SHARP • BRIGHT • ', rot: -6,
+        reqs: [['Take the photo', 'one sheet, filling the square', 'Shoot'], ['Sharp, bright, square, plain', 'checked on the phone', null]] },
+      { title: 'Placed', who: 'Moses keeps it', whoInk: 'color:#1A5A8A', mode: 'hold', shape: 'r', ink: BLUE, word: 'PLACED', wordSize: 26, sub: 'STEEL & MESH', date: '17 OCT 2026', ring: 'NAME AND AISLE', rot: 3,
+        reqs: [['Name', 'Wire mesh BRC A142', 'Keep'], ['Aisle', 'Steel & mesh', 'Keep']] },
+      { title: 'Held', who: 'Moses decides', whoInk: 'color:#1A5A8A', mode: 'hold', shape: 'c', ink: BLUE, word: 'STOCK', wordSize: 23, sub: 'HELD AS', date: '17 OCT · 68', ring: 'HOW WE HOLD IT • AS ADVISED • ', rot: -11,
+        reqs: [['The app advises', 'Stock · 68 · sells in ≈ 16 days', null], ['Your pick', 'Stock, a batch of 40 for Denis', 'Pick']] },
+      { title: 'Priced', who: 'Ruth, in her app', whoInk: 'color:#7A3268', mode: 'auto', shape: 'r', ink: PLUM, word: 'PRICED', wordSize: 24, sub: '147,500', date: '17 OCT 2026', ring: 'RUTH NAKATO · MANAGER', rot: 5,
+        reqs: [['Into Ruth’s tray', 'eight stamps travel with it', 'Send'], ['Ruth sets the price', '25% · 147,500 · under Kikuubo', 'Ruth does']] },
+      { title: 'Proven', who: 'the sales prove it', whoInk: 'color:#A82D24', mode: 'auto', shape: 'r', ink: RED, word: 'PROVEN', wordSize: 30, sub: '38 OF 40', date: '16 NOV 2026', ring: 'IN 30 DAYS ON THE NEW-IN SHELF', rot: -7,
+        reqs: [['30 days on bay N4', 'the New-in shelf', 'Day 30'], ['Sold against expected', '38 of 40', null]] }
+    ];
+    const N = STAGES.length;
+    const i = Math.min(S.i, N - 1), st = STAGES[i];
+    // a step with no button (a given fact, or a check the app runs) is done once every step above it is done
+    const isDoneIn = (r, k, j) => !!r[k + '-' + j] || (STAGES[k].reqs[j][2] === null && STAGES[k].reqs.slice(0, j).every((q, x) => isDoneIn(r, k, x)));
+    const isDone = (k, j) => isDoneIn(S.r, k, j);
+    const allDone = (k) => STAGES[k].reqs.every((q, j) => isDone(k, j));
+    const stampIt = (k) => this.setState({ stamped: { ...this.state.stamped, [k]: true } });
+    const reqs = st.reqs.map(([label, sub, verb], j) => {
+      const done = isDone(i, j);
+      // a step can only be done once every step above it is done: the order is the workflow
+      const open = !done && verb !== null && st.reqs.slice(0, j).every((q, x) => isDone(i, x));
+      return { label, sub: done ? sub : verb === null ? 'waits for the step above' : sub, verb, can: open,
+        subInk: done ? 'color:#0F6B43' : 'color:#5F6980', rule: j ? '1px solid #EFECE6' : 'none',
+        box: done ? 'background:#0F6B43;color:#FFFFFF' : 'background:#FFFFFF;color:transparent;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+        act: () => {
+          const r = { ...this.state.r, [i + '-' + j]: true };
+          this.setState({ r });
+          const nowAll = st.reqs.every((q, x) => isDoneIn(r, i, x));
+          if (nowAll && st.mode === 'auto') setTimeout(() => stampIt(i), 450);
+        } };
+    });
+    const stampedNow = !!S.stamped[i];
+    const finished = !!S.stamped[N - 1] && S.i >= N;
+    const strip = STAGES.map((s, k) => {
+      const done = !!S.stamped[k], cur = k === i && !finished;
+      return { n: k + 1, aria: 'Stage ' + (k + 1) + ', ' + s.title + (done ? ', stamped' : cur ? ', now' : ', locked'),
+        icon: done ? 'm5 12.5 4.5 4.5L19 7.5' : cur ? 'M12 7v5l3 2' : 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',
+        look: done ? 'background:' + s.ink + ';color:#FFFFFF' : cur ? 'background:#FFFFFF;color:#16203C;animation:owPulse 1.6s infinite' : 'background:rgba(255,255,255,.08);color:#8D97B0',
+        numInk: done ? 'color:#FFFFFF' : cur ? 'color:#F5B26B' : 'color:#8D97B0' };
+    });
+    const ready = allDone(i) && !stampedNow;
+    return {
+      strip, reqs, num: i + 1, title: st.title, who: st.who, whoInk: st.whoInk,
+      journeying: !finished, finished, stampedN: Object.keys(S.stamped).length,
+      locked: !stampedNow, stampedNow, isCircle: st.shape === 'c', isRect: st.shape === 'r',
+      ink: st.ink, word: st.word, wordSize: st.wordSize, sub: st.sub, date: st.date, ring: st.ring, rot: st.rot,
+      thud: st.ink + '33', stampAria: 'Stamp ' + (i + 1) + ': ' + st.title + ', ' + st.date,
+      lockWord: ready ? (st.mode === 'hold' ? 'ready for your stamp' : 'stamping…') : 'locked until the work is done',
+      holding: S.holding,
+      showHold: ready && st.mode === 'hold', holdWord: S.holding ? 'Stamping…' : 'Hold to stamp ' + st.title.toLowerCase(),
+      press: () => { if (S.holding) return; this.setState({ holding: true }); setTimeout(() => { this.setState({ holding: false }); stampIt(i); }, 900); },
+      showNext: stampedNow && !finished, nextWord: i === N - 1 ? 'Complete the passport' : 'Stage ' + (i + 2) + ': ' + STAGES[Math.min(i + 1, N - 1)].title,
+      next: () => this.setState({ i: i + 1, holding: false }),
+      showWait: !stampedNow && !(ready && st.mode === 'hold') && !finished,
+      waitWord: ready ? 'Stamping…' : 'Stage ' + (i + 2 > N ? N : i + 2) + ' opens after this stamp',
+      restart: () => this.setState({ i: 0, r: {}, stamped: {}, holding: false })
+    };
+  }
+}
+</script>
+</body>
+</html>
