@@ -214,8 +214,16 @@ Two rules from the third review, which every Sourcing board and the build follow
   or **Sold singly**. The entry is that sentence with three slots (a typed
   number, a unit: pieces, dozens, pairs, sets; an outer: ctn, box, bundle,
   bag), never free text. A supplier's price is never kept without its
-  packing, and its price steps are named in those packs ("1 · 380k",
-  "1 ctn · 355k", "3 ctns · 340k").
+  packing.
+- **A price tier is one sentence too: `<n> <pack>+ cost <price>/<pack>`**:
+  "1 dozen+ cost 3,000/dozen", "1 ctn+ cost 400,000/ctn", "5 ctns+ cost
+  390,000/ctn", each part replaced with what fits the item. Tiers below a full
+  outer pack are **retail** (amber dot), a full pack and above are
+  **wholesale** (indigo dot), entered in two groups. Each tier is added once:
+  a repeated starting point, or a retail tier as big as a full pack, is left
+  out; a tier that costs more each than the one before is kept but outlined
+  amber for a second look. Comparisons between suppliers use the cost per
+  piece at the quantity asked.
 
 Sourcing's hand-offs all end on the same done screen and track: **Sent → the
 person who decides (pulsing ring) → what follows**: Send to Ruth, Ask Kiseka,
