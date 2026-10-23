@@ -20,7 +20,8 @@ button{font-family:inherit}
 .st text{font-family:Oswald,'Figtree',sans-serif}
 .st .d{font-family:'IBM Plex Mono',monospace}
 .chalk{color:#F2EFE6;text-shadow:0 0 1px rgba(242,239,230,.6),0 0 6px rgba(242,239,230,.12)}
-input::placeholder{color:rgba(242,239,230,.45)}
+.cin{box-sizing:border-box;height:42px;border:none;outline:none;border-radius:10px;background:rgba(242,239,230,.08);box-shadow:inset 0 0 0 1.5px rgba(242,239,230,.45);color:#F2EFE6;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px}
+.cin::placeholder{color:rgba(242,239,230,.4)}
 @keyframes owFillRing{from{stroke-dashoffset:239}to{stroke-dashoffset:0}}
 @keyframes owSlam{0%{transform:scale(1.9) rotate(-4deg);opacity:0}55%{transform:scale(.9) rotate(-4deg);opacity:1}75%{transform:scale(1.04) rotate(-4deg)}100%{transform:scale(1) rotate(-4deg)}}
 @keyframes owIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -41,36 +42,59 @@ input::placeholder{color:rgba(242,239,230,.45)}
   </div>
 
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 12px">
-    <!-- the rival's chalkboard: copy the figure you read -->
-    <div style="border-radius: 16px; background: #6E5135; padding: 7px; box-shadow: 0 14px 28px rgba(22,32,60,.2)">
-      <div style="border-radius: 10px; background: radial-gradient(120% 90% at 30% 10%, #2E3B34 0%, #1F2B26 60%, #18221E 100%); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px">
-        <span style="display: flex; align-items: center; justify-content: space-between"><span class="chalk" style="font-size: 12px; font-weight: 700; letter-spacing: .08em">KIKUUBO HARDWARE MART</span><span class="chalk m" style="font-size: 11px; opacity: .7">7 OCT</span></span>
-        <div style="display: flex; align-items: center; gap: 10px">
-          <span class="chalk" style="flex: 1; font-size: 17px; font-weight: 600">Tile cutter 600</span>
-          <input value="{{rival}}" inputmode="numeric" placeholder="their price" aria-label="Kikuubo's price for the tile cutter" onInput="{{typeRival}}" class="m" style="width: 140px; height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: none; outline: none; background: rgba(242,239,230,.08); box-shadow: inset 0 0 0 1.5px rgba(242,239,230,.5); color: #F2EFE6; font-size: 19px; font-weight: 600; text-align: right">
+    <!-- our side, from stamp 2: the best cost at each tier -->
+    <div style="flex: none; border-radius: 18px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">
+      <span style="display: flex; align-items: center; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #6B5A43"><i style="width: 8px; height: 8px; border-radius: 999px; background: #2B3A8C"></i>Our cost · Katwe · 4 pieces in a ctn</span><span style="font-size: 11px; font-weight: 600; color: #8A7A62">stamp 2</span></span>
+      <sc-for list="{{ours}}" as="o" hint-placeholder-count="3"><span style="display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; border-radius: 7px; background: #F7F2E9; color: #4A3A22"><i style="width: 6px; height: 6px; flex: none; border-radius: 999px; {{o.dot}}"></i><span class="m" style="flex: 1; font-size: 12px; font-weight: 600">{{o.from}}</span><span class="m" style="font-size: 12px; font-weight: 600">{{o.cost}}</span></span></sc-for>
+    </div>
+
+    <!-- the rival's chalkboard: their packing and their tiers, copied as written -->
+    <div style="flex: none; border-radius: 16px; background: #6E5135; padding: 7px; box-shadow: 0 14px 28px rgba(22,32,60,.2)">
+      <div style="border-radius: 10px; background: radial-gradient(120% 90% at 30% 10%, #2E3B34 0%, #1F2B26 60%, #18221E 100%); padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 10px">
+        <span style="display: flex; align-items: center; justify-content: space-between"><span class="chalk" style="font-size: 12px; font-weight: 700; letter-spacing: .08em">KIKUUBO HARDWARE MART</span><span class="chalk m" style="font-size: 11px; opacity: .7">TILE CUTTER 600 · 7 OCT</span></span>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span class="chalk" style="font-size: 13px; font-weight: 600; opacity: .8">Packed</span>
+          <input value="{{rN}}" inputmode="numeric" aria-label="Kikuubo: how many in one pack" placeholder="n" onInput="{{typeRN}}" class="cin" style="width: 52px; text-align: center">
+          <button type="button" onClick="{{cycleUnit}}" aria-label="Kikuubo: unit, tap to change" style="all: unset; cursor: pointer; box-sizing: border-box; height: 42px; padding: 0 10px; border-radius: 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; {{unitStyle}}">{{rUnitW}}</button>
+          <span class="chalk" style="font-size: 15px; font-weight: 700">in a</span>
+          <button type="button" onClick="{{cycleOuter}}" aria-label="Kikuubo: pack, tap to change" style="all: unset; cursor: pointer; box-sizing: border-box; height: 42px; padding: 0 10px; border-radius: 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; {{outerStyle}}">{{rOuterW}}</button>
         </div>
-        <span class="chalk" style="font-size: 12px; font-weight: 600; opacity: .75">Tile cutter 400 · 210,000 · we sell it at our price</span>
+        <i aria-hidden="true" style="height: 1px; background: rgba(242,239,230,.18)"></i>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="2">
+          <div style="display: flex; align-items: center; gap: 6px">
+            <i style="width: 7px; height: 7px; flex: none; border-radius: 999px; {{r.dot}}"></i>
+            <span class="chalk m" style="width: 70px; flex: none; font-size: 14px; font-weight: 600">{{r.from}}</span>
+            <span class="chalk" style="font-size: 12px; font-weight: 600; opacity: .75">sells</span>
+            <input value="{{r.p}}" inputmode="numeric" aria-label="{{r.aria}}" placeholder="{{r.ph}}" onInput="{{r.type}}" class="cin" style="flex: 1; min-width: 0; padding: 0 10px; text-align: right">
+            <span class="chalk" style="width: 42px; flex: none; font-size: 13px; font-weight: 700">/{{r.per}}</span>
+          </div>
+        </sc-for>
+        <span class="chalk" style="font-size: 11px; font-weight: 600; opacity: .7">{{boardNote}}</span>
       </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB">
+    <div style="flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB">
       <span style="width: 34px; height: 34px; flex: none; border-radius: 999px; background: #F6E4F1; color: #7A3268; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">NB</span>
       <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Nateete Builders’ Centre</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43">Not on their board · checked on the walk</span></span>
     </div>
 
-    <!-- the room: our best cost against the cheapest rival -->
-    <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 16px; display: flex; flex-direction: column; gap: 12px">
-      <span style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">The room</span><span class="os" style="font-size: 13px; font-weight: 700; letter-spacing: .1em; {{bandInk}}">{{band}}</span></span>
-      <div role="img" aria-label="{{roomAria}}" style="position: relative; height: 54px">
-        <i style="position: absolute; left: 0; right: 0; top: 22px; height: 8px; border-radius: 999px; background: #F1EBE0"></i>
-        <i style="position: absolute; top: 22px; height: 8px; border-radius: 999px; {{roomBar}}"></i>
-        <span style="position: absolute; top: 14px; width: 2px; height: 24px; background: #2B3A8C; {{costX}}"></span>
-        <span class="m" style="position: absolute; top: 0; {{costLab}}; font-size: 11px; font-weight: 600; color: #2B3A8C">Katwe 380,000</span>
-        <sc-if value="{{hasRival}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; top: 14px; width: 2px; height: 24px; background: #7A3268; {{rivalX}}"></span><span class="m" style="position: absolute; top: 40px; font-size: 11px; font-weight: 600; color: #7A3268; {{rivalLab}}">Kikuubo {{rivalTxt}}</span></sc-if>
-      </div>
-      <span style="font-size: 12px; font-weight: 600; color: #6B5A43">{{roomNote}}</span>
+    <!-- the room, tier by tier: our cost each against theirs, per piece -->
+    <div style="flex: none; border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 16px; display: flex; flex-direction: column; gap: 14px">
+      <span style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">The room, per piece</span><span style="font-size: 11px; font-weight: 600; color: #8A7A62">our cost · their price</span></span>
+      <sc-for list="{{rooms}}" as="k" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="display: flex; align-items: center; justify-content: space-between"><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; {{k.ink}}"><i style="width: 7px; height: 7px; border-radius: 999px; {{k.dot}}"></i>{{k.title}}</span><span class="os" style="font-size: 12px; font-weight: 700; letter-spacing: .1em; {{k.bandInk}}">{{k.band}}</span></span>
+          <div role="img" aria-label="{{k.aria}}" style="position: relative; height: 44px">
+            <i style="position: absolute; left: 0; right: 0; top: 18px; height: 8px; border-radius: 999px; background: #F1EBE0"></i>
+            <i style="position: absolute; top: 18px; height: 8px; border-radius: 999px; {{k.bar}}"></i>
+            <span style="position: absolute; top: 12px; width: 2px; height: 20px; background: #2B3A8C; {{k.ourX}}"></span>
+            <span class="m" style="position: absolute; top: 0; font-size: 10px; font-weight: 600; color: #2B3A8C; {{k.ourLab}}">{{k.our}}</span>
+            <sc-if value="{{k.has}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; top: 12px; width: 2px; height: 20px; background: #7A3268; {{k.theirX}}"></span><span class="m" style="position: absolute; top: 32px; font-size: 10px; font-weight: 600; color: #7A3268; {{k.theirLab}}">{{k.their}}</span></sc-if>
+          </div>
+          <sc-if value="{{k.hasNote}}" hint-placeholder-val="{{ false }}"><span style="font-size: 11px; font-weight: 600; color: #6B5A43">{{k.note}}</span></sc-if>
+        </div>
+      </sc-for>
     </div>
 
-    <div style="position: relative; min-height: 176px; border-radius: 20px; background: linear-gradient(160deg, #FBF7EE 0%, #F3ECDD 100%); box-shadow: inset 0 0 0 1px #E6DECB; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 14px">
+    <div style="flex: none; position: relative; min-height: 176px; border-radius: 20px; background: linear-gradient(160deg, #FBF7EE 0%, #F3ECDD 100%); box-shadow: inset 0 0 0 1px #E6DECB; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 14px">
       <span class="m" style="position: absolute; left: 14px; top: 10px; font-size: 10px; font-weight: 600; color: #8A7A62">STAMP 3 · COMPARED</span>
       <sc-if value="{{open}}" hint-placeholder-val="{{ true }}">
         <button type="button" onClick="{{press}}" aria-label="{{pressAria}}" style="all: unset; cursor: pointer; position: relative; width: 96px; height: 96px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{pressDim}}">
@@ -84,14 +108,14 @@ input::placeholder{color:rgba(242,239,230,.45)}
           <g filter="url(#ink)" fill="none" stroke="#1E6E47" opacity=".9">
             <circle cx="70" cy="70" r="64" stroke-width="5" fill="rgba(30,110,71,.05)"></circle><circle cx="70" cy="70" r="55" stroke-width="1.6"></circle>
             <path id="sc-ring" d="M70 70 m-47 0 a47 47 0 1 1 94 0 a47 47 0 1 1 -94 0" stroke="none"></path>
-            <text fill="#1E6E47" stroke="none" font-size="9.5" font-weight="700" letter-spacing="2"><textPath href="#sc-ring">{{ring}}</textPath></text>
+            <text fill="#1E6E47" stroke="none" font-size="9" font-weight="700" letter-spacing="1.8"><textPath href="#sc-ring">{{ring}}</textPath></text>
             <line x1="28" y1="57" x2="112" y2="57" stroke-width="1.6"></line><line x1="28" y1="86" x2="112" y2="86" stroke-width="1.6"></line>
             <text x="70" y="79" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="19" font-weight="700" letter-spacing="1.2">COMPARED</text>
             <text class="d" x="70" y="100" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="9" font-weight="600">7 OCT · ML</text>
             <text class="d" x="70" y="50" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="8.5" font-weight="600">{{stampSub}}</text>
           </g>
         </svg>
-        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px; animation: owIn .3s ease-out .2s both"><span style="font-size: 14px; font-weight: 700; color: #1E6E47">Inked</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43; line-height: 1.4">Find is done. The card moves to the Prepare room, and Moses asks Katwe for a sample.</span></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 4px; animation: owIn .3s ease-out .2s both"><span style="font-size: 14px; font-weight: 700; color: #1E6E47">Inked</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43; line-height: 1.4">Find is done. Ruth will see the same room, retail and wholesale, when she prices it.</span></span>
       </sc-if>
     </div>
   </div>
@@ -103,40 +127,67 @@ input::placeholder{color:rgba(242,239,230,.45)}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { rival: '', holding: false, inked: false }; }
+  constructor(p) { super(p); this.state = { rN: '', rUnit: null, rOuter: null, pU: '', pO: '', holding: false, inked: false }; }
   renderVals() {
     const S = this.state;
     const dot = (c) => 'background:' + c + ';box-shadow:0 0 0 1px rgba(255,255,255,.35)', off = 'background:rgba(255,255,255,.16)';
     const strip = [[dot('#9A2E24'), dot('#2B3A8C'), S.inked ? dot('#1E6E47') : 'background:#F5B26B'], [off, off, off, off], [off], [off]];
-    const COST = 380000;
-    const v = parseInt(String(S.rival).replace(/[^0-9]/g, ''), 10) || 0;
-    const has = v >= 10000;
-    // Sourcing sees the room as a band, never a markup
-    const room = has ? (v - COST) / v : 0;
-    const band = !has ? '—' : room >= 0.12 ? 'STRONG' : room >= 0.05 ? 'FAIR' : room > 0 ? 'THIN' : 'NONE';
+    const fmt = (n) => Math.round(n).toLocaleString('en-US'), num = (t) => parseInt(String(t).replace(/[^0-9]/g, ''), 10) || 0;
+    const UNIT = { pieces: ['piece', 'pieces', 1], dozens: ['dozen', 'dozens', 12], pairs: ['pair', 'pairs', 2], sets: ['set', 'sets', 1] }, UK = Object.keys(UNIT);
+    const OUTER = { ctn: ['ctn', 'ctns'], box: ['box', 'boxes'], bundle: ['bundle', 'bundles'], bag: ['bag', 'bags'] }, OK = Object.keys(OUTER);
+    // our side, from stamp 2: Katwe, 4 pieces in a ctn
+    const OURS = [[1, 'piece', 380000, 1, 'u'], [1, 'ctn', 1420000, 4, 'o'], [3, 'ctns', 1360000, 4, 'o']];
+    const ours = OURS.map(([n, w, p, per, k]) => ({ from: n + ' ' + w + '+', cost: fmt(p) + '/' + (k === 'o' ? 'ctn' : 'piece'), dot: k === 'o' ? 'background:#2B3A8C' : 'background:#C47A1E' }));
+    const ourRetail = 380000, ourWholesale = 1420000 / 4;
+    // their side: packing as the sentence, then one retail and one wholesale tier, as chalked
+    const rN = num(S.rN), unit = S.rUnit, outer = S.rOuter;
+    const perPack = rN && unit ? rN * UNIT[unit][2] : 0;
+    const packKnown = perPack > 1 && !!outer;
+    const vU = num(S.pU), vO = num(S.pO);
+    const uW = unit ? UNIT[unit][0] : 'piece', oW = outer ? OUTER[outer][0] : 'pack';
+    const rows = [
+      { from: '1 ' + uW + '+', per: uW, p: S.pU, ph: 'their price', dot: 'background:#C47A1E', aria: 'Kikuubo: price for one ' + uW, type: (e) => this.setState({ pU: e.target.value.replace(/[^0-9,]/g, '').slice(0, 10) }) },
+      { from: '1 ' + oW + '+', per: oW, p: S.pO, ph: packKnown ? 'by the ' + oW : 'packing first', dot: 'background:#2B3A8C', aria: 'Kikuubo: price for one ' + oW, type: (e) => { if (packKnown) this.setState({ pO: e.target.value.replace(/[^0-9,]/g, '').slice(0, 10) }); } }
+    ];
+    // compare per piece, so a ctn of 6 and a ctn of 4 still line up
+    const theirRetail = vU && unit ? vU / UNIT[unit][2] : vU ? vU : 0;
+    const theirWholesale = packKnown && vO ? vO / perPack : 0;
+    const bandOf = (our, their) => { if (!their) return '—'; const r = (their - our) / their; return r >= 0.12 ? 'STRONG' : r >= 0.05 ? 'FAIR' : r > 0 ? 'THIN' : 'NONE'; };
     const BI = { STRONG: 'color:#0F6B43', FAIR: 'color:#95530C', THIN: 'color:#95530C', NONE: 'color:#8E2A22', '—': 'color:#8A7A62' };
     const lo = 300000, hi = 520000, X = (n) => Math.max(0, Math.min(100, (n - lo) / (hi - lo) * 100));
-    const xr = X(v);
-    const can = has;
+    const room = (title, kind, our, their, note) => { const b = bandOf(our, their), xo = X(our), xt = X(their);
+      return { title, band: b, bandInk: BI[b], ink: kind === 'o' ? 'color:#2B3A8C' : 'color:#95530C', dot: kind === 'o' ? 'background:#2B3A8C' : 'background:#C47A1E',
+        our: fmt(our), their: their ? fmt(their) : '', has: !!their,
+        ourX: 'left:' + xo + '%', ourLab: 'left:calc(' + xo + '% - 4px)', theirX: 'left:' + xt + '%', theirLab: 'left:calc(' + xt + '% - ' + (xt > 80 ? 56 : 4) + 'px)',
+        bar: their && their > our ? 'left:' + xo + '%;width:' + (xt - xo) + '%;background:rgba(30,110,71,.3)' : 'width:0',
+        aria: title + ': our cost ' + fmt(our) + ' a piece' + (their ? ', theirs ' + fmt(their) + ', room ' + b.toLowerCase() : ', no rival price yet'),
+        note, hasNote: !!note }; };
+    const wsNote = !packKnown ? 'Their packing first, then their ctn price.' : !theirWholesale ? 'No price by the ' + oW + ' on their board? Compared with their single price.' : perPack !== 4 ? 'Their ' + oW + ' holds ' + perPack + ', ours 4: compared per piece.' : '';
+    const rooms = [
+      room('Retail · one piece', 'u', ourRetail, theirRetail, ''),
+      room('Wholesale · by the ctn', 'o', ourWholesale, theirWholesale || theirRetail, wsNote)
+    ];
+    const bR = rooms[0].band, bW = rooms[1].band;
+    const can = theirRetail > 0;
     return {
-      costX: 'left:' + X(COST) + '%', costLab: 'left:calc(' + X(COST) + '% - 4px)',
-      strip, stripAria: (S.inked ? 3 : 2) + ' of 9 stamps', rival: S.rival,
-      typeRival: (e) => { if (!S.inked) this.setState({ rival: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }); },
-      hasRival: has, rivalTxt: v.toLocaleString('en-US'), rivalX: 'left:' + xr + '%', rivalLab: 'left:calc(' + xr + '% - 70px)',
-      roomBar: has && v > COST ? 'left:' + X(COST) + '%;width:' + (xr - X(COST)) + '%;background:rgba(30,110,71,.3)' : 'width:0',
-      band, bandInk: BI[band],
-      roomAria: has ? 'Our best cost 380,000; Kikuubo ' + v.toLocaleString('en-US') + '; room ' + band.toLowerCase() : 'Our best cost 380,000; no rival price yet',
-      roomNote: !has ? 'Copy Kikuubo’s figure from the board to see the room.' : band === 'STRONG' ? 'Plenty of room under the cheapest rival. Ruth will set the price.' : band === 'NONE' ? 'They sell it for less than our cost. Worth a second supplier first.' : 'Some room, not much. Ruth will see the same line.',
+      strip, ours, rows, rooms, stripAria: (S.inked ? 3 : 2) + ' of 9 stamps',
+      rN: S.rN, typeRN: (e) => this.setState({ rN: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }),
+      rUnitW: unit ? UNIT[unit][1] : 'what', rOuterW: outer || 'what',
+      cycleUnit: () => this.setState({ rUnit: UK[(UK.indexOf(unit) + 1) % UK.length] }),
+      cycleOuter: () => this.setState({ rOuter: OK[(OK.indexOf(outer) + 1) % OK.length] }),
+      unitStyle: unit ? 'background:#F2EFE6;color:#1F2B26' : 'box-shadow:inset 0 0 0 1.5px rgba(242,239,230,.45);color:rgba(242,239,230,.6)',
+      outerStyle: outer ? 'background:#F2EFE6;color:#1F2B26' : 'box-shadow:inset 0 0 0 1.5px rgba(242,239,230,.45);color:rgba(242,239,230,.6)',
+      boardNote: packKnown ? rN + ' ' + UNIT[unit][1] + ' in a ' + outer + (UNIT[unit][2] > 1 ? ' · ' + perPack + ' pieces' : '') + ' · tap a word to change it' : 'Tap the words to set their packing, as written on the board',
       open: !S.inked, inked: S.inked, holding: S.holding,
       pressDim: can ? '' : 'opacity:.55;cursor:default',
       knob: can ? 'background:#1E6E47;color:#FFFFFF;box-shadow:0 8px 18px rgba(30,110,71,.3)' : 'background:#EDE6D8;color:#8A7A62',
       pressAria: can ? 'Press and hold to ink the compare stamp' : 'A rival price has to be in first',
-      inkHint: !can ? 'One rival price is enough to ink it' : S.holding ? 'Keep holding…' : 'Press and hold to ink it',
+      inkHint: !can ? 'Their single price is enough to ink it; their ctn price makes it complete' : S.holding ? 'Keep holding…' : 'Press and hold to ink it',
       hintInk: can ? 'color:#1C2233' : 'color:#6B5A43',
       press: () => { if (!can || S.holding) return; this.setState({ holding: true }); setTimeout(() => this.setState({ holding: false, inked: true }), 900); },
-      ring: 'KIKUUBO ' + v.toLocaleString('en-US') + ' • ROOM ' + band + ' • NATEETE NONE • ',
-      stampSub: '1 OF 2 RIVALS',
-      stampAria: 'Compare stamp: Kikuubo ' + v.toLocaleString('en-US') + ', room ' + band.toLowerCase() + ', 7 October, Moses',
+      ring: 'RETAIL ' + bR + ' • WHOLESALE ' + bW + ' • KIKUUBO • ',
+      stampSub: theirWholesale ? '2 TIERS COMPARED' : '1 TIER COMPARED',
+      stampAria: 'Compare stamp: retail ' + bR.toLowerCase() + ', wholesale ' + bW.toLowerCase() + ', 7 October, Moses',
       nextLabel: S.inked ? 'Next: the sample arrives · pack it' : 'Prepare opens after this stamp',
       nextStyle: S.inked ? 'background:#16203C;color:#FFFFFF;box-shadow:0 10px 22px rgba(22,32,60,.22)' : 'background:#E9E1D3;color:#6B5A43;pointer-events:none'
     };
