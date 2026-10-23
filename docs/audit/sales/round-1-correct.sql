@@ -57,6 +57,8 @@ declare
   fix_446_receipt bigint := null;      -- for 'relink': the receipt id from the REPORT
   -- #226 Jackson: the 1,600,000 of 1 Aug (receipt 15544), before the order.
   --   'remove'  a second copy of a real payment: taken off #226 (the receipt stays in the cash book)
+  --             Live, 23 Oct: receipts 15544 (1 Aug) and 11385 (26 Aug) are both 1,600,000 "Payment — INV-0226",
+  --             every other Jackson order is paid in full, and #226's paid is already 4,600,000: 'remove'.
   --   <id>      it belongs to that order: moved there (write the order id as text, e.g. '201')
   --   null      leave it
   fix_226 text := null;
@@ -147,18 +149,18 @@ begin
          where round(ow_num(e ->> 'amount')) = 540000 and e ->> 'date' = '2026-10-16' limit 1);
   if q.id is null or q2.id is null or p is null then
     raise notice 'C953: skipped, #408 has no 540,000 payment of 16 Oct (or an order is missing).';
-  elsif round(coalesce(q.amount_paid, 0)) - 540000 < round(ow_order_total(shop, q.payload, false))
+  elsif round((select coalesce(sum(ow_num(e ->> 'amount')), 0) from jsonb_array_elements(q.payload -> 'payments') e)) - 540000 < round(ow_order_total(shop, q.payload, false))
         or round(ow_order_total(shop, q2.payload, false)) - round(coalesce(q2.amount_paid, 0)) < 540000
         or coalesce(q2.payload ->> 'customerId', '') <> coalesce(q.payload ->> 'customerId', '') then
     raise notice 'C953: skipped, #408 is not otherwise paid, or #390 does not owe 540,000 (or they are not the same customer).';
   else
-    update saved_quotes set amount_paid = amount_paid - 540000,
-           payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
+    update saved_quotes set payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
      where shop_id = shop and id = 408;
-    update saved_quotes set amount_paid = coalesce(amount_paid, 0) + 540000,
-           payload = payload || jsonb_build_object('payments', coalesce(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' end, '[]'::jsonb)
+    update saved_quotes set payload = payload || jsonb_build_object('payments', coalesce(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' end, '[]'::jsonb)
              || jsonb_build_array(p || jsonb_build_object('id', 1 + coalesce((select max(ow_num(e ->> 'id')) from jsonb_array_elements(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' else '[]'::jsonb end) e), 0), 'note', 'Moved from #0408 (round 1)')))
      where shop_id = shop and id = 390;
+    -- Paid is the sum of the payments each order now holds (0165's rule), whatever it said before.
+    update saved_quotes set amount_paid = (select coalesce(sum(ow_num(e ->> 'amount')), 0) from jsonb_array_elements(case when jsonb_typeof(payload -> 'payments') = 'array' then payload -> 'payments' else '[]'::jsonb end) e) where shop_id = shop and id in (390, 408);
     if coalesce(p ->> 'cashTxnId', '') <> '' then
       update cash_txns set quote_id = 390, description = replace(coalesce(description, ''), '0408', '0390') where shop_id = shop and id = (p ->> 'cashTxnId')::bigint;
     end if;
@@ -190,10 +192,10 @@ begin
       update saved_quotes set payload = payload || jsonb_build_object('payments', (select jsonb_agg(case when e = p then e || jsonb_build_object('cashTxnId', c.id) else e end) from jsonb_array_elements(q.payload -> 'payments') e)) where shop_id = shop and id = 446;
       perform ow_log(shop, own, own_name, 'owner', 'books.correct', '#0446: the 5,000 paid on 5 Oct gets its receipt ' || c.id, 5000, jsonb_build_object('table', 'saved_quotes', 'id', 446), jsonb_build_object('cashTxnId', 20166), jsonb_build_object('cashTxnId', c.id));
     elsif fix_446 = 'remove' then
-      update saved_quotes set amount_paid = amount_paid - 5000,
-             payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
+      update saved_quotes set payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
        where shop_id = shop and id = 446;
-      perform ow_log(shop, own, own_name, 'owner', 'books.correct', '#0446: the 5,000 that was never paid comes off', 5000, jsonb_build_object('table', 'saved_quotes', 'id', 446), jsonb_build_object('paid', q.amount_paid), jsonb_build_object('paid', q.amount_paid - 5000));
+      update saved_quotes set amount_paid = (select coalesce(sum(ow_num(e ->> 'amount')), 0) from jsonb_array_elements(case when jsonb_typeof(payload -> 'payments') = 'array' then payload -> 'payments' else '[]'::jsonb end) e) where shop_id = shop and id = 446;
+      perform ow_log(shop, own, own_name, 'owner', 'books.correct', '#0446: the 5,000 that was never paid comes off', 5000, jsonb_build_object('table', 'saved_quotes', 'id', 446), jsonb_build_object('paid', q.amount_paid), jsonb_build_object('paid', (select amount_paid from saved_quotes where shop_id = shop and id = 446)));
     end if;
   end if;
 
@@ -205,19 +207,19 @@ begin
     if p is null then
       raise notice '#226: skipped, no payment pointing at 15544.';
     else
-      update saved_quotes set amount_paid = amount_paid - ow_num(p ->> 'amount'),
-             payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
+      update saved_quotes set payload = payload || jsonb_build_object('payments', (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements(q.payload -> 'payments') e where e is distinct from p))
        where shop_id = shop and id = 226;
+      update saved_quotes set amount_paid = (select coalesce(sum(ow_num(e ->> 'amount')), 0) from jsonb_array_elements(case when jsonb_typeof(payload -> 'payments') = 'array' then payload -> 'payments' else '[]'::jsonb end) e) where shop_id = shop and id = 226;
       if fix_226 = 'remove' then
         update cash_txns set quote_id = null where shop_id = shop and id = 15544 and quote_id = 226;
         perform ow_log(shop, own, own_name, 'owner', 'books.correct', '#0226: the second copy of 1 Aug (receipt 15544) comes off the order', ow_num(p ->> 'amount'), jsonb_build_object('table', 'saved_quotes', 'id', 226), null, null);
       else
         select * into q2 from saved_quotes where shop_id = shop and id = fix_226::bigint for update;
         if q2.id is null then raise exception '#226: order % is not there.', fix_226; end if;
-        update saved_quotes set amount_paid = coalesce(amount_paid, 0) + ow_num(p ->> 'amount'),
-               payload = payload || jsonb_build_object('payments', coalesce(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' end, '[]'::jsonb)
+        update saved_quotes set payload = payload || jsonb_build_object('payments', coalesce(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' end, '[]'::jsonb)
                  || jsonb_build_array(p || jsonb_build_object('id', 1 + coalesce((select max(ow_num(e ->> 'id')) from jsonb_array_elements(case when jsonb_typeof(q2.payload -> 'payments') = 'array' then q2.payload -> 'payments' else '[]'::jsonb end) e), 0), 'note', 'Moved from #0226 (round 1)')))
          where shop_id = shop and id = q2.id;
+        update saved_quotes set amount_paid = (select coalesce(sum(ow_num(e ->> 'amount')), 0) from jsonb_array_elements(case when jsonb_typeof(payload -> 'payments') = 'array' then payload -> 'payments' else '[]'::jsonb end) e) where shop_id = shop and id = q2.id;
         update cash_txns set quote_id = q2.id where shop_id = shop and id = 15544;
         perform ow_log(shop, own, own_name, 'owner', 'books.correct', 'Receipt 15544 moved from #0226 to #' || lpad(q2.id::text, 4, '0'), ow_num(p ->> 'amount'), jsonb_build_object('table', 'saved_quotes', 'id', q2.id, 'from', 226), null, null);
       end if;
@@ -234,10 +236,12 @@ begin
       update customers set debt = coalesce(debt, 0) - 85000 where shop_id = shop and id = 'C925';
       n := n + 1;
     end loop;
-    if n = 2 then
+    if n = 0 then
+      raise notice 'C925: skipped, no copies of the 85,000 charge left (already corrected?).';
+    elsif n = 2 then
       perform ow_log(shop, own, own_name, 'owner', 'books.correct', 'C925: two copies of the 85,000 charge of 28-29 Sep taken off', 170000, jsonb_build_object('table', 'customers', 'id', 'C925'), null, null);
     else
-      raise exception 'C925: expected three 85,000 charges on 28-29 Sep, found % to take off. Nothing is changed.', n;
+      raise exception 'C925: expected three 85,000 charges on 28-29 Sep, found % to take off. Nothing is changed.', n + 1;
     end if;
   end if;
 
