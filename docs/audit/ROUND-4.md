@@ -63,11 +63,13 @@ Matched by id and name, like 0161. It stays in Furniture with the other adhesive
 
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| NAV-03 | | | |
-| NAV-02 | | | |
-| NAV-04 | | | |
-| REL-05 | | | |
-| NAV-05 | | | |
-| NAV-06 | | | |
-| NAV-07 | | | |
-| NAV-08 | | | |
+| NAV-03 | Yes | `prodTT` splits a variant on " / " only (the way `variantLabel` joins it). No other place splits a variant. | `1 1/4"` reads as one tag on Find, the aisle list and Pack in the harness at 360 (`#r4`); test `store-round4`. |
+| NAV-02 | Yes | `navArm` (one history entry, put back by `afterRender` and `closeSheet`), a `popstate` handler that runs `stBack`, `SHEET.leaveapp` / `ACT.leaveapp`. Skipped in the APK (`NATIVE_BACK`). | Harness: Stock → aisle → item, then browser Back three times walks item → aisle → Stock → Today with no reload; a fourth Back opens "Leave Omni-ware?". A filled Report a loss goes through `leaveGuard` as before. |
+| NAV-04 | Yes | `orderBuying` (awaiting goods, or preparing but still waiting on a bought-in line and not started, as Today's lists already treat it), `orderLookOnly`, new `PAGE.orderview` (buying, quote, someone else's), `openPack` and `PAGE.pack` send look-only orders there; the pack dock: red only for the full line, amber "Pack short · n of m", grey "Waits for the goods" (disabled, and `ACT.pkok` refuses) with "Not in yet · coming from …". | Harness: #0042 (buying) and a quote open the order view, never Pack; #0048 Cement reads "13 of 20 on the shelf" with an amber "Pack short · 13 of 20"; a bought-in sheet not yet in reads "Not in yet · coming from Namanve Sheets". |
+| REL-05 | Yes | `slDone` (all three variants), `lrSent` and `agDone` say "Handing over…" with the spinner while the write is held; `pkDone` says "Packing #…" with the spinner and the packed grid faded. `stateDot` takes a size. `dvDone` already said "Delivering…". | Harness: each screen with `wait` shows no tick; after the server's yes it shows the green tick and "Handed over to Peter" / "#0048 is packed". |
+| NAV-05 | Yes | Find's `stOf`: every order row has an act: Buying, Quote and someone else's → `orderview`; On the road → the On the road page (`troad`), already drawn. | Harness: every order row in Find for "kato", "0045" and "0049" carries an act; test checks `stOf` has no empty act. |
+| NAV-06 | Yes | `fdNorm` (`4x20`, `4×20`, `4 x 20` → `4*20`), `fdHit` (also against the word one letter shorter), `didYouMean` (nearest shop words within 2 letters, cut to the length typed; at most 2), Find's empty state. Migration `0163` renames P550. | Test compiles the real search: "hindge" → the hinges, "4x20" → the two 4*20 screws (not 4*25), "silcone" → Silicone Clear, "hngie" → "Did you mean hinge". 0163 run twice on Postgres: only P550 renamed, still in Furniture. |
+| NAV-07 | Yes | `PAGE.find`: no 60-row cap; the chips show only with a query. | Harness: the "All" count equals the rows on "e", "hinge" and "4*20"; no chips on the empty Find. |
+| NAV-08 | Yes | `PAGE.aisle`: `.cv-stick` (Back, letter, name, rows in view) once the hero scrolls off, `.cv-totop` button, `stickSync`, `ACT.totop`; a long aisle pads its end so the last rows clear the button. | Harness at 360 and 1280: a 70-row aisle scrolled to row 60 shows the bar with Back at the top (44px) and "70 items · 57–68", and the round button bottom right. |
+
+Not changed from the plan: "On the road" in Find opens the existing On the road page rather than a fourth order-view state, since the OrderView board drew three.

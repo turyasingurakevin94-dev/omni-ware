@@ -84,3 +84,21 @@ Deferred:
 - Order writes (hand over, deliver, pack, unpack) are not queued in the outbox. They wait on screen with Try again, by design.
 - A kept report or return the server refuses for a reason other than signal is still dropped with a toast (it was before). Worth a look in a later round.
 - 0161 and 0162 to run.
+
+## Round 4 · Search and navigation (23 Oct 2026) · NAV-02..08, REL-05 · migration 0163
+
+Fixed: a size like 1 1/4" stays one tag; phone and browser Back walk the app's own screens and ask "Leave Omni-ware?" on Today; a quote, an order waiting on goods and someone else's order open a look-only order view, never Pack; the red pack button only packs the full line ("Pack short · n of m" is amber, and a line not in yet "Waits for the goods"); "Handing over…" and "Packing #…" until the server says yes; every order row in Find opens something; "hindge", "4x20" and "silcone" find the right items, with "Did you mean" when nothing does; Find lists every match and shows chips only with a query; a long aisle keeps Back in a sticky bar with a "back to the top" button.
+
+Now part of the language:
+- **Back is the app's Back.** The phone's Back, the browser's Back, Escape and the on-screen Back all walk one stack: a sheet, then the screen, then the tab, then "Leave Omni-ware?".
+- **Look only.** An order the yard can't act on opens one read-only view that says what it waits on, with "Look only · …" at the foot.
+- **Red is the full job.** A short or partial answer is an amber-outlined choice; something that can't be done yet is a grey, disabled button that says what it waits for.
+- **Nothing found is never a dead end.** It offers the nearest shop words, or the Try chips.
+- **Counts are the rows.** A count on a chip is never more than what is listed.
+- **A long list keeps its header.** Once the hero scrolls off, a compact navy bar with Back stays on top.
+
+Deferred:
+- The rest of the round 4 brief after NAV-08 (it arrived cut off), and NAV-01 if there was one.
+- Find has no paging; "e" lists every match. Fine on the test phones; page it if an old phone is slow.
+- 0161, 0162 and 0163 to run.
+

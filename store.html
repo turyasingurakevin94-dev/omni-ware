@@ -656,6 +656,12 @@ html.big .ct-key{height:60px}
 .cv-cnt{position:absolute;top:4px;right:4px;min-width:24px;height:24px;padding:0 4px;border-radius:999px;background:var(--red);border:2px solid #16203C;font-family:var(--mono);font-size:11px;font-weight:600;color:#fff;display:flex;align-items:center;justify-content:center}
 .cv-me{width:46px;height:46px;flex:none;border:none;border-radius:999px;background:#243052;box-shadow:0 0 0 2px #16203C,0 0 0 4px rgba(111,220,176,.55);color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0}
 .cv-body{flex:1;padding:18px 16px 24px;display:flex;flex-direction:column;gap:10px}
+/* A long list keeps Back in reach (round 4, NAV-08, canvas AisleSticky): a compact navy bar once the hero has scrolled off, and a round "back to the top". */
+.cv-stick{position:sticky;top:0;z-index:5;height:calc(60px + var(--safe-area-inset-top));margin-bottom:calc(-60px - var(--safe-area-inset-top));box-sizing:border-box;padding:calc(8px + var(--safe-area-inset-top)) 12px 8px;background:#16203C;color:#fff;display:flex;align-items:center;gap:10px;box-shadow:0 6px 18px rgba(22,32,60,.18);transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s}
+.cv-stick.on{transform:none;opacity:1;pointer-events:auto}
+.cv-totop{position:sticky;bottom:0;z-index:5;height:0;display:flex;justify-content:flex-end;padding:0 16px}
+.cv-totop button{width:52px;height:52px;flex:none;margin-top:calc(-76px - var(--safe-area-inset-bottom));border-radius:999px;border:none;background:#16203C;color:#fff;box-shadow:0 10px 22px rgba(22,32,60,.28);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:scale(.8);transition:opacity .2s,transform .2s}
+.cv-totop.on button{opacity:1;pointer-events:auto;transform:none}
 .cv-sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 4px 0;font-size:13px;font-weight:700;color:var(--ink2)}
 .cv-sec span{font-size:12px;font-weight:600}
 .cv-sec.first{padding-top:0}
@@ -1599,8 +1605,9 @@ function nameHTML(n){ return `${esc(n.base)}${n.variant ? ` <span class="v">${es
 /* A product's name that never loses its size or colour (the 360px report:
    "SJS Wall Plugs — White…" hid M6 from M14). The name wraps to two lines;
    the variant sits under it as tags, the size last and darkest. */
+// Tags split on " / " only (round 4, NAV-03): a size like 1 1/4" is one tag, never "1 1" and "4"".
 function prodTT(x, style){
-  const n = nameParts(x.productId, x.variantIdx, x.productName), parts = n.variant ? n.variant.split(/\s*\/\s*/).filter(Boolean) : [];
+  const n = nameParts(x.productId, x.variantIdx, x.productName), parts = n.variant ? n.variant.split(/\s+\/\s+/).filter(Boolean) : [];
   return `<span class="cv-tt clamp2" style="white-space:normal;line-height:1.25;overflow-wrap:anywhere;${style || ''}">${esc(n.base)}</span>${parts.length ? `<span class="pv">${parts.map((v, i) => `<span${i === parts.length - 1 ? ' class="last"' : ''}>${esc(v)}</span>`).join('')}</span>` : ''}`;
 }
 // A product in a word or two, as the shop writes it ("Jaguar paint", never "pack jaguar").
@@ -1919,8 +1926,17 @@ window.stBack = function(){
   if (S.view !== 'today') { go('today'); return true; }
   return false;
 };
+/* Phone and browser Back walk the app's own stack (round 4, NAV-02): one history entry sits in
+   front and is put back after every Back, so Back never reloads the page or drops out of the app.
+   On Today it asks first. The APK's own back button already calls stBack, so it skips this. */
+const NATIVE_BACK = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+function navArm(){ if (NATIVE_BACK || S.navLeaving || (S.sheet && S.sheet.type === 'leaveapp')) return;
+  try { if (!history.state || !history.state.ow) history.pushState({ ow: 1 }, ''); } catch (e) {} }
+window.addEventListener('popstate', () => { if (NATIVE_BACK || S.navLeaving) return;
+  if (window.stBack()) { navArm(); return; }
+  FEEL.open(); openSheet('leaveapp'); });
 function openSheet(type, args){ S.sheet = { type, args: args || {}, at: Date.now() }; renderSheet(); }
-function closeSheet(silent){ S.sheet = null; if (!silent) renderSheet(); }
+function closeSheet(silent){ S.sheet = null; if (!silent) renderSheet(); navArm(); }
 
 function navHTML(){
   const cur = v => S.view === v && !S.stack.length ? 'aria-current="page"' : '';
@@ -2013,10 +2029,21 @@ ACT.leaveyes = () => { closeSheet(); const top = S.stack[S.stack.length - 1]; if
   // A return picked from the order list goes back to the list; one opened on its order closes.
   if (top && top.type === 'ret') { const ui = S.ui.rt; if (ui && ui.id != null && !ui.direct && !ui.door) { Object.assign(ui, { id: null, back: {}, cond: {}, why: null, note: '', photo: null, blob: null }); FEEL.back(); render(); return; } S.ui.rt = null; }
   FEEL.back(); pop(); };
+// Back on Today (round 4, NAV-02, canvas LeaveApp). The history entry is already spent, so a second Back leaves.
+SHEET.leaveapp = () => { const n = waitingList().length;
+  return `<span style="font-size:20px;font-weight:700">Leave Omni-ware?</span>
+    ${n ? `<span role="status" style="display:flex;align-items:center;gap:10px;min-height:48px;padding:0 12px;border-radius:14px;background:#FDEEE1;color:#7A4A02;font-size:13px;font-weight:700">${sv('M7 18a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9zM12 12v5M10 15l2 2 2-2', 16, 2.2)}${n0(n)} ${n === 1 ? 'thing is' : 'things are'} still waiting to send · they go when you come back</span>`
+      : `<span style="font-size:13px;font-weight:600;color:var(--ink2)">Nothing is lost · Today opens where you are</span>`}
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <button data-act="closesheet" style="height:56px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:15px;font-weight:700">Stay</button>
+      <button data-act="leaveapp" style="height:56px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:15px;font-weight:700">Leave</button></div>`; };
+ACT.leaveapp = () => { S.navLeaving = true; closeSheet(); try { history.back(); } catch (e) {}
+  // Nothing to go back to (the app was opened straight on this page): stay, and keep Back caught.
+  setTimeout(() => { S.navLeaving = false; navArm(); }, 600); };
 // A row that scrolls sideways fades at the edge that has more, so it never hides what is past it.
 function hscrollCue(el){ const more = el.scrollWidth - el.clientWidth - el.scrollLeft > 4, less = el.scrollLeft > 4; el.classList.toggle('more', more); el.classList.toggle('less', less); }
 AFTER.push(() => document.querySelectorAll('.hscroll').forEach(el => { hscrollCue(el); if (!el._cue) { el._cue = true; el.addEventListener('scroll', () => hscrollCue(el), { passive: true }); } }));
-function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); bindSlides(); }
+function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); bindSlides(); navArm(); }
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
@@ -3761,9 +3788,13 @@ function pkPick(q, it, k){ const ui = S.ui.pk, per = quoteLineCountPer(it), qty 
   if (PICK_ANSWERED.includes(it.pickStatus)) return itemPicked(it);
   const from = packFrom(q, it); return Math.min(qty, Math.floor(from / per) * per); }
 function orderCalledOff(q){ return !!q && (q.voided || !!q.cancelledAt || q.status === 'cancelled'); }
+// Only an order the yard can act on opens Pack (round 4, NAV-04): a quote, one waiting on goods and
+// one someone else is packing open the look-only order view instead.
+function orderBuying(q){ return !!q && (q.status === 'awaiting_goods' || (q.status === 'preparing' && q.pickingStatus !== 'in_progress' && q.pickingStatus !== 'done' && goodsBlockPreparing(q))); }
+function orderLookOnly(q){ return !!q && (q.status === 'draft' || orderBuying(q) || (takenBySomeoneElse(q) && !canCorrect())); }
 async function openPack(id){
   const q = quoteById(id); if (!q) return;
-  if (takenBySomeoneElse(q) && !canCorrect()) { toast(`${staffName(q.assignedWorkerId)} is packing this one`); return; }
+  if (orderLookOnly(q)) { push('orderview', { id }); return; }
   const p = packProgress(q), first = p.items.findIndex(it => !PICK_ANSWERED.includes(it.pickStatus));
   S.ui.pk = { id, i: Math.max(0, first), picked: {}, back: {} };
   push('pack', { id });
@@ -3789,8 +3820,37 @@ async function releaseOrder(id, putBack){
     if (putBack) { q.pickCursor = 0; (q.items || []).forEach(it => { delete it.pickStatus; delete it.pickedQty; }); }
   });
 }
+/* One look-only order (round 4, NAV-04/NAV-05, canvas OrderView): what it is waiting on and its
+   lines, no prices and nothing to tap but Back. */
+PAGE.orderview = ({ id }) => {
+  const q = quoteById(id); if (!q || orderCalledOff(q)) return goneSheet('That order is gone');
+  const icon = { van: 'M3 6h11v10H3zM14 9h4l3 3v4h-7M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', doc: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4', pack: 'M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9' };
+  const tk = takerOf(q), sales = tk ? firstWord(tk.name) : 'Sales', who = firstWord(staffName(q.assignedWorkerId)) || 'Someone', p = packProgress(q);
+  const v = q.status === 'draft' ? { head: 'Quote', bg: '#F1EEE8', ink: '#5F6980', ic: icon.doc, chip: 'Quote · not confirmed', cBg: 'rgba(255,255,255,.12)', cInk: '#DDE3F0', why: `${sales} is still writing it up with the client`, list: 'On the quote', foot: 'it comes to To pack when Sales confirms it' }
+    : orderBuying(q) ? { head: 'Waiting on goods', bg: '#E4E6FA', ink: '#3A3F9B', ic: icon.van, chip: 'Buying', cBg: 'rgba(201,205,247,.2)', cInk: '#C9CDF7', why: 'Packing opens when the goods come in', list: 'What is coming', foot: 'the yard has nothing to do yet' }
+    : { head: 'Packing', bg: '#DDF1EE', ink: '#0E5E57', ic: icon.pack, chip: `${who} is packing it`, cBg: 'rgba(111,220,176,.16)', cInk: '#6FDCB0', why: `${who} took it${q.workerAcceptedAt || q.pickingAssignedAt ? ' at ' + hm(msOf(q.workerAcceptedAt || q.pickingAssignedAt)) : ''} · ${p.done} of ${nLines(p.n)} packed`, list: 'The lines', foot: `ask ${who} to let it go if you need it` };
+  const sub = it => { if (q.status === 'draft') return ['Not confirmed', 'var(--ink2)'];
+    if (PICK_ANSWERED.includes(it.pickStatus)) return it.pickStatus === 'done' ? ['Packed', '#0F6B43'] : ['Packed short', '#95530C'];
+    if (orderLineIsBoughtIn(it) && !quoteLineReceived(it)) { const su = supplierById(it.supplierId); return [`Coming from ${(su && su.name) || 'the supplier'}`, '#3A3F9B']; }
+    return [orderBuying(q) ? (orderLineIsBoughtIn(it) ? 'In · came on a trip' : 'On our shelf already') : 'Not yet', orderBuying(q) ? '#0F6B43' : 'var(--ink2)']; };
+  const lines = pickView(q).map(it => { const c = quoteLineCount(it, Number(it.qty) || 0), s = sub(it);
+    return `<div class="cv-row" style="cursor:default">${thumb(it, 40, 28, 12)}<span class="cv-tx"><span class="cv-tt">${esc(fullName(it))}</span><span class="cv-sb" style="color:${s[1]}">${esc(s[0])}</span></span>
+      <span style="flex:none;display:flex;align-items:baseline;gap:4px"><span class="m" style="font-size:16px;font-weight:600">${esc(c.n)}</span><span style="font-size:11px;font-weight:700;color:var(--ink2)">${esc(c.unit)}</span></span></div>`; }).join('');
+  return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:20px;gap:14px" data-navy-top>
+    <div style="display:flex;align-items:center;justify-content:space-between">${cvBack()}<span style="font-size:13px;font-weight:700;color:var(--navyInk)">${esc(v.head)}</span><span style="width:44px;height:44px"></span></div>
+    <div style="display:flex;align-items:center;gap:14px"><span style="width:56px;height:56px;flex:none;border-radius:999px;background:${v.bg};color:${v.ink};display:flex;align-items:center;justify-content:center">${sv(v.ic, 24, 2.2)}</span>
+      <span class="cv-tx" style="gap:4px"><span style="font-size:22px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere">${q4(q)} · ${esc(quoteClientName(q))}</span><span style="align-self:flex-start;height:24px;padding:0 10px;border-radius:999px;background:${v.cBg};color:${v.cInk};font-size:12px;font-weight:700;display:flex;align-items:center">${esc(v.chip)}</span></span></div>
+    <span style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);font-size:13px;font-weight:600;color:#DDE3F0">${sv('M12 8v4M12 16h.01M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 16, 2.2)}${esc(v.why)}</span></div>
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:10px">
+    <span class="cv-sec first">${esc(v.list)}</span><div class="cv-list">${lines || '<div class="st-empty"><b>No lines yet</b></div>'}</div>
+    <span style="display:flex;align-items:center;justify-content:center;gap:6px;padding-top:4px;font-size:12px;font-weight:600;color:var(--ink2)">${sv('M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 14, 2.2)}Look only · ${esc(v.foot)}</span>
+  </div></div>`;
+};
+PAGE.orderview.bg = '#F7F5F2';
+ACT.orderview = t => { FEEL.open(); push('orderview', { id: Number(t.dataset.id) }); };
 PAGE.pack = ({ id }) => {
   const q = quoteById(id); if (!q || ['pending_delivery', 'completed'].includes(q.status)) return goneSheet('That order is gone');
+  if (orderLookOnly(q)) return PAGE.orderview({ id });
   const ui = S.ui.pk && S.ui.pk.id === id ? S.ui.pk : (S.ui.pk = { id, i: 0, picked: {}, back: {} });
   ui.picked = ui.picked || {}; ui.back = ui.back || {};
   const items = pickView(q), n = items.length;
@@ -3818,7 +3878,11 @@ PAGE.pack = ({ id }) => {
   const dot = (it, k) => { const st = it.pickStatus, on = k === ui.i, gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
     const bg = on ? '#FFFFFF' : st === 'done' ? 'rgba(111,220,176,.18)' : st === 'short' ? 'rgba(245,178,107,.18)' : 'rgba(255,255,255,.07)', ink = on ? '#16203C' : st === 'done' ? '#6FDCB0' : st === 'short' ? '#F5B26B' : '#B3BCD2';
     return `<button type="button" data-act="pkto" data-i="${k}" aria-label="Item ${k + 1}: ${esc(lineName(it).base)}${st === 'done' ? ', packed' : st === 'short' ? ', short' : ''}" class="m" style="position:relative;flex:1 0 44px;min-width:44px;height:44px;border-radius:12px;border:none;background:${bg};color:${ink};box-shadow:${on ? '0 0 0 3px rgba(255,255,255,.18)' : 'none'};font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;transition:background .2s">${st === 'done' && !on ? sv(CV.tick, 18, 2.8) : st === 'short' && !on ? `<span style="font-size:13px">−${esc(gap)}</span>` : k + 1}</button>`; };
-  const warn = shortBy > 0, hint = warn ? (from < qty ? `Only ${n0(quoteLineCount(cur, from).n)} on the shelf · ${managerName()} settles the rest` : `${n0(quoteLineCount(cur, shortBy).n)} short · ${managerName()} settles the rest`) : 'Swipe to look back or ahead';
+  // Round 4, NAV-04 (canvas PackShortChoice): red only packs the full line; short is an amber choice;
+  // a line bought for this order that has not come in waits for it, and never reads "Only 0 on the shelf".
+  const notIn = orderLineIsBoughtIn(cur) && !quoteLineReceived(cur), sup = notIn && supplierById(cur.supplierId);
+  const warn = shortBy > 0 && !notIn, hint = notIn ? `Not in yet · coming from ${(sup && sup.name) || 'the supplier'}` : warn ? (from < qty ? `${from > 0 ? n0(quoteLineCount(cur, from).n) + ' of ' + cq.n : 'None'} on the shelf · ${managerName()} settles the rest` : `${n0(quoteLineCount(cur, shortBy).n)} short · ${managerName()} settles the rest`) : 'Swipe to look back or ahead';
+  const okLook = notIn ? 'background:#fff;color:var(--ink2);box-shadow:inset 0 0 0 1.5px var(--rule)' : warn ? 'background:#fff;color:#7A4A02;box-shadow:inset 0 0 0 2px #F5B26B' : 'background:var(--red);color:#fff;box-shadow:0 8px 20px rgba(201,58,48,.28)';
   return `<div style="position:absolute;inset:0;background:var(--bg);overflow:hidden;display:flex;flex-direction:column">
     <div class="cv-hero tight" style="padding-bottom:18px;gap:14px" data-navy-top>
       <div style="display:flex;align-items:center;gap:10px">
@@ -3840,10 +3904,10 @@ PAGE.pack = ({ id }) => {
         <button type="button" data-act="pkstep" data-d="1" aria-label="One more" style="width:48px;height:48px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 20, 2.4)}</button>
       </div>
       ${PICK_ANSWERED.includes(cur.pickStatus) ? `<button data-act="pkuntick" style="height:44px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv('M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', 16, 2.2)}Not packed after all · untick it</button>`
-      : `<div style="min-height:22px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:${warn ? '#7A4A02' : 'var(--ink2)'};text-align:center">${warn ? sv(CV.loss, 14, 2.2) : ''}${esc(hint)}</div>`}
+      : `<div style="min-height:22px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:${notIn ? '#3A3F9B' : warn ? '#7A4A02' : 'var(--ink2)'};text-align:center">${notIn ? sv(CV.clock, 14, 2.2) : warn ? sv(CV.loss, 14, 2.2) : ''}${esc(hint)}</div>`}
       <div style="display:flex;gap:8px">
         <button type="button" data-act="pkscan" aria-label="Scan the label to pack it" style="width:58px;height:58px;flex:none;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(22,32,60,.22)">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10', 20, 2)}</button>
-        <button type="button" data-act="pkok" style="flex:1;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 20px rgba(201,58,48,.28)">${sv(CV.tick, 20, 2.6)}${warn ? `Pack ${esc(pq.n)} · ${esc(quoteLineCount(cur, shortBy).n)} short` : `Packed · ${esc(cq.n)} ${esc(cq.unit)}`}</button>
+        <button type="button" data-act="pkok" ${notIn ? 'disabled aria-disabled="true"' : ''} style="flex:1;height:58px;border-radius:999px;border:none;${okLook};font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px">${notIn ? 'Waits for the goods' : warn ? `Pack short · ${esc(pq.n)} of ${esc(cq.n)}` : `${sv(CV.tick, 20, 2.6)}Packed · ${esc(cq.n)} ${esc(cq.unit)}`}</button>
       </div>
     </div></div>`;
 };
@@ -3875,7 +3939,7 @@ function pkFinish(q){
   }, () => { ui.wait = false; ui.done = false; const k = ui.last != null ? ui.last : 0; setPick(q, k, 'pending'); delete ui.picked[k]; ui.i = k; S.ui.pkStamp = null; }, 10000, true);
 }
 function topType(){ return S.stack.length ? S.stack[S.stack.length - 1].type : null; }
-ACT.pkok = () => { const q = pkQ(); if (!q) return; const it = pickView(q)[S.ui.pk.i]; pkMark(S.ui.pk.i, pkPick(q, it, S.ui.pk.i)); };
+ACT.pkok = () => { const q = pkQ(); if (!q) return; const it = pickView(q)[S.ui.pk.i]; if (orderLineIsBoughtIn(it) && !quoteLineReceived(it)) return; pkMark(S.ui.pk.i, pkPick(q, it, S.ui.pk.i)); };
 ACT.pkstep = t => { const q = pkQ(), k = S.ui.pk.i, it = pickView(q)[k], per = quoteLineCountPer(it), qty = Number(it.qty) || 0; FEEL.tick();
   S.ui.pk.picked[k] = Math.max(0, Math.min(qty, pkPick(q, it, k) + Number(t.dataset.d) * per)); render(); };
 ACT.pkgo = t => pkGo(S.ui.pk.i + Number(t.dataset.d));
@@ -3926,13 +3990,13 @@ function pkDone(q, items, ui){
   return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${ui.wait ? `<button data-act="pkundofin" aria-label="Undo, for 10 seconds" style="position:absolute;top:calc(12px + var(--safe-area-inset-top));right:16px;z-index:2;height:40px;padding:0 14px 0 8px;border-radius:999px;border:none;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#6FDCB0" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8" transform="rotate(-90 13 13)" class="cv-undorun"></circle><path d="M10 10.5 8 12.5l2 2M8 12.5h6a3 3 0 0 1 0 6h-2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Undo</button>` : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;text-align:center">
-      <span class="cv-pop" style="position:relative;width:128px;height:128px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:16px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:64px;height:64px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.pack, 38, 2.6)}</span></span>
-      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${q4(q)} is packed</span>
+      ${ui.wait ? stateDot('sending', 128) : `<span class="cv-pop" style="position:relative;width:128px;height:128px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:16px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:64px;height:64px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.pack, 38, 2.6)}</span></span>`}
+      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${ui.wait ? `Packing ${q4(q)}…` : `${q4(q)} is packed`}</span>
       <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(quoteClientName(q))}${ui.bay ? ` · leave it on bay ${ui.bay}` : ' · every bay is full · leave it by the gate'}</span>
       ${!ui.wait ? unpackLink(q, 'chip') : ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <div role="list" aria-label="What was packed" class="pk-grid" style="display:grid;grid-auto-flow:column;grid-template-rows:repeat(${items.length > 3 ? 2 : 1},70px);grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none">${items.map(tile).join('')}</div>
+      <div role="list" aria-label="What was packed" class="pk-grid" style="opacity:${ui.wait ? .55 : 1};transition:opacity .3s;display:grid;grid-auto-flow:column;grid-template-rows:repeat(${items.length > 3 ? 2 : 1},70px);grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none">${items.map(tile).join('')}</div>
       ${pages > 1 ? `<div style="display:flex;justify-content:center;gap:6px">${Array.from({ length: pages }, (_, p) => `<span style="width:${p === 0 ? 18 : 6}px;height:6px;border-radius:999px;background:${p === 0 ? '#fff' : 'rgba(255,255,255,.3)'}"></span>`).join('')}</div>` : ''}
     </div>
     ${shorts.length ? `<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:rgba(245,178,107,.12)"><span style="width:40px;height:40px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini((M && M.name) || mgr)}</span>
@@ -4202,8 +4266,8 @@ function lrSent(ui){
   return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px;overflow-y:auto">
     ${s.wait ? undoBtn('lrundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center">
-      ${bigTick(truckIcon(38), 80)}
-      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${me ? (qs.length === 2 ? 'Both drops are' : qs.length > 2 ? 'All the drops are' : 'The drop is') + ' on your truck' : esc(name) + ' is on the way'}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(s.road)} · ${nLines(s.lines)} checked · ${hm(s.at)}</span></span>
+      ${s.wait ? stateDot('sending') : bigTick(truckIcon(38), 80)}
+      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : me ? (qs.length === 2 ? 'Both drops are' : qs.length > 2 ? 'All the drops are' : 'The drop is') + ' on your truck' : esc(name) + ' is on the way'}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(s.road)} · ${nLines(s.lines)} checked · ${hm(s.at)}</span></span>
       <div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:6px;display:flex;flex-direction:column;text-align:left">
         ${qs.map((q, i) => { const tk = takerOf(q); return `<span style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 10px"><span class="m" style="width:26px;height:26px;border-radius:999px;background:#fff;color:#16203C;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">${i + 1}</span><span class="cv-tx" style="gap:2px"><span class="cv-tt">${esc(quoteClientName(q))} · ${q4(q)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${tk ? esc(firstWord(tk.name)) : 'Sales'} ${tk ? 'is' : 'are'} told it's on its way</span></span></span>`; }).join('')}</div>
       ${later ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk)">${face(staffName(later.assignedWorkerId), staffName(later.assignedWorkerId), 24, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}${q4(later)} rides on the next run, when ${esc(firstWord(staffName(later.assignedWorkerId)))} finishes it</span>` : ''}
@@ -4374,8 +4438,8 @@ function slDone(q, ui){
   if (me) return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 55%,#111A33 100%);color:#fff;display:flex;flex-direction:column;padding:calc(14px + var(--safe-area-inset-top)) 20px calc(26px + var(--safe-area-inset-bottom))">
     ${s.wait ? undoBtn('heldundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center">
-      ${bigTick(truckIcon(40), 84, 176)}
-      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:30px;font-weight:700;letter-spacing:-.02em">It's on your truck</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · ${esc(quoteClientName(q))} · ${tk ? esc(firstWord(tk.name)) + ' is' : 'Sales are'} told it's coming</span></span>
+      ${s.wait ? stateDot('sending', 176) : bigTick(truckIcon(40), 84, 176)}
+      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:30px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : "It's on your truck"}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · ${esc(quoteClientName(q))} · ${tk ? esc(firstWord(tk.name)) + ' is' : 'Sales are'} told it's coming</span></span>
       <div style="width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:20px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
         <span style="height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px"><span class="m" style="font-size:22px;font-weight:600;line-height:1">${items.length}/${items.length}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">lines on board</span></span>
         <span style="height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:-1px 0 0 rgba(255,255,255,.07)"><span class="m" style="font-size:22px;font-weight:600;line-height:1;color:#6FDCB0">Nothing</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">to collect at the door</span></span></div>
@@ -4387,9 +4451,9 @@ function slDone(q, ui){
   return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${s.wait ? undoBtn('heldundo') : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:30px;text-align:center">
-      ${bigTick(s.gate ? sv(CV.tick, 40, 2.6) : truckIcon(46))}
-      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.gate ? `Handed over to ${esc(name)}` : `On the road with ${esc(name)}`}</span>
-      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · ${esc(quoteClientName(q))} · ${s.gate ? 'at the gate' : 'left'} ${hm(s.at)}</span></div>
+      ${s.wait ? stateDot('sending') : bigTick(s.gate ? sv(CV.tick, 40, 2.6) : truckIcon(46))}
+      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : s.gate ? `Handed over to ${esc(name)}` : `On the road with ${esc(name)}`}</span>
+      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${s.wait ? `${q4(q)} · to ${esc(name)}${s.gate ? ' at the gate' : ''}` : `${q4(q)} · ${esc(quoteClientName(q))} · ${s.gate ? 'at the gate' : 'left'} ${hm(s.at)}`}</span></div>
     ${s.gate ? '' : `<div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:18px 10px 14px;display:flex;flex-direction:column;gap:14px">
       <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><span style="position:absolute;top:21px;left:16.7%;width:33.3%;height:2px;background:rgba(111,220,176,.5)"></span><span style="position:absolute;top:21px;left:50%;width:33.3%;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 5px,transparent 5px 10px)"></span>
         ${step(`<span style="width:44px;height:44px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 20, 3)}</span>`, 'Checked', `${items.length} of ${nOf(items.length, 'line')}`)}
@@ -4753,7 +4817,7 @@ ACT['slide:aggo'] = () => { const ui = agUI(), q = quoteById(ui.id); if (!q || u
     () => { ui.sent = null; }, 10000, true); };
 function agDone(q, ui){
   const a = agentOf(q), n = pickView(q).length, more = agentReady().filter(o => o.id !== q.id).length;
-  return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, title: `Handed to ${firstWord(a ? a.name : 'them')}`, line: `${a ? 'Their' : 'The'} app shows ${q4(q)} as collected`,
+  return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, state: ui.sent.wait ? 'sending' : null, title: ui.sent.wait ? 'Handing over…' : `Handed to ${firstWord(a ? a.name : 'them')}`, line: `${a ? 'Their' : 'The'} app shows ${q4(q)} as collected`,
     body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[`${n}/${n}`, 'lines checked'], [hm(ui.sent.at), 'handed over'], ['Paid', 'up front', '#6FDCB0']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>
       <span style="font-size:12px;font-weight:600;color:var(--navyInk)">Code ${esc(q4(q).slice(1))} is used up · the invoice goes out by itself tomorrow</span>`,
     foot: `<div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="agdone">Done</button>${more ? `<button data-act="agnext" style="height:46px;border:none;background:none;color:#DDE3F0;font-size:14px;font-weight:700">Another agent at the gate</button>` : ''}</div>` });
@@ -5095,8 +5159,8 @@ function trackDone(o){
     <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${sv(CV.bell, 14, 2.2)}${esc(o.foot)}</span></div>`;
 }
 // Not green until the server says yes (round 3, REL-05): a neutral spinner while it sends, amber when kept on the phone.
-function stateDot(st){ const a = st === 'kept' ? ['rgba(245,178,107,.16)', 'rgba(245,178,107,.28)', 'rgba(245,178,107,.18)', '#F5B26B', sv(CV.wifi, 36, 2.2)] : ['rgba(255,255,255,.1)', 'rgba(255,255,255,.16)', 'rgba(255,255,255,.1)', '#fff', `<span class="cv-spin" style="display:flex">${sv(CV.arc, 36, 2.4)}</span>`];
-  return `<span style="position:relative;width:168px;height:168px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[0]}"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[1]}"></span><span style="width:84px;height:84px;border-radius:999px;background:${a[2]};color:${a[3]};display:flex;align-items:center;justify-content:center">${a[4]}</span></span>`; }
+function stateDot(st, ring){ const R = ring || 168, a = st === 'kept' ? ['rgba(245,178,107,.16)', 'rgba(245,178,107,.28)', 'rgba(245,178,107,.18)', '#F5B26B', sv(CV.wifi, 36, 2.2)] : ['rgba(255,255,255,.1)', 'rgba(255,255,255,.16)', 'rgba(255,255,255,.1)', '#fff', `<span class="cv-spin" style="display:flex">${sv(CV.arc, 36, 2.4)}</span>`];
+  return `<span style="position:relative;width:${R}px;height:${R}px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[0]}"></span><span style="position:absolute;inset:${Math.round(R / 8)}px;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[1]}"></span><span style="width:${Math.round(R / 2)}px;height:${Math.round(R / 2)}px;border-radius:999px;background:${a[2]};color:${a[3]};display:flex;align-items:center;justify-content:center">${a[4]}</span></span>`; }
 function sentScreen(o){
   return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${o.undo ? undoBtn(o.undo) : ''}
@@ -5290,7 +5354,8 @@ ACT.rsdone = () => { S.ui.rs = null; FEEL.back(); pop(); };
 const ALIASES = [[/cement/i, ['sumunti', 'simenti', 'seminti', 'saruji']], [/sand/i, ['musenyu', 'omusenyu', 'mchanga']], [/sheet|mabati/i, ['mabaati', 'mabati', 'bati', 'roofing']], [/ridge/i, ['roofing']],
   [/nail/i, ['misumari', 'msumari', 'emisumaali']], [/padlock/i, ['kufuli', 'kkufulu']], [/pipe|elbow|pvc/i, ['payipu', 'paipu', 'bomba']], [/bar|rebar|y\d+/i, ['seniya', 'rebar', 'nondo', 'ebyuma']],
   [/wire/i, ['waya']], [/paint/i, ['rangi', 'langi']], [/hinge/i, ['bawaba', 'ppata']], [/wheelbarrow/i, ['wilibaala', 'toroli']]];
-function fdNorm(s){ return String(s || '').toLowerCase().replace(/(\d+(?:\.\d+)?)\s*(inches|inch|in\b|''|”|")/g, '$1"').replace(/(\d+)\s*(kgs?|kilos?)\b/g, '$1kg').replace(/[·,—-]/g, ' ').replace(/\s+/g, ' ').trim(); }
+// 4x20, 4×20 and 4 x 20 are the shop's 4*20 (round 4, NAV-06).
+function fdNorm(s){ return String(s || '').toLowerCase().replace(/(\d)\s*[x×*]\s*(\d)/g, '$1*$2').replace(/(\d+(?:\.\d+)?)\s*(inches|inch|in\b|''|”|")/g, '$1"').replace(/(\d+)\s*(kgs?|kilos?)\b/g, '$1kg').replace(/[·,—-]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function lev(a, b){ const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; let prev = Array.from({ length: n + 1 }, (_, j) => j);
   for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; } return prev[n]; }
 function fdHit(word, words, alias){
@@ -5299,7 +5364,7 @@ function fdHit(word, words, alias){
   if (/\d/.test(word)) { for (const a of alias) if (a.startsWith(word)) return 'alias'; return null; }
   for (const a of alias) if (a.startsWith(word) || (word.length >= 4 && lev(word, a) <= 1)) return 'alias';
   const room = word.length >= 7 ? 2 : 1;
-  if (word.length >= 4) for (const w of words) { if (w.length < 3) continue; if (Math.min(lev(word, w), lev(word, w.slice(0, word.length)), lev(word, w.slice(0, word.length + 1))) <= room) return 'typo'; }
+  if (word.length >= 4) for (const w of words) { if (w.length < 3) continue; if (Math.min(lev(word, w), lev(word, w.slice(0, word.length)), lev(word, w.slice(0, word.length + 1)), lev(word, w.slice(0, word.length - 1))) <= room) return 'typo'; }
   return null;
 }
 // One search for every item list (Find, Report a loss, Extra on the truck): the same words find the same things.
@@ -5312,6 +5377,20 @@ function itemSearch(q){
   return stockItems().map(x => { const words = fdNorm(x.productName).split(' '), alias = ALIASES.filter(([re]) => re.test(x.productName)).flatMap(a => a[1]).concat(labelShort(x).toLowerCase());
     return { x, sc: fdScore(qw, x, words, alias) }; }).filter(r => r.sc != null).sort((a, b) => a.sc - b.sc || a.x.productName.length - b.x.productName.length).map(r => r.x);
 }
+// Nothing found: the nearest shop words, at most 2, within 2 letters (round 4, NAV-06, canvas FindTypos).
+function didYouMean(q){
+  const qw = fdNorm(q).split(' ').filter(w => w && w !== 'aisle'); if (!qw.length) return [];
+  const vocab = new Map(); stockItems().forEach(x => fdNorm(x.productName).split(' ').forEach(w => { if (w.length >= 3 && /^[a-z]+$/.test(w)) vocab.set(w, (vocab.get(w) || 0) + 1); }));
+  ALIASES.forEach(a => a[1].forEach(w => vocab.set(w, (vocab.get(w) || 0) + 1)));
+  const out = [];
+  qw.forEach((w, i) => { if (out.length || /\d/.test(w) || w.length < 3 || [...vocab.keys()].some(v => v.startsWith(w))) return;
+    // "hngie" is nearest "hinge", the front of "hinges": a word is offered whole, or cut to the length typed.
+    const near = new Map(); vocab.forEach((n, v) => { const cut = v.slice(0, w.length), d1 = lev(w, v), d2 = v.length > w.length ? lev(w, cut) : 9, t = d2 < d1 ? cut : v, d = Math.min(d1, d2);
+      if (d <= 2 && (!near.has(t) || near.get(t).d > d)) near.set(t, { v: t, n, d }); });
+    [...near.values()].sort((a, b) => a.d - b.d || b.n - a.n || a.v.length - b.v.length).slice(0, 4)
+      .forEach(c => out.push(qw.map((x, j) => j === i ? c.v : x).join(' '))); });
+  return out.filter(t => itemSearch(t).length).slice(0, 2);
+}
 function fdStatus(x){ return countDue(x) ? 'due' : x.avail <= 0 && (x.held > 0 || lookOf(x).out4 > 0) ? 'out' : lookOf(x).why === 'low' ? 'low' : x.held > 0 ? 'held' : 'ok'; }
 PAGE.find = () => {
   const ui = S.ui.fd || (S.ui.fd = { q: '', f: 'all' }), qn = fdNorm(ui.q), qw = qn ? qn.split(' ').filter(w => w && w !== 'aisle') : [];
@@ -5320,7 +5399,7 @@ PAGE.find = () => {
   const matched = qw.length ? all.filter(it => qw.every(w => { if (w.length === 1 && /[a-z]/.test(w)) return it.x.aisle.letter.toLowerCase() === w; const h = fdHit(w, it.words, it.alias); if (h && h !== 'name') translated = true; return !!h; })) : [];
   matched.forEach(it => { it.sc = fdScore(qw, it.x, it.words, it.alias) || 0; }); matched.sort((a, b) => a.sc - b.sc || a.x.productName.length - b.x.productName.length);
   const counts = { all: matched.length, out: 0, low: 0, held: 0, due: 0 }; matched.forEach(it => { if (it.st === 'out') counts.out++; if (it.st === 'low') counts.low++; if (it.st === 'due') counts.due++; if (it.x.held > 0) counts.held++; });
-  const shown = matched.filter(it => ui.f === 'all' || (ui.f === 'held' ? it.x.held > 0 : it.st === ui.f)).slice(0, 60);
+  const shown = matched.filter(it => ui.f === 'all' || (ui.f === 'held' ? it.x.held > 0 : it.st === ui.f)); // every row, so the counts are the rows (round 4, NAV-07)
   // The aisle holding the best match comes first.
   const groups = aisleList().map(a => ({ a, rows: shown.filter(it => it.x.aisle.letter === a.letter) })).filter(g => g.rows.length).sort((p, q) => shown.indexOf(p.rows[0]) - shown.indexOf(q.rows[0]));
   const ow = String(ui.q || '').toLowerCase().replace(/[#&]/g, ' ').split(/\s+/).filter(Boolean);
@@ -5328,14 +5407,15 @@ PAGE.find = () => {
   const hint = translated && matched.length ? (matched.length > 1 ? lineName(matched[0].x).base.split(' ·')[0].replace(/ [A-Z]?\d.*$/, '').toLowerCase().replace(/([^s])$/, '$1s') : matched[0].x.productName) : '';
   const chip = [['all', 'All', ''], ['out', 'Out', '#E5483D'], ['low', 'Low', '#F5B26B'], ['held', 'Held', '#B3BCD2'], ['due', 'Due', '#F5B26B']];
   const sub = it => { const x = it.x; return { out: [`All ${n0(x.qty)} held for orders`, '#8E2A22'], low: [`Low · ${n0(x.held)} held for orders`, '#95530C'], due: [`Count due · ${aisleWord(x.aisle)}`, '#95530C'], held: [`${n0(x.qty)} on the shelf · ${n0(x.held)} held`, '#5F6980'], ok: [`${n0(x.qty)} on the shelf`, '#5F6980'] }[it.st]; };
-  const stOf = q => { const hold = moneyHold(q); if (q.status === 'completed') return ['Delivered', '#E4F4EA', '#0F6B43', 'goret']; if (q.status === 'pending_delivery') return ['On the road', '#DCEAF8', '#1A5A8A', null]; if (q.status === 'awaiting_goods') return ['Buying', '#E4E6FA', '#3A3F9B', null];
+  const stOf = q => { const hold = moneyHold(q); if (q.status === 'completed') return ['Delivered', '#E4F4EA', '#0F6B43', 'goret']; if (q.status === 'pending_delivery') return ['On the road', '#DCEAF8', '#1A5A8A', 'troad']; if (orderBuying(q)) return ['Buying', '#E4E6FA', '#3A3F9B', 'orderview'];
+    if (q.status === 'draft') return ['Quote · not confirmed', '#F1EEE8', '#5F6980', 'orderview'];
     if (q.pickingStatus === 'done') return hold ? ['Waits on money', '#FDEEE1', '#7A4A02', 'slip'] : orderIsCollected(q) ? ['Agent', '#F6E4F1', '#7A3268', 'collect'] : orderIsPickup(q) ? ['At the gate', '#E4F4EA', '#0F6B43', 'slip'] : [bayOf(q) ? 'On bay ' + bayOf(q) : 'Packed', '#16203C', '#FFFFFF', 'slip'];
-    if (takenBySomeoneElse(q)) return [firstWord(staffName(q.assignedWorkerId)) + "'s", '#DDF1EE', '#0E5E57', null]; if (q.pickingStatus === 'in_progress') return ['Packing', '#E8EBF0', '#16203C', 'pack']; return ['To pack', '#E8EBF0', '#16203C', 'pack']; };
+    if (takenBySomeoneElse(q)) return [firstWord(staffName(q.assignedWorkerId)) + "'s", '#DDF1EE', '#0E5E57', canCorrect() ? 'pack' : 'orderview']; if (q.pickingStatus === 'in_progress') return ['Packing', '#E8EBF0', '#16203C', 'pack']; return ['To pack', '#E8EBF0', '#16203C', 'pack']; };
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:14px;gap:12px" data-navy-top>
     <div style="display:flex;align-items:center;gap:8px">${cvBack()}
       <label style="flex:1;min-width:0;height:48px;border-radius:999px;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);display:flex;align-items:center;gap:8px;padding:0 6px 0 14px;color:var(--navyInk)">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}<input id="fd_q" data-in="fdq" value="${esc(ui.q)}" placeholder="Name, aisle, or an order" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:#fff;font-size:16px;font-weight:600">${ui.q ? `<button data-act="fdclear" aria-label="Clear" style="width:32px;height:32px;border-radius:999px;border:none;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center">${sv('M6 6l12 12M18 6 6 18', 12, 2.6)}</button>` : ''}</label>
       <button class="cv-circ" data-act="stscan" aria-label="Scan a label">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 8v8M10 8v8M13 8v8M16 8v8', 20, 2)}</button></div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">${chip.map(([k, w, dot]) => { const on = ui.f === k; return `<button data-act="fdf" data-k="${k}" aria-pressed="${on}" style="flex:none;height:34px;padding:0 12px;border-radius:999px;border:none;background:${on ? '#fff' : 'rgba(255,255,255,.08)'};color:${on ? '#16203C' : '#DDE3F0'};font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${dot ? `<span style="width:7px;height:7px;border-radius:999px;background:${dot}"></span>` : ''}${w}<span class="m" style="font-size:12px;opacity:.7">${counts[k]}</span></button>`; }).join('')}</div></div>
+    ${qw.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${chip.map(([k, w, dot]) => { const on = ui.f === k; return `<button data-act="fdf" data-k="${k}" aria-pressed="${on}" style="flex:none;height:34px;padding:0 12px;border-radius:999px;border:none;background:${on ? '#fff' : 'rgba(255,255,255,.08)'};color:${on ? '#16203C' : '#DDE3F0'};font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${dot ? `<span style="width:7px;height:7px;border-radius:999px;background:${dot}"></span>` : ''}${w}<span class="m" style="font-size:12px;opacity:.7">${counts[k]}</span></button>`; }).join('')}</div>` : ''}</div>
   <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:10px">
     ${!qw.length && !orders.length ? `<span class="cv-sec first">Try</span><div style="display:flex;gap:8px;flex-wrap:wrap">${findTries().map(r => `<button data-act="fdtry" data-q="${esc(r)}" style="height:36px;padding:0 14px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);font-size:13px;font-weight:700;color:var(--ink)">${esc(r)}</button>`).join('')}</div>` : ''}
     ${hint ? `<span style="display:flex;align-items:center;gap:6px;padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${sv('M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z', 14, 2, 'style="color:#0F6B43"')}Showing <b style="color:var(--ink)">${esc(hint)}</b> for "${esc(ui.q)}"</span>` : ''}
@@ -5346,7 +5426,10 @@ PAGE.find = () => {
       ${g.rows.map(it => { const x = it.x, s = sub(it), out = it.st === 'out', due = it.st === 'due', T = thumbOf(x); return `<button class="cv-row" data-act="stock" data-key="${esc(x.key)}" style="${out ? 'background:#FDF3F1' : ''}" aria-label="${esc(x.productName)}, aisle ${esc(x.aisle.letter)}, ${due ? 'count due, figures hidden' : n0(x.avail) + ' ' + esc(unitWord(x)) + ' free to sell'}">${thumb(x, 42, 30, 12)}
         <span class="cv-tx">${prodTT(x)}<span class="cv-sb" style="color:${s[1]}">${esc(s[0])}</span></span>
         <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span class="m" style="font-size:20px;font-weight:600;line-height:1;color:${out ? '#8E2A22' : 'var(--ink)'}">${due ? '–' : n0(x.avail)}</span><span style="font-size:11px;font-weight:600;color:var(--ink2)">${due ? 'hidden' : esc(unitWord(x)) + ' free'}</span></span></button>`; }).join('')}</div>`).join('')}
-    ${qw.length && !groups.length && !orders.length ? `<div class="cv-list"><div class="st-empty"><b>Nothing called "${esc(ui.q)}"</b>Try the yard's own word, or the aisle letter</div></div>` : ''}
+    ${qw.length && !groups.length && !orders.length ? (() => { const dm = didYouMean(ui.q); return dm.length
+      ? `<div style="background:#fff;border-radius:20px;box-shadow:inset 0 0 0 1px var(--rule);padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center"><span style="font-size:15px;font-weight:700">Nothing called "${esc(ui.q)}"</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">Did you mean</span>
+        <span style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px">${dm.map((t, i) => `<button data-act="fdtry" data-q="${esc(t)}" style="height:44px;padding:0 18px;border-radius:999px;border:none;${i ? 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--rule)' : 'background:#16203C;color:#fff'};font-size:14px;font-weight:700">${esc(t)}</button>`).join('')}</span></div>`
+      : `<div class="cv-list"><div class="st-empty"><b>Nothing called "${esc(ui.q)}"</b>Try the yard's own word, or the aisle letter</div></div>`; })() : ''}
   </div></div>`;
 };
 PAGE.find.bg = '#F7F5F2';
@@ -5372,12 +5455,14 @@ PAGE.aisle = ({ a }) => {
   const withRuth = (D().counts || []).filter(c => c.status === 'sent' && (c.lines || []).some(l => items.some(x => x.key === l.key))).length + (D().reports || []).filter(r => r.status === 'sent' && items.some(x => x.key === r.key)).length;
   const last = (D().counts || []).filter(c => (c.lines || []).some(l => items.some(x => x.key === l.key))).sort((p, q) => msOf(q.createdAt) - msOf(p.createdAt))[0], C = 81.68;
   const chip = (w, dot, act, data) => `<button ${act ? `data-act="${act}"` : ''}${data || ''} style="flex:1;min-width:0;height:40px;border-radius:999px;border:none;background:${act === 'labels' ? '#fff' : 'rgba(255,255,255,.08)'};color:${act === 'labels' ? '#16203C' : '#DDE3F0'};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${dot ? `<span style="width:8px;height:8px;border-radius:999px;background:${dot}"></span>` : ''}${w}</button>`;
-  return `<div class="cv"><div class="cv-hero tight" style="gap:14px" data-navy-top>
+  return `<div class="cv"><div class="cv-stick" data-stick aria-hidden="true">${cvBack()}<span style="width:32px;height:32px;flex:none;border-radius:999px;background:#fff;color:#16203C;font-family:var(--mono);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center">${esc(A.letter)}</span>
+      <span class="cv-tx" style="gap:0"><span class="ell" style="font-size:15px;font-weight:700">${esc(A.name)}</span><span data-stick-n style="font-size:11px;font-weight:600;color:var(--navyInk)">${items.length} item${items.length === 1 ? '' : 's'}</span></span></div>
+    <div class="cv-hero tight" style="gap:14px" data-navy-top>
     <div class="cv-top">${cvBack()}<b>Aisle</b><button class="cv-circ" data-act="find" aria-label="Find an item">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}</button></div>
     <div style="display:flex;align-items:center;gap:14px"><span style="width:56px;height:56px;flex:none;border-radius:16px;background:#fff;color:#16203C;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(A.letter)}</span>
       <span class="cv-tx" style="gap:3px"><span class="ell" style="font-size:20px;font-weight:700">${esc(A.name)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${items.length} item${items.length === 1 ? '' : 's'}${last ? ` · ${esc(firstWord(last.countedByName) || 'someone')} counted it ${isTodayMs(msOf(last.createdAt)) ? 'at ' + hm(msOf(last.createdAt)) : whenSaid(msOf(last.createdAt))}` : ' · never counted'}</span></span></div>
     <div style="display:flex;gap:6px">${chip(`${noneFree} none free`, noneFree ? '#F4A49A' : '#6FDCB0', 'fdgo', ` data-q="${esc(A.letter)}" data-f="out"`)}${chip(withRuth ? 'With ' + esc(managerName()) : 'Count it', withRuth ? '#F5B26B' : '', withRuth ? 'ruth' : 'count', withRuth ? '' : ` data-aisle="${esc(A.letter)}"`)}${chip(`${sv('M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z', 14, 2)}Labels`, '', 'labels', ` data-a="${esc(A.letter)}"`)}</div></div>
-  <div class="cv-body">
+  <div class="cv-body" style="padding-bottom:${items.length > 8 ? 92 : 24}px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px"><span style="font-size:17px;font-weight:700">On the shelf</span><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--ink2)"><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;background:#0F6B43"></i>free</span><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;background:#16203C"></i>held</span></span></div>
     <div class="cv-list">${items.map(x => { const due = countDue(x), out = !due && x.avail <= 0 && x.held > 0, pr = promisedFor(x.productId, x.variantIdx)[0];
       const sub = due ? `Count due · ${dueWhy(x)}` : out ? `all ${n0(x.qty)} held for ${pr ? q4(pr.q) : 'orders'}` : x.held ? `${n0(x.qty)} on the shelf · ${n0(x.held)} held` : `${n0(x.qty)} on the shelf`;
@@ -5385,9 +5470,24 @@ PAGE.aisle = ({ a }) => {
         <span class="cv-tx">${prodTT(x)}<span class="cv-sb" style="color:${out ? '#8E2A22' : due ? '#95530C' : 'var(--ink2)'}">${esc(sub)}</span></span>
         ${due ? `<span style="width:30px;height:30px;flex:none;border-radius:999px;border:2px dashed #C9C4BA"></span><span style="width:56px;flex:none;text-align:right;font-size:11px;font-weight:600;color:var(--ink2)">hidden</span>` : `<span role="img" aria-label="${n0(x.avail)} free, ${n0(x.held)} held" style="width:30px;height:30px;flex:none;display:block">${ringHF(x, 30, 4)}</span>
         <span style="width:56px;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:1px"><span class="m" style="font-size:20px;font-weight:600;line-height:1;color:${out ? '#8E2A22' : 'var(--ink)'}">${n0(x.avail)}</span><span style="font-size:11px;font-weight:600;color:var(--ink2)">${esc(unitWord(x))} free</span></span>`}</button>`; }).join('')}</div>
-  </div></div>`;
+  </div>
+  <div class="cv-totop" data-totop><button data-act="totop" aria-label="Back to the top of ${esc(aisleWord(A))}" tabindex="-1">${sv('M12 19V5M6 11l6-6 6 6', 20, 2.4)}</button></div></div>`;
 };
 PAGE.aisle.bg = '#F7F5F2';
+// The bar and the button follow the scroll; the bar says which rows are in view ("68 items · 41–48").
+function stickSync(pg){
+  const bar = pg.querySelector('[data-stick]'), top = pg.querySelector('[data-totop]'), hero = pg.querySelector('.cv-hero'); if (!bar || !hero) return;
+  const on = pg.scrollTop > hero.offsetHeight - 60; bar.classList.toggle('on', on); bar.setAttribute('aria-hidden', String(!on));
+  if (top) { top.classList.toggle('on', on); top.querySelector('button').tabIndex = on ? 0 : -1; }
+  const rows = [...pg.querySelectorAll('.cv-body .cv-row')], n = pg.querySelector('[data-stick-n]'); if (!n || !rows.length) return;
+  const vt = pg.getBoundingClientRect().top + 60, vb = vt - 60 + pg.clientHeight; let a = 0, b = 0;
+  rows.forEach((r, i) => { const R = r.getBoundingClientRect(); if (R.bottom > vt && R.top < vb) { if (!a) a = i + 1; b = i + 1; } });
+  n.textContent = `${rows.length} item${rows.length === 1 ? '' : 's'}${on && a ? ` · ${a}–${b}` : ''}`;
+}
+AFTER.push(() => { const pg = document.querySelector('#st_pages > .st-page:last-child'); if (!pg || !pg.querySelector('[data-stick]')) return;
+  if (!pg._stick) { pg._stick = true; pg.addEventListener('scroll', () => stickSync(pg), { passive: true }); } stickSync(pg); });
+ACT.totop = () => { const pg = document.querySelector('#st_pages > .st-page:last-child'); if (!pg) return; FEEL.tick();
+  pg.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
 ACT.fdgo = t => { FEEL.open(); S.ui.fd = { q: t.dataset.q, f: t.dataset.f || 'all' }; openFind(); };
 
 /* ==================================================================

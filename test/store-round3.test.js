@@ -27,7 +27,7 @@ const sql = read('supabase/migrations/0162_store_expect_order.sql');
 t.check(/function waitingList\(\)\{/.test(store) && /S\.ui\.outboxRows/.test(store) && /function waitCard\(live\)\{/.test(store) && /\$\{waitCard\(live\)\}/.test(store), 'one Waiting to send list, shown whenever it is not empty');
 t.check(/Not sent · \$\{n\}/.test(store) && /ACT\.sendnow = /.test(store), 'the header says Not sent · N, and Send now sends');
 // REL-05
-t.check(/function trackStep1\(o\)\{/.test(store) && /function stateDot\(st\)\{/.test(store), 'done screens have sending and kept looks');
+t.check(/function trackStep1\(o\)\{/.test(store) && /function stateDot\(st(, ring)?\)\{/.test(store), 'done screens have sending and kept looks');
 t.check(/state: st, undo: ui\.wait && !ui\.going/.test(store) && /const st = ui\.sent\.queued \? 'kept' : ui\.sent\.wait \? 'sending' : 'sent';/.test(store) && /s\.wait \? stateDot\('sending'\)/.test(store), 'report, return and delivery show no tick before the server says yes');
 // REL-06
 t.check(/Date\.now\(\) - \(S\.screenAt \|\| 0\) < 400/.test(store) && /data-done-screen/.test(store), 'taps in the first 400 ms of a new screen are ignored');
