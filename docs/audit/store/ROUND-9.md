@@ -24,8 +24,8 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 | Alerts render | 11–25 ms | ≤ 16 ms | not changed this round; Cowork to re-measure |
 | Other screens' render | 1–5 ms | no worse | no screen's drawing changed except Find |
 | Page | 768 KB / 206 KB gzip | no worse; served from the phone after the first open | +5 KB; from the phone after the first open (store-sw.js) |
-| Snapshot, on opening | 315 KB / 735 ms (Kevin's check: 347 KB) | about 300 KB, once a session | after 0166: Kevin to re-run `round-9-snapshot-size.sql` |
-| Each 45-second refresh | the whole snapshot (347 KB) + stock, 2 requests | < 200 KB, 1 request | `store_live`: 1 request; about 185 KB by Kevin's part sizes |
+| Snapshot, on opening | 315 KB / 735 ms (Kevin's check: 347 KB) | about 300 KB, once a session | **306 KB** after 0166 (Kevin's check): orders 107 → 94 (108 KB), trips 56 → 43 (36 KB), units 69 → 47 KB, history 157 rows (30 KB) |
+| Each 45-second refresh | the whole snapshot (347 KB) + stock, 2 requests | < 200 KB, 1 request | **154 KB, 1 request** (`store_live`: orders, trips and the small parts; the stock map is 2 KB) |
 
 ## What was found
 
