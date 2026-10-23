@@ -2,172 +2,151 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sourcing — Funnel</title>
+<title>Sourcing · Funnel</title>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#F7F5F2}
+body{margin:0}
 a{color:inherit;text-decoration:none}a:hover{color:inherit}
-*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
+input::placeholder{color:#9AA1AE}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@keyframes owPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes owPulseA{0%{box-shadow:0 0 0 0 rgba(245,178,107,.6)}70%{box-shadow:0 0 0 6px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+@keyframes owRingA{0%,100%{box-shadow:0 0 0 3px #19223F,0 0 0 5px rgba(245,178,107,.95)}50%{box-shadow:0 0 0 3px #19223F,0 0 0 8px rgba(245,178,107,.25)}}
+@keyframes owUndoRun{to{stroke-dashoffset:62.8}}
+@keyframes owGone{to{opacity:0;visibility:hidden}}
+@keyframes owChev{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
 </style>
 </helmet>
-<div style="width: 390px; height: 1520px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
-
-  <!-- header -->
-  <div style="background: #16203C; color: #FFFFFF; padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 14px">
-    <div style="display: flex; align-items: center; justify-content: space-between">
-      <span style="font-size: 20px; font-weight: 700">Funnel</span>
-      <div role="group" aria-label="View" style="display: flex; padding: 3px; border-radius: 999px; background: #243052">
-        <button type="button" onClick="{{showOpen}}" style="{{openTab}}">New items</button>
-        <button type="button" onClick="{{showCertify}}" style="{{certTab}}">Top sellers</button>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div style="position: absolute; inset: 0 0 84px 0; overflow-y: auto">
+  <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 12px 20px 22px; display: flex; flex-direction: column; gap: 14px; color: #FFFFFF">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+      <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+        <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em">Funnel</span>
+        <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #B3BCD2; white-space: nowrap">Every new item passes six checks</span>
+      </span>
+      <span style="display: flex; align-items: center; gap: 10px; flex: none"><a href="Search.dc.html" aria-label="Search the funnel" style="width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2"></path></svg></a></span>
+    </div>
+    <div role="tablist" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: rgba(255,255,255,.08)">
+      <button type="button" role="tab" aria-selected="{{openSel}}" onClick="{{showOpen}}" style="{{openTab}}">New items <span class="m">30</span></button>
+      <button type="button" role="tab" aria-selected="{{certSel}}" onClick="{{showCertify}}" style="{{certTab}}">Top sellers <span class="m">59</span></button>
+    </div>
+    <sc-if value="{{isOpen}}" hint-placeholder-val="{{ true }}">
+    <div role="img" aria-label="Sent back 1, wanted 9, hunting 6, quoted 4, ready 3, with Ruth 2, live this week 5" style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 3px">
+        <span style="flex: 1; background: #F5B26B"></span><span style="flex: 9; background: rgba(255,255,255,.22)"></span><span style="flex: 6; background: rgba(255,255,255,.4)"></span><span style="flex: 4; background: rgba(255,255,255,.6)"></span><span style="flex: 3; background: #FFFFFF"></span><span style="flex: 2; background: repeating-linear-gradient(135deg, rgba(245,178,107,.8) 0 4px, transparent 4px 8px)"></span><span style="flex: 5; background: #6FDCB0"></span>
       </div>
     </div>
-    <div style="display: flex; gap: 6px; overflow-x: auto; margin-right: -16px; padding-right: 16px">
-      <sc-for list="{{chips}}" as="c" hint-placeholder-count="8">
-        <button type="button" onClick="{{c.pick}}" style="{{c.style}}">{{c.label}} <span class="m">{{c.n}}</span></button>
-      </sc-for>
+    <div style="display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 0 16px">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="8"><button type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}"><span style="width: 8px; height: 8px; border-radius: 999px; {{c.dot}}"></span>{{c.label}} <span class="m">{{c.n}}</span></button></sc-for>
     </div>
+    </sc-if>
+    <sc-if value="{{isCert}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span role="img" aria-label="41 of the top 100 sellers certified" style="position: relative; width: 64px; height: 64px; flex: none; display: block"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32.0" cy="32.0" r="27.5" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="7"></circle><circle cx="32.0" cy="32.0" r="27.5" fill="none" stroke="#6FDCB0" stroke-width="7" stroke-linecap="round" stroke-dasharray="70.8 172.8" transform="rotate(-90 32.0 32.0)"></circle></svg><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">41</span></span>
+      <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700">41 of the top 100 certified</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">Biggest sellers first · most need only a photo</span></span>
+    </div>
+    </sc-if>
   </div>
-
-  <!-- legend: the six gates, in the order of the pips on every card -->
-  <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 12px 29px 2px; font-size: 11px; font-weight: 600; color: #5F6980; text-align: center">
-    <span>Photo</span><span>Packing</span><span>Suppliers</span><span>Verdict</span><span>Name</span><span>Markup</span>
-  </div>
-
-  <div style="padding: 6px 16px 120px; display: flex; flex-direction: column; gap: 14px">
-    <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+  <div style="padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 4px">
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
       <div style="display: flex; flex-direction: column; gap: 8px">
-        <div style="display: flex; align-items: baseline; gap: 8px">
-          <span style="font-size: 13px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; {{g.ink}}">{{g.label}}</span>
-          <span class="m" style="font-size: 12px; color: #5F6980">{{g.n}}</span>
-        </div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; {{g.ink}}">{{g.label}} <span class="m">{{g.n}}</span></span><sc-if value="{{g.hasMore}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 600; color: #5F6980">+<span class="m">{{g.more}}</span> more</span></sc-if></div>
+        <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column; gap: 2px">
         <sc-for list="{{g.items}}" as="it" hint-placeholder-count="2">
-          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px">
-            <div style="display: flex; align-items: center; gap: 12px">
-              <span style="width: 48px; height: 48px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; {{it.thumb}}">
-                <sc-if value="{{it.noPhoto}}" hint-placeholder-val="{{ true }}">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>
-                </sc-if>
-              </span>
-              <sc-if value="{{it.hasLink}}" hint-placeholder-val="{{ true }}">
-                <a href="{{it.href}}" style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
-                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
-                  <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.sub}}</span>
-                </a>
-              </sc-if>
-              <sc-if value="{{it.noLink}}" hint-placeholder-val="{{ false }}">
-                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1">
-                  <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.name}}</span>
-                  <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{it.sub}}</span>
-                </div>
-              </sc-if>
-              <sc-if value="{{it.hasGo}}" hint-placeholder-val="{{ true }}">
-                <a href="{{it.goHref}}" style="flex: none; padding: 9px 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; white-space: nowrap">{{it.go}}</a>
-              </sc-if>
-              <sc-if value="{{it.hasStatus}}" hint-placeholder-val="{{ false }}">
-                <span style="flex: none; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; {{it.statusStyle}}">{{it.status}}</span>
-              </sc-if>
-            </div>
-            <div role="img" aria-label="{{it.aria}}" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px">
-              <sc-for list="{{it.pips}}" as="p" hint-placeholder-count="6"><i style="height: 6px; border-radius: 3px; {{p}}"></i></sc-for>
-            </div>
-          </div>
+        <a href="{{it.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px">
+          <span role="img" aria-label="{{it.aria}}" style="position: relative; width: 42px; height: 42px; flex: none; border-radius: 999px; background: {{it.ring}}"><span class="m" style="position: absolute; inset: 5px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{it.done}}/6</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.sub}}</span></span>
+          <span style="flex: none; height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; {{it.rightStyle}}">{{it.right}}</span>
+        </a>
         </sc-for>
-        <sc-if value="{{g.hasMore}}" hint-placeholder-val="{{ false }}">
-          <span style="font-size: 13px; font-weight: 600; color: #5F6980; padding-left: 4px">+ <span class="m">{{g.more}}</span> more in {{g.label}}</span>
-        </sc-if>
+        </div>
       </div>
     </sc-for>
   </div>
-
-  <!-- TAB BAR -->
-  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding: 8px 0 14px">
-    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0z"></path><path d="M3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11"></path></svg>Today</a>
-    <a href="Funnel.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 700; color: #1C2233">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg>Funnel</a>
-    <a href="Capture.dc.html" aria-label="Capture" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(201,58,48,.35)">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
-    <a href="Prices.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.5"></circle></svg>Prices</a>
-    <a href="Suppliers.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 52px; justify-content: center; font-size: 12px; font-weight: 600; color: #5F6980">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12"></path><path d="M8 21v-7h8v7"></path></svg>Suppliers</a>
+  </div>
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
+    <a href="Main.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11"></path></svg>Today</a>
+    <a href="Funnel.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #1C2233; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg>Funnel</a>
+    <a href="Capture.dc.html" aria-label="Capture a price, a photo or an ask" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(201,58,48,.35); border: 4px solid #F7F5F2; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+    <a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8zM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path></svg>Prices<span class="m" style="position: absolute; top: 0; right: 14px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: #95530C; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span></a>
+    <a href="Suppliers.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12M8 21v-7h8v7"></path></svg>Suppliers</a>
   </nav>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1520}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   constructor(p) { super(p); this.state = { lane: 'all', view: 'open' }; }
   renderVals() {
     // one gate string per item, the same on every screen: Photo Packing Suppliers Verdict Name&aisle Markup
-    const PIP = { d: 'background:#0F6B43', g: 'background:#95530C', t: 'background:#E0DCD4' };
+    const COL = { d: '#0F6B43', g: '#95530C', t: '#E0DCD4' };
     const WORD = { d: 'done', g: 'a gap', t: 'not started' };
     const GATES = ['Photo', 'Packing', 'Suppliers', 'Verdict', 'Name and aisle', 'Markup'];
-    const SOFT = 'background:#F1EEE8;color:#5F6980';
+    const SOFT = 'background:#F1EEE8;color:#5F6980', GO = 'background:#16203C;color:#FFFFFF';
     const mk = (o) => {
       const s = o.gates.split('');
+      const parts = [];
+      s.forEach((k, i) => { const a = i * 60, b = a + 60; parts.push('#FFFFFF ' + a + 'deg ' + (a + 5) + 'deg', COL[k] + ' ' + (a + 5) + 'deg ' + (b - 5) + 'deg', '#FFFFFF ' + (b - 5) + 'deg ' + b + 'deg'); });
       return {
-        ...o,
-        href: o.href || o.goHref || '', hasLink: !!(o.href || o.goHref), noLink: !(o.href || o.goHref),
-        hasGo: !!o.go, hasStatus: !!o.status, statusStyle: o.statusStyle || SOFT,
-        noPhoto: s[0] !== 'd',
-        thumb: s[0] === 'd'
-          ? 'background:repeating-linear-gradient(45deg,#E0DCD4 0 6px,#EFECE6 6px 12px)'
-          : 'background:#F1EEE8;color:#5F6980',
-        pips: s.map(k => PIP[k]),
+        ...o, href: o.href || o.goHref || 'Funnel.dc.html',
+        ring: 'conic-gradient(' + parts.join(',') + ')', done: s.filter(k => k === 'd').length,
+        right: o.go || o.status, rightStyle: o.go ? GO : (o.statusStyle || SOFT),
         aria: s.map((k, i) => GATES[i] + ' ' + WORD[k]).join(', ')
       };
     };
     const open = [
       { key: 'back', label: 'Sent back', n: 1, ink: 'color:#7A4A02', items: [
-        mk({ name: 'Door hinge 4" brass', sub: 'The Manager: photo too dark', gates: 'gddddt', go: 'Retake photo', goHref: 'SentBack.dc.html' })
+        mk({ name: 'Door hinge 4" brass', sub: 'Ruth: the photo is too dark', gates: 'gddddt', go: 'Retake', goHref: 'SentBack.dc.html' })
       ] },
       { key: 'wanted', label: 'Wanted', n: 9, items: [
         mk({ name: 'Gutter bracket, galvanised', sub: '7 searches · 4 named people', gates: 'tttttt', go: 'Hunt it', goHref: 'Hunt.dc.html' }),
-        mk({ name: 'PPR pipe 25mm × 4m', sub: 'Ggaba Stores · Nansana Hardware', gates: 'tttttt', go: 'Ask on the visit', goHref: 'Visit.dc.html' })
+        mk({ name: 'PPR pipe 25mm × 4m', sub: 'Ggaba Stores · Nansana Hardware', gates: 'tttttt', go: 'On the walk', goHref: 'MarketRun.dc.html' })
       ] },
       { key: 'hunting', label: 'Hunting', n: 6, items: [
         mk({ name: 'Ridge cap G28, maroon', sub: 'Asked 2 days ago', gates: 'ttttdt', status: 'Waiting on 3' })
       ] },
       { key: 'quoted', label: 'Quoted', n: 4, items: [
-        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 3 customers waiting', gates: 'gddgdt', href: 'Passport.dc.html', go: 'Take the photo', goHref: 'PhotoGate.dc.html' }),
-        mk({ name: 'Self-drilling screws 10×25', sub: '2 prices · Faith Nambi asked', gates: 'dgdtdt', go: 'Set the packing', goHref: 'PackingGate.dc.html' })
+        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 3 customers waiting', gates: 'gddgdt', href: 'Passport.dc.html', go: 'Fix 2 gaps', goHref: 'GapWalk.dc.html' }),
+        mk({ name: 'Self-drilling screws 10×25', sub: '2 prices · Faith Nambi asked', gates: 'dgdtdt', go: 'Packing', goHref: 'PackingGate.dc.html' })
       ] },
       { key: 'ready', label: 'Ready', n: 3, items: [
-        mk({ name: 'Tile cutter 600mm', sub: 'Five gates done', gates: 'dddddt', go: 'Send to the Manager', goHref: 'SendToManager.dc.html' })
+        mk({ name: 'Tile cutter 600mm', sub: 'Five checks done', gates: 'dddddt', go: 'Send to Ruth', goHref: 'SendToManager.dc.html' })
       ] },
-      { key: 'manager', label: 'With the Manager', n: 2, items: [
-        mk({ name: 'Paint roller 9"', sub: 'Ruth Nakato was told', gates: 'dddddt', status: 'Sent 3 h ago', statusStyle: 'background:#FDEEE1;color:#7A4A02' })
+      { key: 'manager', label: 'With Ruth', n: 2, items: [
+        mk({ name: 'Paint roller 9"', sub: 'Ruth was told 3 h ago', gates: 'dddddt', status: 'With Ruth', statusStyle: 'background:#FDEEE1;color:#7A4A02' })
       ] },
       { key: 'live', label: 'Live this week', n: 5, items: [
-        mk({ name: 'Tile adhesive 20kg', sub: 'On sale since Thursday', gates: 'dddddd', status: '2 askers told', statusStyle: 'background:#E4F4EA;color:#0F6B43' })
+        mk({ name: 'Tile adhesive 20kg', sub: 'On sale since Thursday', gates: 'dddddd', status: '2 told', statusStyle: 'background:#E4F4EA;color:#0F6B43' })
       ] }
     ].map(g => ({ ...g, ink: g.ink || 'color:#5F6980', more: g.n - g.items.length, hasMore: g.n > g.items.length }));
     const certify = [
       { key: 'certify', label: 'Top sellers with gaps', n: 59, items: [
-        mk({ name: 'Iron sheet G28, 3m box profile', sub: '#1 by sales', gates: 'gddgdd', status: '2 gaps', href: 'Certify.dc.html' }),
+        mk({ name: 'Iron sheet G28, 3m box profile', sub: '#1 by sales · needs a photo', gates: 'gddgdd', go: 'Certify', goHref: 'Certify.dc.html' }),
         mk({ name: 'Cement 50kg', sub: '#2 by sales · one supplier', gates: 'ddgddd', status: '1 gap' }),
-        mk({ name: 'Y12 rebar, 12m', sub: '#3 by sales', gates: 'dgdddd', status: '1 gap' })
+        mk({ name: 'Y12 rebar, 12m', sub: '#3 by sales · needs packing', gates: 'dgdddd', status: '1 gap' })
       ] }
     ].map(g => ({ ...g, ink: 'color:#5F6980', more: g.n - g.items.length, hasMore: true }));
     const isOpen = this.state.view === 'open';
-    const lanes = [['all', 'All', 25], ['back', 'Sent back', 1], ['wanted', 'Wanted', 9], ['hunting', 'Hunting', 6], ['quoted', 'Quoted', 4], ['ready', 'Ready', 3], ['manager', 'With the Manager', 2], ['live', 'Live', 5]];
-    const chips = isOpen ? lanes.map(([k, label, n]) => ({
-      label, n,
-      pick: () => this.setState({ lane: k }),
-      style: 'all:unset;cursor:pointer;flex:none;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap;' +
-        (this.state.lane === k ? 'background:#FFFFFF;color:#16203C' : 'background:#243052;color:#B3BCD2')
-    })) : [];
+    const DOTS = { all: 'background:transparent;display:none', back: 'background:#F5B26B', wanted: 'background:rgba(255,255,255,.35)', hunting: 'background:rgba(255,255,255,.5)', quoted: 'background:rgba(255,255,255,.7)', ready: 'background:#FFFFFF', manager: 'background:#F5B26B', live: 'background:#6FDCB0' };
+    const lanes = [['all', 'All', 30], ['back', 'Sent back', 1], ['wanted', 'Wanted', 9], ['hunting', 'Hunting', 6], ['quoted', 'Quoted', 4], ['ready', 'Ready', 3], ['manager', 'With Ruth', 2], ['live', 'Live', 5]];
+    const chips = lanes.map(([k, label, n]) => {
+      const on = this.state.lane === k;
+      return { label, n, on: String(on), dot: DOTS[k], pick: () => this.setState({ lane: k }),
+        style: 'all:unset;cursor:pointer;flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;' +
+          (on ? 'background:#FFFFFF;color:#16203C' : 'background:rgba(255,255,255,.08);color:#B3BCD2') };
+    });
     const groups = isOpen ? open.filter(g => this.state.lane === 'all' || g.key === this.state.lane) : certify;
-    const tab = (on) => 'all:unset;cursor:pointer;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
+    const tab = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:38px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
     return {
-      chips, groups,
-      openTab: tab(isOpen), certTab: tab(!isOpen),
+      chips, groups, isOpen, isCert: !isOpen,
+      openTab: tab(isOpen), certTab: tab(!isOpen), openSel: String(isOpen), certSel: String(!isOpen),
       showOpen: () => this.setState({ view: 'open' }),
       showCertify: () => this.setState({ view: 'certify' })
     };

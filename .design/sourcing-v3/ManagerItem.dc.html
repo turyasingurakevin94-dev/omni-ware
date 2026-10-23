@@ -2,159 +2,111 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Manager — New item to price</title>
+<title>Sourcing · Manager app · new item</title>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#F7F5F2}
+body{margin:0}
 a{color:inherit;text-decoration:none}a:hover{color:inherit}
-*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
+input::placeholder{color:#9AA1AE}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@keyframes owPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes owPulseA{0%{box-shadow:0 0 0 0 rgba(245,178,107,.6)}70%{box-shadow:0 0 0 6px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+@keyframes owRingA{0%,100%{box-shadow:0 0 0 3px #19223F,0 0 0 5px rgba(245,178,107,.95)}50%{box-shadow:0 0 0 3px #19223F,0 0 0 8px rgba(245,178,107,.25)}}
+@keyframes owUndoRun{to{stroke-dashoffset:62.8}}
+@keyframes owGone{to{opacity:0;visibility:hidden}}
+@keyframes owChev{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
 </style>
 </helmet>
-<div style="width: 390px; height: 1180px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
-
-  <!-- manager top bar -->
-  <div style="height: 52px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 16px">
-    <span style="font-size: 16px; font-weight: 700; flex: 1">New item to price</span>
-    <span style="font-size: 12px; color: #B3BCD2">Manager app · from a push</span>
-  </div>
-
-  <div style="padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 14px">
-
-    <div style="display: flex; gap: 14px; align-items: center">
-      <span role="img" aria-label="Photo of the wire mesh" style="width: 88px; height: 88px; flex: none; border-radius: 12px; background: repeating-linear-gradient(0deg, transparent 0 10px, #6B7480 10px 12px), repeating-linear-gradient(90deg, #E0DCD4 0 10px, #6B7480 10px 12px)"></span>
-      <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-        <span style="font-size: 20px; font-weight: 700; line-height: 1.2">Wire mesh BRC A142</span>
-        <span style="font-size: 13px; color: #5F6980">from Moses Lubega · <span class="m">2</span> h ago</span>
-        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 4px; width: 200px" role="img" aria-label="Five gates done; the markup is yours">
-          <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6"><i style="height: 6px; border-radius: 3px; {{t}}"></i></sc-for>
-        </div>
-      </div>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div style="flex: none; background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 30px 30px; padding: 10px 16px 20px; color: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+      <a href="Main.dc.html" aria-label="Close" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: rgba(255,255,255,.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span style="flex: 1; min-width: 0; text-align: center; font-size: 13px; font-weight: 700; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Manager app · new item</span>
+      <span style="width: 44px; height: 44px; flex: none"></span>
     </div>
-
-    <!-- price line -->
-    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 14px">
-      <span style="font-size: 15px; font-weight: 700">Where the price sits</span>
-      <div style="position: relative; height: 100px">
-        <div style="position: absolute; left: 0; right: 0; top: 48px; height: 4px; border-radius: 2px; background: #E6E3DD"></div>
-        <div style="position: absolute; top: 44px; height: 12px; border-radius: 6px; background: #E4F4EA; {{marginBand}}"></div>
-        <sc-for list="{{above}}" as="k" hint-placeholder-count="2">
-          <div style="position: absolute; top: 0; height: 56px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; {{k.pos}}">
-            <span style="font-size: 11px; font-weight: 700; white-space: nowrap; {{k.labelStyle}}">{{k.label}}</span>
-            <span class="m" style="font-size: 12px; font-weight: 600; white-space: nowrap">{{k.v}}</span>
-            <span style="width: 12px; height: 12px; border-radius: 999px; border: 2px solid #FFFFFF; {{k.dot}}"></span>
-          </div>
-        </sc-for>
-        <sc-for list="{{below}}" as="k" hint-placeholder-count="1">
-          <div style="position: absolute; top: 44px; display: flex; flex-direction: column; gap: 3px; {{k.pos}}">
-            <span style="width: 12px; height: 12px; border-radius: 999px; border: 2px solid #FFFFFF; {{k.dot}}"></span>
-            <span class="m" style="font-size: 12px; font-weight: 600; white-space: nowrap">{{k.v}}</span>
-            <span style="font-size: 11px; font-weight: 700; white-space: nowrap; {{k.labelStyle}}">{{k.label}}</span>
-          </div>
-        </sc-for>
-      </div>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="width: 52px; height: 52px; flex: none; border-radius: 999px; background: #DCEAF8; color: #1A5A8A; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #1D2747, 0 0 0 5px rgba(111,220,176,.55)">ML</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">Wire mesh BRC A142</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">From Moses Lubega · <span class="m" style="color: #FFFFFF">2</span> h ago · 5 of 6 checks</span></span>
     </div>
-
-    <!-- markup stepper -->
-    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
-      <div style="display: flex; align-items: center; gap: 10px">
-        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
-          <span style="font-size: 15px; font-weight: 700">Markup</span>
-          <span style="font-size: 12px; color: #5F6980">{{ruleNote}}</span>
+    <div role="img" aria-label="Cost 118,000, our price {{price}}, Kikuubo 149,000" style="position: relative; height: 72px; margin: 0 6px">
+      <span style="position: absolute; left: 0; right: 0; top: 34px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.12)"></span>
+      <span style="position: absolute; top: 34px; height: 4px; border-radius: 2px; background: #6FDCB0; {{marginBand}}"></span>
+      <sc-for list="{{marks}}" as="k" hint-placeholder-count="3">
+        <span style="position: absolute; display: flex; gap: 5px; {{k.pos}}">
+          <span style="display: flex; align-items: baseline; gap: 5px; white-space: nowrap"><span style="font-size: 11px; font-weight: 700; {{k.ink}}">{{k.label}}</span><span class="m" style="font-size: 11px; font-weight: 600; color: #B3BCD2">{{k.v}}</span></span>
+          <span style="width: 12px; height: 12px; border-radius: 999px; {{k.dot}}"></span>
         </span>
-        <button type="button" aria-label="One point less" onClick="{{less}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg></button>
-        <span class="m" style="width: 60px; text-align: center; font-size: 20px; font-weight: 600">{{pct}}%</span>
-        <button type="button" aria-label="One point more" onClick="{{more}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 12px; background: #F1EEE8; display: flex; align-items: center; justify-content: center">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12M6 12h12"></path></svg></button>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #EFECE6; border-radius: 12px">
-        <div style="padding: 10px 12px; border-right: 1px solid #EFECE6; border-bottom: 1px solid #EFECE6; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #5F6980">Shelf price</span><span class="m" style="font-size: 20px; font-weight: 600">{{price}}</span></div>
-        <div style="padding: 10px 12px; border-bottom: 1px solid #EFECE6; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #5F6980">Margin a sheet</span><span class="m" style="font-size: 20px; font-weight: 600">{{margin}}</span></div>
-        <div style="padding: 10px 12px; border-right: 1px solid #EFECE6; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #5F6980">The <span class="m">40</span> sheets waiting</span><span class="m" style="font-size: 20px; font-weight: 600">{{sales40}}</span></div>
-        <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #5F6980">Against Kikuubo</span><span class="m" style="font-size: 20px; font-weight: 600; {{rivalInk}}">{{vsRival}}</span></div>
-      </div>
-    </div>
-
-    <!-- what sourcing settled -->
-    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
-      <sc-for list="{{facts}}" as="f" hint-placeholder-count="5">
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #EFECE6">
-          <span style="font-size: 13px; color: #5F6980; width: 80px; flex: none">{{f.k}}</span>
-          <span style="font-size: 14px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{f.v}}</span>
-          <span class="m" style="font-size: 13px; white-space: nowrap">{{f.n}}</span>
-        </div>
       </sc-for>
     </div>
-
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: 18px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07)"><span style="height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 4px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; line-height: 1">{{price}}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2; text-align: center">shelf price</span></span><span style="height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 4px; box-shadow: -1px 0 0 rgba(255,255,255,.07)"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; line-height: 1; color: #6FDCB0">{{margin}}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2; text-align: center">margin a sheet</span></span><span style="height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 4px; box-shadow: -1px 0 0 rgba(255,255,255,.07)"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; line-height: 1">{{vsRival}}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2; text-align: center">{{vsWord}}</span></span></div>
+  </div>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 13px; font-weight: 700; color: #5F6980">Markup</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{ruleNote}}</span></div>
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 12px 14px"><div style="display: flex; align-items: center; gap: 8px"><button type="button" onClick="{{less}}" aria-label="Fewer" style="all: unset; cursor: pointer; width: 44px; height: 44px; flex: none; border-radius: 999px; background: #F1EEE8; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button><label style="flex: 1; height: 52px; border-radius: 14px; box-shadow: inset 0 0 0 2px #16203C; display: flex; align-items: center; justify-content: center; gap: 6px"><input id="mk_pct" value="{{pct}}" inputmode="numeric" aria-label="Markup in percent" style="width: 90px; border: none; outline: none; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; text-align: right; color: #1C2233"><span style="font-size: 13px; font-weight: 700; color: #5F6980">%</span></label><button type="button" onClick="{{more}}" aria-label="More" style="all: unset; cursor: pointer; width: 44px; height: 44px; flex: none; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button></div></div>
+    <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">What Moses sent</span>
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px"><span style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18a8 8 0 0 1 16 0M12 18l4-6"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Hold · Moses chose Stock</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Denis decides the first batch · ≈40 suggested</span></span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px"><span style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12M8 21v-7h8v7"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Suppliers</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Kiseka Steel · Katwe Fabricators</span></span><span class="m" style="flex: none; font-size: 12px; font-weight: 600; color: #5F6980">2</span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px"><span style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Packing</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">By the sheet, 2.4 × 4.8 m</span></span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px"><span style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Waiting</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">3 customers · 40 sheets</span></span></div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px"><span style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path></svg></span><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Rivals</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Kikuubo 149,000 · Nateete 152,000</span></span></div>
+    </div>
+    <button type="button" onClick="{{toggleBack}}" style="all: unset; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"></path></svg><span style="flex: 1; font-size: 13px; font-weight: 700">Not ready? Send it back to Moses</span><span style="flex: none; display: flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA1AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span></button>
     <sc-if value="{{showBack}}" hint-placeholder-val="{{ false }}">
-      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E6E3DD">
-        <span style="font-size: 14px; font-weight: 700">What needs fixing?</span>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px">
-          <sc-for list="{{reasons}}" as="r" hint-placeholder-count="4">
-            <button type="button" onClick="{{r.pick}}" style="{{r.style}}">{{r.label}}</button>
-          </sc-for>
-        </div>
-        <a href="SentBack.dc.html" style="text-align: center; padding: 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700">Send it back to Moses</a>
-      </div>
+    <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">What needs fixing?</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{reasons}}" as="r" hint-placeholder-count="4"><button type="button" aria-pressed="{{r.on}}" onClick="{{r.pick}}" style="{{r.style}}">{{r.label}}</button></sc-for>
+    </div>
+    <a href="SentBack.dc.html" style="height: 52px; border-radius: 999px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{backStyle}}">{{backLabel}}</a>
     </sc-if>
   </div>
-
-  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px">
-    <button type="button" onClick="{{toggleBack}}" style="all: unset; cursor: pointer; text-align: center; padding: 14px 10px; border-radius: 14px; background: #F1EEE8; color: #1C2233; font-size: 15px; font-weight: 700">Send back</button>
-    <a href="Live.dc.html" style="text-align: center; padding: 14px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Put it on sale at <span class="m">{{price}}</span></a>
+  <div style="flex: none; padding: 12px 16px 22px; display: flex; flex-direction: column; gap: 8px">
+    <a href="Live.dc.html" style="height: 58px; border-radius: 999px; background: #C93A30; color: #FFFFFF; box-shadow: 0 10px 22px rgba(201,58,48,.26); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Put it on sale at <span class="m">{{price}}</span></a>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1180}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   constructor(p) { super(p); this.state = { pct: 25, back: false, reason: null }; }
   renderVals() {
-    // Sourcing chose Stock, so the cost is Kiseka's own 118,000 (a consigned cost would be 125,100)
+    // Moses chose Stock, so the cost is Kiseka's own 118,000 (a consigned cost would be 125,100)
     const COST = 118000, RIVAL = 149000;
     const fmt = (n) => Math.round(n).toLocaleString('en-US');
     const pct = this.state.pct;
     const price = Math.round(COST * (1 + pct / 100) / 500) * 500;
     const lo = 112000, hi = 156000;
-    const at = (v) => ((v - lo) / (hi - lo) * 100).toFixed(1) + '%';
+    const at = (v) => ((v - lo) / (hi - lo) * 100);
     const under = RIVAL - price;
-    // labels hang away from each other: cost to the right of its dot, our price to the left
-    const above = [
-      { label: 'Cost', v: fmt(COST), p: COST, dot: 'background:#5F6980', labelStyle: 'color:#5F6980', anchor: 'left' },
-      { label: 'Our price', v: fmt(price), p: price, dot: 'background:#C93A30', labelStyle: 'color:#A82D24', anchor: 'right' }
-    ].map(k => ({ ...k, pos: k.anchor === 'left'
-      ? 'left:calc(' + at(k.p) + ' - 6px);align-items:flex-start'
-      : 'right:calc(' + (100 - parseFloat(at(k.p))).toFixed(1) + '% - 6px);align-items:flex-end' }));
-    const below = [
-      { label: 'Kikuubo, cheapest rival', v: fmt(RIVAL), p: RIVAL, dot: 'background:#7A3268', labelStyle: 'color:#7A3268' }
-    ].map(k => ({ ...k, pos: 'right:calc(' + (100 - parseFloat(at(k.p))).toFixed(1) + '% - 6px);align-items:flex-end' }));
-    const ticks = ['#0F6B43', '#0F6B43', '#0F6B43', '#0F6B43', '#0F6B43', '#E0DCD4'].map(c => 'background:' + c);
-    const reasons = ['Photo', 'Packing is wrong', 'Needs a second price', 'Hold it differently'].map(label => ({
-      label, pick: () => this.setState({ reason: label }),
-      style: 'all:unset;cursor:pointer;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;' +
-        (this.state.reason === label ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8')
+    // labels hang away from each other: cost to the right of its dot, our price to the left, the rival right-anchored
+    const marks = [
+      { label: 'Cost', v: fmt(COST), p: COST, dot: 'background:#8D99B5', ink: 'color:#B3BCD2', side: 'left' },
+      { label: 'Ours', v: fmt(price), p: price, dot: 'background:#FFFFFF;box-shadow:0 0 0 3px rgba(255,255,255,.2)', ink: 'color:#FFFFFF', side: 'right' },
+      { label: 'Kikuubo', v: fmt(RIVAL), p: RIVAL, dot: 'background:#E7A6D6', ink: 'color:#E7A6D6', side: 'rival' }
+    ].map(k => ({ ...k, pos: k.side === 'left' ? 'top:12px;flex-direction:column;left:calc(' + at(k.p).toFixed(1) + '% - 6px);align-items:flex-start'
+      : k.side === 'rival' ? 'top:30px;flex-direction:column-reverse;right:calc(' + (100 - at(k.p)).toFixed(1) + '% - 6px);align-items:flex-end'
+      : 'top:12px;flex-direction:column;right:calc(' + (100 - at(k.p)).toFixed(1) + '% - 6px);align-items:flex-end' }));
+    const reason = this.state.reason;
+    const reasons = ['The photo', 'Packing is wrong', 'Needs a second price', 'Hold it differently'].map(label => ({
+      label, on: String(reason === label), pick: () => this.setState({ reason: label }),
+      style: 'all:unset;cursor:pointer;box-sizing:border-box;min-height:52px;padding:0 12px;border-radius:16px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;' +
+        (reason === label ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #E6E3DD')
     }));
     return {
-      pct, price: fmt(price), margin: fmt(price - COST), sales40: fmt(price * 40),
-      vsRival: under >= 0 ? fmt(under) + ' under' : fmt(-under) + ' over',
-      rivalInk: under >= 0 ? 'color:#0F6B43' : 'color:#8E2A22',
-      ruleNote: pct === 25 ? 'the shop’s default' : 'its own markup, logged',
-      above, below, ticks, reasons,
-      marginBand: 'left:' + at(COST) + ';width:' + ((price - COST) / (hi - lo) * 100).toFixed(1) + '%',
-      facts: [
-        { k: 'Hold', v: 'Stock · Sourcing’s call', n: '≈40 suggested' },
-        { k: 'Suppliers', v: 'Kiseka Steel · Katwe Fabricators', n: '2' },
-        { k: 'Packing', v: 'By the sheet, 2.4 × 4.8 m', n: '' },
-        { k: 'Waiting', v: '3 customers', n: '40 sheets' },
-        { k: 'Rivals', v: 'Kikuubo · Nateete', n: '149,000 · 152,000' }
-      ],
+      pct, price: fmt(price), margin: fmt(price - COST), marks, reasons,
+      vsRival: fmt(Math.abs(under)), vsWord: under >= 0 ? 'under Kikuubo' : 'over Kikuubo',
+      ruleNote: pct === 25 ? 'the shop’s default, 25%' : 'its own markup · logged',
+      marginBand: 'left:' + at(COST).toFixed(1) + '%;width:' + ((price - COST) / (hi - lo) * 100).toFixed(1) + '%',
       showBack: this.state.back,
       toggleBack: () => this.setState({ back: !this.state.back }),
+      backLabel: reason ? 'Send it back · ' + reason.toLowerCase() : 'Pick what needs fixing',
+      backStyle: reason ? 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #16203C' : 'background:#F1EEE8;color:#9AA1AE;pointer-events:none',
       less: () => this.setState({ pct: Math.max(0, pct - 1) }),
       more: () => this.setState({ pct: pct + 1 })
     };

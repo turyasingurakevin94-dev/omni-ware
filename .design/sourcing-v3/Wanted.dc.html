@@ -2,101 +2,116 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sourcing — Sort the asks</title>
+<title>Sourcing · New asks</title>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#F7F5F2}
+body{margin:0}
 a{color:inherit;text-decoration:none}a:hover{color:inherit}
-*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
+input::placeholder{color:#9AA1AE}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@keyframes owPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes owPulseA{0%{box-shadow:0 0 0 0 rgba(245,178,107,.6)}70%{box-shadow:0 0 0 6px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+@keyframes owRingA{0%,100%{box-shadow:0 0 0 3px #19223F,0 0 0 5px rgba(245,178,107,.95)}50%{box-shadow:0 0 0 3px #19223F,0 0 0 8px rgba(245,178,107,.25)}}
+@keyframes owUndoRun{to{stroke-dashoffset:62.8}}
+@keyframes owGone{to{opacity:0;visibility:hidden}}
+@keyframes owChev{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
 </style>
 </helmet>
-<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
-
-  <div style="background: #16203C; color: #FFFFFF; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; gap: 8px">
-      <a href="Main.dc.html" aria-label="Back to Today" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
-      <span style="font-size: 20px; font-weight: 700; flex: 1">New asks</span>
-      <span class="m" style="font-size: 14px; color: #B3BCD2">{{left}} left</span>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <div style="flex: none; background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 30px 30px; padding: 10px 16px 20px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+      <a href="Main.dc.html" aria-label="Back to Today" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: rgba(255,255,255,.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"></path></svg></a>
+      <span style="flex: 1; min-width: 0; text-align: center; font-size: 13px; font-weight: 700; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">New asks</span>
+      <span style="width: 44px; height: 44px; flex: none"></span>
     </div>
-    <div style="display: flex; gap: 4px" aria-label="{{left}} of 3 still to sort">
-      <sc-for list="{{pips}}" as="p" hint-placeholder-count="3"><i style="flex: 1; height: 6px; border-radius: 3px; {{p}}"></i></sc-for>
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 40px; font-weight: 600; line-height: 1">{{left}}</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">to sort</span></span>
+      <span style="flex: 1"></span>
+      <span role="img" aria-label="{{facesAria}}" style="display: flex">
+        <sc-for list="{{asks}}" as="a" hint-placeholder-count="3"><span style="width: 40px; height: 40px; margin-left: -8px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{a.faceStyle}}">{{a.ini}}</span></sc-for>
+      </span>
     </div>
   </div>
-
-  <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
-    <sc-for list="{{asks}}" as="a" hint-placeholder-count="3">
-      <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
-        <div style="display: flex; align-items: center; gap: 8px">
-          <span style="padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; {{a.tag}}">{{a.kind}}</span>
-          <span style="font-size: 12px; color: #5F6980; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{a.from}}</span>
-          <span style="font-size: 12px; color: #5F6980">{{a.when}}</span>
-        </div>
-        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
-          <span style="font-size: 16px; font-weight: 700; line-height: 1.25">{{a.what}}</span>
-          <span class="m" style="font-size: 15px; font-weight: 600; white-space: nowrap">{{a.qty}}</span>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 13px; font-weight: 700; color: #5F6980">From people and searches</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">newest first</span></div>
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 0 6px; display: flex; flex-direction: column">
+      <sc-for list="{{asks}}" as="a" hint-placeholder-count="3">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 10px; border-radius: 16px; border-top: {{a.rule}}">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 42px; height: 42px; flex: none; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{a.lead}}">{{a.ini}}</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.what}} <span class="m" style="color: #5F6980">{{a.qty}}</span></span>
+            <span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.from}}</span>
+          </span>
+          <span class="m" style="flex: none; font-size: 11px; font-weight: 600; color: #9AA1AE">{{a.when}}</span>
         </div>
         <sc-if value="{{a.hasHint}}" hint-placeholder-val="{{ false }}">
-          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 600">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"></path></svg>
-            <span style="flex: 1">{{a.hint}}</span>
-          </div>
+          <span style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #E4E6FA; color: #3A3F9B; font-size: 12px; font-weight: 700"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9"></path></svg>{{a.hint}}</span>
         </sc-if>
         <sc-if value="{{a.open}}" hint-placeholder-val="{{ true }}">
-          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-            <button type="button" onClick="{{a.aside}}" style="all: unset; cursor: pointer; text-align: center; padding: 12px; border-radius: 12px; background: #F1EEE8; font-size: 14px; font-weight: 700">{{a.asideLabel}}</button>
-            <button type="button" onClick="{{a.go}}" style="all: unset; cursor: pointer; text-align: center; padding: 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700">{{a.goLabel}}</button>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: #F1EEE8">
+            <button type="button" onClick="{{a.aside}}" style="all: unset; cursor: pointer; height: 40px; border-radius: 11px; font-size: 13px; font-weight: 700; color: #5F6980; display: flex; align-items: center; justify-content: center">{{a.asideLabel}}</button>
+            <button type="button" onClick="{{a.go}}" style="all: unset; cursor: pointer; height: 40px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(22,32,60,.12); font-size: 13px; font-weight: 700; color: #16203C; display: flex; align-items: center; justify-content: center; gap: 6px">{{a.goLabel}}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
           </div>
         </sc-if>
         <sc-if value="{{a.done}}" hint-placeholder-val="{{ false }}">
-          <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; {{a.doneStyle}}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
-            <span style="flex: 1">{{a.result}}</span>
-            <button type="button" onClick="{{a.undo}}" style="all: unset; cursor: pointer; font-size: 13px; font-weight: 700; text-decoration: underline">Undo</button>
+          <div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; {{a.doneStyle}}">
+            <span style="flex: 1; font-size: 13px; font-weight: 700">{{a.result}}</span>
+            <button type="button" onClick="{{a.undo}}" style="all: unset; cursor: pointer; font-size: 13px; font-weight: 700; color: #16203C">Undo</button>
           </div>
         </sc-if>
       </div>
-    </sc-for>
-
-    <a href="Funnel.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 14px; border: 1px solid #E6E3DD; background: #FFFFFF; font-size: 14px; font-weight: 700">See all <span class="m">9</span> in Wanted</a>
+      </sc-for>
+    </div>
+    <a href="Funnel.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD"><span class="m" style="font-size: 18px; font-weight: 600">9</span><span style="flex: 1; font-size: 13px; font-weight: 700">already in Wanted</span><span style="flex: none; display: flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA1AE" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span></a>
+  </div>
+  <div style="flex: none; padding: 12px 16px 22px; display: flex; flex-direction: column; gap: 8px">
+    <a href="Funnel.dc.html" style="height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{doneStyle}}">{{doneLabel}}</a>
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   constructor(p) { super(p); this.state = { res: {} }; }
   renderVals() {
     const res = this.state.res;
     const set = (id, v) => () => this.setState({ res: { ...res, [id]: v } });
     const base = [
-      { id: 'a', kind: 'Ask', tag: 'background:#FDE8E4;color:#A82D24', from: 'Grace Akello for Kato Construction', when: '10:42',
+      { id: 'a', ini: 'GA', tint: ['#DCEAF8', '#1A5A8A'], from: 'Grace Akello · for Kato Construction', when: '10:42',
         what: 'Door closer, medium', qty: '× 6', asideLabel: 'Set aside', goLabel: 'Hunt it',
-        out: { hunt: 'Hunting — in the Funnel', aside: 'Set aside — Grace is told' } },
-      { id: 'b', kind: 'Agent', tag: 'background:#FDE8E4;color:#A82D24', from: 'Peter Sserwadda, agent', when: '09:15',
+        out: { hunt: 'Hunting · in the Funnel', aside: 'Set aside · Grace is told' } },
+      { id: 'b', ini: 'PS', tint: ['#FDE8E4', '#A82D24'], from: 'Peter Sserwadda · agent', when: '09:15',
         what: 'Shower mixer, chrome', qty: '× 4', asideLabel: 'Set aside', goLabel: 'Hunt it',
-        out: { hunt: 'Hunting — Peter is told', aside: 'Set aside — Peter is told' } },
-      { id: 'c', kind: 'Search', tag: 'background:#F1EEE8;color:#5F6980', from: '5 searches · 3 named people', when: 'this week',
-        what: '"pvc glue"', qty: '', hint: 'We sell Solvent cement 500ml. Teach it this name?', asideLabel: 'Set the words aside', goLabel: 'Teach the name',
-        out: { hunt: 'Taught — "pvc glue" now finds Solvent cement 500ml', aside: 'Set aside — these words stop showing' } }
+        out: { hunt: 'Hunting · Peter is told', aside: 'Set aside · Peter is told' } },
+      { id: 'c', ini: '5×', tint: ['#F1EEE8', '#5F6980'], from: '5 searches · 3 named people · this week', when: 'week',
+        what: '“pvc glue”', qty: '', hint: 'We sell Solvent cement 500ml · teach it this name?', asideLabel: 'Set the words aside', goLabel: 'Teach the name',
+        out: { hunt: 'Taught · “pvc glue” finds Solvent cement 500ml', aside: 'Set aside · these words stop showing' } }
     ];
-    const asks = base.map(a => {
+    const asks = base.map((a, i) => {
       const r = res[a.id];
       return {
-        ...a, hasHint: !!a.hint, open: !r, done: !!r,
+        ...a, hasHint: !!a.hint, open: !r, done: !!r, rule: i ? '1px solid #EFECE6' : 'none',
+        lead: 'background:' + a.tint[0] + ';color:' + a.tint[1],
+        faceStyle: 'background:' + a.tint[0] + ';color:' + a.tint[1] + ';box-shadow:0 0 0 2px #1D2747' + (r ? ',0 0 0 4px #6FDCB0' : ',0 0 0 4px rgba(245,178,107,.6)'),
         result: r ? a.out[r] : '',
         doneStyle: r === 'hunt' ? 'background:#E4F4EA;color:#0F6B43' : 'background:#F1EEE8;color:#5F6980',
         go: set(a.id, 'hunt'), aside: set(a.id, 'aside'), undo: set(a.id, undefined)
       };
     });
     const left = asks.filter(a => a.open).length;
-    const pips = asks.map(a => a.open ? 'background:#2A3350' : 'background:#6FDCB0');
-    return { asks, left, pips };
+    return {
+      asks, left,
+      facesAria: 'Grace Akello, Peter Sserwadda and a search; ' + left + ' to sort',
+      doneLabel: left ? left + ' still to sort' : 'Done · to the Funnel',
+      doneStyle: left ? 'background:#FFFFFF;color:#5F6980;box-shadow:inset 0 0 0 1.5px #E6E3DD' : 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)'
+    };
   }
 }
 </script>
