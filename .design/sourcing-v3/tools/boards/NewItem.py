@@ -12,10 +12,11 @@ name = ('    <label style="display: flex; flex-direction: column; gap: 6px"><spa
 seen = '''    <sc-if value="{{seen}}" hint-placeholder-val="{{ true }}">
     <div style="display: flex; flex-direction: column; gap: 10px">
 ''' + sec('Where you saw it') + '\n' + chips('wheres', 'w') + '\n' + sec('Their price, if you have it') + '''
-    <div style="''' + LIST + '''; padding: 12px 14px; display: flex; align-items: center; gap: 10px">
-      <input value="" placeholder="0" inputmode="numeric" aria-label="Their price" style="box-sizing: border-box; flex: 1; min-width: 0; height: 48px; padding: 0 12px; border-radius: 14px; border: none; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">
-      <span style="font-size: 13px; font-weight: 700; color: #5F6980">a bag of</span>
-      <input value="100" inputmode="numeric" aria-label="Pieces in a bag" style="box-sizing: border-box; width: 64px; height: 48px; padding: 0 8px; border-radius: 14px; border: none; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; text-align: center">
+    <div style="''' + LIST + '''; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+      <input value="" placeholder="0" inputmode="numeric" aria-label="Their price" style="box-sizing: border-box; width: 100%; height: 48px; padding: 0 12px; border-radius: 14px; border: none; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">
+      <span style="font-size: 12px; font-weight: 700; color: #5F6980">for one</span>
+      <div role="radiogroup" aria-label="Sold by" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{units}}" as="u" hint-placeholder-count="8"><button type="button" role="radio" aria-checked="{{u.on}}" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button></sc-for></div>
+      <sc-if value="{{isPack}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 10px"><span style="flex: 1; font-size: 13px; font-weight: 700; color: #5F6980">How many in a {{unitWord}}?</span><input value="" placeholder="pieces" inputmode="numeric" aria-label="Pieces in one" style="box-sizing: border-box; width: 96px; height: 44px; padding: 0 10px; border-radius: 12px; border: none; box-shadow: inset 0 0 0 2px #16203C; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600; text-align: center"></div></sc-if>
     </div>
     </div>
     </sc-if>'''
@@ -39,9 +40,10 @@ aisle_chips = aisle_chips[:aisle_chips.rindex('</div>')] + more_btn + '</div>'
 bd = body('\n'.join([photo, name, sec('Aisle', 'pick one, or leave it'), aisle_chips, more, seen, asked]))
 ft = foot('<a href="Funnel.dc.html" style="height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{ctaStyle}}">{{cta}}</a>')
 script = '''class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { mode: null, aisle: null, where: null, who: null, qty: 0, more: false }; }
+  constructor(p) { super(p); this.state = { mode: null, aisle: null, where: null, who: null, qty: 0, more: false, unit: null }; }
   renderVals() {
-    const { mode, aisle, where, who, qty, more } = this.state;
+    const { mode, aisle, where, who, qty, more, unit } = this.state;
+    const PACKS = ['box', 'bag', 'carton', 'bundle'];
     const TOP = ['Tiles & finishing', 'Fasteners', 'Plumbing', 'Steel & mesh', 'Roofing'];
     const shown = !aisle || TOP.includes(aisle) ? TOP : TOP.slice(0, 4).concat([aisle]);
     const seg = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
@@ -52,6 +54,8 @@ script = '''class Component extends DCLogic {
     return {
       modes, seen: mode === 'seen', asked: mode === 'asked', qty,
       aisles: pickList('aisle', aisle, shown),
+      units: ['piece', 'metre', 'kg', 'roll', 'sheet', 'length', 'box', 'bag', 'carton', 'bundle'].map(label => ({ label, on: String(unit === label), pick: () => this.setState({ unit: unit === label ? null : label }), style: chip(unit === label).replace('height:36px', 'height:34px') })),
+      isPack: PACKS.includes(unit), unitWord: unit || '',
       moreOpen: more, moreStr: String(more), moreLabel: more ? 'Close' : 'Other aisle', toggleMore: () => this.setState({ more: !more }),
       moreStyle: more ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #C9C4BA',
       others: ['Cement & sand', 'Timber', 'Paint', 'Electrical', 'Tools', 'Doors & locks', 'Gutters', 'Water tanks', 'Safety gear'].map(label => ({ label, pick: () => this.setState({ aisle: label, more: false }) })),
