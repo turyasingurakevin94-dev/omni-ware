@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Passports at scale</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Oswald:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.os{font-family:Oswald,'Figtree',sans-serif}
+</style>
+</helmet>
+<div style="width: 1640px; height: 1000px; box-sizing: border-box; background: #F4EFE6; color: #1C2233; font-family: Figtree, system-ui, sans-serif; padding: 44px 56px; display: flex; flex-direction: column; gap: 26px">
+  <!-- the whole shop's passports in one line -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 30px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #8A7A62">MUKASA HARDWARE · PASSPORTS · SAT 17 OCT</span>
+      <span style="font-size: 34px; font-weight: 700; letter-spacing: -.02em">Nine stamps live in four rooms. An item is only ever in one.</span>
+    </div>
+    <div style="display: flex; gap: 10px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+        <div style="width: 150px; padding: 14px 16px; border-radius: 16px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); display: flex; flex-direction: column; gap: 4px">
+          <span class="m" style="font-size: 26px; font-weight: 600; line-height: 1; {{k.ink}}">{{k.v}}</span>
+          <span style="font-size: 12px; font-weight: 600; color: #6B5A43">{{k.label}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- four rooms -->
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px">
+    <sc-for list="{{rooms}}" as="r" hint-placeholder-count="4">
+      <div style="min-height: 0; display: flex; flex-direction: column; border-radius: 22px; background: #FBF8F2; box-shadow: inset 0 0 0 1px #E3DACB; overflow: hidden">
+        <div style="flex: none; padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #E3DACB">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="display: flex; align-items: center; gap: 10px"><span class="os" style="height: 30px; padding: 0 10px; border-radius: 6px; box-shadow: inset 0 0 0 2px {{r.ink}}; color: {{r.ink}}; font-size: 15px; font-weight: 700; letter-spacing: .12em; display: flex; align-items: center">{{r.word}}</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43">{{r.who}}</span></span>
+            <span class="m" style="font-size: 30px; font-weight: 600; line-height: 1">{{r.n}}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><sc-for list="{{r.stamps}}" as="s" hint-placeholder-count="3"><span style="height: 24px; padding: 0 8px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E3DACB; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; background: {{s.ink}}"></i>{{s.w}}</span></sc-for></div>
+          <div style="display: flex; gap: 14px; font-size: 12px; font-weight: 600; color: #6B5A43"><span><span class="m" style="color: #0F6B43; font-weight: 600">{{r.ready}}</span> ready for a stamp</span><span>oldest <span class="m" style="{{r.oldInk}}">{{r.oldest}}</span></span></div>
+        </div>
+        <div style="flex: 1; min-height: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{r.items}}" as="it" hint-placeholder-count="6">
+            <div style="padding: 11px 12px; border-radius: 14px; background: #FFFFFF; box-shadow: 0 1px 0 #E9E1D3; display: flex; flex-direction: column; gap: 8px">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span class="m" style="flex: none; font-size: 12px; font-weight: 600; color: #4A3A22">{{it.worth}}</span></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <span role="img" aria-label="{{it.aria}}" style="display: flex; align-items: center; gap: 3px"><sc-for list="{{it.dots}}" as="d" hint-placeholder-count="9"><i style="width: 10px; height: 10px; border-radius: 999px; box-sizing: border-box; {{d}}"></i></sc-for></span>
+                <span style="font-size: 11px; font-weight: 700; white-space: nowrap; {{it.nextInk}}">{{it.next}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex: none; padding: 10px 18px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; color: #6B5A43; border-top: 1px solid #E3DACB"><span>{{r.moreText}}</span><span>{{r.foot}}</span></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 22px; font-size: 12px; font-weight: 600; color: #6B5A43">
+    <span style="display: flex; align-items: center; gap: 6px"><i style="width: 10px; height: 10px; border-radius: 999px; background: #2B3A8C"></i>stamped (in its ink)</span>
+    <span style="display: flex; align-items: center; gap: 6px"><i style="width: 10px; height: 10px; border-radius: 999px; box-sizing: border-box; border: 2px solid #C47A1E"></i>the stamp it waits for</span>
+    <span style="display: flex; align-items: center; gap: 6px"><i style="width: 10px; height: 10px; border-radius: 999px; box-sizing: border-box; border: 1.5px solid #D3C8B4"></i>locked until then</span>
+    <span style="margin-left: auto">The dots sit in four groups: Find 3 · Prepare 4 · Ruth 1 · Prove 1</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1640,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const OX = '#9A2E24', BLUE = '#2B3A8C', GREEN = '#1E6E47', PLUM = '#6E2A5E', RED = '#A3241C';
+    const INKS = [OX, BLUE, GREEN, BLUE, GREEN, BLUE, BLUE, PLUM, RED];
+    const NAMES = ['Asked', 'Sourced', 'Compared', 'Packed', 'Photo', 'Placed', 'Held', 'Priced', 'Proven'];
+    // s: how many stamps are inked, in order; the next one is the one it waits for
+    const dots = (n) => INKS.map((ink, i) => (i < n ? 'background:' + ink : i === n ? 'border:2px solid #C47A1E' : 'border:1.5px solid #D3C8B4') + (i === 2 || i === 6 || i === 7 ? ';margin-right:5px' : ''));
+    const item = (name, worth, n, next, warn) => ({ name, worth, dots: dots(n), next, nextInk: warn ? 'color:#A3241C' : n >= 8 ? 'color:#6E2A5E' : 'color:#7A5A1C',
+      aria: name + ': ' + n + ' of 9 stamped, waits for ' + NAMES[Math.min(n, 8)] });
+    const rooms = [
+      { word: 'FIND', who: 'Moses, in the market', ink: BLUE, n: 31, ready: 9, oldest: '8 d', oldInk: 'color:#A3241C', more: 24, foot: 'next: market list',
+        stamps: [['Asked', OX], ['Sourced', BLUE], ['Compared', GREEN]],
+        items: [item('Gutter bracket, galvanised', '1.1 M', 1, 'needs a supplier'), item('Ridge cap G28, maroon', '900,000', 2, 'needs a rival price'),
+          item('Shower mixer, chrome', '520,000', 1, 'needs a supplier'), item('PPR pipe 25mm × 4m', '380,000', 1, 'on Owino’s list'),
+          item('Door closer, medium', '270,000', 1, 'needs a supplier'), item('Floor trap 4", chrome', '210,000', 2, 'second supplier', false),
+          item('Roofing bolts 6"', '160,000', 1, '8 days, no supplier', true)] },
+      { word: 'PREPARE', who: 'Moses, at the desk', ink: GREEN, n: 28, ready: 11, oldest: '5 d', oldInk: 'color:#7A5A1C', more: 21, foot: 'photo round: 11',
+        stamps: [['Packed', BLUE], ['Photo', GREEN], ['Placed', BLUE], ['Held', BLUE]],
+        items: [item('Wire mesh BRC A142', '6.0 M', 3, 'needs packing'), item('Tile cutter 600mm', '520,000', 6, 'needs the hold'),
+          item('Self-drilling screws 10×25', '240,000', 3, 'needs packing'), item('PVC elbow 4"', '180,000', 5, 'needs the aisle'),
+          item('Grout float, rubber', '90,000', 4, 'needs a photo'), item('Masonry nails 3"', '85,000', 4, 'needs a photo'),
+          item('Cable ties 300mm', '60,000', 4, 'needs a photo')] },
+      { word: 'RUTH', who: 'Ruth prices it', ink: PLUM, n: 6, ready: 6, oldest: '26 h', oldInk: 'color:#A3241C', more: 0, foot: 'she gets a buzz',
+        stamps: [['Priced', PLUM]],
+        items: [item('Tile trim 10mm, silver', '140,000', 7, '26 h · reminded', true), item('Paint roller 9"', '300,000', 7, '3 h with Ruth'),
+          item('Silicone, clear 280ml', '120,000', 7, '2 h with Ruth'), item('Hinge 3" steel, pair', '95,000', 7, '1 h with Ruth'),
+          item('PPR tee 25mm', '180,000', 7, '40 min with Ruth'), item('Wall plug 8mm, 100', '45,000', 7, '10 min with Ruth')] },
+      { word: 'PROVE', who: '30 days on the New-in shelf', ink: RED, n: 14, ready: 2, oldest: 'day 45', oldInk: 'color:#A3241C', more: 8, foot: '9 proven this month',
+        stamps: [['Proven', RED]],
+        items: [item('Masking tape 2"', 'day 45', 8, '22 of 60 · behind', true), item('Floor drain 4" chrome', 'day 29', 8, '38 of 40 · passes'),
+          item('Roof paint 4L', 'day 17', 8, '9 of 11 · on pace'), item('Tile adhesive 20kg', 'day 8', 8, '5 of 12 · on pace'),
+          item('Grout, white 5kg', 'day 3', 8, '2 of 4 · on pace'), item('Ceramic tile 40×40', 'day 2', 8, 'first sales in')] }
+    ];
+    const kpis = [
+      { v: '79', label: 'items moving', ink: '' },
+      { v: '28', label: 'ready for a stamp', ink: 'color:#0F6B43' },
+      { v: '11 d', label: 'ask to on sale', ink: '' },
+      { v: '9', label: 'proven this month', ink: 'color:#A3241C' }
+    ];
+    return { rooms: rooms.map(r => ({ ...r, moreText: r.more ? '+' + r.more + ' more, by worth' : 'all ' + r.n + ' shown', stamps: r.stamps.map(([w, ink]) => ({ w, ink })) })), kpis };
+  }
+}
+</script>
+</body>
+</html>
