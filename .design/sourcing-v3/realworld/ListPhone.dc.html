@@ -9,23 +9,24 @@
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,500&amp;family=Oswald:wght@500;700&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0}
 a{color:inherit;text-decoration:none}
 *{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.os{font-family:Oswald,'Figtree',sans-serif}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 input::placeholder{color:#6B7480}
 </style>
 </helmet>
-<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4EFE6; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
   <div style="position: absolute; inset: 0 0 84px 0; overflow-y: auto">
     <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 20px 70px; color: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
       <div style="display: flex; align-items: center; justify-content: space-between">
-        <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 20px; font-weight: 700">Market list</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">Sat 17 Oct · three stops</span></span>
+        <span style="display: flex; flex-direction: column; gap: 3px"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 20px; font-weight: 700">Market list</span><span class="os" style="height: 22px; padding: 0 7px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); font-size: 11px; font-weight: 700; letter-spacing: .14em; display: flex; align-items: center">FIND</span></span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">{{headSub}}</span></span>
         <span style="display: flex; gap: 8px">
-          <button type="button" aria-label="Print the list" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"></path></svg></button>
-          <button type="button" aria-label="Send the list to WhatsApp" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3"></path></svg></button>
+          <button type="button" aria-label="Print the list" onClick="{{print}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"></path></svg></button>
+          <button type="button" aria-label="Send the list to WhatsApp" onClick="{{wa}}" style="all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3"></path></svg></button>
         </span>
       </div>
       <div style="display: flex; align-items: center; gap: 12px"><span class="m" style="font-size: 30px; font-weight: 600; line-height: 1">{{doneN}}<span style="font-size: 16px; color: #B3BCD2">/16</span></span><span style="flex: 1; height: 8px; border-radius: 999px; background: rgba(255,255,255,.14); display: block"><span style="display: block; height: 8px; border-radius: 999px; background: #6FDCB0; {{bar}}"></span></span></div>
@@ -37,6 +38,7 @@ input::placeholder{color:#6B7480}
             <span style="width: 28px; height: 28px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; {{s.dot}}">{{s.n}}</span>
             <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 700">{{s.name}}</span><span style="font-size: 11px; font-weight: 700; {{s.kindInk}}">{{s.kind}}</span></span>
             <span class="m" style="font-size: 13px; font-weight: 600">{{s.count}}</span>
+            <sc-if value="{{s.board}}" hint-placeholder-val="{{ false }}"><a href="BoardPhone.dc.html" style="height: 44px; padding: 0 0 0 8px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #7A3268">Board<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a></sc-if>
           </div>
           <sc-for list="{{s.lines}}" as="l" hint-placeholder-count="4">
             <div style="display: flex; align-items: center; gap: 10px; min-height: 44px">
@@ -50,25 +52,25 @@ input::placeholder{color:#6B7480}
       <div style="display: flex; align-items: center; gap: 8px; border-top: 1px dashed #C9C4BA; padding-top: 10px; font-size: 12px; font-weight: 600; color: #5F6980">Off the list: Kiseka Steel · asked in their app</div>
     </div>
   </div>
-  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
-    <a href="DeskPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3"></path></svg>Today</a>
-    <a href="DeskPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h18v6H3zM3 14l3-8h12l3 8M9 14v2h6v-2"></path></svg>Desk</a>
-    <a href="BoardPhone.dc.html" aria-label="Capture" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(201,58,48,.35); border: 4px solid #F7F5F2; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E3DACB; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
+    <a href="Rooms.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2zM9 8h6M9 12h6"></path></svg>Passports</a>
     <a href="ShelfPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M3 19h18M6 10V5h4v5M14 19v-6h4v6"></path></svg>New-in</a>
+    <a href="AskNew.dc.html" aria-label="Capture a new ask" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(22,32,60,.3); border: 4px solid #F4EFE6; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
     <a href="ListPhone.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #1C2233; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3"></path></svg>Market</a>
+    <a href="BoardPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8zM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path></svg>Prices</a>
   </nav>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { done: { o1: 1, o2: 1, o3: 1, o4: 1, o5: 1, o6: 1, k1: 1, k2: 1 } }; }
+  constructor(p) { super(p); this.state = { done: { o1: 1, o2: 1, o3: 1, o4: 1, o5: 1, o6: 1, k1: 1, k2: 1 }, sent: '' }; }
   renderVals() {
     const D = this.state.done;
     const STOPS = [
       { id: 'o', n: 1, name: 'Owino Plumbing', kind: 'our supplier', sup: true, lines: [
         ['o1', 'PPR elbow 25mm', 'same'], ['o2', 'Gate valve ½"', '19,000'], ['o3', 'Ball valve ¾"', 'same'],
         ['o4', 'Ask: PPR pipe 25mm', 'has it'], ['o5', 'Answer: PVC pipe offer', 'pushed'], ['o6', 'Photos × 2', 'done'] ], jobs: 7 },
-      { id: 'k', n: 2, name: 'Kikuubo Hardware Mart', kind: 'a rival · price check', lines: [
+      { id: 'k', n: 2, name: 'Kikuubo Hardware Mart', kind: 'a rival · price check', board: true, lines: [
         ['k1', 'Cement 50kg', '36,000'], ['k2', 'Iron sheet G28', '36,000'], ['k3', 'Wire mesh A142', '149,000'], ['k4', 'Y12 rebar', '42,000'], ['k5', 'Hoop iron', '25,000'] ], jobs: 5 },
       { id: 'n', n: 3, name: 'Nateete Builders’ Centre', kind: 'a rival · across town', lines: [
         ['n1', 'Wire mesh A142', '152,000'], ['n2', 'Iron sheet G28', '35,500'], ['n3', 'Binding wire', '110,000'], ['n4', 'Cement 50kg', '35,000'] ], jobs: 4 }
@@ -85,11 +87,11 @@ class Component extends DCLogic {
       const n = s.lines.filter(([id]) => D[id]).length;
       const all = n === s.lines.length;
       doneN += n + (s.id === 'o' && D.o6 ? 1 : 0);
-      return { ...s, lines, count: n + '/' + s.lines.length,
+      return { ...s, board: !!s.board, lines, count: n + '/' + s.lines.length,
         kindInk: s.sup ? 'color:#3A3F9B' : 'color:#7A3268',
         dot: all ? 'background:#0F6B43;color:#FFFFFF' : n ? 'background:#F5B26B;color:#16203C' : 'box-shadow:inset 0 0 0 2px #1C2233' };
     });
-    return { stops, doneN, bar: 'width:' + (doneN / 16 * 100).toFixed(0) + '%' };
+    return { stops, doneN, headSub: this.state.sent || 'Sat 17 Oct · three stops', print: () => this.setState({ sent: 'Sent to the shop printer · 10:02' }), wa: () => this.setState({ sent: 'Sent to your WhatsApp · 10:02' }), bar: 'width:' + (doneN / 16 * 100).toFixed(0) + '%' };
   }
 }
 </script>
