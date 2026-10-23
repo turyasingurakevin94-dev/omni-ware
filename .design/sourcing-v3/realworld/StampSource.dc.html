@@ -161,10 +161,16 @@ button{font-family:inherit}
         </div>
         <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 14px; display: flex; flex-direction: column; gap: 10px">
           <span style="font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #8A7A62">HOW THEY PACK IT</span>
-          <div role="radiogroup" aria-label="Sold as" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{units}}" as="u" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{u.on}}" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button></sc-for></div>
-          <div role="radiogroup" aria-label="Packed in" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{outers}}" as="o" hint-placeholder-count="4"><button type="button" role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button></sc-for></div>
-          <sc-if value="{{askN}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px"><input value="{{fPackN}}" inputmode="numeric" aria-label="How many in one" placeholder="how many" onInput="{{typePackN}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: center; width: 96px"><span style="font-size: 13px; font-weight: 700; color: #6B5A43">{{outerWord}}</span></div></sc-if>
-          <sc-if value="{{packOk}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #0F6B43"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9"></path></svg>{{packPreview}}</span></sc-if>
+          <div aria-label="Packing sentence" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: 14px; background: #F7F2E9">
+            <input value="{{fPackN}}" inputmode="numeric" aria-label="How many" placeholder="20" onInput="{{typePackN}}" class="m" style="width: 64px; height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 12px; border: none; outline: none; background: #FFFFFF; box-shadow: {{nRing}}; font-size: 17px; font-weight: 600; color: #1C2233; text-align: center">
+            <button type="button" onClick="{{slotUnit}}" aria-label="Unit" style="all: unset; cursor: pointer; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 17px; font-weight: 700; {{unitSlot}}">{{unitWord}}</button>
+            <span style="font-size: 17px; font-weight: 700; color: #6B5A43">in a</span>
+            <button type="button" onClick="{{slotOuter}}" aria-label="Outer pack" style="all: unset; cursor: pointer; box-sizing: border-box; height: 44px; padding: 0 12px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 17px; font-weight: 700; {{outerSlot}}">{{outerWordS}}</button>
+          </div>
+          <sc-if value="{{pickUnit}}" hint-placeholder-val="{{ false }}"><div role="radiogroup" aria-label="Unit" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{units}}" as="u" hint-placeholder-count="4"><button type="button" role="radio" aria-checked="{{u.on}}" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button></sc-for></div></sc-if>
+          <sc-if value="{{pickOuter}}" hint-placeholder-val="{{ false }}"><div role="radiogroup" aria-label="Outer pack" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{outers}}" as="o" hint-placeholder-count="4"><button type="button" role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button></sc-for></div></sc-if>
+          <button type="button" role="switch" aria-checked="{{singleOn}}" onClick="{{toggleSingle}}" style="all: unset; cursor: pointer; align-self: flex-start; min-height: 40px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; {{singleInk}}"><span style="width: 20px; height: 20px; border-radius: 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{singleBox}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>Not packed together · sold singly</button>
+          <sc-if value="{{packOk}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #0F6B43"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9"></path></svg>{{packCheck}}</span></sc-if>
         </div>
         <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 14px; display: flex; flex-direction: column; gap: 10px">
           <span style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #8A7A62">TILE CUTTER PRICES</span><span style="font-size: 11px; font-weight: 600; color: #8A7A62">if you have them</span></span>
@@ -201,7 +207,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', steps: [], qty: 3, sheet: false, fUnit: null, fOuter: null, fPackN: '' }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', steps: [], qty: 3, sheet: false, fUnit: null, fOuter: null, fPackN: '', fSlot: null, fSingle: false }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -218,13 +224,13 @@ class Component extends DCLogic {
     const askers = [['GA', 'background:#FBE5E2;color:#8E2A22'], ['PS', 'background:#F6E4F1;color:#7A3268'], ['KC', 'background:#E3F4EA;color:#0F6B43']].map(([i, face]) => ({ i, face }));
     // [key, initials, name, why we think they have it, answer]
     const BASE = [
-      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { tiers: [[1, 380000], [4, 355000], [12, 340000]], pack: { n: 4, outer: 'carton', line: 'One in its own box · 4 to a carton' }, per: '2 days' }],
-      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { tiers: [[1, 395000], [5, 370000]], pack: { n: 5, outer: 'box', line: 'One, loose · 5 to a box' }, per: 'next day' }],
+      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { tiers: [[1, 380000], [4, 355000], [12, 340000]], pack: { n: 4, outer: 'ctn', line: '4 pieces in a ctn' }, per: '2 days' }],
+      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { tiers: [[1, 395000], [5, 370000]], pack: { n: 5, outer: 'box', line: '5 pieces in a box' }, per: 'next day' }],
       ['owi', 'OP', 'Owino Plumbing', 'Sometimes has tile tools', null]
     ];
     // the rest of the book: not the likely ones, but one tap away
     const BOOK = [
-      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { tiers: [[1, 410000]], pack: { n: 1, outer: '', line: 'One in its own box · sold singly' }, per: '3 days' }],
+      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { tiers: [[1, 410000]], pack: { n: 1, outer: '', line: 'Sold singly' }, per: '3 days' }],
       ['nam', 'NS', 'Namanve Sheets', 'Roofing, gutters', null],
       ['nde', 'NT', 'Ndeeba Timber Works', 'Timber, boards', null]
     ];
@@ -233,7 +239,7 @@ class Component extends DCLogic {
     const at = (tiers, q) => tiers.filter(t => t[0] <= q).slice(-1)[0] || tiers[0];
     const Q = S.qty;
     // a step is named in the supplier's own packs: 1, 1 carton, 3 cartons
-    const packName = (q, pack) => { if (pack && pack.n > 1 && q >= pack.n && q % pack.n === 0) { const c = q / pack.n; return c + ' ' + pack.outer + (c > 1 ? 's' : ''); } return q === 1 ? '1' : q + '+'; };
+    const packName = (q, pack) => { if (pack && pack.n > 1 && q >= pack.n && q % pack.n === 0) { const c = q / pack.n; return c + ' ' + pack.outer + (c > 1 && pack.outer !== 'box' ? 's' : c > 1 ? 'es' : ''); } return q === 1 ? '1' : q + '+'; };
     const tierChips = (tiers, pack) => tiers.map(t => { const on = at(tiers, Q)[0] === t[0];
       return { label: packName(t[0], pack) + ' · ' + kfmt(t[1]), style: on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EBE0;color:#4A3A22' }; });
     const SUP = BASE.concat(BOOK.filter(x => S.extra.includes(x[0])));
@@ -269,10 +275,12 @@ class Component extends DCLogic {
     let prevQ = 1, prevP = fpv;
     const stepOk = S.steps.map(st => { const q = num(st.q), p = num(st.p); const ok = q > prevQ && p > 0 && (!prevP || p < prevP); if (ok) { prevQ = q; prevP = p; } return { q, p, ok, filled: !!(st.q || st.p) }; });
     const ladderT = fpv ? [[1, fpv]].concat(stepOk.filter(x => x.ok).map(x => [x.q, x.p])) : [];
-    const UN = { one: 'One piece', pair: 'A pair', set: 'A set' }, OU = { carton: 'Carton', box: 'Box', bundle: 'Bundle', single: 'Sold singly' };
-    const packN = S.fOuter === 'single' ? 1 : num(S.fPackN);
-    const packOk = !!S.fUnit && !!S.fOuter && (S.fOuter === 'single' || packN > 1);
-    const fPack = packOk ? { n: packN, outer: S.fOuter === 'single' ? '' : S.fOuter, line: UN[S.fUnit] + (S.fOuter === 'single' ? ' · sold singly' : ' · ' + packN + ' to a ' + S.fOuter) } : null;
+    // the packing sentence: [20] [dozens] in a [ctn]; a unit's size in pieces turns it into steps
+    const UN = { pieces: ['pieces', 1], dozens: ['dozens', 12], pairs: ['pairs', 2], sets: ['sets', 1] }, OU = ['ctn', 'box', 'bundle', 'bag'];
+    const nN = num(S.fPackN), single = !!S.fSingle;
+    const packN = single ? 1 : nN * (S.fUnit ? UN[S.fUnit][1] : 0);
+    const packOk = single || (nN > 0 && !!S.fUnit && !!S.fOuter && packN > 1);
+    const fPack = packOk ? { n: packN, outer: single ? '' : S.fOuter, line: single ? 'Sold singly' : nN + ' ' + UN[S.fUnit][0] + ' in a ' + S.fOuter } : null;
     const canSave = S.fPhone.replace(/[^0-9]/g, '').length >= 9 && S.fWhere.trim().length > 2;
     const nPick = Object.values(S.pick).filter(Boolean).length;
     const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.tiers ? 1 : 0);
@@ -289,10 +297,19 @@ class Component extends DCLogic {
       openSell: () => this.setState({ addingSell: true }), typeSellNew: (e) => this.setState({ fSellNew: e.target.value }),
       addSell: () => { const t = S.fSellNew.trim(); if (t.length > 1) this.setState({ sellsMore: [...S.sellsMore, t], fSellNew: '', addingSell: false }); }, typePrice: (e) => this.setState({ fPrice: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
       saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: ['Tile cutter 600mm'].concat(S.sellsMore), tiers: fpv && packOk ? ladderT : null, pack: fPack || { n: 1, outer: '', line: 'packing to confirm' } }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', steps: [], sellsMore: [], addingSell: false, fSellNew: '', sheet: false }); },
-      packOk, packAsk: !packOk, units: Object.keys(UN).map(k => ({ label: UN[k], on: String(S.fUnit === k), pick: () => this.setState({ fUnit: k }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (S.fUnit === k ? 'background:#16203C;color:#FFFFFF' : 'background:#F7F2E9;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') })),
-      outers: Object.keys(OU).map(k => ({ label: OU[k], on: String(S.fOuter === k), pick: () => this.setState({ fOuter: k }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (S.fOuter === k ? 'background:#16203C;color:#FFFFFF' : 'background:#F7F2E9;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') })),
-      askN: !!S.fOuter && S.fOuter !== 'single', fPackN: S.fPackN, typePackN: (e) => this.setState({ fPackN: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }), outerWord: S.fOuter && S.fOuter !== 'single' ? 'to a ' + S.fOuter : '',
-      packPreview: fPack ? fPack.line : '',
+      packOk, packAsk: !packOk,
+      units: Object.keys(UN).map(k => { const on = S.fUnit === k; return { label: UN[k][0], on: String(on), pick: () => this.setState({ fUnit: k, fSlot: S.fOuter ? null : 'outer', fSingle: false }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') }; }),
+      outers: OU.map(k => { const on = S.fOuter === k; return { label: k, on: String(on), pick: () => this.setState({ fOuter: k, fSlot: null, fSingle: false }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') }; }),
+      pickUnit: S.fSlot === 'unit' && !single, pickOuter: S.fSlot === 'outer' && !single,
+      slotUnit: () => this.setState({ fSlot: 'unit', fSingle: false }), slotOuter: () => this.setState({ fSlot: 'outer', fSingle: false }),
+      unitWord: S.fUnit ? UN[S.fUnit][0] : 'what', outerWordS: S.fOuter || 'what',
+      unitSlot: single ? 'background:#EDE6D8;color:#8A7A62' : S.fUnit ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#8A7A62;box-shadow:inset 0 0 0 1.5px #D3C8B4' + (S.fSlot === 'unit' ? ',0 0 0 3px rgba(43,58,140,.25)' : ''),
+      outerSlot: single ? 'background:#EDE6D8;color:#8A7A62' : S.fOuter ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#8A7A62;box-shadow:inset 0 0 0 1.5px #D3C8B4' + (S.fSlot === 'outer' ? ',0 0 0 3px rgba(43,58,140,.25)' : ''),
+      nRing: single ? 'inset 0 0 0 1.5px #E3DACB;opacity:.5' : nN ? 'inset 0 0 0 2px #16203C' : 'inset 0 0 0 1.5px #D3C8B4',
+      fPackN: S.fPackN, typePackN: (e) => this.setState({ fPackN: e.target.value.replace(/[^0-9]/g, '').slice(0, 4), fSingle: false, fSlot: S.fUnit ? S.fSlot : 'unit' }),
+      singleOn: String(single), toggleSingle: () => this.setState({ fSingle: !single, fSlot: null }),
+      singleInk: single ? 'color:#1C2233' : 'color:#2B3A8C', singleBox: single ? 'background:#16203C' : 'box-shadow:inset 0 0 0 2px #CDBFA6',
+      packCheck: !fPack ? '' : single ? 'Sold singly · each price is for one' : fPack.line + (S.fUnit !== 'pieces' && S.fUnit !== 'sets' ? ' · ' + packN + ' pieces' : ''),
       sheetOpen: S.sheet, openSheet: () => this.setState({ sheet: true }), closeSheet: () => this.setState({ sheet: false }),
       saveNote: !canSave ? 'Phone and where they are make the record' : fpv ? 'They join the supplier book · Denis is told' : 'No price yet: we ask them on WhatsApp',
       ladderBars: ladderT.map(t => ({ q: packName(t[0], fPack), p: Math.round(t[1] / 1000) + 'k', h: 'height:' + Math.round(16 + 36 * (t[1] - 0.85 * ladderT[ladderT.length - 1][1]) / Math.max(1, ladderT[0][1] - 0.85 * ladderT[ladderT.length - 1][1])) + 'px' })),

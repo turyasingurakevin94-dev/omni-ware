@@ -208,6 +208,14 @@ Two rules from the third review, which every Sourcing board and the build follow
   without wrapping it. Item and people names (`.nm`) keep Figtree. Text never
   goes lighter than #5F6980 on paper or white (#9AA1AE is gone); a disabled
   red button is #F3D3CF with #8E2A22 words, not a faded red.
+- **Packing is one sentence, always the same shape.** Packing drives margins,
+  prices, agents and sales, so it is written and entered only as
+  **`<n> <unit> in a <outer>`**: "20 dozens in a ctn", "4 pieces in a ctn",
+  or **Sold singly**. The entry is that sentence with three slots (a typed
+  number, a unit: pieces, dozens, pairs, sets; an outer: ctn, box, bundle,
+  bag), never free text. A supplier's price is never kept without its
+  packing, and its price steps are named in those packs ("1 · 380k",
+  "1 ctn · 355k", "3 ctns · 340k").
 
 Sourcing's hand-offs all end on the same done screen and track: **Sent → the
 person who decides (pulsing ring) → what follows**: Send to Ruth, Ask Kiseka,
