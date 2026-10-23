@@ -52,6 +52,26 @@ The name rules it uses:
 
 "Plumbing" has no products, so it shows no tile. It needs no change.
 
+**DATA-06, product names (from the preview, 23 Oct): 13 to rename, waiting for your yes.** Only the name changes; ids, prices, stock and variants stay as they are.
+
+| ID | Now | Proposed |
+|---|---|---|
+| P293 | BOVOS Door Handle - Small | BOVOS Door Handle Small |
+| P094 | Bow Saw Blade - Bahco | Bow Saw Blade Bahco |
+| P381 | Drawer Handles - Flower | Drawer Handles Flower |
+| P435 | Drawer Runners - Maria | Drawer Runners Maria |
+| P235 | Flat Head (CSK) - Self Drilling | Flat Head (CSK) Self Drilling |
+| P179 | LAK Handles - Big | LAK Handles Big |
+| P484 | Masking Tape - Green | Masking Tape Green |
+| P266 | MEGA Mulper - Normal | MEGA Mulper Normal |
+| P323 | Mulper Frog - KYIKERE | Mulper Frog KYIKERE |
+| P269 | OMEGA Hinges - Normal | OMEGA Hinges Normal |
+| P264 | XY Mulper Hinges - Soft | XY Mulper Hinges Soft |
+| P271 | ZAWAINA Hinges - Normal | ZAWAINA Hinges Normal |
+| P273 | ZAWAINA Hinges - Soft | ZAWAINA Hinges Soft |
+
+"Half Bend(Type B)" isn't in this list, so it's a variant name, not a product name. `round-1-preview-2.sql` finds variant names like it. The DATA-05 moves and the aisle counts also come from that file. The first preview's results didn't come through, because the SQL editor shows only the last result of a script.
+
 ## Not changing / pushed back
 
 | ID | Why |
