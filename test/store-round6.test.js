@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 6, wording and consistency (store.html only; docs/audit/ROUND-6.md).
+ * Audit round 6, wording and consistency (store.html only; docs/audit/store/ROUND-6.md).
  *
  *   WORD-01 one resolver for every name: the name they chose, never a login handle.
  *   WORD-02 the shift is "passed"; "hand over" is only for goods at the gate.

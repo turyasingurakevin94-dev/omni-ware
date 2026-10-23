@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 3, reliability (0162; docs/audit/ROUND-3.md).
+ * Audit round 3, reliability (0162; docs/audit/store/ROUND-3.md).
  *
  *   REL-04 one "Waiting to send" list on Today, signal or not; "Not sent · N" in the header.
  *   REL-05 sending, kept on this phone, sent: green only after the server's yes.

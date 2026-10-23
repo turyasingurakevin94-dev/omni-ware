@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 5, roles and privacy (0164; docs/audit/ROUND-5.md).
+ * Audit round 5, roles and privacy (0164; docs/audit/store/ROUND-5.md).
  *
  *   PRIV-02 store_snapshot works: 0156's money hold is brought back with it.
  *   PRIV-03 a failed load says "Could not load the yard" on every tab; no direct reads, for anyone.

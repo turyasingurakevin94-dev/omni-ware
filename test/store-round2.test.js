@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Audit round 2, core workflows (docs/audit/ROUND-2.md).
+ * Audit round 2, core workflows (docs/audit/store/ROUND-2.md).
  *
  *   FLOW-01 check-in counts in the unit people see (Ctn or Dozen), keeps the line's own unit,
  *           and reads back through backText -- as Pack and the receipt do.

@@ -38,7 +38,7 @@ Do not regress: books vs shelf split, exact-match search ranking, the Take back 
 
 ### DATA-05 / DATA-06: the exact moves and renames (from the live list, waiting for your yes)
 
-This session can't read the live products, so the mapping isn't invented here. `docs/audit/round-1-preview.sql` is **read-only**: it lists every product in Furniture or with no category, with the aisle the name rules propose, plus every name with " - " or a bracket without a space and the proposed new name. Paste its results back and they go here as the table you approve.
+This session can't read the live products, so the mapping isn't invented here. `docs/audit/store/round-1-preview.sql` is **read-only**: it lists every product in Furniture or with no category, with the aisle the name rules propose, plus every name with " - " or a bracket without a space and the proposed new name. Paste its results back and they go here as the table you approve.
 
 The name rules it uses:
 
