@@ -23,7 +23,7 @@ button{font-family:inherit}
 </style>
 </helmet>
 <div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4EFE6; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
-  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><filter id="ink" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"></feDisplacementMap><feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="11" result="w"></feTurbulence><feColorMatrix in="w" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.6" result="wm"></feColorMatrix><feComposite in="d" in2="wm" operator="in"></feComposite></filter></svg>
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><filter id="ink" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"></feDisplacementMap><feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="11" result="w"></feTurbulence><feColorMatrix in="w" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.6" result="wm"></feColorMatrix><feComposite in="d" in2="wm" operator="in"></feComposite></filter><path id="ip-ring" d="M36 36 m-26 0 a26 26 0 1 1 52 0 a26 26 0 1 1 -52 0"></path></svg>
   <div style="position: absolute; inset: 0; overflow-y: auto">
     <!-- head: the item, and how far it has come -->
     <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 18px 22px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
@@ -71,10 +71,17 @@ button{font-family:inherit}
             <div style="display: flex; justify-content: space-around">
               <sc-for list="{{r.stamps}}" as="s" hint-placeholder-count="3">
                 <span style="width: 80px; display: flex; flex-direction: column; align-items: center; gap: 2px">
-                  <svg class="st" width="68" height="68" viewBox="0 0 68 68" role="img" aria-label="{{s.aria}}" style="transform: rotate({{s.rot}}deg); {{s.anim}}">
-                    <g filter="{{s.filter}}" fill="none" stroke="{{s.ink}}" opacity="{{s.op}}"><circle cx="34" cy="34" r="31" stroke-width="{{s.w1}}" stroke-dasharray="{{s.dash}}"></circle><circle cx="34" cy="34" r="26" stroke-width="{{s.w2}}"></circle></g>
-                    <text x="34" y="{{s.wy}}" text-anchor="middle" fill="{{s.ink}}" font-size="{{s.fs}}" font-weight="700" letter-spacing=".5" filter="{{s.filter}}" opacity="{{s.op}}">{{s.word}}</text>
-                    <text class="d" x="34" y="47" text-anchor="middle" fill="{{s.ink}}" font-size="7" font-weight="600" filter="{{s.filter}}" opacity="{{s.op}}">{{s.date}}</text>
+                  <svg class="st" width="74" height="74" viewBox="0 0 72 72" role="img" aria-label="{{s.aria}}" style="transform: rotate({{s.rot}}deg); {{s.anim}}">
+                    <g filter="{{s.filter}}" opacity="{{s.op}}">
+                      <circle cx="36" cy="36" r="34" fill="{{s.wash}}" stroke="{{s.ink}}" stroke-width="{{s.w1}}" stroke-dasharray="{{s.dash}}"></circle>
+                      <circle cx="36" cy="36" r="30.5" fill="none" stroke="{{s.ink}}" stroke-width="{{s.w2}}"></circle>
+                      <circle cx="36" cy="36" r="21.5" fill="none" stroke="{{s.ink}}" stroke-width="{{s.w3}}"></circle>
+                      <text fill="{{s.ink}}" font-size="5.4" font-weight="700" letter-spacing=".8"><textPath href="#ip-ring">{{s.ring}}</textPath></text>
+                      <path d="M23 30.5h26M23 43.5h26" fill="none" stroke="{{s.ink}}" stroke-width="{{s.w3}}"></path>
+                      <path d="M31.5 31v-2.5a4.5 4.5 0 0 1 9 0V31M30 31h12v8H30z" fill="none" stroke="{{s.ink}}" stroke-width="1.6" stroke-linejoin="round" opacity="{{s.lockOp}}"></path>
+                      <text x="36" y="{{s.wy}}" text-anchor="middle" fill="{{s.ink}}" font-size="{{s.fs}}" font-weight="700" letter-spacing=".4">{{s.word}}</text>
+                      <text class="d" x="36" y="{{s.dy}}" text-anchor="middle" fill="{{s.ink}}" font-size="5.6" font-weight="600">{{s.date}}</text>
+                    </g>
                   </svg>
                   <span style="font-size: 11px; font-weight: 700; text-align: center; {{s.capInk}}">{{s.cap}}</span>
                 </span>
@@ -103,17 +110,22 @@ button{font-family:inherit}
 class Component extends DCLogic {
   renderVals() {
     const OX = '#9A2E24', BLUE = '#2B3A8C', GREEN = '#1E6E47', PLUM = '#6E2A5E', RED = '#A3241C', NEXT = '#C47A1E', LOCK = '#B9AC95';
-    // [word, date, caption, ink, state] state: 'done' | 'next' | 'locked'
+    // [word, date, caption, ink, state, ring text] state: 'done' | 'next' | 'locked'
     const S = [
-      ['ASKED', '1 OCT', 'Asked · 3', OX, 'done'], ['SOURCED', '5 OCT', '2 suppliers', BLUE, 'done'], ['COMPARED', '7 OCT', 'Room strong', GREEN, 'done'],
-      ['PACKED', '10 OCT', 'One, boxed', BLUE, 'done'], ['PHOTO', '12 OCT', 'Passed 4/4', GREEN, 'done'], ['PLACED', '13 OCT', 'Tools, bay 3', BLUE, 'done'], ['HOLD', 'NEXT', 'Your call', NEXT, 'next'],
-      ['PRICED', 'RUTH', 'Ruth’s stamp', LOCK, 'locked'], ['PROVEN', 'DAY 30', 'On the shelf', LOCK, 'locked']
+      ['ASKED', '1 OCT', 'Asked · 3', OX, 'done', '3 ASKS • GRACE • PETER • KATO • '], ['SOURCED', '5 OCT', '2 suppliers', BLUE, 'done', 'KATWE 380,000 • KISEKA 395,000 • '],
+      ['COMPARED', '7 OCT', 'Room strong', GREEN, 'done', 'KIKUUBO 455,000 • ROOM STRONG • '],
+      ['PACKED', '10 OCT', 'One, boxed', BLUE, 'done', 'SOLD AS ONE • IN ITS OWN BOX • '], ['PHOTO', '12 OCT', 'Passed 4/4', GREEN, 'done', 'SHARP • BRIGHT • SQUARE • PLAIN • '],
+      ['PLACED', '13 OCT', 'Tools, bay 3', BLUE, 'done', 'TOOLS • BAY 3 • BY THE SPACERS • '], ['HOLD', 'NEXT', 'Your call', NEXT, 'next', ''],
+      ['PRICED', 'RUTH', 'Ruth’s stamp', LOCK, 'locked', ''], ['PROVEN', 'DAY 30', 'On the shelf', LOCK, 'locked', '']
     ];
     const ROT = [-7, 5, -3, 8, -6, 4, 0, 0, 0];
+    const WASH = { [OX]: 'rgba(154,46,36,.07)', [BLUE]: 'rgba(43,58,140,.07)', [GREEN]: 'rgba(30,110,71,.07)' };
     const stamp = (i) => {
-      const [word, date, cap, ink, st] = S[i], done = st === 'done';
-      return { word, date, cap, ink, rot: ROT[i], filter: done ? 'url(#ink)' : 'none', op: done ? '.9' : '1',
-        w1: done ? '2.6' : '2', w2: done ? '1' : '0', dash: done ? 'none' : '4 3.5', fs: word.length > 7 ? '10' : word.length > 6 ? '11' : '12.5', wy: '37',
+      const [word, date, cap, ink, st, ring] = S[i], done = st === 'done', locked = st === 'locked';
+      return { word, date, cap, ink, ring, rot: ROT[i], filter: done ? 'url(#ink)' : 'none', op: done ? '.92' : '1',
+        wash: done ? WASH[ink] : st === 'next' ? 'rgba(196,122,30,.06)' : 'none',
+        w1: done ? '3' : '1.8', w2: done ? '1' : '0', w3: done ? '.9' : '0', dash: done ? 'none' : '4 3.5',
+        lockOp: locked ? '1' : '0', fs: word.length > 7 ? '9' : word.length > 6 ? '10' : '11.5', wy: locked ? '50' : '40', dy: locked ? '58' : '50',
         anim: st === 'next' ? 'animation: owPulse 2.4s ease-in-out infinite' : '',
         capInk: done ? 'color:#1C2233' : st === 'next' ? 'color:#95530C' : 'color:#8A7A62',
         aria: 'Stamp ' + (i + 1) + ', ' + word.toLowerCase() + (done ? ', ' + date.toLowerCase() + ', ' + cap : st === 'next' ? ', next' : ', locked') };
