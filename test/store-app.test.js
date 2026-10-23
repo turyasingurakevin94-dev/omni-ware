@@ -49,7 +49,7 @@ function fixture(){
     savedQuotes: [], collectionTrips: [],
     staff: [{ id: 'W1', name: 'Musa Kato', phone: '0772111222', role: 'delivery', unavailable: false, userId: 'u1' }, { id: 'W2', name: 'Okello Peter', phone: '', role: 'worker', unavailable: false, userId: null }],
     customers: [{ id: 'C1', name: 'Kato Construction Ltd', phone: '', location: 'Ntinda' }],
-    agents: [{ id: 'A1', name: 'Agent One', paymentTerm: 'prepay' }],
+    agents: [{ id: 'A1', name: 'Agent One', paymentTerm: 'prepay', terms: 'before' }], // the worker app's name, and the Store phone's (0164)
     places: [{ name: 'Nakasero', lat: 0.3236, lng: 32.58 }, { name: 'Ntinda', lat: 0.354, lng: 32.615 }],
     routes: [], counts: [],
     categories: [], locations: ['Nakasero', 'Ntinda'], shopPlace: 'Nakasero',
@@ -81,7 +81,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, checkInTrip, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView, pickLines, heldForOrders, shelfAvailable, heldGone, tripWho, lineShortNow };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, D, render, rowToQuote, rowToTrip, quoteLineCount, quoteLinePack, orderDestination, orderIsBackdated, goodsBlockPreparing, packQueue, loadQueue, takeOrder, setPick, flushPicks, finishPack, loadOrders, markDelivered, handOver, tickTripLine, sendCount, changeOrder, levelsFor, fmtLevels, viewToday, viewShelf, pickView, pickLines, heldForOrders, shelfAvailable, heldGone, tripWho, lineShortNow };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -102,7 +102,31 @@ function fakeDb(tables){
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
   };
   return { writes, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb),
-    rpc: async () => ({ data: null, error: { message: 'no rpc' } }), storage: { from: () => ({ upload: async p => { writes.push(['upload', p]); return { error: null }; } }) } };
+    // Since round 5 the Store writes orders and trips only through its functions (0159/0162/0164); these answer
+    // as the database does -- only the Store's keys, a line's pick fields merged into the line -- and log the row they write.
+    rpc: async (name, a) => {
+      const clone = x => JSON.parse(JSON.stringify(x)), rows = tables.saved_quotes || [];
+      const row = () => rows.find(r => String(r.id) === String(a.p_id) && r.shop_id === a.p_shop);
+      const shown = r => r ? { id: r.id, client_name: r.client_name, client_phone: r.client_phone, date: r.date, status: r.status, invoiced: r.invoiced, invoiced_ts: r.invoiced_ts, voided: r.voided, payload: clone(r.payload || {}) } : null;
+      if (name === 'store_order') return { data: shown(row()), error: null };
+      if (name === 'store_patch_order') {
+        const r = row(); if (!r) return { data: null, error: { message: 'That order is no longer on the books.' } };
+        const allowed = ['assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt', 'bay', 'carrier', 'stageEnteredAt', 'stageLog',
+          'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'deliveredNote', 'handoverCheckedAt', 'creditAsk'];
+        const patch = clone(a.p_patch || {}); if ('letGoAsk' in patch) { patch.creditAsk = patch.letGoAsk; delete patch.letGoAsk; }
+        const payload = clone(r.payload || {});
+        Object.entries(patch).forEach(([k, v]) => { if (!allowed.includes(k)) return; if (v === null) delete payload[k]; else payload[k] = v; });
+        (a.p_items || []).forEach(ch => { const it = (payload.items || [])[ch.idx]; if (!it) return; ['pickStatus', 'pickedQty'].forEach(k => { if (!(k in ch)) return; if (ch[k] === null) delete it[k]; else it[k] = ch[k]; }); });
+        const moves = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
+        if (a.p_status && a.p_status !== r.status && !(moves[r.status] || []).includes(a.p_status)) return { data: null, error: { message: 'That order has moved on.', code: 'P0001' } };
+        const w = { payload }; if (a.p_status) w.status = a.p_status;
+        writes.push(['update', 'saved_quotes', clone(w), [r.id]]); Object.assign(r, clone(w));
+        return { data: shown(r), error: null };
+      }
+      if (name === 'store_patch_trip') { writes.push(['rpc', 'store_patch_trip', clone(a)]); const t = (tables.collection_trips || []).find(x => String(x.id) === String(a.p_id));
+        if (!t) return { data: null, error: null }; Object.entries(a.p_got || {}).forEach(([k, v]) => { if (t.lines[k]) t.lines[k].gotQty = v; }); t.status = a.p_status; return { data: true, error: null }; }
+      return { data: null, error: { message: 'no rpc ' + name, code: 'PGRST202' } };
+    }, storage: { from: () => ({ upload: async p => { writes.push(['upload', p]); return { error: null }; } }) } };
 }
 function page(db, data){
   const X = loadPage(db);
@@ -137,7 +161,7 @@ const P = page(fakeDb({}));
     orderRow(7, [it(1, 'P2', 4)], { assignedWorkerId: 'W2', pickingStatus: 'in_progress' }),
     orderRow(8, [it(1, 'P2', 4)], { pickingStatus: 'done' }),
     orderRow(9, [it(1, 'P2', 4)], { createdAt: iso(NOW + 864e5 * 3) }),
-    orderRow(10, [it(1, 'P2', 4)], { originAgentId: 'A1', agentPaymentStatus: 'unpaid' }),
+    orderRow(10, [it(1, 'P2', 4)], { originAgentId: 'A1', agentPaymentStatus: 'unpaid', agentSettled: false }),
   ];
   const qs = rows.map(r => P.rowToQuote(JSON.parse(JSON.stringify(r))));
   const qa = rows.map(r => P.rowToQuote(JSON.parse(JSON.stringify(r))));
@@ -191,7 +215,7 @@ const P = page(fakeDb({}));
     const { db, X } = withOrder(orderRow(22, [it(1, 'P2', 4)], { carrier: { kind: 'staff', staffId: 'W1', name: 'Musa' }, assignedDeliveryId: 'W1' }, { status: 'pending_delivery' }));
     await X.markDelivered(22, 'Joseph', null);
     const r = db.tables.saved_quotes[0];
-    t.check(r.status === 'completed' && r.payload.deliveredTo === 'Joseph' && r.payload.deliveredAt && r.payload.deliveredPhoto === null, 'the door marks it delivered with who took it, as saveDeliveredProof does');
+    t.check(r.status === 'completed' && r.payload.deliveredTo === 'Joseph' && r.payload.deliveredAt && r.payload.deliveredPhoto == null, 'the door marks it delivered with who took it, as saveDeliveredProof does');
     t.check(!db.writes.some(w => w[1] === 'saved_quotes' && 'invoiced' in w[2]), 'delivering never touches invoicing');
   }
   // 3b'. with a photo
@@ -216,15 +240,15 @@ const P = page(fakeDb({}));
     let threw = false; try { await X.changeOrder(24, q => { q.status = 'completed'; }); } catch (_e) { threw = true; }
     t.check(threw && db.tables.saved_quotes[0].status === 'awaiting_goods', 'an order still waiting on goods cannot be pushed to Completed from the yard');
   }
-  // 4a. a trip off the truck
+  // 4a. a line onto the truck: only through store_patch_trip, which touches gotQty and the status (0159)
   {
-    const trip = { id: 'T1', shop_id: SH, supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', lines: [{ orderId: 20, lineId: 1, productId: 'P2', qty: 20, gotQty: 20 }, { orderId: 21, lineId: 1, productId: 'P1', variantIdx: 0, qty: 40, gotQty: 38 }] };
+    const trip = { id: 'T1', shop_id: SH, supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', lines: [{ orderId: 20, lineId: 1, productId: 'P2', qty: 20, gotPrice: 1400 }, { orderId: 21, lineId: 1, productId: 'P1', qty: 38 }] };
     const db = fakeDb({ collection_trips: [JSON.parse(JSON.stringify(trip))] }), X = page(db);
     X.D().collectionTrips = [X.rowToTrip(trip)];
-    await X.checkInTrip('T1', { 1: 36 });
-    const r = db.tables.collection_trips[0];
-    t.check(r.lines[0].yardQty === 20 && r.lines[1].yardQty === 36 && r.lines[1].gotQty === 38 && r.yard_checked_at && r.yard_checked_by === 'u1', 'the yard\'s count rides on each line beside what the buyer said, with who checked it and when');
-    t.check(r.status === 'collected', 'the trip stays for the console to check in: the yard never confirms it');
+    await X.tickTripLine('T1', 1, true);
+    const w = db.writes.find(x => x[1] === 'store_patch_trip'), r = db.tables.collection_trips[0];
+    t.check(w && w[2].p_got[1] === 38 && w[2].p_status === 'collecting' && !db.writes.some(x => x[1] === 'collection_trips'), 'a line ticked onto the truck goes through store_patch_trip, never a direct write');
+    t.check(r.lines[1].gotQty === 38 && r.lines[0].gotPrice === 1400, 'only what came is written; the trip\'s own fields are kept');
   }
   // 4b. a blind count
   {
@@ -253,7 +277,7 @@ const P = page(fakeDb({}));
       X.rowToQuote(orderRow(40, [it(1, 'P1', 40), it(2, 'P2', 10)])),
       X.rowToQuote(orderRow(41, [it(1, 'P2', 4, { pickStatus: 'done' })], { pickingStatus: 'done', pickingDoneAt: NOW - 6e5 })),
       X.rowToQuote(orderRow(42, [it(1, 'P2', 4)], { carrier: { kind: 'staff', staffId: 'W1', name: 'Musa' }, assignedDeliveryId: 'W1' }, { status: 'pending_delivery' })),
-      X.rowToQuote(orderRow(43, [it(1, 'P3', 4, { pickStatus: 'short', pickedQty: 2 })], { pickingStatus: 'done', deliveryMode: 'agent_pickup', originAgentId: 'A1', agentPaymentStatus: 'paid' })),
+      X.rowToQuote(orderRow(43, [it(1, 'P3', 4, { pickStatus: 'short', pickedQty: 2 })], { pickingStatus: 'done', deliveryMode: 'agent_pickup', originAgentId: 'A1', agentPaymentStatus: 'paid', agentSettled: true })),
     ];
     X.D().collectionTrips = [X.rowToTrip({ id: 'T9', supplier_id: 'S1', status: 'collected', assigned_worker_id: 'W2', collected_at: iso(NOW - 6e5), lines: [{ orderId: 40, lineId: 2, productId: 'P2', productName: 'Cement Hima 50kg', unit: 'bag', qty: 10, gotQty: 10 }] })];
     X.D().counts = [{ id: 'c1', aisle: 'Aisle A', countedByName: 'Musa', lines: [{ key: 'P3', productId: 'P3', name: 'Door hinges 4"', counted: 200, system: 204 }], status: 'sent', createdAt: iso(NOW) }];

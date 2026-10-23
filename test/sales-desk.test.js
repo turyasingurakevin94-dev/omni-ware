@@ -132,7 +132,7 @@ const invite = read('supabase/functions/invite-worker/index.ts');
   t.check(gateAt > 0 && gateAt < waSend.indexOf('action === "broadcast"') && gateAt < waSend.indexOf('action === "register"'),
     'asked before any of those actions runs');
 
-  t.check(/select\("id, user_id, role"\)/.test(invite) && /const memberRole = isSales \? "sales" : isBuyer \? "buyer" : isStore \? "store" : isManager \? "manager" : isAccounts \? "accounts" : isSourcing \? "sourcing" : "staff"/.test(invite),
+  t.check(/select\("id, user_id, role(, name)?"\)/.test(invite) && /const memberRole = isSales \? "sales" : isBuyer \? "buyer" : isStore \? "store" : isManager \? "manager" : isAccounts \? "accounts" : isSourcing \? "sourcing" : "staff"/.test(invite),
     'an invite gives somebody who sells a sales membership, somebody who buys a buyer one, somebody who runs the store a store one, a manager a manager one, who keeps the books an accounts one, everybody else staff as before');
   t.check(/redirectTo: isSales \? ADMIN_APP_URL : isBuyer \? BUYER_APP_URL : isStore \? STORE_APP_URL : isManager \? MANAGER_APP_URL : isAccounts \? ACCOUNTS_APP_URL : isSourcing \? SOURCING_APP_URL : WORKER_APP_URL/.test(invite),
     'and lands a salesperson in the admin app and a buyer in the Buyer app, not the worker app');
