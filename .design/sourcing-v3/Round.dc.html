@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Photo round</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Oswald:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.st text{font-family:Oswald,'Figtree',sans-serif}
+.st .d{font-family:'IBM Plex Mono',monospace}
+@keyframes owSlam{0%{transform:scale(1.9) rotate(-8deg);opacity:0}55%{transform:scale(.9) rotate(-8deg);opacity:1}75%{transform:scale(1.04) rotate(-8deg)}100%{transform:scale(1) rotate(-8deg)}}
+@keyframes owIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes owBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes owFlash{0%{opacity:.85}100%{opacity:0}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4EFE6; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><filter id="ink" x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"></feDisplacementMap><feTurbulence type="fractalNoise" baseFrequency="0.32" numOctaves="2" seed="11" result="w"></feTurbulence><feColorMatrix in="w" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3 0 0 0 2.6" result="wm"></feColorMatrix><feComposite in="d" in2="wm" operator="in"></feComposite></filter></svg>
+
+  <!-- head: where you are in the round -->
+  <div style="flex: none; background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 18px 18px; color: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="Room.dc.html" aria-label="Leave the round" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 17px; font-weight: 700">Photo round</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">The stamp lands when the photo passes</span></span>
+      <span class="m" style="font-size: 20px; font-weight: 600"><span style="color: #6FDCB0">{{doneN}}</span><span style="color: #B3BCD2"> / 11</span></span>
+    </div>
+    <div role="img" aria-label="{{barAria}}" style="display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px">
+      <sc-for list="{{segs}}" as="s" hint-placeholder-count="11"><i style="height: 6px; border-radius: 999px; {{s}}"></i></sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{working}}" hint-placeholder-val="{{ true }}">
+  <div style="flex: 1; min-height: 0; padding: 16px 18px 0; display: flex; flex-direction: column; gap: 14px; animation: owIn .3s ease-out">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+      <span style="min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{cur.name}}</span><span style="font-size: 12px; font-weight: 600; color: #6B5A43"><span class="m">{{cur.worth}}</span> asked for · {{cur.pack}}</span></span>
+      <span role="img" aria-label="4 of 9 stamped, waits for the photo" style="flex: none; display: flex; gap: 3px; padding-bottom: 3px"><sc-for list="{{dots}}" as="d" hint-placeholder-count="9"><i style="width: 8px; height: 8px; border-radius: 999px; box-sizing: border-box; {{d}}"></i></sc-for></span>
+    </div>
+
+    <!-- the frame: viewfinder, then the photo, then the stamp on it -->
+    <div style="position: relative; height: 330px; border-radius: 22px; overflow: hidden; {{frameBg}}">
+      <sc-if value="{{shoot}}" hint-placeholder-val="{{ true }}">
+        <span aria-hidden="true" style="position: absolute; inset: 34px; border-radius: 6px; box-shadow: 0 0 0 999px rgba(0,0,0,.28)"></span>
+        <span aria-hidden="true" style="position: absolute; left: 34px; top: 34px; width: 26px; height: 26px; border-left: 3px solid #FFFFFF; border-top: 3px solid #FFFFFF; border-radius: 6px 0 0 0"></span>
+        <span aria-hidden="true" style="position: absolute; right: 34px; top: 34px; width: 26px; height: 26px; border-right: 3px solid #FFFFFF; border-top: 3px solid #FFFFFF; border-radius: 0 6px 0 0"></span>
+        <span aria-hidden="true" style="position: absolute; left: 34px; bottom: 34px; width: 26px; height: 26px; border-left: 3px solid #FFFFFF; border-bottom: 3px solid #FFFFFF; border-radius: 0 0 0 6px"></span>
+        <span aria-hidden="true" style="position: absolute; right: 34px; bottom: 34px; width: 26px; height: 26px; border-right: 3px solid #FFFFFF; border-bottom: 3px solid #FFFFFF; border-radius: 0 0 6px 0"></span>
+        <span style="position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12px; font-weight: 700; color: #FFFFFF">Square, on the white board, near the window</span>
+      </sc-if>
+      <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}">
+        <span aria-hidden="true" style="position: absolute; inset: 0; background: #FFFFFF; animation: owFlash .35s ease-out forwards"></span>
+      </sc-if>
+      <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; margin: -82px 0 0 -75px; display: flex; align-items: center; justify-content: center; {{objStyle}}"><svg width="132" height="132" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="{{cur.icon}}"></path></svg></span>
+      <sc-if value="{{passed}}" hint-placeholder-val="{{ false }}">
+        <svg class="st" width="150" height="150" viewBox="0 0 140 140" role="img" aria-label="{{stampAria}}" style="position: absolute; right: 12px; bottom: 10px; transform: rotate(-8deg); animation: owSlam .45s cubic-bezier(.2,.9,.3,1.2) both">
+          <g filter="url(#ink)" fill="none" stroke="#1E6E47" opacity=".9">
+            <circle cx="70" cy="70" r="64" stroke-width="2.5" stroke-dasharray="3 3"></circle><circle cx="70" cy="70" r="58" stroke-width="4"></circle><circle cx="70" cy="70" r="40" stroke-width="1.4"></circle>
+            <path id="rd-ring" d="M70 70 m-49 0 a49 49 0 1 1 98 0 a49 49 0 1 1 -98 0" stroke="none"></path>
+            <text fill="#1E6E47" stroke="none" font-size="9.5" font-weight="700" letter-spacing="2"><textPath href="#rd-ring">CHECKED ON THE PHONE • SHARP • BRIGHT • </textPath></text>
+            <text x="70" y="68" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="13" font-weight="700" letter-spacing="1">PHOTO</text>
+            <text x="70" y="84" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="15" font-weight="700" letter-spacing="1">PASSED</text>
+            <text class="d" x="70" y="98" text-anchor="middle" fill="#1E6E47" stroke="none" font-size="8.5" font-weight="600">4/4 · 17 OCT</text>
+          </g>
+        </svg>
+      </sc-if>
+    </div>
+
+    <!-- the four checks, the same four every time -->
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
+        <span style="height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 700; {{c.style}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>{{c.w}}</span>
+      </sc-for>
+    </div>
+    <span style="min-height: 18px; font-size: 13px; font-weight: 600; {{noteInk}}">{{note}}</span>
+  </div>
+
+  <!-- the dock: one thing to do, always in the same place -->
+  <div style="flex: none; padding: 12px 18px 26px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+    <button type="button" onClick="{{skip}}" style="all: unset; cursor: pointer; min-width: 92px; height: 44px; display: flex; flex-direction: column; justify-content: center; font-size: 13px; font-weight: 700; color: #1C2233; {{skipStyle}}">Skip for now<span style="font-size: 11px; font-weight: 600; color: #6B5A43">goes to the end</span></button>
+    <sc-if value="{{showShutter}}" hint-placeholder-val="{{ true }}">
+      <button type="button" aria-label="{{shutterLabel}}" onClick="{{shootIt}}" style="all: unset; cursor: pointer; width: 78px; height: 78px; border-radius: 999px; box-shadow: inset 0 0 0 4px #16203C; display: flex; align-items: center; justify-content: center"><span style="width: 62px; height: 62px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{shutterIcon}}"></path></svg></span></button>
+    </sc-if>
+    <sc-if value="{{passed}}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{next}}" style="all: unset; cursor: pointer; position: relative; overflow: hidden; height: 56px; padding: 0 20px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px"><span aria-hidden="true" style="position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #6FDCB0; transform-origin: left; animation: owBar 1.8s linear both"></span>Next<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></button>
+    </sc-if>
+    <span style="min-width: 92px; display: flex; flex-direction: column; align-items: flex-end; font-size: 11px; font-weight: 600; color: #6B5A43">up next<span style="max-width: 110px; font-size: 13px; font-weight: 700; color: #1C2233; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{upNext}}</span></span>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{finished}}" hint-placeholder-val="{{ false }}">
+  <div style="flex: 1; padding: 26px 22px 28px; display: flex; flex-direction: column; gap: 20px; animation: owIn .35s ease-out">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding-top: 10px">
+      <div role="img" aria-label="11 photo stamps" style="display: grid; grid-template-columns: repeat(6, 40px); gap: 8px; justify-content: center">
+        <sc-for list="{{doneStamps}}" as="s" hint-placeholder-count="11">
+          <svg class="st" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" style="transform: rotate({{s}}deg)"><g filter="url(#ink)" fill="none" stroke="#1E6E47"><circle cx="20" cy="20" r="17" stroke-width="2"></circle><circle cx="20" cy="20" r="13.5" stroke-width=".9"></circle></g><text x="20" y="23.5" text-anchor="middle" fill="#1E6E47" font-size="9" font-weight="700" filter="url(#ink)">PHOTO</text></svg>
+        </sc-for>
+      </div>
+      <span style="font-size: 24px; font-weight: 700; margin-top: 8px">11 photos, 11 stamps</span>
+      <span style="font-size: 14px; font-weight: 600; color: #6B5A43">{{retakeLine}} · about <span class="m">14</span> minutes</span>
+    </div>
+    <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #6B5A43">WHERE THEY WENT</span>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px"><span class="m" style="font-size: 22px; font-weight: 600; color: #6B5A43">11 → 0</span><span style="font-size: 12px; font-weight: 700">Photo tray</span></span>
+        <svg width="28" height="14" viewBox="0 0 28 14" aria-hidden="true"><path d="M1 7h24m-5-5 5 5-5 5" fill="none" stroke="#1E6E47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px"><span class="m" style="font-size: 22px; font-weight: 600; color: #1E6E47">4 → 15</span><span style="font-size: 12px; font-weight: 700">Aisle tray</span></span>
+      </div>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+      <a href="Room.dc.html" style="height: 54px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">Aisle round · 15 items</a>
+      <a href="Rooms.dc.html" style="height: 44px; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #1C2233">Back to passports</a>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // the photo tray, by worth; the first three are already done
+    this.state = { order: [3, 4, 5, 6, 7, 8, 9, 10], done: [0, 1, 2], phase: 'shoot', retried: {}, retakes: 0 };
+  }
+  shootIt() {
+    const S = this.state, k = S.order[0];
+    if (S.phase !== 'shoot' && S.phase !== 'failed') return;
+    this.setState({ phase: 'checking' });
+    setTimeout(() => {
+      if (this.state.order[0] !== k) return;
+      // the masonry nails come out dark the first time, as a real bag in a dim corner would
+      if (k === 4 && !this.state.retried[k]) this.setState({ phase: 'failed', retried: { ...this.state.retried, [k]: true }, retakes: this.state.retakes + 1 });
+      else { this.setState({ phase: 'passed' }); setTimeout(() => { if (this.state.order[0] === k && this.state.phase === 'passed') this.next(); }, 1800); }
+    }, 750);
+  }
+  next() {
+    const S = this.state;
+    if (S.phase !== 'passed') return;
+    this.setState({ done: [...S.done, S.order[0]], order: S.order.slice(1), phase: 'shoot' });
+  }
+  skip() {
+    const S = this.state;
+    if (S.order.length < 2 || S.phase === 'checking' || S.phase === 'passed') return;
+    this.setState({ order: [...S.order.slice(1), S.order[0]], phase: 'shoot' });
+  }
+  renderVals() {
+    const S = this.state;
+    const ITEMS = [
+      ['Spirit level 600mm', '180,000', 'one piece', 'M2 9h20v6H2zM10 11h4v2h-4z'],
+      ['Tape measure 5m', '150,000', 'one piece', 'M4 6h12a4 4 0 0 1 4 4v8H8a4 4 0 0 1-4-4zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM20 18h2'],
+      ['Trowel 8"', '110,000', 'one piece', 'M3 15l9-9 6 6-9 9zM15 9l5-5'],
+      ['Grout float, rubber', '90,000', 'one piece', 'M3 13h18v5H3zM9 13V9a3 3 0 0 1 6 0v4'],
+      ['Masonry nails 3"', '85,000', '1 kg bag', 'M6 4h12l1 16H5zM9 9v7M12 9v7M15 9v7'],
+      ['Paint tray 9"', '75,000', 'one piece', 'M3 7h18l-3 11H6zM6 11h12'],
+      ['Chalk line, 30m', '65,000', 'one piece', 'M5 6h10a3 3 0 0 1 3 3v6H8a3 3 0 0 1-3-3zM18 12h4M11 12h.01'],
+      ['Cable ties 300mm', '60,000', 'bag of 100', 'M4 20 18 6M7 20 20 7M18 6l2-2'],
+      ['Wire brush', '50,000', 'one piece', 'M3 14h11v4H3zM14 15h7M5 14v-4M8 14v-4M11 14v-4'],
+      ['Safety goggles', '45,000', 'one piece', 'M3 10h18v5a3 3 0 0 1-3 3h-3l-3-3-3 3H6a3 3 0 0 1-3-3z'],
+      ['Rubber gloves', '30,000', 'pair', 'M8 21v-8L5 9V5h2v4h1V3h2v6h1V3h2v6h1V4h2v9l-2 8z']
+    ];
+    const P = S.phase, k = S.order[0], working = S.order.length > 0;
+    const cur = working ? { name: ITEMS[k][0], worth: ITEMS[k][1], pack: 'packed as ' + ITEMS[k][2], icon: ITEMS[k][3] } : { name: '', worth: '', pack: '', icon: '' };
+    const dn = S.done.length + (P === 'passed' ? 1 : 0);
+    const segs = Array.from({ length: 11 }, (_, i) => i < S.done.length ? 'background:#6FDCB0' : i === S.done.length && working ? (P === 'passed' ? 'background:#6FDCB0' : 'background:#F5B26B') : 'background:rgba(255,255,255,.16)');
+    const INKS = ['#9A2E24', '#2B3A8C', '#1E6E47', '#2B3A8C'];
+    const dots = Array.from({ length: 9 }, (_, i) => (i < 4 ? 'background:' + INKS[i] : i === 4 ? (P === 'passed' ? 'background:#1E6E47' : 'border:2px solid #C47A1E') : 'border:1.5px solid #D3C8B4') + (i === 2 || i === 6 || i === 7 ? ';margin-right:3px' : ''));
+    const CK = ['Sharp', 'Bright', 'Square', 'Plain'];
+    const tick = 'M5 12l5 5 9-10', cross = 'M6 6l12 12M18 6 6 18', dash = 'M7 12h10';
+    const checks = CK.map((w, i) => {
+      if (P === 'shoot' || P === 'checking') return { w, icon: dash, style: P === 'checking' ? 'background:#FFFFFF;color:#6B5A43;box-shadow:inset 0 0 0 1px #E3DACB;opacity:.7' : 'background:#FFFFFF;color:#6B5A43;box-shadow:inset 0 0 0 1px #E3DACB' };
+      if (P === 'failed' && i === 1) return { w: 'Too dark', icon: cross, style: 'background:#FBE5E2;color:#8E2A22' };
+      return { w, icon: tick, style: 'background:#E3F4EA;color:#0F6B43' };
+    });
+    const notes = { shoot: ['Four checks run on the phone. All four ink the stamp.', 'color:#6B5A43'], checking: ['Checking…', 'color:#6B5A43'],
+      failed: ['Too dark. Move the bag to the window and take it again.', 'color:#8E2A22'], passed: ['Stamped. On to the aisle tray.', 'color:#0F6B43'] };
+    const after = S.order[1] != null ? ITEMS[S.order[1]][0] : 'the summary';
+    return {
+      working, finished: !working, cur, dots, segs, doneN: dn,
+      barAria: dn + ' of 11 photos stamped',
+      shoot: P === 'shoot' || P === 'failed', shot: P === 'checking', passed: P === 'passed',
+      frameBg: P === 'shoot' || P === 'failed' ? 'background:linear-gradient(160deg,#4A4F5C 0%,#2C303A 100%)' : 'background:linear-gradient(160deg,#FFFFFF 0%,#F3EEE4 100%);box-shadow:inset 0 0 0 1px #E3DACB',
+      objStyle: P === 'shoot' ? 'color:#E7E2D8' : P === 'failed' ? 'color:#8A8F9C' : 'color:#3C4357',
+      checks, note: notes[P][0], noteInk: notes[P][1],
+      showShutter: P !== 'passed', shutterLabel: P === 'failed' ? 'Take it again' : 'Take the photo', shutterIcon: P === 'failed' ? 'M4 12a8 8 0 1 0 3-6.2M4 4v4h4' : 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+      stampAria: 'Photo stamp: passed four of four checks, 17 October',
+      shootIt: () => this.shootIt(), next: () => this.next(), skip: () => this.skip(),
+      skipStyle: S.order.length < 2 || P === 'checking' || P === 'passed' ? 'opacity:.35;pointer-events:none' : '',
+      upNext: after, retakeLine: S.retakes === 1 ? '1 retake' : S.retakes + ' retakes',
+      doneStamps: [-8, 6, -3, 9, -11, 4, -6, 10, -2, 7, -9]
+    };
+  }
+}
+</script>
+</body>
+</html>

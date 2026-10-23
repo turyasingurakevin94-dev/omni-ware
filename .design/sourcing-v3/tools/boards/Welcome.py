@@ -8,15 +8,14 @@ W = 'rgba(255,255,255,.07)'
 def card(inner, pad='16px'):
     return f'<div style="width: 100%; box-sizing: border-box; border-radius: 22px; background: {W}; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); padding: {pad}; display: flex; flex-direction: column; gap: 12px">{inner}</div>'
 
-# 1 · one door: the funnel bar and the six checks
+# 1 · one door: the funnel bar and the nine stamps
 segs = ''.join(f'<span style="flex: {n}; background: {c}"></span>' for n, c in [(9, 'rgba(255,255,255,.22)'), (6, 'rgba(255,255,255,.4)'), (4, 'rgba(255,255,255,.6)'), (3, '#FFFFFF'), (2, 'repeating-linear-gradient(135deg, rgba(245,178,107,.8) 0 4px, transparent 4px 8px)'), (5, '#6FDCB0')])
-six = ''.join(f'<span style="display: flex; flex-direction: column; align-items: center; gap: 6px"><span style="width: 100%; height: 8px; border-radius: 999px; background: {c}"></span><span style="font-size: 10px; font-weight: 700; color: #B3BCD2">{w}</span></span>'
-              for c, w in [('#6FDCB0', 'Photo'), ('#6FDCB0', 'Pack'), ('#6FDCB0', 'Supply'), ('#6FDCB0', 'Hold'), ('#6FDCB0', 'Name'), ('rgba(255,255,255,.18)', 'Markup')])
+nine = stamp_strip(['in'] * 7 + ['no', 'no'], 'Seven stamps from Moses, then Ruth prices it, then 30 days prove it')
 pic0 = card('<span style="font-size: 12px; font-weight: 700; color: #B3BCD2">An ask comes in</span>'
             f'<div style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 3px">{segs}</div>'
             '<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #B3BCD2"><span>just asked</span><span>on sale</span></div>') + card(
-            '<span style="font-size: 12px; font-weight: 700; color: #B3BCD2">It passes six checks</span>'
-            f'<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px">{six}</div>')
+            '<span style="font-size: 12px; font-weight: 700; color: #B3BCD2">It earns nine stamps in four rooms</span>'
+            + nine)
 
 # 2 · Today: the walk, three stops
 def wstop(name, kind, jobs, first=False):
@@ -39,9 +38,9 @@ pic2 = card('<div style="display: flex; align-items: center; gap: 12px"><span st
        + card('<span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">118<span style="color: #6FDCB0">,000</span></span><span style="font-size: 13px; font-weight: 700">The 000 key</span>', '14px')
        + '</div>')
 
-# 4 · six checks, then Ruth prices it
+# 4 · seven stamps, then Ruth prices it
 tr = track([
-    ('done', '', 'You', 'six checks', '#B3BCD2'),
+    ('done', '', 'You', 'seven stamps', '#B3BCD2'),
     ('now', '<span style="width: 44px; height: 44px; border-radius: 999px; background: #F6E4F1; color: #7A3268; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #19223F, 0 0 0 5px #F5B26B; animation: owRingA 2s infinite">RN</span>', 'Ruth', 'sets the price', '#F5B26B'),
     ('later', svg('M3 21V8l9-5 9 5v13M7 21v-8h10v8M7 17h10', 19, 2), 'On sale', 'askers told', '#B3BCD2'),
 ], 'Your phone buzzes at each step')
@@ -102,7 +101,7 @@ script = '''class Component extends DCLogic {
       ['One door for every new item', 'Asks from Sales, agents and searches come to you. You take each one to on sale.'],
       ['Today puts the next job first', 'The walk plans your stops by area. Every job shows the money behind it.'],
       ['A price in two taps', 'Same, or a new figure on the shillings keypad. Or just say it.'],
-      ['Six checks, then Ruth prices it', 'Photo, packing, suppliers, the hold, name and aisle. Ruth sets the markup; the askers are told.'],
+      ['Nine stamps, then it is proven', 'You stamp it asked, sourced, compared, packed, photographed, placed and held. Ruth prices it; 30 days on the shelf prove it.'],
       ['It learns what sells', 'Thirty days on, each item shows what sold against what you expected.'],
       ['Two things before you start', 'Both can be changed later in You.']
     ];

@@ -10,7 +10,7 @@ for(const fn of fs.readdirSync(dir).filter(f=>f.endsWith('.dc.html'))){
   for(const r of s.matchAll(/([A-Za-z0-9]+\.dc\.html)/g)) if(!fs.existsSync(path.join(dir,r[1]))){console.log('LINK',fn,r[1]);bad++}
   class DCLogic{constructor(p){this.props=p;this.state={}}setState(u){this.state={...this.state,...(typeof u==='function'?u(this.state):u)}}}
   let C;try{C=new Function('DCLogic',m[2]+';return Component')(DCLogic)}catch(e){console.log('PARSE',fn,e.message);bad++;continue}
-  const c=new C({});const walk=(v,d)=>{if(d>4||v==null)return;if(typeof v==='function'){try{v()}catch(e){console.log('HANDLER',fn,e.message);bad++}}else if(typeof v==='object')for(const x of Object.values(v))walk(x,d+1)};
+  const c=new C({});const walk=(v,d)=>{if(d>4||v==null)return;if(typeof v==='function'){try{v({target:{value:'2',checked:true},preventDefault(){},stopPropagation(){}})}catch(e){console.log('HANDLER',fn,e.message);bad++}}else if(typeof v==='object')for(const x of Object.values(v))walk(x,d+1)};
   try{for(let i=0;i<3;i++)walk(c.renderVals(),0);c.renderVals()}catch(e){console.log('RENDER',fn,e.message);bad++}
 }
 console.log(bad?bad+' problems':'all boards OK');process.exit(bad?1:0);

@@ -44,7 +44,7 @@ for x in [X[0], X[2], X[3], X[4]]:
     parts.append(varrow(x + 128, 776, 95, '#95530C', True))
 parts += [
     '<div style="position: absolute; left: 64px; top: 64px; font-size: 40px; font-weight: 700; letter-spacing: -.02em; line-height: 48px">Sourcing · every new item passes one door</div>',
-    '<div style="position: absolute; left: 64px; top: 124px; width: 1120px; font-size: 18px; font-weight: 500; line-height: 28px; color: #5F6980">Asks and searches come in. Moses finds the item and its suppliers, and six checks make it ready. Ruth prices it and it goes on sale in every app. A decision that is someone else’s goes to them by push. Nothing waits for the owner.</div>',
+    '<div style="position: absolute; left: 64px; top: 124px; width: 1120px; font-size: 18px; font-weight: 500; line-height: 28px; color: #5F6980">Asks and searches come in. Moses finds the item and its suppliers, and seven stamps make it ready. Ruth prices it, it goes on sale in every app, and 30 days on the New-in shelf prove it. A decision that is someone else’s goes to them by push. Nothing waits for the owner.</div>',
     '<div style="position: absolute; left: 1408px; top: 72px; width: 264px; height: 40px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: #5F6980"><span style="display: inline-block; width: 28px; height: 2px; background: #16203C"></span>Sourcing’s line</div>',
     '<div style="position: absolute; left: 1408px; top: 112px; width: 264px; height: 40px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: #7A4A02"><span style="display: inline-block; width: 28px; border-top: 2px dashed #95530C"></span>a hand-off, by push</div>',
     person(X[0], 'GA', 'sky', 'Grace · Sales', 'asks for a customer'),
@@ -54,8 +54,8 @@ parts += [
     person(X[4], 'KH', 'manager', 'Rival shops', 'Kikuubo · Nateete'),
     job(X[0], 1, 'Hunt', 'Who sells it, by what they sell', 'one slide ' + ARW + ' asked on WhatsApp', 'search'),
     job(X[1], 2, 'Price', 'At the counter or on the walk', 'say it, tap Same, or read their list', 'tag'),
-    job(X[2], 3, 'Six checks', 'Photo, packing, suppliers, hold, name', 'filled for you where it is known', 'tick'),
-    job(X[3], 4, 'Send to Ruth', 'Fix the gaps, then one slide', 'one slide ' + ARW + ' with Ruth', 'send'),
+    job(X[2], 3, 'Seven stamps', 'Find and Prepare: asked to held', 'a round stamps many at once', 'tick'),
+    job(X[3], 4, 'Ruth prices', 'Held stamped, it lands in her tray', 'her stamp ' + ARW + ' the New-in shelf', 'send'),
     job(X[4], None, 'Prices', 'Fresh prices and better deals', 'beside the line, any time', 'deal', dashed=True),
     exc(X[0], 'Nobody we know sells it ' + ARW + ' add the supplier, then ask'),
     exc(X[2], 'Consign ' + ARW + ' Kiseka must agree first'),
@@ -66,7 +66,7 @@ parts += [
     '<div style="position: absolute; left: 64px; top: 1032px; font-size: 22px; font-weight: 700; letter-spacing: -.01em">From the job to done</div>',
     taps(X[0], 1, 'tap a price', ['Same price · or All the same for a stop']),
     taps(X[1], 2, 'to say a price', ['Hold the mic and say it', 'Save · same price']),
-    taps(X[2], 3, 'to send to Ruth', ['Take the photo', 'Pick how we hold it', 'Slide to send to Ruth']),
+    taps(X[2], 3, 'to stamp it held', ['Pick how we hold it', 'Suggest a first batch', 'Hold to ink the stamp']),
     taps(X[3], 2, 'to ask a supplier', ['Pick the old prices', 'Slide to ask Kiseka']),
     taps(X[4], 0, 'trips for old prices', ['They answer in the supplier app']),
 ]

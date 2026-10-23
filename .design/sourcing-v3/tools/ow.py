@@ -79,7 +79,7 @@ def page(title, body, script, data_props='{"$preview":{"width":390,"height":844}
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Oswald:wght@500;600;700&amp;display=swap" rel="stylesheet">
 <style>
 body{{margin:0}}
 /* figures in the mono face everywhere, words in Figtree: digits come from Plex Mono */
@@ -369,7 +369,7 @@ def seg(sc_list, item='s'):
 
 
 TABS = [('Today', 'Main.dc.html', 'M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11'),
-        ('Funnel', 'Funnel.dc.html', 'M3 5h18l-7 8v6l-4-2v-4z'),
+        ('Passports', 'Rooms.dc.html', 'M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2zM9 8h6M9 12h6'),
         None,
         ('Prices', 'Prices.dc.html', 'M3 12V4h8l10 10-8 8zM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z'),
         ('Suppliers', 'Suppliers.dc.html', 'M3 21V9l9-5 9 5v12M8 21v-7h8v7')]
@@ -427,3 +427,15 @@ def home_scroll(inner):
 
 DOT = '<span style="width: 3px; height: 3px; border-radius: 999px; background: #5F6A85"></span>'
 LIVE = '<span style="display: flex; align-items: center; gap: 5px; color: #6FDCB0"><span style="width: 7px; height: 7px; border-radius: 999px; background: #6FDCB0"></span>Live</span>'
+
+
+def stamp_strip(states, aria):
+    """Nine stamps in four rooms on the navy head. states: 9 of 'in' (inked), 'chk' (filled for you, to check), 'gap', 'no' (not yet)."""
+    c = {'in': '#6FDCB0', 'chk': 'repeating-linear-gradient(135deg,#6FDCB0 0 3px,rgba(111,220,176,.25) 3px 6px)', 'gap': '#F5B26B', 'no': 'rgba(255,255,255,.18)'}
+    out, i = [], 0
+    for word, n in [('FIND', 3), ('PREPARE', 4), ('RUTH', 1), ('PROVE', 1)]:
+        bars = ''.join(f'<span style="flex: 1; height: 8px; border-radius: 999px; background: {c[states[i + k]]}"></span>' for k in range(n))
+        out.append(f'<span style="flex: {n}; display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="display: flex; gap: 3px">{bars}</span>'
+                   f'<span style="font-family: Oswald, Figtree, sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .08em; color: #B3BCD2">{word}</span></span>')
+        i += n
+    return f'<div role="img" aria-label="{aria}" style="display: flex; gap: 8px">' + ''.join(out) + '</div>'

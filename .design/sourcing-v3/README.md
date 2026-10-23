@@ -1,21 +1,31 @@
-# Sourcing engine — design canvas (v3, round 4)
+# Sourcing engine — design canvas (v3)
 
 These are the phone mockups for the Sourcing app, rebuilt from first principles and then
 revised against the independent review in `REVIEW.md`. Each `*.dc.html` file is one
 artboard, and `canvas.json` lays them out. The live canvas is the "Sourcing Engine"
 design artifact. Nothing here is loaded by any app.
 
-**The core idea: no item goes on sale until its passport is complete.** The passport has
-six gates, in this order on every screen:
+**The core idea: no item goes on sale until it has earned its stamps.** Since 23 Oct (version 75)
+the passport is **nine stamps in four rooms**. They replace the six checks; the old boards stay on
+the canvas, under "Superseded", for the record.
 
-| Gate | Done when | Whose |
-|---|---|---|
-| Photo | a square photo passes the on-phone check (sharp, light, size; background is advice only) | Sourcing |
-| Packing | how we sell it is set, and every supplier's own pack divides into it | Sourcing |
-| Suppliers | at least one priced supplier (two or more is the target) | Sourcing |
-| Verdict | stock / per order / consign is chosen. Consign stays open until the supplier agrees | Sourcing |
-| Name & aisle | set | Sourcing |
-| Markup | the Manager prices it, and it goes live in the same write | Manager |
+| Room | Stamp | Earned when | Whose |
+|---|---|---|---|
+| Find | Asked | the ask is named, and the same asks are merged into it | Sourcing |
+| Find | Sourced | a supplier has answered with packing and prices | Sourcing |
+| Find | Compared | the rivals Moses picked are read, and the room is worked out per tier | Sourcing |
+| Prepare | Packed | the pencil packing is checked against the sample | Sourcing |
+| Prepare | Photo | the photo passes the four checks on the phone, then the stamp inks itself | Sourcing |
+| Prepare | Placed | an aisle and a bay are picked | Sourcing |
+| Prepare | Held | stock, per order or consign (`product.edit`); Denis is told and decides the batch | Sourcing |
+| Ruth | Priced | Ruth prices it in her own app (`markup.set`) | Ruth (Manager) |
+| Prove | Proven | day 30 on the New-in shelf: what sold against what was expected | the shelf |
+
+Two rules decide the records, because getting them wrong moves margins, prices, agents and sales:
+- **Packing is one sentence:** `<n> <unit> in a <outer>` ("4 pieces in a ctn"), or "sold singly".
+- **Prices are tiers, one sentence each:** `<n> <pack>+ cost <price>/<pack>`. Below a full outer is
+  retail; a full outer and up is wholesale. Each tier is entered once. A tier dearer per piece than the
+  one before it is flagged, not dropped. Suppliers and rivals are compared per piece at a chosen quantity.
 
 ## Screens (36)
 
@@ -288,3 +298,18 @@ The guide's Sourcing section (`docs/phone-design-language.md`) records the count
 | Today's walk dots | Three named stops with their icon and jobs; the first ringed. |
 | Improve the system as a whole (all but the supplier Wanted board) | New **Report card** (did it sell: hit rate by hold, expected against sold, a miss to decide); time to shelf on the Funnel; shillings on every Funnel and Wanted line; askers told with the price and a reserve tap on Live; the miss on Today; the track record beside the verdict. |
 | Sign in and a walkthrough | New **SignIn** (email and password, wrong-password and reset states) and **Welcome** (five pictures of how it works, then notifications and camera, nothing switched on for you), a fifth canvas row. |
+
+## The stamps replace the six checks (23 Oct, version 75)
+
+The owner asked for the real-world workflow (`realworld/`, the "Sourcing in the Real World" canvas) to
+**replace** the six-check funnel on this canvas.
+
+| What | Now |
+|---|---|
+| The spine | 18 stamp boards: `Rooms`, `Room`, `Round`, `ItemPass`, `ShelfPhone`, `ListPhone`, `BoardPhone`, `StampRules`, and the tile cutter's walk `AskNew` → `StampSource` → `StampCompare` → `StampPack` → `StampPhoto` → `StampPlace` → `StampHold` → `RuthTray` → `StampProven` → `PassDone` |
+| Tab bar | Today · Passports · + · Prices · Suppliers (`ow.TABS`); the + still opens Capture |
+| Superseded, kept for the record | `Wanted`, `Hunt`, `Funnel`, `Passport`, `Verdict`, `PhotoGate`, `PackingGate`, `SendToManager`, `ManagerItem`, `SentBack`, `Live`, `MarketRun`, `NewItem`, `NameAisle`, `SuppliersGate`, `GapWalk`, `LongNames`, `ReportCard` (two rows at the bottom; not rebuilt) |
+| Links | `tools/build.py` `REMAP` points every kept board at the stamp screen that replaced its target (Funnel → Rooms, Passport → ItemPass, Wanted → AskNew, Verdict → StampHold, Live → ShelfPhone, MarketRun → ListPhone, …) |
+| Today | the certify row reads 7 of 9; the hero counts 2 of Ruth's 6 |
+| Certify | a nine-stamp strip in four rooms: seven stamped from what it already sells, Held to check, the photo missing |
+| Welcome, Plan, Sign in | "nine stamps in four rooms"; Plan's third job is "Seven stamps", the fourth "Ruth prices" |

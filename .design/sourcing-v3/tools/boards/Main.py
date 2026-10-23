@@ -17,10 +17,10 @@ def tile(href, fig, label, icon, col='#B3BCD2', fig_col='', bg='rgba(255,255,255
             f'<span style="font-size: 11px; font-weight: 600; color: #B3BCD2">{label}</span></span></a>')
 
 tiles = ('      <div style="flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">'
-         + tile('Wanted.dc.html', '9', 'wanted', 'ask')
-         + tile('Funnel.dc.html', '6', 'hunting', 'search')
-         + tile('Funnel.dc.html', '2', 'with Ruth', 'clock', '#F5B26B', '#F5B26B')
-         + tile('Funnel.dc.html', '5', 'went live', 'tick', '#6FDCB0', '#6FDCB0')
+         + tile('Rooms.dc.html', '31', 'in Find', 'ask')
+         + tile('Rooms.dc.html', '28', 'in Prepare', 'search')
+         + tile('Rooms.dc.html', '6', 'with Ruth', 'clock', '#F5B26B', '#F5B26B')
+         + tile('ShelfPhone.dc.html', '14', 'on the shelf', 'tick', '#6FDCB0', '#6FDCB0')
          + '</div>')
 legend = '''    <div style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #B3BCD2">
       <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #6FDCB0"></span>prices fresh</span>
@@ -30,11 +30,11 @@ right = (f'<a href="Search.dc.html" aria-label="Search items, suppliers, rivals"
          '<a href="Profile.dc.html" aria-label="You: Moses Lubega, settings" style="width: 46px; height: 46px; border-radius: 999px; background: #243052; box-shadow: 0 0 0 2px #16203C, 0 0 0 4px rgba(111,220,176,.55); color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">ML</a>')
 # one hero figure, as the agent app leads with what you earned: items put on sale this week against
 # the week's goal (set by Ruth); the bar shows what is coming (with Ruth, striped) and what is left
-hero = f'''    <a href="Funnel.dc.html" style="display: flex; flex-direction: column; gap: 10px">
+hero = f'''    <a href="Rooms.dc.html" style="display: flex; flex-direction: column; gap: 10px">
       <span style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 12px; font-weight: 700; color: #B3BCD2">On sale this week</span><span style="display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(111,220,176,.12); color: #6FDCB0; font-size: 11px; font-weight: 700">{svg('M12 19V5M6 11l6-6 6 6', 11, 3)}2 on last week</span></span>
       <span style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 52px; font-weight: 600; line-height: .9; letter-spacing: -.04em">5</span><span class="m" style="font-size: 20px; font-weight: 600; color: #B3BCD2">/ 8</span><span style="font-size: 13px; font-weight: 600; color: #B3BCD2">goal</span></span>
-      <span role="img" aria-label="5 on sale, 2 with Ruth, 1 to go of a goal of 8" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">{''.join('<span style="height: 8px; border-radius: 999px; background: ' + c + '"></span>' for c in ['#6FDCB0'] * 5 + ['repeating-linear-gradient(135deg, rgba(245,178,107,.9) 0 3px, rgba(245,178,107,.25) 3px 6px)'] * 2 + ['rgba(255,255,255,.14)'])}</span>
-      <span style="font-size: 12px; font-weight: 600; color: #B3BCD2">2 with Ruth would make it 7 · the goal is Ruth’s</span>
+      <span role="img" aria-label="5 on sale, 2 of Ruth’s 6 due this week, 1 to go of a goal of 8" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">{''.join('<span style="height: 8px; border-radius: 999px; background: ' + c + '"></span>' for c in ['#6FDCB0'] * 5 + ['repeating-linear-gradient(135deg, rgba(245,178,107,.9) 0 3px, rgba(245,178,107,.25) 3px 6px)'] * 2 + ['rgba(255,255,255,.14)'])}</span>
+      <span style="font-size: 12px; font-weight: 600; color: #B3BCD2">2 of Ruth’s 6 would make it 7 · the goal is Ruth’s</span>
     </a>'''
 strip = stats([('≈ 9.4 M', 'asks waiting', None), ('11 d', 'ask to sale', None), ('78%', 'prices fresh', '#6FDCB0')], height=62)
 standing = (f'    <a href="ReportCard.dc.html" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,.06)">'
@@ -105,7 +105,7 @@ waits = lst('\n'.join([
 also = lst('\n'.join([
     row('Hoop iron 0.5mm · switch', 'Katwe is 1,500 a roll cheaper', icon_well('deal', 'indigo'),
         '<span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px"><span class="m" style="font-size: 15px; font-weight: 600">210,000</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">a month</span></span>', href='Deal.dc.html'),
-    row('Iron sheet G28 · certify', 'No photo yet · 1 to check', icon_well('star', 'green'), ring(4/6, '4/6', 40, 4, '#0F6B43', '#EFECE6', 11, '4 of 6 checks kept, 1 to check', part=1/6), href='Certify.dc.html'),
+    row('Iron sheet G28 · certify', 'No photo yet · 1 to check', icon_well('star', 'green'), ring(7/9, '7/9', 40, 4, '#0F6B43', '#EFECE6', 11, '7 of 9 stamps, 1 to check', part=1/9), href='Certify.dc.html'),
 ]))
 outbox = row('2 captures on this phone', 'They go up when there is signal', icon_well('outbox', 'amber'), chev('#95530C'), href='Outbox.dc.html', sub_style='color: #7A4A02')
 coach_rows = '\n'.join(

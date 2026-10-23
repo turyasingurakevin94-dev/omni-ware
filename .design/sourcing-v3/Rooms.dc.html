@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Passports</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Oswald:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.os{font-family:Oswald,'Figtree',sans-serif}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4EFE6; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
+  <div style="position: absolute; inset: 0 0 84px 0; overflow-y: auto">
+    <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 18px 20px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 20px; font-weight: 700">Passports</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #FFFFFF">79</span> moving · <span class="m" style="color: #6FDCB0">22</span> ready for you · <span class="m" style="color: #FFFFFF">6</span> with Ruth</span></span>
+        <span style="width: 46px; height: 46px; border-radius: 999px; background: #243052; box-shadow: 0 0 0 2px #16203C, 0 0 0 4px rgba(111,220,176,.55); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">ML</span>
+      </div>
+      <div role="tablist" aria-label="Rooms" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{rooms}}" as="r" hint-placeholder-count="4">
+          <button type="button" role="tab" aria-selected="{{r.sel}}" onClick="{{r.pick}}" style="{{r.style}}">
+            <span style="display: flex; align-items: center; justify-content: space-between; width: 100%"><span class="os" style="height: 22px; padding: 0 7px; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: .12em; display: flex; align-items: center; {{r.badge}}">{{r.word}}</span><span class="m" style="font-size: 22px; font-weight: 600; line-height: 1">{{r.n}}</span></span>
+            <span style="display: flex; align-items: center; justify-content: space-between; width: 100%"><span style="display: flex; gap: 3px"><sc-for list="{{r.inks}}" as="i" hint-placeholder-count="3"><i style="width: 9px; height: 9px; border-radius: 999px; {{i}}"></i></sc-for></span><span style="font-size: 11px; font-weight: 700; {{r.readyInk}}"><span class="m">{{r.ready}}</span> ready</span></span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+      <sc-if value="{{hasRound}}" hint-placeholder-val="{{ true }}">
+      <a href="Round.dc.html" style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 20px; background: #16203C; color: #FFFFFF; box-shadow: 0 12px 26px rgba(22,32,60,.22)">
+        <span style="position: relative; width: 48px; height: 48px; flex: none"><span style="position: absolute; left: 8px; top: 2px; width: 34px; height: 34px; border-radius: 999px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25)"></span><span style="position: absolute; left: 4px; top: 6px; width: 34px; height: 34px; border-radius: 999px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.45)"></span><span style="position: absolute; left: 0; top: 10px; width: 34px; height: 34px; border-radius: 999px; background: {{roundInk}}; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{roundIcon}}"></path></svg></span></span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700">{{roundTitle}}</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">{{roundSub}}</span></span>
+        <span style="width: 40px; height: 40px; flex: none; border-radius: 999px; background: #FFFFFF; color: #16203C; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span>
+      </a>
+      </sc-if>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px"><span style="font-size: 15px; font-weight: 700">{{listTitle}}</span><a href="Room.dc.html" style="min-height: 44px; display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #2B3A8C">Open the room<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a></div>
+      <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 4px 12px">
+        <sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 68px; border-top: {{it.rule}}">
+            <a href="{{it.href}}" aria-label="{{it.openAria}}" style="flex: 1; min-width: 0; padding: 10px 0; display: flex; flex-direction: column; gap: 7px">
+              <span style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span class="m" style="flex: none; font-size: 12px; font-weight: 600; color: #6B5A43">{{it.worth}}</span></span>
+              <span role="img" aria-label="{{it.aria}}" style="display: flex; align-items: center; gap: 3px"><sc-for list="{{it.dots}}" as="d" hint-placeholder-count="9"><i style="width: 9px; height: 9px; border-radius: 999px; box-sizing: border-box; {{d}}"></i></sc-for></span>
+            </a>
+            <a href="{{it.work}}" aria-label="{{it.workAria}}" style="flex: none; height: 44px; display: flex; align-items: center"><span style="height: 34px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; {{it.verbStyle}}">{{it.verb}}</span></a>
+          </div>
+        </sc-for>
+      </div>
+      <span style="padding: 0 4px; font-size: 12px; font-weight: 600; color: #6B5A43">{{moreLine}}</span>
+    </div>
+  </div>
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E3DACB; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
+    <a href="Main.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11"></path></svg>Today</a>
+    <a href="Rooms.dc.html" aria-current="page" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #1C2233; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2zM9 8h6M9 12h6"></path></svg>Passports</a>
+    <a href="Capture.dc.html" aria-label="Capture a price, a photo or an ask" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(201,58,48,.35); border: 4px solid #F4EFE6; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+    <a href="Prices.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8zM7.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path></svg>Prices</a>
+    <a href="Suppliers.dc.html" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-5 9 5v12M8 21v-7h8v7"></path></svg>Suppliers</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { room: 'prepare' }; }
+  renderVals() {
+    const R = this.state.room;
+    const OX = '#9A2E24', BLUE = '#2B3A8C', GREEN = '#1E6E47', PLUM = '#6E2A5E', RED = '#A3241C';
+    const INKS = [OX, BLUE, GREEN, BLUE, GREEN, BLUE, BLUE, PLUM, RED];
+    const dots = (n) => INKS.map((ink, i) => (i < n ? 'background:' + ink : i === n ? 'border:2px solid #C47A1E' : 'border:1.5px solid #D3C8B4') + (i === 2 || i === 6 || i === 7 ? ';margin-right:4px' : ''));
+    const VERB = ['Ask', 'Source', 'Compare', 'Pack', 'Photo', 'Place', 'Hold', 'Ruth', 'Day 30'];
+    const VS = { mine: 'background:#16203C;color:#FFFFFF', wait: 'background:#F1EBE0;color:#6B5A43', late: 'background:#FBE5E2;color:#8E2A22' };
+    // each pill opens the work that earns that stamp; the row itself opens the passport
+    const WORK = ['AskNew.dc.html', 'StampSource.dc.html', 'StampCompare.dc.html', 'StampPack.dc.html', 'Round.dc.html', 'StampPlace.dc.html', 'StampHold.dc.html', 'RuthTray.dc.html', 'ShelfPhone.dc.html'];
+    const it = (name, worth, n, kind, href) => ({ name, worth, dots: dots(n), verb: kind === 'late' ? 'Late' : VERB[n], verbStyle: VS[kind || 'mine'], href: href || 'ItemPass.dc.html',
+      work: WORK[n], workAria: VERB[n] + ': ' + name, openAria: 'Open the passport: ' + name, aria: name + ', ' + n + ' of 9 stamped' });
+    const DATA = {
+      find: { word: 'FIND', n: 31, ready: 9, inks: [OX, BLUE, GREEN], round: ['Market round · 9 items', 'Owino, Kikuubo, Nateete · on today’s list', BLUE, 'M6 3h12v18H6zM9 8h6M9 12h6'],
+        items: [it('Gutter bracket, galvanised', '1.1 M', 1), it('Ridge cap G28, maroon', '900,000', 2), it('Shower mixer, chrome', '520,000', 1), it('PPR pipe 25mm × 4m', '380,000', 1), it('Door closer, medium', '270,000', 1), it('Roofing bolts 6"', '160,000', 1, 'late')], more: 25 },
+      prepare: { word: 'PREPARE', n: 28, ready: 11, inks: [BLUE, GREEN, BLUE, BLUE], round: ['Photo round · 11 items', 'All on the desk now · about 15 minutes', GREEN, 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z'],
+        items: [it('Wire mesh BRC A142', '6.0 M', 3), it('Tile cutter 600mm', '520,000', 6), it('Self-drilling screws 10×25', '240,000', 3), it('PVC elbow 4"', '180,000', 5), it('Grout float, rubber', '90,000', 4, null, 'Round.dc.html'), it('Masonry nails 3"', '85,000', 4, null, 'Round.dc.html')], more: 22 },
+      ruth: { word: 'RUTH', n: 6, ready: 0, inks: [PLUM], round: null,
+        items: [it('Tile trim 10mm, silver', '140,000', 7, 'late'), it('Paint roller 9"', '300,000', 7, 'wait'), it('Silicone, clear 280ml', '120,000', 7, 'wait'), it('Hinge 3" steel, pair', '95,000', 7, 'wait'), it('PPR tee 25mm', '180,000', 7, 'wait'), it('Wall plug 8mm, 100', '45,000', 7, 'wait')], more: 0 },
+      prove: { word: 'PROVE', n: 14, ready: 2, inks: [RED], round: null,
+        items: [it('Masking tape 2"', 'day 45', 8, 'late', 'ShelfPhone.dc.html'), it('Floor drain 4" chrome', 'day 29', 8, null, 'ShelfPhone.dc.html'), it('Roof paint 4L', 'day 17', 8, 'wait', 'ShelfPhone.dc.html'), it('Tile adhesive 20kg', 'day 8', 8, 'wait', 'ShelfPhone.dc.html'), it('Grout, white 5kg', 'day 3', 8, 'wait', 'ShelfPhone.dc.html'), it('Ceramic tile 40×40', 'day 2', 8, 'wait', 'ShelfPhone.dc.html')], more: 8 }
+    };
+    const rooms = ['find', 'prepare', 'ruth', 'prove'].map(k => {
+      const d = DATA[k], on = R === k;
+      return { word: d.word, n: d.n, ready: d.ready, sel: String(on), pick: () => this.setState({ room: k }),
+        inks: d.inks.map(c => 'background:' + c), readyInk: d.ready ? (on ? 'color:#0F6B43' : 'color:#6FDCB0') : (on ? 'color:#6B5A43' : 'color:#B3BCD2'),
+        badge: on ? 'box-shadow:inset 0 0 0 1.5px #16203C;color:#16203C' : 'box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5);color:#FFFFFF',
+        style: 'all:unset;cursor:pointer;box-sizing:border-box;height:74px;padding:10px 12px;border-radius:16px;display:flex;flex-direction:column;justify-content:space-between;' + (on ? 'background:#FBF8F2;color:#16203C;box-shadow:0 10px 24px rgba(0,0,0,.28)' : 'background:rgba(255,255,255,.07);color:#FFFFFF;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)') };
+    });
+    const d = DATA[R];
+    return {
+      rooms, items: d.items.map((x, i) => ({ ...x, rule: i ? '1px solid #F1EBE0' : 'none' })),
+      listTitle: R === 'ruth' ? 'In Ruth’s tray · she was buzzed' : R === 'prove' ? 'On the New-in shelf' : 'Ready for your stamp',
+      moreLine: d.more ? '+' + d.more + ' more in ' + d.word.toLowerCase() + ', the same way' : 'All ' + d.n + ' shown',
+      hasRound: !!d.round, roundTitle: d.round ? d.round[0] : '', roundSub: d.round ? d.round[1] : '', roundInk: d.round ? d.round[2] : '', roundIcon: d.round ? d.round[3] : ''
+    };
+  }
+}
+</script>
+</body>
+</html>
