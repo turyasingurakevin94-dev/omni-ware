@@ -172,8 +172,9 @@ if (fns) {
   t.check(!/amount: Math\.abs\(delta\)/.test(code), 'the intended delta is no longer what gets logged');
 
   // The same fault lived in the manual/overpayment path.
-  t.check(/const before = Number\(c\.debt\)\|\|0;\s*\n\s*const after = Math\.max\(0, before - unapplied\);/.test(code),
-    'recordCustomerPayment clamps before it logs too');
+  // 0165 (Sales round 1): a balance already below 0 is a deposit, so only a balance above 0 is clamped.
+  t.check(/const before = Number\(c\.debt\)\|\|0;[\s\S]{0,120}const after = before > 0 \? Math\.max\(0, before - unapplied\) : before;/.test(code),
+    'recordCustomerPayment clamps before it logs too (and never clamps a deposit away, 0165)');
   t.check(/if\(before !== after\)\{\s*\n\s*c\.debtLog\.push\(\{id: allocRowId\('debtLog'\), date: date \|\| todayISO\(\), type:'payment', amount: before - after/.test(code),
     'logging what the balance moved by, so paying 5,000 against a 1,000 debt does not write a 5,000 payment');
   t.check(/const cashTxnId = addCashReceipt\(account, unapplied, category \|\| 'Debt Payment'/.test(code),

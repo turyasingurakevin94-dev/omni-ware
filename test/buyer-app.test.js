@@ -119,7 +119,8 @@ function fakeDb(tables){
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), count: hit.length, error: null }).then(res, rej);
   };
   const storage = { from: () => ({ upload: async (path) => { writes.push(['upload', path]); return { error: null }; } }) };
-  return { writes, tables, storage, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async (fn, args) => { writes.push(['rpc', fn, args]); return tables.__rpcOk ? { data: 1, error: null } : { data: null, error: { message: 'no rpc' } }; } };
+  return { writes, tables, storage, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb), rpc: async (fn, args) => { // 0165: the apps change an order through ow_patch_order
+      if (fn === 'ow_patch_order') { const qs = tables.saved_quotes || (tables.saved_quotes = []), r = qs.find(x => String(x.id) === String(args.p_id)); if (!r) return { data: null, error: { message: 'This order is no longer in the books.' } }; const pl = { ...(r.payload || {}), ...JSON.parse(JSON.stringify(args.p_patch || {})) }; (args.p_drop || []).forEach(k => { delete pl[k]; }); const row = { payload: pl }; if (args.p_status != null) row.status = args.p_status; writes.push(['update', 'saved_quotes', JSON.parse(JSON.stringify(row)), [r.id]]); Object.assign(r, row); return { data: JSON.parse(JSON.stringify(r)), error: null }; }  writes.push(['rpc', fn, args]); return tables.__rpcOk ? { data: 1, error: null } : { data: null, error: { message: 'no rpc' } }; } };
 }
 function page(db, data){
   const X = loadPage(db);

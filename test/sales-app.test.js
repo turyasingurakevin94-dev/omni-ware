@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, tdySrcRow, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, tdySrcRow, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payOverHTML, custAddsUp, custAddsUpHTML, getFIFOUnitCost, stockKey, goodsTotal, lineSettledOut, moneyIn, tdyToPriceChip, ordPatch, sb, payDepositOk, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -147,14 +147,17 @@ const matrix = [
   ['typed sell price wins', line('P1', null, 2, 'S1', 32000, { sellPrice: 41000 })],
   ['unknown product', line('PX', null, 2, 'S1', 5000)],
 ];
+// Sales round 1 (SAL-007): a line nobody priced is priced at nothing, never at
+// its cost, as 0165's ow_order_total does; every priced line still matches.
 matrix.forEach(([what, it]) => {
-  const a = admin.quoteItemSellPrice(it), s = P.quoteItemSellPrice(it);
-  t.check(Math.abs(a - s) < 1e-9, `sell price matches the owner's app: ${what} (${a} vs ${s})`);
+  const a = P.linePriceToConfirm(it) ? 0 : admin.quoteItemSellPrice(it), s = P.quoteItemSellPrice(it);
+  t.check(Math.abs(a - s) < 1e-9, `sell price matches the owner's app, or 0 when nobody priced it: ${what} (${a} vs ${s})`);
 });
+t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1]) === 0 && P.quoteItemSellPrice(matrix[7][1]) === 0, 'a line with no rule, or no product, is never priced at its cost');
 [[null, 'cash'], [{ pct: 3, days: 30 }, 'credit']].forEach(([credit, word]) => {
-  const q = { items: matrix.slice(0, 7).map(m => m[1]), charges: [], credit };
-  const a = admin.savedQuoteTotal(q), s = P.quoteTotal(q);
-  t.check(Math.abs(a - s) < 1e-9, `order total matches the owner's app on ${word} (${a} vs ${s})`);
+  const priced = matrix.slice(0, 7).map(m => m[1]).filter(it => !P.linePriceToConfirm(it));
+  const a = admin.savedQuoteTotal({ items: priced, charges: [], credit }), s = P.quoteTotal({ items: matrix.slice(0, 7).map(m => m[1]), charges: [], credit });
+  t.check(Math.abs(a - s) < 1, `order total matches the owner's app on ${word}, over the priced lines (${a} vs ${s})`);
 });
 
 /* ---------------- 2. never at cost ---------------- */
@@ -329,9 +332,13 @@ matrix.forEach(([what, it]) => {
     a.whoId = 'C001';
     t.check(/Kato Construction owes the rest/.test(X.payPaperHTML(a, X.payView(a))) && /Slide to record/.test(X.payDockHTML(a, X.payView(a))), 'once named, the rest is theirs and the slide records');
     a.whoId = null; a.amt = owed + 8500; a.method = 'cash';
-    t.check(X.payChange(a, X.payView(a)) === 8500 && /give back/.test(X.payDockHTML(a, X.payView(a))) && /GIVE BACK/.test(X.payPaperHTML(a, X.payView(a))), 'cash over the bill is change to hand back, not refused');
+    // Sales round 1 (SAL-005): money over the bill is asked about every time -- change by default, a deposit only for someone named.
+    t.check(X.payChange(a, X.payView(a)) === 8500 && /8,500 back/.test(X.payDockHTML(a, X.payView(a))) && /Give <span class="m">8,500<\/span> change/.test(X.payOverHTML(a, X.payView(a))), 'cash over the bill is change by default, and the slide says how much goes back');
     a.method = 'momo';
-    t.check(X.payChange(a, X.payView(a)) === 0 && /More than the order/.test(X.payDockHTML(a, X.payView(a))), 'mobile money over the bill is still refused: there is no change to give');
+    t.check(X.payChange(a, X.payView(a)) === 8500 && /Name them first/.test(X.payOverHTML(a, X.payView(a))) && !X.payDepositOk(a, X.payView(a)), 'mobile money over the bill is change too; a walk-in can’t keep a deposit until named');
+    a.whoId = 'C001'; a.over = 'deposit';
+    t.check(X.payChange(a, X.payView(a)) === 0 && /8,500 deposit/.test(X.payDockHTML(a, X.payView(a))), 'once named, the extra can be kept as their deposit, and the slide says so');
+    a.whoId = null; a.over = null;
     a.method = 'cash'; a.amt = owed;
     t.check(/WILL CLEAR/.test(X.payPaperHTML(a, X.payView(a))) && !/CLEARED/.test(X.payPaperHTML(a, X.payView(a))), 'nothing reads cleared before the slide records it');
     t.check(X.phoneOk('0772123456') && X.phoneOk('+256 772 123 456') && !X.phoneOk('07123') && X.phoneState('07123').typing && X.phoneState('12345').bad, 'a Ugandan number: 07 and 10 digits, or +256 and 9 more');
@@ -599,9 +606,13 @@ matrix.forEach(([what, it]) => {
     const X = loadPage(db);
     Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
     X.S.data.savedQuotes = [{ id: 7, status: 'draft', invoiced: false, amountPaid: 0, voided: false, date: q7.date, ...JSON.parse(JSON.stringify(q7.payload)) }];
+    const q7was = JSON.parse(JSON.stringify(q7));
     X.S.stack = [{ type: 'pay', args: { orderId: 7, amt: 150000, method: 'momo' } }];
     await X.ACT['slide:pay']();
-    t.check(db.writes.length === 0, 'more than the order takes writes nothing');
+    const call = db.writes.find(x => x[0] === 'rpc' && x[1] === 'receive_payment');
+    t.check(call && call[2].p_amount === 100000 && call[2].p_over === 'change' && X.S.stack[0].type === 'paid' && X.S.stack[0].args.change === 50000, 'more than the order takes records only what it takes, and 50,000 goes back as change');
+    db.writes.length = 0; db.tables.saved_quotes[0] = q7was; db.tables.cash_txns.length = 0;
+    X.S.data.savedQuotes = [{ id: 7, status: 'draft', invoiced: false, amountPaid: 0, voided: false, date: q7.date, ...JSON.parse(JSON.stringify(q7.payload)) }];
     X.S.paying = false;
     X.S.stack = [{ type: 'pay', args: { orderId: 7, amt: 60000, method: 'momo' } }];
     await X.ACT['slide:pay']();
@@ -860,6 +871,47 @@ matrix.forEach(([what, it]) => {
     t.check(typeof sr === 'string', 'TodaySrc: the Asked of Sourcing row draws (or hides) without throwing');
     t.check(/data-act="srcopen"/.test(html) && /Ask for something/.test(html) && /Send to /.test(html) && /SUPPLIERS ASKED/.test(html), 'SReqList / SReqLook / SReqAsk: rows open a request, an ask needs no order');
     t.check(/Sell at the counter/.test(html) && /data-act="tdyaddto"/.test(html) && /Take payment · /.test(html), 'FindItem and OrderPay: a found item sells or joins the order; an unpaid order takes payment');
+  }
+
+  // Sales round 1: data integrity (SAL-002..014)
+  {
+    const db = fakeDb({});
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'grace@shop.ug' }, shopName: 'Shop' });
+    // SAL-002: Sales keeps its own sign-in; another login under the screen writes nothing.
+    t.check(/storageKey: OW_AUTH_KEY/.test(html) && /const OW_AUTH_KEY = 'ow-sales-auth'/.test(html) && /'-auth-token'/.test(html), 'SAL-002: Sales keeps its own saved sign-in, carrying the old shared one over once');
+    t.check(/onAuthStateChange/.test(html) && /addEventListener\('visibilitychange', \(\) => \{ if \(document\.visibilityState === 'visible'\) check\(\)/.test(html) && /addEventListener\('focus', \(\) => check\(\)\)/.test(html) && /Signed in as someone else/.test(html), 'SAL-002: the login is checked on sign-in events, on return to the tab and on focus, and a swap says so');
+    X.S.loginLost = { email: 'x@other.ug', at: 1 };
+    const w = await X.sb.from('cash_txns').insert({ amount: 1 }).select().maybeSingle(), rp = await X.sb.rpc('receive_payment', {});
+    t.check(w.error && rp.error && db.writes.length === 0, 'SAL-002: while someone else is signed in, no write or call reaches the database');
+    X.S.loginLost = null;
+    // SAL-013: no whole-payload rewrite of an order; the four edits send only what they change.
+    t.check(!/from\('saved_quotes'\)\.(update|upsert)/.test(html) && (html.match(/ordPatch\(/g) || []).length >= 5 && /sb\.rpc\('ow_patch_order'/.test(html), 'SAL-013: orders are changed through ow_patch_order with only the keys that change, never a stale payload');
+    // SAL-014: a transfer between accounts is not money in.
+    X.S.data.cashTxns = [{ id: 1, date: '2026-10-05', type: 'receipt', category: 'Sales Revenue', amount: 5000 }, { id: 2, date: '2026-10-05', type: 'receipt', category: 'Account Transfer', amount: 1000, transferId: 9 }, { id: 3, date: '2026-10-05', type: 'receipt', category: 'Other', amount: 700, transferId: 4 }];
+    t.check(X.moneyIn('2026-10-01', '2026-10-31').length === 1, 'SAL-014: transfers between accounts are never money in');
+    // SAL-003 / SAL-006: whole UGX per line; a line at 0 or below is off the bill.
+    const ln = (qty, sellPrice) => ({ lineId: qty, productId: 'P1', variantIdx: null, qty, supplierId: 'S1', price: 32000, sellPrice });
+    t.check(X.goodsTotal({ items: [ln(1.5, 333), ln(1, 1001), ln(2.5, 999.6)] }) === 500 + 1001 + 2499, 'SAL-003: each line is rounded to whole UGX before it is added, as the server does');
+    t.check(X.goodsTotal({ items: [ln(-3, 1000), ln(2, -500), ln(1, 1000)] }) === 1000 && X.quoteTotal({ items: [ln(-3, 1000)], charges: [] }) === 0 && X.lineSettledOut({ items: [] }, ln(0, 1000)), 'SAL-006: a negative count or price never reaches a total, and a 0 line is off the bill');
+    // SAL-004 / SAL-008 / SAL-009: a credit note never makes a bill negative; the cost floor weights the lots used; never "-0".
+    t.check(X.quoteTotal({ items: [ln(1, 1000)], charges: [], creditNotes: [{ amount: 6000 }] }) === 0, 'SAL-004: a credit note larger than the bill leaves 0, never a negative bill');
+    X.S.data.stockLots = { [X.stockKey('P1', null)]: [{ qty: 3, cost: 1000 }, { qty: 10, cost: 1200 }] };
+    t.check(X.getFIFOUnitCost('P1', null, 5) === 1080, 'SAL-008: 5 from 3 at 1,000 and 10 at 1,200 cost 1,080 each, not the first lot\'s 1,000');
+    t.check(X.n0(-0.4) === '0' && X.n0(-1) === '-1', 'SAL-009: never "-0"');
+    // SAL-011: a balance that is not its bills says so, how far apart, and who checks it.
+    const kato = X.S.data.customers.find(c => c.id === 'C001'), x = X.custAddsUp(kato);
+    if (x) t.check(Math.abs(x.gap) >= 1 && /apart<\/b>/.test(X.custAddsUpHTML(kato)) && /data-act="custaskbal"/.test(X.custAddsUpHTML(kato)), 'SAL-011: a balance that is not its bills shows both, the gap, and the ask');
+    const even = { ...kato, id: 'CZ', debt: 0, debtLog: [] };
+    X.S.data.customers.push(even);
+    t.check(X.custAddsUp(even) === null && X.custAddsUpHTML(even) === '', 'SAL-011: a balance that is its bills shows one figure, no card');
+    const dep = { ...kato, id: 'CD', name: 'Deposit Co', debt: -50000, debtLog: [{ id: 1, type: 'payment', amount: 50000, quoteId: null, date: '2026-10-01' }] };
+    X.S.data.customers.push(dep); X.S.loadedAt = 71;
+    const dp = X.PAGE.customer({ id: 'CD' });
+    t.check(/Deposit<\/span>/.test(dp) && /50,000/.test(dp) && !/-50,000/.test(dp) && X.custAddsUp(dep) === null, 'SAL-005: a balance below 0 reads as a deposit, never as 0 or a minus');
+    // SAL-007: Today names an invoiced order with lines nobody priced.
+    X.S.data.savedQuotes = [{ id: 541, status: 'completed', invoiced: true, voided: false, invoicedAt: X.todayISO ? X.todayISO() : new Date().toISOString().slice(0, 10), date: new Date().toISOString().slice(0, 10), amountPaid: 0, items: [ln(2, 5000), { lineId: 9, productId: 'PX', variantIdx: null, qty: 3, supplierId: 'S1', price: 0, sellPrice: null }], charges: [], payments: [] }];
+    t.check(/#0541 · 1 line to price, not counted yet/.test(X.tdyToPriceChip()), 'SAL-007: Today names the invoiced order whose lines are still to price');
   }
 
   process.exit(t.done() ? 1 : 0);

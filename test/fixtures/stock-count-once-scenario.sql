@@ -21,6 +21,7 @@ insert into suppliers(shop_id, id, name) values ('11111111-1111-1111-1111-111111
 insert into products(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','P1','BB Silicone');
 insert into stock(shop_id,key,product_id,qty) values ('11111111-1111-1111-1111-111111111111','P1','P1',20);
 insert into stock_lots(shop_id,key,qty,cost) values ('11111111-1111-1111-1111-111111111111','P1',20,30000);
+select set_config('ow.money_fix', 'on', false);  -- a pre-0165 row, seeded as it stands on live (0165)
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
  -- packed (picking done), not invoiced: 3 have left the shelf
  (9601,'11111111-1111-1111-1111-111111111111','Kato Construction','preparing',false,150000,
@@ -34,6 +35,7 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid
  -- packed but voided: not held
  (9604,'11111111-1111-1111-1111-111111111111','Nansana Hardware','preparing',false,0,
   '{"pickingStatus":"done","client":{"name":"Nansana Hardware"},"items":[{"productId":"P1","productName":"BB Silicone","qty":6,"price":30000,"sellPrice":50000,"unit":"piece","supplierId":"__stock__","pickStatus":"done"}]}');
+select set_config('ow.money_fix', '', false);
 update saved_quotes set voided = true where id = 9604;
 -- The shelf holds 15: 20 less the 3 packed and the 2 delivered. A count saved by an
 -- older Store app, with no `held`: accepting it counts back in what orders hold now.
@@ -84,9 +86,11 @@ select _try('check: only the real loss comes off: 16', 'ok', $q$select _is($c$(s
 insert into stock_counts(id, shop_id, counted_by, counted_by_name, lines) values
  ('cccccccc-0000-0000-0000-000000000003','11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','Grace',
   '[{"key":"P1","productId":"P1","name":"BB Silicone","counted":14,"system":14,"held":2}]');
+select set_config('ow.money_fix', 'on', false);  -- a pre-0165 row, seeded as it stands on live (0165)
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
  (9605,'11111111-1111-1111-1111-111111111111','Mukono Roofing','preparing',false,150000,
   '{"pickingStatus":"done","client":{"name":"Mukono Roofing"},"items":[{"productId":"P1","productName":"BB Silicone","qty":3,"price":30000,"sellPrice":50000,"unit":"piece","supplierId":"__stock__","pickStatus":"done"}]}');
+select set_config('ow.money_fix', '', false);
 set role authenticated;
 select _try('manager: accepts a count that matched, after another order was packed', 'ok', $q$select _is($c$(select (r->'stock'->>'P1')::numeric = 16 from (select accept_stock_count('cccccccc-0000-0000-0000-000000000003') r) x)$c$)$q$);
 reset role;

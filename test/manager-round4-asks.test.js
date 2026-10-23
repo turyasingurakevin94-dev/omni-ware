@@ -44,7 +44,8 @@ function fakeDb(tables){
     return Promise.resolve({ data: clone(this.one ? (hit[0] || null) : hit), error: null }).then(res, rej);
   };
   return { writes, rpcs, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb),
-    rpc: async (fn, args) => { rpcs.push([fn, JSON.parse(JSON.stringify(args))]); return { data: { ok: true }, error: null }; } };
+    rpc: async (fn, args) => { // 0165: the apps change an order through ow_patch_order
+      if (fn === 'ow_patch_order') { const qs = tables.saved_quotes || (tables.saved_quotes = []), r = qs.find(x => String(x.id) === String(args.p_id)); if (!r) return { data: null, error: { message: 'This order is no longer in the books.' } }; const pl = { ...(r.payload || {}), ...JSON.parse(JSON.stringify(args.p_patch || {})) }; (args.p_drop || []).forEach(k => { delete pl[k]; }); const row = { payload: pl }; if (args.p_status != null) row.status = args.p_status; writes.push(['update', 'saved_quotes', JSON.parse(JSON.stringify(row)), [r.id]]); Object.assign(r, row); return { data: JSON.parse(JSON.stringify(r)), error: null }; }  rpcs.push([fn, JSON.parse(JSON.stringify(args))]); return { data: { ok: true }, error: null }; } };
 }
 function page(db, data){
   const timers = [];

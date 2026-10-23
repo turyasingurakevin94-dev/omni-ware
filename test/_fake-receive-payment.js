@@ -4,7 +4,10 @@
  * database: a customer's payment spread over the open invoices (oldest
  * first, or the ones ticked) with a receipt per invoice, the invoice's
  * payments and share of the debt, the debt lowered and logged, the rest on
- * account -- or one receipt on an order before its invoice. Writes land in
+ * account -- or one receipt on an order before its invoice. 0165: money
+ * over what is owed is refused unless p_over says 'change' (only what is
+ * owed is taken) or 'deposit' (kept for the named customer, their balance
+ * goes below 0). Writes land in
  * `tables` and are recorded in `writes` the way the fake's own inserts and
  * updates are, so the tests read the same rows they always did.
  *
@@ -32,6 +35,14 @@ module.exports = function fakeReceivePayment(tables, writes, nextId, a, uid){
   const shop = a.p_shop_id, method = String(a.p_method || 'cash').trim() || 'cash', amount = Math.round(num(a.p_amount) || 0);
   if (!(amount > 0)) return err('Nothing to record: the amount is zero.');
   const cashRows = [];
+  const over = String(a.p_over || '');
+  const overErr = n => err('Paid over by ' + n + ': give change, or keep it as a deposit.');
+  const depositIn = (c, amt) => {
+    const id = nextId('row:cash_txn'), row = { id, shop_id: shop, date: today, account: method, type: 'receipt', category: 'Debt Payment', amount: amt, description: 'Deposit — ' + (c.name || c.id), time: hm, quote_id: null, entered_by: uid };
+    ins('cash_txns', row); cashRows.push(row);
+    upd('customers', c, { debt: (num(c.debt) || 0) - amt });
+    ins('customer_debt_log', { id: nextId('row:debt_log'), shop_id: shop, customer_id: c.id, date: today, type: 'payment', amount: amt, note: 'Deposit', quote_id: null, cash_txn_id: id });
+  };
 
   /* an order before its invoice */
   if (a.p_order_id != null) {
@@ -39,14 +50,18 @@ module.exports = function fakeReceivePayment(tables, writes, nextId, a, uid){
     if (!q) return err('This order is no longer in the books.');
     if (q.voided) return err('The order was cancelled.');
     if (q.invoiced) return err('This order has just been invoiced — take it from the customer\'s bills.');
-    const tot = Math.round(total(q)), due = Math.max(0, tot - (num(q.amount_paid) || 0)), pay = Math.min(amount, due);
+    const tot = Math.round(total(q)), due = Math.max(0, tot - (num(q.amount_paid) || 0)), pay = Math.min(amount, due), extra = amount - pay;
     if (!(pay > 0)) return err('Nothing is left to pay on this order.');
+    const oc = (tables.customers || []).find(r => String(r.id) === String((q.payload || {}).customerId || ''));
+    if (extra > 0 && over !== 'change' && over !== 'deposit') return overErr(extra);
+    if (extra > 0 && over === 'deposit' && !oc) return err('Name the customer to keep a deposit.');
     const label = '#' + String(q.id).padStart(4, '0'), id = nextId('row:cash_txn');
     const row = { id, shop_id: shop, date: today, account: method, type: 'receipt', category: 'Invoice Payment', amount: pay, description: 'Payment — order ' + label, time: hm, quote_id: q.id, entered_by: uid };
     ins('cash_txns', row); cashRows.push(row);
     const pays = ((q.payload || {}).payments || []).slice(); pays.push({ date: today, amount: pay, note: '', cashTxnId: id, method, id: nextPayId(pays) });
     upd('saved_quotes', q, { amount_paid: (num(q.amount_paid) || 0) + pay, payload: { ...(q.payload || {}), payments: pays } });
-    return { data: { kind: 'order', orderId: q.id, amount: pay, method, time: hm, date: today, name: q.client_name || 'Walk-in', phone: q.client_phone || '', id: (q.payload || {}).customerId || null, before: due, after: due - pay,
+    if (extra > 0 && over === 'deposit') depositIn(oc, extra);
+    return { data: { kind: 'order', change: extra > 0 && over === 'change' ? extra : 0, deposit: extra > 0 && over === 'deposit' ? extra : 0, orderId: q.id, amount: pay, method, time: hm, date: today, name: q.client_name || 'Walk-in', phone: q.client_phone || '', id: (q.payload || {}).customerId || null, before: due, after: due - pay,
       bills: [{ quoteId: q.id, label: 'Order ' + label, pay, cleared: pay >= due, left: due - pay, total: tot }], cashRows }, error: null };
   }
 
@@ -62,6 +77,9 @@ module.exports = function fakeReceivePayment(tables, writes, nextId, a, uid){
     .sort((x, y) => String(x.invoiced_ts || x.invoiced_at || x.date || '').localeCompare(String(y.invoiced_ts || y.invoiced_at || y.date || '')) || (Number(x.id) - Number(y.id)));
   let ordered = open;
   if (a.p_picks != null) { ordered = []; a.p_picks.forEach(id => { const q = open.find(x => Number(x.id) === Number(id)); if (q && !ordered.includes(q)) ordered.push(q); }); }
+  const dueOf = q => Math.max(0, Math.round(total(q)) - (num(q.amount_paid) || 0)), allDue = open.reduce((s2, q) => s2 + dueOf(q), 0);
+  const takes = ordered.reduce((s2, q) => s2 + dueOf(q), 0) + Math.max(0, debt - allDue), extra = Math.max(0, amount - takes);
+  if (extra > 0 && over !== 'change' && over !== 'deposit') return overErr(extra);
   let left = amount; const bills = [];
   for (const q of ordered) {
     if (!(left > 0)) break;
@@ -81,6 +99,8 @@ module.exports = function fakeReceivePayment(tables, writes, nextId, a, uid){
     bills.push({ quoteId: q.id, label, pay, cleared: pay >= due, left: Math.max(0, due - pay), total: tot });
     left -= pay;
   }
+  let change = 0, deposit = 0;
+  if (extra > 0) { left -= extra; if (over === 'deposit') deposit = extra; else change = extra; }
   if (left > 0) {
     const after = Math.max(0, debt - left), id = nextId('row:cash_txn');
     const row = { id, shop_id: shop, date: today, account: method, type: 'receipt', category: 'Debt Payment', amount: left, description: 'Payment — ' + (c.name || c.id), time: hm, quote_id: null, entered_by: uid };
@@ -90,7 +110,8 @@ module.exports = function fakeReceivePayment(tables, writes, nextId, a, uid){
       ins('customer_debt_log', { id: nextId('row:debt_log'), shop_id: shop, customer_id: c.id, date: today, type: 'payment', amount: debt - after, note: '', quote_id: null, cash_txn_id: id });
       debt = after;
     }
-    bills.push({ label: 'On account', pay: left, cleared: after === 0, left: after, onAccount: true });
+    bills.push({ label: 'Older balance', pay: left, cleared: after === 0, left: after, onAccount: true });
   }
-  return { data: { kind: 'cust', id: c.id, name: c.name || c.id, phone: c.phone || c.phone2 || '', amount, method, time: hm, date: today, bills, before: debt0, after: debt, cashRows }, error: null };
+  if (deposit > 0) { depositIn(c, deposit); debt = num(c.debt) || 0; bills.push({ label: 'Deposit', pay: deposit, deposit: true }); }
+  return { data: { kind: 'cust', id: c.id, name: c.name || c.id, phone: c.phone || c.phone2 || '', amount, method, time: hm, date: today, bills, before: debt0, after: debt, change, deposit, cashRows }, error: null };
 };

@@ -202,6 +202,12 @@ function fakeDb(tb){
         return { data: { asset: clone(x), cashTxnId: c ? c.id : null, cashRows: c ? [c] : [] }, error: null };
       }
       if (name === 'settle_agent') return { data: { cashIn: 0, paidOut: 0, orders: [], claims: [], cashRows: [] }, error: null };
+      // 0165 ow_patch_order: only the keys a desk changes, never the payments.
+      if (name === 'ow_patch_order') {
+        const q = rows('saved_quotes').find(x => Number(x.id) === Number(a.p_id)); if (!q) return { data: null, error: { message: 'That order is no longer in the books.' } };
+        const payload = { ...(q.payload || {}), ...(a.p_patch || {}) }; (a.p_drop || []).forEach(k => delete payload[k]);
+        upd('saved_quotes', q, { payload }); return { data: clone(q), error: null };
+      }
       return { data: null, error: { message: 'no rpc' } };
     } };
 }
@@ -246,7 +252,7 @@ function fnText(src, name){
   return d === 0 ? line : extractFunction(src, name, 'source');
 }
 const FROM_SALES = ['issueRowId', 'IX', 'memo', 'productById', 'nameParts', 'quoteItemSellPrice', 'goodsTotal', 'chargesTotal', 'quoteTotal', 'balanceDue', 'invoiceLabel', 'customerById', 'customerOrdersFor', 'outstandingInvoices',
-  'custTerms', 'custISO', 'custBillAge', 'custOpen', 'custLimit', 'custStmtRange', 'custStmtRows', 'custOpenCharges', 'custStmtRowDetail', 'custShopIdentity', 'custStmtPdfBytes', 'custRecordStatement', 'payPlan'];
+  'custTerms', 'custISO', 'custBillAge', 'custOpen', 'custLimit', 'custStmtRange', 'custStmtRows', 'custOpenCharges', 'custStmtRowDetail', 'custShopIdentity', 'custStmtPdfBytes', 'custRecordStatement', 'payPlan', 'lineHasRule', 'linePriceToConfirm'];
 FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.check(a && a === b, `${n}() is the sales desk's own, word for word`); });
 
 (async () => {
@@ -363,7 +369,7 @@ FROM_SALES.forEach(n => { const a = fnText(html, n), b = fnText(salesSrc, n); t.
       invoices: {}, invoice: { id: 13 }, share: {}, supplier: { sid: 'S1' }, bill: { id: 21 }, me: {},
       billpaid: { sid: 'S1', name: 'Steel & Tube', from: 'bank', paid: 300000, hand: 3000000, after: 2700000, owedAfter: 105000, at: Date.now(), lines: [{ ref: 'ST/1', pay: 300000, cleared: true }] },
       paid: { name: 'Mulongo Builders', id: 'C1', phone: '', amount: 100000, method: 'cash', bills: [], before: 300000, after: 200000, time: '10:00' },
-      position: {}, reports: {}, days: {}, expense: {}, income: {}, transfer: {}, payedit: { id: 5 }, propose: { cid: 'C1' }, billrec: { sid: 'S1' }, consign: {}, agents: {}, tripcash: {}, payback: { id: 'h-own' }, cashback: { id: 'h-loose' }, payroll: {}, absence: { sid: 'W1' }, loans: {}, assets: {}, assetbuy: {} };
+      position: {}, reports: {}, days: {}, expense: {}, income: {}, transfer: {}, payedit: { id: 5 }, payaskover: { id: 'none' }, payaskbal: { id: 'none' }, propose: { cid: 'C1' }, billrec: { sid: 'S1' }, consign: {}, agents: {}, tripcash: {}, payback: { id: 'h-own' }, cashback: { id: 'h-loose' }, payroll: {}, absence: { sid: 'W1' }, loans: {}, assets: {}, assetbuy: {} };
     Object.keys(X.PAGE).forEach(k => draw('the ' + k + ' page', () => { X.S.stack = [{ type: k, args: args[k] || {} }]; return X.PAGE[k](args[k] || {}); }));
     t.check(Object.keys(X.PAGE).every(k => k in args), 'every page the app has is drawn here');
   }

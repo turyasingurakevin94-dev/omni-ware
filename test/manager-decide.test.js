@@ -45,7 +45,8 @@ function fakeDb(tables){
   };
   let nextId = 5000;
   return { writes, rpcs, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb),
-    rpc: async (fn, args) => {
+    rpc: async (fn, args) => { // 0165: the apps change an order through ow_patch_order
+      if (fn === 'ow_patch_order') { const qs = tables.saved_quotes || (tables.saved_quotes = []), r = qs.find(x => String(x.id) === String(args.p_id)); if (!r) return { data: null, error: { message: 'This order is no longer in the books.' } }; const pl = { ...(r.payload || {}), ...JSON.parse(JSON.stringify(args.p_patch || {})) }; (args.p_drop || []).forEach(k => { delete pl[k]; }); const row = { payload: pl }; if (args.p_status != null) row.status = args.p_status; writes.push(['update', 'saved_quotes', JSON.parse(JSON.stringify(row)), [r.id]]); Object.assign(r, row); return { data: JSON.parse(JSON.stringify(r)), error: null }; } 
       if (fn === 'next_row_id_blocks') { const k = args.p_kinds[0]; nextId = Math.max(nextId, Number(args.p_floors[k]) || 0) + 1; return { data: { [k]: nextId }, error: null }; }
       rpcs.push([fn, JSON.parse(JSON.stringify(args))]);
       if (fn === 'invoice_order') return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.invoice_order' } };
@@ -147,7 +148,8 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     await X.ACT['slide:credit']({ dataset: { slide: 'credit:ask-cr' } });
     const p = db.tables.saved_quotes.find(q => q.id === 412).payload;
     t.check(p.creditNotes && p.creditNotes.length === 1 && p.creditNotes[0].amount === 448000 && p.creditNotes[0].lines[0].qty === 4, 'the credit note sits on the invoice: 4 × 112,000');
-    t.check(db.tables.customers.find(c => c.id === 'C2').debt === 2310000 - 448000 && db.tables.customer_debt_log.length === 1 && db.tables.customer_debt_log[0].type === 'payment', 'what Mukono owes comes down by it, on their history');
+    t.check(db.tables.customers.find(c => c.id === 'C2').debt === 2310000 && !(db.tables.customer_debt_log || []).length && !db.writes.some(w => w[1] === 'customers' || w[1] === 'customer_debt_log'),
+      'what Mukono owes comes down on the server (0165 saved_quotes_zz_sync_debt), logged there: the phone writes no balance and no history line');
     const mv = db.rpcs.find(r => r[0] === 'manager_stock_move');
     t.check(mv && mv[1].p_task === 'credit_note.raise' && mv[1].p_lines[0].delta === 4 && mv[1].p_type === 'reversal', 'the 4 sheets go back through the server’s one stock function');
     t.check(db.rpcs.some(r => r[0] === 'decide_invoice_ask' && r[1].p_status === 'accepted') && db.tables.decision_log.some(l => l.task === 'credit_note.raise'), 'the ask is closed and the decision logged');
@@ -164,8 +166,9 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     X.S.ui.vdWhy = 'twice';
     await X.ACT['slide:void']({ dataset: { slide: 'void:ask-vd' } });
     const row = db.tables.saved_quotes.find(q => q.id === 419);
-    t.check(row.voided === true && row.payload.voidedBy.why === 'twice' && row.payload.debtCharged === 0, 'INV-0419 is void and charges nothing');
-    t.check(db.tables.customers.find(c => c.id === 'C3').debt === 1224000, 'Ggaba owes the one bill, 1,224,000');
+    t.check(row.voided === true && row.payload.voidedBy.why === 'twice' && !db.writes.some(w => w[0] === 'update' && w[1] === 'saved_quotes' && w[2].payload && 'debtCharged' in w[2].payload && w[2].payload.debtCharged !== row.payload.debtCharged), 'INV-0419 is void; the phone writes the why and the void, never the bill\'s share of the balance');
+    t.check(!db.writes.some(w => w[1] === 'customers' || w[1] === 'customer_debt_log') && db.writes.filter(w => w[0] === 'update' && w[1] === 'saved_quotes' && 'voided' in w[2]).every(w => Object.keys(w[2]).join() === 'voided'),
+      'Ggaba\'s balance moves on the server as the invoice is voided (0165), once: the phone writes the void on its own column, and no balance');
     t.check(db.rpcs.some(r => r[0] === 'manager_stock_move' && r[1].p_task === 'invoice.void') && db.rpcs.some(r => r[0] === 'void_sale_bills'), 'raised twice: the goods come back and its supplier bills are cancelled');
     t.check(db.tables.saved_quotes.find(q => q.id === 418).voided === false, 'the bill that keeps is untouched');
   }

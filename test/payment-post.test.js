@@ -45,7 +45,8 @@ const src = read('index.html');
 /* ---------- 2. every receiving path offers it ----------------------------- */
 {
   const offers = (label, re) => t.check(re.test(src), label);
-  offers('an invoice’s Receive payment', /toast\('Payment recorded' \+ paymentDatedSuffix\(paidOn\)\);\n\s*offerPaymentPost\(paymentPostFromInvoices\(\[\{ q, payment \}\]/);
+  // 0165 (Sales round 1): through receive_payment, so the payment is the server's, dated today.
+  offers('an invoice’s Receive payment', /toast\('Payment recorded'[\s\S]{0,200}if\(payment\) offerPaymentPost\(paymentPostFromInvoices\(\[\{ q, payment \}\]/);
   offers('a customer’s payment (Customers, Debtors, promises, follow-ups)', /const told = paymentPostWatch\(c\.id, selections\);\n\s*recordCustomerPayment\(c\.id[\s\S]{0,200}?customerDebtPost = told\(/);
   offers('Cash in with a customer named', /recordCustomerPayment\(customer\.id[^\n]*\n\s*const cashInPost = told\([\s\S]{0,400}?offerPaymentPost\(cashInPost\)/);
   offers('an agent’s prepayment', /prepayPost = paymentPostFromInvoices\([\s\S]{0,600}?offerPaymentPost\(prepayPost\)/);

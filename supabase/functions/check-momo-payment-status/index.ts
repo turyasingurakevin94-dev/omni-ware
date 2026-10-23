@@ -58,6 +58,8 @@ async function applyMomoPaymentToOrder(admin: any, txn: any) {
     amount: txn.amount,
     description: `${providerLabel} payment from ${agentRow?.name || txn.agent_id} -- order #${txn.order_id}`,
     time: now.toTimeString().slice(0, 8),
+    // 0165: a payment's receipt names its order, or the order refuses the payment.
+    quote_id: txn.order_id,
   }).select().single();
   if (cashErr) throw new Error(`cash_txns insert failed: ${cashErr.message}`);
 

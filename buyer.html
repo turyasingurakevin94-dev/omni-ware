@@ -2314,16 +2314,17 @@ async function changeOrder(id, fn){
   const row = r.data, q = rowToQuote(row), before = q.status;
   const out = fn(q);
   if (out === false) return null;
-  const payload = { ...(row.payload || {}) };
-  ORDER_KEYS.forEach(k => { if (q[k] === undefined || q[k] === null && payload[k] === undefined) delete payload[k]; else payload[k] = q[k]; });
-  const patch = { payload };
-  if (q.status !== before) patch.status = q.status;
+  // 0165: only these keys go to the server, merged there (ow_patch_order) —
+  // a whole payload written back could drop a payment taken meanwhile.
+  const was = row.payload || {}, patch = {}, drop = [];
+  ORDER_KEYS.forEach(k => { if (q[k] === undefined || q[k] === null && was[k] === undefined) { if (k in was) drop.push(k); } else patch[k] = q[k]; });
+  const status = q.status !== before ? q.status : null;
   // The row as the database kept it: the Checking gate (0119) may have
   // held the move and put the order back in Checking (gateHeldMove), and
   // a phone that only believed its own patch said "moved" when it had not.
-  const u = await sb.from('saved_quotes').update(patch).eq('shop_id', S.shopId).eq('id', id).select('*').maybeSingle();
+  const u = await sb.rpc('ow_patch_order', { p_shop_id: S.shopId, p_id: Number(id), p_patch: patch, p_client_name: null, p_client_phone: null, p_drop: drop.length ? drop : null, p_status: status });
   if (u.error) throw u.error;
-  const fresh = rowToQuote(u.data || { ...row, ...patch });
+  const fresh = rowToQuote(u.data || { ...row, ...(status ? { status } : {}), payload: { ...was, ...patch } });
   const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();

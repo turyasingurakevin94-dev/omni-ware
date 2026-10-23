@@ -60,8 +60,9 @@ t.check(orderCheckingGate({ ...big, items: [{ ...big.items[0], qty: 4 }] }) === 
 /* the console invoices through the server (invoice_order, 0119) */
 {
   const tog = extractFunction(src, 'toggleQuoteInvoiced', 'index.html');
-  t.check(/if\(!q\.invoiced && typeof sb !== 'undefined' && sb && currentShopId\)\{\s+if\(\(await invoiceOnServer\(q\)\) !== 'missing'\) return;/.test(tog),
-    'the console\'s Invoice goes to the server, and invoices for itself only where 0119 is missing');
+  // 0165 (Sales round 1): the console no longer invoices for itself, even where 0119 is missing.
+  t.check(/if\(!q\.invoiced\)\{[\s\S]{0,200}if\(\(await invoiceOnServer\(q\)\) === 'missing'\) toast\([\s\S]{0,160}return;\s*\}/.test(tog),
+    'the console\'s Invoice goes to the server only, and never invoices for itself');
   t.check(tog.indexOf('invoiceOnServer(q)') < tog.indexOf('q.invoiced = !q.invoiced'), 'asked before anything changes here');
   const srv = extractFunction(src, 'invoiceOnServer', 'index.html');
   t.check(/navigator\.onLine === false[\s\S]{0,200}return 'refused'/.test(srv), 'offline it waits, rather than invoicing a copy the server may already have invoiced');

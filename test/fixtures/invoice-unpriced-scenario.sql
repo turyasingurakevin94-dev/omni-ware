@@ -28,6 +28,7 @@ insert into prices(id, shop_id, product_id, supplier_id, retail, unit) values
 insert into customers(shop_id,id,name,debt,credit_limit,terms_days) values
  ('11111111-1111-1111-1111-111111111111','C001','Kato Construction',0,5000000,30);
 
+select set_config('ow.money_fix', 'on', false);  -- a pre-0165 row, seeded as it stands on live (0165)
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
  -- Q-0541's shape: a priced line and a line to price, paid for the priced one only
  (9501,'11111111-1111-1111-1111-111111111111','Walk-in','completed',false,50000,
@@ -56,6 +57,7 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid
   json_build_object('client', json_build_object('name','Walk-in'), 'deliveredAt', (now() - interval '30 hours')::text, 'items', json_build_array(
     json_build_object('productId','P1','productName','BB Silicone','qty',1,'price',40000,'sellPrice',50000,'unit','piece','supplierId','S1'),
     json_build_object('productId','P2','productName','Glass Door Locks','qty',0,'price',0,'unit','piece','supplierId','')))::jsonb);
+select set_config('ow.money_fix', '', false);
 
 insert into purchase_invoices(id, shop_id, quote_id, date, payload) values
  (7001,'11111111-1111-1111-1111-111111111111',9507,current_date,
@@ -107,7 +109,9 @@ select _try('check: told once a day, not every hour', 'ok', $q$select _is($c$(se
 
 -- ---- priced, it goes
 -- The Manager prices MEGGO at 13,000; the customer pays the 26,000 for it.
+select set_config('ow.money_fix', 'on', false);  -- setup written straight to the table, as before 0165
 update saved_quotes set payload = jsonb_set(payload, '{items,1,sellPrice}', '13000'), amount_paid = 76000 where id = 9501;
+select set_config('ow.money_fix', '', false);
 select _try('the next run, once the line is priced', 'ok', $q$select _is($c$(select (r->>'invoiced')::int = 1 from (select ow_invoice_due_orders() r) x)$c$)$q$);
 select _try('check: Q-0541''s shape is invoiced at the Manager''s price, not at cost', 'ok', $q$select _is($c$(select invoiced and (payload->>'debtCharged')::numeric = 0 from saved_quotes where id=9501)$c$)$q$);
 

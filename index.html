@@ -23951,6 +23951,7 @@
   .cu-bk-spl.ow-bad{stroke:var(--ow-crimson);}
   .ow-fig.cu-bk-mg{color:var(--ow-ink-600);}
   .cu-tr > span.cu-bk-ow{flex-direction:column;align-items:flex-end;justify-content:center;gap:0;}
+  .cu-bk-ow .ow-good{color:var(--ow-verdigris);}   /* 0165: a deposit, paid ahead */
   .cu-bk-a{font-size:var(--ow-t-11);color:var(--ow-ink-400);font-family:'Figtree',system-ui,sans-serif;}
   .ow-fig.cu-bk-slow{color:var(--ow-amber);font-weight:var(--ow-fw-600);}
   .cu-bk-cash{font-family:'Figtree',system-ui,sans-serif;font-size:var(--ow-t-12);color:var(--ow-ink-600);}
@@ -65789,7 +65790,8 @@ function recordCustomerPayment(customerId, amount, account, note, selections, ca
     // The cash receipt stays at the full amount -- that money really did
     // come in, and the cash book is a record of cash, not of debt.
     const before = Number(c.debt)||0;
-    const after = Math.max(0, before - unapplied);
+    // 0165: a balance already below 0 is a deposit -- never clamped away.
+    const after = before > 0 ? Math.max(0, before - unapplied) : before;
     const cashTxnId = addCashReceipt(account, unapplied, category || 'Debt Payment', note || `Payment — ${c.name}`, date);
     c.debt = after;
     if(before !== after){
@@ -66129,8 +66131,13 @@ async function toggleQuoteInvoiced(id){
      and the hourly run at once. Only a database without 0119 falls
      through to the console's own invoicing below. Taking an invoice back
      stays here: the server leaves on the order what that needs. */
-  if(!q.invoiced && typeof sb !== 'undefined' && sb && currentShopId){
-    if((await invoiceOnServer(q)) !== 'missing') return;
+  /* 0165 (Sales round 1): the console no longer invoices on its own. The
+     client-side copy billed what the server refuses (lines nobody priced,
+     a balance clamped at 0); the server's is the one way. */
+  if(!q.invoiced){
+    if(!(typeof sb !== 'undefined' && sb && currentShopId)){ toast('Invoicing needs the connection to the server. Nothing was invoiced.', 6000); return; }
+    if((await invoiceOnServer(q)) === 'missing') toast('This database has no invoice_order (0119): run the migrations first. Nothing was invoiced.', 7000);
+    return;
   }
   q.invoiced = !q.invoiced;
   /* A late entry is invoiced on its own date -- the day the goods went --
@@ -74074,20 +74081,25 @@ function renderInvPaymentHistory(q){
 // debt, and -- crucially -- removes the Cash Book entry that payment
 // created, so a recalled/deleted payment never leaves a stray cash-in
 // behind.
-function removeInvoicePayment(id, idx){
+async function removeInvoicePayment(id, idx){
   const q = data.savedQuotes.find(x=>x.id===id);
   if(!q || !q.payments || !q.payments[idx]) return;
   if(q.payments[idx].refund){ toast('That is a refund on a credit note — it stays with the note.'); return; }
   if(!confirm('Remove this payment? Its matching Cash Book entry will be removed too.')) return;
-  const [removed] = q.payments.splice(idx, 1);
-  q.amountPaid = Math.max(0, (Number(q.amountPaid)||0) - (Number(removed.amount)||0));
-  removeCashTxnsByIds([removed.cashTxnId]);
-  syncInvoiceDebtCharge(q);
-  saveData();
-  renderInvPaymentHistory(q);
-  const total = savedQuoteTotal(q);
-  const paid = Number(q.amountPaid)||0;
-  document.getElementById('inv_pay_summary').innerHTML = invPaymentSummaryHTML(q);
+  /* 0165 (Sales round 1): one server write (ow_correct_payment) takes the
+     payment, its receipt, what is paid and the balance off together; the
+     database refuses a payment dropped while its receipt still stands. */
+  const removed = q.payments[idx];
+  if(typeof sb === 'undefined' || !sb || !currentShopId){ toast('Removing a payment needs the connection to the server.', 6000); return; }
+  if(removed.id == null){ toast('This payment has no id to remove it by: correct it from the Accounts app.', 6000); return; }
+  const { error } = await sb.rpc('ow_correct_payment', { p_shop_id: currentShopId, p_order_id: q.id, p_payment_id: String(removed.id), p_remove: true });
+  if(error){ toast('Not removed: ' + (error.message || 'the server refused it'), 7000); return; }
+  await pollForUpdatesNow({ force: true });
+  const fresh = data.savedQuotes.find(x=>x.id===id) || q;
+  renderInvPaymentHistory(fresh);
+  const total = savedQuoteTotal(fresh);
+  const paid = Number(fresh.amountPaid)||0;
+  document.getElementById('inv_pay_summary').innerHTML = invPaymentSummaryHTML(fresh);
   document.getElementById('ip_amount').value = (total-paid)>0 ? (total-paid) : '';
   invRenderSide();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
@@ -74309,38 +74321,49 @@ function printReceipt(q, payment, idx){
   area.innerHTML = '';
 }
 
-document.getElementById('ip_save').addEventListener('click', ()=>{
-  const q = data.savedQuotes.find(x=>x.id===invPaymentId);
-  if(!q) return;
-  const amount = Number(document.getElementById('ip_amount').value)||0;
+document.getElementById('ip_save').addEventListener('click', async ()=>{
+  const q0 = data.savedQuotes.find(x=>x.id===invPaymentId);
+  if(!q0) return;
+  const amount = Math.round(Number(document.getElementById('ip_amount').value)||0);
   if(amount<=0){ toast('Enter an amount greater than 0'); return; }
   const note = document.getElementById('ip_note').value.trim();
   const account = document.getElementById('ip_account').value;
   const paidOn = paymentDateFrom('ip_date');
   if(!paidOn) return;
-  if(!q.payments) q.payments = [];
-  const cashTxnId = addCashReceipt(account, amount, 'Invoice Payment', note || `Payment — ${invoiceNumberLabel(q)}`, paidOn, q.id);
-  /* `method` is the account the form already asked for and used to
-     throw away -- a receipt that says how the money arrived settles an
-     argument months later. `id` is what makes this payment's receipt
-     number survive a LATER payment being reversed. */
-  const payment = {date: paidOn, amount, note, cashTxnId, method: account, id: nextPaymentId(q)};
-  q.payments.push(payment);
-  q.amountPaid = (Number(q.amountPaid)||0) + amount;
-  syncInvoiceDebtCharge(q);
-  saveData();
+  /* 0165 (Sales round 1): a payment is one server write (receive_payment),
+     as in the Sales, Manager and Accounts apps -- the payment, its
+     receipt, what is paid and the customer's balance together. Over what
+     is owed it asks: a deposit the customer confirms, or change. The
+     server dates a payment the day it is taken. */
+  if(typeof sb === 'undefined' || !sb || !currentShopId){ toast('Recording a payment needs the connection to the server.', 6000); return; }
+  const cust = q0.customerId != null && q0.customerId !== '' ? (data.customers||[]).find(c=> String(c.id) === String(q0.customerId)) : null;
+  if(q0.invoiced && !cust){ toast('Name the customer on this invoice first: its payment goes on their account.', 6000); return; }
+  const owes = q0.invoiced ? Math.max(0, Number(cust.debt)||0) : Math.max(0, Math.round(savedQuoteTotal(q0) - (Number(q0.amountPaid)||0)));
+  let over = null;
+  if(amount > owes){
+    const extra = amount - owes, who = cust ? cust.name : 'them';
+    over = (cust && confirm(`${fmtUGX(extra)} more than is owed.\n\nOK: ${who} confirms it is a deposit, kept for their next bill.\nCancel: give it back as change.`)) ? 'deposit' : 'change';
+  }
+  const args = q0.invoiced
+    ? { p_shop_id: currentShopId, p_customer_id: String(cust.id), p_amount: amount, p_method: account || 'cash', p_picks: [q0.id], p_order_id: null, p_ref: null, p_over: over }
+    : { p_shop_id: currentShopId, p_customer_id: null, p_amount: amount, p_method: account || 'cash', p_picks: null, p_order_id: q0.id, p_ref: null, p_over: over };
+  const { data: res, error } = await sb.rpc('receive_payment', args);
+  if(error){ toast('Nothing was recorded: ' + (error.message || 'the server refused it'), 7000); return; }
+  await pollForUpdatesNow({ force: true });
+  const q = data.savedQuotes.find(x=>x.id===invPaymentId) || q0;
+  const ids = ((res && res.cashRows) || []).map(r => String(r.id));
+  const payment = (q.payments||[]).slice().reverse().find(p => ids.includes(String(p.cashTxnId))) || (q.payments||[])[(q.payments||[]).length-1];
   closeModal('invPaymentModal');
   resetInvoicePaymentForm();
   invRenderSide();
   renderCustomers(document.getElementById('c_search') ? document.getElementById('c_search').value : '');
   renderDebtorsList();
-  toast('Payment recorded' + paymentDatedSuffix(paidOn));
-  offerPaymentPost(paymentPostFromInvoices([{ q, payment }], account, paidOn));
-  /* Money in, paper out -- the supermarket moment, and the only one that
-     prints without being asked. Last, so a printer that is off or a
-     dialog that is cancelled cannot cost the shop the payment record
-     itself: everything above has already been saved. */
-  if(data.presetAutoPrintReceipt) printReceipt(q, payment, q.payments.length-1);
+  const change = res && Number(res.change) > 0 ? ` · give back ${fmtUGX(res.change)}` : res && Number(res.deposit) > 0 ? ` · ${fmtUGX(res.deposit)} kept as a deposit` : '';
+  toast('Payment recorded' + (paidOn !== todayISO() ? ' today (the server dates a payment the day it is taken)' : '') + change, 6000);
+  if(payment) offerPaymentPost(paymentPostFromInvoices([{ q, payment }], account, todayISO()));
+  /* Money in, paper out -- last, so a printer that is off cannot cost the
+     shop the payment record itself: the server has it already. */
+  if(payment && data.presetAutoPrintReceipt) printReceipt(q, payment, (q.payments||[]).indexOf(payment));
 });
 
 /* ---- The two registers, and the one bar over them ------------------
@@ -88731,7 +88754,7 @@ function agentsScreenClick(e){
   if((el = hit('[data-agrecord]'))){ agentConfirmPay(); return; }
   if((el = hit('[data-agundo]'))){ const [qid, idx] = el.dataset.agundo.split(':');
     const q = data.savedQuotes.find(x=> String(x.id) === qid);
-    if(q){ removeInvoicePayment(q.id, Number(idx)); refreshAgentsScreen(); } return; }
+    if(q){ removeInvoicePayment(q.id, Number(idx)).then(refreshAgentsScreen); } return; }
   if(hit('button,a,input,select,label,textarea')) return;
   if((el = hit('[data-agx-open]'))){ agxOpenAgent(el.dataset.agxOpen); return; }
   if((el = hit('.agv-qr[data-agq],.agv-qc[data-agq]'))){ const rk = el.dataset.agq;
@@ -90389,7 +90412,7 @@ function customerRegisterRowHTML(r, h){
     <span class="n" data-l="Margin">${r.keptPct !== null ? `<span class="ow-fig cu-bk-mg">${r.keptPct.toFixed(1)}%</span>` : dash}</span>
     <span class="n cu-bk-ow" data-l="Owed · age">${r.debt > 0
       ? `<span class="ow-fig${late ? ' ow-bad' : ''}">${f(r.debt)}</span><span class="cu-bk-a">${r.ageDays >= 0 ? `${r.ageDays}d` : 'no date'}</span>`
-      : dash}</span>
+      : r.debt < -0.5 ? `<span class="ow-fig ow-good" title="Paid ahead: their next bill uses it first">Deposit ${f(-r.debt)}</span>` : dash}</span>
     <span class="n" data-l="Pays in">${pays}</span>
   </div>`;
 }
@@ -90503,7 +90526,7 @@ function renderCustomers(filter=''){
   /* The totals are the whole matching set, never the page. */
   const paid = rows.reduce((n, r)=> n + r.spend, 0);
   const kept = rows.reduce((n, r)=> n + r.kept, 0);
-  const owed = rows.reduce((n, r)=> n + r.debt, 0);
+  const owed = rows.reduce((n, r)=> n + Math.max(0, r.debt), 0);   // a deposit (below 0) is not money owed
   wrap.innerHTML = `<div class="cu-tb cu-bk">
       <div class="cu-tr cu-th cu-t-book"><span>Health</span><span>Customer</span><span>Rhythm</span><span>6 months</span>
         <span class="n">Paid 90d</span><span class="n">Margin</span><span class="n">Owed &middot; age</span><span class="n">Pays in</span></div>
@@ -98843,14 +98866,19 @@ function reconcileCustomerDebts(d){
        is not a repair; this one belongs to the banner, and the balance is
        left exactly as found. */
     if(Math.round(corrected - stored) === 0) return;
-    healed.push({c, from: stored, to: corrected});
-    c.debt = corrected;
+    /* 0165 (Sales round 1): the server keeps every balance now (the sync
+       trigger, receive_payment, ow_invoice_core). The console no longer
+       rewrites one on load -- it would write with no log line, and a
+       balance below 0 is a deposit, not drift. The drift banner still
+       shows what this finds; nothing is changed here. */
+    healed.push({c, from: stored, to: corrected, readOnly: true});
   });
   return healed;
 }
 // Said out loud, because a chase list that shrinks on its own is otherwise
 // indistinguishable from a chase list that lost something.
 function reportDebtReconciliation(healed){
+  healed = (healed||[]).filter(h=> !h.readOnly);   // 0165: nothing is re-read on load any more
   if(!healed.length) return;
   healed.forEach(h=> console.warn(`Customer balance re-read from its own records: ${h.c.name} ${h.from} -> ${h.to}`));
   toast(healed.length===1
@@ -98988,7 +99016,7 @@ document.getElementById('cd_save').addEventListener('click', ()=>{
   if(!happenedOn) return;
   if(!c.debtLog) c.debtLog = [];
   if(editingCustomerDebtType==='charge'){
-    c.debt = Math.max(0, (Number(c.debt)||0) + amount);
+    c.debt = (Number(c.debt)||0) + amount;   // 0165: a charge on a deposit uses the deposit, never clamps it away
     c.debtLog.push({id: allocRowId('debtLog'), date: happenedOn, type:'charge', amount, note, cashTxnId:null});
   } else {
     const account = document.getElementById('cd_account').value;
@@ -119557,7 +119585,12 @@ async function tillCommitSale(customerName, dateISO, account, amount, descriptio
     quoteId: q.id,
     enteredBy: (typeof cbWhoAmI === 'function') ? cbWhoAmI() : null,
   });
+  // 0165 (Sales round 1, SAL-013): what is paid is the sum of the order's
+  // payments, and each payment names its receipt -- a paid sale with no
+  // payment line is refused by the database.
+  q.payments = [{ id: 1, date: dateISO, amount, note: 'Counter sale', method: account || 'cash', cashTxnId }];
   q.amountPaid = amount;
+  q.debtCharged = 0;
   return {quote:q, shortfall, cashTxnId};
 }
 
@@ -119666,9 +119699,28 @@ async function saveCashTxn(column){
   };
   if(editingCashTxnId && editingCashTxnColumn===column){
     const idx = data.cashTxns.findIndex(t=>t.id===editingCashTxnId);
+    const was = data.cashTxns[idx] || {};
+    /* 0165 (Sales round 1): a receipt an order's payment points to moves
+       only with that payment -- the database refuses it on its own. So its
+       amount, day or account change through ow_correct_payment, which moves
+       the payment, the receipt, what is paid and the balance together. */
+    const payOrder = (data.savedQuotes||[]).find(q => (q.payments||[]).some(p => String(p.cashTxnId) === String(editingCashTxnId)));
+    const moneyMoved = Math.round(Number(was.amount)||0) !== Math.round(Number(record.amount)||0) || was.date !== record.date || was.account !== record.account || was.type !== record.type;
+    if(payOrder && moneyMoved){
+      const pay = (payOrder.payments||[]).find(p => String(p.cashTxnId) === String(editingCashTxnId));
+      if(record.type !== was.type || pay.id == null){ toast('This receipt belongs to a payment on ' + invoiceNumberLabel(payOrder) + ': correct it from the order\'s payment.', 7000); return; }
+      if(typeof sb === 'undefined' || !sb || !currentShopId){ toast('Correcting a payment needs the connection to the server.', 6000); return; }
+      const { error } = await sb.rpc('ow_correct_payment', { p_shop_id: currentShopId, p_order_id: payOrder.id, p_payment_id: String(pay.id),
+        p_amount: Math.round(Number(record.amount)||0), p_date: record.date, p_account: record.account });
+      if(error){ toast('Not changed: ' + (error.message || 'the server refused it'), 7000); return; }
+      await pollForUpdatesNow({ force: true });
+      const j = data.cashTxns.findIndex(t=>t.id===editingCashTxnId);
+      if(j >= 0) data.cashTxns[j] = {...data.cashTxns[j], description: record.description, category: record.category, time: record.time};
+    } else {
     /* Spread over links the form does not carry -- a counter sale's
        quoteId, a transfer's other leg -- so an edit keeps them. */
     data.cashTxns[idx] = {...data.cashTxns[idx], ...record, id: editingCashTxnId};
+    }
   } else {
     data.cashTxns.push({...record, id: allocRowId('cashTxn'), enteredBy: (typeof cbWhoAmI === 'function') ? cbWhoAmI() : null});
   }

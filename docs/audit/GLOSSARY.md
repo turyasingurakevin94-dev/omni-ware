@@ -66,6 +66,11 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Owes | What a customer owes the shop (one customer: "Owes"; the list: "Owe") | — | Sales UX audit |
 | To collect | Money owed that Sales should collect | — | Sales UX audit |
 | Take payment | Record money a customer paid | — | Sales |
+| Deposit | Money a customer paid ahead and confirmed keeping; their next bill uses it first. "Deposit 50,000", green; a balance below 0. | on account; credit (credit is the Manager's pay-later); "-50,000" | Sales R1 · SAL-005 |
+| Give change | The default when someone pays more than they owe: the extra goes back | keeping it quietly | Sales R1 · SAL-005 |
+| Paid over | Paid more than the bill, before anyone settled it (change, or a deposit if the customer confirms); Accounts settles it | — | Sales R1 · SAL-005 |
+| To price | A line with no selling price yet; nothing is owed on it until the Manager prices it ("2 lines to price · Ruth", "Priced so far") | billing it at cost | Sales R1 · SAL-007 |
+| Doesn't add up | A customer's balance and their open bills disagree; Accounts checks it ("349,000 apart") | two figures with no word | Sales R1 · SAL-011 |
 | Money on a phone | Shown only to the roles allowed to see it, enforced in SQL by role. The yard's phone gets no money at all. | hidden in the browser only | Store, before the loop (0159, 0160) |
 
 ## Time
@@ -101,6 +106,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Did you mean | Nothing found offers the nearest shop words | a dead end | Store R4 · NAV-06/07 |
 | Needs you | Today's list of jobs for this person | — | Sales, Store |
 | For you · In the yard today | Alerts: only today's "for you" alerts are unread; opening Alerts reads them | counting others' routine check-ins as unread | Store R6 · WORD-10 |
+| Signed in as someone else | Another login is under this app; nothing is saved until the app's own person signs in again | carrying on as the other login | Sales R1 · SAL-002 |
 | Big text | You → Big text: every size one step up, at least 1.2×; controls 52 px; nothing clipped at 360 | a zoom that squeezes the layout | Store R8 · A11Y-01 |
 | Asked of Sourcing | Requests for items the shop doesn't sell: Asked → Looking → Found → Priced → Listed | — | Sales |
 

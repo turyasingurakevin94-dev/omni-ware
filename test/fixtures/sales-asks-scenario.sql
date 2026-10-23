@@ -60,7 +60,8 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select _try('sales: places a counter sale, all from the shelf', 'ok', $q$insert into saved_quotes(id, shop_id, client_name, date, status, invoiced, amount_paid, voided, payload) values (7001,'11111111-1111-1111-1111-111111111111','Walk-in',current_date,'draft',false,0,false,
   '{"counter":true,"client":{"name":"Walk-in"},"items":[{"lineId":1,"productId":"P1","productName":"Cement","unit":"bag","qty":2,"supplierId":"__stock__","price":30000,"sellPrice":37500}],"charges":[],"payments":[],"takenBy":"00000000-0000-0000-0000-00000000000d"}')$q$);
-select _try('sales: paid in full, handed over', 'ok', $q$update saved_quotes set status='completed', amount_paid=75000, payload = payload || '{"payments":[{"amount":75000,"method":"cash"}]}' where id=7001$q$);
+select _try('sales: paid in full, through receive_payment (0165: a payment needs its receipt)', 'ok', $q$select receive_payment('11111111-1111-1111-1111-111111111111', null, 75000, 'cash', null, 7001)$q$);
+select _try('sales: handed over', 'ok', $q$update saved_quotes set status='completed' where id=7001$q$);
 select _try('sales: invoices it through the one function', 'ok', $q$select invoice_order('11111111-1111-1111-1111-111111111111', 7001)$q$);
 select _try('check: invoiced, the stock gone off the shelf', 'ok', $q$select _is($c$(select invoiced from saved_quotes where id=7001) and (select qty from stock where key='P1') = 48$c$)$q$);
 select _try('check: nobody is told a counter sale is "ready to invoice"', 'ok', $q$select _is($c$_to('order.delivered') = ''$c$)$q$);

@@ -20,12 +20,14 @@ insert into staff(shop_id,id,name,role,user_id) values
 insert into customers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','C1','Ggaba Stores');
 insert into customers(shop_id,id,name,credit_limit) values ('11111111-1111-1111-1111-111111111111','C2','Kato Construction',5000000);
 insert into agents(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','A1','Peter Sserwadda');
+select set_config('ow.money_fix', 'on', false);  -- a pre-0165 row, seeded as it stands on live (0165)
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
  (9554,'11111111-1111-1111-1111-111111111111','Ggaba Stores','preparing',false,0,'{"customerId":"C1","items":[{"lineId":1,"productId":"P1","productName":"Nails","unit":"pack","qty":1,"supplierId":"__stock__","price":150000,"sellPrice":185000}]}'),
  (9555,'11111111-1111-1111-1111-111111111111','Kato Construction','preparing',false,0,'{"customerId":"C2","items":[{"lineId":1,"productId":"P1","productName":"Nails","unit":"pack","qty":1,"supplierId":"__stock__","price":150000,"sellPrice":185000}]}'),
  (9556,'11111111-1111-1111-1111-111111111111','Mukono Roofing','preparing',false,185000,'{"items":[{"lineId":1,"productId":"P1","productName":"Nails","unit":"pack","qty":1,"supplierId":"__stock__","price":150000,"sellPrice":185000}]}'),
  (9557,'11111111-1111-1111-1111-111111111111','Walk-in','preparing',false,0,'{"items":[{"lineId":1,"productId":"P1","productName":"Nails","unit":"pack","qty":1,"supplierId":"__stock__","price":150000,"sellPrice":40000}]}'),
  (9558,'11111111-1111-1111-1111-111111111111','Peter Sserwadda','preparing',false,0,'{"originAgentId":"A1","items":[{"lineId":1,"productId":"P1","productName":"Nails","unit":"pack","qty":1,"supplierId":"__stock__","price":150000,"sellPrice":185000}]}');
+select set_config('ow.money_fix', '', false);
 
 create table _r(n serial, label text, expect text, got text);
 create function _try(label text, expect text, q text) returns void language plpgsql as $$
