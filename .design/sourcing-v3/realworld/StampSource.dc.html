@@ -50,12 +50,20 @@ button{font-family:inherit}
     </div>
 
     <!-- step one: ask the ones who might have it, none picked -->
-    <span style="padding: 4px 4px 0; font-size: 15px; font-weight: 700">{{listHead}}</span>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 4px 0">
+      <span style="font-size: 15px; font-weight: 700">{{listHead}}</span>
+      <span style="display: flex; align-items: center; gap: 4px" aria-label="Quantity to compare prices at">
+        <span style="font-size: 12px; font-weight: 700; color: #6B5A43; margin-right: 2px">price at</span>
+        <button type="button" onClick="{{qtyLess}}" aria-label="Fewer" style="all: unset; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><span style="width: 30px; height: 30px; border-radius: 999px; background: #EDE6D8; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></span></button>
+        <span class="m" style="min-width: 26px; text-align: center; font-size: 17px; font-weight: 600">{{qty}}</span>
+        <button type="button" onClick="{{qtyMore}}" aria-label="More" style="all: unset; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center"><span style="width: 30px; height: 30px; border-radius: 999px; background: #EDE6D8; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span></button>
+      </span>
+    </div>
     <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 4px 14px">
       <sc-for list="{{sups}}" as="s" hint-placeholder-count="3">
         <button type="button" role="checkbox" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; min-height: 70px; display: flex; align-items: center; gap: 12px; border-top: {{s.rule}}">
           <span style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: #E4E6FA; color: #2B3A8C; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{s.i}}</span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{s.name}}</span><span style="font-size: 12px; font-weight: 600; {{s.subInk}}">{{s.sub}}</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 700">{{s.name}}</span><sc-if value="{{s.best}}" hint-placeholder-val="{{ false }}"><span style="height: 20px; padding: 0 7px; border-radius: 999px; background: #E3F4EA; color: #0F6B43; font-size: 11px; font-weight: 700; display: flex; align-items: center">{{s.bestLabel}}</span></sc-if></span><span style="font-size: 12px; font-weight: 600; {{s.subInk}}">{{s.sub}}</span><sc-if value="{{s.price}}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{s.tiersAria}}" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px"><sc-for list="{{s.tiers}}" as="t" hint-placeholder-count="3"><span class="m" style="height: 22px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; display: flex; align-items: center; {{t.style}}">{{t.label}}</span></sc-for></span></sc-if></span>
           <span style="flex: none; display: flex; align-items: center; justify-content: flex-end; min-width: 28px; {{s.rightInk}}">
             <sc-if value="{{s.box}}" hint-placeholder-val="{{ true }}"><span style="width: 24px; height: 24px; border-radius: 7px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; {{s.boxStyle}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span></sc-if>
             <sc-if value="{{s.price}}" hint-placeholder-val="{{ false }}"><span style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span class="m" style="font-size: 15px; font-weight: 600">{{s.amount}}</span><span style="font-size: 11px; font-weight: 600; color: #6B5A43">{{s.per}}</span></span></sc-if>
@@ -84,7 +92,8 @@ button{font-family:inherit}
         <input value="{{fPhone}}" inputmode="tel" aria-label="Phone" placeholder="Phone" onInput="{{typePhone}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
         <input value="{{fWhere}}" aria-label="Where they are" placeholder="Where: market, street, landmark" onInput="{{typeWhere}}" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 600; color: #1C2233">
         <input value="{{fSells}}" aria-label="What they sell" placeholder="What they sell" onInput="{{typeSells}}" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 600; color: #1C2233">
-        <input value="{{fPrice}}" inputmode="numeric" aria-label="Their price for the tile cutter, if you have it" placeholder="Their price, if you have it" onInput="{{typePrice}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
+        <input value="{{fPrice}}" inputmode="numeric" aria-label="Their price for one, if you have it" placeholder="Their price for one, if you have it" onInput="{{typePrice}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
+        <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 12px; font-weight: 700; color: #6B5A43">Cheaper from</span><input value="{{fBq}}" inputmode="numeric" aria-label="Cheaper from how many" placeholder="qty" onInput="{{typeBq}}" class="m" style="width: 64px; height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: center"><span style="font-size: 12px; font-weight: 700; color: #6B5A43">at</span><input value="{{fBp}}" inputmode="numeric" aria-label="Price at that quantity" placeholder="price each" onInput="{{typeBp}}" class="m" style="flex: 1; min-width: 0; height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: right"></div>
         <button type="button" onClick="{{saveNew}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; {{saveStyle}}">{{saveLabel}}</button>
       </div>
       </sc-if>
@@ -131,7 +140,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '' }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', fBq: '', fBp: '', qty: 3 }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -148,16 +157,22 @@ class Component extends DCLogic {
     const askers = [['GA', 'background:#FBE5E2;color:#8E2A22'], ['PS', 'background:#F6E4F1;color:#7A3268'], ['KC', 'background:#E3F4EA;color:#0F6B43']].map(([i, face]) => ({ i, face }));
     // [key, initials, name, why we think they have it, answer]
     const BASE = [
-      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { amount: '380,000', per: 'one, in its box · 2 days' }],
-      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { amount: '395,000', per: 'one · next day' }],
+      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { tiers: [[1, 380000], [5, 355000], [10, 340000]], per: 'in its box · 2 days' }],
+      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { tiers: [[1, 395000], [5, 370000]], per: 'next day' }],
       ['owi', 'OP', 'Owino Plumbing', 'Sometimes has tile tools', null]
     ];
     // the rest of the book: not the likely ones, but one tap away
     const BOOK = [
-      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { amount: '410,000', per: 'one · 3 days' }],
+      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { tiers: [[1, 410000]], per: '3 days' }],
       ['nam', 'NS', 'Namanve Sheets', 'Roofing, gutters', null],
       ['nde', 'NT', 'Ndeeba Timber Works', 'Timber, boards', null]
     ];
+    const fmt = (n) => n.toLocaleString('en-US');
+    const kfmt = (n) => (n % 1000 ? (n / 1000).toFixed(1) : n / 1000) + 'k';
+    const at = (tiers, q) => tiers.filter(t => t[0] <= q).slice(-1)[0] || tiers[0];
+    const Q = S.qty;
+    const tierChips = (tiers) => tiers.map(t => { const on = at(tiers, Q)[0] === t[0];
+      return { label: t[0] + '+ ' + kfmt(t[1]), style: on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EBE0;color:#4A3A22' }; });
     const SUP = BASE.concat(BOOK.filter(x => S.extra.includes(x[0])));
     const asked = S.phase === 'asked';
     const rows = SUP.map(([k, i, name, why, ans]) => {
@@ -168,13 +183,17 @@ class Component extends DCLogic {
         sub: st === 'none' ? 'Answered: does not stock it' : st === 'wait' ? 'Asked in the supplier app' : why,
         subInk: st === 'none' ? 'color:#8E2A22' : 'color:#6B5A43',
         box: st === 'choose', boxStyle: on ? 'background:#16203C' : 'box-shadow:inset 0 0 0 2px #CDBFA6',
-        price: st === 'price', amount: ans ? ans.amount : '', per: ans ? ans.per : '', waiting: st === 'wait',
+        price: st === 'price', amount: ans ? fmt(at(ans.tiers, Q)[1]) : '', unit: ans ? at(ans.tiers, Q)[1] : 0, per: ans ? 'each at ' + Q + ' · ' + ans.per : '', waiting: st === 'wait',
+        tiers: ans ? tierChips(ans.tiers) : [], tiersAria: ans ? ans.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '',
         rightInk: st === 'skip' ? 'opacity:.4' : '' };
     });
     if (S.custom) rows.push({ i: S.custom.name.slice(0, 2).toUpperCase(), name: S.custom.name, on: 'true', pick: () => {},
       sub: (S.custom.price ? 'New · ' : 'New · asked on WhatsApp · ') + S.custom.where + ' · ' + S.custom.phone, subInk: 'color:#0F6B43',
-      box: false, boxStyle: '', price: !!S.custom.price, amount: S.custom.price, per: 'one · you got it yourself', waiting: !S.custom.price, rightInk: '' });
-    const sups = rows.map((r, n) => ({ ...r, rule: n ? '1px solid #F1EBE0' : 'none' }));
+      box: false, boxStyle: '', price: !!S.custom.tiers, amount: S.custom.tiers ? fmt(at(S.custom.tiers, Q)[1]) : '', unit: S.custom.tiers ? at(S.custom.tiers, Q)[1] : 0, per: 'each at ' + Q + ' · your own price', waiting: !S.custom.tiers, rightInk: '',
+      tiers: S.custom.tiers ? tierChips(S.custom.tiers) : [], tiersAria: S.custom.tiers ? S.custom.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '' });
+    const pricedRows = rows.filter(r => r.price);
+    const low = pricedRows.length > 1 ? Math.min(...pricedRows.map(r => r.unit)) : 0;
+    const sups = rows.map((r, n) => ({ ...r, rule: n ? '1px solid #F1EBE0' : 'none', best: !!low && r.price && r.unit === low, bestLabel: 'best at ' + Q }));
     const qq = S.q.trim().toLowerCase();
     const listed = SUP.map(x => x[2].toLowerCase()).concat(S.custom ? [S.custom.name.toLowerCase()] : []);
     const hitsRaw = qq.length < 2 ? [] : BOOK.filter(x => !S.extra.includes(x[0]) && (x[2].toLowerCase().includes(qq) || x[3].toLowerCase().includes(qq)));
@@ -182,26 +201,29 @@ class Component extends DCLogic {
       add: () => this.setState({ extra: [...S.extra, k], pick: { ...S.pick, [k]: true }, q: '' }) }));
     const offerNew = qq.length >= 3 && !hitsRaw.length && !listed.some(n => n.includes(qq)) && !S.custom;
     const fpv = parseInt(String(S.fPrice).replace(/[^0-9]/g, ''), 10) || 0;
+    const bq = parseInt(S.fBq, 10) || 0, bp = parseInt(String(S.fBp).replace(/[^0-9]/g, ''), 10) || 0;
     const canSave = S.fPhone.replace(/[^0-9]/g, '').length >= 9 && S.fWhere.trim().length > 2;
     const nPick = Object.values(S.pick).filter(Boolean).length;
-    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.price ? 1 : 0);
+    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.tiers ? 1 : 0);
     const pending = asked && SUP.some(([k]) => S.pick[k] && !S.back[k]);
     const can = priced >= 1 && !pending;
     return {
       strip, askers, sups,
-      ring: SUP.filter(([k, , , , a]) => S.back[k] && a).map(([, , name, , a]) => name.split(' ')[0].toUpperCase() + ' ' + a.amount).concat(S.custom && S.custom.price ? [S.custom.name.split(' ')[0].toUpperCase() + ' ' + S.custom.price] : []).join(' • ') + ' • ' + priced + ' PRICED • ',
+      ring: pricedRows.map(r => r.name.split(' ')[0].toUpperCase() + ' ' + r.amount).join(' • ') + ' • AT ' + Q + ' EACH • ',
+      qty: Q, qtyLess: () => this.setState({ qty: Math.max(1, Q - 1) }), qtyMore: () => this.setState({ qty: Math.min(20, Q + 1) }),
       q: S.q, typeQ: (e) => this.setState({ q: e.target.value }), hits, hasHits: hits.length > 0, offerNew, showSearch: !S.inked,
       qName: S.q.trim(), fPhone: S.fPhone, fWhere: S.fWhere, fSells: S.fSells, fPrice: S.fPrice,
       typePhone: (e) => this.setState({ fPhone: e.target.value.replace(/[^0-9+ ]/g, '').slice(0, 16) }), typeWhere: (e) => this.setState({ fWhere: e.target.value }),
       typeSells: (e) => this.setState({ fSells: e.target.value }), typePrice: (e) => this.setState({ fPrice: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
-      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: S.fSells.trim(), price: fpv ? fpv.toLocaleString('en-US') : '' }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '' }); },
+      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: S.fSells.trim(), tiers: fpv ? [[1, fpv]].concat(bq > 1 && bp > 0 && bp < fpv ? [[bq, bp]] : []) : null }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', fBq: '', fBp: '' }); },
+      fBq: S.fBq, fBp: S.fBp, typeBq: (e) => this.setState({ fBq: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) }), typeBp: (e) => this.setState({ fBp: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
       saveLabel: fpv ? 'Add them, with their price' : 'Add them and ask on WhatsApp',
       saveStyle: canSave ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
       stampSub: priced + (priced === 1 ? ' PRICE IN' : ' PRICES IN'), stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
-      told: (priced > 1 ? 'The ' + priced + ' prices go' : 'The price goes') + ' to the price list. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
+      told: (priced > 1 ? 'The ' + priced + ' prices go' : 'The price goes') + ' to the price list with every volume step. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
       stripAria: (S.inked ? 2 : 1) + ' of 9 stamps',
       listHead: asked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (nPick + (S.custom ? 1 : 0) - priced) + ' without') : 'Ask the ones who might have it',
-      canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + (nPick === 1 ? ' supplier' : ' suppliers') + ' in their app',
+      canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + (nPick === 1 ? ' supplier' : ' suppliers') + ' for 1, 5 and 10',
       ask: () => this.ask(), showMarket: !asked,
       open: !S.inked, inked: S.inked, holding: S.holding,
       pressDim: can ? '' : 'opacity:.55;cursor:default',
