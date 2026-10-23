@@ -825,8 +825,10 @@ function isoOf(ts){ if (!ts) return ''; const d = new Date(typeof ts === 'string
 function msOf(ts){ if (ts == null || ts === '') return 0; if (typeof ts === 'number') return ts; const n = Date.parse(ts); return isNaN(n) ? (Number(ts) || 0) : n; }
 function hm(ms){ if (!ms) return ''; const d = new Date(ms); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // A wait, said the way a clock says it: 2:08, or 25 m under the hour.
-function waitClock(mins){ mins = Math.max(0, Math.round(mins)); return mins < 60 ? mins + ' m' : Math.floor(mins / 60) + ':' + String(mins % 60).padStart(2, '0'); }
-function waitWords(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 1) return 'just now'; if (mins < 60) return mins + ' min'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : ''); const d = Math.round(h / 24); return d === 1 ? '1 day' : d + ' days'; }
+// How long, one way everywhere (round 6, WORD-07): "41 m", "9 h 41 m", "2 days". Never a clock.
+function howLong(mins){ mins = Math.max(0, Math.round(mins)); if (mins < 1) return 'just now'; if (mins < 60) return mins + ' m'; const h = Math.floor(mins / 60), m = mins % 60; if (h < 24) return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') + ' m' : ''); const d = Math.round(h / 24); return d === 1 ? '1 day' : d + ' days'; }
+// When: "15:20" today, "Thu 23:28" on any other day. Never a clock time with no day when it is not today.
+function whenAt(ms){ if (!ms) return ''; return isTodayMs(ms) ? hm(ms) : new Date(ms).toLocaleDateString('en-GB', { weekday: 'short' }) + ' ' + hm(ms); }
 function minsSince(ms){ return ms ? (Date.now() - ms) / 60000 : 0; }
 function dayLabel(iso){ if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
 function shortDay(iso){ if (!iso) return ''; if (iso === todayISO()) return 'today'; const t = new Date(); t.setDate(t.getDate() + 1); if (iso === isoOf(t)) return 'tomorrow'; return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }); }
@@ -1085,10 +1087,12 @@ function returnedQty(q, idx){
 }
 function pendingReturns(q){ return (D().returns || []).filter(a => a.status === 'sent' && (!q || Number(a.orderId) === Number(q.id))); }
 // "1 Ctn", "5 box", or "1 Ctn + 5 box": whole packs first, the line's own unit for the rest.
-function backText(it, n){ const per = quoteLineCountPer(it), u = String(it.unit || '').trim(), p = quoteLinePack(it);
+// Units, one formatter (round 6, WORD-09): always lower case, "1 ctn · 6 pcs · 2 box".
+function unitSay(u){ return String(u == null ? '' : u).trim().toLowerCase(); }
+function backText(it, n){ const per = quoteLineCountPer(it), u = unitSay(it.unit), p = quoteLinePack(it);
   if (per <= 1 || !p) return `${n0(n)} ${u}`.trim();
   const packs = Math.floor(n / per + 1e-9), loose = Math.round((n - packs * per) * 100) / 100;
-  return [packs ? `${n0(packs)} ${p.packUnit}` : '', loose ? `${n0(loose)} ${u}` : ''].filter(Boolean).join(' + ') || `0 ${p.packUnit}`; }
+  return [packs ? `${n0(packs)} ${unitSay(p.packUnit)}` : '', loose ? `${n0(loose)} ${u}` : ''].filter(Boolean).join(' + ') || `0 ${unitSay(p.packUnit)}`; }
 // An accepted count is the item counted, whatever it did to the books: one that matched writes no
 // stock_log row (0142), so the stock log alone left "since count" and the due badges standing.
 function countsIntoLastCounted(map, rows){ (rows || []).forEach(c => { if (c.status !== 'accepted') return; const t = msOf(c.decided_at || c.decidedAt) || msOf(c.created_at || c.createdAt);
@@ -1164,6 +1168,7 @@ async function loadAll(){
     shopPlace: presets.shopLocation || presets.shopAddress || '',
     bays: Math.max(1, Math.min(12, Number(presets.bays) || 4)),
   };
+  nameEveryone();
   S.loadedAt = Date.now(); S.loadErr = null;
   saveSnapshot();
 }
@@ -1183,6 +1188,7 @@ async function refreshLive(){
     if (sn.returns) S.data.returns = sn.returns.map(rowToReturn);
     if (sn.members) S.data.members = sn.members.map(m => ({ userId: m.user_id, name: m.name || '' }));
     if (sn.me) S.data.me = { name: sn.me.name || '', staffId: sn.me.staff_id || null };
+    nameEveryone();
     if (stock) { const m = {}; stock.forEach(s => { m[s.key] = Number(s.qty) || 0; }); S.data.stock = m; }
     const wasErr = !!S.loadErr; S.loadErr = null;
     S.offline = false; S.loadedAt = Date.now(); saveSnapshot(); if (wasErr || (!S.dragging && !S.ui.noRefresh)) render();
@@ -1262,10 +1268,29 @@ function myName(){
   // The name the person chose, or their staff record's, from the snapshot (round 5, PRIV-04).
   const own = S.data && S.data.me && S.data.me.name; if (own && !looksHandle(own)) return own;
   const m = (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
-  const st = myStaff(); if (st && st.name && !(m && looksHandle(st.name))) return st.name;
+  const st = myStaff(), sn = st && (st.recName != null ? st.recName : st.name); if (sn && !looksHandle(sn)) return sn;
   return m || ({ owner: 'The owner', admin: 'The admin', manager: 'The manager', store: 'The store', staff: 'The store' }[S.role] || 'The store');
 }
-function hasOwnName(){ const st = myStaff(); return !!((S.data && S.data.me && S.data.me.name) || (st && st.name) || (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name))); }
+function hasOwnName(){ const st = myStaff(), ok = n => !!n && !looksHandle(n); return ok(S.data && S.data.me && S.data.me.name) || ok(st && (st.recName != null ? st.recName : st.name)) || ok(S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)); }
+// One name per person, on every screen (round 6, WORD-01): the name they chose (0164 members),
+// else their staff record's unless it reads like a login, else the name stored with the row,
+// else "Someone". Never the login handle.
+function personName(o){
+  o = o || {}; const d = S.data || {}, uid = o.userId == null ? '' : String(o.userId);
+  const st = o.staffId != null && o.staffId !== '' ? (d.staff || []).find(s => String(s.id) === String(o.staffId)) || null : uid ? (d.staff || []).find(s => s.userId && String(s.userId) === uid) || null : null;
+  const u = uid || (st && st.userId ? String(st.userId) : '');
+  if (u && S.user && u === String(S.user.id)) return myName();
+  const ok = n => { n = String(n || '').trim(); return n && n !== 'The Store' && !looksHandle(n) && !n.includes('@') ? n : ''; };
+  const chose = u ? (d.members || []).filter(x => String(x.userId) === u).map(x => ok(x.name)).find(Boolean) : '';
+  return chose || ok(st && (st.recName != null ? st.recName : st.name)) || ok(o.stored) || 'Someone';
+}
+// Every name the yard reads is put through personName once, when the snapshot lands.
+function nameEveryone(){ const d = S.data; if (!d) return;
+  (d.staff || []).forEach(s => { if (s.recName == null) s.recName = s.name; });
+  (d.staff || []).forEach(s => { s.name = personName({ staffId: s.id }); });
+  (d.counts || []).forEach(c => { c.countedByName = personName({ userId: c.countedBy, stored: c.countedByName }); });
+  [].concat(d.reports || [], d.returns || [], d.asks || []).forEach(r => { r.byName = personName({ userId: r.by, stored: r.byName }); });
+}
 // The Manager by first name, for "Ruth decides"; the role's word when the shop has none.
 // The Manager's initials, from the full name (RN, not RU).
 // The Manager, found one way everywhere, so the name and the initials agree on every screen.
@@ -1373,6 +1398,9 @@ function waitingOnGoods(){ return boardOrders().filter(q => q.status === 'awaiti
 function orderIsPickup(q){ return orderIsCollected(q) || !orderDestination(q); }
 function loadQueue(){ return boardOrders().filter(q => q.status === 'preparing' && q.pickingStatus === 'done').sort((a, b) => msOf(a.pickingDoneAt) - msOf(b.pickingDoneAt)); }
 function onRoad(){ return boardOrders().filter(q => q.status === 'pending_delivery'); }
+// One label and one reason for an unpaid order, on every screen (round 6, WORD-03).
+const NOT_PAID = 'Not paid yet';
+function notPaidWhy(){ return `Sales take the money before it leaves, or ${managerName()} lets it go on credit.`; }
 /* ---- money at the gate (0156): a cash customer's unpaid order stays on
    the bay until it is paid or the Manager lets it go on credit. ---- */
 function moneyHold(q){ const m = D().moneyHolds; return m && q && q.status === 'preparing' ? m[String(q.id)] || null : null; }
@@ -1381,6 +1409,9 @@ function moneyHold(q){ const m = D().moneyHolds; return m && q && q.status === '
 function loadAskOf(q){ const a = q && q.letGoAsk; return a && typeof a === 'object' && a.at && !a.answer ? a : null; }
 function moneyWaits(){ return loadQueue().filter(moneyHold); }
 function doneToday(){ return liveOrders().filter(q => q.status === 'completed' && isTodayMs(q.stageEnteredAt)); }
+// One definition per word (round 6, WORD-04): Today's tiles, legend and ring, To pack and On the road
+// all read these. To pack is ready now; waiting on goods is counted apart; delivered includes collected.
+function counts(){ return memo('counts', () => { const done = doneToday(); return { toPack: packQueue().length, waitingGoods: waitingOnGoods().length, delivered: done.length, collected: done.filter(orderIsPickup).length, road: onRoad().length, packed: loadQueue().length }; }); }
 function outToday(){ return onRoad().length + doneToday().length; }
 function takenBySomeoneElse(q){ return !!(q.assignedWorkerId && !orderIsMine(q) && q.pickingStatus === 'in_progress'); }
 
@@ -1433,7 +1464,7 @@ function checkedInToday(){ return (D().collectionTrips || []).filter(t => !t.voi
 // A trip the supplier brings is named for the supplier ("Unload Maria's trip").
 function tripWho(t){ if (tripIsSupplierDelivered(t)) { const s = supplierById(t.supplierId); return (s && s.name) || String(t.supplierName || '').trim() || 'Supplier'; } return t.assignedWorkerId ? staffName(t.assignedWorkerId) : ''; }
 // When a trip on the road set off: taken, else sent, else made.
-function tripSince(t){ return hm(msOf(t.acceptedAt) || msOf(t.assignedAt) || msOf(t.createdAt)); }
+function tripSince(t){ return whenAt(msOf(t.acceptedAt) || msOf(t.assignedAt) || msOf(t.createdAt)); }
 /* One count for trips back, the same in every app (the Buyer's): a trip
    collected, not voided, not yet checked in at the shop. A Buyer round is
    several trips -- one per supplier -- whose ids share a stem,
@@ -1442,7 +1473,8 @@ function tripsBack(){ return (D().collectionTrips || []).filter(t => tripIsLive(
 function tripRoundKey(t){ const m = /^(TRIP-[A-Za-z0-9]+)-\d+$/.exec(String(t && t.id || '')); return (m ? m[1] : String(t && t.id || '')) + '|' + (t && t.assignedWorkerId || ''); }
 function roundsOf(trips){ const g = new Map(); trips.forEach(t => { const k = tripRoundKey(t); if (!g.has(k)) g.set(k, []); g.get(k).push(t); }); return [...g.values()]; }
 function roundsBack(){ return roundsOf(tripsBack()); }
-function roundWord(ts){ return ts.length > 1 ? 'round' : 'trip'; }
+// One word (round 6, WORD-08): a buying pickup is a trip, "trip · 3 suppliers" when it has several. Never "round".
+function roundWord(ts){ const n = new Set(ts.map(t => String(t.supplierId || t.supplierName || t.id))).size; return n > 1 ? `trip · ${n} suppliers` : 'trip'; }
 function tripExpect(l){ const g = tripLineGot(l); return g != null ? g : Number(l.qty) || 0; }
 function tripOrders(t){ return [...new Set(tripLines(t).map(l => String(l.orderId)))].map(id => quoteById(id)).filter(Boolean); }
 
@@ -1537,7 +1569,7 @@ function daysSinceCount(key){ const t = D().lastCounted[key]; return t ? Math.fl
 function productById(id){ const m = memo('byId', () => { const o = new Map(); D().products.forEach(p => o.set(p.id, p)); return o; }); return m.get(id) || null; }
 function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 // shared-worker.js 2173
-function staffName(id){ if (!id) return ''; const s = staffById(id); if (s && S.user && s.userId === S.user.id) return myName(); return s ? s.name : '(removed staff)'; }
+function staffName(id){ if (!id) return ''; return personName({ staffId: id }); }
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
 
 function variantLabel(combo){ return Object.values(combo || {}).join(' / '); }
@@ -1595,8 +1627,8 @@ function quoteLineCount(it, n){
   const per = quoteLineCountPer(it);
   const q = Number(n) || 0;
   const num = (x) => Number(Math.round(x * 100) / 100).toLocaleString('en-UG');
-  if (per > 1) return { n: num(q / per), unit: quoteLinePack(it).packUnit };
-  return { n: num(q), unit: String((it && it.unit) || '').trim() };
+  if (per > 1) return { n: num(q / per), unit: unitSay(quoteLinePack(it).packUnit) };
+  return { n: num(q), unit: unitSay(it && it.unit) };
 }
 function quoteLineEach(it, each){
   const p = quoteLinePack(it);
@@ -1818,7 +1850,7 @@ async function boot(){
   const snap = early && early.shopId === S.shopId ? early : await loadSnapshot(user.id);
   if (S.started && !(snap && snap.shopId === S.shopId)) { S.data = null; S.started = false; }
   if (S.started) render();
-  else if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
+  else if (snap && snap.shopId === S.shopId) { S.data = snap.data; nameEveryone(); S.loadedAt = snap.at; start(); }
   else document.getElementById('st_main').innerHTML = `<div class="st-empty" style="padding-top:40vh"><b>Opening the books…</b>${esc(S.shopName)}</div>`;
   try { await loadAll(); if (!S.started) start(); else render(); flushOutbox(); }
   catch (e) {
@@ -2065,7 +2097,7 @@ const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingS
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
 // A 0159 function this database does not have yet (an error with no code is read the same way).
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
-function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; if (needs0115(e)) { try { console.warn('[store] needs migration', mig || '0115', e); } catch (_e) {} return `That did not save · tell ${ownerWord()} · code ${mig || '0115'}/${(e && e.code) || 'E'}`; } return failWord(e, mig); }
+function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `${NOT_PAID} · ${notPaidWhy()}`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; if (needs0115(e)) { try { console.warn('[store] needs migration', mig || '0115', e); } catch (_e) {} return `That did not save · tell ${ownerWord()} · code ${mig || '0115'}/${(e && e.code) || 'E'}`; } return failWord(e, mig); }
 
 /* 0159: the Store sends only its own fields, and each line's pick answer;
    the database merges them into the order it holds, money and all. */
@@ -2539,7 +2571,7 @@ function sfxNotes(notes, type){
 /* ---------------- pieces ---------------- */
 function nLines(n){ n = Number(n) || 0; return n + (n === 1 ? ' line' : ' lines'); }
 // A time today reads as a clock; yesterday says so; older says the day.
-function whenSaid(ms){ if (!ms) return ''; if (isTodayMs(ms)) return hm(ms); if (isTodayMs(ms + 864e5)) return 'yesterday ' + hm(ms); return shortDay(isoOf(ms)) + ' ' + hm(ms); }
+function whenSaid(ms){ return whenAt(ms); }
 function av(name, key, size, extra){ const t = tintFor(key || name); size = size || 40; return `<span class="st-av round" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .32)}px;background:${t[0]};color:${t[1]};${extra || ''}">${esc(initials(name))}</span>`; }
 function closeX(light){ return `<button class="st-x${light ? ' light' : ''}" data-act="back" aria-label="Close">${ic('close', 16, 'style="stroke-width:2.2"')}</button>`; }
 function grip(){ return `<span style="align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22);flex:none"></span>`; }
@@ -2549,7 +2581,7 @@ function sheetPage(head, body, foot, opts){
   <div class="card" style="margin-top:calc(${opts.top || 24}px + var(--safe-area-inset-top));min-height:calc(100% - ${opts.top || 24}px - var(--safe-area-inset-top))">
     ${head}<div style="padding:${opts.pad || '16px'};display:flex;flex-direction:column;gap:10px;flex:1">${body}</div>${foot ? `<div class="st-foot" style="background:var(--bg)">${foot}</div>` : ''}</div>`;
 }
-function ago(ms){ return waitWords(minsSince(ms)); }
+function ago(ms){ return howLong(minsSince(ms)); }
 function placeShort(q){ const d = orderDestination(q); return d ? d : orderIsCollected(q) ? 'they collect' : 'no place on file'; }
 function howGoes(q){ return orderIsCollected(q) ? 'they collect' : orderDestination(q) ? 'we deliver' : 'no place on file'; }
 
@@ -2676,11 +2708,11 @@ function jobRow(j, i){
   if (j.kind === 'putback') return cvRow({ act: 'job', data: { i: id }, icon: CV.ret, soft: '#FBE5E2', ink: '#8E2A22', title: `Put back ${q4(j.q)} · called off`, sub: 'What you packed goes back to the shelf', subInk: '#8E2A22' });
   if (j.kind === 'back') return cvRow({ act: 'job', data: { i: id }, icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `Check ${q4(j.q)}'s return · ${esc(shortName(quoteClientName(j.q)))}`, sub: `${esc((j.dr.shown || []).join(' + '))} · filled in at the door` });
   if (j.kind === 'ride') { const sup = supplierById(j.trips[0].supplierId); return cvRow({ act: 'job', data: { i: id }, icon: CV.truck, soft: '#E4E6FA', ink: '#3A3F9B', title: `Collect from ${esc((sup && sup.name) || 'the supplier')}${j.trips.length > 1 ? ' +' + (j.trips.length - 1) : ''}`, sub: esc(nLines(j.trips.flatMap(tripLines).length) + ' · ' + (theBuyer() ? firstWord(theBuyer().name) + ' sent you' : 'you are sent')) }); }
-  if (j.kind === 'round') { const w = tripWho(j.R[0]); return cvRow({ act: 'job', data: { i: id }, icon: CV.inbox, soft: '#E4F4EA', ink: '#0F6B43', title: `Check in ${esc(firstWord(w) || 'the')}'s ${roundWord(j.R)}`, sub: esc(nLines(j.R.flatMap(tripLines).length) + ' · back ' + hm(msOf(j.R[0].collectedAt))) }); }
+  if (j.kind === 'round') { const w = tripWho(j.R[0]); return cvRow({ act: 'job', data: { i: id }, icon: CV.inbox, soft: '#E4F4EA', ink: '#0F6B43', title: `Check in ${esc(firstWord(w) || 'the')}'s ${roundWord(j.R)}`, sub: esc(nLines(j.R.flatMap(tripLines).length) + ' · back ' + whenAt(msOf(j.R[0].collectedAt))) }); }
   if (j.kind === 'gate') { const ag = j.q.originAgentId && (D().agents || []).find(a => String(a.id) === String(j.q.originAgentId)); const who = ag ? ag.name : quoteClientName(j.q);
     return cvRow({ act: 'job', data: { i: id }, round: true, ini: initials(who), soft: tint(who)[0], ink: tint(who)[1], title: `${esc(firstWord(who))} collects ${q4(j.q)}`, sub: esc((ag ? 'Agent · packed and paid' : 'Packed') + ' · at the gate'), subInk: '#0F6B43', right: cvChip(ag ? 'Code' : 'Hand over') }); }
   if (j.kind === 'pack') { const p = packProgress(j.q);
-    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${nLines(p.n)} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' packed' : 'waiting ' + waitWords(minsSince(waitingSince(j.q))))) }); }
+    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${nLines(p.n)} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' packed' : 'waiting ' + howLong(minsSince(waitingSince(j.q))))) }); }
   if (j.kind === 'run') { const r = j.r;
     return cvRow({ act: 'job', data: { i: id }, icon: CV.truck, soft: '#E4F4EA', ink: '#0F6B43', title: `Load ${r.driver ? esc(firstWord(r.driver.name)) + "'s" : 'the'} run · ${esc(r.road)}`, subInk: '#0F6B43',
       sub: esc([r.drops.map(d => shortName(quoteClientName(d.q))).join(', ') + (r.drops.length > 1 ? ' are' : ' is') + ' packed'].concat(r.after.length ? [r.after.map(q => shortName(quoteClientName(q))).join(', ') + ' after packing'] : []).join(' · ')) }); }
@@ -2690,7 +2722,7 @@ function jobRow(j, i){
       badge: `<span style="position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:999px;background:#16203C;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center">${sv(CV.lock, 9, 3)}</span>`,
       title: `${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${firstWord(nm)} is packing it · ${p.done} of ${p.n}`), right: cvChip(esc(firstWord(nm)) + "'s") }); }
   if (j.kind === 'hold') { const asked = loadAskOf(j.q);
-    return cvRow({ act: 'job', data: { i: id }, icon: CV.clock, soft: '#FDEEE1', ink: '#95530C', title: `${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: asked ? 'Packed · with ' + esc(managerName()) : 'Packed · not paid yet', subInk: '#95530C', right: cvChip('Waits on money', '#FDEEE1', '#7A4A02') }); }
+    return cvRow({ act: 'job', data: { i: id }, icon: CV.clock, soft: '#FDEEE1', ink: '#95530C', title: `${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: asked ? `${NOT_PAID} · with ${esc(managerName())}` : `${NOT_PAID} · ${bayOf(j.q) ? 'on bay ' + bayOf(j.q) : 'on the bay'}`, subInk: '#95530C' }); }
   if (j.kind === 'looks') { const L = j.looks, by = w => L.filter(x => needsLook(x) === w).length;
     return cvRow({ act: 'job', data: { i: id }, icon: CV.store, soft: '#F1EEE8', ink: '#1C2233', title: `${L.length} item${L.length === 1 ? '' : 's'} need${L.length === 1 ? 's' : ''} a look`, sub: esc([['out', 'out'], ['low', 'low'], ['due', 'count due'], ['short', 'short'], ['reported', 'reported']].map(([k, w]) => by(k) ? by(k) + ' ' + w : '').filter(Boolean).join(' · ')) }); }
   return '';
@@ -2699,15 +2731,15 @@ ACT.job = t => { const J = jobsNow(), all = J.list.concat(J.more), j = all[Numbe
 
 function viewToday(){
   const J = jobsNow(), live = online();
-  const done = doneToday().length, road = onRoad().length, packed = loadQueue().length, pack = packQueue().length + waitingOnGoods().length;
+  const N = counts(), done = N.delivered, road = N.road, packed = N.packed, pack = N.toPack;
   const total = done + road + packed + pack, inN = roundsBack().length, toLoad = loadQueue().filter(q => !orderIsPickup(q)).length;
   const first = hasOwnName() ? (w => w ? w[0].toUpperCase() + w.slice(1) : '')(firstWord(myName())) : '';
   const day = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '');
   // One ring, in the order the day goes: delivered, on the road, packed.
   const C = 326.7, step = C / Math.max(1, total), len = n => Math.max(n * step - (total > 1 ? 5 : 0), 0.01);
   const arc = (n, off, col, op) => n ? `<circle cx="62" cy="62" r="52" fill="none" stroke="${col}"${op ? ` stroke-opacity="${op}"` : ''} stroke-width="10" stroke-linecap="round" stroke-dasharray="${len(n).toFixed(1)} ${C}" stroke-dashoffset="${(-off * step).toFixed(1)}" transform="rotate(-90 62 62)" class="a-ring"></circle>` : '';
-  const blank = loadBlank(), tile = (act, d, n, word, on, ink) => `<button class="td-tile" data-act="${act}" aria-label="${blank ? 'Not loaded' : n0(n)} ${esc(word)}" style="height:58px;border:none;border-radius:14px;background:${on ? '#fff' : 'rgba(255,255,255,.07)'};color:${on ? '#16203C' : '#fff'};padding:0 10px;display:flex;align-items:center;gap:8px;text-align:left;min-width:0">
-    <span class="td-ic" style="display:flex;color:${on ? '#16203C' : ink || '#B3BCD2'}">${sv(d, 18, 2)}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${blank ? 'color:#5C6788' : !on && ink ? 'color:' + ink : ''}">${blank ? '–' : n}</span><span style="font-size:11px;font-weight:${on ? 700 : 600};color:${on ? '#16203C' : '#B3BCD2'};white-space:nowrap">${word}</span></span></button>`;
+  const blank = loadBlank(), tile = (act, d, n, word, on, ink, extra) => `<button class="td-tile" data-act="${act}" aria-label="${blank ? 'Not loaded' : n0(n)} ${esc(word)}" style="height:58px;border:none;border-radius:14px;background:${on ? '#fff' : 'rgba(255,255,255,.07)'};color:${on ? '#16203C' : '#fff'};padding:0 10px;display:flex;align-items:center;gap:8px;text-align:left;min-width:0">
+    <span class="td-ic" style="display:flex;color:${on ? '#16203C' : ink || '#B3BCD2'}">${sv(d, 18, 2)}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${blank ? 'color:#5C6788' : !on && ink ? 'color:' + ink : ''}">${blank ? '–' : n}${extra && !blank ? `<span style="margin-left:5px;font-family:Figtree,system-ui,sans-serif;font-size:11px;font-weight:600;letter-spacing:0;color:${on ? '#95530C' : '#F5B26B'};white-space:nowrap">${extra}</span>` : ''}</span><span style="font-size:11px;font-weight:${on ? 700 : 600};color:${on ? '#16203C' : '#B3BCD2'};white-space:nowrap">${word}</span></span></button>`;
   const alerts = alertsNow().filter(a => a.unread).length;
   const legend = [['#6FDCB0', done, 'delivered'], ['rgba(111,220,176,.45)', road, 'on the road'], ['#FFFFFF', packed, 'packed'], ['rgba(255,255,255,.18)', pack, 'to pack']];
   return `<div class="cv-hero" style="padding-bottom:22px;gap:20px" data-navy-top>
@@ -2724,7 +2756,7 @@ function viewToday(){
         <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span class="m" style="font-size:28px;font-weight:600;letter-spacing:-.04em;line-height:1">${done + road}<span style="font-size:16px;color:#8D99B5">/${total}</span></span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">gone out</span></span>
       </span>
       <div style="flex:1;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">
-        ${tile('tin', CV.inbox, inN, 'In', inN > 0)}${tile('tpack', CV.pack, pack, 'to pack')}${tile('tload', CV.slip, toLoad, 'to load')}${tile('troad', CV.van, road, 'on the road', false, '#6FDCB0')}
+        ${tile('tin', CV.inbox, inN, 'In', inN > 0)}${tile('tpack', CV.pack, pack, 'to pack', false, null, N.waitingGoods ? `+${N.waitingGoods} waiting` : '')}${tile('tload', CV.slip, toLoad, 'to load')}${tile('troad', CV.van, road, 'on the road', false, '#6FDCB0')}
       </div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;font-weight:600;color:var(--navyInk)">${legend.map(([c, n, w]) => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:999px;background:${c}"></span>${n} ${w}</span>`).join('')}</div>
@@ -2758,7 +2790,7 @@ function handedCard(){
   const n = (a.payload.orders || []).length;
   return `<div style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:22px;background:#16203C;color:#fff">
     <span style="width:44px;height:44px;flex:none;border-radius:999px;background:${tint(a.byName)[0]};color:${tint(a.byName)[1]};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(a.byName || '?')}</span>
-    <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${esc(firstWord(a.byName) || 'A colleague')} handed you the yard</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${n ? `${n} half-done job${n === 1 ? '' : 's'} · ` : ''}${hm(msOf(a.createdAt))}</span></span>
+    <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${esc(firstWord(a.byName) || 'A colleague')} passed you the yard</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${n ? `${n} half-done job${n === 1 ? '' : 's'} · ` : ''}${whenAt(msOf(a.createdAt))}</span></span>
     <button data-act="hogot" data-id="${esc(a.id)}" style="height:44px;padding:0 16px;border-radius:999px;border:none;background:#fff;color:#16203C;font-size:14px;font-weight:700;flex:none">I've got it</button></div>`;
 }
 // One "Waiting to send" card, whenever anything is waiting, signal or not (round 3, REL-04, canvas TodayWaiting).
@@ -2767,7 +2799,7 @@ function waitCard(live){ const W = waitingList(); if (!W.length) return live ? '
   return `<div style="border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1.5px #F3DCC4,0 6px 18px rgba(22,32,60,.05);padding:14px;display:flex;flex-direction:column;gap:10px">
     <div style="display:flex;align-items:center;gap:12px"><span style="position:relative;width:42px;height:42px;flex:none;border-radius:999px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center">${sv(live ? 'M7 18a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9zM12 12v5M10 15l2 2 2-2' : CV.wifi, 20, 2.2)}<span class="m" style="position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:var(--red);color:#fff;border:2px solid #fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">${W.length}</span></span>
       <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">Waiting to send</span><span style="font-size:12px;font-weight:600;color:var(--ink2);white-space:normal">${go ? 'Sending now…' : live ? 'The signal is up but the books did not answer' : 'No signal · keep working · they send by themselves'}</span></span></div>
-    <div style="display:flex;flex-direction:column;gap:4px">${W.map(o => `<span style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:12px;background:#FEF8F2"><span style="width:28px;height:28px;flex:none;border-radius:9px;background:#fff;color:#95530C;display:flex;align-items:center;justify-content:center">${go ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 15, 2.4)}</span>` : sv(o.icon || CV.arc, 15, 2.2)}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="m" style="font-size:11px;font-weight:600;color:#7A4A02">${o.at ? hm(o.at) : ''}</span></span>`).join('')}</div>
+    <div style="display:flex;flex-direction:column;gap:4px">${W.map(o => `<span style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:12px;background:#FEF8F2"><span style="width:28px;height:28px;flex:none;border-radius:9px;background:#fff;color:#95530C;display:flex;align-items:center;justify-content:center">${go ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 15, 2.4)}</span>` : sv(o.icon || CV.arc, 15, 2.2)}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="m" style="font-size:11px;font-weight:600;color:#7A4A02">${o.at ? whenAt(o.at) : ''}</span></span>`).join('')}</div>
     <button data-act="sendnow" ${go ? 'disabled' : ''} style="height:48px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${go ? .7 : 1}">${go ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 16, 2.4)}</span>Sending…` : `${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 16, 2.4)}Send now`}</button>
     <span style="padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${esc(mgr)} and Sales see these once they send</span></div>`; }
 ACT.sendnow = async () => { if (S.ui.sendingNow) return; if (!online()) { FEEL.no(); toast('No signal yet · they send by themselves when it is back', 4000); return; }
@@ -2779,7 +2811,7 @@ function offlineCard(){
   return `<div style="border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1.5px #F3DCC4,0 6px 18px rgba(22,32,60,.05);padding:14px;display:flex;flex-direction:column;gap:10px">
     <div style="display:flex;align-items:center;gap:12px"><span style="width:42px;height:42px;flex:none;border-radius:999px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center">${sv(CV.wifi, 20, 2.2)}</span>
       <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">No signal · keep working</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">Saved on this phone · it sends by itself</span></span></div>
-    ${ob.length ? `<div style="display:flex;flex-direction:column;gap:4px">${ob.map(o => `<span style="display:flex;align-items:center;gap:10px;min-height:40px;padding:0 10px;border-radius:12px;background:#FEF8F2"><span class="cv-spin" style="display:flex;color:#95530C">${sv(CV.arc, 16, 2.4)}</span><span style="flex:1;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="m" style="font-size:11px;color:#7A4A02">${o.at ? hm(o.at) : ''}</span></span>`).join('')}</div>
+    ${ob.length ? `<div style="display:flex;flex-direction:column;gap:4px">${ob.map(o => `<span style="display:flex;align-items:center;gap:10px;min-height:40px;padding:0 10px;border-radius:12px;background:#FEF8F2"><span class="cv-spin" style="display:flex;color:#95530C">${sv(CV.arc, 16, 2.4)}</span><span style="flex:1;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="m" style="font-size:11px;color:#7A4A02">${o.at ? whenAt(o.at) : ''}</span></span>`).join('')}</div>
     <span style="padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">Sales and ${esc(managerName())} see these once it sends</span>` : `<span style="padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">Nothing is waiting to send</span>`}
   </div>`;
 }
@@ -2790,7 +2822,7 @@ function resumeCard(j){
   const C = 132, a = (d.n / Math.max(1, d.of)) * C;
   return `<button data-act="receive" data-id="${esc(R[0].id)}" style="display:flex;align-items:center;gap:12px;padding:14px;border:none;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1.5px #D3EBDD,0 6px 18px rgba(22,32,60,.06);text-align:left;width:100%">
     <span role="img" aria-label="${d.n} of ${nOf(d.of, 'line')} ticked" style="position:relative;width:52px;height:52px;flex:none;display:block"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="21" fill="none" stroke="#EFECE6" stroke-width="5"></circle><circle cx="26" cy="26" r="21" fill="none" stroke="#0F6B43" stroke-width="5" stroke-linecap="round" stroke-dasharray="${a.toFixed(1)} ${C}" transform="rotate(-90 26 26)"></circle></svg><span class="m" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">${d.n}/${d.of}</span></span>
-    <span class="cv-tx"><span style="font-size:15px;font-weight:700">Carry on checking in</span><span style="font-size:12px;font-weight:600;color:#0F6B43">Saved at ${hm(d.at)} · nothing was lost</span></span>
+    <span class="cv-tx"><span style="font-size:15px;font-weight:700">Carry on checking in</span><span style="font-size:12px;font-weight:600;color:#0F6B43">Saved at ${whenAt(d.at)} · nothing was lost</span></span>
     <span style="height:40px;padding:0 14px;border-radius:999px;background:#16203C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;flex:none">Carry on</span></button>`;
 }
 function jobCard(j, n){
@@ -2807,15 +2839,15 @@ function jobCard(j, n){
       + stats([[out.length, out.length === 1 ? 'line out' : 'lines out'], [[...new Set(out.map(it => aisleOf(it.productId).letter))].length, 'aisles'], ['0', 'to pack']]) + go('Put it back');
   } else if (j.kind === 'back') {
     const q = j.q, n = Object.keys(j.dr.back || {}).length;
-    body = head(tag(CV.van, `From the door · ${hm(j.dr.at)}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)])) + title(`Check ${q4(q)}'s return`, esc(quoteClientName(q) + ' · ' + (j.dr.shown || []).join(' + ')))
+    body = head(tag(CV.van, `From the door · ${whenAt(j.dr.at)}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)])) + title(`Check ${q4(q)}'s return`, esc(quoteClientName(q) + ' · ' + (j.dr.shown || []).join(' + ')))
       + stats([[n, n === 1 ? 'line back' : 'lines back'], ['0', 'sent yet'], [managerName(), 'credits it']]) + go('Check it');
   } else if (j.kind === 'round') {
     const R = j.R, lines = R.flatMap(tripLines), sups = R.map(t => (supplierById(t.supplierId) || {}).name).filter(Boolean), orders = [...new Set(R.flatMap(tripOrders))];
     const shelf = lines.filter(l => !l.orderId || !quoteById(l.orderId) || rcShareOf(l)).length, dr = S.ui.rcDraft && S.ui.rcDraft.id === R[0].id && S.ui.rcDraft.n ? S.ui.rcDraft : null;
-    body = head(tag(CV.van, `Back at the yard · ${hm(msOf(R[0].collectedAt))}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces(sups.length ? sups : [tripWho(R[0])]))
+    body = head(tag(CV.van, `Back at the yard · ${whenAt(msOf(R[0].collectedAt))}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces(sups.length ? sups : [tripWho(R[0])]))
       + (dr ? title(`Carry on ${esc(firstWord(tripWho(R[0])) || 'the')}'s trip`, esc(sups.join(', ') || nOf(R.length, 'stop')))
         + `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:rgba(111,220,176,.1);box-shadow:inset 0 0 0 1px rgba(111,220,176,.25)"><span role="img" aria-label="${dr.n} of ${nOf(dr.of, 'line')} counted" style="position:relative;width:40px;height:40px;flex:none;display:block"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="4"></circle><circle cx="20" cy="20" r="16" fill="none" stroke="#6FDCB0" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(dr.n / Math.max(1, dr.of)) * 100.5} 100.5" transform="rotate(-90 20 20)"></circle></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6FDCB0">${dr.n >= dr.of ? sv(CV.tick, 16, 3) : `<span class="m" style="font-size:12px;font-weight:600">${dr.n}</span>`}</span></span>
-          <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${dr.n} of ${dr.of} counted</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">Saved at ${hm(dr.at)} · nothing was lost</span></span></div>` + go('Carry on')
+          <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${dr.n} of ${dr.of} counted</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">Saved at ${whenAt(dr.at)} · nothing was lost</span></span></div>` + go('Carry on')
         : title(`Check in ${esc(firstWord(tripWho(R[0])) || 'the')}'s trip`, esc(sups.join(', ') || nOf(R.length, 'stop')))
       + stats([[lines.length, lines.length === 1 ? 'line' : 'lines'], [orders.length, orders.length === 1 ? 'order waits on it' : 'orders wait on it'], [shelf, 'for the shelf']]) + go('Check it in'));
   } else if (j.kind === 'ride') {
@@ -2830,7 +2862,7 @@ function jobCard(j, n){
       + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [bayOf(q) || '—', 'bay'], [ag ? 'Code' : 'ID', ag ? 'to match' : 'to check']]) + go('Hand it over');
   } else if (j.kind === 'pack') {
     const q = j.q, p = packProgress(q), aisles = [...new Set(p.items.map(it => aisleOf(it.productId).letter))];
-    body = head(tag(CV.clock, `Pack · waiting ${esc(waitWords(minsSince(waitingSince(q))))}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)]))
+    body = head(tag(CV.clock, `Pack · waiting ${esc(howLong(minsSince(waitingSince(q))))}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)]))
       + title(`Pack ${q4(q)} · ${esc(shortName(quoteClientName(q)))}`, esc(howGoes(q) + (orderDestination(q) ? ' · ' + orderDestination(q) : '')))
       + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [aisles.length, aisles.length === 1 ? 'aisle' : 'aisles'], [freeBay() || '—', 'free bay']]) + go(p.done ? 'Carry on packing' : 'Start packing');
   } else if (j.kind === 'run') {
@@ -2848,7 +2880,7 @@ function jobCard(j, n){
 function dayWithWork(J){
   const open = !!S.ui.todayMore, rest = J.list.slice(1), all = J.list.concat(J.more);
   // What else waits, by kind: a face for a colleague's order, the kind's own mark for the rest, and words that count ("2 pickups").
-  const MORE = { hold: ['a hold', 'holds', CV.clock, '#FDEEE1', '#95530C'], looks: ['stock to look at', 'stock to look at', CV.loss, '#F1EEE8', '#5F6980'], pack: ['an order to pack', 'orders to pack', CV.pack, '#E8EBF0', '#16203C'],
+  const MORE = { hold: ['an order not paid yet', 'orders not paid yet', CV.clock, '#FDEEE1', '#95530C'], looks: ['stock to look at', 'stock to look at', CV.loss, '#F1EEE8', '#5F6980'], pack: ['an order to pack', 'orders to pack', CV.pack, '#E8EBF0', '#16203C'],
     run: ['a run to load', 'runs to load', CV.van, '#E4F4EA', '#0F6B43'], gate: ['a pickup', 'pickups', CV.store, '#E4F4EA', '#0F6B43'], back: ['a return', 'returns', CV.ret, '#FBE5E2', '#8E2A22'] };
   const kinds = []; J.more.forEach(j => { const k = j.kind === 'theirs' ? 'theirs:' + j.q.id : j.kind; const e = kinds.find(x => x.k === k); if (e) e.n++; else kinds.push({ k, j, n: 1 }); });
   const extraFaces = kinds.slice(0, 3).map(({ j }) => { if (j.kind === 'theirs') { const nm = (staffById(j.q.assignedWorkerId) || {}).name || '?'; return face(nm, nm, 24, 'border:2px solid #fff;font-size:11px;font-weight:700;border-radius:999px;display:flex;align-items:center;justify-content:center;box-sizing:border-box'); }
@@ -2857,7 +2889,7 @@ function dayWithWork(J){
   const slots = bayMap().slots, used = slots.filter(s => s.q).length;
   const bay = s => { const q = s.q, hold = q && moneyHold(q), st = !q ? 'free' : hold ? 'hold' : 'ready';
     const ag = q && q.originAgentId && (D().agents || []).find(a => String(a.id) === String(q.originAgentId));
-    const sub = !q ? '' : hold ? (loadAskOf(q) ? 'with ' + managerName() : 'waits on money') : orderIsPickup(q) ? `${firstWord(ag ? ag.name : quoteClientName(q))} · ${ag ? 'agent' : 'collects'}` : (r => `${placeShort(q)}${r && r.driver ? ' · ' + firstWord(r.driver.name) : ''}`)(runsNow().find(r => r.drops.some(d => d.q === q)));
+    const sub = !q ? '' : hold ? (loadAskOf(q) ? 'with ' + managerName() : NOT_PAID) : orderIsPickup(q) ? `${firstWord(ag ? ag.name : quoteClientName(q))} · ${ag ? 'agent' : 'collects'}` : (r => `${placeShort(q)}${r && r.driver ? ' · ' + firstWord(r.driver.name) : ''}`)(runsNow().find(r => r.drops.some(d => d.q === q)));
     const C = { ready: ['#16203C', '#fff', 'none', '#6FDCB0'], hold: ['#FDEEE1', '#7A4A02', 'none', '#F5B26B'], free: ['transparent', '#9AA1AE', 'inset 0 0 0 1.5px #C9C4BA', 'transparent'] }[st];
     return `<button class="cv-bay" data-act="bay" data-n="${s.n}" aria-label="Bay ${s.n}: ${esc(q ? q4(q) + ' ' + sub : 'free')}" style="background:${C[0]};color:${C[1]};box-shadow:${C[2]}">
       <span style="display:flex;align-items:center;justify-content:space-between"><span class="n">${s.n}</span><span style="width:8px;height:8px;border-radius:999px;background:${C[3]}"></span></span>
@@ -2885,7 +2917,7 @@ SHEET.bayfree = a => {
     ${q ? `<span style="padding:4px 4px 0;font-size:13px;font-weight:700;color:var(--ink2)">Next to pack · if you want to fill it</span>
     <div style="display:flex;align-items:center;gap:12px;min-height:68px;padding:0 12px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">
       <span style="width:42px;height:42px;flex:none;border-radius:999px;background:${tint(who)[0]};color:${tint(who)[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(who)}</span>
-      <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${q4(q)} · ${esc(who)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${p.n} line${p.n === 1 ? '' : 's'}${aisles.length ? ` · aisle${aisles.length > 1 ? 's' : ''} ${esc(aisles.join(', '))}` : ''} · ${esc(waitWords(minsSince(waitingSince(q))))} old</span></span>
+      <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${q4(q)} · ${esc(who)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${p.n} line${p.n === 1 ? '' : 's'}${aisles.length ? ` · aisle${aisles.length > 1 ? 's' : ''} ${esc(aisles.join(', '))}` : ''} · ${esc(howLong(minsSince(waitingSince(q))))} old</span></span>
       <button data-act="bfgo" style="flex:none;height:44px;padding:0 16px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:13px;font-weight:700">Look</button></div>` : `<span style="padding:4px;font-size:13px;font-weight:600;color:var(--ink2)">Nothing waits to be packed</span>`}
     <button data-act="closesheet" style="height:52px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:15px;font-weight:700">Close</button>`;
 };
@@ -2941,13 +2973,13 @@ function loadFailCard(){
       <span style="width:54px;height:54px;border-radius:999px;background:${trying ? '#E8EBF0' : '#FBE5E2'};color:${trying ? '#16203C' : '#8E2A22'};display:flex;align-items:center;justify-content:center">${trying ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 26, 2.4)}</span>` : sv('M12 4 2.5 20h19zM12 10v4M12 17h.01', 26, 2.4)}</span></span>
     <span style="display:flex;flex-direction:column;gap:6px"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">${trying ? 'Loading the yard…' : 'Could not load the yard'}</span><span style="font-size:13px;font-weight:600;line-height:1.45;color:var(--ink2)">${trying ? 'Asking the books again' : 'The books did not answer. Your jobs are still there — this phone just can’t see them yet.'}</span></span>
     <button data-act="loadretry" ${trying ? 'disabled' : ''} style="align-self:stretch;height:52px;border-radius:999px;border:none;background:#16203C;color:#fff;opacity:${trying ? '.55' : '1'};font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${trying ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 16, 2.4)}</span>Trying…` : sv('M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', 16, 2.4) + 'Try again'}</button>
-    ${trying ? '' : `<span style="font-size:12px;font-weight:600;color:var(--ink2)">Still not loading? Tell ${esc(ownerWord())} · code <span class="m" style="color:var(--ink)">${esc(E.code || 'load')}</span> · ${hm(E.at)}</span>`}</div>`;
+    ${trying ? '' : `<span style="font-size:12px;font-weight:600;color:var(--ink2)">Still not loading? Tell ${esc(ownerWord())} · code <span class="m" style="color:var(--ink)">${esc(E.code || 'load')}</span> · ${whenAt(E.at)}</span>`}</div>`;
 }
 // Over a copy the phone kept: the red bar, and the old screen faded under it.
 function loadBar(){
   const E = S.loadErr || {}, trying = !!S.ui.loadTrying;
   return `<div role="alert" style="padding:12px;border-radius:18px;background:#FBE5E2;box-shadow:inset 0 0 0 1.5px #F2C9C3;display:flex;align-items:center;gap:12px"><span style="width:38px;height:38px;flex:none;border-radius:999px;background:#fff;color:#8E2A22;display:flex;align-items:center;justify-content:center">${sv('M12 4 2.5 20h19zM12 10v4M12 17h.01', 18, 2.2)}</span>
-    <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700;color:#8E2A22;white-space:normal">Could not load the yard</span><span style="font-size:12px;font-weight:600;color:var(--ink2);white-space:normal">Showing what this phone saw at ${hm(S.loadedAt)} · code ${esc(E.code || 'load')}</span></span>
+    <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700;color:#8E2A22;white-space:normal">Could not load the yard</span><span style="font-size:12px;font-weight:600;color:var(--ink2);white-space:normal">Showing what this phone saw at ${whenAt(S.loadedAt)} · code ${esc(E.code || 'load')}</span></span>
     <button data-act="loadretry" ${trying ? 'disabled' : ''} style="height:44px;padding:0 14px;flex:none;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${trying ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 14, 2.4)}</span>Trying…` : sv('M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', 14, 2.4) + 'Try again'}</button></div>`;
 }
 ACT.loadretry = async () => { if (S.ui.loadTrying) return; S.ui.loadTrying = true; FEEL.tick(); render();
@@ -2990,83 +3022,98 @@ function settleWords(q){ const P = q.pickSettle || {}, L = (P.lines || [])[0], i
 function ruthAsks(){
   return memo('ruth', () => {
     const me = S.user && S.user.id, mine = by => !by || by === me, waiting = [], answered = [], mgr = managerName();
-    const add = (list, o) => list.push(o);
-    (D().counts || []).filter(c => mine(c.countedBy)).forEach(c => {
+    // Everything the yard sent that waits on the Manager, each with who sent it (round 6, WORD-05); the answers are yours.
+    const add = (list, o) => { if (list !== waiting) { list.push(o); return; } const yours = !!o.by && String(o.by) === String(me), who = yours ? 'You' : firstWord(personName({ userId: o.by, stored: o.byName }));
+      list.push({ ...o, mine: yours, who, sub: [esc(who), o.sub, o.since ? whenAt(o.since) : ''].filter(Boolean).join(' · ') }); };
+    (D().counts || []).filter(c => c.status === 'sent' || mine(c.countedBy)).forEach(c => {
       const o = { title: `${esc(String(c.aisle || 'Count').replace(/^Aisle /, 'Aisle '))} count`, icon: CV.count, act: 'decide', data: { id: c.id } };
       const was = c.replaces && (D().counts || []).find(x => x.id === c.replaces);
-      if (c.status === 'sent') add(waiting, { ...o, sub: `${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · ${was ? `replaces ${esc(whoseWord(countWhose(was)))} ${esc(countWhose(was).when)} count` : 'sent from the yard'}`, since: msOf(c.createdAt) });
+      if (c.status === 'sent') add(waiting, { ...o, sub: `${c.lines.length} item${c.lines.length === 1 ? '' : 's'}${was ? ` · replaces ${esc(whoseWord(countWhose(was)))} ${esc(countWhose(was).when)} count` : ''}`, since: msOf(c.createdAt), by: c.countedBy, byName: c.countedByName });
       else if (isTodayMs(msOf(c.decidedAt))) add(answered, { ...o, title: c.status === 'recount' ? `Recount · ${esc(c.aisle)}` : `${esc(c.aisle)} count`, answer: c.status === 'recount' ? 'Asked for a recount' : 'Accepted your count', at: msOf(c.decidedAt), tone: c.status === 'recount' ? 'warn' : 'good',
         say: c.status === 'recount' ? `${esc(mgr)} asks for a recount` : `${esc(mgr)} accepted your count`, saySub: esc(c.aisle) });
     });
-    (D().returns || []).filter(r => mine(r.by)).forEach(r => { const q = quoteById(r.orderId), lines = (r.lines || []).map(l => returnLineWords(q, l)).filter(Boolean).join(', ');
+    (D().returns || []).filter(r => r.status === 'sent' || mine(r.by)).forEach(r => { const q = quoteById(r.orderId), lines = (r.lines || []).map(l => returnLineWords(q, l)).filter(Boolean).join(', ');
       const o = { title: `Return · ${q ? q4(q) + ' ' + esc(shortName(quoteClientName(q))) : 'an order'}`, icon: CV.ret, ...(q ? { act: 'goret', data: { id: q.id } } : {}) };
-      if (r.status === 'sent') add(waiting, { ...o, sub: esc([lines, r.reason].filter(Boolean).join(' · ')), since: msOf(r.createdAt) });
+      if (r.status === 'sent') add(waiting, { ...o, sub: esc([lines, r.reason].filter(Boolean).join(' · ')), since: msOf(r.createdAt), by: r.by, byName: r.byName });
       else if (isTodayMs(msOf(r.decidedAt || r.createdAt)) && r.status !== 'withdrawn') add(answered, { ...o, answer: r.status === 'accepted' ? 'Raised the credit note' : 'Kept it as sold', at: msOf(r.decidedAt || r.createdAt), tone: r.status === 'accepted' ? 'good' : 'warn',
         say: q ? (r.status === 'accepted' ? `${esc(mgr)} raised ${q4(q)}'s credit note` : `${esc(mgr)} kept ${q4(q)} as sold`) : '', saySub: esc(lines) });
     });
-    (D().reports || []).filter(r => mine(r.by)).forEach(r => { const o = { title: `${r.reason === 'damaged' ? 'Damaged' : r.reason === 'stolen' ? 'Stolen' : 'Lost'} · ${esc(r.name)}`, icon: CV.loss, ...(r.key ? { act: 'stock', data: { key: r.key } } : {}) };
-      if (r.status === 'sent') add(waiting, { ...o, sub: `${n0(r.qty)} · ${esc(r.reason)}`, since: msOf(r.createdAt) });
+    (D().reports || []).filter(r => r.status === 'sent' || mine(r.by)).forEach(r => { const o = { title: `${r.reason === 'damaged' ? 'Damaged' : r.reason === 'stolen' ? 'Stolen' : 'Lost'} · ${esc(r.name)}`, icon: CV.loss, ...(r.key ? { act: 'stock', data: { key: r.key } } : {}) };
+      if (r.status === 'sent') add(waiting, { ...o, sub: `${n0(r.qty)} · ${esc(r.reason)}`, since: msOf(r.createdAt), by: r.by, byName: r.byName });
       else if (isTodayMs(msOf(r.decidedAt))) add(answered, { ...o, answer: r.status === 'written_off' ? `Wrote off ${n0(r.qty)}` : 'Kept it on the shelf', at: msOf(r.decidedAt), tone: r.status === 'written_off' ? 'good' : 'warn', act: 'stock', data: { key: r.key },
         say: r.status === 'written_off' ? `${esc(mgr)} wrote off ${n0(r.qty)} ${esc(r.name)}` : `${esc(mgr)} kept ${esc(r.name)} on the shelf`, saySub: `Your report${isTodayMs(msOf(r.createdAt)) ? '' : ' from ' + esc(new Date(msOf(r.createdAt)).toLocaleDateString('en-GB', { weekday: 'long' }))} · the shelf now shows ${n0(D().stock[r.key] || 0)}` });
     });
     // 0157: goods on the truck that were not on the list wait on the Manager.
-    (D().asks || []).filter(a => a.kind === 'extra' && mine(a.by)).forEach(a => { const p = a.payload || {}, what = `${n0(p.qty)} ${esc(p.unit || '')}`.trim(), o = { title: `Not on the list · ${esc(p.name || 'goods')}`, icon: CV.inbox, ...(p.key && stockItems().some(x => x.key === p.key) ? { act: 'stock', data: { key: p.key } } : {}) };
-      if (a.status === 'sent') add(waiting, { ...o, sub: `${what} on the truck · keep it?`, since: msOf(a.createdAt) });
+    (D().asks || []).filter(a => a.kind === 'extra' && (a.status === 'sent' || mine(a.by))).forEach(a => { const p = a.payload || {}, what = `${n0(p.qty)} ${esc(p.unit || '')}`.trim(), o = { title: `Not on the list · ${esc(p.name || 'goods')}`, icon: CV.inbox, ...(p.key && stockItems().some(x => x.key === p.key) ? { act: 'stock', data: { key: p.key } } : {}) };
+      if (a.status === 'sent') add(waiting, { ...o, sub: `${what} on the truck · keep it?`, since: msOf(a.createdAt), by: a.by, byName: a.byName });
       else if (isTodayMs(msOf(a.decidedAt)) && a.status !== 'withdrawn') add(answered, { ...o, answer: a.status === 'accepted' ? 'Keep it' : 'It goes back', at: msOf(a.decidedAt), tone: a.status === 'accepted' ? 'good' : 'warn',
         say: a.status === 'accepted' ? `${esc(mgr)} keeps the ${esc(p.name || 'goods')}` : `${esc(mgr)} sends the ${esc(p.name || 'goods')} back`, saySub: `${what} · not on the list` });
     });
     liveOrders().forEach(q => {
       const ask = q.letGoAsk && typeof q.letGoAsk === 'object' && q.letGoAsk.at ? q.letGoAsk : null;
-      if (ask && mine(ask.by)) { const o = { title: `${q4(q)} · ${esc(quoteClientName(q))}`, icon: CV.money, act: 'open', data: { page: 'load' } };
-        if (!ask.answer) add(waiting, { ...o, sub: 'Not paid · let it go on credit?', since: msOf(ask.at) });
+      if (ask && (!ask.answer || mine(ask.by))) { const o = { title: `${q4(q)} · ${esc(quoteClientName(q))}`, icon: CV.money, act: 'open', data: { page: 'load' } };
+        if (!ask.answer) add(waiting, { ...o, sub: `${NOT_PAID} · let it go on credit?`, since: msOf(ask.at), by: ask.by, byName: ask.byName });
         else if (isTodayMs(msOf(ask.answer.at || (q.letGo && q.letGo.at)))) add(answered, { ...o, answer: ask.answer.decision === 'letgo' ? 'Let it go on credit · load it' : 'Keep it until it is paid', at: msOf(ask.answer.at || (q.letGo && q.letGo.at)), tone: ask.answer.decision === 'letgo' ? 'good' : 'warn',
           say: ask.answer.decision === 'letgo' ? `${esc(mgr)} let ${q4(q)} go on credit` : `${esc(mgr)} keeps ${q4(q)} until it is paid`, saySub: esc(quoteClientName(q)) + (ask.answer.decision === 'letgo' ? ' · it can leave the gate now' : ' · not paid yet') }); }
-      const shortNow = orderIsMine(q) && q.pickingStatus === 'done' && (q.items || []).some(it => lineShortNow(q, it)) && !q.pickSettle;
-      if (shortNow) add(waiting, { title: `Short pick · ${q4(q)} ${esc(shortName(quoteClientName(q)))}`, icon: CV.pack, act: 'ruthslip', data: { id: q.id }, sub: esc((q.items || []).filter(it => lineShortNow(q, it)).map(it => `${n0(it.pickedQty)} of ${n0(it.qty)} ${lineName(it).base.toLowerCase()}`).join(', ')), since: msOf(q.pickingDoneAt) });
+      const shortNow = q.pickingStatus === 'done' && (q.items || []).some(it => lineShortNow(q, it)) && !q.pickSettle, pk = staffById(q.assignedWorkerId);
+      if (shortNow) add(waiting, { title: `Short pick · ${q4(q)} ${esc(shortName(quoteClientName(q)))}`, icon: CV.pack, act: 'ruthslip', data: { id: q.id }, sub: esc((q.items || []).filter(it => lineShortNow(q, it)).map(it => `${n0(it.pickedQty)} of ${n0(it.qty)} ${lineName(it).base.toLowerCase()}`).join(', ')), since: msOf(q.pickingDoneAt), by: pk && pk.userId, byName: pk ? pk.name : '' });
       if (q.pickSettle && isTodayMs(msOf(q.pickSettle.at)) && (orderIsMine(q) || mine(null))) add(answered, { title: `Short pick · ${q4(q)} ${esc(shortName(quoteClientName(q)))}`, icon: CV.pack, answer: esc(settleWords(q)), at: msOf(q.pickSettle.at), tone: 'good', say: `${esc(mgr)} settled ${q4(q)}'s short pick`, saySub: esc(settleWords(q)) });
     });
-    (D().collectionTrips || []).filter(t => !t.voided && t.yardCheckedBy === me).forEach(t => {
+    // A trip check-in that came in different from the list (round 6, WORD-06: it is a check-in, never a count).
+    (D().collectionTrips || []).filter(t => !t.voided && t.yardCheckedBy).forEach(t => {
       const off = tripLines(t).filter(l => l.yardQty != null && Number(l.yardQty) !== Number(tripExpect(l)));
-      if (!off.length) return; const l = off[0], o = { title: `${esc(firstWord(tripWho(t)))}'s trip · ${esc(lineName(l).base.split(' ')[0].toLowerCase())}`, icon: CV.van, act: 'ruthtrip', data: { id: t.id } };
-      if (!t.differenceAcceptedAt && t.status !== 'confirmed') add(waiting, { ...o, sub: `You counted ${n0(l.yardQty)} of ${n0(tripExpect(l))}`, since: msOf(t.yardCheckedAt) });
-      else if (isTodayMs(msOf(t.differenceAcceptedAt || t.confirmedAt))) add(answered, { ...o, answer: `Accepted your count · ${n0(l.yardQty)} of ${n0(tripExpect(l))}`, at: msOf(t.differenceAcceptedAt || t.confirmedAt), tone: 'good', say: `${esc(mgr)} accepted your count`, saySub: `${esc(firstWord(tripWho(t)))}'s trip · ${n0(l.yardQty)} of ${n0(tripExpect(l))}` });
+      if (!off.length) return; const l = off[0], item = esc(lineName(l).base), trip = `${esc(firstWord(tripWho(t)) || 'A')}'s trip`, o = { icon: CV.van, act: 'ruthtrip', data: { id: t.id } };
+      if (!t.differenceAcceptedAt && t.status !== 'confirmed') add(waiting, { ...o, title: `${trip} · ${item}`, sub: `checked in ${n0(l.yardQty)} of ${n0(tripExpect(l))}`, since: msOf(t.yardCheckedAt), by: t.yardCheckedBy });
+      else if (t.yardCheckedBy === me && isTodayMs(msOf(t.differenceAcceptedAt || t.confirmedAt))) add(answered, { ...o, title: `Your check-in of ${trip}`, answer: `${item} · ${esc(mgr)} accepted ${n0(l.yardQty)} of ${n0(tripExpect(l))}`, at: msOf(t.differenceAcceptedAt || t.confirmedAt), tone: 'good', say: `${esc(mgr)} accepted your check-in`, saySub: `${trip} · ${item} · ${n0(l.yardQty)} of ${n0(tripExpect(l))}` });
     });
     waiting.sort((a, b) => a.since - b.since); answered.sort((a, b) => b.at - a.at);
     return { waiting, answered };
   });
 }
+// The bell is what needs you (round 6, WORD-10): only an alert for you, from today, can be unread,
+// and opening Alerts reads them (the dots stay for that visit).
 function alertsNow(){
   if (!S.data) return [];
+  const seen = S.ui.alOpen ? (S.ui.alPrev || 0) : seenAt();
+  return alertsAll().map(a => ({ ...a, unread: !!a.forYou && isTodayMs(a.at) && a.at > seen }));
+}
+function alertsAll(){
   return memo('alerts', () => {
-    const out = [], mgr = managerName(), M = managerStaff(), seen = seenAt(), wk = Date.now() - 7 * 864e5;
+    const out = [], mgr = managerName(), M = managerStaff(), wk = Date.now() - 7 * 864e5, me = S.user && S.user.id;
     const add = (at, o) => { if (at && at > wk) out.push({ at, ...o }); };
     const fromRuth = { ini: initials((M && M.name) || mgr), soft: '#F6E4F1', ink: '#7A3268' };
-    ruthAsks().answered.forEach(a => add(a.at, { ...fromRuth, title: a.say || `${esc(mgr)} · ${a.title}`, sub: a.saySub || a.answer, tone: a.tone, act: a.act, data: a.data }));
-    myTrips().forEach(t => { const b = theBuyer(); add(msOf(t.assignedAt || t.createdAt), { ini: initials(b ? b.name : 'Buyer'), soft: '#E4E6FA', ink: '#3A3F9B', title: `${esc(b ? firstWord(b.name) : 'The buyer')} sent you to ${esc((supplierById(t.supplierId) || {}).name || 'a supplier')}`, sub: esc(nLines(tripLines(t).length)), act: 'goride' }); });
-    roundsOf((D().collectionTrips || []).filter(t => !t.voided && t.collectedAt)).forEach(R => { const w = tripWho(R[0]), back = !R[0].yardCheckedAt, lines = R.flatMap(tripLines).length;
-      add(msOf(R[0].collectedAt), { icon: CV.van, soft: '#E4F4EA', ink: '#0F6B43', title: `${esc(firstWord(w) || 'A trip')} is back at the yard`, sub: back ? `${nLines(lines)} to check in` : 'Checked in', act: back ? 'receive' : null, data: { id: R[0].id } }); });
+    ruthAsks().answered.forEach(a => add(a.at, { ...fromRuth, title: a.say || `${esc(mgr)} · ${a.title}`, sub: a.saySub || a.answer, tone: a.tone, act: a.act, data: a.data, forYou: true }));
+    myTrips().forEach(t => { const b = theBuyer(); add(msOf(t.assignedAt || t.createdAt), { ini: initials(b ? b.name : 'Buyer'), soft: '#E4E6FA', ink: '#3A3F9B', title: `${esc(b ? firstWord(b.name) : 'The buyer')} sent you to ${esc((supplierById(t.supplierId) || {}).name || 'a supplier')}`, sub: esc(nLines(tripLines(t).length)), act: 'goride', forYou: true }); });
+    const came = (D().collectionTrips || []).filter(t => !t.voided && t.collectedAt);
+    roundsOf(came.filter(t => !t.yardCheckedAt)).concat(roundsOf(came.filter(t => t.yardCheckedAt))).forEach(R => { const w = firstWord(tripWho(R[0])) || 'A', back = !R[0].yardCheckedAt, lines = R.flatMap(tripLines).length, by = R[0].yardCheckedBy;
+      if (back) add(msOf(R[0].collectedAt), { icon: CV.van, soft: '#E4F4EA', ink: '#0F6B43', title: `${esc(w)} is back at the yard`, sub: `${nLines(lines)} for you to check in`, act: 'receive', data: { id: R[0].id }, forYou: true });
+      else add(msOf(R[0].yardCheckedAt), { icon: CV.van, soft: '#E4F4EA', ink: '#0F6B43', title: `${esc(by && String(by) === String(me) ? 'You' : firstWord(personName({ userId: by })))} checked in ${esc(w)}'s ${roundWord(R)}`, sub: `${nLines(lines)} · checked in` }); });
+    const ho = typeof handedToMe === 'function' && handedToMe(); if (ho) add(msOf(ho.createdAt), { ini: initials(ho.byName || '?'), soft: '#E8EBF0', ink: '#16203C', title: `${esc(firstWord(ho.byName) || 'A colleague')} passed you the yard`, sub: "On Today · tap \"I've got it\"", act: 'home', forYou: true });
     liveOrders().forEach(q => { const log = q.stageLog || [], i = log.map(x => x.status).lastIndexOf('preparing');
       if (i > 0 && log[i - 1].status === 'awaiting_goods' && q.status === 'preparing' && q.pickingStatus !== 'done') add(msOf(log[i].at), { icon: CV.pack, title: `${q4(q)} is ready to pack`, sub: esc(`${quoteClientName(q)} · ${nOf(pickLines(q).length, 'item')} · its goods came in`), act: 'pack', data: { id: q.id } }); });
-    return out.sort((a, b) => b.at - a.at).map(a => ({ ...a, unread: a.at > seen }));
+    return out.sort((a, b) => b.at - a.at);
   });
 }
 PAGE.alerts = () => {
   const A = alertsNow(), R = ruthAsks(), top = A.find(a => a.unread) || A[0], mgr = managerName();
   const M = managerStaff();
-  const row = a => cvRow({ tall: true, act: a.act, data: a.data, round: true, ini: a.ini, icon: a.icon, soft: a.soft, ink: a.ink, unread: a.unread, title: a.title, sub: a.sub, subInk: a.tone === 'good' ? '#0F6B43' : a.tone === 'warn' ? '#95530C' : '', right: `<span class="cv-at">${isTodayMs(a.at) ? hm(a.at) : esc(new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short' })) + ' ' + hm(a.at)}</span>`,
+  const row = a => cvRow({ tall: true, act: a.act, data: a.data, round: true, ini: a.ini, icon: a.icon, soft: a.soft, ink: a.ink, unread: a.unread, title: a.title, sub: a.sub, subInk: a.tone === 'good' ? '#0F6B43' : a.tone === 'warn' ? '#95530C' : '', right: `<span class="cv-at">${esc(whenAt(a.at))}</span>`,
     badge: a.unread ? '<span style="position:absolute;top:-1px;right:-1px;width:11px;height:11px;border-radius:999px;background:#C93A30;border:2px solid #fff;box-sizing:border-box"></span>' : '' });
   return `<div class="cv"><div class="cv-hero tight" data-navy-top>
     <div class="cv-top">${cvBack('Back to Today')}<b>Alerts</b><button class="cv-circ" data-act="me" aria-label="Alert settings">${sv(CV.sliders, 18, 2)}</button></div>
     ${top ? `<button data-act="${top.act || 'back'}"${Object.entries(top.data || {}).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('')} class="cv-dropin" style="border:none;border-radius:20px;background:rgba(255,255,255,.95);color:var(--ink);padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 12px 28px rgba(0,0,0,.3);text-align:left;width:100%">
       <span style="width:38px;height:38px;flex:none;border-radius:11px;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv(CV.store, 18, 2)}</span>
-      <span class="cv-tx" style="gap:2px"><span style="display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--ink2)"><span class="ell">STORE · ${esc(String(S.shopName || '').toUpperCase())}</span><span>${minsSince(top.at) < 2 ? 'now' : hm(top.at)}</span></span><span class="cv-tt">${top.title}</span><span class="cv-sb" style="font-size:13px">${top.sub || ''}</span></span></button>` : ''}
+      <span class="cv-tx" style="gap:2px"><span style="display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--ink2)"><span class="ell">STORE · ${esc(String(S.shopName || '').toUpperCase())}</span><span>${minsSince(top.at) < 2 ? 'now' : whenAt(top.at)}</span></span><span class="cv-tt">${top.title}</span><span class="cv-sb" style="font-size:13px">${top.sub || ''}</span></span></button>` : ''}
   </div>
   <div class="cv-body">
     <button class="cv-row" data-act="ruth" style="min-height:70px;padding:0 14px;border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 4px 14px rgba(22,32,60,.05)">
       <span class="cv-ic round" style="background:#F6E4F1;color:#7A3268">${ini((M && M.name) || mgr)}</span>
       <span class="cv-tx"><span style="font-size:15px;font-weight:700">With ${esc(mgr)}</span><span class="cv-sb">What waits on ${esc(mgr)}, and today's answers</span></span>
       <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="height:22px;padding:0 8px;border-radius:999px;background:#FDEEE1;color:#7A4A02;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px"><span class="m">${R.waiting.length}</span>waiting</span><span style="height:22px;padding:0 8px;border-radius:999px;background:#E4F4EA;color:#0F6B43;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px"><span class="m">${R.answered.length}</span>answered</span></span></button>
-    ${A.length ? alertDays(A).map(([day, list]) => `<span class="cv-sec">${esc(day)}</span><div class="cv-list">${list.map(row).join('')}</div>`).join('') : `<div class="cv-list"><div class="st-empty"><b>No alerts yet</b>A trip back, an order to pack and ${esc(mgr)}'s answers land here</div></div>`}
+    ${A.length ? (() => { const you = A.filter(a => a.forYou && isTodayMs(a.at)), yard = A.filter(a => !a.forYou && isTodayMs(a.at)), old = A.filter(a => !isTodayMs(a.at));
+      return `<span class="cv-sec">For you<span class="m">${you.filter(a => a.unread).length}</span></span><div class="cv-list">${you.map(row).join('') || '<div class="st-empty">Nothing needs you right now</div>'}</div>`
+        + (yard.length ? `<span class="cv-sec">In the yard today</span><div class="cv-list">${yard.map(row).join('')}</div>` : '')
+        + alertDays(old).map(([day, list]) => `<span class="cv-sec">${esc(day)} · read</span><div class="cv-list">${list.map(row).join('')}</div>`).join(''); })() : `<div class="cv-list"><div class="st-empty"><b>No alerts yet</b>A trip back, an order to pack and ${esc(mgr)}'s answers land here</div></div>`}
     <span style="padding:8px 4px 0;font-size:12px;font-weight:600;color:var(--ink2);text-align:center">Older alerts clear themselves after a week</span>
   </div></div>`;
 };
@@ -3079,8 +3126,8 @@ function alertDays(A){
     if (!at.has(w)) { at.set(w, []); out.push([w, at.get(w)]); } at.get(w).push(a); });
   return out;
 }
-// Seen when the page is left, so the dots show on the visit that finds them.
-AFTER.push(() => { const on = S.stack.some(p => p.type === 'alerts'); if (S.ui.alOpen && !on) { try { localStorage.setItem(SEEN_KEY(), String(Date.now())); } catch (_e) {} } S.ui.alOpen = on; });
+// Read when the page opens: the badge goes to 0, and the dots stay for the visit that finds them.
+AFTER.push(() => { const on = S.stack.some(p => p.type === 'alerts'); if (on && !S.ui.alOpen) { S.ui.alPrev = seenAt(); try { localStorage.setItem(SEEN_KEY(), String(Date.now())); } catch (_e) {} } S.ui.alOpen = on; });
 ACT.ruth = () => { FEEL.open(); push('ruth', {}); };
 ACT.pack = t => { FEEL.open(); openPack(Number(t.dataset.id)); };
 PAGE.ruth = () => {
@@ -3090,15 +3137,14 @@ PAGE.ruth = () => {
     <div class="cv-top">${cvBack('Back to Alerts')}<b>With ${esc(mgr)}</b>${M && M.phone ? `<a class="cv-circ" href="${esc(telUrl(M.phone))}" aria-label="Call ${esc(mgr)}">${sv(CV.phone, 18, 2)}</a>` : '<span class="cv-circ blank"></span>'}</div>
     <div style="display:flex;align-items:center;gap:14px"><span style="width:56px;height:56px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #1D2747,0 0 0 5px rgba(245,178,107,.6)">${ini((M && M.name) || mgr)}</span>
       <span class="cv-tx"><span class="ell" style="font-size:20px;font-weight:700;letter-spacing:-.01em">${esc((M && M.name) || 'The manager')} · Manager</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">Asks still waiting, and what ${esc(mgr)} answered today</span></span></div>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
-      <span style="height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span class="m" style="font-size:22px;font-weight:600;line-height:1;color:#F5B26B">${R.waiting.length}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">waiting on ${esc(mgr)}</span></span>
-      <span style="height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:-1px 0 0 rgba(255,255,255,.07)"><span class="m" style="font-size:22px;font-weight:600;line-height:1;color:#6FDCB0">${R.answered.length}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">answered today</span></span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
+      ${[[R.waiting.length, 'waiting on ' + mgr, '#F5B26B'], [R.answered.length, 'answered today', '#6FDCB0'], [R.waiting.filter(w => w.mine).length, R.waiting.filter(w => w.mine).length === 1 ? 'is yours' : 'are yours']].map(([v, w, c], i) => `<span style="height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:0 4px;text-align:center${i ? ';box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:22px;font-weight:600;line-height:1${c ? ';color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${esc(w)}</span></span>`).join('')}</div>
   </div>
   <div class="cv-body">
     <span class="cv-sec first">Waiting on ${esc(mgr)}</span>
-    <div class="cv-list">${R.waiting.map(w => cvRow({ tall: true, sq13: true, act: w.act, data: w.data, icon: w.icon, soft: '#FDEEE1', ink: '#95530C', title: w.title, sub: w.sub, right: `<span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="cv-wait"></span><span class="m" style="font-size:11px;font-weight:600;color:#7A4A02">${isTodayMs(w.since) ? esc(waitClock(minsSince(w.since)).replace(':', ' h ').replace(/ h (\d\d)$/, ' h $1')) : 'since ' + esc(new Date(w.since).toLocaleDateString('en-GB', { weekday: 'short' }))}</span></span>` })).join('') || '<div class="st-empty">Nothing waits on ' + esc(mgr) + '</div>'}</div>
+    <div class="cv-list">${R.waiting.map(w => cvRow({ tall: true, sq13: true, act: w.act, data: w.data, icon: w.icon, soft: '#FDEEE1', ink: '#95530C', title: w.title, sub: w.sub, right: `<span style="flex:none;display:flex;align-items:center;gap:8px"><span class="cv-wait"></span>${face(w.mine ? myName() : w.who, w.mine ? myName() : w.who, 30, 'flex:none;border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}</span>` })).join('') || '<div class="st-empty">Nothing waits on ' + esc(mgr) + '</div>'}</div>
     <span class="cv-sec">Answered today</span>
-    <div class="cv-list">${R.answered.map(a => { const [soft, ink] = tone[a.tone] || tone.good; return cvRow({ tall: true, sq13: true, act: a.act, data: a.data, icon: a.icon, soft, ink, title: a.title, sub: a.answer, subInk: ink, right: `<span class="cv-at">${hm(a.at)}</span>` }); }).join('') || '<div class="st-empty">No answers yet today</div>'}</div>
+    <div class="cv-list">${R.answered.map(a => { const [soft, ink] = tone[a.tone] || tone.good; return cvRow({ tall: true, sq13: true, act: a.act, data: a.data, icon: a.icon, soft, ink, title: a.title, sub: a.answer, subInk: ink, right: `<span class="cv-at">${whenAt(a.at)}</span>` }); }).join('') || '<div class="st-empty">No answers yet today</div>'}</div>
   </div></div>`;
 };
 PAGE.ruth.bg = '#F7F5F2';
@@ -3136,7 +3182,7 @@ PAGE.me = () => {
     <span class="cv-sec">How the app reaches you</span>
     <div class="cv-list">${tg.map(([k, w, sub, d]) => `<button class="cv-tog" data-act="pref" data-k="${k}" aria-pressed="${!!S.prefs[k]}"><span style="width:40px;height:40px;flex:none;border-radius:12px;background:#E8EBF0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(d, 19, 2)}</span>
       <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${esc(w)}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(sub)}</span></span><span class="cv-sw"><i></i></span></button>`).join('')}</div>
-    ${mate && PAGE.handover ? `<button class="cv-navy" data-act="handover" style="margin-top:8px"><span style="display:flex"><span style="width:28px;height:28px;border-radius:999px;background:#243052;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(myName())}</span><span style="width:28px;height:28px;margin-left:-6px;border-radius:999px;background:${tint(mate.name)[0]};color:${tint(mate.name)[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(mate.name)}</span></span>Hand the yard to ${esc(firstWord(mate.name))}</button>` : ''}
+    ${mate && PAGE.handover ? `<button class="cv-navy" data-act="handover" style="margin-top:8px"><span style="display:flex"><span style="width:28px;height:28px;border-radius:999px;background:#243052;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(myName())}</span><span style="width:28px;height:28px;margin-left:-6px;border-radius:999px;background:${tint(mate.name)[0]};color:${tint(mate.name)[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(mate.name)}</span></span>End my shift · pass the yard to ${esc(firstWord(mate.name))}</button>` : ''}
     ${S.shopCount > 1 ? `<button class="cv-ghost" data-act="switchshop">${ic('store', 18)}Switch shop</button>` : ''}
     <button class="cv-ghost" data-act="signout" style="color:#8E2A22">${sv(CV.out, 18, 2)}Sign out</button>
     ${S.snapMode ? `<span style="display:flex;align-items:center;justify-content:center;gap:8px;padding-top:4px;font-size:12px;font-weight:600;color:var(--ink2)">${ic('eye', 16)}No prices, costs, payments or pay on this phone</span>` : ''}
@@ -3185,7 +3231,7 @@ PAGE.movein = () => {
   const gateRow = (r, i) => { const t = r[0], ls = r.flatMap(tripLines), ords = [...new Set(r.flatMap(tripOrders))], mins = minsSince(msOf(t.collectedAt || t.createdAt)), sd = tripIsSupplierDelivered(t);
     return `<button data-act="receive" data-id="${esc(t.id)}" style="display:flex;align-items:center;gap:12px;min-height:78px;padding:0 10px;border:none;border-radius:16px;background:${i ? 'transparent' : '#F4FBF7'};text-align:left;width:100%;color:inherit">
       ${face(who(r), 'w' + t.assignedWorkerId, 44, 'flex:none;border-radius:999px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center')}
-      <span class="cv-tx" style="gap:4px"><span class="cv-tt" style="font-size:15px">${esc(firstWord(who(r)))}'s ${sd ? 'delivery' : r.length > 1 ? 'round' : 'trip'}</span>
+      <span class="cv-tx" style="gap:4px"><span class="cv-tt" style="font-size:15px">${esc(firstWord(who(r)))}'s ${sd ? 'delivery' : roundWord(r)}</span>
         <span style="display:flex;gap:4px;overflow:hidden">${r.slice(0, 3).map(x => `<span class="ell" style="height:20px;padding:0 7px;border-radius:999px;background:#F1EEE8;font-size:11px;font-weight:700;color:#5F6980;display:flex;align-items:center;max-width:110px">${esc(shortName(supp(x)))}</span>`).join('')}${r.length > 3 ? `<span style="font-size:11px;font-weight:700;color:#5F6980;align-self:center">+${r.length - 3}</span>` : ''}</span>
         <span class="cv-sb">${nLines(ls.length)} · ${ords.length ? `${ords.length} order${ords.length === 1 ? '' : 's'} wait${ords.length === 1 ? 's' : ''} on it` : 'for the shelf'}</span></span>
       <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="m" style="font-size:13px;font-weight:600;color:${mins > 20 ? '#95530C' : '#0F6B43'}">${esc(waitBig(mins))}</span><span style="width:32px;height:32px;border-radius:999px;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv(CV.chev, 15, 2.4)}</span></span></button>`; };
@@ -3193,7 +3239,7 @@ PAGE.movein = () => {
     const stops = r.map((x, i) => i < done ? 'done' : i === done && col ? 'now' : 'next').concat('home'), ph = telUrl((staffById(t.assignedWorkerId) || {}).phone);
     return `<div class="cv-list" style="padding:14px 16px;gap:12px">
       <div style="display:flex;align-items:center;gap:12px">${t.assignedWorkerId ? face(who(r), 'w' + t.assignedWorkerId, 40, 'flex:none;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center') : '<span style="width:40px;height:40px;flex:none;border-radius:999px;border:1.5px dashed #C9C4BA"></span>'}
-        <span class="cv-tx"><span class="cv-tt">${esc(t.assignedWorkerId ? firstWord(who(r)) + "'s " + (r.length > 1 ? 'round' : 'trip') : 'Not taken yet')} · ${esc(r.map(x => shortName(supp(x))).join(', '))}</span><span class="cv-sb">${ords.length ? 'For ' + esc(ords.slice(0, 2).map(id => { const q = quoteById(id); return q ? q4(q) + ' ' + shortName(quoteClientName(q)) : ''; }).filter(Boolean).join(', ')) : 'For the shelf'}</span></span>
+        <span class="cv-tx"><span class="cv-tt">${esc(t.assignedWorkerId ? firstWord(who(r)) + "'s " + roundWord(r) : 'Not taken yet')} · ${esc(r.map(x => shortName(supp(x))).join(', '))}</span><span class="cv-sb">${ords.length ? 'For ' + esc(ords.slice(0, 2).map(id => { const q = quoteById(id); return q ? q4(q) + ' ' + shortName(quoteClientName(q)) : ''; }).filter(Boolean).join(', ')) : 'For the shelf'}</span></span>
         ${ph ? `<a href="${ph}" aria-label="Call ${esc(who(r))}" class="cv-circ" style="background:#F1EEE8;color:#16203C;flex:none">${sv('M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', 17, 2)}</a>` : `<span style="flex:none;font-size:12px;font-weight:700;color:#3A3F9B">${col ? 'buying' : 'sent'}</span>`}</div>
       <div role="img" aria-label="${done} of ${nOf(r.length, 'stop')} done">${stepDots(stops, '#3A3F9B')}</div>
       <div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;font-weight:600;color:var(--ink2)">${r.map((x, i) => `<span class="ell">${esc(shortName(supp(x)))} · ${i < done ? 'done' : i === done && col ? 'now' : 'next'}</span>`).join('')}<span>yard</span></div></div>`; };
@@ -3202,7 +3248,7 @@ PAGE.movein = () => {
     ${empty ? `<div class="st-empty" style="padding-top:8vh"><b>Nothing coming in</b><br>No trip is out or back for the shop right now</div>` : ''}
     ${rounds.length ? `<span class="cv-sec first">At the gate · oldest first</span><div class="cv-list">${rounds.map(gateRow).join('')}</div>` : ''}
     ${outR.length ? `<span class="cv-sec${rounds.length ? '' : ' first'}">On the way</span>${outR.map(wayCard).join('')}` : ''}
-    ${ci.length ? `<span class="cv-sec">Checked in today</span>${doneLines(ci.map(r => [`${esc(firstWord(tripWho(r[0]) || 'A'))}'s ${r.length > 1 ? 'round' : tripIsSupplierDelivered(r[0]) ? 'delivery' : 'trip'} · ${nLines(r.flatMap(tripLines).length)}`, hm(msOf(r[0].yardCheckedAt || r[0].confirmedAt))]))}` : ''}
+    ${ci.length ? `<span class="cv-sec">Checked in today</span>${doneLines(ci.map(r => [`${esc(firstWord(tripWho(r[0]) || 'A'))}'s ${tripIsSupplierDelivered(r[0]) && r.length === 1 ? 'delivery' : roundWord(r)} · ${nLines(r.flatMap(tripLines).length)}`, whenAt(msOf(r[0].yardCheckedAt || r[0].confirmedAt))]))}` : ''}
   </div></div>`;
 };
 PAGE.movein.bg = '#F7F5F2';
@@ -3210,9 +3256,9 @@ PAGE.movein.bg = '#F7F5F2';
 /* ---- To pack ---- */
 PAGE.movepack = () => {
   const pq = packQueue(), mine = pq.filter(q => orderIsMine(q) && q.pickingStatus === 'in_progress'), theirs = pq.filter(takenBySomeoneElse), ready = pq.filter(q => !mine.includes(q) && !theirs.includes(q)).sort((a, b) => waitingSince(a) - waitingSince(b)), wait = waitingOnGoods();
-  const all = pq.length + wait.length, lines = pq.reduce((n, q) => n + pickLines(q).length, 0), oldest = pq.length ? Math.max(...pq.map(q => minsSince(createdMs(q) || waitingSince(q)))) : 0;
+  const all = pq.length + wait.length, oldest = pq.length ? Math.max(...pq.map(q => minsSince(createdMs(q) || waitingSince(q)))) : 0;
   const seg = [[mine.length, '#fff', 'yours'], [ready.length, '#6FDCB0', 'ready'], [theirs.length, 'rgba(255,255,255,.3)', "someone's on it"], [wait.length, 'repeating-linear-gradient(135deg,rgba(201,205,247,.55) 0 4px,transparent 4px 8px)', 'waiting on goods']];
-  const head = `<div style="display:flex;align-items:baseline;gap:8px;padding:0 4px"><span class="m" style="font-size:40px;font-weight:600;line-height:1">${all}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${all === 1 ? 'order' : 'orders'} · ${[pq.length ? `${pq.length} to pack, ${nLines(lines)}` : '', wait.length ? `${wait.length} waiting on goods` : ''].filter(Boolean).join(' · ')}${pq.length ? ' · oldest ' + esc(waitClock(oldest)) : ''}</span></div>
+  const head = `<div style="display:flex;align-items:baseline;gap:8px;padding:0 4px"><span class="m" style="font-size:40px;font-weight:600;line-height:1">${pq.length}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">to pack${pq.length ? ' · oldest waiting ' + esc(howLong(oldest)) : ''}</span></div>
     ${all ? `<div role="img" aria-label="${seg.map(s => s[0] + ' ' + s[2]).join(', ')}" style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;height:12px;border-radius:999px;overflow:hidden;gap:3px">${seg.filter(s => s[0]).map(s => `<span style="flex:${s[0]};background:${s[1]}"></span>`).join('')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;font-weight:600;color:var(--navyInk)">${seg.filter(s => s[0]).map(s => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:999px;background:${s[1].startsWith('repeating') ? '#C9CDF7' : s[1]}"></span>${s[2]}</span>`).join('')}</div></div>` : ''}`;
   const C = 2 * Math.PI * 19;
@@ -3225,7 +3271,7 @@ PAGE.movepack = () => {
     return `<button data-act="pack" data-id="${q.id}" style="display:flex;align-items:center;gap:12px;min-height:72px;padding:0 10px;border:none;border-radius:16px;background:transparent;text-align:left;width:100%;color:inherit">
       ${face(quoteClientName(q), q.id, 42, 'flex:none;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center')}
       <span class="cv-tx" style="gap:5px"><span class="cv-tt">${q4(q)} · ${esc(quoteClientName(q))}</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink2)"><span style="display:flex;gap:3px">${aisles.slice(0, 4).map(a => `<span style="width:20px;height:20px;border-radius:6px;background:#F1EEE8;font-size:11px;font-weight:700;color:#16203C;display:flex;align-items:center;justify-content:center">${esc(a)}</span>`).join('')}</span><span class="ell">${nLines(p.n)} · ${orderIsPickup(q) ? 'collects' : 'to ' + esc(placeShort(q))}</span></span></span>
-      <span class="m" style="flex:none;height:26px;padding:0 9px;border-radius:999px;background:${old ? '#FDEEE1' : '#F1EEE8'};color:${old ? '#7A4A02' : '#5F6980'};font-size:12px;font-weight:600;display:flex;align-items:center">${esc(waitClock(mins))}</span></button>`; };
+      <span class="m" style="flex:none;height:26px;padding:0 9px;border-radius:999px;background:${old ? '#FDEEE1' : '#F1EEE8'};color:${old ? '#7A4A02' : '#5F6980'};font-size:12px;font-weight:600;display:flex;align-items:center">${esc(howLong(mins))}</span></button>`; };
   const theirRow = q => { const p = packProgress(q), w = staffName(q.assignedWorkerId) || 'Someone';
     return `<button data-act="pack" data-id="${q.id}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border:none;border-radius:20px;background:transparent;box-shadow:inset 0 0 0 1px var(--rule);text-align:left;width:100%;color:inherit">
       ${face(w, 'w' + q.assignedWorkerId, 36, 'flex:none;border-radius:999px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center')}
@@ -3242,7 +3288,7 @@ PAGE.movepack = () => {
     ${mine.length ? `<span class="cv-sec first">Yours · carry on</span>${mine.map(mineRow).join('')}` : ''}
     ${ready.length ? `<span class="cv-sec${mine.length ? '' : ' first'}">Ready · oldest first</span><div class="cv-list">${ready.map(readyRow).join('')}</div>` : ''}
     ${theirs.length ? `<span class="cv-sec">Someone's on it</span>${theirs.map(theirRow).join('')}` : ''}
-    ${wait.length ? `<span class="cv-sec">Waiting on goods</span>${wait.map(waitRow).join('')}` : ''}
+    ${wait.length ? `<span class="cv-sec">Waiting on goods<span class="m">${wait.length}</span></span>${wait.map(waitRow).join('')}` : ''}
   </div></div>`;
 };
 PAGE.movepack.bg = '#F7F5F2';
@@ -3254,24 +3300,24 @@ PAGE.onroad = () => {
   const rows = onRoad(), done = doneToday(), groups = new Map();
   rows.forEach(q => { const k = carrierKey(q); if (!groups.has(k)) groups.set(k, { k, out: [], done: [] }); groups.get(k).out.push(q); });
   done.filter(q => groups.has(carrierKey(q))).forEach(q => groups.get(carrierKey(q)).done.push(q));
-  const collected = done.filter(q => orderIsPickup(q)), deliv = done.filter(q => !orderIsPickup(q));
-  const stats = `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[rows.length, 'on the road', '#6FDCB0'], [deliv.length, 'delivered today'], [collected.length, 'collected']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:22px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>`;
+  const collected = done.filter(q => orderIsPickup(q));
+  const stats = `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[rows.length, 'on the road', '#6FDCB0'], [done.length, 'delivered today'], [collected.length, 'of them collected']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:22px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>`;
   const drv = g => { const q = g.out[0], c = q.carrier || {}, st = c.staffId ? staffById(c.staffId) : null, name = (st && st.name) || c.name || 'A driver', hired = !c.staffId, ring = hired ? '#F5B26B' : '#6FDCB0';
     const ph = telUrl((st && st.phone) || c.phone), order = g.done.sort((a, b) => msOf(a.deliveredAt) - msOf(b.deliveredAt)).concat(g.out), stops = order.map(o => o.status === 'completed' ? 'done' : o === g.out[0] ? 'now' : 'next');
     return `<div class="cv-list" style="padding:14px;gap:14px">
       <div style="display:flex;align-items:center;gap:12px">${face(name, c.staffId ? 'w' + c.staffId : name, 44, `flex:none;border-radius:999px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff,0 0 0 4px ${ring}`)}
-        <span class="cv-tx"><span class="cv-tt" style="font-size:15px">${esc(firstWord(name))}${hired ? ' · hired' : ''}${c.what ? ' · ' + esc(c.what) : ''}</span><span class="cv-sb">${c.at ? 'Left ' + hm(msOf(c.at)) + ' · ' : ''}${g.out.length} to go${g.done.length ? ' · ' + g.done.length + ' done' : ''}</span></span>
+        <span class="cv-tx"><span class="cv-tt" style="font-size:15px">${esc(firstWord(name))}${hired ? ' · hired' : ''}${c.what ? ' · ' + esc(c.what) : ''}</span><span class="cv-sb">${c.at ? 'Left ' + whenAt(msOf(c.at)) + ' · ' : ''}${g.out.length} to go${g.done.length ? ' · ' + g.done.length + ' done' : ''}</span></span>
         ${ph ? `<a href="${ph}" aria-label="Call ${esc(name)}" class="cv-circ" style="background:#F1EEE8;color:#16203C;flex:none">${sv('M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', 17, 2)}</a>` : ''}</div>
       <div role="img" aria-label="${g.done.length} delivered, ${g.out.length} to go">${stepDots(['home'].concat(stops), hired ? '#F5B26B' : '#0F6B43').replace('<span style="width:22px;height:22px;border-radius:7px;background:#F1EEE8;color:#5F6980', '<span style="width:22px;height:22px;border-radius:7px;background:#16203C;color:#fff')}</div>
       <div style="display:flex;flex-direction:column">${order.map(o => { const dn = o.status === 'completed';
         // Delivering with proof is the Store's (order.deliver): the driver on their own phone, or anyone in
         // the yard when the driver rings in or comes back with the signed note.
-        return `<button ${dn ? 'disabled' : `data-act="deliver" data-id="${o.id}"`} style="display:flex;align-items:center;gap:10px;min-height:56px;border:none;border-top:1px solid #EFECE6;background:none;text-align:left;width:100%;color:inherit;opacity:1"><span class="m" style="font-size:12px;font-weight:600;width:40px;flex:none;color:${dn ? '#0F6B43' : '#95530C'}">${dn ? hm(msOf(o.deliveredAt)) : o === g.out[0] ? 'next' : 'then'}</span><span class="cv-tx"><span class="cv-tt">${q4(o)} · ${esc(quoteClientName(o))}</span><span class="cv-sb">${dn ? 'Delivered' + (o.deliveredTo ? ' · to ' + esc(o.deliveredTo) : '') : esc(placeShort(o))}</span></span>${dn ? '' : `<span style="flex:none;height:36px;padding:0 12px;border-radius:999px;background:#16203C;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 14, 2.2)}Mark delivered</span>`}</button>`; }).join('')}</div></div>`; };
+        return `<button ${dn ? 'disabled' : `data-act="deliver" data-id="${o.id}"`} style="display:flex;align-items:center;gap:10px;min-height:56px;border:none;border-top:1px solid #EFECE6;background:none;text-align:left;width:100%;color:inherit;opacity:1"><span class="m" style="font-size:12px;font-weight:600;width:40px;flex:none;color:${dn ? '#0F6B43' : '#95530C'}">${dn ? whenAt(msOf(o.deliveredAt)) : o === g.out[0] ? 'next' : 'then'}</span><span class="cv-tx"><span class="cv-tt">${q4(o)} · ${esc(quoteClientName(o))}</span><span class="cv-sb">${dn ? 'Delivered' + (o.deliveredTo ? ' · to ' + esc(o.deliveredTo) : '') : esc(placeShort(o))}</span></span>${dn ? '' : `<span style="flex:none;height:36px;padding:0 12px;border-radius:999px;background:#16203C;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 14, 2.2)}Mark delivered</span>`}</button>`; }).join('')}</div></div>`; };
   const loose = done.filter(q => ![...groups.values()].some(g => g.done.includes(q))).sort((a, b) => msOf(a.deliveredAt) - msOf(b.deliveredAt));
   return `<div class="cv">${navyHead('On the road', stats)}<div class="cv-body">
     ${!rows.length ? `<div class="st-empty" style="padding-top:6vh"><b>Nobody on the road</b><br>Everything loaded today is delivered</div>` : ''}
     ${[...groups.values()].map(drv).join('')}
-    ${loose.length ? `<span class="cv-sec">Done today</span>${doneLines(loose.map(q => [`${q4(q)} · ${esc(quoteClientName(q))} · ${orderIsPickup(q) ? 'collected' : esc(firstWord((q.carrier && q.carrier.name) || staffName(q.carrier && q.carrier.staffId) || 'delivered'))}`, hm(msOf(q.deliveredAt) || q.stageEnteredAt)]))}` : ''}
+    ${loose.length ? `<span class="cv-sec">Done today</span>${doneLines(loose.map(q => [`${q4(q)} · ${esc(quoteClientName(q))} · ${orderIsPickup(q) ? 'collected' : esc(firstWord((q.carrier && q.carrier.name) || staffName(q.carrier && q.carrier.staffId) || 'delivered'))}`, whenAt(msOf(q.deliveredAt) || q.stageEnteredAt)]))}` : ''}
   </div></div>`;
 };
 PAGE.onroad.bg = '#F7F5F2';
@@ -3306,7 +3352,7 @@ function thumb(it, box, svg, radius){ const T = thumbOf(it), img = lineImage(it)
 function takerOf(q){ if (!q || q.takenBy == null) return null;
   const st = D().staff.find(s => s.userId && String(s.userId) === String(q.takenBy)); if (st) return st;
   // A login with no staff record still has a name (0164 members).
-  const m = (D().members || []).find(x => String(x.userId) === String(q.takenBy) && x.name && x.name !== 'The Store'); return m ? { name: m.name, userId: m.userId } : null; }
+  const m = (D().members || []).find(x => String(x.userId) === String(q.takenBy)), nm = m && personName({ userId: m.userId }); return nm && nm !== 'Someone' ? { name: nm, userId: m.userId } : null; }
 
 /* ==================================================================
    SCAN TO TICK -- one scanner for the whole app. A label carries the
@@ -3543,7 +3589,7 @@ function rcDone(R, ui){
     <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:28px;text-align:center">
       <span class="cv-pop" style="position:relative;width:168px;height:168px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:84px;height:84px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.tick, 38, 2.6)}</span></span>
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">On the shelf</span>
-      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${nLines(lines.length)} in at ${hm(at)}${ready.length ? ` · ${ready.length === 1 ? 'one order' : ready.length === 2 ? 'two orders' : ready.length + ' orders'} can be packed` : ''}</span>
+      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${nLines(lines.length)} in at ${whenAt(at)}${ready.length ? ` · ${ready.length === 1 ? 'one order' : ready.length === 2 ? 'two orders' : ready.length + ' orders'} can be packed` : ''}</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${orders.map(q => { const tk = takerOf(q), can = ready.includes(q); return `<button data-act="pack" data-id="${q.id}" style="display:flex;align-items:center;gap:12px;min-height:62px;padding:0 12px;border:none;border-radius:16px;background:rgba(255,255,255,.07);color:#fff;text-align:left;width:100%">
@@ -3700,15 +3746,15 @@ function goneSheet(msg, title){
   const a = (S.stack[S.stack.length - 1] || {}).args || {}, q = a.id != null && /^\d+$/.test(String(a.id)) ? (D().savedQuotes || []).find(o => Number(o.id) === Number(a.id)) : null;
   const off = q && (q.voided || q.status === 'cancelled' || (typeof orderCalledOff === 'function' && orderCalledOff(q))), done = q && q.status === 'completed';
   const steps = [];
-  if (q) { if (q.pickingDoneAt) steps.push([`Packed${q.assignedWorkerId ? ' by ' + firstWord(staffName(q.assignedWorkerId)) : ''}`, hm(msOf(q.pickingDoneAt))]);
-    if (q.carrier && q.carrier.at) steps.push([`Loaded${q.carrier.name ? ' · ' + firstWord(q.carrier.name) : ''}`, hm(msOf(q.carrier.at))]);
-    if (done) steps.push([orderIsPickup(q) ? `Collected${q.deliveredTo ? ' by ' + q.deliveredTo : ''}` : `Delivered${q.deliveredTo ? ' · to ' + q.deliveredTo : ''}`, hm(msOf(q.deliveredAt))]);
-    if (off) steps.push(['Called off', hm(msOf(q.voidedAt || q.stageEnteredAt))]); }
+  if (q) { if (q.pickingDoneAt) steps.push([`Packed${q.assignedWorkerId ? ' by ' + firstWord(staffName(q.assignedWorkerId)) : ''}`, whenAt(msOf(q.pickingDoneAt))]);
+    if (q.carrier && q.carrier.at) steps.push([`Loaded${q.carrier.name ? ' · ' + firstWord(q.carrier.name) : ''}`, whenAt(msOf(q.carrier.at))]);
+    if (done) steps.push([orderIsPickup(q) ? `Collected${q.deliveredTo ? ' by ' + q.deliveredTo : ''}` : `Delivered${q.deliveredTo ? ' · to ' + q.deliveredTo : ''}`, whenAt(msOf(q.deliveredAt))]);
+    if (off) steps.push(['Called off', whenAt(msOf(q.voidedAt || q.stageEnteredAt))]); }
   const v = done ? { t: orderIsPickup(q) ? 'Already collected' : 'Already delivered', l: 'Nothing left to do here', bg: '#6FDCB0', ink: '#16203C', i: CV.tick }
     : off ? { t: 'Called off', l: `${managerName()} called it off · put back anything packed`, bg: '#FDEEE1', ink: '#95530C', i: 'M6 6l12 12M18 6 6 18' }
     : q ? { t: 'It moved on', l: msg, bg: 'rgba(255,255,255,.1)', ink: '#DDE3F0', i: CV.chev }
     : { t: title || 'Not on this phone', l: a.id != null && /^\d+$/.test(String(a.id)) ? `No order #${String(a.id).padStart(4, '0')} here · it may be another shop's, or not made yet` : msg, bg: 'rgba(255,255,255,.1)', ink: '#DDE3F0', i: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5' };
-  if (!steps.length) steps.push(['Last refreshed', hm(S.loadedAt)]);
+  if (!steps.length) steps.push(['Last refreshed', whenAt(S.loadedAt)]);
   return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px">
     <div class="cv-top">${cvBack()}<b>${q ? q4(q) + ' · ' + esc(shortName(quoteClientName(q))) : ''}</b><span class="cv-circ blank"></span></div>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center">
@@ -3783,7 +3829,7 @@ PAGE.orderview = ({ id }) => {
   const tk = takerOf(q), sales = tk ? firstWord(tk.name) : 'Sales', who = firstWord(staffName(q.assignedWorkerId)) || 'Someone', p = packProgress(q);
   const v = q.status === 'draft' ? { head: 'Quote', bg: '#F1EEE8', ink: '#5F6980', ic: icon.doc, chip: 'Quote · not confirmed', cBg: 'rgba(255,255,255,.12)', cInk: '#DDE3F0', why: `${sales} is still writing it up with the client`, list: 'On the quote', foot: 'it comes to To pack when Sales confirms it' }
     : orderBuying(q) ? { head: 'Waiting on goods', bg: '#E4E6FA', ink: '#3A3F9B', ic: icon.van, chip: 'Buying', cBg: 'rgba(201,205,247,.2)', cInk: '#C9CDF7', why: 'Packing opens when the goods come in', list: 'What is coming', foot: 'the yard has nothing to do yet' }
-    : { head: 'Packing', bg: '#DDF1EE', ink: '#0E5E57', ic: icon.pack, chip: `${who} is packing it`, cBg: 'rgba(111,220,176,.16)', cInk: '#6FDCB0', why: `${who} took it${q.workerAcceptedAt || q.pickingAssignedAt ? ' at ' + hm(msOf(q.workerAcceptedAt || q.pickingAssignedAt)) : ''} · ${p.done} of ${nLines(p.n)} packed`, list: 'The lines', foot: `ask ${who} to let it go if you need it` };
+    : { head: 'Packing', bg: '#DDF1EE', ink: '#0E5E57', ic: icon.pack, chip: `${who} is packing it`, cBg: 'rgba(111,220,176,.16)', cInk: '#6FDCB0', why: `${who} took it${q.workerAcceptedAt || q.pickingAssignedAt ? ' at ' + whenAt(msOf(q.workerAcceptedAt || q.pickingAssignedAt)) : ''} · ${p.done} of ${nLines(p.n)} packed`, list: 'The lines', foot: `ask ${who} to let it go if you need it` };
   const sub = it => { if (q.status === 'draft') return ['Not confirmed', 'var(--ink2)'];
     if (PICK_ANSWERED.includes(it.pickStatus)) return it.pickStatus === 'done' ? ['Packed', '#0F6B43'] : ['Packed short', '#95530C'];
     if (orderLineIsBoughtIn(it) && !quoteLineReceived(it)) { const su = supplierById(it.supplierId); return [`Coming from ${(su && su.name) || 'the supplier'}`, '#3A3F9B']; }
@@ -4000,7 +4046,7 @@ function pkCancel(q, items, ui){
   const by = q.cancelledByName || '', at = msOf(q.cancelledAt), mgr = managerName(), M = managerStaff();
   return `<div class="cv" style="position:absolute;inset:0"><div class="cv-hero tight" style="padding:calc(18px + var(--safe-area-inset-top)) 18px 20px;gap:14px" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px"><span style="width:48px;height:48px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #1D2747,0 0 0 5px rgba(244,164,154,.6)">${ini((M && M.name) || mgr)}</span>
-      <span class="cv-tx"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">${q4(q)} is called off</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${by ? esc(firstWord(by)) + ' cancelled it · ' : ''}${esc(mgr)} agreed${at ? ' · ' + hm(at) : ''}</span></span></div>
+      <span class="cv-tx"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">${q4(q)} is called off</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${by ? esc(firstWord(by)) + ' cancelled it · ' : ''}${esc(mgr)} agreed${at ? ' · ' + whenAt(at) : ''}</span></span></div>
     <span style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:14px;background:rgba(244,164,154,.14);color:#F4A49A;font-size:13px;font-weight:700">${out.length ? "Stop packing · put back what's already out" : 'Stop packing · nothing was picked yet'}</span></div>
     <div class="cv-body" style="padding:16px">
       ${out.length ? `<span class="cv-sec first">Back to the shelf</span>
@@ -4151,7 +4197,7 @@ PAGE.load = args => {
   if (!r) return `<div class="cv"><div class="cv-hero tight" data-navy-top><div class="cv-top">${cvBack('Back to Today')}<b>Load a run</b><span class="cv-circ blank"></span></div></div>
     <div class="cv-body">${!holds.length && !gate.length ? `<div class="cv-list"><div class="st-empty"><b>Nothing to load</b>Packed orders for delivery show here</div></div>` : `
       <div style="display:flex;align-items:center;gap:12px;padding:4px 4px 2px"><span style="width:40px;height:40px;flex:none;border-radius:12px;background:#E8EBF0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.van, 20, 2)}</span><span class="cv-tx" style="gap:2px"><span style="font-size:16px;font-weight:700">No delivery run to load</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${[holds.length ? `${holds.length} wait${holds.length === 1 ? 's' : ''} on money` : '', gate.length ? `${gate.length} collect${gate.length === 1 ? 's' : ''} at the gate` : ''].filter(Boolean).join(' · ')}</span></span></div>
-      ${holds.length ? `<span class="cv-sec">Packed · waits on money</span><div class="cv-list">${holds.map(q => cvRow({ act: 'slip', data: { id: q.id }, icon: CV.clock, soft: '#FDEEE1', ink: '#95530C', title: `${q4(q)} · ${esc(quoteClientName(q))}`, sub: 'Not paid yet · it leaves once it is' })).join('')}</div>` : ''}
+      ${holds.length ? `<span class="cv-sec">Packed · ${NOT_PAID.toLowerCase()}</span><div class="cv-list">${holds.map(q => cvRow({ act: 'slip', data: { id: q.id }, icon: CV.clock, soft: '#FDEEE1', ink: '#95530C', title: `${q4(q)} · ${esc(quoteClientName(q))}`, sub: `${NOT_PAID} · stays on ${bayOf(q) ? 'bay ' + bayOf(q) : 'the bay'}`, right: cvChip(NOT_PAID, '#FDEEE1', '#7A4A02') })).join('')}</div>` : ''}
       ${gate.length ? `<span class="cv-sec">Packed · they collect</span><div class="cv-list">${gate.map(q => cvRow({ act: 'slip', data: { id: q.id }, icon: CV.store, soft: '#E4F4EA', ink: '#0F6B43', title: `${q4(q)} · ${esc(quoteClientName(q))}`, sub: 'At the gate · no truck needed' })).join('')}</div>` : ''}`}</div></div>`;
   ui.k = r.k;
   const car = ui.car || staffCar(r.driver) || meCarrier(), me = isMeCar(car), name = carWord(car);
@@ -4192,7 +4238,7 @@ PAGE.load = args => {
   <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 18px;display:flex;flex-direction:column;gap:10px">
     <span style="display:flex;align-items:center;gap:8px;padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${sv('M12 3 3 8l9 5 9-5zM3 13l9 5 9-5', 16, 2)}Load in this order · the last drop goes in first</span>
     ${loadOrder.map(stop).join('')}
-    ${held.map(q => locked(q, `Waits on money · stays on bay ${bayOf(q) || '—'}`)).join('')}
+    ${held.map(q => locked(q, `${NOT_PAID} · stays on bay ${bayOf(q) || '—'}`)).join('')}
     ${later.map(q => locked(q, `${firstWord(staffName(q.assignedWorkerId))} is packing it · goes on the next run`)).join('')}
     ${runs.length > 1 ? `<span class="cv-sec">Other runs</span><div class="cv-list">${runs.filter(x => x.k !== r.k).map(x => cvRow({ act: 'lrrun', data: { k: x.k }, icon: CV.truck, soft: '#E4F4EA', ink: '#0F6B43', title: esc(x.road), sub: esc(x.drops.map(d => shortName(quoteClientName(d.q))).join(', ')) })).join('')}</div>` : ''}
   </div>
@@ -4222,7 +4268,7 @@ function lrSent(ui){
     ${s.wait ? undoBtn('lrundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center">
       ${s.wait ? stateDot('sending') : bigTick(truckIcon(38), 80)}
-      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : me ? (qs.length === 2 ? 'Both drops are' : qs.length > 2 ? 'All the drops are' : 'The drop is') + ' on your truck' : esc(name) + ' is on the way'}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(s.road)} · ${nLines(s.lines)} checked · ${hm(s.at)}</span></span>
+      <span style="display:flex;flex-direction:column;gap:8px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : me ? (qs.length === 2 ? 'Both drops are' : qs.length > 2 ? 'All the drops are' : 'The drop is') + ' on your truck' : esc(name) + ' is on the way'}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(s.road)} · ${nLines(s.lines)} checked · ${whenAt(s.at)}</span></span>
       <div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:6px;display:flex;flex-direction:column;text-align:left">
         ${qs.map((q, i) => { const tk = takerOf(q); return `<span style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 10px"><span class="m" style="width:26px;height:26px;border-radius:999px;background:#fff;color:#16203C;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">${i + 1}</span><span class="cv-tx" style="gap:2px"><span class="cv-tt">${esc(quoteClientName(q))} · ${q4(q)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${tk ? esc(firstWord(tk.name)) : 'Sales'} ${tk ? 'is' : 'are'} told it's on its way</span></span></span>`; }).join('')}</div>
       ${later ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk)">${face(staffName(later.assignedWorkerId), staffName(later.assignedWorkerId), 24, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}${q4(later)} rides on the next run, when ${esc(firstWord(staffName(later.assignedWorkerId)))} finishes it</span>` : ''}
@@ -4272,9 +4318,9 @@ function slSave(id, ui){ try { const name = ui ? String(ui.collector || '').trim
 /* The "Not done" bar (round 3, REL-07): a write that did not go stays on its screen with everything typed
    and ticked, says why, and offers Try again. "Someone else just did this" is blue: the order was refreshed. */
 function movedWords(q){ if (!q) return 'Refreshed';
-  if (q.carrier && q.carrier.at) return `Refreshed · ${firstWord(q.carrier.by) || 'Someone'} handed it over at ${hm(msOf(q.carrier.at))}`;
+  if (q.carrier && q.carrier.at) return `Refreshed · ${firstWord(personName({ stored: q.carrier.by }))} handed it over at ${whenAt(msOf(q.carrier.at))}`;
   if (['pending_delivery', 'completed'].includes(q.status)) return 'Refreshed · it has gone out';
-  if (q.pickingStatus === 'done') return `Refreshed · packed at ${hm(msOf(q.pickingDoneAt))}`;
+  if (q.pickingStatus === 'done') return `Refreshed · packed at ${whenAt(msOf(q.pickingDoneAt))}`;
   if (q.pickingStatus === 'in_progress') return `Refreshed · ${firstWord(staffName(q.assignedWorkerId)) || 'Someone'} is packing it`;
   return 'Refreshed · it moved on'; }
 function setNotDone(e, page, id, retry){ const st = isStale(e);
@@ -4309,7 +4355,7 @@ PAGE.slip = ({ id }) => {
     .concat([{ k: 'me', label: 'Me', ini: initials(myName()), t: ['#243052', '#FFFFFF'], on: ui.who === 'me' }, { k: 'client', label: agent ? 'Agent' : 'Client', ini: agent ? initials(agent.name) : 'CL', t: ['#F6E6DC', '#8E4A22'], on: client },
       { k: 'hired', label: hired ? firstWord(hired.name) : 'Hired', ini: hired ? initials(hired.name) : '+', t: hired ? ['#FDEEE1', '#7A4A02'] : ['rgba(255,255,255,.14)', '#FFFFFF'], on: !client && ui.who !== 'me' && !!hired }]);
   const slipShort = String(shortName(quoteClientName(q))).toUpperCase();
-  const foot = hold ? 'Packed · waits on the money' : me ? (ticked === n ? 'All on your truck' : 'Tick each line as it goes on') : ticked === n ? `Checked together with ${whoName}` : `Read each line out with ${whoName}`;
+  const foot = hold ? `Packed · ${NOT_PAID.toLowerCase()}` : me ? (ticked === n ? 'All on your truck' : 'Tick each line as it goes on') : ticked === n ? `Checked together with ${whoName}` : `Read each line out with ${whoName}`;
   const date = new Date(createdMs(q) || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:18px;gap:14px" data-navy-top>
     <div style="display:flex;align-items:center;gap:10px">${cvBack('Back to Today')}
@@ -4325,7 +4371,7 @@ PAGE.slip = ({ id }) => {
       <div style="background:#fff;padding:14px 16px 12px;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span class="clamp2" style="font-size:11px;font-weight:700;letter-spacing:.14em;line-height:1.4;color:var(--ink2);overflow-wrap:anywhere">${esc(String(S.shopName || '').toUpperCase())}</span><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">Order ${q4(q)}</span><span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">to ${esc(quoteClientName(q))}</span></span>
           <span style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;text-align:right;flex:none"><span class="m" style="font-size:11px;font-weight:600">${esc(date)}</span>${tk ? `<span style="font-size:11px;font-weight:600;color:var(--ink2)">taken by ${esc(tk.name)}</span>` : ''}</span></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:4px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ink2)">WHAT ${esc(slipShort)} GETS</span><span class="m" style="font-size:11px;font-weight:600;color:${ticked === n ? '#0F6B43' : 'var(--ink2)'};flex:none">${ticked} of ${n} ticked</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:4px"><span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ink2)">WHAT ${esc(slipShort)} GETS</span>${hold ? '' : `<span class="m" style="font-size:11px;font-weight:600;color:${ticked === n ? '#0F6B43' : 'var(--ink2)'};flex:none">${ticked} of ${n} ticked</span>`}</div>
         <div style="display:flex;flex-direction:column">${items.map((it, i) => { const on = !!ui.ticks[i], c = quoteLineCount(it, lineOut(q, it)), scanShort = (S.ui.loadShort || {})[q.id + ':' + i], note = scanShort ? `${n0(scanShort / quoteLineCountPer(it))} short · ${managerName()} settles it` : shortNote(q, it);
           return `<button type="button" data-act="sltick" data-i="${i}" ${hold ? 'disabled' : ''} aria-pressed="${on}" style="display:grid;grid-template-columns:30px 62px 1fr;gap:10px;align-items:center;min-height:54px;padding:6px 0;border:none;border-top:1px dashed #E2DED6;background:transparent;color:var(--ink);text-align:left;opacity:${hold ? .6 : 1}">
             <span style="width:26px;height:26px;border-radius:8px;border:${on ? 'none' : '2px solid #C9C4BA'};background:${on ? '#0F6B43' : '#fff'};color:#fff;display:flex;align-items:center;justify-content:center;transition:background .15s">${on ? sv(CV.tick, 15, 3) : ''}</span>
@@ -4334,7 +4380,7 @@ PAGE.slip = ({ id }) => {
         <div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:2px solid #1C2233"><span data-live="slfoot" style="flex:1;font-size:12px;font-weight:600;color:var(--ink2)">${esc(foot)}</span><span class="m" style="font-size:13px;font-weight:600">${nLines(n)}</span></div>
       </div>
       <div style="height:8px;background:conic-gradient(from -45deg at 50% 100%,#FFFFFF 90deg,transparent 0) 0 0/14px 8px repeat-x"></div>
-      ${hold ? `<span class="pk-stamp" style="position:absolute;right:18px;top:92px;padding:8px 12px;border-radius:10px;border:2.5px solid #8E2A22;color:#8E2A22;background:rgba(255,255,255,.88);display:flex;flex-direction:column;align-items:center;gap:2px;transform:rotate(-9deg)"><span style="font-size:13px;font-weight:700;letter-spacing:.12em">NOT PAID</span><span style="font-size:11px;font-weight:700;letter-spacing:.06em">CASH CUSTOMER</span></span>` : ''}
+      ${hold ? `<span class="pk-stamp" style="position:absolute;right:18px;top:96px;padding:8px 12px;border-radius:10px;border:2.5px solid #95530C;color:#7A4A02;background:rgba(255,255,255,.9);display:flex;align-items:center;transform:rotate(-8deg)"><span style="font-size:15px;font-weight:700;letter-spacing:.06em">${NOT_PAID.toUpperCase()}</span></span>` : ''}
     </div>
   </div>
   ${hold ? slHoldDock(q) : darkDock(`${client ? `<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--navyInk)">Name of the person collecting</span>
@@ -4347,11 +4393,11 @@ function slHoldDock(q){
   const h = moneyHold(q), ask = loadAskOf(q), mgr = managerName(), canAsk = canAskCredit(q);
   const dec = q.letGo && h && (h.decision === 'cash' || h.decision === 'hold') && (!q.letGoAsk || Number(q.letGo.at) >= (Number(q.letGoAsk.at) || Date.parse(q.letGoAsk.at) || 0)) ? q.letGo : null;
   return darkDock(`<div style="display:flex;align-items:center;gap:12px"><span style="width:42px;height:42px;flex:none;border-radius:12px;background:rgba(245,178,107,.16);color:#F5B26B;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 9.5v5M18 9.5v5"></path></svg></span>
-      <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${dec ? `${esc(firstWord(dec.byName || mgr))} said cash first` : "It can't leave the gate yet"}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${dec ? 'It goes once it is paid' : !canAsk ? 'No customer record · the money comes first' : `${esc(quoteClientName(q))} pays cash · not paid yet`}</span></span></div>
+      <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${dec ? `${esc(firstWord(personName({ userId: dec.by, stored: dec.byName || mgr })))} said cash first` : NOT_PAID}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${dec ? 'It goes once it is paid' : !canAsk ? 'No customer record · Sales take the money before it leaves.' : esc(notPaidWhy())}</span></span></div>
     ${dec || (!canAsk && !ask) ? `<button data-act="home" style="height:44px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:700">Back to Today</button>`
-    : ask ? `<div style="height:56px;border-radius:16px;background:rgba(245,178,107,.12);display:flex;align-items:center;gap:12px;padding:0 14px"><span class="cv-wait" style="width:10px;height:10px"></span><span style="flex:1;font-size:14px;font-weight:700">Asked ${esc(mgr)} · ${hm(Number(ask.at) || Date.parse(ask.at))}</span><span style="font-size:12px;font-weight:600;color:#F5B26B">you'll get the answer</span></div>
+    : ask ? `<div style="height:56px;border-radius:16px;background:rgba(245,178,107,.12);display:flex;align-items:center;gap:12px;padding:0 14px"><span class="cv-wait" style="width:10px;height:10px"></span><span style="flex:1;font-size:14px;font-weight:700">Asked ${esc(mgr)} · ${whenAt(Number(ask.at) || Date.parse(ask.at))}</span><span style="font-size:12px;font-weight:600;color:#F5B26B">you'll get the answer</span></div>
       <button data-act="mnback" data-id="${q.id}" style="height:44px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:700">Take the ask back</button>`
-    : `<button data-act="mnask" data-id="${q.id}" ${S.busy ? 'disabled' : ''} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}Ask ${esc(mgr)} to let it go on credit</button>
+    : `<button data-act="mnask" data-id="${q.id}" ${S.busy ? 'disabled' : ''} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}Ask ${esc(mgr)} to let it go</button>
       <button data-act="mnwait" data-id="${q.id}" style="height:44px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:700">Keep it here until they pay</button>`}`);
 }
 ACT.sltick = t => { const ui = S.ui.sl, i = Number(t.dataset.i); if (!ui) return; ui.ticks[i] = !ui.ticks[i]; slSave(ui.id, ui); if (ui.ticks[i]) FEEL.load(); else FEEL.back(); render(); };
@@ -4373,7 +4419,7 @@ ACT['slide:slgo'] = () => {
   const ui = S.ui.sl, q = ui && quoteById(ui.id); if (!q || ui.sent) return;
   // The name box gives up focus before the screen changes under it.
   if (document.activeElement && document.activeElement.id === 'sl_who') document.activeElement.blur();
-  if (moneyHold(q)) { toast(`Not paid · cash customer — ask ${managerName()} or wait for payment.`, 5000); return; }
+  if (moneyHold(q)) { toast(`${NOT_PAID} · ${notPaidWhy()}`, 5000); return; }
   const client = ui.who === 'client', agent = q.originAgentId ? (D().agents || []).find(a => String(a.id) === String(q.originAgentId)) : null;
   const car = client ? (q.deliveryMode === 'agent_pickup' ? { kind: 'agent', name: ui.collector.trim() || (agent && agent.name) } : { kind: 'client', name: ui.collector.trim(), phone: orderPhone(q) }) : ui.who === 'me' ? meCarrier() : ui.car;
   if (!car) return;
@@ -4408,11 +4454,11 @@ function slDone(q, ui){
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:30px;text-align:center">
       ${s.wait ? stateDot('sending') : bigTick(s.gate ? sv(CV.tick, 40, 2.6) : truckIcon(46))}
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Handing over…' : s.gate ? `Handed over to ${esc(name)}` : `On the road with ${esc(name)}`}</span>
-      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${s.wait ? `${q4(q)} · to ${esc(name)}${s.gate ? ' at the gate' : ''}` : `${q4(q)} · ${esc(quoteClientName(q))} · ${s.gate ? 'at the gate' : 'left'} ${hm(s.at)}`}</span></div>
+      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${s.wait ? `${q4(q)} · to ${esc(name)}${s.gate ? ' at the gate' : ''}` : `${q4(q)} · ${esc(quoteClientName(q))} · ${s.gate ? 'at the gate' : 'left'} ${whenAt(s.at)}`}</span></div>
     ${s.gate ? '' : `<div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:18px 10px 14px;display:flex;flex-direction:column;gap:14px">
       <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><span style="position:absolute;top:21px;left:16.7%;width:33.3%;height:2px;background:rgba(111,220,176,.5)"></span><span style="position:absolute;top:21px;left:50%;width:33.3%;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 5px,transparent 5px 10px)"></span>
         ${step(`<span style="width:44px;height:44px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 20, 3)}</span>`, 'Checked', `${items.length} of ${nOf(items.length, 'line')}`)}
-        ${step(`<span style="width:44px;height:44px;border-radius:999px;background:${tint(s.car.name)[0]};color:${tint(s.car.name)[1]};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #19223F,0 0 0 5px #6FDCB0">${ini(s.car.name)}</span>`, 'On the road', `left ${hm(s.at)}`, '#6FDCB0')}
+        ${step(`<span style="width:44px;height:44px;border-radius:999px;background:${tint(s.car.name)[0]};color:${tint(s.car.name)[1]};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #19223F,0 0 0 5px #6FDCB0">${ini(s.car.name)}</span>`, 'On the road', `left ${whenAt(s.at)}`, '#6FDCB0')}
         ${step(`<span style="width:44px;height:44px;border-radius:999px;background:#19223F;color:var(--navyInk);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 19, 2)}</span>`, 'Photo', 'signed note')}</div>
       <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${sv(CV.bell, 14, 2.2)}${tk ? esc(firstWord(tk.name)) + ' is' : 'Sales are'} told · ${esc(name)}'s photo closes it</span></div>`}
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
@@ -4549,7 +4595,7 @@ PAGE.drive = ({ id }) => {
         ${km != null ? `<span style="flex:none;display:flex;flex-direction:column;align-items:flex-end"><span class="m" style="font-size:20px;font-weight:600;letter-spacing:-.02em">${km < 10 ? (Math.round(km * 10) / 10) : Math.round(km)} km</span><span style="font-size:11px;font-weight:600;color:var(--ink2)">${here ? 'to go' : rt ? 'by road' : 'as the crow flies'}</span></span>` : ''}</div>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
         <a href="${esc(telUrl(ph) || '#')}" ${ph ? '' : 'aria-disabled="true"'} style="height:64px;border-radius:18px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700;opacity:${ph ? 1 : .5}">${sv(CV.phone, 20, 2)}Call them</a>
-        <a href="${esc(waComposeUrl(ph, msg))}" target="_blank" rel="noopener" data-act="drtell" data-id="${q.id}" data-keep style="height:64px;border-radius:18px;background:${told ? '#E4F4EA' : 'var(--bg)'};color:${told ? '#0F6B43' : 'var(--ink)'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700">${sv('M4 20l1.3-3.9A8 8 0 1 1 8 18.8z', 20, 2)}${told ? 'Told · ' + hm(told) : "I'm coming"}</a>
+        <a href="${esc(waComposeUrl(ph, msg))}" target="_blank" rel="noopener" data-act="drtell" data-id="${q.id}" data-keep style="height:64px;border-radius:18px;background:${told ? '#E4F4EA' : 'var(--bg)'};color:${told ? '#0F6B43' : 'var(--ink)'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700">${sv('M4 20l1.3-3.9A8 8 0 1 1 8 18.8z', 20, 2)}${told ? 'Told · ' + whenAt(told) : "I'm coming"}</a>
         <a href="${esc(pin ? `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}` : 'https://www.google.com/maps/search/' + encodeURIComponent(place || ''))}" target="_blank" rel="noopener" style="height:64px;border-radius:18px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:12px;font-weight:700">${sv('M3 11 21 3l-8 18-2-8z', 20, 2)}Directions</a></div>
       <div style="display:flex;gap:8px"><span style="flex:1;height:40px;border-radius:12px;background:#E4F4EA;color:#0F6B43;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">${sv(CV.tick, 14, 2.4)}Nothing to collect at the door</span><span style="height:40px;padding:0 12px;border-radius:12px;background:#F1EEE8;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px"><span class="m">${items.length}</span> line${items.length === 1 ? '' : 's'}</span></div>
       <button data-act="door" data-id="${q.id}" style="position:relative;height:60px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;padding:5px;width:100%">
@@ -4573,7 +4619,7 @@ PAGE.door = ({ id }) => {
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:16px;gap:12px" data-navy-top>
     <div style="display:flex;align-items:center;gap:10px"><button class="cv-circ" data-act="back" aria-label="Back to the route">${sv(CV.back, 18, 2.2)}</button>
       <span style="width:40px;height:40px;flex:none;border-radius:999px;background:${tint(cl)[0]};color:${tint(cl)[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(cl)}</span>
-      <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">At ${esc(cl)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${q4(q)} · arrived ${hm(ui.at)}</span></span></div>
+      <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">At ${esc(cl)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${q4(q)} · arrived ${whenAt(ui.at)}</span></span></div>
     <span style="align-self:flex-start;height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12h8M12 8v8"></path><circle cx="12" cy="12" r="9"></circle></svg>Change a number only if some stays on</span></div>
     <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px">
       <div style="filter:drop-shadow(0 10px 20px rgba(22,32,60,.12)) drop-shadow(0 1px 1px rgba(22,32,60,.06))">
@@ -4695,7 +4741,7 @@ function dvDone(q, ui){
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center">
       ${s.wait ? stateDot('sending') : bigTick(sv(CV.tick, 40, 2.6))}
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Delivering…' : 'Delivered'}</span>
-      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · to ${esc(ui.to)} · ${hm(s.at)}</span>
+      <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · to ${esc(ui.to)} · ${whenAt(s.at)}</span>
       <div style="width:100%;display:grid;grid-template-columns:repeat(${items.length},minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
         ${items.map((it, i) => { const g = got(it, i), o = lineOut(q, it), c = quoteLineCount(it, g), co = quoteLineCount(it, o); return `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1">${esc(c.n)}${g < o ? `<span style="font-size:12px;color:var(--navyInk)">/${esc(co.n)}</span>` : ''} <span style="font-family:inherit;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(c.unit)}</span></span><span class="ell" style="max-width:92%;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(shortProduct(it))}</span></span>`; }).join('')}</div>
       ${back.length ? `<button data-act="goret" data-id="${q.id}" style="width:100%;height:48px;border-radius:999px;border:none;background:rgba(245,178,107,.14);color:#F5B26B;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv(CV.ret, 16, 2.2)}${esc(back.map(l => l.shown).join(' + '))} ride back · check the return</button>` : ''}
@@ -4738,7 +4784,7 @@ PAGE.agent = ({ id }) => {
 PAGE.agent.bg = '#16203C';
 function agTry(){ const ui = agUI(); if (ui.code.length < 4) return; const n = Number(ui.code), q = agentReady().find(o => Number(o.id) === n) || (D().savedQuotes || []).find(o => Number(o.id) === n && orderIsCollected(o) && o.status === 'preparing' && o.pickingStatus === 'done');
   if (!q || (ui.id && Number(ui.id) !== n && !agentReady().some(o => Number(o.id) === n))) { ui.wrong = true; FEEL.no(); render(); setTimeout(() => { ui.code = ''; ui.wrong = false; render(); }, 1200); return; }
-  if (moneyHold(q)) { ui.wrong = true; FEEL.no(); toast(`${q4(q)} is not paid yet · ${managerName()} decides`); render(); return; }
+  if (moneyHold(q)) { ui.wrong = true; FEEL.no(); toast(`${q4(q)} · ${NOT_PAID.toLowerCase()} · ${managerName()} decides`); render(); return; }
   ui.id = q.id; ui.matched = true; ui.matchedAt = Date.now(); FEEL.stamp(); render(); }
 ACT.agkey = t => { const ui = agUI(); if (ui.code.length >= 4 || ui.wrong) return; ui.code += t.dataset.d; FEEL.tick(); render(); agTry(); };
 ACT.agdel = () => { const ui = agUI(); ui.code = ui.code.slice(0, -1); ui.wrong = false; FEEL.back(); render(); };
@@ -4773,7 +4819,7 @@ ACT['slide:aggo'] = () => { const ui = agUI(), q = quoteById(ui.id); if (!q || u
 function agDone(q, ui){
   const a = agentOf(q), n = pickView(q).length, more = agentReady().filter(o => o.id !== q.id).length;
   return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, state: ui.sent.wait ? 'sending' : null, title: ui.sent.wait ? 'Handing over…' : `Handed to ${firstWord(a ? a.name : 'them')}`, line: `${a ? 'Their' : 'The'} app shows ${q4(q)} as collected`,
-    body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[`${n}/${n}`, 'lines checked'], [hm(ui.sent.at), 'handed over'], ['Paid', 'up front', '#6FDCB0']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>
+    body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[`${n}/${n}`, 'lines checked'], [whenAt(ui.sent.at), 'handed over'], ['Paid', 'up front', '#6FDCB0']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>
       <span style="font-size:12px;font-weight:600;color:var(--navyInk)">Code ${esc(q4(q).slice(1))} is used up · the invoice goes out by itself tomorrow</span>`,
     foot: `<div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="agdone">Done</button>${more ? `<button data-act="agnext" style="height:46px;border:none;background:none;color:#DDE3F0;font-size:14px;font-weight:700">Another agent at the gate</button>` : ''}</div>` });
 }
@@ -4815,12 +4861,12 @@ function lookOf(x){
 }
 function needsLook(x){ return lookOf(x).why; }
 const LOOK_RANK = { reported: 0, short: 1, out: 2, low: 3, due: 4 };
-function unitWord(x){ return String((unitsFor(x.productId, x.variantIdx) || {}).unit || 'pc').toLowerCase(); }
+function unitWord(x){ return unitSay((unitsFor(x.productId, x.variantIdx) || {}).unit || 'pc'); }
 // The Manager asked for a recount of this item: its last count sent back.
 function recountAsk(key){ return (D().counts || []).filter(c => c.status === 'recount' && (c.lines || []).some(l => l.key === key)).sort((a, b) => msOf(b.decidedAt) - msOf(a.decidedAt))[0] || null; }
 // A count is due: the figures stay hidden until it is counted (a blind count).
 function countDue(x){ const L = lookOf(x); return !!recountAsk(x.key) || (x.qty > 0 && L.d != null && L.d > 21); }
-function dueWhy(x){ const re = recountAsk(x.key); return re ? `${managerName()} asked for a recount at ${hm(msOf(re.decidedAt))}` : `Not counted for ${lookOf(x).d} days`; }
+function dueWhy(x){ const re = recountAsk(x.key); return re ? `${managerName()} asked for a recount at ${whenAt(msOf(re.decidedAt))}` : `Not counted for ${lookOf(x).d} days`; }
 // On the shelf to sell, and the part held for orders (rule A).
 function shelfSay(x){ return `${n0(x.avail)} on the shelf${x.held > 0 ? ` · ${n0(x.held)} held for orders` : ''}`; }
 function shortFor(x){ const pr = promisedFor(x.productId, x.variantIdx).filter(p => !p.packed && !['pending_delivery', 'completed'].includes(p.q.status)); return pr.length ? q4(pr[0].q) + (pr.length > 1 ? ' +' + (pr.length - 1) : '') : ''; }
@@ -4854,7 +4900,7 @@ function viewShelf(){
     <div style="display:flex;gap:8px">${tile('count', CV.count, '#E8EBF0', '#16203C', 'Count', due ? ` data-aisle="${esc(due.letter)}"` : '')}${tile('report', CV.loss, '#FDEEE1', '#95530C', 'Report a loss', '')}${tile('goret', CV.ret, '#DCEAF8', '#1A5A8A', 'Returns', '')}</div>
     ${look.length ? `<div class="cv-h" style="padding-top:6px"><b>Needs a look</b><span>${look.length}</span></div>
     <div class="cv-list">${look.slice(0, S.ui.lookAll ? 60 : 5).map(lookRow).join('')}${look.length > 5 ? `<button class="cv-more" data-act="lookall" aria-expanded="${!!S.ui.lookAll}">${S.ui.lookAll ? 'Show fewer' : `${look.length - 5} more`}<span class="ch">${sv(CV.down, 14, 2.4)}</span></button>` : ''}</div>` : ''}
-    ${came ? `<div class="cv-sec" style="font-weight:700"><span style="font-size:13px;font-weight:700">Came in today</span><span class="m" style="font-size:13px;font-weight:400">${hm(came.at)} · ${esc(firstWord(came.who) || 'a trip')}</span></div>
+    ${came ? `<div class="cv-sec" style="font-weight:700"><span style="font-size:13px;font-weight:700">Came in today</span><span class="m" style="font-size:13px;font-weight:400">${whenAt(came.at)} · ${esc(firstWord(came.who) || 'a trip')}</span></div>
     <div style="display:flex;gap:8px">${cameTiles.map(([n, w, l]) => `<button data-act="stock" data-key="${esc(stockKey(l.productId, l.variantIdx))}" style="flex:1;min-width:0;height:64px;border-radius:14px;background:#fff;border:1px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink)"><span class="m" style="font-size:15px;font-weight:600">${esc(n)}</span><span class="ell" style="max-width:92%;font-size:11px;font-weight:600;color:var(--ink2)">${esc(w)}</span></button>`).join('')}${came.lines.length > 3 ? `<span style="flex:1;min-width:0;height:64px;border-radius:14px;background:#fff;border:1px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px"><span class="m" style="font-size:15px;font-weight:600">+${came.lines.length - 3}</span><span style="font-size:11px;font-weight:600;color:var(--ink2)">more</span></span>` : ''}</div>` : ''}
   </div>`}`;
 }
@@ -4915,7 +4961,7 @@ PAGE.stock = ({ key }) => {
       </div>`}
     ${due ? '' : stockHistoryHTML(x, pr, word)}
     <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);text-align:center">${sv('M5 5h14v15H5zM5 9h14M9 3v4M15 3v4', 14, 2)}${L.d == null ? 'Never counted' : L.d === 0 ? 'Counted today' : `Last counted ${L.d} day${L.d === 1 ? '' : 's'} ago`}${due ? '' : ' · a check-in adds stock, it is not a count'}</span>
-    ${need || due ? cvRow({ act: 'restock', data: { key: x.key }, round: true, ini: initials(b ? b.name : 'Buyer'), soft: '#E4E6FA', ink: '#3A3F9B', title: `We need more · ask ${esc(b ? firstWord(b.name) : 'the buyer')}`, sub: `${esc(b ? firstWord(b.name) : 'The buyer')} adds it to a buying round` }).replace('class="cv-row"', 'class="cv-row" style="background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1px var(--rule);padding:0 14px;min-height:66px"') : ''}
+    ${need || due ? cvRow({ act: 'restock', data: { key: x.key }, round: true, ini: initials(b ? b.name : 'Buyer'), soft: '#E4E6FA', ink: '#3A3F9B', title: `We need more · ask ${esc(b ? firstWord(b.name) : 'the buyer')}`, sub: `${esc(b ? firstWord(b.name) : 'The buyer')} adds it to a buying trip` }).replace('class="cv-row"', 'class="cv-row" style="background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1px var(--rule);padding:0 14px;min-height:66px"') : ''}
   </div>
   <div style="flex:none;position:sticky;bottom:0;background:var(--bg);padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px">
     ${due ? `<button data-act="count" data-key="${esc(x.key)}" style="height:58px;border:none;border-radius:999px;background:var(--red);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 22px rgba(201,58,48,.26)">Count it now</button>` : ''}
@@ -4939,7 +4985,7 @@ function stockHistoryHTML(x, pr, word){
   const held = rowsOf(waiting), gone = rowsOf(left);
   const up = 'M12 19V5M5 12l7-7 7 7', down = 'M12 5v14M5 12l7 7 7-7', cnt = 'M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 12h6';
   const moves = (D().stockLog || []).filter(r => r.key === x.key).sort((a, b) => (msOf(b.at) || msOf(b.date)) - (msOf(a.at) || msOf(a.date)) || (Number(b.id) || 0) - (Number(a.id) || 0)).slice(0, 8).map(r => {
-    const d = Number(r.delta) || 0, t = String(r.type || '').toLowerCase(), note = String(r.note || '').trim(), at = msOf(r.at) || msOf(r.date);
+    const d = Number(r.delta) || 0, t = String(r.type || '').toLowerCase(), at = msOf(r.at) || msOf(r.date), note = logNoteSay(r.note, x.key, at);
     const k = t === 'count' || t === 'correction' ? 'count' : /write|loss|damag|stolen|lost/.test(t) ? 'off' : d >= 0 ? 'in' : 'out';
     const look = { count: ['#E4E6FA', '#3A3F9B', cnt, '#3A3F9B', `Counted · ${per(Number(r.qty_after) || 0)} on the shelf`, '=' + per(Number(r.qty_after) || 0)],
       in: ['#E4F4EA', '#0F6B43', up, '#0F6B43', 'In' + (note ? ' · ' + note : ''), '+' + per(d)], out: ['#F1EEE8', '#5F6980', down, 'var(--ink)', 'Out' + (note ? ' · ' + note : ''), '−' + per(-d)],
@@ -4977,9 +5023,15 @@ function levelsFor(x){
   if (u.pieces > 1 && !/^(pc|pcs|piece|pieces)$/i.test(unit)) L.push(['loose pieces', 'pc', 1 / u.pieces]);
   return L;
 }
+// Stock history names the order (round 6, WORD-09): "Quote for Walk-in" reads "Order #0548 · Walk-in".
+function logNoteSay(note, key, at){ note = String(note || '').trim(); const m = note.match(/^Quote(?:\s+#?(\d+))?\s+for\s+(.+)$/i); if (!m) return note;
+  const who = m[2].trim(); if (m[1]) return `Order #${m[1].padStart(4, '0')} · ${who}`;
+  const near = (D().savedQuotes || []).filter(q => quoteClientName(q).trim().toLowerCase() === who.toLowerCase() && (q.items || []).some(it => stockKey(it.productId, it.variantIdx) === key))
+    .map(q => ({ q, gap: Math.abs((q.invoicedTs || q.stageEnteredAt || 0) - (at || 0)) })).filter(o => o.gap < 864e5).sort((a, b) => a.gap - b.gap)[0];
+  return near ? `Order ${q4(near.q)} · ${who}` : `Sale · ${who}`; }
 function fmtLevels(L, tot){ let r = Math.round(tot * 1e6) / 1e6; const parts = [];
-  L.forEach((l, i) => { const q = i === L.length - 1 ? Math.round(r / l[2] * 100) / 100 : Math.floor(r / l[2] + 1e-9); r = Math.round((r - q * l[2]) * 1e6) / 1e6; if (q || (!parts.length && i === L.length - 1)) parts.push(n0(q) + ' ' + l[1]); });
-  return parts.join(' ') || '0 ' + L[L.length - 1][1]; }
+  L.forEach((l, i) => { const q = i === L.length - 1 ? Math.round(r / l[2] * 100) / 100 : Math.floor(r / l[2] + 1e-9); r = Math.round((r - q * l[2]) * 1e6) / 1e6; if (q || (!parts.length && i === L.length - 1)) parts.push(n0(q) + ' ' + unitSay(l[1])); });
+  return parts.join(' ') || '0 ' + unitSay(L[L.length - 1][1]); }
 ACT.count = t => {
   const k = t.dataset.key, a = t.dataset.aisle || (stockItems()[0] || { aisle: {} }).aisle.letter, saved = (() => { try { return JSON.parse(localStorage.getItem(CT_KEY())); } catch (_e) { return null; } })();
   const keys = k ? [k] : stockItems().filter(x => x.aisle.letter === a).sort((p, q) => p.productName.localeCompare(q.productName)).map(x => x.key);
@@ -5105,7 +5157,7 @@ function trackStep1(o){ const st = o.state || 'sent';
   const dot = st === 'sending' ? `<span style="width:44px;height:44px;border-radius:999px;background:#19223F;color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center"><span class="cv-spin" style="display:flex">${sv(CV.arc, 20, 2.6)}</span></span>`
     : st === 'kept' ? `<span style="width:44px;height:44px;border-radius:999px;background:rgba(245,178,107,.18);color:#F5B26B;box-shadow:inset 0 0 0 2px #F5B26B;display:flex;align-items:center;justify-content:center">${sv(CV.wifi, 20, 2.4)}</span>`
     : `<span style="width:44px;height:44px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 20, 3)}</span>`;
-  const [w, sub, ink] = st === 'sending' ? ['Sending', 'now', 'var(--navyInk)'] : st === 'kept' ? ['Not sent yet', 'kept ' + hm(o.keptAt || Date.now()), '#F5B26B'] : [o.sentWord || 'Sent', 'just now', 'var(--navyInk)'];
+  const [w, sub, ink] = st === 'sending' ? ['Sending', 'now', 'var(--navyInk)'] : st === 'kept' ? ['Not sent yet', 'kept ' + whenAt(o.keptAt || Date.now()), '#F5B26B'] : [o.sentWord || 'Sent', 'just now', 'var(--navyInk)'];
   return `<span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">${dot}<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">${w}</span><span style="font-size:11px;font-weight:600;color:${ink}">${esc(sub)}</span></span></span>`; }
 function trackDone(o){
   return `<div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:18px 10px 14px;display:flex;flex-direction:column;gap:14px">
@@ -5134,7 +5186,7 @@ PAGE.countresults = () => {
   const mgr = managerName(), M = managerStaff(), one = ct.keys.length === 1, x = one && stockItems().find(s => s.key === ct.keys[0]);
   const nGot = Object.keys(ct.counts || {}).length, nLost = ct.partial ? ct.keys.length - nGot : 0;
   const what = one && x ? `${x.productName} · ${fmtLevels(levelsFor(x), ct.counts[0] || 0)}` : nLost ? `${ct.aisle} · ${nGot} counted · ${nLost} not found` : `${ct.aisle} · ${nOf(ct.keys.length, 'item')}`;
-  if (ct.sendErr && !ct.sent) return sentScreen({ failed: true, title: `It didn't reach ${mgr}`, line: ct.sendErr === 'net' ? `The signal dropped as it was sending, ${hm(ct.errAt)}` : ct.sendErr,
+  if (ct.sendErr && !ct.sent) return sentScreen({ failed: true, title: `It didn't reach ${mgr}`, line: ct.sendErr === 'net' ? `The signal dropped as it was sending, ${whenAt(ct.errAt)}` : ct.sendErr,
     body: `<div style="width:100%;display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.07);text-align:left"><span style="width:38px;height:38px;flex:none;border-radius:999px;background:rgba(111,220,176,.16);color:#6FDCB0;display:flex;align-items:center;justify-content:center">${sv('M6 3h12v18l-6-4-6 4z', 18, 2)}</span><span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">Nothing is lost</span><span style="font-size:12px;font-weight:600;color:var(--navyInk);white-space:normal">${esc(what)} is saved on this phone</span></span></div>`,
     foot: `<div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="ctretry">${sv(CV.refresh || 'M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', 18, 2.2)}Try again</button><button data-act="ctdone" style="height:46px;border:none;background:none;color:var(--navyInk);font-size:14px;font-weight:700">Leave it · it sends itself when signal is back</button></div>` });
   // Counted again: the old count and the new one, side by side -- replaced, or decided before this one landed.
@@ -5150,7 +5202,7 @@ PAGE.countresults.bg = '#16203C';
 ACT.ctretry = () => { const ct = S.ui.ct; if (!ct) return; FEEL.tick(); ct.sendErr = null; ct.wait = true; render(); sendCountOnce(); };
 ACT.ctdone = () => { const ct = S.ui.ct; if (ct && ct.sent) { S.ui.ct = null; try { localStorage.removeItem(CT_KEY()); } catch (_e) {} } FEEL.back(); S.stack = S.stack.filter(p => !['count', 'countresults'].includes(p.type)); render(); };
 function ctTitle(aisle){ const a = String(aisle || 'the shelf'); return /^Spot count/.test(a) ? a : 'Stock take · ' + a; }
-function managerName(){ const st = managerStaff(); return st && st.name ? firstWord(st.name) : 'the manager'; }
+function managerName(){ const st = managerStaff(), nm = st && personName({ staffId: st.id }); return nm && nm !== 'Someone' ? firstWord(nm) : 'the manager'; }
 
 /* ==================================================================
    REPORT A LOSS -- damaged, lost or stolen. The Manager writes it off;
@@ -5366,7 +5418,7 @@ PAGE.find = () => {
   const sub = it => { const x = it.x; return { out: [`All ${n0(x.qty)} held for orders`, '#8E2A22'], low: [`Low · ${n0(x.held)} held for orders`, '#95530C'], due: [`Count due · ${aisleWord(x.aisle)}`, '#95530C'], held: [`${n0(x.qty)} on the shelf · ${n0(x.held)} held`, '#5F6980'], ok: [`${n0(x.qty)} on the shelf`, '#5F6980'] }[it.st]; };
   const stOf = q => { const hold = moneyHold(q); if (q.status === 'completed') return ['Delivered', '#E4F4EA', '#0F6B43', 'goret']; if (q.status === 'pending_delivery') return ['On the road', '#DCEAF8', '#1A5A8A', 'troad']; if (orderBuying(q)) return ['Buying', '#E4E6FA', '#3A3F9B', 'orderview'];
     if (q.status === 'draft') return ['Quote · not confirmed', '#F1EEE8', '#5F6980', 'orderview'];
-    if (q.pickingStatus === 'done') return hold ? ['Waits on money', '#FDEEE1', '#7A4A02', 'slip'] : orderIsCollected(q) ? ['Agent', '#F6E4F1', '#7A3268', 'collect'] : orderIsPickup(q) ? ['At the gate', '#E4F4EA', '#0F6B43', 'slip'] : [bayOf(q) ? 'On bay ' + bayOf(q) : 'Packed', '#16203C', '#FFFFFF', 'slip'];
+    if (q.pickingStatus === 'done') return hold ? [NOT_PAID, '#FDEEE1', '#7A4A02', 'slip'] : orderIsCollected(q) ? ['Agent', '#F6E4F1', '#7A3268', 'collect'] : orderIsPickup(q) ? ['At the gate', '#E4F4EA', '#0F6B43', 'slip'] : [bayOf(q) ? 'On bay ' + bayOf(q) : 'Packed', '#16203C', '#FFFFFF', 'slip'];
     if (takenBySomeoneElse(q)) return [firstWord(staffName(q.assignedWorkerId)) + "'s", '#DDF1EE', '#0E5E57', canCorrect() ? 'pack' : 'orderview']; if (q.pickingStatus === 'in_progress') return ['Packing', '#E8EBF0', '#16203C', 'pack']; return ['To pack', '#E8EBF0', '#16203C', 'pack']; };
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:14px;gap:12px" data-navy-top>
     <div style="display:flex;align-items:center;gap:8px">${cvBack()}
@@ -5417,7 +5469,7 @@ PAGE.aisle = ({ a }) => {
     <div class="cv-hero tight" style="gap:14px" data-navy-top>
     <div class="cv-top">${cvBack()}<b>Aisle</b><button class="cv-circ" data-act="find" aria-label="Find an item">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}</button></div>
     <div style="display:flex;align-items:center;gap:14px"><span style="width:56px;height:56px;flex:none;border-radius:16px;background:#fff;color:#16203C;font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(A.letter)}</span>
-      <span class="cv-tx" style="gap:3px"><span class="ell" style="font-size:20px;font-weight:700">${esc(A.name)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${items.length} item${items.length === 1 ? '' : 's'}${last ? ` · ${esc(firstWord(last.countedByName) || 'someone')} counted it ${isTodayMs(msOf(last.createdAt)) ? 'at ' + hm(msOf(last.createdAt)) : whenSaid(msOf(last.createdAt))}` : ' · never counted'}</span></span></div>
+      <span class="cv-tx" style="gap:3px"><span class="ell" style="font-size:20px;font-weight:700">${esc(A.name)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${items.length} item${items.length === 1 ? '' : 's'}${last ? ` · ${esc(firstWord(last.countedByName) || 'someone')} counted it ${isTodayMs(msOf(last.createdAt)) ? 'at ' + whenAt(msOf(last.createdAt)) : whenSaid(msOf(last.createdAt))}` : ' · never counted'}</span></span></div>
     <div style="display:flex;gap:6px">${chip(`${noneFree} none free`, noneFree ? '#F4A49A' : '#6FDCB0', 'fdgo', ` data-q="${esc(A.letter)}" data-f="out"`)}${chip(withRuth ? 'With ' + esc(managerName()) : 'Count it', withRuth ? '#F5B26B' : '', withRuth ? 'ruth' : 'count', withRuth ? '' : ` data-aisle="${esc(A.letter)}"`)}${chip(`${sv('M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z', 14, 2)}Labels`, '', 'labels', ` data-a="${esc(A.letter)}"`)}</div></div>
   <div class="cv-body" style="padding-bottom:${items.length > 8 ? 92 : 24}px">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px"><span style="font-size:17px;font-weight:700">On the shelf</span><span style="display:flex;gap:10px;font-size:11px;font-weight:600;color:var(--ink2)"><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;background:#0F6B43"></i>free</span><span style="display:flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:999px;background:#16203C"></i>held</span></span></div>
@@ -5531,17 +5583,17 @@ PAGE.decide = ({ id }) => {
   const where = l => { const x = stockItems().find(s => s.key === l.key); return x ? aisleWord(x.aisle) : ''; };
   const sentAt = msOf(c.createdAt), decAt = msOf(c.decidedAt), who = firstWord(c.countedByName || 'The yard'), place = String(c.aisle || '').replace(/^Spot count · /, '');
   const S2 = {
-    waiting: { head: 'Count sent', title: `With ${mgr}`, sub: `${esc(place)} · ${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · sent ${hm(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: 'cv-ringa', icon: CV.clock, list: 'What you counted', note: `The books stay off this phone · ${esc(mgr)} compares them` },
-    recount: { head: 'Recount', title: `${esc(mgr)} asks again`, sub: `${esc(place)} · asked ${hm(decAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: 'M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0 0 12 3l3-4M19 9a7 7 0 0 0-12-3L4 10', list: c.lines.length === 1 ? 'Count this one again' : 'Count these again', note: 'Still blind · count what you see, not what you counted before' },
-    accepted: { head: 'Count', title: `${esc(mgr)} accepted it`, sub: `${esc(place)} · ${hm(decAt)} · the shelf reads your count`, bg: '#6FDCB0', ink: '#16203C', anim: '', icon: CV.tick, list: 'On the shelf now', note: 'Your count is what the shelf shows' },
-    decide: { head: esc(ctTitle(c.aisle)), title: off.length ? `${off.length} ${fewer.length === off.length ? 'fewer than' : 'differ from'} the shelf` : 'All match the shelf', sub: `${esc(who)} counted blind · ${hm(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: CV.count, list: 'Counted against the shelf', note: "A manager's login sees the gap · the yard never does" }
+    waiting: { head: 'Count sent', title: `With ${mgr}`, sub: `${esc(place)} · ${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · sent ${whenAt(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: 'cv-ringa', icon: CV.clock, list: 'What you counted', note: `The books stay off this phone · ${esc(mgr)} compares them` },
+    recount: { head: 'Recount', title: `${esc(mgr)} asks again`, sub: `${esc(place)} · asked ${whenAt(decAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: 'M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0 0 12 3l3-4M19 9a7 7 0 0 0-12-3L4 10', list: c.lines.length === 1 ? 'Count this one again' : 'Count these again', note: 'Still blind · count what you see, not what you counted before' },
+    accepted: { head: 'Count', title: `${esc(mgr)} accepted it`, sub: `${esc(place)} · ${whenAt(decAt)} · the shelf reads your count`, bg: '#6FDCB0', ink: '#16203C', anim: '', icon: CV.tick, list: 'On the shelf now', note: 'Your count is what the shelf shows' },
+    decide: { head: esc(ctTitle(c.aisle)), title: off.length ? `${off.length} ${fewer.length === off.length ? 'fewer than' : 'differ from'} the shelf` : 'All match the shelf', sub: `${esc(who)} counted blind · ${whenAt(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: CV.count, list: 'Counted against the shelf', note: "A manager's login sees the gap · the yard never does" }
   }[st];
   const s2 = st === 'accepted' ? ['#6FDCB0', '#16203C', 'none'] : ['#F6E4F1', '#7A3268', '0 0 0 2px #16203C,0 0 0 4px #F5B26B'], l2 = st === 'accepted' ? '#6FDCB0' : 'rgba(255,255,255,.15)', s3 = st === 'accepted' ? ['#6FDCB0', '#16203C'] : ['rgba(255,255,255,.08)', 'var(--navyInk)'];
   const track = `<div role="img" aria-label="Counted, ${st === 'accepted' ? 'accepted, on the shelf' : st === 'recount' ? 'asked again' : 'with ' + esc(mgr)}" style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:6px;padding:0 6px">
       <span style="width:28px;height:28px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 14, 3)}</span><span style="height:3px;border-radius:999px;background:#6FDCB0"></span>
       <span style="width:28px;height:28px;border-radius:999px;background:${s2[0]};color:${s2[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:${s2[2]}">${mgrIni()}</span><span style="height:3px;border-radius:999px;background:${l2}"></span>
       <span style="width:28px;height:28px;border-radius:999px;background:${s3[0]};color:${s3[1]};display:flex;align-items:center;justify-content:center">${sv('M4 20V9l8-5 8 5v11M8 20v-6h8v6', 14, 2.2)}</span></div>
-    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk);padding:0 2px"><span>Counted ${hm(sentAt)}</span><span>${esc(mgr)}</span><span>The shelf</span></div>`;
+    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk);padding:0 2px"><span>Counted ${whenAt(sentAt)}</span><span>${esc(mgr)}</span><span>The shelf</span></div>`;
   const hero = `<div style="display:flex;align-items:center;gap:14px"><span class="${S2.anim}" style="width:60px;height:60px;flex:none;border-radius:999px;background:${S2.bg};color:${S2.ink};display:flex;align-items:center;justify-content:center">${sv(S2.icon, 26, 2.2)}</span>
       <span class="cv-tx" style="gap:3px"><span style="font-size:22px;font-weight:700;letter-spacing:-.01em;white-space:normal">${S2.title}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${S2.sub}</span></span></div>${track}`;
   const rows = c.lines.map((l, i) => { const lv = L(l), shown = st === 'recount' ? '?' : fmtLevels(lv, Number(l.counted)), d = Number(l.counted) - Number(l.system);
@@ -5636,7 +5688,7 @@ function waitingOn(ini, title, sub, tint){
   return `<div style="display:flex;align-items:center;gap:10px;padding-top:10px"><span class="st-waitdot" style="width:32px;height:32px;border-radius:999px;${tint};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${esc(ini)}</span>
     <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700">${esc(title)}</span><span style="font-size:11px;font-weight:600;color:#6B7480">${esc(sub)}</span></span></div>`;
 }
-function stampTime(ms){ return `${dayLabel(isoOf(ms))} · ${hm(ms)}`; }
+function stampTime(ms){ return `${dayLabel(isoOf(ms))} · ${whenAt(ms)}`; }
 
 /* ==================================================================
    GOODS BACK -- the client brings it to the gate, or our driver brings
@@ -5677,14 +5729,14 @@ PAGE.ret = () => {
       ${open.length ? `<span class="cv-sec first">With ${esc(mgr)}</span><div class="cv-list">${open.slice(0, 5).map(r => { const o = quoteById(r.orderId); return cvRow({ icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `${o ? q4(o) + ' · ' + esc(quoteClientName(o)) : 'An order'}`, sub: `${esc((r.lines || []).map(l => returnLineWords(o, l)).join(', '))} · ${esc(ago(msOf(r.createdAt)))}`, right: r.status === 'withdrawn' ? `<span style="height:28px;padding:0 10px;border-radius:999px;background:#F1EEE8;color:var(--ink2);font-size:12px;font-weight:700;flex:none;display:inline-flex;align-items:center">Taken back</span>` : r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Take back</button>` : canCorrect() ? `<button data-act="rtdecline" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Reject</button>` : cvChip('waiting', '#FDEEE1', '#7A4A02') }); }).join('')}</div>` : ''}
       <span class="cv-sec${open.length ? '' : ' first'}">Which order</span>
       <label style="height:52px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);display:flex;align-items:center;gap:10px;padding:0 8px 0 14px">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2, 'style="color:#9AA1AE"')}<input id="rt_find" data-in="rtfind" value="${esc(ui.find)}" placeholder="Order number or client" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px"></label>
-      <div class="cv-list"><span style="padding:8px 8px 2px;font-size:12px;font-weight:600;color:var(--ink2)">Delivered lately</span>${list.map(o => cvRow({ act: 'rtpick', data: { id: o.id }, round: true, ini: initials(quoteClientName(o)), soft: tint(quoteClientName(o))[0], ink: tint(quoteClientName(o))[1], title: esc(quoteClientName(o)), sub: `${q4(o)} · ${o.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(o.deliveredAt)) ? 'today ' + hm(msOf(o.deliveredAt)) : esc(dayLabel(isoOf(msOf(o.deliveredAt) || waitingSince(o))))) : 'on the road'} · ${nLines(rtItems(o).length)}` })).join('') || '<div class="st-empty">No delivered orders by that name</div>'}</div>
+      <div class="cv-list"><span style="padding:8px 8px 2px;font-size:12px;font-weight:600;color:var(--ink2)">Delivered lately</span>${list.map(o => cvRow({ act: 'rtpick', data: { id: o.id }, round: true, ini: initials(quoteClientName(o)), soft: tint(quoteClientName(o))[0], ink: tint(quoteClientName(o))[1], title: esc(quoteClientName(o)), sub: `${q4(o)} · ${o.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(o.deliveredAt)) ? 'today ' + whenAt(msOf(o.deliveredAt)) : esc(dayLabel(isoOf(msOf(o.deliveredAt) || waitingSince(o))))) : 'on the road'} · ${nLines(rtItems(o).length)}` })).join('') || '<div class="st-empty">No delivered orders by that name</div>'}</div>
     </div></div>`;
   }
   const items = rtItems(q), lines = items.filter(x => (ui.back[x.k] || 0) > 0), good = lines.filter(x => (ui.cond[x.k] || 0) === 0).length, bad = lines.length - good;
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:14px;gap:12px" data-navy-top>
     <div style="display:flex;align-items:center;gap:10px"><button class="cv-circ" data-act="rtunpick" aria-label="Back">${sv(CV.back, 18, 2.2)}</button><span style="width:40px;height:40px;flex:none;border-radius:999px;background:${tint(quoteClientName(q))[0]};color:${tint(quoteClientName(q))[1]};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(quoteClientName(q))}</span>
       <span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(quoteClientName(q))}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${q4(q)} · ${q.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(q.deliveredAt)) ? 'today' : esc(dayLabel(isoOf(msOf(q.deliveredAt))))) : 'on the road'}</span></span></div>
-    <span style="align-self:flex-start;height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">${sv(ui.door ? CV.van : 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', 14, 2, 'style="color:#6FDCB0"')}${ui.door ? `Filled in at the door · ${hm(ui.door)} · check it` : ui.who === 'driver' ? 'Our driver brought it back' : 'The client brought it to the gate'}</span></div>
+    <span style="align-self:flex-start;height:30px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px">${sv(ui.door ? CV.van : 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', 14, 2, 'style="color:#6FDCB0"')}${ui.door ? `Filled in at the door · ${whenAt(ui.door)} · check it` : ui.who === 'driver' ? 'Our driver brought it back' : 'The client brought it to the gate'}</span></div>
   <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px">
     ${pendingReturns(q).map(r => `<div style="display:flex;align-items:center;gap:10px;min-height:60px;padding:8px 12px;margin-bottom:12px;border-radius:18px;background:#FDEEE1;color:#7A4A02">${sv(CV.ret, 18, 2.2)}<span class="cv-tx" style="gap:2px"><span style="font-size:13px;font-weight:700">Already with ${esc(mgr)} · sent ${esc(whenSaid(msOf(r.createdAt)))}</span><span style="font-size:12px;font-weight:600">${esc((r.lines || []).map(l => returnLineWords(q, l)).join(', '))}${r.reason ? ' · ' + esc(r.reason) : ''}</span></span>${r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="flex:none;height:34px;padding:0 12px;border-radius:999px;border:none;background:#fff;color:#7A4A02;font-size:12px;font-weight:700">Take back</button>` : ''}</div>`).join('')}
     <div style="filter:drop-shadow(0 10px 20px rgba(22,32,60,.12)) drop-shadow(0 1px 1px rgba(22,32,60,.06))"><div style="height:8px;background:conic-gradient(from 135deg at 50% 0,#FFFFFF 90deg,transparent 0) 0 0/14px 8px repeat-x"></div>
@@ -5788,7 +5840,7 @@ PAGE.ride = () => {
   const buyer = theBuyer(), bw = buyer ? firstWord(buyer.name) : 'The buyer', Acc = D().staff.find(s => /account/i.test(s.role));
   const stops = trips.map((t, i) => { const sup = supplierById(t.supplierId), ls = tripLines(t), got = ls.filter(l => tripLineGot(l) != null).length; return { t, i, name: (sup && sup.name) || 'The supplier', ls, got, done: got === ls.length && ls.length > 0 }; });
   const allIn = stops.every(s => s.done), lines = stops.reduce((n, s) => n + s.ls.length, 0);
-  if (ui.handed) return sentScreen({ title: 'Round handed in', line: `${stops.length} stop${stops.length === 1 ? '' : 's'} · ${nLines(lines)} · ${hm(ui.handed.at)}`, done: 'home',
+  if (ui.handed) return sentScreen({ title: 'Round handed in', line: `${stops.length} stop${stops.length === 1 ? '' : 's'} · ${nLines(lines)} · ${whenAt(ui.handed.at)}`, done: 'home',
     body: trackDone({ who: Acc ? Acc.name : 'Accounts', bg: '#DCEAF8', ink: '#1A5A8A', does: 'checks the receipt', last: 'Check-in', lastSub: `${firstWord(myName())} counts it`, icon: CV.inbox, foot: `${bw} sees it handed in` }).replace('>Sent<', '>Handed in<') });
   const cur = stops[Math.min(ui.stop, stops.length - 1)], next = stops.find(s => !s.done && s !== cur);
   if (allIn && ui.backAt) return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px">
@@ -5796,7 +5848,7 @@ PAGE.ride = () => {
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:8px"><span style="font-size:13px;font-weight:600;color:var(--navyInk)">Everything on the truck</span><span class="m" style="font-size:44px;font-weight:600;color:#6FDCB0">${lines}<span style="font-size:18px;color:var(--navyInk)"> lines</span></span></div>
     <div style="border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:6px">${stops.map(s => `<span style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 10px"><span style="width:32px;height:32px;border-radius:999px;background:${tint(s.name)[0]};color:${tint(s.name)[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none">${ini(s.name)}</span><span class="cv-tx" style="gap:2px"><span class="cv-tt">${esc(s.name)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(s.ls.map(l => quoteLineCount(l, tripLineGot(l)).n + ' ' + quoteLineCount(l, 1).unit).join(' · '))}</span></span><span style="flex:none;color:#6FDCB0">${sv(CV.tick, 18, 2.6)}</span></span>`).join('')}</div>
     <span style="text-align:center;font-size:12px;font-weight:600;color:var(--navyInk)">${bw} paid · ${Acc ? esc(firstWord(Acc.name)) : 'Accounts'} checks the receipts</span>
-    <div style="display:flex;margin-top:auto">${slideHTML('ride', 'Slide to hand in the round', 'chevs', { cls: 'cvdark', disabled: S.busy })}</div></div>`;
+    <div style="display:flex;margin-top:auto">${slideHTML('ride', 'Slide to hand in the trip', 'chevs', { cls: 'cvdark', disabled: S.busy })}</div></div>`;
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:14px;gap:12px" data-navy-top>
     <div style="display:flex;align-items:center;gap:10px">${cvBack()}<span class="cv-tx" style="gap:2px"><span class="ell" style="font-size:18px;font-weight:700">${esc(bw)}'s ${new Date().getHours() >= 12 ? 'afternoon' : 'morning'} round</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">You're riding · ${esc(bw)} drives</span></span>
       <span style="display:flex;flex:none">${face(buyer ? buyer.name : 'B', buyer ? buyer.name : 'B', 32, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C')}<span style="width:32px;height:32px;margin-left:-8px;border-radius:999px;background:#243052;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(myName())}</span></span></div>
@@ -5844,16 +5896,16 @@ PAGE.handover = () => {
   const ui = S.ui.ho || (S.ui.ho = { to: (mates()[0] || {}).id || null, sent: null }), to = staffById(ui.to), me = myStaff(), mgr = managerName();
   const sent = ui.sent && storeAsk('handover', a => String(a.id) === String(ui.sent.id))[0];
   if (ui.sent) return hoDone(ui, to, sent);
-  if (!to) return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="gap:14px" data-navy-top><div class="cv-top">${cvBack()}<b>Hand over the yard</b><span class="cv-circ blank"></span></div>
+  if (!to) return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="gap:14px" data-navy-top><div class="cv-top">${cvBack()}<b>Pass the yard</b><span class="cv-circ blank"></span></div>
     <div style="display:flex;align-items:center;justify-content:center;gap:16px"><span style="width:60px;height:60px;border-radius:999px;background:#243052;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini(myName())}</span><span style="color:var(--navyInk);display:flex">${sv('M3 12h4M10 12h4M17 12h3M17 8l4 4-4 4', 28, 2.2)}</span><span style="width:60px;height:60px;border-radius:999px;border:2px dashed rgba(255,255,255,.3)"></span></div></div>
     <div class="cv-body"><div class="st-empty" style="padding-top:12vh"><b>Nobody else is on the yard with the app today</b><br>A colleague needs a store login to take the yard</div></div></div>`;
-  const mine = packQueue().filter(q => orderIsMine(q) && q.pickingStatus === 'in_progress'), slots = bayMap().slots, waits = ruthAsks().waiting;
+  const mine = packQueue().filter(q => orderIsMine(q) && q.pickingStatus === 'in_progress'), slots = bayMap().slots, waits = ruthAsks().waiting.filter(w => w.mine);
   const jobs = mine.map(q => { const p = packProgress(q); return { a: p.done, b: p.n, title: `Pack ${q4(q)} · ${shortName(quoteClientName(q))}`, sub: `${bayOf(q) ? 'On bay ' + bayOf(q) + ' · ' : ''}${orderIsPickup(q) ? 'collects' : 'to ' + placeShort(q)}` }; });
   const ring = (a, b) => { const C = 2 * Math.PI * 14; return `<span style="position:relative;width:36px;height:36px;flex:none;display:block"><svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="14" fill="none" stroke="#EFECE6" stroke-width="4"></circle><circle cx="18" cy="18" r="14" fill="none" stroke="#16203C" stroke-width="4" stroke-dasharray="${(a / Math.max(1, b) * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 18 18)"></circle></svg><span class="m" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${a}/${b}</span></span>`; };
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="gap:14px" data-navy-top>
-    <div class="cv-top">${cvBack()}<b>Hand over the yard</b><span class="cv-circ blank"></span></div>
+    <div class="cv-top">${cvBack()}<b>Pass the yard</b><span class="cv-circ blank"></span></div>
     <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-      <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:60px;height:60px;border-radius:999px;background:#243052;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.15)">${ini(myName())}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(firstWord(myName()))} · off at ${hm(Date.now())}</span></span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:60px;height:60px;border-radius:999px;background:#243052;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(255,255,255,.15)">${ini(myName())}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(firstWord(myName()))} · off at ${whenAt(Date.now())}</span></span>
       <span style="color:#6FDCB0;display:flex">${sv('M3 12h4M10 12h4M17 12h3M17 8l4 4-4 4', 28, 2.2)}</span>
       <span style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:60px;height:60px;border-radius:999px;background:${tint(to.name)[0]};color:${tint(to.name)[1]};font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #1D2747,0 0 0 5px #6FDCB0">${ini(to.name)}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(firstWord(to.name))} · in the yard</span></span></div>
     ${mates().length > 1 ? `<div style="display:flex;justify-content:center;gap:6px">${mates().map(m => `<button data-act="hoto" data-id="${esc(m.id)}" aria-pressed="${m.id === ui.to}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:${m.id === ui.to ? '#fff' : 'rgba(255,255,255,.08)'};color:${m.id === ui.to ? '#16203C' : '#DDE3F0'};font-size:12px;font-weight:700">${esc(firstWord(m.name))}</button>`).join('')}</div>` : ''}</div>
@@ -5865,7 +5917,7 @@ PAGE.handover = () => {
     <span class="cv-sec">${waits.length ? `${esc(mgr)}'s answers go to ${esc(firstWord(to.name))} now` : `Nothing waits on ${esc(mgr)}`}</span>
     ${waits.length ? `<div class="cv-list">${cvRow({ round: true, ini: mgrIni(), soft: '#F6E4F1', ink: '#7A3268', title: `${waits.length} waiting on ${esc(mgr)}`, sub: esc(waits.slice(0, 2).map(w => w.title.replace(/<[^>]+>/g, '')).join(' · ') || 'nothing waits'), right: cvChip('to ' + esc(firstWord(to.name)), '#FDEEE1', '#7A4A02') })}</div>` : ''}
   </div>
-  <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px"><button data-act="hosend" style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">Hand it to ${esc(firstWord(to.name))}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button><span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">${esc(firstWord(to.name))} gets a push and taps "I've got it"</span></div></div>`;
+  <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px"><button data-act="hosend" style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">Pass the yard to ${esc(firstWord(to.name))}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button><span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">${esc(firstWord(to.name))} gets a push and taps "I've got it"</span></div></div>`;
 };
 PAGE.handover.bg = '#F7F5F2';
 ACT.hoto = t => { S.ui.ho.to = t.dataset.id; FEEL.tick(); render(); };
@@ -5874,7 +5926,7 @@ ACT.hosend = async () => {
   const mine = packQueue().filter(q => orderIsMine(q) && q.pickingStatus === 'in_progress').map(q => q.id);
   try {
     const { data, error } = await sb.from('store_asks').insert({ shop_id: S.shopId, kind: 'handover', ref: String(to.userId || to.id), asked_by: S.user.id, asked_by_name: myName(),
-      payload: { toStaffId: to.id, toUserId: to.userId, toName: to.name, orders: mine, waiting: ruthAsks().waiting.length, bays: bayMap().slots.filter(s => s.q).map(s => s.q.id) } }).select('*').single();
+      payload: { toStaffId: to.id, toUserId: to.userId, toName: to.name, orders: mine, waiting: ruthAsks().waiting.filter(w => w.mine).length, bays: bayMap().slots.filter(s => s.q).map(s => s.q.id) } }).select('*').single();
     if (error) throw error;
     // What was half packed moves to them: their name on the order, the picks kept.
     for (const id of mine) await changeOrder(id, q => { if (q.status !== 'preparing' || q.pickingStatus !== 'in_progress') return false; q.assignedWorkerId = to.id; });
@@ -5884,7 +5936,7 @@ ACT.hosend = async () => {
 };
 function hoDone(ui, to, ask){
   const got = ask && ask.status === 'accepted', b = myTrips()[0];
-  return sentScreen({ title: got ? `${firstWord(to.name)} has the yard` : `Waiting on ${firstWord(to.name)}`, line: got ? `${firstWord(to.name)} tapped "I've got it" · ${hm(msOf(ask.decidedAt))}` : `${firstWord(to.name)} gets a push · "I've got it" on their phone`,
+  return sentScreen({ title: got ? `${firstWord(to.name)} has the yard` : `Waiting on ${firstWord(to.name)}`, line: got ? `${firstWord(to.name)} tapped "I've got it" · ${whenAt(msOf(ask.decidedAt))}` : `${firstWord(to.name)} gets a push · "I've got it" on their phone`,
     body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[ui.sent.moved, ui.sent.moved === 1 ? 'job moved' : 'jobs moved'], [`${bayMap().slots.filter(s => s.q).length}/${bayCount()}`, 'bays in use'], [ruthAsks().waiting.length, 'with ' + managerName(), '#F5B26B']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:20px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${esc(w)}</span></span>`).join('')}</div>`,
     foot: `<div style="display:flex;flex-direction:column;gap:6px">${b ? `<button class="cv-white" data-act="goride">${face(theBuyer() ? theBuyer().name : 'B', theBuyer() ? theBuyer().name : 'B', 28, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}Ride with ${esc(theBuyer() ? firstWord(theBuyer().name) : 'the buyer')}</button>` : ''}<button ${b ? '' : 'class="cv-white"'} data-act="hodone" style="${b ? 'height:46px;border:none;background:none;color:#DDE3F0;font-size:14px;font-weight:700' : ''}">Back to Today</button></div>` });
 }
@@ -5935,7 +5987,7 @@ ACT['slide:clgo'] = () => { const ui = S.ui.cl; if (ui.sent) return; const waits
 function clDone(ui){
   const mate = mates()[0], nextJob = (D().collectionTrips || []).filter(t => !t.voided && ['assigned', 'open'].includes(t.status))[0];
   return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, title: 'The yard is closed', line: `${new Date(ui.sent.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · ${hm(ui.sent.at)} · by ${firstWord(myName())}`,
-    body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[`${bayMap().slots.filter(s => s.q).length}/${bayCount()}`, 'bays in use'], [ui.sent.carries, 'carries over', '#F5B26B'], [nextJob ? hm(msOf(nextJob.assignedAt || nextJob.createdAt)) : '—', 'first job']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:20px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>
+    body: `<div style="width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">${[[`${bayMap().slots.filter(s => s.q).length}/${bayCount()}`, 'bays in use'], [ui.sent.carries, 'carries over', '#F5B26B'], [nextJob ? whenAt(msOf(nextJob.assignedAt || nextJob.createdAt)) : '—', 'first job']].map(([v, w, c], i) => `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:20px;font-weight:600;line-height:1;${c ? 'color:' + c : ''}">${v}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${w}</span></span>`).join('')}</div>
       <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--navyInk)"><span style="display:flex"><span style="width:24px;height:24px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${mgrIni()}</span>${mate ? `<span style="width:24px;height:24px;margin-left:-6px;border-radius:999px;background:${tint(mate.name)[0]};color:${tint(mate.name)[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(mate.name)}</span>` : ''}</span>${esc(managerName())}${mate ? ' and ' + esc(firstWord(mate.name)) : ''} see it closed</span>`,
     foot: `<button class="cv-white" data-act="cldone">Done for today</button>` }).replace(bigTick(sv(CV.tick, 40, 2.6)), bigTick(sv(CV.lock, 36, 2.4)));
 }

@@ -119,3 +119,20 @@ Deferred:
 - NAV-08 on lists other than the aisle (name them), and NAV-09 (no details yet).
 - ~~To run on live: 0156 → 0160 → 0161 → 0162 → 0163 → 0164.~~ All applied by Kevin, 23 Oct 2026. DATA-05 checked on live the same day: all 59 of 0161's product moves landed.
 
+## Round 6 · Wording and consistency (23 Oct 2026) · WORD-01..10 · no migration
+
+Fixed: a person is named one way on every screen, the name they chose and never a login handle ("Someone" if none); the shift is passed, goods are handed over; an unpaid order says "Not paid yet" everywhere with one reason on the order; Today's numbers equal the screens they open; With Ruth shows every yard ask with who sent it; a trip difference is a check-in; durations and times have one format each; a trip is never a round; stock history names the order; units are lower case; the bell counts only what needs you, and opening Alerts reads it.
+
+Now part of the language (the glossary in `docs/audit/ROUND-6.md`):
+- **One resolver for names.** `personName()` for everyone; `nameEveryone()` when the snapshot lands. No screen reads a staff record's name raw.
+- **One label, one reason.** `NOT_PAID` ("Not paid yet") on the bay, Today, Load and the slip; `notPaidWhy()` only on the order.
+- **One definition per count.** `counts()`: to pack is ready now; waiting on goods beside it; delivered includes collected.
+- **How long is `howLong()`, when is `whenAt()`.** Never a duration as a clock; never a clock time from another day without the day.
+- **Units through `unitSay()`.** Always lower case.
+- **The bell is what needs you.** Only today's "for you" alerts are unread; opening Alerts reads them.
+
+Deferred:
+- The `store.handover` push text ("handed you the yard") needs a migration.
+- NAV-08 on lists other than the aisle (name them), and NAV-09 (no details yet).
+- `test/store-money-db.test.js` database scenario (as round 5), and `test/manager-decisions-db.test.js`'s "store: count a trip" step, which writes a trip directly as the store role, which 0164 now refuses (it should go through `store_patch_trip`). Both fail the same way without this round's changes.
+

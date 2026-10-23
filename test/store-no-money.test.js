@@ -60,14 +60,14 @@ t.check(!failed.length, `every migration applied, in order (${failed.join(', ')}
 const r = onDb(['-At', '-F', '|'], read('test/fixtures/store-no-money-scenario.sql'));
 const out = r.stdout || '';
 ['quotes', 'prices', 'customers', 'staff', 'trips', 'stock_log'].forEach(x => t.check(new RegExp(`^store reads ${x}\\|0$`, 'm').test(out), `a Store login reads no ${x}`));
-t.check(/^money keys in snapshot\|1$/m.test(out) && /^snapshot keeps\|paid\|2$/m.test(out), 'the snapshot holds no money key but the "paid" status word, and both orders');
+t.check(/^money keys in snapshot\|0$/m.test(out) && /^snapshot keeps\|true\|2$/m.test(out), 'the snapshot holds no money key, an agent\'s order says only whether it is settled (0164), and both orders');
 t.check(/^prices kept after patch\|32000\|done\|in_progress\|t\|10000$/m.test(out), 'the yard\'s patch set the pick fields and left the price, the payments and the money paid alone');
 t.check(/^trip row\|collected\|5\|29000\|150000$/m.test(out), 'handing a round in kept what the Buyer paid and the cash');
 t.check(/^return row\|64000\|32000\|Damaged after delivery\|burst$/m.test(out), 'the return was priced from the order, with its reason and note');
 t.check(/^manager reads quotes\|2$/m.test(out) && /^manager reads prices\|1$/m.test(out), 'the Manager still reads everything');
 // 0160: the allow-list, the wider money names, deliveredNote, and a return no bigger than the line.
 t.check(/^money keys 0160\|0$/m.test(out), 'no amt, rate, receipts, charges, owed, sum, value or price reaches the snapshot (0160)');
-t.check(/^allow list keeps\|credit\|x\|Cement$/m.test(out), 'and the allow-list keeps the credit answer, a credit note (its amount gone) and the line\'s name');
+t.check(/^allow list keeps\|letgo\|x\|Cement$/m.test(out), 'and the allow-list keeps the let-it-go answer (0164), a taken-back note (its amount gone) and the line\'s name');
 t.check(/too big\|More than that line can take back: 3 left of 5/.test((r.stderr || '') + out), 'a return bigger than the line has left is refused (0160)');
 t.check(/^deliver note\|The camera will not open$/m.test(out), 'the Store can say why a delivery has no photo (0160)');
 psql(['-qAt', '-c', `drop database if exists ${db}`]);

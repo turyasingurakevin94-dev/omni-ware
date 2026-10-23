@@ -97,15 +97,25 @@ See `docs/audit/round-6-data05-check.sql`.
 
 ## Phase B result (filled after implementing)
 
+Verified with `test/store-round6.test.js` (new, every ID) and the harness: a new `#r6` fixture with staff records named like logins ("turyasingurakevin94", "grace2024", "joyn7"), asks from two people, a sale in the stock history and a shift passed to Musa. Twelve screens were walked at 360 and 1280 (Today, Alerts, With Ruth, To pack, On the road, Load, the unpaid slip, the item's history, You, Pass the yard, In), and the same walk ran on the `''`, `#r4`, `#packed`, `#long` and `#recount` fixtures. Each walk grepped the rendered text for the handles, "round", "waits on money", "holds", "cash customer", "Quote for", "Hand over the yard", "oldest 9:41" and capitalised units. It found none, with no clipping and no page errors.
+
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| WORD-01 | | | |
-| WORD-02 | | | |
-| WORD-03 | | | |
-| WORD-04 | | | |
-| WORD-05 | | | |
-| WORD-06 | | | |
-| WORD-07 | | | |
-| WORD-08 | | | |
-| WORD-09 | | | |
-| WORD-10 | | | |
+| WORD-01 | Yes | New `personName({ userId, staffId, stored })`: the name they chose (members), else the staff record's unless `looksHandle`, else the stored name, else "Someone". `nameEveryone()` runs it over staff, counts, reports, returns and asks each time the snapshot lands (and on a kept copy). `staffName`, `takerOf` and `managerName` go through it; `myName`/`hasOwnName` skip a handle staff record too. | Test: Denis's handle record reads "Denis Okello", a handle with no chosen name reads "Someone", Ssali and an old stored name read as written. Harness: no handle on any screen. |
+| WORD-02 | Yes | You: "End my shift · pass the yard to Joy"; page title "Pass the yard"; its button "Pass the yard to Joy"; Today's card and alert "Joy passed you the yard". The gate keeps "Slide to hand over to …". | Test and harness (You, Pass the yard). |
+| WORD-03 | Yes | `NOT_PAID` and `notPaidWhy()`: the bay tile, Today's job ("Not paid yet · on bay 3"), Load's list and chip, the order view's chip, the slip foot and an amber stamp all say "Not paid yet". The order's dock gives the one reason ("Sales take the money before it leaves, or Ruth lets it go on credit.") and "Ask Ruth to let it go". `failSay` (OWCSH) and the gate toast say the same. Today's "more" line says "an order not paid yet". | Test; harness slip #0047, Today, Load. |
+| WORD-04 | Yes | `counts()`: Today's ring, legend and tiles read it. The "to pack" tile is ready only with "+2 waiting" beside it; To pack's big number is the same, with "Waiting on goods · 2" below; On the road shows "3 delivered today · 0 of them collected". | Harness: tile 2 = To pack 2, waiting 2 = the section's 2. |
+| WORD-05 | Yes | `ruthAsks()`: the waiting list holds every yard ask (counts, returns, reports, extras, let-it-go asks, short picks, trip differences), each with `by`, `who` ("You" for yours) and a face. The strip says "N waiting on Ruth · N answered today · N yours". Answers stay yours. Passing the yard moves only yours. | Test; harness With Ruth (Joy's count, report and check-in, each with a face). |
+| WORD-06 | Yes | Waiting: "Denis's trip · Iron sheet G28 · 3m", with "Joy · checked in 59 of 60 · 8:30". Answered (yours): "Your check-in of Denis's trip", with "Iron sheet G28 · 3m · Ruth accepted 59 of 60". The alert reads "Ruth accepted your check-in". | Test; harness With Ruth. |
+| WORD-07 | Yes | `howLong(min)` ("41 m", "9 h 41 m", "2 days") replaces `waitClock` and `waitWords`. `whenAt(ms)` ("15:20" today, "Thu 23:28" otherwise) replaces every bare `hm()` where no date is already printed beside it. `whenSaid` is now `whenAt`. | Test (9 h 41 m, 2 h 05 m, Thu 15:20); harness. |
+| WORD-08 | Yes | `roundWord(ts)` gives "trip", or "trip · 3 suppliers". It is used by Checked in today, In, Today's job and alerts. The ride's slide says "hand in the trip", and restock says "a buying trip". | Test (no "round" in the code's screen text); harness grep. |
+| WORD-09 | Yes | `logNoteSay(note, key, at)` turns "Quote for X" into "Order #0548 · X". It finds the order by client, item and time, or "Sale · X" if none is found; "Quote #n for X" becomes "Order #000n · X". `unitSay(u)` lower-cases every unit and is used by `quoteLineCount`, `unitWord`, `fmtLevels` and `backText`. | Test; harness item P1: "Out · Order #0036 · Kato Construction". |
+| WORD-10 | Yes | `alertsNow()` adds `unread` on top of the memoised `alertsAll()`: only `forYou` alerts from today count. These are answers to your asks, a trip back to check in, the buyer sending you out, and a shift passed to you. Alerts is grouped "For you · N", "In the yard today" (e.g. "Joy checked in Denis's trip"), then older days "· read". The seen time is saved when Alerts opens, and the dots stay for that visit. | Harness: badge 3, dots 3 on the visit, badge 0 after. |
+
+### Also fixed while here
+- `test/store-no-money.test.js` still read round 5's old payload names (`agentPaymentStatus`, `creditAsk`, `creditNotes`). It now reads `agentSettled`, `letGoAsk` and `takenBack`. This is test-only.
+- The canvas board `PassTheYard` said "on her phone", a guessed pronoun. It now says "Joy gets a push and taps "I've got it"", as the app does (canvas v104).
+
+### Left as is
+- The push the database sends for a passed yard still says "… handed you the yard" (0157/0159 `store.handover`). Changing it needs a migration; it can ride the next round that has one.
+- `test/store-money-db.test.js`'s database scenario still fails as before (writes orders directly as the store role, which 0159 stopped). This is noted in the LOG since round 5. `test/manager-decisions-db.test.js` has one step that fails the same way ("store: count a trip" writes the trip directly; 0164 refuses it). Both fail identically with this round's changes taken out. The other 457 test files pass.

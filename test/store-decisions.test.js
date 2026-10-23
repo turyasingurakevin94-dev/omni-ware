@@ -71,11 +71,11 @@ t.check(!/\b(gotPrice|expectedPrice|receivedPrice|cash_given)\b/.test(store.slic
 // A "1 Ctn" line of screws is 20 boxes: one carton back is qty 20 and reads "1 Ctn", never "20 Ctn";
 // five boxes back is qty 5 and reads "5 box"; what is already on its way back is not offered twice.
 const R = { data: { returns: [] } };
-const rs = compileScope(['n0', 'quoteLinePack', 'quoteLineCountPer', 'backText', 'returnedQty'].map(f => extractFunction(store, f)), { D: () => R.data }, ['backText', 'returnedQty']);
+const rs = compileScope(['n0', 'unitSay', 'quoteLinePack', 'quoteLineCountPer', 'backText', 'returnedQty'].map(f => extractFunction(store, f)), { D: () => R.data }, ['backText', 'returnedQty']);
 const ctn = { productName: 'ABC Black Screws', unit: 'box', qty: 20, packUnit: 'Ctn', packQty: 20, qtyIn: 'pack' };
-t.check(rs.backText(ctn, 20) === '1 Ctn', `one carton back reads "1 Ctn" (got "${rs.backText(ctn, 20)}")`);
+t.check(rs.backText(ctn, 20) === '1 ctn', `one carton back reads "1 ctn" (round 6: units are lower case) (got "${rs.backText(ctn, 20)}")`);
 t.check(rs.backText(ctn, 5) === '5 box', `five boxes back read "5 box" (got "${rs.backText(ctn, 5)}")`);
-t.check(rs.backText(ctn, 25) === '1 Ctn + 5 box', `25 boxes read "1 Ctn + 5 box" (got "${rs.backText(ctn, 25)}")`);
+t.check(rs.backText(ctn, 25) === '1 ctn + 5 box', `25 boxes read "1 ctn + 5 box" (got "${rs.backText(ctn, 25)}")`);
 t.check(rs.backText({ unit: 'bag', qty: 4 }, 3) === '3 bag', 'a line with no pack reads in its own unit');
 const q494 = { id: 2494, items: [ctn], creditNotes: [] };
 R.data.returns = [{ id: 'a1', orderId: 2494, status: 'sent', lines: [{ idx: 0, qty: 5 }] }, { id: 'a2', orderId: 2494, status: 'withdrawn', lines: [{ idx: 0, qty: 20 }] }];
