@@ -40,7 +40,8 @@ for (const a of Object.keys(apps).filter(a => a !== 'store')) {
   t.check(LIVE.test(apps[a]) && MERGE.test(apps[a]), `${a}: has the live window and the merge`);
 }
 // The Store app reads one snapshot, money taken out in the database (round 5, 0164): no direct order reads to page.
-t.check(/const sn = await storeSnapshotNow\(\); S\.snapMode = true;/.test(apps.store) && !/from\('saved_quotes'\)/.test(apps.store) && /D\(\)\.savedQuotes = \(sn\.orders \|\| \[\]\)\.map\(rowToQuote\)/.test(apps.store), 'store: boot and refresh read only the snapshot');
+// Round 9 (0166): the 45-second refresh reads the snapshot's live part, store_live.
+t.check(/const shopId = S\.shopId, sn = await storeSnapshotNow\(\);/.test(apps.store) && /S\.snapMode = true;/.test(apps.store) && /storeLiveNow\(\)/.test(apps.store) && !/from\('saved_quotes'\)/.test(apps.store) && /D\(\)\.savedQuotes = \(sn\.orders \|\| \[\]\)\.map\(rowToQuote\)/.test(apps.store), 'store: boot and refresh read only the snapshot');
 t.check(/const \[rows, sw\] = await Promise\.all\(\[selectAll\('saved_quotes', 'id', liveQuoteFilter\), switchesQuery\(\)\]\); mergeQuotes\(rows\);/.test(apps.sales), 'sales: refreshQuotes reads the live window and merges');
 for (const a of ['buyer', 'manager']) {
   const fn = apps[a].slice(apps[a].indexOf('async function refreshLive()'), apps[a].indexOf('async function refreshLive()') + 1500);

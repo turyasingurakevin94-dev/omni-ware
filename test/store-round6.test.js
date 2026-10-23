@@ -37,7 +37,7 @@ const code = store.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
   t.check(P.personName({ staffId: 'W3' }) === 'Ssali' && P.personName({ userId: 'u-gone', stored: 'Peter Sserwadda' }) === 'Peter Sserwadda', 'a driver with no login, and a name stored with an old row, still read as written');
   t.check(P.personName({ staffId: 'W1' }) === 'Musa Kiggundu', 'the person holding the phone is their own name');
   t.check(/function staffName\(id\)\{ if \(!id\) return ''; return personName\(\{ staffId: id \}\); \}/.test(store) && /function nameEveryone\(\)\{/.test(store)
-    && /nameEveryone\(\);\n  S\.loadedAt = Date\.now\(\); S\.loadErr = null;/.test(store) && /S\.data = snap\.data; nameEveryone\(\);/.test(store), 'staffName and every row that lands go through personName');
+    && /nameEveryone\(\);\n  S\.loadedAt = (S\.freshAt = )?Date\.now\(\); S\.loadErr = null;/.test(store) && /S\.data = snap\.data; nameEveryone\(\);/.test(store), 'staffName and every row that lands go through personName');
   t.check(/const st = myStaff\(\), sn = st && \(st\.recName != null \? st\.recName : st\.name\); if \(sn && !looksHandle\(sn\)\) return sn;/.test(store), 'your own staff record named like a login is not your name either');
 }
 // WORD-02

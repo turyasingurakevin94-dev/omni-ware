@@ -190,3 +190,30 @@ Deferred:
 - `store.handover` push text (round 6).
 - The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
 
+## Round 9 · Speed (23 Oct 2026) · STO-SPD-01..04, STO-A11Y-03, STO-UI-10 · migration 0166
+
+The plan is in `docs/audit/store/ROUND-9.md`. STO-UI-03 was pushed back (the lists it names are pages over the bar).
+
+Fixed:
+- **The app opens with no signal.** `store-sw.js` keeps the page and its libraries on the phone, never the books.
+- **A new build says "Update ready · Reload".**
+- **Find types smoothly:** only the results redraw, 30 rows at a time.
+- **The first fresh data arrives in about 1 s instead of 3–4.5 s:** the shop and the books are asked beside the sign-in check, not after it.
+- **The 45-second refresh is one smaller request** (`store_live`, 0166, the stock folded in).
+- **"Live" means fresh:** before the fresh data lands, the pill says "Updating…".
+- **The last small text under 4.5:1 is fixed:** Pack's count, Today's ring and an empty bay, the bar's words and the Alerts times.
+- **Hand over on a short phone shows the whole slip first.**
+
+Now part of the language:
+- **Updating… / Live / Offline** on the status pill; "Updating · saved H:MM" when the copy is more than 10 min old.
+- **Update ready · Reload**: the navy card with one white button, at the top of Today.
+- **Show 30 more**: a long list draws 30 rows, and the chips count every match.
+- **The phone keeps the page, never the books.** Data lives in IndexedDB only; the service worker never handles a Supabase request.
+- **Live and the rest.** What changes all day comes from `store_live`; anything new the phone needs every 45 s goes there, and anything it needs once goes in the rest of `store_snapshot`.
+
+Deferred:
+- NAV-08, NAV-09.
+- `store.handover` push text (round 6).
+- The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
+- Alerts' render time (11–25 ms) was not worked on this round.
+

@@ -93,6 +93,9 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Could not load the yard | A failed load, with Try again and a code | an empty yard, 0s, "No products" | Store R5 · PRIV-03 |
 | Checking your shop… | Signed in; the phone is asking which shop this person works in | a blank screen; "This login has no shop" too early | Store R8 · REL-11 |
 | Could not reach the shop | The shop could not be asked just now, with Try again, a code and Sign out | "This login has no shop" after a failed read | Store R8 · REL-11 |
+| Updating… | Showing the copy saved on this phone while the fresh one comes; "Updating · saved 7:52" when that copy is more than 10 minutes old | "Live" before anything fresh has arrived | Store R9 · SPD-04 |
+| Live | This session has loaded fresh data and the phone is online | — | Store R9 · SPD-04 |
+| Update ready · Reload | A newer app has been downloaded; one tap switches to it. The next open uses it anyway | a silent change in the middle of a job | Store R9 · SPD-01 |
 | Try again | Retry after a failure; the work is kept | — | Store R3 |
 | Back online to sell | A slide that writes waits for the connection | — | Sales review 5 |
 
@@ -104,6 +107,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Leave Omni-ware? | Asked by Back on Today | leaving without asking | Store R4 · NAV-02 |
 | Look only | An order this person can't act on, opened read-only, saying what it waits on | Pack on an order that isn't theirs to pack | Store R4 · NAV-04/05 |
 | Did you mean | Nothing found offers the nearest shop words | a dead end | Store R4 · NAV-06/07 |
+| Show 30 more | A long list draws 30 rows, then adds 30 a tap; the chips still count every match | a cap that hides rows | Store R9 · SPD-02 |
 | Needs you | Today's list of jobs for this person | — | Sales, Store |
 | For you · In the yard today | Alerts: only today's "for you" alerts are unread; opening Alerts reads them | counting others' routine check-ins as unread | Store R6 · WORD-10 |
 | Signed in as someone else | Another login is under this app; nothing is saved until the app's own person signs in again | carrying on as the other login | Sales R1 · SAL-002 |

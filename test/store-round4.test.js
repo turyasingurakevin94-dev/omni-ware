@@ -51,7 +51,8 @@ t.check((store.match(/'Handing over…'/g) || []).length >= 4 && /s\.wait \? sta
 t.check(/ui\.wait \? `Packing \$\{q4\(q\)\}…` : `\$\{q4\(q\)\} is packed`/.test(store) && /ui\.wait \? stateDot\('sending', 128\)/.test(store), 'pack says Packing #… until the server says yes');
 
 // NAV-06 / NAV-07 / NAV-08 (the search runs below)
-t.check(!/\.slice\(0, 60\)/.test(region('PAGE.find = () => {', 3000)) && /\$\{qw\.length \? `<div class="st-chiprow"[^`]*>\$\{chip\.map\(/.test(store), 'no row cap in Find, and no chips before a query');
+// Round 9 (STO-SPD-02): the rows come 30 at a time behind "Show N more", so every match is still reachable and the chips count them all.
+t.check(!/\.slice\(0, 60\)/.test(region('PAGE.find = () => {', 3000)) && /\$\{qw\.length \? `<div class="st-chiprow" data-live="fdchips"[^`]*>\$\{fdChips\(ui, F\)\}/.test(store) && /Show \$\{Math\.min\(FD_STEP, more\)\} more/.test(store), 'no row cap in Find (30 at a time, then more), and no chips before a query');
 t.check(/function didYouMean\(q\)\{/.test(store) && /Did you mean<\/span>/.test(store), 'nothing found offers "Did you mean"');
 t.check(/data-stick aria-hidden="true"/.test(store) && /function stickSync\(pg\)\{/.test(store) && /ACT\.totop = /.test(store) && /Back to the top of \$\{esc\(aisleWord\(A\)\)\}/.test(store), 'a long aisle has a sticky bar with Back, and back to the top');
 

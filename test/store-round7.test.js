@@ -42,7 +42,8 @@ t.check(/due \? 'Count due · count as you pick' : low \? `The shelf shows \$\{l
 t.check(/--nav-room:calc\(1[23]0px \+ var\(--safe-area-inset-bottom\)\);/.test(store) && /#st_app\{[^}]*padding-bottom:var\(--nav-room\)\}/.test(store), 'every screen ends with the bar + the button + 16px free');
 // STO-UI-04
 {
-  const find = region('PAGE.find = () => {', 'PAGE.find.bg');
+  // Round 9 (STO-SPD-02): the chips and the results are drawn by fdChips and fdResults, beside PAGE.find.
+  const find = region('function fdChips(', 'PAGE.find.bg');
   t.check(/<input id="fd_q"[^>]*align-self:stretch;height:100%/.test(find) && /data-act="fdclear" aria-label="Clear" style="width:44px;height:44px/.test(find) && /data-act="fdf"[^>]*height:44px/.test(find) && /data-act="fdtry"[^>]*height:44px/.test(find), 'Find: the whole box is the field; Clear, the filters and the tries are 44px');
   t.check(/<input id="rt_find"[^>]*align-self:stretch;height:100%/.test(store), 'Returns: the whole box is the field');
   t.check(/data-act="aisle" data-a="\$\{esc\(x\.aisle\.letter\)\}" style="height:44px/.test(store) && /aria-label="See \$\{esc\(aisleWord\(a\)\)\}" style="position:absolute;left:12px;top:12px;height:44px/.test(store), 'the item page\'s and Pack\'s Aisle pills are 44px');

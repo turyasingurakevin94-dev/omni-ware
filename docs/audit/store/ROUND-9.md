@@ -17,15 +17,15 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 
 | Measure | Before | Target | After |
 |---|---|---|---|
-| Cached Today on screen | 0.8 s | ≤ 0.8 s; also with no signal | |
-| Fresh data on screen | 4.5 s | ≤ 2 s | |
-| Opening with no signal | does not open | cached Today ≤ 1 s | |
-| Find, one keystroke ("screw", 118 rows) | 57–112 ms | < 16 ms | |
-| Alerts render | 11–25 ms | ≤ 16 ms | |
-| Other screens' render | 1–5 ms | no worse | |
-| Page | 768 KB / 206 KB gzip | no worse; served from the phone after the first open | |
-| Snapshot, on opening | 315 KB / 735 ms (Kevin's check: 347 KB) | about 300 KB, once a session | |
-| Each 45-second refresh | the whole snapshot (347 KB) + stock, 2 requests | < 200 KB, 1 request | |
+| Cached Today on screen | 0.8 s | ≤ 0.8 s; also with no signal | harness: 0.07 s (the stub has no network cost); unchanged path |
+| Fresh data on screen | 4.5 s | ≤ 2 s | harness with Cowork's delays (auth 1.7 s, members 0.27 s, snapshot 0.75 s, the rest 0.3 s): **3.1 s → 1.1 s**; **0.8 s** with 0166 (one request) |
+| Opening with no signal | does not open | cached Today ≤ 1 s | harness over http, network cut: Today with "Offline" in **0.09 s** |
+| Find, one keystroke ("screw", 118 rows) | 57–112 ms | < 16 ms | the key itself 0.2–0.3 ms; the redraw 120 ms later **12.7 ms** with 125 matches (a full redraw was 21 ms on the same machine) |
+| Alerts render | 11–25 ms | ≤ 16 ms | not changed this round; Cowork to re-measure |
+| Other screens' render | 1–5 ms | no worse | no screen's drawing changed except Find |
+| Page | 768 KB / 206 KB gzip | no worse; served from the phone after the first open | +5 KB; from the phone after the first open (store-sw.js) |
+| Snapshot, on opening | 315 KB / 735 ms (Kevin's check: 347 KB) | about 300 KB, once a session | after 0166: Kevin to re-run `round-9-snapshot-size.sql` |
+| Each 45-second refresh | the whole snapshot (347 KB) + stock, 2 requests | < 200 KB, 1 request | `store_live`: 1 request; about 185 KB by Kevin's part sizes |
 
 ## What was found
 
@@ -117,10 +117,18 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
-| STO-SPD-01 | | | |
-| STO-SPD-02 | | | |
-| STO-SPD-03 | | | |
-| STO-SPD-04 | | | |
-| STO-UI-03 | | | |
-| STO-A11Y-03 | | | |
-| STO-UI-10 | | | |
+| STO-SPD-01 | Yes | **New `store-sw.js`** (scope `/store.html`). **The page:** served from the phone and fetched again behind it; a changed copy posts "update", and the app asks once it is listening. **Kept on first fetch:** supabase.js, the fonts, `manifest-store.json`. **Never handled:** `*.supabase.co`. **`store.html`:** `registerStoreSW()` (https or localhost; never inside the Android app); `updateBar()` + `ACT.swreload` ("Update ready · A newer Store app is here · Reload", at the top of Today). | **Harness over http** (`r9sw.js`): the second open is controlled; with the network cut, Today with "Offline" in 0.09 s; after a new build, "Update ready" shows; Reload loads the new build and the bar is gone. A bug found here and fixed: the kept copy was handed to the page before it was compared, so no update was ever seen. |
+| STO-SPD-02 | Yes | `fdIndex()` (each item's words, memoised per change to the books); `fdFind(q)` (each query memoised); `fdChips()` and `fdResults()` (30 rows, then "Show N more", `ACT.fdmore`); `findRedraw()` redraws only `data-live="fdres"` and `data-live="fdchips"`; typing waits 120 ms. | `r9find.js` with 120 extra screws: a key 0.2–0.3 ms, the redraw 12.7 ms; "screw" typed at 30 ms a key all lands; the caret stays in the same box; 30 rows, then 60 after "Show 30 more". |
+| STO-SPD-03 | Yes | **`boot()`:** with a kept sign-in, `readMembers()` and `readFresh()` start at once, beside `getUser()`; a 401/403 or a bad session signs out; no signal does not. **`loadAll()`** = `readFresh()` + `applyFresh()`; **`loadSide()`** reads places, routes and road names after the first paint, at most every 10 min. **`refreshLive()`** reads `storeLiveNow()` (0166) with the stock folded in (`stockMapOf`), and falls back to the snapshot + stock on a server without it. **0166:** `store_live`; `store_snapshot` = `store_live` + the rest; history 28 days, deliveries 30 days, voided trips 14 days, units without id or empty fields; a 0166 row in `docs/decision-rights.md`. | `r9boot.js` (Cowork's delays): fresh data at 1.1 s (0.8 s with 0166), against 3.1 s for the old build. `r9check.js`: with 0166 the refresh is one `store_live` call; without it, one try, then the snapshot. `test/store-round9.test.js` on Postgres (every migration, 0166 twice): the keys, the stock map, 29- vs 32-day deliveries, 3- vs 15-day voided trips, 28-day history, no id in a unit, no money word, a stranger refused. |
+| STO-SPD-04 | Yes | `S.freshAt`, set only by a fresh load or refresh; `freshWord()`: "Updating…" (`.cv-live.upd`), "Updating · saved H:MM" after 10 min; "Live" only after `S.freshAt`; "Offline" with no signal. | `r9boot.js`: "Updating…" until the fresh data lands at 1.1 s, then "Live". `r9check.js`: all four states. |
+| STO-UI-03 | Not changed | As planned (pushed back): Returns, Alerts and the aisle lists are pages over the bar. | — |
+| STO-A11Y-03 | Yes | Pack header count `/2` and Today's ring `/13` → navy-ink; the bar's unselected words → ink-2 (`.st-nav.cv-nav button:not(.st-go):not([aria-current="page"])`); `.cv-at` → ink-2; a free bay's label on Today (`#9AA1AE`, 2.39:1, found by the scan) → ink-2. | `r9contrast.js` on #r7, #r4 and #r6 (Today, Stock, Pack ×2, Hand over, On the road, Returns, Alerts): nothing under 4.5:1. |
+| STO-UI-10 | Yes | `PAGE.slip`: `sl-cv` on the page, `sl-scroll` on the slip; `@media (max-height:700px)` makes them one scroll, and the panel keeps `margin-top:auto`. | At 360 × 600 the whole slip shows at rest (it ends at 532 px) and the panel follows it; at 360 × 740 nothing changes (`r9check.js`); the round 8 slip checks still pass at 640 and 740, normal and Big text. |
+
+**Also changed:** five older tests pinned code this round changed, and now follow it: `audit-live-refresh` (the refresh reads `store_live`), `shop-picker` (`registerStoreSW` moved out of the shared shop block), `store-round4` and `store-round7` (Find's chips and rows live in `fdChips` / `fdResults`), `store-round6` (`S.loadedAt = S.freshAt = …`).
+
+**For Cowork to re-check first:** paste 0166, then
+1. open the Store app once, turn on airplane mode, and reopen: Today should show with "Offline";
+2. after a deploy, reopen: "Update ready · Reload";
+3. time "fresh data on screen" and the 45-second refresh (one `store_live` request, about 185 KB);
+4. type "screw" in Find.
