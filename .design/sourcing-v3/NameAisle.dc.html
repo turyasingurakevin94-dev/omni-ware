@@ -49,9 +49,17 @@ input::placeholder{color:#6B7480}
   </div>
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
     <span style="padding: 0 4px; font-size: 13px; font-weight: 700; color: #5F6980">Name</span>
-    <input value="Wire mesh BRC A142" aria-label="Name" style="box-sizing: border-box; height: 52px; padding: 0 14px; border-radius: 16px; border: none; box-shadow: inset 0 0 0 2px #16203C; background: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; color: #1C2233">
+    <input value="Wire mesh BRC A142" aria-label="Name" style="flex: none; box-sizing: border-box; height: 52px; padding: 0 14px; border-radius: 16px; border: none; box-shadow: inset 0 0 0 2px #16203C; background: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; color: #1C2233">
     <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; color: #5F6980">Aisle</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{aisleNote}}</span></div>
-    <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{aisles}}" as="a" hint-placeholder-count="5"><button type="button" aria-pressed="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button></sc-for></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{aisles}}" as="a" hint-placeholder-count="5"><button type="button" aria-pressed="{{a.on}}" onClick="{{a.pick}}" style="{{a.style}}">{{a.label}}</button></sc-for><button type="button" onClick="{{toggleMore}}" aria-expanded="{{moreStr}}" style="all: unset; cursor: pointer; box-sizing: border-box; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; {{moreStyle}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2"></path></svg>{{moreLabel}}</button></div>
+    <sc-if value="{{more}}" hint-placeholder-val="{{ false }}">
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 10px; display: flex; flex-direction: column; gap: 8px">
+      <label style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border-radius: 14px; box-shadow: inset 0 0 0 2px #16203C; color: #5F6980"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2"></path></svg><input value="" placeholder="Find an aisle" aria-label="Find an aisle" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233"><span style="font-size: 11px; font-weight: 600">all <span class="m">14</span></span></label>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{others}}" as="o" hint-placeholder-count="9"><button type="button" onClick="{{o.pick}}" style="all: unset; cursor: pointer; box-sizing: border-box; height: 36px; padding: 0 12px; border-radius: 999px; background: #F7F5F2; font-size: 13px; font-weight: 700; display: flex; align-items: center">{{o.label}}</button></sc-for></div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 16px; background: #F7F5F2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F6980" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg><input value="Reinforcement" aria-label="A new aisle" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233"><button type="button" onClick="{{newAisle}}" style="all: unset; cursor: pointer; height: 40px; padding: 0 14px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">New aisle</button></div>
+      <span style="padding: 0 2px; font-size: 12px; font-weight: 600; color: #5F6980">A new aisle shows in every app's aisle list from today</span>
+    </div>
+    </sc-if>
     <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">Teach a name people search with</span>
     <div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 20px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD">
       <input value="welded mesh" aria-label="Teach a name" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600">
@@ -76,10 +84,12 @@ input::placeholder{color:#6B7480}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { aisle: 'Steel & mesh', touched: false, taught: false, twin: null }; }
+  constructor(p) { super(p); this.state = { aisle: 'Steel & mesh', touched: false, taught: false, twin: null, more: false }; }
   renderVals() {
     const S = this.state;
-    const aisles = ['Steel & mesh', 'Roofing', 'Fasteners', 'Tools', 'Plumbing'].map(label => ({
+    const TOP = ['Steel & mesh', 'Roofing', 'Fasteners', 'Tools', 'Plumbing'];
+    const shown = TOP.includes(S.aisle) ? TOP : TOP.slice(0, 4).concat([S.aisle]);
+    const aisles = shown.map(label => ({
       label, on: String(S.aisle === label), pick: () => this.setState({ aisle: label, touched: true }),
       style: 'all:unset;cursor:pointer;box-sizing:border-box;height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' +
         (S.aisle === label ? (S.touched ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#0F6B43;box-shadow:inset 0 0 0 1.5px #0F6B43') : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #E6E3DD')
@@ -87,6 +97,10 @@ class Component extends DCLogic {
     const names = [{ w: 'brc mesh', n: '3' }, { w: 'a142', n: '2' }].concat(S.taught ? [{ w: 'welded mesh', n: 'new' }] : []);
     return {
       aisles, names, aisleNote: S.touched ? 'chosen' : 'filled for you · check',
+      more: S.more, moreStr: String(S.more), moreLabel: S.more ? 'Close' : 'Other aisle', toggleMore: () => this.setState({ more: !S.more }),
+      moreStyle: S.more ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+      others: ['Cement & sand', 'Timber', 'Paint', 'Electrical', 'Tiles & finishing', 'Doors & locks', 'Gutters', 'Water tanks', 'Safety gear'].map(label => ({ label, pick: () => this.setState({ aisle: label, touched: true, more: false }) })),
+      newAisle: () => this.setState({ aisle: 'Reinforcement', touched: true, more: false }),
       teach: () => this.setState({ taught: true }), teachLabel: S.taught ? 'Taught' : 'Teach',
       open: !S.twin, decided: !!S.twin,
       result: S.twin === 'same' ? 'One item · this hunt joins Welded mesh A142' : 'Two items, kept apart · Denis sees both',
