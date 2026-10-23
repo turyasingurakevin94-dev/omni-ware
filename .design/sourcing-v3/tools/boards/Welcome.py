@@ -65,28 +65,32 @@ perm = '''<div style="width: 100%; display: flex; flex-direction: column; gap: 1
     </div>'''
 
 pics = [pic0, pic1, pic2, pic3, pic4, perm]
-stage = '\n'.join(f'    <sc-if value="{{{{on{i}}}}}" hint-placeholder-val="{{{{ {"true" if i == 0 else "false"} }}}}"><div style="width: 100%; display: flex; flex-direction: column; gap: 10px">{p}</div></sc-if>' for i, p in enumerate(pics))
-dots = '<div role="img" aria-label="{{dotsAria}}" style="display: flex; gap: 6px"><sc-for list="{{dots}}" as="d" hint-placeholder-count="6"><span style="height: 8px; border-radius: 999px; {{d}}"></span></sc-for></div>'
-body_ = f'''  <div style="position: absolute; inset: 0; background: #F7F5F2; display: flex; flex-direction: column">
-    <div style="flex: none; height: 520px; box-sizing: border-box; background: {BG}; border-radius: 0 0 32px 32px; color: #FFFFFF; padding: 12px 20px 24px; display: flex; flex-direction: column">
-      <div style="display: flex; align-items: center; justify-content: space-between; height: 44px">
-        <span style="font-size: 13px; font-weight: 700; color: #B3BCD2">How Sourcing works</span>
-        <sc-if value="{{notLast}}" hint-placeholder-val="{{ true }}"><a href="Main.dc.html" style="height: 44px; padding: 0 6px; display: flex; align-items: center; font-size: 13px; font-weight: 700; color: #FFFFFF">Skip</a></sc-if>
-      </div>
-      <div style="flex: 1; display: flex; align-items: center">
+# a story: segments fill along the top, the headline sits up top, the picture plays in the middle,
+# each slide in its own glow. Tap Next, or the right half of the picture.
+CSS = ('@keyframes owRise{0%{transform:translateY(18px) scale(.96);opacity:0}100%{transform:none;opacity:1}}'
+       '@keyframes owFill{from{width:0}to{width:100%}}')
+segs = '<div role="img" aria-label="{{dotsAria}}" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px"><sc-for list="{{dots}}" as="d" hint-placeholder-count="6"><span style="height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); overflow: hidden; display: block"><span style="display: block; height: 4px; border-radius: 2px; background: #FFFFFF; {{d}}"></span></span></sc-for></div>'
+stage = '\n'.join(f'      <sc-if value="{{{{on{i}}}}}" hint-placeholder-val="{{{{ {"true" if i == 0 else "false"} }}}}"><div style="width: 100%; display: flex; flex-direction: column; gap: 12px; animation: owRise .55s cubic-bezier(.2,.8,.2,1) both">{p}</div></sc-if>' for i, p in enumerate(pics))
+body_ = f'''  <div style="position: absolute; inset: 0; background: {{{{bg}}}}; color: #FFFFFF; display: flex; flex-direction: column; padding: 14px 20px 22px; box-sizing: border-box; transition: background .4s">
+    {segs}
+    <div style="display: flex; align-items: center; justify-content: space-between; height: 44px; margin-top: 6px">
+      <span style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #B3BCD2">{face('ML', 'sky', 28)}Moses, your job in a minute</span>
+      <sc-if value="{{{{notLast}}}}" hint-placeholder-val="{{{{ true }}}}"><a href="Main.dc.html" style="height: 44px; padding: 0 4px; display: flex; align-items: center; font-size: 13px; font-weight: 700; color: #FFFFFF">Skip</a></sc-if>
+    </div>
+    <span style="margin-top: 14px; font-size: 32px; font-weight: 700; letter-spacing: -.025em; line-height: 1.1">{{{{title}}}}</span>
+    <span style="margin-top: 10px; font-size: 15px; font-weight: 600; color: #C9D0E2; line-height: 1.45">{{{{line}}}}</span>
+    <div style="flex: 1; display: flex; align-items: center; position: relative">
+      <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 350px; height: 350px; margin: -175px 0 0 -175px; border-radius: 999px; background: {{{{glow}}}}"></span>
+      <span aria-hidden="true" class="m" style="position: absolute; right: 0; top: -6px; font-size: 180px; font-weight: 600; line-height: 1; letter-spacing: -.06em; color: rgba(255,255,255,.06)">{{{{bigN}}}}</span>
+      <div style="position: relative; width: 100%">
 {stage}
       </div>
+      <sc-if value="{{{{notLast}}}}" hint-placeholder-val="{{{{ true }}}}"><button type="button" onClick="{{{{next}}}}" aria-label="Next" style="all: unset; cursor: pointer; position: absolute; right: 0; top: 0; bottom: 0; width: 34%"></button></sc-if>
     </div>
-    <div style="flex: 1; padding: 24px 24px 22px; display: flex; flex-direction: column; gap: 10px">
-      {dots}
-      <span style="font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2">{{{{title}}}}</span>
-      <span style="font-size: 15px; font-weight: 600; color: #5F6980; line-height: 1.45">{{{{line}}}}</span>
-      <div style="flex: 1"></div>
-      <div style="display: flex; gap: 10px">
-        <sc-if value="{{{{hasBack}}}}" hint-placeholder-val="{{{{ false }}}}"><button type="button" onClick="{{{{back}}}}" aria-label="Back" style="all: unset; cursor: pointer; width: 58px; height: 58px; flex: none; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; color: #16203C; display: flex; align-items: center; justify-content: center">{svg('back', 20, 2.4)}</button></sc-if>
-        <sc-if value="{{{{notLast}}}}" hint-placeholder-val="{{{{ true }}}}"><button type="button" onClick="{{{{next}}}}" style="all: unset; cursor: pointer; box-sizing: border-box; flex: 1; height: 58px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Next{svg('chev', 18, 2.4)}</button></sc-if>
-        <sc-if value="{{{{last}}}}" hint-placeholder-val="{{{{ false }}}}"><a href="Main.dc.html" style="box-sizing: border-box; flex: 1; height: 58px; border-radius: 999px; background: #C93A30; color: #FFFFFF; box-shadow: 0 10px 22px rgba(201,58,48,.26); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Start · Today</a></sc-if>
-      </div>
+    <div style="display: flex; gap: 10px">
+      <sc-if value="{{{{hasBack}}}}" hint-placeholder-val="{{{{ false }}}}"><button type="button" onClick="{{{{back}}}}" aria-label="Back" style="all: unset; cursor: pointer; width: 58px; height: 58px; flex: none; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); color: #FFFFFF; display: flex; align-items: center; justify-content: center">{svg('back', 20, 2.4)}</button></sc-if>
+      <sc-if value="{{{{notLast}}}}" hint-placeholder-val="{{{{ true }}}}"><button type="button" onClick="{{{{next}}}}" style="all: unset; cursor: pointer; box-sizing: border-box; flex: 1; height: 58px; border-radius: 999px; background: #FFFFFF; color: #16203C; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">{{{{nextLabel}}}}{svg('chev', 18, 2.4)}</button></sc-if>
+      <sc-if value="{{{{last}}}}" hint-placeholder-val="{{{{ false }}}}"><a href="Main.dc.html" style="box-sizing: border-box; flex: 1; height: 58px; border-radius: 999px; background: #C93A30; color: #FFFFFF; box-shadow: 0 12px 28px rgba(201,58,48,.45); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Start · Today{svg('chev', 18, 2.4)}</a></sc-if>
     </div>
   </div>'''
 
@@ -109,7 +113,10 @@ script = '''class Component extends DCLogic {
       allow: () => this.setState({ [key]: !S[key] }) });
     return {
       ...vals, title: TXT[i][0], line: TXT[i][1],
-      dots: Array.from({ length: N }, (_, k) => k === i ? 'width:22px;background:#16203C' : 'width:8px;background:' + (k < i ? '#5F6980' : '#E0DCD4')),
+      dots: Array.from({ length: N }, (_, k) => k < i ? 'width:100%' : k === i ? 'width:100%;animation:owFill 1.2s ease-out both' : 'width:0'),
+      bg: 'radial-gradient(120% 70% at 50% 100%, ' + ['#24345F', '#2A2F66', '#3A2A55', '#2B3866', '#1F3D47', '#2B3866'][i] + ' 0%, #16203C 60%, #111A33 100%)',
+      glow: 'radial-gradient(circle, ' + ['rgba(111,220,176,.3)', 'rgba(169,174,240,.32)', 'rgba(231,166,214,.3)', 'rgba(245,178,107,.26)', 'rgba(111,220,176,.32)', 'rgba(255,255,255,.12)'][i] + ' 0%, rgba(0,0,0,0) 65%)',
+      nextLabel: i === N - 2 ? 'Last thing' : 'Next', bigN: '0' + (i + 1),
       dotsAria: 'Step ' + (i + 1) + ' of ' + N,
       perms: [perm('push', 'Notifications', 'A buzz when Ruth decides or a supplier answers', 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0'),
               perm('cam', 'Camera', 'For item photos and reading price lists', 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z')],
@@ -118,4 +125,4 @@ script = '''class Component extends DCLogic {
     };
   }
 }'''
-html = page('How it works', body_, script)
+html = page('How it works', body_, script, extra_css=CSS)
