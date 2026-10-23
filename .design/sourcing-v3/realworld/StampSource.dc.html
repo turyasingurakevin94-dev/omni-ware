@@ -160,9 +160,18 @@ button{font-family:inherit}
           <sc-if value="{{addingSell}}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 6px"><input value="{{fSellNew}}" aria-label="Something else they sell" placeholder="e.g. tile levelling clips" onInput="{{typeSellNew}}" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233; flex: 1; min-width: 0"><button type="button" onClick="{{addSell}}" style="all: unset; cursor: pointer; height: 48px; padding: 0 16px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">Add</button></div></sc-if>
         </div>
         <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #8A7A62">HOW THEY PACK IT</span>
+          <div role="radiogroup" aria-label="Sold as" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{units}}" as="u" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{u.on}}" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button></sc-for></div>
+          <div role="radiogroup" aria-label="Packed in" style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{outers}}" as="o" hint-placeholder-count="4"><button type="button" role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="{{o.style}}">{{o.label}}</button></sc-for></div>
+          <sc-if value="{{askN}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px"><input value="{{fPackN}}" inputmode="numeric" aria-label="How many in one" placeholder="how many" onInput="{{typePackN}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: center; width: 96px"><span style="font-size: 13px; font-weight: 700; color: #6B5A43">{{outerWord}}</span></div></sc-if>
+          <sc-if value="{{packOk}}" hint-placeholder-val="{{ false }}"><span style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #0F6B43"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5M12 12v9"></path></svg>{{packPreview}}</span></sc-if>
+        </div>
+        <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB; padding: 14px; display: flex; flex-direction: column; gap: 10px">
           <span style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #8A7A62">TILE CUTTER PRICES</span><span style="font-size: 11px; font-weight: 600; color: #8A7A62">if you have them</span></span>
+          <sc-if value="{{packAsk}}" hint-placeholder-val="{{ true }}"><span style="min-height: 44px; padding: 0 12px; border-radius: 12px; background: #F7F2E9; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #6B5A43">Set how they pack it first, so every price matches a pack.</span></sc-if>
+          <sc-if value="{{packOk}}" hint-placeholder-val="{{ false }}">
           <div style="display: grid; grid-template-columns: 76px 1fr 44px; gap: 6px 8px; align-items: center">
-            <span style="font-size: 11px; font-weight: 700; color: #8A7A62">FROM</span><span style="font-size: 11px; font-weight: 700; color: #8A7A62; text-align: right">PRICE EACH</span><span></span>
+            <span style="font-size: 11px; font-weight: 700; color: #8A7A62">FROM (PIECES)</span><span style="font-size: 11px; font-weight: 700; color: #8A7A62; text-align: right">PRICE EACH</span><span></span>
             <span class="m" style="height: 46px; border-radius: 12px; background: #EDE6D8; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: #6B5A43">1</span>
             <input value="{{fPrice}}" inputmode="numeric" aria-label="Price for one" placeholder="price for one" onInput="{{typePrice}}" class="m" style="height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 15px; font-weight: 600; color: #1C2233; height: 46px; text-align: right">
             <span></span>
@@ -175,8 +184,9 @@ button{font-family:inherit}
           <button type="button" onClick="{{addStep}}" style="all: unset; cursor: pointer; align-self: flex-start; min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #2B3A8C"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{addStepLabel}}</button>
           <sc-if value="{{hasLadder}}" hint-placeholder-val="{{ false }}">
             <div role="img" aria-label="{{ladderAria}}" style="display: flex; align-items: flex-end; gap: 6px; height: 64px; padding-top: 4px">
-              <sc-for list="{{ladderBars}}" as="lb" hint-placeholder-count="3"><span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px"><span class="m" style="font-size: 10px; font-weight: 600; color: #4A3A22">{{lb.p}}</span><span style="width: 100%; border-radius: 6px 6px 2px 2px; background: #2B3A8C; {{lb.h}}"></span><span class="m" style="font-size: 10px; font-weight: 600; color: #8A7A62">{{lb.q}}+</span></span></sc-for>
+              <sc-for list="{{ladderBars}}" as="lb" hint-placeholder-count="3"><span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px"><span class="m" style="font-size: 10px; font-weight: 600; color: #4A3A22">{{lb.p}}</span><span style="width: 100%; border-radius: 6px 6px 2px 2px; background: #2B3A8C; {{lb.h}}"></span><span class="m" style="font-size: 10px; font-weight: 600; color: #8A7A62">{{lb.q}}</span></span></sc-for>
             </div>
+          </sc-if>
           </sc-if>
         </div>
       </div>
@@ -191,7 +201,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', steps: [], qty: 3, sheet: false }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', steps: [], qty: 3, sheet: false, fUnit: null, fOuter: null, fPackN: '' }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -208,13 +218,13 @@ class Component extends DCLogic {
     const askers = [['GA', 'background:#FBE5E2;color:#8E2A22'], ['PS', 'background:#F6E4F1;color:#7A3268'], ['KC', 'background:#E3F4EA;color:#0F6B43']].map(([i, face]) => ({ i, face }));
     // [key, initials, name, why we think they have it, answer]
     const BASE = [
-      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { tiers: [[1, 380000], [5, 355000], [10, 340000]], per: 'in its box · 2 days' }],
-      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { tiers: [[1, 395000], [5, 370000]], per: 'next day' }],
+      ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { tiers: [[1, 380000], [4, 355000], [12, 340000]], pack: { n: 4, outer: 'carton', line: 'One in its own box · 4 to a carton' }, per: '2 days' }],
+      ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { tiers: [[1, 395000], [5, 370000]], pack: { n: 5, outer: 'box', line: 'One, loose · 5 to a box' }, per: 'next day' }],
       ['owi', 'OP', 'Owino Plumbing', 'Sometimes has tile tools', null]
     ];
     // the rest of the book: not the likely ones, but one tap away
     const BOOK = [
-      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { tiers: [[1, 410000]], per: '3 days' }],
+      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { tiers: [[1, 410000]], pack: { n: 1, outer: '', line: 'One in its own box · sold singly' }, per: '3 days' }],
       ['nam', 'NS', 'Namanve Sheets', 'Roofing, gutters', null],
       ['nde', 'NT', 'Ndeeba Timber Works', 'Timber, boards', null]
     ];
@@ -222,8 +232,10 @@ class Component extends DCLogic {
     const kfmt = (n) => (n % 1000 ? (n / 1000).toFixed(1) : n / 1000) + 'k';
     const at = (tiers, q) => tiers.filter(t => t[0] <= q).slice(-1)[0] || tiers[0];
     const Q = S.qty;
-    const tierChips = (tiers) => tiers.map(t => { const on = at(tiers, Q)[0] === t[0];
-      return { label: t[0] + '+ ' + kfmt(t[1]), style: on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EBE0;color:#4A3A22' }; });
+    // a step is named in the supplier's own packs: 1, 1 carton, 3 cartons
+    const packName = (q, pack) => { if (pack && pack.n > 1 && q >= pack.n && q % pack.n === 0) { const c = q / pack.n; return c + ' ' + pack.outer + (c > 1 ? 's' : ''); } return q === 1 ? '1' : q + '+'; };
+    const tierChips = (tiers, pack) => tiers.map(t => { const on = at(tiers, Q)[0] === t[0];
+      return { label: packName(t[0], pack) + ' · ' + kfmt(t[1]), style: on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EBE0;color:#4A3A22' }; });
     const SUP = BASE.concat(BOOK.filter(x => S.extra.includes(x[0])));
     const asked = S.phase === 'asked';
     const rows = SUP.map(([k, i, name, why, ans]) => {
@@ -231,17 +243,17 @@ class Component extends DCLogic {
       const st = !asked ? 'choose' : !on ? 'skip' : !back ? 'wait' : ans ? 'price' : 'none';
       return { i, name, on: String(on),
         pick: () => { if (!asked) this.setState({ pick: { ...S.pick, [k]: !on } }); },
-        sub: st === 'none' ? 'Answered: does not stock it' : st === 'wait' ? 'Asked in the supplier app' : why,
+        sub: st === 'none' ? 'Answered: does not stock it' : st === 'wait' ? 'Asked in the supplier app' : st === 'price' ? ans.pack.line + ' · ' + ans.per : why,
         subInk: st === 'none' ? 'color:#8E2A22' : 'color:#6B5A43',
         box: st === 'choose', boxStyle: on ? 'background:#16203C' : 'box-shadow:inset 0 0 0 2px #CDBFA6',
-        price: st === 'price', amount: ans ? fmt(at(ans.tiers, Q)[1]) : '', unit: ans ? at(ans.tiers, Q)[1] : 0, per: ans ? 'each at ' + Q + ' · ' + ans.per : '', waiting: st === 'wait',
-        tiers: ans ? tierChips(ans.tiers) : [], tiersAria: ans ? ans.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '',
+        price: st === 'price', amount: ans ? fmt(at(ans.tiers, Q)[1]) : '', unit: ans ? at(ans.tiers, Q)[1] : 0, per: ans ? 'each, for ' + Q : '', waiting: st === 'wait',
+        tiers: ans ? tierChips(ans.tiers, ans.pack) : [], tiersAria: ans ? ans.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '',
         rightInk: st === 'skip' ? 'opacity:.4' : '' };
     });
     if (S.custom) rows.push({ i: S.custom.name.slice(0, 2).toUpperCase(), name: S.custom.name, on: 'true', pick: () => {},
-      sub: (S.custom.price ? 'New · ' : 'New · asked on WhatsApp · ') + S.custom.where + ' · ' + S.custom.phone, subInk: 'color:#0F6B43',
-      box: false, boxStyle: '', price: !!S.custom.tiers, amount: S.custom.tiers ? fmt(at(S.custom.tiers, Q)[1]) : '', unit: S.custom.tiers ? at(S.custom.tiers, Q)[1] : 0, per: 'each at ' + Q + ' · your own price', waiting: !S.custom.tiers, rightInk: '',
-      tiers: S.custom.tiers ? tierChips(S.custom.tiers) : [], tiersAria: S.custom.tiers ? S.custom.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '' });
+      sub: (S.custom.tiers ? 'New · ' : 'New · asked on WhatsApp · ') + S.custom.pack.line + ' · ' + S.custom.where, subInk: 'color:#0F6B43',
+      box: false, boxStyle: '', price: !!S.custom.tiers, amount: S.custom.tiers ? fmt(at(S.custom.tiers, Q)[1]) : '', unit: S.custom.tiers ? at(S.custom.tiers, Q)[1] : 0, per: 'each, for ' + Q, waiting: !S.custom.tiers, rightInk: '',
+      tiers: S.custom.tiers ? tierChips(S.custom.tiers, S.custom.pack) : [], tiersAria: S.custom.tiers ? S.custom.tiers.map(t => t[0] + ' or more at ' + fmt(t[1])).join(', ') : '' });
     const pricedRows = rows.filter(r => r.price);
     const low = pricedRows.length > 1 ? Math.min(...pricedRows.map(r => r.unit)) : 0;
     const sups = rows.map((r, n) => ({ ...r, rule: n ? '1px solid #F1EBE0' : 'none', best: !!low && r.price && r.unit === low, bestLabel: 'best at ' + Q }));
@@ -257,6 +269,10 @@ class Component extends DCLogic {
     let prevQ = 1, prevP = fpv;
     const stepOk = S.steps.map(st => { const q = num(st.q), p = num(st.p); const ok = q > prevQ && p > 0 && (!prevP || p < prevP); if (ok) { prevQ = q; prevP = p; } return { q, p, ok, filled: !!(st.q || st.p) }; });
     const ladderT = fpv ? [[1, fpv]].concat(stepOk.filter(x => x.ok).map(x => [x.q, x.p])) : [];
+    const UN = { one: 'One piece', pair: 'A pair', set: 'A set' }, OU = { carton: 'Carton', box: 'Box', bundle: 'Bundle', single: 'Sold singly' };
+    const packN = S.fOuter === 'single' ? 1 : num(S.fPackN);
+    const packOk = !!S.fUnit && !!S.fOuter && (S.fOuter === 'single' || packN > 1);
+    const fPack = packOk ? { n: packN, outer: S.fOuter === 'single' ? '' : S.fOuter, line: UN[S.fUnit] + (S.fOuter === 'single' ? ' · sold singly' : ' · ' + packN + ' to a ' + S.fOuter) } : null;
     const canSave = S.fPhone.replace(/[^0-9]/g, '').length >= 9 && S.fWhere.trim().length > 2;
     const nPick = Object.values(S.pick).filter(Boolean).length;
     const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.tiers ? 1 : 0);
@@ -272,25 +288,29 @@ class Component extends DCLogic {
       moreSells: S.sellsMore, showAddSell: !S.addingSell, addingSell: S.addingSell, fSellNew: S.fSellNew,
       openSell: () => this.setState({ addingSell: true }), typeSellNew: (e) => this.setState({ fSellNew: e.target.value }),
       addSell: () => { const t = S.fSellNew.trim(); if (t.length > 1) this.setState({ sellsMore: [...S.sellsMore, t], fSellNew: '', addingSell: false }); }, typePrice: (e) => this.setState({ fPrice: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
-      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: ['Tile cutter 600mm'].concat(S.sellsMore), tiers: fpv ? ladderT : null }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', steps: [], sellsMore: [], addingSell: false, fSellNew: '', sheet: false }); },
+      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: ['Tile cutter 600mm'].concat(S.sellsMore), tiers: fpv && packOk ? ladderT : null, pack: fPack || { n: 1, outer: '', line: 'packing to confirm' } }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', steps: [], sellsMore: [], addingSell: false, fSellNew: '', sheet: false }); },
+      packOk, packAsk: !packOk, units: Object.keys(UN).map(k => ({ label: UN[k], on: String(S.fUnit === k), pick: () => this.setState({ fUnit: k }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (S.fUnit === k ? 'background:#16203C;color:#FFFFFF' : 'background:#F7F2E9;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') })),
+      outers: Object.keys(OU).map(k => ({ label: OU[k], on: String(S.fOuter === k), pick: () => this.setState({ fOuter: k }), style: 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (S.fOuter === k ? 'background:#16203C;color:#FFFFFF' : 'background:#F7F2E9;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB') })),
+      askN: !!S.fOuter && S.fOuter !== 'single', fPackN: S.fPackN, typePackN: (e) => this.setState({ fPackN: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }), outerWord: S.fOuter && S.fOuter !== 'single' ? 'to a ' + S.fOuter : '',
+      packPreview: fPack ? fPack.line : '',
       sheetOpen: S.sheet, openSheet: () => this.setState({ sheet: true }), closeSheet: () => this.setState({ sheet: false }),
       saveNote: !canSave ? 'Phone and where they are make the record' : fpv ? 'They join the supplier book · Denis is told' : 'No price yet: we ask them on WhatsApp',
-      ladderBars: ladderT.map(t => ({ q: t[0], p: Math.round(t[1] / 1000) + 'k', h: 'height:' + Math.round(16 + 36 * (t[1] - 0.85 * ladderT[ladderT.length - 1][1]) / Math.max(1, ladderT[0][1] - 0.85 * ladderT[ladderT.length - 1][1])) + 'px' })),
+      ladderBars: ladderT.map(t => ({ q: packName(t[0], fPack), p: Math.round(t[1] / 1000) + 'k', h: 'height:' + Math.round(16 + 36 * (t[1] - 0.85 * ladderT[ladderT.length - 1][1]) / Math.max(1, ladderT[0][1] - 0.85 * ladderT[ladderT.length - 1][1])) + 'px' })),
       steps: S.steps.map((st, i) => { const k = stepOk[i], bad = k.filled && !k.ok && k.q && k.p;
         const set = (patch) => this.setState({ steps: this.state.steps.map((x, j) => j === i ? { ...x, ...patch } : x) });
         return { q: st.q, p: st.p, qAria: 'Step ' + (i + 1) + ': from how many', pAria: 'Step ' + (i + 1) + ': price each',
           qRing: bad ? 'inset 0 0 0 2px #C47A1E' : 'inset 0 0 0 1.5px #E3DACB', pRing: bad ? 'inset 0 0 0 2px #C47A1E' : 'inset 0 0 0 1.5px #E3DACB',
           typeQ: (e) => set({ q: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }), typeP: (e) => set({ p: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
           remove: () => this.setState({ steps: this.state.steps.filter((x, j) => j !== i) }) }; }),
-      addStep: () => this.setState({ steps: [...S.steps, { q: '', p: '' }] }), addStepLabel: S.steps.length ? 'Add another step' : 'Cheaper in bulk? Add a price step',
-      hasLadder: ladderT.length > 1, ladder: ladderT.map(t => t[0] + '+ ' + t[1].toLocaleString('en-US')), ladderAria: ladderT.map(t => t[0] + ' or more at ' + t[1].toLocaleString('en-US')).join(', '),
+      addStep: () => this.setState({ steps: [...S.steps, { q: packN > 1 ? String(packN * [1, 3, 10][Math.min(2, S.steps.length)]) : '', p: '' }] }), addStepLabel: S.steps.length ? 'Add another step' : 'Cheaper in bulk? Add a price step',
+      hasLadder: ladderT.length > 1, ladder: ladderT.map(t => packName(t[0], fPack) + ' · ' + t[1].toLocaleString('en-US')), ladderAria: ladderT.map(t => t[0] + ' or more at ' + t[1].toLocaleString('en-US')).join(', '),
       saveLabel: fpv ? 'Add them, with their price' : 'Add them and ask on WhatsApp',
       saveStyle: canSave ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
       stampSub: priced + (priced === 1 ? ' PRICE IN' : ' PRICES IN'), stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
       told: (priced > 1 ? 'The ' + priced + ' prices go' : 'The price goes') + ' to the price list with every volume step. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
       stripAria: (S.inked ? 2 : 1) + ' of 9 stamps',
       listHead: asked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (nPick + (S.custom ? 1 : 0) - priced) + ' without') : 'Ask the ones who might have it',
-      canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + (nPick === 1 ? ' supplier' : ' suppliers') + ' for 1, 5 and 10',
+      canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + ' for packing and prices',
       ask: () => this.ask(), showMarket: !asked,
       open: !S.inked, inked: S.inked, holding: S.holding,
       pressDim: can ? '' : 'opacity:.55;cursor:default',
