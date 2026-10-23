@@ -36,7 +36,7 @@ Do not regress: books vs shelf split, exact-match search ranking, the Take back 
 | DATA-05 | P2 | `store.html`: `aisleListNow`, `aisleOf`, `stockItems` | A product with no category gets `{ name: 'No aisle yet', letter: '–', none: true }`, outside the letter sequence. Rows and picks say "No aisle yet". It is never counted as an aisle. | yes | Board `CatalogueTidy`. With one uncategorised product, its row reads "No aisle yet". |
 | DATA-06 | P3 | `0161`: one-off renames | Rename the approved names (" - " → " ", a space before "("). The variant separator " — " is untouched. | no | No product shows both separators. |
 
-### DATA-05 / DATA-06: the exact moves (waiting for the live list)
+### DATA-05 / DATA-06: the exact moves and renames (from the live list, waiting for your yes)
 
 This session can't read the live products, so the mapping isn't invented here. `docs/audit/round-1-preview.sql` is **read-only**: it lists every product in Furniture or with no category, with the aisle the name rules propose, plus every name with " - " or a bracket without a space and the proposed new name. Paste its results back and they go here as the table you approve.
 
@@ -70,7 +70,38 @@ The name rules it uses:
 | P271 | ZAWAINA Hinges - Normal | ZAWAINA Hinges Normal |
 | P273 | ZAWAINA Hinges - Soft | ZAWAINA Hinges Soft |
 
-"Half Bend(Type B)" isn't in this list, so it's a variant name, not a product name. `round-1-preview-2.sql` finds variant names like it. The DATA-05 moves and the aisle counts also come from that file. The first preview's results didn't come through, because the SQL editor shows only the last result of a script.
+**DATA-06, variant names (from preview 2): 4 to rename.** The order lines keep the variant by its position, not its name, so a rename changes no order and no stock.
+
+| ID | Variant group | Now | Proposed |
+|---|---|---|---|
+| P107 Chrome Pipe | Pipe Sizes | 19mm - Light | 19mm Light |
+| P107 Chrome Pipe | Pipe Sizes | 25mm - Heavy | 25mm Heavy |
+| P107 Chrome Pipe | Pipe Sizes | 25mm - Light | 25mm Light |
+| P271 ZAWAINA Hinges | Mulper Type | Half Bend(Type B) | Half Bend (Type B) |
+
+**DATA-05, the moves (from preview 2, 23 Oct): 146 products, 77 in Furniture, 3 with none.**
+
+The rule: **move only into aisles that already exist.** A new category takes a letter in the alphabet. "Adhesives", for instance, sorts before "Aluminum", so every shelf label would move one letter. Furniture keeps the real furniture fittings, so no aisle empties and **no letter changes**. The only change is that R "Other" disappears, and it is last. Today's letters: A Aluminum · B Bolts & Nuts · C Curtain Fittings · D Door Hardware · E Fasteners · F Fittings · G Furniture · H Gypsum · I Hand tools · J Handles · K Hinges · L Locks · M Painting · N Power Tool Accessories · O Runners · P Tools · Q Welding · R Other.
+
+| To | Products (id) | Why |
+|---|---|---|
+| **K Hinges** (3 → 14) | OMEGA Hinges - Normal (P269), OXFORD Hinges (P262), XY Mulper Hinges - Soft (P264), ZAWAINA Hinges - Normal (P271), ZAWAINA Hinges - Soft (P273), MEGA Mulper - Normal (P266), Mulper Frog - KYIKERE (P323), Normal Mulper (P042), Soft Close Mulper (P044), ZIN ZHUANG Soft Close (P371), Masasi 15pairs (P522, *was none*) | Hinges by name. A Mulper is a cabinet hinge: ZAWAINA Hinges has a "Mulper Type" variant. "15pairs" is how hinges are sold. |
+| **J Handles** (11 → 15) | BOVOS Door Handle - Small (P293), Drawer Handles - Flower (P381), LAK Handles - Big (P179), MEGGO Handles (P177) | name |
+| **L Locks** (8 → 13) | CH Drawer Locks (P307), Gate Latch (P291), PROTEX Drawer Lock (P181), STEEL MAN Door Lock (P115), KALE KILIT (P409) | Name. Kale Kilit is a lock brand ("kilit" means lock). |
+| **O Runners** (2 → 3) | Runners (P051) | name |
+| **N Power Tool Accessories** (2 → 5) | Concrete Bits (P385), Twist Drill Bits (P118), DCA Circular Blade (P541) | bits and blades for power tools |
+| **P Tools** (2 → 8) | AWARD Planer (P136), Belt Sander (P143), BOSCH Jig Saw (P336), DCA Baby Grinder (P279), DCA Electric Drill (P277), DCA Wood Router (P281) | power tools |
+| **I Hand tools** (1 → 13) | Bow Saw Blade (P086), Bow Saw Blade - Bahco (P094), G-MAN Bow Saw (P092), HandSaw (P524), COLT Hack Saw Flame (P128), WISEUP Hack Saw (P133), OXFORD Tape measure (P158), WISEUP Tape Measure (P171), Spanners (P147), Tri-Square (P313), HU DONG Staple Gun (P488), HANNSON Weighing Scale (P317) | hand tools |
+| **E Fasteners** (19 → 23) | KARDDIA Wall Plug (P289), SJS Wall Plugs (P285), LABIO Staple wires (P156), LIBAO Staple wires (P154) | wall plugs and staples fix things |
+| **M Painting** (1 → 10) | Paint Brushes (P139), ABB Brush (P416), China Stain (P152), Sanding Sealer (P348, *was none*), Deerfos Sand Paper (P481), INDASA Rhynolite Sandpaper Rolls (P145), BAHCO SandFlex (P400), Masking Tape - Green (P484), JUMLEE Spray Gun (P149) | finishing: brush, stain, seal, sand, mask, spray |
+| **H Gypsum** (6 → 7) | Corner Tape (P186) | drywall corners |
+| **C Curtain Fittings** (1 → 3) | Twisted Curtain Pipe (P111), Chrome Pipe (P107) | curtain and wardrobe rail |
+| **G Furniture** (stays, 77 → 22 with the row below) | Adjustable Stands 4" (P462), Bed Bracket (P098), Cable Outlets (P100), Casters (P103), Chair Pin (P402), Edging Lipping (P369), Pin Stands (P366), Sofa Legs (P283), Brackets (P500, *was none*) | real furniture fittings |
+| **G Furniture, for now: you decide** | BB Silicone (P081), Silcone Clear (P550), PU Foam (P124), Premia Bond (P315), Super Stick Contact Adhesive (P379), Elephant Jin Li (P498), ELEPHANT King (P073), Wrapping Film (P175), chains (P354), Axel Brade (P527), Patra (P529), Sail (P334), Parker Engine (P120) | Adhesives and sealants have no aisle. The last six names don't say what they are. Leaving them in Furniture is safe. Moving them needs an aisle from you. |
+
+After this: every hinge, handle, lock and runner is in its own aisle, and 0 products have no category. The Store app's "No aisle yet" guard covers any new product added without one.
+
+"Half Bend(Type B)" isn't in the product list, so it's a variant name, not a product name. `round-1-preview-2.sql` finds variant names like it. The DATA-05 moves and the aisle counts also come from that file. The first preview's results didn't come through, because the SQL editor shows only the last result of a script.
 
 ## Not changing / pushed back
 
@@ -89,7 +120,7 @@ The name rules it uses:
 
 ## Questions for Kevin
 
-1. **DATA-05/06:** run `docs/audit/round-1-preview.sql` and paste the results, or approve the rule table above and name the aisle for wall plugs, tapes, Sanding Sealer, Brackets and Masasi 15pairs.
+1. **DATA-05/06:** approve the move table and the 17 renames above (13 product names, 4 variant names). Say where the 13 in "Furniture, for now" should go, or leave them there.
 2. **DATA-01:** a count done again replaces the waiting one *when it is sent*, not when it is started, so walking away leaves Ruth with the old count. OK? (Recommended.)
 3. **DATA-01:** may anyone in the yard replace a colleague's waiting count (Musa replacing Joy's), or only the person who counted it? The plan says anyone with `stock.count`, and the sheet names whose count it replaces.
 
