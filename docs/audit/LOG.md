@@ -31,6 +31,6 @@ These four test reports ran before the rounds were numbered by aspect. Round 1 o
 - **Data clean-up.**
   - Rename the "turyasingurakevin94" staff record.
   - Warren to decline the duplicate "Aisle A · Aluminum" count.
-  - Warren to decline Ken Bwaise's 20 Ctn return on #0494, raised against 1 Ctn bought.
+  - ~~Warren to decline Ken Bwaise's 20 Ctn return on #0494.~~ Corrected in round 1: it is 20 Box, the whole 1 Ctn, with the wrong unit label (DATA-02). Do not decline it for its size.
 - **Sourcing data.** 76 of 145 products sit in "Furniture". "Aluminum" and "Aluminium" are both used.
 - **Not yet tested by Cowork.** Check-in, and the pack lock.
