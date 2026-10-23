@@ -32,6 +32,7 @@ bd = body('\n'.join([
     sec('What Moses sent'), lst(fact_rows),
     '    <button type="button" onClick="{{toggleBack}}" style="all: unset; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD">' + svg('returned', 18, 2, '#5F6980') + '<span style="flex: 1; font-size: 13px; font-weight: 700">Not ready? Send it back to Moses</span>' + chev() + '</button>',
     back_block,
+    '    <a href="ManagerRule.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 20px; box-shadow: inset 0 0 0 1px #E6E3DD">' + svg('tag', 18, 2, '#5F6980') + '<span style="flex: 1; font-size: 13px; font-weight: 700">Put items like this on sale by a rule</span>' + chev() + '</a>',
 ]))
 ft = foot(pill('Put it on sale at <span class="m">{{price}}</span>', href='Live.dc.html', kind='red'))
 
