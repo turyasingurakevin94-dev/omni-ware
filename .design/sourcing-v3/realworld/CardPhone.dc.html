@@ -35,18 +35,18 @@ a{color:inherit;text-decoration:none}
       </div>
       <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px">
         <sc-for list="{{stamps}}" as="s" hint-placeholder-count="6">
-          <button type="button" onClick="{{s.tap}}" aria-label="{{s.aria}}" style="all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px">
+          <a href="{{s.href}}" aria-label="{{s.aria}}" style="display: flex; flex-direction: column; align-items: center; gap: 7px">
             <span style="width: 86px; height: 86px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; {{s.look}}">
               <span style="font-size: 10px; font-weight: 700; letter-spacing: .08em">{{s.top}}</span>
               <span style="font-size: 13px; font-weight: 700; {{s.face}}">{{s.mid}}</span>
             </span>
             <span style="font-size: 12px; font-weight: 700; {{s.ink}}">{{s.label}}</span>
-          </button>
+          </a>
         </sc-for>
       </div>
       <div style="display: flex; gap: 14px; justify-content: center; font-size: 11px; font-weight: 700; color: #5F6980">
         <span style="display: flex; align-items: center; gap: 5px"><i style="width: 12px; height: 12px; border-radius: 999px; box-shadow: inset 0 0 0 2px #0F6B43"></i>inked</span>
-        <span style="display: flex; align-items: center; gap: 5px"><i style="width: 12px; height: 12px; border-radius: 999px; box-sizing: border-box; border: 1.5px dashed #6B7480"></i>pencil · tap to ink</span>
+        <span style="display: flex; align-items: center; gap: 5px"><i style="width: 12px; height: 12px; border-radius: 999px; box-sizing: border-box; border: 1.5px dashed #6B7480"></i>pencil · check it</span>
         <span style="display: flex; align-items: center; gap: 5px"><i style="width: 12px; height: 12px; border-radius: 999px; box-sizing: border-box; border: 1.5px dashed #95530C"></i>missing</span>
       </div>
     </div>
@@ -56,7 +56,7 @@ a{color:inherit;text-decoration:none}
     </div>
   </div>
   <div style="flex: none; padding: 12px 16px 22px">
-    <button type="button" onClick="{{go}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; {{goStyle}}">{{goLabel}}</button>
+    <a href="StampPack.dc.html" style="box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; {{goStyle}}">{{goLabel}}</a>
   </div>
 </div>
 </x-dc>
@@ -82,13 +82,14 @@ class Component extends DCLogic {
       r: 'border-radius:18px;background:#F6E4F1;box-shadow:inset 0 0 0 2px #7A3268;color:#7A3268'
     };
     const INK = { d: 'color:#0F6B43', p: 'color:#4A5163', g: 'color:#7A4A02', r: 'color:#7A3268' };
-    const WORD = { d: 'stamped', p: 'pencilled, tap to ink', g: 'missing, tap to fill', r: 'Ruth stamps last' };
+    const WORD = { d: 'stamped; open to see its proof', p: 'pencilled; open to check it', g: 'missing; open to do it', r: 'Ruth stamps last, in her app' };
+    // a stamp never inks from this screen: each one opens the work that earns it
+    const HREF = { photo: 'StampPhoto.dc.html', pack: 'StampPack.dc.html', sup: 'StampRules.dc.html', hold: 'StampHold.dc.html', aisle: 'StampPack.dc.html', price: 'RuthTray.dc.html' };
     const stamps = BASE.map(b => {
       const st = S.got[b.k] ? 'd' : b.start;
       return { label: b.label, top: b.top, mid: st === 'd' && b.start !== 'd' ? b.done : b.mid, look: LOOK[st], ink: INK[st],
         face: b.k === 'sup' || (b.k === 'photo' && st === 'd') ? "font-family:'IBM Plex Mono',monospace;font-weight:600" : '',
-        aria: b.label + ': ' + WORD[st],
-        tap: () => { if (st === 'p' || st === 'g') this.setState({ got: { ...S.got, [b.k]: true } }); } };
+        aria: b.label + ': ' + WORD[st], href: HREF[b.k] };
     });
     const pencils = BASE.filter(b => b.start === 'p' && !S.got[b.k]).length;
     const gaps = BASE.filter(b => b.start === 'g' && !S.got[b.k]);
@@ -97,7 +98,7 @@ class Component extends DCLogic {
     return {
       stamps, inkedN,
       go: () => { if (pencils) this.setState({ got: { ...S.got, pack: true, aisle: true } }); else if (ready) this.setState({ sent: true }); },
-      goLabel: S.sent ? 'In Ruth’s tray · she was told' : pencils ? 'Ink the ' + pencils + ' pencilled' : gaps.length ? 'Fill ' + gaps.length + ' missing: ' + gaps.map(g => g.label.toLowerCase()).join(', ') : 'Put it in Ruth’s tray',
+      goLabel: pencils ? 'Check the ' + pencils + ' pencilled, one by one' : gaps.length ? 'Do the ' + gaps.length + ' missing: ' + gaps.map(g => g.label.toLowerCase()).join(', ') : 'Put it in Ruth’s tray',
       goStyle: S.sent ? 'background:#E4F4EA;color:#0F6B43' : gaps.length && !pencils ? 'background:#F3D3CF;color:#8E2A22' : 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)'
     };
   }
