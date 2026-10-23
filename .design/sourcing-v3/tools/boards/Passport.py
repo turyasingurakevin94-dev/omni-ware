@@ -42,7 +42,7 @@ ladder = '''    <div style="''' + LIST + '''; padding: 14px; display: flex; flex
       </div>
     </div>'''
 mini_gauge = '''<span role="img" aria-label="Score 68" style="position: relative; width: 42px; height: 42px; flex: none; border-radius: 13px; background: #E4F4EA; overflow: hidden"><span style="position: absolute; left: 5px; top: 8px; width: 32px; height: 32px; border-radius: 999px; background: conic-gradient(from 270deg, #0F6B43 0deg 122deg, #C9E5D5 122deg 180deg, transparent 180deg)"></span><span style="position: absolute; left: 10px; top: 13px; width: 22px; height: 22px; border-radius: 999px; background: #E4F4EA"></span><span class="m" style="position: absolute; left: 0; right: 0; top: 18px; text-align: center; font-size: 11px; font-weight: 600; color: #0F6B43">68</span></span>'''
-verdict = lst(row('Stock is recommended', 'Not chosen yet · Stock, per order or consign', mini_gauge,
+verdict = lst(row('Stock is recommended', 'Not chosen yet · your Stock calls: 7 of 9 right', mini_gauge,
                   '<span style="flex: none; height: 30px; padding: 0 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">Choose</span>',
                   href='Verdict.dc.html', sub_style='color: #7A4A02'))
 askers = lst('\n'.join(row(n, v, face(i, t), f'<span style="flex: none; display: flex; align-items: center; gap: 8px"><span style="width: 56px; height: 6px; border-radius: 3px; background: #EFECE6; display: block"><span style="display: block; height: 6px; border-radius: 3px; background: #5F6980; width: {round(q/20*100)}%"></span></span><span class="m" style="width: 22px; text-align: right; font-size: 14px; font-weight: 600">{q}</span></span>')

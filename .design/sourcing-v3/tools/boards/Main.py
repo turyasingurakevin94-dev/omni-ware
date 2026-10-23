@@ -85,6 +85,7 @@ ages = ('<span role="img" aria-label="5 prices, 31 to 52 days old; 30 days is th
 
 waits = lst('\n'.join([
     row('Door hinge 4" brass', 'Ruth sent it back · photo too dark', thumb, gauge, href='SentBack.dc.html', sub_style='color: #7A4A02'),
+    row('Masking tape 2" isn’t selling', '22 of 60 in 45 days · 152,000 sitting', icon_well('warn', 'amber'), '<span aria-hidden="true" style="flex: none; width: 56px; display: flex; flex-direction: column; gap: 4px"><span style="height: 6px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px #C9C4BA"></span><span style="height: 6px; width: 37%; border-radius: 3px; background: #95530C"></span></span>', href='ReportCard.dc.html', sub_style='color: #7A4A02'),
     row('3 new asks', 'Door closer · shower mixer · “pvc glue”', faces, chev(), href='Wanted.dc.html'),
     row('“gutter bracket”', '7 searches · 4 people · nobody sells it', icon_well('search', 'oxide'), bars([0, 1, 1, 0, 2, 1, 2], '#D98A80', h=26, top=2), href='Hunt.dc.html'),
     row('2 supplier proposals', 'Owino Plumbing · Kiseka Steel', icon_well('tag', 'indigo'), updown, href='Proposals.dc.html'),
@@ -104,7 +105,7 @@ coach_rows = '\n'.join(
 
 inner = hd + '\n  <div style="padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">\n' + '\n'.join([
     job,
-    sec('Waiting on you · <span class="m">5</span>', '<a href="SentBack.dc.html" style="display: inline-flex; align-items: center; gap: 4px; color: #16203C; font-weight: 700">' + svg('M8 5.5v13l10.5-6.5z', 12, 1.6) + 'One at a time</a>'),
+    sec('Waiting on you · <span class="m">6</span>', '<a href="SentBack.dc.html" style="display: inline-flex; align-items: center; gap: 4px; color: #16203C; font-weight: 700">' + svg('M8 5.5v13l10.5-6.5z', 12, 1.6) + 'One at a time</a>'),
     waits,
     sec('Also worth it'),
     also,

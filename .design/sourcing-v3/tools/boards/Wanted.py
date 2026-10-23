@@ -16,7 +16,7 @@ row_html = '''      <div style="display: flex; flex-direction: column; gap: 10px
             <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.what}} <span class="m" style="color: #5F6980">{{a.qty}}</span></span>
             <span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.from}}</span>
           </span>
-          <span class="m" style="flex: none; font-size: 11px; font-weight: 600; color: #5F6980">{{a.when}}</span>
+          <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px"><span class="m" style="font-size: 13px; font-weight: 600; color: #1C2233">{{a.worth}}</span><span class="m" style="font-size: 11px; font-weight: 600; color: #5F6980">{{a.when}}</span></span>
         </div>
         <sc-if value="{{a.hasHint}}" hint-placeholder-val="{{ false }}">
           <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 6px 0 12px; border-radius: 14px; background: #E4E6FA; color: #3A3F9B">''' + svg('item', 16, 2) + '''<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 11px; font-weight: 700">{{a.matchWord}}</span><span class="nm" style="font-size: 13px; font-weight: 700; color: #1C2233; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.match}}</span></span><sc-if value="{{a.canSwap}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{a.notThis}}" aria-expanded="{{a.pickingStr}}" style="all: unset; cursor: pointer; flex: none; height: 36px; padding: 0 12px; border-radius: 999px; background: #FFFFFF; color: #16203C; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px">''' + svg('search', 13, 2.4) + '''{{a.swapLabel}}</button></sc-if></div>
@@ -57,13 +57,13 @@ script = '''class Component extends DCLogic {
     const set = (id, v) => () => this.setState({ res: { ...res, [id]: v } });
     const base = [
       { id: 'a', ini: 'GA', tint: ['#DCEAF8', '#1A5A8A'], from: 'Grace Akello · for Kato Construction', when: '10:42',
-        what: 'Door closer, medium', qty: '× 6', asideLabel: 'Set aside', goLabel: 'Hunt it',
+        what: 'Door closer, medium', qty: '× 6', worth: '≈ 270,000', asideLabel: 'Set aside', goLabel: 'Hunt it',
         out: { hunt: 'Hunting · in the Funnel', aside: 'Set aside · Grace is told' } },
       { id: 'b', ini: 'PS', tint: ['#FDE8E4', '#A82D24'], from: 'Peter Sserwadda · agent', when: '09:15',
-        what: 'Shower mixer, chrome', qty: '× 4', asideLabel: 'Set aside', goLabel: 'Hunt it',
+        what: 'Shower mixer, chrome', qty: '× 4', worth: '≈ 520,000', asideLabel: 'Set aside', goLabel: 'Hunt it',
         out: { hunt: 'Hunting · Peter is told', aside: 'Set aside · Peter is told' } },
       { id: 'c', ini: '5×', tint: ['#F1EEE8', '#5F6980'], from: '5 searches · 3 named people · this week', when: 'week',
-        what: '“pvc glue”', qty: '', hint: true, asideLabel: 'Set the words aside', goLabel: 'Teach the name',
+        what: '“pvc glue”', qty: '', worth: '≈ 150,000', hint: true, asideLabel: 'Set the words aside', goLabel: 'Teach the name',
         out: { hunt: 'Taught · “pvc glue” finds ' + this.state.item, aside: 'Set aside · these words stop showing' } }
     ];
     const S = this.state;

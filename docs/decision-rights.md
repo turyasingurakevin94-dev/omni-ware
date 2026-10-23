@@ -176,6 +176,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Decide a new item's first batch: how many, and when** (Sourcing only suggests it from the verdict) | `buy.restock` | Buyer | Sourcing | Manager | yes |
 | **Put a new item on sale.** Sourcing sends its passport (photo, packing, suppliers, the hold, name and aisle); the Manager prices it and it goes on sale in one write (`manager_price_item`, 0159). Until then it stays a lead, never a product | `markup.set` | Manager | Sourcing | Sourcing, the customers who asked | yes |
 | **Set a standing price rule for new items**: on sale at a set markup when the room under the cheapest rival is strong; each one can be changed or held for 24 hours (`presets.newItemPriceRule`, 0159) | `markup.set` | Manager | — | owner's log | yes |
+| **Decide what to do with an item Sourcing brought in that is not selling**: per order from now, or off sale when the last one sells (the report card, 0159). A lower price is asked of the Manager, never set here | `product.edit` | Sourcing | — | Buyer, Manager | yes |
 | **Pin an item to the agents' feed** (`agent_feed_pins`; 0126 let Sourcing pin new items, and the build that grants this takes that back) | `feed.pin` | Manager | Sourcing | the shop's agents | no |
 
 ### The team

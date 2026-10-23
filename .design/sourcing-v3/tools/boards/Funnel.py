@@ -26,7 +26,7 @@ hd = home_head('Funnel', 'Every new item passes six checks', right, seg_nav + '\
 
 item_row = '''        <a href="{{it.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px">
           <span role="img" aria-label="{{it.aria}}" style="position: relative; width: 42px; height: 42px; flex: none; border-radius: 999px; background: {{it.ring}}"><span class="m" style="position: absolute; inset: 5px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{it.done}}/6</span></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.sub}}</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><span style="color: #1C2233; font-weight: 700">{{it.worth}}</span>{{it.sub}}</span></span>
           <span style="flex: none; height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; {{it.rightStyle}}">{{it.right}}</span>
         </a>'''
 groups = '''    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
@@ -39,7 +39,16 @@ groups = '''    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
         </div>
       </div>
     </sc-for>'''
-inner = hd + '\n  <div style="padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 4px">\n' + groups + '\n  </div>'
+shelf = ('''    <sc-if value="{{showShelf}}" hint-placeholder-val="{{ true }}">
+    <div style="' + LIST + '; margin-top: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">11</span><span style="flex: 1; font-size: 13px; font-weight: 700">days from ask to on sale</span><span style="display: flex; align-items: center; gap: 3px; height: 22px; padding: 0 8px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 11px; font-weight: 700">''' + svg('M12 5v14M6 13l6 6 6-6', 11, 3) + '''2 d on September</span></div>
+      <div role="img" aria-label="The middle item spends 3 days wanted, 4 hunting (the slowest), 2 quoted, 1 ready and 1 with Ruth" style="display: flex; flex-direction: column; gap: 5px">
+        <sc-for list="{{stages}}" as="s" hint-placeholder-count="5"><div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; font-size: 11px; font-weight: 700; {{s.ink}}">{{s.label}}</span><span style="flex: 1; height: 8px; border-radius: 4px; background: #EFECE6; display: block"><span style="display: block; height: 8px; border-radius: 4px; {{s.bar}}"></span></span><span class="m" style="width: 30px; text-align: right; font-size: 12px; font-weight: 600; {{s.ink}}">{{s.d}} d</span></div></sc-for>
+      </div>
+      <span style="font-size: 12px; font-weight: 600; color: #5F6980">Hunting is the slow part · ≈ on each item is what its askers want, at the market price</span>
+    </div>
+    </sc-if>''')
+inner = hd + '\n  <div style="padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 4px">\n' + shelf + '\n' + groups + '\n  </div>'
 
 script = '''class Component extends DCLogic {
   constructor(p) { super(p); this.state = { lane: 'all', view: 'open' }; }
@@ -59,7 +68,7 @@ script = '''class Component extends DCLogic {
         parts.push('#FFFFFF ' + a + 'deg ' + (a + 5) + 'deg', COL[k] + ' ' + (a + 5) + 'deg ' + (b - 5) + 'deg', '#FFFFFF ' + (b - 5) + 'deg ' + b + 'deg');
       });
       return {
-        ...o, href: o.href || o.goHref || 'Funnel.dc.html',
+        ...o, worth: o.worth || '', href: o.href || o.goHref || 'Funnel.dc.html',
         ring: 'conic-gradient(' + parts.join(',') + ')', done: s.filter(k => k === 'd').length,
         right: o.go || o.status, rightStyle: o.go ? GO : (o.statusStyle || SOFT),
         aria: s.map((k, i) => GATES[i] + ' ' + WORD[k]).join(', ')
@@ -67,24 +76,24 @@ script = '''class Component extends DCLogic {
     };
     const open = [
       { key: 'back', label: 'Sent back', n: 1, ink: 'color:#7A4A02', items: [
-        mk({ name: 'Door hinge 4" brass', sub: 'Ruth: the photo is too dark', gates: 'gddddt', go: 'Retake', goHref: 'SentBack.dc.html' })
+        mk({ name: 'Door hinge 4" brass', worth: '≈ 360,000 · ', sub: 'Ruth: the photo is too dark', gates: 'gddddt', go: 'Retake', goHref: 'SentBack.dc.html' })
       ] },
       { key: 'wanted', label: 'Wanted', n: 9, items: [
-        mk({ name: 'Gutter bracket, galvanised', sub: '7 searches · 4 named people', gates: 'tttttt', go: 'Hunt it', goHref: 'Hunt.dc.html' }),
-        mk({ name: 'PPR pipe 25mm × 4m', sub: 'Ggaba Stores · Nansana Hardware', gates: 'tttttt', go: 'On the walk', goHref: 'MarketRun.dc.html' })
+        mk({ name: 'Gutter bracket, galvanised', worth: '≈ 1.1 M a month · ', sub: '7 searches · 4 named people', gates: 'tttttt', go: 'Hunt it', goHref: 'Hunt.dc.html' }),
+        mk({ name: 'PPR pipe 25mm × 4m', worth: '≈ 380,000 · ', sub: 'Ggaba Stores · Nansana Hardware', gates: 'tttttt', go: 'On the walk', goHref: 'MarketRun.dc.html' })
       ] },
       { key: 'hunting', label: 'Hunting', n: 6, items: [
-        mk({ name: 'Ridge cap G28, maroon', sub: 'Asked 2 days ago', gates: 'ttttdt', status: 'Waiting on 3' })
+        mk({ name: 'Ridge cap G28, maroon', worth: '≈ 900,000 · ', sub: 'Asked 2 days ago', gates: 'ttttdt', status: 'Waiting on 3' })
       ] },
       { key: 'quoted', label: 'Quoted', n: 4, items: [
-        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 2 to check · 3 customers waiting', gates: 'gadgat', href: 'Passport.dc.html', go: 'Fix 2 gaps', goHref: 'GapWalk.dc.html' }),
-        mk({ name: 'Self-drilling screws 10×25', sub: '2 prices · Faith Nambi asked', gates: 'dgdtdt', go: 'Packing', goHref: 'PackingGate.dc.html' })
+        mk({ name: 'Wire mesh BRC A142', worth: '≈ 6.0 M · ', sub: '2 prices · 2 to check · 3 customers waiting', gates: 'gadgat', href: 'Passport.dc.html', go: 'Fix 2 gaps', goHref: 'GapWalk.dc.html' }),
+        mk({ name: 'Self-drilling screws 10×25', worth: '≈ 240,000 · ', sub: '2 prices · Faith Nambi asked', gates: 'dgdtdt', go: 'Packing', goHref: 'PackingGate.dc.html' })
       ] },
       { key: 'ready', label: 'Ready', n: 3, items: [
-        mk({ name: 'Tile cutter 600mm', sub: 'Five checks done', gates: 'dddddt', go: 'Send to Ruth', goHref: 'SendToManager.dc.html' })
+        mk({ name: 'Tile cutter 600mm', worth: '≈ 520,000 · ', sub: 'Five checks done', gates: 'dddddt', go: 'Send to Ruth', goHref: 'SendToManager.dc.html' })
       ] },
       { key: 'manager', label: 'With Ruth', n: 2, items: [
-        mk({ name: 'Paint roller 9"', sub: 'Ruth was told 3 h ago', gates: 'dddddt', status: 'With Ruth', statusStyle: 'background:#FDEEE1;color:#7A4A02' })
+        mk({ name: 'Paint roller 9"', worth: '≈ 300,000 · ', sub: 'Ruth was told 3 h ago', gates: 'dddddt', status: 'With Ruth', statusStyle: 'background:#FDEEE1;color:#7A4A02' })
       ] },
       { key: 'live', label: 'Live this week', n: 5, items: [
         mk({ name: 'Tile adhesive 20kg', sub: 'On sale since Thursday', gates: 'dddddd', status: '2 told', statusStyle: 'background:#E4F4EA;color:#0F6B43' })
@@ -112,7 +121,9 @@ script = '''class Component extends DCLogic {
     const groups = isOpen ? open.filter(g => this.state.lane === 'all' || g.key === this.state.lane) : certify;
     const tab = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:38px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
     return {
-      chips, segs, groups, isOpen, isCert: !isOpen,
+      chips, segs, groups, isOpen, isCert: !isOpen, showShelf: isOpen && this.state.lane === 'all',
+      stages: [['Wanted', 3], ['Hunting', 4], ['Quoted', 2], ['Ready', 1], ['With Ruth', 1]].map(([label, d]) => ({ label, d,
+        bar: 'width:' + (d / 4 * 100) + '%;background:' + (d === 4 ? '#95530C' : '#6B7480'), ink: d === 4 ? 'color:#7A4A02' : 'color:#5F6980' })),
       openTab: tab(isOpen), certTab: tab(!isOpen), openSel: String(isOpen), certSel: String(!isOpen),
       showOpen: () => this.setState({ view: 'open' }),
       showCertify: () => this.setState({ view: 'certify' })

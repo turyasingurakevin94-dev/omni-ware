@@ -276,3 +276,15 @@ Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html
 | P8 | The Funnel's lane chips fade at the right edge. |
 
 The guide's Sourcing section (`docs/phone-design-language.md`) records the count rule, the hit-area rule and the mono-digits rule.
+
+## After round 6: the owner's comments (23 Oct)
+
+| Comment | What changed |
+|---|---|
+| Teach a name, but the match is wrong | Wanted: "Not this one" opens a search in the card; pick the item the words mean, then teach. |
+| A new supplier looks basic | Redrawn: the supplier as a card being built (four bars), the look-alike side by side, tags that show what they could fill, typed terms, a done screen. The map was tried and removed. |
+| An aisle not in the five | Name & aisle: "Other aisle" lists all 14, or makes a new one. |
+| What is the Funnel bar? | Its ends say "just asked" and "on sale"; a picked lane lights its part. |
+| Today's walk dots | Three named stops with their icon and jobs; the first ringed. |
+| Improve the system as a whole (all but the supplier Wanted board) | New **Report card** (did it sell: hit rate by hold, expected against sold, a miss to decide); time to shelf on the Funnel; shillings on every Funnel and Wanted line; askers told with the price and a reserve tap on Live; the miss on Today; the track record beside the verdict. |
+| Sign in and a walkthrough | New **SignIn** (email and password, wrong-password and reset states) and **Welcome** (five pictures of how it works, then notifications and camera, nothing switched on for you), a fifth canvas row. |
