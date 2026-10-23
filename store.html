@@ -1064,8 +1064,10 @@ function rowToQuote(q){
 function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : Number(r.variant_idx), name: r.name || '', qty: Number(r.qty) || 0,
   reason: r.why || 'damaged', photo: r.photo_path || null, by: r.reported_by, byName: r.reported_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
 // Goods back at the gate are a credit ask (0123 invoice_asks, kind 'credit'); the Manager raises the note.
-// One way to say a returned line, everywhere: "20 Ctn ABC black screws", as the gate wrote it.
-function returnLineWords(q, l){ const it = q && (q.items || [])[l.idx], name = it ? lineName(it).base : (l.name || ''); return [l.shown || (n0(l.qty) + ' ' + (l.unit || '')).trim(), name].filter(Boolean).join(' '); }
+// One way to say a returned line, everywhere: "1 Ctn ABC black screws". qty is in the order line's own
+// unit (0161), so it reads through the line's pack formatter -- never a unit the phone once wrote with it.
+function returnLineWords(q, l){ const it = q && (q.items || [])[l.idx], name = it ? lineName(it).base : (l.name || '');
+  return [it ? backText(it, Number(l.qty) || 0) : (l.shown || (n0(l.qty) + ' ' + (l.unit || '')).trim()), name].filter(Boolean).join(' '); }
 function rowToReturn(r){ return { id: r.id, orderId: r.quote_id, lines: Array.isArray(r.lines) ? r.lines : [], reason: r.reason || '', note: r.note || '',
   by: r.asked_by || null, byName: r.asked_by_name || '', status: r.status, createdAt: r.created_at }; }
 // What has already come back on a line, or is waiting to: open and accepted
@@ -1089,7 +1091,18 @@ function backText(it, n){ const per = quoteLineCountPer(it), u = String(it.unit 
 function countsIntoLastCounted(map, rows){ (rows || []).forEach(c => { if (c.status !== 'accepted') return; const t = msOf(c.decided_at || c.decidedAt) || msOf(c.created_at || c.createdAt);
   (Array.isArray(c.lines) ? c.lines : []).forEach(l => { if (l && l.key && t > (map[l.key] || 0)) map[l.key] = t; }); }); return map; }
 function rowToCount(c){ return { id: c.id, aisle: c.aisle || '', countedBy: c.counted_by, countedByName: c.counted_by_name || '', lines: Array.isArray(c.lines) ? c.lines : [],
-  status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at, missing: Array.isArray(c.missing) ? c.missing : [] }; }
+  status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at, missing: Array.isArray(c.missing) ? c.missing : [],
+  place: c.place || countPlace(c.aisle, (Array.isArray(c.lines) ? c.lines : []).map(l => l && l.key)), replaces: c.replaces || null }; }
+// One count of a place waits at a time (0161): an aisle by its category's name (a letter moves when
+// the aisles do, the name doesn't), one item by its key. As ow_count_place() in the database.
+function countPlace(aisle, keys){ const a = String(aisle || ''), i = a.indexOf(' · ');
+  if (/^spot count/i.test(a)) return 'item:' + ((keys && keys[0]) || a.trim().toLowerCase());
+  return /^aisle /i.test(a) && i > 0 ? 'aisle:' + a.slice(i + 3).trim().toLowerCase() : null; }
+function waitingCount(place){ return place ? (D().counts || []).find(c => c.status === 'sent' && c.place === place) || null : null; }
+// "Joy's Thu 9:45" / "your 9:45": whose count, and when it went.
+function countWhose(c){ const t = msOf(c.createdAt), when = (isTodayMs(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short' }) + ' ') + hm(t);
+  return { id: c.id, who: c.countedBy === (S.user && S.user.id) ? 'You' : firstWord(c.countedByName) || 'The yard', name: c.countedByName || '', mine: c.countedBy === (S.user && S.user.id), when, n: (c.lines || []).length }; }
+function whoseWord(r){ return r.mine ? 'your' : `${r.who}’s`; }
 
 // 0156: the packed orders that wait on money -- a cash customer, not paid, no
 // yes from the Manager -- as id -> { decision }. null before 0156.
@@ -1308,10 +1321,13 @@ function lineImage(it){ return productImage(productById(it.productId), it.varian
 /* ---- the aisles: one per category, lettered in the order they sort ---- */
 function aisleList(){ return memo('aisles', aisleListNow); }
 function aisleListNow(){
-  const names = [...new Set(D().products.map(p => p.category || 'Other'))].sort((a, b) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b));
+  // A product with no category has no aisle yet (0161): it takes no letter, so it never moves the others.
+  const names = [...new Set(D().products.map(p => String(p.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   return names.map((name, i) => ({ name, letter: i < 26 ? String.fromCharCode(65 + i) : String(i + 1) }));
 }
-function aisleOf(pid){ const p = productById(pid), n = (p && p.category) || 'Other'; return aisleList().find(a => a.name === n) || { name: n, letter: '?' }; }
+const NO_AISLE = { name: 'No aisle yet', letter: '–', none: true };
+function aisleWord(a){ return a && a.none ? 'No aisle yet' : 'Aisle ' + ((a && a.letter) || '?'); }
+function aisleOf(pid){ const p = productById(pid), n = String((p && p.category) || '').trim(); return n ? aisleList().find(a => a.name === n) || { name: n, letter: '?' } : NO_AISLE; }
 
 /* ---- pictures of the goods, when the product has none of its own ---- */
 const KINDS = [
@@ -1527,7 +1543,7 @@ function stockItems(){
     aisleList().forEach(a => { aisles[a.name] = a; });
     D().products.forEach(p => {
       const vs = Array.isArray(p.variants) && p.variants.length ? p.variants.map((_, i) => i) : [null];
-      const aisle = aisles[p.category || 'Other'] || { name: p.category || 'Other', letter: '?' };
+      const cat = String(p.category || '').trim(), aisle = cat ? aisles[cat] || { name: cat, letter: '?' } : NO_AISLE;
       vs.forEach(vi => { const key = stockKey(p.id, vi); if (seen.has(key)) return; seen.add(key);
         // On the shelf is the books less what has already left it for orders not yet invoiced (packed, out,
         // delivered): a pack delivered this morning is not on the shelf, though the invoice goes tomorrow.
@@ -2377,10 +2393,27 @@ async function sendCount(aisle, lines, missing){
   const row = { shop_id: S.shopId, aisle, counted_by: S.user.id, counted_by_name: myName(), lines };
   let { data, error } = await sb.from('stock_counts').insert(missing && missing.length ? { ...row, missing } : row).select('*').single();
   if (error && missing && missing.length && needs0115(error)) ({ data, error } = await sb.from('stock_counts').insert(row).select('*').single());
+  // 0161: a count of this place reached the Manager first (someone else's, or this phone's from before):
+  // sent now, this one replaces it -- the latest count is the one the Manager sees.
+  if (error && error.code === '23505') { const place = countPlace(aisle, lines.map(l => l.key));
+    const { data: open } = await sb.from('stock_counts').select('*').eq('shop_id', S.shopId).eq('status', 'sent').eq('place', place).limit(1);
+    if (open && open[0]) { const o = rowToCount(open[0]); if (S.ui.ct && S.ui.ct.aisle === aisle) S.ui.ct.replaces = countWhose(o); return sendCountReplace(aisle, lines, missing, o.id); } }
   if (error) throw error;
   if (D().counts) D().counts.unshift(rowToCount(data));
   saveSnapshot();
   return rowToCount(data);
+}
+// Count it again (0161): the waiting count of the same place is replaced as this one goes in. If the
+// Manager decided it meanwhile, this one goes as the next count (replaced: false).
+async function sendCountReplace(aisle, lines, missing, oldId){
+  const { data, error } = await sb.rpc('store_count_replace', { p_shop: S.shopId, p_old: oldId, p_aisle: aisle, p_lines: lines, p_missing: missing || [], p_name: myName() });
+  if (error && needs0115(error)) return Object.assign(await sendCount(aisle, lines, missing), { replaced: false, oldStatus: 'sent' });
+  if (error) throw error;
+  const c = rowToCount(data), was = (D().counts || []).find(x => x.id === oldId);
+  if (data.replaced && was) was.status = 'superseded';
+  if (D().counts) D().counts.unshift(c);
+  saveSnapshot();
+  return Object.assign(c, { replaced: !!data.replaced, oldStatus: data.old_status || null });
 }
 async function decideCount(id, accept){
   const { data, error } = await sb.rpc(accept ? 'accept_stock_count' : 'ask_recount', { p_id: id });
@@ -2911,7 +2944,8 @@ function ruthAsks(){
     const add = (list, o) => list.push(o);
     (D().counts || []).filter(c => mine(c.countedBy)).forEach(c => {
       const o = { title: `${esc(String(c.aisle || 'Count').replace(/^Aisle /, 'Aisle '))} count`, icon: CV.count, act: 'decide', data: { id: c.id } };
-      if (c.status === 'sent') add(waiting, { ...o, sub: `${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · sent from the yard`, since: msOf(c.createdAt) });
+      const was = c.replaces && (D().counts || []).find(x => x.id === c.replaces);
+      if (c.status === 'sent') add(waiting, { ...o, sub: `${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · ${was ? `replaces ${esc(whoseWord(countWhose(was)))} ${esc(countWhose(was).when)} count` : 'sent from the yard'}`, since: msOf(c.createdAt) });
       else if (isTodayMs(msOf(c.decidedAt))) add(answered, { ...o, title: c.status === 'recount' ? `Recount · ${esc(c.aisle)}` : `${esc(c.aisle)} count`, answer: c.status === 'recount' ? 'Asked for a recount' : 'Accepted your count', at: msOf(c.decidedAt), tone: c.status === 'recount' ? 'warn' : 'good',
         say: c.status === 'recount' ? `${esc(mgr)} asks for a recount` : `${esc(mgr)} accepted your count`, saySub: esc(c.aisle) });
     });
@@ -3504,8 +3538,8 @@ SHEET.extra = a => {
     : `<label style="display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">${ic('search', 18)}<input id="ex_find" data-in="exfind" value="${esc(a.find || '')}" placeholder="What is it? Type a name" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px"></label>
       ${!find ? (() => { const sup = R && R.t.supplierId, before = sup ? [...new Map((D().collectionTrips || []).filter(t => t.supplierId === sup).flatMap(tripLines).map(l => stockItems().find(x => String(x.productId) === String(l.productId) && String(x.variantIdx == null ? '' : x.variantIdx) === String(l.variantIdx == null ? '' : l.variantIdx))).filter(Boolean).map(x => [x.key, x])).values()].slice(0, 4) : [];
         return `<button data-act="exscan" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px;border-radius:18px;border:none;background:#16203C;color:#fff;text-align:left"><span style="width:38px;height:38px;flex:none;border-radius:12px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10', 18, 2)}</span><span class="cv-tx"><span class="cv-tt">Scan its label</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">The fastest way · it finds the item</span></span></button>
-          ${before.length ? `<span style="padding:4px 4px 0;font-size:13px;font-weight:700;color:var(--ink2)">${esc(shortName((supplierById(sup) || {}).name || 'This supplier'))} brought before</span><div class="cv-list">${before.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('')}</div>` : ''}`; })() : ''}
-      ${hits.length ? `<div class="cv-list">${hits.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('')}</div>` : ''}
+          ${before.length ? `<span style="padding:4px 4px 0;font-size:13px;font-weight:700;color:var(--ink2)">${esc(shortName((supplierById(sup) || {}).name || 'This supplier'))} brought before</span><div class="cv-list">${before.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">${esc(aisleWord(h.aisle))}</span></span></button>`).join('')}</div>` : ''}`; })() : ''}
+      ${hits.length ? `<div class="cv-list">${hits.map(h => `<button class="cv-row" data-act="expick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">${esc(aisleWord(h.aisle))}</span></span></button>`).join('')}</div>` : ''}
       ${find ? `<button data-act="exnew" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;border-radius:16px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);font-size:13px;font-weight:700;text-align:left"><span style="width:28px;height:28px;flex:none;border-radius:999px;background:#F1EEE8;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 14, 2.4)}</span>${hits.length ? 'Not one of these · record it as new' : 'Nothing on file by that name · record it as new'}</button>` : ''}`}
     ${x ? `<span style="padding:0 4px;font-size:13px;font-weight:700;color:var(--ink2)">Why is it here?</span>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
@@ -3589,7 +3623,7 @@ async function checkInRound(ui, R){
 }
 ACT.home = () => { FEEL.back(); go('today'); };
 // Something this screen was opened for has moved on: say where it went (the canvas's MovedOn), never just "gone".
-function goneSheet(msg){
+function goneSheet(msg, title){
   const a = (S.stack[S.stack.length - 1] || {}).args || {}, q = a.id != null && /^\d+$/.test(String(a.id)) ? (D().savedQuotes || []).find(o => Number(o.id) === Number(a.id)) : null;
   const off = q && (q.voided || q.status === 'cancelled' || (typeof orderCalledOff === 'function' && orderCalledOff(q))), done = q && q.status === 'completed';
   const steps = [];
@@ -3600,7 +3634,7 @@ function goneSheet(msg){
   const v = done ? { t: orderIsPickup(q) ? 'Already collected' : 'Already delivered', l: 'Nothing left to do here', bg: '#6FDCB0', ink: '#16203C', i: CV.tick }
     : off ? { t: 'Called off', l: `${managerName()} called it off · put back anything packed`, bg: '#FDEEE1', ink: '#95530C', i: 'M6 6l12 12M18 6 6 18' }
     : q ? { t: 'It moved on', l: msg, bg: 'rgba(255,255,255,.1)', ink: '#DDE3F0', i: CV.chev }
-    : { t: 'Not on this phone', l: a.id != null && /^\d+$/.test(String(a.id)) ? `No order #${String(a.id).padStart(4, '0')} here · it may be another shop's, or not made yet` : msg, bg: 'rgba(255,255,255,.1)', ink: '#DDE3F0', i: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5' };
+    : { t: title || 'Not on this phone', l: a.id != null && /^\d+$/.test(String(a.id)) ? `No order #${String(a.id).padStart(4, '0')} here · it may be another shop's, or not made yet` : msg, bg: 'rgba(255,255,255,.1)', ink: '#DDE3F0', i: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5' };
   if (!steps.length) steps.push(['Last refreshed', hm(S.loadedAt)]);
   return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px">
     <div class="cv-top">${cvBack()}<b>${q ? q4(q) + ' · ' + esc(shortName(quoteClientName(q))) : ''}</b><span class="cv-circ blank"></span></div>
@@ -3680,7 +3714,7 @@ PAGE.pack = ({ id }) => {
     const gap = st === 'short' ? quoteLineCount(it, (Number(it.qty) || 0) - itemPicked(it)).n : 0;
     return `<div aria-hidden="${!on}" style="width:300px;height:100%;max-height:420px;flex:none;align-self:center;border-radius:28px;background:#fff;box-shadow:0 1px 2px rgba(22,32,60,.05),0 14px 34px rgba(22,32,60,.10),inset 0 0 0 1px #E6E3DD;overflow:hidden;display:flex;flex-direction:column;transform:scale(${on ? 1 : .9});opacity:${on ? 1 : .55};transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .35s">
       <div style="position:relative;flex:1 1 272px;min-height:96px;background:linear-gradient(160deg,${T[0]} 0%,${paler(T[0], .62)} 100%);display:flex;align-items:center;justify-content:center">
-        <button type="button" data-act="aisle" data-a="${esc(a.letter)}" ${on ? '' : 'tabindex="-1"'} aria-label="See aisle ${esc(a.letter)}" style="position:absolute;left:10px;top:10px;height:38px;padding:0 14px;border-radius:999px;border:none;background:#fff;color:#16203C;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M3 21V8l9-5 9 5v13M7 21v-8h10v8', 14, 2.2)}Aisle ${esc(a.letter)}</button>
+        <button type="button" data-act="aisle" data-a="${esc(a.letter)}" ${on ? '' : 'tabindex="-1"'} aria-label="See ${esc(aisleWord(a))}" style="position:absolute;left:10px;top:10px;height:38px;padding:0 14px;border-radius:999px;border:none;background:#fff;color:#16203C;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">${sv('M3 21V8l9-5 9 5v13M7 21v-8h10v8', 14, 2.2)}${esc(aisleWord(a))}</button>
         <span class="m" style="position:absolute;right:14px;top:14px;font-size:12px;font-weight:600;color:var(--ink2)">${k + 1} of ${n}</span>
         ${img ? `<img src="${esc(img)}" alt="" style="max-width:200px;max-height:66%;object-fit:contain">` : `<svg viewBox="0 0 120 120" aria-hidden="true" style="width:170px;height:66%;max-height:170px">${T[1]}</svg>`}
         ${st === 'done' ? `<span class="${S.ui.pkStamp === k ? 'pk-stamp' : ''}" style="position:absolute;right:16px;bottom:16px;height:34px;padding:0 12px;border-radius:10px;border:2px solid #0F6B43;color:#0F6B43;background:rgba(255,255,255,.85);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;transform:rotate(-8deg)">Packed</span>` : ''}
@@ -4645,7 +4679,7 @@ function viewShelf(){
     <div class="cv-top"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:24px;font-weight:700;letter-spacing:-.02em">Stock</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${st.length} aisle${st.length === 1 ? '' : 's'} · counted every ${COUNT_DUE_DAYS} days</span></span>
       <button class="cv-circ" data-act="stscan" aria-label="Scan a label">${sv('M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 8v8M10 8v8M13 8v8M16 8v8', 20, 2)}</button></div>
     <button data-act="find" style="height:52px;border:none;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);color:var(--navyInk);display:flex;align-items:center;gap:10px;padding:0 16px;font-size:16px;font-weight:600;text-align:left">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}Find an item</button>
-    ${st.length ? `<div class="sh-aisles hscroll" style="display:grid;${st.length > 6 ? 'grid-auto-flow:column;grid-template-rows:repeat(2,78px);grid-auto-columns:calc((100% - 16px) / 3.2);overflow-x:auto;scroll-snap-type:x proximity' : 'grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:78px'};gap:6px">${st.map(a => `<button data-act="aisle" data-a="${esc(a.letter)}" aria-label="Aisle ${esc(a.letter)}, ${esc(a.name)}${a.flags ? ', ' + a.flags + ' need a look' : ''}" style="position:relative;scroll-snap-align:start;border:none;border-radius:14px;background:rgba(255,255,255,.07);color:#fff;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;min-width:0">
+    ${st.length ? `<div class="sh-aisles hscroll" style="display:grid;${st.length > 6 ? 'grid-auto-flow:column;grid-template-rows:repeat(2,78px);grid-auto-columns:calc((100% - 16px) / 3.2);overflow-x:auto;scroll-snap-type:x proximity' : 'grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:78px'};gap:6px">${st.map(a => `<button data-act="aisle" data-a="${esc(a.letter)}" aria-label="${esc(aisleWord(a))}, ${esc(a.name)}${a.flags ? ', ' + a.flags + ' need a look' : ''}" style="position:relative;scroll-snap-align:start;border:none;border-radius:14px;background:rgba(255,255,255,.07);color:#fff;padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;min-width:0">
       <span style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:18px;font-weight:700">${esc(a.letter)}</span>${a.flags ? `<span class="m" style="min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:${a.hot ? '#F5B26B' : 'rgba(255,255,255,.18)'};color:${a.hot ? '#16203C' : '#fff'};font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">${a.flags}</span>` : ''}</span>
       <span class="clamp2" style="font-size:12px;font-weight:600;line-height:1.2;color:#DDE3F0;overflow-wrap:anywhere">${esc(aisleShort(a.name))}</span></button>`).join('')}</div>`
     : '<span style="padding:6px 4px;font-size:13px;font-weight:600;color:var(--navyInk)">No products on the books yet · they appear here, an aisle per category</span>'}
@@ -4667,7 +4701,7 @@ function cameInToday(){
 }
 ACT.lookall = () => { S.ui.lookAll = !S.ui.lookAll; FEEL.tick(); render(); };
 ACT.stock = t => { FEEL.open(); push('stock', { key: t.dataset.key }); };
-ACT.aisle = t => { FEEL.open(); push('aisle', { a: t.dataset.a }); };
+ACT.aisle = t => { if (t.dataset.a === NO_AISLE.letter) { FEEL.no(); toast('No aisle yet · Sourcing gives it one'); return; } FEEL.open(); push('aisle', { a: t.dataset.a }); };
 // Find opens with the keyboard up, and is never stacked on itself: one Back leaves it.
 // Focus goes to the box inside the tap itself (a phone opens its keyboard only then), and again once the page has slid in.
 function openFind(){ const top = S.stack[S.stack.length - 1]; if (top && top.type === 'find') render(); else push('find', {});
@@ -4782,15 +4816,32 @@ ACT.count = t => {
   const k = t.dataset.key, a = t.dataset.aisle || (stockItems()[0] || { aisle: {} }).aisle.letter, saved = (() => { try { return JSON.parse(localStorage.getItem(CT_KEY())); } catch (_e) { return null; } })();
   const keys = k ? [k] : stockItems().filter(x => x.aisle.letter === a).sort((p, q) => p.productName.localeCompare(q.productName)).map(x => x.key);
   if (!keys.length) { toast('Nothing in this aisle to count'); return; }
-  // One count of a place at a time: a count still waiting on the Manager opens instead of a second one.
-  const label = k ? null : `Aisle ${a} · ${(aisleList().find(x => x.letter === a) || {}).name || ''}`;
-  const waiting = label && (D().counts || []).find(c => c.status === 'sent' && c.aisle === label);
-  if (waiting) { FEEL.open(); toast(`${label.split(' ·')[0]}'s count is still with ${managerName()}`, 4000); push('decide', { id: waiting.id }); return; }
-  const same = saved && !saved.sent && JSON.stringify(saved.keys) === JSON.stringify(keys);
   const one = k ? stockItems().find(x => x.key === k) : null;
-  S.ui.ct = same ? saved : { aisle: one ? `Spot count · ${one.productName}` : `Aisle ${a} · ${(aisleList().find(x => x.letter === a) || {}).name || ''}`, letter: one ? one.aisle.letter : a, keys, i: 0, entries: {}, focus: 0, counts: {}, system: {}, at: Date.now() };
+  const label = one ? `Spot count · ${one.productName}` : `Aisle ${a} · ${(aisleList().find(x => x.letter === a) || {}).name || ''}`;
+  // One count of a place at a time (0161): one still with the Manager asks first -- count it again
+  // (it replaces that one when sent) or look at it. A draft already replacing it carries straight on.
+  const waiting = waitingCount(countPlace(label, keys)), same = saved && !saved.sent && JSON.stringify(saved.keys) === JSON.stringify(keys);
+  if (waiting && !t.dataset.again && !(same && saved.replaces && saved.replaces.id === waiting.id)) { FEEL.open(); openSheet('ctwait', { id: waiting.id, key: k || '', aisle: k ? '' : a }); return; }
+  S.ui.ct = same ? saved : { aisle: label, letter: one ? one.aisle.letter : a, keys, i: 0, entries: {}, focus: 0, counts: {}, system: {}, at: Date.now() };
+  S.ui.ct.replaces = waiting ? countWhose(waiting) : null;
   saveCt(); FEEL.open(); push('count', {});
 };
+SHEET.ctwait = a => { const c = (D().counts || []).find(x => x.id === a.id); if (!c) return ''; const r = countWhose(c), M = managerStaff(), mgr = managerName();
+  const place = a.key ? esc(((stockItems().find(x => x.key === a.key) || {}).productName) || 'This item') : `Aisle ${esc(a.aisle)}`;
+  const dot = (bg, ink, inner, ring) => `<span style="width:30px;height:30px;flex:none;border-radius:999px;background:${bg};color:${ink};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center${ring ? ';box-shadow:0 0 0 2px #fff,0 0 0 4px #F5B26B' : ''}">${inner}</span>`;
+  return `<div style="display:flex;align-items:center;gap:14px"><span class="cv-ringa" style="width:56px;height:56px;flex:none;border-radius:999px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center">${sv(CV.clock || 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 24, 2.2)}</span>
+      <span class="cv-tx" style="gap:3px"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em;white-space:normal">${place} is with ${esc(mgr)}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">${esc(r.who)} counted it · ${esc(r.when)} · ${r.n} item${r.n === 1 ? '' : 's'}</span></span></div>
+    <div role="img" aria-label="${esc(r.who)}'s count: counted, now with ${esc(mgr)}, not yet on the shelf" style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:6px;padding:12px 14px;border-radius:18px;background:#F7F5F2">
+      ${dot('#0F6B43', '#fff', ini(r.name || r.who))}<span style="height:3px;border-radius:999px;background:#0F6B43"></span>${dot('#F6E4F1', '#7A3268', ini((M && M.name) || mgr), true)}<span style="height:3px;border-radius:999px;background:#E6E3DD"></span>${dot('#fff', '#5F6980', sv(CV.store || 'M4 20V9l8-5 8 5v11M8 20v-6h8v6', 14, 2.2)).replace('background:#fff', 'background:#fff;box-shadow:inset 0 0 0 1.5px #E6E3DD')}</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button data-act="ctagain" data-key="${esc(a.key)}" data-aisle="${esc(a.aisle)}" style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">${sv(CV_AGAIN, 18, 2.2)}Count it again</button>
+      <span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">${esc(mgr)} sees only the new one once you send it</span>
+      <button data-act="ctseeold" data-id="${esc(c.id)}" class="cv-white" style="height:52px;box-shadow:inset 0 0 0 1.5px var(--rule)">See ${r.mine ? 'your' : esc(r.who) + '’s'} count</button></div>`; };
+const CV_AGAIN = 'M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0 0 12 3l3-4M19 9a7 7 0 0 0-12-3L4 10';
+ACT.ctagain = t => { closeSheet(); ACT.count({ dataset: { key: t.dataset.key || '', aisle: t.dataset.aisle || '', again: '1' } }); };
+ACT.ctseeold = t => { closeSheet(); FEEL.open(); push('decide', { id: t.dataset.id }); };
+// "Replaces Joy's Thu 9:45 count": on the count, so it is never a surprise when it goes.
+function ctReplacesChip(ct){ return ct && ct.replaces ? `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:14px;background:rgba(245,178,107,.14);box-shadow:inset 0 0 0 1px rgba(245,178,107,.3)"><span style="width:28px;height:28px;flex:none;border-radius:999px;background:rgba(255,255,255,.1);color:#F5B26B;display:flex;align-items:center;justify-content:center">${sv(CV_AGAIN, 14, 2.2)}</span><span class="cv-tx" style="font-size:13px;font-weight:700;color:#fff;white-space:normal">Replaces ${esc(whoseWord(ct.replaces))} ${esc(ct.replaces.when)} count</span></div>` : ''; }
 // An item counted: what the shelf should hold is the books less what has left
 // for orders not yet invoiced (0142). Taken now, never shown.
 function ctCommit(i){
@@ -4813,7 +4864,7 @@ function ctOne(ct, x, mgr){
   return `<div style="position:absolute;inset:0;background:radial-gradient(130% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(10px + var(--safe-area-inset-top)) 16px calc(22px + var(--safe-area-inset-bottom));gap:14px;overflow-y:auto">
     <div class="cv-top">${cvBack('Stop counting')}<b style="display:flex;align-items:center;gap:6px">${sv('M2 12s3.5-6.5 10-6.5c2 0 3.7.6 5.1 1.5M22 12s-3.5 6.5-10 6.5c-2 0-3.7-.6-5.1-1.5M3 3l18 18', 15, 2.2, 'style="color:#6FDCB0"')}Blind count</b><span class="cv-circ blank"></span></div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:56px;height:56px;border-radius:16px;background:#fff;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.pack, 26, 2)}</span>
-      <span style="font-size:24px;font-weight:700;letter-spacing:-.01em">${esc(x.productName)}</span><span style="font-size:13px;font-weight:600;color:var(--navyInk)">Aisle ${esc(x.aisle.letter)} · count what you can see</span></div>
+      <span style="font-size:24px;font-weight:700;letter-spacing:-.01em">${esc(x.productName)}</span><span style="font-size:13px;font-weight:600;color:var(--navyInk)">${esc(aisleWord(x.aisle))} · count what you can see</span></div>
     ${L.map((l, k) => { const v = val(k), big = k === 0; return `<div style="border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);padding:14px 16px;display:flex;flex-direction:column;align-items:center;gap:10px">
       <span style="font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--navyInk)">${esc(String(k === L.length - 1 && L.length > 1 ? 'loose ' + l[0] + ' · ' + n0(L[k - 1][2] / l[2]) + ' to a ' + L[k - 1][1].replace(/s$/, '') : l[0]).toUpperCase())}</span>
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:280px">
@@ -4821,7 +4872,7 @@ function ctOne(ct, x, mgr){
         <input id="ct1_${k}" data-in="ctv" data-i="0" data-k="${k}" inputmode="numeric" value="${v === null ? '' : v}" placeholder="–" aria-label="${esc(l[0])} counted" class="m" style="width:110px;border:none;outline:none;background:transparent;color:#fff;text-align:center;font-size:${big ? 40 : 30}px;font-weight:600">
         <button data-act="ctstep" data-k="${k}" data-d="1" aria-label="One more ${esc(l[1])}" style="width:${big ? 56 : 48}px;height:${big ? 56 : 48}px;border-radius:999px;border:none;background:${big ? '#fff' : 'rgba(255,255,255,.1)'};color:${big ? '#16203C' : '#fff'};display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 18, 2.6)}</button></div></div>`; }).join('')}
     <span style="text-align:center;font-size:14px;font-weight:600;color:var(--navyInk)">You counted <span class="m" style="font-size:16px;color:#6FDCB0">${any ? esc(parts.join(' + ')) : 'nothing yet'}</span></span>
-    <button data-act="ctsend" style="margin-top:auto;height:58px;border-radius:999px;border:none;background:${any ? 'var(--red)' : 'rgba(255,255,255,.12)'};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${any ? 1 : .55}">Send the count to ${esc(mgr)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button>
+    ${ct.replaces ? `<div style="margin-top:auto">${ctReplacesChip(ct)}</div>` : ''}<button data-act="ctsend" style="${ct.replaces ? '' : 'margin-top:auto;'}height:58px;border-radius:999px;border:none;background:${any ? 'var(--red)' : 'rgba(255,255,255,.12)'};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${any ? 1 : .55}">Send the count to ${esc(mgr)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button>
   </div>`;
 }
 function ctAisle(ct, items, mgr){
@@ -4849,7 +4900,7 @@ function ctAisle(ct, items, mgr){
   ${partial ? darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">Send ${done} now</span><span style="font-size:12px;font-weight:600;color:#F5B26B">${esc(mgr)} sees ${nMiss} not found</span></div>
     <div class="row" style="display:flex">${slideHTML('ctpart', 'Slide to send what you counted', 'chevs', { cls: 'cvdark' })}</div>
     <button data-act="ctlater" style="height:44px;border:none;background:transparent;color:var(--navyInk);font-size:14px;font-weight:700">Keep the rest for later</button>`) : darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">${ready ? `All ${items.length} counted` : `${done} of ${items.length} counted`}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(mgr)} accepts it, then the shelf changes</span></div>
-    <button data-act="ctsend" style="height:58px;border-radius:999px;border:none;background:${ready ? 'var(--red)' : 'rgba(201,58,48,.45)'};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${ready ? 1 : .7}">${ready ? `Send the count to ${esc(mgr)}` : 'Count every item first'}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button>`)}
+    ${ctReplacesChip(ct)}<button data-act="ctsend" style="height:58px;border-radius:999px;border:none;background:${ready ? 'var(--red)' : 'rgba(201,58,48,.45)'};color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${ready ? 1 : .7}">${ready ? `Send the count to ${esc(mgr)}` : 'Count every item first'}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button>`)}
   </div>`;
 }
 ACT['in:ctv'] = t => { const ct = S.ui.ct; if (!ct) return; const i = Number(t.dataset.i), k = Number(t.dataset.k), v = t.value.replace(/[^0-9]/g, '').slice(0, 5); if (v !== t.value) t.value = v;
@@ -4874,7 +4925,8 @@ async function sendCountOnce(){
   const idx = ct.keys.map((_, i) => i), got = idx.filter(i => ct.counts[i] !== undefined), lost = ct.partial ? idx.filter(i => ct.counts[i] === undefined && (ct.missing || {})[i]) : [];
   const lines = got.map(i => { const k = ct.keys[i], x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, counted: ct.counts[i], system: ct.system[i], held: (ct.held || {})[i] || 0 }; });
   const missing = lost.map(i => { const k = ct.keys[i], x = stockItems().find(s => s.key === k); return { key: k, productId: x.productId, variantIdx: x.variantIdx, name: x.productName }; });
-  try { const c = await sendCount(ct.aisle, lines, missing); ct.sent = c.id; ct.sendErr = null; ct.sentAt = Date.now(); saveCt(); }
+  try { const c = ct.replaces ? await sendCountReplace(ct.aisle, lines, missing, ct.replaces.id) : await sendCount(ct.aisle, lines, missing);
+    ct.sent = c.id; ct.sendErr = null; ct.sentAt = Date.now(); if (ct.replaces) ct.replaces.done = c.replaced === false ? (c.oldStatus || 'decided') : 'replaced'; saveCt(); }
   catch (e) { ct.sendErr = isNetworkError(e) ? 'net' : failSay(e); ct.errAt = Date.now(); saveCt(); }
   ct.sending = false; ct.wait = false; if (['count', 'countresults'].includes(topType())) render();
 }
@@ -4906,8 +4958,14 @@ PAGE.countresults = () => {
   if (ct.sendErr && !ct.sent) return sentScreen({ failed: true, title: `It didn't reach ${mgr}`, line: ct.sendErr === 'net' ? `The signal dropped as it was sending, ${hm(ct.errAt)}` : ct.sendErr,
     body: `<div style="width:100%;display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:rgba(255,255,255,.07);text-align:left"><span style="width:38px;height:38px;flex:none;border-radius:999px;background:rgba(111,220,176,.16);color:#6FDCB0;display:flex;align-items:center;justify-content:center">${sv('M6 3h12v18l-6-4-6 4z', 18, 2)}</span><span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">Nothing is lost</span><span style="font-size:12px;font-weight:600;color:var(--navyInk);white-space:normal">${esc(what)} is saved on this phone</span></span></div>`,
     foot: `<div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="ctretry">${sv(CV.refresh || 'M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', 18, 2.2)}Try again</button><button data-act="ctdone" style="height:46px;border:none;background:none;color:var(--navyInk);font-size:14px;font-weight:700">Leave it · it sends itself when signal is back</button></div>` });
-  return sentScreen({ undo: ct.wait ? 'heldundo' : null, title: 'Count sent', line: what, done: 'ctdone',
-    body: trackDone({ who: (M && M.name) || mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'checks it', last: 'Shelf', lastSub: 'takes your count', foot: 'You get a buzz at each step' }) });
+  // Counted again: the old count and the new one, side by side -- replaced, or decided before this one landed.
+  const R = ct.replaces, rd = R && R.done, first = rd && rd !== 'replaced' && rd !== 'sent';
+  const swap = R && rd && rd !== 'sent' ? `<div style="width:100%;box-sizing:border-box;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.55"><span style="font-size:12px;font-weight:700;${first ? '' : 'text-decoration:line-through'}">${esc(R.mine ? 'You' : R.who)} · ${esc(R.when)}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${first ? (rd === 'recount' ? 'sent back' : 'accepted') : 'replaced'}</span></span>
+      ${sv('M5 12h14M13 6l6 6-6 6', 18, 2.2, 'style="color:var(--navyInk)"')}
+      <span style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:12px;font-weight:700">${esc(firstWord(myName()) || 'You')} · now</span><span style="font-size:11px;font-weight:600;color:#6FDCB0">with ${esc(mgr)}</span></span></div>` : '';
+  return sentScreen({ undo: ct.wait ? 'heldundo' : null, title: 'Count sent', line: first ? `${mgr} ${rd === 'recount' ? 'sent' : 'accepted'} ${whoseWord(R)} count first · yours goes as the next one` : what + (swap ? ` · ${mgr} has it now` : ''), done: 'ctdone',
+    body: swap + trackDone({ who: (M && M.name) || mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'checks it', last: 'Shelf', lastSub: 'takes your count', foot: 'You get a buzz at each step' }) });
 };
 PAGE.countresults.bg = '#16203C';
 ACT.ctretry = () => { const ct = S.ui.ct; if (!ct) return; FEEL.tick(); ct.sendErr = null; ct.wait = true; render(); sendCountOnce(); };
@@ -4935,16 +4993,18 @@ PAGE.report = ({ key }) => {
   if (!x) { const f = String(ui.find || '').trim().toLowerCase(), hits = (f ? itemSearch(f) : stockItems()).slice(0, 12);
     return `<div class="cv"><div class="cv-hero tight" data-navy-top><div class="cv-top">${cvBack()}<b>Report a loss</b><span class="cv-circ blank"></span></div>
       <label style="height:52px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--navyInk)">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}<input id="rp_find" data-in="rpfind" value="${esc(ui.find || '')}" placeholder="Which item?" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:#fff;font-size:16px"></label></div>
-      <div class="cv-body"><div class="cv-list">${hits.map(h => `<button class="cv-row" data-act="rppick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('') || '<div class="st-empty">Nothing by that name</div>'}</div></div></div>`; }
+      <div class="cv-body"><div class="cv-list">${hits.map(h => { const hd = countDue(h), none = !hd && h.qty <= 0;
+        // What is there to lose, before the item is picked: an empty shelf says count first; a count due shows no figure.
+        return `<button class="cv-row" data-act="rppick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">${esc(aisleWord(h.aisle))}</span></span>${cvChip(esc(hd ? 'count due' : none ? '0 · count first' : fmtLevels(levelsFor(h), h.qty)), hd || none ? '#F1EEE8' : '#E4F4EA', hd || none ? '#5F6980' : '#0F6B43')}</button>`; }).join('') || '<div class="st-empty">Nothing by that name</div>'}</div></div></div>`; }
   // The unit it is counted in: any level the item is sold by (cartons, kg, loose pieces); the base unit until one is picked.
   const LV = levelsFor(x), lv = ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)), lu = LV[lv] ? LV[lv][1] : u;
-  const due = countDue(x), sel = (k, on) => `height:96px;border-radius:20px;border:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;${on ? 'background:#16203C;color:#fff;box-shadow:0 10px 22px rgba(22,32,60,.2)' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px #E6E3DD'}`;
+  const due = countDue(x), empty = x.qty <= 0, sel = (k, on) => `height:96px;border-radius:20px;border:none;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;${on ? 'background:#16203C;color:#fff;box-shadow:0 10px 22px rgba(22,32,60,.2)' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px #E6E3DD'}`;
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:16px;gap:14px" data-navy-top>
     <div class="cv-top">${cvBack()}<b>Report a loss</b><span class="cv-circ blank"></span></div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:rgba(255,255,255,.07)">${thumb(x, 48, 34)}
-      <span class="cv-tx" style="gap:2px">${prodTT(x, 'font-size:15px')}<span class="cv-sb" style="color:var(--navyInk)">Aisle ${esc(x.aisle.letter)} · ${due ? 'count due' : `${n0(x.qty)} ${esc(u)} on the shelf`}</span></span>
+      <span class="cv-tx" style="gap:2px">${prodTT(x, 'font-size:15px')}<span class="cv-sb" style="color:var(--navyInk)">${esc(aisleWord(x.aisle))} · ${due ? 'count due' : `${n0(x.qty)} ${esc(u)} on the shelf`}</span></span>
       <button data-act="rpchange" style="height:36px;padding:0 14px;border-radius:999px;border:none;background:#fff;color:#16203C;font-size:13px;font-weight:700;flex:none">Change</button></div></div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
+  ${empty ? rpEmpty(x, due, mgr) : `<div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
     <span class="cv-sec first">What happened</span>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${REASONS.map((r, i) => { const on = ui.why === i; return `<button data-act="rpwhy" data-i="${i}" aria-pressed="${on}" style="${sel(r.k, on)}"><span style="width:38px;height:38px;border-radius:999px;background:${on ? 'rgba(255,255,255,.12)' : '#F1EEE8'};display:flex;align-items:center;justify-content:center">${sv(r.icon, 18, 2)}</span><span style="font-size:14px;font-weight:700">${r.name}</span>${on ? `<span style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 12, 3.4)}</span>` : ''}</button>`; }).join('')}</div>
     <span class="cv-sec">How many</span>
@@ -4953,15 +5013,26 @@ PAGE.report = ({ key }) => {
       <span style="display:flex;align-items:baseline;gap:6px">${numBox('rp', ui.n, 'How many were lost', '', 30)}<span style="font-size:14px;font-weight:700;color:var(--ink2)">${esc(ui.n === 1 ? lu.replace(/s$/, '') : lu)}</span></span>
       <button data-act="rpstep" data-d="1" aria-label="One more" style="width:52px;height:52px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 20, 2.4)}</button></div>
     ${LV.length > 1 ? `<div role="group" aria-label="Counted in" style="display:flex;gap:6px">${LV.map((l, k) => { const fits = rpFits(x, l[2]); return `<button data-act="rplv" data-k="${k}" aria-pressed="${k === lv}" ${fits ? '' : `aria-disabled="true" aria-label="${esc(l[1])}: more than the shelf holds"`} style="flex:1;height:36px;border-radius:10px;border:none;background:${k === lv ? '#16203C' : '#F1EEE8'};color:${k === lv ? '#fff' : 'var(--ink)'};font-size:12px;font-weight:700;opacity:${fits ? 1 : .4}${fits ? '' : ';text-decoration:line-through'}">${esc(l[1])}</button>`; }).join('')}</div>` : ''}
-    ${ui.capped ? `<span role="status" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}${due ? 'More than the books hold · count it first' : `The books hold ${esc(fmtLevels(LV, x.qty))} · that is the most`}</span>` : ''}
+    ${ui.capped ? `<span role="status" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}${due ? 'More than the shelf has · count it first' : `The shelf has ${esc(fmtLevels(LV, x.qty))} · that is the most`}</span>` : ''}
     <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="padding:0 4px;font-size:12px;font-weight:700;color:var(--ink2)">What ${esc(mgr)} should know</span>
       <textarea id="rp_note" data-in="rpnote" maxlength="300" aria-label="A note for ${esc(mgr)}" placeholder="Where, how, when you saw it" style="height:76px;border-radius:16px;border:none;box-shadow:inset 0 0 0 1px var(--rule);background:#fff;padding:12px 14px;font-family:inherit;font-size:14px;color:var(--ink);resize:none;outline:none">${esc(ui.note || '')}</textarea></label>
     <button data-act="rpphoto" aria-label="${ui.photo ? 'Take the photo of the loss again' : 'Add a photo of the loss'}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border-radius:20px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">
       ${ui.photo ? `<img src="${ui.photo}" alt="" style="width:40px;height:40px;border-radius:12px;object-fit:cover;flex:none">` : `<span style="width:40px;height:40px;flex:none;border-radius:12px;background:#F1EEE8;display:flex;align-items:center;justify-content:center">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 18, 2)}</span>`}
       <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${ui.photo ? 'Photo added' : 'Add a photo'}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${ui.photo ? 'Tap to take it again' : `Optional · helps ${esc(mgr)} decide`}</span></span>${ui.photo ? sv(CV.tick, 18, 2.6, 'style="color:#0F6B43"') : sv('M12 5v14M5 12h14', 16, 2.2, 'style="color:#9AA1AE"')}</button>
-  </div>
-  <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom))"><button data-act="rpsend" ${ui.why == null ? 'aria-disabled="true"' : ''} style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26);opacity:${ui.why == null ? .5 : 1}">${ui.why == null ? 'Pick what happened first' : `Send to ${esc(mgr)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}`}</button></div></div>`;
+  </div>`}
+  <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom))">${empty ? '' : `<button data-act="rpsend" ${ui.why == null ? 'aria-disabled="true"' : ''} style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26);opacity:${ui.why == null ? .5 : 1}">${ui.why == null ? 'Pick what happened first' : `Send to ${esc(mgr)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}`}</button>`}${empty ? `<button data-act="count" data-key="${esc(x.key)}" style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">${sv(CV.count, 18, 2.2)}Count it now</button>` : ''}</div></div>`;
 };
+// Nothing on the shelf to lose (0161): count it first, then report what is missing. A count that is due shows no figure.
+function rpEmpty(x, due, mgr){ const M = managerStaff();
+  return `<div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:#fff;border-radius:22px;box-shadow:inset 0 0 0 1px var(--rule);padding:22px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+      <span role="img" aria-label="${due ? 'A count is due' : 'The shelf shows 0'}" style="position:relative;width:112px;height:112px;display:block"><svg width="112" height="112" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="48" fill="none" stroke="#EFECE6" stroke-width="10" stroke-dasharray="6 6"></circle></svg>
+        <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">${due ? sv(CV.count, 30, 2) : '<span class="m" style="font-size:34px;font-weight:600;letter-spacing:-.04em;line-height:1">0</span><span style="font-size:11px;font-weight:600;color:var(--ink2)">on the shelf</span>'}</span></span>
+      <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:18px;font-weight:700">${due ? 'Count this item first' : 'Nothing on the shelf to lose'}</span><span style="font-size:13px;font-weight:600;color:var(--ink2)">Count it first · then report what is missing</span></span></div>
+    <div role="img" aria-label="Count first, then report, then ${esc(mgr)} decides" style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:6px;padding:12px 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">
+      <span style="width:34px;height:34px;border-radius:999px;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff,0 0 0 5px #F5B26B">${sv(CV.count, 16, 2.2)}</span><span style="height:3px;border-radius:999px;background:#E6E3DD"></span>
+      <span style="width:34px;height:34px;border-radius:999px;background:#F1EEE8;color:#5F6980;display:flex;align-items:center;justify-content:center">${sv(CV.loss, 16, 2.2)}</span><span style="height:3px;border-radius:999px;background:#E6E3DD"></span>
+      <span style="width:34px;height:34px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${ini((M && M.name) || mgr)}</span></div></div>`; }
 PAGE.report.bg = '#F7F5F2';
 PAGE.report.dirtyWord = 'this report';
 PAGE.report.dirty = () => { const ui = S.ui.rp; return !!ui && !ui.sent && !!ui.key && (ui.why != null || !!String(ui.note || '').trim() || !!ui.photo || ui.n > 1); };
@@ -4969,10 +5040,9 @@ ACT['in:rpfind'] = t => { S.ui.rp.find = t.value; clearTimeout(ACT.rpT); ACT.rpT
 ACT.rppick = t => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: t.dataset.key }); };
 ACT.rpchange = () => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: '' }); const el = document.getElementById('rp_find'); if (el) el.focus(); };
 ACT.rpwhy = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; ui.why = Number(t.dataset.i); FEEL.tick(); render(); };
-// The most that can be lost is what the books hold, in the unit picked.
-/* The most that can be lost is what the books hold, in whole units of the one
+/* The most that can be lost is what the shelf has, in whole units of the one
    picked (3 kg on the shelf is never 3 cartons). A unit bigger than the shelf
-   cannot be picked; a number past the books is held at the books and says so. */
+   cannot be picked; a number past the shelf is held at the shelf and says so. */
 function rpLv(ui, x){ const LV = x ? levelsFor(x) : []; return ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)); }
 function rpFits(x, f){ return f <= 1 || Math.floor(((x && x.qty) || 0) / f + 1e-9) >= 1; }
 function rpMax(ui, x){ const LV = x ? levelsFor(x) : [], f = (LV[rpLv(ui, x)] || [0, '', 1])[2]; return Math.max(1, Math.floor(((x && x.qty) || 0) / f + 1e-9)); }
@@ -4986,7 +5056,7 @@ ACT['in:rpnote'] = t => { if (S.ui.rp) S.ui.rp.note = t.value; };
 ACT.rpphoto = () => { FEEL.open(); push('rphoto', {}); };
 ACT.rpsend = () => {
   const ui = S.ui.rp, x = ui && stockItems().find(i => i.key === ui.key); if (!x || ui.sent) return;
-  if (ui.why == null) { FEEL.no(); return; }
+  if (ui.why == null || x.qty <= 0) { FEEL.no(); return; }
   const LV = levelsFor(x), lv = ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)), f = LV[lv] ? LV[lv][2] : 1, lu = LV[lv] ? LV[lv][1] : unitWord(x);
   const base = Math.round(ui.n * f * 1e6) / 1e6, said = f === 1 ? '' : `${n0(ui.n)} ${lu}`;
   Object.assign(ui, { sent: true, wait: true, unit: ui.n === 1 ? lu.replace(/s$/, '') : lu, name: x.productName }); chimeDone(); render();
@@ -5028,7 +5098,7 @@ PAGE.restock = ({ key }) => {
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:16px;gap:14px" data-navy-top>
     <div class="cv-top">${cvBack()}<b>Ask for more</b><span class="cv-circ blank"></span></div>
     <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:rgba(255,255,255,.07)"><span style="width:44px;height:44px;flex:none;border-radius:14px;background:#fff;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.pack, 20, 2)}</span>
-      <span class="cv-tx" style="gap:2px">${prodTT(x, 'font-size:15px')}<span class="cv-sb" style="color:${due ? '#F5B26B' : x.avail <= 0 ? '#F4A49A' : 'var(--navyInk)'}">Aisle ${esc(x.aisle.letter)} · ${due ? 'count due' : x.avail <= 0 ? 'none free to sell' : `${n0(x.avail)} free to sell`}</span></span></div></div>
+      <span class="cv-tx" style="gap:2px">${prodTT(x, 'font-size:15px')}<span class="cv-sb" style="color:${due ? '#F5B26B' : x.avail <= 0 ? '#F4A49A' : 'var(--navyInk)'}">${esc(aisleWord(x.aisle))} · ${due ? 'count due' : x.avail <= 0 ? 'none free to sell' : `${n0(x.avail)} free to sell`}</span></span></div></div>
   <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
     <span class="cv-sec first">How soon</span>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
@@ -5098,7 +5168,7 @@ PAGE.find = () => {
   const orders = ow.length ? liveOrders().filter(q => ow.every(w => (/^\d{2,4}$/.test(w) && String(q.id).endsWith(w.replace(/^0+/, ''))) || (w.length >= 3 && quoteClientName(q).toLowerCase().split(/\s+/).some(cw => cw.startsWith(w))))).sort((a, b) => b.id - a.id).slice(0, 8) : [];
   const hint = translated && matched.length ? (matched.length > 1 ? lineName(matched[0].x).base.split(' ·')[0].replace(/ [A-Z]?\d.*$/, '').toLowerCase().replace(/([^s])$/, '$1s') : matched[0].x.productName) : '';
   const chip = [['all', 'All', ''], ['out', 'Out', '#E5483D'], ['low', 'Low', '#F5B26B'], ['held', 'Held', '#B3BCD2'], ['due', 'Due', '#F5B26B']];
-  const sub = it => { const x = it.x; return { out: [`All ${n0(x.qty)} held for orders`, '#8E2A22'], low: [`Low · ${n0(x.held)} held for orders`, '#95530C'], due: [`Count due · Aisle ${x.aisle.letter}`, '#95530C'], held: [`${n0(x.qty)} on the shelf · ${n0(x.held)} held`, '#5F6980'], ok: [`${n0(x.qty)} on the shelf`, '#5F6980'] }[it.st]; };
+  const sub = it => { const x = it.x; return { out: [`All ${n0(x.qty)} held for orders`, '#8E2A22'], low: [`Low · ${n0(x.held)} held for orders`, '#95530C'], due: [`Count due · ${aisleWord(x.aisle)}`, '#95530C'], held: [`${n0(x.qty)} on the shelf · ${n0(x.held)} held`, '#5F6980'], ok: [`${n0(x.qty)} on the shelf`, '#5F6980'] }[it.st]; };
   const stOf = q => { const hold = moneyHold(q); if (q.status === 'completed') return ['Delivered', '#E4F4EA', '#0F6B43', 'goret']; if (q.status === 'pending_delivery') return ['On the road', '#DCEAF8', '#1A5A8A', null]; if (q.status === 'awaiting_goods') return ['Buying', '#E4E6FA', '#3A3F9B', null];
     if (q.pickingStatus === 'done') return hold ? ['Waits on money', '#FDEEE1', '#7A4A02', 'slip'] : orderIsCollected(q) ? ['Agent', '#F6E4F1', '#7A3268', 'collect'] : orderIsPickup(q) ? ['At the gate', '#E4F4EA', '#0F6B43', 'slip'] : [bayOf(q) ? 'On bay ' + bayOf(q) : 'Packed', '#16203C', '#FFFFFF', 'slip'];
     if (takenBySomeoneElse(q)) return [firstWord(staffName(q.assignedWorkerId)) + "'s", '#DDF1EE', '#0E5E57', null]; if (q.pickingStatus === 'in_progress') return ['Packing', '#E8EBF0', '#16203C', 'pack']; return ['To pack', '#E8EBF0', '#16203C', 'pack']; };
@@ -5199,7 +5269,7 @@ PAGE.labels = ({ a }) => {
     <div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.08)">${seg(ui.only, 'lbonly', `Only the missing · ${missing.length}`)}${seg(!ui.only, 'lball', `The whole aisle · ${items.length}`)}</div></div>
   <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
     ${list.length ? `<div id="lb_sheet" style="background:#fff;border-radius:16px;box-shadow:inset 0 0 0 1px var(--rule);padding:14px 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px">${list.map(x => labelHTML(x, !done[x.key])).join('')}</div>
-    <span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">Stick each one on the shelf edge, under its item</span>` : `<div class="cv-list"><div class="st-empty"><b>Nothing missing</b>Every item in Aisle ${esc(A.letter)} has its label</div></div>`}
+    <span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">Stick each one on the shelf edge, under its item</span>` : `<div class="cv-list"><div class="st-empty"><b>Nothing missing</b>Every item in ${esc(aisleWord(A))} has its label</div></div>`}
   </div>
   <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px">
     <button data-act="lbprint" ${list.length ? '' : 'disabled'} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 22px rgba(201,58,48,.26);opacity:${list.length ? 1 : .5}">${sv('M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z', 18, 2)}Print ${list.length} label${list.length === 1 ? '' : 's'} · office printer</button>
@@ -5220,7 +5290,7 @@ SCAN_MODES.stock = {
   title: 'Scan a label', hint: 'Hold the label inside the frame',
   count: () => ({ done: 0, of: 0 }), noCount: true,
   read: key => { const x = key && stockItems().find(s => s.key === key); if (!x) return { wrong: { title: 'Not a label from this shop', name: 'Nothing on the books', sub: 'Print the shelf label from its aisle', act: '' } };
-    const due = countDue(x); return { pend: { it: x, name: x.productName, sub: `Aisle ${x.aisle.letter}${due ? ' · count due' + (recountAsk(x.key) ? ' · ' + managerName() + ' asked' : '') : ''}`, found: true, key: x.key, due } }; },
+    const due = countDue(x); return { pend: { it: x, name: x.productName, sub: `${aisleWord(x.aisle)}${due ? ' · count due' + (recountAsk(x.key) ? ' · ' + managerName() + ' asked' : '') : ''}`, found: true, key: x.key, due } }; },
   tick: () => ({}),
 };
 ACT.scprint = () => { const done = labelled(), st = aisleStats().map(x => ({ x, n: x.items.filter(i => !done[i.key]).length })).sort((p, q) => q.n - p.n)[0]; pop(); if (st) push('labels', { a: st.x.letter }); };
@@ -5236,16 +5306,19 @@ ACT.sccount = () => { const sc = S.ui.sc; if (!sc || !sc.pend) return; const k =
 PAGE.decide = ({ id }) => {
   const c = (D().counts || []).find(x => String(x.id) === String(id));
   if (!c) return goneSheet(D().counts === null ? 'Stock takes need migration 0115 on the database' : 'That count is no longer on this phone');
+  // 0161: counted again -- the newer count is the one with the Manager now.
+  if (c.status === 'superseded') { const nw = (D().counts || []).find(x => x.replaces === c.id), r = nw && countWhose(nw);
+    return goneSheet(r ? `${r.mine ? 'You' : r.who} counted ${String(c.aisle || 'it').replace(/^Spot count · /, '')} again at ${r.when} · that count is with ${managerName()}` : `It was counted again · the newer count is with ${managerName()}`, 'It moved on'); }
   const mgr = managerName(), boss = canCorrect() && c.status === 'sent', st = boss ? 'decide' : c.status === 'recount' ? 'recount' : c.status === 'accepted' ? 'accepted' : 'waiting';
   const off = c.lines.filter(l => Number(l.counted) !== Number(l.system)), fewer = off.filter(l => Number(l.counted) < Number(l.system));
   const L = l => { const x = stockItems().find(s => s.key === l.key); return x ? levelsFor(x) : [['', '', 1]]; };
-  const where = l => { const x = stockItems().find(s => s.key === l.key); return x ? 'Aisle ' + x.aisle.letter : ''; };
+  const where = l => { const x = stockItems().find(s => s.key === l.key); return x ? aisleWord(x.aisle) : ''; };
   const sentAt = msOf(c.createdAt), decAt = msOf(c.decidedAt), who = firstWord(c.countedByName || 'The yard'), place = String(c.aisle || '').replace(/^Spot count · /, '');
   const S2 = {
     waiting: { head: 'Count sent', title: `With ${mgr}`, sub: `${esc(place)} · ${c.lines.length} item${c.lines.length === 1 ? '' : 's'} · sent ${hm(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: 'cv-ringa', icon: CV.clock, list: 'What you counted', note: `The books stay off this phone · ${esc(mgr)} compares them` },
     recount: { head: 'Recount', title: `${esc(mgr)} asks again`, sub: `${esc(place)} · asked ${hm(decAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: 'M4 4v6h6M20 20v-6h-6M5 15a7 7 0 0 0 12 3l3-4M19 9a7 7 0 0 0-12-3L4 10', list: c.lines.length === 1 ? 'Count this one again' : 'Count these again', note: 'Still blind · count what you see, not what you counted before' },
     accepted: { head: 'Count', title: `${esc(mgr)} accepted it`, sub: `${esc(place)} · ${hm(decAt)} · the shelf reads your count`, bg: '#6FDCB0', ink: '#16203C', anim: '', icon: CV.tick, list: 'On the shelf now', note: 'Your count is what the shelf shows' },
-    decide: { head: esc(ctTitle(c.aisle)), title: off.length ? `${off.length} ${fewer.length === off.length ? 'fewer than' : 'differ from'} the books` : 'All match the books', sub: `${esc(who)} counted blind · ${hm(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: CV.count, list: 'Counted against the books', note: "A manager's login sees the gap · the yard never does" }
+    decide: { head: esc(ctTitle(c.aisle)), title: off.length ? `${off.length} ${fewer.length === off.length ? 'fewer than' : 'differ from'} the shelf` : 'All match the shelf', sub: `${esc(who)} counted blind · ${hm(sentAt)}`, bg: '#FDEEE1', ink: '#95530C', anim: '', icon: CV.count, list: 'Counted against the shelf', note: "A manager's login sees the gap · the yard never does" }
   }[st];
   const s2 = st === 'accepted' ? ['#6FDCB0', '#16203C', 'none'] : ['#F6E4F1', '#7A3268', '0 0 0 2px #16203C,0 0 0 4px #F5B26B'], l2 = st === 'accepted' ? '#6FDCB0' : 'rgba(255,255,255,.15)', s3 = st === 'accepted' ? ['#6FDCB0', '#16203C'] : ['rgba(255,255,255,.08)', 'var(--navyInk)'];
   const track = `<div role="img" aria-label="Counted, ${st === 'accepted' ? 'accepted, on the shelf' : st === 'recount' ? 'asked again' : 'with ' + esc(mgr)}" style="display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;gap:6px;padding:0 6px">
@@ -5258,7 +5331,7 @@ PAGE.decide = ({ id }) => {
   const rows = c.lines.map((l, i) => { const lv = L(l), shown = st === 'recount' ? '?' : fmtLevels(lv, Number(l.counted)), d = Number(l.counted) - Number(l.system);
     return `<div style="display:flex;align-items:center;gap:12px;min-height:64px;${i ? 'border-top:1px solid #EFECE6' : ''}">${thumb({ productId: l.productId, productName: l.name }, 40, 26, 12)}
       <span class="cv-tx"><span class="cv-tt">${esc(l.name)}</span><span class="cv-sb">${esc(where(l))}</span></span>
-      <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:16px;font-weight:600">${esc(shown)}</span>${st === 'decide' ? `<span class="m" style="font-size:11px;font-weight:600;color:${d ? (d < 0 ? '#8E2A22' : '#95530C') : '#0F6B43'}">${d ? `${d < 0 ? '' : '+'}${esc(fmtLevels(lv, Math.abs(d)))} ${d < 0 ? 'fewer' : 'more'} · books ${esc(fmtLevels(lv, Number(l.system)))}` : 'matches'}</span>` : ''}</span></div>`; }).join('');
+      <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:16px;font-weight:600">${esc(shown)}</span>${st === 'decide' ? `<span class="m" style="font-size:11px;font-weight:600;color:${d ? (d < 0 ? '#8E2A22' : '#95530C') : '#0F6B43'}">${d ? `${d < 0 ? '' : '+'}${esc(fmtLevels(lv, Math.abs(d)))} ${d < 0 ? 'fewer' : 'more'} · shelf ${esc(fmtLevels(lv, Number(l.system)))}` : 'matches'}</span>` : ''}</span></div>`; }).join('');
   const foot = st === 'decide' ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button data-act="dcrecount" class="cv-white" style="box-shadow:inset 0 0 0 1.5px var(--rule)" ${S.busy ? 'disabled' : ''}>Ask for a recount</button><button data-act="dcaccept" style="height:56px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:15px;font-weight:700;box-shadow:0 10px 22px rgba(201,58,48,.26)" ${S.busy || S.ui.dcWait ? 'disabled' : ''}>${S.ui.dcWait ? 'Accepting…' : off.length ? 'Accept the count' : 'Confirm it'}</button></div>`
     : st === 'recount' ? `<button data-act="count" ${c.lines.length === 1 ? `data-key="${esc(c.lines[0].key)}"` : `data-aisle="${esc((stockItems().find(x => x.key === c.lines[0].key) || { aisle: {} }).aisle.letter || '')}"`} style="height:58px;width:100%;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">Count it again${sv(CV.chev, 16, 2.4)}</button>`
     : `<button data-act="dvhome" class="cv-white" style="width:100%;box-shadow:inset 0 0 0 1.5px var(--rule)">Done</button>`;
@@ -5630,7 +5703,7 @@ PAGE.close = () => {
     <div class="cv-list" style="padding:4px 14px;gap:0">
       ${row(!used.length || 'warn', !used.length ? 'Every bay is empty' : `${used.length} bay${used.length === 1 ? '' : 's'} hold${used.length === 1 ? 's' : ''} an order for tomorrow`, !used.length ? 'Nothing packed is left in the yard' : 'Packed and waiting · it stays the night on its bay', `<div style="display:grid;grid-template-columns:repeat(${Math.min(slots.length, 4)},minmax(0,1fr));gap:6px;padding-top:6px">${slots.map(s => `<span class="m" style="height:40px;border-radius:12px;${s.q ? 'background:#16203C;color:#fff' : 'box-shadow:inset 0 0 0 1.5px #E6E3DD;color:#9AA1AE'};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">${s.q ? q4(s.q) : s.n}</span>`).join('')}</div>`).replace('border-top:1px solid #EFECE6', 'border-top:none')}
       ${row(waits.length ? 'warn' : true, waits.length ? `${waits.length} thing${waits.length === 1 ? '' : 's'} wait${waits.length === 1 ? 's' : ''} on ${esc(mgr)}` : `Nothing waits on ${esc(mgr)}`, waits.length ? 'It carries to the next day' : 'Every ask is answered', waits.length ? `<div style="display:flex;flex-direction:column;gap:4px;padding-top:4px">${waits.slice(0, 3).map(w => `<span style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700"><span style="width:22px;height:22px;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:11px;display:flex;align-items:center;justify-content:center">${mgrIni()}</span><span style="flex:1">${w.title}</span><span style="font-weight:600">carry over</span></span>`).join('')}</div>` : '')}
-      ${unshelved.map(r => { const q = quoteById(r.orderId), g = (r.lines || []).filter(l => l.condition === 'good').map(l => l.shown || l.qty + ' ' + l.unit).join(', '); return row('bad', `${q ? q4(q) + "'s" : 'A'} ${esc(g)} ${/s\b/.test(g) ? 'are' : 'is'} still out`, `${esc(mgr)} raised the credit note · it goes back on the shelf`, `<button data-act="clshelf" data-id="${esc(r.id)}" style="align-self:flex-start;height:40px;padding:0 14px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:13px;font-weight:700;margin-top:4px">It's on the shelf</button>`); }).join('') || row(true, 'Returns are put away', rets.length ? `${rets.length} back on the shelf` : 'Nothing came back to shelve')}
+      ${unshelved.map(r => { const q = quoteById(r.orderId), g = (r.lines || []).filter(l => l.condition === 'good').map(l => { const it = q && (q.items || [])[l.idx]; return it ? backText(it, Number(l.qty) || 0) : l.shown || l.qty + ' ' + l.unit; }).join(', '); return row('bad', `${q ? q4(q) + "'s" : 'A'} ${esc(g)} ${/s\b/.test(g) ? 'are' : 'is'} still out`, `${esc(mgr)} raised the credit note · it goes back on the shelf`, `<button data-act="clshelf" data-id="${esc(r.id)}" style="align-self:flex-start;height:40px;padding:0 14px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:13px;font-weight:700;margin-top:4px">It's on the shelf</button>`); }).join('') || row(true, 'Returns are put away', rets.length ? `${rets.length} back on the shelf` : 'Nothing came back to shelve')}
       ${row(nextJob ? true : 'warn', nextJob ? 'The next first job is set' : 'No first job yet', nextJob ? `${esc(tripWho(nextJob) || 'A trip')} · ${esc((supplierById(nextJob.supplierId) || {}).name || 'a supplier')}` : 'It shows on Today when one is set')}
     </div></div>
   ${darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">${ok === 4 ? 'All set' : `${4 - ok} thing${4 - ok === 1 ? '' : 's'} to sort first`}</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(mgr)} sees it closed</span></div>

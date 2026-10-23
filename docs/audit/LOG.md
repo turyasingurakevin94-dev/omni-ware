@@ -30,7 +30,24 @@ These four test reports ran before the rounds were numbered by aspect. Round 1 o
 - **Migration 0160 not yet run.** Run it on the database, then check the snapshot with a yard staff login, not the Owner login.
 - **Data clean-up.**
   - Rename the "turyasingurakevin94" staff record.
-  - Warren to decline the duplicate "Aisle A · Aluminum" count.
+  - ~~Warren to decline the duplicate "Aisle A · Aluminum" count.~~ 0161 supersedes the older one itself (round 1, DATA-01).
   - ~~Warren to decline Ken Bwaise's 20 Ctn return on #0494.~~ Corrected in round 1: it is 20 Box, the whole 1 Ctn, with the wrong unit label (DATA-02). Do not decline it for its size.
 - **Sourcing data.** 76 of 145 products sit in "Furniture". "Aluminum" and "Aluminium" are both used.
 - **Not yet tested by Cowork.** Check-in, and the pack lock.
+
+## Round 1 · Data integrity (23 Oct 2026) · DATA-01..06 · migration 0161
+
+Fixed: one waiting count per place (a count done again replaces it on send); a return reads in its order line's unit; no loss off an empty shelf; a write-off is never past the shelf and is logged per report; "shelf", not "books", next to a shelf figure; 59 products out of the Furniture catch-all; 17 names with one dash.
+
+Now part of the language:
+- **One open thing per place.** A second start of the same job opens a sheet saying who has the first one, and offers "Count it again". The new one replaces the old only when it is sent, and the done screen shows old → new.
+- **A unit is the order line's.** Any quantity from an order line reads through `backText`, never through a unit stored beside it.
+- **Count before loss.** An empty shelf offers "Count it now", not a report form. A count-due item never shows its figure, not even 0.
+- **"Shelf" vs "books".** The shelf is books less what has left for orders not yet invoiced. "Books" only where the real books are meant.
+- **Aisles by name.** A product with no category reads "No aisle yet" and takes no letter. Keys (counts) use the category name, never the letter.
+- **No new category without saying which letters move.**
+
+Deferred:
+- Stable stored aisle letters (letters still follow the sorted names).
+- The 13 products left in Furniture: adhesives and sealants have no aisle, and 8 names are unclear (Elephant Jin Li, ELEPHANT King, Wrapping Film, chains, Axel Brade, Patra, Sail, Parker Engine).
+- `manager-decisions-db`'s old 0159 failure.

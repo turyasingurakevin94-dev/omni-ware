@@ -126,11 +126,15 @@ After this: every hinge, handle, lock and runner is in its own aisle, and 0 prod
 
 ## Phase B result (filled after implementing)
 
+Go-ahead 23 Oct: the tables approved; replace on send; anyone who counts may replace. The 13 "for now" products stay in Furniture.
+
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| DATA-01 | | | |
-| DATA-02 | | | |
-| DATA-03 | | | |
-| DATA-04 | | | |
-| DATA-05 | | | |
-| DATA-06 | | | |
+| DATA-01 | yes | `0161`: `stock_counts.place/replaces/superseded_at`, status `superseded`, `ow_count_place`, triggers `stock_counts_place` and `stock_counts_superseded_stays`, the duplicates superseded, index `stock_counts_one_open`, `store_count_replace`. `store.html`: `countPlace`, `waitingCount`, `countWhose`, `ACT.count`, `SHEET.ctwait`, `ACT.ctagain`, `ACT.ctseeold`, `ctReplacesChip`, `sendCountReplace`, `sendCount` (a 23505 replaces the count that got there first), `sendCountOnce`, `PAGE.countresults` (old → new strip), `PAGE.decide` (a replaced count reads "It moved on"), `ruthAsks`. `manager.html`: a replaced count reads REPLACED. | `test/store-round1.test.js` on Postgres: the Aisle A pair resolves to one, a second waiting count is refused, Joy replaces Musa's, the replaced one can't be accepted, a count after an accept goes as the next one. Harness at 360 and 1280: sheet, dock chip, both done screens. |
+| DATA-02 | yes | `0161`: `store_return_ask` takes the unit from the order line, and the sent asks are relabelled. `store.html`: `returnLineWords` and the Close-the-yard line read through `backText`. | Test: #0494's ask reads 20 Box (qty and amount kept). A new return sent as "Ctn" saves "Box". |
+| DATA-03 | yes | `0161`: `write_off_stock` refuses past the shelf (books − `ow_held_gone`) and writes one log row per line naming its report. `manager.html` sends each line's report id. `store.html`: `rpEmpty`, the `PAGE.report` empty state, picker chips, `ACT.rpsend` guard. | Test: an empty-shelf write-off is refused ("The shelf has only 0 of ABC Black Screws: count it first"). 2 off 5 writes one row, −2 to 3, "report <id>". Harness: picker, empty and no-aisle screens. A count-due item shows the same card without its figure: "Count this item first". That state was added to the canvas as `due`. |
+| DATA-04 | yes | `store.html`: the loss cap ("The shelf has … · that is the most", "More than the shelf has · count it first"), `PAGE.decide` ("fewer than / differ from the shelf", "All match the shelf", "Counted against the shelf", "· shelf 3 ctn"), the `rpMax` comment. | The test greps that no "books" sits next to a shelf figure. The words that stay ("The books stay off this phone", "Opening the books") name the real books. |
+| DATA-05 | yes | `0161`: the 59 approved moves, matched by id and name. `store.html`: `aisleListNow` gives no letter to an uncategorised product, `NO_AISLE`, `aisleWord` at every "Aisle X", `ACT.aisle` guard. | Test: the products land in their aisles, Casters stays in Furniture, another shop's P269 is untouched, none without an aisle. No aisle empties, so no letter moves. |
+| DATA-06 | yes | `0161`: the 13 product renames and 4 variant renames. | Test: "OMEGA Hinges Normal", "19mm Light", "Half Bend (Type B)"; other variants untouched. |
+
+Also checked: store-app, store-decisions, store-asks, design-system, section-structure, decision-rights, shop-picker; on Postgres store-no-money, store-asks, stock-count-once, push, push-handoffs. `manager-decisions-db` has one old failure ("store: count a trip"). It fails the same way without 0161: it came with 0159's yard-only rule.
