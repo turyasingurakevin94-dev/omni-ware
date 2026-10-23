@@ -71,6 +71,7 @@ for (const arg of args) {
     if (full) {
       // unroll the scrolling area so the whole screen can be looked at
       r.querySelectorAll('*').forEach(el => { const cs = getComputedStyle(el); if (cs.overflowY === 'auto') { el.style.overflow = 'visible'; el.style.flex = 'none'; if (cs.position === 'absolute') { el.style.position = 'relative'; el.style.inset = 'auto'; } } });
+      [...r.children].forEach(ch => { const cs = getComputedStyle(ch); if (cs.position === 'absolute' && cs.display === 'flex' && cs.top === '0px' && cs.bottom === '0px') { ch.style.position = 'relative'; ch.style.inset = 'auto'; } });
       r.style.height = 'auto'; r.style.minHeight = '844px'; r.style.overflow = 'visible';
       return { full: r.getBoundingClientRect().height };
     }
