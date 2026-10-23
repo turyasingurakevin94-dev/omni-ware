@@ -51,3 +51,19 @@ Deferred:
 - Stable stored aisle letters (letters still follow the sorted names).
 - The 13 products left in Furniture: adhesives and sealants have no aisle, and 8 names are unclear (Elephant Jin Li, ELEPHANT King, Wrapping Film, chains, Axel Brade, Patra, Sail, Parker Engine).
 - `manager-decisions-db`'s old 0159 failure.
+
+## Round 2 · Core workflows (23 Oct 2026) · FLOW-01..07 · DATA-01 (no code: 0161)
+
+Fixed: check-in counts in Ctn or Dozen and keeps the base unit; every held write waits 10 s; a packed order can be unpacked while still in the yard (ticks kept, bay freed); the hand-over name follows the typing; the counter and the extras sheet take the cursor; one Today card per trip draft; "I miscounted" both ways; singular and plural from one helper.
+
+Now part of the language:
+- **Count in the unit you can see.** Wherever a line comes in packs, the counter offers the pack and the loose unit. The books keep the line's own unit, and every figure reads back through `backText`.
+- **Undo is 10 s everywhere,** or until the screen changes.
+- **Undo, then a way back.** After the Undo window, a reversible step offers its own undo action ("Unpack #…") behind a confirm sheet.
+- **A field that opens takes the cursor.**
+- **One card per job.** A draft carries on inside its Next job card, not beside it.
+- **Counted words** go through `nOf()`: never "1 items".
+
+Deferred:
+- Unpack from a delivery bay goes through the order slip, opened from order search, not from the bay tile (the bay opens the load run).
+- 0161 still to run.

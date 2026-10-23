@@ -53,13 +53,15 @@ FLOW-03 and FLOW-04 change no layout: the label already reads the full name on t
 
 ## Phase B result (filled after implementing)
 
+Go-ahead 23 Oct: keep the ticks, anyone can unpack.
+
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| FLOW-01 | | | |
-| FLOW-02 | | | |
-| FLOW-03 | | | |
-| FLOW-04 | | | |
-| FLOW-05 | | | |
-| FLOW-06 | | | |
-| FLOW-07 | | | |
-| DATA-01 | | | |
+| FLOW-01 | yes | `lineLevels`, `rcLv`, `lvNum`, `btPair`, `rcF`, `ACT.rclv`; `PAGE.receive` `line()` (unit switch, the number box carries its unit, the "You counted 1 Ctn = 20 Dozen" line, the pill and "bought" through `backText`, the bar and reasons in the chosen unit); `ACT['in:rccount']` and `ACT.rcstep` keep the line's own unit; `rcToText`, `rcDone` and scan-to-tick (`SCAN_MODES.receive`, which had the same fault) read through `backText`; the pack card sub reads "1 Ctn · 20 Dozen". | Harness with a 20 Dozen / Ctn 20 line: typing 1 in Ctn turns the line green (20 Dozen, no shortage), and the pill reads "1 Ctn". `test/store-round2.test.js`. |
+| FLOW-02 | yes | `heldWrite` waits at least 10 s. `canUnpack`, `unpackOrder`, `unpackLink` (pack done once Undo is over, and the order slip), `SHEET.unpack`, `ACT.unpack`, `ACT.unpackyes`, the To pack banner. | Harness: Undo still there at 7 s on Packed. After 10 s, Unpack opens the sheet. Confirming puts #0048 back to `in_progress` with bay and packed time cleared and ticks kept, lands on To pack with "is back in To pack · bay 2 is free". The early Undo didn't reproduce on Packed (it already asked 10 s). The other held writes, still on 4 s, were the likely cause. |
+| FLOW-03 | yes | `ACT['in:slwho']` patches the slide label, its knob's label and `[data-live="slfoot"]` on every key; it renders only when the slide becomes ready, then puts focus back at the end. | Harness: typing "Peter Okello" keeps focus in the box. The slide reads "Slide to hand over to Peter" (first names, as everywhere), and the line reads "Checked together with Peter Okello". |
+| FLOW-04 | yes | `focusSoon`; `ACT.rcedit` focuses the count box, `ACT.rcextra` the search box. | Harness: the active element after opening is `rc_in_<i>`. |
+| FLOW-05 | yes | `resumeCard(j)` is skipped when the draft is the next job; the `jobCard` round branch becomes "Carry on …'s trip · n of m counted · Carry on". | Harness: Today shows one card. |
+| FLOW-06 | yes | `WHY.miscount`; `whyOk` never keeps it; `ACT.rcwhy` sets `ui.fixing` and focuses the box; the green ring, "Type the right number" and "Fix the number first" on the slide. | Harness: 2×2 reasons, and the number takes focus. |
+| FLOW-07 | yes | `nOf(n, word)`; "Next order · … · 1 item", "Picks for … of 1 item", "of 1 line/stop", "All 1 line checked", the count line, the pack card. | The test greps for "N items" and "of N lines/stops/items". |
+| DATA-01 | no code | Already in 0161. It needs 0161 run on the live database. | `test/store-round1.test.js` (the Aisle A pair resolves to one). |
