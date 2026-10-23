@@ -2,7 +2,7 @@
 
 **Canvas:** https://claude.ai/artifact/LVsyQEintezbVH3qn4cSVi, row "Audit round 9 · speed" (bottom of the canvas, version 113). As in round 8, the boards are the real screens from the harness with each change applied there as a prototype; `store.html` is not changed.
 
-**Migration:** possibly **0166**, to trim the snapshot, once its size is measured on live (Q1). 0165 is taken by Sales round 1.
+**Migration:** **0166** (0165 is taken by Sales round 1). It splits the snapshot into what changes all day and what doesn't, so the 45-second refresh stops downloading the catalogue again. The live measurement is below.
 
 **Do not regress (round 8):**
 - Big text scales the tokens;
@@ -24,7 +24,8 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 | Alerts render | 11–25 ms | ≤ 16 ms | |
 | Other screens' render | 1–5 ms | no worse | |
 | Page | 768 KB / 206 KB gzip | no worse; served from the phone after the first open | |
-| Snapshot | 315 KB / 735 ms | < 200 KB | |
+| Snapshot, on opening | 315 KB / 735 ms (Kevin's check: 347 KB) | about 300 KB, once a session | |
+| Each 45-second refresh | the whole snapshot (347 KB) + stock, 2 requests | < 200 KB, 1 request | |
 
 ## What was found
 
@@ -60,10 +61,31 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 
 ## Server / SQL changes planned
 
+**What the live check found** (`round-9-snapshot-size.sql`, run by Kevin): the snapshot is **347 KB**.
+
+| Part | Rows | Size | Used by the 45-second refresh? |
+|---|---|---|---|
+| orders | 107 | 124 KB | yes |
+| units | 523 | 69 KB | no |
+| products | 146 | 56 KB | no |
+| trips | 56 | 46 KB | yes |
+| log (stock history) | 160 | 30 KB | no |
+| customers | 127 | 11 KB | no |
+| suppliers, counts, returns, counted, presets, members, staff and the rest | — | 12 KB | partly |
+
+**What this shows:**
+- **Most of the size is downloaded twice for nothing.** `refreshLive()` fetches the whole snapshot every 45 s while Today is open. It keeps only orders, trips, holds, asks, counts, reports, returns, members and me, which is about 185 KB. The other 170 KB (units, products, log, customers and suppliers) is thrown away. Stock comes in a second request.
+- **The size is not in one fat key.** Inside an order, `items` is the biggest key at 39 KB over 107 orders; the rest is many small fields. No one cut takes the whole snapshot under 200 KB without dropping something a screen reads.
+- **21 days of stock history is too short.** The item page draws 4 weekly bars (`weeksIndex`, 28 days), so 21 days would blank the oldest bar. 28 days keeps all four.
+
 | ID | Migration / function / policy | Change | Test |
 |---|---|---|---|
-| STO-SPD-03 | **check first:** `docs/audit/store/round-9-snapshot-size.sql` (read-only) | Shows each part of the snapshot and the heaviest order payload keys, as the shop's Store login. | — |
-| STO-SPD-03 | **0166** (only if Q1 says so), `store_snapshot` | Trim what the check shows is heaviest and unused. **Candidates:** the stock history window, 35 → 21 days (the item page shows 8 moves); customers limited to those on orders in the snapshot; `stock` folded in, to save one request. Safe to run twice, with ROLLBACK and CHECK blocks. | The PG scenario: same keys, smaller; the Store tests pass. |
+| STO-SPD-03 | **0166**, new `store_live(p_shop)` | **What it holds:** the parts that change all day, the same as `store_snapshot` gives today: orders, trips, holds, asks, counts, reports, returns, members, managers and me. **Stock:** folded in as one `{key: qty}` map, so the refresh is one request. **Access:** the same member check, security definer, granted to `authenticated` only. `refreshLive()` calls it, and falls back to `store_snapshot` + the stock read when 0166 is not there yet. | PG: `store_live` keys = the live parts + `stock`; a non-member gets 42501; no money key in it (the round 5 money scan). |
+| STO-SPD-03 | **0166**, `store_snapshot(p_shop)` | **Becomes** `store_live(p_shop)` plus the parts that rarely change (products, units, customers, staff, suppliers, presets, log, counted and agents). So the two cannot drift apart. **Same keys as now, plus `stock`**; `loadAll()` uses the folded stock and drops its own stock read. | PG: the old key set ⊂ the new; the Store tests pass. |
+| STO-SPD-03 | **0166**, trims inside the snapshot | **Stock history:** 35 → 28 days, the 4 weeks the item page draws. **Delivered orders:** 35 → 30 days, the window Returns offers (`returnableOrders`). **Voided trips:** gone after 14 days, as voided orders already are. **Units:** no `id` (the app never reads it), and empty fields left out (every reader defaults them). | PG scenario: an order delivered 32 days ago and a trip voided 15 days ago are not in the snapshot; one delivered 29 days ago is. |
+| STO-SPD-03 | 0166 house rules | Safe to run twice (`create or replace`); ROLLBACK block (0164's `store_snapshot` again, `drop function store_live`); CHECK block (both functions exist, `store_live` is not granted to `anon`); a row in `docs/decision-rights.md`. No role, task or push changes. | `test/decision-rights.test.js` |
+
+**Expected after 0166:** the refresh drops from 347 KB + the stock request to about 185 KB in one request, and the opening snapshot to about 330 KB, once per session. With the service worker, that opening load comes in behind the saved copy rather than in front of it. Cowork should also compare `transferSize` with `decodedBodySize`: the snapshot is repeated JSON keys and is probably compressed on the wire to a fraction of 347 KB.
 
 ## Glossary changes
 
@@ -84,11 +106,12 @@ Before = Cowork's measurements on the live build, on a desktop. After = filled i
 ## Risks
 
 - **A service worker that serves an old page.** The page is always revalidated in the background, the worker never touches API calls, and Reload is one tap. The worker's own file is checked by the browser on each open. A broken worker can be removed by publishing a `store-sw.js` that unregisters itself.
+- **`store_live` before 0166 is pasted.** The page falls back to `store_snapshot` + the stock read, so it works with or without the migration, in either order.
 - **Starting from the stored session** shows the saved copy a moment before the server confirms the login. A refused session signs out, as now; nothing is written before the check.
 
 ## Questions for Kevin
 
-1. **The snapshot:** please run `docs/audit/store/round-9-snapshot-size.sql` (read-only) and paste the two result tables. If it is over 200 KB, I'll trim the heaviest parts in 0166. The first candidate is the stock history window, 35 → 21 days. Is that OK?
+1. ~~The snapshot size~~: answered (347 KB, see above). The stock history window is now **35 → 28 days**, not 21, because the item page draws 4 weeks. "Go ahead" covers this.
 
 ## Phase B result (filled after implementing)
 
