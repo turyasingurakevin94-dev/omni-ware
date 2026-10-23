@@ -120,4 +120,6 @@ Read directly by the app, still: `stock` (key, qty), `places`, `place_routes`, `
 
 ### Run order on the live database
 
-0161 → 0162 → 0163 → **0164**, then deploy `store.html` and the `invite-worker` function. invite-worker writes `display_name`, so it must go after 0164.
+Checked on the live database on 23 Oct 2026: 0156, 0160 and 0161–0164 had not been run (everything they build on, 0115–0159, was there). Run, in this order:
+**0156 → 0160 → 0161 → 0162 → 0163 → 0164**, then deploy `store.html` and the `invite-worker` function. invite-worker writes `display_name`, so it must go after 0164.
+Tried on a copy built like live (0001–0159 without 0156): all six apply cleanly, and the round 5 scenario passes on the result.
