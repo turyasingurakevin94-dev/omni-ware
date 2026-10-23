@@ -64,6 +64,32 @@ button{font-family:inherit}
         </button>
       </sc-for>
     </div>
+    <!-- someone else: from the supplier book, or a supplier met in person -->
+    <sc-if value="{{showOtherBtn}}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{openOther}}" style="all: unset; cursor: pointer; min-height: 48px; padding: 0 14px; border-radius: 16px; box-shadow: inset 0 0 0 1.5px #E3DACB; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #2B3A8C"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Someone else</button>
+    </sc-if>
+    <sc-if value="{{otherOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="border-radius: 20px; background: #FFFFFF; box-shadow: 0 1px 0 #E3DACB, 0 10px 24px rgba(60,40,20,.06); padding: 14px; display: flex; flex-direction: column; gap: 12px; animation: owIn .25s ease-out">
+      <sc-if value="{{showBook}}" hint-placeholder-val="{{ true }}">
+        <span style="font-size: 12px; font-weight: 700; color: #6B5A43">From our supplier book</span>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{book}}" as="b" hint-placeholder-count="3">
+            <button type="button" onClick="{{b.add}}" style="all: unset; cursor: pointer; box-sizing: border-box; min-height: 48px; padding: 0 12px; border-radius: 12px; background: #F7F2E9; display: flex; align-items: center; gap: 10px">
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13px; font-weight: 700">{{b.name}}</span><span style="font-size: 11px; font-weight: 600; color: #6B5A43">{{b.sells}}</span></span>
+              <span style="font-size: 12px; font-weight: 700; color: #2B3A8C">Add to the ask</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <span style="font-size: 12px; font-weight: 700; color: #6B5A43">Or someone new, met in person</span>
+      <div style="display: flex; gap: 8px">
+        <input value="{{nn}}" aria-label="Supplier name" placeholder="Who" onInput="{{typeNN}}" style="flex: 1; min-width: 0; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 700; color: #1C2233">
+        <input value="{{np}}" inputmode="numeric" aria-label="Their price" placeholder="Price" onInput="{{typeNP}}" class="m" style="width: 112px; height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: right">
+      </div>
+      <button type="button" onClick="{{addNew}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; {{addStyle}}">Add their price</button>
+      <span style="font-size: 12px; font-weight: 600; color: #6B5A43">A price you got yourself counts now. They join the supplier book, and Denis is told.</span>
+    </div>
+    </sc-if>
     <sc-if value="{{canAsk}}" hint-placeholder-val="{{ false }}">
       <button type="button" onClick="{{ask}}" style="all: unset; cursor: pointer; height: 52px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; animation: owIn .2s ease-out">{{askLabel}}</button>
     </sc-if>
@@ -105,7 +131,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, otherOpen: false, nn: '', np: '' }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -121,16 +147,23 @@ class Component extends DCLogic {
     const strip = [[dot(OX), S.inked ? dot(BLUE) : 'background:#F5B26B', off], [off, off, off, off], [off], [off]];
     const askers = [['GA', 'background:#FBE5E2;color:#8E2A22'], ['PS', 'background:#F6E4F1;color:#7A3268'], ['KC', 'background:#E3F4EA;color:#0F6B43']].map(([i, face]) => ({ i, face }));
     // [key, initials, name, why we think they have it, answer]
-    const SUP = [
+    const BASE = [
       ['kat', 'KF', 'Katwe Fabricators', 'Sells cutters and grinders · answers in about an hour', { amount: '380,000', per: 'one, in its box · 2 days' }],
       ['kis', 'KS', 'Kiseka Steel', 'Sells hand tools', { amount: '395,000', per: 'one · next day' }],
       ['owi', 'OP', 'Owino Plumbing', 'Sometimes has tile tools', null]
     ];
+    // the rest of the book: not the likely ones, but one tap away
+    const BOOK = [
+      ['nak', 'NC', 'Nakawa Cement Depot', 'Cement, tile adhesive, some tile tools', { amount: '410,000', per: 'one · 3 days' }],
+      ['nam', 'NS', 'Namanve Sheets', 'Roofing, gutters', null],
+      ['nde', 'NT', 'Ndeeba Timber Works', 'Timber, boards', null]
+    ];
+    const SUP = BASE.concat(BOOK.filter(x => S.extra.includes(x[0])));
     const asked = S.phase === 'asked';
-    const sups = SUP.map(([k, i, name, why, ans], n) => {
+    const rows = SUP.map(([k, i, name, why, ans]) => {
       const on = !!S.pick[k], back = !!S.back[k];
       const st = !asked ? 'choose' : !on ? 'skip' : !back ? 'wait' : ans ? 'price' : 'none';
-      return { i, name, on: String(on), rule: n ? '1px solid #F1EBE0' : 'none',
+      return { i, name, on: String(on),
         pick: () => { if (!asked) this.setState({ pick: { ...S.pick, [k]: !on } }); },
         sub: st === 'none' ? 'Answered: does not stock it' : st === 'wait' ? 'Asked in the supplier app' : why,
         subInk: st === 'none' ? 'color:#8E2A22' : 'color:#6B5A43',
@@ -138,24 +171,36 @@ class Component extends DCLogic {
         price: st === 'price', amount: ans ? ans.amount : '', per: ans ? ans.per : '', waiting: st === 'wait',
         rightInk: st === 'skip' ? 'opacity:.4' : '' };
     });
+    if (S.custom) rows.push({ i: S.custom.name.slice(0, 2).toUpperCase(), name: S.custom.name, on: 'true', pick: () => {}, sub: 'New · met in person · now in the book', subInk: 'color:#0F6B43',
+      box: false, boxStyle: '', price: true, amount: S.custom.price, per: 'one · your own price', waiting: false, rightInk: '' });
+    const sups = rows.map((r, n) => ({ ...r, rule: n ? '1px solid #F1EBE0' : 'none' }));
+    const book = BOOK.filter(x => !S.extra.includes(x[0])).map(([k, , name, sells]) => ({ name, sells,
+      add: () => this.setState({ extra: [...S.extra, k], pick: { ...S.pick, [k]: true } }) }));
+    const npv = parseInt(String(S.np).replace(/[^0-9]/g, ''), 10) || 0;
+    const canAdd = S.nn.trim().length > 1 && npv >= 1000;
     const nPick = Object.values(S.pick).filter(Boolean).length;
-    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length;
+    const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom ? 1 : 0);
     const pending = asked && SUP.some(([k]) => S.pick[k] && !S.back[k]);
     const can = priced >= 1 && !pending;
     return {
       strip, askers, sups,
-      ring: SUP.filter(([k, , , , a]) => S.back[k] && a).map(([, , name, , a]) => name.split(' ')[0].toUpperCase() + ' ' + a.amount).join(' • ') + ' • ' + priced + ' PRICED • ',
-      stampSub: priced + ' OF ' + nPick + ' ASKED', stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
-      told: (priced > 1 ? 'Both prices go' : 'The price goes') + ' to the price list. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
+      ring: SUP.filter(([k, , , , a]) => S.back[k] && a).map(([, , name, , a]) => name.split(' ')[0].toUpperCase() + ' ' + a.amount).concat(S.custom ? [S.custom.name.split(' ')[0].toUpperCase() + ' ' + S.custom.price] : []).join(' • ') + ' • ' + priced + ' PRICED • ',
+      book, showBook: !asked && book.length > 0, otherOpen: S.otherOpen && !S.inked, showOtherBtn: !S.otherOpen && !S.inked,
+      openOther: () => this.setState({ otherOpen: true }), nn: S.nn, np: S.np,
+      typeNN: (e) => this.setState({ nn: e.target.value }), typeNP: (e) => this.setState({ np: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
+      addNew: () => { if (canAdd) this.setState({ custom: { name: S.nn.trim(), price: npv.toLocaleString('en-US') }, otherOpen: false, nn: '', np: '' }); },
+      addStyle: canAdd ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
+      stampSub: priced + (priced === 1 ? ' PRICE IN' : ' PRICES IN'), stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
+      told: (priced > 1 ? 'The ' + priced + ' prices go' : 'The price goes') + ' to the price list. Denis sees ' + (priced > 1 ? 'them' : 'it') + ' when he buys.' + (priced < 2 ? ' One more supplier makes it stronger.' : ''),
       stripAria: (S.inked ? 2 : 1) + ' of 9 stamps',
-      listHead: asked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (nPick - priced) + ' without') : 'Ask the ones who might have it',
+      listHead: asked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (nPick + (S.custom ? 1 : 0) - priced) + ' without') : 'Ask the ones who might have it',
       canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + (nPick === 1 ? ' supplier' : ' suppliers') + ' in their app',
       ask: () => this.ask(), showMarket: !asked,
       open: !S.inked, inked: S.inked, holding: S.holding,
       pressDim: can ? '' : 'opacity:.55;cursor:default',
       knob: can ? 'background:#2B3A8C;color:#FFFFFF;box-shadow:0 8px 18px rgba(43,58,140,.3)' : 'background:#EDE6D8;color:#8A7A62',
       pressAria: can ? 'Press and hold to ink the source stamp' : 'A price has to come in first',
-      inkHint: !asked ? 'The stamp needs at least one price in. Two is the target.' : pending ? 'Answers are coming in…' : S.holding ? 'Keep holding…' : 'Press and hold to ink it',
+      inkHint: pending ? 'Answers are coming in…' : !priced ? 'The stamp needs at least one price in. Two is the target.' : S.holding ? 'Keep holding…' : 'Press and hold to ink it',
       hintInk: can ? 'color:#1C2233' : 'color:#6B5A43',
       press: () => { if (!can || S.holding) return; this.setState({ holding: true }); setTimeout(() => this.setState({ holding: false, inked: true }), 900); },
       nextLabel: S.inked ? 'Next: what do rivals charge?' : 'Compare opens after this stamp',
