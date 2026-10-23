@@ -5,10 +5,11 @@ seg_nav = '''    <div role="tablist" style="display: grid; grid-template-columns
       <button type="button" role="tab" aria-selected="{{certSel}}" onClick="{{showCertify}}" style="{{certTab}}">Top sellers <span class="m">59</span></button>
     </div>'''
 bar = '''    <sc-if value="{{isOpen}}" hint-placeholder-val="{{ true }}">
-    <div role="img" aria-label="Sent back 1, wanted 9, hunting 6, quoted 4, ready 3, with Ruth 2, live this week 5" style="display: flex; flex-direction: column; gap: 8px">
+    <div role="img" aria-label="30 new items from asked to on sale: sent back 1, wanted 9, hunting 6, quoted 4, ready 3, with Ruth 2, live this week 5" style="display: flex; flex-direction: column; gap: 6px">
       <div style="display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 3px">
-        <span style="flex: 1; background: #F5B26B"></span><span style="flex: 9; background: rgba(255,255,255,.22)"></span><span style="flex: 6; background: rgba(255,255,255,.4)"></span><span style="flex: 4; background: rgba(255,255,255,.6)"></span><span style="flex: 3; background: #FFFFFF"></span><span style="flex: 2; background: repeating-linear-gradient(135deg, rgba(245,178,107,.8) 0 4px, transparent 4px 8px)"></span><span style="flex: 5; background: #6FDCB0"></span>
+        <sc-for list="{{segs}}" as="g" hint-placeholder-count="7"><span style="{{g.style}}"></span></sc-for>
       </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #B3BCD2"><span>just asked</span><span style="display: flex; align-items: center; gap: 4px">''' + svg('M4 12h15M14 7l5 5-5 5', 12, 2.2) + '''on sale</span></div>
     </div>
     <div style="display: flex; gap: 6px; overflow-x: auto; margin: -6px -20px; padding: 6px 20px; -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent)">
       <sc-for list="{{chips}}" as="c" hint-placeholder-count="8"><button type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}"><span style="width: 8px; height: 8px; border-radius: 999px; {{c.dot}}"></span>{{c.label}} <span class="m">{{c.n}}</span></button></sc-for>
@@ -99,6 +100,9 @@ script = '''class Component extends DCLogic {
     const isOpen = this.state.view === 'open';
     const DOTS = { all: 'background:transparent;display:none', back: 'background:#F5B26B', wanted: 'background:rgba(255,255,255,.35)', hunting: 'background:rgba(255,255,255,.5)', quoted: 'background:rgba(255,255,255,.7)', ready: 'background:#FFFFFF', manager: 'background:#F5B26B', live: 'background:#6FDCB0' };
     const lanes = [['all', 'All', 30], ['back', 'Sent back', 1], ['wanted', 'Wanted', 9], ['hunting', 'Hunting', 6], ['quoted', 'Quoted', 4], ['ready', 'Ready', 3], ['manager', 'With Ruth', 2], ['live', 'Live', 5]];
+    const SEGBG = { back: '#F5B26B', wanted: 'rgba(255,255,255,.22)', hunting: 'rgba(255,255,255,.4)', quoted: 'rgba(255,255,255,.6)', ready: '#FFFFFF', manager: 'repeating-linear-gradient(135deg, rgba(245,178,107,.8) 0 4px, transparent 4px 8px)', live: '#6FDCB0' };
+    // the bar is the same lanes as the chips, sized by how many items each holds; a picked chip lights its part
+    const segs = lanes.slice(1).map(([k, , n]) => ({ style: 'flex:' + n + ';background:' + SEGBG[k] + ';opacity:' + (this.state.lane === 'all' || this.state.lane === k ? 1 : .2) }));
     const chips = lanes.map(([k, label, n]) => {
       const on = this.state.lane === k;
       return { label, n, on: String(on), dot: DOTS[k], pick: () => this.setState({ lane: k }),
@@ -108,7 +112,7 @@ script = '''class Component extends DCLogic {
     const groups = isOpen ? open.filter(g => this.state.lane === 'all' || g.key === this.state.lane) : certify;
     const tab = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:38px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;' + (on ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2');
     return {
-      chips, groups, isOpen, isCert: !isOpen,
+      chips, segs, groups, isOpen, isCert: !isOpen,
       openTab: tab(isOpen), certTab: tab(!isOpen), openSel: String(isOpen), certSel: String(!isOpen),
       showOpen: () => this.setState({ view: 'open' }),
       showCertify: () => this.setState({ view: 'certify' })
