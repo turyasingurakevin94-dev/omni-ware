@@ -2,175 +2,144 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sourcing — Fix the gaps</title>
+<title>Sourcing · Fix the gaps</title>
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#FFFFFF}
+body{margin:0}
 a{color:inherit;text-decoration:none}a:hover{color:inherit}
-*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
+input::placeholder{color:#9AA1AE}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
 .m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+@keyframes owPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1)}}
+@keyframes owPulseA{0%{box-shadow:0 0 0 0 rgba(245,178,107,.6)}70%{box-shadow:0 0 0 6px rgba(245,178,107,0)}100%{box-shadow:0 0 0 0 rgba(245,178,107,0)}}
+@keyframes owRingA{0%,100%{box-shadow:0 0 0 3px #19223F,0 0 0 5px rgba(245,178,107,.95)}50%{box-shadow:0 0 0 3px #19223F,0 0 0 8px rgba(245,178,107,.25)}}
+@keyframes owUndoRun{to{stroke-dashoffset:62.8}}
+@keyframes owGone{to{opacity:0;visibility:hidden}}
+@keyframes owChev{0%,100%{opacity:.35;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
 </style>
 </helmet>
-<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column">
-
-  <div style="padding: 12px 16px 0; display: flex; flex-direction: column; gap: 12px">
-    <div style="display: flex; align-items: center; gap: 8px; margin-left: -8px">
-      <a href="Passport.dc.html" aria-label="Back to the passport" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
-      <span style="display: flex; flex-direction: column; min-width: 0">
-        <span style="font-size: 16px; font-weight: 700">Wire mesh BRC A142</span>
-        <span style="font-size: 12px; color: #5F6980">{{stepWord}}</span>
-      </span>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+  <sc-if value="{{walking}}" hint-placeholder-val="{{ true }}">
+  <div style="position: absolute; inset: 0; display: flex; flex-direction: column">
+  <div style="flex: none; background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 30px 30px; padding: 10px 16px 20px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+      <a href="Passport.dc.html" aria-label="Back to the passport" style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: rgba(255,255,255,.08); color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span style="flex: 1; min-width: 0; text-align: center; font-size: 13px; font-weight: 700; color: #B3BCD2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Fix the gaps</span>
+      <span style="width: 44px; height: 44px; flex: none"></span>
     </div>
-    <!-- the stepper -->
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span role="img" aria-label="Checks done" style="position: relative; width: 52px; height: 52px; flex: none; display: block"><svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26.0" cy="26.0" r="22.5" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"></circle><circle cx="26.0" cy="26.0" r="22.5" fill="none" stroke="#6FDCB0" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ringDash}} 141.4" transform="rotate(-90 26.0 26.0)"></circle></svg><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600">{{doneN}}/6</span></span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">Wire mesh BRC A142</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">{{stepWord}}</span></span>
+    </div>
     <div role="list" aria-label="Steps" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
-      <sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
-        <span role="listitem" aria-current="{{s.cur}}" style="display: flex; flex-direction: column; gap: 6px">
-          <i style="height: 6px; border-radius: 3px; {{s.bar}}"></i>
-          <span style="font-size: 12px; font-weight: 700; {{s.ink}}">{{s.label}}</span>
-        </span>
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="3"><span role="listitem" aria-current="{{s.cur}}" style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 100%; height: 8px; border-radius: 999px; {{s.bar}}"></span><span style="font-size: 11px; font-weight: 700; {{s.ink}}">{{s.label}}</span></span></sc-for>
+    </div>
+  </div>
+  <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+    <sc-if value="{{onPhoto}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 12px; align-items: center">
+      <div style="position: relative; width: 280px; height: 280px; border-radius: 24px; overflow: hidden; {{frame}}">
+        <sc-if value="{{noShot}}" hint-placeholder-val="{{ true }}"><div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #5F6980"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path></svg><span style="font-size: 13px; font-weight: 700">Fill the square with one sheet</span></div></sc-if>
+        <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="The photo: one sheet of mesh on a plain floor" style="position: absolute; inset: 0; background: #E9E5DE; display: flex; align-items: center; justify-content: center"><span style="width: 200px; height: 200px; border-radius: 6px; background-color: #F6F3EE; background-image: repeating-linear-gradient(0deg, #6B7480 0 2px, transparent 2px 20px), repeating-linear-gradient(90deg, #6B7480 0 2px, transparent 2px 20px); box-shadow: 0 10px 24px rgba(22,32,60,.18)"></span></div></sc-if>
+      </div>
+      <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px"><sc-for list="{{checks}}" as="c" hint-placeholder-count="4"><span style="height: 28px; padding: 0 10px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>{{c}}</span></sc-for></div></sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{onHold}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 13px; font-weight: 700; color: #5F6980">Stock is recommended · 68</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">confidence 67, under 70 · your pick</span></div>
+    <div role="radiogroup" aria-label="How we hold it" style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+      <sc-for list="{{holds}}" as="h" hint-placeholder-count="3">
+        <button type="button" role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" style="{{h.style}}">
+          <span style="width: 22px; height: 22px; flex: none; border-radius: 999px; {{h.dot}}"></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; text-align: left"><span style="font-size: 14px; font-weight: 700">{{h.label}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{h.sub}}</span></span>
+          <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px"><span class="m" style="font-size: 14px; font-weight: 600">{{h.cash}}</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">cash out</span></span>
+        </button>
       </sc-for>
     </div>
-  </div>
-
-  <!-- step 1: the photo -->
-  <sc-if value="{{onPhoto}}" hint-placeholder-val="{{ true }}">
-    <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 14px">
-      <div style="position: relative; align-self: center; width: 300px; height: 300px; border-radius: 22px; overflow: hidden; {{frame}}">
-        <sc-if value="{{noShot}}" hint-placeholder-val="{{ true }}">
-          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #5F6980">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>
-            <span style="font-size: 14px; font-weight: 600">Fill the square with one sheet</span>
-          </div>
-        </sc-if>
-        <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}">
-          <!-- a drawn sheet of mesh -->
-          <div aria-label="The photo: one sheet of mesh on a plain floor" role="img" style="position: absolute; inset: 0; background: #E9E5DE; display: flex; align-items: center; justify-content: center">
-            <span style="width: 220px; height: 220px; border-radius: 6px; background-color: #F6F3EE; background-image: repeating-linear-gradient(0deg, #6B7480 0 2px, transparent 2px 22px), repeating-linear-gradient(90deg, #6B7480 0 2px, transparent 2px 22px); box-shadow: 0 10px 24px rgba(22,32,60,.18)"></span>
-          </div>
-        </sc-if>
-      </div>
-      <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}">
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px">
-          <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
-            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 12px; font-weight: 700">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{c}}</span>
-          </sc-for>
-        </div>
-      </sc-if>
+    <sc-if value="{{isConsign}}" hint-placeholder-val="{{ false }}"><a href="Verdict.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 20px; background: #FFFBF6; box-shadow: inset 0 0 0 1.5px #F3DCC4"><span style="flex: 1; font-size: 13px; font-weight: 700; color: #7A4A02">Kiseka must agree to consign first · ask on the verdict</span><span style="flex: none; display: flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#95530C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span></a></sc-if>
     </div>
-  </sc-if>
-
-  <!-- step 2: the hold -->
-  <sc-if value="{{onHold}}" hint-placeholder-val="{{ false }}">
-    <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 14px">
-      <div style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: #F7F5F2">
-        <span role="img" aria-label="Score 68 of 100" style="position: relative; width: 96px; height: 52px; flex: none; overflow: hidden">
-          <span style="position: absolute; left: 0; top: 0; width: 96px; height: 96px; border-radius: 999px; background: conic-gradient(from 270deg, #0F6B43 0deg 122deg, #E0DCD4 122deg 180deg, transparent 180deg 360deg)"></span>
-          <span style="position: absolute; left: 12px; top: 12px; width: 72px; height: 72px; border-radius: 999px; background: #F7F5F2"></span>
-          <span class="m" style="position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 20px; font-weight: 600">68</span>
-        </span>
-        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-          <span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Recommended</span>
-          <span style="font-size: 20px; font-weight: 700">Stock</span>
-          <span style="font-size: 12px; color: #5F6980">confidence <span class="m">67</span>, under <span class="m">70</span>, so it is your pick</span>
-        </span>
-      </div>
-      <div role="radiogroup" aria-label="How we hold it" style="display: flex; flex-direction: column; gap: 8px">
-        <sc-for list="{{holds}}" as="h" hint-placeholder-count="3">
-          <button type="button" role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" style="{{h.style}}">
-            <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
-              <span style="font-size: 15px; font-weight: 700">{{h.label}}</span>
-              <span style="font-size: 12px; font-weight: 600">{{h.sub}}</span>
-            </span>
-            <span class="m" style="font-size: 14px; font-weight: 600">{{h.cash}}</span>
-          </button>
-        </sc-for>
-      </div>
-      <sc-if value="{{isConsign}}" hint-placeholder-val="{{ false }}">
-        <a href="Verdict.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 600">
-          <span style="flex: 1">Kiseka must agree to consign first. Ask on the verdict page.</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
-        </a>
-      </sc-if>
-    </div>
-  </sc-if>
-
-  <!-- step 3: ready -->
-  <sc-if value="{{onSend}}" hint-placeholder-val="{{ false }}">
-    <div style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px">
-      <span role="img" aria-label="5 of 6 gates done; the Manager sets the markup" style="width: 120px; height: 120px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: conic-gradient(#FFFFFF 0deg 4deg, #0F6B43 4deg 296deg, #FFFFFF 296deg 304deg, #E0DCD4 304deg 356deg, #FFFFFF 356deg 360deg)">
-        <span style="width: 96px; height: 96px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><span class="m" style="font-size: 28px; font-weight: 600">5/6</span></span>
-      </span>
-      <span style="font-size: 20px; font-weight: 700">Ready for Ruth</span>
-      <div style="align-self: stretch; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
-        <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
-          <span style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; {{t.style}}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.mark}}"></path></svg>{{t.label}}</span>
-        </sc-for>
-      </div>
-      <span style="font-size: 13px; color: #5F6980">The Manager sets the markup and puts it on sale.</span>
-    </div>
-  </sc-if>
-
-  <div style="margin-top: auto; padding: 12px 16px 18px; border-top: 1px solid #E6E3DD; display: flex; flex-direction: column; gap: 8px">
-    <sc-if value="{{dockBtn}}" hint-placeholder-val="{{ true }}">
-      <button type="button" onClick="{{go}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: block; text-align: center; padding: 15px 10px; border-radius: 14px; font-size: 15px; font-weight: 700; {{goStyle}}">{{goLabel}}</button>
     </sc-if>
     <sc-if value="{{onSend}}" hint-placeholder-val="{{ false }}">
-      <a href="SendToManager.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Send to Ruth</a>
+    <span style="padding: 0 4px; font-size: 13px; font-weight: 700; color: #5F6980">What Ruth gets</span>
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column; gap: 2px">
+      <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 10px"><span style="width: 36px; height: 36px; flex: none; border-radius: 11px; display: flex; align-items: center; justify-content: center; {{t.well}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.mark}}"></path></svg></span><span style="flex: 1; font-size: 14px; font-weight: 700">{{t.label}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{t.v}}</span></div>
+      </sc-for>
+    </div>
     </sc-if>
   </div>
+  <sc-if value="{{dockBtn}}" hint-placeholder-val="{{ true }}"><div style="flex: none; padding: 12px 16px 22px"><button type="button" onClick="{{go}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{goStyle}}">{{goLabel}}</button></div></sc-if>
+  <sc-if value="{{onSend}}" hint-placeholder-val="{{ false }}">  <div style="flex: none; background: #16203C; border-radius: 26px 26px 0 0; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -8px 24px rgba(22,32,60,.18); color: #FFFFFF">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 4px">
+      <span style="font-size: 14px; font-weight: 700"><span class="m">5</span> of 6 · Ruth is next</span>
+      <span style="font-size: 12px; font-weight: 700; color: #B3BCD2">you can take it back</span>
+    </div>
+    <button type="button" onClick="{{send}}" aria-label="Slide to send to Ruth. Slide, or press Enter" style="all: unset; cursor: pointer; box-sizing: border-box; position: relative; width: 100%; height: 56px; border-radius: 999px; background: radial-gradient(120% 140% at 10% 50%, #26335E 0%, #16203C 70%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 10px 22px rgba(22,32,60,.22)"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: 56px; border-radius: 999px; background: linear-gradient(90deg, rgba(201,58,48,.15), rgba(201,58,48,.55))"></span><span style="position: absolute; left: 4px; top: 4px; width: 48px; height: 48px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 14px rgba(201,58,48,.5), inset 0 1px 0 rgba(255,255,255,.2)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3"></path></svg></span><span style="position: absolute; left: 58px; right: 18px; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 700; color: #FFFFFF; white-space: nowrap; overflow: hidden"><span style="overflow: hidden; text-overflow: ellipsis; min-width: 0">Slide to send to Ruth</span><span style="flex: none; display: flex; color: #F0A39B; animation: owChev 1.4s ease-in-out infinite"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></span></span></button>
+  </div></sc-if>
+  </div>
+  </sc-if>
+  <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+  <div style="position: absolute; inset: 0; background: radial-gradient(130% 60% at 50% 0%, #2B3866 0%, #16203C 55%, #111A33 100%); color: #FFFFFF; display: flex; flex-direction: column; padding: 14px 20px 26px; box-sizing: border-box">
+    <button type="button" onClick="{{undo}}" aria-label="Undo, for 10 seconds" style="all: unset; cursor: pointer; position: absolute; top: 12px; right: 16px; z-index: 2; height: 40px; padding: 0 14px 0 8px; border-radius: 999px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; animation: owGone .3s ease 10s forwards"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#6FDCB0" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8" stroke-dashoffset="0" transform="rotate(-90 13 13)" style="animation: owUndoRun 10s linear forwards"></circle><path d="M10 10.5 8 12.5l2 2M8 12.5h6a3 3 0 0 1 0 6h-2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Undo</button>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center">
+      <span style="position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center; animation: owPop .55s cubic-bezier(.2,.8,.2,1)">
+        <span style="position: absolute; inset: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(111,220,176,.14)"></span>
+        <span style="position: absolute; inset: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(111,220,176,.26)"></span>
+        <span style="position: relative; width: 80px; height: 80px; border-radius: 999px; background: #6FDCB0; color: #16203C; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 30px rgba(0,0,0,.3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3"></path></svg></span>
+      </span>
+      <span style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 28px; font-weight: 700; letter-spacing: -.02em">With Ruth</span>
+        <span style="font-size: 14px; font-weight: 600; color: #B3BCD2">Wire mesh BRC A142 · 2 gaps fixed</span>
+      </span>
+      <div style="width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 20px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07)"><span style="height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px"><span class="m" style="font-size: 22px; font-weight: 600; line-height: 1; color: #6FDCB0">5/6</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">checks done</span></span><span style="height: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: -1px 0 0 rgba(255,255,255,.07)"><span class="m" style="font-size: 22px; font-weight: 600; line-height: 1">40</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">sheets waiting</span></span></div>
+      <div style="width: 100%; border-radius: 22px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); padding: 18px 10px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px"><div style="position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))"><span style="position: absolute; top: 21px; left: 16.7%; width: 33.3%; height: 2px; background: rgba(111,220,176,.5)"></span><span style="position: absolute; top: 21px; left: 50%; width: 33.3%; height: 2px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.25) 0 5px, transparent 5px 10px)"></span><span style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center"><span style="width: 44px; height: 44px; border-radius: 999px; background: #6FDCB0; color: #16203C; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; color: #FFFFFF">Sent</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">by you, 18:30</span></span></span><span style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center"><span style="width: 44px; height: 44px; border-radius: 999px; background: #F6E4F1; color: #7A3268; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #19223F, 0 0 0 5px #F5B26B; animation: owRingA 2s infinite">RN</span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; color: #FFFFFF">Ruth</span><span style="font-size: 11px; font-weight: 600; color: #F5B26B">sets the markup</span></span></span><span style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center"><span style="width: 44px; height: 44px; border-radius: 999px; background: #19223F; color: #B3BCD2; box-shadow: inset 0 0 0 2px rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8M7 17h10"></path></svg></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; color: #FFFFFF">On sale</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">3 customers told</span></span></span></div><span style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; color: #B3BCD2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"></path></svg>A buzz on this phone when Ruth decides</span></div>
+    </div>
+    <a href="Funnel.dc.html" style="height: 58px; border-radius: 999px; background: #FFFFFF; color: #16203C; box-shadow: 0 10px 24px rgba(0,0,0,.25); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Done</a>
+  </div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { step: 0, shot: false, hold: null }; }
+  constructor(p) { super(p); this.state = { step: 0, shot: false, hold: null, sent: false }; }
   renderVals() {
     const S = this.state;
-    const LABELS = ['Photo', 'Hold', 'Send'];
-    const steps = LABELS.map((label, i) => ({
+    const steps = ['Photo', 'Hold', 'Send'].map((label, i) => ({
       label, cur: i === S.step ? 'step' : 'false',
-      bar: i < S.step ? 'background:#0F6B43' : i === S.step ? 'background:#16203C' : 'background:#E0DCD4',
-      ink: i <= S.step ? 'color:#1C2233' : 'color:#5F6980'
+      bar: i < S.step ? 'background:#6FDCB0' : i === S.step ? 'background:#FFFFFF' : 'background:rgba(255,255,255,.14)',
+      ink: i <= S.step ? 'color:#FFFFFF' : 'color:#8D99B5'
     }));
     const holds = [
-      { k: 'Stock', sub: 'Recommended · sells in ≈ 16 days', cash: '4,720,000' },
-      { k: 'Per order', sub: 'no cash out · 3 days each time', cash: '0' },
-      { k: 'Consign', sub: 'costs 125,100 a sheet · needs Kiseka', cash: '0' }
-    ].map(h => ({
-      label: h.k, sub: h.sub, cash: h.cash, on: String(S.hold === h.k),
-      pick: () => this.setState({ hold: h.k }),
-      style: 'all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;' +
-        (S.hold === h.k ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1px #E6E3DD')
-    }));
-    const OK = { style: 'background:#E4F4EA;color:#0F6B43', mark: 'M5 12.5l4.5 4.5L19 7.5' };
-    const ticks = [['Photo', OK], ['Packing', OK], ['Suppliers', OK], ['Verdict · ' + (S.hold || ''), OK], ['Name & aisle', OK],
-      ['Markup · Ruth', { style: 'background:#F1EEE8;color:#5F6980', mark: 'M7 12h10' }]].map(([label, t]) => ({ label, ...t }));
+      { k: 'Stock', sub: 'Recommended · sells in ≈16 days', cash: '4,720,000' },
+      { k: 'Per order', sub: 'Kiseka takes 3 days each time', cash: '0' },
+      { k: 'Consign', sub: '125,100 a sheet · needs Kiseka', cash: '0' }
+    ].map(h => ({ label: h.k, sub: h.sub, cash: h.cash, on: String(S.hold === h.k), pick: () => this.setState({ hold: h.k }),
+      dot: S.hold === h.k ? 'background:#16203C;box-shadow:inset 0 0 0 5px #FFFFFF,0 0 0 2px #16203C' : 'box-shadow:inset 0 0 0 2px #C9C4BA',
+      style: 'all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:12px;min-height:66px;padding:0 10px;border-radius:16px;' + (S.hold === h.k ? 'background:#F7F5F2' : '') }));
+    const OK = { well: 'background:#E4F4EA;color:#0F6B43', mark: 'M5 12.5l4.5 4.5L19 7.5' };
+    const ticks = [['Photo', 'passed the check', OK], ['Packing', 'by the sheet', OK], ['Suppliers', '2 priced', OK], ['How we hold it', S.hold || '', OK], ['Name & aisle', 'Steel & mesh', OK],
+      ['Markup', 'Ruth sets it', { well: 'background:#F1EEE8;color:#5F6980', mark: 'M7 12h10' }]].map(([label, v, t]) => ({ label, v, ...t }));
     let goLabel = '', goOk = true, go = () => {};
-    if (S.step === 0) {
-      goLabel = S.shot ? 'Next: the hold' : 'Take the photo';
-      go = () => this.setState(S.shot ? { step: 1 } : { shot: true });
-    } else if (S.step === 1) {
-      goOk = !!S.hold && S.hold !== 'Consign';
-      goLabel = !S.hold ? 'Pick how we hold it' : S.hold === 'Consign' ? 'Waiting on Kiseka' : 'Next: send it';
-      go = () => { if (goOk) this.setState({ step: 2 }); };
-    }
+    if (S.step === 0) { goLabel = S.shot ? 'Next: how we hold it' : 'Take the photo'; go = () => this.setState(S.shot ? { step: 1 } : { shot: true }); }
+    else if (S.step === 1) { goOk = !!S.hold && S.hold !== 'Consign'; goLabel = !S.hold ? 'Pick how we hold it' : S.hold === 'Consign' ? 'Waiting on Kiseka' : 'Next: send it'; go = () => { if (goOk) this.setState({ step: 2 }); }; }
+    const doneN = 3 + (S.shot ? 1 : 0) + (S.step >= 2 ? 1 : 0);
+    const c = 2 * 3.14159 * 22.5;
     return {
-      steps, holds, ticks,
-      stepWord: 'Gap ' + Math.min(S.step + 1, 2) + ' of 2' + (S.step === 2 ? ' · all fixed' : ''),
+      steps, holds, ticks, walking: !S.sent, sent: S.sent, doneN,
+      ringDash: (c * doneN / 6).toFixed(1),
+      stepWord: S.step === 2 ? 'Both gaps fixed · ready for Ruth' : 'Gap ' + (S.step + 1) + ' of 2 · ' + (S.step === 0 ? 'the photo' : 'how we hold it'),
       onPhoto: S.step === 0, onHold: S.step === 1, onSend: S.step === 2, dockBtn: S.step < 2,
-      shot: S.shot, noShot: !S.shot,
-      frame: S.shot ? 'background:#E9E5DE' : 'background:#F7F5F2;box-shadow:inset 0 0 0 2px #C9C4BA',
-      checks: ['Sharp', 'Bright enough', '1,200 px', 'Plain background'],
-      isConsign: S.hold === 'Consign',
-      go, goLabel,
-      goStyle: goOk ? 'background:#C93A30;color:#FFFFFF' : 'background:#F1EEE8;color:#5F6980'
+      shot: S.shot, noShot: !S.shot, frame: S.shot ? 'background:#E9E5DE' : 'background:#FFFFFF;box-shadow:inset 0 0 0 2px #C9C4BA',
+      checks: ['Sharp', 'Bright enough', '1,200 px', 'Plain background'], isConsign: S.hold === 'Consign',
+      go, goLabel, goStyle: goOk ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF',
+      send: () => this.setState({ sent: true }), undo: () => this.setState({ sent: false })
     };
   }
 }

@@ -145,3 +145,49 @@ the clock.
 2. Use the sample shop in `docs/canvas-cast.md` for names and data.
 3. Then build to the board, and compare a screenshot of the app with the board
    side by side before calling it done.
+
+## Sourcing
+
+The Sourcing app (canvas: "Sourcing Engine", https://claude.ai/artifact/Uov93qTYTQDbcFYJ3UdNfN)
+is drawn in this language. Its boards are built from one snippet file,
+`.design/sourcing-v3/tools/ow.py`, so every piece above is the same markup on
+every screen. These are the pieces Sourcing adds; the Store's pieces above
+are unchanged.
+
+- **Tab bar with five places**: Today · Funnel · the raised red + (Capture) ·
+  Prices · Suppliers, 84px, the Store's sizes. A screen whose one red thing is
+  elsewhere draws the + navy.
+- **The passport strip**: six 8px pills in the head, one per check (Photo,
+  Pack, Supply, Hold, Name, Markup), each with a 10px label under it.
+  Mint = done; amber = a gap; mint striped = filled for you, waiting for a look;
+  faint = not started (the Markup is Ruth's). The same six, as a 42px ring of six
+  arcs with "n/6" in the middle, lead every item line in the Funnel.
+- **Filled for you**: a check the app filled from what it knows (packing from
+  the supplier's price row, the aisle from look-alikes, a hold from real sales)
+  is drawn as a white tile with a 1.5px green outline and the word **Check**, and
+  stays so until a person keeps it (one tap: "Keep both"). It is never drawn
+  as done.
+- **The cost ladder**: one 10px bar a supplier or rival, its length the price
+  on a shared scale; ours green, other suppliers grey, rivals plum; the room
+  under the cheapest rival is a soft green band behind the bars, with its
+  figure and a Strong / Fair / Thin chip under them.
+- **The price line on navy**: a 4px track, a dot for each price (cost grey, ours
+  white, the rival or the supplier's ask in its own colour), labels above for
+  the two on the left and right, below for the one that would collide.
+- **The verdict gauge**: a half ring, mint for the score out of 100, the score in
+  mono in the middle; under it the parts as bars with their weights.
+- **The shillings keypad**: 3 × 4 white keys (48px, mono 20px) with a **000** key
+  and a drawn delete key, the figure shown big in the head with its unit, and
+  **Same** for the last price. Saving shows a navy toast with **Undo**, never a
+  confirm dialog.
+- **Swipe rows**: a price to confirm is a line with **Same price** (navy) and
+  **New price** (outlined) under it; **All the same · n** sits on the section
+  head; a done line shows a green "Same · Undo" pill.
+- **Age bars**: how old a price is, as a short bar (amber past 30 days) with the
+  days in mono beside it.
+- **The walk**: numbered stop dots (supplier indigo-light, rival plum-light,
+  done mint) joined by 3px lines, dashed where the area changes.
+
+Sourcing's hand-offs all end on the same done screen and track: **Sent → the
+person who decides (pulsing ring) → what follows**: Send to Ruth, Ask Kiseka,
+Pass to Denis, and a counter to Owino.

@@ -228,4 +228,25 @@ The owner reviewed ways to build this better and faster, and took three:
    - Matching items go live at once with a log line, and the Manager can change the price within 24 hours.
    - Everything else waits for the Manager.
 
+## Redrawn in the shared phone language (23 Oct)
+
+The owner asked for the Store app's look on Sourcing (`docs/phone-design-language.md`). Every board was redrawn to it:
+- 390 × 844, radius 28, the gradient head with a centred grey title;
+- lists as lines, one red thing per screen;
+- slide to hand work to someone else, then a done screen with a three-dot track;
+- names, not roles (Ruth, Denis);
+- nothing picked for you;
+- every number can be typed.
+
+The canvas now opens on a wide plan board, as the Store's does, with four rows of screens under it.
+
+**Built from code, not by hand.** `tools/ow.py` holds the pieces, lifted from the Store canvas. `tools/boards/<Board>.py` builds each board. Run `python3 tools/build.py <Board>` from this folder's copy of the canvas to rebuild one.
+
+**What changed besides the look:**
+- **Nothing pre-picked:** the price screens (have it, unit, stock), Hunt's suppliers, Ask Kiseka's lines, the verdict's hold, New item's aisle and who asked, and the new supplier's credit days now start empty. The button says what is missing.
+- **Typing:** the steppers (packing, markup, prices a day) take typed figures.
+- **Done screens:** Send to Ruth, Push back, the deal (pass to Denis), Ask Kiseka and Fix the gaps each end on a done screen with a 10-second Undo.
+- **Certify:** the five checks it fills from what it already sells are shown, with the photo left (owner's decision of 23 Oct).
+- **Today's "Waiting on you":** back to lines, each keeping its small picture.
+
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
