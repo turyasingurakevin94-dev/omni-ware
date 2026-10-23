@@ -117,5 +117,5 @@ Deferred:
 - `worker.html` (the old `staff` login) still reads orders directly.
 - `test/store-money-db.test.js`'s database scenario writes orders directly as the store role, which 0159 already stopped. It needs rewriting through `store_patch_order`.
 - NAV-08 on lists other than the aisle (name them), and NAV-09 (no details yet).
-- To run on live (checked 23 Oct 2026, none applied yet): 0156 → 0160 → 0161 → 0162 → 0163 → 0164.
+- ~~To run on live: 0156 → 0160 → 0161 → 0162 → 0163 → 0164.~~ All applied by Kevin, 23 Oct 2026. DATA-05 checked on live the same day: all 59 of 0161's product moves landed.
 

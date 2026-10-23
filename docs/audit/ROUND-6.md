@@ -72,6 +72,8 @@ Paste in the SQL editor (read-only). Every row should say `moved`. Anything else
 
 See `docs/audit/round-6-data05-check.sql`.
 
+**Result (Kevin, 23 Oct 2026): all 59 rows `moved`.** Every product 0161 meant to move sits in its new category on live. DATA-05 is closed; no code change.
+
 ## Not changing / pushed back
 
 | ID | Why |
