@@ -99,14 +99,46 @@ Reproduced in the harness before planning, with a new `#r7` fixture: #0574's 10 
 
 ## Phase B result (filled after implementing)
 
+**How it was verified:**
+- **Tests:** `test/store-round7.test.js` (new; every ID).
+- **Fixture:** the `#r7` harness fixture: #0574's 10 dozen of a 20-dozen carton with its count due, #0566's 19 box with its `2"` size, a hired driver, the shop "Omni-ware (old records)".
+- **Screens checked:** Today, Stock, Find, the item page, Pack, Hand over, Returns and On the road, each at 360 and 1280.
+- **Automated checks on those eight screens:**
+  - no "0." quantity;
+  - no control under 44 × 44;
+  - no font size, corner radius or gap off the scale;
+  - no page errors.
+- **Regression walks:** the round 6 wording walk passes on the `#r6`, `''`, `#r4`, `#packed`, `#long` and `#r7` fixtures, with no banned words and no clipping.
+
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| STO-UI-01 | | | |
-| STO-UI-02 | | | |
-| STO-UI-03 | | | |
-| STO-UI-04 | | | |
-| STO-UI-05 | | | |
-| STO-UI-06 | | | |
-| STO-UI-07 | | | |
-| STO-UI-08 | | | |
-| STO-UI-09 | | | |
+| STO-UI-01 | Yes | New `lineQty(it, n)` gives whole packs, then the rest in the line's unit; `backText` and the new `lineCountWords` use it. `quoteLineCountPer` counts in packs only when the line is a whole number of packs, and `quoteLineCount` never divides into a part pack. `quoteLinePack` is unchanged, so it still matches the owner app. Pack: the card shows "10 dozen" (or "1 ctn" with "+ 4 box" under it); the sub line reads "20 dozen to a ctn · off our shelf"; the button reads "Packed · 10 dozen". Load, Hand over, the collect receipt (`agSlip`) and the delivery receipt (`dvDone`) print through `lineCountWords`. | Test: 10 dozen, 19 box, "1 ctn + 4 box", 2 ctn. Harness: #0574 and #0566 as asked, and no "0." on any screen. |
+| STO-UI-02 | Yes | `pkPick` opens every line at the ordered quantity (Kevin, Q2). The hint reads "Count due · count as you pick" (an amber pill), or "The shelf shows N · count what you pick" (amber). "Pack short · N of M" appears only once the packer lowers the count. | Harness: opening #0574 shows "Count due · count as you pick" and "Packed · 10 dozen". |
+| STO-UI-03 | Yes (option A) | `--nav-room` (130 px plus the safe area) is `#st_app`'s bottom padding. The play button is unchanged, as Kevin chose. | Harness, scrolled to the end: nothing under the button on Today or Stock. At rest, bays 2 and 3 on Today and the "Needs a look" rows on Stock still pass under it, as the plan said they would with option A. Find, Returns and On the road open as pages over the bar, so the button is not shown on them. |
+| STO-UI-04 | Yes | **Find:** the input fills the 48 px box; Clear is a 44 px target around a 28 px circle; the filter chips are 44 px, on one scrolling row; the suggestions are 44 px. **Returns:** the input fills its box. **Item page and Pack:** both Aisle pills are 44 px. | Harness: no button, input or `[data-act]` under 44 px on the eight screens. |
+| STO-UI-05 | Yes | **Tokens:** `:root` gains `--t-*`, `--r-*`, `--sh-*`, `--s-*`, `--tap`, `--c-*` (18 colours) and `--nav-room`. **Screens moved:** the eight screens' render functions, the helpers they are built from (`cvRow`, `cvChip`, `cvBack`, `navyHead`, `doneLines`, `darkDock`, `jobCard`, `slHoldDock`) and the CSS of their classes (`.cv-row`, `.cv-tt`, `.cv-sec`, `.cv-hero`, `.td-tile`, `.cv-job`, `.cv-stat`…) now use only those tokens: 624 values in all, listed below. | Harness: computed font sizes, corner radii and gaps on the eight screens are all scale values. Test: the screens' code sets no raw font size or corner radius. |
+| STO-UI-06 | Yes | `viewToday`: "Sat 17 Oct · Omni-ware (old records)" is one line that gives way with "…"; `.cv-live` is a pill (Live, Offline, Not sent · N). The tile shows the number, "to pack", then "+2 waiting" on its own line, and is 64 px tall. | Harness at 360: one line, the pill beside it, and the legend on one line. |
+| STO-UI-07 | Yes | New `shopShort()` drops the bracketed part, so the slip reads "OMNI-WARE" on one line (Kevin, Q3). Slip lines use `prodTT` (the name, then its size or colour as tags). The people picker is 3 to a row, with names on up to 2 lines. | Harness: "OMNI-WARE"; "ABC Black Screws Coarse" with a `2"` tag; names in full. |
+| STO-UI-08 | Yes | `kindOf(name, category)` and `kindOfItem` give new drawings: `lock`, `fix`, `tool` and `tube` (silicone, glue). A product that names nothing falls back to its category. `imgOr` swaps a photo that fails to load for the drawing, on the list tile, the Pack card and the item page. | Harness: Silicone shows a tube, G-MAN Bow Saw a tool, ELEPHANT a lock; a broken photo URL shows the drawing. |
+| STO-UI-09 | Yes | On the road's `drv`: a segmented bar with "N of M stops done" replaces `stepDots`. A hired driver reads "Abudu (hired)" and gets a square, dashed amber avatar. | Harness: Hassan "0 of 2 stops done"; Abudu (hired) is told apart at a glance. |
+
+### Values replaced (STO-UI-05), on the eight screens and the helpers they are built from
+
+| Property | Was → became (count) |
+|---|---|
+| font-size | 11 → 12 (31); 12 → 12 (53); 13 → 12 (19), 13 → 14 when bold (16); 14 → 14 (30); 15 → 16 when bold (9), 15 → 14 (4); 16 → 16 (12); 17 → 16 (8); 18 → 20 (7); 20 → 20 (6); 22 → 20 (6); 24 → 20 (3); 28 → 28 (1); 40 → 40 (1) |
+| font-weight | 400 → 600 (1) |
+| border-radius | 6, 7, 8, 9, 10 → 8 (11); 12, 13, 14, 16 → 14 (27); 18, 20, 22, 24, 26, 28, 32 → 22 (27); 999 → pill (76) |
+| gap | 2, 3, 4, 5 → 4 (40); 6, 8 → 8 (58); 10, 12 → 12 (50); 14, 16, 18 → 16 (16); 20 → 24 (1). A 1 px gap is a hairline and was kept. |
+| padding | 2, 3, 4, 5 → 4 (22); 6, 7, 8 → 8 (22); 10, 12 → 12 (33); 14, 16, 18 → 16 (53); 20, 22, 24 → 24 (9); 28 → 32 (1) |
+| box-shadow | card (7), raised (6), sheet (1). Inset rings and hairlines are borders, not elevation, and were kept. |
+
+### Also changed while here
+- `test/store-app.test.js`: the owner and the store count a whole pack the same. For a part pack the store now counts in the line's unit, by design (round 7).
+- `test/store-round4.test.js`: the Find chips are one 44 px scrolling row now, not two 34 px rows.
+
+### Left as is
+- **Option A and the brief's check:** a long list still passes under the floating button at rest; this is what Kevin chose. Docking the button in the bar (option B) is drawn on the canvas if he wants it later.
+- **#0494 "Someone":** waiting on `docs/audit/store/round-7-0494-check.sql`.
+- **NAV-08, NAV-09:** still open, as planned.
+- **Full suite:** 458 of 460 test files pass. The two that fail (the `store-money-db` and `manager-decisions-db` database scenarios) are the ones logged since round 5, and they fail the same way without this round's changes.
