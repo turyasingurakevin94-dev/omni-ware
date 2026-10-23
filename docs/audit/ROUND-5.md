@@ -88,9 +88,36 @@ Read directly by the app, still: `stock` (key, qty), `places`, `place_routes`, `
 
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| PRIV-02 | | | |
-| PRIV-03 | | | |
-| PRIV-01 | | | |
-| PRIV-04 | | | |
-| PRIV-05 | | | |
-| NAV-02 | | | |
+| PRIV-02 | Yes | `0164`: `ow_money_hold`, `store_money_holds` and the gate trigger from 0156 again (it stops with a named error if 0119's `ow_order_total` is missing). | SQL test: `store_snapshot` loads as owner, admin, manager, sales, store, staff, buyer, accounts and sourcing; someone outside the shop gets 42501. |
+| PRIV-03 | Yes | `storeSnapshotNow` (throws; no fallback), `loadAll` and `refreshLive` read only the snapshot, `S.loadErr` / `loadErrOf`, `blankData`, `loadFailCard`, `loadBar`, `ACT.loadretry`, dashed tiles, grey play button, "Not loaded yet" on Stock. The direct-read helpers are gone (`selectAll`, `moneyHoldsNow`, `storeAsksNow`, `mergeQuotes`, `checkInTrip`, `changeTrip`, `noFn` and the direct order and return writes). The phone's cache moved to `ow-store-snap2`, and the old copy is deleted unread. | Harness `#r5fail` at 360 and 1280: Today and Stock show "Could not load the yard · code 42883", never "The yard is clear" or "No products". Try again loads 12 products. A failed refresh over a kept copy shows the red bar over the faded jobs. |
+| PRIV-01 | Yes | `0164`: `ow_strip_note`, `ow_store_row`, `ow_store_payload` with the phone's names, the settings allow-list, and agents, counts, reports, asks, members, managers and me in the snapshot. `store.html`: `letGoAsk`, `letGo`, `takenBack`, `agentSettled`, `terms`. `changeOrderSnap` now sends only the keys the tap changed, so the phone's copy of the ask never overwrites the books' copy. | SQL test: no `price/cost/amount/paid/payment/credit/UGX` in the snapshot as any role. "counted in at 10,750 UGX per Kg" → "counted in". Harness: the same search over `JSON.stringify(D())` finds nothing. |
+| PRIV-04 | Yes | `0164`: `shop_members.display_name` (filled from the staff name or the login's own name), `ow_member_name` (own choice → staff record → "The Store"), `set_my_name` (own row only, 2–60 letters, never an email), and `store_count_replace` / `store_return_ask` write names through it. `invite-worker` sets `display_name`. `store.html`: `myName` and `hasOwnName` read the snapshot's `me`, `takerOf` falls back to `members`, plus `nameCard`, `SHEET.myname` and `ACT.mnsave`. The avatar shows "?" until there is a name. | SQL test: Joy (no staff record) starts with no name, an email is refused, she sets "Joy Namata", and her return carries it. Harness `#r5noname`: "Good morning" with no comma, the Add your name card, the sheet, then "Musa Kiggundu" on You. |
+| PRIV-05 | Yes | `0164`: "the yard writes through its functions" (restrictive INSERT/UPDATE/DELETE on every shop table except the yard's own: counts, reports, asks, places, roads, push sign-up, and `shop_members`, which keeps its own rules), and "the yard sees only itself" on `shop_members`. | See the results below. |
+| NAV-02 | Yes | `navDepth`, `navCur` and `navArm` push one entry per level as the tap is handled. An in-app Back steps history back too (`navIgnore`). `popstate` runs `stBack`, and on Today opens "Leave Omni-ware?". | Harness: item → Find → Stock → Today → "Leave Omni-ware?" on four Backs, and only the fifth leaves, with the sheet already showing. An in-app Back takes history from 2 to 1. Chrome's skip only shows on a real phone: **Cowork please check Back ×5 on the phone.** |
+
+### PRIV-05 results (test/store-round5.test.js on PostgreSQL 16, as the store role)
+
+| Try | Result |
+|---|---|
+| Read `shop_members` | 1 row (its own) |
+| Update its own role to owner | 0 rows |
+| Update the Manager's role | 0 rows |
+| Insert an order into `saved_quotes` | refused, 42501 (it was written before 0164) |
+| Update / delete an order directly | 0 rows |
+| Insert a customer | refused, 42501 |
+| `decide_invoice_ask` | refused, 42501 |
+| `accept_stock_count` | refused, 42501 |
+| `ask_recount` | refused, 42501 |
+| Insert its own loss report and restock ask | written (its own tables stay open) |
+| `store_patch_order` with `letGoAsk` | written as `creditAsk` |
+
+### Different from the plan
+
+- The snapshot keeps the key `staff` with the staff record's `role` (the job: store, delivery, manager…), not a new `team`/`job` key, so nothing else had to change. It still reads no login roles.
+- Trip lines and product variants go through the money strip (`ow_strip_money`), not a new allow-list. Their keys were too varied to pin safely this round, and the strip already removes every money key in them.
+- The name a person types (`display_name`) wins over the staff record's, and the staff record itself is left alone (it belongs to payroll).
+- `test/store-money-db.test.js`'s database scenario (run only with `OW_PG`) fails before and after this round: it updates orders directly as the store role, which row security has stopped since 0159. Left as it is; noted below.
+
+### Run order on the live database
+
+0161 → 0162 → 0163 → **0164**, then deploy `store.html` and the `invite-worker` function. invite-worker writes `display_name`, so it must go after 0164.

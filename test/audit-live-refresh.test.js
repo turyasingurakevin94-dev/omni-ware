@@ -36,15 +36,17 @@ const LIVE = /function liveQuoteFilter\(q\)\{ return q\.or\('status\.neq\.comple
 const MERGE = /function mergeQuotes\(rows\)\{\n  const list = D\(\)\.savedQuotes \|\| \[\], at = new Map\(list\.map\(\(q, i\) => \[Number\(q\.id\), i\]\)\);\n  rows\.forEach\(r => \{ const q = rowToQuote\(r\), i = at\.get\(Number\(q\.id\)\); if \(i == null\) list\.push\(q\); else list\[i\] = q; \}\);/;
 
 /* ---------------- 1. the live window, merged ---------------- */
-for (const a of Object.keys(apps)) {
+for (const a of Object.keys(apps).filter(a => a !== 'store')) {
   t.check(LIVE.test(apps[a]) && MERGE.test(apps[a]), `${a}: has the live window and the merge`);
 }
+// The Store app reads one snapshot, money taken out in the database (round 5, 0164): no direct order reads to page.
+t.check(/const sn = await storeSnapshotNow\(\); S\.snapMode = true;/.test(apps.store) && !/from\('saved_quotes'\)/.test(apps.store) && /D\(\)\.savedQuotes = \(sn\.orders \|\| \[\]\)\.map\(rowToQuote\)/.test(apps.store), 'store: boot and refresh read only the snapshot');
 t.check(/const \[rows, sw\] = await Promise\.all\(\[selectAll\('saved_quotes', 'id', liveQuoteFilter\), switchesQuery\(\)\]\); mergeQuotes\(rows\);/.test(apps.sales), 'sales: refreshQuotes reads the live window and merges');
-for (const a of ['buyer', 'store', 'manager']) {
+for (const a of ['buyer', 'manager']) {
   const fn = apps[a].slice(apps[a].indexOf('async function refreshLive()'), apps[a].indexOf('async function refreshLive()') + 1500);
   t.check(/selectAll\('saved_quotes', 'id', liveQuoteFilter\)/.test(fn) && /mergeQuotes\(quotes\);/.test(fn) && !/S\.data\.savedQuotes = quotes\.map\(rowToQuote\)/.test(fn), `${a}: refreshLive reads the live window and merges`);
 }
-for (const a of Object.keys(apps)) {
+for (const a of Object.keys(apps).filter(a => a !== 'store')) {
   // boot still reads everything: the figures on Today are whole
   const boot = apps[a].slice(apps[a].indexOf('async function loadAll()'), apps[a].indexOf('async function loadAll()') + 2500);
   t.check(/selectAll\('saved_quotes'\)/.test(boot), `${a}: boot still reads the whole order book`);
@@ -65,7 +67,7 @@ t.check(/selectAll\('cash_txns', 'id', q => q\.gte\('date', monthStartISO\(\)\)\
 t.check(/selectAll\('cash_txns', 'id', q => q\.gte\('date', cashFromISO\(\)\)\)\.then\(rows => \(\{ data: rows \}\)\)/.test(apps.manager) && /selectAll\('rival_prices'\)\.then\(rows => \(\{ data: rows \}\)/.test(apps.manager), 'manager: the cash book and rival prices are paged');
 t.check(/selectAll\('stock_log', 'id', q => q\.not\('pi_id', 'is', null\)\.gte\('date', daysAgoISO\(400\)\)\)/.test(apps.accounts) && /selectAll\('collection_trips', 'id', q => q\.gte\('created_at'/.test(apps.accounts), 'accounts: the stock log and the trips are paged');
 t.check(/selectAll\('decision_log', 'id', \['at', new Date\(Date\.now\(\) - 62 \* 864e5\)\.toISOString\(\)\]\)\.then\(rows => \(\{ data: rows\.slice\(\)\.reverse\(\) \}\)/.test(apps.owner), 'owner: the log is paged, newest first');
-for (const a of ['sales', 'buyer', 'store', 'manager']) t.check(/async function selectAll\(table, keyCol, filter\)\{[\s\S]{0,400}if \(filter\) q = filter\(q\);/.test(apps[a]), `${a}: selectAll takes a filter`);
+for (const a of ['sales', 'buyer', 'manager']) t.check(/async function selectAll\(table, keyCol, filter\)\{[\s\S]{0,400}if \(filter\) q = filter\(q\);/.test(apps[a]), `${a}: selectAll takes a filter`);
 for (const a of ['accounts', 'owner']) t.check(/if \(typeof since === 'function'\) q = since\(q\); else if \(since\) q = q\.gte\(since\[0\], since\[1\]\);/.test(apps[a]), `${a}: selectAll takes a filter or a since`);
 
 /* ---------------- 4. the WhatsApp poll ---------------- */

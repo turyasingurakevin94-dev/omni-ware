@@ -48,7 +48,8 @@ t.check(/inp ->> 'why' in \('short', 'torn', 'brand'\)/.test(rcv) && /'yardWhy',
 t.check(/\| 0157 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0157 for it');
 
 /* ---------------- 3. the store app ---------------- */
-t.check(/from\('store_asks'\)\.select\('\*'\)/.test(store) && /asks: asks === null \? null : asks\.map\(rowToAsk\)/.test(store), 'the store app reads the asks, null before 0157');
+// Round 5 (0164): the asks come in the snapshot, like everything the yard reads.
+t.check(/const \{ products, units, log, orders: quotes, trips, staff, customers, agents, counts, reports, returns, suppliers, asks \} = sn;/.test(store) && /asks: asks == null \? null : asks\.map\(rowToAsk\)/.test(store), 'the store app reads the asks (in the snapshot since 0164)');
 t.check(/sb\.rpc\('answer_store_ask', \{ p_id: t\.dataset\.id, p_status: 'accepted'/.test(store) && !/from\('store_asks'\)\.update/.test(store), '"I\'ve got it" answers through answer_store_ask, never a direct update');
 t.check(/why && why\[i\] \? \{ why: why\[i\] \} : \{\}/.test(store), 'the check-in sends the yard\'s reason with the count');
 

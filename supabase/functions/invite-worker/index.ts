@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
 
     const { data: staffRow, error: staffErr } = await admin
       .from("staff")
-      .select("id, user_id, role")
+      .select("id, user_id, role, name")
       .eq("shop_id", shopId)
       .eq("id", staffId)
       .maybeSingle();
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
 
     const { error: memberErr } = await admin
       .from("shop_members")
-      .upsert({ shop_id: shopId, user_id: userId, role: memberRole }, { onConflict: "shop_id,user_id", ignoreDuplicates: true });
+      .upsert({ shop_id: shopId, user_id: userId, role: memberRole, display_name: String(staffRow.name || "").trim() || null }, { onConflict: "shop_id,user_id", ignoreDuplicates: true });
     console.log("invite-worker: shop_members upsert", { memberErr, memberRole });
     if (memberErr) {
       // The one failure a shop can fix itself: the role did not exist yet.

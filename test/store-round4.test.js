@@ -29,9 +29,10 @@ const region = (start, len) => { const i = store.indexOf(start); return i < 0 ? 
 t.check(/parts = n\.variant \? n\.variant\.split\(\/\\s\+\\\/\\s\+\/\)/.test(store) && /function variantLabel\(combo\)\{ return Object\.values\(combo \|\| \{\}\)\.join\(' \/ '\); \}/.test(store), 'a variant splits on " / " only, the way variantLabel joins it');
 
 // NAV-02
-t.check(/function navArm\(\)\{/.test(store) && /history\.pushState\(\{ ow: 1 \}, ''\)/.test(store) && /window\.addEventListener\('popstate', /.test(store), 'one history entry in front, and Back runs the app\'s own stack');
+// Reworked in round 5 (NAV-02 reopened): one entry per level opened, pushed during the tap.
+t.check(/function navArm\(\)\{/.test(store) && /history\.pushState\(\{ ow: cur \}, ''\)/.test(store) && /window\.addEventListener\('popstate', /.test(store), 'history entries in front, and Back runs the app\'s own stack');
 t.check(/if \(window\.stBack\(\)\) \{ navArm\(\); return; \}/.test(store) && /openSheet\('leaveapp'\)/.test(store), 'Back is re-armed after each step; on Today it asks first');
-t.check(/const NATIVE_BACK = /.test(store) && /if \(NATIVE_BACK \|\| S\.navLeaving \|\| \(S\.sheet && S\.sheet\.type === 'leaveapp'\)\) return;/.test(store), 'the APK keeps its own back button');
+t.check(/const NATIVE_BACK = /.test(store) && /if \(NATIVE_BACK \|\| S\.navLeaving \|\| S\.navIgnore \|\| \(S\.sheet && S\.sheet\.type === 'leaveapp'\)\) return;/.test(store), 'the APK keeps its own back button');
 t.check(/SHEET\.leaveapp = /.test(store) && /Leave Omni-ware\?/.test(store) && /still waiting to send · they go when you come back/.test(store) && /Nothing is lost · Today opens where you are/.test(store) && /data-act="leaveapp"[^>]*>Leave<\/button>/.test(store), 'Leave Omni-ware? with Stay / Leave, and what is still waiting');
 t.check(/function closeSheet\(silent\)\{ S\.sheet = null; if \(!silent\) renderSheet\(\); navArm\(\); \}/.test(store) && /bindSlides\(\); navArm\(\); \}/.test(store), 'closing a sheet or drawing a screen puts the entry back');
 

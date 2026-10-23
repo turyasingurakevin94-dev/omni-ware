@@ -63,7 +63,8 @@ t.check(/sb\.rpc\('receive_trip', \{ p_shop: S\.shopId, p_trip: tripId, p_lines:
 t.check(!/from\('(stock|stock_lots|stock_log)'\)\.(insert|update|upsert|delete)/.test(store), 'the Store app never writes stock, lots or the stock log itself');
 t.check(!/console still puts it on the shelf/i.test(store), 'no "the console still puts it on the shelf"');
 t.check(/from\('stock_reports'\)\.insert\(\{[^}]*why: reason, photo_path: photo/.test(store), 'the Store app reports into 0122\'s stock_reports, in its columns');
-t.check(/from\('invoice_asks'\)\.insert\(\{[^}]*kind: 'credit'/.test(store), 'goods back at the gate are a credit ask (0123)');
+// Since round 5 only through store_return_ask, which files it as a credit ask (0123) and prices it in the database.
+t.check(/sb\.rpc\('store_return_ask', \{ p_shop: S\.shopId, p_order: Number\(q\.id\), p_lines: lines, p_reason: reason, p_note: note \}\)/.test(store) && !/from\('invoice_asks'\)\.insert/.test(store), 'goods back at the gate are a credit ask (0123), through store_return_ask');
 t.check(/from\('road_names'\)\.upsert/.test(store), 'the Store app names directions');
 t.check(!/\b(gotPrice|expectedPrice|receivedPrice|cash_given)\b/.test(store.slice(store.indexOf('PAGE.ride'), store.indexOf("ACT['slide:ride']"))), 'riding a trip shows no price and no cash');
 /* ---------------- 4. returns count in the line's own unit ---------------- */

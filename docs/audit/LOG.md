@@ -102,3 +102,20 @@ Deferred:
 - Find has no paging; "e" lists every match. Fine on the test phones; page it if an old phone is slow.
 - 0161, 0162 and 0163 to run.
 
+## Round 5 · Roles and privacy (23 Oct 2026) · PRIV-01..05, NAV-02 (reopened) · migration 0164
+
+Fixed: the snapshot works again (0156's money hold brought back with it); a failed load says "Could not load the yard" with Try again and a code, on every tab, and the app never falls back to reading tables directly; no money word reaches the phone for any login (notes stripped, the money hold renamed, settings an allow-list, everything the yard reads in one snapshot); every member has a name, set on invite and changeable on You; a Store login writes only through its functions and reads only its own membership; Back adds one history entry per screen as it is tapped, so Chrome no longer skips it.
+
+Now part of the language:
+- **A failed load is never an empty yard.** No "clear", no 0s, no "No products": dashes, a grey play button and "Could not load the yard". If the phone has a last copy, the red bar sits over it, faded.
+- **One way in.** The Store app reads only `store_snapshot`, for every login, the owner too. No money, so no fallback.
+- **The phone has its own words for the money hold** (`letGoAsk`, `letGo`, `takenBack`, `agentSettled`, `terms`). The books keep theirs. A write sends only what the tap changed.
+- **Every person has a name.** The greeting has no comma until there is one; Today asks once; the avatar is "?" until then.
+- **The yard writes through its functions,** deny by default, like its reads.
+
+Deferred:
+- `worker.html` (the old `staff` login) still reads orders directly.
+- `test/store-money-db.test.js`'s database scenario writes orders directly as the store role, which 0159 already stopped. It needs rewriting through `store_patch_order`.
+- NAV-08 on lists other than the aisle (name them), and NAV-09 (no details yet).
+- 0161, 0162, 0163 and 0164 to run, in that order.
+
