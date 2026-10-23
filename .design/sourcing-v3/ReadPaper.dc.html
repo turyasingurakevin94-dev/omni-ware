@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Read a price list</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F7F5F2}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 1000px; position: relative; overflow: hidden; background: #F7F5F2; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <div style="background: #FFFFFF; border-bottom: 1px solid #E6E3DD; padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: -8px">
+      <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <span style="flex: 1; font-size: 16px; font-weight: 700">Read their prices</span>
+      <span style="padding: 6px 10px; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 12px; font-weight: 700">Namanve Sheets</span>
+    </div>
+    <div role="radiogroup" aria-label="Where the prices come from" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: #F1EEE8">
+      <sc-for list="{{sources}}" as="s" hint-placeholder-count="2">
+        <button type="button" role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button>
+      </sc-for>
+    </div>
+
+    <!-- what was read: a photo of their list, or the WhatsApp message -->
+    <sc-if value="{{isPhoto}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; gap: 12px; align-items: center">
+        <div role="img" aria-label="Photo of Namanve's printed price list" style="width: 84px; height: 104px; flex: none; border-radius: 8px; background: #FBFAF7; box-shadow: 0 6px 16px rgba(22,32,60,.14), inset 0 0 0 1px #E6E3DD; padding: 10px 8px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; transform: rotate(-2deg)">
+          <i style="height: 5px; width: 60%; border-radius: 2px; background: #1C2233"></i>
+          <sc-for list="{{paperLines}}" as="w" hint-placeholder-count="6"><i style="height: 3px; border-radius: 2px; background: #9AA1B2; {{w}}"></i></sc-for>
+        </div>
+        <span style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5F6980">
+          <span style="font-size: 15px; font-weight: 700; color: #1C2233">Their printed list</span>
+          <span>snapped at the counter <span class="m">10:42</span></span>
+          <span><span class="m">6</span> lines read</span>
+        </span>
+      </div>
+    </sc-if>
+    <sc-if value="{{isChat}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; color: #5F6980">Shared from WhatsApp · Namanve Sheets · <span class="m">09:15</span></span>
+        <div style="align-self: flex-start; max-width: 300px; padding: 10px 12px; border-radius: 4px 14px 14px 14px; background: #F1EEE8; font-size: 13px; line-height: 1.5">
+          Good morning boss. Prices this week:<br>G28 3m <span class="m">34,200</span> (100+ <span class="m">33,500</span>)<br>G30 3m <span class="m">30,500</span> · gutter 4" <span class="m">18,000</span><br>nails 1kg <span class="m">9,800</span> · ridge cap <span class="m">2?,500</span><br>valley gutter 3m <span class="m">21,000</span> new
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="padding: 16px 16px 130px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <span style="font-size: 16px; font-weight: 700">What it read</span>
+      <span style="font-size: 12px; color: #5F6980">against our last price</span>
+    </div>
+    <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #EFECE6; {{r.rowBg}}">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <button type="button" role="checkbox" aria-checked="{{r.onStr}}" aria-label="{{r.aria}}" onClick="{{r.toggle}}" style="all: unset; cursor: pointer; width: 26px; height: 26px; flex: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; {{r.box}}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></button>
+            <span style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0">
+              <span style="font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.name}}</span>
+              <span style="font-size: 12px; color: #5F6980; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">read as “{{r.read}}”</span>
+            </span>
+            <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none">
+              <span class="m" style="font-size: 15px; font-weight: 600">{{r.price}}</span>
+              <span style="padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; {{r.tagStyle}}">{{r.tag}}</span>
+            </span>
+          </div>
+          <sc-if value="{{r.unsure}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 8px; padding-left: 36px">
+              <label for="{{r.inputId}}" style="font-size: 13px; color: #7A4A02; font-weight: 600">Which is it?</label>
+              <input id="{{r.inputId}}" type="text" inputmode="numeric" value="{{r.guess}}" style="box-sizing: border-box; flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; border: 1.5px solid #95530C; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">
+              <button type="button" onClick="{{r.fix}}" style="all: unset; cursor: pointer; padding: 10px 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">That's it</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{r.isNew}}" hint-placeholder-val="{{ false }}">
+            <span style="padding-left: 36px; font-size: 12px; color: #5F6980">Ticked, it starts a hunt with this price as the first quote.</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5F6980">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"></rect><path d="M11 18h2"></path></svg>
+      Reading needs signal. Without it, the photo waits on this phone.</span>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px">
+    <a href="Main.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">{{saveLabel}}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { src: 'photo', off: {}, fixed: false, hunt: false }; }
+  renderVals() {
+    const S = this.state;
+    const SAME = 'background:#E4F4EA;color:#0F6B43', UP = 'background:#FDEEE1;color:#7A4A02', NEW = 'background:#FDE8E4;color:#A82D24', NEUT = 'background:#F1EEE8;color:#5F6980';
+    const base = [
+      { id: 'a', name: 'Iron sheet G28 3m', read: 'G28 3m 34,200 (100+ 33,500)', price: '34,200', tag: 'same · 100+ 33,500', tagStyle: SAME },
+      { id: 'b', name: 'Iron sheet G30 3m', read: 'G30 3m 30,500', price: '30,500', tag: '+700 on 29,800', tagStyle: UP },
+      { id: 'c', name: 'Gutter 4" × 3m', read: 'gutter 4" 18,000', price: '18,000', tag: 'same', tagStyle: SAME },
+      { id: 'd', name: 'Roofing nails 1kg', read: 'nails 1kg 9,800', price: '9,800', tag: '+300 on 9,500', tagStyle: UP },
+      { id: 'e', name: 'Ridge cap 0.4mm, 2m', read: 'ridge cap 2?,500', price: '2?,500', tag: 'not sure', tagStyle: UP, unsure: true, guess: '23,500' },
+      { id: 'f', name: 'Valley gutter 3m', read: 'valley gutter 3m 21,000 new', price: '21,000', tag: 'not on our list', tagStyle: NEW, isNew: true }
+    ];
+    const rows = base.map(r => {
+      const unsure = !!r.unsure && !S.fixed;
+      const on = r.isNew ? S.hunt : (unsure ? false : !S.off[r.id]);
+      return {
+        ...r, unsure, isNew: !!r.isNew, inputId: 'rp_' + r.id, onStr: String(on),
+        price: r.unsure && S.fixed ? '23,500' : r.price,
+        tag: r.unsure && S.fixed ? 'same' : r.tag, tagStyle: r.unsure && S.fixed ? SAME : r.tagStyle,
+        aria: (on ? 'Leave out ' : 'Include ') + r.name,
+        rowBg: unsure ? 'background:#FFFBF6' : '',
+        box: on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:transparent;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+        toggle: () => {
+          if (r.isNew) this.setState({ hunt: !S.hunt });
+          else if (!unsure) this.setState({ off: { ...S.off, [r.id]: on } });
+        },
+        fix: () => this.setState({ fixed: true })
+      };
+    });
+    const prices = rows.filter(r => r.onStr === 'true' && !r.isNew).length;
+    const sources = [['photo', 'Photo of their list'], ['chat', 'WhatsApp message']].map(([k, label]) => ({
+      label, on: String(S.src === k), pick: () => this.setState({ src: k }),
+      style: 'all:unset;cursor:pointer;text-align:center;padding:9px 6px;border-radius:10px;font-size:13px;font-weight:700;' +
+        (S.src === k ? 'background:#FFFFFF;color:#1C2233;box-shadow:0 1px 3px rgba(22,32,60,.12)' : 'color:#5F6980')
+    }));
+    return {
+      rows, sources, isPhoto: S.src === 'photo', isChat: S.src === 'chat',
+      paperLines: ['width:92%', 'width:80%', 'width:88%', 'width:70%', 'width:84%', 'width:64%'],
+      saveLabel: 'Save ' + prices + (prices === 1 ? ' price' : ' prices') + (S.hunt ? ' · start 1 hunt' : '')
+    };
+  }
+}
+</script>
+</body>
+</html>

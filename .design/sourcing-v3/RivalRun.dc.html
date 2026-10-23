@@ -19,7 +19,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
   <div style="background: #16203C; color: #FFFFFF; border-radius: 0 0 28px 28px; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 14px">
     <div style="display: flex; align-items: center; gap: 8px">
-      <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
+      <a href="MarketRun.dc.html" aria-label="Back to the walk" style="width: 44px; height: 44px; border-radius: 999px; background: #243052; display: flex; align-items: center; justify-content: center">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
       <span style="font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #B3BCD2">Rival run</span>
     </div>
@@ -37,10 +37,26 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
   </div>
 
   <div style="padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 10px">
-    <div style="display: flex; align-items: baseline; justify-content: space-between">
-      <span style="font-size: 16px; font-weight: 700">What to check here</span>
-      <span style="font-size: 12px; color: #5F6980">picked by sales and money at stake</span>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px">
+      <span style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 16px; font-weight: 700">What to check here</span>
+        <span style="font-size: 12px; color: #5F6980">picked by sales and money at stake</span>
+      </span>
+      <sc-if value="{{canAll}}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{allSame}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5l4.5 4.5L16 7.5M10 16l1 1 9.5-9.5"></path></svg>All the same · <span class="m">{{allN}}</span></button>
+        </sc-if>
     </div>
+    <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5F6980">
+      <svg width="34" height="14" viewBox="0 0 34 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h24M9 3 5 7l4 4M25 3l4 4-4 4"></path></svg>
+      Swipe a row: right for the same price, left for a new one</span>
+    <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+        <span style="flex: 1">{{toast}}</span>
+        <button type="button" onClick="{{undoAll}}" style="all: unset; cursor: pointer; padding: 4px 8px; color: #6FDCB0; font-weight: 700">Undo</button>
+      </div>
+      </sc-if>
     <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
       <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
         <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #EFECE6">
@@ -53,8 +69,8 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
               </span>
             </span>
             <sc-if value="{{r.isDone}}" hint-placeholder-val="{{ false }}">
-              <span style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.doneWord}}</span>
+              <button type="button" onClick="{{r.undo}}" aria-label="{{r.undoAria}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.doneWord}}<span style="color: #1C2233; font-weight: 600"> · Undo</span></button>
             </sc-if>
             <sc-if value="{{r.idle}}" hint-placeholder-val="{{ true }}">
               <sc-if value="{{r.hasLast}}" hint-placeholder-val="{{ true }}">
@@ -83,7 +99,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1200}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { stop: 'k', res: {}, editing: null }; }
+  constructor(p) { super(p); this.state = { stop: 'k', res: {}, editing: null, bulk: [] }; }
   renderVals() {
     const S = this.state;
     const TOP = 'background:#E4E6FA;color:#3A3F9B', STAKE = 'background:#F6E4F1;color:#7A3268', HUNT = 'background:#FDE8E4;color:#A82D24';
@@ -106,7 +122,7 @@ class Component extends DCLogic {
     const stops = [['k', 'Kikuubo Hardware Mart'], ['n', 'Nateete Builders’ Centre']].map(([k, name]) => {
       const n = items[k].length, d = doneIn(k), on = S.stop === k;
       return {
-        name, on: String(on), pick: () => this.setState({ stop: k, editing: null }),
+        name, on: String(on), pick: () => this.setState({ stop: k, editing: null, bulk: [] }),
         left: d === n ? 'all checked' : (n - d) + ' to check',
         pips: Array.from({ length: 5 }, (_, i) => i >= n ? 'background:transparent' : i < d ? 'background:#6FDCB0' : (on ? 'background:#E0DCD4' : 'background:#2A3350')),
         style: 'all:unset;cursor:pointer;box-sizing:border-box;padding:12px;border-radius:16px;text-align:left;' + (on ? 'background:#FFFFFF;color:#1C2233' : 'background:#243052;color:#FFFFFF')
@@ -119,16 +135,24 @@ class Component extends DCLogic {
         newWord: r.guess ? 'New price' : 'Add price',
         isDone: !!res, idle: !res && S.editing !== r.id, editing: !res && S.editing === r.id,
         doneWord: res === 'new' ? 'New price' : 'Same price',
-        same: () => this.setState({ res: { ...S.res, [r.id]: 'same' } }),
+        undoAria: 'Undo ' + r.name,
+        same: () => this.setState({ res: { ...S.res, [r.id]: 'same' }, bulk: [] }),
+        undo: () => { const x = { ...S.res }; delete x[r.id]; this.setState({ res: x, bulk: [] }); },
         edit: () => this.setState({ editing: r.id }),
-        save: () => this.setState({ res: { ...S.res, [r.id]: 'new' }, editing: null })
+        save: () => this.setState({ res: { ...S.res, [r.id]: 'new' }, editing: null, bulk: [] })
       };
     });
+    // only lines with a last price here can be "the same"
+    const open = items[S.stop].filter(r => r.guess && !S.res[r.id]).map(r => r.id);
     const allDone = doneIn('k') === items.k.length && doneIn('n') === items.n.length;
     const hereDone = doneIn(S.stop) === items[S.stop].length;
     return {
       stops, rows,
-      next: () => this.setState({ stop: S.stop === 'k' ? 'n' : 'k', editing: null }),
+      canAll: open.length > 1, allN: open.length,
+      allSame: () => { const x = { ...S.res }; open.forEach(id => { x[id] = 'same'; }); this.setState({ res: x, bulk: open, editing: null }); },
+      hasToast: S.bulk.length > 0, toast: S.bulk.length + ' marked the same price',
+      undoAll: () => { const x = { ...S.res }; S.bulk.forEach(id => { delete x[id]; }); this.setState({ res: x, bulk: [] }); },
+      next: () => this.setState({ stop: S.stop === 'k' ? 'n' : 'k', editing: null, bulk: [] }),
       nextLabel: allDone ? 'Run finished' : S.stop === 'k' ? 'Next stop: Nateete' : 'Back to Kikuubo',
       nextStyle: hereDone ? 'background:#C93A30;color:#FFFFFF' : 'background:#F1EEE8;color:#1C2233'
     };

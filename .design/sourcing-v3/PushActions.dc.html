@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Act from the push</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#0B1122}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: radial-gradient(120% 70% at 50% 0%, #2A3350 0%, #0B1122 70%); color: #FFFFFF; font-family: Figtree, system-ui, sans-serif; font-size: 15px">
+
+  <!-- lock screen clock -->
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 70px">
+    <span style="font-size: 15px; font-weight: 600; color: #B3BCD2">Saturday 17 October</span>
+    <span style="font-size: 76px; font-weight: 600; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums">18:34</span>
+  </div>
+
+  <div style="position: absolute; left: 12px; right: 12px; top: 250px; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{pushes}}" as="p" hint-placeholder-count="2">
+      <div style="border-radius: 22px; background: rgba(247,245,242,.94); color: #1C2233; overflow: hidden">
+        <div style="display: flex; gap: 10px; padding: 12px 14px 10px">
+          <span style="width: 34px; height: 34px; flex: none; border-radius: 9px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+            <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #5F6980"><span style="font-weight: 700">Sourcing</span><span>{{p.when}}</span></span>
+            <span style="font-size: 15px; font-weight: 700">{{p.title}}</span>
+            <span style="font-size: 14px; line-height: 1.35">{{p.body}}</span>
+          </span>
+        </div>
+        <sc-if value="{{p.open}}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid rgba(28,34,51,.1)">
+            <button type="button" onClick="{{p.act}}" style="all: unset; cursor: pointer; text-align: center; padding: 13px 8px; font-size: 15px; font-weight: 700; color: #16203C; border-right: 1px solid rgba(28,34,51,.1)">{{p.actLabel}}</button>
+            <a href="{{p.href}}" style="text-align: center; padding: 13px 8px; font-size: 15px; font-weight: 600; color: #16203C">Open</a>
+          </div>
+        </sc-if>
+        <sc-if value="{{p.doneNow}}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 11px 14px; border-top: 1px solid rgba(28,34,51,.1); background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{p.doneWord}}</div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <span style="position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 13px; color: #B3BCD2">Done from the lock screen, without opening the app</span>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { done: {} }; }
+  renderVals() {
+    const D = this.state.done;
+    const pushes = [
+      { id: 'k', when: 'now', title: 'Kiseka Steel answered', body: '4 still the same. Flat bar 25 × 3 is now 29,000, up 1,000.',
+        actLabel: 'Accept all 5', doneWord: 'Accepted · 5 prices fresh', href: 'Proposals.dc.html' },
+      { id: 'l', when: '24 min ago', title: 'Wire mesh BRC A142 is on sale', body: 'Ruth put it on sale at 18:10. Grace, Brian and Aisha were told for their 3 customers.',
+        actLabel: 'Ask Ruth to pin it', doneWord: 'Asked · Ruth decides on the agents’ feed', href: 'Live.dc.html' }
+    ].map(p => ({
+      ...p, open: !D[p.id], doneNow: !!D[p.id],
+      act: () => this.setState({ done: { ...D, [p.id]: true } })
+    }));
+    return { pushes };
+  }
+}
+</script>
+</body>
+</html>

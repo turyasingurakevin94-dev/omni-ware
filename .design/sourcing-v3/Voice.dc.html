@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Say the price</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px">
+    <a href="Capture.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+    <span style="font-size: 16px; font-weight: 700">Say it</span>
+  </div>
+
+  <!-- the mic -->
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 16px 8px">
+    <button type="button" onClick="{{toggle}}" aria-label="{{micAria}}" aria-pressed="{{listeningStr}}" style="all: unset; cursor: pointer; position: relative; width: 132px; height: 132px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{ringStyle}}">
+      <span style="width: 92px; height: 92px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{micStyle}}">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"></path></svg>
+      </span>
+    </button>
+    <!-- the level, drawn as bars -->
+    <div aria-hidden="true" style="display: flex; align-items: center; gap: 3px; height: 26px">
+      <sc-for list="{{level}}" as="b" hint-placeholder-count="15"><i style="width: 4px; border-radius: 2px; {{b}}"></i></sc-for>
+    </div>
+    <span style="font-size: 13px; font-weight: 600; color: #5F6980">{{hint}}</span>
+  </div>
+
+  <div style="padding: 6px 16px; display: flex; flex-direction: column; gap: 12px">
+    <sc-if value="{{heard}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <span style="font-size: 20px; font-weight: 700; line-height: 1.3; text-align: center">“Kiseka, wire mesh, one eighteen”</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+            <a href="{{c.href}}" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; {{c.style}}">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase">{{c.k}}</span>
+              <span style="font-size: 15px; font-weight: 700; line-height: 1.25; color: #1C2233; {{c.face}}">{{c.v}}</span>
+            </a>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+          <span>Same as <span class="m">2</span> days ago, so it saves as “Same price”</span>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{notHeard}}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Say it like</span>
+        <sc-for list="{{examples}}" as="e" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #F7F5F2">
+            <span style="width: 8px; height: 8px; border-radius: 999px; flex: none; {{e.dot}}"></span>
+            <span style="flex: 1; font-size: 14px; font-weight: 600">“{{e.say}}”</span>
+            <span style="font-size: 12px; color: #5F6980">{{e.kind}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="margin-top: auto; padding: 12px 16px 18px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #E6E3DD">
+    <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5F6980">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"></rect><path d="M11 18h2"></path></svg>
+      Some phones need signal to hear you. What it heard is saved on the phone.</span>
+    <sc-if value="{{heard}}" hint-placeholder-val="{{ true }}">
+      <a href="Main.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Save · same price</a>
+    </sc-if>
+    <sc-if value="{{notHeard}}" hint-placeholder-val="{{ false }}">
+      <a href="SupplierPrice.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #F1EEE8; color: #1C2233; font-size: 15px; font-weight: 700">Type it instead</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { mode: 'heard' }; }
+  renderVals() {
+    const mode = this.state.mode, listening = mode === 'listening', heard = mode === 'heard';
+    const H = [6, 10, 16, 22, 14, 24, 18, 26, 12, 20, 16, 10, 22, 14, 8];
+    const level = H.map(h => 'height:' + (listening ? h : 4) + 'px;background:' + (listening ? '#C93A30' : '#E0DCD4'));
+    const SUP = 'background:#E4E6FA;color:#3A3F9B', NEUT = 'background:#F1EEE8;color:#5F6980', MONO = "font-family:'IBM Plex Mono',monospace;font-weight:600";
+    const chips = [
+      { k: 'Supplier', v: 'Kiseka Steel', style: SUP, face: '', href: 'Search.dc.html' },
+      { k: 'Item', v: 'Wire mesh BRC A142', style: NEUT, face: '', href: 'Search.dc.html' },
+      { k: 'Price', v: '118,000', style: NEUT, face: MONO, href: 'SupplierPrice.dc.html' },
+      { k: 'For', v: 'a sheet', style: NEUT, face: '', href: 'SupplierPrice.dc.html' }
+    ];
+    const examples = [
+      { say: 'Kiseka, wire mesh, one eighteen', kind: 'supplier price', dot: 'background:#3A3F9B' },
+      { say: 'Kikuubo, cement, thirty-four', kind: 'rival price', dot: 'background:#7A3268' },
+      { say: 'Owino, gate valve, same', kind: 'same price', dot: 'background:#0F6B43' }
+    ];
+    return {
+      heard, notHeard: !heard, listeningStr: String(listening), level, chips, examples,
+      toggle: () => this.setState({ mode: listening ? 'heard' : 'listening' }),
+      micAria: listening ? 'Stop listening' : 'Hold to talk',
+      hint: listening ? 'Listening… let go when you are done' : heard ? 'Tap a box to fix it · hold to say it again' : 'Hold to talk',
+      ringStyle: listening ? 'background:rgba(201,58,48,.14);box-shadow:0 0 0 14px rgba(201,58,48,.07)' : 'background:#F7F5F2',
+      micStyle: listening ? 'background:#C93A30;color:#FFFFFF' : 'background:#16203C;color:#FFFFFF'
+    };
+  }
+}
+</script>
+</body>
+</html>

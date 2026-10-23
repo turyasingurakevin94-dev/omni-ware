@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sourcing — Fix the gaps</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFFFFF; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column">
+
+  <div style="padding: 12px 16px 0; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: -8px">
+      <a href="Passport.dc.html" aria-label="Back to the passport" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+      <span style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 16px; font-weight: 700">Wire mesh BRC A142</span>
+        <span style="font-size: 12px; color: #5F6980">{{stepWord}}</span>
+      </span>
+    </div>
+    <!-- the stepper -->
+    <div role="list" aria-label="Steps" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+        <span role="listitem" aria-current="{{s.cur}}" style="display: flex; flex-direction: column; gap: 6px">
+          <i style="height: 6px; border-radius: 3px; {{s.bar}}"></i>
+          <span style="font-size: 12px; font-weight: 700; {{s.ink}}">{{s.label}}</span>
+        </span>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- step 1: the photo -->
+  <sc-if value="{{onPhoto}}" hint-placeholder-val="{{ true }}">
+    <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 14px">
+      <div style="position: relative; align-self: center; width: 300px; height: 300px; border-radius: 22px; overflow: hidden; {{frame}}">
+        <sc-if value="{{noShot}}" hint-placeholder-val="{{ true }}">
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #5F6980">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>
+            <span style="font-size: 14px; font-weight: 600">Fill the square with one sheet</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}">
+          <!-- a drawn sheet of mesh -->
+          <div aria-label="The photo: one sheet of mesh on a plain floor" role="img" style="position: absolute; inset: 0; background: #E9E5DE; display: flex; align-items: center; justify-content: center">
+            <span style="width: 220px; height: 220px; border-radius: 6px; background-color: #F6F3EE; background-image: repeating-linear-gradient(0deg, #6B7480 0 2px, transparent 2px 22px), repeating-linear-gradient(90deg, #6B7480 0 2px, transparent 2px 22px); box-shadow: 0 10px 24px rgba(22,32,60,.18)"></span>
+          </div>
+        </sc-if>
+      </div>
+      <sc-if value="{{shot}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px">
+          <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 12px; font-weight: 700">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{c}}</span>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- step 2: the hold -->
+  <sc-if value="{{onHold}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 18px 16px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: #F7F5F2">
+        <span role="img" aria-label="Score 68 of 100" style="position: relative; width: 96px; height: 52px; flex: none; overflow: hidden">
+          <span style="position: absolute; left: 0; top: 0; width: 96px; height: 96px; border-radius: 999px; background: conic-gradient(from 270deg, #0F6B43 0deg 122deg, #E0DCD4 122deg 180deg, transparent 180deg 360deg)"></span>
+          <span style="position: absolute; left: 12px; top: 12px; width: 72px; height: 72px; border-radius: 999px; background: #F7F5F2"></span>
+          <span class="m" style="position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 20px; font-weight: 600">68</span>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+          <span style="font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5F6980">Recommended</span>
+          <span style="font-size: 20px; font-weight: 700">Stock</span>
+          <span style="font-size: 12px; color: #5F6980">confidence <span class="m">67</span>, under <span class="m">70</span>, so it is your pick</span>
+        </span>
+      </div>
+      <div role="radiogroup" aria-label="How we hold it" style="display: flex; flex-direction: column; gap: 8px">
+        <sc-for list="{{holds}}" as="h" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" style="{{h.style}}">
+            <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+              <span style="font-size: 15px; font-weight: 700">{{h.label}}</span>
+              <span style="font-size: 12px; font-weight: 600">{{h.sub}}</span>
+            </span>
+            <span class="m" style="font-size: 14px; font-weight: 600">{{h.cash}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{isConsign}}" hint-placeholder-val="{{ false }}">
+        <a href="Verdict.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 600">
+          <span style="flex: 1">Kiseka must agree to consign first. Ask on the verdict page.</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </a>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- step 3: ready -->
+  <sc-if value="{{onSend}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 16px">
+      <span role="img" aria-label="5 of 6 gates done; the Manager sets the markup" style="width: 120px; height: 120px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: conic-gradient(#FFFFFF 0deg 4deg, #0F6B43 4deg 296deg, #FFFFFF 296deg 304deg, #E0DCD4 304deg 356deg, #FFFFFF 356deg 360deg)">
+        <span style="width: 96px; height: 96px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><span class="m" style="font-size: 28px; font-weight: 600">5/6</span></span>
+      </span>
+      <span style="font-size: 20px; font-weight: 700">Ready for Ruth</span>
+      <div style="align-self: stretch; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+        <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
+          <span style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; {{t.style}}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.mark}}"></path></svg>{{t.label}}</span>
+        </sc-for>
+      </div>
+      <span style="font-size: 13px; color: #5F6980">The Manager sets the markup and puts it on sale.</span>
+    </div>
+  </sc-if>
+
+  <div style="margin-top: auto; padding: 12px 16px 18px; border-top: 1px solid #E6E3DD; display: flex; flex-direction: column; gap: 8px">
+    <sc-if value="{{dockBtn}}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{go}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: block; text-align: center; padding: 15px 10px; border-radius: 14px; font-size: 15px; font-weight: 700; {{goStyle}}">{{goLabel}}</button>
+    </sc-if>
+    <sc-if value="{{onSend}}" hint-placeholder-val="{{ false }}">
+      <a href="SendToManager.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Send to Ruth</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { step: 0, shot: false, hold: null }; }
+  renderVals() {
+    const S = this.state;
+    const LABELS = ['Photo', 'Hold', 'Send'];
+    const steps = LABELS.map((label, i) => ({
+      label, cur: i === S.step ? 'step' : 'false',
+      bar: i < S.step ? 'background:#0F6B43' : i === S.step ? 'background:#16203C' : 'background:#E0DCD4',
+      ink: i <= S.step ? 'color:#1C2233' : 'color:#5F6980'
+    }));
+    const holds = [
+      { k: 'Stock', sub: 'Recommended · sells in ≈ 16 days', cash: '4,720,000' },
+      { k: 'Per order', sub: 'no cash out · 3 days each time', cash: '0' },
+      { k: 'Consign', sub: 'costs 125,100 a sheet · needs Kiseka', cash: '0' }
+    ].map(h => ({
+      label: h.k, sub: h.sub, cash: h.cash, on: String(S.hold === h.k),
+      pick: () => this.setState({ hold: h.k }),
+      style: 'all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;' +
+        (S.hold === h.k ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1px #E6E3DD')
+    }));
+    const OK = { style: 'background:#E4F4EA;color:#0F6B43', mark: 'M5 12.5l4.5 4.5L19 7.5' };
+    const ticks = [['Photo', OK], ['Packing', OK], ['Suppliers', OK], ['Verdict · ' + (S.hold || ''), OK], ['Name & aisle', OK],
+      ['Markup · Ruth', { style: 'background:#F1EEE8;color:#5F6980', mark: 'M7 12h10' }]].map(([label, t]) => ({ label, ...t }));
+    let goLabel = '', goOk = true, go = () => {};
+    if (S.step === 0) {
+      goLabel = S.shot ? 'Next: the hold' : 'Take the photo';
+      go = () => this.setState(S.shot ? { step: 1 } : { shot: true });
+    } else if (S.step === 1) {
+      goOk = !!S.hold && S.hold !== 'Consign';
+      goLabel = !S.hold ? 'Pick how we hold it' : S.hold === 'Consign' ? 'Waiting on Kiseka' : 'Next: send it';
+      go = () => { if (goOk) this.setState({ step: 2 }); };
+    }
+    return {
+      steps, holds, ticks,
+      stepWord: 'Gap ' + Math.min(S.step + 1, 2) + ' of 2' + (S.step === 2 ? ' · all fixed' : ''),
+      onPhoto: S.step === 0, onHold: S.step === 1, onSend: S.step === 2, dockBtn: S.step < 2,
+      shot: S.shot, noShot: !S.shot,
+      frame: S.shot ? 'background:#E9E5DE' : 'background:#F7F5F2;box-shadow:inset 0 0 0 2px #C9C4BA',
+      checks: ['Sharp', 'Bright enough', '1,200 px', 'Plain background'],
+      isConsign: S.hold === 'Consign',
+      go, goLabel,
+      goStyle: goOk ? 'background:#C93A30;color:#FFFFFF' : 'background:#F1EEE8;color:#5F6980'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Supplier app — Kiseka answers</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#F4F1EC}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F4F1EC; color: #1C2233; font-family: Figtree, system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column">
+
+  <sc-if value="{{asking}}" hint-placeholder-val="{{ true }}">
+    <div style="flex: 1; display: flex; flex-direction: column; position: relative">
+      <span aria-hidden="true" style="position: absolute; left: 50%; top: 20px; width: 420px; height: 420px; margin-left: -210px; border-radius: 999px; background: radial-gradient(circle, rgba(58,63,155,.14) 0%, rgba(58,63,155,0) 65%)"></span>
+      <div style="position: relative; display: flex; align-items: center; gap: 10px; padding: 14px 16px 0">
+        <a href="AskConfirm.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(14,21,48,.08)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+        <span style="flex: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px">
+          <sc-for list="{{pips}}" as="p" hint-placeholder-count="5"><i style="height: 6px; border-radius: 3px; {{p}}"></i></sc-for>
+        </span>
+        <span class="m" style="font-size: 14px; color: #5F6980">{{pos}}/5</span>
+      </div>
+
+      <div style="position: relative; margin: 22px 14px 0; padding: 22px 18px; border-radius: 26px; background: #FFFFFF; box-shadow: 0 30px 50px -22px rgba(14,21,48,.45), 0 8px 18px rgba(14,21,48,.08); display: flex; flex-direction: column; align-items: center; gap: 14px">
+        <span style="align-self: stretch; display: flex; justify-content: space-between; align-items: center; gap: 8px">
+          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 12px; font-weight: 700">Mukasa Hardware asks</span>
+          <span style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: #FDEEE1; color: #7A4A02; font-size: 12px; font-weight: 700">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="m">{{item.d}}</span> days old</span>
+        </span>
+        <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+          <b style="font-size: 23px; letter-spacing: -.02em">{{item.name}}</b>
+          <span style="font-size: 14px; color: #5F6980">per {{item.per}}</span>
+        </span>
+        <span class="m" style="font-size: 46px; font-weight: 600; line-height: 1">{{shown}}</span>
+        <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+          <span style="display: flex; align-items: center; gap: 8px; align-self: stretch">
+            <label for="newp" style="font-size: 13px; color: #5F6980">Now</label>
+            <input id="newp" type="text" inputmode="numeric" value="{{guess}}" style="box-sizing: border-box; flex: 1; min-width: 0; padding: 12px 14px; border-radius: 14px; border: 1.5px solid #16203C; font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600">
+          </span>
+        </sc-if>
+      </div>
+
+      <div style="position: relative; margin-top: auto; padding: 18px 16px 22px; display: flex; flex-direction: column; gap: 10px">
+        <sc-if value="{{notEditing}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <button type="button" onClick="{{changed}}" style="all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; height: 54px; border-radius: 16px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #1C2233; font-size: 16px; font-weight: 700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Changed</button>
+            <button type="button" onClick="{{same}}" style="all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; height: 62px; border-radius: 18px; background: #0F6B43; color: #FFFFFF; font-size: 18px; font-weight: 700">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Still the same</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{saveNew}}" style="all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 62px; border-radius: 18px; background: #16203C; color: #FFFFFF; font-size: 18px; font-weight: 700">Send the new price</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{finished}}" hint-placeholder-val="{{ false }}">
+    <div style="flex: 1; background: #0B1122; color: #FFFFFF; padding: 60px 20px 24px; display: flex; flex-direction: column; gap: 18px">
+      <span style="width: 64px; height: 64px; border-radius: 999px; background: rgba(111,220,176,.16); color: #6FDCB0; display: flex; align-items: center; justify-content: center">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span style="font-size: 23px; font-weight: 700; line-height: 1.25">Sent to Mukasa Hardware</span>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <sc-for list="{{stamps}}" as="s" hint-placeholder-count="5">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.06)">
+            <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{s.name}}</span>
+            <span class="m" style="font-size: 14px; font-weight: 600">{{s.price}}</span>
+            <span style="padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .05em; {{s.style}}">{{s.word}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{again}}" style="all: unset; cursor: pointer; margin-top: auto; text-align: center; padding: 15px 10px; border-radius: 14px; background: #FFFFFF; color: #16203C; font-size: 15px; font-weight: 700">Done</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { i: 0, res: [], editing: false }; }
+  renderVals() {
+    const S = this.state;
+    // the same 5 lines Moses asked about, oldest first, as the supplier app orders its checks
+    const items = [
+      { name: 'Flat bar 25 × 3', price: '28,000', now: '29,000', per: 'bar', d: 52 },
+      { name: 'Y10 rebar, 12m', price: '29,500', now: '29,500', per: 'bar', d: 41 },
+      { name: 'Angle bar 40 × 40, 6m', price: '46,000', now: '46,000', per: 'length', d: 36 },
+      { name: 'Wire mesh BRC A98', price: '96,000', now: '96,000', per: 'sheet', d: 33 },
+      { name: 'Barbed wire 25kg', price: '135,000', now: '135,000', per: 'roll', d: 31 }
+    ];
+    const finished = S.i >= items.length;
+    const item = items[Math.min(S.i, items.length - 1)];
+    const next = (r) => this.setState({ res: [...S.res, r], i: S.i + 1, editing: false });
+    return {
+      asking: !finished, finished, item, pos: Math.min(S.i + 1, 5),
+      editing: S.editing, notEditing: !S.editing, guess: item.now,
+      shown: item.price,
+      pips: items.map((_, k) => k < S.i ? 'background:#0F6B43' : k === S.i ? 'background:#16203C' : 'background:#E0DCD4'),
+      same: () => next('same'),
+      changed: () => this.setState({ editing: true }),
+      saveNew: () => next('changed'),
+      again: () => this.setState({ i: 0, res: [], editing: false }),
+      stamps: items.map((it, k) => {
+        const r = S.res[k];
+        return {
+          name: it.name, price: r === 'changed' ? it.now : it.price,
+          word: r === 'changed' ? 'CHANGED' : 'SAME',
+          style: r === 'changed' ? 'background:rgba(245,178,107,.16);color:#F5B26B' : 'background:rgba(111,220,176,.16);color:#6FDCB0'
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -41,7 +41,23 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
     <!-- prices -->
     <div style="display: flex; flex-direction: column; gap: 8px">
-      <span style="font-size: 16px; font-weight: 700">Still the same price?</span>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px">
+        <span style="font-size: 16px; font-weight: 700">Still the same price?</span>
+        <sc-if value="{{canAll}}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{allSame}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12.5l4.5 4.5L16 7.5M10 16l1 1 9.5-9.5"></path></svg>All the same · <span class="m">{{allN}}</span></button>
+        </sc-if>
+      </div>
+      <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #5F6980">
+        <svg width="34" height="14" viewBox="0 0 34 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h24M9 3 5 7l4 4M25 3l4 4-4 4"></path></svg>
+        Swipe a row: right for the same price, left for a new one</span>
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+          <span style="flex: 1">{{toast}}</span>
+          <button type="button" onClick="{{undoAll}}" style="all: unset; cursor: pointer; padding: 4px 8px; color: #6FDCB0; font-weight: 700">Undo</button>
+        </div>
+      </sc-if>
       <div style="background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">
         <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
           <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #EFECE6">
@@ -56,8 +72,8 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
                 </span>
               </span>
               <sc-if value="{{r.isDone}}" hint-placeholder-val="{{ false }}">
-                <span style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.doneWord}}</span>
+                <button type="button" onClick="{{r.undo}}" aria-label="{{r.undoAria}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{r.doneWord}}<span style="color: #1C2233; font-weight: 600"> · Undo</span></button>
               </sc-if>
               <sc-if value="{{r.idle}}" hint-placeholder-val="{{ true }}">
                 <button type="button" onClick="{{r.same}}" style="all: unset; cursor: pointer; padding: 10px 11px; border-radius: 12px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700">Same price</button>
@@ -154,7 +170,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1400}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { price: {}, editing: null, wanted: false, prop: false, photo: {} }; }
+  constructor(p) { super(p); this.state = { price: {}, editing: null, wanted: false, prop: false, photo: {}, bulk: [] }; }
   renderVals() {
     const S = this.state;
     const base = [
@@ -169,11 +185,14 @@ class Component extends DCLogic {
         age: 'width:' + Math.min(100, Math.round(r.d / 45 * 100)) + '%;background:' + (r.d >= 30 ? '#95530C' : '#6B7480'),
         isDone: !!res, idle: !res && S.editing !== r.id, editing: !res && S.editing === r.id,
         doneWord: res === 'new' ? 'New price' : 'Same price',
-        same: () => this.setState({ price: { ...S.price, [r.id]: 'same' } }),
+        undoAria: 'Undo ' + r.name,
+        same: () => this.setState({ price: { ...S.price, [r.id]: 'same' }, bulk: [] }),
+        undo: () => { const p = { ...S.price }; delete p[r.id]; this.setState({ price: p, bulk: [] }); },
         edit: () => this.setState({ editing: r.id }),
-        save: () => this.setState({ price: { ...S.price, [r.id]: 'new' }, editing: null })
+        save: () => this.setState({ price: { ...S.price, [r.id]: 'new' }, editing: null, bulk: [] })
       };
     });
+    const open = base.filter(r => !S.price[r.id]).map(r => r.id);
     const box = (on) => on ? 'background:#0F6B43;color:#FFFFFF' : 'background:#FFFFFF;color:transparent;box-shadow:inset 0 0 0 1.5px #C9C4BA';
     const photos = [{ id: 'p1', name: 'Gate valve ½"' }, { id: 'p2', name: 'Pillar tap ½"' }].map(p => ({
       ...p, on: String(!!S.photo[p.id]), box: box(!!S.photo[p.id]),
@@ -183,6 +202,10 @@ class Component extends DCLogic {
     const left = 7 - done;
     return {
       rows, photos, done,
+      canAll: open.length > 1, allN: open.length,
+      allSame: () => { const p = { ...S.price }; open.forEach(id => { p[id] = 'same'; }); this.setState({ price: p, bulk: open, editing: null }); },
+      hasToast: S.bulk.length > 0, toast: S.bulk.length + ' marked the same price',
+      undoAll: () => { const p = { ...S.price }; S.bulk.forEach(id => { delete p[id]; }); this.setState({ price: p, bulk: [] }); },
       pips: Array.from({ length: 7 }, (_, i) => i < done ? 'background:#6FDCB0' : 'background:#2A3350'),
       wantedOn: String(S.wanted), wantedBox: box(S.wanted),
       toggleWanted: () => this.setState({ wanted: !S.wanted }),

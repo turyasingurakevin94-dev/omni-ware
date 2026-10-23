@@ -43,15 +43,27 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
     <sc-if value="{{has}}" hint-placeholder-val="{{ true }}">
       <div style="display: flex; flex-direction: column; gap: 6px">
-        <label for="sp_price" style="font-size: 12px; font-weight: 700; color: #5F6980">Price</label>
-        <div style="display: flex; align-items: center; gap: 10px">
-          <input id="sp_price" type="text" inputmode="numeric" value="14,500" style="box-sizing: border-box; width: 170px; padding: 12px; border-radius: 12px; border: 1px solid #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600">
-          <div style="display: flex; gap: 6px">
-            <sc-for list="{{units}}" as="u" hint-placeholder-count="2">
-              <button type="button" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button>
+        <span style="font-size: 12px; font-weight: 700; color: #5F6980">Price</span>
+        <button type="button" onClick="{{togglePad}}" aria-label="Price {{shown}} {{unit}}, tap to type" style="all: unset; cursor: pointer; display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-radius: 14px; {{priceBox}}">
+          <span class="m" style="font-size: 32px; font-weight: 600; line-height: 1.1">{{shown}}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5F6980">{{unit}}</span>
+        </button>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+          <sc-for list="{{units}}" as="u" hint-placeholder-count="2">
+            <button type="button" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button>
+          </sc-for>
+          <span style="font-size: 12px; color: #5F6980">our first price for it</span>
+        </div>
+        <sc-if value="{{pad}}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border-radius: 16px; background: #F7F5F2">
+            <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+              <button type="button" aria-label="{{k.aria}}" onClick="{{k.press}}" style="all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 19px; font-weight: 600; box-shadow: inset 0 0 0 1px #E6E3DD">
+                <sc-if value="{{k.isText}}" hint-placeholder-val="{{ true }}">{{k.label}}</sc-if>
+                <sc-if value="{{k.isBack}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h11v14H9l-6-7z"></path><path d="M13 10l4 4M17 10l-4 4"></path></svg></sc-if>
+              </button>
             </sc-for>
           </div>
-        </div>
+        </sc-if>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px">
@@ -94,28 +106,51 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
   </div>
 
   <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-top: 1px solid #E6E3DD; box-shadow: 0 -8px 24px rgba(22,32,60,.08); padding: 12px 16px 18px; display: flex; flex-direction: column; gap: 8px">
-    <span style="font-size: 12px; color: #5F6980; text-align: center">Saved on this phone first. It goes up when you have signal.</span>
-    <a href="Visit.dc.html" style="display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">{{cta}}</a>
+    <sc-if value="{{notSaved}}" hint-placeholder-val="{{ true }}"><span style="display: block; font-size: 12px; color: #5F6980; text-align: center">Saved on this phone first. It goes up when you have signal.</span></sc-if>
+    <sc-if value="{{notSaved}}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{save}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: block; text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">{{cta}}</button>
+    </sc-if>
+    <sc-if value="{{saved}}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: #16203C; color: #FFFFFF; font-size: 14px; font-weight: 600">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6FDCB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+        <span style="flex: 1">{{savedWord}}</span>
+        <button type="button" onClick="{{undo}}" style="all: unset; cursor: pointer; padding: 4px 8px; color: #6FDCB0; font-weight: 700">Undo</button>
+      </div>
+      <a href="Visit.dc.html" style="display: block; text-align: center; padding: 14px 10px; border-radius: 14px; background: #16203C; color: #FFFFFF; font-size: 15px; font-weight: 700">Back to the visit</a>
+    </sc-if>
   </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { has: true, unit: 'a length', lead: 'Same day', extra: false }; }
+  constructor(p) { super(p); this.state = { has: true, unit: 'a length', lead: 'Same day', extra: false, v: '14500', pad: true, saved: false }; }
   renderVals() {
-    const { has, unit, lead, extra } = this.state;
+    const { has, unit, lead, extra, v, pad, saved } = this.state;
+    const n = Number(v || 0);
     const seg = (on) => 'all:unset;cursor:pointer;text-align:center;padding:10px;border-radius:10px;font-size:14px;font-weight:700;' + (on ? 'background:#FFFFFF;box-shadow:0 1px 2px rgba(27,36,56,.08)' : 'color:#5F6980');
     const chip = (on) => 'all:unset;cursor:pointer;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#F1EEE8');
     const have = [[true, 'They have it'], [false, 'They don’t']].map(([k, label]) => ({
       label, on: String(has === k), pick: () => this.setState({ has: k }), style: seg(has === k)
     }));
     const units = ['a length', 'a bundle'].map(label => ({ label, pick: () => this.setState({ unit: label }), style: chip(unit === label) }));
-    const leadOpts = ['Same day', '2 d', 'A week'].map(label => ({ label, pick: () => this.setState({ lead: label }), style: chip(lead === label) }));
-    const raw = [{ from: '1', p: 14500 }, { from: '10', p: 13800 }].concat(extra ? [{ from: '50', p: 13200 }] : []);
-    const steps = raw.map(s => ({ from: s.from, price: s.p.toLocaleString('en-US'), w: 'width:' + Math.round(s.p / 14500 * 100) + '%' }));
+    const leadOpts = ['Same day', '2 d', '7 d'].map(label => ({ label, pick: () => this.setState({ lead: label }), style: chip(lead === label) }));
+    const raw = [{ from: '1', p: n }, { from: '10', p: 13800 }].concat(extra ? [{ from: '50', p: 13200 }] : []);
+    const top = Math.max(...raw.map(s => s.p), 1);
+    const steps = raw.map(s => ({ from: s.from, price: s.p.toLocaleString('en-US'), w: 'width:' + Math.round(s.p / top * 100) + '%' }));
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'].map(label => ({
+      label, isText: label !== 'back', isBack: label === 'back', aria: label === 'back' ? 'Delete a digit' : label,
+      press: () => this.setState({ v: label === 'back' ? v.slice(0, -1) : (v + label).replace(/^0+/, '').slice(0, 9) })
+    }));
     return {
       have, units, lead: leadOpts, steps, has, hasNot: !has,
       addStep: () => this.setState({ extra: true }),
+      keys, pad, unit, shown: n ? n.toLocaleString('en-US') : '0',
+      togglePad: () => this.setState({ pad: !pad }),
+      priceBox: pad ? 'background:#FFFFFF;box-shadow:inset 0 0 0 2px #16203C' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1px #E6E3DD',
+      saved, notSaved: !saved,
+      save: () => this.setState({ saved: true, pad: false }),
+      undo: () => this.setState({ saved: false }),
+      savedWord: has ? 'Saved · ' + (n ? n.toLocaleString('en-US') : '0') + ' ' + unit : 'Saved · Owino doesn’t sell it',
       cta: has ? 'Save the price' : 'Save: they don’t sell it'
     };
   }

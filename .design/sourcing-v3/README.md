@@ -174,4 +174,42 @@ PushBack's "We pay on time" is gone, because that is Accounts' data.
 - **Rival run:** the same wrap, so the last-seen line shows in full.
 - **Suppliers:** the board is 1,110 tall, so nothing is cut at the bottom.
 
+## Round 5: easier to use (the owner asked "what else would make it easier?")
+
+The person this serves is on foot in the market, with the phone in one hand and patchy signal. Round 5 removes four costs: typing every price, walking to a supplier only to hear "same price", opening the gates one at a time, and moving between two lists.
+
+| Cost removed | What changed | Board |
+|---|---|---|
+| Taps at the counter | Swipe a row (right: same price, left: new). **All the same · N** confirms a stop at once. Every done row and every bulk action can be undone. | Visit, RivalRun |
+| Typing | **Say it**: "Kiseka, wire mesh, one eighteen" fills the supplier, item, price and unit. A price equal to the last one saves as "Same price". | Voice (from Capture) |
+| Typing a whole list | **Read a list**: a photo of their printed list, or a WhatsApp message shared into the app. Each line is matched to an item and shown against our last price. An unsure line is asked about, and a line we don't stock can start a hunt. | ReadPaper (from Capture) |
+| Keypad work | A shillings keypad with a 000 key, the unit beside the figure, **Same** for the last price, and an Undo toast instead of a confirm dialog | QuickPrice, SupplierPrice |
+| Trips for "same price" | **Ask Kiseka to confirm 5**: the five lines older than 30 days go to the supplier app, which already has Still the same / Changed. The answers come back as proposals, and the walk drops those lines. | AskConfirm, SupplierConfirm (from Today, Suppliers, Kiseka, the walk) |
+| Two lists, one walk | **Today's walk**: suppliers and rival shops ordered by area (Kikuubo and Owino, then Nateete). Each stop shows its jobs, and the red button always names the next stop. | MarketRun (from Today, Capture) |
+| Gates by hand | Packing and Name & aisle are **filled for you** (from Kiseka's price row and the askers' words), drawn dashed until kept. **Keep both** takes one tap. The hold is not pre-chosen, because confidence 67 is under 70. | Passport |
+| Back and forth to the passport | **Fix 2 gaps** steps through Photo, then Hold, and ends on Send to Ruth | GapWalk |
+| Opening the app | Push buttons: Kiseka answered → **Accept all 5**; the mesh went on sale → **Ask Ruth to pin it** | PushActions |
+| Choosing what's next | **One at a time** on Today walks the Waiting list in order | Main |
+
+**Figures kept true:**
+- Kiseka has 31 lines priced and 26 fresh, so 5 are old.
+- Flat bar goes from 28,000 to 29,000.
+- Today's walk is 19 jobs: Owino 7, Kikuubo 5, Kiseka 3, Nateete 4.
+- Stock cash is 118,000 × 40 = 4,720,000.
+- Namanve's G28 is 34,200, with 33,500 at 100 or more (the radar's 700).
+
+**Decision rights unchanged:**
+- Asking a supplier to confirm and accepting the answers sit under `price.list` (Sourcing).
+- The filled-in tiles and the hold are still Sourcing's to keep.
+- Pinning to the agents' feed is still Ruth's (`feed.pin`).
+
+**What the build needs for this:**
+- An `area` on suppliers and on rival shops, for the walk.
+- A push kind `price.confirm` to the supplier app, carrying the price ids. The supplier app's check flow opens on those lines first. Each ask is logged, which is what "answers 9 of 10 asks in a day" counts.
+- Voice through the `@capgo/capacitor-speech-recognition` plugin that the Sourcing APK already bundles, reusing `nativeSpeech()` from agent.html. A small parser maps "one eighteen" to 118,000 against the last price's size.
+- `api/sourcing-read.js`: Claude vision reads the photo or text into lines, matched against our item names (`item_names`). It needs signal; offline, the photo waits in the outbox.
+- An Android share target in the Sourcing APK, for WhatsApp.
+- Notification actions (categories) in the APK for Accept all and Ask Ruth.
+- Undo instead of confirm: each capture waits a few seconds in the outbox before it is sent.
+
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
