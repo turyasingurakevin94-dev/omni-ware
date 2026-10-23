@@ -212,4 +212,20 @@ The person this serves is on foot in the market, with the phone in one hand and 
 - Notification actions (categories) in the APK for Accept all and Ask Ruth.
 - Undo instead of confirm: each capture waits a few seconds in the outbox before it is sent.
 
+## Build decisions (23 Oct)
+
+The owner reviewed ways to build this better and faster, and took three:
+
+1. **Unfinished items stay as leads, never in the products list.**
+   - The six checks live on the sourcing lead (`sourcing_leads`).
+   - When the Manager prices it, the database creates the product and its prices in one step.
+   - A guard stops products being created any other way.
+   - The console's "new product" and the assistant become "start a lead".
+   - No selling path needs a draft filter, so nothing unfinished can go on sale.
+2. **Certifying is mostly automatic.** Items already selling fill packing, suppliers, name and aisle from their own data. The hold comes from 90 days of sales, and is set automatically when confidence is 70 or more. What is left, mostly photos, is a list ordered by sales.
+3. **The Manager's standing price rule.**
+   - The Manager can set: "put a new item on sale at the default markup when it stays under the cheapest rival with Strong room".
+   - Matching items go live at once with a log line, and the Manager can change the price within 24 hours.
+   - Everything else waits for the Manager.
+
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
