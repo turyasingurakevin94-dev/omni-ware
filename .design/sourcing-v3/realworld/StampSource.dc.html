@@ -222,14 +222,16 @@ button{font-family:inherit}
 class Component extends DCLogic {
   constructor(p) {
     super(p);
-    this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, qty: 3,
+    this.state = { pick: {}, askedK: {}, back: {}, holding: false, inked: false, extra: [], custom: null, qty: 3,
       q: '', sheet: false, fPhone: '', fWhere: '', sellsMore: [], addingSell: false, fSellNew: '',
       fPackN: '', fUnit: null, fOuter: null, fSlot: null, fSingle: false, retail: [], wholesale: [] };
   }
   ask() {
-    const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
+    // ask only the ticked ones not asked yet, so a supplier added later can be asked too
+    const who = Object.keys(this.state.pick).filter(k => this.state.pick[k] && !this.state.askedK[k]);
     if (!who.length) return;
-    this.setState({ phase: 'asked' });
+    const askedK = { ...this.state.askedK }; who.forEach(k => { askedK[k] = true; });
+    this.setState({ askedK });
     // the canvas runs a day in seconds: answers come back one by one, the way the supplier app sends them
     who.forEach((k, i) => setTimeout(() => this.setState({ back: { ...this.state.back, [k]: true } }), 900 + i * 900));
   }
@@ -270,16 +272,16 @@ class Component extends DCLogic {
     ];
     const packLine = (pack) => pack.single ? 'Sold singly' : pack.per + ' ' + UNIT[pack.unit][1] + ' in a ' + pack.outer;
     const SUP = BASE.concat(BOOK.filter(x => S.extra.includes(x[0])));
-    const asked = S.phase === 'asked';
+    const anyAsked = Object.keys(S.askedK).length > 0;
     const rows = SUP.map(([k, i, name, why, ans]) => {
       const on = !!S.pick[k], back = !!S.back[k];
-      const st = !asked ? 'choose' : !on ? 'skip' : !back ? 'wait' : ans ? 'price' : 'none';
+      const st = !S.askedK[k] ? 'choose' : !back ? 'wait' : ans ? 'price' : 'none';
       const t = ans ? at(ans.pack, ans.tiers, Q) : null;
-      return { i, name, on: String(on), pick: () => { if (!asked) this.setState({ pick: { ...S.pick, [k]: !on } }); },
+      return { i, name, on: String(on), pick: () => { if (!S.askedK[k]) this.setState({ pick: { ...S.pick, [k]: !on } }); },
         sub: st === 'none' ? 'Answered: does not stock it' : st === 'wait' ? 'Asked in the supplier app' : st === 'price' ? packLine(ans.pack) + ' · ' + ans.days : why,
         subInk: st === 'none' ? 'color:#8E2A22' : 'color:#6B5A43',
         box: st === 'choose', boxStyle: on ? 'background:#16203C' : 'box-shadow:inset 0 0 0 2px #CDBFA6',
-        price: st === 'price', waiting: st === 'wait', rightInk: st === 'skip' ? 'opacity:.4' : '',
+        price: st === 'price', waiting: st === 'wait', rightInk: '',
         unit: t ? each(ans.pack, t) : 0, amount: t ? fmt(Math.round(each(ans.pack, t))) : '', per: 'each, for ' + Q,
         tiers: ans ? tierLines(ans.pack, ans.tiers) : [], tiersAria: ans ? tiersAria(ans.pack, ans.tiers) : '' };
     });
@@ -345,15 +347,16 @@ class Component extends DCLogic {
     const CH = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#1C2233;box-shadow:inset 0 0 0 1.5px #E3DACB');
     const slot = (val, active) => single ? 'background:#EDE6D8;color:#8A7A62' : val ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:#8A7A62;box-shadow:inset 0 0 0 1.5px #D3C8B4' + (active ? ',0 0 0 3px rgba(43,58,140,.25)' : '');
 
-    const nPick = Object.values(S.pick).filter(Boolean).length;
+    const toAsk = SUP.filter(([k]) => S.pick[k] && !S.askedK[k]).length;
+    const askedN = Object.keys(S.askedK).length;
     const priced = pricedRows.length;
-    const pending = asked && SUP.some(([k]) => S.pick[k] && !S.back[k]);
+    const pending = SUP.some(([k]) => S.askedK[k] && !S.back[k]);
     const can = priced >= 1 && !pending;
     return {
       strip, askers, sups, stripAria: (S.inked ? 2 : 1) + ' of 9 stamps',
       qty: Q, qtyLess: () => this.setState({ qty: Math.max(1, Q - 1) }), qtyMore: () => this.setState({ qty: Math.min(40, Q + 1) }),
-      listHead: asked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (nPick + (S.custom ? 1 : 0) - priced) + ' without') : 'Ask the ones who might have it',
-      canAsk: !asked && nPick > 0, askLabel: 'Ask ' + nPick + ' for packing and prices', ask: () => this.ask(), showMarket: !asked,
+      listHead: anyAsked ? (pending ? 'Waiting for answers' : priced + ' priced, ' + (askedN + (S.custom ? 1 : 0) - priced) + ' without') : 'Ask the ones who might have it',
+      canAsk: toAsk > 0, askLabel: 'Ask ' + toAsk + (toAsk === 1 ? ' supplier' : ' suppliers') + ' for packing and prices', ask: () => this.ask(), showMarket: !anyAsked,
       q: S.q, typeQ: (e) => this.setState({ q: e.target.value }), hits, hasHits: hits.length > 0, offerNew, showSearch: !S.inked, qName: S.q.trim(),
       sheetOpen: S.sheet, openSheet: () => this.setState({ sheet: true }), closeSheet: () => this.setState({ sheet: false }),
       fPhone: S.fPhone, fWhere: S.fWhere,
