@@ -36,6 +36,19 @@ def stop(n, kind, last=False):
     return f'<span style="width: 26px; height: 26px; flex: none; border-radius: 999px; background: {bg}; color: #16203C; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">{n}</span>'
 line = '<span style="flex: 1; height: 3px; margin: 0 4px; border-radius: 2px; background: rgba(255,255,255,.14)"></span>'
 dash = '<span style="flex: 1; margin: 0 4px; border-top: 3px dashed rgba(255,255,255,.14)"></span>'
+# the walk as three stops: what each is (supplier or rival), its name, how much work waits there; the first is where to start
+def wstop(name, kind, jobs, first=False):
+    bg, ink = ('#E4E6FA', '#3A3F9B') if kind == 'sup' else ('#F6E4F1', '#7A3268')
+    ring = '; box-shadow: 0 0 0 3px #19223F, 0 0 0 5px #F5B26B; animation: owRingA 2s infinite' if first else ''
+    icon = 'supplier' if kind == 'sup' else 'rival'
+    return (f'<span style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center">'
+            f'<span style="width: 44px; height: 44px; border-radius: 999px; background: {bg}; color: {ink}; display: flex; align-items: center; justify-content: center{ring}">{svg(icon, 20, 2)}</span>'
+            f'<span style="display: flex; flex-direction: column; gap: 1px"><span class="nm" style="font-size: 13px; font-weight: 700">{name}</span>'
+            f'<span style="font-size: 11px; font-weight: 600; color: {"#F5B26B" if first else "#B3BCD2"}"><span class="m">{jobs}</span> jobs{" · start" if first else ""}</span></span></span>')
+route = ('<div role="img" aria-label="Start at Owino Plumbing, 7 jobs; then Kikuubo Hardware Mart, 5; then across town to Nateete Builders’ Centre, 4" style="position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">'
+         '<span style="position: absolute; top: 21px; left: 16.7%; width: 33.3%; height: 2px; background: rgba(255,255,255,.3)"></span>'
+         '<span style="position: absolute; top: 21px; left: 50%; width: 33.3%; height: 0; border-top: 2px dashed rgba(255,255,255,.3)"></span>'
+         + wstop('Owino', 'sup', 7, True) + wstop('Kikuubo', 'riv', 5) + wstop('Nateete', 'riv', 4) + '</div>')
 job = f'''    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px">
       <span style="font-size: 17px; font-weight: 700">Next job</span>
       <span class="m" style="font-size: 13px; color: #5F6980">1 of 3</span>
@@ -46,7 +59,7 @@ job = f'''    <div style="display: flex; align-items: baseline; justify-content:
         <span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #FFFFFF">16</span> jobs · <span class="m" style="color: #FFFFFF">3</span> stops</span>
       </div>
       <span style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">Kikuubo and Owino, then Nateete</span>
-      <div role="img" aria-label="Owino Plumbing, Kikuubo Hardware Mart, then Nateete Builders’ Centre" style="display: flex; align-items: center">{stop(1,'sup')}{line}{stop(2,'riv')}{dash}{stop(3,'riv')}</div>
+      {route}
       {pill('Start at Owino Plumbing', href='MarketRun.dc.html', kind='white', icon='chev')}
     </div>'''
 
