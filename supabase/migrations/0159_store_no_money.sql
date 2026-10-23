@@ -185,7 +185,7 @@ declare
   q saved_quotes%rowtype;
   allowed text[] := array['assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt',
                           'pickingDoneAt', 'bay', 'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto',
-                          'deliveredPhotoKind', 'handoverCheckedAt', 'creditAsk'];
+                          'deliveredPhotoKind', 'deliveredNote', 'handoverCheckedAt', 'creditAsk'];
   line_keys text[] := array['pickStatus', 'pickedQty'];
   p jsonb;
   items jsonb;

@@ -362,8 +362,9 @@ input{font-family:inherit;color:var(--ink)}
 .st-slide{position:relative;flex:1;height:56px;border-radius:999px;background:radial-gradient(120% 140% at 10% 50%,#26335E 0%,#16203C 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 10px 22px rgba(22,32,60,.22);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 .st-slide .road{position:absolute;left:60px;right:18px;top:27px;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 8px,transparent 8px 16px);animation:stRoad .6s linear infinite}
 .st-slide .fill{position:absolute;left:0;top:0;bottom:0;width:56px;border-radius:999px;background:linear-gradient(90deg,rgba(201,58,48,.15),rgba(201,58,48,.55))}
-.st-slide .lab{position:absolute;left:58px;right:38px;top:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;white-space:nowrap;pointer-events:none;overflow:hidden}
-.st-slide .lab b{font-weight:700;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.st-slide .lab{position:absolute;left:58px;right:38px;top:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;pointer-events:none;overflow:hidden}
+/* A long label wraps to two lines rather than lose a name ("Slide to hand over to Pe"). */
+.st-slide .lab b{font-weight:700;min-width:0;text-align:center;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .st-slide .lab i{flex:none}
 .st-slide .lab i{font-style:normal;display:inline-flex;margin-left:6px;letter-spacing:-.2em;color:var(--rose);animation:stChev 1.4s ease-in-out infinite}
 .st-slide .flag{position:absolute;right:12px;top:18px;width:20px;height:20px;border-radius:6px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center}
@@ -377,6 +378,7 @@ input{font-family:inherit;color:var(--ink)}
 
 /* ---- pushed pages and sheets ---- */
 html.st-covered #st_main{visibility:hidden}
+.st-page:focus{outline:none}
 .pv{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 1px}.pv span{height:20px;padding:0 7px;border-radius:6px;background:#F1EEE8;color:var(--ink2);font-size:11px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap}.pv span.last{background:#E8EBF0;color:#16203C}
 .cv-hero .pv span{background:rgba(255,255,255,.1);color:#DDE3F0}.cv-hero .pv span.last{background:rgba(255,255,255,.18);color:#fff}
 .hscroll{scrollbar-width:none}.hscroll.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
@@ -932,7 +934,7 @@ function heldWrite(msg, run, onUndo, ms, quiet){
   const go = () => { if (gone) return; gone = true; clearTimeout(timer); document.removeEventListener('visibilitychange', away); if (S.ui.held === h) S.ui.held = null; run(); };
   const away = () => { if (document.visibilityState === 'hidden') go(); };
   const undo = () => { if (gone) throw new Error('it has already gone through'); gone = true; clearTimeout(timer); document.removeEventListener('visibilitychange', away); if (S.ui.held === h) S.ui.held = null; if (onUndo) onUndo(); setTimeout(render, 0); };
-  const timer = setTimeout(go, ms), h = { now: go, undo: () => { try { undo(); FEEL.back(); } catch (e) { toast(failWord(e), 4000); } } };
+  const timer = setTimeout(go, ms), h = { quiet: !!quiet, now: go, undo: () => { try { undo(); FEEL.back(); } catch (e) { toast(failWord(e), 4000); } } };
   document.addEventListener('visibilitychange', away);
   S.ui.held = h;
   // A screen with its own Undo (quiet) shows no toast for it.
@@ -1061,6 +1063,8 @@ function rowToQuote(q){
 function rowToReport(r){ return { id: r.id, key: r.key, productId: r.product_id, variantIdx: r.variant_idx == null || r.variant_idx === '' ? null : Number(r.variant_idx), name: r.name || '', qty: Number(r.qty) || 0,
   reason: r.why || 'damaged', photo: r.photo_path || null, by: r.reported_by, byName: r.reported_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
 // Goods back at the gate are a credit ask (0123 invoice_asks, kind 'credit'); the Manager raises the note.
+// One way to say a returned line, everywhere: "20 Ctn ABC black screws", as the gate wrote it.
+function returnLineWords(q, l){ const it = q && (q.items || [])[l.idx], name = it ? lineName(it).base : (l.name || ''); return [l.shown || (n0(l.qty) + ' ' + (l.unit || '')).trim(), name].filter(Boolean).join(' '); }
 function rowToReturn(r){ return { id: r.id, orderId: r.quote_id, lines: Array.isArray(r.lines) ? r.lines : [], reason: r.reason || '', note: r.note || '',
   by: r.asked_by || null, byName: r.asked_by_name || '', status: r.status, createdAt: r.created_at }; }
 // What has already come back on a line, or is waiting to: open and accepted
@@ -1247,16 +1251,19 @@ async function loadSnapshot(userId){
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
 // The person's name from their staff row or their profile; a login with neither
 // is named by its role, never by its email handle.
+// A staff record named like a login ("turyasingurakevin94") gives way to the person's own name.
+function looksHandle(n){ const t = String(n || '').trim(); return !!t && !/\s/.test(t) && /\d/.test(t); }
 function myName(){
-  const st = myStaff(); if (st && st.name) return st.name;
   const m = (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name)) || '';
+  const st = myStaff(); if (st && st.name && !(m && looksHandle(st.name))) return st.name;
   return m || ({ owner: 'The owner', admin: 'The admin', manager: 'The manager', store: 'The store', staff: 'The store' }[S.role] || 'The store');
 }
 function hasOwnName(){ const st = myStaff(); return !!((st && st.name) || (S.user && S.user.user_metadata && (S.user.user_metadata.name || S.user.user_metadata.full_name))); }
 // The Manager by first name, for "Ruth decides"; the role's word when the shop has none.
 // The Manager's initials, from the full name (RN, not RU).
-function mgrIni(){ const ids = D().managerIds || [], st = D().staff.find(s => s.userId && ids.includes(s.userId)) || D().staff.find(s => /manager/i.test(s.role)); return ini(st && st.name ? st.name : managerName()); }
-function managerName(){ const ids = D().managerIds || []; const st = D().staff.find(s => s.userId && ids.includes(s.userId)); return st && st.name ? firstWord(st.name) : 'the manager'; }
+// The Manager, found one way everywhere, so the name and the initials agree on every screen.
+function managerStaff(){ const ids = D().managerIds || []; return D().staff.find(s => s.userId && ids.includes(s.userId)) || D().staff.find(s => /manager/i.test(s.role)) || null; }
+function mgrIni(){ const st = managerStaff(); return ini(st && st.name ? st.name : managerName()); }
 function theBuyer(){ const ids = D().buyerIds || []; return D().staff.find(s => s.userId && ids.includes(s.userId)) || null; }
 function supplierById(id){ return (D().suppliers || []).find(s => String(s.id) === String(id)) || null; }
 function canCorrect(){ return ['owner', 'admin', 'manager'].includes(S.role); }
@@ -1517,7 +1524,7 @@ function daysSinceCount(key){ const t = D().lastCounted[key]; return t ? Math.fl
 function productById(id){ const m = memo('byId', () => { const o = new Map(); D().products.forEach(p => o.set(p.id, p)); return o; }); return m.get(id) || null; }
 function staffById(id){ return D().staff.find(s => String(s.id) === String(id)) || null; }
 // shared-worker.js 2173
-function staffName(id){ if (!id) return ''; const s = staffById(id); return s ? s.name : '(removed staff)'; }
+function staffName(id){ if (!id) return ''; const s = staffById(id); if (s && S.user && s.userId === S.user.id) return myName(); return s ? s.name : '(removed staff)'; }
 function myStaff(){ return S.user ? D().staff.find(s => s.userId && s.userId === S.user.id) || null : null; }
 
 function variantLabel(combo){ return Object.values(combo || {}).join(' / '); }
@@ -1536,6 +1543,8 @@ function prodTT(x, style){
   const n = nameParts(x.productId, x.variantIdx, x.productName), parts = n.variant ? n.variant.split(/\s*\/\s*/).filter(Boolean) : [];
   return `<span class="cv-tt clamp2" style="white-space:normal;line-height:1.25;overflow-wrap:anywhere;${style || ''}">${esc(n.base)}</span>${parts.length ? `<span class="pv">${parts.map((v, i) => `<span${i === parts.length - 1 ? ' class="last"' : ''}>${esc(v)}</span>`).join('')}</span>` : ''}`;
 }
+// A product in a word or two, as the shop writes it ("Jaguar paint", never "pack jaguar").
+function shortProduct(it){ return lineName(it).base.split(/\s+[·—-]\s+|\s*\(/)[0].split(/\s+/).slice(0, 2).join(' '); }
 function fullName(it){ const n = lineName(it); return n.variant ? `${n.base} ${n.variant}` : n.base; }
 function lineName(it){ return nameParts(it.productId, it.variantIdx, it.productName); }
 function stockKey(pid, vi){ return (vi == null || vi === '') ? pid : `${pid}::${vi}`; }
@@ -1724,7 +1733,7 @@ function shopPicker(rows, open, ui){
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">${list.map((m, i) => {
         const name = (m.shops && m.shops.name) || 'Unnamed shop', st = shopStarted(at(m)), here = m.shop_id === open;
         return `<button type="button" data-shop="${esc(m.shop_id)}" aria-label="${esc(name + (st ? ', books from ' + st.mon + ' ' + st.year : ''))}" style="display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px;border:none;border-radius:16px;background:rgba(255,255,255,${i ? '.06' : '.1'});box-shadow:inset 0 0 0 ${here ? '2px #6FDCB0' : '1px rgba(255,255,255,.14)'};color:#fff;text-align:left;font:inherit;cursor:pointer">
-          <span aria-hidden="true" style="width:48px;height:48px;flex:none;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;background:${i ? 'rgba(255,255,255,.1)' : '#6FDCB0'};color:${i ? '#fff' : '#16203C'}">${st ? `<span style="font-size:11px;letter-spacing:.08em">${esc(st.mon)}</span><span style="font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em">${esc(st.year)}</span>` : `<span style="font-size:15px">${esc(shopInitials(name))}</span>`}</span>
+          <span aria-hidden="true" style="width:48px;height:48px;flex:none;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-weight:700;background:${i ? 'rgba(255,255,255,.1)' : '#6FDCB0'};color:${i ? '#fff' : '#16203C'}">${st ? `<span style="font-size:10px;letter-spacing:.08em">${esc(st.mon)}</span><span style="font-size:14px;font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em">${esc(st.year)}</span>` : `<span style="font-size:15px">${esc(shopInitials(name))}</span>`}</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b title="${esc(name)}" style="font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b>
             <span style="font-size:12px;font-weight:600;color:#B3BCD2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i ? '' : '<b style="color:#6FDCB0">Newest</b> · '}${here ? '<b style="color:#fff">Open now</b> · ' : ''}You're ${esc(SHOP_ROLE_WORD[m.role] || m.role)}</span></span>${chev}</button>`;
       }).join('')}</div>
@@ -1815,16 +1824,29 @@ function tickClocks(){ if (!S.stack.length || ['movein', 'movepack'].includes(S.
 function applyPrefs(){ if (S.prefs.big) bigSheet(); document.documentElement.classList.toggle('big', !!S.prefs.big); }
 
 /* ---------------- navigation ---------------- */
-function go(view){ S.view = view; S.stack = []; closeSheet(true); render(); window.scrollTo(0, 0); }
+function go(view){ flushHeld(); S.view = view; S.stack = []; closeSheet(true); render(); window.scrollTo(0, 0); }
 /* Pages there is only one of (Alerts, You, With Ruth, Find): opening one that is
    already behind goes back to it, so Back never walks a loop built up in a session. */
 const ONE_OF = ['alerts', 'me', 'ruth', 'find'];
 function push(type, args){
   const at = ONE_OF.includes(type) ? S.stack.findIndex(p => p.type === type) : -1;
   if (at >= 0) { S.stack = S.stack.slice(0, at + 1); S.stack[at].args = args || {}; render(); return; }
-  S.stack.push({ type, args: args || {} }); render(); const p = document.querySelector('.st-page:last-of-type'); if (p) p.scrollTop = 0; }
+  // The same page twice in a row (a key held on the button that opened it) is one page.
+  const top = S.stack[S.stack.length - 1];
+  if (top && top.type === type && JSON.stringify(top.args || {}) === JSON.stringify(args || {})) return;
+  S.stack.push({ type, args: args || {} }); render();
+  const p = document.querySelector('#st_pages > .st-page:last-child');
+  if (p) { p.scrollTop = 0; p.setAttribute('tabindex', '-1'); if (!p.contains(document.activeElement)) try { p.focus({ preventScroll: true }); } catch (_e) {} } }
 // Back slides the page away instead of cutting to what was under it.
+// Leaving a done screen gives up its Undo, so what it holds goes now: Today and
+// With Ruth show it at once instead of after the undo window (the report's 5 s).
+/* A half-filled form asks before it is thrown away (a page's dirty() says it has
+   something in it). Leave pops it; Keep stays. */
+function leaveGuard(){ const top = S.stack[S.stack.length - 1], f = top && PAGE[top.type];
+  if (!f || !f.dirty || !f.dirty(top.args || {})) return false; FEEL.open(); openSheet('leave', { what: f.dirtyWord || 'this' }); return true; }
+function flushHeld(){ if (S.ui.held && S.ui.held.quiet) S.ui.held.now(); }
 function pop(){
+  flushHeld();
   const el = document.querySelector('#st_pages > .st-page:last-child');
   S.stack.pop(); render();
   if (el && !el.parentNode && !matchMedia('(prefers-reduced-motion: reduce)').matches) { el.classList.add('leaving'); el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el); setTimeout(() => el.remove(), 240); }
@@ -1833,7 +1855,7 @@ function replaceTop(type, args){ S.stack[S.stack.length - 1] = { type, args: arg
 function topArgs(){ return S.stack.length ? S.stack[S.stack.length - 1].args : {}; }
 window.stBack = function(){
   if (S.sheet) { closeSheet(); return true; }
-  if (S.stack.length) { pop(); return true; }
+  if (S.stack.length) { if (!leaveGuard()) pop(); return true; }
   if (S.view !== 'today') { go('today'); return true; }
   return false;
 };
@@ -1918,6 +1940,12 @@ function renderSheet(){
   afterRender();
 }
 const PAGE = {}, SHEET = {}, ACT = {}, AFTER = [];
+SHEET.leave = a => `<span style="font-size:20px;font-weight:700">Leave ${esc(a.what)}?</span>
+    <span style="font-size:13px;font-weight:600;color:var(--ink2)">What you filled in goes. Nothing has been sent.</span>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+      <button data-act="closesheet" style="height:56px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:15px;font-weight:700">Keep filling it in</button>
+      <button data-act="leaveyes" style="height:56px;border-radius:999px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:#8E2A22;font-size:15px;font-weight:700">Leave it</button></div>`;
+ACT.leaveyes = () => { closeSheet(); const top = S.stack[S.stack.length - 1]; if (top && top.type === 'report') S.ui.rp = null; if (top && top.type === 'ret') S.ui.rt = null; FEEL.back(); pop(); };
 // A row that scrolls sideways fades at the edge that has more, so it never hides what is past it.
 function hscrollCue(el){ const more = el.scrollWidth - el.clientWidth - el.scrollLeft > 4, less = el.scrollLeft > 4; el.classList.toggle('more', more); el.classList.toggle('less', less); }
 AFTER.push(() => document.querySelectorAll('.hscroll').forEach(el => { hscrollCue(el); if (!el._cue) { el._cue = true; el.addEventListener('scroll', () => hscrollCue(el), { passive: true }); } }));
@@ -1927,7 +1955,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const a = t.dataset.act;
   if (a === 'tab') { if (S.view !== t.dataset.v || S.stack.length) FEEL.tick(); go(t.dataset.v); return; }
-  if (a === 'back') { pop(); return; }
+  if (a === 'back') { if (!leaveGuard()) pop(); return; }
   // The tap that opened a sheet can land on its scrim a moment later; that is not a close.
   if (a === 'closesheet') { if (t.classList.contains('st-scrim') && S.sheet && Date.now() - (S.sheet.at || 0) < 350) return; closeSheet(); return; }
   // A link that leaves the app (WhatsApp, a call) must go in the tap
@@ -1948,7 +1976,7 @@ document.addEventListener('focusin', e => { if (e.target.classList && e.target.c
 const NUM_SET = {
   ex: (t, v) => { if (!S.sheet) return; S.sheet.args.qty = Math.max(1, v); },
   pk: (t, v) => { const q = pkQ(); if (!q) return; const k = S.ui.pk.i, it = pickView(q)[k]; S.ui.pk.picked[k] = Math.max(0, Math.min(Number(it.qty) || 0, v * quoteLineCountPer(it))); },
-  rp: (t, v) => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key); ui.n = Math.max(1, Math.min(rpMax(ui, x), v)); },
+  rp: (t, v) => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key); rpSet(ui, x, v); },
   rs: (t, v) => { S.ui.rs.n = Math.max(1, v); },
   rt: (t, v) => { const ui = S.ui.rt, q = quoteById(ui.id); if (!q || ui.sent) return; const x = rtItems(q).find(y => y.k === t.dataset.k); if (x) ui.back[x.k] = Math.max(0, Math.min(rtRoom(q, x), v * rtStep(x))); },
   rd: (t, v) => { const tr = (D().collectionTrips || []).find(x => x.id === t.dataset.t), l = tr && tripLines(tr)[Number(t.dataset.i)]; if (l) S.ui.rd.n[tr.id + ':' + t.dataset.i] = Math.max(0, v * quoteLineCountPer(l)); },
@@ -1977,7 +2005,7 @@ function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empt
    delivery -> Completed with the delivery proof, and the gate handover.
    ================================================================== */
 const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt', 'bay',
-  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt', 'creditAsk'];
+  'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'deliveredNote', 'handoverCheckedAt', 'creditAsk'];
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
 // A 0159 function this database does not have yet (an error with no code is read the same way).
 function noFn(e){ return !!e && (needs0115(e) || !e.code); }
@@ -2124,7 +2152,8 @@ async function shrinkPhoto(blob){
     return await new Promise(res => c.toBlob(b => res(b || blob), 'image/jpeg', 0.82));
   } catch (_e) { return blob; }
 }
-async function markDelivered(id, to, blob, kind){
+// noPhoto: why there is no photo (the camera would not open, the client said no); the Manager sees it on the order.
+async function markDelivered(id, to, blob, kind, noPhoto){
   const q0 = quoteById(id); if (!q0) throw new Error('that order is gone');
   let path = null;
   if (blob) {
@@ -2139,6 +2168,7 @@ async function markDelivered(id, to, blob, kind){
     q.deliveredAt = new Date().toISOString();
     q.deliveredPhoto = path;
     if (kind === 'note') q.deliveredPhotoKind = 'note';
+    if (!path && noPhoto) { q.deliveredPhotoKind = 'none'; q.deliveredNote = String(noPhoto).slice(0, 200); }
     setSavedQuoteStatus(q, 'completed');
   });
 }
@@ -2624,7 +2654,7 @@ function jobRow(j, i){
   if (j.kind === 'gate') { const ag = j.q.originAgentId && (D().agents || []).find(a => String(a.id) === String(j.q.originAgentId)); const who = ag ? ag.name : quoteClientName(j.q);
     return cvRow({ act: 'job', data: { i: id }, round: true, ini: initials(who), soft: tint(who)[0], ink: tint(who)[1], title: `${esc(firstWord(who))} collects ${q4(j.q)}`, sub: esc((ag ? 'Agent · packed and paid' : 'Packed') + ' · at the gate'), subInk: '#0F6B43', right: cvChip(ag ? 'Code' : 'Hand over') }); }
   if (j.kind === 'pack') { const p = packProgress(j.q);
-    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${nLines(p.n)} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' picked' : 'waiting ' + waitWords(minsSince(waitingSince(j.q))))) }); }
+    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${nLines(p.n)} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' packed' : 'waiting ' + waitWords(minsSince(waitingSince(j.q))))) }); }
   if (j.kind === 'run') { const r = j.r;
     return cvRow({ act: 'job', data: { i: id }, icon: CV.truck, soft: '#E4F4EA', ink: '#0F6B43', title: `Load ${r.driver ? esc(firstWord(r.driver.name)) + "'s" : 'the'} run · ${esc(r.road)}`, subInk: '#0F6B43',
       sub: esc([r.drops.map(d => shortName(quoteClientName(d.q))).join(', ') + (r.drops.length > 1 ? ' are' : ' is') + ' packed'].concat(r.after.length ? [r.after.map(q => shortName(quoteClientName(q))).join(', ') + ' after packing'] : []).join(' · ')) }); }
@@ -2744,7 +2774,7 @@ function jobCard(j, n){
     const q = j.q, ag = q.originAgentId && (D().agents || []).find(a => String(a.id) === String(q.originAgentId)), who = ag ? ag.name : quoteClientName(q), p = packProgress(q);
     body = head(tag(CV.store, `At the gate · bay ${bayOf(q) || '—'}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces([who]))
       + title(`${esc(firstWord(who))} collects ${q4(q)}`, esc(ag ? 'Agent · packed and paid' : 'Packed · they collect'))
-      + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [bayOf(q) || '—', 'bay'], [ag ? 'code' : 'id', 'to hand over']]) + go('Hand it over');
+      + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [bayOf(q) || '—', 'bay'], [ag ? 'Code' : 'ID', ag ? 'to match' : 'to check']]) + go('Hand it over');
   } else if (j.kind === 'pack') {
     const q = j.q, p = packProgress(q), aisles = [...new Set(p.items.map(it => aisleOf(it.productId).letter))];
     body = head(tag(CV.clock, `Pack · waiting ${esc(waitWords(minsSince(waitingSince(q))))}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)]))
@@ -2848,7 +2878,7 @@ function ruthAsks(){
       else if (isTodayMs(msOf(c.decidedAt))) add(answered, { ...o, title: c.status === 'recount' ? `Recount · ${esc(c.aisle)}` : `${esc(c.aisle)} count`, answer: c.status === 'recount' ? 'Asked for a recount' : 'Accepted your count', at: msOf(c.decidedAt), tone: c.status === 'recount' ? 'warn' : 'good',
         say: c.status === 'recount' ? `${esc(mgr)} asks for a recount` : `${esc(mgr)} accepted your count`, saySub: esc(c.aisle) });
     });
-    (D().returns || []).filter(r => mine(r.by)).forEach(r => { const q = quoteById(r.orderId), lines = (r.lines || []).map(l => { const it = q && (q.items || [])[l.idx]; return it ? `${n0(l.qty)} ${lineName(it).base.toLowerCase()}` : ''; }).filter(Boolean).join(', ');
+    (D().returns || []).filter(r => mine(r.by)).forEach(r => { const q = quoteById(r.orderId), lines = (r.lines || []).map(l => returnLineWords(q, l)).filter(Boolean).join(', ');
       const o = { title: `Return · ${q ? q4(q) + ' ' + esc(shortName(quoteClientName(q))) : 'an order'}`, icon: CV.ret, ...(q ? { act: 'goret', data: { id: q.id } } : {}) };
       if (r.status === 'sent') add(waiting, { ...o, sub: esc([lines, r.reason].filter(Boolean).join(' · ')), since: msOf(r.createdAt) });
       else if (isTodayMs(msOf(r.decidedAt || r.createdAt)) && r.status !== 'withdrawn') add(answered, { ...o, answer: r.status === 'accepted' ? 'Raised the credit note' : 'Kept it as sold', at: msOf(r.decidedAt || r.createdAt), tone: r.status === 'accepted' ? 'good' : 'warn',
@@ -2888,7 +2918,7 @@ function ruthAsks(){
 function alertsNow(){
   if (!S.data) return [];
   return memo('alerts', () => {
-    const out = [], mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), seen = seenAt(), wk = Date.now() - 7 * 864e5;
+    const out = [], mgr = managerName(), M = managerStaff(), seen = seenAt(), wk = Date.now() - 7 * 864e5;
     const add = (at, o) => { if (at && at > wk) out.push({ at, ...o }); };
     const fromRuth = { ini: initials((M && M.name) || mgr), soft: '#F6E4F1', ink: '#7A3268' };
     ruthAsks().answered.forEach(a => add(a.at, { ...fromRuth, title: a.say || `${esc(mgr)} · ${a.title}`, sub: a.saySub || a.answer, tone: a.tone, act: a.act, data: a.data }));
@@ -2902,7 +2932,7 @@ function alertsNow(){
 }
 PAGE.alerts = () => {
   const A = alertsNow(), R = ruthAsks(), top = A.find(a => a.unread) || A[0], mgr = managerName();
-  const M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  const M = managerStaff();
   const row = a => cvRow({ tall: true, act: a.act, data: a.data, round: true, ini: a.ini, icon: a.icon, soft: a.soft, ink: a.ink, unread: a.unread, title: a.title, sub: a.sub, subInk: a.tone === 'good' ? '#0F6B43' : a.tone === 'warn' ? '#95530C' : '', right: `<span class="cv-at">${isTodayMs(a.at) ? hm(a.at) : esc(new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short' })) + ' ' + hm(a.at)}</span>`,
     badge: a.unread ? '<span style="position:absolute;top:-1px;right:-1px;width:11px;height:11px;border-radius:999px;background:#C93A30;border:2px solid #fff;box-sizing:border-box"></span>' : '' });
   return `<div class="cv"><div class="cv-hero tight" data-navy-top>
@@ -2934,7 +2964,7 @@ AFTER.push(() => { const on = S.stack.some(p => p.type === 'alerts'); if (S.ui.a
 ACT.ruth = () => { FEEL.open(); push('ruth', {}); };
 ACT.pack = t => { FEEL.open(); openPack(Number(t.dataset.id)); };
 PAGE.ruth = () => {
-  const R = ruthAsks(), mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  const R = ruthAsks(), mgr = managerName(), M = managerStaff();
   const tone = { good: ['#E4F4EA', '#0F6B43'], warn: ['#FDEEE1', '#95530C'] };
   return `<div class="cv"><div class="cv-hero" style="border-radius:0 0 30px 30px;padding-bottom:18px;gap:16px" data-navy-top>
     <div class="cv-top">${cvBack('Back to Alerts')}<b>With ${esc(mgr)}</b>${M && M.phone ? `<a class="cv-circ" href="${esc(telUrl(M.phone))}" aria-label="Call ${esc(mgr)}">${sv(CV.phone, 18, 2)}</a>` : '<span class="cv-circ blank"></span>'}</div>
@@ -2958,7 +2988,7 @@ PAGE.ruth.bg = '#F7F5F2';
    app reaches them.
    ================================================================== */
 PAGE.me = () => {
-  const me = myStaff(), mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  const me = myStaff(), mgr = managerName(), M = managerStaff();
   const checked = (D().collectionTrips || []).filter(t => t.yardCheckedBy === (S.user && S.user.id) && isTodayMs(msOf(t.yardCheckedAt))).length;
   const packed = liveOrders().filter(q => me && String(q.assignedWorkerId) === String(me.id) && isTodayMs(msOf(q.pickingDoneAt))).length;
   const loads = new Set(liveOrders().filter(q => q.carrier && isTodayMs(q.carrier.at) && q.carrier.by === myName()).map(q => q.carrier.at)).size;
@@ -2989,7 +3019,7 @@ PAGE.me = () => {
     ${mate && PAGE.handover ? `<button class="cv-navy" data-act="handover" style="margin-top:8px"><span style="display:flex"><span style="width:28px;height:28px;border-radius:999px;background:#243052;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(myName())}</span><span style="width:28px;height:28px;margin-left:-6px;border-radius:999px;background:${tint(mate.name)[0]};color:${tint(mate.name)[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #16203C">${ini(mate.name)}</span></span>Hand the yard to ${esc(firstWord(mate.name))}</button>` : ''}
     ${S.shopCount > 1 ? `<button class="cv-ghost" data-act="switchshop">${ic('store', 18)}Switch shop</button>` : ''}
     <button class="cv-ghost" data-act="signout" style="color:#8E2A22">${sv(CV.out, 18, 2)}Sign out</button>
-    <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding-top:4px;font-size:12px;font-weight:600;color:var(--ink2)">${ic('eye', 16)}No prices, costs, payments or pay on this phone</span>
+    ${S.snapMode ? `<span style="display:flex;align-items:center;justify-content:center;gap:8px;padding-top:4px;font-size:12px;font-weight:600;color:var(--ink2)">${ic('eye', 16)}No prices, costs, payments or pay on this phone</span>` : ''}
   </div></div>`;
 };
 PAGE.me.bg = '#F7F5F2';
@@ -3300,7 +3330,7 @@ function rcBar(n, b, buyerWord){
 PAGE.receive = ({ id }) => {
   const R = rcRound(id);
   if (!R) return goneSheet('That trip is no longer on the books');
-  const ui = rcUI(id, R), t = R.t, lines = R.lines, mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  const ui = rcUI(id, R), t = R.t, lines = R.lines, mgr = managerName(), M = managerStaff();
   if (ui.done && ui.after) return rcDone(R, ui);
   const who = tripWho(t) || 'The trip', buyerWord = firstWord(who) || 'the buyer';
   const counted = i => ui.got[i] != null, buyerN = i => { const g = tripLineGot(lines[i]); return g != null ? g : Number(lines[i].qty) || 0; };
@@ -3366,7 +3396,7 @@ PAGE.receive = ({ id }) => {
 };
 PAGE.receive.bg = '#F7F5F2';
 function rcDone(R, ui){
-  const lines = R.lines, mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), at = ui.at || msOf(R.t.yardCheckedAt) || Date.now();
+  const lines = R.lines, mgr = managerName(), M = managerStaff(), at = ui.at || msOf(R.t.yardCheckedAt) || Date.now();
   const orders = [...new Set(R.trips.flatMap(tripOrders))], ready = orders.filter(q => q.status === 'preparing' || (q.status === 'awaiting_goods' && (q.items || []).every(it => it.supplierId === '__stock__' || quoteLineReceived(it) || lines.some(l => String(l.orderId) === String(q.id) && String(l.lineId) === String(it.lineId)))));
   const diffs = lines.map((l, i) => ({ l, i, n: ui.got[i] != null ? Number(ui.got[i]) : null, b: tripLineGot(l) != null ? tripLineGot(l) : Number(l.qty) || 0 })).filter(d => d.n != null && d.n !== d.b);
   const first = ready[0], held = S.ui.held && ui.wait;
@@ -3428,7 +3458,7 @@ SCAN_MODES.receive = {
 SHEET.extra = a => {
   if (a.isNew) return extraNewHTML(a);
   const ui = S.ui.rc, R = ui && rcRound(ui.id), who = R ? firstWord(tripWho(R.t)) || 'the buyer' : 'the buyer', x = a.key ? stockItems().find(s => s.key === a.key) : null, mgr = managerName();
-  const find = String(a.find || '').trim().toLowerCase(), hits = !x && find ? stockItems().filter(s => s.productName.toLowerCase().includes(find)).slice(0, 5) : [];
+  const find = String(a.find || '').trim().toLowerCase(), hits = !x && find ? itemSearch(find).slice(0, 5) : [];
   const unit = x ? unitWord(x) : '', sel = on => on ? 'box-shadow:inset 0 0 0 2px #16203C;background:#16203C;color:#fff' : 'box-shadow:inset 0 0 0 1px #E6E3DD;background:#fff;color:#1C2233';
   return `<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:22px;font-weight:700;letter-spacing:-.01em">Extra on the truck</span><button data-act="closesheet" aria-label="Close" style="width:44px;height:44px;border-radius:999px;border:none;background:var(--bg);display:flex;align-items:center;justify-content:center">${sv('M6 6l12 12M18 6 6 18', 16, 2.2)}</button></div>
     ${x ? `<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">${thumb({ productId: x.productId, variantIdx: x.variantIdx, productName: x.productName }, 48, 36)}
@@ -3451,7 +3481,7 @@ SHEET.extra = a => {
    a unit, kept in the yard until Sourcing adds it; then the Manager decides. */
 const EXTRA_UNITS = ['pcs', 'rolls', 'ctn', 'kg', 'bags', 'm'];
 function extraNewHTML(a){
-  const mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), so = sourcingPerson(), soName = sourcingName();
+  const mgr = managerName(), M = managerStaff(), so = sourcingPerson(), soName = sourcingName();
   const ok = String(a.name || '').trim() && a.unit && a.qty > 0;
   return `<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:22px;font-weight:700;letter-spacing:-.01em">Extra on the truck</span><button data-act="closesheet" aria-label="Close" style="width:44px;height:44px;border-radius:999px;border:none;background:var(--bg);display:flex;align-items:center;justify-content:center">${sv('M6 6l12 12M18 6 6 18', 16, 2.2)}</button></div>
     <div style="display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">
@@ -3543,7 +3573,7 @@ function goneSheet(msg){
       <span style="font-size:14px;font-weight:600;color:var(--navyInk);max-width:300px">${esc(v.l)}</span>
       <div style="width:100%;border-radius:20px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:6px 14px;margin-top:8px;display:flex;flex-direction:column;text-align:left">${steps.map(([t, at], i) => `<span style="display:flex;align-items:center;gap:12px;min-height:48px;${i ? 'border-top:1px solid rgba(255,255,255,.07)' : ''}"><span style="width:24px;height:24px;flex:none;border-radius:999px;background:${q ? '#6FDCB0' : 'rgba(255,255,255,.25)'};color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 12, 3)}</span><span style="flex:1;font-size:14px;font-weight:700">${esc(t)}</span><span class="m" style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(at)}</span></span>`).join('')}</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="dvhome">Back to Today</button><button data-act="gofind" style="height:46px;border:none;background:none;color:#DDE3F0;font-size:14px;font-weight:700">Find another order</button></div></div>`;
+    <div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="dvhome">Done</button><button data-act="gofind" style="height:46px;border:none;background:none;color:#DDE3F0;font-size:14px;font-weight:700">Find another order</button></div></div>`;
 }
 
 /* ==================================================================
@@ -3723,7 +3753,7 @@ SCAN_MODES.pack = {
     return { hit: { name: p.name, sub: (got >= qty ? `Packed · ${n0(n)} ${p.unit}` : `Packed ${n0(n)} · ${n0((qty - got) / per)} short`) + (nx ? ' · next: ' + lineName(nx).base : ''), warn: got < qty, undo: () => { setPick(q, p.k, 'pending'); delete S.ui.pk.picked[p.k]; S.ui.pk.i = p.k; S.ui.pk.done = false; if (S.ui.held && S.ui.held.undo) S.ui.held.undo(); } } }; },
 };
 function pkDone(q, items, ui){
-  const mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), shorts = items.filter(it => it.pickStatus === 'short');
+  const mgr = managerName(), M = managerStaff(), shorts = items.filter(it => it.pickStatus === 'short');
   const slots = bayMap().slots, nextQ = packQueue().find(x => x.id !== q.id && !takenBySomeoneElse(x)), theirs = packQueue().find(takenBySomeoneElse), run = runsNow()[0];
   const tile = it => { const st = it.pickStatus, c = quoteLineCount(it, itemPicked(it));
     return `<span role="listitem" style="position:relative;height:70px;scroll-snap-align:start;border-radius:16px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
@@ -3764,7 +3794,7 @@ ACT.pkbay = async t => { const ui = S.ui.pk, q = pkQ(); if (!ui || !q) return; u
 // what was already picked goes back, each tick as it lands on its shelf.
 function pkCancel(q, items, ui){
   const out = items.map((it, k) => ({ it, k })).filter(x => PICK_ANSWERED.includes(x.it.pickStatus) && itemPicked(x.it) > 0), all = out.every(x => ui.back[x.k]);
-  const by = q.cancelledByName || '', at = msOf(q.cancelledAt), mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId));
+  const by = q.cancelledByName || '', at = msOf(q.cancelledAt), mgr = managerName(), M = managerStaff();
   return `<div class="cv" style="position:absolute;inset:0"><div class="cv-hero tight" style="padding:calc(18px + var(--safe-area-inset-top)) 18px 20px;gap:14px" data-navy-top>
     <div style="display:flex;align-items:center;gap:12px"><span style="width:48px;height:48px;flex:none;border-radius:999px;background:#F6E4F1;color:#7A3268;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #1D2747,0 0 0 5px rgba(244,164,154,.6)">${ini((M && M.name) || mgr)}</span>
       <span class="cv-tx"><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">${q4(q)} is called off</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${by ? esc(firstWord(by)) + ' cancelled it · ' : ''}${esc(mgr)} agreed${at ? ' · ' + hm(at) : ''}</span></span></div>
@@ -4080,7 +4110,7 @@ PAGE.slip = ({ id }) => {
   </div>
   ${hold ? slHoldDock(q) : darkDock(`${client ? `<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;font-weight:700;color:var(--navyInk)">Name of the person collecting</span>
       <input id="sl_who" data-in="slwho" type="text" value="${esc(ui.collector)}" placeholder="Who is taking it?" autocomplete="off" style="height:48px;border-radius:14px;border:none;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;padding:0 14px;font-size:15px;font-weight:600;outline:none"></label>` : ''}
-    <div style="display:flex">${slideHTML('slgo', ready ? (me ? 'Slide · I am taking it' : `Slide to hand over to ${whoName}`) : ticked === n ? (client ? 'Add the name first' : 'Pick who takes it') : 'Tick every line together', 'chevs', { cls: 'cvdark', disabled: !ready || S.busy })}</div>`)}
+    <div style="display:flex">${slideHTML('slgo', ready ? (me ? 'Slide to take it myself' : `Slide to hand over to ${firstWord(whoName) || whoName}`) : ticked === n ? (client ? 'Add the name first' : 'Pick who takes it') : 'Tick every line together', 'chevs', { cls: 'cvdark', disabled: !ready || S.busy })}</div>`)}
   </div>`;
 };
 PAGE.slip.bg = '#F7F5F2';
@@ -4344,7 +4374,7 @@ PAGE.deliver = ({ id }) => {
   const q = quoteById(id); if (!q) return goneSheet('That order is gone');
   const ui = S.ui.dv && S.ui.dv.id === id ? S.ui.dv : (S.ui.dv = { id, to: (customerOf(q) || {}).name || quoteClientName(q), shot: null, blob: null, kind: 'note' });
   if (ui.sent) return dvDone(q, ui);
-  const ready = !!ui.shot && String(ui.to || '').trim().length > 1, sel = on => on ? 'background:#fff;color:#16203C' : 'background:transparent;color:#DDE3F0';
+  const ready = (!!ui.shot || !!ui.noPhoto) && String(ui.to || '').trim().length > 1, sel = on => on ? 'background:#fff;color:#16203C' : 'background:transparent;color:#DDE3F0';
   const corner = (pos, r) => `<span style="position:absolute;${pos};width:26px;height:26px;border-color:#fff;border-style:solid;border-width:0;border-radius:${r}"></span>`;
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:18px;gap:14px" data-navy-top>
     <div style="display:flex;align-items:center;gap:10px"><button class="cv-circ" data-act="dvclose" aria-label="Back">${sv(CV.back, 18, 2.2)}</button>
@@ -4362,21 +4392,31 @@ PAGE.deliver = ({ id }) => {
           : `<button data-act="dvshoot" aria-label="Take the photo" style="position:absolute;left:50%;bottom:22px;margin-left:-36px;width:72px;height:72px;border-radius:999px;border:4px solid #fff;background:transparent;padding:0;display:flex;align-items:center;justify-content:center"><span style="width:56px;height:56px;border-radius:999px;background:#fff"></span></button>`}
         <input id="dv_file" type="file" accept="image/*" capture="environment" hidden>
       </div>
+      ${ui.shot ? '' : ui.noPhoto ? `<div style="display:flex;align-items:center;gap:10px;min-height:52px;padding:0 12px;border-radius:16px;background:#FDEEE1;color:#7A4A02"><span style="flex:none">${sv(CV.loss, 16, 2.2)}</span><span class="cv-tx" style="gap:1px"><span style="font-size:13px;font-weight:700">No photo · ${esc(ui.noPhoto)}</span><span style="font-size:12px;font-weight:600">${esc(managerName())} sees why on the order</span></span><button data-act="dvphotoyes" style="flex:none;height:36px;padding:0 12px;border-radius:999px;border:none;background:#fff;color:#7A4A02;font-size:12px;font-weight:700">Take one</button></div>`
+        : `<button data-act="dvnophoto" style="height:44px;border:none;border-radius:999px;background:transparent;color:var(--ink2);font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px">${ui.noCam ? 'The camera will not open · deliver without a photo' : 'Can\'t take a photo?'}</button>`}
       <label style="display:flex;flex-direction:column;gap:6px"><span style="padding:0 4px;font-size:13px;font-weight:700;color:var(--ink2)">Who took it</span>
         <input id="dv_to" data-in="dvto" type="text" value="${esc(ui.to)}" autocomplete="off" style="height:52px;border-radius:14px;border:1px solid var(--rule);background:#fff;padding:0 14px;font-size:15px;font-weight:600;color:var(--ink);outline:none"></label>
-      <div style="margin-top:auto;display:flex">${slideHTML('dvgo', ready ? 'Slide · delivered' : ui.shot ? 'Add who took it' : 'Take the photo first', 'chevs', { cls: 'cvdark cvnavy', disabled: !ready || S.busy })}</div>
+      <div style="margin-top:auto;display:flex">${slideHTML('dvgo', ready ? 'Slide to mark delivered' : (ui.shot || ui.noPhoto) ? 'Add who took it' : 'Take the photo first', 'chevs', { cls: 'cvdark cvnavy', disabled: !ready || S.busy })}</div>
     </div></div>`;
 };
 PAGE.deliver.bg = '#F7F5F2';
 AFTER.push(async () => {
   const v = document.getElementById('dv_video'); if (!v) { stopCam(); return; }
   if (camStream) { if (v.srcObject !== camStream) v.srcObject = camStream; return; }
-  if (S.ui.dv && S.ui.dv.noCam) return;
+  if (S.ui.dv && (S.ui.dv.noCam || S.ui.dv.noPhoto)) return;
   try { camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } }, audio: false }); const v2 = document.getElementById('dv_video'); if (v2) v2.srcObject = camStream; else stopCam(); }
   catch (_e) { if (S.ui.dv) S.ui.dv.noCam = true; const h = document.getElementById('dv_hint'); if (h) h.textContent = "The camera did not open · tap the shutter for the phone's camera"; }
 });
 ACT['in:dvto'] = t => { const ui = S.ui.dv; if (!ui) return; const was = String(ui.to || '').trim().length > 1; ui.to = t.value; if (was !== (ui.to.trim().length > 1)) render(); };
 ACT.dvclose = () => { stopCam(); FEEL.back(); pop(); };
+// No photo: a reason, picked (never assumed), and the Manager sees it on the order.
+ACT.dvnophoto = () => { FEEL.open(); openSheet('nophoto', {}); };
+ACT.dvphotoyes = () => { const ui = S.ui.dv; if (ui) { ui.noPhoto = null; ui.noCam = false; } FEEL.tick(); render(); };
+SHEET.nophoto = () => `<span style="font-size:20px;font-weight:700">Deliver without a photo?</span>
+    <span style="font-size:13px;font-weight:600;color:var(--ink2)">Say why · ${esc(managerName())} sees it on the order</span>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${['The camera will not open', 'The client said no photo', 'Too dark to see', 'Phone battery low'].map(w => `<button data-act="dvnopick" data-w="${esc(w)}" style="min-height:64px;border-radius:16px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink);font-size:13px;font-weight:700;padding:0 10px">${esc(w)}</button>`).join('')}</div>
+    <button data-act="closesheet" style="height:46px;border:none;background:transparent;font-size:14px;font-weight:700;color:var(--ink2)">Take a photo after all</button>`;
+ACT.dvnopick = t => { const ui = S.ui.dv; if (!ui) return; ui.noPhoto = t.dataset.w; stopCam(); FEEL.tick(); closeSheet(); render(); };
 ACT.dvkind = t => { S.ui.dv.kind = t.dataset.k; FEEL.tick(); render(); };
 ACT.dvretake = () => { const ui = S.ui.dv; ui.shot = null; ui.blob = null; FEEL.back(); render(); };
 function grabFrame(){
@@ -4393,7 +4433,7 @@ ACT['slide:dvgo'] = () => {
   heldWrite('Delivering', async () => {
     S.busy = true;
     try {
-      const r = await markDelivered(q.id, ui.to, ui.blob, ui.kind); ui.sent.wait = false;
+      const r = await markDelivered(q.id, ui.to, ui.blob, ui.kind, ui.blob ? null : ui.noPhoto); ui.sent.wait = false;
       if (!r) { ui.sent = null; toast('That order is no longer on the road'); }
       // What came off at the door waits on Today as a filled-in return: the yard checks it before it goes to the Manager.
       else if (back.length) { const dr = doorReturns(), Q = quoteById(q.id) || q; dr[q.id] = { at: Date.now(), back: Object.fromEntries(back.map(l => [lineKey(Q.items[l.idx], l.idx), l.qty])), cond: Object.fromEntries(back.map(l => [lineKey(Q.items[l.idx], l.idx), 1])), shown: back.map(l => l.shown) }; saveDoorReturns(dr); }
@@ -4412,14 +4452,14 @@ function dvDone(q, ui){
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">Delivered</span>
       <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · to ${esc(ui.to)} · ${hm(s.at)}</span>
       <div style="width:100%;display:grid;grid-template-columns:repeat(${items.length},minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
-        ${items.map((it, i) => { const g = got(it, i), o = lineOut(q, it), c = quoteLineCount(it, g), co = quoteLineCount(it, o); return `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1">${esc(c.n)}${g < o ? `<span style="font-size:12px;color:var(--navyInk)">/${esc(co.n)}</span>` : ''}</span><span class="ell" style="max-width:92%;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(c.unit)} ${esc(lineName(it).base.split(/[ ·]/)[0].toLowerCase())}</span></span>`; }).join('')}</div>
+        ${items.map((it, i) => { const g = got(it, i), o = lineOut(q, it), c = quoteLineCount(it, g), co = quoteLineCount(it, o); return `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1">${esc(c.n)}${g < o ? `<span style="font-size:12px;color:var(--navyInk)">/${esc(co.n)}</span>` : ''} <span style="font-family:inherit;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(c.unit)}</span></span><span class="ell" style="max-width:92%;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(shortProduct(it))}</span></span>`; }).join('')}</div>
       ${back.length ? `<button data-act="goret" data-id="${q.id}" style="width:100%;height:48px;border-radius:999px;border:none;background:rgba(245,178,107,.14);color:#F5B26B;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv(CV.ret, 16, 2.2)}${esc(back.map(l => l.shown).join(' + '))} ride back · check the return</button>` : ''}
       <div style="width:100%;border-radius:18px;background:rgba(255,255,255,.07);padding:14px;display:flex;align-items:center;gap:12px;text-align:left">
         <span style="width:42px;height:42px;flex:none;border-radius:12px;background:#DCEAF8;color:#1A5A8A;display:flex;align-items:center;justify-content:center">${sv('M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', 20, 1.9)}</span>
         <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">The invoice goes out by itself</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${esc(inv.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))}, ${hm(inv.getTime())} · ${esc(mgr)} can invoice it sooner</span></span></div>
     </div>
     ${myDrops().filter(x => x.id !== q.id)[0] ? `<button class="cv-white" data-act="drive" data-id="${myDrops().filter(x => x.id !== q.id)[0].id}">Next drop · ${esc(shortName(quoteClientName(myDrops().filter(x => x.id !== q.id)[0])))}${sv(CV.chev, 16, 2.4)}</button>` : ''}
-    <button class="cv-white" data-act="dvhome">Back to Today</button></div>`;
+    <button class="cv-white" data-act="dvhome">Done</button></div>`;
 }
 ACT.dvhome = () => { S.ui.dv = null; S.ui.door = null; FEEL.back(); go('today'); };
 // The old proof screen is folded into Deliver; its page name still opens it.
@@ -4747,7 +4787,7 @@ function ctAisle(ct, items, mgr){
         <button data-act="ctfound" data-i="${i}" aria-label="Found it after all: count ${esc(x.productName)}" style="flex:none;height:44px;padding:0 12px;border-radius:12px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px #F5B26B;color:#7A4A02;font-size:12px;font-weight:700">Found it</button></div>`;
       return `<div style="display:flex;align-items:center;gap:12px;min-height:66px;border-top:${i ? '1px solid #EFECE6' : 'none'};margin:0 -10px;padding:0 10px;background:${on ? '#F3FAF6' : 'transparent'}">${thumb(x, 40, 28, 12)}
         <span class="cv-tx" style="gap:2px">${prodTT(x)}<span style="font-size:12px;font-weight:600;color:var(--ink2)">${L.length > 1 ? esc(plural(L[0][1]) + ', then loose ' + plural(L[1][1])) : 'counted in ' + esc(plural(L[0][1]))}</span></span>
-        ${on ? '' : `<button data-act="ctmiss" data-i="${i}" aria-label="Can't find ${esc(x.productName)}" style="width:40px;height:44px;flex:none;margin-right:-4px;border:none;border-radius:12px;background:transparent;color:#95530C;display:flex;align-items:center;justify-content:center">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5M8 11h6', 18, 2.2)}</button>`}
+        ${on ? '' : `<button data-act="ctmiss" data-i="${i}" aria-label="Can't find ${esc(x.productName)}" style="width:48px;height:48px;flex:none;margin-right:-4px;border:none;border-radius:12px;background:transparent;color:#95530C;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5M8 11h6', 16, 2.2)}<span style="font-size:11px;font-weight:700;line-height:1.05;text-align:center">Can't<br>find</span></button>`}
         <span style="display:flex;gap:6px;flex:none">${L.slice(0, 2).map((l, k) => `<label style="display:flex;flex-direction:column;align-items:center;gap:2px"><input id="cta_${i}_${k}" data-in="ctv" data-i="${i}" data-k="${k}" inputmode="numeric" value="${esc(E[k] || '')}" placeholder="–" aria-label="${esc(x.productName)}: ${esc(l[0])}" class="m" style="width:${L.length > 1 ? 50 : 62}px;height:44px;border-radius:12px;border:${on ? '1.5px solid #0F6B43' : '1.5px solid #E6E3DD'};background:#fff;text-align:center;font-size:17px;font-weight:600;color:var(--ink);outline:none;padding:0"><span style="font-size:11px;font-weight:700;color:var(--ink2);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l[1])}</span></label>`).join('')}</span></div>`; }).join('')}</div>
   </div>
   ${partial ? darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">Send ${done} now</span><span style="font-size:12px;font-weight:600;color:#F5B26B">${esc(mgr)} sees ${nMiss} not found</span></div>
@@ -4800,7 +4840,7 @@ function sentScreen(o){
 }
 PAGE.countresults = () => {
   const ct = S.ui.ct; if (!ct) return goneSheet('No count open');
-  const mgr = managerName(), M = D().staff.find(s => s.userId && (D().managerIds || []).includes(s.userId)), one = ct.keys.length === 1, x = one && stockItems().find(s => s.key === ct.keys[0]);
+  const mgr = managerName(), M = managerStaff(), one = ct.keys.length === 1, x = one && stockItems().find(s => s.key === ct.keys[0]);
   const nGot = Object.keys(ct.counts || {}).length, nLost = ct.partial ? ct.keys.length - nGot : 0;
   const what = one && x ? `${x.productName} · ${fmtLevels(levelsFor(x), ct.counts[0] || 0)}` : nLost ? `${ct.aisle} · ${nGot} counted · ${nLost} not found` : `${ct.aisle} · ${ct.keys.length} items`;
   if (ct.sendErr && !ct.sent) return sentScreen({ failed: true, title: `It didn't reach ${mgr}`, line: ct.sendErr === 'net' ? `The signal dropped as it was sending, ${hm(ct.errAt)}` : ct.sendErr,
@@ -4813,7 +4853,7 @@ PAGE.countresults.bg = '#16203C';
 ACT.ctretry = () => { const ct = S.ui.ct; if (!ct) return; FEEL.tick(); ct.sendErr = null; ct.wait = true; render(); sendCountOnce(); };
 ACT.ctdone = () => { const ct = S.ui.ct; if (ct && ct.sent) { S.ui.ct = null; try { localStorage.removeItem(CT_KEY()); } catch (_e) {} } FEEL.back(); S.stack = S.stack.filter(p => !['count', 'countresults'].includes(p.type)); render(); };
 function ctTitle(aisle){ const a = String(aisle || 'the shelf'); return /^Spot count/.test(a) ? a : 'Stock take · ' + a; }
-function managerName(){ const ids = D().managerIds || []; const st = D().staff.find(s => s.userId && ids.includes(s.userId)) || D().staff.find(s => /manager/i.test(s.role)); return st && st.name ? firstWord(st.name) : 'the manager'; }
+function managerName(){ const st = managerStaff(); return st && st.name ? firstWord(st.name) : 'the manager'; }
 
 /* ==================================================================
    REPORT A LOSS -- damaged, lost or stolen. The Manager writes it off;
@@ -4830,7 +4870,7 @@ PAGE.report = ({ key }) => {
   if (ui.sent) return sentScreen({ undo: ui.wait ? 'heldundo' : null, title: 'Report sent', line: `${n0(ui.n)} ${ui.unit} of ${ui.name} · ${REASONS[ui.why || 0].word}`, done: 'rpdone',
     body: trackDone({ who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'decides', last: 'Shelf', lastSub: 'if written off', foot: 'You get a buzz at each step' }) });
   const x = key ? stockItems().find(i => i.key === key) : null, u = x ? unitWord(x) : '';
-  if (!x) { const f = String(ui.find || '').trim().toLowerCase(), hits = (f ? stockItems().filter(s => s.productName.toLowerCase().includes(f)) : stockItems()).slice(0, 12);
+  if (!x) { const f = String(ui.find || '').trim().toLowerCase(), hits = (f ? itemSearch(f) : stockItems()).slice(0, 12);
     return `<div class="cv"><div class="cv-hero tight" data-navy-top><div class="cv-top">${cvBack()}<b>Report a loss</b><span class="cv-circ blank"></span></div>
       <label style="height:52px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--navyInk)">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2)}<input id="rp_find" data-in="rpfind" value="${esc(ui.find || '')}" placeholder="Which item?" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:#fff;font-size:16px"></label></div>
       <div class="cv-body"><div class="cv-list">${hits.map(h => `<button class="cv-row" data-act="rppick" data-key="${esc(h.key)}">${thumb(h, 42, 30, 12)}<span class="cv-tx">${prodTT(h)}<span class="cv-sb">Aisle ${esc(h.aisle.letter)}</span></span></button>`).join('') || '<div class="st-empty">Nothing by that name</div>'}</div></div></div>`; }
@@ -4850,7 +4890,8 @@ PAGE.report = ({ key }) => {
       <button data-act="rpstep" data-d="-1" aria-label="One fewer" style="width:52px;height:52px;border-radius:999px;border:none;background:#F1EEE8;color:var(--ink);display:flex;align-items:center;justify-content:center">${sv('M5 12h14', 20, 2.4)}</button>
       <span style="display:flex;align-items:baseline;gap:6px">${numBox('rp', ui.n, 'How many were lost', '', 30)}<span style="font-size:14px;font-weight:700;color:var(--ink2)">${esc(ui.n === 1 ? lu.replace(/s$/, '') : lu)}</span></span>
       <button data-act="rpstep" data-d="1" aria-label="One more" style="width:52px;height:52px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 20, 2.4)}</button></div>
-    ${LV.length > 1 ? `<div role="group" aria-label="Counted in" style="display:flex;gap:6px">${LV.map((l, k) => `<button data-act="rplv" data-k="${k}" aria-pressed="${k === lv}" style="flex:1;height:36px;border-radius:10px;border:none;background:${k === lv ? '#16203C' : '#F1EEE8'};color:${k === lv ? '#fff' : 'var(--ink)'};font-size:12px;font-weight:700">${esc(l[1])}</button>`).join('')}</div>` : ''}
+    ${LV.length > 1 ? `<div role="group" aria-label="Counted in" style="display:flex;gap:6px">${LV.map((l, k) => { const fits = rpFits(x, l[2]); return `<button data-act="rplv" data-k="${k}" aria-pressed="${k === lv}" ${fits ? '' : `aria-disabled="true" aria-label="${esc(l[1])}: more than the shelf holds"`} style="flex:1;height:36px;border-radius:10px;border:none;background:${k === lv ? '#16203C' : '#F1EEE8'};color:${k === lv ? '#fff' : 'var(--ink)'};font-size:12px;font-weight:700;opacity:${fits ? 1 : .4}${fits ? '' : ';text-decoration:line-through'}">${esc(l[1])}</button>`; }).join('')}</div>` : ''}
+    ${ui.capped ? `<span role="status" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}${due ? 'More than the books hold · count it first' : `The books hold ${esc(fmtLevels(LV, x.qty))} · that is the most`}</span>` : ''}
     <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="padding:0 4px;font-size:12px;font-weight:700;color:var(--ink2)">What ${esc(mgr)} should know</span>
       <textarea id="rp_note" data-in="rpnote" maxlength="300" aria-label="A note for ${esc(mgr)}" placeholder="Where, how, when you saw it" style="height:76px;border-radius:16px;border:none;box-shadow:inset 0 0 0 1px var(--rule);background:#fff;padding:12px 14px;font-family:inherit;font-size:14px;color:var(--ink);resize:none;outline:none">${esc(ui.note || '')}</textarea></label>
     <button data-act="rpphoto" aria-label="${ui.photo ? 'Take the photo of the loss again' : 'Add a photo of the loss'}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border-radius:20px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">
@@ -4860,14 +4901,25 @@ PAGE.report = ({ key }) => {
   <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom))"><button data-act="rpsend" ${ui.why == null ? 'aria-disabled="true"' : ''} style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26);opacity:${ui.why == null ? .5 : 1}">${ui.why == null ? 'Pick what happened first' : `Send to ${esc(mgr)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}`}</button></div></div>`;
 };
 PAGE.report.bg = '#F7F5F2';
+PAGE.report.dirtyWord = 'this report';
+PAGE.report.dirty = () => { const ui = S.ui.rp; return !!ui && !ui.sent && !!ui.key && (ui.why != null || !!String(ui.note || '').trim() || !!ui.photo || ui.n > 1); };
 ACT['in:rpfind'] = t => { S.ui.rp.find = t.value; clearTimeout(ACT.rpT); ACT.rpT = setTimeout(render, 200); };
 ACT.rppick = t => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: t.dataset.key }); };
 ACT.rpchange = () => { S.ui.rp = null; FEEL.tick(); replaceTop('report', { key: '' }); };
 ACT.rpwhy = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; ui.why = Number(t.dataset.i); FEEL.tick(); render(); };
 // The most that can be lost is what the books hold, in the unit picked.
-function rpMax(ui, x){ const LV = x ? levelsFor(x) : [], lv = ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)), f = LV[lv] ? LV[lv][2] : 1; return Math.max(1, Math.ceil(((x && x.qty) || 1) / f)); }
-ACT.rpstep = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key); ui.n = Math.max(1, Math.min(rpMax(ui, x), ui.n + Number(t.dataset.d))); FEEL.tick(); render(); };
-ACT.rplv = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; ui.lv = Number(t.dataset.k); FEEL.tick(); render(); };
+/* The most that can be lost is what the books hold, in whole units of the one
+   picked (3 kg on the shelf is never 3 cartons). A unit bigger than the shelf
+   cannot be picked; a number past the books is held at the books and says so. */
+function rpLv(ui, x){ const LV = x ? levelsFor(x) : []; return ui.lv != null && LV[ui.lv] ? ui.lv : Math.max(0, LV.findIndex(l => l[2] === 1)); }
+function rpFits(x, f){ return f <= 1 || Math.floor(((x && x.qty) || 0) / f + 1e-9) >= 1; }
+function rpMax(ui, x){ const LV = x ? levelsFor(x) : [], f = (LV[rpLv(ui, x)] || [0, '', 1])[2]; return Math.max(1, Math.floor(((x && x.qty) || 0) / f + 1e-9)); }
+function rpSet(ui, x, want){ const max = rpMax(ui, x); ui.capped = want > max; ui.n = Math.max(1, Math.min(max, want)); }
+ACT.rpstep = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key); rpSet(ui, x, ui.n + Number(t.dataset.d)); FEEL.tick(); render(); };
+// Switching the unit keeps the amount, not the figure: 3 kg stays 3 kg.
+ACT.rplv = t => { const ui = S.ui.rp; if (!ui || ui.sent) return; const x = stockItems().find(i => i.key === ui.key), LV = levelsFor(x), k = Number(t.dataset.k);
+  if (!LV[k] || !rpFits(x, LV[k][2])) { FEEL.no(); return; }
+  const was = (LV[rpLv(ui, x)] || [0, '', 1])[2]; ui.lv = k; rpSet(ui, x, Math.max(1, Math.round(ui.n * was / LV[k][2]))); FEEL.tick(); render(); };
 ACT['in:rpnote'] = t => { if (S.ui.rp) S.ui.rp.note = t.value; };
 ACT.rpphoto = () => { FEEL.open(); push('rphoto', {}); };
 ACT.rpsend = () => {
@@ -4949,6 +5001,12 @@ function fdHit(word, words, alias){
   const room = word.length >= 7 ? 2 : 1;
   if (word.length >= 4) for (const w of words) { if (w.length < 3) continue; if (Math.min(lev(word, w), lev(word, w.slice(0, word.length)), lev(word, w.slice(0, word.length + 1))) <= room) return 'typo'; }
   return null;
+}
+// One search for every item list (Find, Report a loss, Extra on the truck): the same words find the same things.
+function itemSearch(q){
+  const qw = fdNorm(q).split(' ').filter(w => w && w !== 'aisle'); if (!qw.length) return [];
+  return stockItems().filter(x => { const words = fdNorm(x.productName).split(' '), alias = ALIASES.filter(([re]) => re.test(x.productName)).flatMap(a => a[1]).concat(labelShort(x).toLowerCase());
+    return qw.every(w => (w.length === 1 && /[a-z]/.test(w)) ? x.aisle.letter.toLowerCase() === w : !!fdHit(w, words, alias)); });
 }
 function fdStatus(x){ return countDue(x) ? 'due' : x.avail <= 0 && (x.held > 0 || lookOf(x).out4 > 0) ? 'out' : lookOf(x).why === 'low' ? 'low' : x.held > 0 ? 'held' : 'ok'; }
 PAGE.find = () => {
@@ -5126,7 +5184,7 @@ PAGE.decide = ({ id }) => {
       <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span class="m" style="font-size:16px;font-weight:600">${esc(shown)}</span>${st === 'decide' ? `<span class="m" style="font-size:11px;font-weight:600;color:${d ? (d < 0 ? '#8E2A22' : '#95530C') : '#0F6B43'}">${d ? `${d < 0 ? '' : '+'}${esc(fmtLevels(lv, Math.abs(d)))} ${d < 0 ? 'fewer' : 'more'} · books ${esc(fmtLevels(lv, Number(l.system)))}` : 'matches'}</span>` : ''}</span></div>`; }).join('');
   const foot = st === 'decide' ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button data-act="dcrecount" class="cv-white" style="box-shadow:inset 0 0 0 1.5px var(--rule)" ${S.busy ? 'disabled' : ''}>Ask for a recount</button><button data-act="dcaccept" style="height:56px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:15px;font-weight:700;box-shadow:0 10px 22px rgba(201,58,48,.26)" ${S.busy || S.ui.dcWait ? 'disabled' : ''}>${S.ui.dcWait ? 'Accepting…' : off.length ? 'Accept the count' : 'Confirm it'}</button></div>`
     : st === 'recount' ? `<button data-act="count" ${c.lines.length === 1 ? `data-key="${esc(c.lines[0].key)}"` : `data-aisle="${esc((stockItems().find(x => x.key === c.lines[0].key) || { aisle: {} }).aisle.letter || '')}"`} style="height:58px;width:100%;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">Count it again${sv(CV.chev, 16, 2.4)}</button>`
-    : `<button data-act="dvhome" class="cv-white" style="width:100%;box-shadow:inset 0 0 0 1.5px var(--rule)">Back to Today</button>`;
+    : `<button data-act="dvhome" class="cv-white" style="width:100%;box-shadow:inset 0 0 0 1.5px var(--rule)">Done</button>`;
   return `<div class="cv" style="height:100%;min-height:0">${navyHead(S2.head, hero)}
     <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px 12px;display:flex;flex-direction:column;gap:10px"><span class="cv-sec first">${S2.list}</span><div class="cv-list" style="padding:4px 14px;gap:0">${rows}</div>
       <span style="display:flex;align-items:center;gap:8px;padding:4px 4px 0;font-size:12px;font-weight:600;color:var(--ink2)">${sv('M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 3l18 18', 15, 2)}${S2.note}</span></div>
@@ -5231,7 +5289,7 @@ function doorBacks(){ const dr = doorReturns(); return Object.keys(dr).map(id =>
 function doorReturns(){ try { return JSON.parse(localStorage.getItem(DOORRET_KEY())) || {}; } catch (_e) { return {}; } }
 function saveDoorReturns(m){ try { localStorage.setItem(DOORRET_KEY(), JSON.stringify(m)); } catch (_e) {} }
 ACT.goret = t => { FEEL.open(); const id = t && t.dataset && t.dataset.id ? Number(t.dataset.id) : null, dr = id && doorReturns()[id];
-  S.ui.rt = { id, who: dr ? 'driver' : 'client', find: '', back: dr ? { ...dr.back } : {}, cond: dr ? { ...dr.cond } : {}, photo: null, blob: null, sent: null, door: dr ? dr.at : null }; push('ret', {}); };
+  S.ui.rt = { id, who: dr ? 'driver' : 'client', find: '', back: dr ? { ...dr.back } : {}, cond: dr ? { ...dr.cond } : {}, photo: null, blob: null, sent: null, door: dr ? dr.at : null, direct: !!id }; push('ret', {}); };
 // "1 bags" reads "1 bag"; a figure other than one keeps the unit as written.
 function oneOf(t){ return String(t || '').replace(/^1 ([a-z]+?[^es])s\b/i, '1 $1'); }
 function rtItems(q){ return (q.items || []).map((it, i) => ({ it, i, k: lineKey(it, i) })).filter(x => (Number(x.it.qty) || 0) > 0); }
@@ -5249,7 +5307,7 @@ PAGE.ret = () => {
       <span style="font-size:22px;font-weight:700;letter-spacing:-.01em;padding:0 4px">Who is bringing it back?</span>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${who('client', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0', 'The client', 'at the gate')}${who('driver', CV.van, 'Our driver', 'refused at the door')}</div></div>
     <div class="cv-body">
-      ${open.length ? `<span class="cv-sec first">With ${esc(mgr)}</span><div class="cv-list">${open.slice(0, 5).map(r => { const o = quoteById(r.orderId); return cvRow({ icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `${o ? q4(o) + ' · ' + esc(quoteClientName(o)) : 'An order'}`, sub: `${esc((r.lines || []).map(l => l.shown || l.qty + ' ' + l.unit).join(', '))} · ${esc(ago(msOf(r.createdAt)))}`, right: r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Take back</button>` : canCorrect() ? `<button data-act="rtdecline" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Reject</button>` : cvChip('waiting', '#FDEEE1', '#7A4A02') }); }).join('')}</div>` : ''}
+      ${open.length ? `<span class="cv-sec first">With ${esc(mgr)}</span><div class="cv-list">${open.slice(0, 5).map(r => { const o = quoteById(r.orderId); return cvRow({ icon: CV.ret, soft: '#FDEEE1', ink: '#95530C', title: `${o ? q4(o) + ' · ' + esc(quoteClientName(o)) : 'An order'}`, sub: `${esc((r.lines || []).map(l => returnLineWords(o, l)).join(', '))} · ${esc(ago(msOf(r.createdAt)))}`, right: r.by && S.user && r.by === S.user.id ? `<button data-act="rtwithdraw" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Take back</button>` : canCorrect() ? `<button data-act="rtdecline" data-id="${esc(r.id)}" style="height:32px;padding:0 12px;border-radius:999px;border:none;background:#F1EEE8;font-size:12px;font-weight:700;flex:none">Reject</button>` : cvChip('waiting', '#FDEEE1', '#7A4A02') }); }).join('')}</div>` : ''}
       <span class="cv-sec${open.length ? '' : ' first'}">Which order</span>
       <label style="height:52px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);display:flex;align-items:center;gap:10px;padding:0 8px 0 14px">${sv('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 18, 2, 'style="color:#9AA1AE"')}<input id="rt_find" data-in="rtfind" value="${esc(ui.find)}" placeholder="Order number or client" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:16px"></label>
       <div class="cv-list"><span style="padding:8px 8px 2px;font-size:12px;font-weight:600;color:var(--ink2)">Delivered lately</span>${list.map(o => cvRow({ act: 'rtpick', data: { id: o.id }, round: true, ini: initials(quoteClientName(o)), soft: tint(quoteClientName(o))[0], ink: tint(quoteClientName(o))[1], title: esc(quoteClientName(o)), sub: `${q4(o)} · ${o.status === 'completed' ? 'delivered ' + (isTodayMs(msOf(o.deliveredAt)) ? 'today ' + hm(msOf(o.deliveredAt)) : esc(dayLabel(isoOf(msOf(o.deliveredAt) || waitingSince(o))))) : 'on the road'} · ${nLines(rtItems(o).length)}` })).join('') || '<div class="st-empty">No delivered orders by that name</div>'}</div>
@@ -5274,9 +5332,11 @@ PAGE.ret = () => {
     ${lines.length ? rtWhyHTML(ui, mgr) : ''}
   </div>
   ${darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">${lines.length ? `${nLines(lines.length)} coming back` : 'Nothing marked yet'}</span><span style="display:flex;gap:10px;font-size:12px;font-weight:600;color:var(--navyInk)"><span style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:#6FDCB0"></i>${good} good</span><span style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:#F5B26B"></i>${bad} damaged</span></span></div>
-    <button data-act="rtsend" ${lines.length && ui.why ? '' : 'aria-disabled="true"'} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${lines.length && ui.why ? 1 : .5}">${!lines.length ? 'Mark what came back' : !ui.why ? 'Say why it came back' : `Send to ${esc(mgr)}`}${lines.length && ui.why ? sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2) : ''}</button>`)}</div>`;
+    <button data-act="rtsend" ${lines.length && ui.why && !rtClash(ui) ? '' : 'aria-disabled="true"'} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${lines.length && ui.why && !rtClash(ui) ? 1 : .5}">${!lines.length ? 'Mark what came back' : !ui.why ? 'Say why it came back' : rtClash(ui) ? 'Mark the damaged lines' : `Send to ${esc(mgr)}`}${lines.length && ui.why && !rtClash(ui) ? sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2) : ''}</button>`)}</div>`;
 };
 PAGE.ret.bg = '#F7F5F2';
+PAGE.ret.dirtyWord = 'this return';
+PAGE.ret.dirty = () => { const ui = S.ui.rt; return !!ui && !ui.sent && !ui.door && Object.values(ui.back || {}).some(n => n > 0); };
 // Why it came back: nothing picked for the person; the Manager reads it with the note.
 const RT_WHY = {
   client: [['Damaged after delivery', 'M12 4 2.5 20h19zM12 10v4M12 17h.01'], ['Wrong item sent', 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3'], ['Too many sent', 'M12 5v14M5 12h14'], ["Didn't need it", 'M6 6l12 12M18 6 6 18']],
@@ -5287,16 +5347,22 @@ function rtWhyHTML(ui, mgr){
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${list.map(([w, d]) => { const on = ui.why === w;
       return `<button data-act="rtwhy" data-w="${esc(w)}" aria-pressed="${on}" style="min-height:64px;border-radius:16px;border:none;${on ? 'background:#16203C;color:#fff' : 'background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink)'};display:flex;align-items:center;gap:10px;padding:0 12px;text-align:left">${sv(d, 18, 2)}<span style="font-size:13px;font-weight:700;line-height:1.2">${esc(w)}</span></button>`; }).join('')}</div>
     <label style="display:flex;flex-direction:column;gap:6px;margin-top:12px"><span style="padding:0 4px;font-size:12px;font-weight:700;color:var(--ink2)">Anything ${esc(mgr)} should know · optional</span>
+      ${rtClash(ui) ? `<span role="status" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:#FDEEE1;color:#7A4A02;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}You said damaged · mark which lines are damaged</span>` : ''}
       <textarea id="rt_note" data-in="rtnote" maxlength="300" aria-label="A note for ${esc(mgr)}" placeholder="What happened, in a few words" style="height:76px;border-radius:16px;border:none;box-shadow:inset 0 0 0 1px var(--rule);background:#fff;padding:12px 14px;font-family:inherit;font-size:14px;color:var(--ink);resize:none;outline:none">${esc(ui.note || '')}</textarea></label>`;
 }
-ACT.rtwhy = t => { S.ui.rt.why = t.dataset.w; FEEL.tick(); render(); };
+// A damaged reason marks what came back damaged: damaged goods never go to the shelf by default.
+const rtDamagedWhy = w => /^damaged/i.test(String(w || ''));
+ACT.rtwhy = t => { const ui = S.ui.rt; ui.why = t.dataset.w; if (rtDamagedWhy(ui.why)) Object.keys(ui.back || {}).forEach(k => { if (ui.back[k] > 0) ui.cond[k] = 1; }); FEEL.tick(); render(); };
+// Said damaged, but every line is marked good for the shelf: that cannot go as it is.
+function rtClash(ui){ return rtDamagedWhy(ui.why) && !Object.keys(ui.back || {}).some(k => ui.back[k] > 0 && (ui.cond[k] || 0) === 1); }
 ACT['in:rtnote'] = t => { S.ui.rt.note = t.value; };
 ACT.rtwho = t => { S.ui.rt.who = t.dataset.k; FEEL.tick(); render(); };
 ACT['in:rtfind'] = t => { S.ui.rt.find = t.value; clearTimeout(ACT.rtT); ACT.rtT = setTimeout(render, 200); };
 ACT.rtpick = t => { const ui = S.ui.rt; ui.id = Number(t.dataset.id); FEEL.open(); render(); };
-ACT.rtunpick = () => { const ui = S.ui.rt; if (ui.door) { pop(); return; } ui.id = null; ui.back = {}; ui.cond = {}; ui.why = null; ui.note = ""; FEEL.back(); render(); };
+// Opened on one order (from With Ruth, an alert, the door): Back goes back there, not to the order list.
+ACT.rtunpick = () => { const ui = S.ui.rt; if (ui.door || ui.direct) { if (!leaveGuard()) pop(); return; } ui.id = null; ui.back = {}; ui.cond = {}; ui.why = null; ui.note = ""; FEEL.back(); render(); };
 ACT.rtstep = t => { const ui = S.ui.rt, q = quoteById(ui.id); if (!q || ui.sent) return; const x = rtItems(q).find(y => y.k === t.dataset.k); if (!x) return;
-  ui.back[x.k] = Math.max(0, Math.min(rtRoom(q, x), (ui.back[x.k] || 0) + Number(t.dataset.d) * rtStep(x))); FEEL.tick(); render(); };
+  ui.back[x.k] = Math.max(0, Math.min(rtRoom(q, x), (ui.back[x.k] || 0) + Number(t.dataset.d) * rtStep(x))); if (ui.back[x.k] > 0 && ui.cond[x.k] == null && rtDamagedWhy(ui.why)) ui.cond[x.k] = 1; FEEL.tick(); render(); };
 ACT.rtcond = t => { const ui = S.ui.rt; ui.cond[t.dataset.k] = Number(t.dataset.c); FEEL.tick(); render(); };
 ACT.rtphoto = async () => { const ui = S.ui.rt; if (!ui || ui.sent) return; const p = await takePhoto(); if (!p) return; ui.photo = p.url; ui.blob = p.blob; FEEL.stamp(); render(); };
 ACT.rtwithdraw = async t => { if (S.busy) return; S.busy = true;
@@ -5312,7 +5378,7 @@ ACT.rtsend = () => {
     // qty is in the order line's own unit (20 boxes for a carton of 20), as the Sales app asks and the
     // Manager credits; shown is how it reads, so the receipt never calls 20 boxes "20 Ctn".
     return { idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: String(it.unit || '').trim(), qty: ui.back[k], shown: backText(it, ui.back[k]), condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good' }; });
-  if (!lines.length || !ui.why) { FEEL.no(); if (lines.length) { const el = document.querySelector('[data-act="rtwhy"]'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
+  if (!lines.length || !ui.why || rtClash(ui)) { FEEL.no(); if (lines.length) { const el = document.querySelector('[data-act="rtwhy"]'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
   ui.sent = { lines, wait: true, at: Date.now(), why: ui.why }; chimeDone(); render();
   heldWrite('Logging the return', async () => { S.busy = true;
     try { const r = await sendReturn(q, lines, ui.blob, ui.why, ui.note); ui.sent.wait = false; ui.sent.id = r.id; const dr = doorReturns(); if (dr[q.id]) { delete dr[q.id]; saveDoorReturns(dr); } }
