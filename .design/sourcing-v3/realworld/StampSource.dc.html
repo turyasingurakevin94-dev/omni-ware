@@ -100,7 +100,13 @@ button{font-family:inherit}
           <sc-if value="{{addingSell}}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 6px"><input value="{{fSellNew}}" aria-label="Something else they sell" placeholder="e.g. tile levelling clips" onInput="{{typeSellNew}}" style="flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font: inherit; font-size: 14px; font-weight: 600; color: #1C2233"><button type="button" onClick="{{addSell}}" style="all: unset; cursor: pointer; height: 44px; padding: 0 14px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">Add</button></div></sc-if>
         </div>
         <input value="{{fPrice}}" inputmode="numeric" aria-label="Their price for one tile cutter, if you have it" placeholder="Their price for the tile cutter, one" onInput="{{typePrice}}" class="m" style="height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233">
-        <div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 12px; font-weight: 700; color: #6B5A43">Cheaper from</span><input value="{{fBq}}" inputmode="numeric" aria-label="Cheaper from how many" placeholder="qty" onInput="{{typeBq}}" class="m" style="width: 64px; height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: center"><span style="font-size: 12px; font-weight: 700; color: #6B5A43">at</span><input value="{{fBp}}" inputmode="numeric" aria-label="Price at that quantity" placeholder="price each" onInput="{{typeBp}}" class="m" style="flex: 1; min-width: 0; height: 46px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: inset 0 0 0 1.5px #E3DACB; font-size: 15px; font-weight: 600; color: #1C2233; text-align: right"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 8px"><span style="width: 36px; font-size: 12px; font-weight: 700; color: #6B5A43">From</span><input value="{{st.q}}" inputmode="numeric" aria-label="{{st.qAria}}" placeholder="qty" onInput="{{st.typeQ}}" class="m" style="width: 64px; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: {{st.qRing}}; font-size: 15px; font-weight: 600; color: #1C2233; text-align: center"><span style="font-size: 12px; font-weight: 700; color: #6B5A43">at</span><input value="{{st.p}}" inputmode="numeric" aria-label="{{st.pAria}}" placeholder="price each" onInput="{{st.typeP}}" class="m" style="flex: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: none; outline: none; background: #F7F2E9; box-shadow: {{st.pRing}}; font-size: 15px; font-weight: 600; color: #1C2233; text-align: right"><button type="button" onClick="{{st.remove}}" aria-label="Remove this step" style="all: unset; cursor: pointer; width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; color: #6B5A43"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></div>
+          </sc-for>
+          <button type="button" onClick="{{addStep}}" style="all: unset; cursor: pointer; align-self: flex-start; min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #2B3A8C"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{addStepLabel}}</button>
+          <sc-if value="{{hasLadder}}" hint-placeholder-val="{{ false }}"><span role="img" aria-label="{{ladderAria}}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px"><span style="font-size: 11px; font-weight: 700; color: #6B5A43; margin-right: 2px">Their ladder</span><sc-for list="{{ladder}}" as="t" hint-placeholder-count="3"><span class="m" style="height: 22px; padding: 0 7px; border-radius: 6px; background: #16203C; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center">{{t}}</span></sc-for></span></sc-if>
+        </div>
         <button type="button" onClick="{{saveNew}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; {{saveStyle}}">{{saveLabel}}</button>
       </div>
       </sc-if>
@@ -147,7 +153,7 @@ button{font-family:inherit}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', fBq: '', fBp: '', qty: 3 }; }
+  constructor(p) { super(p); this.state = { pick: {}, phase: 'choose', back: {}, holding: false, inked: false, extra: [], custom: null, q: '', fPhone: '', fWhere: '', fSells: '', sellsMore: [], addingSell: false, fSellNew: '', fPrice: '', steps: [], qty: 3 }; }
   ask() {
     const who = Object.keys(this.state.pick).filter(k => this.state.pick[k]);
     if (!who.length) return;
@@ -208,7 +214,11 @@ class Component extends DCLogic {
       add: () => this.setState({ extra: [...S.extra, k], pick: { ...S.pick, [k]: true }, q: '' }) }));
     const offerNew = qq.length >= 3 && !hitsRaw.length && !listed.some(n => n.includes(qq)) && !S.custom;
     const fpv = parseInt(String(S.fPrice).replace(/[^0-9]/g, ''), 10) || 0;
-    const bq = parseInt(S.fBq, 10) || 0, bp = parseInt(String(S.fBp).replace(/[^0-9]/g, ''), 10) || 0;
+    const num = (t) => parseInt(String(t).replace(/[^0-9]/g, ''), 10) || 0;
+    // a step is good when it starts above the one before and costs less each
+    let prevQ = 1, prevP = fpv;
+    const stepOk = S.steps.map(st => { const q = num(st.q), p = num(st.p); const ok = q > prevQ && p > 0 && (!prevP || p < prevP); if (ok) { prevQ = q; prevP = p; } return { q, p, ok, filled: !!(st.q || st.p) }; });
+    const ladderT = fpv ? [[1, fpv]].concat(stepOk.filter(x => x.ok).map(x => [x.q, x.p])) : [];
     const canSave = S.fPhone.replace(/[^0-9]/g, '').length >= 9 && S.fWhere.trim().length > 2;
     const nPick = Object.values(S.pick).filter(Boolean).length;
     const priced = SUP.filter(([k, , , , ans]) => S.back[k] && ans).length + (S.custom && S.custom.tiers ? 1 : 0);
@@ -224,8 +234,15 @@ class Component extends DCLogic {
       moreSells: S.sellsMore, showAddSell: !S.addingSell, addingSell: S.addingSell, fSellNew: S.fSellNew,
       openSell: () => this.setState({ addingSell: true }), typeSellNew: (e) => this.setState({ fSellNew: e.target.value }),
       addSell: () => { const t = S.fSellNew.trim(); if (t.length > 1) this.setState({ sellsMore: [...S.sellsMore, t], fSellNew: '', addingSell: false }); }, typePrice: (e) => this.setState({ fPrice: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
-      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: ['Tile cutter 600mm'].concat(S.sellsMore), tiers: fpv ? [[1, fpv]].concat(bq > 1 && bp > 0 && bp < fpv ? [[bq, bp]] : []) : null }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', fBq: '', fBp: '', sellsMore: [], addingSell: false, fSellNew: '' }); },
-      fBq: S.fBq, fBp: S.fBp, typeBq: (e) => this.setState({ fBq: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) }), typeBp: (e) => this.setState({ fBp: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
+      saveNew: () => { if (canSave) this.setState({ custom: { name: S.q.trim(), phone: S.fPhone.trim(), where: S.fWhere.trim(), sells: ['Tile cutter 600mm'].concat(S.sellsMore), tiers: fpv ? ladderT : null }, q: '', fPhone: '', fWhere: '', fSells: '', fPrice: '', steps: [], sellsMore: [], addingSell: false, fSellNew: '' }); },
+      steps: S.steps.map((st, i) => { const k = stepOk[i], bad = k.filled && !k.ok && k.q && k.p;
+        const set = (patch) => this.setState({ steps: this.state.steps.map((x, j) => j === i ? { ...x, ...patch } : x) });
+        return { q: st.q, p: st.p, qAria: 'Step ' + (i + 1) + ': from how many', pAria: 'Step ' + (i + 1) + ': price each',
+          qRing: bad ? 'inset 0 0 0 2px #C47A1E' : 'inset 0 0 0 1.5px #E3DACB', pRing: bad ? 'inset 0 0 0 2px #C47A1E' : 'inset 0 0 0 1.5px #E3DACB',
+          typeQ: (e) => set({ q: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }), typeP: (e) => set({ p: e.target.value.replace(/[^0-9,]/g, '').slice(0, 9) }),
+          remove: () => this.setState({ steps: this.state.steps.filter((x, j) => j !== i) }) }; }),
+      addStep: () => this.setState({ steps: [...S.steps, { q: '', p: '' }] }), addStepLabel: S.steps.length ? 'Add another step' : 'Cheaper in bulk? Add a price step',
+      hasLadder: ladderT.length > 1, ladder: ladderT.map(t => t[0] + '+ ' + t[1].toLocaleString('en-US')), ladderAria: ladderT.map(t => t[0] + ' or more at ' + t[1].toLocaleString('en-US')).join(', '),
       saveLabel: fpv ? 'Add them, with their price' : 'Add them and ask on WhatsApp',
       saveStyle: canSave ? 'background:#16203C;color:#FFFFFF' : 'background:#E9E1D3;color:#6B5A43;cursor:default',
       stampSub: priced + (priced === 1 ? ' PRICE IN' : ' PRICES IN'), stampAria: 'Source stamp: sourced, ' + priced + ' priced, 17 October, Moses',
