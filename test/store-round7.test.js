@@ -38,7 +38,8 @@ const region = (from, to) => store.slice(store.indexOf(from), store.indexOf(to, 
 t.check(/if \(PICK_ANSWERED\.includes\(it\.pickStatus\)\) return itemPicked\(it\);\n  \/\/ Every line opens at what was ordered[^\n]*\n  return qty; \}/.test(store), 'every line opens at what was ordered');
 t.check(/due \? 'Count due · count as you pick' : low \? `The shelf shows \$\{lineQty\(cur, from\)\.text\} · count what you pick`/.test(store), 'the books only hint: a count due, or what the shelf shows');
 // STO-UI-03
-t.check(/--nav-room:calc\(130px \+ var\(--safe-area-inset-bottom\)\);/.test(store) && /#st_app\{[^}]*padding-bottom:var\(--nav-room\)\}/.test(store), 'every screen ends with the bar + the button + 16px free');
+// Round 8 (STO-UI-03, A2): the bar now reaches the button's top, so the room is the bar + 16px.
+t.check(/--nav-room:calc\(1[23]0px \+ var\(--safe-area-inset-bottom\)\);/.test(store) && /#st_app\{[^}]*padding-bottom:var\(--nav-room\)\}/.test(store), 'every screen ends with the bar + the button + 16px free');
 // STO-UI-04
 {
   const find = region('PAGE.find = () => {', 'PAGE.find.bg');
@@ -65,7 +66,7 @@ t.check(/\$\{word\}<\/span>\$\{extra && !blank \? `<span style="font-size:[^"]*"
   const sh = compileScope([fn('shopShort')], { S }, ['shopShort']);
   t.check(sh.shopShort() === 'Omni-ware' && /\$\{esc\(shopShort\(\)\.toUpperCase\(\)\)\}/.test(store), 'the receipt says "OMNI-WARE" on one line');
   const slip = region('PAGE.slip = ({ id }) => {', 'PAGE.slip.bg');
-  t.check(/\$\{prodTT\(it, 'font-size:var\(--t-14\)'\)\}/.test(slip) && /repeat\(\$\{Math\.min\(3, who\.length\)\},minmax\(0,1fr\)\)/.test(slip) && /<span class="clamp2"[^>]*>\$\{esc\(w\.label\)\}/.test(slip), 'names with tags; the picker 3 to a row, names on up to 2 lines');
+  t.check(/\$\{prodTT\(it, 'font-size:var\(--t-14\)'\)\}/.test(slip) && /class="st-chiprow" role="group" aria-label="Who takes it"/.test(slip) && /white-space:nowrap">\$\{esc\(w\.label\)\}/.test(slip), 'names with tags; names in full (round 8: the picker is one scrolling row)');
 }
 // STO-UI-08
 {

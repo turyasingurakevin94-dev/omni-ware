@@ -86,6 +86,8 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Waiting to send | The one list of what isn't on the books yet ("Not sent · N") | "Nothing is waiting" while something is | Store R3 · REL-04 |
 | Not done | The bar that stays until the work is done: amber "no signal", red for a save that failed ("tell Kevin · code"), blue "Someone else just did this · Refreshed" | a 5 s toast; losing the work | Store R3 · REL-07 |
 | Could not load the yard | A failed load, with Try again and a code | an empty yard, 0s, "No products" | Store R5 · PRIV-03 |
+| Checking your shop… | Signed in; the phone is asking which shop this person works in | a blank screen; "This login has no shop" too early | Store R8 · REL-11 |
+| Could not reach the shop | The shop could not be asked just now, with Try again, a code and Sign out | "This login has no shop" after a failed read | Store R8 · REL-11 |
 | Try again | Retry after a failure; the work is kept | — | Store R3 |
 | Back online to sell | A slide that writes waits for the connection | — | Sales review 5 |
 
@@ -99,6 +101,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Did you mean | Nothing found offers the nearest shop words | a dead end | Store R4 · NAV-06/07 |
 | Needs you | Today's list of jobs for this person | — | Sales, Store |
 | For you · In the yard today | Alerts: only today's "for you" alerts are unread; opening Alerts reads them | counting others' routine check-ins as unread | Store R6 · WORD-10 |
+| Big text | You → Big text: every size one step up, at least 1.2×; controls 52 px; nothing clipped at 360 | a zoom that squeezes the layout | Store R8 · A11Y-01 |
 | Asked of Sourcing | Requests for items the shop doesn't sell: Asked → Looking → Found → Priced → Listed | — | Sales |
 
 ## Not the same across apps yet

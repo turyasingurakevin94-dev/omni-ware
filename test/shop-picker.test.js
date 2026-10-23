@@ -47,7 +47,9 @@ for (const [app, roles] of Object.entries(APPS)) {
   const src = srcs[app];
   t.check(blockOf(src, app) === block, `${app}.html carries the same shop block as manager.html`);
   const boot = src.slice(src.indexOf('\nasync function boot(){'), src.indexOf('\n}\n', src.indexOf('\nasync function boot(){')));
-  t.check(/select\('shop_id, role, shops\(name, created_at\)'\)/.test(boot), `${app}: reads each shop's age with its name`);
+  // The Store asks for its shops in readMembers(), with retries (store round 8, STO-REL-11).
+  const members = src.includes('async function readMembers(') ? src.slice(src.indexOf('async function readMembers('), src.indexOf('\n}\n', src.indexOf('async function readMembers('))) : '';
+  t.check(/select\('shop_id, role, shops\(name, created_at\)'\)/.test(boot + members), `${app}: reads each shop's age with its name`);
   const call = /const pick = await chooseShop\(rows\.filter\(m => \[([^\]]*)\]\.includes\(m\.role\)\), \{ box: '([a-z]+-auth)', btn: '([a-z]+-btn)' \}\);/.exec(boot);
   t.check(call && call[1] === roles.map(r => `'${r}'`).join(', '), `${app}: opens for ${roles.join(', ')}, and asks which shop when there are several`);
   t.check(call && new RegExp(`class(?:Name)? ?= ?['"]${call[2]}['"]`).test(src) && src.includes(`.${call[3]}`), `${app}: the picker draws in the app's own sign-in overlay and buttons`);

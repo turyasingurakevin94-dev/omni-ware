@@ -41,7 +41,7 @@ const code = store.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
   t.check(/const st = myStaff\(\), sn = st && \(st\.recName != null \? st\.recName : st\.name\); if \(sn && !looksHandle\(sn\)\) return sn;/.test(store), 'your own staff record named like a login is not your name either');
 }
 // WORD-02
-t.check(/End my shift · pass the yard to \$\{esc\(firstWord\(mate\.name\)\)\}/.test(store) && (store.match(/<b>Pass the yard<\/b>/g) || []).length === 2 && /passed you the yard/.test(store)
+t.check(/End my shift · pass the yard to \$\{esc\(firstWord\(mate\.name\)\)\}/.test(store) && (store.match(/<b[^>]*>Pass the yard<\/b>/g) || []).length === 2 && /passed you the yard/.test(store)
   && !/Hand over the yard|Hand the yard to|handed you the yard|>Hand it to /.test(code), 'the shift is passed; "hand over" stays at the gate');
 t.check(/Slide to hand over to \$\{firstWord\(whoName\) \|\| whoName\}/.test(store), 'the gate keeps "Slide to hand over to …"');
 // WORD-03

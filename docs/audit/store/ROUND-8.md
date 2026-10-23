@@ -78,11 +78,30 @@
 
 ## Phase B result (filled after implementing)
 
+**How it was verified:**
+- **Tests:** `test/store-round8.test.js` (new; every ID), plus the round 4, 6 and 7 tests, updated where this round moved what they pin.
+- **Harness:**
+  - **Shop check:** fixture modes `#r8slow`, `#r8stale`, `#r8flaky`, `#r8fail` and `#r8none` delay, empty or fail the first `shop_members` reads.
+  - **Big text:** compared on ten screens.
+  - **Play button:** overlap check on Today and Stock, at rest and scrolled, normal and Big text, on three fixtures.
+  - **Headings:** checked on all 35 screens (2 views, 33 pages).
+  - **Hand over and On the road:** checked at 360 × 640 and 360 × 740.
+- **Round 6 and 7 harness walks:** still clean (no banned words, no "0." quantity, nothing under 44 px, no off-scale value, no clipping, no page errors).
+
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
-| STO-REL-11 | | | |
-| STO-A11Y-01 | | | |
-| STO-UI-03 | | | |
-| STO-A11Y-02 | | | |
-| STO-A11Y-03 | | | |
-| STO-UI-10 | | | |
+| STO-REL-11 | Yes | **Shop check:** new `sessionReady()` restores or refreshes the sign-in; new `readMembers()` asks up to 3 times (0.6 s, 1.5 s), and an empty first answer gets one fresh sign-in and one more ask. **Boot:** `boot()` shows `authScreen('checking')` ("Checking your shop…") unless the last copy is on screen. A failed read shows `authScreen('unreachable')` ("Could not reach the shop", Try again, "Tried 3 times · code", Sign out), or the kept copy when offline. "This login has no shop" appears only after a real empty answer. | **Harness:** slow → Checking → app; stale → app (2 reads, 1 refresh); flaky → app (3 reads); fail → Could not reach, and Try again → app; none → "This login has no shop". **Test:** the same four cases. |
+| STO-A11Y-01 | Yes | `html.big` steps the scale up (15/17/20/24/34/48) and sets `--tap` to 52 px. `bigPx` is now ×1.2 rounded up for sizes still written in px. `bigText` also grows a 44 px control to 52 px. | Harness: on Today, Stock, Find, the item page, Pack, Hand over, Returns, On the road, Alerts and You, every text is at least 1.20× its normal size and nothing is clipped at 360. |
+| STO-UI-03 | Yes (A2) | `.st-nav.cv-nav` has 38 px top padding and the play button a −34 px margin, so the white bar reaches the button's top; the button's ring is white. `--nav-room` is 120 px (the bar + 16), and the toast sits above it. | Harness: nothing readable or tappable meets the button above the bar, on Today and Stock, at rest and scrolled to the end, normal and Big text, on the `#r7`, `''` and `#long` fixtures. Find, Returns, Alerts and the aisle lists open as pages over the bar. |
+| STO-A11Y-02 | Yes | **Headings:** `role="heading" aria-level="2"` on every `.cv-sec` (37 labels) and on "Next job". `aria-level="1"` on Today's greeting, Stock's title and every page title next to its Back button, including `navyHead`; `goneSheet` gets a hidden title. **Pages without a marked title:** `titleHeading()` marks the page's biggest words near the top, and `PAGE_WORD` gives pages with no title in words (Scan, Count, the ride…) a hidden `<h1 class="st-sr">`. **Inert:** `syncInert()` makes everything under the top page or a sheet inert. | Harness: each of the 35 screens has exactly one level-1 heading, and no section label is left unmarked. |
+| STO-A11Y-03 | Yes | Pack card: "1 of 2" sits on a white 32 px pill in ink-2 (5.5:1). | Harness: computed colour `#5F6980` on `#FFFFFF`. |
+| STO-UI-10 | Yes | **Hand over (`PAGE.slip`):** the picker is one scrolling row of 76 px tiles with names in full (`role="group"`), and the slip's scroller keeps 32 px at its end. **On the road (`drv`):** each stop row wraps, the order fills its line, and "Mark delivered" (44 px tall) sits under it. | Harness at 360 × 640 and 740, normal and Big text: the slip's last line ends 52 px above the panel, the picker is one row, and every On the road order is one line. |
+
+### Also changed while here
+- `test/store-round4.test.js` and `test/store-round6.test.js` pinned the old markup (`afterRender` ending at `navArm()`, a bare `<b>Pass the yard</b>`). They now allow this round's additions.
+- `test/store-round7.test.js` now expects round 8's `--nav-room` and the single-row picker.
+- `test/shop-picker.test.js` looked for the Store's shop query inside `boot()`. It now also looks in `readMembers()`.
+
+### Left as is
+- NAV-08 and NAV-09 are still open.
+- **Full suite:** 459 of 461 test files pass. The two that fail are the database scenarios logged since round 5 (`store-money-db`, `manager-decisions-db`); they fail the same way without this round's changes.
