@@ -1,19 +1,20 @@
 from ow import *
 
-route = '''    <div role="img" aria-label="{{routeAria}}" style="display: flex; align-items: center">
+# the head says it plainly: three places to go, how much is done, and what each place is
+route = '''    <div role="img" aria-label="{{routeAria}}" style="position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+      <span style="position: absolute; top: 21px; left: 16.7%; width: 33.3%; height: 2px; background: rgba(255,255,255,.3)"></span>
+      <span style="position: absolute; top: 21px; left: 50%; width: 33.3%; height: 0; border-top: 2px dashed rgba(255,255,255,.3)"></span>
       <sc-for list="{{route}}" as="r" hint-placeholder-count="3">
-        <span style="display: flex; align-items: center; flex: 1">
-          <span style="flex: none; width: 32px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; {{r.dot}}">{{r.n}}</span>
-          <sc-if value="{{r.join}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; height: 3px; margin: 0 4px; border-radius: 2px; {{r.line}}"></span></sc-if>
+        <span style="position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+          <span style="width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{r.dot}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 1px"><span class="nm" style="font-size: 13px; font-weight: 700">{{r.short}}</span><span style="font-size: 11px; font-weight: 600; {{r.ink}}">{{r.word}}</span></span>
         </span>
       </sc-for>
-    </div>
-    <div style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #B3BCD2">
-      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #A9AEF0"></span>supplier</span>
-      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #E7A6D6"></span>rival shop</span>
-      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #6FDCB0"></span>done</span>
     </div>'''
-big = '    <div style="display: flex; align-items: baseline; gap: 8px; padding: 0 4px"><span class="m" style="font-size: 40px; font-weight: 600; line-height: 1">{{jobsLeft}}</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">jobs left · <span class="m">3</span> stops · <span class="m">2</span> areas</span></div>'
+big = '''    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span style="display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 40px; font-weight: 600; line-height: 1">{{doneN}}</span><span class="m" style="font-size: 18px; font-weight: 600; color: #B3BCD2">/ 16</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">things done on today’s walk</span></span>
+      <span style="display: block; height: 8px; border-radius: 999px; background: rgba(255,255,255,.14)"><span style="display: block; height: 8px; border-radius: 999px; background: #6FDCB0; {{doneBar}}"></span></span>
+    </div>'''
 hd = head('Today’s walk', circ('Main.dc.html', 'back', 'Back to Today'), '', big + '\n' + route)
 stop_row = '''        <div style="display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 0 10px; border-top: {{s.rule}}">
           <a href="{{s.href}}" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px">
@@ -45,9 +46,9 @@ script = '''class Component extends DCLogic {
     const SUP = 'background:#E4E6FA;color:#3A3F9B', RIV = 'background:#F6E4F1;color:#7A3268', OK = 'background:#E4F4EA;color:#0F6B43', NEUT = 'background:#F1EEE8;color:#1C2233';
     // ordered by area, then by jobs: downtown first, Nateete last. Kiseka is off today's walk: asked in its app instead
     const stops = [
-      { id: 'o', n: 1, area: 'Kikuubo and Owino', name: 'Owino Plumbing', kind: 'sup', jobs: 7, href: 'Visit.dc.html', tags: [['3 prices', NEUT], ['1 wanted', NEUT], ['1 proposal', SUP], ['2 photos', NEUT]] },
-      { id: 'k', n: 2, area: 'Kikuubo and Owino', name: 'Kikuubo Hardware Mart', kind: 'riv', jobs: 5, href: 'RivalRun.dc.html', tags: [['5 to check', RIV], ['3 are top sellers', NEUT]] },
-      { id: 'n', n: 3, area: 'Nateete', name: 'Nateete Builders’ Centre', kind: 'riv', jobs: 4, href: 'RivalRun.dc.html', tags: [['4 to check', RIV], ['wire mesh among them', NEUT]] }
+      { id: 'o', n: 1, area: 'Kikuubo and Owino', name: 'Owino Plumbing', kind: 'sup', jobs: 7, href: 'Visit.dc.html', tags: [['3 prices to check', NEUT], ['1 item to ask for', NEUT], ['1 offer to answer', SUP], ['2 photos', NEUT]] },
+      { id: 'k', n: 2, area: 'Kikuubo and Owino', name: 'Kikuubo Hardware Mart', kind: 'riv', jobs: 5, href: 'RivalRun.dc.html', tags: [['5 prices to check', RIV], ['3 are top sellers', NEUT]] },
+      { id: 'n', n: 3, area: 'Nateete', name: 'Nateete Builders’ Centre', kind: 'riv', jobs: 4, href: 'RivalRun.dc.html', tags: [['4 prices to check', RIV], ['wire mesh among them', NEUT]] }
     ].map(s => {
       const on = !!D[s.id];
       return { ...s, on: String(on), doneAria: 'Mark ' + s.name + ' done', well: on ? OK : (s.kind === 'sup' ? SUP : RIV),
@@ -58,15 +59,22 @@ script = '''class Component extends DCLogic {
     const jobs = (l) => l.filter(s => s.on !== 'true').reduce((t, s) => t + s.jobs, 0);
     const areas = ['Kikuubo and Owino', 'Nateete'].map(name => {
       const l = stops.filter(s => s.area === name).map((s, i) => ({ ...s, rule: i ? '1px solid #EFECE6' : 'none' }));
-      return { name, stops: l, sub: l.length + (l.length === 1 ? ' stop' : ' stops') + ' · ' + jobs(l) + ' jobs left' };
+      return { name, stops: l, sub: l.length + (l.length === 1 ? ' stop' : ' stops') + ' · ' + jobs(l) + ' things left' };
     });
-    const route = stops.map((s, i) => ({ n: s.n, join: i < stops.length - 1,
-      dot: s.on === 'true' ? 'background:#6FDCB0;color:#16203C' : s.kind === 'sup' ? 'background:#A9AEF0;color:#16203C' : 'background:#E7A6D6;color:#16203C',
-      line: i === 1 ? 'background:transparent;border-top:3px dashed rgba(255,255,255,.18);height:0' : (s.on === 'true' ? 'background:#6FDCB0' : 'background:rgba(255,255,255,.14)') }));
+    const SHORT = { o: 'Owino', k: 'Kikuubo', n: 'Nateete' };
+    const ICON = { sup: 'M3 21V9l9-5 9 5v12M8 21v-7h8v7', riv: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z' };
+    const firstOpen = stops.find(s => s.on !== 'true');
+    const route = stops.map(s => {
+      const done = s.on === 'true', next = firstOpen && s.id === firstOpen.id;
+      return { short: SHORT[s.id], icon: done ? 'M5 12.5l4.5 4.5L19 7.5' : ICON[s.kind],
+        word: done ? 'done' : (next ? 'start · ' : '') + s.jobs + (s.kind === 'sup' ? ' · our supplier' : ' · a rival'),
+        ink: done ? 'color:#6FDCB0' : next ? 'color:#F5B26B' : 'color:#B3BCD2',
+        dot: done ? 'background:#6FDCB0;color:#16203C' : (s.kind === 'sup' ? 'background:#E4E6FA;color:#3A3F9B' : 'background:#F6E4F1;color:#7A3268') + (next ? ';box-shadow:0 0 0 3px #19223F,0 0 0 5px #F5B26B' : '') };
+    });
     const next = stops.find(s => s.on !== 'true');
     return {
-      areas, route, jobsLeft: jobs(stops), routeAria: stops.map(s => s.n + ' ' + s.name + (s.on === 'true' ? ', done' : '')).join('; '),
-      goHref: next ? next.href : 'Main.dc.html', goLabel: next ? 'Start at ' + next.name : 'Walk finished · back to Today',
+      areas, route, jobsLeft: jobs(stops), doneN: 16 - jobs(stops), doneBar: 'width:' + ((16 - jobs(stops)) / 16 * 100).toFixed(1) + '%', routeAria: stops.map(s => s.n + ' ' + s.name + (s.on === 'true' ? ', done' : '')).join('; '),
+      goHref: next ? next.href : 'Main.dc.html', goLabel: next ? (Object.values(D).some(Boolean) ? 'Next: ' : 'Start at ') + next.name : 'Walk finished · back to Today',
       goStyle: next ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#E4F4EA;color:#0F6B43'
     };
   }
