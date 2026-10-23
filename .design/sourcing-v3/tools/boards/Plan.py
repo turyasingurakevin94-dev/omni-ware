@@ -1,4 +1,5 @@
 from ow import *
+ARW = '<svg width="16" height="12" viewBox="0 0 16 12" aria-label="then" role="img" style="display: inline-block; vertical-align: -1px; margin: 0 2px"><path d="M1 6h13M9.5 1.5 14 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
 
 X = [64, 400, 736, 1072, 1408]
 W = 264
@@ -51,15 +52,15 @@ parts += [
     person(X[2], '5×', 'plain', 'Searches', 'that found nothing'),
     person(X[3], 'OP', 'indigo', 'Suppliers', 'propose in their app'),
     person(X[4], 'KH', 'manager', 'Rival shops', 'Kikuubo · Nateete'),
-    job(X[0], 1, 'Hunt', 'Who sells it, by what they sell', 'one slide → asked on WhatsApp', 'search'),
+    job(X[0], 1, 'Hunt', 'Who sells it, by what they sell', 'one slide ' + ARW + ' asked on WhatsApp', 'search'),
     job(X[1], 2, 'Price', 'At the counter or on the walk', 'say it, tap Same, or read their list', 'tag'),
     job(X[2], 3, 'Six checks', 'Photo, packing, suppliers, hold, name', 'filled for you where it is known', 'tick'),
-    job(X[3], 4, 'Send to Ruth', 'Fix the gaps, then one slide', 'one slide → with Ruth', 'send'),
+    job(X[3], 4, 'Send to Ruth', 'Fix the gaps, then one slide', 'one slide ' + ARW + ' with Ruth', 'send'),
     job(X[4], None, 'Prices', 'Fresh prices and better deals', 'beside the line, any time', 'deal', dashed=True),
-    exc(X[0], 'Nobody we know sells it → add the supplier, then ask'),
-    exc(X[2], 'Consign → Kiseka must agree first'),
+    exc(X[0], 'Nobody we know sells it ' + ARW + ' add the supplier, then ask'),
+    exc(X[2], 'Consign ' + ARW + ' Kiseka must agree first'),
     exc(X[3], 'Ruth prices it, or sends it back with a note'),
-    exc(X[4], 'A cheaper supplier → Denis decides the switch'),
+    exc(X[4], 'A cheaper supplier ' + ARW + ' Denis decides the switch'),
     box(64, 872, 1608, 88, face('RN', 'manager', 48) + '<span style="font-size: 16px; font-weight: 700">Ruth Nakato · Manager</span><span style="font-size: 15px; font-weight: 600; color: #5F6980">prices each new item in the Manager app, or a standing rule set there does it. Denis decides suppliers and the first batch. The owner sees it all in the log.</span>',
         'padding: 0 20px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border: 1px solid #E6E3DD; border-radius: 18px'),
     '<div style="position: absolute; left: 64px; top: 1032px; font-size: 22px; font-weight: 700; letter-spacing: -.01em">From the job to done</div>',
@@ -70,5 +71,5 @@ parts += [
     taps(X[4], 0, 'trips for old prices', ['They answer in the supplier app']),
 ]
 html = page('The plan', '', 'class Component extends DCLogic {\n  renderVals() { return {}; }\n}', data_props='{"$preview":{"width":1760,"height":1400}}')
-html = html.replace('<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">\n\n</div>',
-                    '<div style="position: relative; width: 1760px; height: 1400px; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233">\n' + '\n'.join(parts) + '\n</div>')
+html = html.replace('<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: \'OW Figures\', Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">\n\n</div>',
+                    '<div style="position: relative; width: 1760px; height: 1400px; overflow: hidden; background: #F7F5F2; font-family: \'OW Figures\', Figtree, system-ui, sans-serif; color: #1C2233">\n' + '\n'.join(parts) + '\n</div>')

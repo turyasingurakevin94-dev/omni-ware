@@ -8,8 +8,8 @@ pic = '''    <div style="display: flex; align-items: center; gap: 14px">
 hd = head('Saved on this phone', circ('Main.dc.html', 'back', 'Back to Today'), '', pic)
 q_row = '''      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px">
         <span style="width: 42px; height: 42px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; {{q.well}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{q.icon}}"></path></svg></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{q.what}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{q.sub}}</span></span>
-        <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 999px; {{q.dot}}"></span><span class="m" style="font-size: 11px; font-weight: 600; color: #9AA1AE">{{q.at}}</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{q.what}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{q.sub}}</span></span>
+        <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px"><span style="width: 8px; height: 8px; border-radius: 999px; {{q.dot}}"></span><span class="m" style="font-size: 11px; font-weight: 600; color: #5F6980">{{q.at}}</span></span>
       </div>'''
 bd = body('\n'.join([
     sec('{{listHead}}', first=True),
@@ -31,7 +31,7 @@ script = '''class Component extends DCLogic {
     ];
     return {
       queue, waitingN: sent ? '0' : '2', upN: sent ? '11' : '9',
-      title: sent ? 'All up' : '2 waiting for signal', sub: sent ? 'Everything is on the shop’s books' : 'They send by themselves when the phone is back online',
+      title: sent ? 'All up' : '2 waiting for signal', sub: sent ? 'Everything is on the shop’s books' : 'They go up when the phone has signal',
       badge: sent ? 'background:#6FDCB0;color:#16203C' : 'background:#FDEEE1;color:#95530C;animation:owPulseA 2s infinite',
       listHead: sent ? 'Sent just now' : 'Waiting to send',
       send: () => this.setState({ sent: true }),

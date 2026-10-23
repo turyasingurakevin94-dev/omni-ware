@@ -7,7 +7,7 @@ ring_svg = '''      <span role="img" aria-label="Prices fresh: 78 percent; 4 of 
           <circle cx="62" cy="62" r="38" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"></circle>
           <circle cx="62" cy="62" r="38" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-dasharray="159.2 238.8" transform="rotate(-90 62 62)"></circle>
         </svg>
-        <span style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">78<span style="font-size: 16px; color: #8D99B5">%</span></span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">fresh</span></span>
+        <span style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">78<span style="font-size: 16px; color: #A9B3CC">%</span></span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">fresh</span></span>
       </span>'''
 
 def tile(href, fig, label, icon, col='#B3BCD2', fig_col='', bg='rgba(255,255,255,.07)'):
@@ -43,10 +43,10 @@ job = f'''    <div style="display: flex; align-items: baseline; justify-content:
     <div style="border-radius: 22px; background: radial-gradient(120% 90% at 100% 0%, #2B3866 0%, #16203C 58%); color: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 14px 30px rgba(22,32,60,.22)">
       <div style="display: flex; align-items: center; justify-content: space-between">
         <span style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(111,220,176,.16); color: #6FDCB0; font-size: 12px; font-weight: 700">{svg("route", 13, 2.4)}Today's walk</span>
-        <span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #FFFFFF">19</span> jobs · <span class="m" style="color: #FFFFFF">4</span> stops</span>
+        <span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #FFFFFF">16</span> jobs · <span class="m" style="color: #FFFFFF">3</span> stops</span>
       </div>
       <span style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">Kikuubo and Owino, then Nateete</span>
-      <div role="img" aria-label="Owino Plumbing, Kikuubo Hardware Mart, Kiseka Steel, then Nateete Builders’ Centre" style="display: flex; align-items: center">{stop(1,'sup')}{line}{stop(2,'riv')}{line}{stop(3,'sup')}{dash}{stop(4,'riv')}</div>
+      <div role="img" aria-label="Owino Plumbing, Kikuubo Hardware Mart, then Nateete Builders’ Centre" style="display: flex; align-items: center">{stop(1,'sup')}{line}{stop(2,'riv')}{dash}{stop(3,'riv')}</div>
       {pill('Start at Owino Plumbing', href='MarketRun.dc.html', kind='white', icon='chev')}
     </div>'''
 
@@ -80,7 +80,7 @@ waits = lst('\n'.join([
 also = lst('\n'.join([
     row('Hoop iron 0.5mm · switch', 'Katwe is 1,500 a roll cheaper', icon_well('deal', 'indigo'),
         '<span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px"><span class="m" style="font-size: 15px; font-weight: 600">210,000</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">a month</span></span>', href='Deal.dc.html'),
-    row('Iron sheet G28 · certify', 'Our #1 seller has no photo yet', icon_well('star', 'green'), ring(4/6, '4/6', 40, 4, '#0F6B43', '#EFECE6', 11, '4 of 6 gates done'), href='Certify.dc.html'),
+    row('Iron sheet G28 · certify', 'No photo yet · 1 to check', icon_well('star', 'green'), ring(4/6, '4/6', 40, 4, '#0F6B43', '#EFECE6', 11, '4 of 6 checks kept, 1 to check', part=1/6), href='Certify.dc.html'),
 ]))
 outbox = row('2 captures on this phone', 'They send when there is signal', icon_well('outbox', 'amber'), chev('#95530C'), href='Outbox.dc.html', sub_style='color: #7A4A02')
 coach_rows = '\n'.join(

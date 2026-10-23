@@ -11,7 +11,7 @@ fig = '''    <div style="display: flex; flex-direction: column; align-items: cen
 pic = title_block('Wire mesh BRC A142', 'Kikuubo Hardware Mart · a rival', face('KH', 'manager', 52)) + '\n' + fig
 hd = head('Rival price', circ('MarketRun.dc.html', 'back', 'Back to the walk'), '', pic, gap=14)
 segp = lambda lst_, item, n=2: '    <div role="radiogroup" style="display: grid; grid-template-columns: repeat(' + str(n) + ', minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: #F1EEE8"><sc-for list="{{' + lst_ + '}}" as="' + item + '" hint-placeholder-count="' + str(n) + '"><button type="button" role="radio" aria-checked="{{' + item + '.on}}" onClick="{{' + item + '.pick}}" style="{{' + item + '.style}}">{{' + item + '.label}}</button></sc-for></div>'
-recent = lst('\n'.join(row(i, '', icon_well('rival', 'manager', 34, 10), f'<span style="flex: none; display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 14px; font-weight: 600">{p}</span><span style="font-size: 11px; font-weight: 600; color: #9AA1AE">{w}</span></span>', min_h=48)
+recent = lst('\n'.join(row(i, '', icon_well('rival', 'manager', 34, 10), f'<span style="flex: none; display: flex; align-items: baseline; gap: 8px"><span class="m" style="font-size: 14px; font-weight: 600">{p}</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">{w}</span></span>', min_h=48)
                        for i, p, w in [('Gate valve ½"', '19,500', '14 Oct'), ('Y12 rebar, 12m', '47,500', '10 Oct'), ('Iron sheet G28, 3m', '36,000', '9 Oct')]))
 bd = body('\n'.join([sec('Sold by', first=True), segp('units', 'u'), sec('Do they have it?'), segp('stock', 's', 3), sec('Last seen here'), recent]))
 ft = '''  <div style="flex: none; padding: 10px 16px 18px; display: flex; flex-direction: column; gap: 8px; background: #EFECE6; border-radius: 26px 26px 0 0">
@@ -44,7 +44,7 @@ script = '''class Component extends DCLogic {
       useLast: () => this.setState({ v: '147000', unit: 'a sheet' }),
       saved, notSaved: !saved,
       cta: !unit ? 'Pick how they sell it' : !stock ? 'Do they have it?' : 'Save the price',
-      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF',
+      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22',
       save: () => { if (ready) this.setState({ saved: true }); },
       undo: () => this.setState({ saved: false }),
       savedWord: 'Saved · Kikuubo ' + fmt(n) + ' ' + (unit || '')

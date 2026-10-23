@@ -43,7 +43,7 @@ script = '''class Component extends DCLogic {
       whos: pickList('who', who, ['Ggaba Stores', 'Nansana Hardware', 'Someone else']),
       less: () => this.setState({ qty: Math.max(0, qty - 10) }), more: () => this.setState({ qty: qty + 10 }),
       cta: !mode ? 'Say how you found it' : mode === 'asked' ? (who ? 'Add the ask' : 'Say who asked') : 'Start the hunt',
-      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF;pointer-events:none'
+      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22;pointer-events:none'
     };
   }
 }'''

@@ -57,7 +57,7 @@ script = '''class Component extends DCLogic {
       offerShown: offer ? fmt(offer) : '—',
       dockLine: offer ? 'Counter ' + fmt(offer) + (n ? ' · ' + n + ' reason' + (n > 1 ? 's' : '') : '') : 'No counter yet',
       slideLabel: offer ? 'Slide to send ' + fmt(offer) + ' to Owino' : 'Pick your counter first',
-      slideOff: String(!offer), slideOpacity: offer ? '1' : '.5',
+      slideOff: String(!offer), slideOpacity: offer ? '1' : '.72',
       send: () => { if (offer) this.setState({ sent: true }); },
       undo: () => this.setState({ sent: false })
     };

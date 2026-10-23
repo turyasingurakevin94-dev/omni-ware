@@ -38,7 +38,7 @@ script = '''class Component extends DCLogic {
       read: () => this.setState({ filled: true, tags: { Fabrication: true, Mesh: true } }),
       nameVal: S.filled ? 'Kawempe Metal Works' : '', phoneVal: S.filled ? '0772 418 220' : '', whereVal: S.filled ? 'Kawempe, by the market' : '',
       cta: !S.filled ? 'Snap their card, or type' : !S.diff ? 'Answer the look-alike first' : !S.credit ? 'Pick their credit days' : 'Add the supplier',
-      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF'
+      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22'
     };
   }
 }'''

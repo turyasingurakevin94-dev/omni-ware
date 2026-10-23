@@ -1,7 +1,7 @@
 from ow import *
 
 route = '''    <div role="img" aria-label="{{routeAria}}" style="display: flex; align-items: center">
-      <sc-for list="{{route}}" as="r" hint-placeholder-count="4">
+      <sc-for list="{{route}}" as="r" hint-placeholder-count="3">
         <span style="display: flex; align-items: center; flex: 1">
           <span style="flex: none; width: 32px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; {{r.dot}}">{{r.n}}</span>
           <sc-if value="{{r.join}}" hint-placeholder-val="{{ true }}"><span style="flex: 1; height: 3px; margin: 0 4px; border-radius: 2px; {{r.line}}"></span></sc-if>
@@ -13,13 +13,13 @@ route = '''    <div role="img" aria-label="{{routeAria}}" style="display: flex; 
       <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #E7A6D6"></span>rival shop</span>
       <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #6FDCB0"></span>done</span>
     </div>'''
-big = '    <div style="display: flex; align-items: baseline; gap: 8px; padding: 0 4px"><span class="m" style="font-size: 40px; font-weight: 600; line-height: 1">{{jobsLeft}}</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">jobs left · <span class="m">4</span> stops · <span class="m">2</span> areas</span></div>'
+big = '    <div style="display: flex; align-items: baseline; gap: 8px; padding: 0 4px"><span class="m" style="font-size: 40px; font-weight: 600; line-height: 1">{{jobsLeft}}</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">jobs left · <span class="m">3</span> stops · <span class="m">2</span> areas</span></div>'
 hd = head('Today’s walk', circ('Main.dc.html', 'back', 'Back to Today'), '', big + '\n' + route)
 stop_row = '''        <div style="display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 0 10px; border-top: {{s.rule}}">
           <a href="{{s.href}}" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px">
             <span class="m" style="width: 42px; height: 42px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; {{s.well}}">{{s.n}}</span>
             <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
-              <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</span>
+              <span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.name}}</span>
               <span style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap"><sc-for list="{{s.tags}}" as="t" hint-placeholder-count="2"><span style="height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; {{t.style}}">{{t.label}}</span></sc-for></span>
             </span>
           </a>
@@ -35,7 +35,7 @@ areas = '''    <sc-for list="{{areas}}" as="ar" hint-placeholder-count="2">
         </div>
       </div>
     </sc-for>'''
-ask = lst(row('Kiseka Steel has 5 old prices', 'Ask them in the supplier app, not at the counter', icon_well('phone', 'indigo'), chev(), href='AskConfirm.dc.html'))
+ask = lst(row('Kiseka Steel · 5 old prices', 'Visited 2 days ago · ask in their app, no trip', icon_well('phone', 'indigo'), chev(), href='AskConfirm.dc.html'))
 bd = body(areas + '\n' + sec('Off the walk') + '\n' + ask, pad='10px 16px 24px', gap=6)
 ft = foot('<a href="{{goHref}}" style="height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; {{goStyle}}">{{goLabel}}</a>')
 script = '''class Component extends DCLogic {
@@ -43,12 +43,11 @@ script = '''class Component extends DCLogic {
   renderVals() {
     const D = this.state.done;
     const SUP = 'background:#E4E6FA;color:#3A3F9B', RIV = 'background:#F6E4F1;color:#7A3268', OK = 'background:#E4F4EA;color:#0F6B43', NEUT = 'background:#F1EEE8;color:#1C2233';
-    // ordered by area, then by jobs: the downtown three first, Nateete last
+    // ordered by area, then by jobs: downtown first, Nateete last. Kiseka is off today's walk: asked in its app instead
     const stops = [
       { id: 'o', n: 1, area: 'Kikuubo and Owino', name: 'Owino Plumbing', kind: 'sup', jobs: 7, href: 'Visit.dc.html', tags: [['3 prices', NEUT], ['1 wanted', NEUT], ['1 proposal', SUP], ['2 photos', NEUT]] },
       { id: 'k', n: 2, area: 'Kikuubo and Owino', name: 'Kikuubo Hardware Mart', kind: 'riv', jobs: 5, href: 'RivalRun.dc.html', tags: [['5 to check', RIV], ['3 are top sellers', NEUT]] },
-      { id: 's', n: 3, area: 'Kikuubo and Owino', name: 'Kiseka Steel', kind: 'sup', jobs: 3, href: 'SupplierKiseka.dc.html', tags: [['2 wanted', NEUT], ['1 photo', NEUT]] },
-      { id: 'n', n: 4, area: 'Nateete', name: 'Nateete Builders’ Centre', kind: 'riv', jobs: 4, href: 'RivalRun.dc.html', tags: [['4 to check', RIV], ['wire mesh among them', NEUT]] }
+      { id: 'n', n: 3, area: 'Nateete', name: 'Nateete Builders’ Centre', kind: 'riv', jobs: 4, href: 'RivalRun.dc.html', tags: [['4 to check', RIV], ['wire mesh among them', NEUT]] }
     ].map(s => {
       const on = !!D[s.id];
       return { ...s, on: String(on), doneAria: 'Mark ' + s.name + ' done', well: on ? OK : (s.kind === 'sup' ? SUP : RIV),
@@ -63,7 +62,7 @@ script = '''class Component extends DCLogic {
     });
     const route = stops.map((s, i) => ({ n: s.n, join: i < stops.length - 1,
       dot: s.on === 'true' ? 'background:#6FDCB0;color:#16203C' : s.kind === 'sup' ? 'background:#A9AEF0;color:#16203C' : 'background:#E7A6D6;color:#16203C',
-      line: i === 2 ? 'background:transparent;border-top:3px dashed rgba(255,255,255,.18);height:0' : (s.on === 'true' ? 'background:#6FDCB0' : 'background:rgba(255,255,255,.14)') }));
+      line: i === 1 ? 'background:transparent;border-top:3px dashed rgba(255,255,255,.18);height:0' : (s.on === 'true' ? 'background:#6FDCB0' : 'background:rgba(255,255,255,.14)') }));
     const next = stops.find(s => s.on !== 'true');
     return {
       areas, route, jobsLeft: jobs(stops), routeAria: stops.map(s => s.n + ' ' + s.name + (s.on === 'true' ? ', done' : '')).join('; '),

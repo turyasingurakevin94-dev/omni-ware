@@ -15,7 +15,7 @@ hd = head('Item passport', circ('Funnel.dc.html', 'back', 'Back to the Funnel'),
 
 gate_row = '''      <a href="{{g.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 0 10px; border-radius: 16px">
         <span style="width: 42px; height: 42px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; {{g.well}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{g.icon}}"></path></svg></span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{g.label}}</span><span style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {{g.subInk}}">{{g.state}}</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700">{{g.label}}</span><span style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {{g.subInk}}">{{g.state}}</span></span>
         <span style="flex: none; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; {{g.chip}}">{{g.chipWord}}</span>
       </a>'''
 keep = '''      <sc-if value="{{hasAuto}}" hint-placeholder-val="{{ true }}">
@@ -86,9 +86,9 @@ script = '''class Component extends DCLogic {
     return {
       gates, ladder, hasAuto: auto > 0, autoN: auto, autoWord: auto === 1 ? 'it' : 'both',
       keepAll: () => this.setState({ kept: true }),
-      doneLine: done + ' of 6 done',
+      doneLine: done + ' of 6 kept' + (auto ? ' · ' + auto + ' to check' : ''),
       gapLine: gaps + ' gaps before Ruth',
-      fixLabel: 'Fix ' + gaps + ' gaps',
+      fixLabel: auto ? 'Check ' + auto + ', fix ' + gaps + ' gaps' : 'Fix ' + gaps + ' gaps',
       stripAria: gates.map(g => g.label + ': ' + S[g.s].word).join(', ')
     };
   }

@@ -6,7 +6,7 @@ field = ('    <label style="display: flex; align-items: center; gap: 10px; heigh
 sorts = '''    <div role="radiogroup" aria-label="Sort" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: rgba(255,255,255,.08)">
       <sc-for list="{{sorts}}" as="s" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="{{s.style}}">{{s.label}}</button></sc-for>
     </div>'''
-hd = home_head('Suppliers <span class="m" style="font-size: 15px; color: #8D99B5">6</span>', 'Who sells what, and how they score', right, field + '\n' + sorts, gap=14)
+hd = home_head('Suppliers <span class="m" style="font-size: 15px; color: #A9B3CC">6</span>', 'Who sells what, and how they score', right, field + '\n' + sorts, gap=14)
 srow = '''        <a href="{{s.href}}" style="display: flex; align-items: center; gap: 12px; padding: 12px 10px; border-radius: 16px; border-top: {{s.rule}}">
           <span style="width: 42px; height: 42px; flex: none; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{s.ini}}</span>
           <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px">

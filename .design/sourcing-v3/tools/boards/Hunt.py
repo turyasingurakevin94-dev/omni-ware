@@ -5,7 +5,7 @@ hd = head('Hunt it', circ('Main.dc.html', 'back', 'Back to Today'), '', pic)
 
 sup_row = '''      <button type="button" role="checkbox" aria-checked="{{s.on}}" onClick="{{s.toggle}}" style="all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px">
         <span style="width: 42px; height: 42px; flex: none; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{s.ini}}</span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{s.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sells}} · {{s.why}}</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700">{{s.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sells}} · {{s.why}}</span></span>
         <span style="width: 28px; height: 28px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; {{s.box}}">''' + svg('tick', 15, 3) + '''</span>
       </button>'''
 bd = body('\n'.join([
@@ -38,7 +38,7 @@ script = '''class Component extends DCLogic {
       sups,
       pickedLine: asked ? 'Asked ' + n + ' on WhatsApp' : n ? n + ' picked' : 'Nobody picked yet',
       askLabel: asked ? 'Asked · answers come to Proposals' : n ? 'Slide to ask ' + n + ' on WhatsApp' : 'Pick who to ask first',
-      slideOff: String(!n || asked), slideOpacity: !n || asked ? '.5' : '1',
+      slideOff: String(!n || asked), slideOpacity: !n || asked ? '.72' : '1',
       ask: () => { if (n && !asked) this.setState({ asked: true }); }
     };
   }

@@ -17,7 +17,7 @@ twin = '''    <div style="''' + LIST + '''; padding: 6px">
       <sc-if value="{{decided}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px; min-height: 42px; margin: 2px 6px 8px; padding: 0 12px; border-radius: 12px; {{resultStyle}}"><span style="flex: 1; font-size: 12px; font-weight: 700">{{result}}</span><button type="button" onClick="{{undo}}" style="all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: #16203C">Undo</button></div></sc-if>
     </div>'''
 teach = '''    <div style="display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 20px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD">
-      <input value="welded mesh" aria-label="Teach a name" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600">
+      <input value="welded mesh" aria-label="Teach a name" style="flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: transparent; font: inherit; font-size: 15px; font-weight: 600">
       <button type="button" onClick="{{teach}}" style="all: unset; cursor: pointer; height: 40px; padding: 0 16px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">{{teachLabel}}</button>
     </div>'''
 bd = body('\n'.join([

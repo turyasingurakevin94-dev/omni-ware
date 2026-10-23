@@ -13,7 +13,7 @@ hd = head('Rival run · on the walk', circ('MarketRun.dc.html', 'back', 'Back to
 row_html = '''      <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border-top: {{r.rule}}">
         <div style="display: flex; align-items: center; gap: 12px">
           <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
-            <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span>
+            <span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span>
             <span style="display: flex; align-items: center; gap: 6px; min-width: 0"><span style="flex: none; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; {{r.whyStyle}}">{{r.why}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.last}}</span></span>
           </span>
           <sc-if value="{{r.isDone}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{r.undo}}" aria-label="{{r.undoAria}}" style="all: unset; cursor: pointer; flex: none; height: 32px; padding: 0 12px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px">''' + svg('tick', 12, 3) + '''{{r.doneWord}}<span style="color: #1C2233; font-weight: 600"> · Undo</span></button></sc-if>
@@ -35,8 +35,7 @@ row_html = '''      <div style="display: flex; flex-direction: column; gap: 8px;
 all_btn = '<sc-if value="{{canAll}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{allSame}}" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: #16203C; font-weight: 700">' + svg('M2 12.5l4.5 4.5L16 7.5M10 16l1 1 9.5-9.5', 14, 2.4) + 'All the same · <span class="m">{{allN}}</span></button></sc-if>'
 toast = '''    <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}"><div role="status" style="display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; border-radius: 16px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 600">''' + svg('tick', 16, 2.6, '#6FDCB0') + '''<span style="flex: 1">{{toast}}</span><button type="button" onClick="{{undoAll}}" style="all: unset; cursor: pointer; padding: 4px 8px; color: #6FDCB0; font-weight: 700">Undo</button></div></sc-if>'''
 bd = body('\n'.join([
-    sec('Picked by sales and money at stake', all_btn, first=True),
-    '    <span style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">Swipe a row: right for the same price, left for a new one</span>',
+    sec('Picked by sales and money at stake' + '<span role="img" aria-label="Rows swipe: right for the same price, left for a new one" style="display: inline-flex; vertical-align: -3px; margin-left: 6px; color: #5F6980">' + svg('M5 7h24M9 3 5 7l4 4M25 3l4 4-4 4', 24, 1.8).replace('viewBox="0 0 24 24"', 'viewBox="0 0 34 14"').replace('width="24" height="24"', 'width="30" height="14"') + '</span>', all_btn, first=True),
     toast,
     '    <div style="' + LIST + '; padding: 0 6px">\n      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">\n' + row_html + '\n      </sc-for>\n    </div>',
     '    <span style="padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">Saved on this phone first, with today’s date</span>',

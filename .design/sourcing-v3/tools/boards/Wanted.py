@@ -16,15 +16,15 @@ row_html = '''      <div style="display: flex; flex-direction: column; gap: 10px
             <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.what}} <span class="m" style="color: #5F6980">{{a.qty}}</span></span>
             <span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{a.from}}</span>
           </span>
-          <span class="m" style="flex: none; font-size: 11px; font-weight: 600; color: #9AA1AE">{{a.when}}</span>
+          <span class="m" style="flex: none; font-size: 11px; font-weight: 600; color: #5F6980">{{a.when}}</span>
         </div>
         <sc-if value="{{a.hasHint}}" hint-placeholder-val="{{ false }}">
           <span style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: #E4E6FA; color: #3A3F9B; font-size: 12px; font-weight: 700">''' + svg('item', 15, 2) + '''{{a.hint}}</span>
         </sc-if>
         <sc-if value="{{a.open}}" hint-placeholder-val="{{ true }}">
           <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
-            <button type="button" onClick="{{a.aside}}" style="all: unset; cursor: pointer; height: 42px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-size: 13px; font-weight: 700; color: #5F6980; display: flex; align-items: center; justify-content: center">{{a.asideLabel}}</button>
-            <button type="button" onClick="{{a.go}}" style="all: unset; cursor: pointer; height: 42px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-size: 13px; font-weight: 700; color: #16203C; display: flex; align-items: center; justify-content: center; gap: 6px">{{a.goLabel}}''' + svg('chev', 14, 2.4) + '''</button>
+            <button type="button" onClick="{{a.aside}}" style="all: unset; cursor: pointer; height: 44px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-size: 13px; font-weight: 700; color: #16203C; display: flex; align-items: center; justify-content: center">{{a.asideLabel}}</button>
+            <button type="button" onClick="{{a.go}}" style="all: unset; cursor: pointer; height: 44px; border-radius: 999px; background: #16203C; font-size: 13px; font-weight: 700; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 6px">{{a.goLabel}}''' + svg('chev', 14, 2.4) + '''</button>
           </div>
         </sc-if>
         <sc-if value="{{a.done}}" hint-placeholder-val="{{ false }}">

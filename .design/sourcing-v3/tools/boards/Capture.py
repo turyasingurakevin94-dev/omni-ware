@@ -5,11 +5,11 @@ def ktile(href, label, sub, icon, tint):
     return (f'<a href="{href}" style="height: 96px; border-radius: 18px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between">'
             f'<span style="width: 36px; height: 36px; border-radius: 11px; background: {bg}; color: {ink}; display: flex; align-items: center; justify-content: center">{svg(icon, 18, 2.2)}</span>'
             f'<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 700">{label}</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">{sub}</span></span></a>')
-dots = ''.join(f'<span style="width: 22px; height: 22px; flex: none; border-radius: 999px; background: {c}; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">{n}</span>' + ('<span style="flex: 1; height: 3px; margin: 0 3px; border-radius: 2px; background: rgba(255,255,255,.14)"></span>' if n < 4 else '')
-               for n, c in [(1, '#A9AEF0'), (2, '#E7A6D6'), (3, '#A9AEF0'), (4, '#E7A6D6')])
+dots = ''.join(f'<span style="width: 22px; height: 22px; flex: none; border-radius: 999px; background: {c}; color: #16203C; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">{n}</span>' + ('<span style="flex: 1; height: 3px; margin: 0 3px; border-radius: 2px; background: rgba(255,255,255,.14)"></span>' if n < 3 else '')
+               for n, c in [(1, '#A9AEF0'), (2, '#E7A6D6'), (3, '#E7A6D6')])
 walk = f'''    <a href="MarketRun.dc.html" style="border-radius: 22px; background: radial-gradient(120% 90% at 100% 0%, #2B3866 0%, #16203C 58%); color: #FFFFFF; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 14px 30px rgba(22,32,60,.22)">
-      <span style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">Today’s walk · start at Owino</span><span style="font-size: 12px; font-weight: 600; color: #6FDCB0"><span class="m">19</span> jobs</span></span>
-      <span role="img" aria-label="4 stops" style="display: flex; align-items: center">{dots}</span>
+      <span style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 15px; font-weight: 700">Today’s walk · start at Owino</span><span style="font-size: 12px; font-weight: 600; color: #6FDCB0"><span class="m">16</span> jobs</span></span>
+      <span role="img" aria-label="3 stops" style="display: flex; align-items: center">{dots}</span>
     </a>'''
 tiles = ('    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">'
          + ktile('SupplierPrice.dc.html', 'Supplier price', 'price, steps, pack', 'tag', 'indigo')

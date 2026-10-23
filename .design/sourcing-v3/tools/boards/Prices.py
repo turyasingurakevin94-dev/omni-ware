@@ -2,7 +2,7 @@ from _shared import *
 
 big = '''      <span role="img" aria-label="78 percent of 400 lines fresh: 312" style="position: relative; width: 124px; height: 124px; flex: none; display: block">
         <svg width="124" height="124" viewBox="0 0 124 124" aria-hidden="true"><circle cx="62" cy="62" r="52" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"></circle><circle cx="62" cy="62" r="52" fill="none" stroke="#6FDCB0" stroke-width="10" stroke-linecap="round" stroke-dasharray="254.8 326.7" transform="rotate(-90 62 62)"></circle></svg>
-        <span style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">78<span style="font-size: 16px; color: #8D99B5">%</span></span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2"><span class="m">312</span> of <span class="m">400</span></span></span>
+        <span style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><span class="m" style="font-size: 28px; font-weight: 600; line-height: 1">78<span style="font-size: 16px; color: #A9B3CC">%</span></span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2"><span class="m">312</span> of <span class="m">400</span></span></span>
       </span>'''
 def t(fig, label, col='', icon='tag', icol='#B3BCD2'):
     c = f'; color: {col}' if col else ''
@@ -10,7 +10,7 @@ def t(fig, label, col='', icon='tag', icol='#B3BCD2'):
             f'<span style="display: flex; flex-direction: column; gap: 1px"><span class="m" style="font-size: 18px; font-weight: 600; line-height: 1{c}">{fig}</span><span style="font-size: 11px; font-weight: 600; color: #B3BCD2">{label}</span></span></span>')
 tiles = ('      <div style="flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr; gap: 6px">'
          + t('4/6', 'today’s share', '', 'tick', '#B3BCD2') + t('2', 'proposals', '#F5B26B', 'tag', '#F5B26B') + '</div>')
-pic = f'    <div style="display: flex; align-items: center; gap: 18px">\n{big}\n{tiles}\n    </div>\n' + stats([('392,000', 'a month on the table', '#6FDCB0'), ('+3.0%', 'cement cost', '#F5B26B'), ('+2.0%', 'iron sheet cost', '#F5B26B')])
+pic = f'    <div style="display: flex; align-items: center; gap: 18px">\n{big}\n{tiles}\n    </div>\n' + stats([('392,000', 'a month on the table', '#6FDCB0'), ('+3.0%', 'cement cost', '#F5B26B'), ('−2.0%', 'iron sheet cost', '#6FDCB0')])
 hd = home_head('Prices', 'Each line has its own fresh window', '', pic)
 tabs = '''    <div role="tablist" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: #EFECE6">
       <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}} <span class="m">{{t.n}}</span></button></sc-for>
@@ -26,7 +26,7 @@ radar_row = '''        <a href="{{r.href}}" style="display: flex; align-items: c
         </a>'''
 share_row = '''        <div style="display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 0 10px; border-top: {{s.rule}}">
           <span style="width: 42px; height: 42px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; {{s.dot}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.mark}}"></path></svg></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{s.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sup}}</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700">{{s.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sup}}</span></span>
           <span class="m" style="flex: none; font-size: 14px; font-weight: 600">{{s.price}}</span>
         </div>'''
 inner = hd + '\n  <div style="padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">\n' + '\n'.join([

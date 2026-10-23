@@ -10,7 +10,7 @@ line = '''    <div role="img" aria-label="Cost 118,000, our price {{price}}, Kik
         </span>
       </sc-for>
     </div>'''
-pic = title_block('Wire mesh BRC A142', 'From Moses Lubega · <span class="m" style="color: #FFFFFF">2</span> h ago · 5 of 6 checks', face('ML', 'sky', 52, '0 0 0 3px #1D2747, 0 0 0 5px rgba(111,220,176,.55)')) + '\n' + line + '\n' + stats([('{{price}}', 'shelf price', None), ('{{margin}}', 'margin a sheet', '#6FDCB0'), ('{{vsRival}}', '{{vsWord}}', None)])
+pic = title_block('Wire mesh BRC A142', 'From Moses Lubega · <span class="m" style="color: #FFFFFF">2</span> h ago · sent with <span class="m" style="color: #FFFFFF">5</span> of 6 checks', face('ML', 'sky', 52, '0 0 0 3px #1D2747, 0 0 0 5px rgba(111,220,176,.55)')) + '\n' + line + '\n' + stats([('{{price}}', 'shelf price', None), ('{{margin}}', 'margin a sheet', '#6FDCB0'), ('{{vsRival}}', '{{vsWord}}', None)])
 hd = head('Manager app · new item', circ('Main.dc.html', 'close', 'Close'), '', pic, gap=14)
 
 fact_rows = '\n'.join(row(k, v, icon_well(ic, 'plain'), f'<span class="m" style="flex: none; font-size: 12px; font-weight: 600; color: #5F6980">{n}</span>' if n else '')
@@ -69,7 +69,7 @@ script = '''class Component extends DCLogic {
       showBack: this.state.back,
       toggleBack: () => this.setState({ back: !this.state.back }),
       backLabel: reason ? 'Send it back · ' + reason.toLowerCase() : 'Pick what needs fixing',
-      backStyle: reason ? 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #16203C' : 'background:#F1EEE8;color:#9AA1AE;pointer-events:none',
+      backStyle: reason ? 'background:#FFFFFF;color:#16203C;box-shadow:inset 0 0 0 1.5px #16203C' : 'background:#F1EEE8;color:#5F6980;pointer-events:none',
       less: () => this.setState({ pct: Math.max(0, pct - 1) }),
       more: () => this.setState({ pct: pct + 1 })
     };

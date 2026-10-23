@@ -58,7 +58,7 @@ script = '''class Component extends DCLogic {
       shown: n ? fmt(n) : '0', unitWord: unit || '',
       addStep: () => this.setState({ extra: true }),
       saved, notSaved: !saved, cta,
-      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF',
+      ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22',
       save: () => { if (ready) this.setState({ saved: true }); },
       undo: () => this.setState({ saved: false }),
       savedWord: has ? 'Saved · ' + fmt(n) + ' ' + (unit || '') : 'Saved · Owino doesn’t sell it'

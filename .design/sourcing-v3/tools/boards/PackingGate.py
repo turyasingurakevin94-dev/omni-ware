@@ -5,7 +5,7 @@ def ptile(top, fig, word, hi=False):
     sub = 'color: #5F6980' if hi else 'color: #B3BCD2'
     return (f'<span style="flex: 1; min-width: 0; height: 74px; border-radius: 16px; {bg}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px">'
             f'<span style="font-size: 11px; font-weight: 700; {sub}">{top}</span><span class="m" style="font-size: 20px; font-weight: 600; line-height: 1">{fig}</span><span style="font-size: 11px; font-weight: 600; {sub}">{word}</span></span>')
-arrow = f'<span style="flex: none; color: #8D99B5; display: flex">{svg("chev", 16, 2.4)}</span>'
+arrow = f'<span style="flex: none; color: #A9B3CC; display: flex">{svg("chev", 16, 2.4)}</span>'
 chain = ('    <div role="img" aria-label="{{chainAria}}" style="display: flex; align-items: center; gap: 4px">'
          + ptile('Carton', '× {{boxes}}', 'boxes') + arrow + ptile('Box', '× {{pcs}}', 'pieces') + arrow + ptile('Piece', '1', 'we sell', True) + '</div>')
 pic = title_block('Self-drilling screws 10×25', 'Template · drawn for screws') + '\n' + chain
@@ -13,7 +13,7 @@ hd = head('How it is packed', circ('Passport.dc.html', 'back', 'Back to the pass
 
 sup_row = '''      <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-top: {{r.rule}}">
         <span style="width: 42px; height: 42px; flex: none; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{r.ini}}</span>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">{{r.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">sells {{r.pack}}</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700">{{r.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">sells {{r.pack}}</span></span>
         <span style="flex: none; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; {{r.chip}}">{{r.says}}</span>
       </div>'''
 bd = body('\n'.join([
@@ -50,7 +50,7 @@ script = '''class Component extends DCLogic {
       chainAria: '1 carton holds ' + boxes + ' boxes; 1 box holds ' + pcs + ' pieces; we sell the piece',
       lessPcs: step('pcs', -50, 50), morePcs: step('pcs', 50, 50), lessBox: step('boxes', -10, 10), moreBox: step('boxes', 10, 10),
       okLabel: ok ? 'Packing is right' : failing.length > 1 ? 'Doesn’t fit ' + failing.join(' or ') : 'Doesn’t fit ' + failing[0] + '’s pack',
-      okStyle: ok ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF;pointer-events:none'
+      okStyle: ok ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22;pointer-events:none'
     };
   }
 }'''

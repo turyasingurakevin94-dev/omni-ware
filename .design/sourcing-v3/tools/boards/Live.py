@@ -7,7 +7,7 @@ told = lst('\n'.join(row(n, w, face(i, t), pushed) for i, t, n, w in [
     ('GA', 'sky', 'Grace Akello', 'Sales · tells Kato Construction'),
     ('BO', 'manager', 'Brian Ouma', 'Sales · tells Lubowa Builders'),
     ('AN', 'teal', 'Aisha Namutebi', 'Agent · tells Mukono Roofing'),
-    ('DO', 'indigo', 'Denis Okello', 'Buyer · decides the first batch, ≈40 suggested')]))
+    ('DO', 'indigo', 'Denis Okello', 'Buyer · first batch, ≈40')]))
 cust = lst('\n'.join(row(n, f'{who} tells them', icon_well('user', 'plain'), f'<span style="flex: none; display: flex; align-items: center; gap: 8px"><span style="width: 56px; height: 6px; border-radius: 3px; background: #EFECE6; display: block"><span style="display: block; height: 6px; border-radius: 3px; background: #5F6980; width: {round(q/20*100)}%"></span></span><span class="m" style="width: 22px; text-align: right; font-size: 14px; font-weight: 600">{q}</span></span>')
                      for n, who, q in [('Kato Construction', 'Grace', 20), ('Lubowa Builders', 'Brian', 12), ('Mukono Roofing', 'Aisha', 8)]))
 bd = body('\n'.join([sec('Already told', 'a push each', first=True), told, sec('The customers who asked', 'sheets'), cust,

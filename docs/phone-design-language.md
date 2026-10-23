@@ -162,6 +162,11 @@ are unchanged.
   Mint = done; amber = a gap; mint striped = filled for you, waiting for a look;
   faint = not started (the Markup is Ruth's). The same six, as a 42px ring of six
   arcs with "n/6" in the middle, lead every item line in the Funnel.
+- **One meaning for "n/6"**: n counts only the checks a person has kept, or the
+  app has confirmed from the books (suppliers priced, the markup set). A check
+  filled for you is never counted: it is the dashed arc, and the words beside
+  the figure say "· 2 to check". Every screen that shows an item's count
+  (Passport, Funnel, Today, Certify, the gap walk, the Manager's item) follows it.
 - **Filled for you**: a check the app filled from what it knows (packing from
   the supplier's price row, the aisle from look-alikes, a hold from real sales)
   is drawn as a white tile with a 1.5px green outline and the word **Check**, and
@@ -187,6 +192,22 @@ are unchanged.
   days in mono beside it.
 - **The walk**: numbered stop dots (supplier indigo-light, rival plum-light,
   done mint) joined by 3px lines, dashed where the area changes.
+
+Two rules from the third review, which every Sourcing board and the build follow:
+
+- **A drawn size is not the hit area.** A chip, a tick circle or a text link
+  may be drawn smaller than 44px, but its tap area never is: every `a`,
+  `button` and radio, tab or switch carries a transparent `::before` of at
+  least 44 × 44 centred on it (`ow.py`'s page CSS; the build lifts the same
+  rule). A list that scrolls sideways gets 6px of padding above and below so
+  the tap area is not clipped, and a fade on its right edge so it reads as
+  more.
+- **Figures in mono, wherever they are.** Digits come from IBM Plex Mono by
+  an `@font-face` named "OW Figures" with `unicode-range: U+0030-0039`, put in
+  front of Figtree, so a figure inside a sentence or a filled-in value is mono
+  without wrapping it. Item and people names (`.nm`) keep Figtree. Text never
+  goes lighter than #5F6980 on paper or white (#9AA1AE is gone); a disabled
+  red button is #F3D3CF with #8E2A22 words, not a faded red.
 
 Sourcing's hand-offs all end on the same done screen and track: **Sent → the
 person who decides (pulsing ring) → what follows**: Send to Ruth, Ask Kiseka,

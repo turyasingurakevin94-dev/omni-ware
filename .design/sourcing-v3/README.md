@@ -250,3 +250,29 @@ The canvas now opens on a wide plan board, as the Store's does, with four rows o
 - **Today's "Waiting on you":** back to lines, each keeping its small picture.
 
 Screenshot one artboard: `node .design/shot.mjs .design/sourcing-v3/Main.dc.html`. Holes stay unfilled; it shows layout only.
+
+## Round 6: the third review (REVIEW-3.md), version 53
+
+| Finding | What changed |
+|---|---|
+| B1 "n of 6" meant different things | n counts only kept checks (or ones the app confirmed from the books). Filled-for-you checks are a dashed arc with "· n to check". Wire mesh reads 1/6 · 2 to check on Passport, Funnel and the gap walk; 5 of 6 once sent (ManagerItem, SendToManager). Iron sheet reads 4/6 · 1 to check on Today, the Funnel and Certify. The gap walk now starts with a Check step ("Keep both"). |
+| B2 rule 10 | One page rule in `ow.py`: every control has a 44 × 44 `::before` hit area, whatever its drawn size. #9AA1AE is gone (#5F6980 on paper); disabled red buttons are #F3D3CF with #8E2A22 words; the navy greys under 4.5:1 are #A9B3CC. Short inputs grew to 44px. `render.mjs` gained `AUDIT=1`, which fails any target under 44 or text under 4.5:1 (3:1 for large text); all 45 boards pass. |
+| S1 ManagerRule's left-out item | Paint roller 9" (room 14%, Fair; the rule needs Strong), the item already With Ruth in the Funnel. |
+| S2, S9 ManagerRule's state | Drawn as Ruth's saved rule ("since 23 Oct"); each 24-hour row has **Hold this one** beside **Change**; turned off, the log reads "Nothing on sale by a rule". |
+| S3 Kiseka on and off the walk | Off today's walk (visited 2 days ago): 3 stops, 16 jobs (Owino 7, Kikuubo 5, Nateete 4) on Today, Capture and the walk. Kiseka's scorecard: red action "Ask about 5 old prices"; its 2 wanted and 1 photo are "For the next visit · Add to a walk". |
+| S4 and the shop's own asks | Named in the build plan under 0159: `supplier_visits`, `walk_stops`, `supplier_price_asks` (pushed `price.confirm`, answered as `supplier_proposals`). |
+| S5 Outbox | "They go up when the phone has signal". |
+| S6 Wanted | **Hunt it** navy, **Set aside** outlined. |
+| S7 figures in mono | Digits come from Plex Mono through an "OW Figures" `@font-face` (`unicode-range` digits only) in front of Figtree, so every figure is mono, filled-in values too; names (`.nm`) keep Figtree. |
+| S8 decision rights | `docs/decision-rights.md`: the hold (product.edit, Sourcing), the first batch (buy.restock, Denis), putting a new item on sale and the standing price rule (markup.set, Ruth), pinning to the agents' feed (`feed.pin`, Ruth, planned); 0159 reserved for Sourcing v3. |
+| S10 the swipe sentence | Gone from Visit and the rival run; a drawn swipe mark sits on the section head. |
+| P1 | Covered by B2. |
+| P2 | Iron sheet cost −2.0% (mint) on Prices. |
+| P3 | Live: "Buyer · first batch, ≈40". |
+| P4 | "Joseph sees each one in the log". |
+| P5 | The Plan board draws its arrows. |
+| P6 | Row titles sit 240px above their rows. |
+| P7 | SupplierConfirm's glow stays inside the frame. |
+| P8 | The Funnel's lane chips fade at the right edge. |
+
+The guide's Sourcing section (`docs/phone-design-language.md`) records the count rule, the hit-area rule and the mono-digits rule.

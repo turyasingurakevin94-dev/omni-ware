@@ -104,7 +104,7 @@ script = '''class Component extends DCLogic {
       agree: () => this.setState({ agreed: !agreed }), agreedStr: String(agreed), agreeLabel: agreed ? 'Kiseka agreed' : 'They agreed',
       agreeStyle: 'all:unset;cursor:pointer;height:42px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' + (agreed ? 'background:#E4F4EA;color:#0F6B43' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #E6E3DD'),
       choose: () => { if (ready) this.setState({ chosen: true }); }, cta,
-      ctaStyle: chosen ? 'background:#E4F4EA;color:#0F6B43' : ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:rgba(201,58,48,.45);color:#FFFFFF'
+      ctaStyle: chosen ? 'background:#E4F4EA;color:#0F6B43' : ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22'
     };
   }
 }'''

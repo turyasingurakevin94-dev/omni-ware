@@ -10,7 +10,7 @@ bar = '''    <sc-if value="{{isOpen}}" hint-placeholder-val="{{ true }}">
         <span style="flex: 1; background: #F5B26B"></span><span style="flex: 9; background: rgba(255,255,255,.22)"></span><span style="flex: 6; background: rgba(255,255,255,.4)"></span><span style="flex: 4; background: rgba(255,255,255,.6)"></span><span style="flex: 3; background: #FFFFFF"></span><span style="flex: 2; background: repeating-linear-gradient(135deg, rgba(245,178,107,.8) 0 4px, transparent 4px 8px)"></span><span style="flex: 5; background: #6FDCB0"></span>
       </div>
     </div>
-    <div style="display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px; padding: 0 16px">
+    <div style="display: flex; gap: 6px; overflow-x: auto; margin: -6px -20px; padding: 6px 20px; -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 44px), transparent)">
       <sc-for list="{{chips}}" as="c" hint-placeholder-count="8"><button type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}"><span style="width: 8px; height: 8px; border-radius: 999px; {{c.dot}}"></span>{{c.label}} <span class="m">{{c.n}}</span></button></sc-for>
     </div>
     </sc-if>
@@ -25,7 +25,7 @@ hd = home_head('Funnel', 'Every new item passes six checks', right, seg_nav + '\
 
 item_row = '''        <a href="{{it.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px; border-radius: 16px">
           <span role="img" aria-label="{{it.aria}}" style="position: relative; width: 42px; height: 42px; flex: none; border-radius: 999px; background: {{it.ring}}"><span class="m" style="position: absolute; inset: 5px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600">{{it.done}}/6</span></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.sub}}</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.sub}}</span></span>
           <span style="flex: none; height: 30px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; {{it.rightStyle}}">{{it.right}}</span>
         </a>'''
 groups = '''    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
@@ -44,14 +44,19 @@ script = '''class Component extends DCLogic {
   constructor(p) { super(p); this.state = { lane: 'all', view: 'open' }; }
   renderVals() {
     // one gate string per item, the same on every screen: Photo Packing Suppliers Verdict Name&aisle Markup
-    const COL = { d: '#0F6B43', g: '#95530C', t: '#E0DCD4' };
-    const WORD = { d: 'done', g: 'a gap', t: 'not started' };
+    // d kept, a filled for you and not kept yet (dashed, never counted), g a gap, t not started
+    const COL = { d: '#0F6B43', a: '#0F6B43', g: '#95530C', t: '#E0DCD4' };
+    const WORD = { d: 'done', a: 'filled for you, to check', g: 'a gap', t: 'not started' };
     const GATES = ['Photo', 'Packing', 'Suppliers', 'Verdict', 'Name and aisle', 'Markup'];
     const SOFT = 'background:#F1EEE8;color:#5F6980', GO = 'background:#16203C;color:#FFFFFF';
     const mk = (o) => {
       const s = o.gates.split('');
       const parts = [];
-      s.forEach((k, i) => { const a = i * 60, b = a + 60; parts.push('#FFFFFF ' + a + 'deg ' + (a + 5) + 'deg', COL[k] + ' ' + (a + 5) + 'deg ' + (b - 5) + 'deg', '#FFFFFF ' + (b - 5) + 'deg ' + b + 'deg'); });
+      s.forEach((k, i) => {
+        const a = i * 60, b = a + 60;
+        if (k === 'a') { for (let d = a; d < b; d += 10) parts.push('#FFFFFF ' + d + 'deg ' + (d + 5) + 'deg', COL[k] + ' ' + (d + 5) + 'deg ' + (d + 10) + 'deg'); return; }
+        parts.push('#FFFFFF ' + a + 'deg ' + (a + 5) + 'deg', COL[k] + ' ' + (a + 5) + 'deg ' + (b - 5) + 'deg', '#FFFFFF ' + (b - 5) + 'deg ' + b + 'deg');
+      });
       return {
         ...o, href: o.href || o.goHref || 'Funnel.dc.html',
         ring: 'conic-gradient(' + parts.join(',') + ')', done: s.filter(k => k === 'd').length,
@@ -71,7 +76,7 @@ script = '''class Component extends DCLogic {
         mk({ name: 'Ridge cap G28, maroon', sub: 'Asked 2 days ago', gates: 'ttttdt', status: 'Waiting on 3' })
       ] },
       { key: 'quoted', label: 'Quoted', n: 4, items: [
-        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 3 customers waiting', gates: 'gddgdt', href: 'Passport.dc.html', go: 'Fix 2 gaps', goHref: 'GapWalk.dc.html' }),
+        mk({ name: 'Wire mesh BRC A142', sub: '2 prices · 2 to check · 3 customers waiting', gates: 'gadgat', href: 'Passport.dc.html', go: 'Fix 2 gaps', goHref: 'GapWalk.dc.html' }),
         mk({ name: 'Self-drilling screws 10×25', sub: '2 prices · Faith Nambi asked', gates: 'dgdtdt', go: 'Packing', goHref: 'PackingGate.dc.html' })
       ] },
       { key: 'ready', label: 'Ready', n: 3, items: [
@@ -86,7 +91,7 @@ script = '''class Component extends DCLogic {
     ].map(g => ({ ...g, ink: g.ink || 'color:#5F6980', more: g.n - g.items.length, hasMore: g.n > g.items.length }));
     const certify = [
       { key: 'certify', label: 'Top sellers with gaps', n: 59, items: [
-        mk({ name: 'Iron sheet G28, 3m box profile', sub: '#1 by sales · needs a photo', gates: 'gddgdd', go: 'Certify', goHref: 'Certify.dc.html' }),
+        mk({ name: 'Iron sheet G28, 3m box profile', sub: '#1 by sales · needs a photo · 1 to check', gates: 'gddadd', go: 'Certify', goHref: 'Certify.dc.html' }),
         mk({ name: 'Cement 50kg', sub: '#2 by sales · one supplier', gates: 'ddgddd', status: '1 gap' }),
         mk({ name: 'Y12 rebar, 12m', sub: '#3 by sales · needs packing', gates: 'dgdddd', status: '1 gap' })
       ] }

@@ -82,8 +82,16 @@ def page(title, body, script, data_props='{"$preview":{"width":390,"height":844}
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
 body{{margin:0}}
+/* figures in the mono face everywhere, words in Figtree: digits come from Plex Mono */
+@font-face{{font-family:'OW Figures';font-weight:400;src:url(https://fonts.gstatic.com/s/ibmplexmono/v20/-F63fjptAgt5VM-kVkqdyU8n1i8q1w.woff2) format('woff2');unicode-range:U+0030-0039}}
+@font-face{{font-family:'OW Figures';font-weight:500;src:url(https://fonts.gstatic.com/s/ibmplexmono/v20/-F6qfjptAgt5VM-kVkqdyU8n3twJwlBFgg.woff2) format('woff2');unicode-range:U+0030-0039}}
+@font-face{{font-family:'OW Figures';font-weight:600 700;src:url(https://fonts.gstatic.com/s/ibmplexmono/v20/-F6qfjptAgt5VM-kVkqdyU8n3vAOwlBFgg.woff2) format('woff2');unicode-range:U+0030-0039}}
+.nm{{font-family:Figtree,system-ui,sans-serif}}
 a{{color:inherit;text-decoration:none}}a:hover{{color:inherit}}
-input::placeholder{{color:#9AA1AE}}
+input::placeholder{{color:#6B7480}}
+/* rule 10: a drawn size is not the hit area. Every control reaches at least 44 x 44 */
+:where(a,button,[role=radio],[role=tab],[role=switch]):not([style*="position: absolute"]):not([style*="position:absolute"]){{position:relative!important}}
+:where(a,button,[role=radio],[role=tab],[role=switch])::before{{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}}
 *{{scrollbar-width:none}}*::-webkit-scrollbar{{display:none}}
 .m{{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}}
 @keyframes owPop{{0%{{transform:scale(.6);opacity:0}}60%{{transform:scale(1.08);opacity:1}}100%{{transform:scale(1)}}}}
@@ -94,7 +102,7 @@ input::placeholder{{color:#9AA1AE}}
 @keyframes owChev{{0%,100%{{opacity:.35;transform:translateX(0)}}50%{{opacity:1;transform:translateX(4px)}}}}
 {extra_css}</style>
 </helmet>
-<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: 'OW Figures', Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
 {body}
 </div>
 </x-dc>
@@ -135,7 +143,7 @@ def title_block(title, sub='', lead=''):
     """A big title on navy with an optional leading badge (initials, icon)."""
     return f'''    <div style="display: flex; align-items: center; gap: 14px">
       {lead}
-      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">{title}</span>{f'<span style="font-size: 12px; font-weight: 600; color: #B3BCD2">{sub}</span>' if sub else ''}</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">{title}</span>{f'<span style="font-size: 12px; font-weight: 600; color: #B3BCD2">{sub}</span>' if sub else ''}</span>
     </div>'''
 
 
@@ -164,15 +172,24 @@ def stats(cells, height=64):
             f'background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07)">' + ''.join(out) + '</div>')
 
 
-def ring(frac, label, size=48, stroke=5, col='#6FDCB0', track='rgba(255,255,255,.12)', fs=12, aria=''):
+def ring(frac, label, size=48, stroke=5, col='#6FDCB0', track='rgba(255,255,255,.12)', fs=12, aria='', part=0):
+    """part: a further share drawn as a dashed arc after the solid one, for checks
+    filled for you and not yet kept (they never count in the figure)."""
     r = (size - stroke) / 2 - 1
     c = 2 * 3.14159 * r
     on = round(c * max(0, min(1, frac)), 1)
+    extra = ''
+    if part:
+        pl = c * part
+        n = max(1, int((pl + 2) // 4.5))
+        extra = (f'<circle cx="{size/2}" cy="{size/2}" r="{r:.1f}" fill="none" stroke="{col}" stroke-width="{stroke}" stroke-opacity=".6" '
+                 f'stroke-dasharray="{' '.join(['2.5'] * n).replace(' ', ' 2 ')} {round(c, 1)}" '
+                 f'transform="rotate({round(-90 + frac * 360 + 3, 1)} {size/2} {size/2})"></circle>')
     return (f'<span role="img" aria-label="{aria or label}" style="position: relative; width: {size}px; height: {size}px; flex: none; display: block">'
             f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" aria-hidden="true">'
             f'<circle cx="{size/2}" cy="{size/2}" r="{r:.1f}" fill="none" stroke="{track}" stroke-width="{stroke}"></circle>'
             f'<circle cx="{size/2}" cy="{size/2}" r="{r:.1f}" fill="none" stroke="{col}" stroke-width="{stroke}" stroke-linecap="round" '
-            f'stroke-dasharray="{on} {round(c,1)}" transform="rotate(-90 {size/2} {size/2})"></circle></svg>'
+            f'stroke-dasharray="{on} {round(c,1)}" transform="rotate(-90 {size/2} {size/2})"></circle>{extra}</svg>'
             f'<span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; {MONO}; font-size: {fs}px; font-weight: 600">{label}</span></span>')
 
 
@@ -205,7 +222,7 @@ def row(title, sub='', lead='', right='', href=None, onclick=None, min_h=66, sub
     """One line in a list: lead (icon well or face), title over subtitle, something on the right."""
     sub_html = f'<span style="font-size: 12px; font-weight: 600; {sub_style}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{sub}</span>' if sub else ''
     inner = (f'{lead}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">'
-             f'<span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{title}</span>{sub_html}</span>{right}')
+             f'<span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{title}</span>{sub_html}</span>{right}')
     base = f'display: flex; align-items: center; gap: 12px; min-height: {min_h}px; padding: 0 10px; border-radius: 16px'
     al = f' aria-label="{aria}"' if aria else ''
     if href:
@@ -215,7 +232,7 @@ def row(title, sub='', lead='', right='', href=None, onclick=None, min_h=66, sub
     return f'      <div style="{base}">{inner}</div>'
 
 
-def chev(col='#9AA1AE'):
+def chev(col='#6B7480'):
     return f'<span style="flex: none; display: flex">{svg("chev", 16, 2.4, col)}</span>'
 
 

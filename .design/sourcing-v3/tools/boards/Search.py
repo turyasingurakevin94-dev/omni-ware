@@ -8,7 +8,7 @@ modes = '''    <div role="radiogroup" aria-label="Picking an item for" style="di
 hd = head('Search and pick', circ('{{backHref}}', 'back', 'Back'), '', field + '\n' + modes, gap=12)
 res_row = '''        <a href="{{r.href}}" style="display: flex; align-items: center; gap: 12px; min-height: 62px; padding: 0 10px; border-radius: 16px">
           <span style="width: 42px; height: 42px; flex: none; border-radius: 13px; display: flex; align-items: center; justify-content: center; {{r.well}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg></span>
-          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{r.sub}}</span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{r.sub}}</span></span>
           ''' + chev() + '''
         </a>'''
 groups = '''    <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
