@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your desk</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
+  <div style="position: absolute; inset: 0 0 84px 0; overflow-y: auto">
+    <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 20px 22px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 20px; font-weight: 700">Your desk</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #FFFFFF">24</span> cards · <span class="m" style="color: #FFFFFF">7</span> are yours to stamp</span></span>
+        <span style="width: 46px; height: 46px; border-radius: 999px; background: #243052; box-shadow: 0 0 0 2px #16203C, 0 0 0 4px rgba(111,220,176,.55); font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center">ML</span>
+      </div>
+      <div role="tablist" aria-label="Trays" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <sc-for list="{{trays}}" as="t" hint-placeholder-count="4">
+          <button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="{{t.style}}">
+            <span style="position: relative; width: 52px; height: 40px; flex: none">
+              <span style="position: absolute; left: 0; right: 0; bottom: 0; height: 22px; border-radius: 8px; {{t.tray}}"></span>
+              <span style="position: absolute; left: 9px; right: 9px; bottom: 10px; height: 24px; border-radius: 5px; background: #FFFFFF; transform: rotate(-6deg); opacity: {{t.op2}}"></span>
+              <span style="position: absolute; left: 9px; right: 9px; bottom: 12px; height: 24px; border-radius: 5px; background: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,.25); opacity: {{t.op1}}"></span>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left"><span class="m" style="font-size: 22px; font-weight: 600; line-height: 1">{{t.n}}</span><span style="font-size: 12px; font-weight: 700; white-space: nowrap; {{t.ink}}">{{t.label}}</span></span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 17px; font-weight: 700">{{trayTitle}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{traySub}}</span></div>
+      <sc-for list="{{cards}}" as="c" hint-placeholder-count="3">
+        <div style="position: relative; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: #FFFFFF; box-shadow: 0 1px 0 #E6E3DD, 0 8px 18px rgba(22,32,60,.07)">
+          <span aria-hidden="true" style="position: absolute; left: 0; top: 16px; bottom: 16px; width: 4px; border-radius: 0 4px 4px 0; {{c.edge}}"></span>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">{{c.sub}}</span></span>
+            <span class="m" style="flex: none; font-size: 13px; font-weight: 600">{{c.worth}}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span role="img" aria-label="{{c.aria}}" style="flex: 1; display: flex; gap: 5px"><sc-for list="{{c.stamps}}" as="s" hint-placeholder-count="6"><i style="width: 22px; height: 22px; border-radius: 999px; box-sizing: border-box; {{s}}"></i></sc-for></span>
+            <a href="CardPhone.dc.html" style="flex: none; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; align-items: center; {{c.goStyle}}">{{c.go}}</a>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
+    <a href="DeskPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3"></path></svg>Today</a>
+    <a href="DeskPhone.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #1C2233; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h18v6H3zM3 14l3-8h12l3 8M9 14v2h6v-2"></path></svg>Desk</a>
+    <a href="DeskPhone.dc.html" aria-label="Capture" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #C93A30; color: #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(201,58,48,.35); border: 4px solid #F7F5F2; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+    <a href="ShelfPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M3 19h18M6 10V5h4v5M14 19v-6h4v6"></path></svg>New-in</a>
+    <a href="ListPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3"></path></svg>Market</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tray: 'desk' }; }
+  renderVals() {
+    const T = this.state.tray;
+    const ST = {
+      d: 'background:#E4F4EA;box-shadow:inset 0 0 0 2px #0F6B43',
+      p: 'border:2px dashed #0F6B43',
+      g: 'box-shadow:inset 0 0 0 2px #95530C',
+      r: 'background:#F6E4F1;box-shadow:inset 0 0 0 2px #7A3268',
+      t: 'box-shadow:inset 0 0 0 2px #E0DCD4'
+    };
+    const stamps = (s) => s.split('').map(k => ST[k]);
+    const WORD = { d: 'stamped', p: 'pencilled, to check', g: 'missing', r: 'Ruth’s', t: 'not started' };
+    const NAMES = ['Photo', 'Pack', 'Supplier', 'Hold', 'Aisle', 'Price'];
+    const DATA = {
+      in: { title: 'In', sub: 'new asks, newest first', cards: [
+        { name: 'Door closer, medium × 6', sub: 'Grace Akello · for Kato Construction', worth: '≈ 270,000', s: 'tttttr', go: 'Hunt it', edge: '#A82D24' },
+        { name: 'Shower mixer, chrome × 4', sub: 'Peter Sserwadda · agent', worth: '≈ 520,000', s: 'tttttr', go: 'Hunt it', edge: '#A82D24' },
+        { name: '“pvc glue”', sub: '5 searches · 3 people', worth: '≈ 150,000', s: 'tttttr', go: 'Teach', edge: '#A82D24' } ] },
+      out: { title: 'Out with suppliers', sub: 'waiting on answers', cards: [
+        { name: 'Ridge cap G28, maroon', sub: '3 suppliers asked · 2 days', worth: '≈ 900,000', s: 'ttttdr', go: 'Chase', edge: '#3A3F9B' },
+        { name: 'Gutter bracket, galvanised', sub: 'Owino and Kiseka asked · today', worth: '≈ 1.1 M', s: 'tttttr', go: 'Chase', edge: '#3A3F9B' } ] },
+      desk: { title: 'On my desk', sub: 'biggest first', cards: [
+        { name: 'Wire mesh BRC A142', sub: '2 to ink · photo and hold missing', worth: '≈ 6.0 M', s: 'gpdgpr', go: 'Stamp it', edge: '#0F6B43' },
+        { name: 'Tile cutter 600mm', sub: 'five stamps · ready for Ruth', worth: '≈ 520,000', s: 'dddddr', go: 'To Ruth’s tray', edge: '#0F6B43', ready: true },
+        { name: 'Self-drilling screws 10×25', sub: 'packing missing', worth: '≈ 240,000', s: 'dgdtdr', go: 'Stamp it', edge: '#0F6B43' } ] },
+      ruth: { title: 'Ruth’s tray', sub: 'she was told by push', cards: [
+        { name: 'Paint roller 9"', sub: '3 h with Ruth', worth: '≈ 300,000', s: 'dddddr', go: 'Open', edge: '#7A3268' },
+        { name: 'PPR tee 25mm', sub: '40 min with Ruth', worth: '≈ 180,000', s: 'dddddr', go: 'Open', edge: '#7A3268' } ] }
+    };
+    const META = [['in', 'In', 9, '#E9E4DA', '#EFEAE1'], ['out', 'Out with suppliers', 6, '#C9CDF2', '#E4E6FA'], ['desk', 'On my desk', 7, '#DCD3C3', '#FFFFFF'], ['ruth', 'Ruth’s tray', 2, '#E7C6DF', '#F6E4F1']];
+    const trays = META.map(([k, label, n, lip, bg]) => {
+      const on = T === k;
+      return { label, n, sel: String(on), pick: () => this.setState({ tray: k }),
+        tray: 'background:' + bg + ';box-shadow:inset 0 -6px 0 ' + lip, op1: n ? 1 : 0, op2: n > 1 ? 1 : 0,
+        ink: on ? 'color:#16203C' : 'color:#B3BCD2',
+        style: 'all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;gap:12px;height:72px;padding:0 14px;border-radius:18px;' + (on ? 'background:#FFFFFF;color:#16203C;box-shadow:0 10px 24px rgba(0,0,0,.25)' : 'background:rgba(255,255,255,.07);color:#FFFFFF;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)') };
+    });
+    const d = DATA[T];
+    const cards = d.cards.map(c => ({ ...c, stamps: stamps(c.s), edge: 'background:' + c.edge,
+      aria: c.s.split('').map((k, i) => NAMES[i] + ' ' + WORD[k]).join(', '),
+      goStyle: c.ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 8px 18px rgba(201,58,48,.3)' : 'background:#16203C;color:#FFFFFF' }));
+    return { trays, cards, trayTitle: d.title, traySub: d.sub };
+  }
+}
+</script>
+</body>
+</html>

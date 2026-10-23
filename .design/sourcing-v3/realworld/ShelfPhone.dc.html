@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New-in shelf</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none}
+.m{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233">
+  <div style="position: absolute; inset: 0 0 84px 0; overflow-y: auto">
+    <div style="background: radial-gradient(130% 90% at 50% 0%, #2B3866 0%, #16203C 65%); border-radius: 0 0 32px 32px; padding: 14px 20px 22px; color: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+      <span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 20px; font-weight: 700">New-in shelf</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2"><span class="m" style="color: #6FDCB0">5</span> on trial · <span class="m" style="color: #FFFFFF">3</span> bays free · 30 days each</span></span>
+      <div role="radiogroup" aria-label="Bays" style="border-radius: 20px; background: #232A3E; padding: 12px 10px 0; display: flex; flex-direction: column">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding-bottom: 8px">
+          <sc-for list="{{top}}" as="b" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{b.on}}" aria-label="{{b.aria}}" onClick="{{b.pick}}" style="{{b.style}}">
+              <span class="m" style="font-size: 10px; font-weight: 600; color: #8D97B0; align-self: flex-start">{{b.id}}</span>
+              <span style="width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{b.ring}}"><span class="m" style="width: 30px; height: 30px; border-radius: 999px; background: #232A3E; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; {{b.ink}}">{{b.day}}</span></span>
+            </button>
+          </sc-for>
+        </div>
+        <i aria-hidden="true" style="height: 8px; margin: 0 -10px; background: linear-gradient(180deg, #C9B79C, #A8916F)"></i>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px 0 8px">
+          <sc-for list="{{bottom}}" as="b" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{b.on}}" aria-label="{{b.aria}}" onClick="{{b.pick}}" style="{{b.style}}">
+              <span class="m" style="font-size: 10px; font-weight: 600; color: #8D97B0; align-self: flex-start">{{b.id}}</span>
+              <span style="width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{b.ring}}"><span class="m" style="width: 30px; height: 30px; border-radius: 999px; background: #232A3E; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; {{b.ink}}">{{b.day}}</span></span>
+            </button>
+          </sc-for>
+        </div>
+        <i aria-hidden="true" style="height: 8px; margin: 0 -10px; border-radius: 0 0 20px 20px; background: linear-gradient(180deg, #C9B79C, #A8916F)"></i>
+      </div>
+      <div style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #B3BCD2">
+        <span style="display: flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; background: #6FDCB0"></i>on pace</span>
+        <span style="display: flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; background: #F5B26B"></i>behind</span>
+        <span style="display: flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; box-sizing: border-box; border: 1.5px dashed #8D97B0"></i>free</span>
+        <span style="margin-left: auto">ring: days of 30</span>
+      </div>
+    </div>
+    <div style="padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 12px">
+      <sc-if value="{{hasItem}}" hint-placeholder-val="{{ true }}">
+      <div style="border-radius: 22px; background: #FFFFFF; box-shadow: 0 8px 20px rgba(22,32,60,.08); padding: 16px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span class="m" style="width: 46px; height: 46px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; {{selChip}}">{{selId}}</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 17px; font-weight: 700">{{selName}}</span><span style="font-size: 12px; font-weight: 600; {{selInk}}">{{selSub}}</span></span>
+        </div>
+        <div role="img" aria-label="{{selAria}}" style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; font-size: 11px; font-weight: 700; color: #5F6980">Expected</span><span style="flex: 1; height: 10px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px #C9C4BA"></span><span class="m" style="width: 30px; text-align: right; font-size: 13px; font-weight: 600">{{selExp}}</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 64px; font-size: 11px; font-weight: 700; color: #5F6980">Sold</span><span style="flex: 1; height: 10px; border-radius: 5px; background: #EFECE6; display: block"><span style="display: block; height: 10px; border-radius: 5px; {{selBar}}"></span></span><span class="m" style="width: 30px; text-align: right; font-size: 13px; font-weight: 600">{{selSold}}</span></div>
+        </div>
+        <sc-if value="{{selBehind}}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <button type="button" onClick="{{order}}" style="all: unset; cursor: pointer; height: 44px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">Per order now</button>
+          <button type="button" onClick="{{askRuth}}" style="all: unset; cursor: pointer; height: 44px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">Ask Ruth to lower it</button>
+        </div>
+        </sc-if>
+        <sc-if value="{{selPass}}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{graduate}}" style="all: unset; cursor: pointer; box-sizing: border-box; height: 48px; border-radius: 999px; background: #C93A30; color: #FFFFFF; box-shadow: 0 8px 18px rgba(201,58,48,.3); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center">Passes · move it to its aisle</button>
+        </sc-if>
+        <sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 12px; background: #E4F4EA; color: #0F6B43; font-size: 13px; font-weight: 700">{{note}}</div></sc-if>
+      </div>
+      </sc-if>
+      <sc-if value="{{isFree}}" hint-placeholder-val="{{ false }}">
+      <div style="border-radius: 22px; background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E6E3DD; padding: 18px; display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 16px; font-weight: 700">{{selId}} is free</span>
+        <span style="font-size: 13px; font-weight: 600; color: #5F6980">Wire mesh BRC A142 takes it when Ruth prices it</span>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+  <nav aria-label="Sourcing" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 84px 1fr 1fr; align-items: start; padding-top: 8px; box-sizing: border-box">
+    <a href="DeskPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a6 6 0 0 1 12 0zM3 18h18M12 4v3"></path></svg>Today</a>
+    <a href="DeskPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h18v6H3zM3 14l3-8h12l3 8M9 14v2h6v-2"></path></svg>Desk</a>
+    <a href="DeskPhone.dc.html" aria-label="Capture" style="justify-self: center; margin-top: -26px; width: 64px; height: 64px; border-radius: 999px; background: #16203C; color: #FFFFFF; display: flex; align-items: center; justify-content: center; border: 4px solid #F7F5F2; box-sizing: content-box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></a>
+    <a href="ShelfPhone.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #1C2233; font-size: 12px; font-weight: 700"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18M3 19h18M6 10V5h4v5M14 19v-6h4v6"></path></svg>New-in</a>
+    <a href="ListPhone.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 52px; justify-content: center; color: #6B7480; font-size: 12px; font-weight: 600"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h3"></path></svg>Market</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { sel: 'N3', note: '' }; }
+  renderVals() {
+    const S = this.state;
+    const BAYS = [
+      { id: 'N1', name: 'Tile adhesive 20kg', day: 8, exp: 12, sold: 5, kind: 'ok' },
+      { id: 'N2', name: 'Grout, white 5kg', day: 3, exp: 4, sold: 2, kind: 'ok' },
+      { id: 'N3', name: 'Masking tape 2"', day: 45, exp: 60, sold: 22, kind: 'behind' },
+      { id: 'N4', kind: 'free' },
+      { id: 'N5', name: 'Floor drain 4" chrome', day: 29, exp: 40, sold: 38, kind: 'pass' },
+      { id: 'N6', name: 'Roof paint 4L, red oxide', day: 17, exp: 11, sold: 9, kind: 'ok' },
+      { id: 'N7', kind: 'free' },
+      { id: 'N8', kind: 'free' }
+    ];
+    const COL = { ok: '#6FDCB0', pass: '#6FDCB0', behind: '#F5B26B' };
+    const bays = BAYS.map(b => {
+      const on = S.sel === b.id, free = b.kind === 'free';
+      const deg = free ? 0 : Math.min(360, b.day / 30 * 360);
+      return { ...b, on: String(on), pick: () => this.setState({ sel: b.id, note: '' }),
+        day: free ? '' : b.day,
+        aria: b.id + (free ? ', free' : ', ' + b.name + ', day ' + b.day + (b.kind === 'behind' ? ', behind' : b.kind === 'pass' ? ', passes' : '')),
+        ring: free ? 'border:1.5px dashed #8D97B0;box-sizing:border-box' : 'background:conic-gradient(' + COL[b.kind] + ' 0 ' + deg + 'deg, rgba(255,255,255,.12) ' + deg + 'deg 360deg)',
+        ink: b.kind === 'behind' ? 'color:#F5B26B' : 'color:#FFFFFF',
+        style: 'all:unset;cursor:pointer;box-sizing:border-box;height:78px;padding:6px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:2px;' + (on ? 'background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 2px #FFFFFF' : 'background:rgba(255,255,255,.04)') };
+    });
+    const sel = BAYS.find(b => b.id === S.sel);
+    const free = sel.kind === 'free';
+    const KIND = {
+      ok: ['On pace · day ' + sel.day + ' of 30', 'color:#0F6B43', 'background:#E4F4EA;color:#0F6B43', '#0F6B43'],
+      pass: ['Day 29 · passes tomorrow', 'color:#0F6B43', 'background:#E4F4EA;color:#0F6B43', '#0F6B43'],
+      behind: ['Behind · day 45 · 152,000 sitting', 'color:#7A4A02', 'background:#FDEEE1;color:#95530C', '#95530C'],
+      free: ['', '', '', '']
+    }[sel.kind];
+    return {
+      top: bays.slice(0, 4), bottom: bays.slice(4),
+      hasItem: !free, isFree: free, selId: sel.id, selName: sel.name || '', selSub: KIND[0], selInk: KIND[1], selChip: KIND[2],
+      selExp: free ? '' : sel.exp, selSold: free ? '' : sel.sold,
+      selBar: free ? '' : 'width:' + Math.min(100, sel.sold / Math.max(sel.exp, sel.sold) * 100).toFixed(0) + '%;background:' + KIND[3],
+      selAria: free ? '' : 'Expected ' + sel.exp + ' by now, sold ' + sel.sold,
+      selBehind: sel.kind === 'behind' && !S.note, selPass: sel.kind === 'pass' && !S.note,
+      hasNote: !!S.note, note: S.note,
+      order: () => this.setState({ note: 'Per order from now · Denis stops buying it for the shelf' }),
+      askRuth: () => this.setState({ note: 'Asked Ruth · she decides the price' }),
+      graduate: () => this.setState({ note: 'Moved to Plumbing · bay ' + sel.id + ' is free' })
+    };
+  }
+}
+</script>
+</body>
+</html>
