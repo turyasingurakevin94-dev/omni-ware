@@ -710,6 +710,7 @@ html.big .ct-key{height:60px}
 .cv-live i{width:7px;height:7px;border-radius:999px;background:var(--mint);animation:stLive 2s infinite}
 .cv-live.off{color:var(--amber)}
 .cv-live.off i{background:var(--amber);animation:stWait 2s infinite}
+.cv-live.wait{color:#F5B26B}.cv-live.wait i{background:#F5B26B;animation:stWait 2s infinite}
 .cv-dotsep{width:3px;height:3px;border-radius:999px;background:#5F6A85;flex:none}
 .cv-wait{width:8px;height:8px;border-radius:999px;background:var(--amber);animation:stWait 2s infinite}
 @keyframes cvSpin{to{transform:rotate(360deg)}}
@@ -944,7 +945,18 @@ function heldWrite(msg, run, onUndo, ms, quiet){
   return h;
 }
 function isNetworkError(e){ return !!e && /fetch|network|Failed to fetch|NetworkError|Load failed/i.test(String(e.message || e)); }
-function failWord(e){ return isNetworkError(e) ? 'No connection — nothing was changed. Try again with signal.' : 'Nothing was changed: ' + (e && e.message || e); }
+/* Plain words for the yard (round 3, REL-09): no SQL, function or migration name on screen. A sentence the
+   shop's own database says on purpose ("The shelf has only 0 …") shows as it is; anything else becomes
+   "That did not save · tell Kevin · code …", and the raw message goes to the log. */
+function ownerWord(){ const o = (D().staff || []).find(s => /owner/i.test(s.role || '')); return (o && firstWord(o.name)) || 'the owner'; }
+function plainSentence(m){ return /^[A-Za-z][^_()<>{}=]*[.:]?$/.test(m) && !/\b(function|column|relation|schema|policy|row-level|violates|constraint|syntax|null value|jwt|token|PGRST|migration|duplicate key|permission denied)\b/i.test(m); }
+function failWord(e, mig){
+  if (isNetworkError(e)) return 'No connection — nothing was changed. Try again with signal.';
+  if (isStale(e)) return 'Someone else just did this — refreshed';
+  const m = String((e && e.message) || e || '').trim();
+  if (m && plainSentence(m) && (!e || !e.code || ['P0001', '22023', 'P0002'].includes(e.code) || !/^[0-9A-Z]{5}$/.test(e.code))) return m.charAt(0).toUpperCase() + m.slice(1).replace(/\.$/, '');
+  try { console.warn('[store] did not save', e); } catch (_e) {}
+  return `That did not save · tell ${ownerWord()} · code ${mig || '—'}/${(e && e.code) || 'E'}`; }
 
 /* ---------------- sounds and buzz ----------------
    Every answer has its own feel: a click as the knob crosses into a zone,
@@ -1243,9 +1255,12 @@ function snapDb(){
 async function outboxAll(){ try { const db = await snapDb(); return await new Promise((ok, no) => { const r = db.transaction('outbox').objectStore('outbox').getAll(); r.onsuccess = () => ok(r.result || []); r.onerror = () => no(r.error); }); } catch (_e) { return []; } }
 async function outboxPut(item){ const db = await snapDb(); await new Promise((ok, no) => { const tx = db.transaction('outbox', 'readwrite'); tx.objectStore('outbox').put(item); tx.oncomplete = ok; tx.onerror = () => no(tx.error); }); }
 async function outboxDel(id){ try { const db = await snapDb(); await new Promise(ok => { const tx = db.transaction('outbox', 'readwrite'); tx.objectStore('outbox').delete(id); tx.oncomplete = ok; tx.onerror = ok; }); } catch (_e) {} }
-function outboxAdd(kind, args){ const id = kind + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); return outboxPut({ id, kind, at: Date.now(), shopId: S.shopId, ...args }).then(() => { S.ui.outboxN = (S.ui.outboxN || 0) + 1; return id; }); }
+// What the outbox holds for this shop, for Today's "Waiting to send" (round 3, REL-04): read again after every change.
+async function outboxRefresh(){ S.ui.outboxRows = (await outboxAll()).filter(it => !it.shopId || it.shopId === S.shopId); S.ui.outboxN = S.ui.outboxRows.length; if (S.started && !S.stack.length) render(); }
+function outboxAdd(kind, args){ const id = kind + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); return outboxPut({ id, kind, at: Date.now(), shopId: S.shopId, ...args }).then(() => { S.ui.outboxN = (S.ui.outboxN || 0) + 1; outboxRefresh(); return id; }); }
 async function flushOutbox(){
-  if (flushOutbox.on || !S.data || !navigator.onLine) return; flushOutbox.on = true;
+  if (!S.data) return; if (!S.ui.outboxRows) await outboxRefresh();
+  if (flushOutbox.on || !navigator.onLine) return; flushOutbox.on = true;
   try {
     for (const it of await outboxAll()) {
       if (it.shopId && it.shopId !== S.shopId) continue;
@@ -1255,7 +1270,7 @@ async function flushOutbox(){
         await outboxDel(it.id);
       } catch (e) { if (isNetworkError(e)) break; await outboxDel(it.id); toast('A kept ' + it.kind + ' could not go: ' + failSay(e), 6000); }
     }
-    S.ui.outboxN = (await outboxAll()).length;
+    await outboxRefresh();
   } finally { flushOutbox.on = false; }
   if (S.started) render();
 }
@@ -1969,6 +1984,10 @@ function render(){
   }).join(''));
   [...pages.children].forEach((el, i) => { if (prev[i] && prev[i].type === el.dataset.type) el.scrollTop = prev[i].top; });
   document.body.style.overflow = S.stack.length ? 'hidden' : '';
+  // A tap that lands in the first 400 ms of a new screen is a bounce from the last one (round 3, REL-06):
+  // the screen is the view, the page on top, and whether it is a done screen.
+  const top = S.stack[S.stack.length - 1], sig = `${S.view}|${top ? top.type + JSON.stringify(top.args || {}) : ''}|${pages.querySelector('.st-page:last-child [data-done-screen]') ? 'done' : ''}`;
+  if (sig !== render.sig) { render.sig = sig; S.screenAt = Date.now(); }
   // Once a full page has slid over Today, Today is hidden: on a wide screen its
   // cards' shadows spilled out beside the page column (the report's ghost cards).
   clearTimeout(render.covT);
@@ -2001,6 +2020,7 @@ function afterRender(){ AFTER.forEach(f => { try { f(); } catch (e) { console.wa
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
+  if (Date.now() - (S.screenAt || 0) < 400 && !t.closest('.st-sheet')) { e.preventDefault(); return; }
   const a = t.dataset.act;
   if (a === 'tab') { if (S.view !== t.dataset.v || S.stack.length) FEEL.tick(); go(t.dataset.v); return; }
   if (a === 'back') { if (!leaveGuard()) pop(); return; }
@@ -2058,14 +2078,24 @@ const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pendi
 // A 0159 function this database does not have yet (an error with no code is read the same way).
 function noFn(e){ return !!e && (needs0115(e) || !e.code); }
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
-function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? `This needs migration ${mig || '0115'} on the database — ask the owner to run it.` : failWord(e); }
+function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; if (needs0115(e)) { try { console.warn('[store] needs migration', mig || '0115', e); } catch (_e) {} return `That did not save · tell ${ownerWord()} · code ${mig || '0115'}/${(e && e.code) || 'E'}`; } return failWord(e, mig); }
 
 /* 0159: the Store sends only its own fields, and each line's pick answer;
    the database merges them into the order it holds, money and all. */
-async function changeOrder(id, fn){
+/* What the phone showed when the person tapped (round 3, REL-08). A write is refused -- here and in the
+   database (0162 store_patch_order p_expect) -- when the order has moved since: another phone handed it
+   over, packed or unpacked it. The order is then reloaded and the screen says so; nothing is overwritten. */
+function seenOf(q){ return q ? { status: q.status, pickingStatus: q.pickingStatus == null ? null : q.pickingStatus, pickingDoneAt: q.pickingDoneAt == null ? null : q.pickingDoneAt, carrierAt: q.carrier && q.carrier.at != null ? q.carrier.at : null } : null; }
+function seenDiffers(seen, q){ return !!seen && !!q && ['status', 'pickingStatus', 'pickingDoneAt', 'carrierAt'].some(k => String(seen[k] == null ? '' : seen[k]) !== String((k === 'carrierAt' ? q.carrier && q.carrier.at : q[k]) == null ? '' : (k === 'carrierAt' ? q.carrier.at : q[k]))); }
+function staleErr(){ const e = new Error('Someone else just changed this order.'); e.code = '40001'; e.hint = 'OWSTALE'; return e; }
+function isStale(e){ return !!e && (e.hint === 'OWSTALE' || e.code === '40001'); }
+function keepOrder(fresh){ const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(fresh.id)); if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh); saveSnapshot(); }
+async function refreshOrder(id){ try { const g = await sb.rpc('store_order', { p_shop: S.shopId, p_id: Number(id) }); if (!g.error && g.data) keepOrder(rowToQuote(g.data)); } catch (_e) {} }
+async function changeOrder(id, fn, seen){
+  if (seen === undefined) seen = seenOf(quoteById(id));
   if (S.snapMode !== false) {
     const g = await sb.rpc('store_order', { p_shop: S.shopId, p_id: Number(id) });
-    if (!g.error) return changeOrderSnap(id, g.data, fn);
+    if (!g.error) return changeOrderSnap(id, g.data, fn, seen);
     if (!noFn(g.error)) throw g.error;
     S.snapMode = false;
   }
@@ -2074,6 +2104,7 @@ async function changeOrder(id, fn){
   if (!r.data) throw new Error('that order is no longer on the books');
   const row = r.data, q = rowToQuote(row), before = q.status;
   if (q.voided) return null;
+  if (seenDiffers(seen, q)) { keepOrder(rowToQuote(row)); throw staleErr(); }
   const out = fn(q);
   if (out === false) return null;
   if (q.status !== before && !(STORE_STATUS_MOVES[before] || []).includes(q.status)) throw new Error('that order has moved on');
@@ -2089,17 +2120,21 @@ async function changeOrder(id, fn){
   saveSnapshot();
   return { q: fresh, out };
 }
-async function changeOrderSnap(id, row, fn){
+async function changeOrderSnap(id, row, fn, seen){
   if (!row) throw new Error('that order is no longer on the books');
   const q = rowToQuote(row), before = q.status;
   if (q.voided) return null;
+  if (seenDiffers(seen, q)) { keepOrder(rowToQuote(row)); throw staleErr(); }
   const out = fn(q);
   if (out === false) return null;
   if (q.status !== before && !(STORE_STATUS_MOVES[before] || []).includes(q.status)) throw new Error('that order has moved on');
   const patch = {};
   ORDER_KEYS.forEach(k => { if (k !== 'items') patch[k] = q[k] === undefined ? null : q[k]; });
   const items = (q.items || []).map((it, idx) => ({ idx, lineId: it.lineId || null, pickStatus: it.pickStatus == null ? null : it.pickStatus, pickedQty: it.pickedQty == null ? null : it.pickedQty }));
-  const u = await sb.rpc('store_patch_order', { p_shop: S.shopId, p_id: Number(id), p_patch: patch, p_status: q.status !== before ? q.status : null, p_items: items });
+  const args = { p_shop: S.shopId, p_id: Number(id), p_patch: patch, p_status: q.status !== before ? q.status : null, p_items: items };
+  let u = await sb.rpc('store_patch_order', seen ? { ...args, p_expect: seen } : args);
+  if (u.error && seen && needs0115(u.error)) u = await sb.rpc('store_patch_order', args);
+  if (u.error && isStale(u.error)) { await refreshOrder(id); throw u.error; }
   if (u.error) throw u.error;
   if (!u.data) return null;
   const fresh = rowToQuote(u.data);
@@ -2758,7 +2793,7 @@ function viewToday(){
   return `<div class="cv-hero" style="padding-bottom:22px;gap:20px" data-navy-top>
     <div class="cv-top">
       <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span class="clamp2" style="font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.2;overflow-wrap:anywhere">${greeting()}${first ? ', ' + esc(first) : ''}</span>
-        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:12px;font-weight:600;color:var(--navyInk);min-width:0"><span style="white-space:nowrap">${esc(day)}</span><span class="cv-dotsep"></span><span>${esc(shopWord())}</span><span class="cv-dotsep"></span>${live ? '<span class="cv-live"><i></i>Live</span>' : '<span class="cv-live off"><i></i>Offline</span>'}</span></span>
+        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:12px;font-weight:600;color:var(--navyInk);min-width:0"><span style="white-space:nowrap">${esc(day)}</span><span class="cv-dotsep"></span><span>${esc(shopWord())}</span><span class="cv-dotsep"></span>${(() => { const n = waitingList().length; return n ? `<span class="cv-live ${live ? 'wait' : 'off'}"><i></i>${live ? `Not sent · ${n}` : `Offline · ${n} waiting`}</span>` : live ? '<span class="cv-live"><i></i>Live</span>' : '<span class="cv-live off"><i></i>Offline</span>'; })()}</span></span>
       <span style="display:flex;align-items:center;gap:10px;flex:none">
         <button class="cv-circ" data-act="alerts" aria-label="Alerts and With ${esc(managerName())}${alerts ? ': ' + alerts + ' new' : ''}">${sv(CV.bell, 19, 2)}${alerts ? `<span class="cv-cnt">${alerts}</span>` : ''}</button>
         <button class="cv-me" data-act="me" aria-label="You: ${esc(myName())}, settings">${ini(myName())}</button></span>
@@ -2775,12 +2810,22 @@ function viewToday(){
     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;font-weight:600;color:var(--navyInk)">${legend.map(([c, n, w]) => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:999px;background:${c}"></span>${n} ${w}</span>`).join('')}</div>
   </div>
   <div style="padding:18px 16px 24px;display:flex;flex-direction:column;gap:10px">
-    ${live ? '' : offlineCard()}
+    ${waitCard(live)}
     ${handedCard()}
     ${J.list.length ? dayWithWork(J) : yardClear()}
   </div>`;
 }
 // What this phone holds that has not reached the books: the picks kept on the phone.
+/* Everything not yet on the books, in one list (round 3, REL-04): reports and returns kept in the outbox,
+   picks still on the phone, a check-in under way, a count that did not go. Online or not. */
+function waitingList(){
+  const out = [];
+  (S.ui.outboxRows || []).forEach(it => { if (it.kind === 'report') { const x = stockItems().find(i => i.key === it.key); out.push({ title: `Report · ${it.name} · ${x ? fmtLevels(levelsFor(x), Number(it.qty) || 0) : n0(it.qty)} ${(REASONS.find(r => r.k === it.reason) || {}).word || it.reason || ''}`.trim(), at: it.at, icon: CV.loss }); }
+    else if (it.kind === 'return') { const q = quoteById(it.orderId); out.push({ title: `Return · ${q ? q4(q) : 'an order'}${q ? ' · ' + (it.lines || []).map(l => returnLineWords(q, l)).join(', ') : ''}`, at: it.at, icon: CV.ret }); } });
+  outbox().forEach(o => out.push({ ...o, icon: /^Check-in/.test(o.title) ? CV.inbox : CV.pack }));
+  const ct = S.ui.ct; if (ct && ct.sendErr && !ct.sent) out.push({ title: `Count · ${ct.aisle}`, at: ct.errAt || ct.at, icon: CV.count });
+  return out.sort((a, b) => (b.at || 0) - (a.at || 0));
+}
 function outbox(){
   const out = [];
   Object.entries(S.pickDraft || {}).forEach(([id, d]) => { const q = quoteById(id), n = Object.keys(d || {}).length; if (q && n) out.push({ title: `Picks for ${q4(q)} · ${n} of ${nOf(pickLines(q).length, 'item')}`, at: Math.max(0, ...Object.values(d).map(x => x.at || 0)) }); });
@@ -2796,6 +2841,19 @@ function handedCard(){
     <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">${esc(firstWord(a.byName) || 'A colleague')} handed you the yard</span><span style="font-size:12px;font-weight:600;color:var(--navyInk)">${n ? `${n} half-done job${n === 1 ? '' : 's'} · ` : ''}${hm(msOf(a.createdAt))}</span></span>
     <button data-act="hogot" data-id="${esc(a.id)}" style="height:44px;padding:0 16px;border-radius:999px;border:none;background:#fff;color:#16203C;font-size:14px;font-weight:700;flex:none">I've got it</button></div>`;
 }
+// One "Waiting to send" card, whenever anything is waiting, signal or not (round 3, REL-04, canvas TodayWaiting).
+function waitCard(live){ const W = waitingList(); if (!W.length) return live ? '' : offlineCard();
+  const go = S.ui.sendingNow, mgr = managerName();
+  return `<div style="border-radius:22px;background:#fff;box-shadow:inset 0 0 0 1.5px #F3DCC4,0 6px 18px rgba(22,32,60,.05);padding:14px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:12px"><span style="position:relative;width:42px;height:42px;flex:none;border-radius:999px;background:#FDEEE1;color:#95530C;display:flex;align-items:center;justify-content:center">${sv(live ? 'M7 18a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9zM12 12v5M10 15l2 2 2-2' : CV.wifi, 20, 2.2)}<span class="m" style="position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:var(--red);color:#fff;border:2px solid #fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">${W.length}</span></span>
+      <span class="cv-tx" style="gap:2px"><span style="font-size:15px;font-weight:700">Waiting to send</span><span style="font-size:12px;font-weight:600;color:var(--ink2);white-space:normal">${go ? 'Sending now…' : live ? 'The signal is up but the books did not answer' : 'No signal · keep working · they send by themselves'}</span></span></div>
+    <div style="display:flex;flex-direction:column;gap:4px">${W.map(o => `<span style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 10px;border-radius:12px;background:#FEF8F2"><span style="width:28px;height:28px;flex:none;border-radius:9px;background:#fff;color:#95530C;display:flex;align-items:center;justify-content:center">${go ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 15, 2.4)}</span>` : sv(o.icon || CV.arc, 15, 2.2)}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="m" style="font-size:11px;font-weight:600;color:#7A4A02">${o.at ? hm(o.at) : ''}</span></span>`).join('')}</div>
+    <button data-act="sendnow" ${go ? 'disabled' : ''} style="height:48px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;opacity:${go ? .7 : 1}">${go ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 16, 2.4)}</span>Sending…` : `${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 16, 2.4)}Send now`}</button>
+    <span style="padding:0 4px;font-size:12px;font-weight:600;color:var(--ink2)">${esc(mgr)} and Sales see these once they send</span></div>`; }
+ACT.sendnow = async () => { if (S.ui.sendingNow) return; if (!online()) { FEEL.no(); toast('No signal yet · they send by themselves when it is back', 4000); return; }
+  S.ui.sendingNow = true; FEEL.tick(); render();
+  try { await flushOutbox(); for (const id of Object.keys(S.pickDraft || {})) await flushPicks(Number(id)).catch(() => {}); const ct = S.ui.ct; if (ct && ct.sendErr && !ct.sent) await sendCountOnce(); }
+  finally { S.ui.sendingNow = false; await outboxRefresh(); render(); } };
 function offlineCard(){
   const ob = outbox();
   return `<div style="border-radius:20px;background:#fff;box-shadow:inset 0 0 0 1.5px #F3DCC4,0 6px 18px rgba(22,32,60,.05);padding:14px;display:flex;flex-direction:column;gap:10px">
@@ -3496,7 +3554,7 @@ function rcDone(R, ui){
   const orders = [...new Set(R.trips.flatMap(tripOrders))], ready = orders.filter(q => q.status === 'preparing' || (q.status === 'awaiting_goods' && (q.items || []).every(it => it.supplierId === '__stock__' || quoteLineReceived(it) || lines.some(l => String(l.orderId) === String(q.id) && String(l.lineId) === String(it.lineId)))));
   const diffs = lines.map((l, i) => ({ l, i, n: ui.got[i] != null ? Number(ui.got[i]) : null, b: tripLineGot(l) != null ? tripLineGot(l) : Number(l.qty) || 0 })).filter(d => d.n != null && d.n !== d.b);
   const first = ready[0], held = S.ui.held && ui.wait;
-  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px;overflow-y:auto">
     ${held ? `<button data-act="rcundo" aria-label="Undo, for 10 seconds" class="cv-undo" style="position:absolute;top:calc(12px + var(--safe-area-inset-top));right:16px;z-index:2;height:40px;padding:0 14px 0 8px;border-radius:999px;border:none;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#6FDCB0" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8" transform="rotate(-90 13 13)" class="cv-undorun"></circle><path d="M10 10.5 8 12.5l2 2M8 12.5h6a3 3 0 0 1 0 6h-2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Undo</button>` : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:28px;text-align:center">
       <span class="cv-pop" style="position:relative;width:168px;height:168px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:84px;height:84px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.tick, 38, 2.6)}</span></span>
@@ -3775,7 +3833,7 @@ PAGE.pack = ({ id }) => {
     <div data-pkswipe style="position:relative;flex:1;min-height:0;touch-action:pan-y;cursor:grab">
       <div class="pk-track" style="left:0;top:14px;bottom:12px;gap:14px;transform:translateX(${tx}px)">${items.map(card).join('')}</div>
     </div>
-    <div style="flex:none;padding:0 16px calc(20px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">
+    <div style="flex:none;padding:0 16px calc(20px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px">${notDoneBar('pack', q.id)}
       <div style="height:64px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule),0 6px 18px rgba(22,32,60,.06);display:flex;align-items:center;justify-content:space-between;padding:0 8px">
         <button type="button" data-act="pkstep" data-d="-1" aria-label="One fewer" style="width:48px;height:48px;border-radius:999px;border:none;background:#F1EEE8;color:var(--ink);display:flex;align-items:center;justify-content:center">${sv('M5 12h14', 20, 2.4)}</button>
         <span style="display:flex;align-items:baseline;gap:6px">${numBox('pk', pq.n, 'How many ' + cq.unit + ' packed', '', 24)}<span style="font-size:13px;font-weight:700;color:var(--ink2)">of ${esc(cq.n)} ${esc(cq.unit)}</span></span>
@@ -3811,8 +3869,8 @@ function pkFinish(q){
   const ui = S.ui.pk; ui.done = true; ui.bay = Number(q.bay) || bayOf(q) || freeBay(); ui.wait = true; chimeDone(); render();
   heldWrite('Finishing', async () => {
     S.busy = true;
-    try { const r = await finishPack(q.id, ui.bay); ui.wait = false; if (!r) { ui.done = false; toast('Every line needs an answer first'); } }
-    catch (e) { ui.wait = false; ui.done = false; toast(failSay(e), 5000); }
+    try { const r = await finishPack(q.id, ui.bay); ui.wait = false; if (!r) { ui.done = false; toast('Every line needs an answer first'); } else S.ui.nd = null; }
+    catch (e) { ui.wait = false; ui.done = false; setNotDone(e, 'pack', q.id, 'pkfinish'); }
     S.busy = false; render();
   }, () => { ui.wait = false; ui.done = false; const k = ui.last != null ? ui.last : 0; setPick(q, k, 'pending'); delete ui.picked[k]; ui.i = k; S.ui.pkStamp = null; }, 10000, true);
 }
@@ -3865,12 +3923,13 @@ function pkDone(q, items, ui){
       <span style="display:flex;align-items:baseline;gap:4px"><span class="m" style="font-size:20px;font-weight:600;color:${st === 'short' ? '#F5B26B' : '#fff'}">${esc(c.n)}</span><span style="font-size:11px;font-weight:700;color:var(--navyInk)">${esc(c.unit)}</span></span>
       <span title="${esc(fullName(it))}" style="max-width:88%;font-size:11px;font-weight:600;color:var(--navyInk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(fullName(it))}</span></span>`; };
   const pages = Math.ceil(items.length / 6);
-  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${ui.wait ? `<button data-act="pkundofin" aria-label="Undo, for 10 seconds" style="position:absolute;top:calc(12px + var(--safe-area-inset-top));right:16px;z-index:2;height:40px;padding:0 14px 0 8px;border-radius:999px;border:none;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="10" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"></circle><circle cx="13" cy="13" r="10" fill="none" stroke="#6FDCB0" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8" transform="rotate(-90 13 13)" class="cv-undorun"></circle><path d="M10 10.5 8 12.5l2 2M8 12.5h6a3 3 0 0 1 0 6h-2" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Undo</button>` : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;text-align:center">
       <span class="cv-pop" style="position:relative;width:128px;height:128px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.14)"></span><span style="position:absolute;inset:16px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(111,220,176,.26)"></span><span style="position:relative;width:64px;height:64px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center;box-shadow:0 14px 30px rgba(0,0,0,.3)">${sv(CV.pack, 38, 2.6)}</span></span>
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${q4(q)} is packed</span>
       <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(quoteClientName(q))}${ui.bay ? ` · leave it on bay ${ui.bay}` : ' · every bay is full · leave it by the gate'}</span>
+      ${!ui.wait ? unpackLink(q, 'chip') : ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div role="list" aria-label="What was packed" class="pk-grid" style="display:grid;grid-auto-flow:column;grid-template-rows:repeat(${items.length > 3 ? 2 : 1},70px);grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none">${items.map(tile).join('')}</div>
@@ -3887,12 +3946,13 @@ function pkDone(q, items, ui){
     <div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
       ${nextQ ? `<button data-act="pack" data-id="${nextQ.id}" style="height:60px;border:none;border-radius:999px;background:#fff;color:#16203C;padding:0 22px;display:flex;align-items:center;gap:12px;text-align:left;width:100%"><span class="cv-tx" style="gap:1px"><span style="font-size:12px;font-weight:700;color:var(--ink2)">Next order</span><span class="ell" style="font-size:16px;font-weight:700">${q4(nextQ)} · ${esc(quoteClientName(nextQ))} · ${nOf(pickLines(nextQ).length, 'item')}</span></span>${sv(CV.chev, 18, 2.4)}</button>` : ''}
       ${theirs ? `<span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${face(staffName(theirs.assignedWorkerId), staffName(theirs.assignedWorkerId), 24, 'border-radius:999px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center')}${q4(theirs)} is ${esc(firstWord(staffName(theirs.assignedWorkerId)))}'s, so it's skipped</span>` : ''}
-      ${!ui.wait ? unpackLink(q, true) : ''}
       ${run ? `<button data-act="open" data-page="load" style="height:48px;border:none;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);color:#fff;font-size:14px;font-weight:700">Load ${run.driver ? esc(firstWord(run.driver.name)) + "'s" : 'the'} run now</button>` : `<button data-act="home" style="height:48px;border:none;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);color:#fff;font-size:14px;font-weight:700">Back to Today</button>`}
     </div></div>`;
 }
 ACT.pkundofin = () => { if (S.ui.held && S.ui.held.undo) S.ui.held.undo(); };
-function unpackLink(q, dark){ const live = quoteById(q.id) || q; return canUnpack(live) ? `<button data-act="unpack" data-id="${q.id}" style="height:46px;border:none;background:transparent;color:${dark ? '#DDE3F0' : 'var(--ink2)'};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv('M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', 16, 2.2)}Unpack ${q4(q)}</button>` : ''; }
+ACT.pkfinish = () => { const q = pkQ(); if (q && S.ui.pk && !S.ui.pk.done) pkFinish(q); };
+// Unpack never sits where the screen before had its main button (round 3, REL-06): on Packed it is a chip up top.
+function unpackLink(q, dark){ const live = quoteById(q.id) || q; return canUnpack(live) ? `<button data-act="unpack" data-id="${q.id}" style="${dark === 'chip' ? 'height:36px;margin-top:2px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);font-size:13px;' : 'height:46px;background:transparent;font-size:14px;'}border:none;color:${dark ? '#DDE3F0' : 'var(--ink2)'};font-weight:700;display:flex;align-items:center;justify-content:center;gap:${dark === 'chip' ? 6 : 8}px">${sv('M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', 16, 2.2)}Unpack ${q4(q)}</button>` : ''; }
 ACT.unpack = t => { FEEL.open(); S.ui.upErr = null; openSheet('unpack', { id: Number(t.dataset.id) }); };
 SHEET.unpack = a => { const q = quoteById(a.id); if (!q) return ''; const bay = Number(q.bay) || bayOf(q);
   return `<span style="font-size:20px;font-weight:700">Unpack ${q4(q)}?</span>
@@ -4139,7 +4199,7 @@ ACT['slide:lrsend'] = () => {
 function lrSent(ui){
   const s = ui.sent, me = isMeCar(s.car), name = carWord(s.car), qs = s.ids.map(quoteById).filter(Boolean), later = packQueue().find(takenBySomeoneElse);
   const wa = s.car && s.car.kind === 'hired' ? waComposeUrl(s.car.phone, driverMessage(qs, s.car)) : null;
-  return `<div style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:16px;overflow-y:auto">
     ${s.wait ? undoBtn('lrundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center">
       ${bigTick(truckIcon(38), 80)}
@@ -4183,10 +4243,33 @@ ACT.lrscan = () => openScan('load', {});
    it; an order that waits on money cannot leave and asks the Manager.
    ================================================================== */
 function slUI(id){ if (S.ui.sl && S.ui.sl.id === id) return S.ui.sl; const q = quoteById(id), r = q && runsNow().find(x => x.drops.some(d => d.q.id === id));
-  return (S.ui.sl = { id, who: q && orderIsPickup(q) ? 'client' : null, car: (r && staffCar(r.driver)) || staffCar(drivers()[0]) || null, ticks: {}, collector: q && orderIsPickup(q) ? slSaved(id) || (q.carrier && q.carrier.name) || '' : '', sent: null }); }
+  const kept = slSaved(id); return (S.ui.sl = { id, who: (q && orderIsPickup(q)) || kept.name ? 'client' : null, car: (r && staffCar(r.driver)) || staffCar(drivers()[0]) || null, ticks: {}, collector: kept.name || (q && orderIsPickup(q) && q.carrier && q.carrier.name) || '', sent: null, ticks: kept.ticks }); }
 // A name half-typed at the gate is kept on this phone until the order goes, so a reload does not lose it.
-function slSaved(id){ try { return localStorage.getItem(shopScoped('ow-store-sl:' + id)) || ''; } catch (_e) { return ''; } }
-function slSave(id, v){ try { if (v) localStorage.setItem(shopScoped('ow-store-sl:' + id), v); else localStorage.removeItem(shopScoped('ow-store-sl:' + id)); } catch (_e) {} }
+// The hand-over in progress, kept on the phone (round 3, REL-02): the collector's name AND the ticks, until
+// the server says it is done. An older phone kept only the name, as plain text: that still reads.
+function slSaved(id){ try { const v = localStorage.getItem(shopScoped('ow-store-sl:' + id)) || ''; if (v.charAt(0) === '{') { const o = JSON.parse(v); return { name: o.name || '', ticks: o.ticks || {} }; } return { name: v, ticks: {} }; } catch (_e) { return { name: '', ticks: {} }; } }
+function slSave(id, ui){ try { const name = ui ? String(ui.collector || '').trim() : '', ticks = ui ? Object.fromEntries(Object.entries(ui.ticks || {}).filter(([, v]) => v)) : {};
+  if (name || Object.keys(ticks).length) localStorage.setItem(shopScoped('ow-store-sl:' + id), JSON.stringify({ name, ticks })); else localStorage.removeItem(shopScoped('ow-store-sl:' + id)); } catch (_e) {} }
+/* The "Not done" bar (round 3, REL-07): a write that did not go stays on its screen with everything typed
+   and ticked, says why, and offers Try again. "Someone else just did this" is blue: the order was refreshed. */
+function movedWords(q){ if (!q) return 'Refreshed';
+  if (q.carrier && q.carrier.at) return `Refreshed · ${firstWord(q.carrier.by) || 'Someone'} handed it over at ${hm(msOf(q.carrier.at))}`;
+  if (['pending_delivery', 'completed'].includes(q.status)) return 'Refreshed · it has gone out';
+  if (q.pickingStatus === 'done') return `Refreshed · packed at ${hm(msOf(q.pickingDoneAt))}`;
+  if (q.pickingStatus === 'in_progress') return `Refreshed · ${firstWord(staffName(q.assignedWorkerId)) || 'Someone'} is packing it`;
+  return 'Refreshed · it moved on'; }
+function setNotDone(e, page, id, retry){ const st = isStale(e);
+  S.ui.nd = { page, id: String(id), why: st ? 'stale' : isNetworkError(e) ? 'net' : 'err', text: st ? movedWords(quoteById(id)) : failSay(e), retry: st ? null : retry, at: Date.now() }; FEEL.no(); }
+const ND_KEPT = { slip: 'The name and the ticks are kept', deliver: 'The photo and the name are kept', pack: 'Your ticks are kept' };
+function notDoneBar(page, id){ const n = S.ui.nd; if (!n || n.page !== page || n.id !== String(id)) return '';
+  const T = { net: ['#FDEEE1', '#F3DCC4', '#95530C', CV.wifi, 'Not done · no signal', n.trying ? 'Trying again…' : ND_KEPT[page] || 'Your work is kept'],
+    err: ['#FBE5E2', '#F2C9C3', '#8E2A22', CV.loss, 'That did not save', (n.trying ? 'Trying again…' : n.text.replace(/^That did not save · /, '').replace(/^t/, 'T') + ' · your work is kept')],
+    stale: ['#DCEAF8', '#BCD6EF', '#1A5A8A', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-5-6.7', 'Someone else just did this', n.text] }[n.why];
+  return `<div role="status" style="padding:12px;border-radius:18px;background:${T[0]};box-shadow:inset 0 0 0 1.5px ${T[1]};display:flex;align-items:center;gap:12px">
+    <span style="width:38px;height:38px;flex:none;border-radius:999px;background:#fff;color:${T[2]};display:flex;align-items:center;justify-content:center">${sv(T[3], 18, 2.2)}</span>
+    <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700;color:${T[2]}">${esc(T[4])}</span><span style="font-size:12px;font-weight:600;color:var(--ink2);white-space:normal">${esc(T[5])}</span></span>
+    ${n.retry ? `<button data-act="ndretry" ${n.trying ? 'disabled' : ''} style="height:40px;padding:0 14px;border-radius:999px;border:none;background:#16203C;color:#fff;font-size:13px;font-weight:700;flex:none;display:flex;align-items:center;gap:6px">${n.trying ? `<span class="cv-spin" style="display:flex">${sv(CV.arc, 14, 2.4)}</span>Trying…` : `${sv('M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', 14, 2.4)}Try again`}</button>` : ''}</div>`; }
+ACT.ndretry = () => { const n = S.ui.nd; if (!n || !n.retry || n.trying) return; n.trying = true; FEEL.tick(); render(); const r = n.retry; setTimeout(() => { if (S.ui.nd === n) S.ui.nd = null; if (ACT[r]) ACT[r]({ dataset: {} }); }, 300); };
 PAGE.collect = ({ id }) => {
   const q = quoteById(id); if (!q) return goneSheet('That order is gone');
   if (orderIsCollected(q) && PAGE.agent) return PAGE.agent({ id });
@@ -4217,7 +4300,7 @@ PAGE.slip = ({ id }) => {
       <div style="display:grid;grid-template-columns:repeat(${who.length},minmax(0,1fr));gap:5px">${who.map(w => `<button data-act="slwho" data-k="${esc(w.k)}" aria-pressed="${w.on}" style="height:64px;border-radius:14px;border:none;background:${w.on ? '#fff' : 'rgba(255,255,255,.07)'};color:${w.on ? '#16203C' : '#DDE3F0'};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0;min-width:0">
         <span style="width:28px;height:28px;border-radius:999px;background:${w.t[0]};color:${w.t[1]};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(w.ini)}</span><span style="max-width:92%;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.label)}</span></button>`).join('')}</div></div>`}
   </div>
-  <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px">
+  <div style="flex:1;min-height:0;overflow-y:auto;padding:18px 16px">${notDoneBar('slip', q.id) ? `<div style="margin-bottom:12px">${notDoneBar('slip', q.id)}</div>` : ''}
     <div style="position:relative;filter:drop-shadow(0 10px 20px rgba(22,32,60,.12)) drop-shadow(0 1px 1px rgba(22,32,60,.06))">
       <div style="height:8px;background:conic-gradient(from 135deg at 50% 0,#FFFFFF 90deg,transparent 0) 0 0/14px 8px repeat-x"></div>
       <div style="background:#fff;padding:14px 16px 12px;display:flex;flex-direction:column;gap:12px">
@@ -4252,14 +4335,14 @@ function slHoldDock(q){
     : `<button data-act="mnask" data-id="${q.id}" ${S.busy ? 'disabled' : ''} style="height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}Ask ${esc(mgr)} to let it go on credit</button>
       <button data-act="mnwait" data-id="${q.id}" style="height:44px;border-radius:999px;border:none;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:700">Keep it here until they pay</button>`}`);
 }
-ACT.sltick = t => { const ui = S.ui.sl, i = Number(t.dataset.i); if (!ui) return; ui.ticks[i] = !ui.ticks[i]; if (ui.ticks[i]) FEEL.load(); else FEEL.back(); render(); };
+ACT.sltick = t => { const ui = S.ui.sl, i = Number(t.dataset.i); if (!ui) return; ui.ticks[i] = !ui.ticks[i]; slSave(ui.id, ui); if (ui.ticks[i]) FEEL.load(); else FEEL.back(); render(); };
 ACT.slwho = t => { const ui = S.ui.sl, k = t.dataset.k; if (!ui) return; FEEL.tick();
   if (k === 'hired') { S.ui.drvFor = 'sl'; push('loadhired', {}); return; }
   if (k === 'me' || k === 'client') ui.who = k; else { ui.who = null; ui.car = staffCar(staffById(k.slice(2))); }
   render(); if (k === 'client') setTimeout(() => { const el = document.getElementById('sl_who'); if (el && !el.value) el.focus(); }, 60); };
 // The slider and "Checked together with …" follow the typing, letter by letter (round 2, FLOW-03): the two
 // text nodes are patched on every key, never a render, so the box keeps focus and the caret stays put.
-ACT['in:slwho'] = t => { const ui = S.ui.sl; if (!ui) return; const was = ui.collector.trim().length > 1; ui.collector = t.value; slSave(ui.id, ui.collector.trim());
+ACT['in:slwho'] = t => { const ui = S.ui.sl; if (!ui) return; const was = ui.collector.trim().length > 1; ui.collector = t.value; slSave(ui.id, ui);
   const name = ui.collector.trim(), now = name.length > 1;
   if (was !== now) { render(); const el = document.getElementById('sl_who'); if (el && document.activeElement !== el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } return; }
   if (!now) return;
@@ -4269,22 +4352,26 @@ ACT['in:slwho'] = t => { const ui = S.ui.sl; if (!ui) return; const was = ui.col
 ACT.slscan = () => openScan('load', {});
 ACT['slide:slgo'] = () => {
   const ui = S.ui.sl, q = ui && quoteById(ui.id); if (!q || ui.sent) return;
+  // The name box gives up focus before the screen changes under it.
+  if (document.activeElement && document.activeElement.id === 'sl_who') document.activeElement.blur();
   if (moneyHold(q)) { toast(`Not paid · cash customer — ask ${managerName()} or wait for payment.`, 5000); return; }
   const client = ui.who === 'client', agent = q.originAgentId ? (D().agents || []).find(a => String(a.id) === String(q.originAgentId)) : null;
   const car = client ? (q.deliveryMode === 'agent_pickup' ? { kind: 'agent', name: ui.collector.trim() || (agent && agent.name) } : { kind: 'client', name: ui.collector.trim(), phone: orderPhone(q) }) : ui.who === 'me' ? meCarrier() : ui.car;
   if (!car) return;
-  ui.sent = { car, at: Date.now(), gate: client, wait: true }; slSave(ui.id, ''); chimeDone(); render();
+  S.ui.nd = null; ui.sent = { car, at: Date.now(), gate: client, wait: true }; chimeDone(); render();
   heldWrite('Handing over', async () => {
     S.busy = true;
-    try { const r = client ? await handOver(q.id, car, Date.now()) : (await loadOrders([q.id], car))[0]; ui.sent.wait = false; if (!r) { ui.sent = null; toast('That order has moved on'); } }
-    catch (e) { ui.sent = null; toast(failSay(e), 5000); }
+    // What was typed and ticked stays on the phone until the server says it is done (round 3, REL-07).
+    try { const r = client ? await handOver(q.id, car, Date.now()) : (await loadOrders([q.id], car))[0]; ui.sent.wait = false;
+      if (!r) { ui.sent = null; await refreshOrder(q.id); setNotDone(staleErr(), 'slip', q.id, null); } else slSave(ui.id, null); }
+    catch (e) { ui.sent = null; setNotDone(e, 'slip', q.id, 'slide:slgo'); }
     S.busy = false; render();
   }, () => { ui.sent = null; }, 10000, true);
 };
 function slDone(q, ui){
   const s = ui.sent, me = isMeCar(s.car), name = s.gate ? firstWord(s.car.name) || 'them' : carWord(s.car), items = pickView(q), tk = takerOf(q), next = loadQueue().find(x => x.id !== q.id && orderIsPickup(x) && !moneyHold(x));
   const wa = s.car && s.car.kind === 'hired' ? waComposeUrl(s.car.phone, driverMessage([q], s.car)) : null;
-  if (me) return `<div style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 55%,#111A33 100%);color:#fff;display:flex;flex-direction:column;padding:calc(14px + var(--safe-area-inset-top)) 20px calc(26px + var(--safe-area-inset-bottom))">
+  if (me) return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 55%,#111A33 100%);color:#fff;display:flex;flex-direction:column;padding:calc(14px + var(--safe-area-inset-top)) 20px calc(26px + var(--safe-area-inset-bottom))">
     ${s.wait ? undoBtn('heldundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center">
       ${bigTick(truckIcon(40), 84, 176)}
@@ -4297,7 +4384,7 @@ function slDone(q, ui){
     <div style="display:flex;flex-direction:column;gap:6px"><button class="cv-white" data-act="drive" data-id="${q.id}" style="box-shadow:0 10px 24px rgba(0,0,0,.25)">${sv('M3 11 21 3l-8 18-2-8z', 18, 2.2)}Start the drive</button>
       <button data-act="home" style="height:46px;border:none;background:none;color:var(--navyInk);font-size:14px;font-weight:700">Later · back to Today</button></div></div>`;
   const step = (inner, label, sub, subInk) => `<span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">${inner}<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">${label}</span><span style="font-size:11px;font-weight:600;color:${subInk || 'var(--navyInk)'}">${sub}</span></span></span>`;
-  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${s.wait ? undoBtn('heldundo') : ''}
     <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:30px;text-align:center">
       ${bigTick(s.gate ? sv(CV.tick, 40, 2.6) : truckIcon(46))}
@@ -4328,7 +4415,7 @@ PAGE.loadhired = () => {
     ${plate ? `<span style="display:flex;align-items:stretch;height:24px;border-radius:6px;box-shadow:inset 0 0 0 1.5px #1C2233;background:#fff;overflow:hidden"><span style="display:flex;align-items:center;padding:0 5px;background:#16203C;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em">UG</span><span class="m" style="display:flex;align-items:center;padding:0 7px;font-size:12px;font-weight:600">${esc(plate)}</span></span>` : ''}
     <span style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(sub)}</span></button>`;
   const field = (k, w, ty, ph, mono) => `<label style="min-width:0;height:60px;border-radius:16px;background:var(--bg);padding:9px 14px 0;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--ink2)">${w}</span><input id="nw_${k}" data-in="nw" data-k="${k}" type="${ty}" value="${esc(nw[k] || '')}" placeholder="${ph}" autocomplete="off" style="min-width:0;border:none;outline:none;background:transparent;padding:0;font-family:${mono ? 'var(--mono)' : 'inherit'};font-size:${mono ? 15 : 16}px;font-weight:600;color:var(--ink)"></label>`;
-  return `<div style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 60%)">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(130% 60% at 50% 0%,#2B3866 0%,#16203C 60%)">
     <div style="position:absolute;left:0;right:0;bottom:0;top:calc(40px + var(--safe-area-inset-top));background:#fff;border-radius:30px 30px 0 0;display:flex;flex-direction:column;padding:10px 20px calc(26px + var(--safe-area-inset-bottom));gap:18px;box-shadow:0 -12px 30px rgba(0,0,0,.25);overflow-y:auto">
       <span style="align-self:center;width:40px;height:5px;border-radius:999px;background:#D8D3CA;flex:none"></span>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><span style="display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;font-weight:700;letter-spacing:-.02em">Who's driving?</span><span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2)">${sv('M4 20l1.3-3.9A8 8 0 1 1 8 18.8z', 14, 2.2, 'style="color:#0F6B43"')}They get ${esc(what)} on WhatsApp</span></span>
@@ -4521,7 +4608,7 @@ PAGE.deliver = ({ id }) => {
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)">
       <button data-act="dvkind" data-k="note" aria-pressed="${ui.kind === 'note'}" style="height:40px;border-radius:999px;border:none;${sel(ui.kind === 'note')};font-size:14px;font-weight:700">Signed note</button>
       <button data-act="dvkind" data-k="door" aria-pressed="${ui.kind === 'door'}" style="height:40px;border-radius:999px;border:none;${sel(ui.kind === 'door')};font-size:14px;font-weight:700">At the door</button></div></div>
-    <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">${notDoneBar('deliver', q.id)}
       <div style="position:relative;height:330px;flex:none;border-radius:24px;background:#0F1629;overflow:hidden;display:flex;align-items:center;justify-content:center">
         ${ui.shot ? `<img src="${ui.shot}" alt="The photo" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<video id="dv_video" playsinline muted autoplay data-cam="1" poster="${CAM_POSTER}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s"></video>
           <span id="dv_hint" style="position:absolute;left:0;right:0;top:46%;text-align:center;font-size:14px;font-weight:600;color:var(--navyInk)">${ui.kind === 'note' ? 'Point at the signed note' : 'Show the goods at the door'}</span>`}
@@ -4568,15 +4655,15 @@ ACT.dvshoot = async () => { const ui = S.ui.dv; if (!ui) return; const shot = (a
 ACT['slide:dvgo'] = () => {
   const ui = S.ui.dv, q = ui && quoteById(ui.id); if (!q || ui.sent) return;
   const back = doorReturnLines(q);
-  ui.sent = { at: Date.now(), wait: true, back }; chimeDone(); render();
+  S.ui.nd = null; ui.sent = { at: Date.now(), wait: true, back }; chimeDone(); render();
   heldWrite('Delivering', async () => {
     S.busy = true;
     try {
       const r = await markDelivered(q.id, ui.to, ui.blob, ui.kind, ui.blob ? null : ui.noPhoto); ui.sent.wait = false;
-      if (!r) { ui.sent = null; toast('That order is no longer on the road'); }
+      if (!r) { ui.sent = null; await refreshOrder(q.id); setNotDone(staleErr(), 'deliver', q.id, null); }
       // What came off at the door waits on Today as a filled-in return: the yard checks it before it goes to the Manager.
       else if (back.length) { const dr = doorReturns(), Q = quoteById(q.id) || q; dr[q.id] = { at: Date.now(), back: Object.fromEntries(back.map(l => [lineKey(Q.items[l.idx], l.idx), l.qty])), cond: Object.fromEntries(back.map(l => [lineKey(Q.items[l.idx], l.idx), 1])), shown: back.map(l => l.shown) }; saveDoorReturns(dr); }
-    } catch (e) { ui.sent = null; toast(failSay(e), 5000); }
+    } catch (e) { ui.sent = null; setNotDone(e, 'deliver', q.id, 'slide:dvgo'); }
     S.busy = false; render();
   }, () => { ui.sent = null; }, 10000, true);
 };
@@ -4584,11 +4671,11 @@ function dvDone(q, ui){
   const s = ui.sent, items = pickView(q).slice(0, 3), door = S.ui.door && S.ui.door.id === q.id ? S.ui.door : null, mgr = managerName();
   const got = (it, i) => door && door.got[i] != null ? door.got[i] : lineOut(q, it), inv = new Date((msOf(q.deliveredAt) || s.at) + 864e5);
   const back = s.back || [];
-  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${s.wait ? undoBtn('heldundo') : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center">
-      ${bigTick(sv(CV.tick, 40, 2.6))}
-      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">Delivered</span>
+      ${s.wait ? stateDot('sending') : bigTick(sv(CV.tick, 40, 2.6))}
+      <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${s.wait ? 'Delivering…' : 'Delivered'}</span>
       <span style="font-size:14px;font-weight:600;color:var(--navyInk)">${q4(q)} · to ${esc(ui.to)} · ${hm(s.at)}</span>
       <div style="width:100%;display:grid;grid-template-columns:repeat(${items.length},minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
         ${items.map((it, i) => { const g = got(it, i), o = lineOut(q, it), c = quoteLineCount(it, g), co = quoteLineCount(it, o); return `<span style="height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;${i ? 'box-shadow:-1px 0 0 rgba(255,255,255,.07)' : ''}"><span class="m" style="font-size:18px;font-weight:600;line-height:1">${esc(c.n)}${g < o ? `<span style="font-size:12px;color:var(--navyInk)">/${esc(co.n)}</span>` : ''} <span style="font-family:inherit;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(c.unit)}</span></span><span class="ell" style="max-width:92%;font-size:11px;font-weight:600;color:var(--navyInk)">${esc(shortProduct(it))}</span></span>`; }).join('')}</div>
@@ -4992,19 +5079,30 @@ async function sendCountOnce(){
 }
 // A count that did not go is kept on the phone and goes by itself when the signal is back.
 window.addEventListener('online', () => { const ct = S.ui.ct; if (ct && ct.sendErr && !ct.sent) sendCountOnce(); });
+// The first step of a done screen says only what is true (round 3, REL-05): sending, kept on this phone, or sent.
+function trackStep1(o){ const st = o.state || 'sent';
+  const dot = st === 'sending' ? `<span style="width:44px;height:44px;border-radius:999px;background:#19223F;color:#fff;box-shadow:inset 0 0 0 2px rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center"><span class="cv-spin" style="display:flex">${sv(CV.arc, 20, 2.6)}</span></span>`
+    : st === 'kept' ? `<span style="width:44px;height:44px;border-radius:999px;background:rgba(245,178,107,.18);color:#F5B26B;box-shadow:inset 0 0 0 2px #F5B26B;display:flex;align-items:center;justify-content:center">${sv(CV.wifi, 20, 2.4)}</span>`
+    : `<span style="width:44px;height:44px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 20, 3)}</span>`;
+  const [w, sub, ink] = st === 'sending' ? ['Sending', 'now', 'var(--navyInk)'] : st === 'kept' ? ['Not sent yet', 'kept ' + hm(o.keptAt || Date.now()), '#F5B26B'] : [o.sentWord || 'Sent', 'just now', 'var(--navyInk)'];
+  return `<span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">${dot}<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">${w}</span><span style="font-size:11px;font-weight:600;color:${ink}">${esc(sub)}</span></span></span>`; }
 function trackDone(o){
   return `<div style="width:100%;border-radius:22px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);padding:18px 10px 14px;display:flex;flex-direction:column;gap:14px">
-    <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><span style="position:absolute;top:21px;left:16.7%;width:33.3%;height:2px;background:rgba(111,220,176,.5)"></span><span style="position:absolute;top:21px;left:50%;width:33.3%;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 5px,transparent 5px 10px)"></span>
-      <span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:44px;height:44px;border-radius:999px;background:#6FDCB0;color:#16203C;display:flex;align-items:center;justify-content:center">${sv(CV.tick, 20, 3)}</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">Sent</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">just now</span></span></span>
-      <span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:44px;height:44px;border-radius:999px;background:${o.bg};color:${o.ink};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #19223F,0 0 0 5px #6FDCB0">${ini(o.who)}</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">${esc(firstWord(o.who))}</span><span style="font-size:11px;font-weight:600;color:#F5B26B">${esc(o.does)}</span></span></span>
+    <div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))"><span style="position:absolute;top:21px;left:16.7%;width:33.3%;height:2px;background:${o.state === 'sending' || o.state === 'kept' ? 'rgba(255,255,255,.18)' : 'rgba(111,220,176,.5)'}"></span><span style="position:absolute;top:21px;left:50%;width:33.3%;height:2px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 5px,transparent 5px 10px)"></span>
+      ${trackStep1(o)}
+      <span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:44px;height:44px;border-radius:999px;background:${o.bg};color:${o.ink};font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #19223F,0 0 0 5px #6FDCB0;opacity:${o.state === 'sending' || o.state === 'kept' ? .5 : 1}">${ini(o.who)}</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">${esc(firstWord(o.who))}</span><span style="font-size:11px;font-weight:600;color:#F5B26B">${esc(o.does)}</span></span></span>
       <span style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:44px;height:44px;border-radius:999px;background:#19223F;color:var(--navyInk);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center">${sv(o.icon || CV.store, 19, 2)}</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:#DDE3F0">${esc(o.last)}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${esc(o.lastSub)}</span></span></span></div>
     <span style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;color:var(--navyInk)">${sv(CV.bell, 14, 2.2)}${esc(o.foot)}</span></div>`;
 }
+// Not green until the server says yes (round 3, REL-05): a neutral spinner while it sends, amber when kept on the phone.
+function stateDot(st){ const a = st === 'kept' ? ['rgba(245,178,107,.16)', 'rgba(245,178,107,.28)', 'rgba(245,178,107,.18)', '#F5B26B', sv(CV.wifi, 36, 2.2)] : ['rgba(255,255,255,.1)', 'rgba(255,255,255,.16)', 'rgba(255,255,255,.1)', '#fff', `<span class="cv-spin" style="display:flex">${sv(CV.arc, 36, 2.4)}</span>`];
+  return `<span style="position:relative;width:168px;height:168px;flex:none;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[0]}"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px ${a[1]}"></span><span style="width:84px;height:84px;border-radius:999px;background:${a[2]};color:${a[3]};display:flex;align-items:center;justify-content:center">${a[4]}</span></span>`; }
 function sentScreen(o){
-  return `<div style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
+  return `<div data-done-screen style="position:absolute;inset:0;background:radial-gradient(120% 70% at 50% 0%,#2B3866 0%,#16203C 60%);color:#fff;display:flex;flex-direction:column;padding:calc(24px + var(--safe-area-inset-top)) 18px calc(26px + var(--safe-area-inset-bottom));gap:18px;overflow-y:auto">
     ${o.undo ? undoBtn(o.undo) : ''}
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center">
-      ${o.failed ? `<span class="cv-pop" style="position:relative;width:168px;height:168px;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(244,164,154,.14)"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(244,164,154,.26)"></span><span style="width:84px;height:84px;border-radius:999px;background:rgba(244,164,154,.18);color:#F4A49A;display:flex;align-items:center;justify-content:center">${sv(CV.wifi, 36, 2.2)}</span></span>` : bigTick(sv(CV.tick, 40, 2.6))}
+      ${o.failed ? `<span class="cv-pop" style="position:relative;width:168px;height:168px;display:flex;align-items:center;justify-content:center"><span style="position:absolute;inset:0;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(244,164,154,.14)"></span><span style="position:absolute;inset:21px;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(244,164,154,.26)"></span><span style="width:84px;height:84px;border-radius:999px;background:rgba(244,164,154,.18);color:#F4A49A;display:flex;align-items:center;justify-content:center">${sv(CV.wifi, 36, 2.2)}</span></span>`
+        : o.state === 'sending' || o.state === 'kept' ? stateDot(o.state) : bigTick(sv(CV.tick, 40, 2.6))}
       <span style="font-size:28px;font-weight:700;letter-spacing:-.02em">${esc(o.title)}</span><span style="font-size:14px;font-weight:600;color:var(--navyInk)">${esc(o.line)}</span>
       ${o.body || ''}
     </div>
@@ -5024,8 +5122,8 @@ PAGE.countresults = () => {
       <span style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.55"><span style="font-size:12px;font-weight:700;${first ? '' : 'text-decoration:line-through'}">${esc(R.mine ? 'You' : R.who)} · ${esc(R.when)}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">${first ? (rd === 'recount' ? 'sent back' : 'accepted') : 'replaced'}</span></span>
       ${sv('M5 12h14M13 6l6 6-6 6', 18, 2.2, 'style="color:var(--navyInk)"')}
       <span style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:12px;font-weight:700">${esc(firstWord(myName()) || 'You')} · now</span><span style="font-size:11px;font-weight:600;color:#6FDCB0">with ${esc(mgr)}</span></span></div>` : '';
-  return sentScreen({ undo: ct.wait ? 'heldundo' : null, title: 'Count sent', line: first ? `${mgr} ${rd === 'recount' ? 'sent' : 'accepted'} ${whoseWord(R)} count first · yours goes as the next one` : what + (swap ? ` · ${mgr} has it now` : ''), done: 'ctdone',
-    body: swap + trackDone({ who: (M && M.name) || mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'checks it', last: 'Shelf', lastSub: 'takes your count', foot: 'You get a buzz at each step' }) });
+  return sentScreen({ state: ct.wait ? 'sending' : 'sent', undo: ct.wait ? 'heldundo' : null, title: ct.wait ? 'Sending…' : 'Count sent', line: first ? `${mgr} ${rd === 'recount' ? 'sent' : 'accepted'} ${whoseWord(R)} count first · yours goes as the next one` : what + (swap ? ` · ${mgr} has it now` : ''), done: 'ctdone',
+    body: swap + trackDone({ state: ct.wait ? 'sending' : 'sent', who: (M && M.name) || mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'checks it', last: 'Shelf', lastSub: 'takes your count', foot: 'You get a buzz at each step' }) });
 };
 PAGE.countresults.bg = '#16203C';
 ACT.ctretry = () => { const ct = S.ui.ct; if (!ct) return; FEEL.tick(); ct.sendErr = null; ct.wait = true; render(); sendCountOnce(); };
@@ -5047,8 +5145,9 @@ ACT.report = t => { FEEL.open(); S.ui.rp = null; push('report', { key: t.dataset
   if (!t.dataset.key) { const f = () => { const el = document.getElementById('rp_find'); if (el && document.activeElement !== el) el.focus(); }; f(); setTimeout(f, 340); } };
 PAGE.report = ({ key }) => {
   const ui = S.ui.rp && S.ui.rp.key === key ? S.ui.rp : (S.ui.rp = { key, why: null, n: 1, lv: null, note: '', photo: null, blob: null, find: '' }), mgr = managerName();
-  if (ui.sent) return sentScreen({ undo: ui.wait && !ui.going ? 'heldundo' : null, title: ui.queued ? 'Kept on this phone' : ui.wait ? 'Sending…' : 'Report sent', line: ui.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${n0(ui.n)} ${ui.unit} of ${ui.name} · ${REASONS[ui.why || 0].word}`, done: 'rpdone',
-    body: trackDone({ who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'decides', last: 'Shelf', lastSub: 'if written off', foot: 'You get a buzz at each step' }) });
+  if (ui.sent) { const st = ui.queued ? 'kept' : ui.wait ? 'sending' : 'sent';
+    return sentScreen({ state: st, undo: ui.wait && !ui.going ? 'heldundo' : null, title: ui.queued ? 'Kept on this phone' : ui.wait ? 'Sending…' : 'Report sent', line: ui.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${n0(ui.n)} ${ui.unit} of ${ui.name} · ${REASONS[ui.why || 0].word}`, done: 'rpdone',
+      body: trackDone({ state: st, keptAt: ui.keptAt, who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'decides', last: 'Shelf', lastSub: 'if written off', foot: st === 'kept' ? 'Today lists it under Waiting to send' : st === 'sending' ? 'Undo while it sends' : 'You get a buzz at each step' }) }); }
   const x = key ? stockItems().find(i => i.key === key) : null, u = x ? unitWord(x) : '';
   if (!x) { const f = String(ui.find || '').trim().toLowerCase(), hits = (f ? itemSearch(f) : stockItems()).slice(0, 12);
     return `<div class="cv"><div class="cv-hero tight" data-navy-top><div class="cv-top">${cvBack()}<b>Report a loss</b><span class="cv-circ blank"></span></div>
@@ -5125,7 +5224,7 @@ ACT.rpsend = () => {
     try { await sendReport(x, base, REASONS[ui.why].k, ui.blob, note); ui.wait = false; ui.going = false; }
     catch (e) { ui.going = false;
       // No signal: kept on the phone and sent by itself later; the screen says so.
-      if (isNetworkError(e)) { try { await outboxAdd('report', { key: x.key, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, qty: base, reason: REASONS[ui.why].k, blob: ui.blob || null, note }); ui.wait = false; ui.queued = true; } catch (_e2) { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
+      if (isNetworkError(e)) { ui.keptAt = Date.now(); try { await outboxAdd('report', { key: x.key, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, qty: base, reason: REASONS[ui.why].k, blob: ui.blob || null, note }); ui.wait = false; ui.queued = true; } catch (_e2) { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
       else { ui.sent = false; ui.wait = false; FEEL.no(); toast(failSay(e, '0124'), 5000); } }
     S.busy = false; render(); }, () => { ui.sent = false; ui.wait = false; }, 10000, true);
 };
@@ -5151,8 +5250,8 @@ PAGE.restock = ({ key }) => {
   const x = stockItems().find(i => i.key === key); if (!x) return goneSheet('That item is gone');
   const L = lookOf(x), b = theBuyer(), bw = b ? firstWord(b.name) : 'the buyer', R = restockUnit(x), u = R.u, sf = shortFor(x);
   const ui = S.ui.rs && S.ui.rs.key === key ? S.ui.rs : (S.ui.rs = { key, when: L.why === 'short' || x.avail <= 0 ? 'out' : 'low', n: Math.max(1, Math.round(L.wk * 2 / R.f) || (R.f > 1 ? 2 : 20)) });
-  if (ui.sent) return sentScreen({ undo: ui.wait ? 'heldundo' : null, title: `${bw[0].toUpperCase() + bw.slice(1)} has it`, line: `About ${n0(ui.n)} ${u} of ${x.productName} · ${ui.when === 'out' ? "we're out" : 'running low'}`, done: 'rsdone',
-    body: trackDone({ who: b ? b.name : 'Buyer', bg: '#E4E6FA', ink: '#3A3F9B', does: 'buys it', last: 'Check-in', lastSub: 'when it lands', icon: CV.inbox, foot: `${managerName()} can still hold the buy` }) });
+  if (ui.sent) return sentScreen({ state: ui.wait ? 'sending' : 'sent', undo: ui.wait ? 'heldundo' : null, title: ui.wait ? 'Sending…' : `${bw[0].toUpperCase() + bw.slice(1)} has it`, line: `About ${n0(ui.n)} ${u} of ${x.productName} · ${ui.when === 'out' ? "we're out" : 'running low'}`, done: 'rsdone',
+    body: trackDone({ state: ui.wait ? 'sending' : 'sent', who: b ? b.name : 'Buyer', bg: '#E4E6FA', ink: '#3A3F9B', does: 'buys it', last: 'Check-in', lastSub: 'when it lands', icon: CV.inbox, foot: `${managerName()} can still hold the buy` }) });
   const due = countDue(x), sel = on => on ? 'box-shadow:inset 0 0 0 2px #16203C;background:#16203C;color:#fff' : 'box-shadow:inset 0 0 0 1px #E6E3DD;background:#fff;color:var(--ink)';
   const gap = Math.max(0, x.held - x.qty);
   return `<div class="cv" style="height:100%;min-height:0"><div class="cv-hero tight" style="padding-bottom:16px;gap:14px" data-navy-top>
@@ -5611,11 +5710,12 @@ ACT.rtsend = () => {
 };
 function rtDone(q, ui){
   const good = ui.sent.lines.filter(l => l.condition === 'good'), bad = ui.sent.lines.filter(l => l.condition === 'damaged'), tk = takerOf(q), mgr = managerName();
-  return sentScreen({ undo: ui.sent.wait ? 'heldundo' : null, title: ui.sent.queued ? 'Kept on this phone' : ui.sent.wait ? 'Logging…' : 'Return logged', line: ui.sent.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${q4(q)} · ${quoteClientName(q)}`, done: 'rtdone',
+  const st = ui.sent.queued ? 'kept' : ui.sent.wait ? 'sending' : 'sent';
+  return sentScreen({ state: st, undo: ui.sent.wait ? 'heldundo' : null, title: ui.sent.queued ? 'Kept on this phone' : ui.sent.wait ? 'Logging…' : 'Return logged', line: ui.sent.queued ? `No signal · it goes to ${mgr} by itself when the signal is back` : `${q4(q)} · ${quoteClientName(q)}`, done: 'rtdone',
     body: `<div style="width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-radius:18px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)">
       <span style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><span class="m" style="font-size:20px;font-weight:600;color:#6FDCB0">${esc(good.map(l => oneOf(l.shown)).join(' + ') || '0')}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">good · back to the shelf</span></span>
       <span style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:-1px 0 0 rgba(255,255,255,.07)"><span class="m" style="font-size:20px;font-weight:600;color:#F5B26B">${esc(bad.map(l => oneOf(l.shown)).join(' + ') || '0')}</span><span style="font-size:11px;font-weight:600;color:var(--navyInk)">damaged · set aside</span></span></div>
-      ${trackDone({ who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'credit note', last: 'Shelf', lastSub: 'good goods back', foot: 'You get a buzz when it is raised' }).replace('>Sent<', '>Logged<').replace('>just now<', `>${tk ? esc(firstWord(tk.name)) + ' told' : 'Sales told'}<`)}` });
+      ${trackDone({ state: st, keptAt: ui.sent.at, sentWord: 'Logged', who: mgr, bg: '#F6E4F1', ink: '#7A3268', does: 'credit note', last: 'Shelf', lastSub: 'good goods back', foot: 'You get a buzz when it is raised' }).replace('>just now<', `>${tk ? esc(firstWord(tk.name)) + ' told' : 'Sales told'}<`)}` });
 }
 ACT.rtdone = () => { S.ui.rt = null; FEEL.back(); pop(); };
 

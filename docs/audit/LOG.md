@@ -67,3 +67,20 @@ Now part of the language:
 Deferred:
 - Unpack from a delivery bay goes through the order slip, opened from order search, not from the bay tile (the bay opens the load run).
 - 0161 still to run.
+
+## Round 3 · Reliability (23 Oct 2026) · REL-02, REL-04..09 · migration 0162
+
+Fixed: one "Waiting to send" list on Today with "Not sent · N" in the header; sending / kept / sent on every done screen; a 400 ms tap guard after each screen change, and Unpack up top; failed writes keep their work with a "Not done" bar and Try again; two phones on one order can't both win (0162); plain error words; the hand-over ticks kept with the name.
+
+Now part of the language:
+- **Three looks for a send:** a neutral spinner while it goes, amber "Not sent yet" when kept on the phone, and green only after the server's yes.
+- **The "Not done" bar** (new component): amber for no signal, red for a save that failed ("tell Kevin · code"), blue for "Someone else just did this · Refreshed". It stays until the work is done, and the work stays with it.
+- **Waiting to send** is the one place the phone admits what is not on the books yet.
+- **A write says what the phone saw.** If the order moved, nothing is written, the order is refreshed, and the screen says so.
+- **No SQL, function or migration words on screen,** ever.
+- **A destructive button never sits where the last screen's main button was.**
+
+Deferred:
+- Order writes (hand over, deliver, pack, unpack) are not queued in the outbox. They wait on screen with Try again, by design.
+- A kept report or return the server refuses for a reason other than signal is still dropped with a toast (it was before). Worth a look in a later round.
+- 0161 and 0162 to run.

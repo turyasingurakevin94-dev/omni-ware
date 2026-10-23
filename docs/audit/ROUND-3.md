@@ -43,13 +43,15 @@ Do not regress: 10 s undo, Unpack, the live hand-over label, the report/return o
 
 ## Phase B result (filled after implementing)
 
+Go-ahead 23 Oct.
+
 | ID | Done? | What changed (function names) | How verified |
 |---|---|---|---|
-| REL-04 | | | |
-| REL-05 | | | |
-| REL-06 | | | |
-| REL-07 | | | |
-| REL-08 | | | |
-| REL-09 | | | |
-| REL-02 | | | |
-| DATA-01 | | | |
+| REL-04 | yes | `outboxRefresh` (`S.ui.outboxRows`, after every `outboxAdd` and `flushOutbox`, and on first load), `waitingList`, `waitCard` (replaces the offline card when anything waits), the header pill "Not sent · N" / "Offline · N waiting" (`.cv-live.wait`), `ACT.sendnow`. | Harness: queue a report → Today shows "Not sent · 1" and the card with "Report · Wire nails 4" · 1 ctn damaged · 9:45" at once. `test/store-round3.test.js`. |
+| REL-05 | yes | `stateDot`, `trackStep1`; `sentScreen` and `trackDone` take `state`. Report, the restock ask, the return, the count and the delivery pass sending / kept / sent; delivery reads "Delivering…" with a spinner until the yes. | Harness: the report after a triple tap shows "Sending…" (spinner, no tick). |
+| REL-06 | yes | `render()` stamps `S.screenAt` when the view, the page on top, or a done screen (`data-done-screen` on every done screen) changes; the click handler ignores taps within 400 ms (sheets excepted); `unpackLink(q, 'chip')` at the top of Packed. | Harness: three taps 120 ms apart on "Send to Ruth" end on the report's Sending screen, and nothing else opens. |
+| REL-07 | yes | `setNotDone`, `notDoneBar`, `movedWords`, `ACT.ndretry`; hand over (`slide:slgo`, which also drops the box's focus first), deliver (`slide:dvgo`) and pack (`pkFinish`, `ACT.pkfinish`) keep their work and show the bar; the name is cleared only after the server's yes. | Harness with writes failing: the slip shows "Not done · no signal · The name and the ticks are kept · Try again", with "Peter Okello" and 4 ticks still there. |
+| REL-08 | yes | `0162` `store_patch_order(…, p_expect)`. `store.html`: `seenOf`, `seenDiffers`, `staleErr`, `isStale`, `keepOrder`, `refreshOrder`; `changeOrder(id, fn, seen)` and `changeOrderSnap` check first, send `p_expect`, and fall back without it before 0162. | Postgres: tab A hands over, tab B (still showing packed) is refused `40001 Someone else just changed this order.`, the row keeps A's hand-over, and a write without `p_expect` still goes. Harness: the blue "Someone else just did this · Refreshed · packed at 8:30". |
+| REL-09 | yes | `failWord` (plain sentence of our own shown as it is; anything else "That did not save · tell Kevin · code …", raw message to `console.warn`), `failSay` (no "migration" words), `ownerWord`. | The test greps that "This needs migration" and the raw "Nothing was changed: " are gone. |
+| REL-02 | yes | `slSave(id, ui)` keeps `{ name, ticks }`; `slSaved` reads it (and the old plain name); `slUI` restores both; `ACT.sltick` saves. | Harness: tick 4, type the name, writes fail, reload: the name and 4 ticks are back. |
+| DATA-01 | no code | In 0161, still to run. | `test/store-round1.test.js`. |
