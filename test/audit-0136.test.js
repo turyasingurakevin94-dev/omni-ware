@@ -115,7 +115,7 @@ const fn = name => { const at = sql.indexOf('create or replace function ' + name
 
 /* ---------------- 8. the three app corrections ---------------- */
 {
-  t.check(/const u = await sb\.from\('saved_quotes'\)\.update\(patch\)\.eq\('shop_id', S\.shopId\)\.eq\('id', id\)\.select\('\*'\)\.maybeSingle\(\);/.test(buyer) && /const fresh = rowToQuote\(u\.data \|\| \{ \.\.\.row, \.\.\.patch \}\);/.test(buyer), 'the Buyer reads the row back after a move');
+  t.check(/const u = await sb\.rpc\('ow_patch_order', \{ p_shop_id: S\.shopId, p_id: Number\(id\), p_patch: patch,/.test(buyer) && /const fresh = rowToQuote\(u\.data \|\| \{ \.\.\.row,/.test(buyer), 'the Buyer reads the row back after a move (0165 ow_patch_order hands it back)');
   t.check(/const held = q\.status !== before && fresh\.status === before && fresh\.gateHeldMove \? fresh\.gateHeldMove : null;/.test(buyer) && /function heldToast\(q, held\)/.test(buyer), 'and says when the gate held it, and why');
   t.check(/\.filter\(it => it\.productId && Number\(it\._stockTaken\) > 0\)\.map\(it => \(\{ key: stockKey\(it\.productId, it\.variantIdx\)[^}]*delta: Number\(it\._stockTaken\)/.test(manager), 'a void gives back what the invoice took (_stockTaken)');
   t.check(/throw new Error\('Voided, but the supplier bills for it could not be voided — '/.test(manager) && !/void_sale_bills'[^\n]*\.catch\(e => console\.warn\(e\)\)/.test(manager), 'a failed bill reversal is said');

@@ -147,7 +147,8 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
   // The form already asked for the account and used to discard it.
   const save = (/ip_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(src) || [''])[0];
   t.check(/method: account/.test(save), 'the payment records the account the form already collected');
-  t.check(/id: nextPaymentId\(q\)/.test(save), 'and an id, so its receipt number survives a later reversal');
+  // 0165 (Sales round 1): receive_payment writes the payment, with its id (next after the order's highest).
+  t.check(/sb\.rpc\('receive_payment'/.test(save), 'and an id, so its receipt number survives a later reversal (receive_payment numbers it, 0165)');
 }
 
 /* ---------- 5. balance due, only when there is one ------------------- */
@@ -292,7 +293,7 @@ const nums = (html) => (html.match(/[\d,]{4,}/g) || []).map((x) => Number(x.repl
 /* ---------- 9. automatic, but only where it was asked for ------------ */
 {
   const save = (/ip_save'\)\.addEventListener[\s\S]*?\n\}\);/.exec(src) || [''])[0];
-  t.check(/if\(data\.presetAutoPrintReceipt\) printReceipt\(q, payment, q\.payments\.length-1\);/.test(save),
+  t.check(/if\(payment && data\.presetAutoPrintReceipt\) printReceipt\(q, payment, \(q\.payments\|\|\[\]\)\.indexOf\(payment\)\);/.test(save),
     'money received prints paper — the one moment that does not wait for a click');
   t.check(save.indexOf('saveData()') < save.indexOf('printReceipt'),
     'after the payment is saved, so a printer that is off cannot cost the shop the record');

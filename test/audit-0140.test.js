@@ -50,13 +50,13 @@ t.check(/'bills', bills, 'before', debt0, 'after', debt,\s*'cashRows'/.test(fn),
 t.check(/grant execute on function receive_payment\(uuid, text, numeric, text, bigint\[\], bigint\) to authenticated;/.test(sql), 'granted');
 
 /* ---------------- 2. the apps ---------------- */
-const CALL = "sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: amount, p_method: a.method || 'cash', p_picks: a.mode === 'pick' ? (a.picks || []).map(Number) : null, p_order_id: null })";
+const CALL = "sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: amount, p_method: a.method || 'cash', p_picks: a.mode === 'pick' ? (a.picks || []).map(Number) : null, p_order_id: null, p_over: over })";
 // Sales sends the same arguments through payRpc, which adds the transaction ID (0155) when one was typed.
 const ARGS = CALL.replace("sb.rpc('receive_payment', ", '').replace(/\)$/, '');
 t.check(sales.includes("payRpc('receive_payment', " + ARGS + ', payRefOf(a))') && manager.includes(CALL), 'sales and manager: the customer payment is the one call, with the same arguments');
-t.check(sales.includes("payRpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: null, p_amount: amount, p_method: a.method || 'cash', p_picks: null, p_order_id: Number(v.q.id) }, payRefOf(a))"), 'sales: an order before its invoice is the same call with the order');
+t.check(sales.includes("payRpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: null, p_amount: amount, p_method: a.method || 'cash', p_picks: null, p_order_id: Number(v.q.id), p_over: over }, payRefOf(a))"), 'sales: an order before its invoice is the same call with the order');
 t.check(/async function payRpc\(fn, args, ref\)\{\n  if \(!ref\) return sb\.rpc\(fn, args\);/.test(sales), 'sales: with no transaction ID it is exactly the one call');
-t.check(accounts.includes("sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: Math.round(amount), p_method: method || 'cash', p_picks: picks && picks.length ? picks.map(Number) : null, p_order_id: null })"), 'accounts: recordPayment is the one call');
+t.check(accounts.includes("sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: Math.round(amount), p_method: method || 'cash', p_picks: picks && picks.length ? picks.map(Number) : null, p_order_id: null, p_over: over || null })"), 'accounts: recordPayment is the one call');
 for (const [name, src] of [['sales', sales], ['manager', manager], ['accounts', accounts]]) {
   t.check(!/payCashRow\(/.test(src) && !/Stopped part-way/.test(src), `${name}: the pieces are no longer written by hand, and nothing can stop part-way`);
   t.check(/\(d\.cashRows \|\| \[\]\)\.forEach\(row => \{ if \(!(D\(\)\.cashTxns\.some\(x => String\(x\.id\) === String\(row\.id\)\)|txnById\(row\.id\))\) D\(\)\.cashTxns\.push\(rowToTxn\(row\)\); \}\);/.test(src), `${name}: the lines it wrote land in the phone's copy once`);

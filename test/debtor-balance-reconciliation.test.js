@@ -72,8 +72,9 @@ if (fns) {
     const healed = reconcileCustomerDebts(d);
     t.check(healed.length === 1 && healed[0].from === 370000 && healed[0].to === 0,
       `the stale 370,000 is re-read as the 0 the records agree on (${healed.map(h => h.from + '->' + h.to).join(', ') || 'nothing healed'})`);
-    t.check(d.customers[0].debt === 0, 'so the Debtors List stops chasing a settled invoice');
-    t.check(customerDebtDrift(d.customers[0]) === 0, 'and the drift banner has nothing left to report');
+    // 0165 (Sales round 1): the server keeps balances; the console finds the drift and changes nothing.
+    t.check(d.customers[0].debt === 370000 && healed[0].readOnly === true, 'the console no longer rewrites the balance itself (0165: the server keeps it)');
+    t.check(customerDebtDrift(d.customers[0]) !== 0, 'so the drift banner still reports it, for Accounts to correct');
   }
 
   /* ---------- 2. a healthy balance is left alone -------------------- */
@@ -94,8 +95,8 @@ if (fns) {
     d.savedQuotes[1].debtCharged = 370000;
     d.customers[0].debt = 425000; // yesterday's snapshot won the last write
     const healed = reconcileCustomerDebts(d);
-    t.check(healed.length === 1 && d.customers[0].debt === 795000,
-      `a stale low balance is restored to the 795,000 the records support (now ${d.customers[0].debt})`);
+    t.check(healed.length === 1 && healed[0].to === 795000 && d.customers[0].debt === 425000,
+      `a stale low balance is found against the 795,000 the records support, and left for the server (now ${d.customers[0].debt})`);
   }
 
   /* ---------- 4. no invoice evidence, no verdict -------------------- */
@@ -158,8 +159,8 @@ if (fns) {
       { id: 4, date: '2026-08-21', type: 'payment', amount: 370000, note: 'Auto-sync — INV-0195' },
     ];
     const healed = reconcileCustomerDebts(d);
-    t.check(healed.length === 1 && d.customers[0].debt === 0,
-      `a stale total from write order heals even when statement order never shows it (now ${d.customers[0].debt})`);
+    t.check(healed.length === 1 && healed[0].to === 0,
+      `a stale total from write order is found even when statement order never shows it (now ${d.customers[0].debt}, unchanged)`);
   }
 
   /* ---------- 6c. the evidence, asked directly ---------------------- */

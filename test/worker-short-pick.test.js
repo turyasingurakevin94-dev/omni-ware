@@ -406,8 +406,9 @@ const MODEL_NAMES = ['itemPickAnswered', 'itemOrderedQty', 'itemPickedQty',
       data3.savedQuotes = [kept];
       seen.modalFor = null;
       await s3.toggleQuoteInvoiced(42);
-      t.check(kept.invoiced === true && seen.modalFor === null,
-        'once settled, invoicing proceeds without asking again');
+      // 0165 (Sales round 1): the invoice itself is the server's; the console does not mark it here.
+      t.check(seen.modalFor === null && kept.invoiced === false,
+        'once settled, invoicing proceeds without asking again (to the server; the console never invoices for itself)');
 
       // Un-invoicing is never gated: it only ever reverses.
       const undo = order();

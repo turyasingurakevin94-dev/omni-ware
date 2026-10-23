@@ -1241,7 +1241,8 @@ function quoteItemSellPrice(it){
   if (it.sellPrice != null && it.sellPrice !== '') return Number(it.sellPrice) || 0;
   const buy = Number(it.price) || 0;
   const product = productById(it.productId);
-  if (!product) return buy;
+  // Sales round 1 (SAL-007): no price and no rule is no price — never the cost (0165 does the same).
+  if (!product) return 0;
   const vi = it.variantIdx == null ? null : it.variantIdx;
   const packQty = Number(it.packQty) || 0, qty = Number(it.qty) || 0;
   const fromStock = it.supplierId === '__stock__';
@@ -1249,7 +1250,7 @@ function quoteItemSellPrice(it){
   const row = !fromStock ? (productPriceRows(it.productId, vi).find(r => r.supplierId === it.supplierId) || null) : null;
   const kind = sellSideFor(row, qty, packQty, ruleAt);
   const s = applyRule(ruleAt(kind), buy, kind, packQty);
-  return s != null ? s : buy;
+  return s != null ? s : 0;
 }
 /* Whether a line has a selling price the shop decided, or would go out
    at cost. A sales login never sells at cost: the line says "price to
@@ -1304,7 +1305,7 @@ function makeLine(pid, vi, qty, opts){
 }
 
 /* ---- totals: savedQuoteGoodsTotal 63537 ... savedQuoteTotal 63768 ---- */
-function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (Number(it.qty) || 0) * quoteItemSellPrice(it), 0); }
+function goodsTotal(q){ return (q.items || []).reduce((s, it) => s + (linePriceToConfirm(it) ? 0 : Math.round(Math.max(0, Number(it.qty) || 0) * Math.max(0, quoteItemSellPrice(it)))), 0); }
 /* What the salesperson can quote today: lines still to be priced are left
    out and counted, never shown at cost. */
 function pricedView(q){ const open = (q.items || []).filter(linePriceToConfirm); const known = { ...q, items: (q.items || []).filter(it => !linePriceToConfirm(it)) }; return { total: quoteTotal(known), cash: cashTotal(known), credit: creditCharge(known), toConfirm: open.length, pending: (q.items || []).filter(it => it.priceNote === 'nocost' && !linePriceToConfirm(it)).length }; }
@@ -1313,7 +1314,7 @@ function chargesTotal(q){ const g = goodsTotal(q); return (q.charges || []).redu
 function cashTotal(q){ const gross = goodsTotal(q) + chargesTotal(q); return gross - Math.min(Math.max(0, Number(q.discount) || 0), gross); }
 function creditTerms(q){ const c = q && q.credit; if (!c || !(Number(c.pct) > 0)) return null; return { pct: Number(c.pct), days: Math.max(0, Number(c.days) || 0) }; }
 function creditCharge(q){ const t = creditTerms(q); return t ? Math.round(cashTotal(q) * t.pct / 100) : 0; }
-function quoteTotal(q){ const credited = (q.creditNotes || []).reduce((s, cn) => s + (cn && !cn.voided ? Number(cn.amount) || 0 : 0), 0); return cashTotal(q) + creditCharge(q) - credited; }
+function quoteTotal(q){ const credited = (q.creditNotes || []).reduce((s, cn) => s + (cn && !cn.voided ? Number(cn.amount) || 0 : 0), 0); return Math.max(0, cashTotal(q) + creditCharge(q) - credited); }
 function balanceDue(q){ return Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)); }
 function shopCreditPct(){ const n = Number(D().presetCreditPct); return Number.isFinite(n) && n > 0 ? n : 0; }
 function invoiceLabel(q){ return 'INV-' + String(q.id).padStart(4, '0'); }
@@ -1409,7 +1410,7 @@ function payPlan(c, amount, picks){
     const desired = Math.max(0, quoteTotal(b.q) - (Number(b.q.amountPaid) || 0) - b.pay), after = Math.max(0, debt + desired - (Number(b.q.debtCharged) || 0));
     if (after < debt) debt = after;
   });
-  const over = Math.max(0, left - debt);
+  const over = Math.max(0, left - Math.max(0, debt));   // a deposit already held is not more owed
   return { bills, rest: left, loose, over, after: Math.max(0, debt - left), all: Math.max(debt0, sumDue + loose), oldest: open.length ? balanceDue(open[0]) : 0 };
 }
 async function insertRow(table, row, optional){
@@ -1750,6 +1751,16 @@ const PACK_CAP = 5;
    the keys this desk touches.
    ================================================================== */
 const PACK_KEYS = ['items', 'assignedWorkerId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickShortfallAckAt', 'pickingDoneAt'];
+/* 0165: only the keys this desk touches go to the server, merged there
+   (ow_patch_order) — a whole payload written back could drop a payment
+   taken on another phone in between. Returns the row as it was saved. */
+async function patchOrder(id, row, q, keys, status){
+  const patch = {}, drop = [];
+  keys.forEach(k => { if (q[k] === undefined) { if (row.payload && k in row.payload) drop.push(k); } else patch[k] = q[k]; });
+  const r = await sb.rpc('ow_patch_order', { p_shop_id: S.shopId, p_id: Number(id), p_patch: patch, p_client_name: null, p_client_phone: null, p_drop: drop.length ? drop : null, p_status: status == null ? null : status });
+  if (r.error) throw r.error;
+  return r.data || { ...row, status: status == null ? row.status : status, payload: { ...(row.payload || {}), ...patch } };
+}
 async function changeOrder(id, fn, keys){
   const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
   if (r.error) throw r.error;
@@ -1757,11 +1768,7 @@ async function changeOrder(id, fn, keys){
   const row = r.data, q = rowToQuote(row);
   const out = fn(q);
   if (out === false) return null;
-  const payload = { ...(row.payload || {}) };
-  keys.forEach(k => { if (q[k] === undefined) delete payload[k]; else payload[k] = q[k]; });
-  const u = await sb.from('saved_quotes').update({ payload }).eq('shop_id', S.shopId).eq('id', id);
-  if (u.error) throw u.error;
-  const fresh = rowToQuote({ ...row, payload });
+  const fresh = rowToQuote(await patchOrder(id, row, q, keys));
   const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();
@@ -2928,7 +2935,7 @@ function obCustCard(c, q){
     ${custAv(c, 44)}
     <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span class="ell" style="font-size:15px;font-weight:700">${obMark(c.name, q)}</span>
       <span role="img" aria-label="${mine.length} ${pl(mine.length, 'order')}${first ? ' since ' + obMonthYr(first) : ''}; the last seven months as bars" style="display:flex;align-items:flex-end;gap:2px;height:14px">${bars}<span class="ell" style="margin-left:6px;font-size:12px;font-weight:600;color:var(--ink3)"><span class="m">${mine.length}</span> ${pl(mine.length, 'order')}${first ? ' since ' + esc(obMonthYr(first)) : ''}</span></span></span>
-    <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none"><span class="m" style="font-size:15px;font-weight:600;color:${owes > 0 ? (custOverdue(c) ? 'var(--crimson)' : 'var(--amberInk)') : 'var(--green)'}">${n0(owes)}</span><span style="font-size:11px;font-weight:600;color:var(--ink3)">owes</span></span></button>`;
+    <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none"><span class="m" style="font-size:15px;font-weight:600;color:${owes > 0 ? (custOverdue(c) ? 'var(--crimson)' : 'var(--amberInk)') : 'var(--green)'}">${n0(Math.abs(owes))}</span><span style="font-size:11px;font-weight:600;color:var(--ink3)">${owes < 0 ? 'deposit' : 'owes'}</span></span></button>`;
 }
 function obTabsHTML(){
   const q = String(S.ui.srchQ || '').trim();
@@ -3029,14 +3036,9 @@ async function obMove(id, fn){
   const row = r.data, q = rowToQuote(row), before = q.status;
   if (q.voided || q.invoiced) throw new Error('that order is ' + (q.voided ? 'voided' : 'invoiced'));
   if (fn(q) === false) return null;
-  const payload = { ...(row.payload || {}) };
-  ['stageEnteredAt', 'stageLog', 'pickingStatus', 'pickingDoneAt', 'deliveredAt'].forEach(k => { if (q[k] === undefined) delete payload[k]; else payload[k] = q[k]; });
-  if ('status' in payload) payload.status = q.status;
-  const patch = { status: q.status, payload };
-  const u = await sb.from('saved_quotes').update(patch).eq('shop_id', S.shopId).eq('id', id);
-  if (u.error) throw u.error;
-  const r2 = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
-  const fresh = rowToQuote(r2 && !r2.error && r2.data ? r2.data : { ...row, ...patch });
+  const keys = ['stageEnteredAt', 'stageLog', 'pickingStatus', 'pickingDoneAt', 'deliveredAt'].concat(row.payload && 'status' in row.payload ? ['status'] : []);
+  // The saved row comes back from the server, gate and all (0119 gateHeldMove).
+  const fresh = rowToQuote(await patchOrder(id, row, q, keys, q.status));
   const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();
@@ -3219,11 +3221,13 @@ async function obVoidDup(id, keepId){
   if (q.invoiced || q.status === 'completed') throw new Error('it was delivered since — void it from its invoice');
   const why = obVoidBlock(q); if (why) throw new Error(why);
   const now = new Date().toISOString();
-  const payload = { ...(row.payload || {}), cancelledAt: Date.now(), voidedBy: { by: S.user ? S.user.id : null, byName: myName(), at: now, why: 'duplicate', keeps: Number(keepId) },
-    docLog: (Array.isArray(q.docLog) ? q.docLog : []).concat([{ at: now, kind: 'voided', what: 'Voided · taken twice, Q-' + String(keepId).padStart(4, '0') + ' kept' }]).slice(-60) };
-  const u = await sb.from('saved_quotes').update({ voided: true, payload }).eq('shop_id', S.shopId).eq('id', id);
+  q.cancelledAt = Date.now(); q.voidedBy = { by: S.user ? S.user.id : null, byName: myName(), at: now, why: 'duplicate', keeps: Number(keepId) };
+  q.docLog = (Array.isArray(q.docLog) ? q.docLog : []).concat([{ at: now, kind: 'voided', what: 'Voided · taken twice, Q-' + String(keepId).padStart(4, '0') + ' kept' }]).slice(-60);
+  // 0165: the why goes in first (merged), then the void itself, on its own column.
+  const saved = await patchOrder(id, row, q, ['cancelledAt', 'voidedBy', 'docLog']);
+  const u = await sb.from('saved_quotes').update({ voided: true }).eq('shop_id', S.shopId).eq('id', id);
   if (u.error) throw u.error;
-  const fresh = rowToQuote({ ...row, voided: true, payload }), i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
+  const fresh = rowToQuote({ ...saved, voided: true }), i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh;
   saveSnapshot();
   return fresh;
@@ -3514,7 +3518,7 @@ PAGE.debtor = a => {
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px"><span class="mx-face">${avatar(c.name, c.id, 46, true)}${sellerBadge(ls).replace('box-shadow:0 0 0 2px #fff', '')}</span>
         <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:17px;font-weight:700">${esc(c.name)}</span><span class="ell" style="font-size:12px;color:var(--navyInk)">${ls ? esc(firstWord(ls.name)) + ' last sold · ' : ''}${terms ? `terms <span class="m">${terms}</span> days` : c.debt > 0 ? 'no credit terms set' : 'cash, no terms'}${custAreaOf(c) ? ' · ' + esc(custAreaOf(c)) : ''}</span></span>${can('credit.set') || can('customer.edit') ? `<button class="bx-circle" data-act="push" data-p="custedit" data-id="${esc(c.id)}" aria-label="Edit ${esc(c.name)}: limit and terms">${ic('lines', 16)}</button>` : ''}${closeBtn()}</div>
-      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">Owes the shop</span><span class="mx-big" style="font-size:30px">${n0(c.debt)}</span></span>${c.debt > 0 ? (custUndated(c) ? `<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">no date</span>` : `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>`) : ''}</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:700;color:var(--navyInk2)">${c.debt < 0 ? 'Deposit' : 'Owes the shop'}</span><span class="mx-big" style="font-size:30px${c.debt < 0 ? ';color:var(--mint)' : ''}">${n0(Math.abs(c.debt))}</span></span>${c.debt > 0 ? (custUndated(c) ? `<span class="bx-chip" style="background:rgba(255,255,255,.08);color:var(--navyInk)">no date</span>` : `<span class="bx-chip" style="background:${age > terms ? 'rgba(229,72,61,.18)' : 'rgba(111,220,176,.14)'};color:${age > terms ? 'var(--rose)' : 'var(--mint)'}">oldest <span class="m" style="margin:0 3px">${age}</span> days</span>`) : ''}</div>
       <div role="img" aria-label="Owes ${n0(c.debt)}${limit ? ' of a ' + n0(limit) + ' limit' : ', no credit limit set'}${pend ? '; orders on the way add ' + n0(pend) : ''}" style="display:flex;flex-direction:column;gap:6px">
         ${limit || pend ? `<span style="position:relative;height:14px;border-radius:999px;background:rgba(255,255,255,.08)"><i class="a-grow" style="position:absolute;left:0;top:0;bottom:0;width:${pc(c.debt)};border-radius:999px 0 0 999px;background:${limit && c.debt > limit ? '#E5483D' : 'var(--amber)'}"></i>${pend ? `<i class="a-grow" style="animation-delay:.5s;position:absolute;left:${pc(c.debt)};top:0;bottom:0;width:${pc(pend)};border-radius:0 999px 999px 0;background:repeating-linear-gradient(135deg,${over ? 'rgba(229,72,61,.7)' : 'rgba(245,178,107,.55)'} 0 4px,rgba(245,178,107,.2) 4px 7px)"></i>` : ''}${limit ? `<i style="position:absolute;left:${pc(limit)};top:-5px;bottom:-5px;width:2.5px;border-radius:2px;background:#fff"></i>` : ''}</span>` : ''}
         <span style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--navyInk)"><span>${pend ? `+ orders on the way <b class="m" style="color:#fff">${n0(pend)}</b>` : 'no orders in progress'}</span><span style="display:inline-flex;align-items:center;gap:4px">${ic('lock', 11, 'style="stroke-width:2.2"')}${limit ? `limit <b class="m" style="color:#fff">${n0(limit)}</b>` : 'no limit set'}</span></span></div>
@@ -3809,8 +3813,9 @@ PAGE.pay = a => {
           return `<div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;color:${b.pay > 0 ? 'var(--ink)' : '#8A93A3'}"><span style="width:10px;height:10px;border-radius:999px;${cleared ? 'background:var(--green)' : part ? 'background:linear-gradient(90deg,var(--green) 50%,#E6E3DD 50%)' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA'}"></span>
             <span style="display:flex;align-items:baseline;gap:6px;min-width:0"><span class="m" style="font-size:13px;font-weight:600">${esc(b.label)}</span><span class="m ell" style="font-size:11px;color:${b.age != null && b.age > custTerms(c) ? 'var(--crimson)' : 'inherit'}">${b.age == null ? 'no date' : b.age + ' ' + pl(b.age, 'day')}</span></span>
             <span style="display:flex;align-items:baseline;gap:6px"><span class="m" style="font-size:13px;font-weight:600">${n0(b.due)}</span>${cleared ? `<span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--green)">CLEARED</span>` : part ? `<span style="font-size:10px;font-weight:700;color:var(--amberInk)">PART <span class="m">${short(b.pay)}</span></span>` : ''}</span></div>`; }).join('') + (plan.bills.length > 5 ? `<span style="font-size:11px;font-weight:600;color:var(--ink3)">+ ${plan.bills.length - 5} newer ${pl(plan.bills.length - 5, 'bill')}</span>` : '') : '<span style="font-size:12px;color:var(--ink3)">No dated bills on their account — it goes on account.</span>'}
-        ${plan.rest > 0.5 && plan.bills.length ? `<span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${n0(plan.rest)}</span> goes on account</span>` : ''}
+        ${plan.rest > 0.5 && plan.bills.length && !payOver(c, amt) ? `<span style="font-size:12px;font-weight:600;color:var(--ink3)"><span class="m" style="color:var(--ink)">${n0(plan.rest)}</span> goes on the older balance</span>` : ''}
       </div>
+      ${payOverHTML(c, a, amt)}
       ${c.phone || c.phone2 ? `<button role="switch" aria-checked="${!!a.receipt}" data-act="payreceipt" style="align-self:flex-start;height:36px;padding:0 12px 0 6px;border:none;border-radius:999px;background:var(--greenSoft);color:var(--green);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px"><span style="width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;${a.receipt ? 'background:var(--green);color:#fff' : 'box-shadow:inset 0 0 0 2px var(--green)'}">${a.receipt ? ic('tick', 12, 'style="stroke-width:3"') : ''}</span>Receipt to ${esc(firstWord(c.name))}</button>` : ''}
       <span style="font-size:11px;font-weight:600;color:var(--ink3);text-align:center">Counts as money in under your name${taker ? ' · the sale stays ' + esc(firstWord(taker.name)) + "'s" : ''}</span>
     </div>
@@ -3845,6 +3850,19 @@ ACT['in:payamt'] = t => {
 ACT.paymode = t => { const a = payArgs(); if (!a) return; const c = customerById(a.id); a.mode = t.dataset.v; a.amt = a.mode === 'oldest' ? payOldest(c) : Math.round(c.debt); FEEL.tick(); render(); };
 ACT.paymethod = t => { const a = payArgs(); if (!a) return; a.method = t.dataset.m; FEEL.tick(); render(); };
 ACT.payreceipt = () => { const a = payArgs(); if (!a) return; a.receipt = !a.receipt; FEEL.tick(); render(); };
+/* Sales round 1 (0165, SAL-005): money over what the customer owes is never
+   kept quietly. It is change, unless the customer confirms a deposit (their
+   next bill uses it first) -- asked every time, change by default; the same
+   choice as the sales desk's pay page (R1PayOver). */
+function payOver(c, amt){ return c ? payPlan(c, amt, null).over : 0; }
+function payOverHTML(c, a, amt){
+  const ov = payOver(c, amt); if (!(ov > 0)) return '';
+  const dep = a.over === 'deposit', first = firstWord(c.name);
+  const opt = (k, on, title, sub) => `<button type="button" role="radio" aria-checked="${on}" data-act="payover" data-v="${k}" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;border:none;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 ${on ? '2px var(--navy)' : '1px var(--rule)'};text-align:left;font:inherit;color:var(--ink)"><span style="flex:1;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">${title}</b><span style="font-size:12px;color:var(--ink3)">${sub}</span></span><span aria-hidden="true" style="width:18px;height:18px;border-radius:999px;flex:none;box-shadow:inset 0 0 0 ${on ? '6px var(--navy)' : '2px #C9C4BA'}"></span></button>`;
+  return `<div role="radiogroup" aria-label="${n0(ov)} over" style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--amberSoft)"><b style="font-size:13px;color:var(--amberInk)"><span class="m">${n0(ov)}</span> more than ${esc(first)} owes</b>
+    ${opt('change', !dep, `Give <span class="m">${n0(ov)}</span> change`, 'unless they confirm a deposit')}${opt('deposit', dep, `Keep <span class="m">${n0(ov)}</span> as a deposit`, `${esc(first)} confirms · their next bill uses it`)}</div>`;
+}
+ACT.payover = t => { const a = payArgs(); if (!a) return; a.over = t.dataset.v === 'deposit' ? 'deposit' : 'change'; FEEL.tick(); render(); };
 // The check before it is recorded: a short sheet, so it fits a small window.
 SHEET.payok = () => {
   const a = payArgs(); if (!a) return '';
@@ -3852,7 +3870,7 @@ SHEET.payok = () => {
   const amt = Math.round(Number(a.amt) || 0), after = Math.max(0, c.debt - amt), m = (PAY_METHODS.find(x => x[0] === a.method) || PAY_METHODS[0]), plan = payClears(c, amt), cleared = plan.bills.filter(b => b.pay > 0 && b.pay >= b.due).length;
   return `<div style="display:flex;align-items:center;gap:12px"><span style="width:46px;height:46px;flex:none;border-radius:14px;background:var(--greenSoft);color:var(--green);display:flex;align-items:center;justify-content:center">${ic(m[2], 24)}</span>
       <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="m" style="font-size:24px;font-weight:600;letter-spacing:-.03em">${n0(amt)}</span><span class="ell" style="font-size:13px;font-weight:600;color:var(--ink3)">${esc(m[1])} from ${esc(c.name)}</span></span></div>
-    <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700">${a.receipt && (c.phone || c.phone2) ? `<span class="bx-chip" style="height:28px;background:var(--greenSoft);color:var(--green)">${ic('tick', 14, 'style="stroke-width:3"')}Receipt to ${esc(firstWord(c.name))}</span>` : ''}${cleared ? `<span class="bx-chip" style="height:28px;background:var(--greenSoft);color:var(--green)">${ic('tick', 14, 'style="stroke-width:3"')}clears <span class="m">${cleared}</span>&nbsp;${pl(cleared, 'bill')}</span>` : ''}<span class="bx-chip" style="height:28px;background:var(--soft2);color:var(--ink2)"><span class="m">${n0(after)}</span>&nbsp;left</span></span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700">${a.receipt && (c.phone || c.phone2) ? `<span class="bx-chip" style="height:28px;background:var(--greenSoft);color:var(--green)">${ic('tick', 14, 'style="stroke-width:3"')}Receipt to ${esc(firstWord(c.name))}</span>` : ''}${cleared ? `<span class="bx-chip" style="height:28px;background:var(--greenSoft);color:var(--green)">${ic('tick', 14, 'style="stroke-width:3"')}clears <span class="m">${cleared}</span>&nbsp;${pl(cleared, 'bill')}</span>` : ''}<span class="bx-chip" style="height:28px;background:var(--soft2);color:var(--ink2)"><span class="m">${n0(after)}</span>&nbsp;left</span>${payOver(c, amt) > 0 ? `<span class="bx-chip" style="height:28px;background:var(--amberSoft);color:var(--amberInk)"><span class="m">${n0(payOver(c, amt))}</span>&nbsp;${a.over === 'deposit' ? 'deposit' : 'back'}</span>` : ''}</span>
     <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:8px"><button class="bx-btn ghost" style="height:54px;font-size:15px" data-act="closesheet">Change</button><button class="bx-btn red" style="height:54px;font-size:15px" data-act="payyes">Yes, record it</button></div>`;
 };
 ACT.payask = () => { const a = payArgs(); if (!a || !(Math.round(Number(a.amt) || 0) > 0) || !can('payment.receive') || S.paying) return; clearTimeout(ACT._payT); FEEL.ask(); openSheet('payok', {}); };
@@ -3878,11 +3896,11 @@ ACT.payundo = () => { const h = S.payHold; if (!h) return; clearTimeout(h.timer)
    window runs out (payCommit), with the payment it was given. */
 ACT['slide:pay'] = async (_t, _e, held) => {
   const a = held || payArgs(); if (!a || S.paying || !can('payment.receive')) return;
-  const c0 = customerById(a.id), amount = Math.round(Number(a.amt) || 0);
+  const c0 = customerById(a.id), typed = Math.round(Number(a.amt) || 0), ov = payOver(c0, typed), change = ov > 0 && a.over !== 'deposit' ? ov : 0, amount = typed - change, over = ov > 0 ? (change ? 'change' : 'deposit') : null;
   if (!c0 || !(amount > 0)) { a.step = null; render(); return; }
   S.paying = true; render();
   try {
-    const r = await sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: amount, p_method: a.method || 'cash', p_picks: a.mode === 'pick' ? (a.picks || []).map(Number) : null, p_order_id: null });
+    const r = await sb.rpc('receive_payment', { p_shop_id: S.shopId, p_customer_id: c0.id, p_amount: amount, p_method: a.method || 'cash', p_picks: a.mode === 'pick' ? (a.picks || []).map(Number) : null, p_order_id: null, p_over: over });
     if (r.error) throw r.error;
     const d = r.data || {};
     (d.cashRows || []).forEach(row => { if (!D().cashTxns.some(x => String(x.id) === String(row.id))) D().cashTxns.push(rowToTxn(row)); });
@@ -3891,6 +3909,8 @@ ACT['slide:pay'] = async (_t, _e, held) => {
     const top = S.stack[S.stack.length - 1];
     if (top && top.type === 'pay' && top.args === a) S.stack[S.stack.length - 1] = { type: 'paid', args: p };
     else toast('Recorded ' + n0(amount) + ' from ' + c0.name);
+    if (change > 0) toast('Give ' + n0(change) + ' back to ' + firstWord(c0.name), 8000);
+    else if (Number(d.deposit) > 0) toast(n0(d.deposit) + ' kept as ' + firstWord(c0.name) + '’s deposit', 6000);
     loadAll().then(render).catch(() => render());
     render(); FEEL.stamp(); playKaching();
   } catch (e) {
@@ -4694,25 +4714,11 @@ ACT.recount = async t => { if (S.busy) return; S.busy = true;
 
 /* ---------------- returns and voids: asked for on an invoice (0123 invoice_asks) ---------------- */
 function openAsks(kind){ return (D().invoiceAsks || []).filter(a => a.status === 'sent' && a.kind === kind && quoteById(a.quoteId)); }
-/* index.html applyInvoiceDebtCharge, downward only: what the customer owes
-   follows the bill down after a credit note or a void, logged on their
-   history as the invoice's own line. Raising a debt stays invoicing's. */
-async function lowerDebtFor(qid){
-  const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', qid).maybeSingle(); if (r.error) throw r.error;
-  const row = r.data, q = rowToQuote(row), cid = q.customerId; if (cid == null || cid === '') return 0;
-  const desired = q.invoiced && !q.voided ? Math.max(0, quoteTotal(q) - (Number(q.amountPaid) || 0)) : 0, current = Number(q.debtCharged) || 0;
-  if (desired >= current) return 0;
-  const cu = await sb.from('customers').select('debt').eq('shop_id', S.shopId).eq('id', cid).maybeSingle(); if (cu.error) throw cu.error;
-  const before = Number(cu.data && cu.data.debt) || 0, after = Math.max(0, before + (desired - current)), applied = after - before;
-  if (applied < 0) {
-    const logMax = D().customers.reduce((m, c) => (c.debtLog || []).reduce((mm, l) => Math.max(mm, Number(l.id) || 0), m), 0);
-    const id = await issueRowId('row:debt_log', logMax);
-    await insertRow('customer_debt_log', { id, shop_id: S.shopId, customer_id: cid, date: todayISO(), type: 'payment', amount: -applied, note: `Auto-sync — ${invoiceLabel(q)}`, quote_id: q.id }, ['quote_id']);
-    const up = await sb.from('customers').update({ debt: after }).eq('shop_id', S.shopId).eq('id', cid); if (up.error) throw up.error;
-  }
-  const u = await sb.from('saved_quotes').update({ payload: { ...(row.payload || {}), debtCharged: desired, customerId: cid } }).eq('shop_id', S.shopId).eq('id', q.id); if (u.error) throw u.error;
-  return -applied;
-}
+/* 0165: what the customer owes follows a credit note or a void on the
+   server (saved_quotes_zz_sync_debt), logged as the invoice's own line —
+   no phone writes the balance for it any more. */
+// A balance below 0 is the customer's deposit (0165): said so, never shown as 0 or as a minus.
+function owesWord(v){ v = Math.round(Number(v) || 0); return v < 0 ? 'deposit ' + n0(-v) : n0(v); }
 function creditedQty(q, idx){ return ((q.creditNotes) || []).filter(cn => !cn.voided).reduce((s, cn) => s + (cn.lines || []).filter(l => l.idx === idx).reduce((a, l) => a + (Number(l.qty) || 0), 0), 0); }
 PAGE.return = a => {
   const ask = (D().invoiceAsks || []).find(x => String(x.id) === String(a.id)); const q = ask && quoteById(ask.quoteId);
@@ -4721,6 +4727,9 @@ PAGE.return = a => {
   const st = S.ui[key] || (S.ui[key] = { q: Object.fromEntries((ask.lines || []).map(l => [l.idx, Number(l.qty) || 0])), back: Object.fromEntries((ask.lines || []).map(l => [l.idx, !/scratch|damag|broken/i.test(ask.reason || '')])), way: 'debt' });
   const items = (q.items || []).map((it, idx) => ({ it, idx, room: (Number(it.qty) || 0) - creditedQty(q, idx), price: linePriceNow(it) })).filter(x => x.room > 0 && (st.q[x.idx] != null || (ask.lines || []).length === 0));
   const cu = customerById(q.customerId), credit = Math.round(items.reduce((s, x) => s + (st.q[x.idx] || 0) * x.price, 0)), owes = Math.round(cu ? Number(cu.debt) || 0 : balanceDue(q)), seller = staffByUser(takenBy(q)), asker = ask.askedByName || 'Someone';
+  // 0165: the server lowers what they owe by the credit, so cash back is only for money already paid over the new total.
+  const cashOk = credit > 0 && Math.round((Number(q.amountPaid) || 0) - (quoteTotal(q) - credit)) >= credit;
+  if (!cashOk && st.way === 'cash') st.way = 'debt';
   return pageShell({ eyebrow: `RETURN · ${esc(firstWord(asker).toUpperCase())} ASKS`, title: esc(clientName(q)), sub: `<span class="m">${esc(invoiceLabel(q))}</span> · ${esc(dayLabel(q.invoicedAt || q.date))} · <span class="m">${n0(quoteTotal(q))}</span>`, face: custAv(customerById(q.customerId) || { name: clientName(q), id: q.id }, 44),
     head: ask.reason || ask.note ? `<span style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font-size:13px;font-weight:600;color:#DDE3F0">${ic('asking', 15, 'style="stroke:#6FDCB0"')}“${esc(ask.reason || ask.note)}”</span>` : '',
     body: `<div class="bx-slip"><div class="bx-slip-in" style="padding:10px 14px">
@@ -4729,7 +4738,7 @@ PAGE.return = a => {
             <button data-act="rtback" data-k="${key}" data-i="${x.idx}" style="align-self:flex-start;margin-top:4px;height:24px;padding:0 9px;border:none;border-radius:999px;font-size:11px;font-weight:700;${st.back[x.idx] ? 'background:var(--greenSoft);color:var(--green)' : 'background:var(--amberSoft);color:var(--amberDeep)'}">${st.back[x.idx] ? 'back on the shelf' : 'damaged · not resold'}</button></span>
           ${done ? `<span class="m" style="font-size:16px;font-weight:600">${st.q[x.idx] || 0}</span>` : `<span style="display:flex;align-items:center;gap:6px"><button class="bx-sq" style="width:36px;height:36px;border-radius:10px;font-size:18px" data-act="rtq" data-k="${key}" data-i="${x.idx}" data-d="-1" aria-label="One less">−</button><span class="m" style="min-width:28px;text-align:center;font-size:17px;font-weight:600;color:${st.q[x.idx] ? 'var(--ink)' : '#9AA1AE'}">${st.q[x.idx] || 0}</span><button class="bx-sq" style="width:36px;height:36px;border-radius:10px;font-size:18px" data-act="rtq" data-k="${key}" data-i="${x.idx}" data-d="1" data-max="${x.room}" aria-label="One more">+</button></span>`}</div>`).join('')}
         <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 0 4px;border-top:1.5px solid var(--ink)"><b style="font-size:13px">Credit note</b><span class="m" style="font-size:20px;font-weight:600;color:var(--green)">${n0(credit)}</span></div></div></div>
-      ${done ? '' : `<div role="radiogroup" aria-label="How they get it back" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[['debt', 'Off what they owe', `${n0(owes)} → ${n0(Math.max(0, owes - credit))}`], ['cash', 'Cash back', 'Accounts pays it out']].map(w => `<button class="bx-pick" role="radio" aria-checked="${st.way === w[0]}" data-act="rtway" data-k="${key}" data-v="${w[0]}" style="flex-direction:column;align-items:flex-start;gap:3px"><b style="font-size:13px">${w[1]}</b><span class="m" style="font-size:11px;font-weight:600;color:var(--ink2)">${w[2]}</span></button>`).join('')}</div>`}
+      ${done ? '' : `<div role="radiogroup" aria-label="How they get it back" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[['debt', 'Off what they owe', `${owesWord(owes)} → ${owesWord(owes - credit)}`], ['cash', 'Cash back', cashOk ? 'Accounts pays it out' : 'Only on money paid']].map(w => `<button class="bx-pick" role="radio" aria-checked="${st.way === w[0]}" data-act="rtway" data-k="${key}" data-v="${w[0]}"${w[0] === 'cash' && !cashOk ? ' disabled' : ''} style="flex-direction:column;align-items:flex-start;gap:3px"><b style="font-size:13px">${w[1]}</b><span class="m" style="font-size:11px;font-weight:600;color:var(--ink2)">${w[2]}</span></button>`).join('')}</div>`}
       ${seller && credit ? `<span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('target', 13)}${esc(firstWord(seller.name))}’s ${esc(monthWord())} sales <span class="m" style="color:var(--crimson)">−${n0(credit)}</span></span>` : ''}
       ${done ? doneHTML('CREDITED', 'var(--green)', done.way === 'debt' ? `${esc(clientName(q))} now owes ${n0(done.owes)}. ${done.restocked ? 'Stock back on the shelf. ' : ''}Accounts${seller ? ' and ' + esc(firstWord(seller.name)) : ''} are told.` : `Accounts pays ${n0(done.credit)} back. ${done.restocked ? 'Stock back on the shelf. ' : ''}${seller ? esc(firstWord(seller.name)) + ' is told.' : ''}`) : `<button data-act="push" data-p="void" data-id="${ask.id}" data-from="return" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);text-align:left">${ic('outc', 16, 'style="color:var(--crimson)"')}<span style="flex:1;display:flex;flex-direction:column"><b style="font-size:13px;color:var(--crimson)">Void the whole invoice instead</b><span style="font-size:11px;font-weight:600;color:var(--ink3)">for a bill raised by mistake</span></span>${ic('chev', 16, 'style="color:#9AA1AE"')}</button>`}
       <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}The credit note goes in the owner’s log</span>`,
@@ -4760,7 +4769,6 @@ ACT['slide:credit'] = async el => {
       q.docLog = (q.docLog || []).concat([{ at: new Date().toISOString(), kind: 'credited', what: `CN-${String(no).padStart(4, '0')} raised · ${n0(amount)}` }]).slice(-60);
     }, ['creditNotes', 'docLog']);
     if (restock.length) await callFn('manager_stock_move', { p_shop_id: S.shopId, p_lines: restock, p_type: 'reversal', p_note: `Returned — CN-${String(no).padStart(4, '0')} on ${invoiceLabel(res.q)}`, p_task: 'credit_note.raise' });
-    if (st.way === 'debt') await lowerDebtFor(ask.quoteId);
     await callFn('decide_invoice_ask', { p_id: ask.id, p_status: 'accepted' }).catch(e => { throw new Error('Credited, but the ask could not be closed — ' + (e.message || e) + '. Open it again.'); });
     logDecision('credit_note.raise', `Credit note CN-${String(no).padStart(4, '0')} · ${n0(cn.amount)} on ${invoiceLabel(res.q)} for ${clientName(res.q)}${st.way === 'cash' ? ' · cash back by Accounts' : ''}`, { amount: cn.amount, ref: { table: 'saved_quotes', id: res.q.id, creditNote: no }, before: { total: Math.round(quoteTotal(res.q) + cn.amount) }, after: { total: Math.round(quoteTotal(res.q)) } });
     ask.status = 'accepted';
@@ -4790,8 +4798,8 @@ PAGE.void = a => {
   return pageShell({ eyebrow: `VOID · ${esc(firstWord(ask.askedByName || 'someone').toUpperCase())} ASKS`, title: esc(clientName(q)), sub: twin ? 'two bills for one delivery' : esc(invoiceLabel(q)), face: custAv(c || { name: clientName(q), id: q.id }, 44),
     head: `<div style="display:grid;grid-template-columns:${twin ? '1fr 1fr' : '1fr'};gap:8px">${twin ? slip(twin, true) : ''}${slip(q, false)}</div>${ask.reason ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#DDE3F0">${ic('asking', 14, 'style="stroke:#6FDCB0"')}“${esc(ask.reason)}”</span>` : ''}`,
     body: `${done ? '' : `<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;color:var(--ink2);padding:0 2px">Why it goes</span><div role="radiogroup" aria-label="Why it goes" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">${VOID_WHY.map(w => `<button role="radio" aria-checked="${why === w[0]}" data-act="vdwhy" data-v="${w[0]}" style="height:44px;border:none;border-radius:12px;font-size:12px;font-weight:700;${why === w[0] ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)'}">${w[1]}</button>`).join('')}</div></div>`}
-      <div class="bx-card" style="padding:4px 14px">${eff('team', 'What they owe', owes != null ? `<span style="color:#9AA1AE;text-decoration:line-through">${n0(owes)}</span>&nbsp; ${n0(Math.max(0, owes - Math.round(balanceDue(q))))}` : '—')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('box', 'Back on the shelf', back ? (q.items || []).map(it => '+' + n0(it.qty)).slice(0, 3).join(' · ') : 'stays out', back ? 'color:var(--green)' : 'color:var(--ink3)')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('truck', 'Its supplier bills', 'cancelled too', 'color:var(--crimson);font-family:Figtree,sans-serif;font-weight:700')}</div>
-      ${done ? doneHTML('VOID', 'var(--crimson)', `${esc(invoiceLabel(q))} is void. ${c ? esc(c.name) + ' owes ' + n0(Math.max(0, owes - (S.ui.vdLower || 0))) + '. ' : ''}Accounts${staffByUser(takenBy(q)) ? ' and ' + esc(firstWord(staffByUser(takenBy(q)).name)) : ''} are told.`) : ''}
+      <div class="bx-card" style="padding:4px 14px">${eff('team', 'What they owe', owes != null ? `<span style="color:#9AA1AE;text-decoration:line-through">${owesWord(owes)}</span>&nbsp; ${owesWord(owes - Math.round(Number(q.debtCharged) || 0))}` : '—')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('box', 'Back on the shelf', back ? (q.items || []).map(it => '+' + n0(it.qty)).slice(0, 3).join(' · ') : 'stays out', back ? 'color:var(--green)' : 'color:var(--ink3)')}<span style="display:block;height:1px;background:#F1EEE8"></span>${eff('truck', 'Its supplier bills', 'cancelled too', 'color:var(--crimson);font-family:Figtree,sans-serif;font-weight:700')}</div>
+      ${done ? doneHTML('VOID', 'var(--crimson)', `${esc(invoiceLabel(q))} is void. ${c ? esc(c.name) + ' owes ' + owesWord(owes - (S.ui.vdLower || 0)) + '. ' : ''}Accounts${staffByUser(takenBy(q)) ? ' and ' + esc(firstWord(staffByUser(takenBy(q)).name)) : ''} are told.`) : ''}
       <span class="bx-hint" style="font-size:11px;color:var(--ink3)">${ic('doc', 13)}A void can’t be undone from here · it goes in the owner’s log</span>`,
     foot: done ? '' : can('invoice.void') ? slideHTML('void:' + ask.id, 'Void ' + n0(tot), 'outc') + `<button class="bx-btn ghost" style="height:44px;font-size:13px" data-act="askno" data-id="${ask.id}">Keep it · decline</button>` : lockedHTML('invoice.void', 'Voiding an invoice') });
 };
@@ -4802,9 +4810,12 @@ ACT['slide:void'] = async el => {
   try {
     const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', ask.quoteId).maybeSingle(); if (r.error) throw r.error;
     const row = r.data, q = rowToQuote(row); if (!q.invoiced || q.voided) throw new Error('that invoice is not live');
-    const payload = { ...(row.payload || {}), voidedBy: { by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString(), why, askId: ask.id }, docLog: (q.docLog || []).concat([{ at: new Date().toISOString(), kind: 'voided', what: 'Voided · ' + why }]).slice(-60) };
-    const u = await sb.from('saved_quotes').update({ voided: true, payload }).eq('shop_id', S.shopId).eq('id', q.id); if (u.error) throw u.error;
-    S.ui.vdLower = await lowerDebtFor(q.id);
+    q.voidedBy = { by: S.user ? S.user.id : null, byName: myName(), at: new Date().toISOString(), why, askId: ask.id };
+    q.docLog = (q.docLog || []).concat([{ at: new Date().toISOString(), kind: 'voided', what: 'Voided · ' + why }]).slice(-60);
+    await patchOrder(q.id, row, q, ['voidedBy', 'docLog']);
+    const u = await sb.from('saved_quotes').update({ voided: true }).eq('shop_id', S.shopId).eq('id', q.id); if (u.error) throw u.error;
+    // 0165: the server takes the invoice's share off what they owe as it is voided.
+    S.ui.vdLower = q.customerId != null && q.customerId !== '' ? Math.round(Number(q.debtCharged) || 0) : 0;
     // Back on the shelf: exactly what the invoice took off it (_stockTaken,
     // 0119), never the line's quantity -- a line that came straight from a
     // supplier, or a short pick, was never all on the shelf.
