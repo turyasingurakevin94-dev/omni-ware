@@ -1091,7 +1091,7 @@ function rowToAsk(r){ return { id: r.id, kind: r.kind, ref: r.ref, payload: r.pa
    directly; before 0159 the app reads them as it did. null = no 0159. */
 async function storeSnapshotNow(){
   const r = await sb.rpc('store_snapshot', { p_shop: S.shopId });
-  if (r.error) { if (needs0115(r.error)) return null; throw r.error; }
+  if (r.error) { if (noFn(r.error)) return null; throw r.error; }
   return r.data || null;
 }
 function snapHolds(h){ return h ? Object.fromEntries(Object.entries(h).map(([id, x]) => [id, { decision: (x && x.decision) || null }])) : null; }
@@ -1941,6 +1941,8 @@ function emptyCard(title, sub){ return `<div class="st-card"><div class="st-empt
 const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt', 'pickingDoneAt', 'bay',
   'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'handoverCheckedAt', 'creditAsk'];
 const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
+// A 0159 function this database does not have yet (an error with no code is read the same way).
+function noFn(e){ return !!e && (needs0115(e) || !e.code); }
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
 function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? `This needs migration ${mig || '0115'} on the database — ask the owner to run it.` : failWord(e); }
 
@@ -1950,7 +1952,7 @@ async function changeOrder(id, fn){
   if (S.snapMode !== false) {
     const g = await sb.rpc('store_order', { p_shop: S.shopId, p_id: Number(id) });
     if (!g.error) return changeOrderSnap(id, g.data, fn);
-    if (!needs0115(g.error)) throw g.error;
+    if (!noFn(g.error)) throw g.error;
     S.snapMode = false;
   }
   const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
@@ -2173,7 +2175,7 @@ async function uploadPhoto(blob, folder){
 async function sendReport(it, qty, reason, blob, note){
   const photo = blob ? await uploadPhoto(blob, 'reports') : null;
   const { data, error } = await sb.from('stock_reports').insert({ shop_id: S.shopId, key: it.key, product_id: it.productId, variant_idx: it.variantIdx == null ? null : String(it.variantIdx),
-    name: it.productName, qty, why: reason, note: note || null, photo_path: photo, reported_by: S.user.id, reported_by_name: myName() }).select('*').single();
+    name: it.productName, qty, why: reason, photo_path: photo, note: note || null, reported_by: S.user.id, reported_by_name: myName() }).select('*').single();
   if (error) throw error;
   if (D().reports) D().reports.unshift(rowToReport(data)); else D().reports = [rowToReport(data)];
   saveSnapshot();
@@ -2195,7 +2197,7 @@ async function sendReturn(q, lines, blob, why, said){
   let data = null, error = null;
   if (S.snapMode !== false) {
     ({ data, error } = await sb.rpc('store_return_ask', { p_shop: S.shopId, p_order: Number(q.id), p_lines: lines, p_reason: reason, p_note: note }));
-    if (error && needs0115(error)) { S.snapMode = false; error = null; data = null; }
+    if (error && noFn(error)) { S.snapMode = false; error = null; data = null; }
   }
   if (!data && !error) ({ data, error } = await sb.from('invoice_asks').insert({ shop_id: S.shopId, quote_id: Number(q.id), customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: 'credit',
     lines, reason, note, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' }).select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').single());
@@ -2233,7 +2235,7 @@ async function patchTripSnap(tripId, got, status){
   const t = (D().collectionTrips || []).find(x => x.id === tripId);
   if (t && t.voided) throw new Error('that trip was called off');
   const u = await sb.rpc('store_patch_trip', { p_shop: S.shopId, p_id: String(tripId), p_got: got, p_status: status });
-  if (u.error) { if (needs0115(u.error)) { S.snapMode = false; return undefined; } throw u.error; }
+  if (u.error) { if (noFn(u.error)) { S.snapMode = false; return undefined; } throw u.error; }
   if (!u.data) return null;
   if (t) {
     Object.entries(got || {}).forEach(([k, v]) => { const l = t.lines[Number(k)]; if (l) l.gotQty = v; });
