@@ -1567,8 +1567,7 @@ function createdMs(q){ return Date.parse(q.createdAt || q.savedAt || '') || (q.d
 // shared-worker.js 124
 function quoteAgedOffBoard(q){ return !!(q.invoiced && q.invoicedTs && (Date.now() - q.invoicedTs) >= 24 * 60 * 60 * 1000); }
 // Two walk-ins are two orders: the number tells them apart.
-function quoteClientName(q){ const n = (q && q.client && q.client.name || '').trim(); return !n || /^(walk[- ]?in|unnamed client)$/i.test(n) ? `Walk-in · Q-${String(q && q.id).padStart(4, '0')}` : n; }
-function orderNo(q){ return 'Q-' + String(q.id).padStart(4, '0'); }
+function quoteClientName(q){ const n = (q && q.client && q.client.name || '').trim(); return !n || /^(walk[- ]?in|unnamed client)$/i.test(n) ? 'Walk-in' : n; }
 function setSavedQuoteStatus(q, status, opts){
   if (!SQ_STATUS_ORDER.includes(status)) return;
   const stageOrder = SQ_STATUS_ORDER.indexOf(status);
@@ -2154,10 +2153,12 @@ async function sendExtras(R, extras){
 }
 
 /* ---- ask for more (0157: store_asks, kind 'restock'): the Buyer decides what to buy (buy.restock) ---- */
+// A restock is asked in the unit the Buyer buys: the pack (cartons of 25) when the item has one.
+function restockUnit(x){ const L = levelsFor(x), top = L[0]; return top && top[2] > 1 ? { u: top[1], f: top[2] } : { u: unitWord(x), f: 1 }; }
 async function sendRestock(x, qty, when){
   const pr = promisedFor(x.productId, x.variantIdx).filter(p => !p.packed).map(p => Number(p.q.id));
   const { error } = await sb.from('store_asks').insert({ shop_id: S.shopId, kind: 'restock', ref: x.key, asked_by: S.user.id, asked_by_name: myName(),
-    payload: { key: x.key, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, qty, unit: unitWord(x), when, shortFor: pr } });
+    payload: { key: x.key, productId: x.productId, variantIdx: x.variantIdx, name: x.productName, qty, unit: restockUnit(x).u, when, shortFor: pr } });
   if (error) throw error;
 }
 
@@ -2583,7 +2584,7 @@ function jobRow(j, i){
   if (j.kind === 'gate') { const ag = j.q.originAgentId && (D().agents || []).find(a => String(a.id) === String(j.q.originAgentId)); const who = ag ? ag.name : quoteClientName(j.q);
     return cvRow({ act: 'job', data: { i: id }, round: true, ini: initials(who), soft: tint(who)[0], ink: tint(who)[1], title: `${esc(firstWord(who))} collects ${q4(j.q)}`, sub: esc((ag ? 'Agent · packed and paid' : 'Packed') + ' · at the gate'), subInk: '#0F6B43', right: cvChip(ag ? 'Code' : 'Hand over') }); }
   if (j.kind === 'pack') { const p = packProgress(j.q);
-    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${p.n} item${p.n === 1 ? '' : 's'} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' picked' : 'waiting ' + waitWords(minsSince(waitingSince(j.q))))) }); }
+    return cvRow({ act: 'job', data: { i: id }, icon: CV.pack, title: `Pack ${q4(j.q)} · ${esc(quoteClientName(j.q))}`, sub: esc(`${nLines(p.n)} · ` + (j.round ? goodsWords(j.round, j.q) + ' come off this trip' : p.done ? p.done + ' picked' : 'waiting ' + waitWords(minsSince(waitingSince(j.q))))) }); }
   if (j.kind === 'run') { const r = j.r;
     return cvRow({ act: 'job', data: { i: id }, icon: CV.truck, soft: '#E4F4EA', ink: '#0F6B43', title: `Load ${r.driver ? esc(firstWord(r.driver.name)) + "'s" : 'the'} run · ${esc(r.road)}`, subInk: '#0F6B43',
       sub: esc([r.drops.map(d => shortName(quoteClientName(d.q))).join(', ') + (r.drops.length > 1 ? ' are' : ' is') + ' packed'].concat(r.after.length ? [r.after.map(q => shortName(quoteClientName(q))).join(', ') + ' after packing'] : []).join(' · ')) }); }
@@ -2609,7 +2610,7 @@ function viewToday(){
   // One ring, in the order the day goes: delivered, on the road, packed.
   const C = 326.7, step = C / Math.max(1, total), len = n => Math.max(n * step - (total > 1 ? 5 : 0), 0.01);
   const arc = (n, off, col, op) => n ? `<circle cx="62" cy="62" r="52" fill="none" stroke="${col}"${op ? ` stroke-opacity="${op}"` : ''} stroke-width="10" stroke-linecap="round" stroke-dasharray="${len(n).toFixed(1)} ${C}" stroke-dashoffset="${(-off * step).toFixed(1)}" transform="rotate(-90 62 62)" class="a-ring"></circle>` : '';
-  const tile = (act, d, n, word, on, ink) => `<button data-act="${act}" style="height:58px;border:none;border-radius:14px;background:${on ? '#fff' : 'rgba(255,255,255,.07)'};color:${on ? '#16203C' : '#fff'};padding:0 10px;display:flex;align-items:center;gap:8px;text-align:left;min-width:0">
+  const tile = (act, d, n, word, on, ink) => `<button data-act="${act}" aria-label="${n0(n)} ${esc(word)}" style="height:58px;border:none;border-radius:14px;background:${on ? '#fff' : 'rgba(255,255,255,.07)'};color:${on ? '#16203C' : '#fff'};padding:0 10px;display:flex;align-items:center;gap:8px;text-align:left;min-width:0">
     <span style="display:flex;color:${on ? '#16203C' : ink || '#B3BCD2'}">${sv(d, 18, 2)}</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span class="m" style="font-size:18px;font-weight:600;line-height:1;${!on && ink ? 'color:' + ink : ''}">${n}</span><span style="font-size:11px;font-weight:${on ? 700 : 600};color:${on ? '#16203C' : '#B3BCD2'}">${word}</span></span></button>`;
   const alerts = alertsNow().filter(a => a.unread).length;
   const legend = [['#6FDCB0', done, 'delivered'], ['rgba(111,220,176,.45)', road, 'on the road'], ['#FFFFFF', packed, 'packed'], ['rgba(255,255,255,.18)', pack, 'to pack']];
@@ -2703,12 +2704,12 @@ function jobCard(j, n){
     const q = j.q, ag = q.originAgentId && (D().agents || []).find(a => String(a.id) === String(q.originAgentId)), who = ag ? ag.name : quoteClientName(q), p = packProgress(q);
     body = head(tag(CV.store, `At the gate · bay ${bayOf(q) || '—'}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces([who]))
       + title(`${esc(firstWord(who))} collects ${q4(q)}`, esc(ag ? 'Agent · packed and paid' : 'Packed · they collect'))
-      + stats([[p.n, p.n === 1 ? 'item' : 'items'], [bayOf(q) || '—', 'bay'], [ag ? 'code' : 'id', 'to hand over']]) + go('Hand it over');
+      + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [bayOf(q) || '—', 'bay'], [ag ? 'code' : 'id', 'to hand over']]) + go('Hand it over');
   } else if (j.kind === 'pack') {
     const q = j.q, p = packProgress(q), aisles = [...new Set(p.items.map(it => aisleOf(it.productId).letter))];
     body = head(tag(CV.clock, `Pack · waiting ${esc(waitWords(minsSince(waitingSince(q))))}`, 'rgba(245,178,107,.16)', '#F5B26B'), faces([quoteClientName(q)]))
       + title(`Pack ${q4(q)} · ${esc(shortName(quoteClientName(q)))}`, esc(howGoes(q) + (orderDestination(q) ? ' · ' + orderDestination(q) : '')))
-      + stats([[p.n, p.n === 1 ? 'item' : 'items'], [aisles.length, aisles.length === 1 ? 'aisle' : 'aisles'], [freeBay() || '—', 'free bay']]) + go(p.done ? 'Carry on packing' : 'Start packing');
+      + stats([[p.n, p.n === 1 ? 'line' : 'lines'], [aisles.length, aisles.length === 1 ? 'aisle' : 'aisles'], [freeBay() || '—', 'free bay']]) + go(p.done ? 'Carry on packing' : 'Start packing');
   } else if (j.kind === 'run') {
     const r = j.r;
     body = head(tag(CV.truck, `${r.drops.length} packed · ${esc(r.road)}`, 'rgba(111,220,176,.16)', '#6FDCB0'), faces(r.drops.map(d => quoteClientName(d.q))))
@@ -2717,7 +2718,7 @@ function jobCard(j, n){
   } else if (j.kind === 'drop') {
     const q = j.q, p = packProgress(q);
     body = head(tag(CV.van, 'On the road · yours', 'rgba(111,220,176,.16)', '#6FDCB0'), faces([quoteClientName(q)]))
-      + title(`Deliver ${q4(q)}`, esc(quoteClientName(q) + ' · ' + placeShort(q))) + stats([[p.n, 'items'], ['photo', 'at the door'], [esc(placeShort(q)), 'to']]) + go('At the door');
+      + title(`Deliver ${q4(q)}`, esc(quoteClientName(q) + ' · ' + placeShort(q))) + stats([[p.n, p.n === 1 ? 'line' : 'lines'], ['photo', 'at the door'], [esc(placeShort(q)), 'to']]) + go('At the door');
   }
   return `<div class="cv-h"><b>Next job</b><span>1 of ${n}</span></div><div class="cv-job a-card">${body}</div>`;
 }
@@ -4502,7 +4503,7 @@ function lookRow(x){
   const [sub, ink, soft, cink] = { short: [`Out · ${shortFor(x) || 'an order'} is short`, '#8E2A22', '#FBE5E2', '#8E2A22'], out: [`Out · ${n0(L.out4)} ${u} went out in 4 weeks`, '#8E2A22', '#FBE5E2', '#8E2A22'],
     low: [`Low · ${n0(x.avail)} free to sell`, '#95530C', '#FDEEE1', '#95530C'], due: [recountAsk(x.key) ? `Count due · ${managerName()} asked` : `Count due · last counted ${L.d} days ago`, '#5F6980', '#F1EEE8', '#5F6980'],
     reported: [`Reported · ${n0(L.rep)} waiting on ${managerName()}`, '#7A3268', '#F6E4F1', '#7A3268'] }[L.why];
-  return `<button class="cv-row" data-act="stock" data-key="${esc(x.key)}" style="min-height:66px">${thumb(x, 46, 32)}
+  return `<button class="cv-row" data-act="stock" data-key="${esc(x.key)}" aria-label="${esc(x.productName)}: ${esc(sub)}, aisle ${esc(a)}" style="min-height:66px">${thumb(x, 46, 32)}
     <span class="cv-tx"><span class="cv-tt">${esc(x.productName)}</span><span class="cv-sb" style="color:${ink}">${esc(sub)}</span></span>
     <span class="m" style="width:30px;height:30px;flex:none;border-radius:999px;background:${soft};color:${cink};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">${esc(a)}</span></button>`;
 }
@@ -4806,7 +4807,7 @@ PAGE.report = ({ key }) => {
     ${LV.length > 1 ? `<div role="group" aria-label="Counted in" style="display:flex;gap:6px">${LV.map((l, k) => `<button data-act="rplv" data-k="${k}" aria-pressed="${k === lv}" style="flex:1;height:36px;border-radius:10px;border:none;background:${k === lv ? '#16203C' : '#F1EEE8'};color:${k === lv ? '#fff' : 'var(--ink)'};font-size:12px;font-weight:700">${esc(l[1])}</button>`).join('')}</div>` : ''}
     <label style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><span style="padding:0 4px;font-size:12px;font-weight:700;color:var(--ink2)">What ${esc(mgr)} should know</span>
       <textarea id="rp_note" data-in="rpnote" maxlength="300" aria-label="A note for ${esc(mgr)}" placeholder="Where, how, when you saw it" style="height:76px;border-radius:16px;border:none;box-shadow:inset 0 0 0 1px var(--rule);background:#fff;padding:12px 14px;font-family:inherit;font-size:14px;color:var(--ink);resize:none;outline:none">${esc(ui.note || '')}</textarea></label>
-    <button data-act="rpphoto" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border-radius:20px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">
+    <button data-act="rpphoto" aria-label="${ui.photo ? 'Take the photo of the loss again' : 'Add a photo of the loss'}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px;border-radius:20px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">
       ${ui.photo ? `<img src="${ui.photo}" alt="" style="width:40px;height:40px;border-radius:12px;object-fit:cover;flex:none">` : `<span style="width:40px;height:40px;flex:none;border-radius:12px;background:#F1EEE8;display:flex;align-items:center;justify-content:center">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 18, 2)}</span>`}
       <span class="cv-tx" style="gap:2px"><span style="font-size:14px;font-weight:700">${ui.photo ? 'Photo added' : 'Add a photo'}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">${ui.photo ? 'Tap to take it again' : `Optional · helps ${esc(mgr)} decide`}</span></span>${ui.photo ? sv(CV.tick, 18, 2.6, 'style="color:#0F6B43"') : sv('M12 5v14M5 12h14', 16, 2.2, 'style="color:#9AA1AE"')}</button>
   </div>
@@ -4851,8 +4852,8 @@ ACT.rpshoot = async () => { const ui = S.ui.rp; if (!ui) return; const shot = (a
 ACT.restock = t => { FEEL.open(); S.ui.rs = null; push('restock', { key: t.dataset.key }); };
 PAGE.restock = ({ key }) => {
   const x = stockItems().find(i => i.key === key); if (!x) return goneSheet('That item is gone');
-  const L = lookOf(x), b = theBuyer(), bw = b ? firstWord(b.name) : 'the buyer', u = unitWord(x), sf = shortFor(x);
-  const ui = S.ui.rs && S.ui.rs.key === key ? S.ui.rs : (S.ui.rs = { key, when: L.why === 'short' || x.avail <= 0 ? 'out' : 'low', n: Math.max(1, Math.round(L.wk * 2) || (u === 'ctn' ? 10 : 20)) });
+  const L = lookOf(x), b = theBuyer(), bw = b ? firstWord(b.name) : 'the buyer', R = restockUnit(x), u = R.u, sf = shortFor(x);
+  const ui = S.ui.rs && S.ui.rs.key === key ? S.ui.rs : (S.ui.rs = { key, when: L.why === 'short' || x.avail <= 0 ? 'out' : 'low', n: Math.max(1, Math.round(L.wk * 2 / R.f) || (R.f > 1 ? 2 : 20)) });
   if (ui.sent) return sentScreen({ undo: ui.wait ? 'heldundo' : null, title: `${bw[0].toUpperCase() + bw.slice(1)} has it`, line: `About ${n0(ui.n)} ${u} of ${x.productName} · ${ui.when === 'out' ? "we're out" : 'running low'}`, done: 'rsdone',
     body: trackDone({ who: b ? b.name : 'Buyer', bg: '#E4E6FA', ink: '#3A3F9B', does: 'buys it', last: 'Check-in', lastSub: 'when it lands', icon: CV.inbox, foot: `${managerName()} can still hold the buy` }) });
   const due = countDue(x), sel = on => on ? 'box-shadow:inset 0 0 0 2px #16203C;background:#16203C;color:#fff' : 'box-shadow:inset 0 0 0 1px #E6E3DD;background:#fff;color:var(--ink)';
@@ -4872,7 +4873,7 @@ PAGE.restock = ({ key }) => {
         <span style="display:flex;align-items:baseline;gap:6px">${numBox('rs', ui.n, 'How many to ask for', '', 30)}<span style="font-size:14px;font-weight:700;color:var(--ink2)">${esc(u)}</span></span>
         <button data-act="rsstep" data-d="1" aria-label="More" style="width:52px;height:52px;border-radius:999px;border:none;background:#16203C;color:#fff;display:flex;align-items:center;justify-content:center">${sv('M12 5v14M5 12h14', 20, 2.4)}</button></div>
       <span style="text-align:center;font-size:12px;font-weight:600;color:var(--ink2)">A guess is fine · ${esc(bw)} decides what to buy</span></div>
-    ${gap > 0 ? `<span style="display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:14px;background:#FBE5E2;color:#8E2A22;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}${n0(gap)} ${esc(u)} short for ${esc(sf || 'an order')} · ${esc(bw)} sees it too</span>` : ''}
+    ${gap > 0 ? `<span style="display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:14px;background:#FBE5E2;color:#8E2A22;font-size:12px;font-weight:700">${sv(CV.loss, 14, 2.2)}${esc(fmtLevels(levelsFor(x), gap))} short for ${esc(sf || 'an order')} · ${esc(bw)} sees it too</span>` : ''}
   </div>
   <div style="flex:none;padding:12px 16px calc(18px + var(--safe-area-inset-bottom))"><button data-act="rssend" style="width:100%;height:58px;border-radius:999px;border:none;background:var(--red);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 22px rgba(201,58,48,.26)">Ask ${esc(bw)}${sv('M21 3 3 10.5l7 2.5 2.5 7zM10 13 21 3', 18, 2.2)}</button></div></div>`;
 };
@@ -5216,7 +5217,7 @@ PAGE.ret = () => {
               <span style="display:flex;align-items:center;gap:6px;flex:none"><button class="cv-pm" data-act="rtstep" data-k="${esc(x.k)}" data-d="-1" aria-label="One fewer back" style="width:40px;height:40px;background:#F1EEE8;color:var(--ink)">${sv('M5 12h14', 14, 2.6)}</button>${numBox('rt', c.n, 'How many ' + c.unit + ' came back', `data-k="${esc(x.k)}"`, 17)}<button class="cv-pm" data-act="rtstep" data-k="${esc(x.k)}" data-d="1" aria-label="One more back" ${room ? '' : 'disabled'} style="width:40px;height:40px;background:#16203C;color:#fff;opacity:${room ? 1 : .4}">${sv('M12 5v14M5 12h14', 14, 2.6)}</button></span></div>
             ${n ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:3px;border-radius:12px;background:#F1EEE8">${[['Good · to the shelf', '#0F6B43'], ['Damaged', '#95530C']].map(([w, d], k) => `<button data-act="rtcond" data-k="${esc(x.k)}" data-c="${k}" aria-pressed="${cond === k}" style="height:36px;border-radius:9px;border:none;background:${cond === k ? '#fff' : 'transparent'};box-shadow:${cond === k ? '0 1px 4px rgba(22,32,60,.12)' : 'none'};font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px"><i style="width:7px;height:7px;border-radius:999px;background:${d}"></i>${w}</button>`).join('')}</div>` : ''}</div>`; }).join('')}
       </div><div style="height:8px;background:conic-gradient(from -45deg at 50% 100%,#FFFFFF 90deg,transparent 0) 0 0/14px 8px repeat-x"></div></div>
-    <button data-act="rtphoto" style="margin-top:12px;width:100%;display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-radius:18px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">${ui.photo ? `<img src="${ui.photo}" alt="" style="width:36px;height:36px;border-radius:10px;object-fit:cover">` : `<span style="width:36px;height:36px;border-radius:10px;background:#F1EEE8;display:flex;align-items:center;justify-content:center">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 16, 2)}</span>`}<span style="flex:1;font-size:13px;font-weight:700">${ui.photo ? 'Photo added' : 'Add a photo of what came back'}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">optional</span></button>
+    <button data-act="rtphoto" aria-label="${ui.photo ? 'Take the photo again' : 'Add a photo of what came back'}" style="margin-top:12px;width:100%;display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px;border-radius:18px;border:1.5px dashed #C9C4BA;background:transparent;color:var(--ink);text-align:left">${ui.photo ? `<img src="${ui.photo}" alt="" style="width:36px;height:36px;border-radius:10px;object-fit:cover">` : `<span style="width:36px;height:36px;border-radius:10px;background:#F1EEE8;display:flex;align-items:center;justify-content:center">${sv('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 16, 2)}</span>`}<span style="flex:1;font-size:13px;font-weight:700">${ui.photo ? 'Photo added' : 'Add a photo of what came back'}</span><span style="font-size:12px;font-weight:600;color:var(--ink2)">optional</span></button>
     ${lines.length ? rtWhyHTML(ui, mgr) : ''}
   </div>
   ${darkDock(`<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;gap:8px"><span style="font-size:14px;font-weight:700">${lines.length ? `${nLines(lines.length)} coming back` : 'Nothing marked yet'}</span><span style="display:flex;gap:10px;font-size:12px;font-weight:600;color:var(--navyInk)"><span style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:#6FDCB0"></i>${good} good</span><span style="display:flex;align-items:center;gap:5px"><i style="width:7px;height:7px;border-radius:999px;background:#F5B26B"></i>${bad} damaged</span></span></div>
