@@ -28,7 +28,7 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
   </div>
 
   <!-- the frame, square -->
-  <div style="position: relative; margin: 22px auto 0; width: 330px; height: 330px; border-radius: 6px; overflow: hidden; background: repeating-linear-gradient(0deg, transparent 0 26px, rgba(179,188,210,.45) 26px 29px), repeating-linear-gradient(90deg, #2A3350 0 26px, rgba(179,188,210,.45) 26px 29px)">
+  <div style="position: relative; margin: 16px auto 0; width: 300px; height: 300px; border-radius: 6px; overflow: hidden; background: repeating-linear-gradient(0deg, transparent 0 26px, rgba(179,188,210,.45) 26px 29px), repeating-linear-gradient(90deg, #2A3350 0 26px, rgba(179,188,210,.45) 26px 29px)">
     <span style="position: absolute; left: 8px; top: 8px; width: 28px; height: 28px; border-left: 3px solid #6FDCB0; border-top: 3px solid #6FDCB0"></span>
     <span style="position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; border-right: 3px solid #6FDCB0; border-top: 3px solid #6FDCB0"></span>
     <span style="position: absolute; left: 8px; bottom: 8px; width: 28px; height: 28px; border-left: 3px solid #6FDCB0; border-bottom: 3px solid #6FDCB0"></span>
@@ -49,29 +49,46 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 
   <!-- the check -->
   <sc-if value="{{shot}}" hint-placeholder-val="{{ true }}">
-    <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; color: #1C2233; border-radius: 26px 26px 0 0; padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 14px">
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; color: #1C2233; border-radius: 28px 28px 0 0; box-shadow: 0 -18px 40px rgba(6,10,22,.35); padding: 10px 16px 20px; display: flex; flex-direction: column; gap: 14px">
       <span aria-hidden="true" style="align-self: center; width: 40px; height: 5px; border-radius: 3px; background: #E0DCD4"></span>
-      <div style="display: flex; align-items: center; justify-content: space-between">
-        <span style="font-size: 16px; font-weight: 700">Checked on the phone</span>
-        <span style="display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #E4F4EA; color: #0F6B43; font-size: 12px; font-weight: 700">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Passes</span>
+
+      <!-- the verdict at a glance: the square it saved, and how many checks pass -->
+      <div style="display: flex; align-items: center; gap: 14px">
+        <span role="img" aria-label="The saved square" style="width: 60px; height: 60px; flex: none; border-radius: 14px; box-shadow: 0 6px 14px rgba(22,32,60,.22), inset 0 0 0 1px rgba(255,255,255,.12); background-color: #2A3350; background-image: repeating-linear-gradient(0deg, transparent 0 8px, rgba(179,188,210,.55) 8px 9px), repeating-linear-gradient(90deg, transparent 0 8px, rgba(179,188,210,.55) 8px 9px)"></span>
+        <span style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0">
+          <span style="font-size: 20px; font-weight: 700; letter-spacing: -.01em">Ready to use</span>
+          <span style="font-size: 13px; color: #5F6980"><span class="m" style="color: #1C2233; font-weight: 600">1200 × 1200</span> · phone-checked</span>
+        </span>
+        <span role="img" aria-label="{{passAria}}" style="width: 52px; height: 52px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: {{ring}}">
+          <span class="m" style="width: 42px; height: 42px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600">{{passN}}/4</span>
+        </span>
       </div>
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+
+      <!-- four gauges on one surface -->
+      <div style="border-radius: 18px; background: #F7F5F2; padding: 4px 14px">
         <sc-for list="{{checks}}" as="c" hint-placeholder-count="4">
-          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; {{c.tile}}">
-            <span style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700"><span>{{c.label}}</span><span style="font-size: 12px">{{c.v}}</span></span>
-            <span style="height: 6px; border-radius: 3px; background: rgba(28,34,51,.08); position: relative; display: block">
-              <span style="position: absolute; top: -3px; width: 2px; height: 12px; background: #1C2233; {{c.min}}"></span>
-              <span style="display: block; height: 6px; border-radius: 3px; {{c.bar}}"></span>
+          <div style="display: grid; grid-template-columns: 32px 1fr 92px; align-items: center; gap: 12px; padding: 11px 0; {{c.rule}}">
+            <span style="width: 32px; height: 32px; border-radius: 10px; background: #FFFFFF; color: #1C2233; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(22,32,60,.08)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg></span>
+            <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0">
+              <span style="font-size: 14px; font-weight: 700">{{c.label}} <span style="font-weight: 600; {{c.ink}}">· {{c.v}}</span></span>
+              <span style="font-size: 12px; color: #5F6980">{{c.note}}</span>
             </span>
-            <span style="font-size: 11px; font-weight: 600">{{c.note}}</span>
+            <span role="img" aria-label="{{c.aria}}" style="position: relative; height: 16px; display: block">
+              <span style="position: absolute; left: 0; right: 0; top: 6px; height: 4px; border-radius: 2px; background: #E6E3DD"></span>
+              <span style="position: absolute; left: 0; top: 6px; height: 4px; border-radius: 2px; {{c.bar}}"></span>
+              <span style="position: absolute; top: 1px; width: 2px; height: 14px; border-radius: 1px; background: #5F6980; {{c.min}}"></span>
+              <span style="position: absolute; top: 3px; width: 10px; height: 10px; margin-left: -5px; border-radius: 999px; background: #FFFFFF; {{c.dot}}"></span>
+            </span>
           </div>
         </sc-for>
       </div>
-      <span style="font-size: 12px; color: #5F6980">Saved as a <span class="m">1200 × 1200</span> square, from a <span class="m">3024</span> px shot. The line on each bar is the pass mark.</span>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5F6980">
+        <span style="width: 2px; height: 12px; border-radius: 1px; background: #5F6980; display: inline-block"></span>the pass mark · background is advice only</span>
+
       <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 8px">
-        <button type="button" onClick="{{retake}}" style="all: unset; cursor: pointer; text-align: center; padding: 14px 10px; border-radius: 14px; background: #F1EEE8; color: #1C2233; font-size: 15px; font-weight: 700">Retake</button>
-        <a href="Passport.dc.html" style="text-align: center; padding: 14px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700">Use this photo</a>
+        <button type="button" onClick="{{retake}}" style="all: unset; cursor: pointer; text-align: center; padding: 15px 10px; border-radius: 14px; background: #F1EEE8; color: #1C2233; font-size: 15px; font-weight: 700">Retake</button>
+        <a href="Passport.dc.html" style="text-align: center; padding: 15px 10px; border-radius: 14px; background: #C93A30; color: #FFFFFF; font-size: 15px; font-weight: 700; box-shadow: 0 8px 18px rgba(201,58,48,.28)">Use this photo</a>
       </div>
     </div>
   </sc-if>
@@ -81,17 +98,33 @@ a{color:inherit;text-decoration:none}a:hover{color:inherit}
 class Component extends DCLogic {
   constructor(p) { super(p); this.state = { live: false, torch: false }; }
   renderVals() {
-    const OK = 'background:#E4F4EA;color:#0F6B43';
-    const WARN = 'background:#FDEEE1;color:#7A4A02';
     const checks = [
-      { label: 'Sharp', v: 'clear', pct: 78, min: 35, note: 'no blur', tile: OK, c: '#0F6B43' },
-      { label: 'Light', v: 'good', pct: 61, min: 30, note: 'not dark, not blown out', tile: OK, c: '#0F6B43' },
-      { label: 'Size', v: 'large', pct: 100, min: 26, note: 'big enough to crop square', tile: OK, c: '#0F6B43' },
-      { label: 'Background', v: 'busy', pct: 38, min: 55, note: 'advice only: a plain wall reads better', tile: WARN, c: '#95530C' }
-    ].map(c => ({ ...c, bar: 'width:' + c.pct + '%;background:' + c.c, min: 'left:' + c.min + '%' }));
+      { label: 'Sharp', v: 'clear', pct: 78, min: 35, note: 'no blur', ok: true,
+        icon: 'M12 3v3M12 18v3M3 12h3M18 12h3M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z' },
+      { label: 'Light', v: 'good', pct: 61, min: 30, note: 'not dark, not blown out', ok: true,
+        icon: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4' },
+      { label: 'Size', v: 'large', pct: 100, min: 26, note: 'from a 3024 px shot', ok: true,
+        icon: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' },
+      { label: 'Background', v: 'busy', pct: 38, min: 55, note: 'a plain wall reads better', ok: false,
+        icon: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6' }
+    ].map((c, i) => {
+      const col = c.ok ? '#0F6B43' : '#95530C';
+      return {
+        ...c, ink: 'color:' + (c.ok ? '#0F6B43' : '#7A4A02'),
+        rule: i ? 'border-top: 1px solid #E6E3DD' : '',
+        bar: 'width:' + c.pct + '%;background:' + col,
+        dot: 'left:' + Math.min(c.pct, 100) + '%;box-shadow:inset 0 0 0 3px ' + col,
+        min: 'left:' + c.min + '%',
+        aria: c.label + ' ' + c.pct + ' of 100, pass mark ' + c.min + (c.ok ? ', passes' : ', below the mark, advice only')
+      };
+    });
+    const passN = checks.filter(c => c.ok).length;
+    const seg = [];
+    checks.forEach((c, k) => { const a0 = k * 90, b0 = a0 + 90; seg.push('#FFFFFF ' + a0 + 'deg ' + (a0 + 5) + 'deg', (c.ok ? '#0F6B43' : '#E0DCD4') + ' ' + (a0 + 5) + 'deg ' + (b0 - 5) + 'deg', '#FFFFFF ' + (b0 - 5) + 'deg ' + b0 + 'deg'); });
     const live = this.state.live, torchOn = this.state.torch;
     return {
-      checks, live, shot: !live,
+      checks, live, shot: !live, passN,
+      ring: 'conic-gradient(' + seg.join(',') + ')', passAria: passN + ' of 4 checks pass; the background is advice only',
       shoot: () => this.setState({ live: false }),
       retake: () => this.setState({ live: true }),
       torch: () => this.setState({ torch: !torchOn }),
