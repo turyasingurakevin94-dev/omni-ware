@@ -53,24 +53,6 @@ twin = '''    <sc-if value="{{askTwin}}" hint-placeholder-val="{{ true }}">
     </sc-if>
     <sc-if value="{{twinDone}}" hint-placeholder-val="{{ false }}"><div style="display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 8px 0 14px; border-radius: 16px; background: #E4F4EA; color: #0F6B43">''' + svg('tick', 15, 3) + '''<span style="flex: 1; font-size: 13px; font-weight: 700">Not Katwe · the phone is shared, both keep it</span><button type="button" onClick="{{undoTwin}}" style="all: unset; cursor: pointer; padding: 0 8px; height: 32px; display: flex; align-items: center; font-size: 13px; font-weight: 700; color: #16203C">Undo</button></div></sc-if>'''
 
-# Where they are, against the walk: our suppliers indigo, rivals plum, the new one a red pin.
-def dot(x, y, c, label, lx=8, anchor='start'):
-    return (f'<circle cx="{x}" cy="{y}" r="5" fill="{c}"></circle>'
-            f'<text x="{x + lx}" y="{y + 4}" text-anchor="{anchor}" font-size="10" font-weight="700" fill="#5F6980">{label}</text>')
-mapsvg = ('<svg viewBox="0 0 334 150" width="100%" height="150" role="img" aria-label="Kawempe is north of town, away from today’s walk through Kikuubo, Owino and Nateete" style="display: block">'
-          '<path d="M167 18c40 4 92 18 118 52s-6 66-56 72-120 4-160-14S10 82 40 52 120 14 167 18z" fill="#F7F5F2"></path>'
-          '<path d="M150 86 182 92 96 104" fill="none" stroke="#C9C4BA" stroke-width="2" stroke-dasharray="4 4"></path>'
-          + dot(150, 86, '#3A3F9B', 'Owino', -8, 'end') + dot(182, 92, '#7A3268', 'Kikuubo') + dot(96, 104, '#7A3268', 'Nateete', -8, 'end')
-          + dot(170, 120, '#3A3F9B', 'Katwe') + dot(292, 88, '#3A3F9B', 'Namanve', -8, 'end') + dot(206, 74, '#3A3F9B', 'Kiseka')
-          + '<path d="M160 22c-7 0-12 5-12 12 0 9 12 20 12 20s12-11 12-20c0-7-5-12-12-12z" fill="#C93A30"></path><circle cx="160" cy="34" r="4" fill="#FFFFFF"></circle>'
-          '<text x="178" y="38" font-size="11" font-weight="700" fill="#1C2233">Kawempe</text></svg>')
-where = ('    <div style="' + LIST + '; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">' + mapsvg
-         + '<div style="display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #5F6980">'
-           '<span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #3A3F9B"></span>our suppliers</span>'
-           '<span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #7A3268"></span>rivals</span>'
-           '<span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 2px; border-top: 2px dashed #C9C4BA"></span>today’s walk</span></div>'
-           '<span style="font-size: 12px; font-weight: 700; color: #1C2233">Kawempe · a new area · asked by app until a walk goes north</span></div>')
-
 # What they sell, each tag with what it could fill for us; the picked tags list the items.
 chips = '''    <div style="display: flex; flex-wrap: wrap; gap: 6px"><sc-for list="{{tags}}" as="t" hint-placeholder-count="6"><button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}<sc-if value="{{t.hasN}}" hint-placeholder-val="{{ false }}"><span style="height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; {{t.nStyle}}">{{t.n}}</span></sc-if></button></sc-for></div>'''
 fills = '''    <sc-if value="{{hasFills}}" hint-placeholder-val="{{ true }}">
@@ -85,7 +67,7 @@ terms = ('    <div style="' + LIST + '; padding: 12px 14px; display: flex; flex-
          + seg('credit', 'c').replace('repeat(var(--n, 2)', 'repeat(4') +
          '<span style="font-size: 12px; font-weight: 700; color: #5F6980">Delivers in</span>'
          + stepper('ns_days', '{{days}}', 'days', '{{less}}', '{{more}}', 'Days to deliver') + '</div>')
-bd = body('\n'.join([twin, '    <sc-if value="{{filled}}" hint-placeholder-val="{{ true }}">', sec('Where they are', 'for the walk'), where,
+bd = body('\n'.join([twin, '    <sc-if value="{{filled}}" hint-placeholder-val="{{ true }}">',  
                      sec('What they sell', '{{sellsRight}}'), chips, fills,
                      sec('Their terms'), terms, '    </sc-if>',
                      '    <sc-if value="{{notFilled}}" hint-placeholder-val="{{ false }}"><div style="' + LIST + '; padding: 18px; display: flex; align-items: center; gap: 12px">' + icon_well('supplier', 'indigo') + '<span style="font-size: 14px; font-weight: 700; color: #5F6980">Their card fills the name, phone, area and what they sell; you check the rest</span></div></sc-if>']))
