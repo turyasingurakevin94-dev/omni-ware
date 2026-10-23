@@ -1071,10 +1071,10 @@ function rowToCount(c){ return { id: c.id, aisle: c.aisle || '', countedBy: c.co
   status: c.status, decidedBy: c.decided_by, decidedAt: c.decided_at, createdAt: c.created_at }; }
 
 // 0156: the packed orders that wait on money -- a cash customer, not paid, no
-// yes from the Manager -- as id -> { owed, decision }. null before 0156.
+// yes from the Manager -- as id -> { decision }. null before 0156.
 function moneyHoldsNow(){
   return sb.rpc('store_money_holds', { p_shop: S.shopId })
-    .then(r => r.error ? null : Object.fromEntries((r.data || []).map(h => [String(h.id), { owed: Number(h.owed) || 0, decision: h.decision || null }])))
+    .then(r => r.error ? null : Object.fromEntries((r.data || []).map(h => [String(h.id), { decision: h.decision || null }])))
     .catch(() => null);
 }
 // 0157: what the yard asked of others in the last three days -- restock, extras,
@@ -1085,32 +1085,42 @@ function storeAsksNow(){
 }
 function rowToAsk(r){ return { id: r.id, kind: r.kind, ref: r.ref, payload: r.payload || {}, by: r.asked_by || null, byName: r.asked_by_name || '', status: r.status || 'sent',
   createdAt: r.created_at, decidedAt: r.decided_at || null, decidedBy: r.decided_by || null }; }
+/* 0159: the yard's day in one call, every money field taken out in the
+   database (store_snapshot). A Store login can no longer read the books
+   directly; before 0159 the app reads them as it did. null = no 0159. */
+async function storeSnapshotNow(){
+  const r = await sb.rpc('store_snapshot', { p_shop: S.shopId });
+  if (r.error) { if (needs0115(r.error)) return null; throw r.error; }
+  return r.data || null;
+}
+function snapHolds(h){ return h ? Object.fromEntries(Object.entries(h).map(([id, x]) => [id, { decision: (x && x.decision) || null }])) : null; }
 async function loadAll(){
   const since = isoOf(Date.now() - 35 * 864e5);
+  const sn = await storeSnapshotNow(); S.snapMode = !!sn;
   const [products, units, stock, log, quotes, trips, staff, customers, agents, places, routes, counts, settingsR, lastCounts, reports, returns, roadNames, managers, suppliers, holds, asks] = await Promise.all([
-    selectAll('products'),
-    selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty,pieces_per_unit').catch(() => selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty')).catch(() => []),
+    sn ? sn.products : selectAll('products'),
+    sn ? sn.units : selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty,pieces_per_unit').catch(() => selectCols('prices', 'id,product_id,variant_idx,unit,pack_unit,pack_qty')).catch(() => []),
     selectCols('stock', 'key,product_id,variant_idx,qty', 'key'),
-    selectCols('stock_log', 'id,key,type,delta,qty_after,date,at,note', 'id', q => q.gte('date', since)).catch(() => []),
-    selectAll('saved_quotes'),
-    selectAll('collection_trips').catch(() => []),
-    selectCols('staff', 'id,name,phone,role,unavailable,user_id').catch(() => []),
-    selectCols('customers', 'id,name,phone,location').catch(() => []),
+    sn ? sn.log : selectCols('stock_log', 'id,key,type,delta,qty_after,date,at,note', 'id', q => q.gte('date', since)).catch(() => []),
+    sn ? sn.orders : selectAll('saved_quotes'),
+    sn ? sn.trips : selectAll('collection_trips').catch(() => []),
+    sn ? sn.staff : selectCols('staff', 'id,name,phone,role,unavailable,user_id').catch(() => []),
+    sn ? sn.customers : selectCols('customers', 'id,name,phone,location').catch(() => []),
     selectCols('agents', 'id,name,payment_term').catch(() => []),
     selectCols('places', 'name,lat,lng', 'name').catch(() => []),
     selectCols('place_routes', 'from_place,to_place,km,mins,line,locked_at', 'to_place').catch(() => null),
     sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
-    sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
+    sn ? { data: { presets: sn.presets || {} } } : sb.from('app_settings').select('presets').eq('shop_id', S.shopId).maybeSingle(),
     // When each item was last counted, from any phone or the console.
-    sb.from('stock_log').select('key,at,date').eq('shop_id', S.shopId).in('type', ['count', 'correction']).order('id', { ascending: false }).limit(1000).then(r => r.error ? [] : r.data),
+    sn ? Object.entries(sn.counted || {}).map(([key, at]) => ({ key, at })) : sb.from('stock_log').select('key,at,date').eq('shop_id', S.shopId).in('type', ['count', 'correction']).order('id', { ascending: false }).limit(1000).then(r => r.error ? [] : r.data),
     // Reports (0122), credit asks (0123) and the names of the directions (0124); null before them.
     sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
-    sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
+    sn ? sn.returns : sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
     selectCols('road_names', 'way_key,name', 'way_key').catch(() => null),
     // Who decides for the shop on the ground, so a screen can name them.
     sb.from('shop_members').select('user_id,role').eq('shop_id', S.shopId).in('role', ['manager', 'buyer']).then(r => r.error ? [] : r.data),
-    selectCols('suppliers', 'id,name,location').catch(() => []),
-    moneyHoldsNow(),
+    sn ? sn.suppliers : selectCols('suppliers', 'id,name,location').catch(() => []),
+    sn ? snapHolds(sn.holds) : moneyHoldsNow(),
     storeAsksNow(),
   ]);
   const presets = (settingsR && settingsR.data && settingsR.data.presets) || {};
@@ -1159,14 +1169,17 @@ function mergeQuotes(rows){
   D().savedQuotes = list;
 }
 async function refreshLive(){
+  if (S.snapMode === undefined) return; // the first full read has not come back yet
   try {
-    const [quotes, trips, stock, counts, reports, returns, holds, asks] = await Promise.all([selectAll('saved_quotes', 'id', liveQuoteFilter), selectAll('collection_trips').catch(() => null),
+    const sn = S.snapMode ? await storeSnapshotNow() : null;
+    const [quotes, trips, stock, counts, reports, returns, holds, asks] = await Promise.all([sn ? sn.orders : selectAll('saved_quotes', 'id', liveQuoteFilter), sn ? sn.trips : selectAll('collection_trips').catch(() => null),
       selectCols('stock', 'key,product_id,variant_idx,qty', 'key').catch(() => null),
       sb.from('stock_counts').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
       sb.from('stock_reports').select('*').eq('shop_id', S.shopId).order('created_at', { ascending: false }).limit(60).then(r => r.error ? null : r.data),
-      sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
-      moneyHoldsNow(), storeAsksNow()]);
-    mergeQuotes(quotes);
+      sn ? sn.returns : sb.from('invoice_asks').select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').eq('shop_id', S.shopId).eq('kind', 'credit').order('created_at', { ascending: false }).limit(40).then(r => r.error ? null : r.data),
+      sn ? snapHolds(sn.holds) : moneyHoldsNow(), storeAsksNow()]);
+    // The snapshot is the whole live window, so it replaces what the phone holds; a direct read is merged.
+    if (sn) D().savedQuotes = quotes.map(rowToQuote); else mergeQuotes(quotes);
     if (asks) S.data.asks = asks.map(rowToAsk);
     if (holds) S.data.moneyHolds = holds;
     if (trips) S.data.collectionTrips = trips.map(rowToTrip);
@@ -1177,11 +1190,39 @@ async function refreshLive(){
     S.offline = false; S.loadedAt = Date.now(); saveSnapshot(); if (!S.dragging && !S.ui.noRefresh) render();
   } catch (e) { if (isNetworkError(e)) { if (!S.offline) { S.offline = true; render(); } } else console.warn(e); }
 }
+/* What the phone last saw, kept in IndexedDB: localStorage holds 5 MB and a
+   shop's pictures filled it (the report's "storage nearly full"). Written a
+   moment after the last change, never on every tick. */
+const SNAP_DB = 'ow-store', SNAP_OS = 'snap';
+function snapDb(){
+  return snapDb.p || (snapDb.p = new Promise((ok, no) => {
+    try { const r = indexedDB.open(SNAP_DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(SNAP_OS); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }
+    catch (e) { no(e); }
+  }));
+}
 function snapKey(){ return 'ow-store-snap:' + (S.user && S.user.id); }
-function saveSnapshot(){ S.rev = (S.rev || 0) + 1; try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data })); } catch (_e) {
-  // Product pictures can be big; keep the yard without them rather than nothing.
-  try { localStorage.setItem(snapKey(), JSON.stringify({ shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: { ...S.data, products: S.data.products.map(p => ({ ...p, image: null, variants: (p.variants || []).map(v => ({ ...v, image: null })) })) } })); } catch (_e2) {} } }
-function loadSnapshot(userId){ try { const s = JSON.parse(localStorage.getItem('ow-store-snap:' + userId)); return s && s.data ? s : null; } catch (_e) { return null; } }
+function saveSnapshot(){
+  S.rev = (S.rev || 0) + 1;
+  clearTimeout(saveSnapshot.t);
+  saveSnapshot.t = setTimeout(() => {
+    const key = snapKey(), val = { shopId: S.shopId, shopName: S.shopName, role: S.role, at: S.loadedAt, data: S.data };
+    snapDb().then(db => { const tx = db.transaction(SNAP_OS, 'readwrite'); tx.objectStore(SNAP_OS).put(val, key); }).catch(() => {});
+  }, 1200);
+}
+async function loadSnapshot(userId){
+  const key = 'ow-store-snap:' + userId;
+  let old = null; try { old = localStorage.getItem(key); } catch (_e) {}
+  if (old != null) {
+    // The copy from before, in localStorage: moved over once, then gone.
+    try { localStorage.removeItem(key); } catch (_e) {}
+    try { const s = JSON.parse(old); if (s && s.data) { snapDb().then(db => db.transaction(SNAP_OS, 'readwrite').objectStore(SNAP_OS).put(s, key)).catch(() => {}); return s; } } catch (_e) {}
+  }
+  try {
+    const db = await snapDb();
+    const s = await new Promise((ok, no) => { const r = db.transaction(SNAP_OS).objectStore(SNAP_OS).get(key); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+    return s && s.data ? s : null;
+  } catch (_e) { return null; }
+}
 
 /* ==================================================================
    What the yard is looking at, worked out from the owner's rules.
@@ -1687,16 +1728,25 @@ function shopScoped(base){
 
 async function boot(){
   S.prefs = loadPrefs(); applyPrefs();
+  // First paint from what this phone last saw, before the sign-in is checked
+  // with the server; the server's answer then confirms it or takes it away.
+  let early = null;
+  try {
+    const { data: s0 } = await sb.auth.getSession(), u0 = s0 && s0.session && s0.session.user;
+    early = u0 ? await loadSnapshot(u0.id) : null;
+    if (early) { S.user = u0; Object.assign(S, { shopId: early.shopId, shopName: early.shopName, role: early.role, data: early.data, loadedAt: early.at }); hideAuth(); start(); }
+  } catch (_e) { early = null; }
   let { data: u, error: ue } = await sb.auth.getUser();
   let user = (!ue && u && u.user) ? u.user : null;
   if (!user) {
     const { data: sess } = await sb.auth.getSession();
     const sid = sess && sess.session && sess.session.user && sess.session.user.id;
-    const snap = sid ? loadSnapshot(sid) : null;
+    const snap = sid ? await loadSnapshot(sid) : null;
     if (isNetworkError(ue) && snap) {
       S.user = sess.session.user; Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at });
-      hideAuth(); start(); toast('Offline — showing what you last saw'); return;
+      if (!S.started) { hideAuth(); start(); } toast('Offline — showing what you last saw'); return;
     }
+    if (S.started) { S.started = false; S.data = null; document.getElementById('st_main').innerHTML = ''; }
     await authScreen();
     ({ data: u } = await sb.auth.getUser()); user = u && u.user;
     if (!user) return;
@@ -1706,8 +1756,8 @@ async function boot(){
   S.user = user;
   const { data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id);
   if (error) {
-    const snap = loadSnapshot(user.id);
-    if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at }); hideAuth(); start(); toast('Offline — showing what you last saw'); return; }
+    const snap = early || await loadSnapshot(user.id);
+    if (isNetworkError(error) && snap) { Object.assign(S, { shopId: snap.shopId, shopName: snap.shopName, role: snap.role, data: snap.data, loadedAt: snap.at }); hideAuth(); if (!S.started) start(); toast('Offline — showing what you last saw'); return; }
     toast('Could not reach the shop: ' + error.message, 6000); return;
   }
   const rows = ms || [];
@@ -1719,8 +1769,10 @@ async function boot(){
   if (!pick) { authScreen('denied'); return; }
   S.shopId = pick.shop_id; S.role = pick.role; S.shopName = (pick.shops && pick.shops.name) || 'The shop';
   hideAuth();
-  const snap = loadSnapshot(user.id);
-  if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
+  const snap = early && early.shopId === S.shopId ? early : await loadSnapshot(user.id);
+  if (S.started && !(snap && snap.shopId === S.shopId)) { S.data = null; S.started = false; }
+  if (S.started) render();
+  else if (snap && snap.shopId === S.shopId) { S.data = snap.data; S.loadedAt = snap.at; start(); }
   else document.getElementById('st_main').innerHTML = `<div class="st-empty" style="padding-top:40vh"><b>Opening the books…</b>${esc(S.shopName)}</div>`;
   try { await loadAll(); if (!S.started) start(); else render(); }
   catch (e) { if (S.data) toast(isNetworkError(e) ? 'Offline — showing what you last saw' : 'Could not refresh: ' + e.message, 5000); else document.getElementById('st_main').innerHTML = `<div class="st-empty" style="padding-top:35vh"><b>Could not open the books</b>${esc(e.message || e)}<br><br><button class="st-btn navy" style="flex:none;margin:0 auto" onclick="location.reload()">Try again</button></div>`; }
@@ -1729,6 +1781,7 @@ function start(){
   S.started = true;
   restoreDrafts();
   render();
+  if (S.ticking) return; S.ticking = true;
   afterStart();
   setInterval(() => { if (document.visibilityState === 'visible' && !S.dragging) refreshLive(); }, 45000);
   setInterval(() => { if (document.visibilityState === 'visible' && !S.dragging && !S.sheet) tickClocks(); }, 30000);
@@ -1856,7 +1909,15 @@ const STORE_STATUS_MOVES = { preparing: ['pending_delivery', 'completed'], pendi
 function needs0115(e){ return e && (e.code === '42P01' || e.code === '42703' || e.code === '42883' || e.code === 'PGRST202' || e.code === 'PGRST204' || e.code === 'PGRST205' || /does not exist|schema cache|could not find the function/i.test(e.message || '')); }
 function failSay(e, mig){ if (e && (e.hint === 'OWCSH' || /cash customer/i.test(e.message || ''))) return `Not paid · cash customer — ask ${managerName()} or wait for payment.`; if (e && (e.code === '42501' || /row-level security/i.test(e.message || ''))) return 'Your login cannot do this one — ask the owner.'; return needs0115(e) ? `This needs migration ${mig || '0115'} on the database — ask the owner to run it.` : failWord(e); }
 
+/* 0159: the Store sends only its own fields, and each line's pick answer;
+   the database merges them into the order it holds, money and all. */
 async function changeOrder(id, fn){
+  if (S.snapMode !== false) {
+    const g = await sb.rpc('store_order', { p_shop: S.shopId, p_id: Number(id) });
+    if (!g.error) return changeOrderSnap(id, g.data, fn);
+    if (!needs0115(g.error)) throw g.error;
+    S.snapMode = false;
+  }
   const r = await sb.from('saved_quotes').select('*').eq('shop_id', S.shopId).eq('id', id).maybeSingle();
   if (r.error) throw r.error;
   if (!r.data) throw new Error('that order is no longer on the books');
@@ -1872,6 +1933,25 @@ async function changeOrder(id, fn){
   const u = await sb.from('saved_quotes').update(patch).eq('shop_id', S.shopId).eq('id', id);
   if (u.error) throw u.error;
   const fresh = rowToQuote({ ...row, ...patch });
+  const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
+  if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
+  saveSnapshot();
+  return { q: fresh, out };
+}
+async function changeOrderSnap(id, row, fn){
+  if (!row) throw new Error('that order is no longer on the books');
+  const q = rowToQuote(row), before = q.status;
+  if (q.voided) return null;
+  const out = fn(q);
+  if (out === false) return null;
+  if (q.status !== before && !(STORE_STATUS_MOVES[before] || []).includes(q.status)) throw new Error('that order has moved on');
+  const patch = {};
+  ORDER_KEYS.forEach(k => { if (k !== 'items') patch[k] = q[k] === undefined ? null : q[k]; });
+  const items = (q.items || []).map((it, idx) => ({ idx, lineId: it.lineId || null, pickStatus: it.pickStatus == null ? null : it.pickStatus, pickedQty: it.pickedQty == null ? null : it.pickedQty }));
+  const u = await sb.rpc('store_patch_order', { p_shop: S.shopId, p_id: Number(id), p_patch: patch, p_status: q.status !== before ? q.status : null, p_items: items });
+  if (u.error) throw u.error;
+  if (!u.data) return null;
+  const fresh = rowToQuote(u.data);
   const i = D().savedQuotes.findIndex(x => Number(x.id) === Number(id));
   if (i >= 0) D().savedQuotes[i] = fresh; else D().savedQuotes.push(fresh);
   saveSnapshot();
@@ -2067,13 +2147,20 @@ function openReportFor(key){ return (D().reports || []).filter(r => r.key === ke
    The lines are the order's own (idx), as the Sales app asks; the amount
    is what the order sold them at, for the Manager's list -- never shown
    here. Each line says whether it can go back on the shelf. */
-async function sendReturn(q, lines, blob){
+/* The phone sends what came back and how; the database prices it from the
+   order (0159 store_return_ask), so no price ever rides on this phone. */
+async function sendReturn(q, lines, blob, why, said){
   const photo = blob ? await uploadPhoto(blob, 'returns') : null;
   const bad = lines.some(l => l.condition === 'damaged');
-  const amount = lines.reduce((n, l) => n + (Number(l.amount) || 0), 0);
-  const { data, error } = await sb.from('invoice_asks').insert({ shop_id: S.shopId, quote_id: Number(q.id), customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: 'credit',
-    lines, amount, reason: bad ? (lines.every(l => l.condition === 'damaged') ? 'Came back damaged' : 'Came back · some damaged') : 'Came back · can sell',
-    note: ['Brought back at the gate', photo ? 'photo: ' + photo : ''].filter(Boolean).join(' · '), asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' }).select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').single();
+  const reason = why || (bad ? (lines.every(l => l.condition === 'damaged') ? 'Came back damaged' : 'Came back · some damaged') : 'Came back · can sell');
+  const note = [String(said || '').trim() || 'Brought back at the gate', photo ? 'photo: ' + photo : ''].filter(Boolean).join(' · ');
+  let data = null, error = null;
+  if (S.snapMode !== false) {
+    ({ data, error } = await sb.rpc('store_return_ask', { p_shop: S.shopId, p_order: Number(q.id), p_lines: lines, p_reason: reason, p_note: note }));
+    if (error && needs0115(error)) { S.snapMode = false; error = null; data = null; }
+  }
+  if (!data && !error) ({ data, error } = await sb.from('invoice_asks').insert({ shop_id: S.shopId, quote_id: Number(q.id), customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: 'credit',
+    lines, reason, note, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' }).select('id,quote_id,kind,lines,reason,note,asked_by,asked_by_name,status,created_at').single());
   if (error) throw error;
   if (D().returns) D().returns.unshift(rowToReturn(data)); else D().returns = [rowToReturn(data)];
   saveSnapshot();
@@ -2102,8 +2189,29 @@ async function changeTrip(tripId, fn){
   saveSnapshot();
   return true;
 }
+/* 0159: the truck's lines go through store_patch_trip, which checks the trip
+   is still this phone's and touches only gotQty and the status. */
+async function patchTripSnap(tripId, got, status){
+  const t = (D().collectionTrips || []).find(x => x.id === tripId);
+  if (t && t.voided) throw new Error('that trip was called off');
+  const u = await sb.rpc('store_patch_trip', { p_shop: S.shopId, p_id: String(tripId), p_got: got, p_status: status });
+  if (u.error) { if (needs0115(u.error)) { S.snapMode = false; return undefined; } throw u.error; }
+  if (!u.data) return null;
+  if (t) {
+    Object.entries(got || {}).forEach(([k, v]) => { const l = t.lines[Number(k)]; if (l) l.gotQty = v; });
+    t.status = status === 'collected' ? 'collected' : 'collecting';
+    const now = new Date().toISOString(); if (!t.acceptedAt) t.acceptedAt = now; if (status === 'collected') t.collectedAt = now;
+  }
+  saveSnapshot();
+  return true;
+}
 // Each line ticked onto the truck says it came in full; nothing about money.
 async function tickTripLine(tripId, i, on){
+  if (S.snapMode) {
+    const t = (D().collectionTrips || []).find(x => x.id === tripId), l = t && t.lines[i];
+    const r = await patchTripSnap(tripId, { [i]: on ? Number(l && l.qty) || 0 : null }, 'collecting');
+    if (r !== undefined) return r;
+  }
   return changeTrip(tripId, row => {
     if (!['assigned', 'collecting'].includes(row.status)) return null;
     const lines = (row.lines || []).map((l, k) => k === i ? { ...l, gotQty: on ? Number(l.qty) || 0 : null } : l);
@@ -2111,6 +2219,12 @@ async function tickTripLine(tripId, i, on){
   });
 }
 async function handInTrip(tripId){
+  if (S.snapMode) {
+    const t = (D().collectionTrips || []).find(x => x.id === tripId);
+    if (t && !(t.lines || []).every(l => l.gotQty != null)) throw new Error('load every line first');
+    const r = await patchTripSnap(tripId, {}, 'collected');
+    if (r !== undefined) return r;
+  }
   return changeTrip(tripId, row => {
     if (!['assigned', 'collecting'].includes(row.status)) return null;
     if (!(row.lines || []).every(l => l.gotQty != null)) throw new Error('load every line first');
@@ -4011,8 +4125,8 @@ ACT['in:drgot'] = t => { const v = t.value.replace(/[^0-9.]/g, ''); if (v === ''
 // What rides back from the door, as a return for the Manager to credit (the
 // lines in the order line's own unit, as the gate's return writes them).
 function doorReturnLines(q){ const ui = S.ui.door; if (!ui || ui.id !== q.id) return []; const items = pickView(q);
-  return items.map((it, i) => ({ it, i, back: ui.got[i] != null ? lineOut(q, it) - ui.got[i] : 0 })).filter(x => x.back > 0).map(({ it, back }) => { const sell = Number(it.sellPrice) || 0;
-    return { idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: String(it.unit || '').trim(), qty: back, shown: backText(it, back), condition: 'damaged', ...(sell > 0 ? { price: sell, amount: Math.round(sell * back) } : {}) }; }); }
+  return items.map((it, i) => ({ it, i, back: ui.got[i] != null ? lineOut(q, it) - ui.got[i] : 0 })).filter(x => x.back > 0).map(({ it, back }) =>
+    ({ idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: String(it.unit || '').trim(), qty: back, shown: backText(it, back), condition: 'damaged' })); }
 
 /* ==================================================================
    DELIVER -- the proof: a signed note or the goods at the door, who
@@ -4898,11 +5012,10 @@ ACT.rtdecline = async t => { if (S.busy) return; S.busy = true;
 ACT.rtsend = () => {
   const ui = S.ui.rt, q = ui && quoteById(ui.id); if (!q || ui.sent) return;
   const items = (q.items || []).filter(it => (Number(it.qty) || 0) > 0);
-  const lines = items.map((it, i) => ({ it, k: lineKey(it, (q.items || []).indexOf(it)) })).filter(x => ui.back[x.k] > 0).map(({ it, k }) => { const sell = Number(it.sellPrice) || 0;
+  const lines = items.map((it, i) => ({ it, k: lineKey(it, (q.items || []).indexOf(it)) })).filter(x => ui.back[x.k] > 0).map(({ it, k }) => {
     // qty is in the order line's own unit (20 boxes for a carton of 20), as the Sales app asks and the
     // Manager credits; shown is how it reads, so the receipt never calls 20 boxes "20 Ctn".
-    return { idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: String(it.unit || '').trim(), qty: ui.back[k], shown: backText(it, ui.back[k]), condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good',
-      ...(sell > 0 ? { price: sell, amount: Math.round(sell * ui.back[k]) } : {}) }; });
+    return { idx: (q.items || []).indexOf(it), name: lineName(it).base, unit: String(it.unit || '').trim(), qty: ui.back[k], shown: backText(it, ui.back[k]), condition: (ui.cond[k] || 0) === 1 ? 'damaged' : 'good' }; });
   if (!lines.length) { FEEL.no(); return; }
   ui.sent = { lines, wait: true, at: Date.now() }; chimeDone(); render();
   heldWrite('Logging the return', async () => { S.busy = true;
