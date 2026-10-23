@@ -165,3 +165,28 @@ Deferred:
 - `store.handover` push text (round 6).
 - The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
 
+## Round 8 · Accessibility (+ round 7 leftovers) (23 Oct 2026) · STO-REL-11, STO-A11Y-01..03, STO-UI-03 (reopened), STO-UI-10 · no migration
+
+The plan is in `docs/audit/store/ROUND-8.md`.
+
+Fixed:
+- A first load no longer says "This login has no shop" because a read came too early or failed.
+- Big text works again on the scale, at least 1.2×.
+- The white bar reaches the play button's top, so nothing above the bar is ever under it (A2).
+- Every screen has one h1, every section label is an h2, and only the top screen can be read or tapped.
+- "1 of 2" on Pack is readable (5.5:1).
+- Hand over fits at 360 (one picker row, the slip clears the panel).
+- On the road puts the button under the order.
+
+Now part of the language:
+- **Checking your shop… / Could not reach the shop.** A failed read is never "no shop"; "This login has no shop" only after a real empty answer.
+- **Big text** steps the scale (`html.big`: 15/17/20/24/34/48, controls 52 px). Any new size goes through the scale, so Big text reaches it.
+- **The bar holds the play button** (A2). New lists end above `--nav-room`.
+- **Headings.** A page title next to Back is `aria-level="1"`; a section label (`.cv-sec`) is `aria-level="2"`; a page with no title in words gets a `PAGE_WORD` hidden h1.
+- **Pickers are one scrolling row** with names in full.
+
+Deferred:
+- NAV-08, NAV-09.
+- `store.handover` push text (round 6).
+- The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
+
