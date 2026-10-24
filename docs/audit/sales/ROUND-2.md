@@ -31,7 +31,7 @@ Canvas: v130, row "Sales round 2 · core workflows" (boards `R2QtyBack`, `R2Cred
 | SAL-016 | Medium | `sx/7_neworder.js` `nwDockHTML` | A customer with no limit: the pay choice on its own row, "No limit set · {Manager} decides", and the waiting line when Credit is chosen | yes | Board `R2CreditNoLimit`. |
 | SAL-016 | Medium | `sx/7_neworder.js` `nwPlacedNote`, `sx/5b_orders.js` gate chip | "waits in Checking for {Manager} · credit, no limit set"; the chip's hint "No limit set · {Manager} decides" | yes | Placed page and order page as drawn. |
 | SAL-016 | Medium | `manager.html` `creditCase`, its hold card and push line | A no-limit credit order is held; the card says "no limit set" (not "over their credit limit") | yes (one line of copy) | The Manager's queue lists it; Release and Cash first work as for an over-limit hold. |
-| SAL-018 | Medium | `sx/5a_today.js` `moneyIn`, `sx/5c_numbers.js` `nmIsSale` / `nmInvoicesIn`, Today, the money list and order page; the same shared functions in `manager.html` and `accounts.html` (word for word) | A test record (`qa`) is left out of every figure and marked "TEST · not counted" where it is listed | yes | After the flag: October collected and the goal exclude #554, #556, #562, #564, 22655 and 22656. |
+| SAL-018 | Medium | `sx/5a_today.js` `moneyIn`, `sx/5c_numbers.js` `nmIsSale` / `nmInvoicesIn`, Today, the money list and order page; the same shared functions in `manager.html` and `accounts.html` (word for word), and Accounts' cash book totals and daily count (Kevin: not real money) | A test record (`qa`) is left out of every figure and marked "TEST · not counted" where it is listed | yes | After the flag: October collected and the goal exclude #554, #556, #562, #564, 22655 and 22656. |
 
 ## Server / SQL changes planned
 
@@ -84,6 +84,13 @@ Run `docs/audit/sales/round-2-check.sql` on live first; queries 1 and 2 show the
 2. **Were the TESTQA payments real money?** If not, Accounts' cash book should leave them out too (the daily count never had them). If they were, they stay in the cash book and only the sales figures drop them.
 3. **SAL-017 in round 5:** agreed, or do you want it in this round?
 4. **The corrections:** for each switch above, "yes", "no" or the choice (#446, #264, #301, #360).
+
+## Kevin's answers (24 Oct 2026)
+
+1. **Test records:** yes — they are kept and marked test, out of every figure; from now on a customer or walk-in named "TEST …", and a ref starting "TESTQA", is test automatically.
+2. **Real money?** No — the TESTQA payments were never cash, so Accounts' cash book leaves them out too.
+3. **SAL-017:** round 5, as planned.
+4. **The corrections:** to confirm (#446's choice, the three paid-over orders, the other switches).
 
 ## Phase B result (filled after implementing)
 
