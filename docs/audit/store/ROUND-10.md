@@ -75,6 +75,8 @@
 | A person's name (updated) | The name they chose; otherwise their staff record's name; otherwise their role ("The owner", "The manager"). Never a login. | "Otherwise 'Someone'" |
 | A colleague | A person who has left the shop and has no role any more | "Someone" |
 | Remove (Waiting to send) | Drop something that was never sent from this phone, after a confirm; the books never had it | — |
+| Coming in | Goods coming **into** the yard from suppliers: trips still buying ("Buying") and trips heading back ("Coming"). The In page's list | "On the way", which read like "On the road" |
+| On the road (unchanged) | Orders going **out** to clients on a truck | — |
 
 ## Not changing / pushed back
 
