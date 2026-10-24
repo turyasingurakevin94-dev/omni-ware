@@ -43,35 +43,64 @@ input::placeholder{color:#6B7480}
       <span style="width: 52px; height: 52px; flex: none; border-radius: 999px; background: #E4E6FA; color: #3A3F9B; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center">OP</span>
       <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2">PPR pipe 25mm × 4m</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2">Owino Plumbing · our first price for it</span></span>
     </div>
-    <div style="display: flex; align-items: baseline; justify-content: center; gap: 10px; padding: 4px 0 2px">
+    <div style="display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 4px 0 2px">
       <span class="m" style="font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.03em">{{shown}}</span><span style="font-size: 14px; font-weight: 600; color: #B3BCD2">{{unitWord}}</span>
     </div>
   </div>
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
-    <span style="padding: 0 4px; font-size: 13px; font-weight: 700; color: #5F6980">Do they have it?</span>
+    <a href="{{feedHref}}" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: #FBF8F1; box-shadow: inset 0 0 0 1px #E6DECB">
+      <span aria-hidden="true" style="position: relative; width: 52px; height: 52px; flex: none; border-radius: 999px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); font-family: Oswald, Figtree, sans-serif; font-size: 8px; font-weight: 700; letter-spacing: .02em; {{feedRing}}">{{feedStamp}}</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{feedTitle}}</span><span style="font-size: 12px; font-weight: 600; {{feedInk}}">{{feedNote}}</span></span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">Do they have it?</span>
     <div role="radiogroup" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: #F1EEE8"><sc-for list="{{haves}}" as="h" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" style="{{h.style}}">{{h.label}}</button></sc-for></div>
     <sc-if value="{{has}}" hint-placeholder-val="{{ false }}">
     <div style="display: flex; flex-direction: column; gap: 10px">
-    <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">Sold by</span>
-    <div role="radiogroup" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 14px; background: #F1EEE8"><sc-for list="{{units}}" as="u" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{u.on}}" onClick="{{u.pick}}" style="{{u.style}}">{{u.label}}</button></sc-for></div>
-    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
-      <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
-        <button type="button" aria-label="{{k.aria}}" onClick="{{k.press}}" style="all: unset; cursor: pointer; height: 48px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; color: #5F6980">How they pack it</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">one sentence</span></div>
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div aria-label="{{packAria}}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; {{packDim}}">
+        <input inputmode="numeric" aria-label="How many in one outer" placeholder="n" value="{{pn}}" onInput="{{typePn}}" class="m" style="box-sizing: border-box; width: 58px; height: 40px; padding: 0 8px; border: none; border-radius: 10px; text-align: center; font-size: 17px; font-weight: 600; color: #1C2233; outline: none; {{pnStyle}}">
+        <button type="button" onClick="{{cycleUnit}}" aria-label="The unit, tap to change" style="all: unset; cursor: pointer; box-sizing: border-box; height: 40px; padding: 0 10px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; {{puStyle}}">{{puWord}}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"></path></svg></button>
+        <span style="font-size: 15px; font-weight: 600; color: #5F6980">in a</span>
+        <button type="button" onClick="{{cycleOuter}}" aria-label="The outer pack, tap to change" style="all: unset; cursor: pointer; box-sizing: border-box; height: 40px; padding: 0 10px; border-radius: 10px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; {{poStyle}}">{{poWord}}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"></path></svg></button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid #EFECE6; padding-top: 10px">
+        <button type="button" role="switch" aria-checked="{{singleStr}}" onClick="{{toggleSingle}}" style="all: unset; cursor: pointer; position: relative; width: 46px; height: 28px; flex: none; border-radius: 999px; {{singleTrack}}"><span style="position: absolute; top: 3px; width: 22px; height: 22px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.25); {{singleKnob}}"></span></button>
+        <span style="flex: 1; font-size: 13px; font-weight: 600; color: #5F6980">Sold singly, no outer pack</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; color: #5F6980">Their prices</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">one line a tier</span></div>
+    <sc-if value="{{packNotSet}}" hint-placeholder-val="{{ false }}">
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 16px; display: flex; align-items: center; gap: 12px; color: #5F6980"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"></path></svg><span style="font-size: 13px; font-weight: 600">Set how they pack it first. Each price follows the packing.</span></div>
+    </sc-if>
+    <sc-if value="{{packSet}}" hint-placeholder-val="{{ true }}">
+    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column">
+      <sc-for list="{{tiers}}" as="t" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 8px 8px; border-radius: 14px; {{t.rowBg}}">
+          <div style="display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 600">
+            <span aria-hidden="true" style="width: 8px; height: 8px; flex: none; border-radius: 999px; {{t.dot}}"></span>
+            <input inputmode="numeric" aria-label="{{t.nAria}}" value="{{t.n}}" onInput="{{t.typeN}}" class="m" style="box-sizing: border-box; width: 40px; height: 36px; padding: 0 4px; border: none; border-radius: 9px; background: #F4F2EE; text-align: center; font-size: 15px; font-weight: 600; color: #1C2233; outline: none">
+            <button type="button" onClick="{{t.flip}}" aria-label="{{t.flipAria}}" style="all: unset; cursor: pointer; height: 36px; padding: 0 2px; font-weight: 700; display: flex; align-items: center; {{t.wordInk}}">{{t.word}}+</button>
+            <span style="color: #5F6980">{{verb}}</span>
+            <button type="button" onClick="{{t.pick}}" aria-label="{{t.priceAria}}" class="m" style="all: unset; cursor: pointer; box-sizing: border-box; min-width: 92px; height: 36px; padding: 0 8px; border-radius: 9px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: flex-end; {{t.priceStyle}}">{{t.price}}</button>
+            <span style="color: #5F6980; white-space: nowrap">/{{t.per}}</span>
+            <sc-if value="{{t.canRemove}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{t.remove}}" aria-label="Remove this tier" style="all: unset; cursor: pointer; margin-left: auto; width: 28px; height: 28px; flex: none; border-radius: 999px; color: #5F6980; display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></sc-if>
+          </div>
+          <sc-if value="{{t.hasNote}}" hint-placeholder-val="{{ false }}"><span style="padding-left: 13px; font-size: 12px; font-weight: 600; {{t.noteInk}}">{{t.note}}</span></sc-if>
+        </div>
+      </sc-for>
+      <button type="button" onClick="{{addTier}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; color: #3A3F9B; font-size: 13px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>{{addLabel}}</button>
+    </div>
+    <div aria-hidden="true" style="display: flex; gap: 14px; padding: 0 6px; font-size: 11px; font-weight: 700; color: #5F6980"><span style="display: flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; background: #C47A1E"></i>retail · under a full {{poShort}}</span><span style="display: flex; align-items: center; gap: 5px"><i style="width: 8px; height: 8px; border-radius: 999px; background: #3A3F9B"></i>wholesale · a full {{poShort}} and up</span></div>
+    </sc-if>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; {{keysDim}}">
+      <sc-for list="{{tkeys}}" as="k" hint-placeholder-count="12">
+        <button type="button" aria-label="{{k.aria}}" onClick="{{k.press}}" style="all: unset; cursor: pointer; height: 46px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E6E3DD; font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center">
           <sc-if value="{{k.isText}}" hint-placeholder-val="{{ true }}">{{k.label}}</sc-if>
           <sc-if value="{{k.isBack}}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h11v14H9l-6-7zM13 10l4 4M17 10l-4 4"></path></svg></sc-if>
         </button>
       </sc-for>
-    </div>
-    <span style="padding: 8px 4px 0; font-size: 13px; font-weight: 700; color: #5F6980">Cheaper when you buy more</span>
-    <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 6px; display: flex; flex-direction: column; gap: 2px">
-      <sc-for list="{{steps}}" as="s" hint-placeholder-count="2">
-        <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 10px">
-          <span style="flex: 1; font-size: 13px; font-weight: 600; color: #5F6980"><span class="m" style="color: #1C2233">{{s.from}}</span> or more</span>
-          <span style="width: 70px; height: 6px; border-radius: 3px; background: #EFECE6; display: block"><span style="display: block; height: 6px; border-radius: 3px; background: #3A3F9B; {{s.w}}"></span></span>
-          <span class="m" style="width: 70px; text-align: right; font-size: 15px; font-weight: 600">{{s.price}}</span>
-        </div>
-      </sc-for>
-      <button type="button" onClick="{{addStep}}" style="all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 10px; color: #3A3F9B; font-size: 13px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a step</button>
     </div>
     <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; color: #5F6980">Delivers in</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">optional</span></div>
     <div style="display: flex; gap: 6px"><sc-for list="{{lead}}" as="l" hint-placeholder-count="3"><button type="button" aria-pressed="{{l.on}}" onClick="{{l.pick}}" style="{{l.style}}">{{l.label}}</button></sc-for></div>
@@ -96,33 +125,90 @@ input::placeholder{color:#6B7480}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { has: null, unit: null, lead: null, extra: false, v: '', saved: false }; }
+  constructor(p) { super(p); this.state = { has: null, lead: null, saved: false, pn: '', pu: '', po: '', single: false, sel: 0, tiers: [{ n: '1', on: 'u', v: '' }, { n: '1', on: 'o', v: '' }] }; }
+
+  tierVals(S, o) {
+    const UNITS = ['pieces', 'lengths', 'sheets', 'rolls', 'dozens', 'pairs', 'sets'], OUTERS = ['ctn', 'bundle', 'box', 'bag'];
+    const ONE = { pieces: 'piece', lengths: 'length', sheets: 'sheet', rolls: 'roll', dozens: 'dozen', pairs: 'pair', sets: 'set' };
+    const MANY = { ctn: 'ctns', bundle: 'bundles', box: 'boxes', bag: 'bags' };
+    const fmt = (x) => Number(x).toLocaleString('en-US');
+    const pn = Number(S.pn || 0), set = S.single ? !!S.pu : !!(pn > 1 && S.pu && S.po);
+    const word = (on, n) => on === 'u' ? (n === 1 ? ONE[S.pu] || 'unit' : S.pu || 'units') : (n === 1 ? S.po || 'outer' : MANY[S.po] || 'outers');
+    const per = (on) => on === 'u' ? ONE[S.pu] || 'unit' : S.po || 'outer';
+    const pieces = (t) => (Number(t.n) || 0) * (t.on === 'o' ? pn : 1);
+    const seen = {}; let prevEach = null, prevLabel = '';
+    const rows = S.tiers.map((t, i) => ({ t, i })).sort((a, b) => pieces(a.t) - pieces(b.t) || a.i - b.i);
+    const out = rows.map(({ t, i }) => {
+      const n = Number(t.n) || 0, v = Number(t.v || 0), key = t.on + n, dup = !!seen[key];
+      const full = t.on === 'u' && !S.single && pn && n >= pn;
+      seen[key] = 1;
+      const each = v ? v / (t.on === 'o' ? pn : 1) : null;
+      let note = '', noteInk = 'color:#5F6980', left = dup || full || !n;
+      if (dup) note = 'Already there · left out';
+      else if (full) note = n + ' ' + word('u', n) + ' is a full ' + S.po + ': that is wholesale · left out';
+      else if (each && prevEach && each > prevEach) { note = 'Dearer a ' + per('u') + ' than ' + prevLabel + ' · kept, check it'; noteInk = 'color:#95530C'; }
+      else if (each && t.on === 'o') note = '= ' + fmt(Math.round(each)) + ' a ' + per('u');
+      if (each && !left) { prevEach = each; prevLabel = n + ' ' + word(t.on, n) + '+'; }
+      const sel = S.sel === i, retail = t.on === 'u';
+      const upd = (patch) => this.setState({ tiers: S.tiers.map((x, j) => j === i ? { ...x, ...patch } : x), sel: i });
+      return { n: t.n, word: word(t.on, n), per: per(t.on), price: v ? fmt(v) : sel ? 'type it' : 'price', left, sentence: n + ' ' + word(t.on, n) + '+ ' + o.verb + ' ' + fmt(v) + '/' + per(t.on), v,
+        dot: 'background:' + (retail ? '#C47A1E' : '#3A3F9B'), wordInk: retail ? 'color:#95530C' : 'color:#3A3F9B',
+        priceStyle: sel ? 'background:#16203C;color:#FFFFFF' : v ? 'background:#F4F2EE;color:#1C2233' : 'background:#FFFFFF;color:#5F6980;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+        rowBg: left ? 'opacity:.6' : sel ? 'background:#F7F5F2' : '', hasNote: !!note, note, noteInk,
+        nAria: 'How many for this tier', flipAria: 'Switch between ' + word('u', 2) + ' and ' + word('o', 2), priceAria: 'Type the price for ' + n + ' ' + word(t.on, n) + ' and up',
+        typeN: (e) => upd({ n: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }),
+        flip: () => { if (!S.single) upd({ on: t.on === 'u' ? 'o' : 'u' }); }, pick: () => this.setState({ sel: i }),
+        canRemove: S.tiers.length > 1, remove: () => this.setState({ tiers: S.tiers.filter((x, j) => j !== i), sel: 0 }) };
+    });
+    const good = out.filter(t => !t.left && t.v);
+    const cur = S.tiers[S.sel] || S.tiers[0] || { v: '' };
+    const tkeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'].map(label => ({ label, isText: label !== 'back', isBack: label === 'back', aria: label === 'back' ? 'Delete a digit' : label,
+      press: () => { if (!set) return; const v = String(cur.v || ''); const nv = label === 'back' ? v.slice(0, -1) : (v + label).replace(/^0+/, '').slice(0, 9); this.setState({ tiers: S.tiers.map((x, j) => j === S.sel ? { ...x, v: nv } : x) }); } }));
+    const nextN = S.single ? 10 : 5;
+    return {
+      pn: S.pn, puWord: S.pu || 'unit', poWord: S.single ? '—' : S.po || 'outer', poShort: S.po || 'outer',
+      pnStyle: S.pn ? 'background:#F4F2EE' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+      puStyle: S.pu ? 'background:#F4F2EE;color:#1C2233' : 'background:#FFFFFF;color:#5F6980;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+      poStyle: S.po && !S.single ? 'background:#F4F2EE;color:#1C2233' : 'background:#FFFFFF;color:#5F6980;box-shadow:inset 0 0 0 1.5px #C9C4BA',
+      packDim: S.single ? 'opacity:.45' : '', packAria: 'Packing: ' + (S.single ? 'sold singly' : (S.pn || 'n') + ' ' + (S.pu || 'units') + ' in a ' + (S.po || 'outer')),
+      typePn: (e) => this.setState({ pn: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }),
+      cycleUnit: () => this.setState({ pu: UNITS[(UNITS.indexOf(S.pu) + 1) % UNITS.length] }),
+      cycleOuter: () => { if (!S.single) this.setState({ po: OUTERS[(OUTERS.indexOf(S.po) + 1) % OUTERS.length] }); },
+      singleStr: String(!!S.single), toggleSingle: () => this.setState({ single: !S.single, tiers: !S.single ? S.tiers.map(x => ({ ...x, on: 'u' })) : S.tiers }),
+      singleTrack: S.single ? 'background:#0F6B43' : 'background:#D9D5CE', singleKnob: S.single ? 'left:21px' : 'left:3px',
+      packSet: set, packNotSet: !set, verb: o.verb, tiers: out, tkeys, keysDim: set ? '' : 'opacity:.4',
+      addLabel: 'Add a tier · ' + nextN + ' ' + word(S.single ? 'u' : 'o', nextN) + '+',
+      addTier: () => this.setState({ tiers: S.tiers.concat({ n: String(nextN), on: S.single ? 'u' : 'o', v: '' }), sel: S.tiers.length }),
+      packSentence: S.single ? 'Sold singly' : pn + ' ' + S.pu + ' in a ' + S.po,
+      tierSentences: good.map(t => t.sentence), tierCount: good.length, curV: Number(cur.v || 0), curPer: per(cur.on || 'u')
+    };
+  }
+
   renderVals() {
-    const { has, unit, lead, extra, v, saved } = this.state;
-    const n = Number(v || 0), fmt = (x) => x.toLocaleString('en-US');
+    const S = this.state, { has, lead, saved } = S;
+    const T = this.tierVals(S, { verb: 'cost' });
+    const fmt = (x) => x.toLocaleString('en-US');
     const seg = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:40px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' + (on ? 'background:#FFFFFF;color:#1C2233;box-shadow:0 1px 3px rgba(22,32,60,.12)' : 'color:#5F6980');
     const chip = (on) => 'all:unset;cursor:pointer;box-sizing:border-box;height:36px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;display:flex;align-items:center;' + (on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;box-shadow:inset 0 0 0 1.5px #E6E3DD');
     const haves = [[true, 'They have it'], [false, 'They don’t']].map(([k, label]) => ({ label, on: String(has === k), pick: () => this.setState({ has: k }), style: seg(has === k) }));
-    const units = ['a length', 'a bundle of 10'].map(label => ({ label, on: String(unit === label), pick: () => this.setState({ unit: label }), style: seg(unit === label) }));
     const leadOpts = ['Same day', '2 d', '7 d'].map(label => ({ label, on: String(lead === label), pick: () => this.setState({ lead: lead === label ? null : label }), style: chip(lead === label) }));
-    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'].map(label => ({
-      label, isText: label !== 'back', isBack: label === 'back', aria: label === 'back' ? 'Delete a digit' : label,
-      press: () => this.setState({ v: label === 'back' ? v.slice(0, -1) : (v + label).replace(/^0+/, '').slice(0, 9) })
-    }));
-    const raw = [{ from: '1', p: n }, { from: '10', p: 13800 }].concat(extra ? [{ from: '50', p: 13200 }] : []);
-    const top = Math.max(...raw.map(s => s.p), 1);
-    const steps = raw.map(s => ({ from: s.from, price: fmt(s.p), w: 'width:' + Math.round(s.p / top * 100) + '%' }));
-    const ready = has === false || (has === true && n > 0 && !!unit);
-    const cta = has === null ? 'Do they have it?' : has === false ? 'Save: they don’t sell it' : !n ? 'Type their price' : !unit ? 'Pick how they sell it' : 'Save ' + fmt(n) + ' ' + unit;
+    const ready = has === false || (has === true && T.packSet && T.tierCount > 0);
+    const cta = has === null ? 'Do they have it?' : has === false ? 'Save: they don’t sell it' : !T.packSet ? 'Set how they pack it' : !T.tierCount ? 'Type a price' : 'Save ' + T.tierCount + (T.tierCount === 1 ? ' price' : ' prices');
+    // the passport this price feeds: PPR pipe is in Find with one stamp (Asked); a supplier with packing and prices makes Sourced ready
+    const inked = saved && has === true, none = saved && has === false;
     return {
-      haves, units, lead: leadOpts, steps, keys, has: has === true, hasNot: has === false,
-      shown: n ? fmt(n) : '0', unitWord: unit || '',
-      addStep: () => this.setState({ extra: true }),
+      ...T, haves, lead: leadOpts, has: has === true, hasNot: has === false,
+      shown: T.curV ? fmt(T.curV) : '0', unitWord: T.packSet ? '/' + T.curPer : '',
       saved, notSaved: !saved, cta,
       ctaStyle: ready ? 'background:#C93A30;color:#FFFFFF;box-shadow:0 10px 22px rgba(201,58,48,.26)' : 'background:#F3D3CF;color:#8E2A22',
-      save: () => { if (ready) this.setState({ saved: true }); },
-      undo: () => this.setState({ saved: false }),
-      savedWord: has ? 'Saved · ' + fmt(n) + ' ' + (unit || '') : 'Saved · Owino doesn’t sell it'
+      save: () => { if (ready) this.setState({ saved: true, sel: -1 }); },
+      undo: () => this.setState({ saved: false, sel: 0 }),
+      savedWord: has ? 'Saved · ' + T.packSentence + ' · ' + T.tierCount + (T.tierCount === 1 ? ' tier' : ' tiers') : 'Saved · Owino doesn’t sell it',
+      feedHref: 'Rooms.dc.html', feedTitle: 'Feeds the passport · PPR pipe 25mm',
+      feedStamp: inked ? 'SOURCED' : 'STAMP 2',
+      feedRing: inked ? 'border: 3px solid #2B3A8C; color: #2B3A8C; background: rgba(43,58,140,.08)' : 'border: 2px dashed #B9AE99; color: #8A7A62',
+      feedNote: inked ? 'Sourced is ready for your stamp · in Find' : none ? 'Still waiting for a supplier · 2 more asked' : 'Packing and one price make Sourced ready',
+      feedInk: inked ? 'color:#2B3A8C' : 'color:#5F6980'
     };
   }
 }

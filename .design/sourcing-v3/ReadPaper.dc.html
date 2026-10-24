@@ -56,7 +56,12 @@ input::placeholder{color:#6B7480}
     </sc-if>
   </div>
   <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">
-    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 13px; font-weight: 700; color: #5F6980">What it read</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">against our last price</span></div>
+    <a href="{{feedHref}}" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 18px; background: #FBF8F1; box-shadow: inset 0 0 0 1px #E6DECB">
+      <span aria-hidden="true" style="position: relative; width: 52px; height: 52px; flex: none; border-radius: 999px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; transform: rotate(-8deg); font-family: Oswald, Figtree, sans-serif; font-size: 8px; font-weight: 700; letter-spacing: .02em; {{feedRing}}">{{feedStamp}}</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{feedTitle}}</span><span style="font-size: 12px; font-weight: 600; {{feedInk}}">{{feedNote}}</span></span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7480" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+    </a>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 0"><span style="font-size: 13px; font-weight: 700; color: #5F6980">What it read</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">one line a tier, against our last price</span></div>
     <div style="background: #FFFFFF; border-radius: 22px; box-shadow: inset 0 0 0 1px #E6E3DD, 0 4px 14px rgba(22,32,60,.05); padding: 0 6px">
       <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
       <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border-top: {{r.rule}}; {{r.rowBg}}">
@@ -65,13 +70,14 @@ input::placeholder{color:#6B7480}
           <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span class="nm" style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">read “{{r.read}}”</span></span>
           <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px"><span class="m" style="font-size: 15px; font-weight: 600">{{r.price}}</span><span style="height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; {{r.tagStyle}}">{{r.tag}}</span></span>
         </div>
+        <span style="padding-left: 40px; display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; font-weight: 600"><span class="m" style="color: #1C2233">{{r.sentence}}</span><span style="color: #6B5A43">{{r.pack}}</span></span>
         <sc-if value="{{r.unsure}}" hint-placeholder-val="{{ false }}">
           <div style="display: flex; align-items: center; gap: 8px; padding-left: 40px">
             <input id="{{r.inputId}}" type="text" inputmode="numeric" value="{{r.guess}}" aria-label="Which price is it?" style="box-sizing: border-box; flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 14px; border: none; box-shadow: inset 0 0 0 2px #95530C; font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 600">
             <button type="button" onClick="{{r.fix}}" style="all: unset; cursor: pointer; height: 42px; padding: 0 14px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center">That’s it</button>
           </div>
         </sc-if>
-        <sc-if value="{{r.isNew}}" hint-placeholder-val="{{ false }}"><span style="padding-left: 40px; font-size: 12px; font-weight: 600; color: #5F6980">Ticked, it starts a hunt with this as the first quote</span></sc-if>
+        <sc-if value="{{r.isNew}}" hint-placeholder-val="{{ false }}"><span style="padding-left: 40px; font-size: 12px; font-weight: 600; color: #5F6980">Ticked, it starts a passport at Asked · Sourced waits for its packing</span></sc-if>
       </div>
       </sc-for>
     </div>
@@ -89,19 +95,19 @@ class Component extends DCLogic {
     const S = this.state;
     const SAME = 'background:#E4F4EA;color:#0F6B43', UP = 'background:#FDEEE1;color:#7A4A02', NEW = 'background:#FDE8E4;color:#A82D24';
     const base = [
-      { id: 'a', name: 'Iron sheet G28 3m', read: 'G28 3m 34,200 (100+ 33,500)', price: '34,200', tag: 'same · 100+ 33,500', tagStyle: SAME },
-      { id: 'b', name: 'Iron sheet G30 3m', read: 'G30 3m 30,500', price: '30,500', tag: '+700 on 29,800', tagStyle: UP },
-      { id: 'c', name: 'Gutter 4" × 3m', read: 'gutter 4" 18,000', price: '18,000', tag: 'same', tagStyle: SAME },
-      { id: 'd', name: 'Roofing nails 1kg', read: 'nails 1kg 9,800', price: '9,800', tag: '+300 on 9,500', tagStyle: UP },
-      { id: 'e', name: 'Ridge cap 0.4mm, 2m', read: 'ridge cap 2?,500', price: '2?,500', tag: 'not sure', tagStyle: UP, unsure: true, guess: '23,500' },
-      { id: 'f', name: 'Valley gutter 3m', read: 'valley gutter 3m 21,000 new', price: '21,000', tag: 'not on our list', tagStyle: NEW, isNew: true }
+      { id: 'a', name: 'Iron sheet G28 3m', read: 'G28 3m 34,200 (100+ 33,500)', sentence: '1 sheet+ cost 34,200/sheet · 100 sheets+ cost 33,500/sheet', pack: 'sold singly', price: '34,200', tag: 'same · 100+ 33,500', tagStyle: SAME },
+      { id: 'b', name: 'Iron sheet G30 3m', read: 'G30 3m 30,500', sentence: '1 sheet+ cost 30,500/sheet', pack: 'sold singly', price: '30,500', tag: '+700 on 29,800', tagStyle: UP },
+      { id: 'c', name: 'Gutter 4" × 3m', read: 'gutter 4" 18,000', sentence: '1 length+ cost 18,000/length', pack: '10 lengths in a bundle', price: '18,000', tag: 'same', tagStyle: SAME },
+      { id: 'd', name: 'Roofing nails 1kg', read: 'nails 1kg 9,800', sentence: '1 bag+ cost 9,800/bag', pack: 'sold singly', price: '9,800', tag: '+300 on 9,500', tagStyle: UP },
+      { id: 'e', name: 'Ridge cap 0.4mm, 2m', read: 'ridge cap 2?,500', sentence: '1 piece+ cost 2?,500/piece', pack: 'sold singly', price: '2?,500', tag: 'not sure', tagStyle: UP, unsure: true, guess: '23,500' },
+      { id: 'f', name: 'Valley gutter 3m', read: 'valley gutter 3m 21,000 new', sentence: '1 length+ cost 21,000/length', pack: 'packing not read', price: '21,000', tag: 'not on our list', tagStyle: NEW, isNew: true }
     ];
     const rows = base.map((r, i) => {
       const unsure = !!r.unsure && !S.fixed;
       const on = r.isNew ? S.hunt : (unsure ? false : !S.off[r.id]);
       return {
         ...r, unsure, isNew: !!r.isNew, inputId: 'rp_' + r.id, onStr: String(on), rule: i ? '1px solid #EFECE6' : 'none',
-        price: r.unsure && S.fixed ? '23,500' : r.price,
+        price: r.unsure && S.fixed ? '23,500' : r.price, sentence: r.unsure && S.fixed ? '1 piece+ cost 23,500/piece' : r.sentence,
         tag: r.unsure && S.fixed ? 'same' : r.tag, tagStyle: r.unsure && S.fixed ? SAME : r.tagStyle,
         aria: (on ? 'Leave out ' : 'Include ') + r.name, rowBg: unsure ? 'background:#FFFBF6;border-radius:14px' : '',
         box: on ? 'background:#16203C;color:#FFFFFF' : 'background:#FFFFFF;color:transparent;box-shadow:inset 0 0 0 1.5px #C9C4BA',
@@ -115,7 +121,10 @@ class Component extends DCLogic {
       style: 'all:unset;cursor:pointer;box-sizing:border-box;height:38px;border-radius:11px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;' + (S.src === k ? 'background:#FFFFFF;color:#16203C' : 'color:#B3BCD2')
     }));
     return { rows, sources, isPhoto: S.src === 'photo', isChat: S.src === 'chat',
-      saveLabel: 'Save ' + prices + (prices === 1 ? ' price' : ' prices') + (S.hunt ? ' · start 1 hunt' : '') };
+      feedHref: 'Rooms.dc.html', feedTitle: S.hunt ? 'Starts a passport · Valley gutter 3m' : 'Feeds the price list · 5 items on sale',
+      feedStamp: S.hunt ? 'ASKED' : 'PRICES', feedRing: S.hunt ? 'border: 3px solid #9A2E24; color: #9A2E24; background: rgba(154,46,36,.06)' : 'border: 2px solid #C9C4BA; color: #6B5A43',
+      feedNote: S.hunt ? 'Asked now · Sourced waits for Namanve’s packing' : 'No passport waits on these · tick the new line to start one', feedInk: S.hunt ? 'color:#9A2E24' : 'color:#5F6980',
+      saveLabel: 'Save ' + prices + (prices === 1 ? ' price' : ' prices') + (S.hunt ? ' · start 1 passport' : '') };
   }
 }
 </script>

@@ -313,3 +313,14 @@ The owner asked for the real-world workflow (`realworld/`, the "Sourcing in the 
 | Today | the certify row reads 7 of 9; the hero counts 2 of Ruth's 6 |
 | Certify | a nine-stamp strip in four rooms: seven stamped from what it already sells, Held to check, the photo missing |
 | Welcome, Plan, Sign in | "nine stamps in four rooms"; Plan's third job is "Seven stamps", the fourth "Ruth prices" |
+
+## Fitting the stamps to the rest (24 Oct, version 79)
+
+The owner asked how well the stamps fit the screens that were kept, then said go ahead on the first four weaknesses.
+
+| Weakness | Fix |
+|---|---|
+| Field captures never fed a stamp | A stamp strip on the price screens shows which passport a price feeds: a supplier price makes **Sourced** ready (PPR pipe), a rival price keeps **Compared** fresh (wire mesh), a new line read from a list starts a passport at **Asked**. Visit and the rival run tag their lines with the stamp they feed. |
+| Two rules for prices | `SupplierPrice` and `QuickPrice` take the packing sentence and a line a tier (`tools/boards/_tiers.py`, shared); prices stay locked until the packing is set. `Proposals` and `ReadPaper` show what came in as the same sentences. Rival tiers are read per piece for the room. |
+| Ruth could not send an item back | `RuthTray`: "Not ready? Send it back to Moses" picks the stamp and the reason (Held asks Moses to think again: the hold is his call), adds a note, and reopens that stamp. The door hinge waits first in the Prepare room's Photo tray, marked "Back from Ruth". |
+| Two homes | Today keeps the walk and shows "Ready for your stamp · 22" as the four rooms (9/31, 11/28, 0/6, 2/14, as on Passports), the photo round, and only work that is not an item: back from Ruth, proposals, old prices. |

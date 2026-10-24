@@ -94,11 +94,23 @@ ages = ('<span role="img" aria-label="5 prices, 31 to 52 days old; 30 days is th
         + ''.join(f'<i style="width: 6px; height: {round(d / 60 * 26)}px; border-radius: 2px 2px 1px 1px; background: #95530C"></i>' for d in [52, 41, 36, 33, 31])
         + '<span style="position: absolute; left: -2px; right: -2px; bottom: 13px; border-top: 1.5px dashed #5F6980"></span></span>')
 
+# Today does not list items: the rooms do. It shows what is ready for a stamp, by room, and the round to start
+def room_tile(word, ready, n, inks, href='Rooms.dc.html'):
+    dots = ''.join(f'<i style="width: 7px; height: 7px; border-radius: 999px; background: {c}"></i>' for c in inks)
+    hot = ready > 0
+    return (f'<a href="{href}" aria-label="{word.title()}: {ready} ready for your stamp, {n} in the room" style="height: 76px; box-sizing: border-box; padding: 9px 10px; border-radius: 16px; '
+            f'background: {"#FFFFFF" if hot else "#F4F2EE"}; box-shadow: {"inset 0 0 0 1px #E6E3DD, 0 4px 12px rgba(22,32,60,.06)" if hot else "none"}; display: flex; flex-direction: column; justify-content: space-between">'
+            f'<span style="font-family: Oswald, Figtree, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .12em; color: #5F6980">{word}</span>'
+            f'<span style="display: flex; align-items: baseline; gap: 3px"><span class="m" style="font-size: 22px; font-weight: 600; line-height: 1; color: {"#16203C" if hot else "#5F6980"}">{ready}</span><span class="m" style="font-size: 11px; color: #5F6980">/{n}</span></span>'
+            f'<span style="display: flex; gap: 3px">{dots}</span></a>')
+ready = ('    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">'
+         + room_tile('FIND', 9, 31, ['#9A2E24', '#2B3A8C', '#1E6E47'])
+         + room_tile('PREPARE', 11, 28, ['#2B3A8C', '#1E6E47', '#2B3A8C', '#2B3A8C'], 'Room.dc.html')
+         + room_tile('RUTH', 0, 6, ['#6E2A5E'], 'RuthTray.dc.html')
+         + room_tile('PROVE', 2, 14, ['#A3241C'], 'ShelfPhone.dc.html') + '</div>')
+round_row = lst(row('Photo round · 11 items', 'All on the desk now · about 15 minutes', icon_well('camera', 'green'), chev(), href='Round.dc.html'))
 waits = lst('\n'.join([
-    row('Door hinge 4" brass', 'Ruth sent it back · photo too dark', thumb, gauge, href='SentBack.dc.html', sub_style='color: #7A4A02'),
-    row('Masking tape 2" isn’t selling', '22 of 60 in 45 days · 152,000 sitting', icon_well('warn', 'amber'), '<span aria-hidden="true" style="flex: none; width: 56px; display: flex; flex-direction: column; gap: 4px"><span style="height: 6px; border-radius: 3px; box-shadow: inset 0 0 0 1.5px #C9C4BA"></span><span style="height: 6px; width: 37%; border-radius: 3px; background: #95530C"></span></span>', href='ReportCard.dc.html', sub_style='color: #7A4A02'),
-    row('3 new asks', 'Door closer · shower mixer · “pvc glue”', faces, chev(), href='Wanted.dc.html'),
-    row('“gutter bracket”', '7 searches · 4 people · nobody sells it', icon_well('search', 'oxide'), bars([0, 1, 1, 0, 2, 1, 2], '#D98A80', h=26, top=2), href='Hunt.dc.html'),
+    row('Door hinge 4" brass', 'Back from Ruth · Photo reopened, too dark', thumb, gauge, href='Room.dc.html', sub_style='color: #6E2A5E'),
     row('2 supplier proposals', 'Owino Plumbing · Kiseka Steel', icon_well('tag', 'indigo'), updown, href='Proposals.dc.html'),
     row('Kiseka Steel: 5 old prices', 'Ask in their app · no trip', icon_well('phone', 'indigo'), ages, href='AskConfirm.dc.html'),
 ]))
@@ -110,13 +122,16 @@ also = lst('\n'.join([
 outbox = row('2 captures on this phone', 'They go up when there is signal', icon_well('outbox', 'amber'), chev('#95530C'), href='Outbox.dc.html', sub_style='color: #7A4A02')
 coach_rows = '\n'.join(
     row(t, s, f'<span class="m" style="width: 42px; height: 42px; flex: none; border-radius: 13px; background: #F6E4F1; color: #7A3268; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center">{n}</span>', '')
-    for n, t, s in [(1, 'Wire mesh: a photo and a hold', '3 customers wait for 40 sheets'),
+    for n, t, s in [(1, 'Wire mesh: pack it, then the photo', '3 customers wait for 40 sheets'),
                     (2, 'Cement: get a second price', 'One supplier · 600 bags a month'),
                     (3, 'Gutter brackets: find a supplier', '4 named people searched')])
 
 inner = hd + '\n  <div style="padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 10px">\n' + '\n'.join([
     job,
-    sec('Waiting on you · <span class="m">6</span>', '<a href="SentBack.dc.html" style="display: inline-flex; align-items: center; gap: 4px; color: #16203C; font-weight: 700">' + svg('M8 5.5v13l10.5-6.5z', 12, 1.6) + 'One at a time</a>'),
+    sec('Ready for your stamp · <span class="m">22</span>', '<a href="Rooms.dc.html" style="display: inline-flex; align-items: center; gap: 4px; color: #16203C; font-weight: 700">All passports' + chev('#16203C') + '</a>'),
+    ready,
+    round_row,
+    sec('Waiting on you · <span class="m">3</span>'),
     waits,
     sec('Also worth it'),
     also,

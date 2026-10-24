@@ -50,7 +50,7 @@ a{color:inherit;text-decoration:none}
             <span class="m" style="width: 18px; flex: none; font-size: 12px; font-weight: 600; color: #8A7A62">{{it.k}}</span>
             <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
               <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.name}}</span>
-              <span style="font-size: 12px; font-weight: 600; color: #6B5A43; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.why}}</span>
+              <span style="display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {{it.whyInk}}"><sc-if value="{{it.back}}" hint-placeholder-val="{{ false }}"><span class="os" style="flex: none; height: 18px; padding: 0 6px; border-radius: 4px; background: #6E2A5E; color: #FFFFFF; font-size: 10px; font-weight: 700; letter-spacing: .08em; display: inline-flex; align-items: center">BACK FROM RUTH</span></sc-if>{{it.why}}</span>
             </span>
             <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px"><span class="m" style="font-size: 13px; font-weight: 600">{{it.worth}}</span><span style="font-size: 11px; font-weight: 700; {{it.ageInk}}"><span class="m">{{it.age}}</span> waiting</span></span>
           </a>
@@ -75,10 +75,10 @@ class Component extends DCLogic {
           ['Paint brush 3"', 'Katwe · dozen', '70,000', 4], ['Hacksaw blade', 'Katwe · pack of 10', '55,000', 1], ['Sandpaper P120', 'Ndeeba · sheet or roll?', '40,000', 1]] },
       photo: { word: 'Photo', ink: GREEN, head: 'Waiting for a photo', round: 'Photo round · 11 items', roundSub: 'All on the desk now · about 15 min',
         icon: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', iconBg: 'background:#E3F4EA;color:#1E6E47',
-        items: [['Spirit level 600mm', 'Packed · single piece', '180,000', 1], ['Tape measure 5m', 'Packed · single piece', '150,000', 1], ['Trowel 8"', 'Packed · single piece', '110,000', 2],
+        items: [['Door hinge 4" brass', 'photo too dark', '95,000', 1, true], ['Spirit level 600mm', 'Packed · single piece', '180,000', 1], ['Tape measure 5m', 'Packed · single piece', '150,000', 1], ['Trowel 8"', 'Packed · single piece', '110,000', 2],
           ['Grout float, rubber', 'Packed · single piece', '90,000', 2], ['Masonry nails 3"', 'Packed · 1 kg bag', '85,000', 3], ['Paint tray 9"', 'Packed · single piece', '75,000', 1],
           ['Chalk line, 30m', 'Packed · single piece', '65,000', 1], ['Cable ties 300mm', 'Packed · bag of 100', '60,000', 5], ['Wire brush', 'Packed · single piece', '50,000', 1],
-          ['Safety goggles', 'Packed · single piece', '45,000', 2], ['Rubber gloves', 'Packed · pair', '30,000', 1]] },
+          ['Rubber gloves', 'Packed · pair', '30,000', 1]] },
       aisle: { word: 'Aisle', ink: BLUE, head: 'Waiting for a place', round: 'Aisle round · 4 items', roundSub: 'Walk the shop with them · about 6 min',
         icon: 'M4 21V5h16v16M4 11h16M4 16h16M9 5v16', iconBg: 'background:#E4E6FA;color:#2B3A8C',
         items: [['PVC elbow 4"', 'Plumbing or drainage?', '180,000', 2], ['Gate valve 1"', 'Plumbing, which bay?', '140,000', 1], ['Shower hose 1.5m', 'Bathroom, next to mixers?', '80,000', 1], ['Cistern float', 'Plumbing, small parts', '35,000', 1]] },
@@ -94,7 +94,7 @@ class Component extends DCLogic {
         style: 'all:unset;cursor:pointer;box-sizing:border-box;height:86px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;' + (on ? 'background:#FBF8F2;color:#16203C;box-shadow:0 10px 24px rgba(0,0,0,.28)' : 'background:rgba(255,255,255,.07);color:#FFFFFF;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)') };
     });
     const g = G[T];
-    const items = g.items.map(([name, why, worth, age], i) => ({ k: i + 1, name, why, worth, age: age + ' d', ageInk: age >= 4 ? 'color:#95530C' : 'color:#6B5A43', rule: i ? '1px solid #F1EBE0' : 'none' }));
+    const items = g.items.map(([name, why, worth, age, back], i) => ({ k: i + 1, name, why, worth, back: !!back, whyInk: back ? 'color:#6E2A5E' : 'color:#6B5A43', age: age + ' d', ageInk: age >= 4 ? 'color:#95530C' : 'color:#6B5A43', rule: i ? '1px solid #F1EBE0' : 'none' }));
     const total = g.items.reduce((s, x) => s + toN(x[2]), 0);
     return { trays, g: { ...g, items, total: fmt(total), foot: 'All ' + items.length + ' shown · the other ' + (28 - items.length) + ' are in the other trays' } };
   }

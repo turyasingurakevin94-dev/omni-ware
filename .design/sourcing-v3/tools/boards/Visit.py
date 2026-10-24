@@ -37,7 +37,7 @@ swipe = '    <span style="display: flex; align-items: center; gap: 8px; padding:
 want = '''    <div style="''' + LIST + '''; padding: 6px">
       <div style="display: flex; align-items: center; gap: 12px; min-height: 66px; padding: 0 10px">
         <button type="button" role="checkbox" aria-checked="{{wantedOn}}" aria-label="Mark asked" onClick="{{toggleWanted}}" style="all: unset; cursor: pointer; width: 30px; height: 30px; flex: none; border-radius: 999px; display: flex; align-items: center; justify-content: center; {{wantedBox}}">''' + svg('tick', 14, 3) + '''</button>
-        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">PPR pipe 25mm × 4m</span><span style="font-size: 12px; font-weight: 600; color: #5F6980">Ggaba Stores · Nansana Hardware wait</span></span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">PPR pipe 25mm × 4m</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #5F6980"><span style="flex: none; height: 20px; padding: 0 7px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px #2B3A8C; color: #2B3A8C; font-family: Oswald, Figtree, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; display: inline-flex; align-items: center; transform: rotate(-3deg)">SOURCED</span>its next stamp · 2 shops wait</span></span>
         <a href="SupplierPrice.dc.html" style="flex: none; height: 32px; padding: 0 12px; border-radius: 999px; background: #16203C; color: #FFFFFF; font-size: 12px; font-weight: 700; display: flex; align-items: center">Their price</a>
       </div>
     </div>'''
@@ -62,7 +62,7 @@ coach = lst('\n'.join(row(t, s, f'<span class="m" style="min-width: 42px; height
 bd = body('\n'.join([
     sec('Still the same price?' + '<span role="img" aria-label="Rows swipe: right for the same price, left for a new one" style="display: inline-flex; vertical-align: -3px; margin-left: 6px; color: #5F6980">' + svg('M5 7h24M9 3 5 7l4 4M25 3l4 4-4 4', 24, 1.8).replace('viewBox="0 0 24 24"', 'viewBox="0 0 34 14"').replace('width="24" height="24"', 'width="30" height="14"') + '</span>', all_btn, first=True), toast,
     '    <div style="' + LIST + '; padding: 0 6px">\n      <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">\n' + price_row + '\n      </sc-for>\n    </div>',
-    sec('Ask them for'), want, sec('They proposed', 'in the supplier app'), prop, sec('Photograph while here'), photos, sec('Coach · talking points'), coach,
+    sec('Ask them for'), want, sec('They proposed', 'in the supplier app'), prop, sec('Photograph while here', 'each one inks its Photo stamp'), photos, sec('Coach · talking points'), coach,
 ]))
 ft = foot('<a href="MarketRun.dc.html" style="height: 58px; border-radius: 999px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; {{endStyle}}">{{endLabel}}</a>')
 script = '''class Component extends DCLogic {
