@@ -36,17 +36,29 @@ a{color:inherit;text-decoration:none}
     <div style="border-radius: 14px; background: #6E5135; padding: 8px; box-shadow: 0 16px 32px rgba(22,32,60,.22)">
       <div style="border-radius: 8px; background: radial-gradient(120% 90% at 30% 10%, #2E3B34 0%, #1F2B26 60%, #18221E 100%); padding: 6px 12px 10px">
         <sc-for list="{{lines}}" as="l" hint-placeholder-count="5">
-          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: {{l.rule}}">
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-bottom: {{l.rule}}">
             <div style="display: flex; align-items: baseline; gap: 10px">
-              <span class="chalk" style="flex: 1; min-width: 0; font-size: 16px; font-weight: 600">{{l.name}}</span>
-              <span class="chalk m" style="flex: none; font-size: 22px; font-weight: 600; {{l.figStyle}}">{{l.fig}}</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <span style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; background: #FFFFFF; transform: rotate(-1.5deg); box-shadow: 0 3px 8px rgba(0,0,0,.35)"><i style="width: 7px; height: 7px; border-radius: 999px; background: #C93A30"></i><span class="m" style="font-size: 11px; font-weight: 600">cost {{l.cost}}</span><span style="font-size: 10px; font-weight: 700; {{l.roomInk}}">{{l.room}}</span></span></span>
-              <sc-if value="{{l.open}}" hint-placeholder-val="{{ true }}"><span style="flex: none; display: flex; gap: 6px"><button type="button" onClick="{{l.same}}" style="all: unset; cursor: pointer; height: 36px; padding: 0 12px; border-radius: 999px; background: #F2EFE6; color: #1F2B26; font-size: 12px; font-weight: 700; display: flex; align-items: center">Same</button><button type="button" onClick="{{l.edit}}" style="all: unset; cursor: pointer; height: 36px; padding: 0 12px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(242,239,230,.6); color: #F2EFE6; font-size: 12px; font-weight: 700; display: flex; align-items: center">New</button></span></sc-if>
+              <span class="chalk" style="flex: 1; min-width: 0; font-size: 17px; font-weight: 700">{{l.name}}</span>
               <sc-if value="{{l.done}}" hint-placeholder-val="{{ false }}"><span style="flex: none; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: #6FDCB0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>{{l.doneWord}}</span></sc-if>
             </div>
-            <sc-if value="{{l.editing}}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 8px"><input value="{{l.guess}}" inputmode="numeric" aria-label="Their new price" class="m" style="flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 10px; border: none; background: rgba(242,239,230,.1); box-shadow: inset 0 0 0 1.5px rgba(242,239,230,.5); color: #F2EFE6; font-size: 18px; font-weight: 600"><button type="button" onClick="{{l.save}}" style="all: unset; cursor: pointer; height: 44px; padding: 0 16px; border-radius: 999px; background: #F2EFE6; color: #1F2B26; font-size: 13px; font-weight: 700; display: flex; align-items: center">Chalk it</button></div></sc-if>
+            <span class="chalk" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; font-style: italic; opacity: .85"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"></path></svg>{{l.pack}}</span>
+            <sc-for list="{{l.tiers}}" as="t" hint-placeholder-count="2">
+              <div style="display: flex; flex-direction: column; gap: 1px; {{l.figStyle}}">
+                <div style="display: flex; align-items: baseline; gap: 6px">
+                  <i style="width: 7px; height: 7px; flex: none; border-radius: 999px; transform: translateY(-2px); {{t.dot}}"></i>
+                  <span class="chalk" style="flex: none; font-size: 15px; font-weight: 600">{{t.qty}}</span>
+                  <span aria-hidden="true" style="flex: 1; min-width: 12px; border-bottom: 2px dotted rgba(242,239,230,.35); transform: translateY(-4px)"></span>
+                  <sc-if value="{{t.show}}" hint-placeholder-val="{{ true }}"><span class="chalk m" style="flex: none; font-size: 20px; font-weight: 600">{{t.fig}}</span><span class="chalk" style="flex: none; font-size: 13px; font-weight: 600">/{{t.per}}</span></sc-if>
+                  <sc-if value="{{t.input}}" hint-placeholder-val="{{ false }}"><input value="{{t.fig}}" inputmode="numeric" aria-label="{{t.aria}}" onInput="{{t.type}}" class="m" style="box-sizing: border-box; width: 120px; height: 40px; padding: 0 10px; border-radius: 10px; border: none; background: rgba(242,239,230,.1); box-shadow: inset 0 0 0 1.5px rgba(242,239,230,.55); color: #F2EFE6; font-size: 17px; font-weight: 600; text-align: right; outline: none"><span class="chalk" style="flex: none; font-size: 13px; font-weight: 600">/{{t.per}}</span></sc-if>
+                </div>
+                <sc-if value="{{t.hasEach}}" hint-placeholder-val="{{ false }}"><span class="chalk" style="align-self: flex-end; font-size: 12px; font-weight: 600; opacity: .7">= <span class="m">{{t.each}}</span> a {{l.unit}}</span></sc-if>
+              </div>
+            </sc-for>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px">
+              <span style="flex: 1; min-width: 0; display: flex"><span style="display: inline-flex; flex-direction: column; gap: 3px; padding: 6px 9px; border-radius: 6px; background: #FFFFFF; transform: rotate(-1.5deg); box-shadow: 0 3px 8px rgba(0,0,0,.35)"><span style="display: flex; align-items: center; gap: 6px"><i style="width: 7px; height: 7px; border-radius: 999px; background: #C93A30"></i><span class="m" style="font-size: 11px; font-weight: 600">our cost {{l.cost}}/{{l.unit}}</span></span><sc-for list="{{l.rooms}}" as="r" hint-placeholder-count="2"><span style="font-size: 10px; font-weight: 700; {{r.ink}}">{{r.text}}</span></sc-for></span></span>
+              <sc-if value="{{l.open}}" hint-placeholder-val="{{ true }}"><span style="flex: none; display: flex; gap: 6px"><button type="button" onClick="{{l.same}}" style="all: unset; cursor: pointer; height: 40px; padding: 0 12px; border-radius: 999px; background: #F2EFE6; color: #1F2B26; font-size: 12px; font-weight: 700; display: flex; align-items: center">Same</button><button type="button" onClick="{{l.edit}}" style="all: unset; cursor: pointer; height: 40px; padding: 0 12px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px rgba(242,239,230,.6); color: #F2EFE6; font-size: 12px; font-weight: 700; display: flex; align-items: center">New prices</button></span></sc-if>
+              <sc-if value="{{l.editing}}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{l.save}}" style="all: unset; cursor: pointer; flex: none; height: 40px; padding: 0 16px; border-radius: 999px; background: #F2EFE6; color: #1F2B26; font-size: 13px; font-weight: 700; display: flex; align-items: center">Save</button></sc-if>
+            </div>
           </div>
         </sc-for>
       </div>
@@ -59,23 +71,41 @@ a{color:inherit;text-decoration:none}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  constructor(p) { super(p); this.state = { res: { c: 'same', i: 'same' }, editing: null }; }
+  constructor(p) { super(p); this.state = { res: { c: 'same', i: 'same' }, editing: null, typed: {} }; }
   renderVals() {
     const S = this.state;
+    const fmt = (n) => Math.round(n).toLocaleString('en-US');
+    const num = (t) => Number(String(t).replace(/[^0-9]/g, '')) || 0;
+    // the rival's own packing and tiers, as their board shows them; the room is read a piece against our cost
     const BASE = [
-      { id: 'c', name: 'Cement 50kg', last: '36,000', cost: '34,500', room: '1,500 under · thin', thin: true },
-      { id: 'i', name: 'Iron sheet G28', last: '36,000', cost: '34,200', room: '1,800 under · thin', thin: true },
-      { id: 'w', name: 'Wire mesh A142', last: '149,000', cost: '118,000', room: '31,000 under · strong', thin: false, newFig: '149,000' },
-      { id: 'y', name: 'Y12 rebar, 12m', last: '43,000', cost: '41,500', room: '1,500 under · thin', thin: true, newFig: '42,000' },
-      { id: 'h', name: 'Hoop iron 0.5mm', last: '25,000', cost: '23,500', room: '1,500 under · thin', thin: true, newFig: '25,000' }
+      { id: 'c', name: 'Cement 50kg', unit: 'bag', pack: null, cost: 34500, tiers: [[1, 'u', 36000], [10, 'u', 35000]] },
+      { id: 'i', name: 'Iron sheet G28, 3m', unit: 'sheet', pack: null, cost: 34200, tiers: [[1, 'u', 36000], [100, 'u', 35000]] },
+      { id: 'w', name: 'Wire mesh A142', unit: 'sheet', pack: [10, 'bundle', 'bundles'], cost: 118000, tiers: [[1, 'u', 149000], [1, 'o', 1450000]] },
+      { id: 'y', name: 'Y12 rebar, 12m', unit: 'length', pack: [10, 'bundle', 'bundles'], cost: 41500, tiers: [[1, 'u', 43000], [1, 'o', 420000]], newT: [42000, 410000] },
+      { id: 'h', name: 'Hoop iron 0.5mm', unit: 'roll', pack: null, cost: 23500, tiers: [[1, 'u', 25000]] }
     ];
+    const PL = { bag: 'bags', sheet: 'sheets', length: 'lengths', roll: 'rolls' };
+    const band = (r) => r >= 12 ? 'strong' : r >= 5 ? 'fair' : r > 0 ? 'thin' : 'none';
     const lines = BASE.map((l, i) => {
       const r = S.res[l.id], ed = S.editing === l.id;
-      return { ...l, rule: i < BASE.length - 1 ? '1px dashed rgba(242,239,230,.18)' : 'none',
-        fig: r === 'new' ? (l.newFig || l.last) : l.last, figStyle: r ? '' : 'opacity:.55',
-        roomInk: l.thin ? 'color:#95530C' : 'color:#0F6B43',
-        open: !r && !ed, editing: ed, done: !!r, doneWord: r === 'new' ? 'new price' : 'same',
-        guess: l.newFig || l.last,
+      const vals = l.tiers.map((t, k) => S.typed[l.id + k] != null ? num(S.typed[l.id + k]) : (r === 'new' && l.newT ? l.newT[k] : t[2]));
+      const tiers = l.tiers.map(([n, on], k) => {
+        const per = on === 'o' ? l.pack[1] : l.unit, v = vals[k], each = on === 'o' ? v / l.pack[0] : v;
+        return { qty: n + ' ' + (on === 'o' ? (n === 1 ? l.pack[1] : l.pack[2]) : (n === 1 ? l.unit : PL[l.unit])) + '+', per, fig: fmt(v),
+          dot: 'background:' + (on === 'u' && !(l.pack && n >= l.pack[0]) ? '#E9A23B' : '#9AA3F0'), hasEach: on === 'o', each: fmt(each),
+          show: !ed, input: ed, aria: 'Their price for ' + n + ' ' + per + ' and up',
+          type: (e) => this.setState({ typed: { ...S.typed, [l.id + k]: e.target.value } }) };
+      });
+      const rooms = l.tiers.map(([n, on], k) => {
+        const each = on === 'o' ? vals[k] / l.pack[0] : vals[k], pct = (each - l.cost) / each * 100, b = band(pct);
+        return { text: (k === 0 ? 'retail' : on === 'o' ? 'wholesale' : n + '+') + ': ' + fmt(each - l.cost) + ' under · ' + pct.toFixed(0) + '% ' + b,
+          ink: b === 'strong' ? 'color:#0F6B43' : b === 'none' ? 'color:#A82D24' : 'color:#95530C' };
+      });
+      return { name: l.name, unit: l.unit, cost: fmt(l.cost), tiers, rooms,
+        pack: l.pack ? l.pack[0] + ' ' + PL[l.unit] + ' in a ' + l.pack[1] : 'sold singly, by the ' + l.unit,
+        rule: i < BASE.length - 1 ? '1px dashed rgba(242,239,230,.18)' : 'none',
+        figStyle: r || ed ? '' : 'opacity:.6',
+        open: !r && !ed, editing: ed, done: !!r && !ed, doneWord: r === 'new' ? 'new prices' : 'same',
         same: () => this.setState({ res: { ...S.res, [l.id]: 'same' } }),
         edit: () => this.setState({ editing: l.id }),
         save: () => this.setState({ res: { ...S.res, [l.id]: 'new' }, editing: null }) };
