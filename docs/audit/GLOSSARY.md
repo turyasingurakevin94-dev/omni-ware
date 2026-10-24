@@ -110,6 +110,9 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Show 30 more | A long list draws 30 rows, then adds 30 a tap; the chips still count every match | a cap that hides rows | Store R9 · SPD-02 |
 | Needs you | Today's list of jobs for this person | — | Sales, Store |
 | For you · In the yard today | Alerts: only today's "for you" alerts are unread; opening Alerts reads them | counting others' routine check-ins as unread | Store R6 · WORD-10 |
+| No limit set · {Manager} decides | A customer with no credit limit can buy on credit only with the Manager's yes; the order waits in Checking | "★ no limit" | Sales R2 · SAL-016 |
+| Test · not counted | A QA record (a "TEST …" name, a TESTQA ref): kept and listed, in no figure | — | Sales R2 · SAL-018 |
+| At least 1 — use the bin to remove it | What a count under 1 says; the box goes back to the line's count | "At least 1 · or remove the line" (Sales R1) | Sales R2 · SAL-015 |
 | Signed in as someone else | Another login is under this app; nothing is saved until the app's own person signs in again | carrying on as the other login | Sales R1 · SAL-002 |
 | Big text | You → Big text: every size one step up, at least 1.2×; controls 52 px; nothing clipped at 360 | a zoom that squeezes the layout | Store R8 · A11Y-01 |
 | Asked of Sourcing | Requests for items the shop doesn't sell: Asked → Looking → Found → Priced → Listed | — | Sales |

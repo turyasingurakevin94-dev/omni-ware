@@ -62,7 +62,7 @@ for (const [name, src] of [['sales', sales], ['manager', manager], ['accounts', 
   t.check(/\(d\.cashRows \|\| \[\]\)\.forEach\(row => \{ if \(!(D\(\)\.cashTxns\.some\(x => String\(x\.id\) === String\(row\.id\)\)|txnById\(row\.id\))\) D\(\)\.cashTxns\.push\(rowToTxn\(row\)\); \}\);/.test(src), `${name}: the lines it wrote land in the phone's copy once`);
 }
 t.check(/toast\(isNetworkError\(e\) \? 'No connection — nothing was recorded\. Try again\.' : 'Nothing was recorded: ' \+ \(e\.message \|\| e\), 6000\);/.test(sales) && /toast\(isNetworkError\(e\) \? 'No connection — nothing was recorded\. Try again\.' : 'Nothing was recorded: ' \+ \(e\.message \|\| e\), 6000\);/.test(manager), 'sales and manager: a failure is whole and names its reason');
-t.check(/function rowToTxn\(t\)\{ return \{ id: t\.id, date: t\.date, account: t\.account, type: t\.type, category: t\.category, amount: Number\(t\.amount\) \|\| 0/.test(sales) && /cashTxns: \(\(cashR && cashR\.data\) \|\| \[\]\)\.map\(rowToTxn\),/.test(sales) && /cashTxns: \(\(cashR && cashR\.data\) \|\| \[\]\)\.map\(rowToTxn\),/.test(manager), 'sales and manager: one cash-row mapper, at boot and for a row handed back');
+t.check(/function rowToTxn\(t\)\{ return \{ id: t\.id, date: t\.date, account: t\.account, type: t\.type, category: t\.category, amount: Number\(t\.amount\) \|\| 0/.test(sales) && /cashTxns: \(\(cashR && cashR\.data\) \|\| \[\]\)\.map\(rowToTxn\),/.test(sales) && /cashTxns: \(\(cashR && cashR\.data\) \|\| \[\]\)\.map\(rowToTxn\)(\.filter\(t => !t\.qa\))?,/.test(manager), 'sales and manager: one cash-row mapper, at boot and for a row handed back');
 
 /* ---------------- 3. the fake ---------------- */
 const fake = require('./_fake-receive-payment');

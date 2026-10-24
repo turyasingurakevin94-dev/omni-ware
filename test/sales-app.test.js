@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, tdySrcRow, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payOverHTML, custAddsUp, custAddsUpHTML, getFIFOUnitCost, stockKey, goodsTotal, lineSettledOut, moneyIn, tdyToPriceChip, ordPatch, sb, payDepositOk, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, tdySrcRow, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payOverHTML, nmIsSale, custInFilter, qaIn, lineById, lineQtyWords, nwCreditHeld, qtyBack, qtyBackHTML, creditHoldFor, custAddsUp, custAddsUpHTML, getFIFOUnitCost, stockKey, goodsTotal, lineSettledOut, moneyIn, tdyToPriceChip, ordPatch, sb, payDepositOk, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskCard, ordFindRows };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -206,6 +206,8 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
     X.S.data.savedQuotes = [{ id: 41 }];
     const it = X.makeLine('P1', null, 10, { lineId: 1 });
+    // SAL-016: credit within a set limit goes straight on (with no limit set it waits for the Manager; checked below).
+    X.S.data.customers.find(c => c.id === 'C001').creditLimit = 3000000;
     X.S.draft = { client: { name: 'Kato Construction', phone: '0772123456' }, customerId: 'C001', items: [it], credit: true, q: '' };
     await X.ACT['slide:place']({ querySelector: () => ({ textContent: '' }) });
     const ins = db.writes.filter(w => w[0] === 'insert' && w[1] === 'saved_quotes');
@@ -525,7 +527,12 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     const dr = X.newDraft(k); X.nwApplyHabit(dr, k);
     t.check(dr.credit === false, 'SAL-11: no limit set: the order opens on Cash, whatever they did last time');
     X.S.draft = { ...dr, items: [X.makeLine('P1', null, 1, { lineId: 1 })] };
-    t.check(/no limit<\/small>/.test(X.nwDockHTML()) && /they have no credit limit/.test(X.nwDockHTML()), 'SAL-11: Credit says there is no limit');
+    // SAL-016 (R2CreditNoLimit): Credit says who decides, on its own row; chosen, it says it waits.
+    t.check(/No limit set · [^<]+ decides<\/small>/.test(X.nwDockHTML()) && /class="nw-paywide"/.test(X.nwDockHTML()) && !/nw-nolimw/.test(X.nwDockHTML()), 'SAL-016: no limit set: Credit says who decides, before it is chosen');
+    X.S.draft.credit = true;
+    t.check(/It waits in Checking until [^<]+ says yes/.test(X.nwDockHTML()) && X.nwCreditHeld(X.S.draft), 'SAL-016: credit chosen with no limit set waits for the Manager');
+    X.S.draft.credit = false;
+    t.check(!X.nwCreditHeld(X.S.draft), 'SAL-016: the same order for cash does not wait');
     // SAL-12 / SAL-13: a box comes whole; past the shelf the line asks
     t.check(X.nwWholeUnit({ unit: 'box' }) && X.nwWholeUnit({ unit: 'bag' }) && !X.nwWholeUnit({ unit: 'kg' }) && !X.nwWholeUnit({ unit: 'm' }), 'SAL-12: boxes and bags come whole; kilos and metres do not');
     // NEW-01: a part payment shows the whole sum
@@ -912,6 +919,35 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     // SAL-007: Today names an invoiced order with lines nobody priced.
     X.S.data.savedQuotes = [{ id: 541, status: 'completed', invoiced: true, voided: false, invoicedAt: X.todayISO ? X.todayISO() : new Date().toISOString().slice(0, 10), date: new Date().toISOString().slice(0, 10), amountPaid: 0, items: [ln(2, 5000), { lineId: 9, productId: 'PX', variantIdx: null, qty: 3, supplierId: 'S1', price: 0, sellPrice: null }], charges: [], payments: [] }];
     t.check(/#0541 · 1 line to price, not counted yet/.test(X.tdyToPriceChip()), 'SAL-007: Today names the invoiced order whose lines are still to price');
+  }
+
+  // Sales round 2: core workflows (SAL-015, SAL-016, SAL-018)
+  {
+    const X = loadPage(fakeDb({}));
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'g@shop.ug' }, shopName: 'Shop' });
+    // SAL-015: a count under 1 goes back to the line, in the box and the line alike, and says why.
+    X.S.draft = { client: { name: 'Kato Construction', phone: '' }, customerId: 'C001', items: [X.makeLine('P1', null, 3, { lineId: 7 })], q: '', openLine: 7 };
+    for (const typed of ['-2', '0', '', 'abc']) {
+      const box = { value: typed, dataset: { lid: '7' } };
+      X.ACT['ch:lq'](box);
+      const it = X.lineById(7);
+      t.check(Number(it.qty) === 3 && box.value === '3' && /At least 1 — use the bin to remove it/.test(X.qtyBackHTML(7)), `SAL-015: "${typed}" puts the box back to 3, the line stays 3, and the note says why`);
+    }
+    const ok = { value: '5', dataset: { lid: '7' } }; X.ACT['ch:lq'](ok);
+    t.check(Number(X.lineById(7).qty) === 5 && X.qtyBackHTML(7) === '', 'SAL-015: a real count is taken, and the note goes');
+    const ctBox = { value: '0', dataset: { lid: '7' } }; X.ACT['ch:ctq'](ctBox);
+    t.check(Number(X.lineById(7).qty) === 5 && ctBox.value === '5' && /At least 1/.test(X.qtyBackHTML(7)), 'SAL-015: the counter sale\'s count does the same');
+    // SAL-016: the order's Credit gate says no limit is set, and who decides.
+    const kato = X.S.data.customers.find(c => c.id === 'C001'); kato.creditLimit = null;
+    const h = X.creditHoldFor(kato, 100000, { credit: { pct: 3, days: 30 } }), h2 = X.creditHoldFor({ ...kato, creditLimit: 9000000, debt: 0 }, 100000, { credit: { pct: 3, days: 30 } });
+    t.check(h && h.noLimit && !h2 && !X.creditHoldFor({ ...kato, debt: 0 }, 100000, { credit: null }), 'SAL-016: credit with no limit set waits; within a limit, or for cash, it does not');
+    // SAL-018: a test order or payment is listed and in no figure.
+    const today = new Date().toISOString().slice(0, 10);
+    X.S.data.cashTxns = [{ id: 1, date: today, type: 'receipt', category: 'Sales Revenue', amount: 5000 }, { id: 2, date: today, type: 'receipt', category: 'Invoice Payment', amount: 11500, description: 'ref TESTQA456', qa: true }];
+    t.check(X.moneyIn(today, today).length === 1 && X.qaIn(today, today).length === 1, 'SAL-018: a test payment is not money in, and is still listed');
+    t.check(!X.nmIsSale({ status: 'completed', invoiced: true, voided: false, qa: true }) && X.nmIsSale({ status: 'completed', invoiced: true, voided: false }), 'SAL-018: a test invoice is not in the goal');
+    t.check(!X.custInFilter({ debt: 5000, qa: true }, 'owe') && X.custInFilter({ debt: 5000 }, 'owe'), 'SAL-018: a test customer is not among those who owe');
+    t.check(/rowToQuote\(q\)\{[\s\S]*?qa: !!q\.qa/.test(html) && /qa: !!t\.qa/.test(html) && /qa: !!c\.qa/.test(html), 'SAL-018: the test mark is read from orders, receipts and customers');
   }
 
   process.exit(t.done() ? 1 : 0);
