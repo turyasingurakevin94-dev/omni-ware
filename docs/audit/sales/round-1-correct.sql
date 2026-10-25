@@ -36,7 +36,7 @@ union all
 select '#226 payments', x ->> 'cashTxnId', x ->> 'date', 'payment', ow_num(x ->> 'amount'), x ->> 'note', '226'
   from saved_quotes q, shop, jsonb_array_elements(q.payload -> 'payments') x where q.shop_id = shop.id and q.id = 226
 union all
-select 'balance vs bills · ' || b.name, b.customer_id, null, 'gap', b.gap, 'balance ' || b.balance || ' · old book ' || b.opening || ' · open bills ' || b.open_bills, null
+select 'bills say more than the balance · ' || b.name, b.customer_id, null, 'gap', b.gap, 'balance ' || b.balance || ' · open bills ' || b.open_bills, null
   from ow_balance_check b, shop where b.shop_id = shop.id
 order by 1, 3, 2;
 

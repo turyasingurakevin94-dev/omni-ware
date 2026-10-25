@@ -657,25 +657,27 @@ alter table payment_asks add constraint payment_asks_receipt_check check (cash_t
 
 -- ---------------------------------------------------------------------
 -- 10. Whose balance doesn't add up (read under the reader's own policies).
-create or replace view ow_balance_check with (security_invoker = true) as
+-- A balance may be more than the open bills (an old-book balance from before
+-- them), never less. Old debt-log lines often name no bill even when they were
+-- a bill's ("Auto-sync — INV-0406" with no quote_id), so the log is not used to
+-- split the balance: a row here is a customer whose open bills say more is owed
+-- than their balance carries (live, 25 Oct). opening: what the balance holds
+-- beyond the bills.
+drop view if exists ow_balance_check;
+create view ow_balance_check with (security_invoker = true) as
 with inv as (
   select q.shop_id, q.payload ->> 'customerId' as cid,
          sum(greatest(0, round(ow_order_total(q.shop_id, q.payload, false)) - coalesce(q.amount_paid, 0))) as due
     from saved_quotes q
    where q.invoiced and not coalesce(q.voided, false) and coalesce(q.payload ->> 'customerId', '') <> ''
    group by 1, 2
-), opening as (
-  select l.shop_id, l.customer_id as cid, sum(case when l.type = 'charge' then l.amount else -l.amount end) as amt
-    from customer_debt_log l
-   where l.quote_id is null
-   group by 1, 2
 )
-select c.shop_id, c.id as customer_id, c.name, coalesce(c.debt, 0) as balance, coalesce(o.amt, 0) as opening, coalesce(i.due, 0) as open_bills,
-       coalesce(c.debt, 0) - (coalesce(o.amt, 0) + coalesce(i.due, 0)) as gap
+select c.shop_id, c.id as customer_id, c.name, coalesce(c.debt, 0) as balance,
+       greatest(0, coalesce(c.debt, 0) - coalesce(i.due, 0)) as opening, coalesce(i.due, 0) as open_bills,
+       greatest(0, coalesce(c.debt, 0)) - coalesce(i.due, 0) as gap
   from customers c
   left join inv i on i.shop_id = c.shop_id and i.cid = c.id
-  left join opening o on o.shop_id = c.shop_id and o.cid = c.id
- where round(coalesce(c.debt, 0)) <> round(coalesce(o.amt, 0) + coalesce(i.due, 0));
+ where round(greatest(0, coalesce(c.debt, 0))) < round(coalesce(i.due, 0));
 grant select on ow_balance_check to authenticated;
 
 -- ---------------------------------------------------------------------
