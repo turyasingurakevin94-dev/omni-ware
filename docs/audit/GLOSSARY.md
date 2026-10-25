@@ -16,9 +16,10 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
-| A person's name | The name they chose (`members`, Store R5 · PRIV-04). Otherwise their staff record's name, unless it looks like a login. Otherwise "Someone". One resolver: `personName()` in the Store. | the login handle; a stored name that differs from the one they chose | Store R6 · WORD-01 |
+| A person's name | The name they chose (`members`, Store R5 · PRIV-04). Otherwise their staff record's name, unless it looks like a login. Otherwise their role: "The owner", "The manager", "The store" (`members[].role`, Store R10 · 0168), with a person mark in place of initials. Otherwise "A colleague". One resolver: `personName()` in the Store. | the login handle; "Someone"; a role word cut to "The" | Store R10 · WORD-11 |
 | You | The person holding the phone, in their own lists ("2 yours") | their own name in their own list | Store R6 · WORD-05 |
-| Someone | A person whose name isn't known | a handle | Store R6 · WORD-01 |
+| A colleague | A person with no name and no role the apps can show (someone who has left) | "Someone"; a handle | Store R10 · WORD-11 |
+| Someone else just did this | The one sentence that keeps "someone": another phone changed this first, and the screen refreshed | a person's name guessed | Store R3 · REL-07, kept in R10 |
 | Customer | Who an order is for | client | Sales UX audit |
 | Ruth (the Manager) | The person who decides: prices under the shop's price, credit, voids, returns. Named by their display name, not their role, on screen. | the owner, for day-to-day decisions | `docs/decision-rights.md` |
 
@@ -32,6 +33,11 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | To pack | Ready to pack now | counting "waiting on goods" in it | Store R6 · WORD-04 |
 | Waiting on goods | Bought in for the order, not here yet ("+1 waiting" beside To pack) | to pack | Store R6 · WORD-04 |
 | Delivered | Left the yard for good: at the door, or collected at the gate. "3 delivered today · 1 of them collected". | delivered and gone out counted differently | Store R6 · WORD-04 |
+| Delivered (the button) | On the road, beside each stop: the camera, then "Delivered". It opens the photo proof. | Mark delivered | Store R10 |
+| Coming in | Goods coming **into** the yard from suppliers: trips still buying ("Buying · 1 of 2") and trips heading back ("Coming"). A section of the In page. | On the way; on the road (that is orders going out) | Store R10 |
+| On the road | Orders going **out** to customers on a truck. Its pills: "out now · delivered · collected" (collected is part of delivered). | coming in | Store R10 |
+| Packing now | To pack's orders another person has started; each row names them | Someone's on it | Store R10 · WORD-11 |
+| Remove (Waiting to send) | Drop something that was never sent from this phone, after "Remove it from this phone?" · Keep it / Remove. The books never had it. | delete; cancel (an order's word) | Store R10 · NAV-09 |
 | Packed | The order is packed and checked | — | Round skill |
 | Pack short | Pack fewer than the line asks (an amber choice) | a red button for a short pack | Store R4 · NAV-04 |
 | Waits for the goods | A line that can't be packed yet (a grey, disabled button) | — | Store R4 |
