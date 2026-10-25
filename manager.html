@@ -1808,6 +1808,9 @@ function custOpenCharges(c){
    so (custAddsUp) and Accounts checks it. */
 // (A line naming an order this phone does not hold can't be checked against it: it stands as the record.)
 function custOpeningLines(c){ return ((c && c.debtLog) || []).filter(l => l.quoteId == null || !quoteById(l.quoteId)); }
+// The old book only (lines naming no order): what the screens call the opening balance. A line
+// naming an order this phone does not hold is in the balance but listed under its own number.
+function custOldBook(c){ return Math.round(((c && c.debtLog) || []).filter(l => l.quoteId == null).reduce((s, l) => s + (l.type === 'charge' ? 1 : -1) * (Number(l.amount) || 0), 0)); }
 function custOpening(c){ return Math.round(custOpeningLines(c).reduce((s, l) => s + (l.type === 'charge' ? 1 : -1) * (Number(l.amount) || 0), 0)); }
 // The invoiced orders that carry this customer's id (the server's rule names no order by name only).
 function custBills(c){ return c ? (IX().byCust.get(String(c.id)) || []).filter(q => q.invoiced && !q.voided) : []; }
@@ -3927,7 +3930,7 @@ ACT.mgaskbal = async t => {
    never as a bill (new component, M1-Debtor-Opening). */
 function custBillListHTML(c){
   const ch = custOwedCharges(c), bal = custBalance(c), first = firstWord(c.name) || 'They';
-  const bills = ch.filter(x => x.quoteId != null), opening = custOpening(c), billSum = sum(bills, x => Math.round(x.remaining));
+  const bills = ch.filter(x => x.quoteId != null), opening = custOldBook(c), billSum = sum(bills, x => Math.round(x.remaining));
   if (bal <= 0.5 && !bills.length) {
     if (bal < -0.5) return `<div class="vm-dep"><span class="ico">${ic('tick', 16, 'style="stroke-width:2.6"')}</span><span style="flex:1;display:flex;flex-direction:column"><b style="font-size:14px">Deposit <span class="m">${n0(-bal)}</span></b><span style="font-size:12px;font-weight:600">${esc(first)}’s next bill uses it first</span></span></div>`;
     return `<div class="bx-card" style="padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span style="width:40px;height:40px;border-radius:999px;background:var(--greenSoft);color:var(--green);display:flex;align-items:center;justify-content:center">${ic('tick', 20, 'style="stroke-width:2.6"')}</span><b style="font-size:14px">Nothing owed</b>${custOpeningLines(c).length ? '<span style="font-size:12px;color:var(--ink3)">Opening balance cleared</span>' : ''}</div>`;
@@ -3944,7 +3947,7 @@ function custBillListHTML(c){
 function custFigureChip(c){
   const bal = custBalance(c); if (custAddsUp(c)) return `<span class="cu-apart">${ic('bang', 14)}Doesn’t add up · ${esc(paAccountsName())} checks it</span>`;
   if (!(bal > 0.5)) return '';
-  const ch = custOwedCharges(c), nb = ch.filter(x => x.quoteId != null).length, op = custOpening(c) > 0.5;
+  const ch = custOwedCharges(c), nb = ch.filter(x => x.quoteId != null).length, op = custOldBook(c) > 0.5;
   const w = op && nb ? `= opening balance + ${nb} ${pl(nb, 'bill')}` : op ? '= the opening balance' : nb ? `= the ${nb} open ${pl(nb, 'bill')}` : '';
   return w ? `<span class="cu-agree">${ic('tick', 14, 'style="stroke-width:2.6"')}${w}</span>` : '';
 }
