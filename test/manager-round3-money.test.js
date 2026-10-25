@@ -91,7 +91,8 @@ function page(){
     const tm = timers.filter(x => x.live && x.ms === 6000);
     t.check(tm.length === 1, 'a second Yes starts one Undo window');
     tm[0].live = false; tm[0].f(); await new Promise(r => setImmediate(r));
-    t.check(rpcs.length === 1 && rpcs[0][0] === 'receive_payment' && rpcs[0][1].p_amount === 878000 && rpcs[0][1].p_customer_id === 'C2', 'when the window runs out, the one write: receive_payment 878,000');
+    const pays = rpcs.filter(r => r[0] === 'receive_payment'); // the reload after it may also end old targets (ow_end_targets)
+    t.check(pays.length === 1 && pays[0][1].p_amount === 878000 && pays[0][1].p_customer_id === 'C2', 'when the window runs out, the one write: receive_payment 878,000');
     t.check(X.S.stack[0].type === 'paid', 'and the paid screen follows');
   }
   /* 4. delivered */
@@ -106,5 +107,5 @@ function page(){
     t.check(/data-act="delday" data-v="/.test(w) && /aria-label="Paid /.test(w), 'tappable day bars and the paid/owed split');
     t.check(/data-act="push" data-p="delivered"/.test(X.viewOrders()), 'the Orders tab opens it');
   }
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

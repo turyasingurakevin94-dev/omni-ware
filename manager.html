@@ -2034,7 +2034,9 @@ const ALL_TASKS = ['order.move', 'order.assign', 'credit.release', 'team.nudge',
   'price.approve', 'markup.set', 'margin.see', 'invoice.make', 'pick.settle', 'credit_note.raise', 'invoice.void', 'credit.set',
   'promise.record', 'agent.change', 'trip.difference', 'stock.writeoff', 'stock.correct', 'restock.hold', 'goal.set', 'team.limits',
   // A customer's balance from before these books (0148).
-  'debt.open'];
+  'debt.open',
+  // Two records of one customer made one (0169).
+  'customer.merge'];
 function tasks(){
   if (['owner', 'admin'].includes(S.role)) return ALL_TASKS;
   if (S.tasks) return S.tasks;
@@ -5927,7 +5929,7 @@ PAGE.lamerge = a => {
     foot: `<button class="bx-btn red" data-act="laask" data-keep="${esc(K.id)}" data-drop="${esc(G.id)}">${ic('tick', 18, 'style="stroke-width:2.4"')}Merge</button>` });
 };
 ACT.lakeep = t => { S.ui.laKeep = { k: t.dataset.k, v: t.dataset.v }; FEEL.tick(); render(); };
-ACT.laask = t => { FEEL.open(); openSheet('laconfirm', { keep: t.dataset.keep, drop: t.dataset.drop }); };
+ACT.laask = t => { if (!can('customer.merge')) { toast('Merging customers needs customer.merge on this login (the Manager’s).', 5000); return; } FEEL.open(); openSheet('laconfirm', { keep: t.dataset.keep, drop: t.dataset.drop }); };
 SHEET.laconfirm = a => {
   const K = customerById(a.keep), G = customerById(a.drop);
   if (!K || !G) return `<div class="bx-empty"><b>One of them is gone</b></div><button class="bx-btn ghost" style="flex:none" data-act="closesheet">Close</button>`;

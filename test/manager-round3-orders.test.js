@@ -163,5 +163,5 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     const N = page(fakeDb({}), fixture(), ['order.move']);
     t.check(/not on for this login/.test(N.PAGE.dup({ a: 2426, b: 2427 })), 'without invoice.void the pair is shown, not offered');
   }
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

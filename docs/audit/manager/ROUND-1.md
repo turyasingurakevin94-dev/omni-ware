@@ -121,3 +121,21 @@ One migration, **0169** (Manager round 1), safe to run twice, with ROLLBACK and 
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
+| MGR-DATA-01 | Yes | 0169: the money check also refuses a receipt from another account and a receipt already named by another payment (GIN index). #0415 in `round-1-correct.sql` (`fix_415 := 'record'`). | `manager-round1-db` (as Manager, Sales, Accounts); check queries 1–2. |
+| MGR-DATA-02 | Yes | `custBalance` (opening + bills due) everywhere money is shown; `custAddsUp` card with "Ask Esther to check" (`payment_asks` 'balance', all states, kept on the phone with no signal); opening balance line; bill list by `#`; 0169 `ow_customer_balance`. Merge fix: a debt-log line naming an order not on this phone is listed under its number, never also as opening. | `manager-round1-money`; screenshots at 360 (Ken, Sadat, Eddy, Mukono); DB test (Sadat 290,000 opening). |
+| MGR-DATA-03 | Yes (strict, per Kevin) | 0169: deferred triggers refuse a commit where a key's lots ≠ stock (OWLOT); `replace_stock_and_lots`; console (`index.html` `mergeStockOps`) saves both in one call, old path only before 0169; six test seeds and the staging sample write both. Rebuild in `round-1-correct.sql` (newest layers stay, every shop). | DB test: split write refused, joined passes, `ow_stock_move`, count, write-off, invoicing pass; Store tests pass. |
+| MGR-DATA-04 | Yes | Order slip "below cost" pill + loss each; Margins "Sold below cost" group, all months. | `manager-round1-orders`; screenshot. |
+| MGR-DATA-05 | Yes | `todayMoney().toPrice`; day card "N order · to price" / value + "N to price". | `manager-round1-orders`. |
+| MGR-DATA-06 | Yes | Legend as chips; "No seller · amount" sheet by month; "<name> · no login" + "Ask <owner> to link <name>'s login" (WhatsApp to the shop phone; no owner push exists). | `manager-round1-orders`; screenshots. |
+| MGR-WORD-01 | Yes | `orderNo()` → `#0543` on every screen; search takes `Q-` or `#`. | grep: no `Q-` + digits on screen; tests updated. |
+| MGR-DATA-07 | Yes | Void with money: Refund (account) or Keep as deposit, Undo 10 s, `void_with_money` (0169; deposit = debt-log line with no order); plain voids refuse paid orders (OWVMN, phone logins). #0166/#0148 marked test records (Kevin: test data). | DB test both ways + refusals; `manager-round1-money`; screenshots. |
+| MGR-DATA-08 | Yes | `salesIn()` for Today and Margins; "Sales invoiced · <month> · goods only, no delivery fees"; Margins costed / no-cost split. | `manager-round1-orders`; Margins screenshot. |
+| MGR-DATA-09 | Yes | `PAGE.givenaway`: each 0 line "Free · given away" + reason or "To price"; billing refused while unanswered; Margins "Given away" group; 0169 refuses an invoiced 0 line without `givenAway.why` (OWGIV). | DB test; `manager-round1-orders`. |
+| MGR-DATA-10 | Yes | 0169 rounds every cash amount to whole shillings; `accounts.html` `wholeDue()` in the pay run; old rows in `round-1-correct.sql`. | DB test; `accounts-wages-whole`. |
+| MGR-DATA-11 | Yes | Pay screen date: before the order warns and records "Deposit"; `receive_payment(p_date, p_label)` (one signature; 0165 re-run drops it cleanly); the order lists its payments. | DB test; `manager-round1-money`; `audit-0140`. |
+| MGR-DATA-12 | Yes | Saved value only (no 25% fallback); "pricing has no default until you set one"; "Shop's" quick price hidden with no rule. | `manager-round1-money`. |
+| MGR-DATA-13 | Yes | "Look alike" list (merge with confirm + Undo 10 s via `merge_customers`, task **customer.merge** (new, Manager only), not the same, fix the phone); phone check "10 digits, starting 07". | DB test (Sales refused; bills and balance move); `manager-round1-orders`. |
+| MGR-DATA-14 | Yes | `ow_end_targets` (hourly and on load); goals "Ended · reached / missed · result". | DB test; `manager-round1-orders`. |
+| MGR-DATA-15 | Yes | "Only 567 · check it" before billing; Invoice all leaves it out; the hourly run skips it and pushes `invoice.held`. | DB test; `manager-round1-money`. |
+
+Also: five manager test files printed failures but exited 0; they now exit 1 on a failed check (one real failure surfaced and fixed: a test counted the reload's `ow_end_targets` call as a second payment).
