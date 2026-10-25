@@ -22,8 +22,10 @@ insert into saved_quotes(id, shop_id, client_name, status, invoiced, payload) ov
  (9001,'11111111-1111-1111-1111-111111111111','Kato','completed',true,'{}'),
  (9002,'11111111-1111-1111-1111-111111111111','Kato','draft',false,'{}'),
  (9003,'11111111-1111-1111-1111-111111111111','Agent client','draft',false,'{"agentCancel":{"at":"2026-10-18","reason":"changed mind"}}');
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id,key,product_id,qty) values ('11111111-1111-1111-1111-111111111111','P1','P1',10);
 insert into stock_lots(shop_id,key,qty,cost) values ('11111111-1111-1111-1111-111111111111','P1',4,100),('11111111-1111-1111-1111-111111111111','P1',6,120);
+commit;
 insert into purchase_invoices(id, shop_id, quote_id, date, payload) values
  (7001,'11111111-1111-1111-1111-111111111111',9001,current_date,'{"items":[{"qty":2,"price":1000}],"amountPaid":0,"payments":[]}'),
  (7002,'11111111-1111-1111-1111-111111111111',9001,current_date,'{"items":[{"qty":1,"price":500}],"amountPaid":200,"payments":[{"amount":200}]}');

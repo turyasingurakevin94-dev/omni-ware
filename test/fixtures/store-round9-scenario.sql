@@ -13,7 +13,10 @@ insert into staff(shop_id,id,name,role,user_id) values ('11111111-1111-1111-1111
 insert into suppliers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','S1','Katwe Fabricators');
 insert into products(shop_id,id,name,category) values ('11111111-1111-1111-1111-111111111111','P1','ABC Black Screws Coarse','Nails');
 insert into prices(shop_id,product_id,supplier_id,unit,pack_unit,pack_qty,wholesale,retail) values ('11111111-1111-1111-1111-111111111111','P1','S1','Box','Ctn',20,5000,6000);
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id,key,product_id,qty) values ('11111111-1111-1111-1111-111111111111','P1','P1',14),('11111111-1111-1111-1111-111111111111','P2','P2',3);
+insert into stock_lots(shop_id,key,qty,cost) values ('11111111-1111-1111-1111-111111111111','P1',14,5000),('11111111-1111-1111-1111-111111111111','P2',3,5000);
+commit;
 insert into saved_quotes(id,shop_id,client_name,status,amount_paid,payload) overriding system value values
  (601,'11111111-1111-1111-1111-111111111111','Kato Construction','preparing',0,'{"items":[{"lineId":1,"productId":"P1","qty":2,"unit":"Box","price":6000}]}'),
  (602,'11111111-1111-1111-1111-111111111111','Ssali','completed',0,jsonb_build_object('deliveredAt', to_char(now() - interval '29 days', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), 'items', '[]'::jsonb)),

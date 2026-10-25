@@ -6711,6 +6711,8 @@ ACT['slide:tripcash'] = async () => {
    newWageDue / payDue / addDueAbsence. Pay rates stay the owner's.
    ================================================================== */
 function curPeriod(){ return monthISO(); }
+// MGR-DATA-10: a wage is whole shillings where it is written (a month's pay over its days is rarely whole).
+function wholeDue(x){ return x == null ? null : Math.round(Number(x) || 0); }
 function rateWords(s){ const r = Number(s.payRate) || 0, k = r >= 1e6 ? (r / 1e6).toFixed(r % 1e6 ? 1 : 0) + 'M' : r >= 1000 ? Math.round(r / 1000) + 'k' : n0(r); return `${k} a ${s.payBasis === 'daily' ? 'day' : s.payBasis === 'weekly' ? 'week' : 'month'}`; }
 // The month's due for one person or one tenancy: the stored row, or the one the console would raise (newWageDue).
 function dueFor(kind, ref, period){
@@ -6722,7 +6724,7 @@ function dueFor(kind, ref, period){
     return { id: null, kind: 'rent', refId: String(r.id), period: p, dueDate: `${p}-${dd}`, amount: Number(r.amount) || 0, days: null, rate: Number(r.amount) || 0, paid: 0, payments: [], absences: [], basis: null, virtual: true }; }
   const s = (D().staff || []).find(x => String(x.id) === String(ref)); if (!s) return null;
   const v = { id: null, kind: 'wage', refId: String(s.id), period: p, dueDate: CB().periodEndDate(p), amount: null, days: null, rate: Number(s.payRate) || 0, paid: 0, payments: [], absences: [], basis: s.payBasis || null, virtual: true };
-  v.amount = s.payRate == null ? null : CB().dueCostOf(v);
+  v.amount = s.payRate == null ? null : wholeDue(CB().dueCostOf(v));
   return v;
 }
 function payrollMonth(){
@@ -6801,7 +6803,7 @@ ACT['slide:payroll'] = async () => {
   try { S.busy = true;
     // One write (0141 pay_dues): a due the console only imagined gets its row,
     // each is paid its balance as Wages or Rent, logged for the owner.
-    const dues = sel.map(({ d }) => ({ id: d.virtual ? null : d.id, kind: d.kind, refId: String(d.refId), period: d.period, dueDate: d.dueDate || null, amount: d.amount, days: d.days == null ? null : d.days, rate: d.rate, basis: d.basis || null, notes: d.notes || null, absences: d.absences || [], proposed: d.proposed || [], pay: Math.round(P.bal(d)) }));
+    const dues = sel.map(({ d }) => ({ id: d.virtual ? null : d.id, kind: d.kind, refId: String(d.refId), period: d.period, dueDate: d.dueDate || null, amount: wholeDue(d.amount), days: d.days == null ? null : d.days, rate: d.rate, basis: d.basis || null, notes: d.notes || null, absences: d.absences || [], proposed: d.proposed || [], pay: Math.round(P.bal(d)) }));
     const r = await sb.rpc('pay_dues', { p_shop_id: S.shopId, p_dues: dues, p_account: a.acct });
     if (r.error) throw r.error;
     const d = r.data || {}; (d.cashRows || []).forEach(row => { if (!txnById(row.id)) D().cashTxns.push(rowToTxn(row)); });
@@ -6825,7 +6827,7 @@ PAGE.absence = a => {
   for (let dd = 1; dd <= last; dd++) { const dt = new Date(y, m - 1, dd); if (dt.getDay() === 0) continue; const iso = `${p}-${String(dd).padStart(2, '0')}`, fut = iso > t, ab = a.abs.find(x => x.date === iso), k = absenceKind(ab), on = a.day === iso;
     const bg = fut ? 'background:var(--soft);color:#A9A397' : k === 'worked' ? 'background:var(--greenSoft);color:var(--green)' : k === 'absent' ? 'background:#E5483D;color:#fff' : k === 'half' ? 'background:var(--amber);color:var(--navy)' : 'background:#9BA3F0;color:#fff';
     cells.push(`<button ${fut ? 'disabled' : `data-act="absday" data-v="${iso}"`} aria-label="${esc(dShort(iso))}, ${fut ? 'not yet' : k}" style="position:relative;height:40px;border:none;border-radius:10px;font-family:var(--mono);font-size:13px;font-weight:600;${bg};${on ? 'box-shadow:inset 0 0 0 2.5px var(--navy),0 6px 14px rgba(22,32,60,.18)' : ''}">${dd}${prop && prop.date === iso ? '<i style="position:absolute;right:-3px;top:-3px;width:12px;height:12px;border-radius:999px;background:#E5483D;box-shadow:0 0 0 2px #fff"></i>' : ''}</button>`); }
-  const tmp = { ...d0, absences: a.abs }, before = d0.amount == null ? null : d0.amount, after = CB().dueCostOf(tmp);
+  const tmp = { ...d0, absences: a.abs }, before = d0.amount == null ? null : d0.amount, after = wholeDue(CB().dueCostOf(tmp));
   const cur = absenceKind(a.abs.find(x => x.date === a.day)), unp = a.abs.filter(x => !x.paid).reduce((n, x) => n + (x.half ? .5 : 1), 0);
   const changed = JSON.stringify(a.abs) !== JSON.stringify(d0.absences || []);
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">
@@ -6862,7 +6864,7 @@ ACT['slide:absence'] = async () => {
   const s = (D().staff || []).find(x => String(x.id) === String(a.sid));
   try { S.busy = true;
     const d = await ensureDue(dueFor('wage', a.sid, curPeriod())), before = { absences: d.absences, amount: d.amount };
-    d.absences = a.abs; d.amount = CB().dueCostOf(d);
+    d.absences = a.abs; d.amount = wholeDue(CB().dueCostOf(d));
     const up = await sb.from('dues').update({ amount: d.amount, payload: dueRow(d).payload }).eq('shop_id', S.shopId).eq('id', d.id); if (up.error) throw up.error;
     booksChanged();
     logDecision('payroll.run', `${s ? s.name : 'Staff'}'s days for ${fmtMonth(d.period)}: ${a.abs.length ? a.abs.map(x => `${x.date.slice(8)} ${x.half ? 'half' : x.paid ? 'sick' : 'absent'}`).join(', ') : 'every day worked'} — pay ${n0(d.amount)}`, { amount: d.amount, ref: { table: 'dues', id: d.id }, before, after: { absences: d.absences, amount: d.amount } });

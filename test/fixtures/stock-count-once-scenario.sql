@@ -19,8 +19,10 @@ insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-1111
  on conflict (shop_id) do update set presets = excluded.presets;
 insert into suppliers(shop_id, id, name) values ('11111111-1111-1111-1111-111111111111','S1','Maria Building Materials');
 insert into products(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','P1','BB Silicone');
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id,key,product_id,qty) values ('11111111-1111-1111-1111-111111111111','P1','P1',20);
 insert into stock_lots(shop_id,key,qty,cost) values ('11111111-1111-1111-1111-111111111111','P1',20,30000);
+commit;
 select set_config('ow.money_fix', 'on', false);  -- a pre-0165 row, seeded as it stands on live (0165)
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, amount_paid, payload) overriding system value values
  -- packed (picking done), not invoiced: 3 have left the shelf

@@ -83,13 +83,14 @@ select c.id, c.name, round(coalesce(c.debt, 0)) as stored, round(coalesce(o.amt,
 -- The same rule as Sales round 1 query 5 and the view ow_balance_check (0165).
 
 -- 5 · MGR-DATA-03: a stock key whose FIFO lots do not add up to the stock.
+--     (0169 refuses any new write that leaves a key so; a stock below 0 has no lots.)
 with shop as (select id from shops where name = 'Omni-ware (old records)'),
 l as (select key, sum(coalesce(qty, 0)) as lots, count(*) as layers from stock_lots, shop where stock_lots.shop_id = shop.id group by key)
 select coalesce(s.key, l.key) as key, s.product_id, s.variant_idx, round(coalesce(s.qty, 0), 3) as stock, round(coalesce(l.lots, 0), 3) as lots, coalesce(l.layers, 0) as layers,
        round(coalesce(l.lots, 0) - coalesce(s.qty, 0), 3) as surplus
   from (select * from stock, shop where stock.shop_id = shop.id) s
   full join l on l.key = s.key
- where abs(coalesce(l.lots, 0) - coalesce(s.qty, 0)) > 0.0001
+ where abs(coalesce(l.lots, 0) - greatest(0, coalesce(s.qty, 0))) > 0.0001
  order by abs(coalesce(l.lots, 0) - coalesce(s.qty, 0)) desc;
 
 -- 6 · MGR-DATA-04 / -09: invoiced lines sold under their cost, or at 0.
@@ -107,12 +108,15 @@ select q.id as order_id, q.client_name, it ->> 'productName' as item, ow_num(it 
 
 -- 7 · MGR-DATA-07: a voided order still holding money (payments not refunded
 --     and not moved to a deposit).
+--     Test records (qa, 0167) are left out: #0166 and #0148 are test data,
+--     marked by round-1-correct.sql (Kevin, 25 Oct).
 with shop as (select id from shops where name = 'Omni-ware (old records)')
 select q.id as order_id, q.client_name, q.status, q.amount_paid, q.payload ->> 'cancelledAt' as cancelled_at,
        q.payload -> 'voidMoney' as what_was_done
   from saved_quotes q, shop
  where q.shop_id = shop.id and coalesce(q.voided, false) and coalesce(q.amount_paid, 0) > 0
    and coalesce(q.payload -> 'voidMoney' ->> 'done', '') = ''
+   and not coalesce(q.qa, false)
  order by q.id;
 
 -- 8 · MGR-DATA-10: money with fractions of a shilling.
@@ -129,7 +133,8 @@ select q.id as order_id, q.client_name, q.date as order_date, pay ->> 'date' as 
        jsonb_array_elements(case when jsonb_typeof(q.payload -> 'payments') = 'array' then q.payload -> 'payments' else '[]'::jsonb end) pay
  where q.shop_id = shop.id and q.date is not null and (pay ->> 'date') ~ '^\d{4}-\d{2}-\d{2}$'
    and (pay ->> 'date')::date < q.date
-   and coalesce(pay ->> 'label', '') <> 'Deposit' and coalesce((pay ->> 'deposit')::text, '') <> 'true'
+   and coalesce(pay ->> 'label', '') <> 'Deposit' and coalesce(pay ->> 'note', '') <> 'Deposit'   -- Sales round 2's fix_labels noted them
+   and coalesce((pay ->> 'deposit')::text, '') <> 'true'
  order by q.id;
 
 -- 10 · MGR-DATA-13: customers who look alike — the same name, the same phone,
