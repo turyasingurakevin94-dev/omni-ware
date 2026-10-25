@@ -930,6 +930,13 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     const even = { ...kato, id: 'CZ', debt: 0, debtLog: [] };
     X.S.data.customers.push(even);
     t.check(X.custAddsUp(even) === null && X.custAddsUpHTML(even) === '', 'SAL-011: a balance that is its bills shows one figure, no card');
+    // Live, 25 Oct: old log lines often name no bill ("Auto-sync — INV-0406" with no order); a balance equal to its open bills adds up.
+    const amos = { ...kato, id: 'CA', name: 'Amos Dulisa', debt: 20000, debtLog: [{ id: 2, type: 'charge', amount: 20000, quoteId: null, note: 'Auto-sync — INV-0406', date: '2026-09-28' }] };
+    X.S.data.customers.push(amos); X.S.data.savedQuotes.push({ id: 406, status: 'completed', invoiced: true, voided: false, customerId: 'CA', invoicedAt: '2026-09-28', date: '2026-09-28', amountPaid: 0, items: [{ lineId: 1, productId: 'P1', variantIdx: null, qty: 1, supplierId: 'S1', price: 15000, sellPrice: 20000 }], charges: [], payments: [] });
+    X.S.loadedAt = 70;
+    t.check(X.custAddsUp(amos) === null, 'SAL-011: an old log line that names no bill is not counted twice: 20,000 owed on a 20,000 bill adds up');
+    t.check(X.custAddsUp({ ...amos, id: 'CB', debt: 290000, debtLog: [] }) === null, 'SAL-011: a balance from the old book, with no open bills, adds up');
+    t.check(!!X.custAddsUp({ ...amos, debt: 5000 }), 'SAL-011: open bills that say more is owed than the balance do not add up');
     const dep = { ...kato, id: 'CD', name: 'Deposit Co', debt: -50000, debtLog: [{ id: 1, type: 'payment', amount: 50000, quoteId: null, date: '2026-10-01' }] };
     X.S.data.customers.push(dep); X.S.loadedAt = 71;
     const dp = X.PAGE.customer({ id: 'CD' });

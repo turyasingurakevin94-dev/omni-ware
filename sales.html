@@ -6528,17 +6528,19 @@ function custLastStatement(cid){
   return (D().statementsSent || []).filter(x => String(x.customer_id) === String(cid))
     .sort((a, b) => String(b.sent_on).localeCompare(String(a.sent_on)) || (Number(b.id) || 0) - (Number(a.id) || 0))[0] || null;
 }
-/* SAL-011 (R1AddsUp): a customer's balance against what makes it up -- what
-   is on no bill (the old book, deposits) and their open bills. When the two
-   disagree the page says so, how far apart, and who checks it; it never
-   shows two figures that disagree without a word. */
+/* SAL-011 (R1AddsUp): a customer's balance against their open bills. The
+   balance may be more than the bills (an old-book balance from before the
+   bills), never less: open bills that say more is owed than the balance
+   carries is a balance that doesn't add up, and the page says so, how far
+   apart, and who checks it. (Old debt-log lines often name no bill even
+   when they were a bill's -- "Auto-sync — INV-0406" with no order -- so
+   the lines are not used to split the balance: live, 25 Oct.) */
 function custAddsUp(c){
   if (!c) return null;
   const debt = Math.round(Number(c.debt) || 0);
-  const opening = Math.round((c.debtLog || []).filter(l => l.quoteId == null).reduce((s, l) => s + (l.type === 'charge' ? 1 : -1) * (Number(l.amount) || 0), 0));
   const bills = Math.round(outstandingInvoices(c.id).reduce((s, q) => s + balanceDue(q), 0));
-  const gap = debt - (opening + bills);
-  return Math.abs(gap) >= 1 ? { debt, opening, bills, gap } : null;
+  const gap = Math.max(0, debt) - bills;
+  return gap <= -1 ? { debt, opening: 0, bills, gap } : null;
 }
 function custBalanceAsk(c){ return (D().payAsks || []).find(a => a.what === 'balance' && String(a.customerId) === String(c.id) && a.status === 'sent') || null; }
 function custAddsUpBand(c){ return custAddsUp(c) ? `<span class="cu-apart">${ic('ordWarn', 14)}Doesn’t add up · ${esc(paAccountsName())} checks it</span>` : ''; }
@@ -6547,7 +6549,7 @@ function custAddsUpHTML(c){
   const first = firstWord(c.name) || 'Their', top = Math.max(Math.abs(x.debt), x.opening + x.bills, 1), ask = custBalanceAsk(c);
   const bar = (label, v, cls) => `<span class="cu-apb"><span class="l"><span>${label}</span><span class="m">${n0(v)}</span></span><span class="t"><i class="${cls}" style="width:${Math.max(2, Math.min(100, Math.round(Math.abs(v) / top * 100)))}%"></i></span></span>`;
   return `<div class="sx-card cu-apcard" data-key="apart"><b class="h"><span class="m">${n0(Math.abs(x.gap))}</span> apart</b>
-    ${bar(`${esc(first)}’s balance`, x.debt, 'a')}${bar(`${x.opening ? 'Old balance and open bills' : 'Open bills'}`, x.opening + x.bills, 'b')}
+    ${bar(`${esc(first)}’s balance`, x.debt, 'a')}${bar('Open bills', x.bills, 'b')}
     <span class="s">Payments still go on the bills, oldest first</span>
     ${ask ? `<span class="cu-apsent">${paFace(26)}<span class="tx">Asked ${esc(paAccountsName())} · ${esc(ordWhen(Date.parse(ask.createdAt)))}</span>${ic('ordClock', 16)}</span>`
       : `<button class="sx-btn cu-apask" data-act="custaskbal" data-id="${esc(c.id)}" ${S.paAsking ? 'disabled' : ''}>Ask ${esc(paAccountsName())} to check</button>`}</div>`;

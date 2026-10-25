@@ -38,7 +38,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/create or replace function ow_settle_over/.test(sql) && /p_how not in \('deposit', 'change'\)/.test(sql), 'SAL-005: Esther settles an order paid over as a deposit, or change given back');
   t.check(/create or replace function ow_correct_payment/.test(sql) && /has_task\(p_shop_id, 'payment\.edit'\)/.test(sql), 'Accounts corrects a payment in one transaction (payment.edit)');
   t.check(/what in \('method', 'amount', 'bill', 'day', 'over', 'balance'\)/.test(sql) && /cash_txn_id is not null or what = 'balance'/.test(sql), 'two new asks: over and balance');
-  t.check(/create or replace view ow_balance_check with \(security_invoker = true\)/.test(sql), 'the balance check reads under the reader\'s own policies');
+  t.check(/create view ow_balance_check with \(security_invoker = true\)/.test(sql), 'the balance check reads under the reader\'s own policies');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   const doc = read('docs/decision-rights.md');
   t.check(/\| 0165 \| Sales, fifth/.test(doc), 'docs/decision-rights.md reserves 0165');
