@@ -713,7 +713,11 @@ begin
   if position('dep_use' in src) > 0 then return; end if;   -- already 0165's
   if position(a in src) = 0 then raise exception '0165: ow_invoice_core is not the shape 0139 left; not changed.'; end if;
   src := replace(src, a, b);
-  src := replace(src, '  applied numeric;' || chr(10), '  applied numeric;' || chr(10) || '  dep_use numeric := 0;' || chr(10));
+  -- The new variable goes after `applied numeric;`, whatever spacing or line ending the live text has.
+  src := regexp_replace(src, '(\mapplied\s+numeric\s*;)', '\1' || chr(10) || '  dep_use numeric := 0;');
+  if position('dep_use numeric := 0;' in src) = 0 then
+    raise exception '0165: could not declare dep_use in ow_invoice_core; not changed.';
+  end if;
   -- What the deposit paid goes in with the invoice itself, so paid and its payments move together.
   if position('set invoiced = true, invoiced_at = inv_at, invoiced_ts = inv_ts, payload = pay' in src) = 0 then
     raise exception '0165: ow_invoice_core''s invoice write is not the shape 0139 left; not changed.';
