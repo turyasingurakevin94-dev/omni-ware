@@ -39,6 +39,7 @@
 | STO-UI-12 | `Store · Check-in · name and tags` | "Black Screws 8* / Coarse / 3/4"" as one name → "Black Screws" with the tags 8*, Coarse, 3/4". | before, after | `prodTT()` / `.pv` tags | No |
 | Kevin · In (24 Oct) | `In` (TodayIn, redone) and `Store · In · nothing at the gate yet` (InQuiet), canvas v117 | **Before:** two big tiles, a decorative road, and three faults on live (a bare "For", "buying" after every stop was done, "Shafik's trip · Shafik"). **After:** an arrivals board. **Top:** one row with the Buying · Coming · At the gate dots. **The oldest trip at the gate** gets its own card: wait ring, ticked suppliers, the orders waiting on it, and one "Check it in". **On the way:** "Buying · 1 of 2" / "Coming" / "Not started", a dot track, and "For the shelf" / "For 1 order" / "#0049 Ssali". **Checked in today:** a day line. **Nothing at the gate:** a calm card, no button. | busy, nothing at the gate | the navy header, dots, pills, chips | No |
 | Kevin · headers (24 Oct) | To pack, On the road, Count sent / Recount / Decide (canvas v117) | Back, title and the key figure in one row; a slimmer bar, figures or track under it. 170–220 px → 110–135 px. | — | same | No |
+| Kevin · On the road (25 Oct) | `Store · On the road · the button beside the order` (canvas v120) | **Before:** round 8 put "Mark delivered" under each order, so every stop took two rows. **After:** one row per stop. **The client** on the first line (two lines at most). **Under it:** "#0036 · Kira". **Beside it:** a "Delivered" button with the camera mark. | before, after, a long name | stop row, navy pill | No |
 
 ## Code changes planned
 
@@ -57,6 +58,7 @@
 | STO-UI-12 | P3 | `store-sw.js` | **One cache,** `ow-store-v2`, for the page and the libraries. Activate deletes every other `ow-store-*` cache, including both v1 caches. | no | After an update, `caches.keys()` holds one Store cache; opening offline still works. |
 | Kevin · In | P3 | `store.html` `PAGE.movein` | Rebuilt to the TodayIn / InQuiet boards. **"For":** order ids not in the phone's data count as "For N orders". **"Coming":** once every stop is done. **Supplier deliveries:** "<Supplier> delivers". | yes | Harness: busy and quiet match the boards at 360; never a bare "For"; a trip with every stop done reads "Coming". |
 | Kevin · headers | P3 | `store.html` `PAGE.movepack`, `PAGE.onroad` header, the count status pages | The compact headers from the boards. | yes | Each header at most 135 px at 360, normal text; the round 8 Big text walk passes. |
+| Kevin · On the road | P3 | `store.html` `PAGE.onroad` stop row | No wrap. The client is the title (clamp 2); `q4` and the place go below; the button reads "Delivered", 44 px high, beside the order. Round 8's test line for "the button under it" changes with it. | yes | At 360, each stop is one row, a long client name takes two lines, and nothing is clipped. |
 
 ## Server / SQL changes planned
 
