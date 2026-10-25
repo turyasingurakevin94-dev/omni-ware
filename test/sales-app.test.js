@@ -893,7 +893,25 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(w.error && rp.error && db.writes.length === 0, 'SAL-002: while someone else is signed in, no write or call reaches the database');
     X.S.loginLost = null;
     // SAL-013: no whole-payload rewrite of an order; the four edits send only what they change.
-    t.check(!/from\('saved_quotes'\)\.(update|upsert)/.test(html) && (html.match(/ordPatch\(/g) || []).length >= 5 && /sb\.rpc\('ow_patch_order'/.test(html), 'SAL-013: orders are changed through ow_patch_order with only the keys that change, never a stale payload');
+    // The one direct write left is the fallback for a database without 0165 (a fresh read, then only the keys asked for).
+    const noFallback = html.replace(/\/\* 0165 gave receive_payment[\s\S]*?\}\)\(\);/, '');
+    t.check(!/from\('saved_quotes'\)\.(update|upsert)/.test(noFallback) && (html.match(/ordPatch\(/g) || []).length >= 5 && /sb\.rpc\('ow_patch_order'/.test(html), 'SAL-013: orders are changed through ow_patch_order with only the keys that change, never a stale payload');
+    // Before 0165 is run: a payment with nothing paid over goes through; an order change falls back to a fresh read.
+    {
+      const calls = [];
+      const db2 = fakeDb({ saved_quotes: [{ id: 9, shop_id: SH, status: 'draft', payload: { client: { name: 'Kato' }, note: 'a', payments: [{ id: 1, amount: 5 }] } }] });
+      const rpc0 = db2.rpc;
+      db2.rpc = async (fn, a) => { calls.push([fn, a]); if (fn === 'ow_patch_order' || (fn === 'receive_payment' && 'p_over' in a)) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } }; return { data: { ok: true }, error: null }; };
+      const Y = loadPage(db2); Object.assign(Y.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
+      const pr = await Y.sb.rpc('receive_payment', { p_shop_id: SH, p_customer_id: 'C001', p_amount: 1000, p_method: 'cash', p_picks: null, p_order_id: null, p_over: null });
+      t.check(!pr.error && !('p_over' in calls[0][1]), 'before 0165: a payment with nothing paid over is sent without p_over, and goes through');
+      const po = await Y.sb.rpc('receive_payment', { p_shop_id: SH, p_customer_id: 'C001', p_amount: 1000, p_method: 'cash', p_picks: null, p_order_id: null, p_over: 'change' });
+      t.check(po.error && /0165_sales_money_holds_together\.sql/.test(po.error.message), 'before 0165: a payment over what is owed says which update to run');
+      const pt = await Y.ordPatch(9, { note: 'b' });
+      const row = db2.tables.saved_quotes[0];
+      t.check(pt && row.payload.note === 'b' && row.payload.payments.length === 1 && row.payload.client.name === 'Kato', 'before 0165: an order change reads the order fresh and changes only its own keys');
+      db2.rpc = rpc0;
+    }
     // SAL-014: a transfer between accounts is not money in.
     X.S.data.cashTxns = [{ id: 1, date: '2026-10-05', type: 'receipt', category: 'Sales Revenue', amount: 5000 }, { id: 2, date: '2026-10-05', type: 'receipt', category: 'Account Transfer', amount: 1000, transferId: 9 }, { id: 3, date: '2026-10-05', type: 'receipt', category: 'Other', amount: 700, transferId: 4 }];
     t.check(X.moneyIn('2026-10-01', '2026-10-31').length === 1, 'SAL-014: transfers between accounts are never money in');

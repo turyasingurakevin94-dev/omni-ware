@@ -44228,6 +44228,37 @@ const OW_ENV = (function () {
 const SUPABASE_URL = OW_ENV.url;
 const SUPABASE_ANON_KEY = OW_ENV.anon;
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* 0165 gave receive_payment one more argument (p_over: change or deposit,
+   only when money is paid over what is owed). It is sent only when there is
+   something to say, so a payment still goes through on a database that has
+   not had 0165 yet; a payment over what is owed there says what to run. */
+(function owPaymentArgs(){
+  if (typeof sb.rpc !== 'function') return;
+  const rpc = sb.rpc.bind(sb);
+  sb.rpc = async (fn, args, o) => {
+    if (fn === 'ow_patch_order' && args) {
+      const r = await rpc(fn, args, o);
+      if (!(r && r.error && (r.error.code === 'PGRST202' || /Could not find the function/i.test(String(r.error.message || ''))))) return r;
+      // Before 0165: the order read fresh, only the keys asked for changed, written back.
+      const got = await sb.from('saved_quotes').select('*').eq('shop_id', args.p_shop_id).eq('id', args.p_id).maybeSingle();
+      if (got.error) return { data: null, error: got.error };
+      if (!got.data) return { data: null, error: { message: 'This order is no longer in the books.' } };
+      const payload = { ...(got.data.payload || {}), ...(args.p_patch || {}) }; (args.p_drop || []).forEach(k => { delete payload[k]; });
+      const row = { payload };
+      if (args.p_client_name != null) row.client_name = args.p_client_name;
+      if (args.p_client_phone != null) row.client_phone = args.p_client_phone;
+      if (args.p_status != null) row.status = args.p_status;
+      const up = await sb.from('saved_quotes').update(row).eq('shop_id', args.p_shop_id).eq('id', args.p_id).select('*').maybeSingle();
+      return up.error ? { data: null, error: up.error } : { data: up.data || { ...got.data, ...row }, error: null };
+    }
+    if (fn !== 'receive_payment' || !args) return rpc(fn, args, o);
+    const a = { ...args }; ['p_over', 'p_ref'].forEach(k => { if (a[k] == null) delete a[k]; });
+    const r = await rpc(fn, a, o);
+    if (r && r.error && a.p_over && (r.error.code === 'PGRST202' || /Could not find the function/i.test(String(r.error.message || ''))))
+      return { ...r, error: { ...r.error, message: 'Paying more than is owed needs one server update first: the owner runs supabase/migrations/0165_sales_money_holds_together.sql. Take only what is owed for now.' } };
+    return r;
+  };
+})();
 let currentShopId = null;
 let currentUser = null;
 let currentMemberRole = null;
