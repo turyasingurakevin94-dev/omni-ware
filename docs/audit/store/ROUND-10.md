@@ -2,7 +2,7 @@
 
 **Canvas:** https://claude.ai/artifact/LVsyQEintezbVH3qn4cSVi, row "Audit round 10 · final polish" (bottom, version 116). The boards are the real screens from the harness with each change applied there as a prototype. `store.html` is not changed in Phase A.
 
-**Migration:** **0167** (Store, eleventh), reserved in `docs/decision-rights.md` in this commit. It covers names only (STO-WORD-11).
+**Migration:** **0168** (Store, eleventh; 0167 went to Sales round 2). It covers names only (STO-WORD-11).
 
 **Do not regress (verified by Cowork):**
 - the service worker caches the app only, never the API;
@@ -65,10 +65,10 @@
 
 | ID | Migration / function / policy | Change | Test |
 |---|---|---|---|
-| STO-WORD-11 | **0167** `ow_member_name()` | The last fallback is the member's role word ("The owner", "The manager"…), not "The Store". So names the database writes from now on (counted by, asked by) carry it too. | PG: a member with no name, as owner, store and manager. |
-| STO-WORD-11 | **0167** `store_live()` `members` | Each member carries `role` as well as the name. | PG: `members[*].role` present; no other key added. |
+| STO-WORD-11 | **0168** `ow_member_name()` | The last fallback is the member's role word ("The owner", "The manager"…), not "The Store". So names the database writes from now on (counted by, asked by) carry it too. | PG: a member with no name, as owner, store and manager. |
+| STO-WORD-11 | **0168** `store_live()` `members` | Each member carries `role` as well as the name. | PG: `members[*].role` present; no other key added. |
 | STO-WORD-11 | data, **Kevin's call** (Q1) | `docs/audit/store/round-10-names-check.sql` (read-only) lists every member with no name the apps can show. For each, Kevin either gives the name (set by one `update shop_members set display_name = …` line) or leaves the role word. | — |
-| STO-WORD-11 | 0167 house rules | Safe to run twice; ROLLBACK (0164's `ow_member_name` and 0166's `store_live`); CHECK block; a 0167 row in decision-rights. No role, task or push changes. | `test/decision-rights.test.js` |
+| STO-WORD-11 | 0168 house rules | Safe to run twice; ROLLBACK (0164's `ow_member_name` and 0166's `store_live`); CHECK block; a 0168 row in decision-rights. No role, task or push changes. | `test/decision-rights.test.js` |
 | STO-REL-12 | tests only | Repair the round 5 and no-money fixtures (a payment gets its receipt); the new round 10 scenario. No migration. | as above |
 
 ## Glossary changes

@@ -64374,6 +64374,9 @@ function orderCheckingGate(q){
   if(limit > 0){
     const owes = Math.max(0, Math.round(savedQuoteTotal(q)) - (Number(q.amountPaid)||0));
     if((Number(c.debt)||0) + owes > limit && (!q.creditCheck || q.creditCheck.decision === 'hold')) return 'credit';
+  } else if(c && q.credit && Number(q.credit.pct) > 0 && (!q.creditCheck || q.creditCheck.decision === 'hold')){
+    // 0167 (Sales round 2, SAL-016): on credit with no limit set, the Manager's yes first.
+    return 'credit';
   }
   return null;
 }

@@ -1,4 +1,5 @@
 -- Sales round 1 (data integrity): the one-off correction of the old rows.
+-- SUPERSEDED by round-2-correct.sql (Sales round 2, Kevin's choices). Run that one, not this.
 --
 -- Run ONCE, in the Supabase SQL editor, right after
 -- supabase/migrations/0165_sales_money_holds_together.sql, and only after

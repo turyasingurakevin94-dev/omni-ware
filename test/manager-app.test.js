@@ -395,5 +395,9 @@ const quoteRow = (q) => {
     t.check(/wa\.me\/256772300101\?text=/.test(s) && /Namuli General Stores/.test(s), 'a nudge opens WhatsApp to their own number, written about the order holding them up');
     t.check(!/Cost|margin/i.test(X.viewToday() + X.viewMoney() + X.PAGE.order({ id: 21 })), 'costs and margins are never drawn');
   }
+  // Sales round 2 (0167): credit with no limit set is the Manager's yes; a test payment is never money here.
+  t.check(/const noLimit = !\(limit > 0\) && !!q\.credit && Number\(q\.credit\.pct\) > 0;\s*if \(!over && !old && !noLimit\) return null;/.test(app), 'SAL-016: an order on credit for a customer with no limit set waits for the Manager');
+  t.check(/no credit limit set/.test(app) && /\.map\(rowToTxn\)\.filter\(t => !t\.qa\)/.test(app) && /qa: !!q\.qa/.test(app), 'SAL-016/018: the hold says no limit is set; test payments and orders are in no figure');
+  t.check(/\.map\(rowToTxn\)\.filter\(t => !t\.qa\)/.test(accountsSrc), 'SAL-018: Accounts\' cash book leaves test payments out (they were never cash)');
   process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

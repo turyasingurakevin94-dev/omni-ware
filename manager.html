@@ -1011,7 +1011,7 @@ function rowToQuote(q){
   return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedAt: q.invoiced_at, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
     amountPaid: Number(q.amount_paid) || 0, voided: !!q.voided, date: q.date,
     client: { name: q.client_name || '', phone: q.client_phone || '' }, items: [], savedAt: null, payments: [], customerId: null, debtCharged: 0, charges: [], credit: null,
-    ...(q.payload || {}) };
+    ...(q.payload || {}), qa: !!q.qa };   // SAL-018: a test order (0167), in no figure
 }
 function rowToTrip(r){ return { id: r.id, supplierId: r.supplier_id, status: r.status, assignedWorkerId: r.assigned_worker_id, createdAt: r.created_at, assignedAt: r.assigned_at,
   acceptedAt: r.accepted_at, collectedAt: r.collected_at, confirmedAt: r.confirmed_at, note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], voided: !!r.voided,
@@ -1068,7 +1068,8 @@ async function loadAll(){
       unit: pr.unit || '', packUnit: pr.pack_unit || '', packQty: Number(pr.pack_qty) || 0, outOfStock: !!pr.out_of_stock, tiers: Array.isArray(pr.tiers) ? pr.tiers : [] })),
     stock: stockMap, stockLots: lotMap,
     savedQuotes: quotes.map(rowToQuote),
-    cashTxns: ((cashR && cashR.data) || []).map(rowToTxn),
+    // SAL-018 (0167): a test payment was never money: no figure here counts it.
+    cashTxns: ((cashR && cashR.data) || []).map(rowToTxn).filter(t => !t.qa),
     collectionTrips: trips.map(rowToTrip),
     targets: ((targetsR && targetsR.data) || []).map(r => ({ id: r.id, date: r.date, body: r.body || {}, status: r.status })),
     statementsSent: (stmR && stmR.data) || [],
@@ -1343,7 +1344,7 @@ function custAreaOf(c){ return String(c.location || '').trim(); }
 /* ---- sales.html: the owner's measure of a sales goal (index.html MANAGER_METRICS.sales) ---- */
 function nmInvoiceDate(q){ return String(q.invoicedAt || q.date || '').slice(0, 10); }
 // anInvoicesInRange: completed, invoiced, not voided; dated by invoicedAt, else the quote date.
-function nmIsSale(q){ return q.status === 'completed' && !!q.invoiced && !q.voided; }
+function nmIsSale(q){ return q.status === 'completed' && !!q.invoiced && !q.voided && !q.qa; }
 // anInvoiceTotals(q).sales: goods, less the discount, less what credit notes took back.
 function nmInvoiceSales(q){
   let sales = goodsTotal(q);
@@ -1689,8 +1690,10 @@ function creditCase(q){
   const c = customerById(q.customerId); if (!c) return null;
   const amt = Math.max(0, orderTotal(q) - (Number(q.amountPaid) || 0)), limit = custLimit(c), withIt = c.debt + amt;
   const over = limit > 0 && withIt > limit, age = c.debt > 0 ? custOldestAge(c) : 0, old = age > holdDays();
-  if (!over && !old) return null;
-  return { q, c, amt, limit, withIt, over, old, age, decision: q.creditCheck || null };
+  // SAL-016 (0167): on credit with no limit set, credit is the Manager's yes whatever the amount.
+  const noLimit = !(limit > 0) && !!q.credit && Number(q.credit.pct) > 0;
+  if (!over && !old && !noLimit) return null;
+  return { q, c, amt, limit, withIt, over, old, noLimit, age, decision: q.creditCheck || null };
 }
 function heldOrders(){ return liveOrders().map(creditCase).filter(Boolean).sort((a, b) => createdMs(a.q) - createdMs(b.q)); }
 function heldWaiting(){ return heldOrders().filter(x => !x.decision || x.decision.decision === 'hold'); }
@@ -3319,7 +3322,7 @@ function reasonsFor(s){
   if (s.role === 'sales' && s.userId) {
     const g = personGoal(s.userId);
     if (g && g.ahead < 0 && !g.reached) out.push({ t: `Behind pace by ${short(-g.ahead)}`, s: `${g.days - g.dayN} days left`, m: `${first}, you are ${short(-g.ahead)} behind pace with ${g.days - g.dayN} days left. Let us look at who is due to buy.` });
-    heldWaiting().filter(x => takenBy(x.q) === String(s.userId)).slice(0, 1).forEach(x => out.push({ t: `${x.c.name} waits for a yes`, s: x.over ? 'over their credit limit' : `owing ${x.age} days`, m: `${first}, ${x.c.name}'s order is held: ${x.over ? 'it takes them over their credit limit' : 'they have owed ' + x.age + ' days'}. Can you collect from them first?` }));
+    heldWaiting().filter(x => takenBy(x.q) === String(s.userId)).slice(0, 1).forEach(x => out.push({ t: `${x.c.name} waits for a yes`, s: x.over ? 'over their credit limit' : x.noLimit ? 'no credit limit set' : `owing ${x.age} days`, m: `${first}, ${x.c.name}'s order is held: ${x.over ? 'it takes them over their credit limit' : 'they have owed ' + x.age + ' days'}. Can you collect from them first?` }));
     const owing = debtors().filter(d => over30(d.c) > 0.5 && lastSeller(d.c) && String(lastSeller(d.c).id) === String(s.id)).slice(0, 1);
     owing.forEach(d => out.push({ t: `Chase ${d.c.name}`, s: `${n0(d.c.debt)} · ${d.age} days`, m: `${first}, ${d.c.name} owes ${n0(d.c.debt)} for ${d.age} days. Can you call them today?` }));
   }
@@ -3556,13 +3559,13 @@ PAGE.approvals = () => {
   const head = `<div class="bx-sheethead" style="gap:12px;padding-bottom:46px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:center;gap:8px"><span class="bx-eyebrow">ON HOLD IN CHECKING</span>${holdIsOn() ? '' : '<span class="mx-prop dark">PROPOSED</span>'}</span><span style="font-size:20px;font-weight:700">Needs a yes · <span class="m">${left}</span> left</span></span>${closeBtn()}</div>
       ${list.length ? `<div class="mx-tabs3" role="tablist" aria-label="Held orders" style="grid-template-columns:repeat(${Math.min(4, list.length)},minmax(0,1fr))">${list.slice(0, 4).map((y, k) => { const dd = S.ui.decided[y.q.id];
-        return `<button class="mx-tab3" role="tab" aria-selected="${k === i}" data-act="hpick" data-i="${k}" aria-label="${esc(y.c.name)}: ${y.over ? 'over their credit limit' : 'owing ' + y.age + ' days'}">${custAv(y.c, 26)}<span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:12px;font-weight:600">${short(y.amt)}</span><span class="ell" style="font-size:10px;font-weight:700;color:${dd ? 'var(--mint)' : 'var(--rose)'}">${dd ? dd : y.over ? 'over' : y.age + 'd'}</span></span></button>`; }).join('')}</div>` : ''}</div>`;
+        return `<button class="mx-tab3" role="tab" aria-selected="${k === i}" data-act="hpick" data-i="${k}" aria-label="${esc(y.c.name)}: ${y.over ? 'over their credit limit' : y.noLimit ? 'no credit limit set' : 'owing ' + y.age + ' days'}">${custAv(y.c, 26)}<span style="display:flex;flex-direction:column;min-width:0"><span class="m" style="font-size:12px;font-weight:600">${short(y.amt)}</span><span class="ell" style="font-size:10px;font-weight:700;color:${dd ? 'var(--mint)' : 'var(--rose)'}">${dd ? dd : y.over ? 'over' : y.age + 'd'}</span></span></button>`; }).join('')}</div>` : ''}</div>`;
   if (!x) return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head.replace('padding-bottom:46px', '')}<div class="bx-body">${emptyCard('Nothing waits for a yes', `Orders stop here when a customer would go over their credit limit, or has owed past ${holdDays()} days.`)}</div></div>`;
   const q = x.q, c = x.c, taker = staffByUser(takenBy(q)), times = x.withIt / (x.limit || 1);
   const max = Math.max(x.withIt, x.limit) * 1.06, pc = v => Math.min(100, v / max * 100).toFixed(1) + '%';
   const proms = promisesFor(c).slice(-4), pays = paysInDays(c);
   const oldest = custOpenCharges(c).filter(ch => ch.date)[0], oldAge = oldest ? chargeAge(oldest) : 0;
-  const way = x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + oldAge + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${oldAge}-day bill (<b class="m">${n0(oldest.remaining)}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
+  const way = x.noLimit && !x.over ? `${esc(firstWord(c.name))} has no credit limit set: credit is your yes, or cash first.` : x.over ? `Paying <b class="m">${n0(x.withIt - x.limit)}</b> brings ${esc(firstWord(c.name))} inside the limit${x.old && oldest ? ', and clearing the ' + oldAge + '-day bill fixes the age' : ''}.` : oldest ? `Clear the ${oldAge}-day bill (<b class="m">${n0(oldest.remaining)}</b>) and this order can go.` : 'Collect what is owed and this order can go.';
   const dec = S.ui.decided[q.id];
   const stampCol = { RELEASED: '#0F6B43', ASKED: '#16203C', HELD: '#95530C' }[dec] || '#95530C';
   return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card">${head}
@@ -3835,7 +3838,7 @@ function payHeldHTML(c, a){
   </div>`;
 }
 // A cash line as the phone keeps it (boot, and a row a write hands back).
-function rowToTxn(t){ return { id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null }; }
+function rowToTxn(t){ return { id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '', quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null, qa: !!t.qa }; }
 function payArgs(){ const t = S.stack[S.stack.length - 1]; return t && t.type === 'pay' ? t.args : null; }
 ACT['in:payamt'] = t => {
   const a = payArgs(); if (!a) return;

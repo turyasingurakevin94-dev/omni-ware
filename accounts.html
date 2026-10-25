@@ -1382,7 +1382,7 @@ function rowToQuote(q){
   return { id: q.id, status: q.status || 'draft', invoiced: !!q.invoiced, invoicedAt: q.invoiced_at, invoicedTs: q.invoiced_ts ? new Date(q.invoiced_ts).getTime() : null,
     amountPaid: Number(q.amount_paid) || 0, voided: !!q.voided, date: q.date,
     client: { name: q.client_name || '', phone: q.client_phone || '' }, items: [], savedAt: null, payments: [], customerId: null, debtCharged: 0, charges: [], credit: null,
-    ...(q.payload || {}) };
+    ...(q.payload || {}), qa: !!q.qa };   // SAL-018: a test order (0167), in no figure
 }
 // index.html 45307: dueDate is the day the OWNER said they would pay.
 function rowToBill(pi){
@@ -1391,7 +1391,7 @@ function rowToBill(pi){
 }
 // index.html nextPaymentId: a payment's own number on its invoice (the payment edit still numbers by hand).
 function payNextPaymentId(payments){ return (payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1; }
-function rowToTxn(t){ return { id: t.id, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '',
+function rowToTxn(t){ return { id: t.id, qa: !!t.qa, date: t.date, account: t.account, type: t.type, category: t.category, amount: Number(t.amount) || 0, description: t.description || '', time: t.time || '',
   quoteId: t.quote_id == null ? null : Number(t.quote_id), enteredBy: t.entered_by || null, photo: t.photo || null,
   transferId: t.transfer_id == null ? null : Number(t.transfer_id), coversFrom: t.covers_from || null, coversTo: t.covers_to || null }; }
 // The console's own mappings (index.html 45267-45497), so its statements read these rows as it does.
@@ -1509,7 +1509,8 @@ async function loadAll(){
     payAsks: (payAsks || []).map(rowToPayAsk),
     members: (membersR && membersR.data) || [],
     handoffs: accHandoffs(handoffs), looseCash: accLooseCash(handoffs),
-    cashTxns: txns.map(rowToTxn),
+    // SAL-018 (0167): a test payment was never cash (Kevin, 24 Oct): the cash book leaves it out.
+    cashTxns: txns.map(rowToTxn).filter(t => !t.qa),
     cashDays,
     bills: bills.map(rowToBill),
     statementsSent: stm || [],

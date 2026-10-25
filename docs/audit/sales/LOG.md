@@ -30,3 +30,22 @@ Canvas: https://claude.ai/code/artifact/9db8c76a-d77f-4312-a3c1-442d10005ea7 (ro
 - The Manager listing invoiced orders with lines to price (next Manager round).
 - The other apps' shared sign-in (each app's own round).
 - Boards for the Manager and Accounts over-payment cards.
+
+## Round 2 · Core workflows (24 Oct 2026) · SAL-015, SAL-016, SAL-018 (SAL-017 to round 5)
+
+**What changed**
+- **A count that can't be goes back.** A count under 1 in the order line or the counter sale puts the box back to the line and says "At least 1 — use the bin to remove it". Replaces round 1's red 0.
+- **Credit with no limit set is the Manager's yes.** The order waits in Checking; the Manager is pushed; Release moves it on, Cash first holds it until paid. Within a set limit, nothing changes.
+- **Test records stay out of every figure.** Marked test (a "TEST …" name or a TESTQA ref), kept and listed, never counted: not sales, not money in, not the goal, not the cash book.
+
+**Design decisions**
+- The test mark is set by the server, never by hand on the phone, and nothing is deleted (Kevin, 24 Oct: keep the test data; it was never cash).
+- The reopened data items are one script with Kevin's choices as switches: `round-2-correct.sql`.
+
+**Deploy order**
+1. `supabase/migrations/0165_sales_money_holds_together.sql` (if not yet run), then `0167_sales_credit_and_test_records.sql`
+2. `docs/audit/sales/round-2-correct.sql` (REPORT first, then the run)
+3. The apps: `sales.html`, `manager.html`, `accounts.html`, `index.html`
+
+**Deferred**
+- SAL-017 (cost on the sales phone) to round 5, Roles and privacy.

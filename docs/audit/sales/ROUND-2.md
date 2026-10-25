@@ -31,18 +31,18 @@ Canvas: v130, row "Sales round 2 · core workflows" (boards `R2QtyBack`, `R2Cred
 | SAL-016 | Medium | `sx/7_neworder.js` `nwDockHTML` | A customer with no limit: the pay choice on its own row, "No limit set · {Manager} decides", and the waiting line when Credit is chosen | yes | Board `R2CreditNoLimit`. |
 | SAL-016 | Medium | `sx/7_neworder.js` `nwPlacedNote`, `sx/5b_orders.js` gate chip | "waits in Checking for {Manager} · credit, no limit set"; the chip's hint "No limit set · {Manager} decides" | yes | Placed page and order page as drawn. |
 | SAL-016 | Medium | `manager.html` `creditCase`, its hold card and push line | A no-limit credit order is held; the card says "no limit set" (not "over their credit limit") | yes (one line of copy) | The Manager's queue lists it; Release and Cash first work as for an over-limit hold. |
-| SAL-018 | Medium | `sx/5a_today.js` `moneyIn`, `sx/5c_numbers.js` `nmIsSale` / `nmInvoicesIn`, Today, the money list and order page; the same shared functions in `manager.html` and `accounts.html` (word for word) | A test record (`qa`) is left out of every figure and marked "TEST · not counted" where it is listed | yes | After the flag: October collected and the goal exclude #554, #556, #562, #564, 22655 and 22656. |
+| SAL-018 | Medium | `sx/5a_today.js` `moneyIn`, `sx/5c_numbers.js` `nmIsSale` / `nmInvoicesIn`, Today, the money list and order page; the same shared functions in `manager.html` and `accounts.html` (word for word), and Accounts' cash book totals and daily count (Kevin: not real money) | A test record (`qa`) is left out of every figure and marked "TEST · not counted" where it is listed | yes | After the flag: October collected and the goal exclude #554, #556, #562, #564, 22655 and 22656. |
 
 ## Server / SQL changes planned
 
-Migration **0166** (Sales, sixth; reserved in `docs/decision-rights.md` in the same commit).
+Migration **0167** (Sales, sixth; reserved in `docs/decision-rights.md` in the same commit).
 
 | ID | Migration / function / policy | Change | Test |
 |---|---|---|---|
 | SAL-016 | `ow_gate_reason` | An order on credit (`payload.credit.pct > 0`) for a customer with no limit set waits as `'credit'` until the Manager releases it ("cash first" holds until paid, as for over-limit). Over-limit is unchanged. | SQL as sales: a no-limit credit order can't leave Checking; as manager: release, and it moves; within-limit credit moves at once. |
 | SAL-016 | the `credit.hold` push (0120 trigger) | Body: "{client} would owe {X} · no limit set" when there is no limit. | Same scenario: one push to the Manager, with that body. |
 | SAL-018 | `saved_quotes.qa`, `cash_txns.qa` (boolean, default false); `customers.qa` | A test customer's orders, and their receipts, are marked by a trigger; so is a walk-in order named "TEST …" and a receipt whose ref starts "TESTQA". Nothing is deleted. | Scenario: a TEST customer's order and receipt get `qa`; a normal one doesn't. |
-| Data | `docs/audit/sales/round-1-correct.sql` → **every fix a switch, all off** | Per the brief, nothing corrects itself: #484, the Deposit labels and C953 become switches like the others; new switches for the three paid-over orders (`'change'` or `'deposit'` each) and for marking the test records. | Seeded run: with every switch off nothing changes; each switch on changes only its case; a second run changes nothing. |
+| Data | `docs/audit/sales/round-2-correct.sql` (replaces round 1's) → **every fix a switch** | Per the brief, nothing corrects itself: #484, the Deposit labels and C953 become switches like the others; new switches for the three paid-over orders (`'change'` or `'deposit'` each) and for marking the test records. | Seeded run: with every switch off nothing changes; each switch on changes only its case; a second run changes nothing. |
 
 ## Data corrections for Kevin's approval (nothing runs without it)
 
@@ -85,7 +85,21 @@ Run `docs/audit/sales/round-2-check.sql` on live first; queries 1 and 2 show the
 3. **SAL-017 in round 5:** agreed, or do you want it in this round?
 4. **The corrections:** for each switch above, "yes", "no" or the choice (#446, #264, #301, #360).
 
+## Kevin's answers (24 Oct 2026)
+
+1. **Test records:** yes — they are kept and marked test, out of every figure; from now on a customer or walk-in named "TEST …", and a ref starting "TESTQA", is test automatically.
+2. **Real money?** No — the TESTQA payments were never cash, so Accounts' cash book leaves them out too.
+3. **SAL-017:** round 5, as planned.
+4. **The corrections:** #446 — link it to its own receipt if one is found (otherwise nothing, and a notice); #264, #301, #360 — change was given; every other correction approved. Then "go ahead".
+
 ## Phase B result (filled after implementing)
+
+Migration **0167** (Store took 0166 the same day; `docs/decision-rights.md` has both).
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
+| SAL-015 | Yes | `qtyBack()` (`sx/7_neworder.js`): a count under 1, empty or not a number, typed in the order line's box (`ch:lq`) or the counter sale's (`ch:ctq`), puts the box back to the line's count and shows "At least 1 — use the bin to remove it" for 4 s (`aria-live`), with the bin ringed; the next tap clears it. Round 1's red 0 (`NW.zero`) is gone. | `sales-app`: −2, 0, empty and "abc" each leave box and line at 3 with the note; a real count is taken; the counter does the same. Harness at 360: Enter on −2 → box 3, line 3. |
+| SAL-016 | Yes | 0167 `ow_gate_reason`: an order on credit for a customer with no limit set waits in Checking until the Manager releases it; "cash first" holds it until paid; within a set limit unchanged. The `credit.hold` push says "· no limit set". Sales: `creditHoldFor(c, amt, q)` knows `noLimit`; the dock puts Cash / "Credit · No limit set · {Manager} decides" on its own row and, chosen, "It waits in Checking until {Manager} says yes"; the route card and the placed page say it waits; the order's Credit chip says "no limit set · {Manager} decides". Manager: `creditCase` holds it, the hold reads "no credit limit set" and "credit is your yes, or cash first". The console's own gate copy too. | DB scenario as sales / manager (no-limit credit held and pushed; release moves it; cash first holds until paid; within limit and cash go straight on; over limit as before). `sales-app`, `manager-app`, `console-checking-gate`. Harness at 360: board `R2CreditNoLimit`. |
+| SAL-018 | Yes | 0167: `qa` on customers, orders and receipts, marked by trigger from a "TEST …" name (capitals) or a TESTQA ref; nothing deleted. Sales: `moneyIn`, `ordersOn`, `nmIsSale` (the goal), Today's month, "who owes" leave test records out; the day's money lists them struck through "TEST · NOT COUNTED"; a test order says "In no figure"; Today says once that test records are not counted. Manager: the same `nmIsSale`, test payments out of its figures. Accounts: test payments out of the cash book (Kevin: never cash). | DB scenario (TEST Claude QA and a TEST walk-in marked, "Testimony Hardware" not; their receipts marked; a TESTQA ref marked). `sales-app`, `manager-app`. Harness: day money and the test order. |
+| SAL-010, -011, -012, -013, SAL-005 data, SAL-018 data | Script ready | `docs/audit/sales/round-2-correct.sql` (replaces round 1's, which never ran): Kevin's choices set — #446 linked to Baker's own 5,000 receipt of 5 Oct when exactly one is found; #226 copy removed; #484 linked to 22096; #264, #301, #360 settled as change given (`ow_settle_over`, as the owner); C953 moved; Ken, Hajat, Sadat and Sam resynced (only them); C925's two copies off; early payments labelled Deposit; test records marked. | Seeded copy, every case: all fixed as chosen, paid = payments everywhere, `ow_balance_check` empty, the cash book's net for #264 still 100,000 (125,000 in, 25,000 given back); a second run wrote nothing. |
+| SAL-017 | Round 5 | Kevin agreed. | — |
