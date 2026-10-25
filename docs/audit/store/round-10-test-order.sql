@@ -10,11 +10,12 @@
 with shop as (
   select m.shop_id from shop_members m where m.role = 'store' order by m.shop_id limit 1
 ), item as (
-  select s.product_id, s.variant_idx, coalesce(p.name, s.product_id) as name,
-         coalesce((select r.unit from prices r where r.shop_id = s.shop_id and r.product_id = s.product_id and r.unit is not null limit 1), 'pc') as unit
+  -- Live stock rows keep the item in `key` ("product id" or "product id::variant"); product_id can be empty.
+  select split_part(s.key, '::', 1) as product_id, nullif(split_part(s.key, '::', 2), '') as variant_idx, p.name,
+         coalesce((select r.unit from prices r where r.shop_id = s.shop_id and r.product_id = split_part(s.key, '::', 1) and r.unit is not null limit 1), 'pc') as unit
     from stock s join shop on shop.shop_id = s.shop_id
-    left join products p on p.shop_id = s.shop_id and p.id = s.product_id
-   where s.qty >= 5
+    join products p on p.shop_id = s.shop_id and p.id = split_part(s.key, '::', 1)
+   where s.qty >= 5 and nullif(trim(p.name), '') is not null
    order by s.qty desc
    limit 1
 )
