@@ -217,3 +217,33 @@ Deferred:
 - The database scenarios in `store-money-db` and `manager-decisions-db` (round 5).
 - Alerts' render time (11–25 ms) was not worked on this round.
 
+
+## Round 10 · Final polish (25 Oct 2026) · STO-WORD-11, STO-REL-12, STO-UI-11, STO-A11Y-04, NAV-08, NAV-09, STO-UI-12 · migration 0168
+
+The plan is in `docs/audit/store/ROUND-10.md`. Kevin added four items during Phase A: the In page, shorter headers, On the road on one row, and the light band at the top of pushed pages.
+
+Fixed:
+- **No screen says "Someone" for a person.** A login with no name is named by its role ("The owner", "The manager"), with a person mark in the avatar; with no role, "A colleague". The snapshot's members carry their role (`store_live`, 0168). To pack's "Someone's on it" is now "Packing now".
+- **Two tabs on one order are proven safe:** the second pack and the second hand-over are refused with "Someone else just changed this order", on a real database. The round 5 and no-money scenarios run again.
+- **Alerts and You are on the type scale.** In Report a loss, the whole box is the field.
+- **A finished pack card dims its contents, never its stamp.** Empty text is ink-2.
+- **Back and the title stay at the top** of With Ruth, Alerts, On the road and In.
+- **Waiting to send has Remove**, after a confirm, for each kind. **A reload opens the same list or detail page**; flows carry on from Today.
+- **A check-in line shows the name, then its tags.** The service worker keeps one cache.
+- **The In page is an arrivals board:** the next trip at the gate with one "Check it in", "Coming in" with Buying / Coming / Not started, and the day's check-ins on a line.
+- **To pack, On the road and the count pages have one-row headers** (110–124 px, were 170–220).
+- **On the road shows each stop on one row**, with "Delivered" beside it.
+- **The light band is gone:** the strip behind the clock is repainted once a page has slid in, and no room is kept for the clock when Android keeps it in its own bar.
+
+Now part of the language:
+- **A person with no name is named by their role, never "Someone".** "Someone else just did this" is the one sentence that keeps the word.
+- **Remove** drops what was never sent, after "Remove it from this phone?" · Keep it / Remove.
+- **Coming in** (goods into the yard) vs **On the road** (orders out to customers).
+- **The compact header:** Back, the key figure and the title in one row, then a slim bar or track.
+- **One row per list item:** a button sits beside its row, never wrapped under it.
+- **The reload rule:** list and detail pages come back after a reload; flows reopen from Today with their drafts.
+
+Deferred:
+- `store.handover` push text (round 6).
+- The database scenarios in `store-money-db` and `manager-decisions-db` (round 5; `store-money-db` still fails the same 8 checks).
+- The owner's display name (Kevin's call; until then the role covers it) and the live TEST order (scripts ready).

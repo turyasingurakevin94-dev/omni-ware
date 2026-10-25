@@ -13,16 +13,16 @@
    To take this worker off every phone, publish a store-sw.js whose activate
    step unregisters itself. */
 const PAGE = '/store.html';
-const PAGE_CACHE = 'ow-store-page-v1';
-const LIB_CACHE = 'ow-store-lib-v1';
+// One cache for the page and its libraries (round 10, STO-UI-12); activate deletes every
+// other ow-store-* cache, the two v1 caches included.
+const CACHE = 'ow-store-v2';
 let ready = false;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(PAGE_CACHE).then((c) => c.add(new Request(PAGE, { cache: 'no-cache' }))).catch(() => {}).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((c) => c.add(new Request(PAGE, { cache: 'no-cache' }))).catch(() => {}).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (event) => event.waitUntil((async () => {
-  const keep = [PAGE_CACHE, LIB_CACHE];
-  for (const k of await caches.keys()) if (k.startsWith('ow-store-') && !keep.includes(k)) await caches.delete(k);
+  for (const k of await caches.keys()) if (k.startsWith('ow-store-') && k !== CACHE) await caches.delete(k);
   await self.clients.claim();
 })()));
 
@@ -50,7 +50,7 @@ async function tell() {
 
 async function page(event) {
   ready = false;
-  const cache = await caches.open(PAGE_CACHE);
+  const cache = await caches.open(CACHE);
   const had = await cache.match(PAGE);
   // Read the kept copy before it is handed to the page, which uses up its body.
   const oldText = had ? had.clone().text() : Promise.resolve(null);
@@ -67,7 +67,7 @@ async function page(event) {
 }
 
 async function lib(req) {
-  const cache = await caches.open(LIB_CACHE);
+  const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);

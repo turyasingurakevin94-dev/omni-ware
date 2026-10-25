@@ -98,10 +98,44 @@
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
-| STO-WORD-11 | | | |
-| STO-REL-12 | | | |
-| STO-UI-11 | | | |
-| STO-A11Y-04 | | | |
-| NAV-08 | | | |
-| NAV-09 | | | |
-| STO-UI-12 | | | |
+| STO-WORD-11 | Yes | **0168** `store_live()`: each member carries `role`, and `name` is null when the shop has none to show. `ow_member_name()` is **not** changed: six Store functions test for its "The Store" marker, so the role fallback is done on the phone instead of in the plan's SQL. `store.html`: `ROLE_WORD` / `ROLE_NAMES`; `personName()` falls back to the member's role, then "A colleague"; `initials()` + `iniHTML()` draw a person mark for a role name; `firstWord()` keeps "The owner" whole; `managerName()` skips role words; the members keep `role` in `applyFresh` and `refreshLive`. Two more "Someone"s found while checking: To pack's "Someone's on it" is now **"Packing now"** (heading and legend; canvas v122), and the Aisle header's "someone counted it" uses "The yard" like the other count lines. | `test/store-round10.test.js`: `personName` on a login with no name → "The owner"; handle → role; no role → "A colleague"; no `'Someone'` in the code. Harness `r10names.js` on every page: 0 "Someone". `r10desk.js` at 360 and 1280 on In, To pack, On the road, Alerts, With Ruth, You, Find: 0 "Someone". |
+| STO-REL-12 | Yes | `test/fixtures/store-round5-scenario.sql` and `store-no-money-scenario.sql`: each payment gets its receipt row, so the scenarios run again. New `test/fixtures/store-round10-scenario.sql` (two tabs, the yard's write limits, members with roles). `docs/audit/store/round-10-test-order.sql` + `round-10-test-order-cleanup.sql` for the live check. | On Postgres 16, all migrations, 0168 twice, then the scenario (output below). `store-round1/3/5/9/10`, `store-no-money`, `store-asks` pass with `OW_PG`. |
+| STO-UI-11 | Yes | `PAGE.alerts` and `PAGE.me`: every font size on the `--t-*` scale. `PAGE.report` `#rp_find`: `align-self:stretch;height:100%`, so the whole box is the field. | No raw px font size in either page (test). Harness: Report a loss field fills its 52 px box. |
+| STO-A11Y-04 | Yes | `PAGE.pack`: a card off to the side gets `pk-dim`, which dims its contents and never the `pk-keep` stamp (white ground). `.st-empty` in `--ink2`. | Test pins the CSS; `r9contrast.js`: 0 small text under 4.5:1 on slip, On the road, Return, Alerts. |
+| NAV-08 | Yes | New `stickBar(title, sub)`: With Ruth ("N waiting · N answered today"), Alerts ("N new for you"), On the road ("N out · N delivered today") and In ("N at the gate · N coming in"). Agent pickup was in the plan, but it is a fixed keypad screen that never scrolls, so it needs no bar. | `r10nav.js`: scrolled past the header, Back and the title are at the top and Back works. |
+| NAV-09 | Yes | **Remove:** each Waiting-to-send row has a 44 px bin (`data-act="rmwait"`), then `SHEET.rmwait` ("Remove it from this phone?" · Keep it / Remove), then `ACT.rmwaityes` drops a kept report or return (`outboxDel`), picks (`S.pickDraft`), a check-in (`RC_KEY`) or a count (`CT_KEY`). **Reload:** `saveView()` / `restoreView()` keep the list or detail page (`VIEW_PAGES`) in `sessionStorage`; flows reopen from Today with their drafts. | Harness: Keep it keeps the item; Remove removes it and it stays gone after a reload. A reload on Aisle → item opens the same item, and Back goes to the aisle. A reload during Pack opens Today with the draft. |
+| STO-UI-12 | Yes | `nameParts()` falls back to the product variant that ends the name, otherwise splits at " / " (a trailing size word goes to the tags); the check-in line uses `prodTT()`. `store-sw.js`: one cache `ow-store-v2`; activate deletes every other `ow-store-*` cache. | Test: "Black Screws 8* / Coarse / 3/4"" → name "Black Screws", tags "8* / Coarse / 3/4""; the SW has no second cache name. |
+| Kevin · In | Yes | `PAGE.movein` rebuilt to TodayIn / InQuiet: the stage dots in the header, the next trip at the gate (wait ring, ticked suppliers, the orders waiting on it, "Check it in"), "Coming in" with Buying / Coming / Not started, "Checked in today" on a day line, and a calm "Nothing at the gate" card. `inStage()` / `inFor()`: never a bare "For" and never "buying" after every stop is done. A trip the supplier brings reads "Shafik · to the yard", not "The supplier brings it" (canvas v121). "At the gate · next" and "Nothing at the gate" are level-2 headings. | Test: `inStage`, `inFor`. Harness `r10in.js` busy and quiet at 360 match the boards (header 82 px); `r10desk.js` at 1280. |
+| Kevin · headers | Yes | New `compactHead()`: To pack 110 px, On the road 122 px, the count status pages 124 px (were 170–220). | `r10heads.js` at 360; `r8big.js` Big text walk: nothing clipped. |
+| Kevin · On the road | Yes | One row per stop: the client (2 lines at most), then "#0036 · Kira", then "Delivered" with the camera beside it. No wrap. | `r10road.js` at 360: every stop is one row and the button is inside it. |
+| Kevin · the light band | Yes | Head script: `paintBar()` judges the header by `offsetTop - scrollTop` and repaints on `animationend`; `insets()` marks its own guess, and removes it when Android keeps the clock in its own bar (page shorter than the screen), never a value Capacitor measured. | `r10strip.js`: after a page slides in, the strip is transparent (the old build: light). On Kevin's phone this needs the live check. |
+
+### STO-REL-12 on Postgres 16 (`test/fixtures/store-round10-scenario.sql`)
+
+```
+A packs|done
+B packs|40001 Someone else just changed this order.
+A hands over|completed
+B hands over|40001 Someone else just changed this order.
+w|own role|0 rows
+w|manager role|0 rows
+w|order insert|refused 42501
+w|order update|0 rows
+w|customer update|0 rows
+w|write_off_stock|refused 42501
+w|accept_stock_count|refused 42501
+w|decide_invoice_ask|refused 42501
+w|accept_trip_difference|refused 42501
+w|own ask|written
+member|manager|Ruth Nakato
+member|owner|∅
+member|store|Musa Kiggundu
+row|completed|Peter|1
+```
+
+### Checks run
+
+- `npm test`: exit 0.
+- `node test/store-round10.test.js` with `OW_PG`: all passed (static checks and the database scenario).
+- Old tests updated to round 10's markup: round 4 (`afterRender` ends with `saveView`), round 6 (On the road's pills "delivered" / "collected", collected still a part of delivered), round 8 (level-2 headings counted however they are styled; On the road on one row), store-app (fix 6 still holds: no "the supplier").
+- `store-money-db` with `OW_PG`: 8 failures, the same 8 on the commit before this round (deferred since round 5, see LOG).

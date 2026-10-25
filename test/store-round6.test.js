@@ -30,10 +30,11 @@ const code = store.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
   const S = { user: { id: 'u-musa' }, data: {
     staff: [{ id: 'W1', name: 'Musa Kiggundu', userId: 'u-musa' }, { id: 'W5', name: 'turyasingurakevin94', userId: 'u-denis' }, { id: 'W2', name: 'joyn7', userId: 'u-joy' }, { id: 'W3', name: 'Ssali', userId: null }],
     members: [{ userId: 'u-denis', name: 'turyasingurakevin94' }, { userId: 'u-denis', name: 'Denis Okello' }, { userId: 'u-joy', name: 'joyn7' }, { userId: 'u-grace', name: 'Grace Akello' }, { userId: 'u-x', name: 'The Store' }] } };
-  const P = compileScope([fn('looksHandle'), fn('personName')], { S, myName: () => 'Musa Kiggundu' }, ['personName']);
+  const P = compileScope([fn('looksHandle'), fn('personName')], { S, myName: () => 'Musa Kiggundu', ROLE_WORD: { owner: 'The owner', store: 'The store' } }, ['personName']);
   t.check(P.personName({ staffId: 'W5' }) === 'Denis Okello', 'a staff record named like a login gives way to the name the person chose');
   t.check(P.personName({ userId: 'u-grace' }) === 'Grace Akello', 'a login with no staff record is named by the name they chose');
-  t.check(P.personName({ staffId: 'W2' }) === 'Someone' && P.personName({ userId: 'u-x', stored: 'joy@mukasa.ug' }) === 'Someone', 'a handle or an email is never shown: "Someone"');
+  // Round 10 (STO-WORD-11): the last fallback is the member's role, else "A colleague"; never "Someone".
+t.check(P.personName({ staffId: 'W2' }) === 'A colleague' && P.personName({ userId: 'u-x', stored: 'joy@mukasa.ug' }) === 'A colleague', 'a handle or an email is never shown: "A colleague"');
   t.check(P.personName({ staffId: 'W3' }) === 'Ssali' && P.personName({ userId: 'u-gone', stored: 'Peter Sserwadda' }) === 'Peter Sserwadda', 'a driver with no login, and a name stored with an old row, still read as written');
   t.check(P.personName({ staffId: 'W1' }) === 'Musa Kiggundu', 'the person holding the phone is their own name');
   t.check(/function staffName\(id\)\{ if \(!id\) return ''; return personName\(\{ staffId: id \}\); \}/.test(store) && /function nameEveryone\(\)\{/.test(store)
@@ -52,7 +53,7 @@ t.check(/hold \? \(loadAskOf\(q\) \? 'with ' \+ managerName\(\) : NOT_PAID\)/.te
 t.check(/function counts\(\)\{ return memo\('counts', \(\) => \{ const done = doneToday\(\); return \{ toPack: packQueue\(\)\.length, waitingGoods: waitingOnGoods\(\)\.length, delivered: done\.length, collected: done\.filter\(orderIsPickup\)\.length,/.test(store), 'one counts(), shared');
 t.check(/const N = counts\(\), done = N\.delivered, road = N\.road, packed = N\.packed, pack = N\.toPack;/.test(store) && /tile\('tpack', CV\.pack, pack, 'to pack', false, null, N\.waitingGoods \? `\+\$\{N\.waitingGoods\} waiting` : ''\)/.test(store)
   && !/packQueue\(\)\.length \+ waitingOnGoods\(\)\.length/.test(store), 'Today\'s "to pack" is ready only, with "+N waiting" beside it');
-t.check(/\[done\.length, 'delivered today'\], \[collected\.length, 'of them collected'\]/.test(store), 'On the road: delivered includes collected');
+t.check(/const collected = done\.filter\(q => orderIsPickup\(q\)\);/.test(store) && /\[done\.length, 'delivered'\], \[collected\.length, 'collected'\]/.test(store), 'On the road: delivered includes collected (round 10: the compact header\'s three pills)');
 // WORD-05 / WORD-06
 t.check(/\(D\(\)\.counts \|\| \[\]\)\.filter\(c => c\.status === 'sent' \|\| mine\(c\.countedBy\)\)/.test(store) && /\(D\(\)\.returns \|\| \[\]\)\.filter\(r => r\.status === 'sent' \|\| mine\(r\.by\)\)/.test(store)
   && /\(D\(\)\.reports \|\| \[\]\)\.filter\(r => r\.status === 'sent' \|\| mine\(r\.by\)\)/.test(store) && /who = yours \? 'You' : firstWord\(personName/.test(store), 'With Ruth lists everyone\'s asks, with who sent each');

@@ -34,7 +34,7 @@ t.check(/function navArm\(\)\{/.test(store) && /history\.pushState\(\{ ow: cur \
 t.check(/if \(window\.stBack\(\)\) \{ navArm\(\); return; \}/.test(store) && /openSheet\('leaveapp'\)/.test(store), 'Back is re-armed after each step; on Today it asks first');
 t.check(/const NATIVE_BACK = /.test(store) && /if \(NATIVE_BACK \|\| S\.navLeaving \|\| S\.navIgnore \|\| \(S\.sheet && S\.sheet\.type === 'leaveapp'\)\) return;/.test(store), 'the APK keeps its own back button');
 t.check(/SHEET\.leaveapp = /.test(store) && /Leave Omni-ware\?/.test(store) && /still waiting to send · they go when you come back/.test(store) && /Nothing is lost · Today opens where you are/.test(store) && /data-act="leaveapp"[^>]*>Leave<\/button>/.test(store), 'Leave Omni-ware? with Stay / Leave, and what is still waiting');
-t.check(/function closeSheet\(silent\)\{ S\.sheet = null; if \(!silent\) renderSheet\(\); navArm\(\); \}/.test(store) && /bindSlides\(\); navArm\(\);( titleHeading\(\);)? \}/.test(store), 'closing a sheet or drawing a screen puts the entry back');
+t.check(/function closeSheet\(silent\)\{ S\.sheet = null; if \(!silent\) renderSheet\(\); navArm\(\); \}/.test(store) && /bindSlides\(\); navArm\(\);( titleHeading\(\);)?( if \(S\.started\) saveView\(\);)? \}/.test(store), 'closing a sheet or drawing a screen puts the entry back');
 
 // NAV-04 / NAV-05
 t.check(/function orderLookOnly\(q\)\{ return !!q && \(q\.status === 'draft' \|\| orderBuying\(q\) \|\| \(takenBySomeoneElse\(q\) && !canCorrect\(\)\)\); \}/.test(store)

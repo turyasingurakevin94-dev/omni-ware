@@ -27,9 +27,11 @@ insert into suppliers(shop_id,id,name) values ('11111111-1111-1111-1111-11111111
 insert into customers(shop_id,id,name) values ('11111111-1111-1111-1111-111111111111','C1','Kato Construction');
 insert into agents(shop_id,id,name,payment_term) values ('11111111-1111-1111-1111-111111111111','A1','Aisha Namutebi','prepay');
 insert into app_settings(shop_id,presets) values ('11111111-1111-1111-1111-111111111111','{"categories":["Hinges"],"bays":4,"priceTiers":[1,2],"deliveryFee":5000,"markup":20}');
+-- 0165: a payment carries its receipt (a cash row of the same amount, for the same order), and paid is their sum.
+insert into cash_txns(id,shop_id,type,amount,quote_id,date) overriding system value values (9576,'11111111-1111-1111-1111-111111111111','receipt',100,576,current_date);
 insert into saved_quotes(id,shop_id,client_name,status,amount_paid,payload) overriding system value values
- (576,'11111111-1111-1111-1111-111111111111','Kato Construction','preparing',0,
-  '{"customerId":"C1","pickingStatus":"done","bay":2,"payments":[{"amount":100,"method":"cash"}],"cost":5000,"agentCommission":30,
+ (576,'11111111-1111-1111-1111-111111111111','Kato Construction','preparing',100,
+  '{"customerId":"C1","pickingStatus":"done","bay":2,"payments":[{"amount":100,"method":"cash","cashTxnId":"9576"}],"cost":5000,"agentCommission":30,
     "creditAsk":{"at":1729000000000,"by":"00000000-0000-0000-0000-00000000000e","byName":"Musa","answer":{"decision":"credit","at":1729000100000}},
     "creditCheck":{"decision":"release","at":1729000100000,"amount":96000},
     "creditNotes":[{"askId":"x","lines":[{"idx":0,"qty":1,"amount":5250}],"total":5250}],
