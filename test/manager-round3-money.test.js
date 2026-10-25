@@ -52,7 +52,9 @@ function page(){
     const { X } = page();
     t.check([0, 7, 8, 21, 22, 30, 31, 90].map(X.ageBand).join() === '0,0,1,1,2,2,3,3', 'ages fall into under 7 · 8–21 · 22–30 · over 30');
     const b = X.debtBands(X.debtors());
-    t.check(b[0] === 1432000 + 2448000 && b[1] === 746000 + 560000 && b[2] === 615000 && b[3] === 878000, 'each bill counted by its own age: ' + b.join(', '));
+    // Manager round 1 (MGR-DATA-02): what is owed comes from the bills, so the delivered bills still due (#2383 1,701,980,
+    // #2382 300,000, #2385 1,076,000) count too: Kyaligonza, Ggaba and Nansana's stored balances don't hold them.
+    t.check(b[0] === 1432000 + 2448000 + 1701980 + 300000 + 1076000 && b[1] === 746000 + 560000 && b[2] === 615000 && b[3] === 878000, 'each bill counted by its own age: ' + b.join(', '));
     t.check(X.ageBand(X.holdDays()) === 1, 'the 21-day hold line closes the 8–21 band');
   }
   /* 2. Money, option B */
@@ -63,7 +65,7 @@ function page(){
     X.S.view = 'today'; X.ACT.chase();
     t.check(X.S.ui.money === 'over30' && X.S.ui.mside === 'out', 'Chase opens To collect on the over-30 band');
     const out = X.viewMoney();
-    t.check(/>878,000<\/span>/.test(out) && /<span class="m" style="color:var\(--ink\)">1<\/span> of <span class="m">5<\/span> customers/.test(out), 'the total follows the filter: 878,000 · 1 of 5 customers');
+    t.check(/>878,000<\/span>/.test(out) && /<span class="m" style="color:var\(--ink\)">1<\/span> of <span class="m">6<\/span> customers/.test(out), 'the total follows the filter: 878,000 · 1 of 6 customers (Nansana owes #2385 from the bills)');
     t.check(/Mukono Roofing/.test(out) && !/Ggaba Stores/.test(out) && /over 30 days/.test(out) && /credit holds at <span class="m">21<\/span> days/.test(out), 'only the over-30 debtor is listed; bands say days and the hold line is drawn');
     t.check((out.match(/class="mx-track"/g) || []).length === 1 && /class="tick" style="left:52.5%"/.test(out), 'each debtor row has its own age track with the hold tick at 21 of 40 days');
   }
