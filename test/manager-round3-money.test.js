@@ -98,9 +98,9 @@ function page(){
     const y = iso(NOW - DAY), ids = X.deliveredOn(y).map(q => q.id);
     t.check(ids.includes(2383) && ids.includes(2384) && !ids.includes(2380), 'a day holds its own deliveries');
     const d = X.PAGE.delivered({ range: 'day', day: y });
-    t.check(/Q-2383/.test(d) && !/Q-2380/.test(d) && /OWES/.test(d) && /PAID/.test(d), 'Pick a day lists that day’s orders, paid or owed');
+    t.check(/#2383/.test(d) && !/#2380/.test(d) && /OWES/.test(d) && /PAID/.test(d), 'Pick a day lists that day’s orders, paid or owed');
     const w = X.PAGE.delivered({ range: 'week' });
-    t.check(/Q-2389/.test(w) && /Q-2380/.test(w) && w.indexOf('Q-2380') < w.indexOf('Q-2389'), 'This week runs newest first');
+    t.check(/#2389/.test(w) && /#2380/.test(w) && w.indexOf('#2380') < w.indexOf('#2389'), 'This week runs newest first');
     t.check(/data-act="delday" data-v="/.test(w) && /aria-label="Paid /.test(w), 'tappable day bars and the paid/owed split');
     t.check(/data-act="push" data-p="delivered"/.test(X.viewOrders()), 'the Orders tab opens it');
   }

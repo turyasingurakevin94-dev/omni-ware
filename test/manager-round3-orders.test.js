@@ -82,11 +82,11 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     const kato = X.obSearch('kato');
     t.check(kato.custs.length === 1 && kato.orders.some(o => o.id === 1104) && kato.orders.some(o => o.id === 2427), 'a name finds the customer and every order of theirs, an old paid one too');
     t.check(kato.orders[kato.orders.length - 1].id === 1104 || kato.orders.findIndex(o => o.id === 1104) > kato.orders.findIndex(o => o.id === 2427), 'open orders come before old ones');
-    t.check(X.obSearch('Q-2418').idHit && X.obSearch('Q-2418').orders[0].id === 2418 && X.obSearch('2418').orders[0].id === 2418, 'an order number goes straight to it');
+    t.check(X.obSearch('Q-2418').idHit && X.obSearch('Q-2418').orders[0].id === 2418 && X.obSearch('2418').orders[0].id === 2418 && X.obSearch('#2418').idHit.id === 2418, 'an order number goes straight to it');
     t.check(X.obSearch('0700333').custs.map(c => c.id).join() === 'C2', 'part of a phone number finds the customer');
     t.check(X.obSearch('zzz').orders.length === 0, 'nothing matches nothing');
     X.S.ui.srchQ = 'kato'; const r = X.obResultsHTML();
-    t.check(/Q-1104/.test(r) && /Customers · /.test(r) && /<mark/.test(r), 'typing draws the matches, highlighted');
+    t.check(/#1104/.test(r) && /Customers · /.test(r) && /<mark/.test(r), 'typing draws the matches, highlighted');
     X.S.ui.srchQ = ''; t.check(/Jump to/.test(X.obResultsHTML()), 'empty: recent and jump-to');
     t.check(/data-act="obsearch"/.test(X.viewToday()) && /data-act="obsearch"/.test(X.viewOrders()), 'search opens from Today and Orders');
     t.check(/PAGE|undefined|NaN/.test(X.PAGE.search({}).replace(/data-[a-z]+="[^"]*"/g, '')) === false, 'the search page draws');
@@ -103,7 +103,7 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     t.check(new RegExp(`<span class="m">${ny.total}</span>&nbsp;waiting`).test(tv), 'the waiting count is the rows drawn');
     t.check(/>Nudge<\/button>/.test(X.navHTML()), 'the centre button is labelled Nudge');
     t.check(/staff in/.test(tv) && /data-p="teamrules"/.test(tv), 'staff in today; the goal ring opens goals and limits');
-    t.check(/Q-2418 · /.test(tv), 'rows carry the order number and amount');
+    t.check(/#2418 · /.test(tv), 'rows carry the order number and amount');
   }
   /* 3. OrderAct */
   {
@@ -146,7 +146,7 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
   {
     const data = fixture(), db = fakeDb(tablesFor(data)), X = page(db, data);
     const pg = X.PAGE.dup({ a: 2426, b: 2427 });
-    t.check(/POSSIBLE DUPLICATE/.test(pg) && /Void <span class="m">Q-2427/.test(pg) && /Keep both/.test(pg) && /Both taken by Brian/.test(pg), 'side by side: the newer one picked, keep or void');
+    t.check(/POSSIBLE DUPLICATE/.test(pg) && /Void <span class="m">#2427/.test(pg) && /Keep both/.test(pg) && /Both taken by Brian/.test(pg), 'side by side: the newer one picked, keep or void');
     X.ACT.dupvoid({ dataset: { a: '2426', b: '2427' } });
     t.check(/VOIDED/.test(X.PAGE.dup({ a: 2426, b: 2427 })) && /Undo/.test(X.PAGE.dup({ a: 2426, b: 2427 })) && !db.tables.saved_quotes.find(q => q.id === 2427).voided, 'void: stamped, nothing written while Undo stands');
     await X.ACT.dupundo();

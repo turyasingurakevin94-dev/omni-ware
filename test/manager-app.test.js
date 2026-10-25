@@ -362,7 +362,7 @@ const quoteRow = (q) => {
   // 18. The month's team sales are invoiced-only, and the card says so.
   {
     const X = page(fakeDb({}), fixture());
-    t.check(/Team sales invoiced · /.test(X.viewToday()) && / invoiced<\/span>/.test(X.viewTeam()), 'the team\'s month is labelled "invoiced" on Today and Team');
+    t.check(/Sales invoiced · /.test(X.viewToday()) && / invoiced<\/span>/.test(X.viewTeam()), 'the team\'s month is labelled "invoiced" on Today and Team');
   }
   // 5. every screen draws
   for (const n of [0, 1, 3, 5]) {
