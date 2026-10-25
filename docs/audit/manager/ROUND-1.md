@@ -28,23 +28,23 @@ Verified fine in the brief (do not regress): the team goal pace, Money in today 
 
 ## Design changes (canvas)
 
-All boards at 360 px, before and after, every state that applies. (Filled in with the board names when the canvas is published.)
+Canvas version 44, 15 boards in the row "Manager round 1 · data integrity" (each titled `Manager · <Screen> · <State>`), all at 360 px, before and after, every state that applies. New reusable components, each captioned on its board: opening balance line, below-cost flag, legend chip, money choice (void), given-away answer, date warning, look-alike pair, ended pill.
 
 | ID | Board(s) | Before → After | States drawn | Tokens/components used | New component? |
 |---|---|---|---|---|---|
-| MGR-DATA-02 | `Manager · Debtor · Doesn't add up`, `Manager · To collect · Computed` | Before: Ken "Owes 685,000" over bills of 1,034,000; Eddy missing from To collect. After: one figure from the bills ("Owes 1,034,000"); "Doesn't add up · Accounts checks it" with the two bars and "349,000 apart" until corrected; Sadat's 290,000 as an **Opening balance** line; Eddy listed at 540,000 and counted by the over-30 chase card | agrees, doesn't add up, asked (sent), corrected, opening balance | Sales `R1AddsUp` card (reused), debtor bill list, To collect row | No (reuses Sales) |
-| MGR-DATA-04 | `Manager · Order · Below cost`, `Manager · Margins · Below cost` | Before: #0193, #0321, #0554 look normal. After: red "below cost" flag and the loss on the line; Margins "Sold below cost · 3 lines" group, each line opens its order | flagged, none | line flag chip, Margins group | No |
-| MGR-DATA-05 | `Manager · Today · Sold today` | Before: "Sold today · 1 order · 0". After: "1 order · to price" | none sold, all priced, mixed, all to price | Today's day card | No |
-| MGR-DATA-06 | `Manager · Today · Goal legend` | Before: "Daphine · not linked". After: sellers' chips, then a tappable "No seller · 11.2M" chip opening the invoices with no seller by month; a seller with no login reads "Daphine · no login" with "Ask Kevin to link her login" | all linked, no-seller, seller with no login, asked | legend chips, sheet | No |
-| MGR-WORD-01 | `Manager · Order numbers` | `Q-0543` → `#0543` on rows, order header, search, pushes | — | — | No |
-| MGR-DATA-07 | `Manager · Void · Money on it` | Before: void with 500,000 paid drops it silently. After: void asks **Refund** (cash out: account, amount) or **Keep as deposit** (green "Deposit", used first on the next bill); confirm disabled until chosen | choose, refund, deposit, sending, done + Undo 10 s, error | Void board, deposit chip (glossary) | No |
-| MGR-DATA-08 | `Manager · Today & Margins · One sales figure` | Before: 12,980,897 vs 12,576,569. After: both "Sales invoiced · October · goods only"; Margins splits "costed 12,576,569 · no cost recorded 404,328" on a bar | — | figure + split bar | No |
-| MGR-DATA-09 | `Manager · Invoice & Margins · Given away` | Before: 7 lines at 0 billed silently. After: each 0 line asks "Free · given away" + reason, or "To price"; refused without; order shows "Given away · reason"; Margins "Given away" group at cost | ask, chosen, refused, shown | line sheet, chips | No |
-| MGR-DATA-11 | `Manager · Take payment · Before the order` | A date before the order's date warns "Before the order (28 Aug)" and records it as **Deposit**; the order lists "Deposit · 22 Aug" | normal, warned, recorded | pay screen, amber note | No |
-| MGR-DATA-12 | `Manager · Margins · Default markup` | Before: "25%" while 0% is saved. After: the saved value, and when pricing falls back, says so | saved value, none saved | Margins head | No |
-| MGR-DATA-13 | `Manager · Customers · Look alike` | A list to approve: merge (pick the name that stays; bills and balance move; confirm), not the same, fix the phone; customer edit's phone "10 digits, starting 07" | list, merge confirm, merged + Undo, not same, phone error | list rows, confirm sheet | No |
-| MGR-DATA-14 | `Manager · Goals · Ended` | "Open" → "Ended · reached / missed · result" | reached, missed | goal row | No |
-| MGR-DATA-15 | `Manager · Invoice · Very small` | "Only 567 · check it": Bill it / Fix the order | warned | confirm sheet | No |
+| MGR-DATA-02 | `M1-Debtor-AddsUp`, `M1-Debtor-Opening`, `M1-ToCollect-FromBills` | Before: Ken "Owes 685,000" over bills of 1,034,000; Eddy missing from To collect. After: one figure from the bills ("Owes 1,034,000"); "Doesn't add up · Accounts checks it" with the two bars and "349,000 apart" until corrected; Sadat's 290,000 as an **Opening balance** line; Eddy listed at 540,000 and counted by the over-30 chase card | agrees, doesn't add up, asked (sent), corrected, opening balance | Sales `R1AddsUp` card (reused), debtor bill list, To collect row | No (reuses Sales) |
+| MGR-DATA-04 | `M1-BelowCost` | Before: #0193, #0321, #0554 look normal. After: red "below cost" flag and the loss on the line; Margins "Sold below cost · 3 lines" group, each line opens its order | flagged, none | line flag chip, Margins group | No |
+| MGR-DATA-05 | `M1-Today-SoldToday` | Before: "Sold today · 1 order · 0". After: "1 order · to price" | none sold, all priced, mixed, all to price | Today's day card | No |
+| MGR-DATA-06 | `M1-Today-GoalLegend` | Before: "Daphine · not linked". After: sellers' chips, then a tappable "No seller · 11.2M" chip opening the invoices with no seller by month; a seller with no login reads "Daphine · no login" with "Ask Kevin to link her login" | all linked, no-seller, seller with no login, asked | legend chips, sheet | No |
+| MGR-WORD-01 | `M1-OrderNumbers` | `Q-0543` → `#0543` on rows, order header, search, pushes | — | — | No |
+| MGR-DATA-07 | `M1-Void-Money` | Before: void with 500,000 paid drops it silently. After: void asks **Refund** (cash out: account, amount) or **Keep as deposit** (green "Deposit", used first on the next bill); confirm disabled until chosen | choose, refund, deposit, sending, done + Undo 10 s, error | Void board, deposit chip (glossary) | No |
+| MGR-DATA-08 | `M1-SalesFigure` | Before: 12,980,897 vs 12,576,569. After: both "Sales invoiced · October · goods only"; Margins splits "costed 12,576,569 · no cost recorded 404,328" on a bar | — | figure + split bar | No |
+| MGR-DATA-09 | `M1-GivenAway` | Before: 7 lines at 0 billed silently. After: each 0 line asks "Free · given away" + reason, or "To price"; refused without; order shows "Given away · reason"; Margins "Given away" group at cost | ask, chosen, refused, shown | line sheet, chips | No |
+| MGR-DATA-11 | `M1-PayDate` | A date before the order's date warns "Before the order (28 Aug)" and records it as **Deposit**; the order lists "Deposit · 22 Aug" | normal, warned, recorded | pay screen, amber note | No |
+| MGR-DATA-12 | `M1-DefaultMarkup` | Before: "25%" while 0% is saved. After: the saved value, and when pricing falls back, says so | saved value, none saved | Margins head | No |
+| MGR-DATA-13 | `M1-LookAlike` | A list to approve: merge (pick the name that stays; bills and balance move; confirm), not the same, fix the phone; customer edit's phone "10 digits, starting 07" | list, merge confirm, merged + Undo, not same, phone error | list rows, confirm sheet | No |
+| MGR-DATA-14 | `M1-GoalsEnded` | "Open" → "Ended · reached / missed · result" | reached, missed | goal row | No |
+| MGR-DATA-15 | `M1-SmallInvoice` | "Only 567 · check it": Bill it / Fix the order | warned | confirm sheet | No |
 | MGR-DATA-01, -03, -10 | — | Logic and server only; their visible effect is a correct figure | — | — | — |
 
 ## Code changes planned
@@ -97,7 +97,7 @@ One migration, **0169** (Manager round 1), safe to run twice, with ROLLBACK and 
 | #0166 Muyanja (7,040,000 paid) and #0148 Adinan (500,000 paid) | — | Refund or keep as deposit, for each |
 | 16804, 16805, 21597 (fractions) | Round to whole shillings; the 1-shilling adjustments listed in the report | OK |
 | #0266, #0273, #0291, #0338, #0345, #0348 | Labelled "Deposit" (Sales round 2 `fix_labels` does this) | — |
-| Esther ×2; Sarah - Dorcus / Dorcus' Customer; Henry Munene's phone | Listed in the app for Kevin to merge or fix | Each, in the app |
+| Esther ×2; Sarah - Dorcus / Dorcus' Customer; Henry Munene's phone | Listed in the app to merge or fix (drawn as the Manager's, who edits customers per decision-rights; the brief says Kevin approves) | Who merges: the Manager, or Kevin? |
 | Targets 35, 46 | Closed with their result | OK |
 
 ## Glossary changes
