@@ -178,8 +178,8 @@ const invite = read('supabase/functions/invite-worker/index.ts');
   eq(all.length, 9, 'the owner\'s save is untouched');
 
   const sync = extractFunction(src, 'syncDataToServer', 'index.html');
-  t.check(/addSettingsDiffOp\(ops, shopId, rows\.settings\);\s*salesDeskFilterOps\(ops\);\s*if\(!ops\.length\) return true;/.test(sync),
-    'the filter runs after every op is built and before any is sent');
+  t.check(/addSettingsDiffOp\(ops, shopId, rows\.settings\);\s*salesDeskFilterOps\(ops\);\s*mergeStockOps\(ops, shopId, rows\);\s*if\(!ops\.length\) return true;/.test(sync),
+    'the filter runs after every op is built and before any is sent (then stock and its lots fold into one call, 0169)');
 
   const settingsOp = extractFunction(src, 'addSettingsDiffOp', 'index.html');
   t.check(/delete c\.quote_draft; if\(c\.presets\) delete c\.presets\.idCounters;/.test(settingsOp)

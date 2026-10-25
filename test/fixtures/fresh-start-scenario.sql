@@ -54,7 +54,10 @@ insert into fixed_assets(shop_id, name, cost, acquired_on, method, life_months, 
 insert into rival_prices(shop_id, product_id, rival, price, seen_on) values ('aaaaaaaa-0000-0000-0000-000000000001','P001','Nakawa Hardware',58000,'2026-10-01');
 insert into wa_numbers(shop_id, phone_number_id) values ('aaaaaaaa-0000-0000-0000-000000000001','pn-1');
 -- What stays behind.
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id, key, product_id, qty) values ('aaaaaaaa-0000-0000-0000-000000000001','P001','P001',140);
+insert into stock_lots(shop_id, key, qty, cost) values ('aaaaaaaa-0000-0000-0000-000000000001','P001',140,50000);
+commit;
 insert into cash_txns(shop_id, date, account, type, category, amount) values ('aaaaaaaa-0000-0000-0000-000000000001',current_date,'cash','receipt','Sales',100000);
 insert into saved_quotes(shop_id, client_name, status, invoiced, voided, payload) values ('aaaaaaaa-0000-0000-0000-000000000001','Kato','draft',false,false,'{}');
 insert into purchase_invoices(shop_id, date, payload) values ('aaaaaaaa-0000-0000-0000-000000000001',current_date,'{"supplierId":"S001"}');

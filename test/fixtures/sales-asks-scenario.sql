@@ -49,8 +49,10 @@ $$;
 grant execute on function _to to authenticated;
 
 
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id, key, qty) values ('11111111-1111-1111-1111-111111111111','P1',50);
 insert into stock_lots(shop_id, key, qty, cost) values ('11111111-1111-1111-1111-111111111111','P1',50,30000);
+commit;
 insert into cash_txns(id, shop_id, date, account, type, category, amount, description, quote_id) values
  (1,'11111111-1111-1111-1111-111111111111', current_date, 'momo', 'receipt', 'Debt Payment', 420000, 'Payment — Kato', null);
 

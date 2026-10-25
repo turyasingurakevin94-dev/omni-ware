@@ -46341,6 +46341,52 @@ function addStockLotsDiffOps(ops, shopId, stockLotsMap){
   });
 }
 
+/* STOCK AND ITS LOTS GO UP TOGETHER (0169, Manager round 1). The database
+   now refuses, at commit, any write that leaves a key's lots not adding up
+   to its stock -- and the two ops above are separate requests, run side by
+   side, so each would be refused on its own. They are folded here into one
+   call, replace_stock_and_lots: for every key either op would touch, its
+   stock row and exactly its lots, in one transaction, as the signed-in
+   member (0083's owner-only writes still decide). A shop that has not
+   applied 0169 finds the function missing and runs the two ops as before. */
+function mergeStockOps(ops, shopId, rows){
+  const mine = ops.filter(op=> op.key === 'stock' || op.key === 'stockLots');
+  if(!mine.length) return;
+  const prevStock = lastSynced.stock || {}, prevLots = lastSynced.stockLots || {};
+  const lotsMap = rows.stockLots || {};
+  const keys = new Set();
+  if(mine.some(op=> op.key === 'stock' && !op.deletes))
+    rows.stock.forEach(r=>{ if(JSON.stringify(r) !== JSON.stringify(prevStock[String(r.key)])) keys.add(String(r.key)); });
+  if(mine.some(op=> op.key === 'stock' && op.deletes)){
+    const have = new Set(rows.stock.map(r=> String(r.key)));
+    Object.keys(prevStock).forEach(k=>{ if(!have.has(k)) keys.add(k); });
+  }
+  if(mine.some(op=> op.key === 'stockLots')){
+    Object.keys(lotsMap).forEach(k=>{ if(JSON.stringify(lotsMap[k]) !== JSON.stringify(prevLots[k])) keys.add(k); });
+    Object.keys(prevLots).forEach(k=>{ if(!Object.prototype.hasOwnProperty.call(lotsMap, k)) keys.add(k); });
+  }
+  if(!keys.size) return;
+  const keyList = [...keys];
+  const stockRows = rows.stock.filter(r=> keys.has(String(r.key))).map(r=> ({ key: String(r.key), qty: r.qty }));
+  const lotRows = [];
+  keyList.forEach(k=> (lotsMap[k] || []).forEach(l=> lotRows.push({ key: k, qty: l.qty, cost: l.cost, consign: l.consign || null })));
+  let fellBack = false;
+  for(let i = ops.length - 1; i >= 0; i--) if(mine.includes(ops[i])) ops.splice(i, 1);
+  ops.push({
+    key: 'stock', table: 'stock',
+    run: async ()=>{
+      const one = await sb.rpc('replace_stock_and_lots', { p_shop_id: shopId, p_keys: keyList, p_stock: stockRows, p_lots: lotRows });
+      if(!one.error || !dbFunctionMissing(one.error)) return one;
+      // Before 0169: the two ops as they were, each committed when it lands.
+      fellBack = true;
+      const res = await Promise.all(mine.map(op=> op.run()));
+      res.forEach((r, i)=>{ if(!(r && r.error)) mine[i].commit(); });
+      return res.find(r=> r && r.error) || { error: null };
+    },
+    commit: ()=>{ if(!fellBack) mine.forEach(op=> op.commit()); }
+  });
+}
+
 // app_settings is a singleton row per shop; compare everything except
 // updated_at (which is always freshly generated) so an unrelated change
 // doesn't cause a spurious upsert just because the timestamp differs.
@@ -46541,6 +46587,7 @@ async function syncDataToServer(){
   addDiffOps(ops, 'statementsSent', 'statements_sent', 'id', shopId, rows.statementsSent);
   addSettingsDiffOp(ops, shopId, rows.settings);
   if(typeof salesDeskFilterOps === 'function') salesDeskFilterOps(ops);
+  mergeStockOps(ops, shopId, rows);
 
   if(!ops.length) return true;
 
