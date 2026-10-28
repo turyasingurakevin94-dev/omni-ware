@@ -532,7 +532,8 @@ with m(no, migration, kind, name, col) as (values
   ('0176', '0176_void_and_credit_note_one_write', 'function', 'raise_credit_note', ''),
   ('0177', '0177_one_cancel', 'function', 'ow_settle_void_money', ''),
   ('0177', '0177_one_cancel', 'function', 'cancel_order', ''),
-  ('0178', '0178_yard_workers_load_and_deliver', 'none', '', '')
+  ('0178', '0178_yard_workers_load_and_deliver', 'none', '', ''),
+  ('0179', '0179_yard_workers_keep_out_of_the_books', 'function', 'ow_yard_worker', '')
 ), found as (
   select no, migration, kind, name, col,
          case kind

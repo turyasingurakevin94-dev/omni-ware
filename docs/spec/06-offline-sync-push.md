@@ -2,7 +2,7 @@
 
 What this covers: what each phone keeps when there is no signal, how it gets fresh data, how a write survives bad signal, how the app itself stays current, and every push — who gets it, what sends it, and whether the app opens it.
 Date: 2026-10-28
-Status: written from the apps and the database — open questions for Kevin in §7
+Status: **decided — Kevin took every recommended answer in §7 on 2026-10-28**
 
 ---
 
@@ -156,9 +156,9 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 
 ---
 
-## 7. Open questions for Kevin
+## 7. Decided (Kevin, 2026-10-28)
 
-| # | The apps differ on | Recommended (the shared core builds it once) |
+| # | The apps differ on | Decided (the shared core builds it once) |
 |---|---|---|
 | Q1 | Where the copy lives: IndexedDB (Store) or localStorage (five), which fails silently when full | **IndexedDB for every app**, one store per login |
 | Q2 | Opening on bad signal: Store draws the copy first; the others wait for the login | **Draw the copy first**, then check |
@@ -170,7 +170,7 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | Q8 | A tapped push with no signal opens nothing (all but Owner) | **Open from the copy**, refresh behind |
 | Q9 | 8 pushes reach an app with no page for them (§6b ✗) | **Each push has its page** in the app it goes to; a test pairs them |
 | Q10 | `notify-stock-count` pushes the owner, though decision-rights says the owner gets a log, never a queue | **Manager only**; the owner sees it in the log |
-| Q11 | Manager's "Kept on this phone" for an invoice is held only in memory: it is lost if the app closes (`manager.html:5070`, `5115`) | an old-app bug: fix now (urgent, one place) or let the new Manager fix it |
+| Q11 | Manager's "Kept on this phone" for an invoice is held only in memory: it is lost if the app closes (`manager.html:5070`, `5115`) | **The new Manager fixes it**, through the one outbox (Q4); the old app is frozen |
 | Q12 | Sign-out keeps the copy in Store, Buyer and Accounts | **Sign-out clears the copy** (a shared phone in the yard) |
 | Q13 | The app checks for a new page every 3 min (Manager) or 30 min (the rest) | **30 min**, and on resume |
 | Q14 | Only Store's web version opens with no signal | **A service worker for every app**, as Store's |

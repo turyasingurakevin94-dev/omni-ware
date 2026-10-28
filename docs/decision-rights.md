@@ -148,9 +148,9 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Accept a stock take, which corrects the stock | `stock.correct` | Manager | Store | owner's log | yes |
 | **Report damaged, lost or stolen stock** | `stock.report` | Store | — | Manager | yes |
 | **Write off damaged, lost or stolen stock** | `stock.writeoff` | Manager | Store | owner's log | yes |
-| Pick and pack an order | `order.pick` | Store | — | — | yes |
-| Load the truck, choose the driver | `order.load` | Store | — | — | yes |
-| Deliver, with proof | `order.deliver` | Store | — | — | yes |
+| Pick and pack an order | `order.pick` | Store, Staff | — | — | yes |
+| Load the truck, choose the driver | `order.load` | Store, Staff | — | — | yes |
+| Deliver, with proof | `order.deliver` | Store, Staff | — | — | yes |
 | Lock a road route to a place; **name the delivery directions on the load map** | `route.lock` | Store | — | — | yes |
 
 ### Buying
@@ -597,6 +597,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0176 | The rebuild, sixth backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q6, 28 Oct 2026): a void and a credit note are each one write — `void_invoice` (invoice.void: the why, the void with its money and supplier bills through `void_with_money`, what the invoice took back on the shelf, the ask answered) and `raise_credit_note` (credit_note.raise: lines priced as sold and never past what is left to credit, numbered from `row:credit_note`, goods back, the ask answered, the owner's log), each all or nothing. The old Manager app keeps its own path. No role, task or push changes |
 | 0177 | The rebuild, seventh backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q7 and Q8, 28 Oct 2026): one Cancel — `order.cancel` granted to the Manager; `cancel_order` writes `status = 'cancelled'` and the void in one write with `cancelledAt`, `cancelledByName` and why, settles money paid (refund or deposit, `ow_settle_void_money`), and pushes `order.cancelled` to the yard (`order.pick`) when it was packing or out, and to the salesperson; refused once invoiced or delivered, when bought-in goods came in, or on a live buying trip. 0173's stage rule knows 'cancelled'; 0122's void guard logs it as a cancel. Sales' ask for a cancel is not built |
 | 0178 | Urgent, after the rebuild's fixes went live (28 Oct 2026): a yard worker loads and delivers again — 0173's stage rule also lets a `store` or `staff` login make the yard's three moves (Packing to On the road, Packing or On the road to Delivered), as `store_patch_order` (0164) lets them; the rule is written out whole with 0177's Cancel. No role, task or push changes |
+| 0179 | Yard workers keep out of the books (docs/spec/05-data.md §8 Q1, Q2, 28 Oct 2026): a `staff` (yard worker) login is refused the 21 money and customer tables the worker app never reads ("not a yard worker", `ow_yard_worker`); `staff` holds the yard's tasks `order.pick`, `order.load`, `order.deliver` |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

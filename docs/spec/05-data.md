@@ -2,7 +2,7 @@
 
 What this covers: every table the apps and the server use, what each holds, who may read and write it, what lives inside JSON fields, the actions only the server may take, and how rows are numbered.
 Date: 2026-10-28
-Status: written from the database — open questions for Kevin in §8
+Status: **decided — Kevin took every recommended answer in §8 on 2026-10-28**; Q1 and Q2 built in 0179
 
 ---
 
@@ -269,12 +269,12 @@ Each is one function, one transaction, with the task it checks. The new apps cal
 
 ---
 
-## 8. Open questions for Kevin
+## 8. Decided (Kevin, 2026-10-28)
 
-| # | Found | Recommended | Evidence |
+| # | Found | Decided | Evidence |
 |---|---|---|---|
-| Q1 | A **staff** (yard worker) login reads every table a member can — the cash book, customers' debts, the decision log's money. Only a **Store** login is kept to its own functions (`ow_yard_only` names `store` alone). | Treat `staff` as yard too: the same "not yard" narrowing | `0164` `ow_yard_only`; checked 2026-10-28: a staff login read `cash_txns` and `customers`, a Store login read none |
-| Q2 | The `staff` role holds **no tasks**: what workers may do is written into the Store's functions by role name (0164), which is how 0173 refused them until 0178 | Give `staff` its tasks in `decision-rights.md` (`order.pick`, `order.load`, `order.deliver`) so the rule lives once | `0164:309`, `0178` |
-| Q3 | Any member (not yard) may write an order row directly; 14 triggers keep it sound | The new apps write orders only through server functions; close direct writes for each role when its old app retires | §2 |
-| Q4 | All settings are one JSON blob, read under two names in places (`presetDefaultMarkup` vs `presets.defaultMarkup`, 02 §3) and with no list of who may change each | List each setting once: its name, its default, and whose it is (owner's policy or the Manager's) | `app_settings.presets`; 02 Q-list |
-| Q5 | Everything about an order is in one JSON field: lines, payments, credit notes, history | Keep it (no data move on the live books); its shape is fixed in 01 §4 and checked by the triggers | §4 |
+| Q1 | A **staff** (yard worker) login reads every table a member can — the cash book, customers' debts, the decision log's money. Only a **Store** login is kept to its own functions (`ow_yard_only` names `store` alone). | **Yes**: a staff login is refused the 21 money and customer tables the worker app never reads (0179). An order's prices and payments, which the worker app reads in `saved_quotes`, close when it reads through a stripped function, as the Store does | `0164` `ow_yard_only`; checked 2026-10-28: a staff login read `cash_txns` and `customers`, a Store login read none |
+| Q2 | The `staff` role holds **no tasks**: what workers may do is written into the Store's functions by role name (0164), which is how 0173 refused them until 0178 | **Yes**: `staff` holds `order.pick`, `order.load`, `order.deliver` (0179, `decision-rights.md`) | `0164:309`, `0178` |
+| Q3 | Any member (not yard) may write an order row directly; 14 triggers keep it sound | **Yes**: the new apps write orders only through server functions; direct writes close for each role when its old app retires | §2 |
+| Q4 | All settings are one JSON blob, read under two names in places (`presetDefaultMarkup` vs `presets.defaultMarkup`, 02 §3) and with no list of who may change each | **Yes**: each setting listed once, with its name, its default and whose it is | `app_settings.presets`; 02 Q-list |
+| Q5 | Everything about an order is in one JSON field: lines, payments, credit notes, history | **Keep it** (no data move on the live books); its shape is fixed in 01 §4 and checked by the triggers | §4 |

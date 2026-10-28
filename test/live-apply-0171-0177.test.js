@@ -120,7 +120,8 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
 {
   const { on } = makeDb('ow_live_apply_no153', '0170', ['0153']);
   const which = on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql'));
-  const missing = (which.stdout || '').split('\n').filter((l) => /\|missing\|/.test(l)).map((l) => l.slice(0, 4));
+  // Later migrations (0178 on) are not this script's: these databases stop at 0170.
+  const missing = (which.stdout || '').split('\n').filter((l) => /\|missing\|/.test(l)).map((l) => l.slice(0, 4)).filter((n) => n <= '0177');
   t.check(JSON.stringify(missing) === '["0153","0171","0173","0174","0175","0176","0177"]', `which-migrations.sql names 0153 and the new ones as missing (${missing.join(', ')})`);
   const s1 = run(on, 1);
   t.check(s1.status !== 0 && /Not run: 0153 not in this database yet/.test(s1.stderr), 'step 1 stops and names 0153');
@@ -139,7 +140,7 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const cut = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-c', 'drop function ow_push_claim(int)', '-c', 'alter table push_outbox drop column claimed_at, drop column delivered']);
   t.check(cut.status === 0, `a database shaped like live (${errs(cut)[0] || 'ok'})`);
   const report = () => (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n')
-    .filter((l) => /\|(missing|partly)\|/.test(l)).map((l) => l.slice(0, 4) + ':' + l.split('|')[1]);
+    .filter((l) => /\|(missing|partly)\|/.test(l) && l.slice(0, 4) <= '0177').map((l) => l.slice(0, 4) + ':' + l.split('|')[1]);
   t.check(JSON.stringify(report()) === JSON.stringify(['0120:partly', '0153:missing', '0158:missing', '0171:missing', '0173:missing', '0174:missing', '0175:missing', '0176:missing', '0177:missing']),
     `which-migrations.sql reads it as live did (${report().join(', ')})`);
   const cu = read('docs/live/catch-up-before-0171.sql');

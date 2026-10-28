@@ -31,7 +31,8 @@ const t = createReporter('decision rights');
 const doc = read('docs/decision-rights.md');
 const claude = read('CLAUDE.md');
 
-const ROLES = ['sales', 'buyer', 'store', 'manager', 'accounts', 'sourcing'];
+// staff: a yard worker's login (worker.html, the Store app), holding the yard's tasks (0179).
+const ROLES = ['sales', 'buyer', 'store', 'manager', 'accounts', 'sourcing', 'staff'];
 
 /* ---- the table, as the file writes it ---- */
 function docRows() {
