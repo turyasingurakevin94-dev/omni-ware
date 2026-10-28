@@ -9,6 +9,27 @@ Actions live in the phone apps. The Owner app holds only the owner's governance 
 
 If a day-to-day job has no role in that file, ask the owner which role takes it; never default it to the owner. `test/decision-rights.test.js` fails if the migrations and that file disagree.
 
+# What we are building
+
+One wholesale hardware shop in Uganda, run from phones. An order's journey is **receive → buy → yard → deliver → get paid**, and each role app is one view of that journey (Sales takes it, Sourcing and the Buyer find and buy it, the Store packs and sends it, Accounts books the money, the Manager decides, the Owner watches). The people are in a yard in daylight, often on bad signal, some read little; every figure is real money. Great means **correct books, fast, obvious, and calm** — not more features.
+
+# The rebuild (standing goal) — read `docs/rebuild.md`
+
+The apps are being moved, step by step, from a few huge files to small files with every shared rule in one place. Before touching app code, read `docs/rebuild.md` and follow it:
+- **Leave it smaller.** No source file over 1,000 lines (aim 200–500). A screen you change moves into its own file once its app is on the build step. `test/file-size.test.js` guards this; its ceilings only go down.
+- **One rule, one place.** Never copy a function into another app. If two copies disagree, list it under "Decisions waiting for Kevin" in `docs/rebuild.md`; never pick silently.
+- **Built files are not edited.** Once an app is on the build step, edit `src/`, never the `GENERATED` `<app>.html`.
+- **No behaviour change by accident.** A move changes nothing the shop sees. Update the Log in `docs/rebuild.md` with each step.
+
+# Keep it reasonable — coach Kevin
+
+Kevin wants a great app, not a big one. Before building anything, and in plain words:
+- **Say the smallest version** that solves the real problem, and build that unless Kevin picks bigger.
+- **Name the cost**: how many screens, files, migrations and tests it adds, and what it makes harder later.
+- **Push back, with one sentence of why**, when a request adds a second way to do something that already exists, a new screen where a state on an existing one would do, a setting nobody will change, or work for a role or case the shop does not have yet.
+- **Prefer removing to adding.** When something can be deleted or merged, say so.
+- **Finish before starting.** Point out open work (blocked sessions, red tests, unanswered decisions) before taking on new work.
+
 # Permanent UI/UX Design Preference — Visual-First Communication
 
 Remember and apply the following design preference across all my projects, interfaces, dashboards, pages, and future UI/UX work.
