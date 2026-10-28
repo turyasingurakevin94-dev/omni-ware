@@ -4510,7 +4510,7 @@ ACT['slide:handin'] = async () => {
     }
     if (!ready.length) { S.busy = false; S.ui.handing = null; toast('That trip has already been handed in'); await refreshLive(); return; }
     step(0, ready.length);
-    // Stops not reached are off the trip first, so the one push counts only what came back.
+    // Stops not reached are off the round first, so the one push counts only what came back.
     for (const x of left) await dropStop(x, 'Left for a later trip', ready[ready.length - 1].t).catch(e => toast('Handed in · ' + supplierShort(x.supplierId) + ' is still on the trip — ' + (e.message || e)));
     // What was paid at each stop, and from whose money, goes on the trip (0151):
     // Accounts reads it, never this phone.
@@ -5198,7 +5198,7 @@ ACT.nonewait = async t => {
     const res = await changeOrder(id, q => {
       if (q.status !== 'draft') return false;
       const it = (q.items || []).find(x => String(x.lineId) === String(lineId)); if (!it || it.supplierId) return false;
-      if (undo) delete it.clientWaits; else it.clientWaits = { at: Date.now(), ...(find ? { via: 'sourcing' } : {}), ...(S.user ? { by: S.user.id } : {}) };
+      if (undo) delete it.clientWaits; else { it.clientWaits = { at: Date.now(), ...(S.user ? { by: S.user.id } : {}) }; if (find) it.clientWaits.via = 'sourcing'; }
       return { moved: !undo && orderDraftReady(q) && orderLeaveDraft(q) };
     });
     S.busy = false;
