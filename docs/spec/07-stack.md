@@ -96,7 +96,7 @@ The build check (§6) fails a page that goes over budget.
 1. Built on a branch; seen at 360 px in every state (the canvas states) with Playwright, against **staging**.
 2. Merged to `main` as **`/next/<role>.html`** — the old page untouched. On the live host it uses the live books, so it is tried by the role's own people for a day or two, with the old app beside it.
 3. The switch: `<role>.html` becomes the built page (one commit). Installed phones pick it up through their live update. `next/` goes.
-4. The old page stays one release as `/old/<role>.html`, then goes.
+4. The old page stays one release as `/old/<role>.html`, then goes: the **retire list** in `docs/rebuild.md` dates it, and `test/retire-list.test.js` fails once it is late, if an old-app test is left behind, or if anything in `src/` reads an old page.
 
 Vercel builds no preview for `claude/**` branches (`vercel.json`), so step 1 runs from the session's own server, which the host rule sends to staging.
 

@@ -99,6 +99,30 @@ phones when this branch is merged to main.
 Everything else decided there is a front-end rule: the shared core builds it
 once, and the old apps are not changed for it (they are frozen).
 
+## Retire list
+
+Each role's old page goes once its new app has taken over, so the repo never
+keeps two versions of an app. `test/retire-list.test.js` reads this table:
+
+- once a role is **switched**, its page at the root must be the built one
+  (first line `GENERATED from src/`), and the date it must be gone by must be
+  filled in, at most 30 days after the switch;
+- after that date, the old copy (`old/<role>.html`) must not be in the repo;
+- after the switch, a test that still reads the role's page must say it reads
+  the built page (a comment `reads the built <role>.html`); the old app's tests
+  go with the old app;
+- nothing in `src/` reads an old page.
+
+Fill in **Switched** and **Old gone by** in the commit that switches the role.
+
+| Role | Page | Switched | Old gone by |
+|---|---|---|---|
+| Store | `store.html` | — | — |
+| Sales | `sales.html` | — | — |
+| Buyer | `buyer.html` | — | — |
+| Manager | `manager.html` | — | — |
+| Accounts | `accounts.html` | — | — |
+
 ## Baseline (2026-10-28)
 
 Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
@@ -126,3 +150,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — **Live.** In the live SQL editor: the catch-up (0120's missing pieces, 0153, 0158), the void guard put back to 0122's, then `apply-0171-0177.sql`; step 4 said ok seven times. One order was in Checking, #0556, a test record, held for credit. Still to do: tell the Manager what changes, and merge this branch so the Manager app's credit-note fix reaches the phones.
 - **2026-10-28** — The three old failing database tests fixed: the shared-foundation scenario gives its moved orders their suppliers' yes (0174) and pays its counter sale with a receipt (0165); the Manager's-decisions and money-at-the-gate scenarios write as the Store app does, through `receive_trip` and `store_patch_order` (0164). The last one showed a live regression from fix 3: `store_patch_order` lets a `staff` (yard worker) login load and deliver, and 0173 refused them. `0178` lets the yard's own moves through for `store` and `staff` logins, as 0164 does. Pasted on live the same day (checked: the rule names `staff`).
 - **2026-10-28** — Phase 2: chapter 07, the stack, proposed. Measured first: the phones ship one page and update by swapping it, Vercel has no build step, CI tests install nothing and Node 22 runs TypeScript as it is, today's pages are 192–266 KB compressed. Proposed esbuild over Vite (the dev server is for a terminal nobody here has), and committed built pages so nothing that ships changes. Four questions for Kevin.
+- **2026-10-28** — Retire list added, with `test/retire-list.test.js`: an old page goes within 30 days of its switch, its tests with it, and new code never reads it — so v3 never sits beside v2.
