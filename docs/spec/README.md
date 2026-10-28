@@ -22,7 +22,7 @@ can be built cleanly without losing a rule the shop depends on.
 | 04 | Screens | Every screen per role, from the approved canvases | to do |
 | 05 | Data | Tables, what is in an order's `payload`, who can read and write what | to do |
 | 06 | Offline, sync and pushes | Bad signal, the queue, the phone's copy of the books, every push | to do |
-| 07 | The stack | Tools for the new front end — **Kevin approves** | to do |
+| 07 | [The stack](07-stack.md) | Tools for the new front end — **Kevin approves** | proposed 2026-10-28 |
 | 08 | What we leave behind | Features the new apps do not carry over — **Kevin decides each** | to do |
 
 Words: [`docs/audit/GLOSSARY.md`](../audit/GLOSSARY.md) — one word per idea, shared by every app.

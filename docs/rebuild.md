@@ -48,7 +48,9 @@ is clearly better.** Kevin set this goal on 2026-10-28.
       journey, money, roles, screens, data, offline and pushes. Kevin reviews
       each chapter.
 - [ ] **2. The stack.** One page in the spec (chapter 07); Kevin approves.
-      Leaning: TypeScript, Vite, Preact; Supabase and Capacitor stay.
+      Proposed 2026-10-28 (`docs/spec/07-stack.md`): TypeScript, Preact with
+      signals, esbuild (not Vite), one built page per role committed as today;
+      Supabase and Capacitor stay. Waiting on Kevin's four answers (§7).
 - [ ] **3. The shared core.** Money (one rule each, Kevin's answers below),
       data and offline sync, log in, the screen parts. The old money tests are
       ported as its checks.
@@ -123,3 +125,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Live's void guard is 0122's word for word, with Windows line ends (`\r\n`): pasted from Windows. 0174 and 0177 change functions in place by matching their lines, so they now read a function without its carriage returns; step 1 of the live script does too. Tested with live's guard and every script pasted with `\r\n`.
 - **2026-10-28** — **Live.** In the live SQL editor: the catch-up (0120's missing pieces, 0153, 0158), the void guard put back to 0122's, then `apply-0171-0177.sql`; step 4 said ok seven times. One order was in Checking, #0556, a test record, held for credit. Still to do: tell the Manager what changes, and merge this branch so the Manager app's credit-note fix reaches the phones.
 - **2026-10-28** — The three old failing database tests fixed: the shared-foundation scenario gives its moved orders their suppliers' yes (0174) and pays its counter sale with a receipt (0165); the Manager's-decisions and money-at-the-gate scenarios write as the Store app does, through `receive_trip` and `store_patch_order` (0164). The last one showed a live regression from fix 3: `store_patch_order` lets a `staff` (yard worker) login load and deliver, and 0173 refused them. `0178` lets the yard's own moves through for `store` and `staff` logins, as 0164 does. Pasted on live the same day (checked: the rule names `staff`).
+- **2026-10-28** — Phase 2: chapter 07, the stack, proposed. Measured first: the phones ship one page and update by swapping it, Vercel has no build step, CI tests install nothing and Node 22 runs TypeScript as it is, today's pages are 192–266 KB compressed. Proposed esbuild over Vite (the dev server is for a terminal nobody here has), and committed built pages so nothing that ships changes. Four questions for Kevin.
