@@ -409,8 +409,8 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(/sells<\/span><b class="ink">155,000/.test(X.ordPriceUpHTML(line)) && /10,000<\/span> under cost/.test(X.ordPriceUpHTML(line)) && !/COST/.test(X.ordPriceUpHTML(line)), 'under cost, the line says what it sells for and how far under');
     t.check(/Ruth sets a new price/.test(X.priceTagHTML(line, true)), 'the line tag says Ruth sets a new price');
     t.check(/RUTH ANSWERS · THEN ON TO BUYING/.test(X.ordAnswersHTML(q)) && /165,000<\/span> or more · you tell Henry/.test(X.ordAnswersHTML(q)) && !/keeps/.test(X.ordAnswersHTML(q)), 'Ruth\'s only answer is a new price at the cost or more');
-    t.check(/with Ruth · price up/.test(X.orderRow(q)), 'the Orders row says who has it');
-    t.check(/With Ruth/.test(X.viewOrders()) && !/going to Buying/.test(X.viewOrders()), 'Checking lists it with Ruth, not as all found going to Buying');
+    t.check(/Ruth · <span>to say yes/.test(X.orderRow(q)), 'O1: the Orders row says who has it, as one person chip');
+    t.check(/Ruth · <span>to say yes/.test(X.viewOrders()) && !/going to Buying/.test(X.viewOrders()), 'O1: Checking shows it waiting on Ruth, not as all found');
     t.check(/waiting on Ruth · price up/.test(X.nwPlacedNote(q)), 'the placed screen follows: all found, waiting on Ruth');
     q.status = 'awaiting_goods';
     t.check(/With Ruth · Manager/.test(X.ordWhoHas(q, X.ordViews(q))), 'a price up still waits on the Manager once buying has started');
@@ -837,7 +837,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     X.S.data.savedQuotes.push({ id: 2601, status: 'completed', invoiced: true, amountPaid: 409000, client: { name: 'Walk-in' }, items: [{ productId: 'P1', productName: 'Cement', qty: 10, price: 30000, sellPrice: 40900, supplierId: '__stock__' }], charges: [] });
     X.S.data.asks = [{ id: 'k1', quoteId: 2601, kind: 'void', amount: 409000, status: 'sent', createdAt: new Date().toISOString() }];
     X.S.loadedAt = 41;
-    t.check(/Void asked/.test(X.orderRow(X.S.data.savedQuotes.find(q => q.id === 2601))), 'Done today: a row carries the void asked of the Manager');
+    t.check(/to cancel it/.test(X.orderRow(X.S.data.savedQuotes.find(q => q.id === 2601))), 'O1: a row carries the cancel asked of the Manager, as one person chip');
     t.check(X.custNcNameHit({ name: 'Kato Construction' }) && !X.custNcNameHit({ name: 'Zz' }), 'a name already on the books is found before a second one is saved');
   }
 
@@ -875,7 +875,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     const picked = X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }, { productId: 'P3', qty: 2, qtySaid: true }]);
     t.check(picked.length === 1 && picked[0].productId === 'P3' && X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }]).length === 1, 'ChatToLines: a bare word is not an item when the message gives counts; alone, it still is');
     t.check(/data-act="srcopen"/.test(html) && /Ask for something/.test(html) && /Send to /.test(html) && /SUPPLIERS ASKED/.test(html), 'SReqList / SReqLook / SReqAsk: rows open a request, an ask needs no order');
-    t.check(/Sell at the counter/.test(html) && /data-act="tdyaddto"/.test(html) && /Take payment · /.test(html), 'FindItem and OrderPay: a found item sells or joins the order; an unpaid order takes payment');
+    t.check(/Sell at the counter/.test(html) && /data-act="tdyaddto"/.test(html) && /data-act="ordpay"/.test(html), 'FindItem and OrderPay: a found item sells or joins the order; an unpaid order takes payment');
   }
 
   // Sales round 1: data integrity (SAL-002..014)

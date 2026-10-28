@@ -3251,6 +3251,38 @@ a.k-bi{text-decoration:none}
 .k9-i{width:64px;height:64px;border-radius:999px;background:var(--amberSoft);color:var(--amberInk);display:flex;align-items:center;justify-content:center}
 .k9-c b{font-size:20px;font-weight:700;line-height:1.3}.k9-c>span:last-child{font-size:15px;color:var(--kink2);line-height:1.4}
 .k9-b{display:flex;flex-direction:column;gap:8px}.k9-b a.k-bs{text-decoration:none}
+.ord-page{min-height:calc(100vh - 140px)}
+.ord-st{color:var(--kink3)}
+.ord-wn{display:block;font-size:13px;color:var(--kink2);font-weight:400}.ord-wn b{color:var(--kink)}
+.ord-acts{display:flex;flex-direction:column;gap:8px}
+.ord-ask{padding:14px 0;display:flex;flex-direction:column;gap:12px}
+.ord-askh{display:flex;align-items:center;justify-content:space-between}.ord-askh b{font-size:16px}
+.k-sh-chips .k-p{background:rgba(255,255,255,.95)}
+.ord-other{min-height:120px;padding:12px 14px;border-radius:14px;border:none;background:#fff;box-shadow:inset 0 0 0 1.5px var(--kink);font:inherit;font-size:16px;line-height:1.4;resize:vertical;outline:none}
+.ord-sides{display:flex;gap:8px}
+.ord-side{flex:1;min-width:0;padding:12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--krule);display:flex;flex-direction:column;gap:6px}
+.ord-side.copy{box-shadow:inset 0 0 0 2px var(--crimson)}
+.ord-sideh{display:flex;justify-content:space-between;align-items:center}.ord-side small{font-size:12px;color:var(--kink2)}
+.ord-sidei{font-size:13px;line-height:1.4}
+.ord-sames{padding:12px 0;display:flex;flex-direction:column;gap:6px}
+.ord-same{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--green);font-weight:600}
+.ord-rl{display:flex;flex-direction:column;gap:10px;padding:12px 0;box-shadow:inset 0 -1px 0 var(--khair)}.ord-rl:last-child{box-shadow:none}
+.ord-rlh{display:flex;align-items:center;gap:12px;border:none;background:none;padding:0;text-align:left;color:var(--kink);width:100%}.ord-rlh .k-row-n{flex:1;min-width:0}
+.ord-rlq{padding-left:38px}
+.ord-credit2{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px;font-size:15px;color:var(--kink2)}
+.k-radio-o.on{background:var(--navy);box-shadow:none}
+.pa-ws{display:flex;align-items:center;gap:10px}
+.pa-was2{flex:1;min-width:0;padding:12px;border-radius:14px;background:#F4F2EE;display:flex;flex-direction:column;gap:2px}
+.pa-was2 s{font-size:17px;color:var(--kink3)}.pa-was2 small,.pa-now small{font-size:12px;color:var(--kink2)}
+.pa-now{flex:1;min-width:0;padding:12px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 2px var(--kink);display:flex;flex-direction:column;gap:2px}
+.pa-now input{border:none;background:none;outline:none;font-size:17px;padding:0;width:100%;color:var(--kink)}
+.pa-after{font-size:14px;color:var(--kink2);padding:0 2px}.pa-after b{color:var(--kink)}
+.tl-wall{background-color:#EFEAE2;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.tl-bub{align-self:flex-end;max-width:92%;background:#D9FDD3;border-radius:14px 4px 14px 14px;padding:8px 10px;font-size:15px;line-height:1.4;white-space:pre-wrap}
+.tl-bub textarea{width:100%;min-width:240px;border:none;background:none;outline:none;font:inherit;font-size:15px;line-height:1.4;resize:none}
+.tl-att{align-self:flex-end;width:80%;background:#D9FDD3;border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:6px}
+.tl-att img{width:100%;border-radius:10px;display:block}
+.tl-attr{background:#fff;border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px}.tl-attr b{font-size:14px}
 .k-ic{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;flex:none}
 /* ---- headers: three kinds only ---- */
 .k-hd{background:var(--navy);color:#fff;border-radius:0 0 20px 20px;padding:calc(10px + var(--safe-area-inset-top)) 12px 14px 16px;display:flex;flex-direction:column;gap:10px;flex:none}
@@ -3707,7 +3739,7 @@ const S = {
   user: null, shopId: null, shopName: '', role: null,
   data: null, loadedAt: 0,
   view: 'today', stack: [], sheet: null,
-  ordersStage: 'draft', custFilter: 'all', custArea: '', custQuery: '',
+  ordersStage: 'all', custFilter: 'all', custArea: '', custQuery: '',
   draft: null,
 };
 window.SX = S;
@@ -3809,7 +3841,7 @@ function rowToQuote(q){
     ...(q.payload || {}), qa: !!q.qa };   // SAL-018: a test order (0167), in no figure
 }
 function rowToPromise(r){ return { id: Number(r.id), customerId: String(r.customer_id), promisedOn: r.promised_on, madeOn: r.made_on, amount: r.amount == null ? null : Number(r.amount), note: r.note || '' }; }
-function rowToAsk(r){ return { id: r.id, quoteId: r.quote_id, customerId: r.customer_id, kind: r.kind, amount: Number(r.amount) || 0, reason: r.reason || '', note: r.note || '', askedBy: r.asked_by, askedByName: r.asked_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
+function rowToAsk(r){ return { id: r.id, quoteId: r.quote_id, customerId: r.customer_id, kind: r.kind, amount: Number(r.amount) || 0, reason: r.reason || '', note: r.note || '', lines: Array.isArray(r.lines) ? r.lines : [], askedBy: r.asked_by, askedByName: r.asked_by_name || '', status: r.status, decidedAt: r.decided_at, createdAt: r.created_at }; }
 // SAL-013 (0165): an order changes by the keys that change, merged on the server
 // (ow_patch_order); a whole payload written back could drop a payment taken meanwhile.
 async function ordPatch(qid, patch, name, phone){
@@ -5462,72 +5494,39 @@ function ordPagedCard(key, qs, rowFn){
   const n = ordShown(key), shown = qs.slice(0, n), rest = qs.slice(n);
   return `<div class="sx-card ord-card" data-key="oc-${key}">${shown.map(rowFn).join('')}${rest.length ? `<button class="ord-more" data-act="ordpage" data-g="${key}" data-key="om-${key}">${ordStack(rest, 2)}<span>Show ${Math.min(ORD_PAGE, rest.length)} more <span class="ord-more-n">· ${rest.length} left</span></span>${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>` : ''}</div>`;
 }
-function viewOrders(){
-  const B = ordBuckets(), sel = B[S.ordersStage] ? S.ordersStage : 'draft';
-  const moving = B.draft.concat(B.awaiting_goods, B.preparing, B.pending_delivery);
-  S.ordOpen = S.ordOpen || {};
-  const tiles = STAGES.map(s => { const on = s.key === sel, n = B[s.key].length;
-    return `<button class="ord-tile" data-act="stage" data-k="${s.key}" role="tab" aria-selected="${on}" aria-pressed="${on}" aria-label="${s.key === 'completed' ? 'Done today' : s.label}: ${n}"><span class="m">${n}</span><span class="l">${s.key === 'completed' ? 'Done today' : s.short}</span><span class="u" style="background:${s.col}"></span></button>`; }).join('');
-  // Waiting longest first; what was delivered today, the latest first.
-  const list = B[sel].slice().sort(sel === 'completed' ? (a, b) => ordDeliveredMs(b) - ordDeliveredMs(a) : (a, b) => stageEnteredMs(a) - stageEnteredMs(b));
-  let body = '';
-  if (!list.length) body = `<div class="sx-card sx-empty"><b>Nothing ${sel === 'completed' ? 'delivered today yet' : 'here right now'}</b>${sel === 'draft' ? 'New orders wait here while the shop checks suppliers.' : ''}</div>`;
-  else if (sel === 'draft') {
-    const g = ordGroups(list);
-    const seg = (c, col, cls) => c ? `<i class="${cls || ''}" style="flex:${c};background:${col}"></i>` : '';
-    body = `<div class="ord-sum" data-key="osum" role="img" aria-label="${g.tell.length} not found, ${g.ask.length + g.mgr.length} asking, ${g.found.length} all found">
-      <span class="bar">${seg(g.tell.length, '#8E2A22')}${seg(g.ask.length + g.mgr.length, '#F5B26B', 'ord-blink')}${seg(g.found.length, '#0F6B43')}</span>
-      <span class="lg"><span><b class="m" style="color:#8E2A22">${g.tell.length}</b> not found</span><span><b class="m" style="color:#95530C">${g.ask.length + g.mgr.length}</b> ${g.mgr.length && !g.ask.length ? 'with ' + esc(mgrName()) : 'asking'}</span><span><b class="m" style="color:#0F6B43">${g.found.length}</b> all found</span></span></div>`;
-    const head = (key, dot, title, count, hint) => `<div class="ord-gh" data-key="gh-${key}"><i style="background:${dot}"></i><b>${title}</b><span class="m">${count}</span><em>${hint}</em></div>`;
-    const card = (key, qs, moreWord) => {
-      if (S.ordOpen[key]) return ordPagedCard(key, qs, q => orderRow(q, key === 'tell')).replace(/<\/div>$/, `<button class="ord-more" data-act="ordmore" data-g="${key}" data-key="of-${key}"><span>Show fewer</span>${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(-90deg)')}</button></div>`);
-      const shown = qs.slice(0, 2), rest = qs.slice(2);
-      return `<div class="sx-card ord-card" data-key="oc-${key}">${shown.map(q => orderRow(q, key === 'tell')).join('')}${rest.length ? `<button class="ord-more" data-act="ordmore" data-g="${key}" data-key="om-${key}">${ordStack(rest, 2)}<span>${rest.length} more ${moreWord}</span>${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>` : ''}</div>`;
-    };
-    if (g.tell.length) body += head('tell', '#8E2A22', 'Tell them', g.tell.length, 'oldest first') + card('tell', g.tell, 'to tell');
-    if (g.ask.length) body += head('ask', '#F5B26B', 'Still asking', g.ask.length, (firstWord(roleFull('buyer')) || 'the Buyer') + ' is on it') + card('ask', g.ask, 'asking');
-    if (g.mgr.length) body += head('mgr', '#F5B26B', 'With ' + esc(mgrName()), g.mgr.length, 'the price is theirs') + card('mgr', g.mgr, 'waiting');
-    if (g.found.length) {
-      if (S.ordOpen.found) body += `<button class="ord-gh btn" data-act="ordmore" data-g="found" data-key="gh-found" aria-expanded="true"><i style="background:#0F6B43"></i><b>All found</b><span class="m">${g.found.length}</span><em style="color:var(--green)">going to Buying</em>${ordIc('chev', 14, 'stroke:#9AA1AE;transform:rotate(-90deg)')}</button>${ordPagedCard('found', g.found, q => orderRow(q))}`;
-      else body += `<button class="ord-foundbar" data-act="ordmore" data-g="found" data-key="fb-found" aria-expanded="false"><i></i><span class="t">All found <span class="m">${g.found.length}</span> <em>· going to Buying</em></span>${ordStack(g.found, 2)}${ordIc('chev', 16, 'stroke:#9AA1AE;transform:rotate(90deg)')}</button>`;
-    }
-  } else if (sel === 'completed') {
-    // Done today (review 5): paid, part paid, and what waits on the Manager -- a void or a credit note asked.
-    const asked = list.filter(q => ordAskOpen(q)), rest = list.filter(q => !ordAskOpen(q)), due = q => q.invoiced ? Math.max(0, orderDue(q)) : Math.max(0, pricedLive(q).total - (Number(q.amountPaid) || 0));
-    const paid = rest.filter(q => due(q) <= 0.5).length, part = rest.filter(q => due(q) > 0.5 && (Number(q.amountPaid) || 0) > 0).length, none = rest.length - paid - part;
-    const seg = (c, col, cls) => c ? `<i class="${cls || ''}" style="flex:${c};background:${col}"></i>` : '';
-    body = `<div class="ord-sum" data-key="osum-d" role="img" aria-label="${paid} paid, ${part} part paid${none ? `, ${none} not paid` : ''}${asked.length ? `, ${asked.length} asked of ${esc(mgrName())}` : ''}">
-      <span class="bar">${seg(paid, '#0F6B43')}${seg(part, '#F5B26B')}${seg(none, '#C9C3B8')}${seg(asked.length, 'repeating-linear-gradient(135deg,#F5B26B 0 5px,#FBD9B4 5px 10px)', 'ord-blink')}</span>
-      <span class="lg"><span><b class="m" style="color:#0F6B43">${paid}</b> paid</span>${part ? `<span><b class="m" style="color:#95530C">${part}</b> part paid</span>` : ''}${none ? `<span><b class="m">${none}</b> not paid</span>` : ''}${asked.length ? `<span><b class="m" style="color:#95530C">${asked.length}</b> asked of ${esc(mgrName())}</span>` : ''}</span></div>
-      <div class="ord-gh" data-key="gh-done"><i style="background:#0F6B43"></i><b>Delivered today</b><span class="m">${list.length}</span><em>newest first</em></div>`
-      + ordPagedCard(sel, list, q => orderRow(q));
-  } else body = ordPagedCard(sel, list, q => orderRow(q));
-  const total = moving.reduce((s, q) => s + pricedLive(q).total, 0);
-  return `<div class="ord-top"><div class="ord-title"><h1>Orders</h1><span class="sx-sub"><span class="m" style="color:var(--ink);font-weight:600">${moving.length}</span> on the move · <span class="m" style="color:var(--ink);font-weight:600">${n0(total)}</span></span></div>
-    <button class="sx-circle light ord-find" data-act="ordfind" aria-label="Find an order">${ic('search', 20)}</button></div>
-  <div class="sx-body ord-body"><div class="ord-tiles" role="tablist" aria-label="Stage">${tiles}</div><div class="ord-list" data-key="ol-${sel}">${body}</div></div>`;
+/* O1 (Orders): every order on the move, grouped by stage, each group with its
+   count; the stage chips narrow it to one; a row is the customer, #number with
+   one chip, the amount. The one chip, in this order: a person it waits on, a
+   line not found, how many came, then whether it is paid. */
+function ordRowChip(q){
+  const ask = D().asks != null ? ordAskOpen(q) : null;
+  if (ask) return K.p(mgrFull() || mgrName(), ask.kind === 'void' ? 'to cancel it' : ask.kind === 'credit' ? 'credit note' : 'asked');
+  const views = ordViews(q), c = ordCount(views), waits = pricesWaiting(q);
+  if (waits.length && !c.no) return K.p(mgrFull() || mgrName(), 'to say yes');
+  if (q.status === 'draft' && c.no) return K.chip(`${c.no} not found`, 'bad');
+  if (q.status === 'awaiting_goods') return K.chip(`${c.in + c.short} of ${views.length} came`);
+  if (q.qa) return K.chip('Test · not counted');
+  const w = nmPaidWord(q)[0];
+  return w === 'PAID' ? K.chip('Paid', 'good') : w === 'PART PAID' ? K.chip('Part paid', 'caution') : K.chip('Not paid yet', 'caution');
 }
-function orderRow(q, tellBtn){
-  const views = ordViews(q), c = ordCount(views), pv = pricedLive(q);
-  let note = '', col = 'var(--ink3)';
-  const waits = pricesWaiting(q), upWait = waits.some(it => !it.priceBy);
-  if (waits.length && !c.no && (q.status === 'draft' || upWait)) { note = `with ${mgrName()} · ${upWait ? 'price up' : waits.length === 1 ? 'a price' : waits.length + ' prices'}`; col = 'var(--amberInk)'; }
-  else if (q.status === 'draft') {
-    if (c.no) { note = `${c.no} not found · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--crimson)'; }
-    else if (c.ask || c.toask) {
-      const asked = Object.values(q.supplierConfirms || {}).map(r => ordMs(r && r.askedAt)).filter(Boolean);
-      note = c.ask ? `asked ${ordAgo(asked.length ? Math.min(...asked) : stageEnteredMs(q))}` : `to ask · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--amberInk)';
-    } else { note = `all found · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--green)'; }
-  } else if (q.status === 'awaiting_goods') { note = `${c.in + c.short} of ${views.length} in${c.way ? ` · ${c.way} on the way` : ''} · ${ordAgo(stageEnteredMs(q))}`; col = 'var(--indigo)'; }
-  else if (q.status === 'preparing') { const who = firstWord(ordStaffName(q.assignedWorkerId)); note = `${who ? who + ' packing' : 'packing'} since ${ordClock(stageEnteredMs(q))}`; col = 'var(--amberInk)'; }
-  else if (q.status === 'pending_delivery') { const cr = ordCarrier(q); note = `${cr.label ? cr.label + ' · ' : ''}left ${ordClock(stageEnteredMs(q))}`; col = 'var(--sky)'; }
-  else { const d = ordDeliveredMs(q); note = 'delivered' + (d ? ' ' + ordClock(d) : ''); col = 'var(--green)'; }
-  if (q.qa) { note = 'Test · not counted'; col = 'var(--ink3)'; }
-  const name = ordName(q), ask = D().asks != null ? ordAskOpen(q) : null;
-  const main = `<button class="ord-rmain" data-act="order" data-id="${q.id}">${ordAv(name, 34)}
-    <span class="ord-rtx"><span class="a"><span class="ell n" title="${esc(name)}">${esc(name)}</span><span class="m t">${n0(pv.total)}</span></span>
-    <span class="b">${ordStrip(views)}<span class="ell" style="color:${col}"><span class="m ord-rno">${esc(orderNo(q))}</span>${ask ? '' : ' · ' + esc(note)}</span>${pv.toConfirm ? `<span class="ord-tp">+${pv.toConfirm} to price</span>` : ''}${ask ? `<span class="ord-askchip"><span class="d" aria-hidden="true">${esc(initials(mgrFull() || 'Manager'))}</span><i class="sx-blink" aria-hidden="true"></i>${ask.kind === 'void' ? 'Void asked' : `Credit note <span class="m">${n0(ask.amount)}</span>`} · ${esc(mgrName())}</span>` : ''}</span></span>${tellBtn ? '' : ordIc('chev', 16, 'stroke:#9AA1AE')}</button>`;
-  return `<div class="ord-row" data-key="o-${q.id}">${main}${tellBtn ? `<button class="ord-tellbtn" data-act="tell" data-id="${q.id}" aria-label="Tell ${esc(name)}">${ordIc('chat', 18, 'stroke-width:2')}</button>` : ''}</div>`;
+function orderRow(q){
+  const name = ordName(q);
+  return K.row(K.av(name), esc(name), `<span class="m">${esc(orderNo(q))}</span> ${ordRowChip(q)}`, `<span class="cu-mr">${K.money(pricedLive(q).total, 15)}${K.svg('chev', 16, 2.2, 'color:var(--ink3)')}</span>`, `data-key="o-${q.id}" data-act="order" data-id="${q.id}"`);
+}
+function viewOrders(){
+  const B = ordBuckets(), sel = B[S.ordersStage] ? S.ordersStage : 'all';
+  const moving = B.draft.concat(B.awaiting_goods, B.preparing, B.pending_delivery), allN = moving.length + B.completed.length;
+  const date = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '');
+  const chips = K.f('All', allN, sel === 'all', 'data-act="stage" data-k="all"') + STAGES.map(st => K.f(st.label, B[st.key].length, sel === st.key, `data-act="stage" data-k="${st.key}"`)).join('');
+  const sortFor = k => k === 'completed' ? (a, b) => ordDeliveredMs(b) - ordDeliveredMs(a) : (a, b) => stageEnteredMs(a) - stageEnteredMs(b);
+  const groups = STAGES.filter(st => sel === 'all' || st.key === sel).map(st => {
+    const list = B[st.key].slice().sort(sortFor(st.key)); if (!list.length) return '';
+    const n = ordShown(st.key), shown = list.slice(0, n), rest = list.length - shown.length;
+    return `<div data-key="og-${st.key}">${K.label(st.key === 'completed' ? 'Delivered today' : st.label, list.length)}${K.card(shown.map(orderRow).join(''))}${rest > 0 ? K.bs(`Show ${Math.min(ORD_PAGE, rest)} more`, null, `data-act="ordpage" data-g="${st.key}"`, true) : ''}</div>`;
+  }).join('');
+  return `${K.hd('Orders', K.bi('search', 'Find an order', true, 'data-act="ordfind"'), null, `${moving.length} order${moving.length === 1 ? '' : 's'} on the move · ${esc(date)}`)}
+  <div class="k-body ord-body">${K.frow(chips)}
+    ${groups || K.empty(sel === 'all' ? 'No orders on the move' : sel === 'completed' ? 'Nothing delivered today yet' : `Nothing in ${esc(stageOf({ status: sel }).label)} now`, sel === 'all' ? 'Take one with the red button.' : '', 'box', 'neutral')}</div>`;
 }
 ACT.stage = t => { if (S.ordersStage === t.dataset.k) return; S.ordersStage = t.dataset.k; render(); };
 ACT.ordmore = t => { S.ordOpen = S.ordOpen || {}; const g = t.dataset.g; S.ordOpen[g] = !S.ordOpen[g]; if (!S.ordOpen[g] && S.ordShow) delete S.ordShow[g]; render(); };
@@ -5800,71 +5799,97 @@ ACT.ordphoto = t => {
 };
 ACT.ordphotoretry = t => { const path = t.dataset.path; if (!path || ordPhotoState(path) !== 'fail') return; delete ORD_PHOTO[path]; ordPhotoSrc(path); ordPhotoMark(path); };
 
+/* O2-O7, O12, O13 (one order): one header -- who, #0552, the stage word and
+   bar, one chip row; the paper for what they get, each line saying one word;
+   a details card for the money and who took it (GO2: no delivery place,
+   which nothing records yet); one red button for the next move. */
+function ordLineChip(q, it, v){
+  if (v.k === 'no') return K.chip('Not found', 'bad');
+  if (linePriceToConfirm(it)) return K.chip('Price coming', 'caution');
+  const pr = priceReviewState(it);
+  if (pr === 'waiting') return K.p(mgrFull() || mgrName(), `your price ${n0(linePriceNow(it))}`);
+  if (q.status === 'awaiting_goods') return v.k === 'in' ? K.chip(v.word && /SHELF/.test(v.word) ? 'On shelf' : 'Came', 'good') : v.k === 'way' ? K.chip('On the way') : v.k === 'short' ? K.chip(`Short · ${qtyText(it.receivedQty)} of ${n0(it.qty)}`, 'caution') : K.chip('To be bought');
+  if (q.status === 'preparing' && v.word) return v.k === 'short' ? K.chip(`Packed ${n0(it.pickedQty)} of ${n0(it.qty)}`, 'caution') : v.k === 'wait' ? K.chip('To pack') : K.chip('Packed', 'good');
+  if (v.k === 'short') return K.chip(v.word.charAt(0) + v.word.slice(1).toLowerCase(), 'caution');
+  return '';
+}
+function ordPaperLines(q, views){
+  const its = q.items || [];
+  const lines = its.map((it, i) => { const v = views[i], qw = ordQty(it), struck = v.k === 'out' || v.k === 'no';
+    const nm = nameHTML(nameParts(it.productId, it.variantIdx, it.productName)), up = priceToTell(it) && it.priceReview ? `<span class="ord-wn"><s class="m">${n0(it.priceReview.was)}</s> → <b class="m">${n0(it.priceReview.price)}</b> each</span>` : '';
+    return { q: `${qtyText(qw.n)}`, n: struck ? `<s class="ord-st">${nm}</s>` : nm + up, v: struck || linePriceToConfirm(it) ? '' : n0(Math.round((Number(it.qty) || 0) * quoteItemSellPrice(it))), x: ordLineChip(q, it, v) }; });
+  (q.droppedLines || []).forEach(d => { const qw = ordQty(d); lines.push({ q: qtyText(qw.n), n: `<s class="ord-st">${nameHTML(nameParts(d.productId, d.variantIdx, d.productName || d.name))}</s>`, v: '', x: K.chip('Dropped') }); });
+  orderExtraRows(q).forEach(x => { const cr = x.name === 'Credit charge', ct = creditTerms(q);
+    lines.push({ q: cr || x.pct ? `${qtyText(x.pct)}%` : '1', n: esc(cr ? `Credit${ct && ct.days ? ` · ${ct.days} days` : ''}` : x.name), v: (x.amt < 0 ? '−' : '') + n0(Math.abs(x.amt)), x: K.chip(cr ? 'Credit' : 'Charge') }); });
+  return lines;
+}
+function ordPayWord(q, tt){
+  const paid = Math.round(Number(q.amountPaid) || 0), over = ordOverPaid(q, tt), w = nmPaidWord(q)[0];
+  if (over) return ['Paid over', 'caution'];
+  return w === 'PAID' ? ['Paid', 'good'] : w === 'PART PAID' ? ['Part paid', 'caution'] : paid > 0 ? ['Part paid', 'caution'] : ['Not paid yet', 'caution'];
+}
 PAGE.order = ({ id }) => {
   const q = quoteById(id);
-  if (!q) return `<div class="ord-sheet"><div class="sx-empty" style="padding-top:30vh"><b>That order is not here any more</b><button class="sx-btn navy" data-act="back" style="margin:16px auto 0">Back</button></div></div>`;
-  const views = ordViews(q), name = ordName(q), first = ordGreet(name) || 'them';
-  const tt = ordTotals(q), ph = ordPaperHead(q, views), phone = q.client && q.client.phone;
-  // SAL-007 (R1ToPrice): on an invoice, the lines nobody priced sit under one plum marker: the Manager prices them, nothing is owed on them before.
-  const tpN = q.invoiced ? (q.items || []).filter(it => !lineSettledOut(q, it) && linePriceToConfirm(it)).length : 0; let tpSeen = false;
-  const lines = (q.items || []).map((it, i) => { let h = '';
-    if (tpN && !tpSeen && !lineSettledOut(q, it) && linePriceToConfirm(it)) { tpSeen = true; h = `<div class="ord-tpg" data-key="tpg">${mgrFace(24)}<b>${tpN} line${tpN === 1 ? '' : 's'} to price · ${esc(mgrName())}</b>${ic('nwtag', 15)}</div>`; }
-    return h + ordPaperLine(q, it, views[i]); }).join('')
-    + (q.droppedLines || []).map((d, i) => { const qw = ordQty(d); return `<div class="ord-pl struck" data-key="d-${i}"><span class="q m">${qtyText(qw.n)} <small>${esc(qw.u)}</small></span><span class="st"></span><span class="nm">${nameHTML(nameParts(d.productId, d.variantIdx, d.productName || d.name))}</span><span class="ord-nf">DROPPED</span></div>`; }).join('');
-  const xr = orderExtraRows(q), ct = creditTerms(q);
-  const extra = xr.map((x, i) => { const cr = x.name === 'Credit charge', disc = x.amt < 0, trip = /deliver|transport/i.test(x.name);
-    const qcol = cr || x.pct ? `${qtyText(x.pct)}<small>%</small>` : disc ? '' : `1${trip ? ' <small>trip</small>' : ''}`;
-    const nm = cr ? `Credit${ct && ct.days ? ` · ${ct.days} days` : ''}` : x.name;
-    return `<div class="ord-pl chg" data-key="x-${i}"><span class="q m">${qcol}</span><span class="st" aria-hidden="true"></span><span class="nm"><span class="ell">${esc(nm)}</span>${disc ? '' : `<span class="ord-xchip">${cr ? 'credit' : 'charge'}</span>`}</span><span class="ord-amts"><span class="m amt">${disc ? '−' : ''}${n0(Math.abs(x.amt))}</span></span></div>`; }).join('');
-  const done = q.status === 'completed';
-  const foot = tt.dropped && q.status === 'draft'
-    ? `<div class="ord-pf"><span class="l"><b>Total</b><small>if the not-found ${tt.dropped > 1 ? 'lines are' : 'line is'} dropped</small></span><span class="m was">${n0(tt.all)}</span><span class="m now">${n0(tt.kept)}</span></div>`
-    : `<div class="ord-pf"><span class="l"><b>${tpN ? 'Priced so far' : 'Total'}${creditTerms(q) ? ' · on credit' : ''}</b></span>${ordWasTotal(q) != null && ordWasTotal(q) !== tt.all ? `<span class="m was">${n0(ordWasTotal(q))}</span>` : ''}<span class="m now">${n0(tt.all)}${tt.toConfirm && !tpN ? ` <small>+ ${tt.toConfirm} to price</small>` : ''}</span></div>${ordMadeOf(q, xr, tt.all)}${ordToldLine(q)}${ordAnswersHTML(q)}`;
-  const photo = done && q.deliveredPhoto ? (() => { const src = ordPhotoSrc(q.deliveredPhoto), d = ordDeliveredMs(q), st = ordPhotoState(q.deliveredPhoto);
-    return `<button class="ord-photo ${st}" data-act="ordphoto" data-id="${q.id}" data-ordphotowrap="${esc(q.deliveredPhoto)}" data-key="ph-${q.id}" aria-label="Delivery photo${d ? ', ' + ordClock(d) : ''}. Tap to enlarge"><img src="${esc(src)}" data-ordphoto="${esc(q.deliveredPhoto)}" alt="">${ordPhotoMsg()}<span class="cap">${ic('camera', 14)}At their door${d ? ` · <span class="m">${ordClock(d)}</span>` : ''}</span><span class="ex">${ordIc('expand', 14, 'stroke-width:2')}</span></button>`; })() : '';
-  const cust = q.customerId != null && q.customerId !== '' ? customerById(q.customerId) : null;
-  // "Tell Grace" plus what about, when it fits one line on a small phone.
-  let tail = '';
-  if (q.status === 'draft') tail = views.some(v => v.k === 'ok' || v.k === 'no') ? 'what was found' : 'where it is';
-  else if (q.status === 'awaiting_goods') { const way = (q.items || []).filter((it, i) => views[i].k === 'way'); const about = way.length === 1 ? 'about the ' + nameParts(way[0].productId, way[0].variantIdx, way[0].productName).base.toLowerCase() : ''; tail = about && (first.length + about.length) <= 18 ? about : 'what came in'; }
-  else if (q.status === 'preparing') tail = 'it’s packing';
-  else if (q.status === 'pending_delivery') tail = 'it’s coming';
-  const callName = name === 'Walk-in' ? 'them' : first;
-  const cta = done ? 'Send the thanks' : `Tell ${callName}${tail && (callName.length + tail.length) <= 18 ? ' ' + tail : ''}`;
-  const left = done
-    ? (cust ? `<button class="ord-sq" data-act="sellto" data-id="${esc(cust.id)}" aria-label="Sell to ${esc(name)} again">${ic('again', 18)}<span>Sell again</span></button>` : '')
-    : (phone ? `<a class="ord-sq" href="tel:${esc(phone)}" aria-label="Call ${esc(name)}">${ic('phone', 22)}</a>` : '');
-  const stamp = tpN || ordOverPaid(q, tt) ? '' : ordStampHTML(q, done && q.invoiced), due = q.invoiced ? 0 : orderDue(q);
-  return `<button class="ord-dimtap" data-act="back" aria-label="Back to orders"></button>
-  <div class="ord-sheet" data-key="os-${q.id}">
-    <div class="ord-head"><span class="ord-handle"></span>
-      <div class="ord-who">${ordAv(name, 42)}<span class="tx"><span class="n" title="${esc(name)}">${esc(name)}</span><span class="m s">${orderNo(q)} · ${esc(ordWhen(createdMs(q)))}</span></span><button class="sx-circle" data-act="back" aria-label="Close">${ordIc('close', 16, 'stroke-width:2.2')}</button></div>
-      ${ordStage(q)}
-      ${ordChipsHTML(q, views)}</div>
-    <div class="ord-in">
-      ${q.status === 'awaiting_goods' ? ordCollectors(q, views) : ''}
-      ${photo}
-      ${q.qa ? `<div class="ord-qa" role="note">${ic('flask', 20)}<span><b>Test order</b><br>In no figure: not sales, not money in, not the goal</span></div>` : ''}
-      <div class="sx-paper"><div class="sx-paper-in">
-        <div class="sx-paper-h"><span class="t">${done ? 'WHAT THEY GOT' : q.status === 'pending_delivery' ? 'WHAT THEY GET' : 'WHAT ' + esc(first.toUpperCase()) + ' GETS'}</span><span style="font-size:12px;font-weight:600;color:${ph[1]}">${esc(ph[0])}</span></div>
-        ${lines ? lines + extra : '<div class="sx-empty" style="padding:14px">No lines on this order</div>'}
-        ${foot}${ordMoneyRows(q, tt, tpN)}
-      </div></div>
-      ${tpN ? `<div class="ord-tpnote">${ic('ordClock', 15)}The total grows when ${esc(mgrName())} prices them; nothing is owed on them before</div>` : ''}
-      ${ordOverHTML(q, tt)}
-      ${ordTellPriceRow(q)}
-      ${swForOrder(q).map(swCard).join('')}
-      ${done && q.invoiced ? `<div class="ord-invrow"><span class="ord-inv">${ordIc('doc', 15, 'stroke:#0F6B43')}Invoice <span class="m">${invoiceLabel(q)}</span></span>${stamp}</div>` : stamp ? `<div class="ord-stampw">${stamp}</div>` : ''}
-      ${q.invoiced && !q.voided ? ordAskRow(q) : ''}
-    </div>
-  </div>
-  <div class="ord-dock${due > 0.5 && !q.voided && (phone || (cust && (cust.phone || cust.phone2))) ? ' pay' : ''}">${due > 0.5 && !q.voided && (phone || (cust && (cust.phone || cust.phone2))) ? `<button class="ord-paybtn" data-act="ordpay" data-id="${q.id}">${ic('cash', 18, 'style="stroke-width:2"')}Take payment · <span class="m">${n0(due)}</span></button>` : ''}${left}${phone || (cust && (cust.phone || cust.phone2)) ? `<button class="sx-btn red ord-cta" data-act="tell" data-id="${q.id}">${ordIc('chat', 20, 'stroke-width:2')}<span class="ell">${esc(cta)}</span></button>`
-    // No number, money still due on a cash order (SAL-24): taking it is the move, the number beside it.
-    : due > 0.5 && !creditTerms(q) && !q.voided ? `<button class="ord-sq wide" data-act="ordnumber" data-id="${q.id}" aria-label="Add their number">${ic('phone', 19)}<span>Add number</span></button><button class="sx-btn red ord-cta" data-act="pay" data-order="${q.id}">${ic('cash', 20)}<span class="ell">Take <span class="m">${n0(due)}</span></span></button>`
-    // No number to tell them on: getting one is the move.
-    : `<button class="sx-btn navy ord-cta" data-act="ordnumber" data-id="${q.id}">${ic('phone', 20)}<span class="ell">Add their number to tell them</span></button>`}</div>`;
+  if (!q) return `${K.sh('', 'Not here any more', '')}<div class="k-body">${K.empty('That order is not here any more', '', 'box', 'neutral')}</div>`;
+  const views = ordViews(q), name = ordName(q), first = ordGreet(name) || 'them', callName = name === 'Walk-in' ? 'them' : first;
+  const tt = ordTotals(q), cust = q.customerId != null && q.customerId !== '' ? customerById(q.customerId) : null;
+  const phone = (q.client && q.client.phone) || (cust && (cust.phone || cust.phone2)) || '';
+  const tpN = q.invoiced ? (q.items || []).filter(it => !lineSettledOut(q, it) && linePriceToConfirm(it)).length : 0;
+  const pw = ordPayWord(q, tt), ask = D().asks != null ? ordAskOpen(q) : null, waits = pricesWaiting(q);
+  const chips = (q.voided ? K.chip('Voided', 'bad') : K.chip(pw[0], pw[1])) + (ask ? K.p(mgrFull() || mgrName(), ask.kind === 'void' ? 'to cancel it' : 'credit note asked') : waits.length ? K.p(mgrFull() || mgrName(), 'to say yes') : '');
+  const right = phone ? `<a class="k-bi dark" href="tel:${esc(phone)}" aria-label="Call ${esc(name)}">${K.svg('phone', 18, 2)}</a>` : '';
+  const head = K.sh(K.av(name), esc(name), `${esc(orderNo(q))} · ${esc(ordWhen(createdMs(q)))}`, { stage: stageIdx(q), chips, right });
+  const done = q.status === 'completed', due = q.invoiced ? Math.max(0, balanceDue(q)) : orderDue(q), over = ordOverPaid(q, tt);
+  // On the road: who drives, and a call. Delivered: the proof as one row.
+  const cr = q.status === 'pending_delivery' ? ordCarrier(q) : null, drv = cr && cr.person ? (D().staff || []).find(st => st.name === cr.person) : null;
+  const road = cr ? K.card(K.row(K.tile('truck', 'indigo'), esc(cr.label ? `${firstWord(cr.label)} is on the way` : 'On the road'), `Left ${esc(ordClock(stageEnteredMs(q)))}`, drv && drv.phone ? `<a class="k-bi" href="tel:${esc(drv.phone)}" aria-label="Call ${esc(firstWord(cr.label))}">${K.svg('phone', 18, 2)}</a>` : '')) : '';
+  const dMs = done ? ordDeliveredMs(q) : 0;
+  const proof = done && q.deliveredPhoto ? K.card(K.row(K.tile('camera', 'green'), `Delivered${dMs ? ' ' + esc(ordClock(dMs)) : ''}`, q.deliveredBy ? `Photo by ${esc(firstWord(q.deliveredBy))}` : 'The photo at their door', K.svg('chev', 16, 2.2, 'color:var(--ink3)'), `data-act="ordphoto" data-id="${q.id}"`)) : '';
+  const tells = (q.items || []).filter(priceToTell);
+  const notices = (tells.length ? K.notice(`The supplier’s price went up on ${tells.length} line${tells.length === 1 ? '' : 's'}. ${esc(mgrName())} set the new price.`, 'caution', 'tag') : '')
+    + (tpN ? K.notice(`${tpN} line${tpN === 1 ? ' has' : 's have'} a price coming. ${tpN === 1 ? 'It is' : 'They are'} not owed until ${esc(mgrName())} prices ${tpN === 1 ? 'it' : 'them'}.`, 'neutral', 'tag') : '')
+    + (q.qa ? K.notice('Test order · in no figure: not sales, not money in, not the goal', 'neutral', 'flag') : '');
+  const lines = ordPaperLines(q, views), nLines = (q.items || []).length;
+  const totLabel = tpN || tt.toConfirm ? 'Priced so far' : q.status === 'pending_delivery' && due > 0.5 ? 'Owes on this order' : done && pw[0] === 'Paid' ? 'Paid' : over ? 'Paid' : 'Total';
+  const totV = q.status === 'pending_delivery' && due > 0.5 ? due : over ? Math.round(Number(q.amountPaid) || 0) : tt.all;
+  const paperHead = `<span>${q.invoiced ? `Invoice ${esc(orderNo(q))}` : esc(orderNo(q)) + (q.status === 'awaiting_goods' ? ' · being bought' : '')}</span><span>${nLines} line${nLines === 1 ? '' : 's'}</span>`;
+  const paper = K.paper(paperHead, lines, totLabel, totV, done && pw[0] === 'Paid' && !tpN && !tt.toConfirm ? ['PAID', 'var(--green)'] : q.voided ? ['VOID', 'var(--crimson)'] : null);
+  const paid = Math.round(Number(q.amountPaid) || 0), ct = creditTerms(q);
+  const payRow = K.row(K.tile('cash', pw[1] === 'good' ? 'green' : 'grey', 36), paid > 0 ? (due > 0.5 ? `Part paid · <span class="m">${n0(paid)}</span> of <span class="m">${n0(tt.all)}</span>` : 'Paid') : 'Nothing paid yet', ct ? `On credit · ${ct.days ? ct.days + ' days' : 'the Manager’s terms'}` : 'Cash', '');
+  const taker = q.takenBy ? (D().staff || []).find(st => String(st.userId) === String(q.takenBy)) : null;
+  const details = K.card(payRow + (taker ? K.row(K.av(taker.name, null, 36), `Taken by ${esc(firstWord(taker.name))}`, esc(ordWhen(createdMs(q))), '') : ''));
+  const sw = swForOrder(q).map(x => K.card(K.row(K.av(swBuyer(x)), `${esc(firstWord(swBuyer(x)))} switched a line`, `${esc(x.to || '')} instead of ${esc(x.from || '')}`, K.bs('Tell them', null, `data-act="tellswitch" data-v="${esc(x.id)}"`, true)))).join('');
+  const overN = over ? `${K.notice(`<span class="m">${n0(over)}</span> more than the bill. ${esc(paAccountsName())} gives change, or keeps it as a deposit if ${esc(first)} says so.`, 'caution', 'cash')}${ordOverAsk(q) ? `<div>${K.p(paAccountsFull(), `settling it · asked ${esc(timeOf(Date.parse(ordOverAsk(q).createdAt)))}`, 'amber')}</div>` : ''}` : '';
+  const wrong = (q.invoiced || done) && !q.voided ? ordAskBlock(q) : '';
+  // The one red button: tell them a new price; tell them what was found; take the money; sell again.
+  const tellAct = `data-act="tell" data-id="${q.id}"`, msg = phone ? K.bs(`Message ${esc(callName)}`, 'chat', tellAct) : '';
+  let acts;
+  if (q.voided) acts = '';
+  else if (tells.length && phone) acts = K.bp(`Tell ${esc(callName)} the new price`, 'chat', `data-act="tellprice" data-id="${q.id}"`);
+  else if (over && !ordOverAsk(q)) acts = msg + K.bp(`Ask ${esc(paAccountsName())} to settle it`, 'send', `data-act="ordaskover" data-id="${q.id}" ${S.paAsking ? 'disabled' : ''}`);
+  else if (q.status === 'awaiting_goods' && phone && views.some(v => v.k === 'in' || v.k === 'no' || v.k === 'short')) acts = K.bp(`Tell ${esc(callName)} what was found`, 'chat', tellAct) + (due > 0.5 ? K.bs('Take payment', 'cash', `data-act="ordpay" data-id="${q.id}"`) : '');
+  else if (due > 0.5) acts = (phone ? msg : K.bs('Add their number', 'phone', `data-act="ordnumber" data-id="${q.id}"`)) + K.bp(`Take payment${tpN ? ` · <span class="m">${n0(due)}</span>` : ''}`, 'cash', `data-act="ordpay" data-id="${q.id}"`);
+  else if (done) acts = (D().cashTxns.some(x => x.type === 'receipt' && String(x.quoteId) === String(q.id)) ? K.bs('Send the receipt', 'doc', `data-act="ordreceipt" data-id="${q.id}"`) : '') + (cust ? K.bp('Sell again', 'plus', `data-act="sellto" data-id="${esc(cust.id)}"`) : '');
+  else acts = phone ? K.bp(`Message ${esc(callName)}`, 'chat', tellAct) : K.bp('Add their number', 'phone', `data-act="ordnumber" data-id="${q.id}"`);
+  return `${head}<div class="k-body ord-page">${road}${proof}${notices}${paper}${details}${sw}${overN}${wrong}<div class="k-grow"></div><div class="cu-foot ord-acts">${acts}</div></div>`;
 };
-PAGE.order.bg = '#2A3350';
+// "Send the receipt" from a paid order: the payment's own end screen, rebuilt from the cash book.
+ACT.ordreceipt = t => { const x = D().cashTxns.filter(r => r.type === 'receipt' && String(r.quoteId) === String(t.dataset.id)).sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)))[0]; if (x) push('paid', { fromTxn: x.id }); };
+/* O9b / GO2: a return or a void asked shows where it is, as a timeline, with
+   "Take back the ask"; otherwise one row into "Something wrong". */
+function ordAskBlock(q){
+  if (D().asks == null) return '';
+  const open = ordAskOpen(q), last = ordAsks(q)[0], mgr = mgrFull() || mgrName();
+  if (open) {
+    const what = open.kind === 'void' ? 'Cancel asked' : 'Return asked', lines = (open.lines || []).map(l => `${n0(l.qty)} ${esc(l.name || '')}`).join(', ');
+    const steps = [['You asked', `${lines ? lines + ' · ' : ''}${open.reason ? esc(open.reason) + ' · ' : ''}${esc(timeOf(Date.parse(open.createdAt)))}`, 'done'], [`${esc(firstWord(mgr))} checks it`, '', 'now'], [open.kind === 'void' ? `${esc(orderNo(q))} cancelled` : `Credit note <span class="m">${n0(open.amount)}</span>`, open.kind === 'void' ? '' : 'Goes on their account', 'next']];
+    return `${K.card(`<div class="ord-ask"><span class="ord-askh"><b>${what}</b>${K.chip('Waiting', 'caution', true)}</span>${K.tl(steps)}</div>`)}${K.bs('Take back the ask', 'undo', `data-act="ordaskback" data-v="${esc(open.id)}"`)}`;
+  }
+  const told = last && (last.status === 'accepted' || last.status === 'declined') && Date.now() - Date.parse(last.decidedAt || last.createdAt) < 7 * 864e5
+    ? K.notice(`${esc(firstWord(mgr))} ${last.status === 'accepted' ? 'said yes' : 'said no'} to the ${last.kind === 'void' ? 'cancel' : 'credit note'}.`, last.status === 'accepted' ? 'good' : 'neutral', last.status === 'accepted' ? 'tick' : 'close') : '';
+  return told + (q.invoiced ? K.card(K.row(K.tile('alert', 'amber', 36), 'Something wrong with this sale?', 'Items back, entered twice, a payment', K.svg('chev', 16, 2.2, 'color:var(--ink3)'), `data-act="ordfix" data-id="${q.id}"`)) : '');
+}
+
 
 /* ---------------- the Checking gate ----------------
    Three chips, the three things an order waits for before it leaves
@@ -6020,14 +6045,34 @@ function ordAskRow(q){
   return `${told}<button class="ord-wrong" data-act="ordfix" data-id="${q.id}">${ordIc('ordWarn', 16, 'stroke-width:2')}Something wrong with this sale?</button>`;
 }
 ACT.ordfix = t => openSheet('ordfix', { id: Number(t.dataset.id) });
+/* O8 (something wrong after the sale): which order, at the top; four
+   choices in the words people use, each saying who fixes it. */
+function ordSumCard(q){ const pw = ordPayWord(q, ordTotals(q)), d = ordDeliveredMs(q);
+  return K.card(K.row(K.av(ordName(q)), `${esc(orderNo(q))} · ${esc(ordName(q))}`, `${q.status === 'completed' && d ? `Delivered ${esc(ordClock(d))}` : esc(stageOf(q).label)} · ${pw[0]}`, K.money(pricedLive(q).total, 15))); }
 SHEET.ordfix = ({ id }) => {
   const q = quoteById(id); if (!q) return '';
-  const mgr = mgrName(), opt = (act, icon, tint, title, sub) => `<button class="ord-fixopt" data-act="${act}" data-id="${q.id}"><span class="fi" style="background:${tint[0]};color:${tint[1]}">${ordIc(icon, 20, 'stroke-width:1.9')}</span><span class="tx"><b>${title}</b><span>${sub}</span></span><span class="who">${mgrFace(28)}<small>${esc(mgr === 'the Manager' ? 'Manager' : mgr)}</small></span></button>`;
-  return `<div class="ord-fixh"><span class="fi" style="background:var(--amberSoft);color:var(--amberInk)">${ordIc('ordWarn', 22, 'stroke-width:1.8')}</span><span class="tx"><b>Something wrong with this sale?</b><span>${esc(ordName(q))} · ${invoiceLabel(q)}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    ${opt('ordaskcredit', 'ordBack', ['var(--greenSoft)', 'var(--green)'], 'They’re bringing goods back', 'A return, and a credit note for it')}
-    ${opt('ordaskvoid', 'ordVoid', ['var(--crimsonSoft)', 'var(--crimson)'], 'This invoice shouldn’t exist', 'Raised twice, or for the wrong customer')}
-    <span class="ord-fixnote">You propose · nothing changes until ${esc(mgr)} says yes</span>`;
+  const mgr = firstWord(mgrFull()) || mgrName(), acc = paAccountsName(), ch = K.svg('chev', 16, 2.2, 'color:var(--ink3)');
+  const pays = (D().cashTxns || []).filter(x => x.type === 'receipt' && String(x.quoteId) === String(q.id));
+  return `${sheetTitle('Something wrong?')}${ordSumCard(q)}${K.card(
+    K.row(K.tile('undo', 'amber'), 'Items coming back', `${esc(mgr)} makes a credit note`, ch, `data-act="ordaskcredit" data-id="${q.id}"`)
+    + K.row(K.tile('close', 'crim'), 'It was entered twice', `${esc(mgr)} ${q.invoiced ? 'voids' : 'cancels'} the copy`, ch, `data-act="ordaskvoid" data-id="${q.id}"`)
+    + (pays.length ? K.row(K.tile('cash', 'indigo'), 'Payment recorded wrong', `${esc(acc)} corrects it`, ch, `data-act="ordpaywrong" data-id="${q.id}"`) : '')
+    + K.row(K.tile('note', 'grey'), 'Something else', `Tell ${esc(mgr)} in a few words`, ch, `data-act="ordaskother" data-id="${q.id}"`))}`;
 };
+// GO8: an order paid more than once asks which payment first.
+ACT.ordpaywrong = t => { const pays = (D().cashTxns || []).filter(x => x.type === 'receipt' && String(x.quoteId) === String(t.dataset.id));
+  if (pays.length === 1) { ACT.payask({ dataset: { id: pays[0].id } }); return; }
+  openSheet('paypick', { id: Number(t.dataset.id), pick: pays[0] ? pays[0].id : null }); };
+SHEET.paypick = a => {
+  const pays = (D().cashTxns || []).filter(x => x.type === 'receipt' && String(x.quoteId) === String(a.id));
+  const by = x => { const st = (D().staff || []).find(s => s.userId && String(s.userId) === String(x.enteredBy)); return st ? 'taken by ' + firstWord(st.name) : ''; };
+  return `${sheetTitle('Which payment?')}${K.card(pays.map(x => K.row(`<span class="k-radio-o${String(a.pick) === String(x.id) ? ' on' : ''}">${String(a.pick) === String(x.id) ? K.svg('tick', 13, 3) : ''}</span>`, `${esc(PA_ACCT[x.account] || x.account)} · ${esc(dayLabel(x.date))}`, [((/ · ref (\S+)\s*$/.exec(String(x.description || '')) || [])[1]) ? 'ID ' + esc((/ · ref (\S+)\s*$/.exec(String(x.description || '')) || [])[1]) : '', esc(by(x))].filter(Boolean).join(' · '), K.money(x.amount, 15), `data-act="paypickone" data-v="${esc(x.id)}"`)).join(''))}
+    ${K.bp('Next', '', `data-act="paypicknext" ${a.pick ? '' : 'disabled'}`)}`;
+};
+ACT.paypickone = t => { S.sheet.args.pick = t.dataset.v; renderSheet(); };
+ACT.paypicknext = () => { const id = S.sheet && S.sheet.args.pick; if (id) ACT.payask({ dataset: { id } }); };
+// "Something else": a few words to the Manager (an 'other' ask, 0169).
+ACT.ordaskother = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'other', note: '' });
 ACT.ordaskcredit = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'credit', qty: {}, reason: 'Damaged' });
 ACT.ordaskvoid = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'void', reason: 'Raised twice' });
 // The invoice this one may repeat: the same customer, the same total, within two days.
@@ -6037,36 +6082,43 @@ function ordTwin(q){
     && (q.customerId != null ? String(x.customerId) === String(q.customerId) : ordName(x) === ordName(q))
     && Math.abs(daysBetween(String(x.invoicedAt || x.date || '').slice(0, 10), day)) <= 2) || null;
 }
+/* O9 (a return): tick what comes back, then how many of it; why, as three
+   chips; what it is worth, before you ask. O10 (entered twice): the two side
+   by side, the copy -- always the later one -- outlined; why they look like
+   one sale, ticked off; voided after the invoice, cancelled before (GO10). */
 SHEET.ordask = a => {
   const q = quoteById(a.id); if (!q) return '';
-  const mgr = mgrName(), cust = q.customerId != null ? customerById(q.customerId) : null, name = ordName(q), first = ordGreet(name) || 'They', total = quoteTotal(q);
-  const chips = opts => `<div class="ord-chips" role="radiogroup" aria-label="Why">${opts.map(o => `<button role="radio" aria-checked="${a.reason === o}" data-act="ordaskwhy" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
-  const note = `<label class="ord-asknote">${ic('pen', 15)}<input data-in="ordasknote" value="${esc(a.note || '')}" placeholder="A word for ${esc(mgr)}" aria-label="Note for ${esc(mgr)}"></label>`;
-  const owes = cust ? Number(cust.debt) || 0 : balanceDue(q);
+  const mgr = firstWord(mgrFull()) || mgrName(), name = ordName(q);
+  if (a.kind === 'other') return `${sheetTitle(`Something else · ${esc(orderNo(q))}`)}<textarea class="ord-other" data-in="ordasknote" placeholder="What happened, in a few words" aria-label="What happened">${esc(a.note || '')}</textarea>
+    <div>${K.p(mgrFull() || mgrName(), 'reads it', 'green')}</div>${K.bp(`Send to ${esc(mgr)}`, 'send', `data-act="ordasksend" ${String(a.note || '').trim() && !S.ordAsking ? '' : 'disabled'}`)}`;
   if (a.kind === 'void') {
-    const tw = ordTwin(q), card = (x, me) => `<span class="ord-vinv${me ? ' me' : ''}"><span class="m">${invoiceLabel(x)}</span><small>${esc(dayLabel(String(x.invoicedAt || x.date || '').slice(0, 10)))}</small><span class="m v">${n0(quoteTotal(x))}</span></span>`;
-    const after = Math.max(0, owes - balanceDue(q));
-    return `<div class="ord-fixh"><span class="fi" style="background:var(--crimsonSoft);color:var(--crimson)">${ordIc('ordVoid', 22, 'stroke-width:1.9')}</span><span class="tx"><b>Void ${invoiceLabel(q)}?</b><span>${esc(name)} · <span class="m">${n0(total)}</span></span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-      ${tw ? `<div class="ord-vpair">${card(tw)}<b class="m">=</b>${card(q, true)}</div>` : ''}
-      <span class="ord-lab">WHY</span>${chips(['Raised twice', 'Wrong customer', 'Wrong order'])}
-      <div class="ord-owe"><span>${esc(first)} would owe</span><span><span class="m was">${n0(owes)}</span><b class="m">${n0(after)}</b></span></div>
-      ${note}
-      <button class="sx-btn red" data-act="ordasksend" ${S.ordAsking ? 'disabled' : ''}>Ask ${esc(mgr)} to void it</button>
-      <span class="ord-fixnote">${mgrFace(22)}${esc(mgr)} decides · Accounts sees it</span>`;
+    const tw = ordTwin(q), later = tw && createdMs(tw) > createdMs(q) ? tw : q, earlier = later === q ? tw : q;
+    a.target = later.id;
+    const side = (x, copy) => { const its = (x.items || []).slice(0, 3).map(it => `${qtyText(ordQty(it).n)} × ${esc(nameParts(it.productId, it.variantIdx, it.productName).base)}`).join('<br>'), tk = (D().staff || []).find(st => String(st.userId) === String(x.takenBy));
+      return `<div class="ord-side${copy ? ' copy' : ''}"><span class="ord-sideh"><b class="m">${esc(orderNo(x))}</b>${copy ? K.chip('Copy', 'bad') : ''}</span><small>${q.invoiced ? 'Invoice · ' : ''}${esc(timeOf(createdMs(x)))}${tk ? ' · ' + esc(firstWord(tk.name)) : ''}</small><span class="ord-sidei">${its}</span>${K.money(pricedLive(x).total, 15)}</div>`; };
+    const mins = tw ? Math.round(Math.abs(createdMs(tw) - createdMs(q)) / 60000) : 0, paidOnce = tw ? [q, tw].filter(x => (Number(x.amountPaid) || 0) > 0).length <= 1 : true;
+    const same = t => `<span class="ord-same">${K.svg('tick', 14, 2.6)}${t}</span>`;
+    const word = q.invoiced ? 'void' : 'cancel';
+    return `${sheetTitle('Entered twice?')}
+      ${tw ? `<div class="ord-sides">${side(earlier, false)}${side(later, true)}</div>${K.card(`<div class="ord-sames">${same('Same customer')}${same('Same items, same total')}${same(`${mins < 1 ? 'The same minute' : (mins < 60 ? mins + ' minute' + (mins === 1 ? '' : 's') : Math.round(mins / 60) + ' hours') + ' apart'}${paidOnce ? ' · paid once' : ''}`)}</div>`)}`
+        : `${ordSumCard(q)}${K.label('Why')}${K.frow(['Raised twice', 'Wrong customer', 'Wrong order'].map(o => K.f(o, null, a.reason === o, `data-act="ordaskwhy" data-v="${esc(o)}"`)).join(''), 'wrap')}`}
+      <div>${K.p(mgrFull() || mgrName(), `${word}s the copy`, 'green')}</div>
+      ${K.bp(`Ask ${esc(mgr)} to ${word} ${esc(orderNo(later))}`, 'send', `data-act="ordasksend" ${S.ordAsking ? 'disabled' : ''}`)}`;
   }
   const lines = (q.items || []).map((it, idx) => ({ it, idx, price: quoteItemSellPrice(it), max: Math.max(0, (Number(it.qty) || 0) - ordCredited(q, idx)) })).filter(l => l.max > 0 && l.price > 0);
   const off = lines.reduce((s, l) => s + Math.min(l.max, a.qty[l.idx] || 0) * l.price, 0);
-  return `<div class="ord-fixh"><span class="fi" style="background:var(--greenSoft);color:var(--green)">${ordIc('ordBack', 22, 'stroke-width:1.9')}</span><span class="tx"><b>${esc(first)} is bringing goods back</b><span>${invoiceLabel(q)} · <span class="m">${n0(total)}</span></span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <div class="ord-retl">${lines.length ? lines.map(l => { const n = Math.min(l.max, a.qty[l.idx] || 0), qw = ordQty(l.it);
-      return `<div class="ord-ret${n ? ' on' : ''}" data-key="r-${l.idx}"><span class="tx"><b class="ell">${esc(ordItemName(l.it))}</b><span>took <span class="m">${qtyText(qw.n)}</span> ${esc(qw.u)} · <span class="m">${n0(l.price)}</span> each</span></span><span class="ord-retstep"><button data-act="ordretq" data-i="${l.idx}" data-d="-1" aria-label="Fewer back">−</button><b class="m">${n}</b><button data-act="ordretq" data-i="${l.idx}" data-d="1" aria-label="More back">+</button></span></div>`; }).join('') : '<span class="ord-fixnote">Every line is credited already</span>'}</div>
-    <span class="ord-lab">WHY</span>${chips(['Damaged', 'Wrong item', 'Too many'])}
-    <div class="ord-credit"><span>Credit to ${esc(first)}</span><b class="m">${n0(off)}</b></div>
-    ${note}
-    <button class="sx-btn red" data-act="ordasksend" ${off > 0 && !S.ordAsking ? '' : 'disabled'}>Send to ${esc(mgr)}</button>
-    <span class="ord-fixnote">${mgrFace(22)}${esc(mgr)} raises the credit note · Accounts sees it</span>`;
+  const rl = l => { const n = Math.min(l.max, a.qty[l.idx] || 0), qw = ordQty(l.it);
+    return `<div class="ord-rl" data-key="r-${l.idx}"><button type="button" class="ord-rlh" data-act="ordrettick" data-i="${l.idx}" aria-pressed="${n > 0}">${K.tick(n > 0)}<span class="k-row-n">${esc(ordItemName(l.it))}</span>${K.money(Math.round(l.max * l.price), 15, n > 0 ? '' : 'var(--ink3)')}</button>
+      ${n > 0 ? `<div class="ord-rlq"><span class="k-qty"><button type="button" aria-label="Fewer back" data-act="ordretq" data-i="${l.idx}" data-d="-1">${K.svg('minus', 18, 2.2)}</button><span class="k-qty-v"><b>${qtyText(n)}</b><small>${esc(qw.u)} of ${qtyText(l.max)}</small></span><button type="button" aria-label="More back" data-act="ordretq" data-i="${l.idx}" data-d="1">${K.svg('plus', 18, 2.2)}</button></span></div>` : ''}</div>`; };
+  return `${sheetTitle(`Items coming back · ${esc(orderNo(q))}`)}
+    ${lines.length ? K.card(lines.map(rl).join('')) : K.notice('Every line is credited already.', 'neutral', 'tick')}
+    ${K.label('Why')}${K.frow(['Wrong size', 'Damaged', 'Not needed'].map(o => K.f(o, null, a.reason === o, `data-act="ordaskwhy" data-v="${esc(o)}"`)).join(''), 'wrap')}
+    <div class="ord-credit2"><span>Credit to give back</span>${K.money(off, 20)}</div>
+    ${K.bp(`Ask ${esc(mgr)} for the credit note`, 'send', `data-act="ordasksend" ${off > 0 && !S.ordAsking ? '' : 'disabled'}`)}`;
 };
+ACT.ordrettick = t => { const a = S.sheet.args, q = quoteById(a.id), i = Number(t.dataset.i), it = q && q.items[i]; if (!it) return; const max = Math.max(0, (Number(it.qty) || 0) - ordCredited(q, i)); a.qty[i] = (a.qty[i] || 0) > 0 ? 0 : max; haptic('light'); renderSheet(); };
 ACT.ordaskwhy = t => { S.sheet.args.reason = t.dataset.v; haptic('light'); renderSheet(); };
-ACT['in:ordasknote'] = t => { if (S.sheet) S.sheet.args.note = t.value; };
+ACT['in:ordasknote'] = t => { if (!S.sheet) return; S.sheet.args.note = t.value; const b = document.querySelector('[data-act="ordasksend"]'); if (b && S.sheet.args.kind === 'other') b.disabled = !t.value.trim(); };
 ACT.ordretq = t => {
   const a = S.sheet.args, q = quoteById(a.id), i = Number(t.dataset.i), it = q && q.items[i]; if (!it) return;
   const max = Math.max(0, (Number(it.qty) || 0) - ordCredited(q, i));
@@ -6076,10 +6128,12 @@ ACT.ordasksend = async () => {
   if (S.ordAsking || !S.sheet || S.sheet.type !== 'ordask') return;
   const a = S.sheet.args, q = quoteById(a.id); if (!q) return;
   const lines = a.kind === 'void' ? [] : (q.items || []).map((it, idx) => ({ idx, name: it.productName || '', qty: Math.min(Math.max(0, (Number(it.qty) || 0) - ordCredited(q, idx)), a.qty[idx] || 0), price: quoteItemSellPrice(it) })).filter(l => l.qty > 0).map(l => ({ ...l, amount: Math.round(l.qty * l.price) }));
-  const amount = a.kind === 'void' ? Math.round(quoteTotal(q)) : lines.reduce((s, l) => s + l.amount, 0); if (!(amount > 0)) return;
+  const tq = a.kind === 'void' && a.target != null ? (quoteById(a.target) || q) : q;
+  const amount = a.kind === 'void' ? Math.round(quoteTotal(tq)) : a.kind === 'other' ? 0 : lines.reduce((s, l) => s + l.amount, 0); if (!(amount > 0) && a.kind !== 'other') return;
+  if (a.kind === 'other' && !String(a.note || '').trim()) return;
   S.ordAsking = true; renderSheet();
   try {
-    const row = { shop_id: S.shopId, quote_id: q.id, customer_id: q.customerId != null && q.customerId !== '' ? String(q.customerId) : null, kind: a.kind, lines, amount, reason: a.reason || null, note: String(a.note || '').trim() || null, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' };
+    const row = { shop_id: S.shopId, quote_id: tq.id, customer_id: tq.customerId != null && tq.customerId !== '' ? String(tq.customerId) : null, kind: a.kind, lines, amount, reason: a.kind === 'void' && !a.reason ? 'Raised twice' : a.reason || null, note: String(a.note || '').trim() || null, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' };
     const r = await sb.from('invoice_asks').insert(row).select().maybeSingle(); if (r.error) throw r.error;
     (D().asks ||= []).push(rowToAsk(r.data || { ...row, id: 'local-' + Date.now(), created_at: new Date().toISOString() })); S.loadedAt = Date.now(); saveSnapshot();
     S.ordAsking = false; haptic('success'); closeSheet(); toast(`Asked ${mgrName()} — you’ll see the answer on the order`); render();
@@ -6225,34 +6279,29 @@ ACT.tell = t => {
   openSheet('tell', { id: q.id, text: ordTellText(q), pic: q.status === 'draft' || q.status === 'awaiting_goods', editing: false });
   if (S.wa.configured == null) waStatus().then(() => { if (S.sheet && S.sheet.type === 'tell') renderSheet(); });
 };
+/* O4 (tell them): what they will read, as they will see it; one red button,
+   "Send to Kato" -- no slide for a message. Before an invoice the attachment
+   is the order's picture, as it stands (GO4). A shut chat says so once, and
+   WhatsApp opens with it typed. */
 SHEET.tell = a => {
   const q = quoteById(a.id); if (!q) return '';
   const name = ordName(q), first = ordGreet(name === 'Walk-in' ? '' : name) || 'them', conv = ordConv(q), send = ordCanSend(q);
   const w = conv ? waWindowInfo(conv.last_inbound_at) : null, wrote = conv && conv.last_inbound_at ? agoWords(Date.parse(conv.last_inbound_at)) : '';
   const phone = q.client && q.client.phone;
-  // One line: where it goes. The footer says what the slide will do.
-  const status = !conv ? `<i class="dot off"></i><span class="ell">${phone ? 'No WhatsApp chat with them yet' : 'No phone number on this order'}</span>`
-    : w.open ? `<i class="dot on"></i><span class="ell">WhatsApp · they wrote ${esc(wrote)}</span>`
-    : `<i class="dot off"></i><span class="ell">Chat closed${wrote ? ' · wrote ' + esc(wrote) : ''}</span>`;
-  const note = conv && !w.open ? 'They must write first for the app to send it' : !phone ? 'WhatsApp will ask who to send it to' : 'Text only · you press send in WhatsApp';
   const pic = send && a.pic ? ordPictureURL(q) : '';
   const rows = Math.min(14, Math.max(4, Math.ceil(String(a.text || '').length / 34) + 1));
-  return `<div class="ord-tell">
-    <div class="ord-tellhead"><span class="ord-handle light"></span><div class="row">${ordAv(name, 42)}<span class="tx"><b>Tell ${esc(first)}</b><span class="st">${status}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ordIc('close', 16, 'stroke-width:2.2')}</button></div></div>
-    <div class="ord-chat">
-      <span class="ord-prev">Preview · nothing sent yet</span>
-      ${send ? `<div class="ord-bub pic ord-tin" data-key="bpic"${pic ? '' : ' hidden'}>${pic ? `<img src="${pic}" alt="Order picture for ${esc(name)}">` : ''}</div>` : ''}
-      <div class="ord-bub txt ord-tin${a.editing ? ' editing' : ''}" data-key="btxt" style="animation-delay:.2s">${a.editing
-        ? `<textarea id="ord_telltext" data-in="telltext" rows="${rows}" aria-label="Message to ${esc(first)}">${esc(a.text)}</textarea>`
-        : `<span class="b">${esc(a.text).replace(/(\d{1,3}(,\d{3})+)/g, '<span class="m">$1</span>')}</span>`}</div>
+  const note = !conv ? (phone ? 'No WhatsApp chat with them yet. WhatsApp opens with it typed.' : 'No phone number on this order. WhatsApp will ask who to send it to.')
+    : !w.open ? `${esc(first)} last wrote ${esc(wrote || 'a while ago')}. WhatsApp opens with it typed.` : '';
+  return `${sheetTitle(`Tell ${esc(first)}`)}
+    <div class="tl-wall">
+      <div class="tl-bub">${a.editing ? `<textarea id="ord_telltext" data-in="telltext" rows="${rows}" aria-label="Message to ${esc(first)}">${esc(a.text)}</textarea>` : esc(a.text).replace(/(\d{1,3}(,\d{3})+)/g, '<span class="m">$1</span>')}</div>
+      ${send && a.pic ? `<div class="tl-att">${pic ? `<img src="${pic}" alt="">` : ''}<span class="tl-attr">${K.tile('camera', 'indigo', 36)}<span class="k-row-tx"><b>Order ${esc(orderNo(q))}</b><span class="k-row-m">picture · as it stands</span></span></span></div>` : ''}
     </div>
-    <div class="ord-tellfoot">
-      <div class="opts">${send ? `<button class="ord-sw${a.pic ? ' on' : ''}" role="switch" aria-checked="${!!a.pic}" data-act="tellpic"><i>${a.pic ? ordIc('tick', 12, 'stroke-width:3') : ''}</i>Order picture</button>` : `<span class="ord-note">${note}</span>`}
-        <button class="ord-edit" data-act="telledit">${ic(a.editing ? 'tick' : 'pen', 15)}${a.editing ? 'Done' : 'Edit'}</button></div>
-      ${sliderHTML('tell', send ? `Slide to send to ${first}` : 'Slide to open WhatsApp', { disabled: !!S.ordSending })}
-      ${a.price || a.swId ? `<span class="ord-note c">The card leaves Today once it’s ${send ? 'sent' : 'opened in WhatsApp'}</span>` : ''}
-    </div></div>`;
+    ${note ? K.notice(note, 'neutral', 'clock') : ''}
+    ${K.bs(a.editing ? 'Done' : 'Change the message', a.editing ? 'tick' : 'edit', 'data-act="telledit"')}
+    ${K.bp(S.ordSending ? 'Sending…' : send ? `Send to ${esc(first)}` : 'Open WhatsApp', 'send', `data-act="tellsend" ${S.ordSending ? 'disabled' : ''}`)}`;
 };
+ACT.tellsend = () => ACT['slide:tell']();
 ACT['in:telltext'] = t => { if (S.sheet && S.sheet.type === 'tell') S.sheet.args.text = t.value; ordFitText(t); };
 /* The message box grows with what is typed and stays above the keyboard. */
 function ordFitText(t){ if (!t || !t.style) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
@@ -6285,7 +6334,7 @@ ACT['slide:tell'] = async () => {
   }
 };
 /* The tell sheet wears the chat's own paper. */
-AFTER.push(() => { const sh = document.querySelector('#sx_sheet .sx-sheet'); if (sh) sh.classList.toggle('ord-tellsheet', !!(S.sheet && S.sheet.type === 'tell')); });
+
 
 /* ==================================================================
    Your day, the owner's goal, and You.
@@ -10937,66 +10986,47 @@ function paRowHTML(txnId){
   const done = a && (a.status === 'done' || a.status === 'declined') ? `<span class="pa-done ${a.status}">${a.status === 'done' ? ic('tick', 13, 'style="stroke-width:3"') : ''}${esc(a.decidedByName ? firstWord(a.decidedByName) : acc)} ${a.status === 'done' ? 'corrected it' : 'kept it as it was'}</span>` : '';
   return `${done}<button class="pa-wrong" data-act="payask" data-id="${esc(txnId)}">${ic('paSwap', 16)}Something wrong with this payment?</button>`;
 }
-ACT.payask = t => { const tx = paTxn(t.dataset.id); if (!tx) return; openSheet('payask', { id: tx.id, what: 'method', account: tx.account === 'cash' ? 'momo' : 'cash', amount: '', quoteId: undefined, date: tx.date, note: '' }); };
+/* O11 (a payment recorded wrong): recorded -> should be, side by side, the
+   amount and how they paid together; what they will owe after; Esther
+   corrects it. Both wrong: two asks, one for each (payment_asks takes one
+   'what' a row). */
+ACT.payask = t => { const tx = paTxn(t.dataset.id); if (!tx) return; openSheet('payask', { id: tx.id, account: tx.account, amount: '' }); };
 SHEET.payask = a => {
   const tx = paTxn(a.id); if (!tx) return '';
   const c = typeof payTxnCustomer === 'function' ? payTxnCustomer(tx) : null, q0 = tx.quoteId != null ? quoteById(tx.quoteId) : null;
-  const who = (c && c.name) || (q0 && q0.client && q0.client.name) || 'A payment', acc = paAccountsName(), me = S.user && String(tx.enteredBy) === String(S.user.id);
-  const by = me ? 'recorded by you' : (() => { const st = (D().staff || []).find(s => s.userId && String(s.userId) === String(tx.enteredBy)); return st ? 'recorded by ' + firstWord(st.name) : 'in the cash book'; })();
-  const chip = (k, w) => `<button role="radio" aria-checked="${a.what === k}" data-act="pawhat" data-v="${k}">${w}</button>`;
-  let body = '';
-  if (a.what === 'method') {
-    const day = moneyIn(tx.date, tx.date), sum = k => day.filter(x => x.account === k).reduce((s, x) => s + x.amount, 0), total = day.reduce((s, x) => s + x.amount, 0) || 1;
-    const after = k => sum(k) + (k === a.account ? tx.amount : 0) - (k === tx.account ? tx.amount : 0);
-    body = `<div class="pa-pair"><span class="pa-was">${esc(PA_ACCT[tx.account] || tx.account)}</span>${ic('chev', 16, 'style="stroke-width:2.4"')}<span class="pa-opts">${Object.keys(PA_ACCT).filter(k => k !== tx.account).map(k => `<button role="radio" aria-checked="${a.account === k}" data-act="paacct" data-v="${k}">${PA_ACCT[k]}</button>`).join('')}</span></div>
-      <div class="pa-day"><span class="pa-lab"><span>MONEY IN ${tx.date === todayISO() ? 'TODAY' : 'THAT DAY'}</span><span>total stays <b class="m">${n0(total)}</b></span></span>
-        ${[tx.account, a.account].map(k => { const b = sum(k), n = after(k); return `<span class="pa-acc"><span class="k">${PA_ACCT[k]}</span><span class="bar"><i style="width:${Math.round(b / total * 100)}%"></i><i class="n" style="width:${Math.round(n / total * 100)}%"></i></span><span class="m v"><s>${n0(b)}</s> ${n0(n)}</span></span>`; }).join('')}</div>`;
-  } else if (a.what === 'amount') {
-    const v = Number(String(a.amount || '').replace(/[^0-9]/g, '')) || 0;
-    body = `<label class="pa-big"><span>It should be</span><span class="u">UGX</span><input class="m" data-in="paamt" inputmode="numeric" autocomplete="off" value="${v ? n0(v) : ''}" placeholder="${n0(tx.amount)}" aria-label="The right amount"></label>
-      ${v ? `<span class="pa-delta">${v > tx.amount ? '+' : '−'}<span class="m">${n0(Math.abs(v - tx.amount))}</span> on ${esc(firstWord(who))}’s account</span>` : ''}`;
-  } else if (a.what === 'bill') {
-    const bills = c ? outstandingInvoices(c.id).filter(q => String(q.id) !== String(tx.quoteId)) : [];
-    const opt = (id, label, sub) => `<button class="pa-bill${String(a.quoteId) === String(id) ? ' on' : ''}" data-act="pabill" data-v="${id == null ? '' : id}"><span class="tx"><b>${esc(label)}</b><small>${sub}</small></span>${String(a.quoteId) === String(id) ? ic('tick', 16, 'style="stroke-width:2.8"') : ''}</button>`;
-    body = `<span class="pa-lab"><span>ON ${q0 ? (q0.invoiced ? invoiceLabel(q0) : 'ORDER ' + orderNo(q0)) : 'THEIR ACCOUNT'} NOW · IT SHOULD BE ON</span></span>
-      <div class="pa-bills">${bills.slice(0, 5).map(q => opt(q.id, invoiceLabel(q), `<span class="m">${n0(balanceDue(q))}</span> left`)).join('')}${tx.quoteId != null ? opt(null, 'Their account', 'not tied to a bill') : ''}${!bills.length && tx.quoteId == null ? '<span class="pa-none">No other open bill to move it to</span>' : ''}</div>`;
-  } else {
-    body = `<label class="pa-big"><span>It came in on</span><input type="date" data-ch="padate" value="${esc(a.date || tx.date)}" max="${todayISO()}" aria-label="The right day"></label>`;
-  }
-  const ready = a.what === 'method' ? !!a.account : a.what === 'amount' ? (Number(String(a.amount || '').replace(/[^0-9]/g, '')) || 0) > 0 && Number(String(a.amount).replace(/[^0-9]/g, '')) !== Math.round(tx.amount)
-    : a.what === 'bill' ? a.quoteId !== undefined : !!a.date && a.date !== tx.date;
-  return `<div class="pa-head"><span class="pa-ico">${ic('paSwap', 22)}</span><span class="tx"><b>Correct a payment</b><span class="ell">${esc(who)} · ${esc(tx.date === todayISO() ? 'today' : dayLabel(tx.date))}${tx.time ? ' ' + esc(String(tx.time).slice(0, 5)) : ''}</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <div class="pa-amt"><b class="m">${n0(tx.amount)}</b><span>${esc(PA_ACCT[tx.account] || tx.account)} · ${esc(by)}</span></div>
-    <span class="pa-lab"><span>WHAT’S WRONG</span></span>
-    <div class="pa-chips" role="radiogroup" aria-label="What is wrong">${PA_WHAT.map(([k, w]) => chip(k, w)).join('')}</div>
-    ${body}
-    <label class="pa-note">${ic('pen', 15)}<input data-in="panote" value="${esc(a.note || '')}" placeholder="A word for ${esc(acc)} · the slip number, who paid" aria-label="Note for ${esc(acc)}"></label>
-    <button class="sx-btn red" data-act="pasend" ${ready && !S.paAsking ? '' : 'disabled'}>Send to ${esc(acc)}</button>
-    <span class="pa-who"><span class="pa-face s">${esc(initials(paAccountsFull()))}</span>${esc(acc)}${acc === 'Accounts' ? '' : ', Accounts,'} corrects it${a.what === 'method' || a.what === 'day' ? ` · ${esc(firstWord(who))}’s bills stay paid` : ''}</span>`;
+  const who = (c && c.name) || (q0 && q0.client && q0.client.name) || 'A payment', acc = paAccountsName();
+  const v = Number(String(a.amount || '').replace(/[^0-9]/g, '')) || 0, amt = v > 0 ? v : Math.round(tx.amount), changed = amt !== Math.round(tx.amount) || a.account !== tx.account;
+  const owesNow = c ? Math.round(Number(c.debt) || 0) : null, after = owesNow == null ? null : owesNow + (Math.round(tx.amount) - amt);
+  const ask = paAskFor(tx.id);
+  if (ask && ask.status === 'sent') return `${sheetTitle('Payment recorded wrong')}${K.notice(`Asked ${esc(acc)} · ${esc(paWantWords(ask))} · waiting`, 'caution', 'clock')}${String(ask.askedBy) === String(S.user && S.user.id) ? K.bs('Take back the ask', 'undo', `data-act="paback" data-v="${esc(ask.id)}"`) : ''}`;
+  return `${sheetTitle('Payment recorded wrong')}
+    ${K.card(K.row(K.av(who), esc(who), owesNow == null ? '' : `Owes <span class="m">${n0(owesNow)}</span> now`, ''))}
+    <div class="pa-ws"><span class="pa-was2"><small>Recorded</small><s class="k-m">${n0(tx.amount)}</s><small>${esc(PA_ACCT[tx.account] || tx.account)}${tx.time ? ' · ' + esc(String(tx.time).slice(0, 5)) : ''}</small></span>${K.svg('chev', 18, 2.4, 'color:var(--ink3)')}
+      <label class="pa-now"><small>Should be</small><input class="k-m" data-in="paamt" inputmode="numeric" autocomplete="off" value="${v ? n0(v) : ''}" placeholder="${n0(tx.amount)}" aria-label="The right amount"><small>${esc(PA_ACCT[a.account] || a.account)}</small></label></div>
+    ${K.seg(Object.keys(PA_ACCT).map(k => ({ t: k === 'momo' ? 'Mobile' : PA_ACCT[k], attrs: `data-act="paacct" data-v="${k}"` })), Object.keys(PA_ACCT).indexOf(a.account), true)}
+    ${after != null && changed ? `<span class="pa-after">They will owe <b class="m">${n0(Math.max(0, after))}</b> after ${esc(acc)}’s correction.</span>` : ''}
+    ${K.bp(`Ask ${esc(acc)} to correct it`, 'send', `data-act="pasend" ${changed && !S.paAsking ? '' : 'disabled'}`)}`;
 };
-ACT.pawhat = t => { S.sheet.args.what = t.dataset.v; haptic('light'); renderSheet(); };
 ACT.paacct = t => { S.sheet.args.account = t.dataset.v; haptic('light'); renderSheet(); };
-ACT.pabill = t => { S.sheet.args.quoteId = t.dataset.v === '' ? null : Number(t.dataset.v); haptic('light'); renderSheet(); };
-ACT['in:paamt'] = t => { const v = String(t.value).replace(/[^0-9]/g, ''); S.sheet.args.amount = v; const s = v ? n0(Number(v)) : ''; if (t.value !== s) t.value = s; const tx = paTxn(S.sheet.args.id), btn = document.querySelector('[data-act="pasend"]'); if (btn && tx) btn.disabled = !(Number(v) > 0) || Number(v) === Math.round(tx.amount); };
-ACT['ch:padate'] = t => { if (t.value) { S.sheet.args.date = t.value; renderSheet(); } };
-ACT['in:panote'] = t => { if (S.sheet) S.sheet.args.note = t.value; };
+ACT['in:paamt'] = t => { const v = String(t.value).replace(/[^0-9]/g, ''); S.sheet.args.amount = v; const s2 = v ? n0(Number(v)) : ''; if (t.value !== s2) t.value = s2; clearTimeout(ACT.paamtT); ACT.paamtT = setTimeout(() => { if (S.sheet && S.sheet.type === 'payask') { renderSheet(); const el = document.querySelector('[data-in="paamt"]'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } } }, 400); };
 ACT.pasend = async () => {
   if (S.paAsking || !S.sheet || S.sheet.type !== 'payask') return;
   const a = S.sheet.args, tx = paTxn(a.id); if (!tx) return;
-  const c = typeof payTxnCustomer === 'function' ? payTxnCustomer(tx) : null;
-  const want = a.what === 'method' ? { from: tx.account, account: a.account } : a.what === 'amount' ? { amount: Number(String(a.amount).replace(/[^0-9]/g, '')) || 0 }
-    : a.what === 'bill' ? { fromQuoteId: tx.quoteId, quoteId: a.quoteId == null ? null : a.quoteId } : { from: tx.date, date: a.date };
-  const row = { shop_id: S.shopId, cash_txn_id: Number(tx.id), customer_id: c ? String(c.id) : null, quote_id: tx.quoteId == null ? null : Number(tx.quoteId), amount: Math.round(tx.amount),
-    what: a.what, want, note: String(a.note || '').trim() || null, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' };
+  const c = typeof payTxnCustomer === 'function' ? payTxnCustomer(tx) : null, v = Number(String(a.amount || '').replace(/[^0-9]/g, '')) || 0;
+  const base = { shop_id: S.shopId, cash_txn_id: Number(tx.id), customer_id: c ? String(c.id) : null, quote_id: tx.quoteId == null ? null : Number(tx.quoteId), amount: Math.round(tx.amount), note: null, asked_by: S.user.id, asked_by_name: myName(), asked_role: S.role, status: 'sent' };
+  const rows = [];
+  if (v > 0 && v !== Math.round(tx.amount)) rows.push({ ...base, what: 'amount', want: { amount: v } });
+  if (a.account !== tx.account) rows.push({ ...base, what: 'method', want: { from: tx.account, account: a.account } });
+  if (!rows.length) return;
   S.paAsking = true; renderSheet();
   try {
-    const r = await sb.from('payment_asks').insert(row).select().maybeSingle(); if (r.error) throw r.error;
-    (D().payAsks ||= []).push(rowToPayAsk(r.data || { ...row, id: 'local-' + Date.now(), created_at: new Date().toISOString() })); S.loadedAt = Date.now(); saveSnapshot();
+    for (const row of rows) { const r = await sb.from('payment_asks').insert(row).select().maybeSingle(); if (r.error) throw r.error;
+      (D().payAsks ||= []).push(rowToPayAsk(r.data || { ...row, id: 'local-' + Date.now(), created_at: new Date().toISOString() })); }
+    S.loadedAt = Date.now(); saveSnapshot();
     S.paAsking = false; haptic('success'); closeSheet(); toast(`Sent to ${paAccountsName()} — nothing changes until they correct it`); render();
   } catch (e) {
     S.paAsking = false; renderSheet();
-    const denied = e && (e.code === '42501' || /row-level security|permission/i.test(String(e.message || '')));
-    toast(isNetworkError(e) ? 'No connection — nothing was sent' : denied || /payment_asks/.test(String(e.message || '')) ? 'Asking Accounts needs one update — the owner runs supabase/migrations/0130_counter_sale_and_payment_asks.sql' : 'Not sent: ' + (e.message || e), 7000);
+    toast(isNetworkError(e) ? 'No connection — nothing was sent' : 'Not sent: ' + (e.message || e), 7000);
   }
 };
 // SAL-005 / SAL-011 (0165): an ask with no sheet -- a paid-over order, a balance that doesn't add up.
