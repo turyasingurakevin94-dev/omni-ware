@@ -20,8 +20,8 @@ can be built cleanly without losing a rule the shop depends on.
 | 02 | [Money](02-money.md) | Every money rule: totals, prices, cost, debt, payments, the treasurer's books | decided 2026-10-28 |
 | 03 | Roles | Who does what. **[`docs/decision-rights.md`](../decision-rights.md) is that chapter** and stays binding; this one only adds each role's daily jobs | to do |
 | 04 | Screens | Every screen per role, from the approved canvases | to do |
-| 05 | Data | Tables, what is in an order's `payload`, who can read and write what | to do |
-| 06 | Offline, sync and pushes | Bad signal, the queue, the phone's copy of the books, every push | to do |
+| 05 | [Data](05-data.md) | Tables, what is in an order's `payload`, who can read and write what | written 2026-10-28 · 5 questions for Kevin |
+| 06 | [Offline, sync and pushes](06-offline-sync-push.md) | Bad signal, the queue, the phone's copy of the books, every push | written 2026-10-28 · 14 questions for Kevin |
 | 07 | [The stack](07-stack.md) | Tools for the new front end — **Kevin approves** | decided 2026-10-28 |
 | 08 | What we leave behind | Features the new apps do not carry over — **Kevin decides each** | to do |
 
