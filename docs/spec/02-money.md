@@ -78,7 +78,7 @@ balance due     = max(0, quote total − amount_paid)
 | `balanceDue` | `sales.html:4594` (all 4 copies the same) | `0169:285` debt sync uses `max(0, round(total) − round(paid))` | `accounts-app`, `manager-app` |
 | **Amount paid** = Σ `payload.payments[].amount`; each payment has its own receipt row in `cash_txns` with the same amount and order | written only by server functions (§6) | `0165` / `0169` `saved_quotes_zz_money_check` refuses anything else | `sales-round1-db`, `manager-round1-db` |
 | `pricedView` / Manager `orderTotal`: the total of the priced lines only, plus a count of lines to confirm | `sales.html:4569`, `manager.html:1617` | `ow_order_total(…, p_known_only)` (now always known-only) | `sales-app`, `manager-app` |
-| **Agent order total** (what the shop is owed) | edge function `agent-change-order/index.ts:69`: Σ sellPrice×qty **+ charges** | `0109:61` `order_shop_total`: Σ sellPrice×qty, **no charges** | `agent-change-order`, `money-write-guards` (no test of `order_shop_total`) |
+| **Agent order total** (what the shop is owed) | edge function `agent-change-order/index.ts:69`: Σ sellPrice×qty **+ charges** | `0172` `order_shop_total`: Σ sellPrice×qty **+ charges** (was goods only, `0109:61`); read by `apply_momo_payment` and `use_agent_credit` | `agent-change-order`, `money-write-guards`, `agent-total-charges-db` |
 | **Customer portal total** | `supabase/functions/client-portal/index.ts:241` `orderTotal` | — | `client-order-total` (checks it against the console; discount together with credit is not tested) |
 
 **The console's own copy** (`index.html` `savedQuoteGoodsTotal` 63664, `savedQuoteCashTotal` 63823, `orderCreditCharge` 63832, `savedQuoteTotal` 63895, `invoiceBalanceDue` 65486) is the **0119** rule: it counts every line (a line with no rule at its cost), does not round lines, and can go below 0. `CONSOLE_BOOKS` in Accounts and Owner carries this copy (Q1). Tests: `quote-totals`, 55 `admin-*` tests.
@@ -324,7 +324,7 @@ database rule (see `docs/rebuild.md`, "Backend fixes decided").
 | Q11 | Pay plan "over" | `least(left, max(debt, 0))` (= server `receive_payment`) | owner 1230 |
 | Q12 | Payables | Every open bill counts (Kevin's 20 Oct 2026 rule) | owner 2911, 3223 |
 | Q13 | Today's date | Kampala date everywhere (= server `ow_today()`) | console UTC; phones local; supplier.html UTC+3 |
-| Q14 | Agent order total | Goods + charges | `0109` `order_shop_total` counted goods only |
+| Q14 | Agent order total | Goods + charges. **Built: `0172`** | `0109` `order_shop_total` counted goods only |
 | Q15 | Portal total | The server's `ow_order_total`: the customer sees the shop's figure | `client-portal/index.ts:241` |
 | Q16 | No sale below cost | **Server:** the database refuses a line priced below cost, except a line marked given away. **Built: `0171`** | only `priceTooLow` and the Manager's floor in the apps |
 | Q17 | Rounding of discounts and credit notes | Round as the server does | apps did not round |
@@ -339,7 +339,7 @@ Differences found that are **names or format only** (no answer needed): `tieredU
 - Every **owner.html** money copy: `goodsTotal`, `quoteTotal`, `quoteItemSellPrice`, `custAging`, `payPlan`, `payablesAsAt`, `dashTotalCreditors`.
 - `marginOf` / `marginCol` / `priceChip` (Manager's margin and at-cost floor).
 - `custPromiseState` (Sales' promise rule).
-- SQL: `order_shop_total`, `ow_markup_rule`, `ow_tiered_unit_price`, `ow_apply_rule`, `ow_line_under_cost`, `ow_deposit_in`, `ow_money` (only text checks for `saved_quotes_sync_debt` and `ow_settle_over`).
+- SQL: `ow_markup_rule`, `ow_tiered_unit_price`, `ow_apply_rule`, `ow_line_under_cost`, `ow_deposit_in`, `ow_money` (only text checks for `saved_quotes_sync_debt` and `ow_settle_over`).
 - Any SQL test that is a text check only, unless run with `OW_PG` (`sales-round1-db`, `manager-round1-db`, `store-money-db` and others).
 - Portal total with a discount **and** credit together (`client-order-total` does not try it).
 - No test proves the server's total equals the phone's for the same order (only `sales-app` compares Sales with the console, on priced lines).
