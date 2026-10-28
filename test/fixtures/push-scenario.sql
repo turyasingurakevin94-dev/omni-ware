@@ -59,7 +59,7 @@ set role authenticated;
 
 -- ---- a price, decided
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select _try('sales: an order at a price under the shop''s', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9201,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"takenBy":"00000000-0000-0000-0000-00000000000d","items":[{"lineId":"L1","productId":"P1","productName":"Cement","qty":2,"price":30000,"sellPrice":35000,"priceBy":"GA","priceNote":"under","supplierId":"S1"}]}')$q$);
+select _try('sales: an order at a price under the shop''s', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9201,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"takenBy":"00000000-0000-0000-0000-00000000000d","items":[{"lineId":"L1","productId":"P1","productName":"Cement","qty":2,"price":30000,"sellPrice":35000,"priceBy":"GA","priceNote":"under","supplierId":"S1"}],"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::2:30000"}}}')$q$);
 select _try('check: one push, to the Manager only', 'ok', $q$select _is($c$(select count(*) from push_outbox where kind='price.waits')=1 and _to('price.waits')='0b' and (select body from push_outbox where kind='price.waits') = 'Kato Construction — Cement at 35,000'$c$)$q$);
 select _try('sales: save it again', 'ok', $q$update saved_quotes set payload = payload || '{"note":"x"}' where id=9201$q$);
 select _try('check: saving again rings nobody again', 'ok', $q$select _is($c$(select count(*) from push_outbox where kind='price.waits')=1$c$)$q$);

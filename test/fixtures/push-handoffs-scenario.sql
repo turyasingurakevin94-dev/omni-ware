@@ -37,7 +37,7 @@ insert into customers(shop_id,id,name,debt,credit_limit) values ('11111111-1111-
 insert into saved_quotes(id, shop_id, client_name, status, invoiced, payload) overriding system value values
  (9301,'11111111-1111-1111-1111-111111111111','Kyaligonza & Sons','completed',true,'{}'),
  (9302,'11111111-1111-1111-1111-111111111111','Kato Construction','draft',false,
-  '{"takenBy":"00000000-0000-0000-0000-00000000000d","customerId":"C001","items":[{"productId":"P1","productName":"Cement","qty":20,"unit":"bags","price":30000,"supplierId":"S1"},{"productId":"P2","productName":"Iron bar","qty":4,"price":17500,"supplierId":"S2"}]}');
+  '{"takenBy":"00000000-0000-0000-0000-00000000000d","customerId":"C001","items":[{"productId":"P1","productName":"Cement","qty":20,"unit":"bags","price":30000,"supplierId":"S1"},{"productId":"P2","productName":"Iron bar","qty":4,"price":17500,"supplierId":"S2"}],"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::20:30000"},"S2":{"state":"confirmed","terms":"P2::4:17500"}}}');
 insert into stock_reports(id, shop_id, key, product_id, name, qty, why, reported_by, reported_by_name, status) values
  ('cccccccc-0000-0000-0000-000000000009','11111111-1111-1111-1111-111111111111','P1','P1','Cement',2,'damaged','00000000-0000-0000-0000-00000000000e','Musa Kiggundu','sent');
 insert into sourcing_leads(id, shop_id, name, status, requests) values
