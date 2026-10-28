@@ -113,7 +113,7 @@ Tests: gate and invoicing `test/shared-foundation-db.test.js`; counter sale `tes
 | Rule | Detail | Source |
 |---|---|---|
 | Who it binds | Every login, owner too. Edge Functions and the hourly run (no login) pass. | `0119:531`, header `0119:31-34` |
-| Only the Manager writes `priceReview` | A changed `priceReview` object from a login without `price.approve` → error 42501. Setting it to `null` is not refused (Buyer does, `buyer.html:2912`). | `0119:539-557` |
+| Only the Manager writes `priceReview` | Any change, clearing included, from a login without `price.approve` → 42501 (`0175`; `0119:539-557` refused changed objects only). A new cost past the price decided clears it by itself, so the line waits again (what `buyer.html:2912` did) | `0175` `saved_quotes_ow_a_decisions` |
 | A price waits | Line has `priceBy`, `priceNote` in `under/nomargin/nocost`, and no `priceReview` matching today's price **and** qty | `ow_line_waits_price`, `0119:452` |
 | Credit holds | Customer has a limit and debt + this order > limit; or (0167) the order is on credit (`payload.credit.pct > 0`) and no limit is set; and the Manager has not said `release` (or said `cash` and money is still owed) | `ow_gate_reason`, `0167:46-77` |
 | Suppliers' yes (`0174`) | Every supplier on the order has `supplierConfirms[id].state = 'confirmed'` with `terms` = its lines as they stand (`ow_supplier_terms`, = `orderSupplierTerms`) → else 'suppliers' | `buyer.html:1046-1056`; `ow_gate_reason` |
@@ -171,14 +171,14 @@ Tests: gate and invoicing `test/shared-foundation-db.test.js`; counter sale `tes
 | `supplierConfirms {[supplierId]: {state, at, askedAt, terms, note, readyOn, by, via?}}` | Each supplier's answer | Buyer app (`buyer.html:1110-1120`) | Only as part of `ow_gate_terms` (staleness) |
 | `droppedLines[]` | Lines taken off at Checking, with reason | Buyer | Triggers pushes and a Sourcing request |
 | `shopConfirmedAt`, `shopConfirmedTerms` | Shop confirmed a prepay agent's order | Buyer (`buyer.html:1088`) | No |
-| `creditCheck {decision: release\|cash\|hold, by, byName, at, over, ask?}` | Manager's credit answer | Manager app | Read by gate and money hold; **who may write it is not checked** |
+| `creditCheck {decision: release\|cash\|hold, by, byName, at, over, ask?}` | Manager's credit answer | Manager app | Read by gate and money hold; written only with `credit.release` (`0175`) |
 | `creditAsk {at, by, byName, carrier, answer}` | Store's "let it go on credit?" | Store (`store_patch_order`), Manager answers | Pushes only |
 | `assignedWorkerId`, `pickingStatus`, `pickCursor`, `pickingAssignedAt`, `workerAcceptedAt`, `pickingDoneAt`, `bay` | Packing | Store; Manager hands over (`manager.html:1994` `PACK_KEYS`) | Store logins limited to these by `store_patch_order` |
-| `pickShortfallAckAt`, `pickSettle {pick: went\|full, by, byName, at, lines[{idx, ordered, picked}]}` | Short pick settled | Manager app | Read by `ow_pick_shortfall`; **who may write it is not checked** |
+| `pickShortfallAckAt`, `pickSettle {pick: went\|full, by, byName, at, lines[{idx, ordered, picked}]}` | Short pick settled | Manager app | Read by `ow_pick_shortfall`; set only with `pick.settle` (`0175`; clearing `pickShortfallAckAt` when a pick starts again is free) |
 | `assignedDeliveryId` (staff id, `__carrier__`, `__agent__`, `__client__`), `carrier {kind, name, what, phone, at, by, staffId?}` | Who takes it out | Store (`store.html:2401-2404`), Manager | `job.given` push |
 | `deliveredTo`, `deliveredAt`, `deliveredPhoto`, `deliveredPhotoKind (note\|none)`, `deliveredNote`, `handoverCheckedAt` | Proof of delivery | Store; Manager "mark done" writes only `deliveredAt` | `deliveredAt` starts the 24 h clock (`0169:811`) |
 | `invoicedBy {via, by, byName, at}` | Who invoiced | `ow_invoice_core` | Yes; protects against a stale un-invoice (`0119:1070`) |
-| `creditNotes[] {id, no, date, reason, lines[{idx, qty, price, name}], amount, restocked, refund, askId, by, byName, voided?}` | Returns credited | Manager app (`manager.html:5395`) | Total capped at the bill; **who may write it is not checked** |
+| `creditNotes[] {id, no, date, reason, lines[{idx, qty, price, name}], amount, restocked, refund, askId, by, byName, voided?}` | Returns credited | Manager app (`manager.html:5395`) | Total capped at the bill; written only with `credit_note.raise` (`0175`) |
 | `voidedBy {by, byName, at, why, askId \| keeps}`, `cancelledAt`, `voidMoney` | Why and how it was voided | Manager app; `void_with_money` writes `voidMoney` | `voidMoney.done` checked by `0169:468` |
 | `cancelledByName`, `voidedAt` | Shown on the Store's "called off" screen | **No writer found** (only in the Store allow-list, `0164:179`) | — |
 | `docLog[] {at, kind, what}` | Order's paper trail (last 60) | Manager app | No |
@@ -220,14 +220,14 @@ rule (see `docs/rebuild.md`, "Backend fixes decided").
 | Q2 | `order.move` is granted but never checked; any Sales, Buyer or Manager login can set any status | **Server:** moving a stage needs `order.move`, and only to the next allowed stage. **Built: `0173`** — Checking → Buying/Packing `order.move` or `supplier.confirm`; Buying → Packing `order.move` or `stock.receive`; Packing → On the road `order.move` or `order.load`; → Delivered from Packing/On the road `order.move` or `order.deliver`, from any stage `order.move` ("mark done"); back `order.move`; invoiced or voided: stays; a new order placed past Checking is a move out of it (Packing also `quote.make`) | `0165:463` (`p_status` taken as given) |
 | Q3 | Manager "next" from Checking always goes to Buying | When every line is on our shelf, "next" goes straight to **Packing** | `manager.html:3512-3513` vs `buyer.html:1103` |
 | Q4 | Manager "mark done" skips the delivery proof and starts the 24 h invoice clock | "Mark done" **asks for a reason**, kept on the order and in the log; the Store's delivery with proof stays the normal path | `manager.html:3500-3505`; decision-rights §2 `order.deliver` |
-| Q5 | `creditCheck`, `pickSettle` and `creditNotes` have no server task check | **Server:** each needs its task (`credit.release`, `pick.settle`, `credit_note.raise`) | `0156`/`0164`; `0169:448` |
+| Q5 | `creditCheck`, `pickSettle` and `creditNotes` have no server task check | **Server:** each needs its task (`credit.release`, `pick.settle`, `credit_note.raise`). **Built: `0175`** | `0156`/`0164`; `0169:448` |
 | Q6 | A void and a credit note are several writes; a lost signal leaves half of one | **Server:** each is **one database write**, like payments and the counter sale | `manager.html:5385-5398`, `5500-5521` |
 | Q7 | Three ways void an unbilled order; the Store is not told to stop packing | **One "Cancel" action**, by the Manager (`order.cancel`; Sales asks). It puts back what was packed and pushes the Store and Sales | `index.html:67239`; `manager.html:3581`; `0122:242-244`; `store.html:4322-4326` |
 | Q8 | `status = 'cancelled'` is read but never written | Cancel writes `status = 'cancelled'` with `cancelledAt` and `cancelledByName`, which the Store screen already reads | `store.html:1597`, `4020`, `4065`, `4322-4326` |
 | Q9 | decision-rights says the Manager is told of a counter sale; `0130` removed the push | **Log only.** A counter sale waits on nobody, so no push; decision-rights now says so | `0130:36` `ow_push_counter_quiet` |
 | Q10 | `deliveredAt` is ISO text in some places, milliseconds in others | One shape: ISO text | `0155`; `sales.html:11033`; `0119:130` `ow_ts` |
 | Q11 | decision-rights' `priceReview` shape leaves out `qty` | `qty` is part of it (a decision goes stale when the qty changes); decision-rights now says so | `0119:465`; `manager.html:4602` |
-| Q12 | The Buyer can wipe a Manager's price decision (`priceReview = null`) from any login | **Server:** only `price.approve` changes or clears it; a new cost that leaves no margin flags the line for the Manager instead | `buyer.html:2912`; `0119:544` |
+| Q12 | The Buyer can wipe a Manager's price decision (`priceReview = null`) from any login | **Server:** only `price.approve` changes or clears it; a new cost that leaves no margin flags the line for the Manager instead. **Built: `0175`** (the database clears the decision when the cost passes it) | `buyer.html:2912`; `0119:544` |
 | Q13 | "On road" in the Manager app | "On the road", as the glossary says | `manager.html:1606` |
 | Q14 | Sales reads the name from `payload.client`, the Manager from `client_name` | One place: the `client_name` column | `sales.html:3962` vs `manager.html:1156` |
 

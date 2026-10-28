@@ -274,7 +274,7 @@ priceReview: { state: 'approved' | 'changed', price, was, qty, by, byName, at } 
 
 **Enforced in the database.** A guard on `saved_quotes` has two rules:
 
-- only `has_task('price.approve')` may write `priceReview`;
+- only `has_task('price.approve')` may write or clear `priceReview` (0175); a new cost past the price decided clears it by itself;
 - an order cannot leave `draft` while a price waits, or while `creditCheck`
   holds it.
 
@@ -593,6 +593,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0172 | The rebuild, second backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/02-money.md §8 Q14, 28 Oct 2026): an agent order's total is goods + charges — `order_shop_total` (0109) counts the delivery fee as its edge-function twins do, so mobile money (`apply_momo_payment`) no longer marks an order paid with the fee still owed, and the agent's credit (`use_agent_credit`) can pay it. No role, task or push changes |
 | 0173 | The rebuild, third backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q2, 28 Oct 2026): moving an order's stage needs its task, checked on every write by a person (`saved_quotes_ow_a_stage_move`, before the Checking gate) — out of Checking `order.move` or `supplier.confirm`, Buying to Packing `order.move` or `stock.receive`, load `order.move` or `order.load`, deliver `order.move` or `order.deliver`, any stage to Delivered or back `order.move`; anything else, and any move on an invoiced or voided order, refused (OWSTG); a new order placed past Checking is judged as a move out of it (Packing also with `quote.make`). No login and the owner's console are not judged. No role, task or push changes |
 | 0174 | The rebuild, fourth backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q1, docs/spec/02-money.md §8 Q8, 28 Oct 2026): the Checking gate (`ow_gate_reason`) also holds an order while a supplier has not said yes on the lines as they stand ('suppliers'), a line has no supplier and the client is not waiting for it ('unsourced'), an agent who pays first has not paid ('prepay'), and — as a credit hold, the Manager's `credit.release` — while the customer has owed past the hold days (`presets.creditHold.days`, 21) on an order that adds to it (`ow_oldest_debt_days`; the credit.hold push names the age). Price and credit stay first. No role, task or push changes |
+| 0175 | The rebuild, fifth backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q5 and Q12, 28 Oct 2026): the Manager's answers on an order are checked on the writer (`saved_quotes_ow_a_decisions`) — `creditCheck` needs `credit.release`, `pickSettle` and setting `pickShortfallAckAt` need `pick.settle`, `creditNotes` need `credit_note.raise`, and any change to a line's `priceReview`, clearing included, needs `price.approve`; a new cost past the price decided clears that decision by itself, so the line waits for the Manager again. No login is not judged. No role, task or push changes |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.
