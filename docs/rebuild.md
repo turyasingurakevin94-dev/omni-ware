@@ -65,7 +65,7 @@ checked alone. They protect the books whichever app is in use, so they come
 **before** the shared core. Each takes a migration number reserved in
 `docs/decision-rights.md` and a test run against a real database (`OW_PG`).
 
-- [ ] Moving a stage needs `order.move`, and only to an allowed next stage (journey Q2)
+- [x] Moving a stage needs `order.move`, and only to an allowed next stage (journey Q2) — `0173`, `test/stage-move-db.test.js`
 - [ ] The Checking gate checks suppliers' yes, lines with no supplier, agent prepay (journey Q1) and debt past the hold days (money Q8)
 - [ ] `credit.release`, `pick.settle`, `credit_note.raise` checked on the writer (journey Q5); only `price.approve` changes a price decision (journey Q12)
 - [ ] A void and a credit note are each one database write (journey Q6)
@@ -90,3 +90,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Plan changed to a new front end on the same database. Spec chapters 01 (the order's journey) and 02 (money) written from the code, checked, and decided by Kevin: 31 questions answered. The answers that need the database are listed under "Backend fixes decided".
 - **2026-10-28** — First backend fix: no sale below cost (`0171`). Checked the old apps first: Sales and the Manager refuse a typed price under cost; a line also comes under cost when the Buyer takes a dearer supplier price, which they hold for the Manager. The database now refuses the first (OWCST) and never bills the second (OWPRC), until the Manager prices it or gives it away. Found on the way: the server's gate does not hold an untagged under-cost line in Checking (0153 only pushes) — left for the gate item (journey Q1).
 - **2026-10-28** — Second backend fix: an agent order's total counts its charges (`0172`). `order_shop_total` counted goods only while its three edge-function twins count goods + charges, so on an order with a delivery fee mobile money marked it paid early and the agent's credit could not pay the fee (every plan refused as "changed"). Tested on a real database; the same test fails on the old rule.
+- **2026-10-28** — Third backend fix: moving a stage needs its task (`0173`). Every move the apps make was traced to its task first: the Buyer leaves Checking with `supplier.confirm`, the Store moves with `stock.receive`, `order.load` and `order.deliver`, so `order.move` alone would have stopped them; each move takes `order.move` or that role's own task. Skips (other than the Manager's "mark done"), unknown stages and moves on invoiced or voided orders are refused.
