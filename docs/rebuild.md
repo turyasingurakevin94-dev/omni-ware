@@ -77,6 +77,9 @@ checked alone. They protect the books whichever app is in use, so they come
 `tools/build-live-sql.js` from the migrations; `test/live-apply-0171-0177.test.js`
 runs it on a database made from 0001-0170). In the live project's SQL editor:
 
+0. **First, `docs/live/which-migrations.sql`** (read-only): which of the
+   repo's migrations live is missing. Paste any it names, oldest first, each
+   from `supabase/migrations/` (each says it is safe to run twice).
 1. **Step 1** alone: read-only. Stops with a plain message if live is missing
    anything the seven are built on, or if a function they change was edited
    by hand. Says which of the seven are in already.
@@ -112,3 +115,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Sixth backend fix: a void and a credit note are each one write (`0176`), for the new apps to call; the old Manager app keeps its several calls (frozen). Found on the way: the Manager app asks for a credit-note number with the kind `'creditNote'`, which `next_row_id_blocks` refuses (it takes `row:…`; the console uses `row:credit_note`), so raising a credit note from the Manager app failed before it wrote. Fixed (Kevin approved the urgent fix): `manager.html` asks for `row:credit_note`.
 - **2026-10-28** — Seventh backend fix: one Cancel (`0177`); every backend fix decided is now built. Stock moves only at the invoice, so "stock put back" is the yard's own step: the push tells them, and the Store screen already shows it. Not built: Sales asking for a cancel, and billing goods that came in before a cancel (such an order is refused, as the Manager app refuses it today).
 - **2026-10-28** — The seven backend fixes as one live script (`docs/live/apply-0171-0177.sql`): prerequisites, preview, one transaction, check. Tested on a database from 0001-0170, run twice, on one missing 0169 (stops first), and on one with a hand-edited function (stops first; forced, leaves nothing).
+- **2026-10-28** — First live try: step 1 stopped before writing anything — live does not have `0153` (the push to the Manager when a dearer supplier price puts a line under its sale). Added `docs/live/which-migrations.sql` to list everything live is missing in one go; tested that 0153 goes in on its own on top of 0154-0170 and that the script then passes.

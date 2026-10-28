@@ -15,6 +15,9 @@
  *          run twice) and step 1 names all seven;
  *        - made from 0001-0168 only, step 1 stops before anything changes,
  *          naming 0169;
+ *        - made from 0001-0170 without 0153 (live as found on 28 Oct):
+ *          which-migrations.sql names 0153, step 1 stops on it, 0153 goes in
+ *          on its own, then the script passes;
  *        - with the void guard's wording changed by hand, step 1 stops and names it,
  *          and step 3 (if run anyway) fails as a whole, leaving nothing.
  *
@@ -37,6 +40,9 @@ const step = (n) => {
   const a = committed.indexOf(`-- STEP ${n} `), b = committed.indexOf(`-- STEP ${n + 1} `);
   return committed.slice(committed.lastIndexOf('\n-- ====', a), b < 0 ? undefined : committed.lastIndexOf('\n-- ====', b));
 };
+const which = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-which-migrations-sql.js')], { encoding: 'utf8' });
+t.check(which.status === 0 && which.stdout === read('docs/live/which-migrations.sql'), 'docs/live/which-migrations.sql is what tools/build-which-migrations-sql.js makes now');
+t.check(!/\b(insert|update|delete|create|alter|drop)\b/i.test(read('docs/live/which-migrations.sql').replace(/--[^\n]*/g, '').replace(/'[^']*'/g, '')), 'which-migrations.sql only reads');
 const apply = step(3);
 t.check(/\nbegin;\n/.test(apply) && /\ncommit;\n$/.test(apply), 'step 3 is one transaction, BEGIN to COMMIT');
 ['0171', '0172', '0173', '0174', '0175', '0176', '0177'].forEach((m) => {
@@ -57,12 +63,12 @@ const shim = fs.readFileSync(path.join(__dirname, 'fixtures', 'supabase-shim.sql
 const migDir = path.join(ROOT, 'supabase', 'migrations');
 const errs = (r) => (r.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l));
 
-function makeDb(db, upTo) {
+function makeDb(db, upTo, skip = []) {
   psql(['-qAt', '-c', `drop database if exists ${db}`, '-c', `create database ${db}`]);
   const on = (args, input) => spawnSync('psql', [`${conn} dbname=${db}`, ...args], { input, encoding: 'utf8', maxBuffer: 1 << 26 });
   on(['-qAt', '-v', 'ON_ERROR_STOP=1'], shim);
   const failed = [];
-  fs.readdirSync(migDir).filter((f) => f.endsWith('.sql') && f.slice(0, 4) <= upTo).sort().forEach((f) => {
+  fs.readdirSync(migDir).filter((f) => f.endsWith('.sql') && f.slice(0, 4) <= upTo && !skip.includes(f.slice(0, 4))).sort().forEach((f) => {
     const r = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, f)]);
     if (r.status !== 0) failed.push(f);
   });
@@ -95,6 +101,22 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const s1 = run(on, 1);
   t.check(s1.status !== 0 && /Not run: 0169 not in this database yet/.test(s1.stderr), `before 0169, step 1 stops and names it (${(errs(s1)[0] || '').slice(0, 120)})`);
   psql(['-qAt', '-c', 'drop database if exists ow_live_apply_old']);
+}
+
+// Live as found on 28 Oct 2026: everything to 0170 but 0153. Step 1 names it;
+// 0153 pasted on its own goes in on top of the later ones; then all four steps pass.
+{
+  const { on } = makeDb('ow_live_apply_no153', '0170', ['0153']);
+  const which = on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql'));
+  const missing = (which.stdout || '').split('\n').filter((l) => /\|missing\|/.test(l)).map((l) => l.slice(0, 4));
+  t.check(JSON.stringify(missing) === '["0153","0171","0173","0174","0175","0176","0177"]', `which-migrations.sql names 0153 and the new ones as missing (${missing.join(', ')})`);
+  const s1 = run(on, 1);
+  t.check(s1.status !== 0 && /Not run: 0153 not in this database yet/.test(s1.stderr), 'step 1 stops and names 0153');
+  const m153 = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, fs.readdirSync(migDir).find((f) => f.startsWith('0153_')))]);
+  t.check(m153.status === 0, `0153 pasted on its own goes in on top of 0154-0170 (${errs(m153)[0] || 'ok'})`);
+  const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
+  t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then steps 1, 3 and 4 pass (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
+  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_no153']);
 }
 
 // The void guard changed by hand: step 1 names it; step 3 run anyway leaves nothing behind.
