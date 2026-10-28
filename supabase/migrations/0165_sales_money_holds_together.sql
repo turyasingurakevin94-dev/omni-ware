@@ -263,6 +263,8 @@ create trigger cash_txns_zz_payment_check before update on cash_txns
 -- ---------------------------------------------------------------------
 -- 5. A payment, with what is paid over said: change or deposit.
 drop function if exists receive_payment(uuid, text, numeric, text, bigint[], bigint, text);
+-- Run again after 0169, this puts 0165's back: 0169's (with p_date, p_label) goes, so there is one.
+drop function if exists receive_payment(uuid, text, numeric, text, bigint[], bigint, text, text, date, text);
 create or replace function receive_payment(p_shop_id uuid, p_customer_id text, p_amount numeric, p_method text,
                                            p_picks bigint[] default null, p_order_id bigint default null, p_ref text default null,
                                            p_over text default null)

@@ -78,6 +78,12 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Paid over | Paid more than the bill, before anyone settled it (change, or a deposit if the customer confirms); Accounts settles it | — | Sales R1 · SAL-005 |
 | Price coming | A line with no selling price yet; nothing is owed on it until the Manager prices it ("1 price coming", "Priced so far"). It still goes on the order. | to price; price to confirm; to be confirmed; billing it at cost | Sales R1 · SAL-007; renamed by the Sales design review, 28 Oct |
 | Being checked | Money Accounts is checking: a bill that may already be paid, or a balance and bills that disagree ("349,000 apart · Esther is checking") | in question; doesn't add up; which is it; two figures with no word | Sales R1 · SAL-011; one word by the Sales design review, 28 Oct |
+| Opening balance | What a customer owed before these books; its own striped line, never a bill | an unlabelled debt | Manager R1 · DATA-02 |
+| Below cost | A line sold for less than it cost; red, with the loss | — | Manager R1 · DATA-04 |
+| Given away | A line billed at 0 on purpose, with a reason; counted at cost in Margins | a silent 0 | Manager R1 · DATA-09 |
+| Refund | Money given back to a customer out of the cash book (a void with money) | — | Manager R1 · DATA-07 |
+| No seller | Sales on invoices that name no salesperson (old records) | "not linked" | Manager R1 · DATA-06 |
+| Sales invoiced | The one sales figure: invoiced goods in the period, no delivery fees, no test records; Today and Margins show the same | "sold" for a different sum | Manager R1 · DATA-08 |
 | Money on a phone | Shown only to the roles allowed to see it, enforced in SQL by role. The yard's phone gets no money at all. | hidden in the browser only | Store, before the loop (0159, 0160) |
 
 ## Time

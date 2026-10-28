@@ -973,7 +973,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(/rowToQuote\(q\)\{[\s\S]*?qa: !!q\.qa/.test(html) && /qa: !!t\.qa/.test(html) && /qa: !!c\.qa/.test(html), 'SAL-018: the test mark is read from orders, receipts and customers');
   }
 
-  // The team chat (0169): whose customer, first-come numbers, the Team tab, notes never sent.
+  // The team chat (0170): whose customer, first-come numbers, the Team tab, notes never sent.
   {
     const db = fakeDb({});
     const X = loadPage(db);
@@ -995,7 +995,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(team.indexOf('data-conv="3"') < team.indexOf('data-conv="1"'), 'C5: the longest wait comes first');
     X.S.wa.convs.forEach(c => { delete c.owner_user_id; });
     X.S.chatTab = 'mine';
-    t.check(!/New numbers/.test(X.viewChats()) && /data-conv="3"/.test(X.viewChats()), 'before 0169 there are no owners: every chat is everyone’s, as before');
+    t.check(!/New numbers/.test(X.viewChats()) && /data-conv="3"/.test(X.viewChats()), 'before 0170 there are no owners: every chat is everyone’s, as before');
     X.S.wa.convs[0].owner_user_id = 'u1'; X.S.wa.convs[1].owner_user_id = null; X.S.wa.convs[2].owner_user_id = 'u2';
     X.S.chatNote = { 1: true };
     await X.ACT.chatsend({ dataset: { conv: '1' } });

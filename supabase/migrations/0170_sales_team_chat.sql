@@ -1,4 +1,4 @@
--- 0169 Sales, seventh (the app built to its approved canvas, 28 Oct 2026;
+-- 0170 Sales, seventh (the app built to its approved canvas, 28 Oct 2026;
 -- docs/audit/sales/BUILD-2026-10-28.md): the team chat, and the server
 -- pieces the canvas needs that the books lack.
 --
@@ -33,7 +33,7 @@
 --   8. chat_served(shop, conv): messages each person sent this customer this
 --      year (C4 "Who served Kato").
 --
--- Applied by hand, after 0168. Safe to run twice.
+-- Applied by hand, after 0169 (the Manager's, 25 Oct). Safe to run twice.
 --
 -- CHECK AFTERWARDS:
 --   select column_name from information_schema.columns where table_name = 'wa_conversations' and column_name in ('owner_user_id', 'owner_at');

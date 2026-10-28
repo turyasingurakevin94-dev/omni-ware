@@ -130,5 +130,5 @@ function shop(){
     t.check(X.S.stack[X.S.stack.length - 1].type === 'teamrules', 'Goals opens the team’s rules');
   }
 
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

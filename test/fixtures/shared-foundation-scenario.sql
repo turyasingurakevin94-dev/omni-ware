@@ -31,8 +31,10 @@ insert into products(shop_id,id,name) values
 insert into prices(id, shop_id, product_id, supplier_id, retail, wholesale, unit, pack_unit, pack_qty) values
  (1,'11111111-1111-1111-1111-111111111111','P1','S1',30000,null,'bag',null,null),
  (2,'11111111-1111-1111-1111-111111111111','P2','S2',null,5000,'kg','box',10);
+begin;  -- 0169: a key's stock and its lots go in together (checked at commit)
 insert into stock(shop_id,key,product_id,qty) values ('11111111-1111-1111-1111-111111111111','P1','P1',20);
 insert into stock_lots(shop_id,key,qty,cost) values ('11111111-1111-1111-1111-111111111111','P1',10,28000),('11111111-1111-1111-1111-111111111111','P1',10,29000);
+commit;
 insert into customers(shop_id,id,name,debt,credit_limit,terms_days) values
  ('11111111-1111-1111-1111-111111111111','C001','Kato Construction',500000,1000000,30);
 

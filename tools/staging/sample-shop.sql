@@ -101,6 +101,11 @@ insert into stock (shop_id, key, product_id, qty) values
   ('5a3b1e00-0000-4000-8000-0000000000aa', 'P001', 'P001', 140),
   ('5a3b1e00-0000-4000-8000-0000000000aa', 'P004', 'P004', 85),
   ('5a3b1e00-0000-4000-8000-0000000000aa', 'P005', 'P005', 60);
+-- Each key's lots add up to its stock (0169 checks it at commit).
+insert into stock_lots (shop_id, key, qty, cost) values
+  ('5a3b1e00-0000-4000-8000-0000000000aa', 'P001', 140, 52000),
+  ('5a3b1e00-0000-4000-8000-0000000000aa', 'P004', 85, 31000),
+  ('5a3b1e00-0000-4000-8000-0000000000aa', 'P005', 60, 9000);
 insert into cash_txns (shop_id, date, account, type, category, amount, description) values
   ('5a3b1e00-0000-4000-8000-0000000000aa', '2026-10-17', 'cash', 'receipt', 'Sales', 1250000, 'Counter sales'),
   ('5a3b1e00-0000-4000-8000-0000000000aa', '2026-10-17', 'cash', 'payment', 'Transport', 40000, 'Delivery fuel');

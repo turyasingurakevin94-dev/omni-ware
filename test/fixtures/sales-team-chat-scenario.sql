@@ -1,4 +1,4 @@
--- 0169 asked of a real database (the Sales app built to its canvas): the team
+-- 0170 asked of a real database (the Sales app built to its canvas): the team
 -- chat -- take, hand, move, notes, a reply by someone else -- and a customer's kind.
 grant all on all tables in schema public to authenticated;
 grant all on all sequences in schema public to authenticated;

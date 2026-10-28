@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * Sales, seventh (0169; docs/audit/sales/BUILD-2026-10-28.md): the team chat
+ * Sales, seventh (0170; docs/audit/sales/BUILD-2026-10-28.md): the team chat
  * -- a chat's salesperson, taken first-come, handed with a note, moved by the
  * Manager, each logged and pushed; team notes; a reply by someone else pushes
  * the chat's salesperson -- and a customer's kind, the Manager's to change.
  *
  *   1. The SQL text.
- *   2. A REAL database, when OW_PG names one: every migration in order, 0169
+ *   2. A REAL database, when OW_PG names one: every migration in order, 0170
  *      run twice, then test/fixtures/sales-team-chat-scenario.sql, as the
  *      owner, the Manager, two salespeople and Accounts.
  *
@@ -19,8 +19,8 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('Sales: the team chat and a customer\'s kind (0169)');
-const raw = read('supabase/migrations/0169_sales_team_chat.sql');
+const t = createReporter('Sales: the team chat and a customer\'s kind (0170)');
+const raw = read('supabase/migrations/0170_sales_team_chat.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the text ---------------- */
@@ -34,7 +34,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(!/\bdelete from\b/i.test(sql), 'nothing is deleted');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   const doc = read('docs/decision-rights.md');
-  t.check(/\| 0169 \| Sales, seventh/.test(doc), 'docs/decision-rights.md reserves 0169');
+  t.check(/\| 0170 \| Sales, seventh/.test(doc), 'docs/decision-rights.md reserves 0170');
 }
 
 /* ---------------- 2. on a real database ---------------- */
@@ -57,8 +57,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0169_sales_team_chat.sql')]);
-t.check(again.status === 0, `0169 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0170_sales_team_chat.sql')]);
+t.check(again.status === 0, `0170 runs a second time without error (${(again.stderr || '').trim().split('\n').filter((l) => /ERROR/.test(l))[0] || 'ok'})`);
 const scenario = fs.readFileSync(path.join(__dirname, 'fixtures', 'sales-team-chat-scenario.sql'), 'utf8');
 const run = onDb(['-qAt', '-F', '\t'], scenario);
 const rows = (run.stdout || '').split('\n').filter((l) => /^(PASS|FAIL)\t/.test(l));

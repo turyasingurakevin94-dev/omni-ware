@@ -83,7 +83,10 @@ same('staffEligibleForRole', workerSrc, 'shared-worker.js');
   // The payment is the sales desk's customer payment: the same one write (0140 receive_payment), with the same arguments.
   // Sales sends it through payRpc, which adds the transaction ID (0155) only when one was typed: the arguments are compared.
   const grab = (src, where) => { const i = src.indexOf("ACT['slide:pay'] = async"); if (i < 0) throw new Error('no slide:pay in ' + where); const j = src.indexOf("('receive_payment', {", i); if (j < 0) throw new Error('no receive_payment in ' + where); const k = src.indexOf('}', j); return norm(src.slice(j, k + 1)); };
-  t.check(grab(app, 'manager.html') === grab(salesSrc, 'sales.html'), 'a payment is the one write the sales desk makes, with the same arguments');
+  // Manager round 1 (MGR-DATA-11): the Manager's pay screen also sends the day it was paid and, before the order, 'Deposit' (0169).
+  const mgrArgs = grab(app, 'manager.html');
+  t.check(mgrArgs.includes(norm(", p_date: otherDay, p_label: early ? 'Deposit' : null")), "the Manager's payment also carries its day and a Deposit label (0169)");
+  t.check(mgrArgs.replace(norm(", p_date: otherDay, p_label: early ? 'Deposit' : null"), '') === grab(salesSrc, 'sales.html'), 'a payment is the one write the sales desk makes, with the same arguments');
 }
 
 /* ---------------- the fixture: one shop on a Thursday ---------------- */
@@ -302,13 +305,16 @@ const quoteRow = (q) => {
     const data = fixture();
     const ch = (id, days, amount, quoteId) => ({ id, date: days == null ? null : iso(NOW - days * D), type: 'charge', amount, note: '', cashTxnId: null, quoteId });
     data.customers.push(
-      { id: 'C4', name: 'Sadat', phone: '', phone2: '', location: '', notes: '', debt: 310000, termsDays: null, creditLimit: null, debtLog: [] },
+      // Manager round 1 (MGR-DATA-02): an old-book debt is an opening line (no order); this one has no date.
+      { id: 'C4', name: 'Sadat', phone: '', phone2: '', location: '', notes: '', debt: 310000, termsDays: null, creditLimit: null, debtLog: [ch(39, null, 310000, null)] },
       { id: 'C5', name: 'Ken Bwaise', phone: '', phone2: '', location: '', notes: '', debt: 800000, termsDays: null, creditLimit: null, debtLog: [ch(40, 40, 500000, 40), ch(41, 5, 300000, 41)] },
       { id: 'C6', name: 'Hajat Faluk', phone: '', phone2: '', location: '', notes: '', debt: 200000, termsDays: null, creditLimit: null, debtLog: [ch(42, null, 200000, 42)] },
       { id: 'C7', name: 'Ssendawula Sam', phone: '', phone2: '', location: '', notes: '', debt: 900000, termsDays: null, creditLimit: null,
         debtLog: [ch(43, 45, 600000, 43), { id: 44, date: iso(NOW - 20 * D), type: 'payment', amount: 600000, note: '', cashTxnId: null, quoteId: null }, ch(45, 14, 900000, 45)] });
     // Ken's invoice is dated 60 days back: the old invoice-date age would say 60.
-    data.savedQuotes.push({ id: 40, status: 'completed', invoiced: true, invoicedAt: iso(NOW - 60 * D), date: iso(NOW - 60 * D), amountPaid: 0, voided: false, client: { name: 'Ken Bwaise' }, customerId: 'C5', items: [line(1, 8, 100000)], charges: [], payments: [], takenBy: 'u2' });
+    data.savedQuotes.push({ id: 40, status: 'completed', invoiced: true, invoicedAt: iso(NOW - 60 * D), date: iso(NOW - 60 * D), amountPaid: 0, voided: false, client: { name: 'Ken Bwaise' }, customerId: 'C5', items: [line(1, 5, 100000)], charges: [], payments: [], takenBy: 'u2' });
+    // Manager round 1 (MGR-DATA-02): Ken's two log charges are his two bills, so his balance adds up and the log ages it.
+    data.savedQuotes.push({ id: 41, status: 'completed', invoiced: true, invoicedAt: iso(NOW - 5 * D), date: iso(NOW - 5 * D), amountPaid: 0, voided: false, client: { name: 'Ken Bwaise' }, customerId: 'C5', items: [line(1, 3, 100000)], charges: [], payments: [], takenBy: 'u2' });
     const X = page(fakeDb({}), data), cu = id => X.customerById(id);
     t.check(X.custOldestAge(cu('C5')) === 40, 'the oldest age is the oldest open charge on the log (40 days), not the invoice date (60)');
     const a4 = X.custAging(cu('C4')), a6 = X.custAging(cu('C6'));
@@ -362,7 +368,7 @@ const quoteRow = (q) => {
   // 18. The month's team sales are invoiced-only, and the card says so.
   {
     const X = page(fakeDb({}), fixture());
-    t.check(/Team sales invoiced · /.test(X.viewToday()) && / invoiced<\/span>/.test(X.viewTeam()), 'the team\'s month is labelled "invoiced" on Today and Team');
+    t.check(/Sales invoiced · /.test(X.viewToday()) && / invoiced<\/span>/.test(X.viewTeam()), 'the team\'s month is labelled "invoiced" on Today and Team');
   }
   // 5. every screen draws
   for (const n of [0, 1, 3, 5]) {

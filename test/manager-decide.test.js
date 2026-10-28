@@ -218,5 +218,5 @@ const tablesFor = data => ({ saved_quotes: data.savedQuotes.map(quoteRow), custo
     t.check(!/the owner (sets|turns|records|reviews)|stay with the owner|OWNER SETS/i.test(html.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')), 'no screen says a Manager’s decision is the owner’s');
   }
 
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

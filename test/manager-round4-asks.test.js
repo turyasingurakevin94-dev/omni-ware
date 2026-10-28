@@ -136,5 +136,5 @@ const tablesFor = d => ({ saved_quotes: d.savedQuotes.map(quoteRow), customers: 
     const { X: Y } = page(fakeDb(tablesFor(e)), e);
     t.check(!Y.cartonAsks().length && /data-act="rshold" data-id="rs-3"/.test(Y.PAGE.restock()), 'without for_line (main before 0151) it is an ordinary held line');
   }
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })();

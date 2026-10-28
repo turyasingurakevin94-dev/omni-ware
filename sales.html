@@ -4063,7 +4063,7 @@ async function loadThread(convId){
   const { data, error } = await sb.from('wa_messages').select('*').eq('conversation_id', convId).order('sent_at', { ascending: true }).limit(300);
   if (error) throw error;
   S.wa.threads[convId] = data || [];
-  // The team's notes and what was done with the chat (0169); none before it.
+  // The team's notes and what was done with the chat (0170); none before it.
   try {
     const [nR, eR] = await Promise.all([sb.from('wa_notes').select('*').eq('conversation_id', convId).order('created_at', { ascending: true }).limit(200), sb.from('wa_conv_events').select('*').eq('conversation_id', convId).order('created_at', { ascending: true }).limit(100)]);
     (S.wa.notes ||= {})[convId] = nR && !nR.error ? nR.data || [] : []; (S.wa.events ||= {})[convId] = eR && !eR.error ? eR.data || [] : [];
@@ -4929,7 +4929,7 @@ function pushOpen(d){
     };
     let done = true;
     if (['price.decided', 'price.changed', 'credit.decided', 'line.dropped', 'order.invoiced'].includes(k)) order(has(d.orderId) ? d.orderId : d.id);
-    // 0169: a chat given to you, a reply by a teammate, a note naming you: that chat.
+    // 0170: a chat given to you, a reply by a teammate, a note naming you: that chat.
     else if (/^chat\./.test(k)) { S.view = 'chats'; S.stack = has(d.id) ? [{ type: 'chat', args: { convId: Number(d.id) } }] : []; }
     else if (k === 'item.switch') { const sw = (D().switches || []).find(x => String(x.id) === String(d.id)); order(has(d.orderId) ? d.orderId : sw && sw.orderId); }
     else if (k === 'invoice.ask.decided') {
@@ -5000,7 +5000,7 @@ function start(){
   let waTicks = 0;
   const waTick = async () => { if (document.visibilityState !== 'visible' || S.loginLost) return; if (S.wa.configured == null) await waStatus(); if (!S.wa.configured) return; if (S.view !== 'chats' && S.wa.loadedAt && (++waTicks % 4)) return; const before = S.wa.loadedAt; await loadWA(); if (S.wa.loadedAt !== before && !isTyping()) { AFTER_WA.forEach(f => { try { f(); } catch (e) { console.warn(e); } }); render(); } };
   waTick(); setInterval(waTick, 15000);
-  // Who is on now, and in which chat (0169): every 20 seconds while Chats or a chat is open.
+  // Who is on now, and in which chat (0170): every 20 seconds while Chats or a chat is open.
   setInterval(() => { if (typeof chPresenceTick === 'function') chPresenceTick(); }, 20000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !S.loginLost && Date.now() - S.loadedAt > 30000) loadAll().then(render).catch(() => {}); });
 }
@@ -6194,7 +6194,7 @@ SHEET.paypick = a => {
 };
 ACT.paypickone = t => { S.sheet.args.pick = t.dataset.v; renderSheet(); };
 ACT.paypicknext = () => { const id = S.sheet && S.sheet.args.pick; if (id) ACT.payask({ dataset: { id } }); };
-// "Something else": a few words to the Manager (an 'other' ask, 0169).
+// "Something else": a few words to the Manager (an 'other' ask, a later migration).
 ACT.ordaskother = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'other', note: '' });
 ACT.ordaskcredit = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'credit', qty: {}, reason: 'Damaged' });
 ACT.ordaskvoid = t => openSheet('ordask', { id: Number(t.dataset.id), kind: 'void', reason: 'Raised twice' });
@@ -7665,7 +7665,7 @@ ACT.ncsave = async t => {
   try {
     const id = await issueCustomerId(), row = { id, shop_id: S.shopId, name, phone, location, notes: '', debt: 0, kind: sa.kind || null };
     let { error } = await sb.from('customers').insert(row);
-    // Before 0169 the books have no kind column: the customer is still saved.
+    // Before 0170 the books have no kind column: the customer is still saved.
     if (error && /kind/.test(String(error.message || '')) && /column|schema/i.test(String(error.message || ''))) { delete row.kind; ({ error } = await sb.from('customers').insert(row)); }
     if (error) throw error;
     const c = { id, name, phone, phone2: '', location, notes: '', debt: 0, termsDays: null, creditLimit: null, debtLog: [], kind: row.kind || null };
@@ -9803,11 +9803,11 @@ function chatWindowChip(conv){
 }
 function chatConvById(id){ return S.wa.convs.find(c => String(c.id) === String(id)) || null; }
 
-/* ---------------- the team chat (0169): whose customer, who is on ----------------
+/* ---------------- the team chat (0170): whose customer, who is on ----------------
    A chat's salesperson is wa_conversations.owner_user_id: a new number is
    taken first-come, your own customer is handed with a note, the Manager
    moves any chat. Anyone may reply so no customer waits; the reply names its
-   sender and the chat's salesperson is pushed. Until 0169 is on the shop's
+   sender and the chat's salesperson is pushed. Until 0170 is on the shop's
    database there are no owners: every chat is everyone's, as before. */
 function chOwnersOn(){ return S.wa.convs.some(c => c && 'owner_user_id' in c); }
 function chMe(){ return S.user ? String(S.user.id) : ''; }
@@ -9932,7 +9932,7 @@ ACT.chattake = async t => {
     const { error } = await sb.rpc('take_conversation', { p_conv: id });
     if (error) throw error;
     c.owner_user_id = chMe(); c.owner_at = new Date().toISOString(); haptic('success'); toast(`${chatCust(c.wa_id) ? firstWord(chatTitle(c)) : chNum(c.wa_id)} is yours`);
-  } catch (e) { toast(rpcMissing(e) ? 'Taking a chat needs the shop’s database update (0169)' : isNetworkError(e) ? 'No connection · try again' : String(e.message || e).replace(/^[A-Z0-9]{5}: /, ''), 6000); loadWA().then(render); }
+  } catch (e) { toast(rpcMissing(e) ? 'Taking a chat needs the shop’s database update (0170)' : isNetworkError(e) ? 'No connection · try again' : String(e.message || e).replace(/^[A-Z0-9]{5}: /, ''), 6000); loadWA().then(render); }
   finally { S.chTaking = false; render(); }
 };
 /* ---------------- New chat ---------------- */
@@ -10371,7 +10371,7 @@ function chatFit(){
   }
 }
 /* ---------------- team notes (C2): the yellow button; never sent to the customer ---------------- */
-// "@Brian" names a teammate: they get a push (0169 wa_notes_push).
+// "@Brian" names a teammate: they get a push (0170 wa_notes_push).
 function chMentions(text){ const team = chTeam(); const out = new Set(); String(text || '').replace(/@([A-Za-z]+)/g, (m, w) => { const p = team.find(x => firstWord(x.name).toLowerCase() === w.toLowerCase()); if (p) out.add(p.uid); return m; }); return [...out]; }
 async function chSaveNote(c, text, box){
   if (!text || S.chNoting) return;
@@ -10382,7 +10382,7 @@ async function chSaveNote(c, text, box){
     if (error) throw error;
     ((S.wa.notes ||= {})[c.id] ||= []).push({ ...row, id: 'n' + Date.now(), created_at: new Date().toISOString() });
     S.chatDraft[c.id] = ''; if (box) box.value = ''; S.chatNote[c.id] = false; S.chatSeen[c.id] = -1; haptic('success');
-  } catch (e) { toast(rpcMissing(e) || /wa_notes|relation/i.test(String(e.message || '')) ? 'Team notes need the shop’s database update (0169)' : isNetworkError(e) ? 'No connection · the note is still in the box' : 'Not saved: ' + (e.message || e), 6000); }
+  } catch (e) { toast(rpcMissing(e) || /wa_notes|relation/i.test(String(e.message || '')) ? 'Team notes need the shop’s database update (0170)' : isNetworkError(e) ? 'No connection · the note is still in the box' : 'Not saved: ' + (e.message || e), 6000); }
   finally { S.chNoting = false; render(); }
 }
 
@@ -10411,7 +10411,7 @@ ACT.chathandgo = async () => {
     if (error) throw error;
     c.owner_user_id = a.to; c.owner_at = new Date().toISOString(); haptic('success');
     toast(`${firstWord(chatTitle(c))} is ${firstWord(chPersonName(a.to))}’s now`); closeSheet(); loadThread(c.id).then(render).catch(() => {});
-  } catch (e) { toast(rpcMissing(e) ? 'Giving a chat needs the shop’s database update (0169)' : isNetworkError(e) ? 'No connection · nothing changed' : String(e.message || e).replace(/^[A-Z0-9]{5}: /, ''), 6000); }
+  } catch (e) { toast(rpcMissing(e) ? 'Giving a chat needs the shop’s database update (0170)' : isNetworkError(e) ? 'No connection · nothing changed' : String(e.message || e).replace(/^[A-Z0-9]{5}: /, ''), 6000); }
   finally { S.chHanding = false; renderSheet(); render(); }
 };
 // Who may give this chat: its own salesperson, or the Manager for any chat.
