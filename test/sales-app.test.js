@@ -335,11 +335,11 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(/Kato Construction owes the rest/.test(X.payPaperHTML(a, X.payView(a))) && /Slide to record/.test(X.payDockHTML(a, X.payView(a))), 'once named, the rest is theirs and the slide records');
     a.whoId = null; a.amt = owed + 8500; a.method = 'cash';
     // Sales round 1 (SAL-005): money over the bill is asked about every time -- change by default, a deposit only for someone named.
-    t.check(X.payChange(a, X.payView(a)) === 8500 && /8,500 back/.test(X.payDockHTML(a, X.payView(a))) && /Give <span class="m">8,500<\/span> change/.test(X.payOverHTML(a, X.payView(a))), 'cash over the bill is change by default, and the slide says how much goes back');
+    t.check(X.payChange(a, X.payView(a)) === 8500 && /Give change/.test(X.payDockHTML(a, X.payView(a))) && /8,500/.test(X.payDockHTML(a, X.payView(a))) && /Give <span class="m">8,500<\/span> change/.test(X.payOverHTML(a, X.payView(a))), 'cash over the bill is change by default, and the dock says how much goes back (U11)');
     a.method = 'momo';
     t.check(X.payChange(a, X.payView(a)) === 8500 && /Name them first/.test(X.payOverHTML(a, X.payView(a))) && !X.payDepositOk(a, X.payView(a)), 'mobile money over the bill is change too; a walk-in can’t keep a deposit until named');
     a.whoId = 'C001'; a.over = 'deposit';
-    t.check(X.payChange(a, X.payView(a)) === 0 && /8,500 deposit/.test(X.payDockHTML(a, X.payView(a))), 'once named, the extra can be kept as their deposit, and the slide says so');
+    t.check(X.payChange(a, X.payView(a)) === 0 && /Deposit/.test(X.payDockHTML(a, X.payView(a))) && /8,500/.test(X.payDockHTML(a, X.payView(a))), 'once named, the extra can be kept as their deposit, and the dock says so');
     a.whoId = null; a.over = null;
     a.method = 'cash'; a.amt = owed;
     t.check(/WILL CLEAR/.test(X.payPaperHTML(a, X.payView(a))) && !/CLEARED/.test(X.payPaperHTML(a, X.payView(a))), 'nothing reads cleared before the slide records it');
@@ -491,7 +491,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(X.custInQuestion(g) === 125000 && X.custTakeable(g) === 165000, 'SAL-04: 125,000 is in question, 165,000 can be taken');
     const sheet = X.PAGE.customer({ id: 'C009' });
     t.check(/Take <span class="m">165,000<\/span>/.test(sheet) && /data-amt="165000"/.test(sheet) && !/Take <span class="m">290,000/.test(sheet), 'SAL-04: the Take leaves the disputed bill out');
-    t.check(/165,000<\/b> to take/.test(sheet) && /125,000<\/b> in question/.test(sheet) && /Opening balance/.test(sheet), 'SAL-04: the head splits to take and in question; the loose bill names its note');
+    t.check(/To collect/.test(sheet) && /Being checked/.test(sheet) && /125,000/.test(sheet) && /Opening balance/.test(sheet), 'SAL-04 (U3): the money card splits to collect and being checked; the loose bill names its note');
     const ask = X.needsYou().find(n => n.title === 'Ggaba Stores');
     t.check(!!ask && /165,000/.test(ask.sub) && /125,000<\/span> in question/.test(ask.sub) && !/290,000/.test(ask.sub), 'SAL-04: Today asks to collect only what is clear');
     // SAL-05: nothing billed, orders on the move: the ring counts them, the body lists them with what is paid
@@ -501,12 +501,12 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
       { id: 2415, status: 'pending_delivery', invoiced: false, amountPaid: 0, customerId: 'C010', client: { name: 'Mukono Roofing' }, items: [{ productId: 'P1', productName: 'Cement', qty: 2, price: 30000, sellPrice: 45000, supplierId: '__stock__' }], charges: [] });
     X.S.loadedAt = 22;
     const open = X.PAGE.customer({ id: 'C010' });
-    t.check(/<span class="m">2<\/span> open<\/span>/.test(open) && !/0 orders?</i.test(open), 'SAL-05: the chip counts the open orders, never "0 orders"');
-    t.check(/ON THE MOVE/.test(open) && /50,000<\/b> paid/.test(open) && /still to pay <b class="m">220,000/.test(open), 'SAL-05: what is already paid on them shows');
-    t.check(/>Owes</.test(open) && /nothing billed yet/.test(open) && /Open bills <span class="m">0/.test(open) && /data-act="custpayorders"/.test(open), 'SAL-05: billed nothing yet, and a payment can still be taken');
+    t.check(/On the move<\/span><span>2<\/span>/.test(open) && !/0 orders?</i.test(open), 'SAL-05 (GU3): the open orders are counted under On the move, never "0 orders"');
+    t.check(/#2413 · Checking/.test(open) && /Part paid/.test(open) && /Not paid yet/.test(open), 'SAL-05 (GU3): what is already paid on them shows, in the glossary\'s words');
+    t.check(/Owes nothing/.test(open) && /Nothing billed yet/.test(open) && /data-act="custpayorders"/.test(open), 'SAL-05: billed nothing yet, and a payment can still be taken');
     t.check(/k<\/span> on the move/.test(X.nwOwesChip(k)) && X.nwMovingDue(k) === 220000, 'SAL-05: New sale says what is on the move, never a blank');
-    t.check(/To collect/.test(X.viewCustomers()) && /125,000<\/b> in question/.test(X.viewCustomers()), 'SAL-05 / R3-02: the owe list says what is to collect, and what is in question');
-    t.check(/165,000<\/span><small>TO COLLECT/.test(X.viewCustomers()) && /125,000<\/span> in question/.test(X.viewCustomers()), 'R3-02: a row splits the same way as the sheet and Today');
+    t.check(/To collect/.test(X.viewCustomers()) && /Being checked<\/span><span class="k-strip-v" style="color:#F5B26B">125,000/.test(X.viewCustomers()), 'SAL-05 / R3-02 (U1): the owe list says what is to collect, and what is being checked');
+    t.check(/data-act="customer" data-id="C009"/.test(X.viewCustomers()) && /Ggaba/.test(X.viewCustomers()), 'R3-02 (U1): the customer with a bill being checked is still in the list');
     // R3-01: a bill near a paid order is in question only at the same sum; a different sum stays owed
     const n = { id: 'C011', name: 'Nansana Two', phone: '', phone2: '', location: 'Nakawa', notes: '', debt: 20000, termsDays: null, creditLimit: 500000,
       debtLog: [{ id: 95, type: 'charge', amount: 235000, date: d54, quoteId: null }, { id: 96, type: 'payment', amount: 215000, date: d54, quoteId: null }] };
@@ -514,12 +514,12 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     data.savedQuotes.push({ id: 360, status: 'completed', invoiced: true, invoicedAt: d54, date: d54, amountPaid: 235000, customerId: 'C011', client: { name: 'Nansana Two' }, items: [{ productId: 'P1', productName: 'Cement', qty: 1, price: 200000, sellPrice: 235000, supplierId: '__stock__' }], charges: [] });
     X.S.loadedAt = 25;
     t.check(X.custInQuestion(n) === 0 && X.custTakeable(n) === 20000, 'R3-01: 20,000 beside a paid 235,000 is not in question');
-    t.check(/Not the same sum · it stays owed/.test(X.PAGE.customer({ id: 'C011' })) && /data-act="pay" data-id="C011">/.test(X.PAGE.customer({ id: 'C011' })) && /Take payment/.test(X.PAGE.customer({ id: 'C011' })), 'R3-01: the sheet shows ≠ and takes the whole 20,000');
+    t.check(!/Being checked/.test(X.PAGE.customer({ id: 'C011' })) && /data-act="pay" data-id="C011">/.test(X.PAGE.customer({ id: 'C011' })) && /Take payment/.test(X.PAGE.customer({ id: 'C011' })), 'R3-01: a different sum is not being checked, and the whole 20,000 is taken');
     t.check(!!X.needsYou().find(x => x.title === 'Nansana Two'), 'R3-01: and Today still asks to collect it');
     t.check(X.custInQuestion(g) === 125000, 'R3-01: the same sum is still in question');
     // SAL-25: a typo in Customers finds who they meant
     X.S.custQuery = 'ggaba stors'; X.S.loadedAt = 23;
-    t.check(/did you mean/.test(X.viewCustomers()) && /Ggaba Stores/.test(X.viewCustomers()) && /Someone new/.test(X.viewCustomers()), 'SAL-25: Customers offers the one they meant, then someone new');
+    t.check(/Did you mean/.test(X.viewCustomers()) && /Ggaba Stores/.test(X.viewCustomers()) && /as new/.test(X.viewCustomers()), 'SAL-25 (U2): Customers offers the one they meant, then adding them as new');
     X.S.custQuery = '';
     // SAL-11: no credit limit -> the order opens on Cash, and Credit says why
     data.savedQuotes.push({ id: 2390, status: 'completed', invoiced: true, invoicedAt: d60, date: d60, customerId: 'C010', credit: { pct: 3, days: 30 }, createdAt: new Date(Date.now() - 1e9).toISOString(), client: { name: 'Mukono Roofing' }, items: [], charges: [] });
@@ -736,7 +736,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(b.b + b.c === ken.parts.b60 + ken.parts.b90 + ken.parts.b90p, 'owing over 30 days is Accounts\' figure');
     t.check(/no date/.test(X.custState(data.customers[1]).why) && /oldest bill 42 days/.test(X.custState(data.customers[0]).why), 'debtor rows: "oldest bill 42 days", and "no date" where nothing is dated');
     t.check(!/Sadat/.test(X.viewToday()), 'an undated debt is not chased as overdue');
-    { const pg = X.PAGE.customer({ id: 'C1' }); t.check(/42<\/span> days/.test(pg) && /no date/.test(pg) && /INV-0001/.test(pg), 'the customer\'s bill bar is their open charges, the oldest 42 days, with a "no date" part'); }
+    { const pg = X.PAGE.customer({ id: 'C1' }); t.check(/42 days/.test(pg) && /no date/.test(pg) && /#0001 · /.test(pg), 'the customer\'s bills are their open charges by order number, the oldest 42 days, with the undated part'); }
 
     // fix 12: one known-only total; a line still to price is never billed at cost
     const open = sq(60, 'completed', [line('P1', null, 10, '__stock__', 31000), line('P3', null, 2, 'S1', 90000)]);
@@ -785,7 +785,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     X.S.sheet = { type: 'addcust', args: { for: '', phone: '', name: '', area: '' } };
     const sh = X.SHEET.addcust(X.S.sheet.args);
     t.check(/class="cu-ncareas"/.test(sh) ? /data-act="ncarea"/.test(sh) && /Other…/.test(sh) && !/--w:|\+1|customers there/.test(sh) : /id="sx_nc_area"/.test(sh) && !/Other…/.test(sh), 'areas are plain chips with Other… (no bars, counts or +1); with none on the books, a box to type it');
-    t.check(/Just save/.test(sh) && /Save and sell/.test(sh) && /cu-ncdock/.test(sh), 'the two saves sit in the dock');
+    t.check(/Just save/.test(sh) && /Save and sell/.test(sh), 'the two saves sit at the foot (U6)');
   }
 
   // the smaller navy tops (v109/v110/v113): Today is one strip; an order is who, a stage n/6 bar, and chips
@@ -857,7 +857,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(!/Client name or order number|client’s name/.test(html) && !/'On road'/.test(html) && /--ink3:#656E80/.test(html) && !/#767F91/i.test(html), 'wording and contrast: customer (not client), On the road, and the small-print grey at 4.7:1');
     const quiet = { id: 'C9', name: 'Zed Hardware', phone: '', location: 'Kira', debt: 0, termsDays: null, creditLimit: null, debtLog: [] };
     X.S.data.customers.push(quiet); X.S.loadedAt = 52;
-    t.check(!/data-act="custstmt"/.test(X.PAGE.customer({ id: 'C9' })) && /Statement<\/button>/.test(X.PAGE.customer({ id: 'C001' })), 'a statement button only when there is something to put on it, and it says Statement, not PDF');
+    t.check(!/data-act="custstmt"/.test(X.PAGE.customer({ id: 'C9' })) && /Send a statement/.test(X.PAGE.customer({ id: 'C001' })), 'a statement only when there is something to put on it (GU3)');
   }
 
   // rows 18-19: one customer page, the tidy Add customer, the message read into lines, aisle marks, Asked of Sourcing
@@ -867,10 +867,10 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     X.S.loadedAt = 61;
     const kc = X.PAGE.customer({ id: 'C001' });
     t.check(/data-act="sellto"/.test(kc) && /Sell to Kato/.test(kc) && !/>Usual</.test(kc), 'CustOne: one red Sell to <name> in the dock, whatever they owe');
-    t.check(/Old balance/.test(kc) && /from the old book · no date/.test(kc) && /class="cu-bacts"/.test(kc), 'CustOne: the undated balance leads the bills, and Promise / Take sit at the card foot');
+    t.check(/Old balance/.test(kc) && /from the old book · no date/.test(kc) && /class="k-two-b cu-acts"/.test(kc), 'CustOne (U3): the undated balance leads the bills, and Take payment / Promise sit in the money card');
     X.S.sheet = { type: 'addcust', args: { for: '', phone: '', name: '', area: '' } };
     let add = ''; try { add = X.SHEET.addcust(X.S.sheet.args); } catch (e) { add = String(e); }
-    t.check(!/id="cu_ncready"/.test(add) && !/cu-nctiles/.test(add) && /sets credit<\/b>/.test(add) && /cu-ncline/.test(add), 'AddCustTidy: no Ready pill, no tiles, one quiet line');
+    t.check(!/id="cu_ncready"/.test(add) && !/cu-nctiles/.test(add) && /data-act="nckind"/.test(add) && /class="k-field"/.test(add), 'AddCustTidy (U6): no Ready pill, no tiles; one grouped card and the kind');
     t.check(/<path/.test(X.nwCatMark('Roofing')) && /<path/.test(X.nwCatMark('Plumbing pipes')) && X.nwCatMark('Garden') === '', 'AisleIcons: the common aisles draw a mark, any other keeps its initials');
     const picked = X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }, { productId: 'P3', qty: 2, qtySaid: true }]);
     t.check(picked.length === 1 && picked[0].productId === 'P3' && X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }]).length === 1, 'ChatToLines: a bare word is not an item when the message gives counts; alone, it still is');
