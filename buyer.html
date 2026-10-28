@@ -300,7 +300,7 @@ input{font-family:inherit;color:var(--ink)}
 .bx-btn[disabled],.bx-btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
 .bx-sq{width:56px;height:56px;flex:none;border-radius:18px;border:none;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:700}
 .bx-foot{margin-top:auto;position:sticky;bottom:0;z-index:5;padding:14px 16px calc(18px + var(--safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;background:inherit}
-.bx-foot:before{content:'';position:absolute;left:0;right:0;top:-20px;height:20px;background:linear-gradient(180deg,rgba(247,245,242,0),var(--bg));pointer-events:none}
+.bx-foot:before{content:'';position:absolute;left:0;right:0;top:-32px;height:32px;background:linear-gradient(180deg,rgba(247,245,242,0),var(--bg) 85%);pointer-events:none}
 .bx-dock{position:sticky;bottom:0;z-index:5}
 /* the fade above a pinned footer must never sit on the last thing above it */
 .bx-page :has(+ .bx-foot){margin-bottom:20px}
@@ -1231,7 +1231,7 @@ function cartonsHTML(){
   const list = cartonsWaiting(); if (!list.length) return '';
   const mgr = whoShort('manager');
   return list.map(({ q, l }) => { const c = l.carton, it = l.it, cu = n => quoteLineCount(it, n), sh = supplierShort(l.best.supplierId), money = Math.round(c.shelf * (c.rate || l.unitCost || 0));
-    const head = c.state === 'no' ? firstWord(mgr) + ' said no to the carton' : 'A carton of ' + n0(cu(c.units).n) + ' for ' + n0(cu(l.quotedQty).n) + ' sold · ' + firstWord(mgr) + ' OKs the shelf part';
+    const head = c.state === 'no' ? firstWord(mgr) + ' said no to the carton' : 'Sold only in ' + String(l.best.packUnit || 'carton').toLowerCase() + 's of ' + n0(cu(c.units).n) + ' · ' + firstWord(mgr) + ' must OK the ' + n0(cu(c.shelf).n) + ' extra';
     return `<div role="group" aria-label="${esc(lineFull(it))} from ${esc(supplierName(l.best.supplierId))}: ${esc(head)}" style="display:flex;flex-direction:column;gap:7px;padding:10px 12px;border-radius:14px;background:${c.state === 'no' ? '#FDF0EE' : '#F3F1FC'};box-shadow:inset 0 0 0 1px ${c.state === 'no' ? 'rgba(201,58,48,.3)' : 'rgba(58,63,155,.18)'}">
       <span style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:${c.state === 'no' ? '#8E2A22' : '#2E3388'}"><span class="bx-av round" style="width:20px;height:20px;font-size:8px;background:#FDE8E4;color:#A82D24">${esc(whoIni('manager'))}</span><span style="flex:1;min-width:0">${esc(head)}</span>${c.state === 'waiting' ? `<span style="flex:none;font-size:10.5px;font-weight:700;color:var(--amberInk)">asked ${esc(hm(msOf(c.row.createdAt)))}</span>` : ''}</span>
       <span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">${esc(lineFull(it))} · ${esc(sh)} sells only whole ${esc(String(l.best.packUnit || 'carton').toLowerCase())}s</span>
@@ -1731,15 +1731,15 @@ function tickClocks(){ if (S.view === 'asking' || S.view === 'today' || (S.stack
 function applyPrefs(){ document.documentElement.classList.toggle('big', !!S.prefs.big); }
 
 /* ---------------- navigation ---------------- */
-function go(view){ S.view = view; S.stack = []; closeSheet(true); toastOff(); render(); window.scrollTo(0, 0); }
+function go(view){ S.view = view; S.stack = []; S.ui.slideAsk = null; closeSheet(true); toastOff(); render(); window.scrollTo(0, 0); }
 function toastOff(){ clearTimeout(toastTimer); const el = document.getElementById('bx_toast'); if (el) el.classList.remove('on'); }
 function push(type, args){
-  args = args || {};
+  args = args || {}; S.ui.slideAsk = null;
   const same = S.stack.findIndex(p => p.type === type && ['sid', 'id'].every(k => String(p.args[k] == null ? '' : p.args[k]) === String(args[k] == null ? '' : args[k])));
   if (same >= 0) { S.stack = S.stack.slice(0, same + 1); S.stack[same] = { type, args: { ...S.stack[same].args, ...args } }; render(); return; }
   S.stack.push({ type, args }); render(); const p = document.querySelector('.bx-page:last-of-type'); if (p) p.scrollTop = 0; }
-function pop(){ S.stack.pop(); render(); }
-function replaceTop(type, args){ S.stack[S.stack.length - 1] = { type, args: args || {} }; render(); }
+function pop(){ S.stack.pop(); S.ui.slideAsk = null; render(); }
+function replaceTop(type, args){ S.stack[S.stack.length - 1] = { type, args: args || {} }; S.ui.slideAsk = null; render(); }
 function topArgs(){ return S.stack.length ? S.stack[S.stack.length - 1].args : {}; }
 window.bxBack = function(){
   if (S.sheet) { closeSheet(); return true; }
@@ -1887,9 +1887,14 @@ function bindTri(){
 ACT.tritap = t => { const el = t.closest('[data-tri]'); if (el && el._commit) el._commit(t.dataset.to); };
 
 /* ---------------- slide to start / hand in ---------------- */
+// A tap on a slide asks first: one question, Not yet or the yes.
 function slideHTML(id, label, icon, opts){
   opts = opts || {};
-  return `<div class="bx-slide settle" data-slide="${id}" ${opts.disabled ? 'aria-disabled="true"' : ''}>
+  if (opts.ask && S.ui.slideAsk === id && !opts.disabled) return `<div role="group" aria-label="${esc(opts.ask)}" class="a-card" style="flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px;box-sizing:border-box;border-radius:20px;background:var(--navy);color:#fff">
+    <span style="flex:1 0 100%;min-width:0;padding:0 6px;font-size:15px;font-weight:700">${esc(opts.ask)}</span>
+    <button data-act="slideno" style="flex:1;height:44px;padding:0 14px;border:none;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:14px;font-weight:700">Not yet</button>
+    <button data-act="slideyes" data-k="${esc(id)}" style="flex:1;height:44px;padding:0 16px;border:none;border-radius:999px;background:var(--mint);color:#0B3D27;font-size:14px;font-weight:700">${esc(opts.yes || 'Yes')}</button></div>`;
+  return `<div class="bx-slide settle" data-slide="${id}" ${opts.ask ? 'data-ask="1"' : ''} ${opts.disabled ? 'aria-disabled="true"' : ''}>
     <span class="road" aria-hidden="true"></span><span class="fill" aria-hidden="true"></span>
     <span class="lab" aria-hidden="true"><b>${esc(label)}</b><i>›››</i></span><span class="flag" aria-hidden="true"></span>
     <button type="button" class="k" aria-label="${esc(label)}. Drag right, or press Enter">${ic(icon || 'truck', 24, 'style="stroke-width:2"')}</button></div>`;
@@ -1904,11 +1909,16 @@ function bindSlides(){
     const done = () => { if (el.getAttribute('aria-disabled') === 'true') return; const k = String(el.dataset.slide || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; if (f) f(el); };
     k.addEventListener('pointerdown', e => { if (el.getAttribute('aria-disabled') === 'true') return; drag = true; S.dragging = true; sx = e.clientX; x = 0; step = 0; el.classList.remove('settle'); try { k.setPointerCapture(e.pointerId); } catch (_e) {} });
     k.addEventListener('pointermove', e => { if (!drag) return; x = Math.max(0, Math.min(max(), e.clientX - sx)); const s = Math.floor(x / max() * 4); if (s !== step) { step = s; if (s > 0) FEEL.tick(); } paint(); });
-    const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * 0.86) { x = max(); paint(); setTimeout(done, 120); } else { if (x > 8) FEEL.back(); x = 0; paint(); } };
+    const end = () => { if (!drag) return; drag = false; S.dragging = false; el.classList.add('settle'); if (x >= max() * 0.86) { x = max(); paint(); setTimeout(done, 120); } else { if (x > 8) FEEL.back(); else if (el.dataset.ask) { FEEL.tick(); S.ui.slideAsk = el.dataset.slide; render(); return; } x = 0; paint(); } };
+    // A tap anywhere on the road asks the same question.
+    el.addEventListener('click', e => { if (e.target.closest('.k') || !el.dataset.ask || el.getAttribute('aria-disabled') === 'true') return; FEEL.tick(); S.ui.slideAsk = el.dataset.slide; render(); });
     k.addEventListener('pointerup', end); k.addEventListener('pointercancel', end);
     k.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); x = max(); paint(); done(); } });
   });
 }
+
+ACT.slideno = () => { FEEL.back(); S.ui.slideAsk = null; render(); };
+ACT.slideyes = t => { const k = String(t.dataset.k || ''), f = ACT['slide:' + k] || ACT['slide:' + k.split(':')[0]]; S.ui.slideAsk = null; if (f) f(t); };
 
 /* ==================================================================
    TODAY — what to check, chase and fetch.
@@ -3455,7 +3465,7 @@ PAGE.plan = (args) => {
       <span style="display:flex;align-items:center;gap:10px;width:100%">
         <span class="m" style="width:22px;height:22px;border-radius:999px;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;${on ? 'background:var(--navy);color:#fff' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA;color:var(--ink2)'}">${on ? ic('tick', 12, 'style="stroke-width:3.2"') : i + 1}</span>
         <span class="bx-av" style="width:36px;height:36px;border-radius:11px;font-size:12px;background:${tt[0]};color:${tt[1]}">${esc(initials(supplierName(r.supplierId)))}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(supplierName(r.supplierId))}</span><span class="ell" style="font-size:12px;color:var(--ink3)">${esc([s2 && supplierWhere(s2), r.lines.length + ' line' + (r.lines.length > 1 ? 's' : ''), orders + ' order' + (orders > 1 ? 's' : '')].filter(Boolean).join(' · '))}</span></span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span class="ell" style="font-size:14px;font-weight:700">${esc(supplierName(r.supplierId))}</span><span class="ell" style="font-size:13px;color:var(--ink3)">${esc([area, r.lines.length + ' line' + (r.lines.length > 1 ? 's' : ''), orders + ' order' + (orders > 1 ? 's' : '')].filter(Boolean).join(' · '))}</span></span>
         <span class="m" style="font-size:14px;font-weight:600">${n0(r.total)}</span>
       </span>
       ${on ? `<span style="display:flex;flex-wrap:wrap;gap:5px;width:100%">${planItemsHTML(r)}</span>${planYardHTML(r)}${planJoinHTML(r)}${planRefillWaitHTML(r)}` : ''}
@@ -3497,12 +3507,16 @@ PAGE.plan = (args) => {
     }
     const stale = stalePricesFor(first.supplierId, askPriceAge()).length;
     tip = args.who === 'sup' ? (nS > 1 ? 'Each supplier gets their list, no prices · pay on their bill' : `${supplierName(first.supplierId)} gets the list, no prices · pay on their bill`) : stale ? `At ${supplierShort(first.supplierId)}, ask ${stale} price${stale > 1 ? 's' : ''} nobody has checked in ${askPriceAge() === 30 ? 'a month' : askPriceAge() + ' days'}` : nS > 1 ? `Stop 1 is ${supplierShort(first.supplierId)} · the trip runs in order` : `Carry ${n0(total)} for ${supplierShort(first.supplierId)}`;
-    const label = args.who === 'me' ? (nS > 1 ? 'Slide to start · ' + stopsW : 'Slide to start · ' + supplierShort(first.supplierId)) : args.who === 'sup' ? 'Slide · ' + (nS > 1 ? nS + ' suppliers deliver' : supplierShort(first.supplierId) + ' delivers') : pickedStaff ? 'Slide to send ' + staffCall(pickedStaff) + (nS > 1 ? ' · ' + stopsW : '') : 'Choose who goes';
+    const label = args.who === 'me' ? (nS > 1 ? 'Start the trip · ' + stopsW : 'Start the trip · ' + supplierShort(first.supplierId)) : args.who === 'sup' ? 'Slide · ' + (nS > 1 ? nS + ' suppliers deliver' : supplierShort(first.supplierId) + ' delivers') : pickedStaff ? 'Slide to send ' + staffCall(pickedStaff) + (nS > 1 ? ' · ' + stopsW : '') : 'Choose who goes';
     const h = args.who === 'sup' ? null : roundCashAsk(picked.map(r => String(r.supplierId)));
     const inHand = args.who === 'sup' || (h && h.status === 'done'), own = !inHand && args.who === 'me' && !!args.own;
-    ownRow = inHand || own ? '' : args.who === 'me' ? `<span style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 4px"><span style="font-size:12px;font-weight:600;color:var(--ink3)">No cash yet? Go on your own money</span><button data-act="planown" style="flex:none;height:32px;padding:0 12px;border:none;border-radius:999px;background:#7A4A02;color:#fff;font-size:12px;font-weight:700">I paid myself</button></span>` : '';
-    cta = inHand || own ? slideHTML('trip', label, 'truck', { disabled: !carrier || S.busy })
-      : `<span class="bx-btn" role="status" aria-disabled="true" style="background:var(--rule);color:var(--ink2);box-shadow:none;border-radius:999px">${ic('lock', 18)}<span class="ell">${h ? 'Waiting for ' + esc(whoShort('accounts')) + '’s cash' : 'Ask ' + esc(whoShort('accounts')) + ' for the cash'}</span></span>`;
+    // No cash in hand yet: ask Accounts, or say you pay from your own pocket (one question first).
+    const askAmt = args.given === undefined ? roundUp(total, cashStep(total)) : args.given;
+    ownRow = inHand || own || args.who !== 'me' ? '' : args.ownAsk ? `<span role="group" aria-label="Use your own money?" class="a-card" style="display:flex;align-items:center;gap:8px;padding:8px 8px 8px 12px;border-radius:16px;background:#FFF6EC;box-shadow:inset 0 0 0 1px rgba(122,74,2,.2)"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;color:#7A4A02">Use your own money?</b><span style="font-size:13px;font-weight:600;color:var(--amberInk)">${esc(whoShort('accounts'))} pays you back after</span></span><button data-act="planownask" style="flex:none;height:40px;padding:0 12px;border:none;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink);font-size:13px;font-weight:700">Cancel</button><button data-act="planown" style="flex:none;height:40px;padding:0 12px;border:none;border-radius:12px;background:#7A4A02;color:#fff;font-size:13px;font-weight:700">Yes, my money</button></span>`
+      : `<button data-act="planownask" style="align-self:center;min-height:36px;padding:0 8px;border:none;background:transparent;color:var(--ink2);font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Pay with my own money instead</button>`;
+    cta = inHand || own ? slideHTML('trip', label, 'truck', { disabled: !carrier || S.busy, ask: 'Start the trip now?', yes: 'Yes, go' })
+      : h && Number(h.payload.amount) === Number(askAmt) ? `<span class="bx-btn" role="status" aria-disabled="true" style="background:var(--rule);color:var(--ink2);box-shadow:none;border-radius:999px">${ic('lock', 18)}<span class="ell">Waiting for ${esc(whoShort('accounts'))}’s cash</span></span>`
+      : `<button class="bx-btn red" data-act="cashask" data-v="${askAmt}" ${S.busy ? 'aria-disabled="true"' : ''} aria-label="Ask ${esc(whoFull('accounts'))} for ${n0(askAmt)}"><span class="ell">Ask ${esc(whoShort('accounts'))} for ${n0(askAmt)}</span></button>`;
   }
   const msg = previewTrip ? supplierTripMessage(previewTrip) : '';
   const out = live.filter(t => t.status === 'collecting' && !tripIsSupplierDelivered(t));
@@ -3511,13 +3525,11 @@ PAGE.plan = (args) => {
     <div class="bx-sheethead" style="gap:14px"><span class="bx-grip"></span>
       <div style="display:flex;align-items:center;gap:12px"><span style="flex:1;display:flex;flex-direction:column;gap:2px"><span class="bx-eyebrow">The buying list · tick the stops</span><span style="font-size:20px;font-weight:700;letter-spacing:-.01em">Plan the trip</span></span>${closeBtn()}</div>
       <div role="img" aria-label="${esc(stopsW + ' in this trip, ' + n0(total) + ' planned' + (picked.length ? ': ' + picked.map((r, i) => (i + 1) + ' ' + supplierShort(r.supplierId)).join(', then ') : ''))}" style="display:flex;flex-direction:column;gap:8px">
-        <span style="position:relative;height:22px"><span style="position:absolute;left:0;right:0;top:10px;border-top:2px dotted rgba(255,255,255,.25)"></span><span class="${picked.length ? 'a-drive' : ''}" style="position:absolute;top:0;left:0;color:var(--lilac);display:flex">${ic('truck', 22, 'style="stroke-width:1.9"')}</span></span>
         <span style="display:flex;height:12px;gap:2px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)">${picked.map((r, i) => `<i class="a-grow" style="flex:${Math.max(1, r.total)};background:${RUN_COLS[runs.indexOf(r) % RUN_COLS.length]};animation-delay:${i * .1}s"></i>`).join('')}</span>
         <span style="display:flex;align-items:baseline;justify-content:space-between"><span class="ell" style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--navyInk2);padding-right:10px">${esc(roundWords || 'No stop ticked')}${out.length ? ' · ' + esc(supplierShort(out[0].supplierId)) + (out.length > 1 ? ' and ' + (out.length - 1) + ' more' : '') + ' out now' : ''}</span><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em">${n0(total)}</span></span>
       </div>
     </div>
     <div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:8px">
-      ${liveRow}
       ${(() => { const own = live.filter(t => tripIsSupplierDelivered(t) && t.status === 'collecting'); return own.length ? `<div role="note" style="display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 10px;border-radius:14px;background:#EEF6F7;box-shadow:inset 0 0 0 1px rgba(14,100,112,.18)"><span style="width:26px;height:26px;border-radius:8px;background:#DDF1F3;color:#0E6470;display:flex;align-items:center;justify-content:center;flex:none">${ic('truck', 14)}</span><span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:#0B5560"><b>${esc(own.length > 1 ? own.length + ' suppliers bring their own' : supplierName(own[0].supplierId) + ' brings its own')}</b> · since ${esc(dayLabel(isoOf(own[0].createdAt)))} · never a stop here</span></div>` : ''; })()}
       ${cartonsHTML()}
       ${runs.length ? `<div role="group" aria-label="Stops in this trip" style="display:flex;flex-direction:column;gap:8px">${stops}</div>` : emptyCard('Nothing on the buying list', 'Orders in Buying with lines still out at a supplier land here.')}
@@ -3563,7 +3575,7 @@ function planOpenTripHTML(r, on, args){
   const btn = 'height:38px;border:none;border-radius:11px;font-size:12.5px;font-weight:700';
   return `<div role="group" aria-label="${esc(head + ', ' + sub)}" style="margin:-2px 0 2px 34px;display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:${took ? '#EEF7F1' : '#F3F1FC'};box-shadow:inset 0 0 0 1px ${took ? 'rgba(15,107,67,.25)' : 'rgba(58,63,155,.18)'}">
     <span style="display:flex;align-items:center;gap:10px"><span class="bx-av" style="width:30px;height:30px;border-radius:10px;font-size:10px;background:var(--greenSoft);color:var(--green)">${esc(initials(who === 'you' ? myName() : who0))}</span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b class="ell" style="font-size:12.5px">${esc(head)}</b><span class="ell" style="font-size:11.5px;font-weight:600;color:var(--ink3)">${esc(sub)}</span></span>
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14px;line-height:1.25">${esc(head)}</b><span style="font-size:13px;font-weight:600;color:var(--ink3)">${esc(sub)}</span></span>
       <span role="img" aria-label="${got} of ${n} lines loaded" style="flex:none;display:flex;gap:3px">${tripLines(t).slice(0, 6).map(l => `<i style="width:8px;height:14px;border-radius:3px;${tripLineGot(l) != null ? 'background:var(--green)' : 'box-shadow:inset 0 0 0 1.5px #C9C4BA'}"></i>`).join('')}</span></span>
     ${took || left ? `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:${took ? 'var(--green)' : 'var(--ink3)'}"><span style="flex:1">✓ ${took ? n + ' more line' + (n === 1 ? '' : 's') + ' on this stop' : esc(sh) + ' stays with ' + esc(who === 'you' ? 'you' : who)}</span><button data-act="planopenundo" data-sid="${esc(sid)}" ${S.busy ? 'aria-disabled="true"' : ''} style="flex:none;min-height:28px;padding:0 8px;border:none;background:transparent;color:var(--indigo);font-size:12px;font-weight:700;text-decoration:underline;text-underline-offset:3px">Undo</button></span>`
       : `<span style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${can ? `<button data-act="planopentake" data-sid="${esc(sid)}" data-id="${esc(t.id)}" ${S.busy ? 'aria-disabled="true"' : ''} style="${btn};background:var(--navy);color:#fff">Take its ${n} line${n === 1 ? '' : 's'}</button>` : `<button data-act="trip" data-id="${esc(t.id)}" style="${btn};background:var(--navy);color:#fff">Open that trip</button>`}<button data-act="planopenleave" data-sid="${esc(sid)}" style="${btn};background:#fff;box-shadow:inset 0 0 0 1.5px var(--rule);color:var(--ink)">Leave it to ${esc(who === 'you' ? 'that trip' : who)}</button></span>`}
@@ -3591,7 +3603,7 @@ ACT.planopenundo = async t => {
 };
 // The yard already holds some of what a stop would buy: say so, and what is left to buy.
 function planYardHTML(r){
-  const notes = r.lines.filter(l => l.fromYard > 0).map(l => `${n0(quoteLineCount(l.it, l.fromYard).n)} ${lineFull(l.it)} already at the yard, uncounted · take them from there, buy ${n0(quoteLineCount(l.it, l.qty).n)}`);
+  const notes = r.lines.filter(l => l.fromYard > 0).map(l => `${n0(quoteLineCount(l.it, l.fromYard).n)} ${lineFull(l.it)} are already at the yard (not counted yet) · buy only ${n0(quoteLineCount(l.it, l.qty).n)}`);
   return notes.map(w => `<span style="display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border-radius:10px;background:#EEF6F7;color:#0B5560;font-size:12px;font-weight:600;text-align:left">${ic('box', 14, 'style="flex:none;stroke-width:2"')}<span style="flex:1">${esc(w)}</span></span>`).join('');
 }
 function planItemsHTML(r){
@@ -3893,7 +3905,8 @@ ACT.cashset = t => { const v = S.sheet.args.v; const a = topArgs(); a.given = t.
    One trip per stop, in round order, the same carrier on each. The cash is
    split by what each stop plans to spend, the spare on the last stop, so
    Accounts can count any stop that comes back on its own. */
-ACT.planown = () => { const a = topArgs(); a.own = !a.own; FEEL.tick(); render(); };
+ACT.planown = () => { const a = topArgs(); a.own = !a.own; a.ownAsk = false; FEEL.tick(); render(); };
+ACT.planownask = () => { const a = topArgs(); a.ownAsk = !a.ownAsk; FEEL.tick(); render(); };
 ACT['slide:trip'] = async () => {
   const a = topArgs(); if (S.busy) return;
   S.busy = true;
