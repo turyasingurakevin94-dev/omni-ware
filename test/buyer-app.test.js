@@ -1116,6 +1116,19 @@ const P = page(fakeDb({}));
     X.D().storeAsks = []; X.S.ui.yardWait = {};
     t.check(X.yardCardHTML() === '', 'no asks (or no 0157 yet): no card');
   }
+  // 10p. #586: a line whose supplier said yes is bought there, never moved to a cheaper one.
+  {
+    const X = page(fakeDb({}));
+    const mk = (id, extra) => { const q = X.rowToQuote(orderRow(id, [it(1, 'P1', 0, 10, 'S3', 15000, extra)], {}, { status: 'awaiting_goods' })); q.supplierConfirms = { S3: { state: 'confirmed', at: NOW, terms: X.orderSupplierTerms(q, 'S3') } }; return q; };
+    const q1 = mk(586), l1 = X.orderPurchaseLines(q1)[0];
+    t.check(l1.best && l1.best.supplierId === 'S3' && l1.unitCost === 15000 && !l1.movedFrom, 'confirmed at Katwe: bought at Katwe at its row price, though Kikuubo is cheaper (' + (l1.best && l1.best.supplierId) + ' ' + l1.unitCost + ')');
+    const runs = X.buyingListRuns([q1]);
+    t.check(runs.length === 1 && runs[0].supplierId === 'S3', 'the run is Katwe’s, and no Kikuubo card is left to plan');
+    const q2 = mk(587, { price: 14800, repricedAt: NOW - 6e4 }), l2 = X.orderPurchaseLines(q2)[0];
+    t.check(l2.best.supplierId === 'S3' && l2.unitCost === 14800 && l2.best.agreedAt, 'with a price they agreed, that price is what the trip carries');
+    q2.supplierConfirms = {};
+    t.check(X.orderPurchaseLines(q2)[0].best.supplierId === 'S1', 'not confirmed: ranked again, the cheapest first');
+  }
   // 10o. The canvas build of 28 Oct 2026: Today's steps, the order as one slip, a question before a slide.
   {
     const row = orderRow(95, [it(1, 'P1', 0, 10, 'S1', 14500), it(2, 'P2', null, 6, 'S2', 28000), it(3, 'P3', null, 4, null, 0)], { supplierConfirms: { S1: { state: 'problem', at: NOW - 6e5, askedAt: NOW - 9e5 } } });

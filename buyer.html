@@ -1244,14 +1244,22 @@ function cartonsHTML(){
 function cartonsWaiting(){ const out = []; beingPreparedOrders().forEach(q => orderPurchaseLines(q).forEach(l => { if (l.carton && l.carton.state !== 'ok' && !lineIsOnATrip(q.id, l.it.lineId)) out.push({ q, l }); })); return out; }
 
 /* ---- the buying list: index.html 55505 orderPurchaseLines, 55574 buyingListRuns ---- */
+function confirmedBest(q, it, qty){
+  const sid = it.supplierId; if (!sid || sid === '__stock__' || orderSupplierConfirmState(q, sid).state !== 'confirmed') return null;
+  const row = rankedPurchaseRowsAtQty(it.productId, it.variantIdx, qty).find(r => String(r.supplierId) === String(sid))
+    || (r => r ? { ...r, purchasePrice: purchasePriceAtQty(r, qty) } : null)(productPriceRows(it.productId, it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx)).find(r => String(r.supplierId) === String(sid)));
+  const agreed = it.repricedAt && Number(it.price) > 0;
+  const price = agreed ? Number(it.price) : row && row.purchasePrice != null ? row.purchasePrice : Number(it.price) > 0 ? Number(it.price) : null;
+  if (price == null) return null;
+  return { ...(row || {}), supplierId: sid, purchasePrice: price, ...(agreed ? { agreedAt: it.repricedAt } : {}) };
+}
 function orderPurchaseLines(q){
   return (((q && q.items) || []).filter(orderLineIsBoughtIn)).map(it => {
     const quotedQty = Number(it.qty) || 0;
-    // A price agreed in the app (a new price they said, and their yes on it)
-    // is what the trip carries and pays: never the older list price.
-    const agreed = it.repricedAt && it.supplierId && it.supplierId !== '__stock__' && Number(it.price) > 0 && orderSupplierConfirmState(q, it.supplierId).state === 'confirmed';
-    const best = agreed ? { ...(supplierRowFor(it.productId, it.variantIdx, it.supplierId) || {}), supplierId: it.supplierId, purchasePrice: Number(it.price), agreedAt: it.repricedAt }
-      : rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty).find(r => r.purchasePrice != null) || null;
+    // The line's own supplier said yes for this order: the trip buys there,
+    // at the price they agreed (a new price they said), else their row's
+    // price. Only a line whose supplier has not said yes is ranked again.
+    const best = confirmedBest(q, it, quotedQty) || rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty).find(r => r.purchasePrice != null) || null;
     const unitCost = best ? Math.round(best.purchasePrice) : null;
     const out = best ? ipLineOutlay(best, quotedQty) : null;
     const received = quoteLineReceived(it);

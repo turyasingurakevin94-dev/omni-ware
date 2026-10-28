@@ -55649,8 +55649,23 @@ function rankedPurchaseRowsAtQty(productId, variantIdx=null, qty=0){
 function orderPurchaseLines(q){
   return (((q && q.items) || []).filter(orderLineIsBoughtIn)).map(it=>{
     const quotedQty = Number(it.qty) || 0;
-    const best = rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty)
-      .find(r=> r.purchasePrice != null) || null;
+    /* The line's own supplier said yes for this order: it is bought
+       there, at the price they agreed (a new price they said), else at
+       their row's price. Only a line whose supplier has not said yes is
+       ranked again, so a confirmed line never drifts to another shop. */
+    const sid = it.supplierId;
+    const said = sid && sid !== '__stock__' && typeof orderSupplierConfirmState === 'function'
+      && orderSupplierConfirmState(q, sid).state === 'confirmed';
+    let best = null;
+    if (said){
+      const vi = it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx);
+      let row = rankedPurchaseRowsAtQty(it.productId, vi, quotedQty).find(r=> String(r.supplierId) === String(sid)) || null;
+      if (!row){ const r = productPriceRows(it.productId, vi).find(x=> String(x.supplierId) === String(sid)); row = r ? {...r, purchasePrice: purchasePriceAtQty(r, quotedQty)} : null; }
+      const agreed = it.repricedAt && Number(it.price) > 0;
+      const price = agreed ? Number(it.price) : (row && row.purchasePrice != null) ? row.purchasePrice : (Number(it.price) > 0 ? Number(it.price) : null);
+      if (price != null) best = {...(row || {}), supplierId: sid, purchasePrice: price, ...(agreed ? {agreedAt: it.repricedAt} : {})};
+    }
+    if (!best) best = rankedPurchaseRowsAtQty(it.productId, it.variantIdx, quotedQty).find(r=> r.purchasePrice != null) || null;
     const unitCost = best ? Math.round(best.purchasePrice) : null;
     /* `qty` is what has to be COLLECTED, which is a whole carton where
        the supplier sells no less -- this list is what somebody carries to
