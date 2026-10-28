@@ -13,7 +13,7 @@ p as (
          ow_num(pay ->> 'amount') as paid, lower(coalesce(pay ->> 'method', '')) as method, pay ->> 'date' as paid_on
     from saved_quotes q, shop,
          jsonb_array_elements(case when jsonb_typeof(q.payload -> 'payments') = 'array' then q.payload -> 'payments' else '[]'::jsonb end) pay
-   where q.shop_id = shop.id and coalesce(pay ->> 'cashTxnId', '') <> ''
+   where q.shop_id = shop.id and not coalesce(q.qa, false) and coalesce(pay ->> 'cashTxnId', '') <> ''
 )
 select p.order_id, p.client_name, p.pay_id, p.paid, p.method, p.paid_on, p.cash_id,
        c.amount as cash_amount, c.account as cash_account, c.quote_id as cash_order, c.description,
