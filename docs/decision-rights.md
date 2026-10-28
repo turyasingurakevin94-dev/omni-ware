@@ -76,7 +76,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | Decision | Task | Who decides | Proposes | Told | Built |
 |---|---|---|---|---|---|
 | Make an order at or above the shop's price | `quote.make` | Sales | — | — | yes |
-| **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | Manager | yes |
+| **Sell over the counter: pay and go, for goods on the shelf** | `counter.sell` | Sales | — | — (the Manager's log; no push, it waits on nobody) | yes |
 | **Forward an item we don't sell to Sourcing, while taking the order** | `sourcing.ask` | Sales | — | Sourcing | yes |
 | **Sell below the shop's price (at or above cost)** | `price.approve` | Manager | Sales | Sales, owner's log | yes |
 | **Price a line that has no selling price or no known cost** | `price.approve` | Manager | Sales, Buyer | Sales, owner's log | yes |
@@ -269,7 +269,7 @@ the Buyer's cost first.
 **Data.** The decision is kept on the order line, in `saved_quotes.payload.items[]`:
 
 ```
-priceReview: { state: 'approved' | 'changed', price, was, by, byName, at }
+priceReview: { state: 'approved' | 'changed', price, was, qty, by, byName, at }   // qty: the decision goes stale when the qty changes
 ```
 
 **Enforced in the database.** A guard on `saved_quotes` has two rules:

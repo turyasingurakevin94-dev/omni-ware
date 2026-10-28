@@ -2,7 +2,7 @@
 
 What this covers: every money rule the shop runs on (writing money, an order's totals, prices, cost, customers' debt, payments, the treasurer's books), each with its formula, where it lives today, and the test that proves it.
 Date: 2026-10-28
-Status: draft — Kevin to review
+Status: reviewed — Kevin's decisions are in §8
 
 ---
 
@@ -302,29 +302,31 @@ The report formulas take their "today" from `todayISO()` in UTC; the phone apps 
 
 ---
 
-## 8. Open questions for Kevin
+## 8. Decided (Kevin, 2026-10-28)
 
-Each row is a real behaviour difference. Nothing here is picked; the suggestion is the server's rule or the one with a fix and a test behind it.
+The one rule for each disagreement. The shared core implements exactly
+these; the old copies are not consulted again. **Server** = also becomes a
+database rule (see `docs/rebuild.md`, "Backend fixes decided").
 
-| # | Rule | Apps that differ | What differs | Suggested answer (why) |
-|---|---|---|---|---|
-| Q1 | `goodsTotal` / order total | **owner.html:1037**; console `savedQuoteGoodsTotal` (index 63664, and `CONSOLE_BOOKS` in accounts + owner, so their P&L) | counts lines still to confirm (at cost), does not round each line | Sales' version (= server `0165` `ow_order_total`; SAL-003/SAL-007 fixes, tested) |
-| Q2 | `quoteTotal` | **owner.html:1043**; console `savedQuoteTotal` 63895 (+ `CONSOLE_BOOKS`); portal `orderTotal` | can go below 0 after credit notes | Never below 0 (server `0165`; credit notes above the bill are refused anyway) |
-| Q3 | `fmtUGX` / money on screen | agent `UGX 1,000` rounded; index blank for empty; 5 apps `1,000 UGX`, no rounding, `0 UGX` for empty | currency before/after, rounding, empty | `1,000 UGX`, whole shillings, blank when empty; fold `n0` and `fmtUGX` into one writer (`docs/rebuild.md` already suggests this) |
-| Q4 | `quoteItemSellPrice` with no product or no markup rule | owner 1022 and index 60005 (+ `CONSOLE_BOOKS`) return the **cost**; Sales/Manager/Accounts return **0** | a line shown (and, in the console P&L, sold) at cost | 0, "price to confirm" (Sales SAL-007; server keeps those lines out of every total) |
-| Q5 | `getFIFOUnitCost` | buyer 917, manager 1323, index 112586: first lot's cost; sales 4281: weighted over the lots the qty takes | expected cost and margin for a qty bigger than the first lot | Sales' (SAL-008, tested; matches what the server's FIFO take really charges) |
-| Q6 | `custAddsUp` ("balance doesn't add up") | sales 7060 vs manager 1821 | Sales warns one way only and ignores opening balances; Manager both ways with the opening | Manager's (it is `ow_customer_balance`'s rule, `0169`) |
-| Q7 | `custAging` undated charge | owner 1440 | ages it as 0 days ("new") instead of "no date" | "No date" everywhere (majority, tested in `sales-app:733`) |
-| Q8 | Credit hold for **old debt** | Sales `creditHoldFor` / Manager `creditCase` hold an order when the oldest debt > hold days; server `ow_gate_reason` does not | an order the phones show as held can leave Checking through another writer | Ask Kevin: add "old" to `ow_gate_reason`, or drop it from the apps. The server is the gate, so the two must match. |
-| Q9 | `debtors` | manager 1889 vs accounts 1764 / owner 1449 | same name; Manager: books balance, oldest first; Accounts: stored debt, any order | Keep both under two names (`debtorsByAge`, `customersOwing`), both on the books balance (`ow_customer_balance`) |
-| Q10 | Promise kept | sales 7162 vs manager 1908 | Sales: kept if the balance is cleared; a promise with no amount is never kept by part payment. Manager: no amount = any payment keeps it; ignores a cleared balance | Ask Kevin; suggest Sales' + "no amount: any payment" (both cases covered) |
-| Q11 | `payPlan` "over" | owner 1230 | `left − debt` without the `max(0, …)`: a customer with a deposit shows more "over" than was paid | Sales' (= server `receive_payment`: `least(left, greatest(debt, 0))`) |
-| Q12 | `payablesAsAt` / `dashTotalCreditors` | owner 2911 / 3223 | counts only bills from suppliers on file; index + accounts count every open bill (owner's call, 20 Oct 2026) | Index/Accounts' (later decision, and both dates obey the same rule) |
-| Q13 | `todayISO` | index + `CONSOLE_BOOKS`: UTC date; phone apps: local date; supplier.html: UTC+3; server `ow_today()`: Kampala | from midnight to 03:00 in Kampala the reports read yesterday | Kampala date everywhere (the server's) |
-| Q14 | Agent order total | `0109` `order_shop_total` (goods only) vs edge `orderShopTotal` (goods + charges) | an agent order with a delivery charge can be marked paid by credit/momo when only the goods are covered | Goods + charges (the edge functions; the SQL comment says "keep the three in step") |
-| Q15 | Portal `orderTotal` | `client-portal/index.ts:241` | credit % on the total **before** discount (apps: after); lines not rounded; can go below 0; unpriced lines (no `sellPrice`) count 0 but are not skipped | Server `ow_order_total` (the customer must see the shop's figure) |
-| Q16 | No sale below cost | apps only (`priceTooLow`, Manager floor); no SQL refusal | another writer (console, edge function) can save a price below cost | Ask Kevin: add a server refusal (an exception for `givenAway`), as for negatives in `0165` |
-| Q17 | Discount and credit-note rounding | server rounds `discount` and each credit note; apps do not | only differs on fractions | Round as the server does |
+| # | Rule | Decided | Was (where the copies differed) |
+|---|---|---|---|
+| Q1 | Goods total | Skip lines whose price is still to confirm; round each line (= server `0165` `ow_order_total`) | owner.html:1037; console `savedQuoteGoodsTotal` (+ `CONSOLE_BOOKS` in Accounts and Owner) |
+| Q2 | Order total | Never below 0 | owner.html:1043; console `savedQuoteTotal`; portal `orderTotal` |
+| Q3 | Money on screen | **One writer**: `1,000 UGX`, whole shillings, blank when empty (replaces `n0` and `fmtUGX`) | agent `UGX 1,000`; index blank; 5 apps no rounding |
+| Q4 | Sell price with no product or no markup rule | 0, shown as "price to confirm"; kept out of every total | owner 1022, index 60005 returned the cost |
+| Q5 | FIFO cost | Weighted over the lots the quantity takes (Sales, SAL-008) | buyer 917, manager 1323, index 112586 used the first lot |
+| Q6 | "Balance doesn't add up" | Checked both ways, with the opening balance (Manager's = `ow_customer_balance`, `0169`) | sales 7060 |
+| Q7 | Aging a charge with no date | Under "no date", never "new" | owner 1440 |
+| Q8 | Credit hold for old debt | **Hold at 21 days. Server:** `ow_gate_reason` holds a credit order when the oldest debt is past the hold days (default 21), as the apps already do | Sales `creditHoldFor`, Manager `creditCase` vs `ow_gate_reason` |
+| Q9 | Debtors | Two lists, two names, both on the books balance: `debtorsByAge` (oldest first) and `customersOwing` | manager 1889 vs accounts 1764, owner 1449 |
+| Q10 | Promise kept | Kept when the balance is cleared by the promised date, whatever amount was or wasn't named; a part payment keeps only a promise that named that amount (Sales' rule) | sales 7162 vs manager 1908 |
+| Q11 | Pay plan "over" | `least(left, max(debt, 0))` (= server `receive_payment`) | owner 1230 |
+| Q12 | Payables | Every open bill counts (Kevin's 20 Oct 2026 rule) | owner 2911, 3223 |
+| Q13 | Today's date | Kampala date everywhere (= server `ow_today()`) | console UTC; phones local; supplier.html UTC+3 |
+| Q14 | Agent order total | Goods + charges | `0109` `order_shop_total` counted goods only |
+| Q15 | Portal total | The server's `ow_order_total`: the customer sees the shop's figure | `client-portal/index.ts:241` |
+| Q16 | No sale below cost | **Server:** the database refuses a line priced below cost, except a line marked given away | only `priceTooLow` and the Manager's floor in the apps |
+| Q17 | Rounding of discounts and credit notes | Round as the server does | apps did not round |
 
 Differences found that are **names or format only** (no answer needed): `tieredUnitPrice`, `tiersForKind`, `purchasePriceAtQty`, `rankedPriceRows`, `chargeAmount`, `shopCreditPct`, `effectiveMarkupRule` (sourcing/index read the same setting under another key), `effectiveStockMarkupRule`, `bandOf`/`AGE_BANDS`, `stockKey`, `rowToPayAsk` (Accounts drops two display fields), `productPriceRows` (index adds a supplier name; strict vs number variant match).
 

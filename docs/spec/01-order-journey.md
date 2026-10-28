@@ -2,7 +2,7 @@
 
 **Covers:** every stage and flag of an order (a `saved_quotes` row), who moves it, what each move writes, who gets a push, and what the order carries in `payload`.
 **Date:** 2026-10-28
-**Status:** draft — Kevin to review
+**Status:** reviewed — Kevin's decisions are in §5
 
 Money rules (totals, prices, cost, debt, payments, refunds) are in [02 · Money](02-money.md). This chapter only says *when* money is written, not how it is worked out. Who may decide what is [`docs/decision-rights.md`](../decision-rights.md), which stays binding.
 
@@ -204,26 +204,28 @@ The Store never sees money: its copy of an order is cut to an allow-list by `ow_
 
 ---
 
-## 5. Open questions
+## 5. Decided (Kevin, 2026-10-28)
 
-Not resolved here. Each has its evidence; Kevin answers.
+Each question raised in the first draft, with Kevin's answer. The evidence
+stays so the builder can find the old code. **Server** = becomes a database
+rule (see `docs/rebuild.md`, "Backend fixes decided").
 
-| # | Question | Evidence |
-|---|---|---|
-| Q1 | **"Every supplier said yes" is only in the front end.** The server gate checks price and credit, not suppliers, not "a line with no supplier", not agent prepay. A Manager "next stage" or any `ow_patch_order` with a status can move a draft past unconfirmed suppliers. Should the gate own the supplier check? | `ow_gate_reason` `0167:46-77` vs `buyer.html:1094-1105`; Manager next `manager.html:3509-3517` (`ACT.oanext`) checks none of them |
-| Q2 | **`order.move` is not enforced.** Any member who can update `saved_quotes` (Sales, Buyer, Manager) can set any status with `ow_patch_order`; the only server limits are the gate and the Store's own function. | `0165:463` (`p_status` taken as given); no `has_task(…'order.move')` anywhere |
-| Q3 | **Manager "next" from Checking always goes to Buying**, even for a shelf-only order (it takes the next status in the list, not "Buying or Packing"). | `manager.html:3512-3513` vs `buyer.html:1103` |
-| Q4 | **Manager "mark done" skips the delivery proof** and can jump from any stage straight to Delivered (which starts the 24 h invoice clock). Decision-rights gives "Deliver, with proof" to the Store. | `manager.html:3500-3505`; `docs/decision-rights.md` §2 Stock and the yard (`order.deliver`) |
-| Q5 | **`creditCheck`, `pickShortfallAckAt`/`pickSettle` and `creditNotes` have no server task check.** Only the Manager app writes them, but nothing stops another login's `ow_patch_order`. Decision-rights says these are the Manager's (`credit.release`, `pick.settle`, `credit_note.raise`). | grep: `credit.release` appears only in `0156`/`0164` (Store gate); `0169:448` checks the amount of credit notes, not the writer |
-| Q6 | **Void and credit note are several writes, not one.** A void of an invoiced order is: void flag (or `void_with_money`), stock reversal, `void_sale_bills`, close the ask. A lost signal mid-way leaves an order voided with stock or supplier bills not put back. The counter sale and payments were moved to one write for this reason. | `manager.html:5500-5521`, `5385-5398`; contrast `docs/decision-rights.md` §3 counter sale "one database write" |
-| Q7 | **Cancel before invoice (`order.cancel`) is "Built: no"**, yet three paths void uninvoiced orders: console `cancelSavedQuote`, Manager duplicate void (under `invoice.void`), agent cancel (under `agent.change`). The Store's "called off" screen reads `cancelledByName`, which nothing writes, and no push tells the Store to stop packing. | `docs/decision-rights.md` §2 and §3; `index.html:67239`; `manager.html:3581`; `0122:242-244`; `store.html:4322-4326`; no `order.cancel` push in any migration |
-| Q8 | **`status = 'cancelled'` is read but never written.** Keep the defensive checks, or drop them? | `store.html:1597`, `4020`, `4065`; no writer in apps, migrations or Edge Functions |
-| Q9 | **Counter sale "Told: Manager"** in decision-rights, but `0130` drops the only push a counter sale makes (`order.delivered`); the Manager sees it only in the log. | `docs/decision-rights.md` §2 Selling (`counter.sell`, Told: Manager); `0130:36` `ow_push_counter_quiet` |
-| Q10 | **`deliveredAt` has two shapes**: ISO text (Store, Manager) and a millisecond number (counter sale `0155`, `sales.html:11033`). The hourly run reads it with `ow_ts`, which returns null for a number and falls back to `stageEnteredAt`. Harmless today (counter sales are already invoiced); one shape for the rebuild? | `0155` counter_sale (`'deliveredAt', now_ms`); `store.html:2422`, `2449`; `0119:130` `ow_ts`; `0169:811` |
-| Q11 | **`priceReview` shape**: decision-rights §3 lists `{state, price, was, by, byName, at}`; the gate also needs `qty` (a decision goes stale when qty changes) and the Manager app writes it. The doc is missing `qty`. | `docs/decision-rights.md` §3 "Data"; `0119:465`; `manager.html:4602` |
-| Q12 | **The Buyer can clear a Manager's `priceReview`** (sets it to `null` when a new cost leaves no margin). The gate allows a `null` from any login. Intended ("a decision goes stale"), or should only a price change make it stale? | `buyer.html:2912`; `0119:544` (`continue when … is distinct from 'object'`) |
-| Q13 | **Short label "On road"** in the Manager app; the glossary says never "On road". | `manager.html:1606`; `docs/audit/GLOSSARY.md` Orders and goods |
-| Q14 | **The order's name**: Sales reads the name only from `payload.client`, the Manager from the `client_name` column. They can differ after a WhatsApp or portal order, or a console edit. | `sales.html:3962` vs `manager.html:1156` |
+| # | Was | Decided | Evidence |
+|---|---|---|---|
+| Q1 | "Every supplier said yes", "no line without a supplier" and agent prepay are checked only in the Buyer app | **Server:** the Checking gate checks them too, so no app can move an order past them | `ow_gate_reason` `0167:46-77`; `buyer.html:1094-1105`; `manager.html:3509-3517` |
+| Q2 | `order.move` is granted but never checked; any Sales, Buyer or Manager login can set any status | **Server:** moving a stage needs `order.move`, and only to the next allowed stage | `0165:463` (`p_status` taken as given) |
+| Q3 | Manager "next" from Checking always goes to Buying | When every line is on our shelf, "next" goes straight to **Packing** | `manager.html:3512-3513` vs `buyer.html:1103` |
+| Q4 | Manager "mark done" skips the delivery proof and starts the 24 h invoice clock | "Mark done" **asks for a reason**, kept on the order and in the log; the Store's delivery with proof stays the normal path | `manager.html:3500-3505`; decision-rights §2 `order.deliver` |
+| Q5 | `creditCheck`, `pickSettle` and `creditNotes` have no server task check | **Server:** each needs its task (`credit.release`, `pick.settle`, `credit_note.raise`) | `0156`/`0164`; `0169:448` |
+| Q6 | A void and a credit note are several writes; a lost signal leaves half of one | **Server:** each is **one database write**, like payments and the counter sale | `manager.html:5385-5398`, `5500-5521` |
+| Q7 | Three ways void an unbilled order; the Store is not told to stop packing | **One "Cancel" action**, by the Manager (`order.cancel`; Sales asks). It puts back what was packed and pushes the Store and Sales | `index.html:67239`; `manager.html:3581`; `0122:242-244`; `store.html:4322-4326` |
+| Q8 | `status = 'cancelled'` is read but never written | Cancel writes `status = 'cancelled'` with `cancelledAt` and `cancelledByName`, which the Store screen already reads | `store.html:1597`, `4020`, `4065`, `4322-4326` |
+| Q9 | decision-rights says the Manager is told of a counter sale; `0130` removed the push | **Log only.** A counter sale waits on nobody, so no push; decision-rights now says so | `0130:36` `ow_push_counter_quiet` |
+| Q10 | `deliveredAt` is ISO text in some places, milliseconds in others | One shape: ISO text | `0155`; `sales.html:11033`; `0119:130` `ow_ts` |
+| Q11 | decision-rights' `priceReview` shape leaves out `qty` | `qty` is part of it (a decision goes stale when the qty changes); decision-rights now says so | `0119:465`; `manager.html:4602` |
+| Q12 | The Buyer can wipe a Manager's price decision (`priceReview = null`) from any login | **Server:** only `price.approve` changes or clears it; a new cost that leaves no margin flags the line for the Manager instead | `buyer.html:2912`; `0119:544` |
+| Q13 | "On road" in the Manager app | "On the road", as the glossary says | `manager.html:1606` |
+| Q14 | Sales reads the name from `payload.client`, the Manager from `client_name` | One place: the `client_name` column | `sales.html:3962` vs `manager.html:1156` |
 
 ### Not verified
 

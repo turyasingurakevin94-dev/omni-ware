@@ -16,8 +16,8 @@ can be built cleanly without losing a rule the shop depends on.
 
 | # | Chapter | What it answers | Status |
 |---|---|---|---|
-| 01 | [The order's journey](01-order-journey.md) | The stages an order goes through, who moves it, what each step writes and who gets a push | draft — 14 questions for Kevin |
-| 02 | [Money](02-money.md) | Every money rule: totals, prices, cost, debt, payments, the treasurer's books | draft — 17 questions for Kevin |
+| 01 | [The order's journey](01-order-journey.md) | The stages an order goes through, who moves it, what each step writes and who gets a push | decided 2026-10-28 |
+| 02 | [Money](02-money.md) | Every money rule: totals, prices, cost, debt, payments, the treasurer's books | decided 2026-10-28 |
 | 03 | Roles | Who does what. **[`docs/decision-rights.md`](../decision-rights.md) is that chapter** and stays binding; this one only adds each role's daily jobs | to do |
 | 04 | Screens | Every screen per role, from the approved canvases | to do |
 | 05 | Data | Tables, what is in an order's `payload`, who can read and write what | to do |

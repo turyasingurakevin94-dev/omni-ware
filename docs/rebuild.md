@@ -44,7 +44,7 @@ is clearly better.** Kevin set this goal on 2026-10-28.
 
 - [x] **0. Guardrails.** This file, CLAUDE.md pointing at it, the size guard,
       the baseline below.
-- [ ] **1. The spec** (`docs/spec/`). From the existing system: the order's
+- [ ] **1. The spec** (`docs/spec/`). 01 and 02 decided 2026-10-28. From the existing system: the order's
       journey, money, roles, screens, data, offline and pushes. Kevin reviews
       each chapter.
 - [ ] **2. The stack.** One page in the spec (chapter 07); Kevin approves.
@@ -57,19 +57,24 @@ is clearly better.** Kevin set this goal on 2026-10-28.
       then its role switches over; the old app stays one release as fallback.
 - [ ] **5. Later, if ever:** Owner, Worker, Supplier, Agent, the console.
 
-## Decisions waiting for Kevin
+## Backend fixes decided (2026-10-28)
 
-Copies that **behave differently**, found 2026-10-28. The shared core
-(phase 3) needs one answer each. The rest of the 250 disagreements are checked the same way
-when the money chapter is written; many only differ in names.
+Kevin's answers to the spec's questions (`docs/spec/01-order-journey.md` §5,
+`docs/spec/02-money.md` §8) that make the **database** check a rule the apps
+checked alone. They protect the books whichever app is in use, so they come
+**before** the shared core. Each takes a migration number reserved in
+`docs/decision-rights.md` and a test run against a real database (`OW_PG`).
 
-| Rule | Where they disagree | Suggested answer |
-|---|---|---|
-| `goodsTotal` — goods on an order | Owner counts lines whose price is still being confirmed, and does not round. Sales, Manager, Accounts skip them and round. | Sales' version everywhere |
-| `quoteTotal` — what the order costs | Owner's can go below zero after credit notes. The others stop at 0. | Stop at 0 everywhere |
-| `custAging` — how old a debt is | Owner counts a charge with no date as new (0 days). The others put it under "no date". | "No date" everywhere |
-| `fmtUGX` — how money is written | `1,000 UGX` (5 apps), `UGX 1,000` (agent), blank for an empty value (console) | `1,000 UGX`, blank when empty |
-| `debtors` | Same name, two meanings: Manager's list is sorted by oldest debt; Accounts' is anyone owing. | Keep both, under two names |
+- [ ] Moving a stage needs `order.move`, and only to an allowed next stage (journey Q2)
+- [ ] The Checking gate checks suppliers' yes, lines with no supplier, agent prepay (journey Q1) and debt past the hold days (money Q8)
+- [ ] `credit.release`, `pick.settle`, `credit_note.raise` checked on the writer (journey Q5); only `price.approve` changes a price decision (journey Q12)
+- [ ] A void and a credit note are each one database write (journey Q6)
+- [ ] One "Cancel" by the Manager: `status = 'cancelled'`, stock put back, the Store and Sales pushed (journey Q7, Q8; builds the `order.cancel` row)
+- [ ] No line priced below cost, except given away (money Q16)
+- [ ] Agent order total counts charges (money Q14)
+
+Everything else decided there is a front-end rule: the shared core builds it
+once, and the old apps are not changed for it (they are frozen).
 
 ## Baseline (2026-10-28)
 
@@ -82,3 +87,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 ## Log
 
 - **2026-10-28** — Goal set. Phase 0 done: this file, CLAUDE.md rules, the size guard.
+- **2026-10-28** — Plan changed to a new front end on the same database. Spec chapters 01 (the order's journey) and 02 (money) written from the code, checked, and decided by Kevin: 31 questions answered. The answers that need the database are listed under "Backend fixes decided".
