@@ -45,7 +45,7 @@ function fakeDb(tables){
   return { writes, rpcs, tables, auth: { getUser: () => new Promise(() => {}), getSession: async () => ({ data: { session: null } }), signOut: async () => ({}) }, from: tb => new Q(tb),
     rpc: async (fn, args) => { // 0165: the apps change an order through ow_patch_order
       if (fn === 'ow_patch_order') { const qs = tables.saved_quotes || (tables.saved_quotes = []), r = qs.find(x => String(x.id) === String(args.p_id)); if (!r) return { data: null, error: { message: 'This order is no longer in the books.' } }; const pl = { ...(r.payload || {}), ...JSON.parse(JSON.stringify(args.p_patch || {})) }; (args.p_drop || []).forEach(k => { delete pl[k]; }); const row = { payload: pl }; if (args.p_status != null) row.status = args.p_status; writes.push(['update', 'saved_quotes', JSON.parse(JSON.stringify(row)), [r.id]]); Object.assign(r, row); return { data: JSON.parse(JSON.stringify(r)), error: null }; } 
-      if (fn === 'next_row_id_blocks') { const k = args.p_kinds[0]; nextId = Math.max(nextId, Number(args.p_floors[k]) || 0) + 1; return { data: { [k]: nextId }, error: null }; }
+      if (fn === 'next_row_id_blocks') { const k = args.p_kinds[0]; if (!/^row:[a-z_]+$/.test(k)) return { data: null, error: { code: 'P0001', message: 'unknown row id kind: ' + k } }; nextId = Math.max(nextId, Number(args.p_floors[k]) || 0) + 1; return { data: { [k]: nextId }, error: null }; }
       rpcs.push([fn, JSON.parse(JSON.stringify(args))]);
       if (fn === 'invoice_order') return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.invoice_order' } };
       return { data: { ok: true }, error: null };
