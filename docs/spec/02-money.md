@@ -143,11 +143,12 @@ price ≥ shop's price        → Sales decides, no wait
 
 | Rule | Where | Server? | Tests |
 |---|---|---|---|
-| Sales can't type below cost (`priceTooLow`: `v < cost`) | `sales.html:4428` | **no**: nothing in SQL refuses a price below cost | `sales-app` |
-| Manager's Set price: floor is cost; at cost asks a second yes (`priceChip`) | `manager.html:4534` | no | **no test** |
+| Sales can't type below cost (`priceTooLow`: `v < cost`) | `sales.html:4428` | **yes** (`0171`): a price a person types above 0 and under the line's cost is refused (OWCST), judged only when the price is new (new line, or a new figure on the same line, by `lineId`); writes with no login are judged at the bill | `sales-app`, `no-sale-below-cost-db` |
+| Manager's Set price: floor is cost; at cost asks a second yes (`priceChip`) | `manager.html:4534` | the floor: **yes** (`0171`, as above) | `no-sale-below-cost-db` (the floor); the second yes: **no test** |
 | Only `price.approve` writes `items[].priceReview` | — | `0119:539` guard (42501) | `shared-foundation-db` |
 | An order leaves Checking only when no price waits (`ow_line_waits_price`) and credit doesn't hold it | — | `0119:452`, `0167:46` `ow_gate_reason` | `shared-foundation-db`, `audit-0136` |
-| A line that comes to sell under cost (Buyer took a higher price) pushes the Manager | `lineBelowCost` `sales.html:4477`, manager 4482 | `0153:39` `ow_line_under_cost` (push only, does not refuse) | `sales-app`, `manager-round1-orders`; no test on the SQL |
+| A line that comes to sell under cost (Buyer took a higher price) pushes the Manager | `lineBelowCost` `sales.html:4477`, manager 4482 | `0153:39` `ow_line_under_cost` pushes; the write is **not** refused (the cost moved, not the price); the gate does not hold it (journey Q1) | `sales-app`, `manager-round1-orders`, `no-sale-below-cost-db` (the write is kept) |
+| A line selling under its cost is never billed, whoever invoices; a 0 or a line given away is `0169`'s (OWGIV) | — | `0171` `ow_line_sells_under_cost`, `saved_quotes_zz_cost_floor` (OWPRC: the hourly run sends it to `price.approve`) | `no-sale-below-cost-db` |
 | A line with no shop price is never billed at cost | — | `0139:70` `ow_order_unpriced` → `ow_invoice_core` refuses (OWTPC) | `invoice-unpriced-db` |
 
 ---
@@ -325,7 +326,7 @@ database rule (see `docs/rebuild.md`, "Backend fixes decided").
 | Q13 | Today's date | Kampala date everywhere (= server `ow_today()`) | console UTC; phones local; supplier.html UTC+3 |
 | Q14 | Agent order total | Goods + charges | `0109` `order_shop_total` counted goods only |
 | Q15 | Portal total | The server's `ow_order_total`: the customer sees the shop's figure | `client-portal/index.ts:241` |
-| Q16 | No sale below cost | **Server:** the database refuses a line priced below cost, except a line marked given away | only `priceTooLow` and the Manager's floor in the apps |
+| Q16 | No sale below cost | **Server:** the database refuses a line priced below cost, except a line marked given away. **Built: `0171`** | only `priceTooLow` and the Manager's floor in the apps |
 | Q17 | Rounding of discounts and credit notes | Round as the server does | apps did not round |
 
 Differences found that are **names or format only** (no answer needed): `tieredUnitPrice`, `tiersForKind`, `purchasePriceAtQty`, `rankedPriceRows`, `chargeAmount`, `shopCreditPct`, `effectiveMarkupRule` (sourcing/index read the same setting under another key), `effectiveStockMarkupRule`, `bandOf`/`AGE_BANDS`, `stockKey`, `rowToPayAsk` (Accounts drops two display fields), `productPriceRows` (index adds a supplier name; strict vs number variant match).

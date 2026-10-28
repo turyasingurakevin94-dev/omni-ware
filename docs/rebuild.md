@@ -70,7 +70,7 @@ checked alone. They protect the books whichever app is in use, so they come
 - [ ] `credit.release`, `pick.settle`, `credit_note.raise` checked on the writer (journey Q5); only `price.approve` changes a price decision (journey Q12)
 - [ ] A void and a credit note are each one database write (journey Q6)
 - [ ] One "Cancel" by the Manager: `status = 'cancelled'`, stock put back, the Store and Sales pushed (journey Q7, Q8; builds the `order.cancel` row)
-- [ ] No line priced below cost, except given away (money Q16)
+- [x] No line priced below cost, except given away (money Q16) — `0171`, `test/no-sale-below-cost-db.test.js`
 - [ ] Agent order total counts charges (money Q14)
 
 Everything else decided there is a front-end rule: the shared core builds it
@@ -88,3 +88,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 
 - **2026-10-28** — Goal set. Phase 0 done: this file, CLAUDE.md rules, the size guard.
 - **2026-10-28** — Plan changed to a new front end on the same database. Spec chapters 01 (the order's journey) and 02 (money) written from the code, checked, and decided by Kevin: 31 questions answered. The answers that need the database are listed under "Backend fixes decided".
+- **2026-10-28** — First backend fix: no sale below cost (`0171`). Checked the old apps first: Sales and the Manager refuse a typed price under cost; a line also comes under cost when the Buyer takes a dearer supplier price, which they hold for the Manager. The database now refuses the first (OWCST) and never bills the second (OWPRC), until the Manager prices it or gives it away. Found on the way: the server's gate does not hold an untagged under-cost line in Checking (0153 only pushes) — left for the gate item (journey Q1).
