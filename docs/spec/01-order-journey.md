@@ -116,7 +116,11 @@ Tests: gate and invoicing `test/shared-foundation-db.test.js`; counter sale `tes
 | Only the Manager writes `priceReview` | A changed `priceReview` object from a login without `price.approve` → error 42501. Setting it to `null` is not refused (Buyer does, `buyer.html:2912`). | `0119:539-557` |
 | A price waits | Line has `priceBy`, `priceNote` in `under/nomargin/nocost`, and no `priceReview` matching today's price **and** qty | `ow_line_waits_price`, `0119:452` |
 | Credit holds | Customer has a limit and debt + this order > limit; or (0167) the order is on credit (`payload.credit.pct > 0`) and no limit is set; and the Manager has not said `release` (or said `cash` and money is still owed) | `ow_gate_reason`, `0167:46-77` |
-| Not in the gate | Suppliers' yes; a line with no supplier; agent prepay; `clientWaits` lines | `buyer.html:1094-1105` only |
+| Suppliers' yes (`0174`) | Every supplier on the order has `supplierConfirms[id].state = 'confirmed'` with `terms` = its lines as they stand (`ow_supplier_terms`, = `orderSupplierTerms`) → else 'suppliers' | `buyer.html:1046-1056`; `ow_gate_reason` |
+| A line with no supplier (`0174`) | No `supplierId` and the client is not waiting for it (`clientWaits`) → 'unsourced' | `buyer.html:4845` `noneOpen` |
+| Agent prepay (`0174`) | The order's agent pays first (`agents.payment_term = 'prepay'`) and `agentPaymentStatus` is not 'paid' → 'prepay' | `buyer.html:1059` |
+| Old debt (`0174`, money Q8) | The customer's oldest open debt is past the hold days (21) and the order adds to it → 'credit' | `ow_oldest_debt_days`, `ow_hold_days` |
+| Not in the gate | An agent's open change or cancel ask (`agentOrderOnHold`); a line selling under its cost (refused at the bill, `0171`) | `buyer.html:1087` |
 
 ---
 
@@ -212,7 +216,7 @@ rule (see `docs/rebuild.md`, "Backend fixes decided").
 
 | # | Was | Decided | Evidence |
 |---|---|---|---|
-| Q1 | "Every supplier said yes", "no line without a supplier" and agent prepay are checked only in the Buyer app | **Server:** the Checking gate checks them too, so no app can move an order past them | `ow_gate_reason` `0167:46-77`; `buyer.html:1094-1105`; `manager.html:3509-3517` |
+| Q1 | "Every supplier said yes", "no line without a supplier" and agent prepay are checked only in the Buyer app | **Server:** the Checking gate checks them too, so no app can move an order past them. **Built: `0174`** | `ow_gate_reason` `0167:46-77`; `buyer.html:1094-1105`; `manager.html:3509-3517` |
 | Q2 | `order.move` is granted but never checked; any Sales, Buyer or Manager login can set any status | **Server:** moving a stage needs `order.move`, and only to the next allowed stage. **Built: `0173`** — Checking → Buying/Packing `order.move` or `supplier.confirm`; Buying → Packing `order.move` or `stock.receive`; Packing → On the road `order.move` or `order.load`; → Delivered from Packing/On the road `order.move` or `order.deliver`, from any stage `order.move` ("mark done"); back `order.move`; invoiced or voided: stays; a new order placed past Checking is a move out of it (Packing also `quote.make`) | `0165:463` (`p_status` taken as given) |
 | Q3 | Manager "next" from Checking always goes to Buying | When every line is on our shelf, "next" goes straight to **Packing** | `manager.html:3512-3513` vs `buyer.html:1103` |
 | Q4 | Manager "mark done" skips the delivery proof and starts the 24 h invoice clock | "Mark done" **asks for a reason**, kept on the order and in the log; the Store's delivery with proof stays the normal path | `manager.html:3500-3505`; decision-rights §2 `order.deliver` |

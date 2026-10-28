@@ -222,7 +222,7 @@ no date / not in the log = "no date" = max(0, debt − Σ aged)
 | Terms (days to pay) | `termsDays` on the customer, else `presets.chaseAfterDays` (default 7) | `custTerms` `sales.html:6835` | — | `accounts-app`, `manager-app` |
 | Overdue | debt > 0 and oldest age > terms | `custOverdue` `sales.html:6846` | — | `manager-app` |
 | Over limit | limit > 0 and debt > limit | `custOverLimit` `sales.html:6848` | — | `manager-app` |
-| **Credit hold** on an order in Checking | **over**: debt + order's due > limit; **old**: oldest debt > hold days (`presets.creditHold.days`, default 21); **noLimit**: on credit terms with no limit | `creditHoldFor` `sales.html:4452`, `creditCase` `manager.html:1926` | `0167:46` `ow_gate_reason` checks **over** and **noLimit** only, not **old** (Q8) | `sales-app`, `manager-app`, `manager-round3-money`, `audit-0136` |
+| **Credit hold** on an order in Checking | **over**: debt + order's due > limit; **old**: oldest debt > hold days (`presets.creditHold.days`, default 21); **noLimit**: on credit terms with no limit | `creditHoldFor` `sales.html:4452`, `creditCase` `manager.html:1926` | `ow_gate_reason` checks **over**, **noLimit** (`0167`) and **old** (`0174`: `ow_oldest_debt_days` > `ow_hold_days`, on an order that adds to the debt) | `sales-app`, `manager-app`, `manager-round3-money`, `audit-0136` |
 | Manager's answer `creditCheck.decision`: release / hold / cash first (held until paid) | | | `0167:64-67` | `shared-foundation-db` |
 | **Money at the gate**: a packed order for a cash customer (no limit, or walk-in) can't leave unpaid unless the Manager released it | | — | `0164:49` `ow_money_hold`, `0156` trigger | `store-money-db`, `store-round5` |
 
@@ -318,7 +318,7 @@ database rule (see `docs/rebuild.md`, "Backend fixes decided").
 | Q5 | FIFO cost | Weighted over the lots the quantity takes (Sales, SAL-008) | buyer 917, manager 1323, index 112586 used the first lot |
 | Q6 | "Balance doesn't add up" | Checked both ways, with the opening balance (Manager's = `ow_customer_balance`, `0169`) | sales 7060 |
 | Q7 | Aging a charge with no date | Under "no date", never "new" | owner 1440 |
-| Q8 | Credit hold for old debt | **Hold at 21 days. Server:** `ow_gate_reason` holds a credit order when the oldest debt is past the hold days (default 21), as the apps already do | Sales `creditHoldFor`, Manager `creditCase` vs `ow_gate_reason` |
+| Q8 | Credit hold for old debt | **Hold at 21 days. Server:** `ow_gate_reason` holds a credit order when the oldest debt is past the hold days (default 21), as the apps already do. **Built: `0174`** (an order that adds nothing to the debt is not held) | Sales `creditHoldFor`, Manager `creditCase` vs `ow_gate_reason` |
 | Q9 | Debtors | Two lists, two names, both on the books balance: `debtorsByAge` (oldest first) and `customersOwing` | manager 1889 vs accounts 1764, owner 1449 |
 | Q10 | Promise kept | Kept when the balance is cleared by the promised date, whatever amount was or wasn't named; a part payment keeps only a promise that named that amount (Sales' rule) | sales 7162 vs manager 1908 |
 | Q11 | Pay plan "over" | `least(left, max(debt, 0))` (= server `receive_payment`) | owner 1230 |
