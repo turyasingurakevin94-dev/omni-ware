@@ -24,6 +24,8 @@
  *        - with 0116's void guard back in place (live, 28 Oct): void-guard.sql
  *          names it and puts 0122's back, then the fixes go in; a guard
  *          changed by hand is refused and left alone;
+ *        - as live really was: 0122's guard with Windows line ends, and every
+ *          script pasted with them: void-guard.sql, then the fixes, pass;
  *        - with the void guard's wording changed by hand, step 1 stops and names it,
  *          and step 3 (if run anyway) fails as a whole, leaving nothing.
  *
@@ -192,6 +194,28 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const after = on2(['-qAt', '-c', `select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard'`]).stdout;
   t.check(refuse.status !== 0 && /none of the repo's versions/.test(refuse.stderr) && before === after, 'a guard changed by hand: step 2 refuses and leaves it as it was');
   psql(['-qAt', '-c', 'drop database if exists ow_live_apply_guard', '-c', 'drop database if exists ow_live_apply_guard2', '-c', 'drop database if exists ow_live_apply_guard3']);
+}
+
+// As live really was (28 Oct): 0122's guard with Windows line ends (\r\n),
+// and every script pasted with them too. void-guard.sql step 2, then all four
+// steps of the fixes, pass.
+{
+  const crlf = (t) => t.replace(/\r?\n/g, '\r\n');
+  const { on } = makeDb('ow_live_apply_crlf', '0170');
+  const cr = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-c', `do $x$ begin execute replace(replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(13), ''), chr(10), chr(13) || chr(10)); end $x$`]);
+  const vg = crlf(read('docs/live/void-guard.sql'));
+  const cut = (txt, n) => { const a = txt.indexOf(`-- STEP ${n} `), b = txt.indexOf(`-- STEP ${n + 1} `); return txt.slice(txt.lastIndexOf('-- ====', a), b < 0 ? undefined : txt.lastIndexOf('-- ====', b)); };
+  const row = (on(['-qAt', '-F', '|'], cut(vg, 1)).stdout || '').split('|');
+  t.check(cr.status === 0 && row[0] === "none of the repo's" && row[1] === '0122_manager_decisions', `0122's guard with \\r\\n reads as live's did (${row.slice(0, 2).join(', ')})`);
+  const put = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], cut(vg, 2));
+  t.check(put.status === 0, `void-guard.sql step 2, pasted with \\r\\n (${errs(put)[0] || 'ok'})`);
+  const ap = crlf(committed);
+  const a1 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], cut(ap, 1)), a3 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], cut(ap, 3)), a4 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], cut(ap, 4));
+  t.check(a1.status === 0 && /Ready/.test(a1.stderr), `apply step 1, pasted with \\r\\n: ready (${errs(a1)[0] || 'ok'})`);
+  t.check(a3.status === 0 && (a4.stdout.match(/\|ok\r?$/gm) || []).length === 7, `apply steps 3 and 4, pasted with \\r\\n: ok seven times (${errs(a3)[0] || 'ok'})`);
+  const again = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], cut(ap, 3));
+  t.check(again.status === 0, `and step 3 again (${errs(again)[0] || 'ok'})`);
+  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_crlf']);
 }
 
 // The void guard changed by hand: step 1 names it; step 3 run anyway leaves nothing behind.

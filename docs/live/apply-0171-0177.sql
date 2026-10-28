@@ -58,10 +58,11 @@ begin
     raise exception 'Not run: % not in this database yet. Run them first, in order, then this.', array_to_string(missing, ', ');
   end if;
 
-  -- The functions 0174 and 0177 change in place must be as 0167 and 0122 left them (or already changed).
-  src := pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure);
+  -- The functions 0174 and 0177 change in place must be as 0167 and 0122 left them (or already changed);
+  -- line ends are read without the carriage return a paste from Windows leaves.
+  src := replace(pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure), chr(13), '');
   if position('ow_oldest_debt_days' in src) = 0 and position('else '' · no limit set'' end' in src) = 0 then shape := shape || 'saved_quotes_ow_push (0167''s credit.hold wording)'::text; end if;
-  src := pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure);
+  src := replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(13), '');
   if position('order.cancel' in src) = 0 and (position('    if has_task(new.shop_id, ''invoice.void'') then' || chr(10) || '      v_task := ''invoice.void'';' in src) = 0
        or position('case when v_task = ''agent.change'' then ''Closed an agent''''s cancelled order #'' else ''Voided order #'' end' in src) = 0) then
     shape := shape || 'saved_quotes_sales_guard (0122''s void guard)'::text;
@@ -601,7 +602,8 @@ end $$;
 -- The credit.hold push names an old debt's age (0167's wording, widened).
 do $mig$
 declare
-  src text := pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure), chr(13), '');
   was text := 'else '' · no limit set'' end';
 begin
   if position('ow_oldest_debt_days' in src) > 0 then return; end if;
@@ -1021,7 +1023,8 @@ insert into role_tasks (role, task) values ('manager', 'order.cancel') on confli
 -- 1. 0173's stage rule: 'cancelled' is the Manager's, and final.
 do $mig$
 declare
-  src text := pg_get_functiondef('saved_quotes_stage_move()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('saved_quotes_stage_move()'::regprocedure), chr(13), '');
   was text := '    if new.status is not distinct from old.status then return new; end if;' || chr(10);
 begin
   if position('order.cancel' in src) > 0 then return; end if;
@@ -1043,7 +1046,8 @@ end $mig$;
 -- 2. 0122's void guard: a cancel is voided by order.cancel, and logged as a cancel.
 do $mig$
 declare
-  src text := pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(13), '');
   was1 text := '    if has_task(new.shop_id, ''invoice.void'') then' || chr(10) || '      v_task := ''invoice.void'';';
   was2 text := 'case when v_task = ''agent.change'' then ''Closed an agent''''s cancelled order #'' else ''Voided order #'' end';
 begin

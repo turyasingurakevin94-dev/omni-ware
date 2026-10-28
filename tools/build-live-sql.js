@@ -104,10 +104,11 @@ begin
     raise exception 'Not run: % not in this database yet. Run them first, in order, then this.', array_to_string(missing, ', ');
   end if;
 
-  -- The functions 0174 and 0177 change in place must be as 0167 and 0122 left them (or already changed).
-  src := pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure);
+  -- The functions 0174 and 0177 change in place must be as 0167 and 0122 left them (or already changed);
+  -- line ends are read without the carriage return a paste from Windows leaves.
+  src := replace(pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure), chr(13), '');
   if position('ow_oldest_debt_days' in src) = 0 and position('else '' · no limit set'' end' in src) = 0 then shape := shape || 'saved_quotes_ow_push (0167''s credit.hold wording)'::text; end if;
-  src := pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure);
+  src := replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(13), '');
   if position('order.cancel' in src) = 0 and (position('    if has_task(new.shop_id, ''invoice.void'') then' || chr(10) || '      v_task := ''invoice.void'';' in src) = 0
        or position('case when v_task = ''agent.change'' then ''Closed an agent''''s cancelled order #'' else ''Voided order #'' end' in src) = 0) then
     shape := shape || 'saved_quotes_sales_guard (0122''s void guard)'::text;

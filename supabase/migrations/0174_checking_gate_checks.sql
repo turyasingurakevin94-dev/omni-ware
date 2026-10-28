@@ -187,7 +187,8 @@ end $$;
 -- The credit.hold push names an old debt's age (0167's wording, widened).
 do $mig$
 declare
-  src text := pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('public.saved_quotes_ow_push()'::regprocedure), chr(13), '');
   was text := 'else '' · no limit set'' end';
 begin
   if position('ow_oldest_debt_days' in src) > 0 then return; end if;

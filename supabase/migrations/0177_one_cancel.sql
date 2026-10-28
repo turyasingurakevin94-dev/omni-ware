@@ -57,7 +57,8 @@ insert into role_tasks (role, task) values ('manager', 'order.cancel') on confli
 -- 1. 0173's stage rule: 'cancelled' is the Manager's, and final.
 do $mig$
 declare
-  src text := pg_get_functiondef('saved_quotes_stage_move()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('saved_quotes_stage_move()'::regprocedure), chr(13), '');
   was text := '    if new.status is not distinct from old.status then return new; end if;' || chr(10);
 begin
   if position('order.cancel' in src) > 0 then return; end if;
@@ -79,7 +80,8 @@ end $mig$;
 -- 2. 0122's void guard: a cancel is voided by order.cancel, and logged as a cancel.
 do $mig$
 declare
-  src text := pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure);
+  -- Line ends as written: a function pasted from Windows has \r\n (live's 0122 guard does).
+  src text := replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(13), '');
   was1 text := '    if has_task(new.shop_id, ''invoice.void'') then' || chr(10) || '      v_task := ''invoice.void'';';
   was2 text := 'case when v_task = ''agent.change'' then ''Closed an agent''''s cancelled order #'' else ''Voided order #'' end';
 begin
