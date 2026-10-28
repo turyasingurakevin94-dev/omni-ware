@@ -13,9 +13,11 @@
 -- from a phone.
 --
 -- How to run it, in the live project's SQL editor:
---   1. STEP 1. It changes nothing. It names the version live has, and
---      shows its text. If it says "none of the repo's", stop and send the
---      text: it was changed by hand, and this script will not touch it.
+--   1. STEP 1. It changes nothing. It names the version live has, exactly
+--      and ignoring spaces and line ends (an editor may have changed
+--      those), and shows its text. If both say "none of the repo's", stop
+--      and send the text: it was changed by hand, and this script will not
+--      touch it.
 --   2. STEP 2, from BEGIN to COMMIT, in one go.
 --   3. STEP 1 again: it should say 0122_manager_decisions.
 --   4. Then docs/live/apply-0171-0177.sql from its step 1.
@@ -25,6 +27,7 @@
 -- STEP 1  WHICH ONE LIVE HAS (read-only)
 -- =====================================================================
 select case md5(prosrc) when '642c102ab62636b4daad421f86b100f0' then '0113_sales_role' when 'bddcc46976c3c7363d74c29fcd46019f' then '0116_manager_role' when '8e57b9fba06fca97307c2ba363245d3e' then '0122_manager_decisions' else 'none of the repo''s' end as live_has,
+       case md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) when '3007ac86da6705b545330477ccf4559e' then '0113_sales_role' when '67cde3f72d2e100ff25bb1e80b3b1f93' then '0116_manager_role' when '6863b9d5f1d241fe636e608a1ddd5b29' then '0122_manager_decisions' else 'none of the repo''s' end as ignoring_spaces,
        pg_get_functiondef(oid) as its_text
   from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace;
 
@@ -33,13 +36,15 @@ select case md5(prosrc) when '642c102ab62636b4daad421f86b100f0' then '0113_sales
 -- =====================================================================
 begin;
 do $chk$
-declare h text := (select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
+declare
+  h text := (select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
+  hf text := (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
 begin
   if to_regprocedure('is_shop_desk(uuid)') is null or to_regprocedure('has_task(uuid, text)') is null
      or to_regprocedure('manager_log_decision(uuid, text, text, numeric, jsonb, jsonb, jsonb)') is null then
     raise exception 'Not run: is_shop_desk (0116), has_task (0127) or manager_log_decision (0122) is missing.';
   end if;
-  if h is null or h not in ('642c102ab62636b4daad421f86b100f0', 'bddcc46976c3c7363d74c29fcd46019f', '8e57b9fba06fca97307c2ba363245d3e') then
+  if h is null or (h not in ('642c102ab62636b4daad421f86b100f0', 'bddcc46976c3c7363d74c29fcd46019f', '8e57b9fba06fca97307c2ba363245d3e') and hf not in ('3007ac86da6705b545330477ccf4559e', '67cde3f72d2e100ff25bb1e80b3b1f93', '6863b9d5f1d241fe636e608a1ddd5b29')) then
     raise exception 'Not run: live''s void guard is none of the repo''s versions (0113, 0116, 0122). Send its text (step 1) before changing it.';
   end if;
 end $chk$;

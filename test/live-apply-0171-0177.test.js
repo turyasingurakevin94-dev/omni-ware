@@ -166,13 +166,24 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   t.check(/changed since its migration/.test(run(on, 1).stderr), 'apply step 1 stops on it, as it did on live');
   const vg = read('docs/live/void-guard.sql');
   const vstep = (n) => { const a = vg.indexOf(`-- STEP ${n} `), b = vg.indexOf(`-- STEP ${n + 1} `); return vg.slice(vg.lastIndexOf('\n-- ====', a), b < 0 ? undefined : vg.lastIndexOf('\n-- ====', b)); };
-  const has = () => ((on(['-qAt', '-F', '|'], vstep(1)).stdout || '').split('|')[0] || '').trim();
+  const has3 = (o) => ((o(['-qAt', '-F', '|'], vstep(1)).stdout || '').split('|')[0] || '').trim();
+  const has = () => has3(on);
   t.check(has() === '0116_manager_role', `void-guard.sql step 1 names it: ${has()}`);
   const put = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2));
   t.check(put.status === 0 && has() === '0122_manager_decisions', `step 2 puts 0122's in place (${errs(put)[0] || has()})`);
   t.check(on(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2)).status === 0 && has() === '0122_manager_decisions', 'step 2 again changes nothing');
   const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
   t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then the fixes go in (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
+  // 0122's guard with its spacing changed (an editor can): named ignoring spaces, put back exactly.
+  const { on: on3 } = makeDb('ow_live_apply_guard3', '0170');
+  on3(['-qAt', '-c', `do $x$ begin execute replace(replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), chr(10) || '    ', chr(13) || chr(10) || chr(9)), '  v_task text;', '  v_task  text;'); end $x$`]);
+  const row3 = (on3(['-qAt', '-F', '|'], vstep(1)).stdout || '').split('|');
+  t.check(row3[0] === "none of the repo's" && row3[1] === '0122_manager_decisions', `0122's with its spacing changed: named ignoring spaces (${row3.slice(0, 2).join(', ')})`);
+  t.check(/changed since its migration/.test(run(on3, 1).stderr), 'apply step 1 stops on it, as it did on live');
+  const put3 = on3(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2));
+  t.check(put3.status === 0 && has3(on3) === '0122_manager_decisions', `step 2 puts 0122's exact text back (${errs(put3)[0] || 'ok'})`);
+  const r31 = run(on3, 1), r33 = run(on3, 3), r34 = run(on3, 4);
+  t.check(r31.status === 0 && r33.status === 0 && (r34.stdout.match(/\|ok$/gm) || []).length === 7, `then the fixes go in (${errs(r31)[0] || errs(r33)[0] || 'ok'})`);
   // A guard nobody in the repo wrote: step 2 refuses, and leaves it as it was.
   const { on: on2 } = makeDb('ow_live_apply_guard2', '0170');
   on2(['-qAt', '-c', `do $x$ begin execute replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), 'Make a new order instead.', 'Start again.'); end $x$`]);
@@ -180,7 +191,7 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const refuse = on2(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2));
   const after = on2(['-qAt', '-c', `select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard'`]).stdout;
   t.check(refuse.status !== 0 && /none of the repo's versions/.test(refuse.stderr) && before === after, 'a guard changed by hand: step 2 refuses and leaves it as it was');
-  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_guard', '-c', 'drop database if exists ow_live_apply_guard2']);
+  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_guard', '-c', 'drop database if exists ow_live_apply_guard2', '-c', 'drop database if exists ow_live_apply_guard3']);
 }
 
 // The void guard changed by hand: step 1 names it; step 3 run anyway leaves nothing behind.

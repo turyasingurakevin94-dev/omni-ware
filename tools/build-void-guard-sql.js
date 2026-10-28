@@ -11,9 +11,11 @@
  *   STEP 1  read-only: which of the three live has (by the fingerprint of
  *           its body, md5(prosrc), worked out here from the files), and its
  *           full text.
- *   STEP 2  one transaction: when live has 0113's or 0116's, puts 0122's in
- *           its place (the statements cut from 0122's file); when it has
- *           0122's, does it again (no change); when it has anything else,
+ *           Also ignoring spaces and line ends: the SQL editor can change
+ *           those, and the code is then the same.
+ *   STEP 2  one transaction: when live has 0113's, 0116's or 0122's (exactly
+ *           or but for spacing), puts 0122's exact text in its place (the
+ *           statements cut from 0122's file); when it has anything else,
  *           stops and changes nothing.
  *
  * Run: node tools/build-void-guard-sql.js [out.sql]
@@ -28,7 +30,10 @@ const START = 'create or replace function saved_quotes_sales_guard() returns tri
 const body = (s) => { const i = s.indexOf(START), j = s.indexOf('$$', i), k = s.indexOf('$$', j + 2); return s.slice(j + 2, k); };
 const md5 = (t) => crypto.createHash('md5').update(t).digest('hex');
 
-const v = ['0113', '0116', '0122'].map((no) => { const { f, s } = read(no); return { no, f, hash: md5(body(s)) }; });
+// Spaces and line ends collapsed: a guard pasted through an editor that changed
+// them is the same code, and is still that version.
+const flat = (t) => t.replace(/\s+/g, ' ').trim();
+const v = ['0113', '0116', '0122'].map((no) => { const { f, s } = read(no); return { no, f, hash: md5(body(s)), flat: md5(flat(body(s))) }; });
 const m122 = read('0122').s;
 const a = m122.indexOf(START);
 const end = 'for each row execute function saved_quotes_sales_guard();';
@@ -36,6 +41,8 @@ const b = m122.indexOf(end, a);
 if (a < 0 || b < 0) { console.error('0122 no longer has the void guard'); process.exit(1); }
 const stmt = m122.slice(a, b + end.length);
 const which = `case md5(prosrc) ${v.map((x) => `when '${x.hash}' then '${x.f.replace(/\.sql$/, '')}'`).join(' ')} else 'none of the repo''s' end`;
+const FLAT = `md5(btrim(regexp_replace(prosrc, '\\s+', ' ', 'g')))`;
+const whichFlat = `case ${FLAT} ${v.map((x) => `when '${x.flat}' then '${x.f.replace(/\.sql$/, '')}'`).join(' ')} else 'none of the repo''s' end`;
 
 const out = `-- =====================================================================
 -- Live's void guard (saved_quotes_sales_guard), brought to 0122's.
@@ -52,9 +59,11 @@ const out = `-- ================================================================
 -- from a phone.
 --
 -- How to run it, in the live project's SQL editor:
---   1. STEP 1. It changes nothing. It names the version live has, and
---      shows its text. If it says "none of the repo's", stop and send the
---      text: it was changed by hand, and this script will not touch it.
+--   1. STEP 1. It changes nothing. It names the version live has, exactly
+--      and ignoring spaces and line ends (an editor may have changed
+--      those), and shows its text. If both say "none of the repo's", stop
+--      and send the text: it was changed by hand, and this script will not
+--      touch it.
 --   2. STEP 2, from BEGIN to COMMIT, in one go.
 --   3. STEP 1 again: it should say 0122_manager_decisions.
 --   4. Then docs/live/apply-0171-0177.sql from its step 1.
@@ -64,6 +73,7 @@ const out = `-- ================================================================
 -- STEP 1  WHICH ONE LIVE HAS (read-only)
 -- =====================================================================
 select ${which} as live_has,
+       ${whichFlat} as ignoring_spaces,
        pg_get_functiondef(oid) as its_text
   from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace;
 
@@ -72,13 +82,15 @@ select ${which} as live_has,
 -- =====================================================================
 begin;
 do $chk$
-declare h text := (select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
+declare
+  h text := (select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
+  hf text := (select ${FLAT} from pg_proc where proname = 'saved_quotes_sales_guard' and pronamespace = 'public'::regnamespace);
 begin
   if to_regprocedure('is_shop_desk(uuid)') is null or to_regprocedure('has_task(uuid, text)') is null
      or to_regprocedure('manager_log_decision(uuid, text, text, numeric, jsonb, jsonb, jsonb)') is null then
     raise exception 'Not run: is_shop_desk (0116), has_task (0127) or manager_log_decision (0122) is missing.';
   end if;
-  if h is null or h not in (${v.map((x) => `'${x.hash}'`).join(', ')}) then
+  if h is null or (h not in (${v.map((x) => `'${x.hash}'`).join(', ')}) and hf not in (${v.map((x) => `'${x.flat}'`).join(', ')})) then
     raise exception 'Not run: live''s void guard is none of the repo''s versions (0113, 0116, 0122). Send its text (step 1) before changing it.';
   end if;
 end $chk$;
