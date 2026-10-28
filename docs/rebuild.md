@@ -47,10 +47,10 @@ is clearly better.** Kevin set this goal on 2026-10-28.
 - [ ] **1. The spec** (`docs/spec/`). 01 and 02 decided 2026-10-28. From the existing system: the order's
       journey, money, roles, screens, data, offline and pushes. Kevin reviews
       each chapter.
-- [ ] **2. The stack.** One page in the spec (chapter 07); Kevin approves.
-      Proposed 2026-10-28 (`docs/spec/07-stack.md`): TypeScript, Preact with
-      signals, esbuild (not Vite), one built page per role committed as today;
-      Supabase and Capacitor stay. Waiting on Kevin's four answers (§7).
+- [x] **2. The stack.** One page in the spec (chapter 07); Kevin approves.
+      Decided 2026-10-28 (`docs/spec/07-stack.md`): TypeScript, Preact with
+      signals, esbuild (not Vite), one built page per role committed as today,
+      each new app tried at `/next/<role>.html` first; Supabase and Capacitor stay.
 - [ ] **3. The shared core.** Money (one rule each, Kevin's answers below),
       data and offline sync, log in, the screen parts. The old money tests are
       ported as its checks.
@@ -151,3 +151,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — The three old failing database tests fixed: the shared-foundation scenario gives its moved orders their suppliers' yes (0174) and pays its counter sale with a receipt (0165); the Manager's-decisions and money-at-the-gate scenarios write as the Store app does, through `receive_trip` and `store_patch_order` (0164). The last one showed a live regression from fix 3: `store_patch_order` lets a `staff` (yard worker) login load and deliver, and 0173 refused them. `0178` lets the yard's own moves through for `store` and `staff` logins, as 0164 does. Pasted on live the same day (checked: the rule names `staff`).
 - **2026-10-28** — Phase 2: chapter 07, the stack, proposed. Measured first: the phones ship one page and update by swapping it, Vercel has no build step, CI tests install nothing and Node 22 runs TypeScript as it is, today's pages are 192–266 KB compressed. Proposed esbuild over Vite (the dev server is for a terminal nobody here has), and committed built pages so nothing that ships changes. Four questions for Kevin.
 - **2026-10-28** — Retire list added, with `test/retire-list.test.js`: an old page goes within 30 days of its switch, its tests with it, and new code never reads it — so v3 never sits beside v2.
+- **2026-10-28** — Phase 2 done: Kevin approved chapter 07 as proposed (all four answers yes). Next: phase 3, the shared core.

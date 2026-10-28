@@ -2,7 +2,7 @@
 
 What this covers: the tools the new front end is built with, why each fits this shop, what they cost, and what we deliberately do not add.
 Date: 2026-10-28
-Status: **proposed — Kevin approves** (questions in §7)
+Status: **decided — Kevin approved all four answers in §7 on 2026-10-28**
 
 > **Small files stay the rule.** Everything a session writes, reads and edits is in `src/`: small files, 200–500 lines, never over 1,000 (`docs/rebuild.md` rule 6). The **one page per role** in §0 is only what the build makes from them for the machines — Vercel, the phone apps, the offline cache — like an APK. Nobody edits it or needs to read it; it is made again from `src/` every time, and the size guard measures `src/`, not it.
 
@@ -113,11 +113,11 @@ Vercel builds no preview for `claude/**` branches (`vercel.json`), so step 1 run
 
 ---
 
-## 7. For Kevin to decide
+## 7. Decided (Kevin, 2026-10-28)
 
-| # | Question | Recommended |
+| # | Question | Decided |
 |---|---|---|
-| Q1 | Approve the stack in §0? | yes |
+| Q1 | Approve the stack in §0? | **Yes** |
 | Q2 | esbuild alone, or Vite as the plan first leaned? | **esbuild**: one package, same compiler, nothing we would use is missing |
-| Q3 | Commit the built pages (as today), or build on Vercel? | **commit**: nothing that ships today changes |
-| Q4 | Try each new app at `/next/<role>.html` on the live site for a day before the switch? | yes |
+| Q3 | Commit the built pages (as today), or build on Vercel? | **Commit**: nothing that ships today changes |
+| Q4 | Try each new app at `/next/<role>.html` on the live site for a day before the switch? | **Yes** |
