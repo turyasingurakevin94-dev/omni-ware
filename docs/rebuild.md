@@ -73,6 +73,22 @@ checked alone. They protect the books whichever app is in use, so they come
 - [x] No line priced below cost, except given away (money Q16) — `0171`, `test/no-sale-below-cost-db.test.js`
 - [x] Agent order total counts charges (money Q14) — `0172`, `test/agent-total-charges-db.test.js`
 
+**Putting them live.** One script, `docs/live/apply-0171-0177.sql` (made by
+`tools/build-live-sql.js` from the migrations; `test/live-apply-0171-0177.test.js`
+runs it on a database made from 0001-0170). In the live project's SQL editor:
+
+1. **Step 1** alone: read-only. Stops with a plain message if live is missing
+   anything the seven are built on, or if a function they change was edited
+   by hand. Says which of the seven are in already.
+2. **Step 2**: read-only. Lists what staff will notice. Tell the Manager first:
+   "next" now waits for suppliers' yes, a customer owing past 21 days waits
+   for a Release, and an order selling under its cost waits at the bill.
+3. **Step 3**, BEGIN to COMMIT in one go: all seven or none. Safe to run twice.
+4. **Step 4**: every row says ok.
+
+No edge function changes. The Manager app's credit-note fix reaches the
+phones when this branch is merged to main.
+
 Everything else decided there is a front-end rule: the shared core builds it
 once, and the old apps are not changed for it (they are frozen).
 
@@ -95,3 +111,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Fifth backend fix: the Manager's answers are checked on the writer (`0175`). Only the Manager app writes them today; no server function does. The Buyer app clears a price decision when a dearer supplier price leaves no margin; the database now does that itself (Kevin's Q12), and refuses any other change by anyone without `price.approve`, so the frozen Buyer app keeps working.
 - **2026-10-28** — Sixth backend fix: a void and a credit note are each one write (`0176`), for the new apps to call; the old Manager app keeps its several calls (frozen). Found on the way: the Manager app asks for a credit-note number with the kind `'creditNote'`, which `next_row_id_blocks` refuses (it takes `row:…`; the console uses `row:credit_note`), so raising a credit note from the Manager app failed before it wrote. Fixed (Kevin approved the urgent fix): `manager.html` asks for `row:credit_note`.
 - **2026-10-28** — Seventh backend fix: one Cancel (`0177`); every backend fix decided is now built. Stock moves only at the invoice, so "stock put back" is the yard's own step: the push tells them, and the Store screen already shows it. Not built: Sales asking for a cancel, and billing goods that came in before a cancel (such an order is refused, as the Manager app refuses it today).
+- **2026-10-28** — The seven backend fixes as one live script (`docs/live/apply-0171-0177.sql`): prerequisites, preview, one transaction, check. Tested on a database from 0001-0170, run twice, on one missing 0169 (stops first), and on one with a hand-edited function (stops first; forced, leaves nothing).
