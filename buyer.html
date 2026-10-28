@@ -2809,7 +2809,7 @@ PAGE.price = (args) => {
   if (args.v == null) args.v = String(Math.round(old));
   const sid = it.supplierId, t = tintFor(sid), g = orderSupplierGroups(q).find(x => String(x.supplierId) === String(sid));
   const c = quoteLineCount(it, it.qty);
-  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card" style="background:radial-gradient(90% 50% at 50% 18%,#FFFFFF 0%,#F7F5F2 70%)">
+  return `<button class="tapback" data-act="back" aria-label="Back"></button><div class="card" style="display:flex;flex-direction:column">
     <div style="padding:10px 16px 0;display:flex;flex-direction:column;gap:10px">
       <span class="bx-grip" style="background:#DDD8CF"></span>
       <div style="display:flex;align-items:center;gap:10px">
@@ -2819,82 +2819,51 @@ PAGE.price = (args) => {
       </div>
       ${g && g.lines.length > 1 ? `<div style="display:flex;gap:6px;overflow-x:auto">${g.lines.map(x => `<button data-act="pricel" data-line="${esc(x.lineId)}" aria-pressed="${x === it}" style="height:30px;padding:0 12px;border:none;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;${x === it ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)'}">${esc(lineName(x).base)}</button>`).join('')}</div>` : ''}
     </div>
-    <div style="position:relative;height:150px;margin-top:2px">
-      <svg width="100%" height="40" viewBox="0 0 390 40" preserveAspectRatio="xMinYMin meet" aria-hidden="true" style="position:absolute;left:0;top:0"><path d="M60 0 C 70 18, 66 30, 74 40" fill="none" stroke="#B9B2A6" stroke-width="1.5"/></svg>
-      <div class="a-swing" style="position:absolute;left:clamp(20px, 7vw, 52px);top:30px;right:clamp(20px, 7vw, 52px);filter:drop-shadow(0 2px 2px rgba(22,32,60,.08)) drop-shadow(0 14px 22px rgba(22,32,60,.14))">
-        <div style="position:relative;height:116px;background:linear-gradient(180deg,#FFFFFF,#FBF9F5);clip-path:polygon(26px 0,100% 0,100% 100%,26px 100%,0 50%);padding:10px 16px 10px 40px;display:flex;flex-direction:column;gap:2px">
-          <span aria-hidden="true" style="position:absolute;left:14px;top:52px;width:12px;height:12px;border-radius:999px;background:#F2EFEA;box-shadow:inset 0 1px 2px rgba(22,32,60,.25)"></span>
-          <span style="display:flex;align-items:center;gap:8px;min-width:0;padding-right:96px">${itemTile(it.productName, t, 24)}<span class="ell" style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ink2)">${esc((c.n + ' ' + c.unit + ' · ' + lineName(it).base).toUpperCase())}</span></span>
-          <span class="m" id="bx_pold" style="${priceSame(args, it) ? 'visibility:hidden;' : ''}font-size:15px;font-weight:500;color:#8A93A3;text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px">${n0(old)}</span>
-          <span style="display:flex;align-items:baseline;gap:6px"><span class="m" id="bx_pshown" style="font-size:44px;font-weight:600;letter-spacing:-.045em;line-height:1;color:var(--navy)">${n0(Number(args.v) || 0)}</span><span class="a-caret" aria-hidden="true" style="width:3px;height:32px;border-radius:2px;background:var(--amber);align-self:center"></span><span style="font-size:14px;font-weight:700;color:var(--ink3)">/${esc(args.unit === 'pack' && u.pack ? u.pack.unit : u.base)}</span></span>
-          <span class="bx-stamp" id="bx_pstamp" aria-hidden="true" style="${priceSame(args, it) ? 'visibility:hidden;' : ''}right:12px;top:10px;animation-delay:.9s;color:var(--amberInk);background:rgba(253,238,225,.5);transform:rotate(-12deg)">NEW<small>${esc(supplierShort(sid).toUpperCase())} · ${hm(Date.now())}</small></span>
-        </div>
-      </div>
-    </div>
-    <div id="bx_pdyn">${priceDynHTML(args, it)}</div>
-    <div class="bx-dock" style="margin-top:auto">
-      ${u.pack ? `      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        ${u.pack ? `<div role="radiogroup" aria-label="Price for" style="display:flex;gap:4px;padding:3px;border-radius:12px;background:rgba(255,255,255,.08)">${[['base', 'a ' + u.base], ['pack', 'a ' + u.pack.unit + ' of ' + n0(u.pack.qty)]].map(([k, w]) => `<button role="radio" aria-checked="${args.unit === k}" data-act="punit" data-v="${k}" style="height:34px;padding:0 12px;border:none;border-radius:9px;font-size:12px;font-weight:700;${args.unit === k ? 'background:#fff;color:var(--navy)' : 'background:transparent;color:var(--navyInk)'}">${esc(w)}</button>`).join('')}</div>` : `<span style="font-size:12px;font-weight:700;color:var(--navyInk)">a ${esc(u.base)}</span>`}
-        <span style="font-size:11px;font-weight:600;color:var(--navyInk2)">in their unit</span>
-      </div>
-` : ''}
-      <div class="bx-pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map(k => `<button data-act="pkey" data-k="${k}" aria-label="${k === 'del' ? 'Delete' : k}">${k === 'del' ? '⌫' : k}</button>`).join('')}</div>
-      <div id="bx_phold" style="${priceHolds(args, it) ? '' : 'display:none'}">${priceHoldHTML(q)}</div>
-      ${(() => { const how = askedHowOf(q, sid), rec = q.supplierConfirms && q.supplierConfirms[String(sid)], at = rec && rec.askedAt ? ' · ' + hm(rec.askedAt) : '', sh = supplierShort(sid);
-        const W = { wa: [sh + ' wrote it on WhatsApp', 'wa'], call: [sh + ' said it on a call', 'phone'], person: [sh + ' told you in person', 'user'], phone2: [sh + ' said it from another phone', 'device'] }[how] || [sh + ' gave the price', 'tag'];
+    <div id="bx_pdyn" style="padding:4px 16px 0;display:flex;flex-direction:column;gap:10px">${priceDynHTML(args, it)}</div>
+    <div style="padding:10px 16px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      ${u.pack ? `<div role="radiogroup" aria-label="Price for" style="display:flex;gap:4px;padding:3px;border-radius:12px;background:var(--soft)">${[['base', 'a ' + u.base], ['pack', 'a ' + u.pack.unit + ' of ' + n0(u.pack.qty)]].map(([k, w]) => `<button role="radio" aria-checked="${args.unit === k}" data-act="punit" data-v="${k}" style="height:36px;padding:0 12px;border:none;border-radius:9px;font-size:13px;font-weight:700;white-space:nowrap;${args.unit === k ? 'background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(22,32,60,.15)' : 'background:transparent;color:var(--ink3)'}">${esc(w)}</button>`).join('')}</div>` : '<span></span>'}
+      ${(() => { const how = askedHowOf(q, sid), rec = q.supplierConfirms && q.supplierConfirms[String(sid)], at = rec && rec.askedAt ? ' · ' + hm(rec.askedAt) : '';
+        const W = { wa: ['On WhatsApp', 'wa'], call: ['On a call', 'phone'], person: ['In person', 'user'], phone2: ['Other phone', 'device'] }[how] || ['Their price', 'tag'];
         // How the price came is how they were asked; their new price is their answer.
-        return `<div role="note" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:rgba(111,220,176,.12);box-shadow:inset 0 0 0 1px rgba(111,220,176,.4)">
-        <span style="width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;background:rgba(111,220,176,.2);color:var(--mint)">${ic(W[1], 15)}</span>
-        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span class="ell" style="font-size:13px;font-weight:700;color:#fff">${esc(W[0] + at)}</span><span class="ell" style="font-size:11px;font-weight:600;color:var(--navyInk)">Their new price is their answer · nothing to confirm after</span></span>
-        <span style="width:26px;height:26px;border-radius:999px;background:var(--mint);color:#0B3D27;display:flex;align-items:center;justify-content:center;flex:none">${ic('tick', 13, 'style="stroke-width:3.2"')}</span></div>`; })()}
-      <button class="bx-btn ${priceSame(args, it) ? 'green' : 'red'}" id="bx_pgo" data-act="pgo" style="flex:none"><span id="bx_pword">${priceGoWord(args, it)}</span> · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
+        return `<span role="note" aria-label="${esc(supplierShort(sid))} gave it ${esc(W[0].toLowerCase() + at)}. Their new price is their answer" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap">${ic(W[1], 15)}${esc(W[0] + at)}</span>`; })()}
+    </div>
+    <div style="margin-top:auto;padding:12px 16px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'].map(k => `<button data-act="pkey" data-k="${k}" aria-label="${k === 'del' ? 'Delete' : k}" class="m" style="height:clamp(52px, 8.5vh, 76px);border:none;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule);color:var(--ink);font-size:${k === 'del' ? 18 : 24}px;font-weight:500">${k === 'del' ? '⌫' : k}</button>`).join('')}</div>
+    <div class="bx-foot" style="gap:8px">
+      <div id="bx_phold" style="${priceHolds(args, it) ? '' : 'display:none'}">${priceHoldHTML(q)}</div>
+      <button class="bx-btn ${priceSame(args, it) ? 'green' : 'red'}" id="bx_pgo" data-act="pgo" style="flex:none;width:100%"><span id="bx_pword">${priceGoWord(args, it)}</span> · <span class="m" id="bx_peach">${n0(Number(args.v) || 0)}</span></button>
     </div>
   </div>`;
 };
 // The keyed price costs more than the client's price: the order will wait
 // for the Manager. Said without the selling price, which is the Manager's.
 function priceHolds(args, it){ const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1; return !priceSame(args, it) && lineCostsOverSell({ ...it, price: (Number(args.v) || 0) / per }); }
-function priceGoWord(args, it){ return priceSame(args, it) ? 'Same price · that’s a yes' : priceHolds(args, it) ? 'Save · ' + firstWord(whoShort('manager')) + ' decides' : 'Save their new price'; }
+function priceGoWord(args, it){ return priceSame(args, it) ? 'Same price · that’s a yes' : priceHolds(args, it) ? 'Save · ' + firstWord(whoShort('manager')) + ' decides' : 'Save the new price'; }
 function priceHoldHTML(q){
-  const mgr = whoShort('manager'), sw = sellerOf(q), me = myStaff();
-  const dot = (ini, bg, ink, extra) => `<span style="width:20px;height:20px;border-radius:999px;background:${bg};color:${ink};font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;${extra || ''}">${esc(ini)}</span>`;
-  return `<div role="img" aria-label="It now costs more than it sells for, so the order waits: you save the price, ${esc(mgr)} the Manager sets what ${esc(shortName(quoteClientName(q)))} pays, then ${esc(sw)} tells them" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(245,178,107,.12);box-shadow:inset 0 0 0 1px rgba(245,178,107,.45)">
-    <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#F5C894">${ic('lock', 14, 'style="stroke-width:2.4;flex:none"')}<span style="flex:1">Costs more than it sells for · the order waits</span></span>
-    <span style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700">
-      <span style="display:flex;align-items:center;gap:5px;flex:none;color:#fff">${dot(me ? initials(me.name) : 'YOU', 'var(--mint)', '#0B3D27')}You save</span><i style="flex:1;height:2px;border-radius:999px;background:repeating-linear-gradient(90deg,rgba(245,178,107,.6) 0 5px,transparent 5px 9px)"></i>
-      <span style="display:flex;align-items:center;gap:5px;flex:none;color:#F5C894">${dot(whoIni('manager'), '#FDE8E4', '#A82D24', 'box-shadow:0 0 0 3px rgba(245,178,107,.3)')}<span class="ell">${esc(firstWord(mgr))} sets the price</span></span><i style="flex:1;height:2px;border-radius:999px;background:rgba(255,255,255,.18)"></i>
-      <span style="display:flex;align-items:center;gap:5px;flex:none;color:var(--navyInk2)">${dot(initials(sw), 'transparent', '#B3BCD2', 'box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)')}${esc(sw)} tells</span></span>
-  </div>`;
+  const mgr = firstWord(whoShort('manager'));
+  return `<span role="note" aria-label="It now costs more than it sells for, so the order waits: ${esc(mgr)} the Manager sets what ${esc(shortName(quoteClientName(q)))} pays, then ${esc(sellerOf(q))} tells them" style="display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:14px;background:var(--amberSoft);color:#7A4A02;font-size:14px;font-weight:700">${ic('lock', 15, 'style="stroke-width:2.4;flex:none"')}<span style="flex:1;min-width:0">Above our selling price · ${esc(mgr)} decides</span></span>`;
 }
 // Keyed in the same as the line has: nothing struck out, nothing stamped new.
 function priceSame(args, it){ const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1; return Math.round((Number(args.v) || 0) / per) === Math.round(Number(it.price) || 0); }
 function priceDynHTML(args, it){
-  const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1;
-  const old = Number(it.price) || 0, n = Number(args.v) || 0, each = n / per, d = each - old, pctN = old ? d / old * 100 : 0;
-  const deg = Math.max(-90, Math.min(90, pctN / 20 * 90)), qty = Number(it.qty) || 0;
-  const rows = lineRank(it).rows.map(r => ({ sid: r.supplierId, p: String(r.supplierId) === String(it.supplierId) ? each : r.purchasePrice })).sort((a, b) => a.p - b.p);
-  const pos = rows.findIndex(r => String(r.sid) === String(it.supplierId)) + 1, of = rows.length;
-  const rankWord = !of || pos < 1 ? 'not on the price list' : of === 1 ? 'still the only one with it' : pos === 1 ? 'still the cheapest of ' + of : 'now #' + pos + ' of ' + of;
+  const u = priceUnits(it), per = args.unit === 'pack' && u.pack ? u.pack.qty : 1, unitW = args.unit === 'pack' && u.pack ? u.pack.unit : u.base;
+  const old = Number(it.price) || 0, n = Number(args.v) || 0, each = n / per, d = each - old, pctN = old ? d / old * 100 : 0, qty = Number(it.qty) || 0, c = quoteLineCount(it, qty), same = priceSame(args, it);
   const step = niceStep(old * per * 0.02);
   const quick = [['Same', 0], ['+' + n0(step), step], ['+' + n0(step * 2), step * 2], ['+' + n0(step * 4), step * 4]].map(([w, add]) => {
     const target = Math.round(old * per) + add, on = n === target;
-    return `<button data-act="pquick" data-v="${target}" style="flex:1;height:38px;border:none;border-radius:12px;font-family:var(--mono);font-size:13px;font-weight:600;${on ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)'}">${w}</button>`; }).join('');
-  return `<div style="margin:0 16px;display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">
-      <span role="img" aria-label="Price change ${pctN.toFixed(1)} percent against the old ${n0(old * per)}" style="position:relative;width:84px;height:48px;flex:none"><svg width="84" height="48" viewBox="0 0 84 48" aria-hidden="true" style="position:absolute;inset:0"><path d="M8 44 A 34 34 0 0 1 76 44" fill="none" stroke="#EFECE6" stroke-width="8" stroke-linecap="round"/><path d="M42 10 A 34 34 0 0 1 76 44" fill="none" stroke="#F5B26B" stroke-width="8" stroke-linecap="round" opacity=".35"/><path d="M8 44 A 34 34 0 0 1 42 10" fill="none" stroke="#0F6B43" stroke-width="8" stroke-linecap="round" opacity=".25"/><g style="transform-origin:42px 44px;transform:rotate(${deg.toFixed(1)}deg);transition:transform .35s cubic-bezier(.3,1.3,.5,1)"><line x1="42" y1="44" x2="42" y2="16" stroke="#16203C" stroke-width="3" stroke-linecap="round"/></g><circle cx="42" cy="44" r="4.5" fill="#16203C"/></svg></span>
-      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
-        <span style="display:flex;align-items:baseline;gap:8px"><span class="m" style="font-size:22px;font-weight:600;letter-spacing:-.03em;color:${d > 0 ? 'var(--amberInk)' : d < 0 ? 'var(--green)' : 'var(--ink)'}">${old ? (Math.abs(pctN) < 0.05 ? '±' : pctN > 0 ? '+' : '−') + Math.abs(pctN).toFixed(1) + '%' : 'new'}</span><span style="font-size:12px;font-weight:600;color:var(--ink3)">${signed(d * per)} a ${esc(args.unit === 'pack' && u.pack ? u.pack.unit : u.base)}</span></span>
-        <span class="ell" style="font-size:12px;font-weight:600;color:var(--ink2)">The ${n0(quoteLineCount(it, qty).n)} · <span class="m" style="color:var(--ink4)">${n0(old * qty)}</span> → <b class="m" style="color:var(--ink)">${n0(each * qty)}</b></span>
-        <span style="align-self:flex-start;display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;background:var(--amberSoft);color:var(--amberDeep);font-size:10px;font-weight:700">${esc(rankWord)}</span>
-      </span></div>
-    <div style="padding:10px 16px 10px;display:flex;gap:6px">${quick}</div>`;
+    return `<button data-act="pquick" data-v="${target}" class="m" style="flex:1;min-width:0;height:52px;border:none;border-radius:14px;font-size:14px;font-weight:600;${on ? 'background:var(--navy);color:#fff' : 'background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)'}">${w}</button>`; }).join('');
+  return `<div style="display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:18px;background:#fff;box-shadow:inset 0 0 0 1px var(--rule)">
+      <span style="font-size:14px;font-weight:700;line-height:1.3">${esc(lineName(it).base)} <span style="font-weight:600;color:var(--ink3);white-space:nowrap">· ${esc(c.n)} ${esc(c.unit)}</span></span>
+      <span style="display:flex;align-items:baseline;gap:8px;min-width:0">${same ? '' : `<span class="m" style="font-size:15px;font-weight:500;color:#8A93A3;text-decoration:line-through">${n0(old * per)}</span>`}<span class="m" id="bx_pshown" style="font-size:48px;font-weight:600;letter-spacing:-.045em;line-height:1;color:var(--navy)">${n0(n)}</span><span class="a-caret" aria-hidden="true" style="width:3px;height:34px;border-radius:2px;background:var(--amber)"></span><span style="font-size:15px;font-weight:600;color:var(--ink3)">/${esc(unitW)}</span></span>
+      <span style="font-size:14px;font-weight:700;color:${d > 0 ? '#95530C' : d < 0 ? 'var(--green)' : 'var(--ink3)'}">${same ? 'Same as before · the ' + esc(c.n) + ' ' + n0(old * qty) : (d > 0 ? '+' : '−') + n0(Math.abs(Math.round(d * per))) + ' each (' + (d > 0 ? '+' : '−') + Math.abs(pctN).toFixed(1) + '%) · the ' + esc(c.n) + ' now ' + n0(Math.round(each * qty))}</span>
+    </div>
+    <div style="display:flex;gap:6px">${quick}</div>`;
 }
 function refreshPrice(){
   const a = topArgs(), q = quoteById(a.id), it = q && (q.items || []).find(x => String(x.lineId) === String(a.lineId)); if (!it) return;
   const n = Number(a.v) || 0;
   const el = document.getElementById('bx_pdyn'); if (el) el.innerHTML = priceDynHTML(a, it);
-  const s = document.getElementById('bx_pshown'); if (s) s.textContent = n0(n);
   const e = document.getElementById('bx_peach'); if (e) e.textContent = n0(n);
-  const same = priceSame(a, it); ['bx_pold', 'bx_pstamp'].forEach(k => { const x = document.getElementById(k); if (x) x.style.visibility = same ? 'hidden' : ''; });
+  const same = priceSame(a, it);
   const h = document.getElementById('bx_phold'); if (h) h.style.display = priceHolds(a, it) ? '' : 'none';
   const w = document.getElementById('bx_pword'), b = document.getElementById('bx_pgo'); if (w) w.textContent = priceGoWord(a, it); if (b) { b.classList.toggle('green', same); b.classList.toggle('red', !same); }
 }
