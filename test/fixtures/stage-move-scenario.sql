@@ -20,15 +20,16 @@ insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-1111
  on conflict (shop_id) do update set presets = excluded.presets;
 
 -- Orders at each stage (the checks are off while they go in). Each sells
--- one bag of cement at 35,000 and is paid, so no price, credit or money hold
--- stands in the way of a move.
+-- one bag of cement at 35,000, is paid, and its supplier said yes, so no
+-- price, credit, money or supplier hold stands in the way of a move.
 set session_replication_role = replica;
 insert into cash_txns(id, shop_id, date, account, type, category, amount, description, quote_id)
  select 9500 + g, '11111111-1111-1111-1111-111111111111', ow_today(), 'cash', 'receipt', 'Invoice Payment', 35000, 'Payment', 500 + g from generate_series(1, 9) g;
 insert into saved_quotes(id, shop_id, client_name, date, status, invoiced, voided, amount_paid, payload) overriding system value
  select 500 + g, '11111111-1111-1111-1111-111111111111', 'Ken', ow_today(), s, g = 8, g = 9, 35000,
         jsonb_build_object('payments', jsonb_build_array(jsonb_build_object('id',1,'date',ow_today(),'amount',35000,'cashTxnId',9500 + g,'method','cash')),
-          'items', jsonb_build_array(jsonb_build_object('lineId',1,'productName','Cement','qty',1,'price',30000,'sellPrice',35000,'supplierId','S1')))
+          'items', jsonb_build_array(jsonb_build_object('lineId',1,'productName','Cement','qty',1,'price',30000,'sellPrice',35000,'supplierId','S1')),
+          'supplierConfirms', '{"S1":{"state":"confirmed","terms":"::1:30000"}}'::jsonb)
    from (values (1,'draft'),(2,'draft'),(3,'awaiting_goods'),(4,'preparing'),(5,'preparing'),(6,'pending_delivery'),(7,'draft'),(8,'completed'),(9,'preparing')) v(g, s);
 set session_replication_role = origin;
 
