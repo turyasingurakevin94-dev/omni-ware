@@ -874,7 +874,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(/<path/.test(X.nwCatMark('Roofing')) && /<path/.test(X.nwCatMark('Plumbing pipes')) && X.nwCatMark('Garden') === '', 'AisleIcons: the common aisles draw a mark, any other keeps its initials');
     const picked = X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }, { productId: 'P3', qty: 2, qtySaid: true }]);
     t.check(picked.length === 1 && picked[0].productId === 'P3' && X.nwAskPick([{ productId: 'P4', qty: 1, qtySaid: false }]).length === 1, 'ChatToLines: a bare word is not an item when the message gives counts; alone, it still is');
-    t.check(/data-act="srcopen"/.test(html) && /Ask for something/.test(html) && /Send to /.test(html) && /SUPPLIERS ASKED/.test(html), 'SReqList / SReqLook / SReqAsk: rows open a request, an ask needs no order');
+    t.check(/data-act="srcopen"/.test(html) && /data-act="srcasknew"/.test(html) && /Who \$\{esc\(pf\)\} asked/.test(html) && /Not sent yet\. It is kept on this phone/.test(html), 'S1 / S2 / S4 / GS1: rows open a request, an ask needs no order, an ask with no signal is kept');
     t.check(/Sell at the counter/.test(html) && /data-act="tdyaddto"/.test(html) && /data-act="ordpay"/.test(html), 'FindItem and OrderPay: a found item sells or joins the order; an unpaid order takes payment');
   }
 

@@ -3366,6 +3366,14 @@ button.k-row:active,a.k-row:active{background:linear-gradient(90deg,transparent,
 .k-notice.neutral{background:#EFECE6;color:var(--kink2)}
 .k-notice>span{flex:1;min-width:0}
 .k-grow{flex:1}
+.k-foot{position:fixed;left:0;right:0;bottom:0;z-index:30;max-width:520px;margin:0 auto;padding:16px 16px calc(16px + var(--safe-area-inset-bottom));background:linear-gradient(rgba(246,244,240,0),var(--kbg) 28%);display:flex;flex-direction:column;gap:8px}
+.src-empty{min-height:55vh;justify-content:center}
+.src-phb{align-self:flex-start;gap:8px}
+.src-ph{position:relative;align-self:flex-start}.src-ph img{width:120px;height:90px;object-fit:cover;border-radius:12px;display:block}.src-ph .k-bi{position:absolute;top:-10px;right:-10px}
+.src-pr{padding:16px 0;display:flex;flex-direction:column;gap:6px}
+.src-prv{display:flex;align-items:baseline;gap:8px}.src-prv>span:last-child{font-size:15px;color:var(--kink2)}
+.src-cu{padding:14px 0;display:flex;flex-direction:column;gap:12px}.src-cuh{display:flex;align-items:center;gap:12px}
+.src-tl{padding:16px 0}
 .kc-tl{min-width:0;padding:12px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 1px var(--krule);display:flex;flex-direction:column;gap:8px}
 .kc-tln{font-size:15px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kc-tlp{display:flex;justify-content:space-between;align-items:center;gap:6px}
@@ -3905,6 +3913,8 @@ async function loadAll(){
     switches: (switchesR || []).map(rowToSwitch),
   };
   S.loadedAt = Date.now();
+  // Asks kept on this phone while there was no signal go now (GS1).
+  if (typeof srcFlush === 'function') setTimeout(() => { srcFlush(); }, 0);
   saveSnapshot();
 }
 // index.html 45290: the payload is spread over these defaults.
@@ -10302,7 +10312,10 @@ function srcPerson(l){
 function srcFace(name, size){ const t = tintFor(name || 'Sourcing'); return `<span class="src-face" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .38)}px;background:${t[0]};color:${t[1]}">${esc(initials(name || 'Sourcing'))}</span>`; }
 function srcBar(i){ return `<span class="src-bar${i === 4 ? ' done' : ''}">${SRC_STAGES.map((s, k) => `<i class="${k < i ? 'past' : k === i ? (i === 4 ? 'on' : 'on sx-blink') : ''}"></i>`).join('')}</span>`; }
 
-/* ---------------- the sheet: what, how many, who asked ---------------- */
+/* ---------------- Ask Sourcing (S4, GS1): what, how many, who asked ---------------- */
+// The canvas's four steps; the app's Priced is still Found to a salesperson.
+const SRC_STEPS = ['Asked', 'Looking', 'Found', 'Listed'];
+function srcStep(l){ return { asked: 0, looking: 1, sourced: 2, priced: 2, listed: 3 }[l.status] ?? 0; }
 ACT.srcask = t => {
   // An item that is Out (GN5): Sourcing is asked for that item, by name.
   if (t && t.dataset && t.dataset.name) { openSheet('srcask', { name: t.dataset.name, qty: Math.max(1, Math.round(Number(t.dataset.q) || 1)) }); return; }
@@ -10311,83 +10324,130 @@ ACT.srcask = t => {
   const name = pq.qty ? q.replace(/^\s*[-−]?\d+(\.\d+)?\s*[×x]?\s*/i, '').replace(/\s*[×x]?\s*\d+(\.\d+)?\s*$/i, '').trim() || q : q;
   openSheet('srcask', { name, qty: pq.qty ? Math.max(1, Math.round(pq.qty)) : 1 });
 };
-// On its own ("Ask for something", no order): for whom is picked here, walk-in by default.
+// On its own ("Ask Sourcing", no order): for whom is picked here, walk-in by default.
 function srcFree(a){ return !!(a && a.free) || !S.draft; }
 function srcAskWho(a){
   if (srcFree(a)) { const c = a && a.custId != null ? customerById(a.custId) : null; return { c, who: c ? c.name : '' }; }
   const d = S.draft, c = d && d.customerId != null ? customerById(d.customerId) : null;
   return { c, who: c ? c.name : (d && d.client && d.client.name && d.client.name !== 'Walk-in' ? d.client.name : '') };
 }
+function srcAskGo(a){ return K.bp(S.srcSending ? 'Sending…' : 'Ask Sourcing', 'send', `data-act="srcsend" ${String(a.name || '').trim().length >= 2 && !S.srcSending ? '' : 'disabled'}`); }
 SHEET.srcask = a => {
-  const free = srcFree(a), { who } = srcAskWho(a), first = firstWord(who);
-  const me = firstWord(myGivenName()), lead = String(a.name || '').trim().length >= 3 ? srcMatch(a.name) : null, person = firstWord(srcPerson(lead)) || 'Sourcing';
-  const at = lead ? srcStageIdx(lead) : 0, before = lead ? (lead.requests || []).filter(r => !r.withdrawn).length : 0;
-  const face = who ? avatar(who, 's') : `<span class="sx-av s" style="background:var(--soft2);color:var(--ink2)">${ic('me', 16)}</span>`;
-  const whoBox = free
-    ? `<button class="src-who src-whobtn${a.pick ? ' on' : ''}" data-act="srcwho" aria-expanded="${a.pick ? 'true' : 'false'}">${face}<span class="tx"><b class="ell">${esc(who || 'Walk-in')}</b><small class="ell">${who ? 'tap to change · or walk-in' : 'tap to pick a customer'}</small></span></button>`
-    : `<div class="src-who">${face}<span class="tx"><b class="ell">${esc(first || 'Walk-in')}</b><small>and you${me ? ', ' + esc(me) : ''}</small></span></div>`;
-  return `<div class="src-head"><span class="src-ico">${ic('srcScope', 22)}</span><span class="tx"><b>${free ? 'Ask Sourcing' : 'We don’t sell it'}</b><span>${esc(free ? person : 'Sourcing')} finds it, prices it and lists it</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    <span class="src-lab">${free ? 'WHAT THEY WANT' : 'WHAT THEY ASKED FOR'}</span>
-    <textarea class="src-what" data-in="srcname" rows="2" aria-label="What they want" placeholder="The item, its size, what it is for"${free && !a.name ? ' autofocus' : ''}>${esc(a.name || '')}</textarea>
-    <div class="src-two${free ? ' free' : ''}">
-      <div><span class="src-lab">HOW MANY</span><div class="src-qty"><button data-act="srcqty" data-d="-1" aria-label="Fewer">−</button><b class="m">${n0(a.qty)}</b><button data-act="srcqty" data-d="1" aria-label="More">+</button></div></div>
-      <div><span class="src-lab">${free ? 'FOR WHOM' : 'WHO ASKED'}</span>${whoBox}</div>
-    </div>
-    ${free && a.pick ? `<div class="src-pick"><input class="src-pickq" data-in="srccust" value="${esc(a.cq || '')}" placeholder="Customer name or phone" aria-label="Find the customer" autocomplete="off" autofocus><div id="src_picks" class="src-picks">${srcPicksHTML(a)}</div></div>` : ''}
-    <div class="src-steps" role="img" aria-label="${lead ? `Already with ${esc(person)}: ${SRC_STAGES[at][1]}` : 'Starts at Asked'}">${SRC_STAGES.map((s, k) => `<span class="${k < at ? 'past' : k === at ? 'on' : ''}"><i></i>${s[1]}</span>`).join('')}</div>
-    ${lead ? `<span class="src-dup">${srcFace(srcPerson(lead), 22)}<span class="ell">Already with ${esc(person)} · “${esc(lead.name)}” · ${before} asked before</span></span>` : ''}
-    <button class="sx-btn red" data-act="srcsend" ${String(a.name || '').trim().length >= 2 && !S.srcSending ? '' : 'disabled'}>${lead ? `Add ${esc(first || 'them')} to it` : free ? `Send to ${esc(person)}` : 'Send to Sourcing'}</button>
-    <span class="src-note">${free ? 'No order needed · you’re told when it’s listed' : `The rest of ${esc(first ? first + '’s' : 'the')} order goes on as normal`}</span>`;
+  const free = srcFree(a), { c, who } = srcAskWho(a);
+  // GS1: an ask that could not go is kept on this phone; it says so and sends itself when there is signal.
+  if (a.failed) return `${sheetTitle('Ask Sourcing')}
+    ${K.fld('What they want', `<input readonly value="${esc(a.name || '')}">`)}${K.fld('How many', `<input class="m" readonly value="${n0(a.qty)}">`)}
+    ${K.notice('Not sent yet. It is kept on this phone and sends itself when there is signal.', 'caution', 'wifi')}
+    ${K.bp('Try again', 'send', 'data-act="srcretry"')}`;
+  const unit = 'piece', whoBox = free
+    ? K.ctx(who || 'Walk-in', c ? esc(custAreaOf(c) || c.phone || '') : 'tap to pick a customer', `data-act="srcwho" aria-expanded="${a.pick ? 'true' : 'false'}"`)
+    : `<span class="k-ctx" style="pointer-events:none">${K.av(who || 'Walk-in', null, 36)}<span class="k-ctx-tx"><b>${esc(who || 'Walk-in')}</b><span>${c ? esc(custAreaOf(c) || '') : 'on this order'}</span></span></span>`;
+  return `${sheetTitle('Ask Sourcing')}
+    ${K.fld('What they want', `<input data-in="srcname" autocomplete="off" placeholder="The item, its size" value="${esc(a.name || '')}"${free && !a.name ? ' autofocus' : ''}>`)}
+    <div class="nw-pcome"><span class="nw-hm">How many</span>${K.qty(n0(a.qty), nwPlural(unit, a.qty), '', { step: 'srcqty', ch: 'srcqtyv' })}</div>
+    <div class="k-col" style="gap:6px"><span class="k-label-s" style="font-weight:600">Who asked</span><div>${whoBox}</div></div>
+    ${free && a.pick ? `<div class="k-col">${K.search('Customer name or phone', a.cq, 'data-in="srccust" autocomplete="off" autofocus')}<div id="src_picks">${srcPicksHTML(a)}</div></div>` : ''}
+    ${a.photo ? `<div class="src-ph"><img src="${esc(a.photo.url)}" alt="The photo">${K.bi('close', 'Remove the photo', false, 'data-act="srcphotox"')}</div>` : `<label class="k-bt src-phb">${K.svg('camera', 18, 2)}Add a photo · optional<input type="file" accept="image/*" capture="environment" data-ch="srcphoto" hidden></label>`}
+    <span id="src_go" class="k-col">${srcAskGo(a)}</span>`;
 };
 // Up to three customers for what is typed, and walk-in.
 function srcPicksHTML(a){
   const q = String(a.cq || '').trim(), hits = q && typeof custMatches === 'function' ? (D().customers || []).filter(c => custMatches(c, q)).slice(0, 3) : [];
-  return hits.map(c => `<button class="src-pc${String(a.custId) === String(c.id) ? ' on' : ''}" data-act="srcpickc" data-id="${esc(c.id)}">${avatar(c.name, 's')}<span class="tx"><b class="ell">${esc(c.name)}</b><small class="ell">${esc([typeof custAreaOf === 'function' ? custAreaOf(c) : '', c.phone].filter(Boolean).join(' · '))}</small></span></button>`).join('')
-    + (q && !hits.length ? `<span class="src-pnone">No customer called “${esc(q)}”</span>` : '')
-    + `<button class="src-pc walk${a.custId == null ? ' on' : ''}" data-act="srcpickc" data-id=""><span class="sx-av s" style="background:var(--soft2);color:var(--ink2)">${ic('me', 16)}</span><span class="tx"><b>Walk-in</b></span></button>`;
+  const tick = K.svg('tick', 18, 2.6, 'color:var(--green)');
+  return K.card(hits.map(c => K.row(K.av(c.name), esc(c.name), esc([custAreaOf(c), c.phone].filter(Boolean).join(' · ')), String(a.custId) === String(c.id) ? tick : '', `data-act="srcpickc" data-id="${esc(c.id)}"`)).join('')
+    + K.row(`<span class="k-av" style="width:40px;height:40px;background:#EFECE6;color:var(--kink2)">${K.svg('store', 19)}</span>`, 'Walk-in', q && !hits.length ? `No customer called “${esc(q)}”` : 'No name on it', a.custId == null ? tick : '', 'data-act="srcpickc" data-id=""'));
 }
 ACT.srcwho = () => { const a = S.sheet && S.sheet.args; if (!a) return; a.pick = !a.pick; haptic('light'); renderSheet(); };
 ACT['in:srccust'] = t => { const a = S.sheet && S.sheet.args; if (!a) return; a.cq = t.value; const el = document.getElementById('src_picks'); if (el) morph(el, srcPicksHTML(a)); };
 ACT.srcpickc = t => { const a = S.sheet && S.sheet.args; if (!a) return; a.custId = t.dataset.id ? t.dataset.id : null; a.pick = false; a.cq = ''; haptic('light'); renderSheet(); };
-ACT['in:srcname'] = t => { if (!S.sheet) return; const had = !!srcMatch(S.sheet.args.name || ''); S.sheet.args.name = t.value; const btn = document.querySelector('[data-act="srcsend"]'); if (btn) btn.disabled = t.value.trim().length < 2; if (had !== !!srcMatch(t.value)) renderSheet(); };
+ACT['in:srcname'] = t => { if (!S.sheet) return; S.sheet.args.name = t.value; const el = document.getElementById('src_go'); if (el) el.innerHTML = srcAskGo(S.sheet.args); };
 ACT.srcqty = t => { const a = S.sheet.args; a.qty = Math.max(1, (Number(a.qty) || 1) + Number(t.dataset.d)); haptic('light'); renderSheet(); };
+ACT['ch:srcqtyv'] = t => { const a = S.sheet.args, v = Math.round(Number(String(t.value).replace(/[^0-9]/g, '')) || 0); if (v >= 1) a.qty = v; renderSheet(); };
+ACT['ch:srcphoto'] = t => { const a = S.sheet && S.sheet.args, f = t.files && t.files[0]; if (!a || !f) return; if (!/^image\//.test(f.type || '')) { toast('That isn’t a picture'); return; } if (a.photo && a.photo.url) try { URL.revokeObjectURL(a.photo.url); } catch (_e) {} a.photo = { file: f, url: URL.createObjectURL(f) }; renderSheet(); };
+ACT.srcphotox = () => { const a = S.sheet && S.sheet.args; if (!a) return; if (a.photo && a.photo.url) try { URL.revokeObjectURL(a.photo.url); } catch (_e) {} a.photo = null; renderSheet(); };
+// A phone photo, made small before it goes (sourcing.html downscaleImageBlob).
+async function downscaleImageBlob(blob){
+  if (!blob || typeof blob.type !== 'string' || !/^image\/(jpeg|png|webp)/.test(blob.type) || typeof createImageBitmap !== 'function') return blob;
+  let bmp = null;
+  try {
+    bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d'); cx.fillStyle = '#FFFFFF'; cx.fillRect(0, 0, w, h); cx.drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.85));
+    return out && out.size < blob.size ? out : blob;
+  } catch (_e) { return blob; }
+  finally { if (bmp && bmp.close) bmp.close(); }
+}
+// The photo goes where the Sourcing app shows a lead's picture: the shop's product-images folder.
+async function srcUploadPhoto(file){
+  const blob = typeof downscaleImageBlob === 'function' ? await downscaleImageBlob(file) : file;
+  const ext = /png/.test(blob.type) ? 'png' : /webp/.test(blob.type) ? 'webp' : 'jpg';
+  const path = `${S.shopId}/${(crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2))}.${ext}`;
+  const { error } = await sb.storage.from('product-images').upload(path, blob, { contentType: blob.type || 'image/jpeg' });
+  if (error) throw error;
+  return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
+// The ask itself, as the Sourcing app reads it: one lead per item, a request each time it is asked.
+function srcAskOf(a){
+  const free = srcFree(a), d = free ? null : S.draft, { c, who } = srcAskWho(a);
+  return { at: new Date().toISOString(), source: 'sourcing.ask', customerId: c ? c.id : null, customerName: who,
+    phone: c ? (c.phone || '') : (d && d.client ? d.client.phone || '' : ''), variant: '', qty: Number(a.qty) || 1, orderId: null, conversationId: d && d.waConvId != null ? d.waConvId : null, note: '',
+    by: S.user ? String(S.user.id) : null, salesName: myName() };
+}
+async function srcWrite(name, ask, photoUrl){
+  const lead = srcMatch(name);
+  if (lead) {
+    // Added to the requests as they are on the server now, so nobody else's ask is lost.
+    const cur = await sb.from('sourcing_leads').select('requests,image').eq('shop_id', S.shopId).eq('id', lead.id).maybeSingle();
+    if (cur.error) throw cur.error;
+    const requests = ((cur.data && cur.data.requests) || []).concat([ask]), patch = { requests };
+    if (photoUrl && !(cur.data && cur.data.image)) patch.image = photoUrl;
+    const up = await sb.from('sourcing_leads').update(patch).eq('shop_id', S.shopId).eq('id', lead.id);
+    if (up.error) throw up.error;
+    lead.requests = requests; return { lead, added: true };
+  }
+  const now = Date.now(), row = { id: 'SRC-' + now.toString(36).toUpperCase(), shop_id: S.shopId, name, notes: '', status: 'asked', created_at: new Date(now).toISOString(), stage_entered_at: now, requests: [ask], candidates: [] };
+  if (photoUrl) row.image = photoUrl;
+  const ins = await sb.from('sourcing_leads').insert(row);
+  if (ins.error) throw ins.error;
+  const l = rowToLead(row); (D().leads ||= []).push(l); return { lead: l, added: false };
+}
+// GS1: asks kept on this phone while there is no signal, sent when it comes back.
+const SRC_OUTBOX = 'sx_src_outbox';
+function srcOutbox(){ try { return JSON.parse(localStorage.getItem(SRC_OUTBOX) || '[]') || []; } catch (_e) { return []; } }
+function srcOutboxSave(list){ try { localStorage.setItem(SRC_OUTBOX, JSON.stringify(list)); } catch (_e) {} }
+async function srcFlush(){
+  const list = srcOutbox(); if (!list.length || S.srcFlushing || !S.shopId) return;
+  S.srcFlushing = true; const left = [];
+  for (let k = 0; k < list.length; k++) { const x = list[k]; if (x.shop !== S.shopId) { left.push(x); continue; }
+    try { await srcWrite(x.name, x.ask, null); } catch (e) { left.push(x); if (isNetworkError(e)) { left.push(...list.slice(k + 1)); break; } } }
+  srcOutboxSave(left); S.srcFlushing = false;
+  if (left.length < list.length) { saveSnapshot(); toast(`Sent to ${firstWord(srcPerson(null)) || 'Sourcing'}`); render(); }
+}
+if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('online', () => { srcFlush(); });
 ACT.srcsend = async () => {
   if (S.srcSending || !S.sheet || S.sheet.type !== 'srcask') return;
   const a = S.sheet.args, name = String(a.name || '').trim(); if (name.length < 2) return;
-  // On its own, the customer picked on the sheet (or walk-in); in an order, the order's.
-  const free = srcFree(a), d = free ? null : S.draft, { c, who } = srcAskWho(a);
-  const ask = { at: new Date().toISOString(), source: 'sourcing.ask', customerId: c ? c.id : null, customerName: who,
-    phone: c ? (c.phone || '') : (d && d.client ? d.client.phone || '' : ''), variant: '', qty: Number(a.qty) || 1, orderId: null, conversationId: d && d.waConvId != null ? d.waConvId : null, note: '',
-    by: S.user ? String(S.user.id) : null, salesName: myName() };
+  const free = srcFree(a), ask = srcAskOf(a);
   S.srcSending = true; renderSheet();
   try {
-    const lead = srcMatch(name);
-    if (lead) {
-      // Added to the requests as they are on the server now, so nobody else's ask is lost.
-      const cur = await sb.from('sourcing_leads').select('requests').eq('shop_id', S.shopId).eq('id', lead.id).maybeSingle();
-      if (cur.error) throw cur.error;
-      const requests = ((cur.data && cur.data.requests) || []).concat([ask]);
-      const up = await sb.from('sourcing_leads').update({ requests }).eq('shop_id', S.shopId).eq('id', lead.id);
-      if (up.error) throw up.error;
-      lead.requests = requests;
-    } else {
-      const now = Date.now(), row = { id: 'SRC-' + now.toString(36).toUpperCase(), shop_id: S.shopId, name, notes: '', status: 'asked', created_at: new Date(now).toISOString(), stage_entered_at: now, requests: [ask], candidates: [] };
-      const ins = await sb.from('sourcing_leads').insert(row);
-      if (ins.error) throw ins.error;
-      (D().leads ||= []).push(rowToLead(row));
-    }
+    const url = a.photo ? await srcUploadPhoto(a.photo.file) : null;
+    const r = await srcWrite(name, ask, url);
     S.loadedAt = Date.now(); saveSnapshot();
     S.srcSending = false; haptic('success'); closeSheet();
     if (!free && S.draft) S.draft.q = '';
-    toast(`Sent to ${firstWord(srcPerson(srcMatch(name))) || 'Sourcing'} — ${free ? 'it’s on your list' : 'you’ll see it in Asked of Sourcing'}`); render();
+    toast(r.added ? `Added to the ask already with ${firstWord(srcPerson(r.lead)) || 'Sourcing'}` : `Sent to ${firstWord(srcPerson(r.lead)) || 'Sourcing'}`); render();
   } catch (e) {
-    S.srcSending = false; renderSheet();
+    S.srcSending = false;
+    if (isNetworkError(e)) { srcOutboxSave(srcOutbox().concat([{ shop: S.shopId, name, ask }])); a.failed = true; renderSheet(); return; }
+    renderSheet();
     const denied = e && (e.code === '42501' || /row-level security|permission/i.test(String(e.message || '')));
-    toast(isNetworkError(e) ? 'No connection — nothing was sent' : denied ? 'This login can’t ask Sourcing yet — the owner runs supabase/migrations/0121_sales_rights.sql' : 'Not sent: ' + (e.message || e), 7000);
+    toast(denied ? 'This login can’t ask Sourcing yet — the owner runs supabase/migrations/0121_sales_rights.sql' : 'Not sent: ' + (e.message || e), 7000);
   }
 };
+ACT.srcretry = async () => { await srcFlush(); if (!srcOutbox().some(x => x.shop === S.shopId)) { closeSheet(); render(); } else toast('Still no connection · it is kept here'); };
 
-/* ---------------- Asked of Sourcing: each ask, from asked to listed ---------------- */
+/* ---------------- Asked of Sourcing (S1): what you can do first ---------------- */
 function srcListedPrice(l){
   if (!l.productId || !productById(l.productId)) return null;
   const ask = srcLastAsk(l), ln = makeLine(l.productId, null, Number(ask && ask.qty) || 1);
@@ -10399,79 +10459,65 @@ function srcCandName(c){ const s = c.supplierId != null ? (D().suppliers || []).
 // Answered with a price (candidateHasPrice); the price itself is a cost and never shows in Sales.
 function srcCandPriced(c){ const has = t => Array.isArray(t) && t.some(x => x && Number(x.price) > 0); return has(c.tiers) || (Array.isArray(c.variantOverrides) && c.variantOverrides.some(has)); }
 function srcCandNone(c){ return !!(c.noStock || c.cantAt); }
-// Where it was found: the latest supplier who answered with a price and has it.
 function srcFound(l){ return srcSuppliers(l).filter(c => !srcCandNone(c) && srcCandPriced(c)).sort((a, b) => String(b.quotedAt || b.at || '').localeCompare(String(a.quotedAt || a.at || '')))[0] || null; }
-// "10:20" today, "yesterday", else the weekday.
-function srcDay(iso){ const ms = Date.parse(iso || ''); if (!ms) return ''; if (isoOf(ms) === todayISO()) return timeOf(ms); return isoOf(ms) === isoOf(Date.now() - 864e5) ? 'yesterday' : new Date(ms).toLocaleDateString('en-GB', { weekday: 'short' }); }
-function srcPill(c){
-  if (srcCandNone(c)) return '<span class="src-pill none">has none</span>';
-  if (srcCandPriced(c)) return '<span class="src-pill yes">answered</span>';
-  const d = srcDay(c.askedAt);
-  return `<span class="src-pill">${d ? `asked <span class="m">${esc(d)}</span>&nbsp;· ` : ''}no answer</span>`;
-}
+function srcDay(iso){ const ms = Date.parse(iso || ''); if (!ms) return ''; if (isoOf(ms) === todayISO()) return 'today'; return isoOf(ms) === isoOf(Date.now() - 864e5) ? 'yesterday' : new Date(ms).toLocaleDateString('en-GB', { weekday: 'short' }); }
 function srcWhen(iso){ const ms = Date.parse(iso || ''); if (!ms) return ''; return isoOf(ms) === todayISO() ? timeOf(ms) : new Date(ms).toLocaleDateString('en-GB', { weekday: 'short' }); }
-function srcStageWords(l){
-  const n = srcSuppliers(l).length;
-  if (l.status === 'asked') return 'not started yet';
-  if (l.status === 'looking') return n ? `${n} supplier${n === 1 ? '' : 's'} asked` : 'looking for a supplier';
-  if (l.status === 'sourced') return 'pricing it';
-  if (l.status === 'priced') return 'listing it';
-  return 'on our list';
-}
+function srcWhoOf(l){ const ask = srcLastAsk(l) || {}, c = ask.customerId ? customerById(ask.customerId) : null; return { ask, c, who: (c && c.name) || ask.customerName || 'Walk-in', qty: Number(ask.qty) || 1 }; }
+function srcUnitOf(l, n){ const ln = l.productId && productById(l.productId) ? makeLine(l.productId, null, 1) : null; return nwPlural((ln && ln.unit) || 'piece', n); }
+function srcHead(lead, name, sub, i){ return K.sh(lead, name, sub, i == null ? {} : { stage: i, stages: SRC_STEPS }); }
 PAGE.srcasks = () => {
-  const mine = srcMine().map(l => ({ l, i: srcStageIdx(l), ask: srcLastAsk(l) })).sort((a, b) => String((b.ask || {}).at || '').localeCompare(String((a.ask || {}).at || '')));
-  const counts = SRC_STAGES.map((_, k) => mine.filter(x => x.i === k).length), listed = mine.filter(x => x.i === 4), open = mine.filter(x => x.i < 4);
-  const person = firstWord(srcPerson(open[0] && open[0].l)) || 'Sourcing', cols = ['#FFFFFF', '#FFFFFF', '#A9AEF0', '#A9AEF0', '#6FDCB0'];
-  const head = `<div class="src-top" data-navy-top><div class="src-hrow"><button class="sx-circle" data-act="back" aria-label="Back">${ic('back', 18)}</button><span class="tx" title="What your customers want that we don’t sell yet"><b>Asked of Sourcing</b></span>${srcPerson(null) ? `<span class="src-whoface" title="${esc(srcPerson(null))} · Sourcing" aria-label="${esc(srcPerson(null))}, Sourcing">${srcFace(srcPerson(null), 36)}<small>${esc(firstWord(srcPerson(null)))}</small></span>` : ''}</div>
-    <div class="src-funnel" role="img" aria-label="${SRC_STAGES.map((s, k) => counts[k] + ' ' + s[1].toLowerCase()).join(', ')}">${SRC_STAGES.map((s, k) => `<span><span class="t"><b class="m" style="color:${counts[k] ? cols[k] : '#5C6788'}">${counts[k]}</b><small>${s[1].toUpperCase()}</small></span><i style="background:${counts[k] ? cols[k] : '#5C6788'};opacity:${k < 2 && counts[k] ? .5 : 1}"></i></span>`).join('')}</div></div>`;
-  const askRow = `<button class="src-askrow" data-act="srcasknew"><span class="src-askico">${ic('plus', 20)}</span><span class="tx"><b>Ask for something</b><span>a customer wants what we don’t sell</span></span><span class="src-chev">${ic('chev', 14)}</span></button>`;
-  if (!mine.length) return head + `<div class="sx-body src-body">${askRow}<div class="sx-card cht-empty"><span class="cht-emico" style="background:var(--indigoSoft);color:var(--indigo)">${ic('srcScope', 26)}</span><b>Nothing asked yet</b><span>When a customer wants something we don’t sell, search for it on their order and tap “We don’t sell it”.</span></div></div>`;
-  const listedCard = x => { const l = x.l, ask = x.ask || {}, pr = srcListedPrice(l), c = ask.customerId ? customerById(ask.customerId) : null, who = (c && c.name) || ask.customerName || 'They', qty = Number(ask.qty) || 1;
-    return `<div class="src-listed" data-key="l-${esc(l.id)}"><div class="src-lrow"><span class="src-lico">${ic('tick', 22)}</span><span class="tx"><b class="ell">${esc(l.name)}</b><span>Listed${srcPerson(l) ? ' by ' + esc(firstWord(srcPerson(l))) : ''}${l.stageEnteredAt ? ' · ' + esc(srcWhen(new Date(l.stageEnteredAt).toISOString())) : ''}</span></span>${pr ? `<span class="pr"><b class="m">${n0(pr.each)}</b><small>${esc(pr.unit ? 'a ' + pr.unit : 'each')}</small></span>` : ''}</div>
-      ${srcBar(4)}
-      <div class="src-asker">${avatar(who, 's')}<span class="tx"><b class="ell">${esc(firstWord(who))} asked for ${n0(qty)}</b>${pr ? `<span class="m">${n0(qty)} × ${n0(pr.each)} = ${n0(qty * pr.each)}</span>` : '<span>price to confirm</span>'}</span></div>
-      <div class="src-act">${c ? `<button class="sx-btn red" data-act="srctell" data-lead="${esc(l.id)}">${ic('chat', 18)}<span class="ell">Tell ${esc(firstWord(who))}</span></button>` : ''}${l.productId && productById(l.productId) ? `<button class="sx-btn src-add" data-act="srcorder" data-lead="${esc(l.id)}">${ic('plus', 18)}<span class="ell">Add to order</span></button>` : ''}</div></div>`; };
-  const row = x => { const l = x.l, ask = x.ask || {}, c = ask.customerId ? customerById(ask.customerId) : null, who = (c && c.name) || ask.customerName || 'Walk-in';
-    return `<button class="src-row" data-key="r-${esc(l.id)}" data-act="srcopen" data-lead="${esc(l.id)}"><span class="src-rico">${ic(x.i >= 2 ? 'tick' : 'srcScope', 20)}</span><span class="tx"><span class="t"><b class="ell">${esc(l.name)}</b>${avatar(who, 's')}</span>${srcBar(x.i)}<span class="b"><span class="st">${SRC_STAGES[x.i][1]} · <span>${esc(srcStageWords(l))}</span></span><span class="m">${n0(Number(ask.qty) || 1)} · ${esc(srcWhen(ask.at))}</span></span></span><span class="src-chev">${ic('chev', 14)}</span></button>`; };
-  return head + `<div class="sx-body src-body">${askRow}${listed.map(listedCard).join('')}
-    ${open.length ? `<span class="src-sec"><span>With ${esc(person)}</span><span class="m">${open.length}</span></span><div class="sx-card src-list">${open.map(row).join('')}</div>` : ''}</div>`;
+  const mine = srcMine().map(l => ({ l, i: srcStep(l), ...srcWhoOf(l) })).sort((a, b) => String(b.ask.at || '').localeCompare(String(a.ask.at || '')));
+  const ready = mine.filter(x => x.i === 3), found = mine.filter(x => x.i === 2), looking = mine.filter(x => x.i < 2), open = found.length + looking.length;
+  const person = firstWord(srcPerson(null)) || 'Sourcing';
+  const head = srcHead(K.tile('scope', 'indigo', 40), 'Asked of Sourcing', open ? `${open} open · ${esc(person)} is on them` : `${esc(person)} finds what we don’t sell`);
+  const foot = `<div class="k-foot">${K.bp('Ask Sourcing', 'plus', 'data-act="srcasknew"')}</div>`;
+  if (!mine.length) return head + `<div class="k-body src-empty">${K.empty('Nothing asked yet', 'When a customer wants something we don’t sell, ask Sourcing.', 'scope', 'neutral')}</div>${foot}`;
+  const sub = x => `${esc(x.who)} · ${n0(x.qty)}${x.i === 3 || x.i === 2 ? ' ' + esc(srcUnitOf(x.l, x.qty)) : ''}${x.i < 2 ? ' · asked ' + esc(srcDay(x.ask.at)) : ''}`;
+  const open1 = x => `data-key="r-${esc(x.l.id)}" data-act="srcopen" data-lead="${esc(x.l.id)}"`;
+  const readyRow = x => { const tell = x.c && (x.c.phone || x.c.phone2);
+    return tell ? `<div class="k-row" data-key="r-${esc(x.l.id)}"><button type="button" class="k-rowb" data-act="srcopen" data-lead="${esc(x.l.id)}">${K.tile('tick', 'green')}<span class="k-row-tx"><span class="k-row-n">${esc(x.l.name)}</span><span class="k-row-m">${sub(x)}</span></span></button>${K.bs('Tell them', null, `data-act="srctell" data-lead="${esc(x.l.id)}"`, true)}</div>`
+      : K.row(K.tile('tick', 'green'), esc(x.l.name), sub(x), NW_CHEV(), open1(x)); };
+  return head + `<div class="k-body">
+    ${ready.length ? K.label('Ready to tell', ready.length) + K.card(ready.map(readyRow).join('')) : ''}
+    ${found.length ? K.label('Found · being priced', found.length) + K.card(found.map(x => K.row(K.tile('scope', 'indigo'), esc(x.l.name), sub(x), NW_CHEV(), open1(x))).join('')) : ''}
+    ${looking.length ? K.label('Looking', looking.length) + K.card(looking.map(x => K.row(K.tile('scope', 'indigo'), esc(x.l.name), sub(x), NW_CHEV(), open1(x))).join('')) : ''}
+  </div><div style="height:96px"></div>${foot}`;
 };
 ACT.srcasks = () => push('srcasks');
 ACT.srcasknew = t => openSheet('srcask', { name: (t && t.dataset && t.dataset.q) || '', qty: 1, free: true, custId: null });
-ACT.srcopen = t => openSheet('srcreq', { id: t.dataset.lead });
+ACT.srcopen = t => push('srcreq', { id: t.dataset.lead });
 
-/* ---------------- one ask: where it has got, who was asked (SReqLook, SReqFound) ---------------- */
-SHEET.srcreq = a => {
+/* ---------------- one ask (S2 still looking, S3 listed) ---------------- */
+PAGE.srcreq = a => {
   const l = (D().leads || []).find(x => String(x.id) === String(a.id));
-  if (!l) return `<div class="src-head"><span class="tx"><b>Not found</b><span>This ask is no longer on the list</span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>`;
-  const i = srcStageIdx(l), ask = srcLastAsk(l) || {}, c = ask.customerId ? customerById(ask.customerId) : null, who = (c && c.name) || ask.customerName || 'Walk-in', qty = Number(ask.qty) || 1;
-  const person = srcPerson(l), pf = firstWord(person) || 'Sourcing', sups = srcSuppliers(l), found = i >= 2 ? srcFound(l) : null;
-  const since = l.stageEnteredAt ? srcWhen(new Date(Number(l.stageEnteredAt)).toISOString()) : '';
-  const tick = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>';
-  const track = `<div class="src-track" role="img" aria-label="${SRC_STAGES[i][1]}, step ${i + 1} of 5">${SRC_STAGES.map((s, k) => `<span class="${k < i ? 'past' : k === i ? 'on' : ''}"><i class="${k === i && i < 4 ? 'sx-blink' : ''}"></i><small>${k < i ? tick : ''}${s[1]}${k === i && i < 4 ? ' · now' : ''}</small></span>`).join('')}</div>`;
-  const supRow = x => `<div class="src-srow"><span class="tx"><b class="ell">${esc(srcCandName(x))}</b>${x.where ? `<span class="ell">${esc(x.where)}</span>` : ''}</span>${srcPill(x)}</div>`;
-  const list = (label, xs) => xs.length ? `<div class="sx-card src-sups"><div class="src-shead"><span>${label}</span><span class="m">${xs.length}</span></div>${xs.map(supRow).join('')}</div>` : '';
-  let body;
-  if (i < 2) {
-    body = (sups.length ? list('SUPPLIERS ASKED', sups) : `<div class="sx-card src-sups"><div class="src-shead"><span>SUPPLIERS ASKED</span><span class="m">0</span></div><span class="src-snone">${i === 0 ? 'Not started yet' : 'No supplier asked yet'}</span></div>`)
-      + `<div class="src-onit">${srcFace(person || 'Sourcing', 22)}<b>${esc(pf)} ${i === 0 ? 'has it' : 'is on it'}</b>${since ? ` · since ${esc(since)}` : ''}<i class="sx-blink"></i></div>`;
-  } else {
-    const fWhen = found ? srcDay(found.quotedAt || found.at) : '', fDay = fWhen && /^\d/.test(fWhen) ? 'today ' + fWhen : fWhen;
-    const mgr = mgrFull(), mg = mgrName();
-    const step = (face, words, wait) => `<span class="src-nx${wait ? ' wait' : ''}">${face}${wait ? '<i class="sx-blink"></i>' : ''}${words}</span>`;
-    const next = i === 2 ? step(srcFace(person || 'Sourcing', 18), `${esc(pf)} gets the price`, true) + ic('chev', 12) + step(srcFace(mgr || 'Manager', 18), `${esc(mg)} sets the selling price`, false)
-      : i === 3 ? step(srcFace(mgr || 'Manager', 18), `${esc(mg)} sets the selling price`, true) + ic('chev', 12) + step(`<span class="src-nxok">${ic('tick', 11)}</span>`, 'Listed', false)
-      : '';
-    body = `<div class="src-found"><span class="src-fico">${ic('tick', 18)}</span><span class="tx">${found
-        ? `<small>FOUND AT</small><b class="ell">${esc(srcCandName(found))}${found.where ? ` · <span>${esc(found.where)}</span>` : ''}</b><em>${person ? 'by ' + esc(pf) : ''}${person && fDay ? ' · ' : ''}${esc(fDay)}</em>`
-        : `<small>${SRC_STAGES[i][1].toUpperCase()}</small><b class="ell">${esc(srcStageWords(l)).replace(/^./, m => m.toUpperCase())}</b>${person ? `<em>with ${esc(pf)}${since ? ' · since ' + esc(since) : ''}</em>` : ''}`}</span></div>`
-      + (next ? `<div class="src-next"><span class="src-shead"><span>NEXT</span></span>${next}</div>` : '')
-      + list('ALSO ASKED', sups.filter(x => x !== found));
+  if (!l) return srcHead(K.tile('scope', 'indigo', 40), 'Not here any more', '') + `<div class="k-body">${K.empty('This ask is no longer on the list', '', 'scope', 'neutral')}</div>`;
+  const i = srcStep(l), { ask, c, who, qty } = srcWhoOf(l), first = firstWord(who), person = srcPerson(l), pf = firstWord(person) || 'Sourcing';
+  const sups = srcSuppliers(l), unit = srcUnitOf(l, qty);
+  const phone = c && (c.phone || c.phone2);
+  if (i === 3) {
+    // S3: the price, large, and that it is on the shelf; the count they asked for, already set.
+    const n = Math.max(1, Number(a.qty) || qty), pr = srcListedPrice(l), shelf = l.productId ? shelfAvailable(l.productId, null) : 0;
+    const when = l.stageEnteredAt ? `${srcDay(new Date(Number(l.stageEnteredAt)).toISOString())} ${timeOf(Number(l.stageEnteredAt))}`.replace(/^today /, 'today ') : '';
+    return srcHead(K.tile('tick', 'green', 40), esc(l.name), `${esc(who)} asked for ${n0(qty)}`, 3) + `<div class="k-body">
+      ${K.card(`<div class="src-pr"><span class="k-label-s">Listed${person ? ' by ' + esc(pf) : ''}${when ? ' · ' + esc(when) : ''}</span>${pr ? `<span class="src-prv">${K.money(pr.each, 28)}<span>${pr.unit ? 'a ' + esc(pr.unit) : 'each'}</span></span>` : `<span class="src-prv">${K.chip('Price coming', 'caution')}</span>`}<span style="font-size:13px">${l.productId ? nwStockWord(l.productId, null) : ''}</span></div>`)}
+      ${K.card(`<div class="src-cu"><div class="src-cuh">${K.av(who)}<span class="k-row-tx"><span class="k-row-n">${esc(who)}</span><span class="k-row-m">asked ${esc((Date.parse(ask.at || '') ? agoWords(Date.parse(ask.at)) : '') || srcDay(ask.at))}</span></span></div><div class="nw-pcome">${K.qty(n0(n), nwPlural(pr && pr.unit ? pr.unit : 'piece', n), '', { step: 'srcnstep', ch: 'srcnq' })}${pr ? K.money(n * pr.each, 18) : ''}</div></div>`)}
+    </div><div style="height:150px"></div><div class="k-foot">${l.productId && productById(l.productId) ? K.bs(`Add to ${esc(nwPoss(first || 'their'))} order`, 'plus', `data-act="srcorder" data-lead="${esc(l.id)}" data-q="${n}"`) : ''}${phone ? K.bp(`Tell ${esc(first)}`, 'send', `data-act="srctell" data-lead="${esc(l.id)}"`) : ''}</div>`;
   }
-  const tell = c && (c.phone || c.phone2) && i < 4 ? `<button class="sx-btn red src-tell" data-act="srctellp" data-lead="${esc(l.id)}">${ic('chat', 18)}<span class="ell">Tell ${esc(firstWord(c.name))} · ${i >= 2 ? 'found it' : 'still looking'}</span></button>` : '';
-  return `<div class="src-head"><span class="src-ico">${ic(i >= 2 ? 'tick' : 'srcScope', 22)}</span><span class="tx"><b class="ell">${esc(l.name)}</b><span class="src-by">${avatar(who, 'xs')}<span class="ell">${esc(who)} asked for <b class="m">${n0(qty)}</b>${ask.at ? ' · ' + esc(srcWhen(ask.at)) : ''}</span></span></span><button class="sx-circle light" data-act="closesheet" aria-label="Close">${ic('close', 15)}</button></div>
-    ${track}${body}${tell}`;
+  // S2: where it is, as a short timeline; who was asked, each with one chip.
+  const found = i === 2 ? srcFound(l) : null, askedOn = ask.at ? new Date(Date.parse(ask.at)).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', '') : '';
+  const steps = [['You asked', `${esc(askedOn)} · ${n0(qty)} ${esc(unit)}${first && who !== 'Walk-in' ? ' for ' + esc(first) : ''}`, 'done'],
+    i === 0 ? [`${esc(pf)} has it`, 'Not started yet', 'now'] : [`${esc(pf)} ${i === 1 ? 'is looking' : 'looked'}`, sups.length ? `Asked ${sups.length} supplier${sups.length === 1 ? '' : 's'}` : 'Looking for a supplier', i === 1 ? 'now' : 'done'],
+    ['Found', i === 2 ? (found ? `At ${esc(srcCandName(found))} · ${esc(mgrName())} sets the selling price` : `${esc(mgrName())} sets the selling price`) : '', i === 2 ? 'now' : 'next'],
+    ['Listed with a price', 'You can sell it then', 'next']];
+  const chipOf = x => srcCandNone(x) ? K.chip('Doesn’t have it', 'bad') : srcCandPriced(x) ? K.chip('Has it', 'good') : K.chip('Waiting', 'caution');
+  return srcHead(K.tile('scope', 'indigo', 40), esc(l.name), `${esc(who)} asked for ${n0(qty)}`, i) + `<div class="k-body">
+    ${K.card(`<div class="src-tl">${K.tl(steps)}</div>`)}
+    ${sups.length ? K.label(`Who ${esc(pf)} asked`) + K.card(sups.map(x => K.row(K.tile('store', 'grey', 36), esc(srcCandName(x)), x.where ? esc(x.where) : '', chipOf(x))).join('')) : ''}
+  </div><div style="height:96px"></div>${phone ? `<div class="k-foot">${K.bp(`Tell ${esc(first)} it’s coming`, 'send', `data-act="srctellp" data-lead="${esc(l.id)}"`)}</div>` : ''}`;
 };
+function srcReqArgs(){ const t = S.stack[S.stack.length - 1]; return t && t.type === 'srcreq' ? t.args : null; }
+ACT.srcnstep = t => { const a = srcReqArgs(); if (!a) return; const l = (D().leads || []).find(x => String(x.id) === String(a.id)); a.qty = Math.max(1, (Number(a.qty) || srcWhoOf(l || {}).qty || 1) + Number(t.dataset.d)); haptic('light'); render(); };
+ACT['ch:srcnq'] = t => { const a = srcReqArgs(); if (!a) return; const v = Math.round(Number(String(t.value).replace(/[^0-9]/g, '')) || 0); if (v >= 1) a.qty = v; render(); };
 // Their chat with the words in the box, else WhatsApp (the srctell way).
 function srcTellText(c, text){
   const conv = typeof waConvForCustomer === 'function' ? waConvForCustomer(c) : null;
@@ -10481,21 +10527,22 @@ function srcTellText(c, text){
 ACT.srctellp = t => {
   const l = (D().leads || []).find(x => String(x.id) === t.dataset.lead); if (!l) return;
   const ask = srcLastAsk(l) || {}, c = ask.customerId ? customerById(ask.customerId) : null; if (!c) return;
-  const text = srcStageIdx(l) >= 2 ? `Hello ${firstWord(c.name)}, good news: we’ve found ${l.name}. I’ll send you the price as soon as it’s set.`
+  const text = srcStep(l) >= 2 ? `Hello ${firstWord(c.name)}, good news: we’ve found ${l.name}. I’ll send you the price as soon as it’s set.`
     : `Hello ${firstWord(c.name)}, we’re still looking for ${l.name} for you. I’ll tell you as soon as we have it.`;
-  closeSheet(); srcTellText(c, text);
+  srcTellText(c, text);
 };
 ACT.srctell = t => {
   const l = (D().leads || []).find(x => String(x.id) === t.dataset.lead); if (!l) return;
   const ask = srcLastAsk(l) || {}, c = ask.customerId ? customerById(ask.customerId) : null; if (!c) return;
-  const pr = srcListedPrice(l), text = `Hello ${firstWord(c.name)}, good news: we now have ${l.name}${pr ? ` at ${n0(pr.each)}${pr.unit ? ' a ' + pr.unit : ' each'}` : ''}. Shall I put ${n0(Number(ask.qty) || 1)} on an order for you?`;
+  const a = srcReqArgs(), n = (a && Number(a.qty)) || Number(ask.qty) || 1;
+  const pr = srcListedPrice(l), text = `Hello ${firstWord(c.name)}, good news: we now have ${l.name}${pr ? ` at ${n0(pr.each)}${pr.unit ? ' a ' + pr.unit : ' each'}` : ''}. Shall I put ${n0(n)} on an order for you?`;
   srcTellText(c, text);
 };
 ACT.srcorder = t => {
   const l = (D().leads || []).find(x => String(x.id) === t.dataset.lead); if (!l || !l.productId || !productById(l.productId)) return;
   const ask = srcLastAsk(l) || {}, c = ask.customerId ? customerById(ask.customerId) : null;
   startFor(c, false, true, { noOpen: true });
-  if (!onOrder(l.productId, null)) addLine(l.productId, null, Number(ask.qty) || 1, 'unit');
+  if (!onOrder(l.productId, null)) addLine(l.productId, null, Number(t.dataset.q) || Number(ask.qty) || 1, 'unit');
   saveDraft(); openOrderPage();
 };
 /* Today: an ask of yours listed in the last week, once, with the customer to tell. */
