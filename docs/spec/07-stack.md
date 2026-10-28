@@ -4,6 +4,8 @@ What this covers: the tools the new front end is built with, why each fits this 
 Date: 2026-10-28
 Status: **proposed — Kevin approves** (questions in §7)
 
+> **Small files stay the rule.** Everything a session writes, reads and edits is in `src/`: small files, 200–500 lines, never over 1,000 (`docs/rebuild.md` rule 6). The **one page per role** in §0 is only what the build makes from them for the machines — Vercel, the phone apps, the offline cache — like an APK. Nobody edits it or needs to read it; it is made again from `src/` every time, and the size guard measures `src/`, not it.
+
 ---
 
 ## 0. The answer
