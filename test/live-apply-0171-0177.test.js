@@ -21,6 +21,9 @@
  *        - shaped as which-migrations.sql found live (0120 partly, 0153 and
  *          0158 missing): the catch-up script brings it level, twice over,
  *          and then the fixes go in;
+ *        - with 0116's void guard back in place (live, 28 Oct): void-guard.sql
+ *          names it and puts 0122's back, then the fixes go in; a guard
+ *          changed by hand is refused and left alone;
  *        - with the void guard's wording changed by hand, step 1 stops and names it,
  *          and step 3 (if run anyway) fails as a whole, leaving nothing.
  *
@@ -45,6 +48,8 @@ const step = (n) => {
 };
 const which = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-which-migrations-sql.js')], { encoding: 'utf8' });
 t.check(which.status === 0 && which.stdout === read('docs/live/which-migrations.sql'), 'docs/live/which-migrations.sql is what tools/build-which-migrations-sql.js makes now');
+const guard = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-void-guard-sql.js')], { encoding: 'utf8' });
+t.check(guard.status === 0 && guard.stdout === read('docs/live/void-guard.sql'), 'docs/live/void-guard.sql is what tools/build-void-guard-sql.js makes now');
 const catchUp = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-catch-up-sql.js')], { encoding: 'utf8' });
 t.check(catchUp.status === 0 && catchUp.stdout === read('docs/live/catch-up-before-0171.sql'), 'docs/live/catch-up-before-0171.sql is what tools/build-catch-up-sql.js makes now');
 t.check(!/\b(insert|update|delete|create|alter|drop)\b/i.test(read('docs/live/which-migrations.sql').replace(/--[^\n]*/g, '').replace(/'[^']*'/g, '')), 'which-migrations.sql only reads');
@@ -147,6 +152,35 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
   t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then the fixes go in: steps 1, 3 and 4 pass (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
   psql(['-qAt', '-c', 'drop database if exists ow_live_apply_found']);
+}
+
+// Live's void guard was 0116's (step 1 stopped on it, 28 Oct): void-guard.sql
+// names it, puts 0122's in place, and the fixes then go in. An unknown guard
+// is left alone.
+{
+  const { on } = makeDb('ow_live_apply_guard', '0170');
+  const m116 = fs.readFileSync(path.join(migDir, fs.readdirSync(migDir).find((f) => f.startsWith('0116_'))), 'utf8');
+  const i = m116.indexOf('create or replace function saved_quotes_sales_guard()'), j = m116.indexOf('$$', i), k = m116.indexOf('$$', j + 2);
+  const back = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], m116.slice(i, k + 3));
+  t.check(back.status === 0, `a database whose void guard is 0116's again (${errs(back)[0] || 'ok'})`);
+  t.check(/changed since its migration/.test(run(on, 1).stderr), 'apply step 1 stops on it, as it did on live');
+  const vg = read('docs/live/void-guard.sql');
+  const vstep = (n) => { const a = vg.indexOf(`-- STEP ${n} `), b = vg.indexOf(`-- STEP ${n + 1} `); return vg.slice(vg.lastIndexOf('\n-- ====', a), b < 0 ? undefined : vg.lastIndexOf('\n-- ====', b)); };
+  const has = () => ((on(['-qAt', '-F', '|'], vstep(1)).stdout || '').split('|')[0] || '').trim();
+  t.check(has() === '0116_manager_role', `void-guard.sql step 1 names it: ${has()}`);
+  const put = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2));
+  t.check(put.status === 0 && has() === '0122_manager_decisions', `step 2 puts 0122's in place (${errs(put)[0] || has()})`);
+  t.check(on(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2)).status === 0 && has() === '0122_manager_decisions', 'step 2 again changes nothing');
+  const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
+  t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then the fixes go in (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
+  // A guard nobody in the repo wrote: step 2 refuses, and leaves it as it was.
+  const { on: on2 } = makeDb('ow_live_apply_guard2', '0170');
+  on2(['-qAt', '-c', `do $x$ begin execute replace(pg_get_functiondef('saved_quotes_sales_guard()'::regprocedure), 'Make a new order instead.', 'Start again.'); end $x$`]);
+  const before = on2(['-qAt', '-c', `select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard'`]).stdout;
+  const refuse = on2(['-qAt', '-v', 'ON_ERROR_STOP=1'], vstep(2));
+  const after = on2(['-qAt', '-c', `select md5(prosrc) from pg_proc where proname = 'saved_quotes_sales_guard'`]).stdout;
+  t.check(refuse.status !== 0 && /none of the repo's versions/.test(refuse.stderr) && before === after, 'a guard changed by hand: step 2 refuses and leaves it as it was');
+  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_guard', '-c', 'drop database if exists ow_live_apply_guard2']);
 }
 
 // The void guard changed by hand: step 1 names it; step 3 run anyway leaves nothing behind.
