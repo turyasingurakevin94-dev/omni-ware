@@ -55,6 +55,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Word | Means | Never | Decided |
 |---|---|---|---|
 | On the shelf / the shelf | The books less what has left for orders not invoiced yet | "books" next to a shelf figure ("The shelf has 3 kg", not "The books hold 3 kg") | Store R1 · DATA-04 |
+| 12 on shelf · Order in · Out | Sales' three stock words on an item: how many can be sold now; not on the shelf but the shop buys it for the order; can't be had | bought in; shop checks for supplier; waiting for a supplier; held; free | Sales design review, 28 Oct |
 | Books | Only where the real books are meant | — | Store R1 · DATA-04 |
 | Left the shelf · not invoiced yet | The orders between the shelf and the books, listed on the item page | — | Store, before the loop |
 | No aisle yet | A product with no category. It takes no aisle letter. | a letter, "Other" | Store R1 · DATA-05 |
@@ -75,8 +76,8 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Deposit | Money a customer paid ahead and confirmed keeping; their next bill uses it first. "Deposit 50,000", green; a balance below 0. | on account; credit (credit is the Manager's pay-later); "-50,000" | Sales R1 · SAL-005 |
 | Give change | The default when someone pays more than they owe: the extra goes back | keeping it quietly | Sales R1 · SAL-005 |
 | Paid over | Paid more than the bill, before anyone settled it (change, or a deposit if the customer confirms); Accounts settles it | — | Sales R1 · SAL-005 |
-| To price | A line with no selling price yet; nothing is owed on it until the Manager prices it ("2 lines to price · Ruth", "Priced so far") | billing it at cost | Sales R1 · SAL-007 |
-| Doesn't add up | A customer's balance and their open bills disagree; Accounts checks it ("349,000 apart") | two figures with no word | Sales R1 · SAL-011 |
+| Price coming | A line with no selling price yet; nothing is owed on it until the Manager prices it ("1 price coming", "Priced so far"). It still goes on the order. | to price; price to confirm; to be confirmed; billing it at cost | Sales R1 · SAL-007; renamed by the Sales design review, 28 Oct |
+| Being checked | Money Accounts is checking: a bill that may already be paid, or a balance and bills that disagree ("349,000 apart · Esther is checking") | in question; doesn't add up; which is it; two figures with no word | Sales R1 · SAL-011; one word by the Sales design review, 28 Oct |
 | Money on a phone | Shown only to the roles allowed to see it, enforced in SQL by role. The yard's phone gets no money at all. | hidden in the browser only | Store, before the loop (0159, 0160) |
 
 ## Time
