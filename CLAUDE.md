@@ -15,11 +15,12 @@ One wholesale hardware shop in Uganda, run from phones. An order's journey is **
 
 # The rebuild (standing goal) — read `docs/rebuild.md`
 
-The apps are being moved, step by step, from a few huge files to small files with every shared rule in one place. Before touching app code, read `docs/rebuild.md` and follow it:
-- **Leave it smaller.** No source file over 1,000 lines (aim 200–500). A screen you change moves into its own file once its app is on the build step. `test/file-size.test.js` guards this; its ceilings only go down.
-- **One rule, one place.** Never copy a function into another app. If two copies disagree, list it under "Decisions waiting for Kevin" in `docs/rebuild.md`; never pick silently.
-- **Built files are not edited.** Once an app is on the build step, edit `src/`, never the `GENERATED` `<app>.html`.
-- **No behaviour change by accident.** A move changes nothing the shop sees. Update the Log in `docs/rebuild.md` with each step.
+A new front end is being built from a written spec (`docs/spec/`) on the **same database**, one role at a time; each new app replaces its old one only when it is clearly better. Before touching app code, read `docs/rebuild.md` and follow it:
+- **Spec first.** Build to `docs/spec/`, not to the old app. A rule found in old code that is not in the spec goes into the spec first, with its source.
+- **One database.** Never copy the backend. Database changes go through `supabase/migrations/` as now.
+- **Small files.** No source file over 1,000 lines (aim 200–500). `test/file-size.test.js` guards this; its ceilings only go down.
+- **One rule, one place.** Never copy a function between apps. If two copies disagree, list it as an open question for Kevin; never pick silently.
+- **The old app is frozen while its new one is built**: urgent fixes only. Update the Log in `docs/rebuild.md` with each step.
 
 # Keep it reasonable — coach Kevin
 

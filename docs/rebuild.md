@@ -1,83 +1,67 @@
 # The rebuild — standing goal
 
-**Same apps, same screens, same books. Built from small files, with every
-shared rule in one place.** Every session reads this before touching app
-code and leaves the code a little smaller than it found it.
+**A new front end, built cleanly from a written spec, on the database we
+already have. Role by role, each new app replaces its old one only when it
+is clearly better.** Kevin set this goal on 2026-10-28.
 
-Kevin set this goal on 2026-10-28. It is not a feature: nothing the shop
-sees changes unless Kevin approves a change by name.
+## Why this way
 
----
+| Option | Verdict |
+|---|---|
+| Keep editing the old apps | Months of moving code around to end with the same screens. The old shape keeps pulling back. |
+| Start over, database too | Throws away the part that is right (169 migrations, one-write money, decision rights in the database) and risks the shop's real books in a data move. |
+| **New front end, same database** | Clean design from line one; the old tests and audit lessons carried over through the spec; the old app stays as a fallback. |
 
 ## Done looks like
 
 | Measure | Today (2026-10-28) | Done |
 |---|---|---|
 | Biggest source file | `index.html`, 181,049 lines | under 1,000 (aim 200–500) |
-| Role app source (e.g. `store.html`) | 4,333–17,391 lines in one file | a 100–300 line shell + the screens it uses |
-| Functions copied into 2+ apps | 552 names, 13,679 duplicate lines | 0 — each lives once in `core/` or `flow/` |
+| Phone role apps, all together | ~73,000 lines in 11 files | ~15,000–25,000 lines in small files |
+| Functions copied into 2+ apps | 552 names, 13,679 duplicate lines | 0 — each rule lives once |
 | Copies that disagree | 250 (35 touch money) | 0 — one rule, decided by Kevin where they differ |
-| Files one task has to read | one 6,000–180,000 line file | 3–6 small files |
-| Tests | 478 files | same tests, still green, plus the size guard |
+| Where the rules are written | in the code, in six places | `docs/spec/`, one place, with the test that proves each |
 
-## The design
+## The rules
 
-**Small files in the source, one file on the phone.** Each phone app ships
-one HTML file: its APK build copies only that page (`apps/<app>/scripts/build-www.js`),
-the live update fetches only that page, the service workers cache only
-that page, and 470 tests read functions straight out of it. So the shipped
-file stays, and becomes a **built** file:
-
-```
-src/
-  core/            one copy, used by every app
-    money.js         UGX, balances, credit, aging, markup, totals
-    data.js          Supabase, the offline queue, sync
-    auth.js          log in, shop picker, role
-    ui/              header, sheet, slide, tiles, icons, tokens (CSS)
-    words.js         the glossary, in code
-  flow/            the order's journey, one folder per stage, one file per screen
-    orders/  buying/  yard/  delivery/  payments/  customers/
-  apps/            thin: which tabs and screens each role gets
-    store/  sales/  buyer/  manager/  accounts/  owner/  sourcing/ ...
-
-tools/build-apps.js     src/apps/<app>/ + what it uses  →  <app>.html
-```
-
-- `<app>.html` keeps its name, its place and its single-file shape. Nothing
-  downstream changes: APK builds, live updates, service workers, Vercel,
-  tests.
-- A built file starts with `GENERATED from src/ — do not edit`. A test
-  rebuilds every app and fails if a built file differs from its source, so
-  an edit made to the wrong file cannot slip through.
-- No bundler and no framework. The build stitches files together in a
-  fixed order, nothing more. Plain JS, as now.
+1. **One database.** The new apps use the same Supabase project, tables,
+   server functions and decision rights. Never a copy. Database changes go
+   through `supabase/migrations/` as now.
+2. **Spec first.** `docs/spec/` says what the system does. Build to it. A rule
+   found in old code that is not in the spec is added to the spec first.
+3. **One role at a time.** The next role starts only when the last one has
+   replaced its old app.
+4. **The old app is frozen while its new one is built.** Urgent fixes only, no
+   new features; otherwise everything is built twice.
+5. **Leave alone what works and rarely changes**: Owner, Worker, Supplier, and
+   the console for now.
+6. **Small files.** No source file over 1,000 lines (aim 200–500).
+   `test/file-size.test.js` guards it.
+7. **Plan for the shop we have** (one business, two shops, a few dozen staff),
+   not for scale nobody has.
 
 ## The phases
 
-Each step is its own small change: tests green before and after, merged
-to main the same day, and no screen or total changes unless Kevin has
-approved that difference.
-
-- [x] **0. Guardrails.** This file, CLAUDE.md pointing at it, the size
-      guard (`test/file-size.test.js`), the baseline below.
-- [ ] **1. The build step, on one app.** `tools/build-apps.js` plus the
-      "built file matches its source" test. Pilot: `owner.html` (smallest
-      role app). First cut is mechanical: split into files that rebuild it
-      **byte for byte**, so nothing can change.
-- [ ] **2. `core/money.js`.** Kevin decides each disagreement (below), then
-      one copy serves every app. The money tests prove the totals.
-- [ ] **3. The rest of `core/`.** UI kit, data and sync, log in, words.
-- [ ] **4. Each role app, screen by screen.** Each app moves to the build step
-      once, then shrinks during its normal rounds: a screen a round touches
-      moves into `flow/` in the same change.
-- [ ] **5. The console (`index.html`)**, page by page. Biggest, so last.
+- [x] **0. Guardrails.** This file, CLAUDE.md pointing at it, the size guard,
+      the baseline below.
+- [ ] **1. The spec** (`docs/spec/`). From the existing system: the order's
+      journey, money, roles, screens, data, offline and pushes. Kevin reviews
+      each chapter.
+- [ ] **2. The stack.** One page in the spec (chapter 07); Kevin approves.
+      Leaning: TypeScript, Vite, Preact; Supabase and Capacitor stay.
+- [ ] **3. The shared core.** Money (one rule each, Kevin's answers below),
+      data and offline sync, log in, the screen parts. The old money tests are
+      ported as its checks.
+- [ ] **4. Role apps, one at a time**, to the approved canvases: Store first,
+      then Sales, Buyer, Manager, Accounts. Each is tried on a preview link,
+      then its role switches over; the old app stays one release as fallback.
+- [ ] **5. Later, if ever:** Owner, Worker, Supplier, Agent, the console.
 
 ## Decisions waiting for Kevin
 
-Copies that **behave differently**, found 2026-10-28. Phase 2 needs one
-answer each. The rest of the 250 disagreements are checked the same way
-when their phase comes; many only differ in names.
+Copies that **behave differently**, found 2026-10-28. The shared core
+(phase 3) needs one answer each. The rest of the 250 disagreements are checked the same way
+when the money chapter is written; many only differ in names.
 
 | Rule | Where they disagree | Suggested answer |
 |---|---|---|
