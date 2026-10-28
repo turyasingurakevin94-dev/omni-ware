@@ -31,8 +31,10 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/- \[x\] Moving a stage needs `order\.move`, and only to an allowed next stage \(journey Q2\)/.test(read('docs/rebuild.md')), 'docs/rebuild.md ticks it off');
   const fn = sql.slice(sql.indexOf('function saved_quotes_stage_move'));
   t.check(/when t < f then array\['order\.move'\]/.test(fn), 'back to an earlier stage: order.move');
-  t.check(/old\.status = 'draft' and new\.status in \('awaiting_goods', 'preparing'\) then array\['order\.move', 'supplier\.confirm'\]/.test(fn), 'out of Checking: order.move, or the Buyer\'s supplier.confirm');
-  t.check(/'awaiting_goods' and new\.status = 'preparing' then array\['order\.move', 'stock\.receive'\]/.test(fn), 'Buying to Packing: order.move, or stock.receive (receive_trip)');
+  t.check(/was = 'draft' and new\.status in \('awaiting_goods', 'preparing'\) then array\['order\.move', 'supplier\.confirm'\]/.test(fn), 'out of Checking: order.move, or the Buyer\'s supplier.confirm');
+  t.check(/tg_op = 'INSERT' and new\.status = 'preparing' then array\['quote\.make', 'order\.move'\]/.test(fn) && /tg_op = 'INSERT' and new\.status = 'awaiting_goods' then array\['order\.move'\]/.test(fn),
+    'a new order placed past Checking is a move out of it: Packing with quote.make or order.move, Buying with order.move');
+  t.check(/was = 'awaiting_goods' and new\.status = 'preparing' then array\['order\.move', 'stock\.receive'\]/.test(fn), 'Buying to Packing: order.move, or stock.receive (receive_trip)');
   t.check(/'pending_delivery' then array\['order\.move', 'order\.load'\]/.test(fn) && /new\.status = 'completed' then array\['order\.move', 'order\.deliver'\]/.test(fn), 'load and deliver: order.move, or the Store\'s order.load and order.deliver');
   t.check(/when new\.status = 'completed' then array\['order\.move'\]/.test(fn), 'any stage to Delivered: order.move ("mark done")');
   t.check((fn.match(/errcode = 'OWSTG'/g) || []).length >= 3 && /errcode = '42501'/.test(fn), 'a move not allowed is OWSTG; a missing task 42501');

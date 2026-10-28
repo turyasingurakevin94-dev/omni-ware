@@ -22,8 +22,12 @@
 -- Anything else is refused (OWSTG): a skip forward other than "mark done",
 -- a stage that is not one of the five, and any move on an order that is
 -- invoiced or voided (manager.html obMove refused those already). A new
--- order starts in Checking or Packing (the gate may then send a shelf-only
--- one on, 0119 step 4b). A missing task is refused 42501.
+-- order is placed in Checking; one placed further on is judged as a move out
+-- of Checking in the same write (the gate holds it there as it holds any
+-- move, 0119 "held at insert too"), and one placed straight in Packing (a
+-- shelf-only order, sales.html nwShelfOnly) also passes with quote.make;
+-- supplier.confirm never places one.
+-- A missing task is refused 42501.
 --
 -- Not judged: writes with no login (the Edge Functions, the hourly run, and
 -- a server function's own hand after ow_system_begin, such as the counter
@@ -62,6 +66,7 @@ declare
   t int;
   tasks text[];
   k text;
+  was text;
 begin
   -- No login: the Edge Functions, the hourly run, a server function's own hand.
   if auth.uid() is null then return new; end if;
@@ -70,39 +75,42 @@ begin
   -- An upsert of an order already here is judged by the update it becomes.
   if tg_op = 'INSERT' and exists (select 1 from saved_quotes x where x.shop_id = new.shop_id and x.id = new.id) then return new; end if;
 
+  -- A new order is placed in Checking; one placed further on is a move out of Checking in the same write.
   if tg_op = 'INSERT' then
-    if new.status is null or new.status not in ('draft', 'preparing') then
-      raise exception 'A new order starts in Checking or Packing, not %.', ow_stage_word(new.status) using errcode = 'OWSTG';
+    if new.status = 'draft' then return new; end if;
+    was := 'draft';
+  else
+    if new.status is not distinct from old.status then return new; end if;
+    if coalesce(old.invoiced, false) or coalesce(old.voided, false) then
+      raise exception 'This order is % — its stage stays %.', case when coalesce(old.voided, false) then 'voided' else 'invoiced' end,
+        ow_stage_word(old.status) using errcode = 'OWSTG';
     end if;
-    return new;
+    was := old.status;
   end if;
-
-  if new.status is not distinct from old.status then return new; end if;
-  if coalesce(old.invoiced, false) or coalesce(old.voided, false) then
-    raise exception 'This order is % — its stage stays %.', case when coalesce(old.voided, false) then 'voided' else 'invoiced' end,
-      ow_stage_word(old.status) using errcode = 'OWSTG';
-  end if;
-  f := array_position(stages, old.status);
+  f := array_position(stages, was);
   t := array_position(stages, new.status);
   if f is null or t is null then
-    raise exception 'An order can''t go from % to %.', ow_stage_word(old.status), ow_stage_word(new.status) using errcode = 'OWSTG';
+    raise exception 'An order can''t go from % to %.', ow_stage_word(was), ow_stage_word(new.status) using errcode = 'OWSTG';
   end if;
 
   tasks := case
     when t < f then array['order.move']                                         -- back (the Manager's undo)
-    when old.status = 'draft' and new.status in ('awaiting_goods', 'preparing') then array['order.move', 'supplier.confirm']
-    when old.status = 'awaiting_goods' and new.status = 'preparing' then array['order.move', 'stock.receive']
-    when old.status = 'preparing' and new.status = 'pending_delivery' then array['order.move', 'order.load']
-    when old.status in ('preparing', 'pending_delivery') and new.status = 'completed' then array['order.move', 'order.deliver']
+    -- Placed straight in Packing (every line on our shelf) is placing it: quote.make.
+    when tg_op = 'INSERT' and new.status = 'preparing' then array['quote.make', 'order.move']
+    when tg_op = 'INSERT' and new.status = 'awaiting_goods' then array['order.move']  -- the Buyer places no orders
+    when was = 'draft' and new.status in ('awaiting_goods', 'preparing') then array['order.move', 'supplier.confirm']
+    when was = 'awaiting_goods' and new.status = 'preparing' then array['order.move', 'stock.receive']
+    when was = 'preparing' and new.status = 'pending_delivery' then array['order.move', 'order.load']
+    when was in ('preparing', 'pending_delivery') and new.status = 'completed' then array['order.move', 'order.deliver']
     when new.status = 'completed' then array['order.move']                      -- "mark done"
   end;
   if tasks is null then
-    raise exception 'An order can''t go from % to %.', ow_stage_word(old.status), ow_stage_word(new.status) using errcode = 'OWSTG';
+    raise exception 'An order can''t go from % to %.', ow_stage_word(was), ow_stage_word(new.status) using errcode = 'OWSTG';
   end if;
   foreach k in array tasks loop
     if has_task(new.shop_id, k) then return new; end if;
   end loop;
-  raise exception 'Moving an order from % to % is not yours to do (%).', ow_stage_word(old.status), ow_stage_word(new.status),
+  raise exception 'Moving an order from % to % is not yours to do (%).', ow_stage_word(was), ow_stage_word(new.status),
     array_to_string(tasks, ' or ') using errcode = '42501';
 end $$;
 -- Named to run before saved_quotes_ow_checking_gate (BEFORE triggers fire by name).
