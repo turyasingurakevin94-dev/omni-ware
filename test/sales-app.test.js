@@ -78,7 +78,7 @@ function loadPage(db){
   vm.createContext(sandbox);
   // boot() waits on getUser, which this fake never answers: the page stays
   // unbooted and the test drives it.
-  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payOverHTML, nmIsSale, custInFilter, qaIn, lineById, lineQtyWords, nwCreditHeld, qtyBack, qtyBackHTML, creditHoldFor, custAddsUp, custAddsUpHTML, getFIFOUnitCost, stockKey, goodsTotal, lineSettledOut, moneyIn, tdyToPriceNote, ordPatch, sb, payDepositOk, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskRich, ordFindRows };', sandbox);
+  vm.runInContext(app + '\n;globalThis.__x = { S, ACT, PAGE, nwCatMark, nwAskPick, chatReads, tdyFoundHTML, myGivenName, payBarParts, payView, payNorm, payDockHTML, payPaperHTML, payChange, payOverHTML, nmIsSale, custInFilter, qaIn, lineById, lineQtyWords, nwCreditHeld, qtyBack, qtyBackHTML, creditHoldFor, custAddsUp, custAddsUpHTML, getFIFOUnitCost, stockKey, goodsTotal, lineSettledOut, moneyIn, tdyToPriceNote, ordPatch, sb, payDepositOk, payNeedsWho, phoneOk, phoneState, nwSubOf, nwFindHTML, nwMiniDock, ordWhoHas, ordViews, ctHeroHTML, rowToQuote, ctRowFor, ctSell, ctKeepLocal, ctLand, counterDockHTML, draftQuote, n0, srcMatch, rowToLead, newDraft, mgrName, priceReviewState, priceToTell, priceTagHTML, quoteItemSellPrice, quoteTotal, pricedView, linePriceToConfirm, makeLine, payPlan, viewToday, viewOrders, viewCustomers, viewMe, priceTooLow, priceNoteFor, shopSellPrice, chatSaid, chatCanSend, chatKind, chatWhyNot, chatPriceLine, chatSender, shelfAvailable, heldForOrders, custAging, custOpenCharges, custOldestAge, custOldestOrNull, custDebtBands, custState, orderDue, pricedLive, nmPaidWord, ordStampHTML, ordViews, ordPaperLine, ordPictureRows, linePackOnly, bandHTML, salesTarget, nwSearch, nwPlacedNote, ordGateHTML, ordPaperHead, orderRow, ordPriceUpHTML, linePriceUp, lineBelowCost, pricesWaiting, viewOrders, supplierTerms, qtyText, orderExtraRows, nwPriceState, custNearNames, startFor, addLine, lineQtyWords, customerById, WA_WAIT_MAX_MINS, nearMarked, custNcNameCheck, ordMadeOf, ordStampHTML, SHEET, openSheet, ordAnswersHTML, custInQuestion, custTakeable, custStageRing, custMovingPaper, custDidYouMean, nwMovingDue, nwOwesChip, nwApplyHabit, nwDockHTML, nwWholeUnit, setLineQty, paySum, paySumRows, payRefOf, payRpc, needsYou, NW, ctGivenChoices, lineById, saveDraft, payReceiptText, nwOutChip, nwFocus, custNcPreview, custNcReady, ordStage, ordChipsHTML, qtyJumps, parseQuery, ctChangeHTML, sliderHTML, orderRow, custNcNameHit, tdyAskRich, ordFindRows, viewChats };', sandbox);
   return sandbox.__x;
 }
 function fakeDb(tables){
@@ -971,6 +971,40 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(!X.nmIsSale({ status: 'completed', invoiced: true, voided: false, qa: true }) && X.nmIsSale({ status: 'completed', invoiced: true, voided: false }), 'SAL-018: a test invoice is not in the goal');
     t.check(!X.custInFilter({ debt: 5000, qa: true }, 'owe') && X.custInFilter({ debt: 5000 }, 'owe'), 'SAL-018: a test customer is not among those who owe');
     t.check(/rowToQuote\(q\)\{[\s\S]*?qa: !!q\.qa/.test(html) && /qa: !!t\.qa/.test(html) && /qa: !!c\.qa/.test(html), 'SAL-018: the test mark is read from orders, receipts and customers');
+  }
+
+  // The team chat (0169): whose customer, first-come numbers, the Team tab, notes never sent.
+  {
+    const db = fakeDb({});
+    const X = loadPage(db);
+    Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1', email: 'g@shop.ug' }, shopName: 'Shop', role: 'sales' });
+    X.S.data.members = [{ user_id: 'u1', role: 'sales' }, { user_id: 'u2', role: 'sales' }, { user_id: 'm1', role: 'manager' }];
+    X.S.data.staff = [{ id: 1, name: 'Grace Akello', userId: 'u1' }, { id: 2, name: 'Brian Ouma', userId: 'u2' }, { id: 3, name: 'Ruth Nakato', userId: 'm1' }];
+    const ago = m => new Date(Date.now() - m * 60000).toISOString();
+    X.S.wa.convs = [{ id: 1, wa_id: '256772000001', profile_name: 'Kato', last_inbound_at: ago(12), last_message_at: ago(12), owner_user_id: 'u1' },
+      { id: 2, wa_id: '256701552904', profile_name: '', last_inbound_at: ago(4), last_message_at: ago(4), owner_user_id: null },
+      { id: 3, wa_id: '256772000005', profile_name: 'Ggaba', last_inbound_at: ago(31), last_message_at: ago(31), owner_user_id: 'u2' }];
+    X.S.wa.msgs = [{ id: 1, conversation_id: 1, direction: 'in', msg_type: 'text', body: 'Can you do 40 sheets?', sent_at: ago(12) }, { id: 2, conversation_id: 2, direction: 'in', msg_type: 'text', body: 'Do you have 3m iron sheets?', sent_at: ago(4) },
+      { id: 3, conversation_id: 3, direction: 'in', msg_type: 'text', body: 'Can I pay the rest on Friday?', sent_at: ago(31) }];
+    X.S.wa.loadedAt = 5; X.S.view = 'chats'; X.S.chatTab = 'mine';
+    const mine = X.viewChats();
+    t.check(/New numbers/.test(mine) && /data-act="chattake" data-conv="2"/.test(mine) && /data-conv="1"/.test(mine) && !/data-conv="3"/.test(mine), 'C1: Mine lists your customers, and the new number with Take first; a teammate’s customer is not yours');
+    X.S.chatTab = 'team';
+    const team = X.viewChats();
+    t.check(/Waiting now/.test(team) && /Brian’s customer/.test(team) && />Reply</.test(team) && />Take</.test(team) && /Not taken/.test(team), 'C5: Team lists who waits, oldest first: anyone may reply; a new number is taken');
+    t.check(team.indexOf('data-conv="3"') < team.indexOf('data-conv="1"'), 'C5: the longest wait comes first');
+    X.S.wa.convs.forEach(c => { delete c.owner_user_id; });
+    X.S.chatTab = 'mine';
+    t.check(!/New numbers/.test(X.viewChats()) && /data-conv="3"/.test(X.viewChats()), 'before 0169 there are no owners: every chat is everyone’s, as before');
+    X.S.wa.convs[0].owner_user_id = 'u1'; X.S.wa.convs[1].owner_user_id = null; X.S.wa.convs[2].owner_user_id = 'u2';
+    X.S.chatNote = { 1: true };
+    await X.ACT.chatsend({ dataset: { conv: '1' } });
+    t.check(!db.writes.some(w => w[1] === 'wa_notes'), 'an empty note is not saved');
+    X.S.chatDraft[1] = '@Brian they pay on Friday.';
+    await X.ACT.chatsend({ dataset: { conv: '1' } });
+    const nw = db.writes.find(w => w[0] === 'insert' && w[1] === 'wa_notes');
+    t.check(nw && nw[2].body === '@Brian they pay on Friday.' && nw[2].mentions.join() === 'u2' && nw[2].by_user === 'u1', 'C2: a team note is written to the team, naming Brian, and sent to nobody');
+    t.check(!db.writes.some(w => w[0] === 'rpc' || (w[1] === 'wa_messages')), 'C2: a note never goes to WhatsApp');
   }
 
   process.exit(t.done() ? 1 : 0);

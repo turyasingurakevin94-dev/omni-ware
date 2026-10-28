@@ -99,6 +99,8 @@ select _try('check: Reseller now', 'ok', $q$select _is($c$(select kind from cust
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select _try('grace: is on', 'ok', $q$select touch_presence('11111111-1111-1111-1111-111111111111')$q$);
 select _try('grace: again, one row', 'ok', $q$select touch_presence('11111111-1111-1111-1111-111111111111')$q$);
+select _try('grace: typing in Kato''s chat', 'ok', $q$select touch_presence('11111111-1111-1111-1111-111111111111', _conv('256772418220'), true)$q$);
+select _try('check: one row for Grace, in Kato''s chat, typing', 'ok', $q$select _is($c$(select count(*) from member_presence) = 1 and (select conv_id from member_presence) = _conv('256772418220') and (select typing_at from member_presence) is not null$c$)$q$);
 select _try('check: one row for Grace', 'ok', $q$select _is($c$(select count(*) from member_presence) = 1$c$)$q$);
 select _try('grace: may not write presence for someone else', 'refused', $q$insert into member_presence(shop_id,user_id) values ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000e')$q$);
 

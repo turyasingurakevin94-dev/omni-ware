@@ -45,7 +45,7 @@
 --   drop trigger if exists wa_conversations_owner_guard on wa_conversations; drop trigger if exists wa_messages_reply_push on wa_messages;
 --   drop trigger if exists wa_notes_push on wa_notes; drop trigger if exists customers_kind_guard on customers;
 --   drop function if exists take_conversation(bigint); drop function if exists hand_conversation(bigint, uuid, text);
---   drop function if exists move_conversation(bigint, uuid, text); drop function if exists touch_presence(uuid);
+--   drop function if exists move_conversation(bigint, uuid, text); drop function if exists touch_presence(uuid, bigint, boolean);
 --   drop function if exists chat_served(uuid, bigint);
 --   delete from role_tasks where task in ('chat.take', 'chat.move');
 --   (the new columns and tables can stay: nothing else reads them)
@@ -316,21 +316,29 @@ create table if not exists member_presence (
   shop_id uuid not null references shops(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   seen_at timestamptz not null default now(),
+  -- The chat they have open, and when they last typed in it ("Brian is typing a reply here").
+  conv_id bigint,
+  typing_at timestamptz,
   primary key (shop_id, user_id)
 );
+alter table member_presence add column if not exists conv_id bigint;
+alter table member_presence add column if not exists typing_at timestamptz;
 alter table member_presence enable row level security;
 drop policy if exists "shop members read" on member_presence;
 create policy "shop members read" on member_presence for select using (is_shop_member(shop_id));
-create or replace function touch_presence(p_shop_id uuid)
+create or replace function touch_presence(p_shop_id uuid, p_conv bigint default null, p_typing boolean default false)
 returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null or not is_shop_member(p_shop_id) then return; end if;
-  insert into member_presence (shop_id, user_id, seen_at) values (p_shop_id, auth.uid(), now())
-  on conflict (shop_id, user_id) do update set seen_at = excluded.seen_at;
+  insert into member_presence (shop_id, user_id, seen_at, conv_id, typing_at)
+       values (p_shop_id, auth.uid(), now(), p_conv, case when p_typing then now() end)
+  on conflict (shop_id, user_id) do update
+     set seen_at = excluded.seen_at, conv_id = excluded.conv_id,
+         typing_at = case when p_typing then now() when excluded.conv_id is distinct from member_presence.conv_id then null else member_presence.typing_at end;
 end $$;
-revoke all on function touch_presence(uuid) from public, anon;
-grant execute on function touch_presence(uuid) to authenticated;
+revoke all on function touch_presence(uuid, bigint, boolean) from public, anon;
+grant execute on function touch_presence(uuid, bigint, boolean) to authenticated;
 
 -- ---------------------------------------------------------------------
 -- 8. Who served a customer this year: messages each person sent in the chat.
