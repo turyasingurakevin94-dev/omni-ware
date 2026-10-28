@@ -82,7 +82,13 @@ begin execute 'select (' || cond_sql || ')' into ok;
   if not coalesce(ok, false) then raise exception 'not so: %', cond_sql; end if; end $$;
 grant execute on function _is to authenticated;
 
-update saved_quotes set amount_paid = 35000 where id = 8003;
+-- 8003 is paid at the counter as counter_sale writes it: a receipt, and a payment
+-- naming it (since 0165 the amount paid is the sum of the payments, each with its receipt).
+insert into cash_txns(id, shop_id, date, account, type, category, amount, description, quote_id)
+ values (9803,'11111111-1111-1111-1111-111111111111',current_date,'cash','receipt','Sales Revenue',35000,'Counter sale — order #8003',8003);
+update saved_quotes set amount_paid = 35000,
+  payload = payload || '{"payments":[{"id":1,"amount":35000,"cashTxnId":9803,"method":"cash","note":"Counter sale"}]}'
+ where id = 8003;
 set role authenticated;
 
 -- ================= the Checking gate =================
@@ -95,8 +101,8 @@ select _try('check: a portal order still waits in Checking', 'ok', $q$select _is
 
 select _try('sales: an order at a price under the shop''s', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9103,'11111111-1111-1111-1111-111111111111','Kato Construction','draft','{"items":[{"lineId":"L1","productId":"P1","qty":2,"price":30000,"sellPrice":35000,"priceBy":"GA","priceNote":"under","supplierId":"S1"}]}')$q$);
 select _try('check: a supplier line stays in Checking', 'ok', $q$select _is($c$(select status='draft' from saved_quotes where id=9103)$c$)$q$);
-select _try('sales: move it on to Buying', 'ok', $q$update saved_quotes set status='awaiting_goods', payload = payload || '{"supplierConfirms":{"S1":{"state":"yes"}},"stageLog":[{"status":"awaiting_goods","at":1}]}' where id=9103$q$);
-select _try('check: held in Checking, the supplier''s yes kept, the move kept back', 'ok', $q$select _is($c$(select status='draft' and payload->'supplierConfirms'->'S1'->>'state'='yes' and payload->'gateHeldMove'->>'to'='awaiting_goods' and payload->'gateHeldMove'->>'why'='price' and not exists(select 1 from jsonb_array_elements(payload->'stageLog') e where e->>'status'='awaiting_goods') from saved_quotes where id=9103)$c$)$q$);
+select _try('sales: move it on to Buying', 'ok', $q$update saved_quotes set status='awaiting_goods', payload = payload || '{"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::2:30000"}},"stageLog":[{"status":"awaiting_goods","at":1}]}' where id=9103$q$);
+select _try('check: held in Checking, the supplier''s yes kept, the move kept back', 'ok', $q$select _is($c$(select status='draft' and payload->'supplierConfirms'->'S1'->>'state'='confirmed' and payload->'gateHeldMove'->>'to'='awaiting_goods' and payload->'gateHeldMove'->>'why'='price' and not exists(select 1 from jsonb_array_elements(payload->'stageLog') e where e->>'status'='awaiting_goods') from saved_quotes where id=9103)$c$)$q$);
 select _try('sales: decide its own price', 'refused', $q$update saved_quotes set payload = jsonb_set(payload, '{items,0,priceReview}', '{"price":35000,"qty":2}') where id=9103$q$);
 select _try('sales: a new order that brings its own price decision', 'refused', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9104,'11111111-1111-1111-1111-111111111111','X','draft','{"items":[{"productId":"P1","qty":1,"price":30000,"supplierId":"S1","priceReview":{"price":1,"qty":1}}]}')$q$);
 select _try('sales: re-save it by upsert, still held', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value select id,shop_id,client_name,'awaiting_goods',payload from saved_quotes where id=9103 on conflict (id) do update set status=excluded.status, payload=excluded.payload$q$);
@@ -117,9 +123,9 @@ select _try('sales: change the quantity', 'ok', $q$update saved_quotes set paylo
 select _try('check: the held move is dropped (stale)', 'ok', $q$select _is($c$(select status='draft' and not payload ? 'gateHeldMove' from saved_quotes where id=9105)$c$)$q$);
 
 -- credit: Kato owes 500,000 of a 1,000,000 limit; 20 bags at 37,500 is 750,000
-select _try('sales: an order that takes Kato over the limit, moved', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9106,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"customerId":"C001","items":[{"productId":"P1","qty":20,"price":30000,"supplierId":"S1"}]}')$q$);
+select _try('sales: an order that takes Kato over the limit, moved', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9106,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"customerId":"C001","items":[{"productId":"P1","qty":20,"price":30000,"supplierId":"S1"}],"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::20:30000"}}}')$q$);
 select _try('check: held for credit', 'ok', $q$select _is($c$(select status='draft' and payload->'gateHeldMove'->>'why'='credit' from saved_quotes where id=9106)$c$)$q$);
-select _try('sales: an order inside the limit, moved', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9107,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"customerId":"C001","items":[{"productId":"P1","qty":4,"price":30000,"supplierId":"S1"}]}')$q$);
+select _try('sales: an order inside the limit, moved', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9107,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"customerId":"C001","items":[{"productId":"P1","qty":4,"price":30000,"supplierId":"S1"}],"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::4:30000"}}}')$q$);
 select _try('check: inside the limit goes through', 'ok', $q$select _is($c$(select status='awaiting_goods' from saved_quotes where id=9107)$c$)$q$);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select _try('manager: says Hold', 'ok', $q$update saved_quotes set payload = payload || '{"creditCheck":{"decision":"hold"}}' where id=9106$q$);
@@ -128,7 +134,7 @@ select _try('manager: says Release', 'ok', $q$update saved_quotes set payload = 
 select _try('check: Release moves it on', 'ok', $q$select _is($c$(select status='awaiting_goods' from saved_quotes where id=9106)$c$)$q$);
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select _try('owner: move a price that waits', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9108,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"items":[{"productId":"P1","qty":1,"price":30000,"sellPrice":31000,"priceBy":"GA","priceNote":"under","supplierId":"S1"}]}')$q$);
+select _try('owner: move a price that waits', 'ok', $q$insert into saved_quotes(id,shop_id,client_name,status,payload) overriding system value values (9108,'11111111-1111-1111-1111-111111111111','Kato Construction','awaiting_goods','{"items":[{"productId":"P1","qty":1,"price":30000,"sellPrice":31000,"priceBy":"GA","priceNote":"under","supplierId":"S1"}],"supplierConfirms":{"S1":{"state":"confirmed","terms":"P1::1:30000"}}}')$q$);
 select _try('check: the gate binds the owner too', 'ok', $q$select _is($c$(select status='draft' from saved_quotes where id=9108)$c$)$q$);
 select _try('owner: decides the price', 'ok', $q$update saved_quotes set payload = jsonb_set(payload, '{items,0,priceReview}', '{"price":31000,"qty":1}') where id=9108$q$);
 select _try('check: and the order moves', 'ok', $q$select _is($c$(select status='awaiting_goods' from saved_quotes where id=9108)$c$)$q$);

@@ -7,7 +7,8 @@ grant all on all sequences in schema public to authenticated;
 insert into auth.users values
  ('00000000-0000-0000-0000-00000000000a','owner@x'),('00000000-0000-0000-0000-00000000000b','manager@x'),
  ('00000000-0000-0000-0000-00000000000c','buyer@x'),('00000000-0000-0000-0000-00000000000d','sales@x'),
- ('00000000-0000-0000-0000-00000000000e','store@x'),('00000000-0000-0000-0000-00000000000f','accounts@x');
+ ('00000000-0000-0000-0000-00000000000e','store@x'),('00000000-0000-0000-0000-00000000000f','accounts@x'),
+ ('00000000-0000-0000-0000-000000000012','worker@x');
 insert into shops(id, name, created_by) values ('11111111-1111-1111-1111-111111111111','Omni-ware','00000000-0000-0000-0000-00000000000a');
 insert into shop_members(shop_id,user_id,role) values
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000a','owner'),
@@ -15,7 +16,8 @@ insert into shop_members(shop_id,user_id,role) values
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000c','buyer'),
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000d','sales'),
  ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000e','store'),
- ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000f','accounts');
+ ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-00000000000f','accounts'),
+ ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-000000000012','staff');
 insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-111111111111','{}')
  on conflict (shop_id) do update set presets = excluded.presets;
 
@@ -24,13 +26,13 @@ insert into app_settings(shop_id, presets) values ('11111111-1111-1111-1111-1111
 -- price, credit, money or supplier hold stands in the way of a move.
 set session_replication_role = replica;
 insert into cash_txns(id, shop_id, date, account, type, category, amount, description, quote_id)
- select 9500 + g, '11111111-1111-1111-1111-111111111111', ow_today(), 'cash', 'receipt', 'Invoice Payment', 35000, 'Payment', 500 + g from generate_series(1, 9) g;
+ select 9500 + g, '11111111-1111-1111-1111-111111111111', ow_today(), 'cash', 'receipt', 'Invoice Payment', 35000, 'Payment', 500 + g from generate_series(1, 10) g;
 insert into saved_quotes(id, shop_id, client_name, date, status, invoiced, voided, amount_paid, payload) overriding system value
  select 500 + g, '11111111-1111-1111-1111-111111111111', 'Ken', ow_today(), s, g = 8, g = 9, 35000,
         jsonb_build_object('payments', jsonb_build_array(jsonb_build_object('id',1,'date',ow_today(),'amount',35000,'cashTxnId',9500 + g,'method','cash')),
           'items', jsonb_build_array(jsonb_build_object('lineId',1,'productName','Cement','qty',1,'price',30000,'sellPrice',35000,'supplierId','S1')),
           'supplierConfirms', '{"S1":{"state":"confirmed","terms":"::1:30000"}}'::jsonb)
-   from (values (1,'draft'),(2,'draft'),(3,'awaiting_goods'),(4,'preparing'),(5,'preparing'),(6,'pending_delivery'),(7,'draft'),(8,'completed'),(9,'preparing')) v(g, s);
+   from (values (1,'draft'),(2,'draft'),(3,'awaiting_goods'),(4,'preparing'),(5,'preparing'),(6,'pending_delivery'),(7,'draft'),(8,'completed'),(9,'preparing'),(10,'preparing')) v(g, s);
 set session_replication_role = origin;
 
 create table _r(n serial, label text, expect text, got text);
@@ -78,6 +80,13 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: loads #0504 (order.load)', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',504,'{"pickingStatus":"done"}'::jsonb,'pending_delivery',null)$q$);
 select _try('store: delivers #0506 (order.deliver)', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',506,'{"deliveredNote":"At the gate"}'::jsonb,'completed',null)$q$);
 select _try('check: #0504 is On the road, #0506 Delivered', 'ok', $q$select _is($c$_st(504) = 'pending_delivery' and _st(506) = 'completed'$c$)$q$);
+
+-- ---------------- a yard worker (a staff login in the Store app, 0164): the yard's moves only (0178)
+set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000012';
+select _try('worker: loads #0510 through store_patch_order', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',510,'{"pickingStatus":"done"}'::jsonb,'pending_delivery',null)$q$);
+select _try('worker: delivers it', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',510,'{"deliveredNote":"At the gate"}'::jsonb,'completed',null)$q$);
+select _try('check: #0510 is Delivered', 'ok', $q$select _is($c$_st(510) = 'completed'$c$)$q$);
+select _try('worker: moves #0502 out of Checking', 'refused', $q$update saved_quotes set status = 'preparing' where id=502$q$);
 
 -- ---------------- Sales (order.move, decision-rights)
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';

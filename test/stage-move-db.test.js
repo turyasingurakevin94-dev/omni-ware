@@ -40,6 +40,11 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check((fn.match(/errcode = 'OWSTG'/g) || []).length >= 3 && /errcode = '42501'/.test(fn), 'a move not allowed is OWSTG; a missing task 42501');
   t.check(/old\.invoiced, false\) or coalesce\(old\.voided, false\)/.test(fn), 'an invoiced or voided order\'s stage stays');
   t.check(/auth\.uid\(\) is null then return new/.test(fn) && /is_shop_admin\(new\.shop_id\) then return new/.test(fn), 'no login and the owner\'s console are not judged');
+  const m178 = read('supabase/migrations/0178_yard_workers_load_and_deliver.sql');
+  t.check(/m\.role in \('store', 'staff'\)/.test(m178) && /was in \('preparing', 'pending_delivery'\) and new\.status in \('pending_delivery', 'completed'\)/.test(m178)
+    && /m\.role in \('store', 'staff'\)/.test(read('supabase/migrations/0164_store_roles_and_privacy.sql')),
+    '0178: a store or staff login makes the yard\'s moves, as store_patch_order (0164) lets them');
+  t.check(/has_task\(new\.shop_id, 'order\.cancel'\)/.test(m178), '0178 keeps 0177\'s Cancel in the rule it writes out whole');
   t.check('saved_quotes_ow_a_stage_move' < 'saved_quotes_ow_checking_gate' && /create trigger saved_quotes_ow_a_stage_move before insert or update on saved_quotes/.test(sql), 'it runs before the Checking gate (BEFORE triggers fire by name)');
   // Every task it names is one the decision-rights table and role_tasks know.
   const dr = read('docs/decision-rights.md');
@@ -71,10 +76,13 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
 const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0173_stage_moves_need_their_task.sql')]);
 t.check(again.status === 0, `0173 runs a second time without error (${errs(again)[0] || 'ok'})`);
+// 0173's second run puts its own rule back; 0178 writes out the rule in force (0177's Cancel, the yard's workers).
+const inForce = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0178_yard_workers_load_and_deliver.sql')]);
+t.check(inForce.status === 0, `0178 puts the rule in force back, and runs twice too (${errs(inForce)[0] || 'ok'})`);
 
 const r = onDb(['-qAt', '-F', '\t'], fs.readFileSync(path.join(__dirname, 'fixtures', 'stage-move-scenario.sql'), 'utf8'));
 const rows = (r.stdout || '').split('\n').filter((l) => /^(PASS|FAIL)\t/.test(l));
-t.check(rows.length >= 28, `the scenario ran (${rows.length} cases${errs(r).length ? '; ' + errs(r).slice(0, 2).join(' | ') : ''})`);
+t.check(rows.length >= 32, `the scenario ran (${rows.length} cases${errs(r).length ? '; ' + errs(r).slice(0, 2).join(' | ') : ''})`);
 rows.forEach((l) => { const [verdict, label, got] = l.split('\t'); t.check(verdict === 'PASS', `${label} — ${got}`); });
 
 psql(['-qAt', '-c', `drop database if exists ${db}`]);

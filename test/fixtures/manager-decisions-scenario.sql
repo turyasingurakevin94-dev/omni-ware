@@ -160,7 +160,9 @@ select _try('check: one log row per decision, all the Manager''s', 'ok', $q$sele
 -- ---- as STORE: the acceptance is not the yard's
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: mark a trip''s difference accepted directly', 'refused', $q$update collection_trips set difference_accepted_at = now() where id = 'T2'$q$);
-select _try('store: count a trip (still open to members)', 'ok', $q$update collection_trips set yard_checked_at = now() where id = 'T2'$q$);
+-- Since 0164 the Store writes only through its functions: it counts a trip in with receive_trip (store.html), not by hand.
+select _try('store: count a trip in (receive_trip, as store.html does)', 'ok', $q$select receive_trip('11111111-1111-1111-1111-111111111111', 'T2', '[{"shop":3}]')$q$);
+select _try('store: write the count on the trip by hand (0164: through its functions only)', 'refused', $q$update collection_trips set yard_checked_at = now() where id = 'T2'$q$);
 select _try('store: report stock (stock.report, granted by 0124)', 'ok', $q$insert into stock_reports(shop_id,name,qty,why,reported_by) values ('11111111-1111-1111-1111-111111111111','Cement',1,'damaged','00000000-0000-0000-0000-00000000000e')$q$);
 
 -- ---- as OWNER: everything
