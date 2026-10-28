@@ -284,18 +284,18 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     Object.assign(X.S, { data: fixture(), shopId: SH, user: { id: 'u1' } });
     X.S.data.savedQuotes = [{ id: 41 }];
     X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P1', null, 10, { lineId: 1 })] };
-    t.check(/Slide · paid/.test(X.counterDockHTML()), 'all from the shelf at the shop’s price: one slide, paid');
+    t.check(/Slide to sell · /.test(X.counterDockHTML()) && !/aria-disabled/.test(X.counterDockHTML()), 'all from the shelf at the shop’s price: one slide, sell (K2)');
     const dk = X.counterDockHTML(), tot = X.pricedView(X.draftQuote()).total;
-    t.check(/THEY GAVE/.test(dk) && /data-act="ctgiven"/.test(dk) && /CHANGE/.test(dk), 'cash: what they gave, as one tap each, and the change');
+    t.check(/They gave/.test(dk) && /data-act="ctgiven"/.test(dk) && /data-act="ctgivenother"/.test(dk), 'cash: what they gave, as one tap each, the third typed in (K2, GK2)');
     X.S.draft.given = Math.ceil(tot / 5000) * 5000 + 5000;
     t.check(X.counterDockHTML().includes(X.n0(X.S.draft.given - tot)), 'the change is what they gave less the total');
     X.S.draft.payMethod = 'momo';
-    t.check(!/THEY GAVE/.test(X.counterDockHTML()), 'no change to give on MoMo');
+    t.check(!/They gave/.test(X.counterDockHTML()) && /Transaction ID/.test(X.counterDockHTML()) && /Type the ID first/.test(X.counterDockHTML()), 'no change to give on MoMo: its transaction ID, and the slide waits for it (GK2)');
     X.S.draft.payMethod = 'cash'; X.S.draft.given = null;
-    t.check(/ON THE COUNTER/.test(X.PAGE.counter()) && /all at the shop’s price/.test(X.PAGE.counter()), 'the counter screen lists the lines, at the shop’s price');
+    t.check(/data-act="nwprice"/.test(X.PAGE.counter()) && !/Under the shop’s price/.test(X.PAGE.counter()), 'the counter screen lists the lines, at the shop’s price');
     const keep = X.S.draft; X.S.draft = { ...X.newDraft(null), counter: true };
     const empty = X.PAGE.counter();
-    t.check(/Sells most at the counter/.test(empty) && /data-act="ctadd"/.test(empty) && /Nothing on the counter yet/.test(empty), 'an empty counter offers the shelf, one tap each');
+    t.check(/Sold most/.test(empty) && /data-act="ctadd"/.test(empty) && !/data-slide="counter"/.test(empty), 'an empty counter offers the shelf, one tap each, and no slide yet (K1)');
     t.check(!/data-pid="P2"/.test(empty), 'only what is on our own shelf');
     X.S.draft = keep;
     // 0136: the whole sale is ONE write, counter_sale. The phone never inserts the order or the receipt itself.
@@ -312,12 +312,12 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     X.S.stack = [];
     X.ctLand(id, r, 'cash', r.total + 1000);
     const done = X.PAGE.counterdone(X.S.stack[X.S.stack.length - 1].args);
-    t.check(/INVOICED/.test(done) && /GIVE BACK/.test(done) && done.includes(X.n0(1000)) && done.includes(r.invoice), 'sold, paid, invoiced: the change to give back and the invoice');
+    t.check(/Paid/.test(done) && /Give change/.test(done) && done.includes(X.n0(1000)) && /data-act="ctreceipt"/.test(done), 'sold and paid: the change to give back, large, and the receipt (K5)');
     X.S.draft = { ...X.newDraft(null), counter: true, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] };
-    t.check(/isn’t all on the shelf/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'a line bought in from a supplier is no counter sale: it becomes an order');
+    t.check(/sells only what is on the shelf/.test(X.counterDockHTML()) && /aria-disabled="true"/.test(X.counterDockHTML()) && /isn’t all on the shelf/.test(X.PAGE.counter()) && /data-act="countertoorder"/.test(X.PAGE.counter()), 'a line bought in from a supplier is no counter sale: it becomes an order');
     const it = X.makeLine('P1', null, 10, { lineId: 1 });
     X.S.draft = { ...X.newDraft(null), counter: true, items: [Object.assign(it, { sellPrice: it.sellPrice - 500, priceBy: 'u1', priceNote: 'under', priceShop: it.sellPrice })] };
-    t.check(/data-slide="counterask"/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()), 'under the shop’s price, the slide asks the Manager first');
+    t.check(/data-act="ctask"/.test(X.counterDockHTML()) && !/data-slide="counter"/.test(X.counterDockHTML()) && /data-act="ctshopnow"/.test(X.counterDockHTML()), 'under the shop’s price, one red Ask the Manager, no slide; or the shop’s price (GK4)');
   }
 
   // 3e. the browser review of 21 Oct: what a payment, a number, a size and a counter now say
@@ -349,13 +349,13 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     X.S.data.leads = [];
     X.S.draft = { ...X.newDraft(null), q: 'iron sheets' };
     const f = X.nwFindHTML();
-    t.check(/class="m nw-os"/.test(f) && /nw-opt[^"]*none/.test(f), 'each size shows its shelf count; an empty one is marked');
+    t.check(/on shelf|Order in/.test(f) && /data-act="(nwfindadd|nwnoprice)"/.test(f), 'each item says its shelf word, and adds in one tap (N5)');
     t.check(/Ask Sourcing/.test(f), 'under any results, a way to ask Sourcing');
     X.S.draft = X.newDraft(null);
-    t.check(/disabled/.test(X.nwMiniDock()), 'Review waits for a first item');
+    t.check(/Add an item first/.test(X.nwDockHTML()) && /aria-disabled="true"/.test(X.nwDockHTML()), 'the slide waits for a first item (N3a)');
     const cq = X.rowToQuote({ id: 78, status: 'draft', invoiced: false, amount_paid: 0, voided: false, payload: { client: { name: 'Kato' }, items: [X.makeLine('P2', 0, 5, { lineId: 1 })] } });
     t.check(/With the Buyer/.test(X.ordWhoHas(cq, X.ordViews(cq))), 'an order in Checking says who holds it');
-    t.check(/AT THE COUNTER TODAY/.test(X.ctHeroHTML()) && /No counter sales yet today/.test(X.ctHeroHTML()), 'the empty counter opens on the day, even a quiet one');
+    t.check(X.ctHeroHTML() === '', 'a quiet day at the counter shows no empty row (K1)');
   }
 
   // 3f. the retest of 21 Oct: what a chat says, what a search finds, what a bar fills
@@ -528,9 +528,9 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(dr.credit === false, 'SAL-11: no limit set: the order opens on Cash, whatever they did last time');
     X.S.draft = { ...dr, items: [X.makeLine('P1', null, 1, { lineId: 1 })] };
     // SAL-016 (R2CreditNoLimit): Credit says who decides, on its own row; chosen, it says it waits.
-    t.check(/No limit set · [^<]+ decides<\/small>/.test(X.nwDockHTML()) && /class="nw-paywide"/.test(X.nwDockHTML()) && !/nw-nolimw/.test(X.nwDockHTML()), 'SAL-016: no limit set: Credit says who decides, before it is chosen');
+    t.check(/Credit \+/.test(X.nwDockHTML()) && !/to say yes/.test(X.nwDockHTML()) && !/no credit limit set/.test(X.PAGE.neworder()), 'SAL-016: no limit set: Credit is a choice; nothing waits until it is chosen');
     X.S.draft.credit = true;
-    t.check(/It waits in Checking until [^<]+ says yes/.test(X.nwDockHTML()) && X.nwCreditHeld(X.S.draft), 'SAL-016: credit chosen with no limit set waits for the Manager');
+    t.check(/to say yes/.test(X.nwDockHTML()) && /no credit limit set\. On credit, it waits for/.test(X.PAGE.neworder()) && X.nwCreditHeld(X.S.draft), 'SAL-016: credit chosen with no limit set waits for the Manager, said once, with their chip (N10)');
     X.S.draft.credit = false;
     t.check(!X.nwCreditHeld(X.S.draft), 'SAL-016: the same order for cash does not wait');
     // SAL-12 / SAL-13: a box comes whole; past the shelf the line asks
@@ -674,7 +674,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(X.chatSender(out({})) === null && X.chatSender({ direction: 'in', sent_by_name: 'x' }) === null, 'a reply from before the stamp names nobody rather than a guess; a customer\'s message is theirs');
     const one = X.chatPriceLine('P2', 0, 1), bulk = X.chatPriceLine('P2', 0, 40), none = X.chatPriceLine('P3', null, 1);
     t.check(one && one.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 1))) && bulk.price === Math.round(X.quoteItemSellPrice(X.makeLine('P2', 0, 40))) && /^40 Iron sheets G28: /.test(bulk.text), 'a price is the selling price at the quantity they asked for');
-    t.check(none && none.price === null && /price to confirm/.test(none.text) && !/90,000|3,600/.test(none.text), 'no selling rule: "price to confirm", never the cost');
+    t.check(none && none.price === null && /price coming/.test(none.text) && !/90,000|3,600/.test(none.text), 'no selling rule: "price coming", never the cost');
   }
 
   // 7. the 19 Oct 2026 end-to-end test (docs/decision-rights.md rules A and B)
@@ -707,8 +707,8 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     const nails = X.makeLine('P3', null, 30), pk = X.linePackOnly(nails);
     t.check(pk && pk.pack === 25 && pk.units === 50 && pk.extra === 20, 'nails come only by the carton of 25: 30 makes the shop buy 50');
     t.check(X.linePackOnly(X.makeLine('P2', 0, 3)) === null && X.linePackOnly(X.makeLine('P3', null, 50)).extra === 0, 'a loose price, or a full carton, has nothing to offer');
-    X.S.draft = X.newDraft(null); X.S.draft.items = [nails];
-    t.check(/comes by the carton of 25/.test(X.bandHTML(nails)), 'the line on the order shows the carton size so the full carton can be offered');
+    X.S.draft = X.newDraft(null); X.S.draft.items = [nails]; X.S.draft.openLine = nails.lineId;
+    t.check(/sells it by the carton only/.test(X.bandHTML(nails)) && /Make it 50 · the full carton/.test(X.bandHTML(nails)), 'the line on the order says the supplier sells it by the carton, and offers the full one (GN4)');
     X.S.draft = null;
 
     // fix 9: one rule for how old a debt is, Accounts' (custOpenCharges + custAging)
@@ -829,7 +829,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
     t.check(X.qtyJumps(12, 120) && X.qtyJumps(12, 125) && !X.qtyJumps(12, 13) && !X.qtyJumps(1, 10) && !X.qtyJumps(12, 24), 'R4-01: a digit too many (12 → 120) asks; an ordinary change does not');
     const pq = X.parseQuery('-5 padlock');
     t.check(pq.qty === 5 && pq.neg === true && pq.words.join(' ') === 'padlock' && X.parseQuery('5 padlock').neg === false, 'a count typed with a minus is read as the count, and marked to say so');
-    t.check(/SHORT/.test(X.ctChangeHTML(null, 30300)) && /30,300/.test(X.ctChangeHTML(null, 30300)) && /CHANGE/.test(X.ctChangeHTML(700, 0)), 'short cash: the change slot says how short');
+    t.check(/Short by/.test(X.ctChangeHTML(null, 30300)) && /30,300/.test(X.ctChangeHTML(null, 30300)) && /Give change/.test(X.ctChangeHTML(700, 0)), 'short cash: “Short by” where the change was (K3)');
     X.S.offline = true;
     const sl = X.sliderHTML('counter', 'Slide · paid 480,300 cash', { money: 'cash' });
     t.check(/Back online to sell/.test(sl) && /aria-disabled="true"/.test(sl) && !/Back online/.test(X.sliderHTML('tell', 'Slide to send')), 'no connection: the slides that write wait, and say so');
@@ -954,7 +954,7 @@ t.check(P.linePriceToConfirm(matrix[5][1]) && P.quoteItemSellPrice(matrix[5][1])
       const box = { value: typed, dataset: { lid: '7' } };
       X.ACT['ch:lq'](box);
       const it = X.lineById(7);
-      t.check(Number(it.qty) === 3 && box.value === '3' && /At least 1 — use the bin to remove it/.test(X.qtyBackHTML(7)), `SAL-015: "${typed}" puts the box back to 3, the line stays 3, and the note says why`);
+      t.check(Number(it.qty) === 3 && box.value === '3' && /At least 1\. To take it off, use the bin\./.test(X.qtyBackHTML(7)), `SAL-015: "${typed}" puts the box back to 3, the line stays 3, and the note says why`);
     }
     const ok = { value: '5', dataset: { lid: '7' } }; X.ACT['ch:lq'](ok);
     t.check(Number(X.lineById(7).qty) === 5 && X.qtyBackHTML(7) === '', 'SAL-015: a real count is taken, and the note goes');
