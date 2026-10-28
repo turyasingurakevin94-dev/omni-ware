@@ -78,8 +78,10 @@ checked alone. They protect the books whichever app is in use, so they come
 runs it on a database made from 0001-0170). In the live project's SQL editor:
 
 0. **First, `docs/live/which-migrations.sql`** (read-only): which of the
-   repo's migrations live is missing. Paste any it names, oldest first, each
-   from `supabase/migrations/` (each says it is safe to run twice).
+   repo's migrations live is missing. On 28 Oct it found 0120 partly in and
+   0153 and 0158 missing: `docs/live/catch-up-before-0171.sql` brings those
+   level (0120's missing pieces only, never 0120 whole: later migrations
+   changed it). After it, the query names only the fixes.
 1. **Step 1** alone: read-only. Stops with a plain message if live is missing
    anything the seven are built on, or if a function they change was edited
    by hand. Says which of the seven are in already.
@@ -116,3 +118,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Seventh backend fix: one Cancel (`0177`); every backend fix decided is now built. Stock moves only at the invoice, so "stock put back" is the yard's own step: the push tells them, and the Store screen already shows it. Not built: Sales asking for a cancel, and billing goods that came in before a cancel (such an order is refused, as the Manager app refuses it today).
 - **2026-10-28** — The seven backend fixes as one live script (`docs/live/apply-0171-0177.sql`): prerequisites, preview, one transaction, check. Tested on a database from 0001-0170, run twice, on one missing 0169 (stops first), and on one with a hand-edited function (stops first; forced, leaves nothing).
 - **2026-10-28** — First live try: step 1 stopped before writing anything — live does not have `0153` (the push to the Manager when a dearer supplier price puts a line under its sale). Added `docs/live/which-migrations.sql` to list everything live is missing in one go; tested that 0153 goes in on its own on top of 0154-0170 and that the script then passes.
+- **2026-10-28** — `which-migrations.sql` on live: 0120 partly in (no `push_outbox.claimed_at`, `.delivered`, `ow_push_claim`, which `push-send` calls to take its rows), 0153 and 0158 missing (so the Manager app's "no" to a carton and its customer-change push fail on live). `docs/live/catch-up-before-0171.sql` (made by `tools/build-catch-up-sql.js`) adds them in one transaction; tested on a database shaped like live, twice, then the fixes on top.

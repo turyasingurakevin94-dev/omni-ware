@@ -18,6 +18,9 @@
  *        - made from 0001-0170 without 0153 (live as found on 28 Oct):
  *          which-migrations.sql names 0153, step 1 stops on it, 0153 goes in
  *          on its own, then the script passes;
+ *        - shaped as which-migrations.sql found live (0120 partly, 0153 and
+ *          0158 missing): the catch-up script brings it level, twice over,
+ *          and then the fixes go in;
  *        - with the void guard's wording changed by hand, step 1 stops and names it,
  *          and step 3 (if run anyway) fails as a whole, leaving nothing.
  *
@@ -42,6 +45,8 @@ const step = (n) => {
 };
 const which = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-which-migrations-sql.js')], { encoding: 'utf8' });
 t.check(which.status === 0 && which.stdout === read('docs/live/which-migrations.sql'), 'docs/live/which-migrations.sql is what tools/build-which-migrations-sql.js makes now');
+const catchUp = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'build-catch-up-sql.js')], { encoding: 'utf8' });
+t.check(catchUp.status === 0 && catchUp.stdout === read('docs/live/catch-up-before-0171.sql'), 'docs/live/catch-up-before-0171.sql is what tools/build-catch-up-sql.js makes now');
 t.check(!/\b(insert|update|delete|create|alter|drop)\b/i.test(read('docs/live/which-migrations.sql').replace(/--[^\n]*/g, '').replace(/'[^']*'/g, '')), 'which-migrations.sql only reads');
 const apply = step(3);
 t.check(/\nbegin;\n/.test(apply) && /\ncommit;\n$/.test(apply), 'step 3 is one transaction, BEGIN to COMMIT');
@@ -117,6 +122,31 @@ const run = (on, n) => on(['-qAt', '-v', 'ON_ERROR_STOP=1'], step(n));
   const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
   t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then steps 1, 3 and 4 pass (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
   psql(['-qAt', '-c', 'drop database if exists ow_live_apply_no153']);
+}
+
+// Live exactly as which-migrations.sql found it on 28 Oct 2026: 0120 partly
+// (no claimed_at, delivered or ow_push_claim), 0153 and 0158 missing. The
+// catch-up script brings it level; then the fixes go in.
+{
+  const { on } = makeDb('ow_live_apply_found', '0170', ['0153', '0158']);
+  const cut = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-c', 'drop function ow_push_claim(int)', '-c', 'alter table push_outbox drop column claimed_at, drop column delivered']);
+  t.check(cut.status === 0, `a database shaped like live (${errs(cut)[0] || 'ok'})`);
+  const report = () => (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n')
+    .filter((l) => /\|(missing|partly)\|/.test(l)).map((l) => l.slice(0, 4) + ':' + l.split('|')[1]);
+  t.check(JSON.stringify(report()) === JSON.stringify(['0120:partly', '0153:missing', '0158:missing', '0171:missing', '0173:missing', '0174:missing', '0175:missing', '0176:missing', '0177:missing']),
+    `which-migrations.sql reads it as live did (${report().join(', ')})`);
+  const cu = read('docs/live/catch-up-before-0171.sql');
+  const part = (n) => { const a = cu.indexOf(`-- STEP ${n} `), b = cu.indexOf(`-- STEP ${n + 1} `); return cu.slice(cu.lastIndexOf('\n-- ====', a), b < 0 ? undefined : cu.lastIndexOf('\n-- ====', b)); };
+  const c1 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], part(1)), c2 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], part(2)), c3 = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], part(3));
+  t.check(c1.status === 0 && /Ready/.test(c1.stderr) && c2.status === 0 && (c3.stdout.match(/\|ok$/gm) || []).length === 4, `the catch-up: ready, applied, ok four times (${errs(c1)[0] || errs(c2)[0] || errs(c3)[0] || 'ok'})`);
+  const again = on(['-qAt', '-v', 'ON_ERROR_STOP=1'], part(2));
+  t.check(again.status === 0, `the catch-up runs a second time (${errs(again)[0] || 'ok'})`);
+  t.check(JSON.stringify(report()) === JSON.stringify(['0171:missing', '0173:missing', '0174:missing', '0175:missing', '0176:missing', '0177:missing']), `then only the fixes are missing (${report().join(', ')})`);
+  const claimed = on(['-qAt', '-c', `insert into push_outbox(shop_id, kind, title, body, to_role) select id, 'x', 'x', 'x', 'owner' from shops limit 0; select count(*) from ow_push_claim(10)`]);
+  t.check(claimed.status === 0, `push-send can claim rows again (${errs(claimed)[0] || 'ok'})`);
+  const r1 = run(on, 1), r3 = run(on, 3), r4 = run(on, 4);
+  t.check(r1.status === 0 && r3.status === 0 && (r4.stdout.match(/\|ok$/gm) || []).length === 7, `then the fixes go in: steps 1, 3 and 4 pass (${errs(r1)[0] || errs(r3)[0] || 'ok'})`);
+  psql(['-qAt', '-c', 'drop database if exists ow_live_apply_found']);
 }
 
 // The void guard changed by hand: step 1 names it; step 3 run anyway leaves nothing behind.
