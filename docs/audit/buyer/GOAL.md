@@ -32,13 +32,16 @@ Someone who already knows the Agent app should be able to pick up the Buyer app 
 
 The buying flow from Sales' handover to goods handed in: the fewest steps, and nothing lost or said differently between the two apps.
 
-## Done when
+## Done when (revised by Kevin, 29 Oct 2026)
 
-- Every Buyer page is on the new canvas and scores at or above the Agent app's matching screen.
-- The handover board shows every hand-off with a push and the same words on both sides.
-- The end-to-end flow needs fewer steps than today.
-- Design only: no code until Kevin approves the canvas.
-- Any change the Sales app needs is listed separately for Sales, not built here.
+- [x] every Buyer page is on the canvas, and the independent reviewer scores it at or above the Agent app (round 3: 28 pages, 8.65, 0 below);
+- [x] the handover board names a push and one agreed word for every hand-off (13 of 13), and the Buyer pages use only those words;
+- [x] every push that does not exist yet is listed, ready for one migration after approval (6, in handover.md §6);
+- [x] every change Sales needs to reach the same words is listed in handover.md §5 for the Sales session (11);
+- [x] the end-to-end flow takes fewer steps than today (26 taps → 6 taps + 2 slides);
+- [x] this progress table is up to date.
+
+Then stop and ask Kevin to approve the canvas. No code, migrations or Sales changes until then.
 
 ## Progress
 
