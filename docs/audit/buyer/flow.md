@@ -72,3 +72,7 @@ Baskets / Sent / Packing / Out.
 ## Rule added on the Today board
 
 - **Plan** waits while a supplier in the same area is still **Asked**: one trip once they answer (from buyer.html's trip rule). The red + still opens the trip with what is found.
+
+## Result on the canvas
+
+The tab boards realise this flow: ask 1 tap per supplier, reply 1 tap, cash ask 1 slide, each stop 1 tap, hand in 1 slide — 26 taps → 6 taps + 2 slides for the sample order.

@@ -47,5 +47,11 @@ The buying flow from Sales' handover to goods handed in: the fewest steps, and n
 | 1. Agent app design language | done · `agent-design-language.md` |
 | 2. Sales ↔ Buyer handover map | done · `handover.md` (12 mismatches, 5 Sales changes) |
 | 3. Buying flow from first principles | done · `flow.md` (26 taps → 6 taps + 2 slides) |
-| 4–5. Pages on the new canvas | in progress · handover + flow boards up; tab boards being drawn ([canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7)) |
-| 6. Scores | not started |
+| 4–5. Pages on the new canvas | done · 7 tab boards (28 pages, all 8 states) + handover board + flow board on the [canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7) |
+| 6. Scores | done · independent review, 3 rounds: 8.39 → 8.59 → 8.65; 0 of 28 pages below the Agent app (Scores board) |
+
+## Waiting on Kevin
+
+- Approve the canvas before any code.
+- Should a complete order handed in push the salesperson? (handover.md, open question.)
+- The Sales changes (handover.md §5, 11 items) and three new pushes (order.check, supplier.no, sourcing.waits — one migration) go to the Sales session.
