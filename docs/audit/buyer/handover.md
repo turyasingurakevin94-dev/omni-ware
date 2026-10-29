@@ -75,3 +75,23 @@ Stage names agree. The line words under them do not (§4).
 
 ### Open question for Kevin
 - An order that comes back **complete** pushes nobody in Sales (only `trip.short` does); Grace sees **Packing** after the Store counts it in. Nobody waits on her, so by the push rule no push is needed. Say if you want one.
+
+## 6. The agreed design (the handover board on the canvas)
+
+Every one of the 13 hand-offs carries a push and one word used by both apps.
+The Buyer boards already use only these words (none of CONFIRMED, PROBLEM,
+"round", "being bought in", "shop checks for supplier" remain). Sales reaches
+the same words through the list in §5.
+
+New pushes, one migration (number from docs/decision-rights.md when built):
+
+| Push | To | Sound | Why |
+|---|---|---|---|
+| `order.check` | Buyer | yes | a new order waits on the Buyer (M11) |
+| `supplier.no` | salesperson | yes | the client must hear (M4) |
+| `sourcing.waits` | salesperson | yes | the client waits, Moses is finding it (M5) |
+| `line.asked` | salesperson | quiet | the line moved to Asked |
+| `supplier.found` | salesperson | quiet | the line is Found |
+| `trip.started` | salesperson | quiet | the line is On the trip (M8) |
+
+Quiet = into the salesperson's feed and badge, no sound; nobody waits on it.
