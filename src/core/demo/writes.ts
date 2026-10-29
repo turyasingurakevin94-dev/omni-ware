@@ -126,7 +126,8 @@ function onOrder(o: Order, p: Payment): void {
 export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   const b = s.books, amount = Math.round(a.amount);
   if (!(amount > 0)) throw dataError('refused', 'Type how much they paid');
-  if (a.method !== 'cash' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
+  // Mobile needs its transaction ID (spec 04 Q6, CU33); a bank reference is "if there is one" (CU31; 0155 keeps it optional).
+  if (a.method === 'momo' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
   if (a.orderId != null) {
     const o = b.orders.find((x) => x.id === a.orderId);
     if (!o || o.voided) throw dataError('refused', 'That order is not in the books');
