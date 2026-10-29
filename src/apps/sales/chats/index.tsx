@@ -8,11 +8,13 @@
  */
 import type { TabModule } from '../shell/types.ts';
 import { ChatsList } from './List.tsx';
+import { NewChatScreen } from './NewChat.tsx';
 
 export const tab: TabModule = {
   id: 'chats',
   root: 'chats',
   screens: {
     'chats': { view: ChatsList },
+    'chats/new': { view: NewChatScreen },
   },
 };
