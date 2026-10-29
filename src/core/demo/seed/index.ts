@@ -32,6 +32,11 @@ export interface DemoState {
   messages: Message[];
   notes: ChatNote[];
   events: ChatEvent[];
+  /**
+   * Messages each member sent in a chat this year before the seeded thread (chat_served counts the
+   * year; the demo seeds only the days the boards draw). By chat id, then member id.
+   */
+  servedBefore: Record<number, Record<string, number>>;
 }
 
 export function seed(f: DemoFlags): DemoState {
@@ -60,7 +65,11 @@ export function seed(f: DemoFlags): DemoState {
     messages: messages(),
     notes: [],
     events: chatEvents(),
+    servedBefore: {},
   };
+  // &as=ruth: another member of the team is signed in on this phone (CH32).
+  const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;
+  if (as) s.books.me = as;
   if (f.state === 'empty') emptyShop(s);
   if (f.state === 'first-day') firstDay(s);
   // Each tab's own additions, in tab order.
