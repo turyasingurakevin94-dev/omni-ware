@@ -66,3 +66,5 @@ Stage names agree. The line words under them do not (§4).
 3. Route `trip.short` in `pushOpen` to the order, M6.
 4. Open a new `supplier.no` (or reuse `line.dropped`-style) push in `pushOpen` once a migration sends it, M4.
 5. Show "Sourcing is finding it · Moses" for a line the client waits for, M5.
+6. Show **Switched** as its own line word (from the Orders board).
+7. Show **Ruth decides** on a line whose new cost is above Grace's selling price (from the Orders board).
