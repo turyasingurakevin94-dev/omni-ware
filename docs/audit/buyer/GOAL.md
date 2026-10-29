@@ -44,8 +44,8 @@ The buying flow from Sales' handover to goods handed in: the fewest steps, and n
 
 | Step | State |
 | --- | --- |
-| 1. Agent app design language | not started |
-| 2. Sales ↔ Buyer handover map | not started |
-| 3. Buying flow from first principles | not started |
-| 4–5. Pages on the new canvas | not started |
+| 1. Agent app design language | done · `agent-design-language.md` |
+| 2. Sales ↔ Buyer handover map | done · `handover.md` (12 mismatches, 5 Sales changes) |
+| 3. Buying flow from first principles | done · `flow.md` (26 taps → 6 taps + 2 slides) |
+| 4–5. Pages on the new canvas | in progress · handover + flow boards up; tab boards being drawn ([canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7)) |
 | 6. Scores | not started |
