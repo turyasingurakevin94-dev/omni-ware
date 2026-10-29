@@ -61,6 +61,11 @@ export interface CounterPay {
   given: UGX;
   /** The transaction ID for Mobile or Bank. */
   ref: string;
+  /**
+   * A counter sale placed already, that waited for the Manager's yes on a price: sold now as the books
+   * hold it (counter_sale p_quote_id; sales.html:11098 slide:counterpay). The draft is not read then.
+   */
+  quote?: number | null;
 }
 
 export interface CounterResult {
@@ -118,6 +123,12 @@ export interface DataSource {
   /* orders */
   placeOrder(d: OrderDraft): Promise<Order>;
   counterSale(d: OrderDraft, pay: CounterPay): Promise<CounterResult>;
+  /**
+   * New lines on your own counter sale that waits (not yet sold): back to the shop's price, or lines
+   * added after the Manager's yes (ow_patch_order, as sales.html:11136 countershop). A line the Manager
+   * answered keeps her answer while its price stays hers.
+   */
+  counterLines(orderId: number, lines: Line[]): Promise<void>;
   /** The customer was told the Manager's new price (items[].priceToldAt). */
   markPriceTold(orderId: number): Promise<void>;
   setClientPhone(orderId: number, phone: string): Promise<void>;

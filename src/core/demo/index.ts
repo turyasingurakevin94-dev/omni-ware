@@ -88,6 +88,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
 
     placeOrder: (d) => write(() => copy(W.placeOrder(s, d))),
     counterSale: (d, pay) => write(() => copy(W.counterSale(s, d, pay))),
+    counterLines: (orderId, lines) => write(() => W.counterLines(s, orderId, lines)),
     markPriceTold: (orderId) => write(() => {
       const o = s.books.orders.find((x) => x.id === orderId);
       if (!o) throw dataError('refused', 'That order is not in the books');

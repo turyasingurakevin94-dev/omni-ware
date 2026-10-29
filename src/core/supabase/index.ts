@@ -82,6 +82,7 @@ export function supabaseSource(): DataSource {
       await src.books();
       return { order: await order(r.id), invoice: r.invoice || invoiceNo(r.id), paid: r.paid, change: r.change, waiting: r.waiting };
     },
+    async counterLines(orderId, lines) { await W.counterLines(sb(), me(), orderId, lines, Date.now()); },
     async markPriceTold(orderId) { await W.markPriceTold(sb(), me(), orderId, Date.now()); },
     async setClientPhone(orderId, phone) { await W.setClientPhone(sb(), me(), orderId, phone); },
     async askBill(a) { return W.askBill(sb(), me(), await order(a.orderId), a); },
