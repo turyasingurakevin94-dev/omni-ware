@@ -8,6 +8,7 @@
  *   &state=empty             nothing live, nobody owes, no chats (CH06, OR04, CU06)
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
+ *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -19,6 +20,8 @@ export interface DemoFlags {
   /** "15:40", or null for 10:41. */
   clock: string | null;
   state: DemoStateName | null;
+  /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
+  as: string | null;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -28,10 +31,12 @@ export function readFlags(search: string): DemoFlags {
   const q = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const clock = q.get('clock');
   const state = q.get('state') as DemoStateName | null;
+  const as = (q.get('as') || '').trim().toLowerCase();
   return {
     on: q.has('demo'),
     offline: q.get('offline') === '1',
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
+    as: /^[a-z]+$/.test(as) ? as : null,
   };
 }
