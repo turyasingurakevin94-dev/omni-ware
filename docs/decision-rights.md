@@ -100,6 +100,7 @@ row in the same commit. The test fails on any mismatch, in either direction.
 | **Accept a customer return, raise a credit note** | `credit_note.raise` | Manager | Sales, Accounts, Store | Accounts, owner's log | yes |
 | **Void an invoice** | `invoice.void` | Manager | Sales, Accounts | Accounts, owner's log | yes |
 | **Cancel an order before it is invoiced** (the Store puts back what was packed) | `order.cancel` | Manager | Sales | Store, Sales | yes |
+| **Ask the Manager to cancel an order before it is invoiced** (your own order; take the ask back while it waits) | `cancel.ask` | Sales | — | Manager | yes |
 | Send an invoice | `invoice.send` | Accounts | — | — | yes |
 
 ### Credit, debtors and agents
@@ -218,6 +219,13 @@ row in the same commit. The test fails on any mismatch, in either direction.
 (`order.cancel`): the salesperson asks, the Manager decides, and the Store
 gets a push to stop and put back whatever was packed. Once invoiced, it is a
 void (`invoice.void`). The owner chose the Manager on 22 Oct 2026.
+The ask is built (0181, `cancel_asks`): Sales asks on its own order
+(`ask_cancel`, `cancel.ask`) with why, and may take the ask back while it
+waits (`withdraw_cancel_ask`); the Manager is pushed (`order.cancel.ask`)
+and answers with `answer_cancel_ask`. Yes is `cancel_order` itself, with all
+its refusals; no is logged and pushed to the asker
+(`order.cancel.ask.decided`). An order called off another way, or invoiced
+first, closes its open ask.
 
 ### The price decision
 
@@ -416,6 +424,11 @@ got it"), and the yard closed for the day to the Manager as a log line
 (`store.closed`, nothing to answer). Each answer goes back to the one who
 asked (`store.ask.decided`).
 
+0181 adds Sales' ask for a cancel (`cancel_asks`): to the Manager
+(`order.cancel.ask`, `order.cancel`), and a no, a void by another way or an
+invoice that came first back to the salesperson who asked
+(`order.cancel.ask.decided`). A yes is told by 0177's `order.cancelled`.
+
 A tap on a push opens the screen it is about: each app's `pushOpen` reads the
 push's kind and the ids it carries (push-send copies the ref into the data).
 
@@ -598,6 +611,8 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0177 | The rebuild, seventh backend fix (docs/rebuild.md, "Backend fixes decided"; docs/spec/01-order-journey.md §5 Q7 and Q8, 28 Oct 2026): one Cancel — `order.cancel` granted to the Manager; `cancel_order` writes `status = 'cancelled'` and the void in one write with `cancelledAt`, `cancelledByName` and why, settles money paid (refund or deposit, `ow_settle_void_money`), and pushes `order.cancelled` to the yard (`order.pick`) when it was packing or out, and to the salesperson; refused once invoiced or delivered, when bought-in goods came in, or on a live buying trip. 0173's stage rule knows 'cancelled'; 0122's void guard logs it as a cancel. Sales' ask for a cancel is not built |
 | 0178 | Urgent, after the rebuild's fixes went live (28 Oct 2026): a yard worker loads and delivers again — 0173's stage rule also lets a `store` or `staff` login make the yard's three moves (Packing to On the road, Packing or On the road to Delivered), as `store_patch_order` (0164) lets them; the rule is written out whole with 0177's Cancel. No role, task or push changes |
 | 0179 | Yard workers keep out of the books (docs/spec/05-data.md §8 Q1, Q2, 28 Oct 2026): a `staff` (yard worker) login is refused the 21 money and customer tables the worker app never reads ("not a yard worker", `ow_yard_worker`); `staff` holds the yard's tasks `order.pick`, `order.load`, `order.deliver` |
+| 0180 | Sales places an order through a server function (docs/spec/05-data.md §8 Q3, §9 Q6, 29 Oct 2026): `place_order` (quote.make) numbers the order from `row:saved_quote` and inserts it in one write, as sales.html inserts it, so every guard and trigger still judges it as the caller (0119's gate, 0165, 0167, 0171, 0173, 0174, 0175, the pushes); the phone sends only what Sales decides (client, lines, charges, on credit and the days, the customer, deliverTo, waConvId, Checking or Packing), the server writes the rest (number, date, times, takenBy, nothing paid, the shop's Credit charge pct); the draft's key places it once (`payload.placeKey`). The direct insert stays open for the old apps until each retires. No role, task or push changes |
+| 0181 | Sales asks the Manager to cancel (docs/spec/01-order-journey.md §5 Q7, docs/spec/05-data.md §9 Q7, 29 Oct 2026; the canvas's OR18, OR19): `cancel_asks`, one open ask per order; `ask_cancel` (new task `cancel.ask`, Sales; your own order, before it is invoiced or delivered), `withdraw_cancel_ask` (the asker), `answer_cancel_ask` (order.cancel: yes through 0177's `cancel_order`, no logged and pushed back); an order called off another way or invoiced first closes its open ask; pushes `order.cancel.ask` (to order.cancel) and `order.cancel.ask.decided` (to the asker) |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

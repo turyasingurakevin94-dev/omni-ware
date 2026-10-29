@@ -92,6 +92,28 @@ const sum = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
   let refused = null;
   try { await demo.placeOrder(draft([{ ...lineOf('cement-hima-50', 1), price: 1000, priceBy: GRACE }])); } catch (e) { refused = e; }
   t.check(refused && refused.code === 'OWCST', 'a price under cost is refused (0171 OWCST)');
+  // place_order (0180): the draft's key places it once.
+  const keyed = await demo.placeOrder(draft([lineOf('cement-hima-50', 2)], { key: 'draft-k1' }));
+  const keyedAgain = await demo.placeOrder(draft([lineOf('cement-hima-50', 2)], { key: 'draft-k1' }));
+  t.check(keyedAgain.id === keyed.id && (await demo.books()).orders.filter((o) => o.id === keyed.id).length === 1, 'the same draft key placed twice is one order (place_order 0180)');
+  let noCust = null;
+  try { await demo.placeOrder(draft([lineOf('cement-hima-50', 1)], { customerId: 'C404' })); } catch (e) { noCust = e; }
+  t.check(noCust && noCust.code === 'P0002', 'a customer not in the books is refused (place_order 0180)');
+
+  /* ---- asking Ruth to cancel (ask_cancel 0181) ---- */
+  const ask = await demo.askCancel(keyed.id, 'Entered twice');
+  t.check(ask.kind === 'cancel' && ask.status === 'sent' && ask.orderId === keyed.id && ask.amount === M.orderTotal(keyed) && ask.reason === 'Entered twice', 'Grace asks to cancel her own order: a cancel ask, waiting, with what it came to');
+  const askAgain = await demo.askCancel(keyed.id, 'Kato changed their mind');
+  t.check(askAgain.id === ask.id && (await demo.books()).billAsks.filter((a) => a.kind === 'cancel' && a.orderId === keyed.id).length === 1, 'asked again while it waits: the same ask');
+  const why = async (orderId, r) => { try { await demo.askCancel(orderId, r); return null; } catch (e) { return e; } };
+  t.check(((await why(keyed.id, ' ')) || {}).code === '22023', 'no reason: refused');
+  demo.state.books.orders.find((o) => o.id === held.id).placedBy = 'u-someone-else';
+  t.check(((await why(held.id, 'Entered twice')) || {}).code === '42501', "someone else's order: refused");
+  const billed = (await demo.books()).orders.find((o) => o.placedBy === GRACE && o.invoiced && !o.voided);
+  t.check(billed && ((await why(billed.id, 'Entered twice')) || {}).code === '22023', 'an invoiced order: refused (a void, not a cancel)');
+  await demo.withdrawBillAsk(ask.id);
+  await demo.withdrawBillAsk(ask.id);
+  t.check((await demo.books()).billAsks.find((a) => a.id === ask.id).status === 'withdrawn', 'Grace takes it back; again is no harm');
   let over = null;
   try { await demo.receivePayment({ customerId: 'C002', orderId: null, amount: 500000, method: 'cash', ref: '', picks: null, over: null }); } catch (e) { over = e; }
   t.check(over && over.code === 'OWOVR', 'paying more than owed with no choice is refused (OWOVR)');

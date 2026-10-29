@@ -17,6 +17,8 @@ import * as W from './write.ts';
 export function supabaseSource(): DataSource {
   let session: Session | null = null;
   let last: Books | null = null;
+  /** Cancel asks made since the books were last read (so a withdraw finds its function before the next read). */
+  const cancelAsks = new Set<string>();
 
   const sb = (): Sb => {
     const c = client();
@@ -71,7 +73,7 @@ export function supabaseSource(): DataSource {
       const cust = d.customerId ? b.customers.find((c) => c.id === d.customerId) || null : null;
       const total = orderTotal({ lines: d.lines, charges: d.charges, discount: 0, credit: d.credit });
       const stage = startStage(d, b.items, cust, dayOf(now), b.settings.holdDays, total);
-      const id = await W.placeOrder(sb(), me(), d, stage, b.orders.reduce((m, o) => Math.max(m, o.id), 0), now);
+      const id = await W.placeOrder(sb(), me(), d, stage, now);
       await src.books();
       return order(id);
     },
@@ -83,10 +85,16 @@ export function supabaseSource(): DataSource {
     async markPriceTold(orderId) { await W.markPriceTold(sb(), me(), orderId, Date.now()); },
     async setClientPhone(orderId, phone) { await W.setClientPhone(sb(), me(), orderId, phone); },
     async askBill(a) { return W.askBill(sb(), me(), await order(a.orderId), a); },
-    async withdrawBillAsk(id) { await W.withdrawBillAsk(sb(), id); },
-    async askCancel() {
-      // 0177: "Sales' ask for a cancel is not built". No table or function takes it yet.
-      throw dataError('missing', 'Asking Ruth to cancel needs a database update first');
+    async withdrawBillAsk(id) {
+      // A cancel ask is withdrawn through its own function (0181); a void or credit ask through 0123's.
+      const ask = (await books()).billAsks.find((x) => x.id === id);
+      if (cancelAsks.has(id) || (ask && ask.kind === 'cancel')) await W.withdrawCancelAsk(sb(), id);
+      else await W.withdrawBillAsk(sb(), id);
+    },
+    async askCancel(orderId, why) {
+      const ask = await W.askCancel(sb(), me(), await order(orderId), why);
+      cancelAsks.add(ask.id);
+      return ask;
     },
 
     async receivePayment(a) {
