@@ -1,0 +1,30 @@
+name: Build check
+
+# The new apps are built from src/ (docs/spec/07-stack.md §6). The built
+# page is committed, as the old pages are, so Vercel and the phone apps keep
+# serving finished files. This run makes sure the committed page is exactly
+# what src/ builds, that the types hold, and that the page is within its
+# 80 KB compressed budget. It installs packages, so it is its own workflow:
+# test.yml stays install-free.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: The Sales page is what src/ builds, within budget
+        run: node tools/build-app.js sales --check
+      - name: The core's tests, with the build present
+        run: node test/build-app.test.js
