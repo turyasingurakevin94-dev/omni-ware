@@ -1,16 +1,16 @@
 /*
  * Writing to the books, the writes sales.html makes, each with its line:
- * the same tables, RPCs and edge functions. Never a new backend path: where
- * the canvas needs a write that has none (Sales asking for a cancel), the
- * write says so ('missing') and nothing is sent.
+ * the same tables, RPCs and edge functions. Never a new backend path
+ * without its migration: an order is placed through place_order (0180, spec
+ * 05 Q3) and a cancel is asked through ask_cancel (0181). On a database
+ * without them the write says so ('missing') and nothing is sent.
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
 import { invoiceNo } from '../names.ts';
 import { orderPayload } from '../orders.ts';
-import { dayOf } from '../time.ts';
 import type { BillAsk, ChatNote, Customer, CustomerKind, Day, Message, Order, PayPromise, PaymentAsk, Session, SourcingAsk, Stage, UGX } from '../types.ts';
 import { isMissing, isNetwork, type Row, type Sb } from './client.ts';
-import { askOf, billAskOf, customerOf, messageOf, paymentAskOf, promiseOf } from './rows.ts';
+import { askOf, billAskOf, cancelAskOf, customerOf, messageOf, paymentAskOf, promiseOf } from './rows.ts';
 
 /** A failed call, classified (sales.html isNetworkError, rpcMissing; the server's five-letter codes). */
 function fail(e: unknown): never {
@@ -41,16 +41,18 @@ export async function patchOrder(sb: Sb, s: Session, id: number, patch: Row, nam
   await ok(sb.rpc('ow_patch_order', { p_shop_id: s.shopId, p_id: id, p_patch: patch, p_client_name: name, p_client_phone: phone }));
 }
 
-/** sales.html:8718 slide:place: an id from row:saved_quote, then one insert into saved_quotes. */
-export async function placeOrder(sb: Sb, s: Session, d: OrderDraft, stage: Stage, maxId: number, now: number): Promise<number> {
-  const id = await rowId(sb, s, 'row:saved_quote', maxId);
+/**
+ * place_order (0180): numbered and placed in one write on the server, as sales.html:8718 slide:place
+ * inserted it, and every guard on saved_quotes still judges it. The draft's key places it once. The
+ * server keeps from the payload only what Sales decides; it writes the number, the date, the times,
+ * who took it, nothing paid and the shop's Credit charge pct itself.
+ */
+export async function placeOrder(sb: Sb, s: Session, d: OrderDraft, stage: Stage, now: number): Promise<number> {
   const payload = orderPayload(d, stage, s.userId, now);
-  const row = {
-    id, shop_id: s.shopId, client_name: d.client.name || 'Walk-in', client_phone: d.client.phone || null, date: dayOf(now),
-    status: stage === 'packing' ? 'preparing' : 'draft', invoiced: false, invoiced_at: null, invoiced_ts: null, amount_paid: 0, voided: false, payload,
-  };
-  await ok(sb.from('saved_quotes').insert(row));
-  return id;
+  const row = { client_name: d.client.name || 'Walk-in', client_phone: d.client.phone || null, status: stage === 'packing' ? 'preparing' : 'draft', payload };
+  const r = await ok<Row>(sb.rpc('place_order', { p_shop_id: s.shopId, p_row: row, p_key: d.key || null }));
+  if (!r || !r.ok || r.id == null) throw dataError('refused', 'The order did not go through');
+  return Number(r.id);
 }
 
 /** sales.html:9281 payRpc: the transaction ID rides only when typed; before 0155 the write goes again without it. */
@@ -113,6 +115,18 @@ export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 
 
 export async function withdrawBillAsk(sb: Sb, id: string): Promise<void> {
   await ok(sb.rpc('withdraw_invoice_ask', { p_id: id }));
+}
+
+/** ask_cancel (0181): ask the Manager to cancel your own order before its invoice; asked again, the same ask comes back. */
+export async function askCancel(sb: Sb, s: Session, o: Order, why: string): Promise<BillAsk> {
+  const r = await ok<Row>(sb.rpc('ask_cancel', { p_shop_id: s.shopId, p_order: o.id, p_why: why, p_note: null }));
+  if (!r || !r.ok || !r.id) throw dataError('refused', 'The ask did not go through');
+  return cancelAskOf({ id: r.id, quote_id: o.id, customer_id: o.customerId, why, amount: r.amount, status: r.status || 'sent', asked_by: s.userId, created_at: r.at });
+}
+
+/** withdraw_cancel_ask (0181): the asker takes it back while it waits; again is no harm. */
+export async function withdrawCancelAsk(sb: Sb, id: string): Promise<void> {
+  await ok(sb.rpc('withdraw_cancel_ask', { p_id: id }));
 }
 
 /** sales.html:7213: a promise to pay (payment_promises, 0089; promise.record 0121). */

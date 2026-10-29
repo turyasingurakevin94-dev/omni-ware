@@ -309,7 +309,7 @@ export interface BillAsk {
   id: string;
   orderId: number;
   customerId: string | null;
-  /** void · credit (a return) are invoice_asks kinds; 'cancel' exists only in the demo until a migration builds it (0177). */
+  /** void · credit (a return): invoice_asks (0123); cancel: cancel_asks (0181), before the invoice. */
   kind: 'void' | 'credit' | 'cancel';
   amount: UGX;
   reason: string;

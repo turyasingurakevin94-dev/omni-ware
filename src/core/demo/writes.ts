@@ -11,7 +11,7 @@ import { cashTotal, orderOwes, orderTotal, payPlan } from '../money.ts';
 import { initials, invoiceNo, isGenericName, tintFor } from '../names.ts';
 import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
-import type { Customer, Order, OrderPayment, Payment } from '../types.ts';
+import type { BillAsk, Customer, Order, OrderPayment, Payment } from '../types.ts';
 import type { DemoState } from './seed/index.ts';
 
 const nextOrderId = (s: DemoState) => s.books.orders.reduce((m, o) => (o.id < 1000 ? Math.max(m, o.id) : m), 0) + 1;
@@ -34,15 +34,57 @@ function newOrder(s: DemoState, d: OrderDraft, id: number, stage: Order['stage']
   };
 }
 
-/** saved_quotes insert (sales.html slide:place), placed at Packing when it needs nothing (orders.ts startStage). */
+/** The keys each demo shop has placed an order under (place_order's payload.placeKey). */
+const placed = new WeakMap<DemoState, Map<string, number>>();
+
+/**
+ * place_order (0180), placed at Packing when it needs nothing (orders.ts startStage). The same key
+ * again is the order it placed; a customer not in the books is refused; on credit the pct is the shop's.
+ */
 export function placeOrder(s: DemoState, d: OrderDraft): Order {
+  const b = s.books, keys = placed.get(s) || new Map<string, number>();
+  placed.set(s, keys);
+  const again = d.key ? b.orders.find((o) => o.id === keys.get(d.key as string)) : undefined;
+  if (again) return again;
   if (!d.lines.length) throw dataError('refused', 'Add an item to place');
   checkCost(d);
-  const b = s.books, cust = d.customerId ? b.customers.find((c) => c.id === d.customerId) || null : null;
-  const stage = startStage(d, b.items, cust, dayOf(s.now), b.settings.holdDays, orderTotal({ lines: d.lines, charges: d.charges, discount: 0, credit: d.credit }));
-  const o = newOrder(s, d, nextOrderId(s), stage);
+  const cust = d.customerId ? b.customers.find((c) => c.id === d.customerId) || null : null;
+  if (d.customerId && !cust) throw dataError('refused', 'That customer is not in the books', 'P0002');
+  const draft: OrderDraft = { ...d, credit: d.credit ? { pct: b.settings.creditPct, days: d.credit.days } : null };
+  const stage = startStage(draft, b.items, cust, dayOf(s.now), b.settings.holdDays, orderTotal({ lines: draft.lines, charges: draft.charges, discount: 0, credit: draft.credit }));
+  const o = newOrder(s, draft, nextOrderId(s), stage);
   b.orders.push(o);
+  if (d.key) keys.set(d.key, o.id);
   return o;
+}
+
+/**
+ * ask_cancel (0181): your own order, before it is invoiced or delivered, with why; asked again while
+ * it waits, the same ask. The Manager answers in her app (answer_cancel_ask).
+ */
+export function askCancel(s: DemoState, orderId: number, why: string): BillAsk {
+  const b = s.books, o = b.orders.find((x) => x.id === orderId);
+  if (!o) throw dataError('refused', 'This order is no longer in the books', 'P0002');
+  const no = '#' + String(o.id).padStart(4, '0');
+  if (!why.trim()) throw dataError('refused', 'Say why it should be cancelled', '22023');
+  if (o.placedBy !== b.me.id) throw dataError('refused', `Only the one who took ${no} asks to cancel it`, '42501');
+  if (o.voided || o.cancelled) throw dataError('refused', `${no} is called off already`, '22023');
+  if (o.invoiced) throw dataError('refused', `${no} is invoiced: ask for a void instead`, '22023');
+  if (o.stage === 'delivered') throw dataError('refused', `${no} was delivered: ask for a void once it is invoiced`, '22023');
+  const open = b.billAsks.find((a) => a.kind === 'cancel' && a.orderId === o.id && a.status === 'sent');
+  if (open) return open;
+  const ask: BillAsk = { id: 'ba' + (b.billAsks.length + 1), orderId: o.id, customerId: o.customerId, kind: 'cancel', amount: orderTotal(o), reason: why.trim(), status: 'sent', by: b.me.id, at: s.now };
+  b.billAsks.push(ask);
+  return ask;
+}
+
+/** withdraw_invoice_ask (0123) and withdraw_cancel_ask (0181): your own ask, while it waits; again is no harm. */
+export function withdrawAsk(s: DemoState, id: string): void {
+  const a = s.books.billAsks.find((x) => x.id === id);
+  if (!a || a.by !== s.books.me.id) throw dataError('refused', 'That ask is not yours', '42501');
+  if (a.status === 'withdrawn') return;
+  if (a.status !== 'sent') throw dataError('refused', `That ask is ${a.status} already`, '22023');
+  a.status = 'withdrawn';
 }
 
 /** counter_sale (0136/0155): placed, paid, delivered and invoiced in one write; a price under the shop's waits. */

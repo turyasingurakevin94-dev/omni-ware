@@ -116,6 +116,7 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | `order.delivered` | Manager (`invoice.make`) | an order delivered (0120) | ✓ |
 | `invoice.held` | Manager (`price.approve`, `pick.settle` or `invoice.make`, by why) | the hourly run could not invoice (0139, 0169) | ✓ |
 | `invoice.ask` | Manager (`invoice.void` / `credit_note.raise`) | a void or return asked (0131) | ✓ |
+| `order.cancel.ask` | Manager (`order.cancel`) | a salesperson asks to cancel their order (0181) | ✗ (the Manager app's page is to come) |
 | `agent.change`, `agent.cancel` | Manager (`agent.change`) | an agent's ask (0120) | ✓ |
 | `carton.ask` | Manager (`restock.hold`) | the Buyer asks for a carton's shelf part (0151) | ✓ |
 | `trip.difference`, `trip.yard_note` | Manager (`trip.difference`) | the yard's count differs; the Buyer's yard note | ✓ |
@@ -133,6 +134,7 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | `request.listed` | who asked | Sourcing listed the item | ✓ |
 | `chat.handed`, `chat.note`, `chat.reply_by_other` | the chat's salesperson | a chat handed, noted, answered by someone else (0170) | ✓ |
 | `order.cancelled` | the salesperson, and the yard (`order.pick`) when it was packing | the Manager cancelled it (0177) | ✗ both |
+| `order.cancel.ask.decided` | who asked | the Manager said no, the order was voided another way, or it was invoiced first (0181) | ✗ (the new Sales app's page is to come) |
 | `customer.changed` | the salesperson who last sold to them | the Manager edited the customer (0158) | ✗ |
 | `trip.short` | the salesperson (or `quote.make`) | a trip came back short for an order | ✗ |
 | `order.buying` | Buyer (`trip.plan`) | an order entered Buying (0131) | ✓ |

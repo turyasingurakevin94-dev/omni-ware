@@ -255,6 +255,12 @@ export function billAskOf(r: Row): BillAsk {
   return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: r.kind === 'credit' ? 'credit' : 'void', amount: whole(r.amount), reason: String(r.reason || ''), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
+/** cancel_asks (0181) → BillAsk, kind 'cancel': what the order came to when asked, and why. */
+export function cancelAskOf(r: Row): BillAsk {
+  const status = r.status === 'accepted' || r.status === 'declined' || r.status === 'withdrawn' ? r.status : 'sent';
+  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: 'cancel', amount: whole(r.amount), reason: String(r.why || ''), status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+}
+
 /** payment_asks → PaymentAsk (sales.html rowToPayAsk). */
 export function paymentAskOf(r: Row): PaymentAsk {
   return { id: String(r.id), paymentId: r.cash_txn_id == null ? null : Number(r.cash_txn_id), customerId: r.customer_id ? String(r.customer_id) : null, orderId: r.quote_id == null ? null : Number(r.quote_id), what: r.what, amount: whole(r.amount), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };

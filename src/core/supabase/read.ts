@@ -12,7 +12,7 @@ import { dayOf } from '../time.ts';
 import type { Books, ChatBooks, Customer, Goal, Role, Session, Thread } from '../types.ts';
 import { isNetwork, type Row, type Sb } from './client.ts';
 import {
-  askOf, billAskOf, chatOf, customerOf, eventOf, heldOf, itemsOf, membersOf, messageOf, noteOf, orderOf,
+  askOf, billAskOf, cancelAskOf, chatOf, customerOf, eventOf, heldOf, itemsOf, membersOf, messageOf, noteOf, orderOf,
   paymentAskOf, paymentOf, priceBookOf, promiseOf, settingsOf,
 } from './rows.ts';
 
@@ -69,7 +69,7 @@ function monthStart(now: number): string {
 /** The books, as sales.html loadAll reads them. */
 export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books> {
   const id = s.shopId;
-  const [customers, debtLog, products, prices, stock, lots, quotes, settingsR, cash, staff, targetsR, membersR, presenceR, promises, billAsks, payAsks, leads] = await Promise.all([
+  const [customers, debtLog, products, prices, stock, lots, quotes, settingsR, cash, staff, targetsR, membersR, presenceR, promises, billAsks, payAsks, leads, cancelAsks] = await Promise.all([
     selectAll(sb, id, 'customers'), selectAll(sb, id, 'customer_debt_log'), selectAll(sb, id, 'products'), selectAll(sb, id, 'prices'),
     selectAll(sb, id, 'stock', 'key'), selectAll(sb, id, 'stock_lots'), selectAll(sb, id, 'saved_quotes'),
     sb.from('app_settings').select('presets').eq('shop_id', id).maybeSingle(),
@@ -84,6 +84,8 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
     quiet(sb.from('invoice_asks').select('*').eq('shop_id', id).gte('created_at', new Date(now - 120 * 864e5).toISOString()), { data: [] }),
     quiet(sb.from('payment_asks').select('*').eq('shop_id', id).gte('created_at', new Date(now - 60 * 864e5).toISOString()), { data: [] }),
     quiet(sb.from('sourcing_leads').select('id, name, status, voided, product_id, assigned_staff_id, created_at, stage_entered_at, requests, candidates').eq('shop_id', id).eq('voided', false).limit(1000), { data: [] }),
+    // Asks to cancel an order (0181); none on a database before it.
+    quiet(sb.from('cancel_asks').select('*').eq('shop_id', id).gte('created_at', new Date(now - 120 * 864e5).toISOString()), { data: [] }),
   ]);
   const presets: Row = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const pb = priceBookOf(products, prices, stock, lots, presets.defaultMarkup || {});
@@ -112,7 +114,7 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
     payments: cash.filter((t) => t.type === 'receipt').map((t) => paymentOf(t, txnCustomer, orderCustomer)),
     promises: promises.map(promiseOf),
     asks: data(leads).map(askOf),
-    billAsks: data(billAsks).map(billAskOf),
+    billAsks: data(billAsks).map(billAskOf).concat(data(cancelAsks).map(cancelAskOf)),
     paymentAsks: data(payAsks).map(paymentAskOf),
     goal,
   };

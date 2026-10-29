@@ -102,12 +102,8 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       s.books.billAsks.push(ask);
       return copy(ask);
     }),
-    withdrawBillAsk: (id) => write(() => { const a = s.books.billAsks.find((x) => x.id === id); if (a) a.status = 'withdrawn'; }),
-    askCancel: (orderId, why) => write(() => {
-      const o = s.books.orders.find((x) => x.id === orderId);
-      if (!o || o.invoiced || o.stage === 'delivered') throw dataError('refused', 'Only an order not yet delivered can be cancelled');
-      s.books.billAsks.push({ id: 'ba' + (s.books.billAsks.length + 1), orderId, customerId: o.customerId, kind: 'cancel', amount: 0, reason: why, status: 'sent', by: me.id, at: s.now });
-    }),
+    withdrawBillAsk: (id) => write(() => W.withdrawAsk(s, id)),
+    askCancel: (orderId, why) => write(() => copy(W.askCancel(s, orderId, why))),
 
     receivePayment: (a) => write(() => copy(W.receivePayment(s, a))),
     recordPromise: (a) => write(() => {

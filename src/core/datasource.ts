@@ -51,6 +51,8 @@ export interface OrderDraft {
   deliverTo: string | null;
   /** The chat it came from, if any. */
   chatId: number | null;
+  /** The draft's own key: placed again with the same key, it is placed once (place_order, 0180). */
+  key?: string;
 }
 
 export interface CounterPay {
@@ -121,9 +123,13 @@ export interface DataSource {
   setClientPhone(orderId: number, phone: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
   askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string }): Promise<BillAsk>;
+  /** Take back any ask of yours that still waits: a void, a credit or a cancel. */
   withdrawBillAsk(id: string): Promise<void>;
-  /** Ask the Manager to cancel an order before its invoice. No backend path yet (0177: "Sales' ask for a cancel is not built"). */
-  askCancel(orderId: number, why: string): Promise<void>;
+  /**
+   * Ask the Manager to cancel your own order before its invoice (ask_cancel, cancel_asks, 0181).
+   * Asked again while it waits, the same ask comes back. The Manager's yes is the one Cancel (0177).
+   */
+  askCancel(orderId: number, why: string): Promise<BillAsk>;
 
   /* money */
   receivePayment(a: PayArgs): Promise<PayResult>;
