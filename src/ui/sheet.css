@@ -1,12 +1,24 @@
-/* P17 · the sheet host: scrim and placement. The sheet's own surface (white or ground, top corners 26) is the sheet part's. */
+/* P17 · the sheet host (scrim and placement) and the light sheet (LANGUAGE.md §3), value for value. */
 .ow-sheet-layer { position: fixed; inset: 0; z-index: 40; max-width: var(--frame-w, 480px); margin: 0 auto; }
 .ow-scrim { position: absolute; inset: 0; background: var(--scrim); animation: owFadeIn .18s ease-out; }
 .ow-sheet {
   position: absolute; left: 0; right: 0; bottom: 0; max-height: calc(100% - 40px);
-  display: flex; flex-direction: column; overflow: auto;
+  display: flex; flex-direction: column; overflow: auto; overscroll-behavior: contain;
   background: #FFFFFF; border-radius: 26px 26px 0 0; box-shadow: var(--sh-sheet);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   animation: owSheetUp .22s cubic-bezier(.2,.8,.2,1);
 }
 @keyframes owSheetUp { from { transform: translateY(24px); opacity: .6 } to { transform: none; opacity: 1 } }
 @keyframes owFadeIn { from { opacity: 0 } to { opacity: 1 } }
+.ow-lsheet { display: flex; flex-direction: column; flex: 1; background: #FFFFFF; border-radius: 26px 26px 0 0; }
+.ow-lsheet.ground { background: var(--ground); }
+.ow-grab { all: unset; box-sizing: border-box; cursor: pointer; display: block; width: 100%; height: 15px; position: relative; flex: none; }
+.ow-grab::before { content: ''; position: absolute; left: 50%; top: 10px; width: 40px; height: 5px; margin-left: -20px; border-radius: 999px; background: var(--dash); }
+.ow-lsheet-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px 4px; }
+.ow-lsheet-ht { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ow-lsheet-eye { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--ink-faint); text-transform: uppercase; }
+.ow-lsheet-h h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.ow-x-tile { width: 44px; height: 44px; flex: none; border: none; padding: 0; border-radius: 999px; background: var(--tile); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+.ow-x-tile:active { background: var(--line); }
+.ow-lsheet-b { padding: 16px; display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+.ow-lsheet-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }

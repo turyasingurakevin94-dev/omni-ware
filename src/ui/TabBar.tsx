@@ -1,74 +1,65 @@
 /*
- * P16 · The white tab bar and the red + (LANGUAGE.md §3), the Sales bar:
- * Today · Chats · + · Orders · Customers, five columns 1fr 1fr 96px 1fr 1fr.
- * The markup and the measures are the part's own, moved from inline styles
- * to tabbar.css; the icons are its paths. The active tab is ink, 700, its
- * icon filled; the Chats tab carries the unread count; the + carries the
- * orders not placed yet.
+ * P16 · The white tab bar and the red + (LANGUAGE.md §3 P16), the Sales
+ * bar: Today · Chats · + · Orders · Customers, five columns 1fr 1fr 96px
+ * 1fr 1fr. The active tab is ink, 700, its icon filled; the Chats tab
+ * carries the unread count (crimson); the + carries the orders not placed
+ * yet (navy). The + is hidden on screens with the dock, a full sheet or the
+ * chat composer (the shell does that: it shows the bar only on tab roots).
+ *
+ *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
+ *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)
  */
 import type { JSX } from 'preact';
+import { Icon, type IconName } from './icons.tsx';
+import { cx } from './util.tsx';
 import './tabbar.css';
 
 export type BarTab = 'today' | 'chats' | 'orders' | 'customers';
 
-const ICONS: Record<BarTab, (on: boolean) => JSX.Element> = {
-  today: (on) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M6 18a6 6 0 0 1 12 0z" /><path d="M3 18h18M12 4v3M4.9 8.9 7 11M19.1 8.9 17 11" fill="none" />
-    </svg>
-  ),
-  chats: (on) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 4.5h13v9H8l-5 4z" /><path d="M17.5 8.5H21v11.5l-3.2-2.6H10.5v-2.9" fill="none" />
-    </svg>
-  ),
-  orders: (on) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z" /><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9" fill="none" stroke={on ? '#FFFFFF' : undefined} />
-    </svg>
-  ),
-  customers: (on) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill={on ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6z" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .9 3.2 2.9 3.5 5.7" fill="none" />
-    </svg>
-  ),
-};
+export interface BarItem<T extends string = BarTab> { id: T; word: string; icon: IconName }
 
-const WORD: Record<BarTab, string> = { today: 'Today', chats: 'Chats', orders: 'Orders', customers: 'Customers' };
+const SALES: BarItem[] = [
+  { id: 'today', word: 'Today', icon: 'today' }, { id: 'chats', word: 'Chats', icon: 'chats' },
+  { id: 'orders', word: 'Orders', icon: 'orders-tab' }, { id: 'customers', word: 'Customers', icon: 'customers' },
+];
 
-export interface TabBarProps {
-  active: BarTab | null;
-  /** Chats waiting for a reply (the crimson count). */
+export interface TabBarProps<T extends string = BarTab> {
+  active: T | null;
+  /** Chats waiting for a reply (the crimson count on Chats). */
   waiting: number;
   /** Orders not placed yet (the navy count on the +). */
   notPlaced: number;
-  onTab: (tab: BarTab) => void;
+  onTab: (tab: T) => void;
   onPlus: () => void;
+  /** The tabs, half each side of the +. The Sales four by default. */
+  items?: BarItem<T>[];
+  /** The +'s name ("New sale"). */
+  plusLabel?: string;
+  inline?: boolean;
 }
 
-export function TabBar(p: TabBarProps): JSX.Element {
-  const tab = (t: BarTab) => {
-    const on = p.active === t;
-    const label = t === 'chats' && p.waiting > 0 ? `Chats, ${p.waiting} waiting` : undefined;
+export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Element {
+  const items = (p.items || SALES) as BarItem<T>[], half = Math.ceil(items.length / 2);
+  const tab = (t: BarItem<T>) => {
+    const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
-      <a href={`#${t}`} class={'ow-tab' + (on ? ' on' : '') + (t === 'chats' ? ' ow-tab-chats' : '')} aria-current={on ? 'page' : undefined} aria-label={label}
-        onClick={(e) => { e.preventDefault(); p.onTab(t); }}>
-        {ICONS[t](on)}{WORD[t]}
-        {t === 'chats' && p.waiting > 0 && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
+      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} waiting` : undefined}
+        onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
+        <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} />{t.word}
+        {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
       </a>
     );
   };
+  const plus = p.plusLabel || 'New sale';
   return (
-    <nav aria-label="Main" class="ow-tabbar">
-      {tab('today')}
-      {tab('chats')}
-      <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `New sale, ${p.notPlaced} not placed yet` : 'New sale'}
+    <nav aria-label="Main" class={cx('ow-tabbar', p.inline && 'inline')} style={{ gridTemplateColumns: [...items.slice(0, half).map(() => '1fr'), '96px', ...items.slice(half).map(() => '1fr')].join(' ') }}>
+      {items.slice(0, half).map(tab)}
+      <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} not placed yet` : plus}
         onClick={(e) => { e.preventDefault(); p.onPlus(); }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        <Icon name="plus" size={28} stroke={2.4} />
         {p.notPlaced > 0 && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}
       </a>
-      {tab('orders')}
-      {tab('customers')}
+      {items.slice(half).map(tab)}
     </nav>
   );
 }

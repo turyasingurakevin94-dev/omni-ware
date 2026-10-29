@@ -21,7 +21,9 @@
  *
  * The demo (the sample shop of the canvas, src/core/demo) is its own file
  * beside the page, loaded only on ?demo: the page never carries it, so its
- * budget is the real app's. The phone apps never fetch it.
+ * budget is the real app's. The phone apps never fetch it. So is the parts
+ * gallery (src/ui/gallery, next/<role>-parts.js), loaded only on
+ * ?demo&parts=main|main2: its CSS rides inside the script.
  */
 const fs = require('fs');
 const path = require('path');
@@ -34,7 +36,7 @@ const SUPABASE_TAG = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supaba
 const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
 const ROLES = {
-  sales: { title: 'Sales', theme: '#16203C', manifest: '/manifest-sales.json', demo: 'src/core/demo/entry.ts' },
+  sales: { title: 'Sales', theme: '#16203C', manifest: '/manifest-sales.json', demo: 'src/core/demo/entry.ts', parts: 'src/ui/gallery/entry.tsx' },
 };
 const OPTS = { bundle: true, write: false, minify: true, format: 'iife', target: ['es2020'], legalComments: 'none', charset: 'utf8', logLevel: 'silent' };
 
@@ -80,7 +82,12 @@ async function build(role) {
   const gz = zlib.gzipSync(Buffer.from(html), { level: 9 }).length;
   const demoRes = await esbuild.build({ ...OPTS, entryPoints: [path.join(ROOT, ROLES[role].demo)] });
   const demo = `// GENERATED from src/core/demo by tools/build-app.js for ${role}.html?demo. Do not edit: run \`npm run build:${role}\`.\n${demoRes.outputFiles[0].text.trim()}\n`;
-  return { html, gz, out: path.join(ROOT, 'next', role + '.html'), demo, demoOut: path.join(ROOT, 'next', role + '-demo.js') };
+  const partsRes = await esbuild.build({ ...OPTS, entryPoints: [path.join(ROOT, ROLES[role].parts)], jsx: 'automatic', jsxImportSource: 'preact', outdir: path.join(ROOT, '.build-tmp') });
+  const pjs = partsRes.outputFiles.filter((f) => f.path.endsWith('.js')).map((f) => f.text).join('\n').trim();
+  const pcss = partsRes.outputFiles.filter((f) => f.path.endsWith('.css')).map((f) => f.text).join('\n').trim();
+  const parts = `// GENERATED from src/ui/gallery by tools/build-app.js for ${role}.html?demo&parts=main|main2. Do not edit: run \`npm run build:${role}\`.\n`
+    + `(function(){var s=document.createElement("style");s.textContent=${JSON.stringify(pcss)};document.head.appendChild(s)})();\n${pjs}\n`;
+  return { html, gz, out: path.join(ROOT, 'next', role + '.html'), demo, demoOut: path.join(ROOT, 'next', role + '-demo.js'), parts, partsOut: path.join(ROOT, 'next', role + '-parts.js') };
 }
 
 async function main() {
@@ -88,7 +95,7 @@ async function main() {
   const role = args.find((a) => !a.startsWith('--'));
   const check = args.includes('--check');
   if (!role) { console.error('usage: node tools/build-app.js <role> [--check]'); process.exit(2); }
-  const { html, gz, out, demo, demoOut } = await build(role);
+  const { html, gz, out, demo, demoOut, parts, partsOut } = await build(role);
   const rel = path.relative(ROOT, out);
   const kb = (n) => (n / 1024).toFixed(1) + ' KB';
   if (gz > BUDGET) {
@@ -96,7 +103,7 @@ async function main() {
     process.exit(1);
   }
   if (check) {
-    for (const [file, want] of [[out, html], [demoOut, demo]]) {
+    for (const [file, want] of [[out, html], [demoOut, demo], [partsOut, parts]]) {
       const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
       if (cur !== want) {
         console.error(`build-app: ${path.relative(ROOT, file)} is not what src/ builds. Run \`npm run build:${role}\` and commit it.`);
@@ -109,6 +116,7 @@ async function main() {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
   fs.writeFileSync(demoOut, demo);
+  fs.writeFileSync(partsOut, parts);
   console.log(`build-app: wrote ${rel}, ${kb(Buffer.byteLength(html))} raw, ${kb(gz)} compressed of ${kb(BUDGET)}`);
 }
 

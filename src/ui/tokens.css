@@ -38,6 +38,26 @@
   --on-navy-2: #8D99B5;
   --on-navy-off: #5F6A85;        /* decoration only */
   --chev: #9AA1AE;               /* decoration only */
+  --on-navy-3: #DDE3F0;          /* icons on a glass tile (P09) */
+  --navy-done: #22305A;          /* a done stop on the rail (P18) */
+  --knob-off: #59627A;           /* the slide knob when it cannot go (P15) */
+  --empty-ink: #5C6788;          /* the empty dock's figure and basket (P15) */
+  --empty-label: #7F89A6;        /* the empty dock's words (P15) */
+  --dash-soft: #D8D3C9;          /* a ghost tile's dashes (P24) */
+  --ring-track: #EFECE6;         /* a due ring's track, a check-list divider (P10, P20) */
+  --day-block: #D5D9E2;          /* a day inside their rhythm (S08) */
+  --chat-ground: #EDE7DD;        /* the chat (S01) */
+  --bubble-ours: #DDF6D2;        /* our bubble (S01) */
+  --warn-line: #F3D3B0;          /* a team note's and a warn toast's outline */
+  --bad-line: #E8B4AE;           /* an error toast's outline */
+  --oxide-pressed-soft: #FDE8E4; /* the flame's square */
+
+  /* S05 · each stage's own dot (identity, always with its word) */
+  --st-checking: #F5B26B;
+  --st-buying: #9DB7E0;
+  --st-packing: #7FA2D6;
+  --st-road: #6FDCB0;
+  --st-delivered: #C9C4BA;
 
   /* §1.1 avatar tints (identity, never state) */
   --t0-bg: #DCEAF8; --t0-fg: #1A5A8A;
@@ -52,6 +72,9 @@
   --dark-card-ground: radial-gradient(120% 90% at 100% 0%, #2B3866 0%, #16203C 58%);
   --navy-tile-ground: linear-gradient(160deg, #243052, #16203C);
   --scrim: rgba(12, 19, 38, .72);
+  --hatch: repeating-linear-gradient(135deg, #9DB7E0 0 4px, #7FA2D6 4px 8px);   /* being checked (S06) */
+  --shim: linear-gradient(90deg, #EDEAE4 0%, #F7F5F2 40%, #EDEAE4 80%);         /* P25 on light */
+  --shim-navy: linear-gradient(90deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.14) 40%, rgba(255,255,255,.06) 80%);
 
   /* §1.3 shadows */
   --sh-hair: 0 1px 2px rgba(22,32,60,.05), inset 0 0 0 1px #E6E3DD;
@@ -66,6 +89,8 @@
   --sh-white-on-navy: 0 6px 16px rgba(0,0,0,.25);
   --sh-toast: 0 10px 28px rgba(22,32,60,.25);
   --sh-sheet: 0 -8px 30px rgba(0,0,0,.35);
+  --sh-row: 0 1px 2px rgba(22,32,60,.05), inset 0 0 0 1px #E6E3DD;   /* = hair: a white row or card */
+  --sh-line: inset 0 0 0 1px #E6E3DD;                                /* a flat white card (money tile, check list) */
 
   /* §1.4 radii */
   --r-pill: 999px;
@@ -97,13 +122,18 @@
 @keyframes owNudge { 0%, 100% { transform: translateX(0) } 50% { transform: translateX(6px) } }
 @keyframes owShim { 0% { background-position: 100% 0 } 100% { background-position: -200% 0 } }
 
-/* The file shell's base (body{margin:0}, links and buttons inherit). */
-*, *::before, *::after { box-sizing: border-box; }
+/*
+ * The file shell's base (body{margin:0}, links and buttons inherit). No global
+ * border-box: the boards are drawn content-box, so the parts are too, and each
+ * says box-sizing where the board does.
+ */
 html, body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
 a { color: inherit; text-decoration: none; }
 a:hover { color: inherit; }
 button { font-family: inherit; color: inherit; }
-input::placeholder { color: var(--ink-faint); opacity: 1; font-family: var(--font); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+input::placeholder, textarea::placeholder { color: var(--ink-faint); opacity: 1; }
 :focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+/* A unit word inside a mono figure ("40 bag × 33,500") stays Figtree. */
+.ow-word { font-family: var(--font); }

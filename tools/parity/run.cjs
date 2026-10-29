@@ -29,6 +29,11 @@
  *   {"press": "Enter"} · {"wait": 400} · {"wait": "Placed"} (until that text shows) · {"scroll": 300} or {"scroll": "Show 34 more"}
  * A spec may also name a "region": [x, y, w, h] in board pixels, measured on its own as well
  * (TD01's tab bar: [0, 716, 360, 84]).
+ *
+ * Each board is shot at its own size, its "$preview" (360 × 800 for a screen; the parts
+ * boards Main and Main2 are 1600 × 1600 and 1600 × 1000, reached at ?demo&parts=main|main2,
+ * test/parity/parts.json), and the app at the same viewport. Animations are stopped in both
+ * shots (each at its first frame), so a pulse or a nudge never counts as a difference.
  */
 const fs = require('fs');
 const path = require('path');
@@ -38,7 +43,13 @@ const ROOT = path.join(__dirname, '..', '..');
 const BOARDS = path.join(ROOT, 'docs/canvas/sales-agent/boards');
 const SPECS = path.join(ROOT, 'test/parity');
 const OUT = path.join(ROOT, 'docs/audit/sales/parity');
-const W = 360, H = 800, ORIGIN = 'http://omni.local';
+const ORIGIN = 'http://omni.local';
+
+/** A board's own size: its $preview (shot.cjs reads it the same way); 360 × 800 when it says none. */
+function sizeOf(board) {
+  const m = fs.readFileSync(path.join(BOARDS, board), 'utf8').match(/"\$preview":\{"width":(\d+),"height":(\d+)\}/);
+  return m ? { W: +m[1], H: +m[2] } : { W: 360, H: 800 };
+}
 
 function allSpecs() {
   const out = [];
@@ -65,11 +76,12 @@ function pick(args) {
 
 function tabOf(board) {
   const c = JSON.parse(fs.readFileSync(path.join(BOARDS, 'canvas.json'), 'utf8'));
-  return (c.boards[board] && c.boards[board].page) || 'unknown';
+  const page = (c.boards[board] && c.boards[board].page) || 'unknown';
+  return page === 'lang' ? 'parts' : page;
 }
 
 /** The board as shot.cjs draws it. */
-async function shootBoard(browser, board) {
+async function shootBoard(browser, board, { W, H }) {
   const src = fs.readFileSync(path.join(BOARDS, board), 'utf8');
   const html = src.replace('<script src="./support.js"></script>', '').replace(/<script type="text\/x-dc"[\s\S]*?<\/script>/, '')
     .replace(/<x-dc>/g, '<div class="xdc">').replace(/<\/x-dc>/g, '</div>').replace(/<helmet>/g, '').replace(/<\/helmet>/g, '');
@@ -78,7 +90,7 @@ async function shootBoard(browser, board) {
   await p.setContent(html, { waitUntil: 'load', timeout: 20000 }).catch(() => {});
   await p.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
   await p.waitForTimeout(400);
-  const png = await p.screenshot({ clip: { x: 0, y: 0, width: W, height: H } });
+  const png = await p.screenshot({ clip: { x: 0, y: 0, width: W, height: H }, animations: 'disabled' });
   await ctx.close();
   return png;
 }
@@ -124,7 +136,7 @@ async function step(p, s) {
   await p.waitForTimeout(s.settle ?? 350);
 }
 
-async function shootApp(browser, spec) {
+async function shootApp(browser, spec, { W, H }) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, ignoreHTTPSErrors: true });
   await serve(ctx);
   const p = await ctx.newPage();
@@ -137,13 +149,13 @@ async function shootApp(browser, spec) {
   let taps = 0;
   for (const s of spec.steps || []) { await step(p, s); if (s.tap != null) taps++; }
   await p.waitForTimeout(spec.settle ?? 300);
-  const png = await p.screenshot({ clip: { x: 0, y: 0, width: W, height: H } });
+  const png = await p.screenshot({ clip: { x: 0, y: 0, width: W, height: H }, animations: 'disabled' });
   await ctx.close();
   return { png, taps, errors };
 }
 
 /** Side by side, the diff, and the % of pixels that differ (in the browser: no image package needed). */
-async function compare(browser, boardPng, appPng, board, region) {
+async function compare(browser, boardPng, appPng, board, region, { W, H }) {
   const ctx = await browser.newContext({ viewport: { width: W * 2 + 48, height: H + 56 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const url = (b) => 'data:image/png;base64,' + b.toString('base64');
@@ -185,9 +197,10 @@ async function main() {
   for (const spec of specs) {
     const name = spec.board.replace(/\.dc\.html$/, '');
     try {
-      const boardPng = await shootBoard(browser, spec.board);
-      const app = await shootApp(browser, spec);
-      const c = await compare(browser, boardPng, app.png, spec.board, spec.region);
+      const size = sizeOf(spec.board);
+      const boardPng = await shootBoard(browser, spec.board, size);
+      const app = await shootApp(browser, spec, size);
+      const c = await compare(browser, boardPng, app.png, spec.board, spec.region, size);
       fs.writeFileSync(path.join(OUT, name + '.png'), c.side);
       fs.writeFileSync(path.join(OUT, name + '.diff.png'), c.diff);
       results[spec.board] = { tab: spec.tab, taps: app.taps, diff: c.pct, region: spec.region || null, regionDiff: c.regionPct, errors: app.errors, at: new Date().toISOString().slice(0, 16).replace('T', ' ') };
