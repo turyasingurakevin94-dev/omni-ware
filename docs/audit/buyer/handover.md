@@ -40,7 +40,7 @@ Stage names agree. The line words under them do not (§4).
 | Client waits / Sourcing finds | `items[].clientWaits` (no `supplierId`) | Sourcing request (0139); `sourcing.found` → Buyer (0144); **nothing to Sales** | "waiting for a supplier" | "WITH MOSES" / "CLIENT WAITS" |
 | All suppliers yes | status `draft→awaiting_goods` (orderLeaveDraft) | `order.buying` → Buyer only | stage chip "Buying", line "being bought in" | "All confirmed · in Buying" |
 | Trip came back short | `items[].receivedQty` < `qty` | `trip.short` → salesperson (0144) | "short · got 5 of 6" | "4 short · Kato" |
-| Goods in, order to Packing | status → `preparing` (Store count) | `order.pick` → Store | "Packing" | "Checked in · on the shelf" |
+| Hand in; Store counts it in, order to Packing | status → `preparing` at the Store count | `trip.back` → Store (0150) | "Packing" | "Checked in · on the shelf" |
 
 ## 4. Mismatches
 
@@ -71,3 +71,7 @@ Stage names agree. The line words under them do not (§4).
 8. An ask by phone or in person shows **Asked · 10:40** the same as one sent on WhatsApp (from the Today board).
 9. A line moved to another supplier after a **Not found** goes back to **To ask**; Sales shows that word again (from the Replies board).
 10. A supplier price that came in **under** the selling price stays **Found**, no push; Sales shows the new cost quietly (from the Replies board).
+11. Show **On the trip** on a line once the cash ask is sent (read the trip state; no push, nobody waits), M8 (from the trip boards).
+
+### Open question for Kevin
+- An order that comes back **complete** pushes nobody in Sales (only `trip.short` does); Grace sees **Packing** after the Store counts it in. Nobody waits on her, so by the push rule no push is needed. Say if you want one.
