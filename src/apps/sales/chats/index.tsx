@@ -1,20 +1,18 @@
 /*
- * The Chats tab (boards CH01–CH33, docs/canvas/sales-agent/boards/).
- * Owned by the chats builder: register this tab's screens and routes here,
- * one file per screen beside this one. Screen ids start with "chats/";
- * the root's id is "chats". Parity specs: test/parity/chats.json.
+ * The Chats tab (boards CH01–CH33, docs/canvas/sales-agent/boards/). Its screens:
+ *   chats            the list: Mine, Waiting, New, Team (CH01–CH04), no chats yet (CH06), loading (CH07)
+ *   chats/new        New chat, the sheet over the list (CH05)
+ *   chats/chat       one chat (CH10–CH15, CH20, CH21, CH30, CH31)
+ *   chats/customer   the customer, from the chat (CH33)
+ * Parity specs: test/parity/chats.json.
  */
-import { Todo } from '../shell/Todo.tsx';
 import type { TabModule } from '../shell/types.ts';
-
-function ChatsRoot() {
-  return <Todo title="Chats" boards="CH01–CH33" />;
-}
+import { ChatsList } from './List.tsx';
 
 export const tab: TabModule = {
   id: 'chats',
   root: 'chats',
   screens: {
-    'chats': { view: ChatsRoot },
+    'chats': { view: ChatsList },
   },
 };
