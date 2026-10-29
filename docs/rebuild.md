@@ -54,8 +54,9 @@ is clearly better.** Kevin set this goal on 2026-10-28.
 - [ ] **3. The shared core.** Money (one rule each, Kevin's answers below),
       data and offline sync, log in, the screen parts. The old money tests are
       ported as its checks.
-- [ ] **4. Role apps, one at a time**, to the approved canvases: Store first,
-      then Sales, Buyer, Manager, Accounts. Each is tried on a preview link,
+- [ ] **4. Role apps, one at a time**, to the approved canvases: **Sales first**
+      (Kevin, 2026-10-29: the Sales canvas in the agent app's language,
+      `docs/canvas/sales-agent/`), then Store, Buyer, Manager, Accounts. Each is tried on a preview link,
       then its role switches over; the old app stays one release as fallback.
 - [ ] **5. Later, if ever:** Owner, Worker, Supplier, Agent, the console.
 
@@ -154,3 +155,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-10-28** — Phase 2 done: Kevin approved chapter 07 as proposed (all four answers yes). Next: phase 3, the shared core.
 - **2026-10-28** — Spec chapters 05 (data) and 06 (offline, sync, pushes) written from the database and the apps. Found on the way: a `staff` (yard worker) login can read the cash book and customers' debts (only `store` is kept to its functions); 8 pushes reach an app with no page for them; the Manager's "kept on this phone" invoice is held only in memory. 19 questions for Kevin.
 - **2026-10-28** — Kevin took every recommended answer in chapters 05 (§8) and 06 (§7); both decided. 05 Q1 and Q2 built now as `0179`: a `staff` (yard worker) login is refused the 21 money and customer tables the worker app never reads, and `staff` holds the yard's tasks (`order.pick`, `order.load`, `order.deliver`) in `decision-rights.md` and `role_tasks`. Still open to a worker: an order's prices and payments in `saved_quotes`, closed when the worker app reads through a stripped function as the Store does. 06 Q10 (stock-count pushes go to the Manager, not the owner) and the eight pushes with no page (Q9) are built by the new apps. Test: `test/staff-privacy-db.test.js`.
+- **2026-10-29** — Kevin moved **Sales ahead of Store**: the new Sales app is built in `src/apps/sales/` to the approved canvas "Sales — in the agent app's language" (149 boards, every one scored at least 8.5 by an independent audit; source in `docs/canvas/sales-agent/`), tried at `/next/sales.html`; `sales.html` stays frozen as the fallback. Phase 3's shared core (build, `src/core`, `src/ui` parts from the canvas's LANGUAGE.md) is built first, for Sales. Proof per board: `docs/audit/sales/CANVAS-PARITY.md` (board beside app at 360 × 800, reached by taps from Today in a demo seeded with the canvas's FACTS.md).
