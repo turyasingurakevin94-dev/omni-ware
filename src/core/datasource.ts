@@ -150,7 +150,14 @@ export interface DataSource {
   send(chatId: number, text: string): Promise<Message>;
   /** After the 24-hour window: the shop's approved reply template, their words inside it. */
   sendTemplate(chatId: number, text: string): Promise<Message>;
-  note(chatId: number, body: string): Promise<ChatNote>;
+  /** A picture, with words under it (wa-send 'send-image': the shop's image bucket, then its link). */
+  sendImage(chatId: number, file: Blob, caption: string): Promise<Message>;
+  /** The shop's WhatsApp catalogue as a card they can browse (wa-send 'send-catalog'). */
+  sendCatalog(chatId: number): Promise<Message>;
+  /** A customer's picture, voice note or document: its link (wa-send 'media'). */
+  media(messageId: string): Promise<{ link: string; mime: string }>;
+  /** A team note, never sent to the customer; each member in `mentions` gets a push (wa_notes.mentions). */
+  note(chatId: number, body: string, mentions?: string[]): Promise<ChatNote>;
   /** Take a new number as your customer (take_conversation, chat.take). */
   take(chatId: number): Promise<void>;
   /** Give your own customer's chat to a teammate, with a note (hand_conversation). */

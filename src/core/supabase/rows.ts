@@ -284,6 +284,7 @@ export function messageOf(m: Row): Message {
     id: String(m.id), chatId: num(m.conversation_id), at: ms(m.sent_at) || ms(m.created_at) || 0, dir: m.direction === 'out' ? 'out' : 'in',
     kind, body: String(m.body || ''), by: m.sent_by ? String(m.sent_by) : null,
     state: m.direction === 'out' ? (['sent', 'delivered', 'read', 'failed'].includes(m.status) ? m.status : 'sent') : null,
+    media: m.payload && m.payload.media_link ? String(m.payload.media_link) : null,
   };
 }
 
