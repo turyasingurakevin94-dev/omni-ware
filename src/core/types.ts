@@ -260,6 +260,11 @@ export interface Message {
   by: string | null;
   /** sent → delivered → read, or failed; 'kept' = on this phone, not sent yet. */
   state: 'sent' | 'delivered' | 'read' | 'failed' | 'kept' | null;
+  /**
+   * A picture's or file's link once known (payload.media_link; wa-send 'media' fetches it).
+   * The demo has no pictures: 'aisle:<Aisle>' stands for a photo of an item from that aisle.
+   */
+  media?: string | null;
 }
 
 /** A team note on a chat, never sent to the customer (wa_notes, 0170). */

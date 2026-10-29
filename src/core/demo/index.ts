@@ -12,7 +12,7 @@ import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
 import { readFlags, type DemoFlags } from './flags.ts';
 import { SAVED_AT } from './seed/clock.ts';
 import { seed, type DemoState } from './seed/index.ts';
-import { MUSA } from './seed/people.ts';
+import { CHAT, MUSA } from './seed/people.ts';
 import * as W from './writes.ts';
 
 const copy = <T>(x: T): T => structuredClone(x);
@@ -57,16 +57,17 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     state: s,
     now: () => s.now,
     online: () => !flags.offline,
+    // &offline=1: Grace's two answers to Mukono, typed with no signal at 10:40 and 10:41 (CH12; TD09 counts them).
     kept: () => (flags.offline ? [
-      { id: 'k1', kind: 'send', args: { chatId: 103, text: 'Esther has corrected it. Thank you.' }, at: SAVED_AT + 5 * 60000, tries: 1, state: 'kept', reason: '' },
-      { id: 'k2', kind: 'note', args: { chatId: 101, body: 'Kato wants it at the Ntinda site' }, at: SAVED_AT + 9 * 60000, tries: 1, state: 'kept', reason: '' },
+      { id: 'k1', kind: 'send', args: [CHAT.mukono, 'Shall I add 6 tins to your order?'], at: s.now - 60000, tries: 1, state: 'kept', reason: '' },
+      { id: 'k2', kind: 'send', args: [CHAT.mukono, 'I’ll bring the colour card on Monday.'], at: s.now, tries: 1, state: 'kept', reason: '' },
     ] : []),
 
     async session(): Promise<Session | null> {
       if (!signedIn) return null;
       // TD10: the login under this screen is now Musa's (Store); nothing is saved as Musa.
       if (flags.state === 'signed-elsewhere') return { userId: MUSA, shopId: s.books.shop.id, shopName: s.books.shop.name, role: 'store', name: 'Musa Kiggundu' };
-      return { userId: me.id, shopId: s.books.shop.id, shopName: s.books.shop.name, role: 'sales', name: me.name };
+      return { userId: me.id, shopId: s.books.shop.id, shopName: s.books.shop.name, role: me.role === 'manager' ? 'manager' : 'sales', name: me.name };
     },
     async signIn() { signedIn = true; return (await src.session()) as Session; },
     async signOut() { signedIn = false; },
@@ -134,6 +135,12 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),
+    sendImage: (chatId, _file, caption) => write(() => say(chatId, caption, 'image')),
+    sendCatalog: (chatId) => write(() => say(chatId, '', 'catalog')),
+    media: (messageId) => {
+      const m = s.messages.find((x) => x.id === messageId);
+      return m && m.media ? Promise.resolve({ link: m.media, mime: 'image/jpeg' }) : Promise.reject(dataError('refused', 'no file came back'));
+    },
     note: (chatId, body) => write(() => {
       const n: ChatNote = { id: 'n' + (s.notes.length + 1), chatId: chat(chatId).id, at: s.now, by: me.id, body };
       s.notes.push(n);
@@ -145,16 +152,20 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       c.ownerId = me.id; c.ownerAt = s.now;
       s.events.push({ id: 'e' + (s.events.length + 1), chatId, at: s.now, kind: 'taken', by: me.id, to: me.id, note: '' });
     }),
+    // hand_conversation (0170): your own customer is handed; the Manager (chat.move) moves anyone's, and both are pushed.
     give: (chatId, to, note) => write(() => {
-      const c = chat(chatId);
-      if (c.ownerId && c.ownerId !== me.id) throw dataError('refused', 'Only your own customer can be given', 'OWGIV');
+      const c = chat(chatId), mine = c.ownerId === me.id;
+      if (!mine && me.role !== 'manager') throw dataError('refused', 'Only the chat’s salesperson hands it on; the Manager moves any chat.', '42501');
+      const target = s.books.members.find((m) => m.id === to);
+      if (!target || !['sales', 'manager', 'owner'].includes(target.role)) throw dataError('refused', 'Give it to someone on the sales team.', '22023');
+      if (c.ownerId === to) return;
       c.ownerId = to; c.ownerAt = s.now;
-      s.events.push({ id: 'e' + (s.events.length + 1), chatId, at: s.now, kind: 'handed', by: me.id, to, note });
+      s.events.push({ id: 'e' + (s.events.length + 1), chatId, at: s.now, kind: mine ? 'handed' : 'moved', by: me.id, to, note: note.trim() });
     }),
     markRead: (chatId) => write(() => { chat(chatId).lastReadAt = s.now; }),
     touch() { /* presence is seeded */ },
     served: (chatId) => {
-      const by = new Map<string, number>();
+      const by = new Map<string, number>(Object.entries(s.servedBefore[chatId] || {}));
       s.messages.filter((m) => m.chatId === chatId && m.dir === 'out' && m.by).forEach((m) => by.set(m.by as string, (by.get(m.by as string) || 0) + 1));
       return Promise.resolve([...by].map(([id, n]) => ({ by: id, name: (s.books.members.find((m) => m.id === id) || { name: '' }).name, messages: n })));
     },
