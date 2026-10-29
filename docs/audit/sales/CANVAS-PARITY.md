@@ -13,11 +13,11 @@ Reading the numbers: "Pixels that differ" counts pixels where any colour channel
 
 <!-- parity:start (tools/parity/report.cjs writes this part) -->
 
-**147 boards** · 2 with a spec · 2 measured · 0 passed by their critic. Regenerated 2026-10-29.
+**149 boards** · 4 with a spec · 4 measured · 0 passed by their critic. Regenerated 2026-10-29.
 
 | Board | Tab | What it shows | Taps from Today | Pixels that differ | Critic | Screenshot |
 |---|---|---|---|---|---|---|
-| TD01Today | today | Today → sold this month, 4 live stages with Mukono's Take 1.1M, Needs you 7 by kind | 0 | 41.07% (region 0%) | — | [side by side](parity/TD01Today.png) · [diff](parity/TD01Today.diff.png) |
+| TD01Today | today | Today → sold this month, 4 live stages with Mukono's Take 1.1M, Needs you 7 by kind | 0 | 41.04% (region 0%) | — | [side by side](parity/TD01Today.png) · [diff](parity/TD01Today.diff.png) |
 | TD02TodayBusy | today | Today, busy → Needs you 22 by kind, running on into Next move | — | no spec yet | — | — |
 | TD03TodayNext | today | Next move → Kyaligonza 4 days late, Order usual in one tap; then Lubowa, Mukono, Kato's new price | — | no spec yet | — | — |
 | TD04TodayTell | today | Tell them → old price struck, the message shown, Send to Kato, next tell queued | — | no spec yet | — | — |
@@ -111,7 +111,7 @@ Reading the numbers: "Pixels that differ" counts pixels where any colour channel
 | KC17Offline | counter | No signal → lines kept, Back online to sell | — | no spec yet | — | — |
 | KC18NotOnShelf | counter | 1 short → SL13's pattern: Make it 2 or Order in 1 | — | no spec yet | — | — |
 | KC19Failed | counter | Not sold → nothing taken, slide again | — | no spec yet | — | — |
-| OR01Orders | orders | Orders by stage → act from the row (Take 1.1M, Tell), who holds each | 1 | 29.9% (region 0%) | — | [side by side](parity/OR01Orders.png) · [diff](parity/OR01Orders.diff.png) |
+| OR01Orders | orders | Orders by stage → act from the row (Take 1.1M, Tell), who holds each | 1 | 29.93% (region 0%) | — | [side by side](parity/OR01Orders.png) · [diff](parity/OR01Orders.diff.png) |
 | OR02Delivered | orders | Delivered this week → paid, return asked at a glance | — | no spec yet | — | — |
 | OR03Find | orders | Find Kato → what's in each order, owes 420,000, Take from search | — | no spec yet | — | — |
 | OR04Empty | orders | Nothing on the move → ghost stages, first steps, New order | — | no spec yet | — | — |
@@ -164,5 +164,7 @@ Reading the numbers: "Pixels that differ" counts pixels where any colour channel
 | CU41PaidChange | customers | Paid with change → give 80,000 back now | — | no spec yet | — | — |
 | CU42PaidDeposit | customers | Paid with a deposit → deposit 80,000 on the slip | — | no spec yet | — | — |
 | CU43ReceiptNotSent | customers | Paid; WhatsApp can't reach Kato → Send by SMS or Try again | — | no spec yet | — | — |
+| Main | parts | The language · shared parts | 0 | 0.02% | — | [side by side](parity/Main.png) · [diff](parity/Main.diff.png) |
+| Main2 | parts | The language · Sales-only parts in the same voice | 0 | 0% | — | [side by side](parity/Main2.png) · [diff](parity/Main2.diff.png) |
 
 <!-- parity:end -->

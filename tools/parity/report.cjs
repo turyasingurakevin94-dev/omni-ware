@@ -18,7 +18,9 @@ const ROOT = path.join(__dirname, '..', '..');
 const DOC = path.join(ROOT, 'docs/audit/sales/CANVAS-PARITY.md');
 const START = '<!-- parity:start (tools/parity/report.cjs writes this part) -->';
 const END = '<!-- parity:end -->';
-const TABS = ['today', 'chats', 'sell', 'counter', 'orders', 'customers'];
+const TABS = ['today', 'chats', 'sell', 'counter', 'orders', 'customers', 'parts'];
+// The parts boards (Main, Main2) are canvas page "lang"; their specs are test/parity/parts.json.
+const tabOf = (page) => (page === 'lang' ? 'parts' : page);
 
 const read = (rel, empty) => { const f = path.join(ROOT, rel); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : empty; };
 
@@ -31,8 +33,8 @@ TABS.forEach((t) => {
 });
 
 const boards = Object.entries(canvas.boards)
-  .filter(([, b]) => TABS.includes(b.page))
-  .sort(([a, x], [b, y]) => TABS.indexOf(x.page) - TABS.indexOf(y.page) || a.localeCompare(b));
+  .filter(([, b]) => TABS.includes(tabOf(b.page)))
+  .sort(([a, x], [b, y]) => TABS.indexOf(tabOf(x.page)) - TABS.indexOf(tabOf(y.page)) || a.localeCompare(b));
 
 const cell = (s) => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\n/g, ' ');
 let withSpec = 0, measured = 0, passed = 0;
@@ -44,7 +46,7 @@ const rows = boards.map(([file, b]) => {
   const diff = !r ? '—' : r.diff == null ? `could not run: ${cell((r.errors || [])[0])}` : `${r.diff}%${r.regionDiff != null ? ` (region ${r.regionDiff}%)` : ''}`;
   const verdict = v ? `${cell(v.verdict)}${v.score != null ? ` ${v.score}` : ''}${v.note ? ` · ${cell(v.note)}` : ''}` : '—';
   const shot = r && r.diff != null ? `[side by side](parity/${name}.png) · [diff](parity/${name}.diff.png)` : '—';
-  return `| ${name} | ${b.page} | ${cell(b.title)} | ${spec ? (r && r.taps != null ? r.taps : (spec.steps || []).filter((s) => s.tap != null).length) : '—'} | ${spec ? diff : 'no spec yet'} | ${verdict} | ${shot} |`;
+  return `| ${name} | ${tabOf(b.page)} | ${cell(b.title)} | ${spec ? (r && r.taps != null ? r.taps : (spec.steps || []).filter((s) => s.tap != null).length) : '—'} | ${spec ? diff : 'no spec yet'} | ${verdict} | ${shot} |`;
 });
 
 const table = [

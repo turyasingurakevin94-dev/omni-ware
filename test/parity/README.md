@@ -1,6 +1,6 @@
 # Parity specs
 
-One file per tab, written by that tab's builder: `today.json`, `chats.json`, `sell.json`, `counter.json`, `orders.json`, `customers.json`. Each is a list; one entry per board:
+One file per tab, written by that tab's builder: `today.json`, `chats.json`, `sell.json`, `counter.json`, `orders.json`, `customers.json`; and `parts.json` for the two parts boards (Main, Main2: `"demo": "&parts=main"`, shot at their own size, `src/ui/README.md`). Each is a list; one entry per board:
 
 ```json
 [

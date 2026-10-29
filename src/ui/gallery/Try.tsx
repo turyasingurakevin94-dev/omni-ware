@@ -7,6 +7,7 @@
  */
 import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
+import { orderNo } from '../../core/names.ts';
 import type { Method } from '../../core/types.ts';
 import { Button } from '../Button.tsx';
 import { Composer } from '../Composer.tsx';
@@ -27,7 +28,7 @@ const say = (s: string) => { log.value = [...log.value, s]; };
 function place(): Promise<void> {
   return new Promise((done) => window.setTimeout(() => {
     placed.value += 1; say(`placed ${placed.value}`);
-    toast.show(`Placed #${557 + placed.value}`, { undo: () => { placed.value -= 1; say(`undone ${placed.value}`); } });
+    toast.show(`Placed ${orderNo(557 + placed.value)}`, { undo: () => { placed.value -= 1; say(`undone ${placed.value}`); } });
     done();
   }, 250));
 }

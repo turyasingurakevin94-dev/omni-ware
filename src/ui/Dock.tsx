@@ -23,7 +23,7 @@ export function ModeSwitch(p: { value: Mode; onChange: (m: Mode) => void }): JSX
     const on = p.value === m;
     return (
       <button type="button" role="radio" aria-checked={on} aria-label={on ? undefined : word} class={cx('ow-mode', on && 'on')} onClick={() => p.onChange(m)}>
-        <Icon name={icon} size={on ? 18 : 20} />{on && word}
+        <span><Icon name={icon} size={on ? 18 : 20} />{on && word}</span>
       </button>
     );
   };

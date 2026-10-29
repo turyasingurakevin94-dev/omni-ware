@@ -37,6 +37,8 @@ try { esbuild = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { es
 
   t.check(!page.includes('Mukasa Hardware'), 'the page itself carries no sample shop (it is in next/sales-demo.js, loaded only on ?demo)');
   t.check(fs.existsSync(path.join(ROOT, 'next/sales-demo.js')) && fs.readFileSync(path.join(ROOT, 'next/sales-demo.js'), 'utf8').startsWith('// GENERATED from src/'), 'next/sales-demo.js is committed, built from src/');
+  t.check(fs.existsSync(path.join(ROOT, 'next/sales-parts.js')) && fs.readFileSync(path.join(ROOT, 'next/sales-parts.js'), 'utf8').startsWith('// GENERATED from src/'), 'next/sales-parts.js (the parts gallery, ?demo&parts=…) is committed, built from src/');
+  t.check(!page.includes('g-board'), 'the page itself carries no parts gallery');
 
   const gz = zlib.gzipSync(Buffer.from(page), { level: 9 }).length;
   t.check(gz <= tool.BUDGET, `it is within budget: ${(gz / 1024).toFixed(1)} KB of ${tool.BUDGET / 1024} KB compressed`);
@@ -48,6 +50,8 @@ try { esbuild = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { es
     t.check(built.html === page, 'next/sales.html is exactly what src/ builds (run `npm run build:sales` and commit it)');
     const demo = fs.existsSync(built.demoOut) ? fs.readFileSync(built.demoOut, 'utf8') : '';
     t.check(built.demo === demo, 'next/sales-demo.js is exactly what src/core/demo builds');
+    const parts = fs.existsSync(built.partsOut) ? fs.readFileSync(built.partsOut, 'utf8') : '';
+    t.check(built.parts === parts, 'next/sales-parts.js is exactly what src/ui/gallery builds');
     t.check(built.gz <= tool.BUDGET, 'the fresh build is within budget');
   }
   process.exit(t.done() ? 1 : 0);
