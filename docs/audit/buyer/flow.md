@@ -68,3 +68,7 @@ Baskets / Sent / Packing / Out.
 | Price went up | Reply row → **New price** → type → done | `price.waits` → Manager, then `price.decided` → salesperson |
 | Switched item | Reply row → **No** → Switch → search → pick | `item.switch` |
 | Short at a stop | Stop row → **Short** → type what came | `trip.short` → salesperson |
+
+## Rule added on the Today board
+
+- **Plan** waits while a supplier in the same area is still **Asked**: one trip once they answer (from buyer.html's trip rule). The red + still opens the trip with what is found.

@@ -68,3 +68,6 @@ Stage names agree. The line words under them do not (§4).
 5. Show "Sourcing is finding it · Moses" for a line the client waits for, M5.
 6. Show **Switched** as its own line word (from the Orders board).
 7. Show **Ruth decides** on a line whose new cost is above Grace's selling price (from the Orders board).
+8. An ask by phone or in person shows **Asked · 10:40** the same as one sent on WhatsApp (from the Today board).
+9. A line moved to another supplier after a **Not found** goes back to **To ask**; Sales shows that word again (from the Replies board).
+10. A supplier price that came in **under** the selling price stays **Found**, no push; Sales shows the new cost quietly (from the Replies board).
