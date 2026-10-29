@@ -4,7 +4,8 @@
  * Builds one role's page from src/ (docs/spec/07-stack.md §3, §6).
  *
  *   node tools/build-app.js sales            src/apps/sales/main.tsx -> next/sales.html
- *   node tools/build-app.js sales --check    builds in memory; fails if next/sales.html differs
+ *                                            src/core/demo/entry.ts  -> next/sales-demo.js
+ *   node tools/build-app.js sales --check    builds in memory; fails if either file differs
  *
  * One self-contained page, like the old apps: the script and the CSS are
  * inlined, the fonts come from Google Fonts without holding the page up,
@@ -17,6 +18,10 @@
  * has a built page. Nobody edits the page; it is made again every time.
  *
  * Fails when the page is over its budget: 80 KB gzip (spec 07 §4).
+ *
+ * The demo (the sample shop of the canvas, src/core/demo) is its own file
+ * beside the page, loaded only on ?demo: the page never carries it, so its
+ * budget is the real app's. The phone apps never fetch it.
  */
 const fs = require('fs');
 const path = require('path');
@@ -29,8 +34,9 @@ const SUPABASE_TAG = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supaba
 const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
 const ROLES = {
-  sales: { title: 'Sales', theme: '#16203C', manifest: '/manifest-sales.json' },
+  sales: { title: 'Sales', theme: '#16203C', manifest: '/manifest-sales.json', demo: 'src/core/demo/entry.ts' },
 };
+const OPTS = { bundle: true, write: false, minify: true, format: 'iife', target: ['es2020'], legalComments: 'none', charset: 'utf8', logLevel: 'silent' };
 
 function page(role, js, css) {
   const r = ROLES[role];
@@ -67,25 +73,14 @@ async function build(role) {
   const entry = path.join(ROOT, 'src/apps', role, 'main.tsx');
   if (!fs.existsSync(entry)) throw new Error(`build-app: ${path.relative(ROOT, entry)} is missing`);
   const esbuild = require('esbuild');
-  const res = await esbuild.build({
-    entryPoints: [entry],
-    bundle: true,
-    write: false,
-    minify: true,
-    format: 'iife',
-    target: ['es2020', 'chrome80', 'safari14'],
-    jsx: 'automatic',
-    jsxImportSource: 'preact',
-    outdir: path.join(ROOT, '.build-tmp'),
-    legalComments: 'none',
-    charset: 'utf8',
-    logLevel: 'silent',
-  });
+  const res = await esbuild.build({ ...OPTS, entryPoints: [entry], jsx: 'automatic', jsxImportSource: 'preact', outdir: path.join(ROOT, '.build-tmp') });
   const js = res.outputFiles.filter((f) => f.path.endsWith('.js')).map((f) => f.text).join('\n');
   const css = res.outputFiles.filter((f) => f.path.endsWith('.css')).map((f) => f.text).join('\n');
   const html = page(role, js.trim(), css.trim());
   const gz = zlib.gzipSync(Buffer.from(html), { level: 9 }).length;
-  return { html, gz, out: path.join(ROOT, 'next', role + '.html') };
+  const demoRes = await esbuild.build({ ...OPTS, entryPoints: [path.join(ROOT, ROLES[role].demo)] });
+  const demo = `// GENERATED from src/core/demo by tools/build-app.js for ${role}.html?demo. Do not edit: run \`npm run build:${role}\`.\n${demoRes.outputFiles[0].text.trim()}\n`;
+  return { html, gz, out: path.join(ROOT, 'next', role + '.html'), demo, demoOut: path.join(ROOT, 'next', role + '-demo.js') };
 }
 
 async function main() {
@@ -93,7 +88,7 @@ async function main() {
   const role = args.find((a) => !a.startsWith('--'));
   const check = args.includes('--check');
   if (!role) { console.error('usage: node tools/build-app.js <role> [--check]'); process.exit(2); }
-  const { html, gz, out } = await build(role);
+  const { html, gz, out, demo, demoOut } = await build(role);
   const rel = path.relative(ROOT, out);
   const kb = (n) => (n / 1024).toFixed(1) + ' KB';
   if (gz > BUDGET) {
@@ -101,16 +96,19 @@ async function main() {
     process.exit(1);
   }
   if (check) {
-    const cur = fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '';
-    if (cur !== html) {
-      console.error(`build-app: ${rel} is not what src/ builds. Run \`npm run build:${role}\` and commit it.`);
-      process.exit(1);
+    for (const [file, want] of [[out, html], [demoOut, demo]]) {
+      const cur = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+      if (cur !== want) {
+        console.error(`build-app: ${path.relative(ROOT, file)} is not what src/ builds. Run \`npm run build:${role}\` and commit it.`);
+        process.exit(1);
+      }
     }
-    console.log(`build-app: ${rel} matches src/ (${kb(gz)} compressed of ${kb(BUDGET)})`);
+    console.log(`build-app: ${rel} and its demo match src/ (${kb(gz)} compressed of ${kb(BUDGET)})`);
     return;
   }
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
+  fs.writeFileSync(demoOut, demo);
   console.log(`build-app: wrote ${rel}, ${kb(Buffer.byteLength(html))} raw, ${kb(gz)} compressed of ${kb(BUDGET)}`);
 }
 
