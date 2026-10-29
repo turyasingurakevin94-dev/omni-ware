@@ -351,3 +351,20 @@ Differences found that are **names or format only** (no answer needed): `tieredU
 - `counter_sale`, `apply_momo_payment`, `settle_agent`, `buyer_payback` bodies were not read in full; rows above come from their headers.
 - `agent.html`'s own totals (`orderTotal` 6778 uses the agent's prices `agentSellPrice`, the agent's margin) and the agent discount/margin rules: not covered; they belong with the agent chapter.
 - `index.html` has more money functions than are listed here (about 600 `fmtUGX` calls); only the ones the role apps share were compared.
+
+---
+
+## 11. Found while building the shared core (2026-10-29)
+
+Rules the new core (`src/core/money.ts`) needed that this chapter did not yet hold, with their source, and the copies that disagree. The core builds the default named; Kevin decides.
+
+| Rule | Formula | Source | Test |
+|---|---|---|---|
+| **The credit charge is one line** named "Credit charge", never folded into unit prices | `round(cash total × credit.pct / 100)`, shown as its own row on the bill | `sales.html:4591` `orderExtraRows`; FACTS.md lead ruling "credit charge (final)" (186,000 at 3% → +5,580 → 191,580) | `sales-core-money` |
+| **A goal is measured by the invoices of the orders the salesperson took** | the open `manager_notes` target with `body.who` = the login, `metric = 'sales'`, `from ≤ today ≤ to`, newest first; actual = their invoiced sales in the window | `sales.html:6559` `myTarget`; `0122:977` | `sales-core-demo` (the seed's 12,480,000) |
+| **A dropped line is in no total** | lines taken off at Checking leave `items[]` for `droppedLines[]` | 01 §4a `droppedLines` | `sales-core-money` |
+
+| # | Open question | Copies | Built until Kevin answers |
+|---|---|---|---|
+| Q18 | Short money: one decimal or two under 10M? | `sales.html:3647` `short` writes "3.24M", "1.91M"; the approved canvas writes "+3.2M", "1.9M", "6.1M" and "1.61M a day" | One decimal, two where a rate needs it (`short(n, 2)`), as the canvas draws |
+| Q19 | Q3 says every amount is written "1,000 UGX". The approved canvas writes amounts bare ("1,250,000"), with "UGX" small in front only on the hero | Q3 vs `docs/canvas/sales-agent/LANGUAGE.md` §1.6 "Hero money" | `money()` bare where the canvas draws it; `ugx()` gives "1,000 UGX" where the currency must be said |
