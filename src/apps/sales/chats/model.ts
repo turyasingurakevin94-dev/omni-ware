@@ -4,7 +4,7 @@
  * src/core/chats.ts (the tab bar's count reads it too).
  *
  *   chatView(c)        one chat as a row or a head shows it: who, whose, wait, unread, typing, window
- *   salesTeam()        the people who answer chats: you first, then the team by name
+ *   salesTeam()        the people who answer chats: you first, then the team in the shop's order
  *   mineList()         the Mine list: new numbers, then yours waiting (longest first), then yours by who is due
  *   waitLine(scope)    the head's wait line: each chat waiting, placed by minutes on the 0–1 h track
  */
@@ -84,10 +84,10 @@ export function chatView(b: Books, cb: ChatBooks, c: Chat, now: Ms, drafts: Draf
 /** The counter's shared login rings up sales; it is not a person who answers chats. */
 const isPerson = (m: Member) => !/^counter$/i.test(m.name.trim());
 
-/** The people who answer chats (the Sales team): you first, then by name. */
+/** The people who answer chats (the Sales team): you first, then the shop's own order of its people. */
 export function salesTeam(b: Books): Member[] {
-  const team = b.members.filter((m) => (m.role === 'sales' || m.id === b.me.id) && isPerson(m));
-  return [...team.filter((m) => m.id === b.me.id), ...team.filter((m) => m.id !== b.me.id).sort((x, y) => x.name.localeCompare(y.name))];
+  const team = b.members.filter((m) => m.role === 'sales' && isPerson(m));
+  return [...team.filter((m) => m.id === b.me.id), ...team.filter((m) => m.id !== b.me.id)];
 }
 
 /** The Manager(s), who move any chat. */

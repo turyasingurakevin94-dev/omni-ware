@@ -17,7 +17,9 @@ import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
+import { sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
+import { GiveSheet } from './GiveSheet.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, drafts, isDemo, now, source } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
@@ -145,12 +147,12 @@ function GroupHead(p: { title: string; n: number; dot?: 'warn' | 'bad' | null; g
   );
 }
 
-function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element }): JSX.Element {
+function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element; onRow?: () => void }): JSX.Element {
   const v = p.v, me = books.value?.me, mine = v.owner?.id === me?.id;
   const fresh = !v.chat.ownerId, late = (v.waitMins || 0) >= 30;
   return (
     <div class="ch-row w">
-      <Tap on={() => openChat(v)} class="ch-row-m">
+      <Tap on={p.onRow || (() => openChat(v))} class="ch-row-m">
         <Ring face={v.face} mins={v.waitMins} badge={p.badge && v.owner ? faceOf(v.owner) : null} />
         <span class="ch-row-t">
           <span class="ch-row-1">
@@ -283,7 +285,10 @@ function TeamView(p: { b: Books; cb: ChatBooks; t: number; match: (v: ChatView) 
         more={fresh ? <Tap on={p.onNew}>{`+${fresh} new`}<Icon name="chevron-right" size={14} stroke={2.4} /></Tap> : undefined} />
       <GroupCard>{views.map((v) => {
         const sub = v.typing ? `${firstWord(v.typing.name)} is typing a reply` : `${whose(v.owner)}${v.owner && v.owner.presence !== 'on' ? ' · away' : ''}`;
-        return <WaitRow key={v.chat.id} v={v} sub={sub} badge />;
+        // The Manager moves any teammate's chat from here (CH32); the WhatsApp disc still opens it.
+        const move = manager && v.owner && v.owner.id !== b.me.id
+          ? () => sheet.open(() => <GiveSheet chatId={v.chat.id} />, { label: `Move ${v.title}`, top: 196 }) : undefined;
+        return <WaitRow key={v.chat.id} v={v} sub={sub} badge onRow={move} />;
       })}</GroupCard>
     </div>
   );

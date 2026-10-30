@@ -34,8 +34,10 @@ function oftenWith(b: Books, c: Customer | null, anchor: Item | null, skip: Set<
   const had = b.orders.filter((o) => o.customerId === c.id && !o.cancelled && o.lines.some((l) => l.name.startsWith(kind)));
   const count = new Map<string, number>();
   had.forEach((o) => new Set(o.lines.map((l) => l.itemId)).forEach((id) => count.set(id, (count.get(id) || 0) + 1)));
+  // What goes on with it: its own aisle first (ridge caps with sheets), then anything bought with it.
+  const same = (id: string) => (b.items.find((i) => i.id === id)?.aisle === anchor.aisle ? 1 : 0);
   const best = [...count].filter(([id]) => !skip.has(id) && !b.items.find((i) => i.id === id)?.name.startsWith(kind))
-    .sort((x, y) => y[1] - x[1]).slice(0, 1)
+    .sort((x, y) => same(y[0]) - same(x[0]) || y[1] - x[1]).slice(0, 1)
     .map(([id, k]) => ({ it: b.items.find((i) => i.id === id) as Item, sub: `with ${kindOf(anchor)}, ${k} of ${had.length}` })).filter((x) => x.it && x.it.price != null);
   const coming = b.items.filter((i) => i.price == null && i.aisle === anchor.aisle && !skip.has(i.id)).map((it) => ({ it, sub: '' }));
   return [...best, ...coming];
@@ -88,15 +90,15 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
       <label class="nc-search pr-search"><Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Cement, iron sheets…" aria-label="Find an item" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
       </label>
-      {s ? <GroupCard>{found.map((it) => <PriceRow key={it.id} it={it} sub={it.aisle} act={act(it)} />)}</GroupCard> : (
+      {s ? <GroupCard class="bb">{found.map((it) => <PriceRow key={it.id} it={it} sub={it.aisle} act={act(it)} />)}</GroupCard> : (
         <>
           {!!usual.length && <>
             <div class="ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>{`${first}’s usual`}</span><span class="mono g">{`${usual.filter((u) => picked.includes(u.it.id)).length}/${usual.length}`}</span></div>
-            <GroupCard>{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
+            <GroupCard class="bb">{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
           </>}
           {!!often.length && <>
             <div class="ad-h"><Duo i={phAgain} size={18} color="#5F6980" /><span>Often with it</span></div>
-            <GroupCard>{often.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? <span class="pr-coming"><span>Price coming</span></span> : sub} act={act(it)} />)}</GroupCard>
+            <GroupCard class="bb">{often.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? <span class="pr-coming"><span>Price coming</span></span> : sub} act={act(it)} />)}</GroupCard>
           </>}
         </>
       )}

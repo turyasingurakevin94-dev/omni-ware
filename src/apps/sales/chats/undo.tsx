@@ -5,11 +5,11 @@
  * shows it done meanwhile, and leaving the chat sends it at once.
  *
  *   undoable('Kato is Brian’s now', () => write('give', […]), { top: 4, onUndo: … })
- *   <UndoToast />      the toast (CH21, CH31), drawn by the chat screen
+ *   the toast (CH21, CH31) is drawn on the page, above every sheet
  *   sendPending()      leaving: what waits goes now
  */
 import { signal } from '@preact/signals';
-import type { JSX } from 'preact';
+import { render, type JSX } from 'preact';
 import { Icon } from '../../../ui/icons.tsx';
 
 interface Pending { id: number; text: string; top: number; commit: () => unknown; onUndo: () => void; timer: number }
@@ -28,7 +28,17 @@ export function sendPending(): void {
   void p.commit();
 }
 
+/** The toast lives on the page itself, above any sheet (a full sheet's own layer would hide it under a light sheet's scrim). */
+let host: HTMLElement | null = null;
+function mount(): void {
+  if (host || typeof document === 'undefined') return;
+  host = document.createElement('div');
+  document.body.appendChild(host);
+  render(<UndoToast />, host);
+}
+
 export function undoable(text: string, commit: () => unknown, o: { top?: number; onUndo?: () => void; ms?: number } = {}): void {
+  mount();
   sendPending();
   const id = ++n;
   const timer = window.setTimeout(() => { if (pending.value && pending.value.id === id) sendPending(); }, o.ms ?? 10000);

@@ -75,6 +75,11 @@ export function extra(s: DemoState, _f: DemoFlags): void {
     c.lastInAt = ins.length ? ins[ins.length - 1].at : null;
     if (c.lastReadAt != null) c.lastReadAt = c.lastAt;
   });
+  // CH15: Esther checks Ggaba's #0528, 125,000 (FACTS §3.1: it may be #0264, paid in cash the same day).
+  // A payment_asks row on the bill; added once, whichever tab's seed adds it first.
+  if (!s.books.paymentAsks.some((a) => a.orderId === 528 && a.status === 'sent')) {
+    s.books.paymentAsks.push({ id: 'pa-0528', paymentId: null, customerId: 'C003', orderId: 528, what: 'bill', amount: 125000, status: 'sent', by: GRACE, at: d('2026-10-16', '11:00') });
+  }
   // CH03: Brian took Okot J.'s number this morning (the chat's owner_at is when it was taken).
   const okot = s.chats.find((c) => c.id === CHAT.okot);
   if (okot) okot.ownerAt = t('8:20');

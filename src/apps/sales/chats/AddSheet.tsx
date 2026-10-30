@@ -70,7 +70,7 @@ export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): 
       {!!usual.length && (
         <>
           <div class="ad-h"><span class="g"><Icon name="tag" size={17} stroke={2} /></span><span>Prices of their usual</span><span>tap + to add</span></div>
-          <GroupCard>{usual.map(({ it, sub }) => (
+          <GroupCard class="bb">{usual.map(({ it, sub }) => (
             <PriceRow key={it.id} it={it} sub={sub} act={
               <button type="button" class="ad-add" aria-label={`Add the price of ${shortName(it)}`} onClick={() => price([it.id])}><Icon name="plus" size={16} stroke={2.6} /></button>
             } />

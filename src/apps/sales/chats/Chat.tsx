@@ -6,7 +6,7 @@
  * the ready answers, and the composer. Every write goes through the outbox (act).
  */
 import type { JSX } from 'preact';
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { orderOwes } from '../../../core/money.ts';
 import { firstWord, STAGE_WORD, orderNo } from '../../../core/names.ts';
 import { money, short } from '../../../core/money.ts';
@@ -29,7 +29,7 @@ import { chatView, faceOf, salesTeam, managers, type ChatView } from './model.ts
 import { open, write } from './parts.tsx';
 import { openOrder, readyAnswers, saysPaid, wantsToBuy } from './read.ts';
 import { Thread, entries } from './Thread.tsx';
-import { UndoToast, sendPending, shown } from './undo.tsx';
+import { sendPending, shown } from './undo.tsx';
 import './chat.css';
 
 /** The last thread read of each chat (the copy shown while it reads again, or with no signal). */
@@ -68,9 +68,6 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
     return () => { sendPending(); source.touch(null, false); };
   }, [id]);
   useEffect(() => { typed.set(id, text); }, [text]);
-  // Kept at the newest while you are there (a new message, the picker opening); left alone while you read back.
-  const pinned = useRef(true);
-  useLayoutEffect(() => { const s = scroll.current; if (s && pinned.current) s.scrollTop = s.scrollHeight; });
 
   if (!b || !cb || !chat) return <FullSheet onBack={nav.back} backLabel="Back to Chats" head={<div class="ow-shead chat" />} ground="#EDE7DD" />;
   const v: ChatView = chatView(b, cb, chat, t, drafts.value);
@@ -82,8 +79,8 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const lastIn = [...msgs].reverse().find((m) => m.dir === 'in') || null;
   const paid = cust && cust.owes > 0 ? saysPaid(v.waitMins != null ? lastIn : null) : null;
   const wants = nobody && v.waitMins != null && lastIn ? wantsToBuy(b, lastIn.body) : [];
-  const answers = (mine || nobody) && v.waitMins != null && !note ? readyAnswers(b, cust, msgs, t) : [];
   const pend = shown.give && shown.give.chatId === id ? shown.give.event : null;
+  const answers = ((mine && !pend) || nobody) && v.waitMins != null && !note ? readyAnswers(b, cust, msgs, t) : [];
   const notes: ChatNote[] = th ? th.notes : [], events = [...(th ? th.events : []), ...(pend ? [pend] : [])];
   const items = entries(msgs, notes, events, kept.value, id);
   const whoseNow = pend ? b.members.find((m) => m.id === pend.to) || owner : owner;
@@ -176,7 +173,6 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
           {note && <div class="cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
           <ChatComposer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)}
             shut={shut && !note} onAdd={add} sending={sending} />
-          <UndoToast />
         </>
       }>
       {nobody && (
@@ -196,7 +192,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
           <span>{`Your reply shows your name · ${firstWord(owner.name)} is told`}</span>
         </div>
       )}
-      <div ref={scroll} class="cv-scroll" onScroll={(e) => { const s = e.currentTarget as HTMLDivElement; pinned.current = s.scrollHeight - s.scrollTop - s.clientHeight < 24; }}>
+      <div ref={scroll} class="cv-scroll">
         <Thread items={items} members={b.members} meId={me.id} who={first} now={t} days={online.value}
           onRetry={() => { void flush(); }} onChange={(k, s) => { void discardKept(k); setText(s); }}
           tail={<>
