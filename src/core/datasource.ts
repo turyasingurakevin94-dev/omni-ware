@@ -35,6 +35,16 @@ export function dataError(kind: DataErrorKind, message: string, code: string = '
   return e;
 }
 
+/**
+ * This phone's pushes (spec 06 §6a). `why` says why they are off when the person cannot simply turn them on:
+ * not-app (a browser: pushes come in the installed app), old-app (an install with no Firebase), denied (off in
+ * the phone's settings), no-play (no Google Play services: no token).
+ */
+export interface PushState {
+  on: boolean;
+  why: 'not-app' | 'old-app' | 'denied' | 'no-play' | null;
+}
+
 export function isDataError(e: unknown): e is DataError {
   return !!e && typeof e === 'object' && 'kind' in e && e instanceof Error;
 }
@@ -145,6 +155,14 @@ export interface DataSource {
   askSourcing(a: { name: string; qty: number; customerId: string | null; chatId: number | null; photo?: Blob | null }): Promise<SourcingAsk>;
   /** A search that found nothing, for Sourcing (log_search_miss). Fire and forget. */
   logSearchMiss(words: string, client: string | null): void;
+
+  /* this phone */
+  /** Whether this phone gets the person's pushes (its token in push_subscriptions). */
+  pushState(): Promise<PushState>;
+  /** Sign this phone up: the phone is asked, its token saved to push_subscriptions. */
+  pushOn(): Promise<PushState>;
+  /** Take this phone off: its push_subscriptions row deleted, the phone unregistered. */
+  pushOff(): Promise<PushState>;
 
   /* chats */
   send(chatId: number, text: string): Promise<Message>;

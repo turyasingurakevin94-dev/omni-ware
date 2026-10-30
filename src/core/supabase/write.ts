@@ -21,7 +21,7 @@ function fail(e: unknown): never {
   throw dataError('refused', m.replace(/^[A-Z0-9]{5}: /, ''), (m.match(/^([A-Z0-9]{5}):/) || [])[1] || String(x?.code || ''));
 }
 
-async function ok<T = Row>(p: Promise<{ data: T; error: unknown }>): Promise<T> {
+export async function ok<T = Row>(p: Promise<{ data: T; error: unknown }>): Promise<T> {
   let r: { data: T; error: unknown };
   try { r = await p; } catch (e) { return fail(e); }
   if (r.error) fail(r.error);

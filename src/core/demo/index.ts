@@ -134,6 +134,10 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       return copy(ask);
     }),
     logSearchMiss() { /* the demo keeps no search log */ },
+    // The demo phone is the installed app: pushes on (FACTS), off on her first day (TD20).
+    pushState: () => Promise.resolve({ on: s.push, why: null }),
+    pushOn: () => write(() => { s.push = true; return { on: true, why: null }; }),
+    pushOff: () => write(() => { s.push = false; return { on: false, why: null }; }),
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),

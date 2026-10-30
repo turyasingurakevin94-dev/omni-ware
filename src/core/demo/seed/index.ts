@@ -37,6 +37,8 @@ export interface DemoState {
    * year; the demo seeds only the days the boards draw). By chat id, then member id.
    */
   servedBefore: Record<number, Record<string, number>>;
+  /** This phone gets Grace's pushes (push_subscriptions). */
+  push: boolean;
 }
 
 export function seed(f: DemoFlags): DemoState {
@@ -66,6 +68,7 @@ export function seed(f: DemoFlags): DemoState {
     notes: [],
     events: chatEvents(),
     servedBefore: {},
+    push: true,
   };
   // &as=ruth: another member of the team is signed in on this phone (CH32).
   const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;
