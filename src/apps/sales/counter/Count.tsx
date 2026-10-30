@@ -42,14 +42,20 @@ export function CountSheet(p: { total: number }): JSX.Element {
         {counted > 0 && (
           <span class={'kc-cnt-c' + (over ? '' : ' short')}>
             <span>{over ? 'Give change' : 'Short by'}</span>
-            <span class="mono">{fig(Math.abs(counted - p.total))}</span>
+            {over ? <span class="mono">{fig(counted - p.total)}</span> : (
+              <span class="kc-cnt-sv">
+                <span role="img" aria-label={`${fig(p.total - counted)} still to come`} class="kc-cnt-dash">{notesFor(Math.ceil((p.total - counted) / 1000) * 1000).slice(0, 2).map((x, i) => <span key={i} class="mono">{fig(x)}</span>)}</span>
+                <span class="mono">{fig(p.total - counted)}</span>
+              </span>
+            )}
           </span>
         )}
       </div>
       <div class="kc-cnt-b">
-        <div role="img" aria-label={`Counted ${fig(counted)} for a sale of ${fig(p.total)}`} class="kc-cnt-bar">
+        <div role="img" aria-label={`Counted ${fig(counted)} for a sale of ${fig(p.total)}${over ? '' : `: ${fig(p.total - counted)} short`}`} class={'kc-cnt-bar' + (over || !counted ? '' : ' short')}>
           <span style={{ width: `${Math.round((Math.min(counted, top) / top) * 100)}%` }} />
-          <span class="tick" style={{ left: `${Math.round((p.total / top) * 100)}%` }} />
+          {!over && !!counted && <span class="hatch" style={{ left: `${Math.round((counted / top) * 100)}%` }} />}
+          <span class="tick" style={over ? { left: `${Math.round((p.total / top) * 100)}%` } : { left: 'calc(100% - 2px)' }} />
         </div>
         <div class="kc-cnt-l"><span>{'Sale '}<span class="mono">{fig(p.total)}</span></span><span>{'Counted '}<span class="mono">{fig(counted)}</span></span></div>
       </div>

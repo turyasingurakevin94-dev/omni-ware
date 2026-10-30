@@ -85,7 +85,7 @@ export function Sold(p: ScreenProps): JSX.Element {
         </div>
       ) : (
         <div class="kc-card paid">
-          <div class="kc-card-h"><span class="kc-meth">{s.method === 'cash' ? 'Cash' : s.method === 'momo' ? 'Mobile' : 'Bank'}</span><span class="kc-paid"><Icon name="check" size={12} stroke={3.2} />Paid</span></div>
+          <div class="kc-card-h"><span class="kc-meth">{s.method === 'cash' ? 'Cash · exact' : s.method === 'momo' ? 'Mobile' : 'Bank'}</span><span class="kc-paid"><Icon name="check" size={12} stroke={3.2} />Paid</span></div>
           <span class="mono kc-big">{fig(total)}</span>
           {!!s.ref && (
             <div class="kc-id">

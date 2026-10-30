@@ -19,6 +19,7 @@ import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
 import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefField, Tender } from './CounterDock.tsx';
 import { Find } from './Find.tsx';
+import { FindNone } from './FindNone.tsx';
 import { StillWho } from './local-whopill.tsx';
 import { Picked } from './Picked.tsx';
 import { OtherAisles, SoldHead, SoldRows, Tiles } from './Shelf.tsx';
@@ -81,7 +82,8 @@ export function Counter(): JSX.Element {
   let body: JSX.Element;
   if (text.trim()) {
     const r = readQuery(text), found = findItems(b.items, r.words);
-    body = <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
+    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} />
+      : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);
     body = (
