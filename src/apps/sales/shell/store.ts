@@ -58,10 +58,11 @@ export const readError = signal<string | null>(null);
 export const elsewhere = signal<Member | null>(null);
 
 export const me = computed(() => (books.value ? books.value.me : null));
-/** Chats waiting for this salesperson (the Chats tab's count). */
+/** Chats waiting for this salesperson (the Chats tab's count). With no signal it shows none: the copy
+ * cannot say who wrote since (TD09: "Chats waiting · back online"). */
 export const waitingCount = computed(() => {
   const cb = chats.value, m = me.value;
-  return cb && m ? waitingChats(cb, m.id, now.value).length : 0;
+  return cb && m && online.value ? waitingChats(cb, m.id, now.value).length : 0;
 });
 
 let outbox: Outbox | null = null;
