@@ -18,7 +18,7 @@ interface Act { word: string; on: () => void; icon?: IconName }
 
 /** LOCAL PART · a hard hat in the 24-grid stroke style: the Contractor kind (the truck means Delivery). */
 function HardHat(): JSX.Element {
-  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9V6h4v3" /></svg>;
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9V6h4v3" /></svg>;
 }
 
 const KINDS: [CustomerKind, string][] = [['contractor', 'Contractor'], ['reseller', 'Reseller'], ['retail', 'Retail']];
@@ -66,14 +66,14 @@ export function NewForm(p: {
         {!p.dup && (
           <div class="cu-nf-who">
             <span aria-hidden="true" class={cx('cu-nf-face', done && 'done')}>{p.face}</span>
-            <span class="cu-nf-ticks">{ticks.map(([w, ok]) => <span key={w} class={ok ? 'ok' : undefined}><span aria-hidden="true">{ok && <Icon name="check" size={11} stroke={3} />}</span>{w}</span>)}</span>
+            <span class="cu-nf-ticks">{ticks.map(([w, ok]) => <span key={w} class={ok ? 'ok' : undefined}><span aria-hidden="true">{ok && <Icon name="check" size={11} stroke={3.4} />}</span>{w}</span>)}</span>
           </div>
         )}
         {p.chat && (
           <button type="button" class="cu-nf-chat" onClick={p.chat.on}>
             <span aria-hidden="true"><Duo i={phWhatsapp} size={18} /></span>
             <span><span>{`From ${whose(p.chat.name)} chat · ${clock(p.chat.at)}`}</span><span class="mono">{`${p.chat.phone} · “${p.chat.name}”`}</span></span>
-            <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={15} stroke={2.2} /></span>
+            <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={15} stroke={2.4} /></span>
           </button>
         )}
         <label class="cu-nf-f"><span>Name</span>
@@ -98,7 +98,7 @@ export function NewForm(p: {
           <div role="radiogroup" aria-label="Kind of customer" class="cu-nf-kinds">
             {KINDS.map(([k, w]) => (
               <button key={k} type="button" role="radio" aria-checked={p.kind === k} class={p.kind === k ? 'on' : undefined} onClick={() => p.onKind(k)}>
-                {k === 'contractor' ? <HardHat /> : <Icon name={k === 'reseller' ? 'store' : 'basket'} size={17} />}{w}
+                {k === 'contractor' ? <HardHat /> : <Icon name={k === 'reseller' ? 'store' : 'basket'} size={17} stroke={1.9} />}{w}
               </button>
             ))}
           </div>
@@ -107,7 +107,7 @@ export function NewForm(p: {
         <div class="cu-nf-acts">
           <button type="button" class="cu-nf-ghost" disabled={off} onClick={p.acts.left.on}>{p.acts.left.word}</button>
           <button type="button" class="cu-nf-go" disabled={off} onClick={p.acts.right.on}>
-            {p.busy ? <span class="ow-spin" aria-hidden="true" /> : p.acts.right.icon && <Icon name={p.acts.right.icon} size={18} stroke={2} />}{p.busy ? 'Sending…' : p.acts.right.word}
+            {p.busy ? <span class="ow-spin" aria-hidden="true" /> : p.acts.right.icon && <Icon name={p.acts.right.icon} size={18} stroke={2.4} />}{p.busy ? 'Sending…' : p.acts.right.word}
           </button>
         </div>
       </div>

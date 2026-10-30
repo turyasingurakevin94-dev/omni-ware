@@ -60,7 +60,7 @@ function BillCheck(p: { customerId: string; orderId: number }): JSX.Element {
 
   const choice = (on: boolean, title: string, sub: string, pick: () => void) => (
     <button type="button" role="radio" aria-checked={on} class={'cu-choice' + (on ? ' on' : '')} onClick={pick}>
-      <span aria-hidden="true" class="cu-choice-dot">{on && <Icon name="check" size={13} stroke={3} />}</span>
+      <span aria-hidden="true" class="cu-choice-dot">{on && <Icon name="check" size={13} stroke={3.2} />}</span>
       <span class="cu-choice-t"><span>{title}</span><span>{sub}</span></span>
     </button>
   );
@@ -76,7 +76,7 @@ function BillCheck(p: { customerId: string; orderId: number }): JSX.Element {
         {choice(paid, 'Already paid that day', `the ${money(bill.left)} ${how} · take the bill off`, () => setPaid(true))}
         {choice(!paid, 'Still owed', 'keep it on the bill', () => setPaid(false))}
       </div>
-      <div class="cu-who"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{esther.initials}</span>{`${first(esther.name)} checks it · ${name}’s ${money(m.take)} can still be taken`}</div>
+      <div class="cu-who p4"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{esther.initials}</span>{`${first(esther.name)} checks it · ${name}’s ${money(m.take)} can still be taken`}</div>
     </LightSheet>
   );
 }

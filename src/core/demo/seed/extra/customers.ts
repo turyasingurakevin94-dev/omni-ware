@@ -4,7 +4,8 @@
  * seed does not have yet; keep it true to FACTS.md, and say which board needs it.
  */
 import { d, t } from '../clock.ts';
-import { GGABA, LUBOWA, MUKONO, NANSANA } from '../orders-live.ts';
+import { orderTotal } from '../../../money.ts';
+import { GGABA, LUBOWA, MUKONO, NANSANA, liveOrders } from '../orders-live.ts';
 import { ESTHER, GRACE } from '../people.ts';
 import type { DemoFlags } from '../../flags.ts';
 import type { DemoState } from '../index.ts';
@@ -14,7 +15,19 @@ export function extra(s: DemoState, f: DemoFlags): void {
   // CU43: &wa=off, the shop's WhatsApp is not connected, so a receipt cannot reach anyone (no tap can cause it).
   // Read here until the shared flags (flags.ts) carry it.
   if (typeof location !== 'undefined' && /[?&]wa=off(&|$)/.test(location.search)) s.connected = false;
+  if (f.state === 'empty') {
+    // CU06: nobody owes, but who is due still reads FACTS §3.2 (Kyaligonza 4 days late, Lubowa 1): their last
+    // orders (#0530, #0546) stay in the books, delivered and paid, from before this week.
+    liveOrders().filter((o) => o.id === 530 || o.id === 546).forEach((o) => {
+      const done = o.placedAt + 3600 * 1000;
+      b.orders.push({ ...o, stage: 'delivered', stageAt: done, deliveredAt: done, invoiced: true, invoicedAt: done, paid: orderTotal(o), holderId: null });
+    });
+    b.orders.sort((x, y) => x.id - y.id);
+  }
   if (f.state === 'empty' || f.state === 'first-day') return;
+  // CU11 "Order usual": Ggaba's usual, from their own orders (wood glue in #0547 and #0548). FACTS gives no list.
+  const gs = b.customers.find((c) => c.id === GGABA);
+  if (gs && !gs.usual.length) gs.usual = [{ itemId: 'wood-glue-1l', variantIdx: null, qty: 1, seen: 2, of: 3 }];
   // CU12: #0264, 125,000 paid in cash on 17 Aug: the payment Ggaba's #0528 may be (FACTS §3.1, §4.5).
   if (!b.payments.some((p) => p.id === 6264)) {
     b.payments.push({ id: 6264, at: d('2026-08-17', '9:30'), day: '2026-08-17', amount: 125000, method: 'cash', customerId: GGABA, orderId: 264, by: GRACE, ref: '', qa: false });

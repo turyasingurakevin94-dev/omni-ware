@@ -38,7 +38,7 @@ export interface PayDockProps {
 function Receipt(p: { on: boolean; label: string; toggle: () => void }): JSX.Element {
   return (
     <button type="button" role="switch" aria-checked={p.on} aria-label={p.label} class={cx('cu-rcpt', !p.on && 'off')} onClick={p.toggle}>
-      <span aria-hidden="true"><Icon name="receipt" size={16} stroke={2} /></span>Receipt
+      <span aria-hidden="true"><Icon name="receipt" size={16} stroke={2.2} /></span>Receipt
     </button>
   );
 }

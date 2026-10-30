@@ -62,7 +62,7 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
             return (
               <div key={h.w.c.id} class="cu-near">
                 {row(h.w, [h.w.c.place, `${orders(h.w.c)} orders`].filter(Boolean).join(' · '), name)}
-                {h.word && <div class="cu-near-fix"><s class="mono">{h.word[0]}</s><span aria-hidden="true"><Icon name="arrow-right" size={14} stroke={2} /></span><b>{h.word[1]}</b><span>{ins || h.word[1].length === h.word[0].length ? 'one letter off' : 'one letter off'}</span></div>}
+                {h.word && <div class="cu-near-fix"><s class="mono">{h.word[0]}</s><span aria-hidden="true"><Icon name="arrow-right" size={14} stroke={2.2} /></span><b>{h.word[1]}</b><span>{ins || h.word[1].length === h.word[0].length ? 'one letter off' : 'one letter off'}</span></div>}
               </div>
             );
           })}
@@ -71,7 +71,7 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
       <button type="button" class="cu-new" onClick={p.onNew}>
         <span aria-hidden="true"><Icon name="person-plus" size={20} stroke={2} /></span>
         <span><span>Someone new</span><span>{`add “${p.q.trim()}” as a customer`}</span></span>
-        <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+        <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.4} /></span>
       </button>
       {p.opened.length > 0 && (
         <div class="cu-grp lately"><Group title="Opened lately" count={p.opened.length} /><Card>{p.opened.map((o) => row(byId(o.c), o.when))}</Card></div>

@@ -53,7 +53,7 @@ export function Row(p: RowProps): JSX.Element {
       </button>
       {p.act === 'take' && <button type="button" class="cu-row-take" aria-label={`Take payment from ${p.label}`} onClick={p.onAct}><Duo i={phCoins} size={19} /></button>}
       {p.act === 'wa' && <button type="button" class="cu-row-wa" aria-label={`WhatsApp ${p.label}`} onClick={p.onAct}><Duo i={phWhatsapp} size={19} color="#0F6B43" /></button>}
-      {p.act === 'chev' && <span aria-hidden="true" class="cu-row-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>}
+      {p.act === 'chev' && <span aria-hidden="true" class="cu-row-chev"><Icon name="chevron-right" size={16} stroke={2.4} /></span>}
     </div>
   );
 }

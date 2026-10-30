@@ -63,7 +63,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
         )}
         {d.owe.length > 0 && (
           <div class="cu-end">
-            <span aria-hidden="true"><Icon name="check" size={15} stroke={2.6} /></span>
+            <span aria-hidden="true"><Icon name="check" size={15} stroke={3} /></span>
             <span><span>{`That’s all ${d.owe.length} who owe`}</span><span>{`${d.all.length - d.owe.length} more customers owe nothing`}</span></span>
             <b class="mono">{money(d.owes)}</b>
           </div>
@@ -145,7 +145,7 @@ export function NobodyBody(p: { d: ListData; a: Acts }): JSX.Element {
     <>
       <div class="cu-ghost">
         <div aria-hidden="true" class="cu-ghost-row"><span /><span><span /><span /></span><span /></div>
-        <div class="cu-ghost-ok"><span aria-hidden="true"><Icon name="check" size={22} stroke={2.4} /></span><span><span>Nobody owes</span><span>Every bill is paid</span></span></div>
+        <div class="cu-ghost-ok"><span aria-hidden="true"><Icon name="check" size={22} stroke={2.8} /></span><span><span>Nobody owes</span><span>Every bill is paid</span></span></div>
       </div>
       {p.d.due.length > 0 && <div class="cu-grp after"><Group dot="#95530C" title="Who’s due" count={p.d.due.length} />
         <Card>{p.d.due.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : 'due'} act="wa" on={() => p.a.open(w.c)} onAct={() => p.a.wa(w.c)} />)}</Card></div>}

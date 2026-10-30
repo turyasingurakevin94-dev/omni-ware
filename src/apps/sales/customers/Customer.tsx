@@ -91,7 +91,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       )}
       {showMove && <OnTheMove orders={live} onOrder={(id) => nav.push('orders/order', { id })} />}
       {rh}
-      <div class="cu-sell"><Button icon={sell.icon} onClick={sell.on}>{sell.word}</Button></div>
+      <div class="cu-sell"><Button icon={sell.icon} stroke={sell.icon === 'plus' ? 2.4 : 2.2} onClick={sell.on}>{sell.word}</Button></div>
     </FullSheet>
   );
 }

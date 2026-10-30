@@ -50,7 +50,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
       </div>
       {p.change > 0 && (
         <div class="cu-paid-change">
-          <span aria-hidden="true"><Icon name="cash" size={20} stroke={2} /></span>
+          <span aria-hidden="true"><Icon name="cash" size={22} stroke={2} /></span>
           <span><span>Give change now</span><span>they gave <b class="mono">{money(p.given)}</b></span></span>
           <b class="mono">{money(p.change)}</b>
         </div>
@@ -60,7 +60,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
         <div class="cu-slip-b">
           <div class="cu-slip-h"><span>{(b ? b.shop.name : '').toUpperCase()}</span><span class="mono">{stamp}</span></div>
           {p.lines.map((l) => (
-            <div key={l.id} class="cu-slip-l"><span aria-hidden="true"><Icon name="check" size={11} stroke={3} /></span>
+            <div key={l.id} class="cu-slip-l"><span aria-hidden="true"><Icon name="check" size={11} stroke={3.2} /></span>
               <span>{`${orderNo(l.id)} `}<span>{dm(l.day)}</span></span><span class="mono">{money(l.amount)}</span></div>
           ))}
           {p.deposit > 0 && (
@@ -76,7 +76,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
           <span class="cu-rc-row"><span aria-hidden="true" class="cu-rc-ic warn"><Icon name="receipt" size={20} stroke={2} /></span>
             <span class="cu-rc-t"><span>Receipt not sent yet</span><span>{`WhatsApp can’t reach ${name} now`}</span></span></span>
           <span class="cu-rc-acts">
-            <button type="button" class="cu-rc-sms" onClick={sms}><Icon name="message" size={17} stroke={2} />Send by SMS</button>
+            <button type="button" class="cu-rc-sms" onClick={sms}><Icon name="message" size={17} stroke={2.2} />Send by SMS</button>
             <button type="button" class="cu-rc-again" onClick={() => { if (b) void sendReceipt(p.key, b.shop.name, now.value); }}><Icon name="undo" size={15} stroke={2.2} />Try again on WhatsApp</button>
           </span>
         </div>
@@ -85,7 +85,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
           <span aria-hidden="true" class="cu-rc-ic"><Icon name="receipt" size={20} stroke={2} /></span>
           <span class="cu-rc-t"><span>{p.receipt.state === 'sent' ? `Receipt sent to ${name}` : `Sending the receipt to ${name}`}</span>
             <span>{p.receipt.state === 'sent' && p.receipt.at ? `WhatsApp · sent ${clock(p.receipt.at)}` : 'WhatsApp · sending'}</span></span>
-          {p.receipt.state === 'sent' && <span aria-hidden="true" class="cu-rc-read"><Icon name="check" size={14} stroke={2.2} /><span><Icon name="check" size={14} stroke={2.2} /></span></span>}
+          {p.receipt.state === 'sent' && <span aria-hidden="true" class="cu-rc-read"><Icon name="check" size={14} stroke={2.6} /><span><Icon name="check" size={14} stroke={2.6} /></span></span>}
         </div>
       )}
       <EndOfFlow on={nav.home} ms={8000} />

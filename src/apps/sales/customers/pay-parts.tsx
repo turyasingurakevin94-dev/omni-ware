@@ -53,7 +53,7 @@ export function PaysCard(p: { rows: PaysRow[]; pick: boolean; onToggle: (id: num
         const tag = !r.on || !(r.applied > 0) ? { t: 'not this time', c: 'neutral' } : full ? { t: 'clears', c: 'good' } : { t: `${money(r.left - r.applied)} left`, c: 'warn' };
         return (
           <button key={r.id} type="button" role="checkbox" aria-checked={r.on} aria-label={`${orderNo(r.id)}, ${money(r.left)}`} class="cu-pay-row" onClick={() => p.onToggle(r.id)}>
-            <span aria-hidden="true" class={cx('cu-tick', r.on && 'on')}>{r.on && <Icon name="check" size={13} stroke={3} />}</span>
+            <span aria-hidden="true" class={cx('cu-tick', r.on && 'on')}>{r.on && <Icon name="check" size={13} stroke={3.2} />}</span>
             <span class={cx('cu-pay-t', !r.on && 'off')}>
               <span><span>{`${orderNo(r.id)} `}<span>{`${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
               <span><span aria-hidden="true" class="cu-pay-bar"><span style={{ width: `${pct}%`, background: full ? '#0F6B43' : '#95530C' }} /></span><span class={'cu-tag ' + tag.c}>{tag.t}</span></span>
@@ -71,7 +71,7 @@ export function OverCard(p: { pays: number; over: number; bills: number[]; how: 
   const word = p.how === 'change' ? 'change' : 'deposit', t = TINTS[p.checker.tint];
   const opt = (h: 'change' | 'deposit', label: string) => (
     <button type="button" role="radio" aria-checked={p.how === h} class={cx('cu-over-o', p.how === h && 'on')} onClick={() => p.onHow(h)}>
-      <span aria-hidden="true" class="cu-choice-dot">{p.how === h && <Icon name="check" size={13} stroke={3} />}</span><span>{label}</span>
+      <span aria-hidden="true" class="cu-choice-dot">{p.how === h && <Icon name="check" size={13} stroke={3.2} />}</span><span>{label}</span>
     </button>
   );
   return (
@@ -116,7 +116,7 @@ export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null
               <span aria-hidden="true" class="cu-who-av" style={{ background: t.bg, color: t.fg }}>{o.initials}</span>
               <span class="cu-who-t"><span>{o.name}</span><span>{o.sub}</span></span>
               {on && <span class="mono cu-who-amt">{money(p.share)}</span>}
-              <span aria-hidden="true" class={cx('cu-choice-dot', on && 'on')}>{on && <Icon name="check" size={13} stroke={3} />}</span>
+              <span aria-hidden="true" class={cx('cu-choice-dot', on && 'on')}>{on && <Icon name="check" size={13} stroke={3.2} />}</span>
             </button>
           );
         })}

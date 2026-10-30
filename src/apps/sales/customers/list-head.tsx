@@ -97,7 +97,7 @@ export function NoneHead(p: HeadProps & { q: string; onQ: (v: string) => void })
       <div class="cu-none-h">
         <div class="ow-hstat-row">
           <span class="ow-hstat-col"><span class="ow-hstat-l">Owed to the shop · nobody owes</span><span class="ow-hstat-fig"><span>UGX</span><span class="mono mint">0</span></span></span>
-          <span class="cu-allpaid"><Icon name="check" size={13} stroke={2.6} />All paid</span>
+          <span class="cu-allpaid"><Icon name="check" size={13} stroke={3} />All paid</span>
         </div>
         <span aria-hidden="true" class="cu-none-bar" />
       </div>

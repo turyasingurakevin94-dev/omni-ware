@@ -93,7 +93,7 @@ export function Acts(p: { acts: { tone: keyof typeof ACT_TONE; icon: IconName; w
     <div class="cu-acts">
       {p.acts.map((a) => (
         <Tap key={a.word} on={a.on} class="cu-act">
-          <span aria-hidden="true" style={{ background: ACT_TONE[a.tone][0], color: ACT_TONE[a.tone][1] }}><Icon name={a.icon} size={20} /></span>
+          <span aria-hidden="true" style={{ background: ACT_TONE[a.tone][0], color: ACT_TONE[a.tone][1] }}><Icon name={a.icon} size={20} stroke={2} /></span>
           <span>{a.word}</span><span>{a.sub}</span>
         </Tap>
       ))}

@@ -17,8 +17,10 @@ export interface Bill {
   left: number;
   age: number;
   past: boolean;
-  /** Esther is checking it (an open payment ask names it). */
+  /** Esther is checking it: an open ask names it, or asks about their whole balance. */
   checked: boolean;
+  /** An ask names this bill (it is inside what they owe and being checked). */
+  named: boolean;
 }
 
 /** A customer's open bills, oldest first: invoiced, not voided, with something left (receive_payment's order, 0169). */
@@ -29,7 +31,7 @@ export function billsOf(b: Books, c: Customer, today: Day): Bill[] {
     .sort((x, y) => (x.invoicedAt || 0) - (y.invoicedAt || 0))
     .map((o) => {
       const day = dayOf(o.invoicedAt || o.placedAt);
-      return { order: o, id: o.id, day, left: orderOwes(o), age: daysApart(day, today), past: pastHold(day, today, b.settings.holdDays), checked: asks.some((a) => a.orderId === o.id) };
+      return { order: o, id: o.id, day, left: orderOwes(o), age: daysApart(day, today), past: pastHold(day, today, b.settings.holdDays), checked: asks.some((a) => a.orderId === o.id || (a.what === 'balance' && a.orderId == null)), named: asks.some((a) => a.orderId === o.id) };
     });
 }
 
@@ -54,7 +56,7 @@ export interface Money {
 
 export function moneyOf(b: Books, c: Customer, today: Day): Money {
   const bills = billsOf(b, c, today), owes = Math.max(0, c.owes);
-  const checkedIn = bills.filter((x) => x.checked).reduce((s, x) => s + x.left, 0);
+  const checkedIn = bills.filter((x) => x.named).reduce((s, x) => s + x.left, 0);
   const sum = bills.reduce((s, x) => s + x.left, 0);
   const apart = openAsks(b, c.id).some((a) => a.what === 'balance') ? Math.max(0, sum - owes) : 0;
   const oldest = owes > 0 && bills.length ? bills[0].age : 0;
