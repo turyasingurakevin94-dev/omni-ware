@@ -102,14 +102,14 @@ export function Acts(p: { acts: { tone: keyof typeof ACT_TONE; icon: IconName; w
 }
 
 /** CU13 · who is on it: Esther checking (since when), and their chat while it waits. */
-export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: string; ago: string; text: string; on: () => void } | null; onEsther: () => void }): JSX.Element {
+export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: string; ago: string; text: string; on: () => void } | null; onEsther: (() => void) | null }): JSX.Element {
   const t = TINTS[p.checker.tint], name = p.checker.name.split(/\s+/)[0];
   return (
     <div class="cu-asks">
       <div class="cu-ask">
         <span aria-hidden="true" class="cu-ask-av" style={{ background: t.bg, color: t.fg }}>{p.checker.initials}</span>
         <span class="cu-ask-t"><span>{`${name} is checking`}</span><span>{p.askedAt}</span></span>
-        <button type="button" class="cu-ask-b tile" aria-label={`Message ${name}`} onClick={p.onEsther}><Icon name="message" size={18} stroke={2} /></button>
+        <button type="button" class="cu-ask-b tile" aria-label={p.onEsther ? `Message ${name}` : `Message ${name}: they have no chat to put a note on`} disabled={!p.onEsther} onClick={p.onEsther || undefined}><Icon name="message" size={18} stroke={2} /></button>
       </div>
       {p.chat && (
         <div class="cu-ask">

@@ -13,9 +13,10 @@ import { lastMessages } from '../../../core/chats.ts';
 import { orderTotal } from '../../../core/money.ts';
 import { clock, dayLabel, dayOf, daysApart, howLong, when } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
-import type { Books, ChatBooks, Customer } from '../../../core/types.ts';
+import { isDataError } from '../../../core/datasource.ts';
+import type { Books, ChatBooks, Customer, Member } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
-import { books, chats, drafts, now } from '../shell/store.ts';
+import { act, books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { openBillCheck } from './BillCheck.tsx';
 import { AgeTrack, ApartHead, CustHead, PaidUp, SplitHead, first } from './cust-head.tsx';
@@ -25,6 +26,16 @@ import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
 import { sendStatement } from './statement.ts';
 import './customers.css';
+
+/** "Message Esther": a team note on their chat that mentions the checker, so 0170 pushes them (never sent to the customer). */
+async function noteFor(chatId: number, who: Member, body: string): Promise<void> {
+  try {
+    const r = await act('note', chatId, body, [who.id]);
+    toast.show(r.kept ? 'Kept on this phone · sends with signal' : `${first(who.name)} gets a push`);
+  } catch (e) {
+    toast.show('Not sent', { kind: 'error', sub: isDataError(e) ? e.message : '' });
+  }
+}
 
 export function role(b: Books, r: 'manager' | 'accounts') {
   return b.members.find((m) => m.role === r) || b.me;
@@ -87,7 +98,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       ]} />}
       {m.apart > 0 && <AsksCard checker={esther} askedAt={ask ? `asked ${dayOf(ask.at) === today ? 'today' : dayLabel(ask.at)} ${clock(ask.at)} · you get a push` : 'you get a push'}
         chat={asked && chat ? { who: name, ago: howLong(asked.at, t), text: asked.body, on: () => nav.push('chats/chat', { id: chat.id }) } : null}
-        onEsther={() => toast.show(`${first(esther.name)} gets a push when it is checked`)} />}
+        onEsther={chat ? () => { void noteFor(chat.id, esther, `@${first(esther.name)} ${name} is waiting on the ${fig(m.apart)} being checked`); } : null} />}
       {head}
       {m.bills.length > 0 && (
         <BillsCard>

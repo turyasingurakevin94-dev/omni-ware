@@ -8,7 +8,7 @@
  *     the receipt sent; the list then has 3 who owe;
  *   - Mobile with no transaction ID: the slide waits (Q6);
  *   - change and deposit: what is recorded (420,000 and 500,000);
- *   - a promise to pay is recorded; a bill being checked goes to Esther;
+ *   - a promise to pay is recorded; a bill being checked goes to Esther; Message Esther is a team note;
  *   - a new customer from the newest unsaved chat is added; a number
  *     already saved is caught and opens that customer;
  *   - no signal: the payment is kept on the phone;
@@ -110,9 +110,15 @@ async function flows(browser) {
   await ctx.close();
 
   ({ ctx, p, errors } = await open(browser));
+  await p.getByText('Lubowa Builders', { exact: true }).first().click();
+  await p.getByRole('button', { name: 'Message Esther', exact: true }).click();
+  t.check(/Esther gets a push/.test(await toastText(p)), 'being checked: Message Esther puts a team note on their chat that mentions Esther');
+  await ctx.close();
+
+  ({ ctx, p, errors } = await open(browser));
   await p.getByLabel('New customer').first().click();
-  await p.getByText('From her chat · 10:37').click();
-  t.check((await p.locator('input[aria-label=Name]').inputValue()) === 'Mama Shine', 'new: filled from her chat');
+  await p.getByText('From their chat · 10:37').click();
+  t.check((await p.locator('input[aria-label=Name]').inputValue()) === 'Mama Shine', 'new: filled from their chat');
   await p.getByRole('button', { name: 'Just add' }).click();
   t.check(/Mama Shine added/.test(await toastText(p)), 'new: added');
   await p.getByRole('button', { name: /^All/ }).click();
