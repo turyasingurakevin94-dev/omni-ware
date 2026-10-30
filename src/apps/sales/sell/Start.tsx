@@ -23,6 +23,8 @@ import { openAisle, openAisles } from './sheets.tsx';
 import './start.css';
 
 export const inchLabel = (s: string) => s.replace(/"/g, ' inch');
+/** A tile's name: the first words, no grade (FACTS §7: "Iron sheet", "Cement", "Wire nails 4""). */
+export const tileName = (s: string) => s.split(' · ')[0].split(' ').filter((w) => !/^G\d+$/.test(w)).join(' ');
 
 /** Their order before this one, again at today's prices (manifest note: "Sell again uses today's prices"). */
 export function sellAgain(b: Books, customerId: string): void {
@@ -85,7 +87,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
       cards.push(
         <UsualCard key="usual" title={`${whose(c.name)} usual`.replace('’', "'")}
           items={items.map(({ u, it }) => ({
-            aisle: it.aisle, name: it.name.split(' · ')[0], qty: `×${u.qty} ${it.unit}`, in: inIt.has(itemKey(u)),
+            aisle: it.aisle, name: tileName(it.name), qty: `×${u.qty} ${it.unit}`, in: inIt.has(itemKey(u)),
             note: u.seen === u.of ? 'every order' : `${u.seen} of ${u.of}`, label: `Add ${inchLabel(it.name.split(' · ')[0])}, usual ×${u.qty} ${it.unit}`, on: () => add(it, u.qty),
           }))}
           onAll={() => items.filter(({ u }) => !inIt.has(itemKey(u))).forEach(({ u, it }) => add(it, u.qty))} />,
@@ -97,7 +99,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
         <a href="#" class="sl-last" key="last" onClick={(e) => { e.preventDefault(); sellAgain(b, c.id); }}>
           <ItemSquare aisle={(itemOf(b, last.lines[0].itemId, last.lines[0].variantIdx) || { aisle: '' }).aisle} size={36} radius={10} icon={22} />
           <span class="sl-last-t"><span>Last order <span class="mono">{orderNo(last.id)}</span></span><span class="mono">{`${dayWord(last.placedAt, now.value)} ${clock(last.placedAt)} · ${fig(orderTotal(last))}`}</span></span>
-          <span class="sl-last-again"><Icon name="undo" size={16} stroke={2.2} />Sell again</span>
+          <span class="sl-last-again"><Icon name="return" size={15} stroke={2.2} />Sell again</span>
         </a>,
       );
     }

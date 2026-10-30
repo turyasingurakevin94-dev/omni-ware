@@ -44,9 +44,10 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
   const b = books.value, x = cur.value, aisle = String(p.params.aisle || ''), shelf = String(p.params.group || '');
   const shelfMode = !aisle && !!shelf;
   const all = b ? b.items.filter((i) => (shelfMode ? true : i.aisle === aisle)) : [];
-  const kinds = [...new Set(all.map((i) => kindOf(i.name)))].map((k) => ({ k, n: cardsOf(b as Books, all.filter((i) => kindOf(i.name) === k)).length }))
-    .sort((m, n) => n.n - m.n);
-  const [kind, setKind] = useState(shelfMode ? '' : String(p.params.group || '') || (kinds.find((k) => k.k === 'Nails') || kinds[0] || { k: '' }).k);
+  // Its kinds, most sold first, then the biggest.
+  const kinds = [...new Set(all.map((i) => kindOf(i.name)))].map((k) => { const cs = cardsOf(b as Books, all.filter((i) => kindOf(i.name) === k)); return { k, n: cs.length, sold: cs.reduce((t, c) => t + c.sold, 0) }; })
+    .sort((m, n) => n.sold - m.sold || n.n - m.n);
+  const [kind, setKind] = useState(shelfMode ? '' : String(p.params.group || '') || (kinds[0] || { k: '' }).k);
   const [q, setQ] = useState(''), [more, setMore] = useState(false);
   if (!b || !x) return null;
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) || null : null;

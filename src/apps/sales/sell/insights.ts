@@ -48,7 +48,8 @@ export function dueLine(r: Rhythm): string {
 /** Who's due: late or due today, due today first, then the latest. FACTS §3.2: 3. */
 export function whosDue(b: Books, now: number): { c: Customer; r: Rhythm }[] {
   return b.customers.filter((c) => !c.qa).map((c) => ({ c, r: rhythm(b, c, now) }))
-    .filter((x) => x.r.next && (x.r.dueToday || x.r.late > 0))
+    // Late by more than a whole round is gone quiet (FACTS §3.2: 8), not due.
+    .filter((x) => x.r.next && (x.r.dueToday || (x.r.late > 0 && x.r.late <= x.r.every)))
     .sort((x, y) => (y.r.dueToday ? 1 : 0) - (x.r.dueToday ? 1 : 0) || y.r.late - x.r.late);
 }
 
