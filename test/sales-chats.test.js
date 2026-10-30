@@ -67,6 +67,11 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   t.check(off.kept().every((k) => k.kind === 'send' && k.args[0] === 104), '&offline=1: the two kept writes are Grace\'s answers to Mukono (CH12)');
   const served = await demo.served(101);
   t.check(served.find((s) => s.by === 'u-grace').messages === 86 && served.find((s) => s.by === 'u-brian').messages === 31, 'who served Kato: Grace 86 messages, Brian 31 (CH33)');
+  const { servedThisYear } = require(path.join(ROOT, 'src/core/chats.ts'));
+  const fresh = demoSource('?demo'), fb = await fresh.books();
+  const who = servedThisYear(fb.orders, 101, await fresh.served(101), '2026');
+  t.check(who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ') === 'u-grace:86:3:5600000 u-brian:31:3:2180000 u-faith:7:1:500000',
+    `served from Kato's chat this year, by who took them (got ${who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ')})`);
 
   t.done();
 })().catch((e) => { console.error(e); process.exit(1); });

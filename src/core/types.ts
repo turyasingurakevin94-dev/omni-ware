@@ -190,6 +190,8 @@ export interface Order {
   deliveredAt: Ms | null;
   /** What the customer was told it comes to, when that differs from now (#0552: told 1,750,000). */
   toldTotal: UGX | null;
+  /** The WhatsApp chat it was taken from (payload.waConvId), when it was. */
+  chatId: number | null;
   qa: boolean;
 }
 

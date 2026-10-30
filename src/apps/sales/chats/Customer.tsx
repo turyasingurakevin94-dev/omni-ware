@@ -6,6 +6,7 @@
  */
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { servedThisYear } from '../../../core/chats.ts';
 import { money, orderTotal, short } from '../../../core/money.ts';
 import { TINTS, firstWord, orderNo } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf } from '../../../core/time.ts';
@@ -36,11 +37,8 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
   const first = firstWord(cust.name), year = dayOf(t).slice(0, 4), me = b.me;
   const owner = b.members.find((m) => m.id === chat.ownerId) || null;
   const orders = b.orders.filter((o) => o.customerId === cust.id && !o.voided && !o.cancelled && dayOf(o.placedAt).startsWith(year));
-  const rows = (served || []).map((s) => {
-    const m = b.members.find((x) => x.id === s.by) as Member;
-    const mine = orders.filter((o) => o.placedBy === s.by);
-    return { m, msgs: s.messages, n: mine.length, sum: mine.reduce((a, o) => a + orderTotal(o), 0) };
-  }).filter((r) => r.m).sort((x, y) => y.sum - x.sum || y.msgs - x.msgs);
+  // Who served them: messages in this chat, and the orders placed from it (src/core/chats.ts).
+  const rows = servedThisYear(b.orders, id, served || [], year).map((x) => ({ m: b.members.find((m) => m.id === x.by) as Member, msgs: x.messages, n: x.orders, sum: x.total })).filter((r) => r.m);
   const all = rows.reduce((a, r) => a + r.sum, 0) || 1;
   // Lately: orders placed and the Manager's prices on them, newest first.
   const feed: { at: Ms; who: Member | undefined; what: JSX.Element; sub: string }[] = [];

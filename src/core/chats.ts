@@ -5,7 +5,9 @@
  * salesperson's own view, theirs or nobody's yet. The tab bar's count and
  * the Chats tab both read this.
  */
-import type { Chat, ChatBooks, Message, Ms } from './types.ts';
+import { orderTotal } from './money.ts';
+import { dayOf } from './time.ts';
+import type { Chat, ChatBooks, Message, Ms, Order } from './types.ts';
 
 /** A week: an older last word is not someone waiting (sales.html WA_WAIT_MAX_MINS, SAL-08). */
 export const WAIT_MAX_MS = 7 * 24 * 3600 * 1000;
@@ -40,4 +42,20 @@ export function waitingChats(cb: ChatBooks, meId: string, now: Ms, scope: 'mine'
     out.push({ chat: c, last: m, since: m.at });
   });
   return out.sort((a, b) => a.since - b.since);
+}
+
+export interface Served { by: string; messages: number; orders: number; total: number }
+
+/**
+ * Who served a chat's customer this year (CH33; the lead's ruling, 30 Oct): the messages each
+ * person sent in the chat (chat_served), and the orders placed FROM this chat (payload.waConvId)
+ * this year, by who took them. Biggest total first, then most messages.
+ */
+export function servedThisYear(orders: Order[], chatId: number, messages: { by: string; messages: number }[], year: string): Served[] {
+  const per = new Map<string, Served>();
+  const get = (by: string) => { let s = per.get(by); if (!s) { s = { by, messages: 0, orders: 0, total: 0 }; per.set(by, s); } return s; };
+  messages.forEach((m) => { get(m.by).messages += m.messages; });
+  orders.filter((o) => o.chatId === chatId && o.placedBy && !o.voided && !o.cancelled && dayOf(o.placedAt).startsWith(year))
+    .forEach((o) => { const s = get(o.placedBy as string); s.orders += 1; s.total += orderTotal(o); });
+  return [...per.values()].sort((a, b) => b.total - a.total || b.messages - a.messages);
 }

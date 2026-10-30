@@ -187,6 +187,7 @@ export function orderOf(q: Row, pb: PriceBook): Order {
     deliverTo: p.deliveryAddress ? String(p.deliveryAddress) : p.deliverTo ? String(p.deliverTo) : null,
     deliveredAt: ms(p.deliveredAt),
     toldTotal: null,
+    chatId: p.waConvId != null && p.waConvId !== '' ? num(p.waConvId) : null,
     qa: !!q.qa,
   };
 }

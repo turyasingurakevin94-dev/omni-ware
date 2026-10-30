@@ -83,6 +83,11 @@ export function extra(s: DemoState, _f: DemoFlags): void {
   // CH03: Brian took Okot J.'s number this morning (the chat's owner_at is when it was taken).
   const okot = s.chats.find((c) => c.id === CHAT.okot);
   if (okot) okot.ownerAt = t('8:20');
+  // CH33: the orders placed from Kato's chat this year (payload.waConvId). Amounts and counts stay as
+  // seeded: Grace's #0529 + #0552 + #0553 = 5,600,000 (the board's 5.6M; it says 10 orders, the seed
+  // has 9 of hers in all); Brian's three are 2,180,000 (the board's 2.1M needs 2,050,000-2,149,999);
+  // Faith's #0402 500,000.
+  [529, 552, 553, 437, 466, 511, 402].forEach((id) => { const o = s.books.orders.find((x) => x.id === id); if (o) o.chatId = CHAT.kato; });
   // CH33: the year before the seeded thread (chat_served counts every message sent this year).
   s.servedBefore[CHAT.kato] = { [GRACE]: 84, [BRIAN]: 31, [FAITH]: 7 };
 }
