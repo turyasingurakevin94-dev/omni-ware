@@ -22,10 +22,10 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR26 |
-| `customers` | `{ filter? }` | customers | CU01–CU08 |
+| `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU08 |
 | `customers/customer` | `{ id }` | customers | CU10–CU15 |
-| `customers/new` | `{ phone?, name? }` | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: number[] }` | customers | CU30–CU36 |
+| `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
+| `customers/pay` | `{ customer, bills?: string }` (bills: order ids joined by commas, "544" or "531,544"), or `{ order }` for a walk-in's order before its invoice (CU34) | customers | CU30–CU36 |
 | `customers/paid` | `{ id }` | customers | CU40–CU43 |
 
 ## Rules
