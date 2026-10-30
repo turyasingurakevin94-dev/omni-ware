@@ -34,7 +34,7 @@ The buying flow from Sales' handover to goods handed in: the fewest steps, and n
 
 ## Done when (revised by Kevin, 29 Oct 2026)
 
-- [x] every Buyer page is on the canvas, and the independent reviewer scores it at or above the Agent app (round 3: 28 pages, 8.65, 0 below);
+- [x] every Buyer page is on the canvas, and the independent reviewer scores it at or above the Agent app (round 5, scored from the rendered screens: 28 pages, 8.68, 0 below);
 - [x] the handover board names a push and one agreed word for every hand-off (13 of 13), and the Buyer pages use only those words;
 - [x] every push that does not exist yet is listed, ready for one migration after approval (6, in handover.md §6);
 - [x] every change Sales needs to reach the same words is listed in handover.md §5 for the Sales session (11);
@@ -51,7 +51,7 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or Sales chan
 | 2. Sales ↔ Buyer handover map | done · `handover.md` (12 mismatches, 5 Sales changes) |
 | 3. Buying flow from first principles | done · `flow.md` (26 taps → 6 taps + 2 slides) |
 | 4–5. Pages on the new canvas | done · 7 tab boards (28 pages, all 8 states) + handover board + flow board on the [canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7) |
-| 6. Scores | done · independent review, 3 rounds: 8.39 → 8.59 → 8.65; 0 of 28 pages below the Agent app (Scores board) |
+| 6. Scores | done · independent review, 5 rounds (rounds 4–5 from rendered screens, overlap sweep clean): 8.39 → 8.68; 0 of 28 pages below the Agent app (Scores board) |
 
 ## Waiting on Kevin
 
