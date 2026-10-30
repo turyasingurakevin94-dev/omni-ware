@@ -60,6 +60,10 @@ function NewSheet(p: { params: ScreenProps['params'] }): JSX.Element {
   const short9 = phone.length > 0 && phone.length < 9;
   const dup: Dup | null = sameNum ? { kind: 'phone', c: sameNum } : sameName ? { kind: 'name', c: sameName } : null;
   const today = dayOf(now.value);
+  const left = 9 - phone.length;
+  const warn = sameNum ? `This number is already ${sameNum.name}` : short9 && phoneOut ? `${left} more ${left > 1 ? 'digits' : 'digit'} · a number has 9 after +256` : null;
+  // How far down the sheet starts, by what it shows (as the boards draw it: CU20 110, CU21 150 less its 5 px grabber, CU22 96, CU23 124).
+  const top = dup ? (dup.kind === 'name' ? 145 : 124) : warn ? 96 : 110;
 
   const add = async (then: 'add' | 'sell'): Promise<void> => {
     if (busy) return;
@@ -79,12 +83,12 @@ function NewSheet(p: { params: ScreenProps['params'] }): JSX.Element {
 
   return (
     <NewForm b={b} today={today} name={name} onName={setName} phone={phone} onPhone={(v) => setPhone(nine(v))} phoneRef={phoneEl}
-      phoneWarn={sameNum ? `This number is already ${sameNum.name}` : short9 && phoneOut ? `${9 - phone.length} more digit${9 - phone.length > 1 ? 's' : ''} · a number has 9 after +256` : null}
+      phoneWarn={warn} top={top}
       onPhoneBlur={() => setPhoneOut(true)} onPhoneFocus={() => setPhoneOut(false)}
       place={place} onPlace={setPlace} kind={k} onKind={(x) => { setKind(x); setPicked(true); }}
       ruth={first(role(b, 'manager').name)} face={initials(name || '?')}
       chat={dup ? null : chat ? { at: chat.lastInAt || 0, phone: chat.phone, name: chat.profileName, filled: !!fromChat || (phone === nine(chat.phone) && name === chat.profileName), on: () => {
-        if (!fromChat && !(phone === nine(chat.phone) && name === chat.profileName)) { setName(chat.profileName); setPhone(nine(chat.phone)); return; }
+        if (!fromChat && !(phone === nine(chat.phone) && name === chat.profileName)) { setName(chat.profileName); setPhone(nine(chat.phone)); setTimeout(() => phoneEl.current && phoneEl.current.focus(), 0); return; }
         leave(); nav.replace('chats/chat', { id: chat.id });
       } } : null}
       dup={dup} short9={short9} busy={busy} onClose={() => sheet.close()}

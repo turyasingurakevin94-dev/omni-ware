@@ -4,7 +4,7 @@
  * saved when the name or number is theirs, and two buttons.
  */
 import type { JSX, RefObject } from 'preact';
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
@@ -33,9 +33,11 @@ export function NewForm(p: {
   phoneWarn: string | null; onPhoneBlur: () => void; onPhoneFocus: () => void; place: string; onPlace: (v: string) => void;
   kind: CustomerKind | null; onKind: (k: CustomerKind) => void; ruth: string; face: string;
   chat: { at: number; phone: string; name: string; filled: boolean; on: () => void } | null;
-  dup: Dup | null; short9: boolean; busy: 'add' | 'sell' | null; onClose: () => void; acts: { left: Act; right: Act };
+  dup: Dup | null; short9: boolean; top: number; busy: 'add' | 'sell' | null; onClose: () => void; acts: { left: Act; right: Act };
 }): JSX.Element {
   const [focus, setFocus] = useState<string | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { const el = root.current && root.current.parentElement; if (el && el.classList.contains('ow-sheet')) el.style.top = `${p.top}px`; }, [p.top]);
   const ticks: [string, boolean][] = [['Name', !!p.name.trim()], ['Phone', p.phone.length === 9], ['Kind', !!p.kind]];
   const done = ticks.every(([, x]) => x), off = p.short9;
   const field = (k: string, warn = false) => cx('cu-nf-box', warn ? 'warn' : focus === k && 'focus');
@@ -58,7 +60,7 @@ export function NewForm(p: {
     );
   };
   return (
-    <div class="ow-lsheet cu-ls cu-nf">
+    <div ref={root} class="ow-lsheet cu-ls cu-nf">
       <button type="button" class="ow-grab" aria-label="Close" onClick={p.onClose} />
       <div class="ow-lsheet-h"><div class="ow-lsheet-ht"><h2>New customer</h2></div>
         <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></div>
@@ -102,7 +104,7 @@ export function NewForm(p: {
               </button>
             ))}
           </div>
-          <span class="cu-nf-lock"><Icon name="lock" size={13} stroke={2.2} />{`You set it now · after this only ${p.ruth} changes it`}</span>
+          {!(p.dup && p.dup.kind === 'phone') && <span class="cu-nf-lock"><Icon name="lock" size={13} stroke={2.2} />{`You set it now · after this only ${p.ruth} changes it`}</span>}
         </div>
         <div class="cu-nf-acts">
           <button type="button" class="cu-nf-ghost" disabled={off} onClick={p.acts.left.on}>{p.acts.left.word}</button>
