@@ -25,7 +25,7 @@ import { enterFind, Find } from './Find.tsx';
 import { CreditLine, Foot } from './Foot.tsx';
 import { whoLine } from './insights.ts';
 import { closeLine, Lines, openWarns } from './Lines.tsx';
-import { cur, customerOf, forget, keep, openId, plain, query, resume, start, toDraft } from './model.ts';
+import { add, cur, customerOf, forget, keep, openId, plain, query, resume, setPrice, start, toDraft } from './model.ts';
 import { OrderDock } from './OrderDock.tsx';
 import { sendPicture } from './picture.ts';
 import { openAisles, openSwitch, openVoice } from './sheets.tsx';
@@ -36,11 +36,24 @@ import './order.css';
 function init(b: Books, p: ScreenProps['params']): void {
   if (typeof p.draft === 'string' && p.draft) { if (resume(p.draft)) return; }
   const id = typeof p.customer === 'string' && p.customer ? p.customer : null;
-  if (cur.value && cur.value.customerId === id && !p.from && !p.draft) return;
-  start(id, { chatId: typeof p.chat === 'number' ? p.chat : null });
-  if (id && p.from === 'usual') usualInto(b, id);
-  if (id && p.from === 'again') sellAgain(b, id);
-  if (p.from === 'chat' && typeof p.chat === 'number') fromChat(b, p.chat);
+  const fresh = !(cur.value && cur.value.customerId === id && !p.from && !p.draft);
+  if (fresh) start(id, { chatId: typeof p.chat === 'number' ? p.chat : null });
+  if (fresh && id && p.from === 'usual') usualInto(b, id);
+  if (fresh && id && p.from === 'again') sellAgain(b, id);
+  if (fresh && p.from === 'chat' && typeof p.chat === 'number') fromChat(b, p.chat);
+  // From the counter ("Order in", KC07/KC18) or Today ("Start Kato's order with…"): [{ itemId, qty, price? }].
+  if (typeof p.items === 'string' && p.items) {
+    let list: { itemId: string; qty: number; price?: number | null }[] = [];
+    try { list = JSON.parse(p.items); } catch (_e) { list = []; }
+    list.forEach((r) => {
+      const it = b.items.find((i) => i.id === r.itemId);
+      if (!it || !(r.qty > 0)) return;
+      const l = add(it, r.qty);
+      if (r.price != null && r.price !== l.price) setPrice(l.lineId, r.price, b.me.id);
+    });
+  }
+  // From Today ("Sells most", "Or open an aisle"): the order opens at that aisle (SL12).
+  if (typeof p.aisle === 'string' && p.aisle) queueMicrotask(() => nav.push('sell/aisle', { aisle: p.aisle as string }));
 }
 
 /** Close the order: what is in it is kept under "Still open". */

@@ -21,25 +21,25 @@ import { PickSheet, SwitchSheet } from './SwitchSheet.tsx';
 import { VoiceSheet } from './VoiceSheet.tsx';
 
 export function openPrice(lineId: number): void {
-  sheet.open(() => <PriceSheet lineId={lineId} />, { label: 'Their price' });
+  sheet.open(() => <PriceSheet lineId={lineId} />, { label: 'Their price', top: 150 });
 }
 export function openPriceComing(itemId: string, lineId: number | null, qty?: number): void {
-  sheet.open(() => <ComingSheet itemId={itemId} lineId={lineId} qty={qty} />, { label: 'No selling price yet' });
+  sheet.open(() => <ComingSheet itemId={itemId} lineId={lineId} qty={qty} />, { label: 'No selling price yet', top: 282 });
 }
 export function openCharge(): void {
-  sheet.open(() => <ChargeSheet />, { label: 'Add a charge' });
+  sheet.open(() => <ChargeSheet />, { label: 'Add a charge', top: 380 });
 }
 export function openAmount(o: { title: string; eyebrow?: string; value: number; onUse: (n: number) => void }): void {
-  sheet.open(() => <AmountSheet {...o} />, { label: o.title });
+  sheet.open(() => <AmountSheet {...o} />, { label: o.title, top: 150 });
 }
 export function openDelivery(): void {
-  sheet.open(() => <DeliverySheet />, { label: 'The shop delivers' });
+  sheet.open(() => <DeliverySheet />, { label: 'The shop delivers', top: 214 });
 }
 export function openSwitch(): void {
   sheet.open(() => <PickSheet />, { label: 'Who is it for?', top: 40 });
 }
 export function openSwitchTo(customerId: string): void {
-  sheet.open(() => <SwitchSheet to={customerId} />, { label: 'Change the customer' });
+  sheet.open(() => <SwitchSheet to={customerId} />, { label: 'Change the customer', top: 480 });
 }
 export function openVoice(): void {
   sheet.open(() => <VoiceSheet />, { label: 'Say it' });
