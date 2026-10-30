@@ -8,10 +8,13 @@
  *   &state=empty             nothing live, nobody owes, no chats (CH06, OR04, CU06)
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
+ *   &state=busy              an afternoon with 38 live and 22 needing Grace (TD02)
+ *   &state=goal-hit          Thu 29 Oct, the month's goal passed (TD08)
+ *   &state=test-record       a TEST order of Grace's at 10:30, in no figure (TD25)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
-export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading';
+export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading' | 'busy' | 'goal-hit' | 'test-record';
 
 export interface DemoFlags {
   on: boolean;
@@ -21,7 +24,7 @@ export interface DemoFlags {
   state: DemoStateName | null;
 }
 
-const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
+const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading', 'busy', 'goal-hit', 'test-record'];
 
 /** Reads ?demo&offline=1&clock=15:40&state=… from a query string. */
 export function readFlags(search: string): DemoFlags {

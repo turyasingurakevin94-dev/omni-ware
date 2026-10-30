@@ -13,7 +13,7 @@
  *   &state=busy       TD02 (today-whatif.ts)        &state=goal-hit   TD08 (today-whatif.ts)
  *   &state=test-record  TD25: a TEST order of Grace's at 10:30, kept and in no figure
  *
- * The three states after &state= are this tab's; until flags.ts lists them they are read from the address.
+ * #0559 may be added by the Orders tab's seed too: whichever runs first adds it, the other finds it by its id.
  */
 import { at } from '../../../time.ts';
 import type { DemoFlags } from '../../flags.ts';
@@ -36,13 +36,8 @@ export interface TodayLocal {
   drafts?: unknown[];
 }
 
-function stateOf(f: DemoFlags): string | null {
-  if (f.state) return f.state;
-  return typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('state');
-}
-
 export function extra(s: DemoState, f: DemoFlags): void {
-  const b = s.books, st = stateOf(f);
+  const b = s.books, st = f.state;
   // TD06, TD11, TD14: the shop's aisles, busiest first, with their item counts (FACTS §6; not in Books yet).
   (b as typeof b & { aisles?: typeof AISLES }).aisles = AISLES.map((a) => ({ ...a }));
   // TD05: #0528 is being checked by Esther (Ggaba's 125,000 inside what they owe).
