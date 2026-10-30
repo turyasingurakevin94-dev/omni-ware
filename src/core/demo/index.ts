@@ -45,6 +45,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   };
   const say = (chatId: number, body: string, kind: Message['kind']): Message => {
     const c = chat(chatId);
+    if (!s.connected) throw dataError('refused', 'WhatsApp is not connected yet', 'WAOFF');
     if (kind !== 'template' && !replyWindow(c.lastInAt, s.now).open) throw dataError('refused', 'The 24-hour window is shut: send it as the reply template', 'WSHUT');
     const m: Message = { id: 'm' + (s.messages.length + 1), chatId, at: s.now, dir: 'out', kind, body, by: me.id, state: 'sent' };
     s.messages.push(m); c.lastAt = s.now;
@@ -134,6 +135,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),
+    sendPicture: (chatId, _png, caption) => write(() => say(chatId, caption, 'image')),
     note: (chatId, body) => write(() => {
       const n: ChatNote = { id: 'n' + (s.notes.length + 1), chatId: chat(chatId).id, at: s.now, by: me.id, body };
       s.notes.push(n);

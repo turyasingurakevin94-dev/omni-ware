@@ -17,6 +17,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=empty` | Nothing live, nobody owes, no chats | CH06, OR04, CU06 |
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
+| `&wa=down` | The shop's WhatsApp does not answer: every send (a message, the order's picture) is refused | SL29 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 
@@ -46,6 +47,7 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `counterSale` | `counter_sale` (0136/0155) | placed, paid, delivered and invoiced at once; change for cash; a price under the shop's waits (`waiting: 'price'`) |
 | `receivePayment` | `receive_payment` (0169) | a customer's bills oldest first (or the ticked ones); more than owed needs `change` or `deposit`, else `OWOVR`; Mobile and Bank need the transaction ID |
 | `askBill`, `askCancel`, `askPaymentFix`, `recordPromise`, `askSourcing` | `invoice_asks`, (none yet), `payment_asks`, `payment_promises`, `sourcing_leads` | recorded, visible on the next read |
+| `sendPicture` | `wa-send` 'send-image' (sales.html:4150) | a picture message on the chat; a shut 24-hour window or `&wa=down` refuses it |
 | `send`, `sendTemplate`, `note`, `take`, `give`, `markRead` | `wa-send`, `wa_notes`, `take_conversation`, `hand_conversation` | a shut 24-hour window refuses a plain message; taking someone else's chat is refused |
 
 Writes take 250 ms, so "Sending…" is seen. With `&offline=1` every write is refused as `offline`.

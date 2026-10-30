@@ -8,6 +8,7 @@
  *   &state=empty             nothing live, nobody owes, no chats (CH06, OR04, CU06)
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
+ *   &wa=down                 the shop's WhatsApp does not answer: sends are refused (SL29 "Picture not sent yet")
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -19,6 +20,8 @@ export interface DemoFlags {
   /** "15:40", or null for 10:41. */
   clock: string | null;
   state: DemoStateName | null;
+  /** The shop's WhatsApp is not answering (&wa=down). */
+  waDown: boolean;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -33,5 +36,6 @@ export function readFlags(search: string): DemoFlags {
     offline: q.get('offline') === '1',
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
+    waDown: q.get('wa') === 'down',
   };
 }

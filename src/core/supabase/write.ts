@@ -202,6 +202,25 @@ export async function waSend(sb: Sb, s: Session, chatId: number, text: string, t
   return messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: template ? 'template' : 'text', body: text, sent_by: s.userId, status: 'sent' });
 }
 
+/** sales.html:4145 waUploadBlob + 4150 waSendImage: the picture to the shop's image bucket, then wa-send 'send-image'. */
+export async function waSendPicture(sb: Sb, s: Session, chatId: number, png: Blob, caption: string, now: number): Promise<Message> {
+  const path = `${s.shopId}/receipts/${(globalThis.crypto && crypto.randomUUID && crypto.randomUUID()) || now}.png`;
+  const up = await sb.storage.from('product-images').upload(path, png, { contentType: png.type || 'image/png' }).catch((e: unknown) => fail(e));
+  if (up.error) fail(up.error);
+  const link = sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+  let res: Row;
+  try {
+    res = await sb.functions.invoke('wa-send', { body: { shopId: s.shopId, action: 'send-image', conversationId: chatId, link, caption } });
+  } catch (e) { return fail(e); }
+  if (res.error) {
+    const why = await waReason(res.error);
+    if (isNetwork(why) || /Failed to send a request/i.test(why)) throw dataError('offline', 'No signal');
+    throw dataError(/Unknown action/i.test(why) ? 'missing' : 'refused', why);
+  }
+  if (!(res.data && res.data.sent)) throw dataError('refused', 'the send was refused');
+  return messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: 'image', body: caption, sent_by: s.userId, status: 'sent' });
+}
+
 /** sales.html:10407: a team note, never sent (wa_notes, 0170). */
 export async function addNote(sb: Sb, s: Session, chatId: number, body: string, now: number): Promise<ChatNote> {
   await ok(sb.from('wa_notes').insert({ shop_id: s.shopId, conversation_id: chatId, body, by_user: s.userId, by_name: s.name, mentions: [] }));

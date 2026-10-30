@@ -61,6 +61,7 @@ export function seed(f: DemoFlags): DemoState {
     notes: [],
     events: chatEvents(),
   };
+  if (f.waDown) s.connected = false;
   if (f.state === 'empty') emptyShop(s);
   if (f.state === 'first-day') firstDay(s);
   // Each tab's own additions, in tab order.

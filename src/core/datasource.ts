@@ -150,6 +150,11 @@ export interface DataSource {
   send(chatId: number, text: string): Promise<Message>;
   /** After the 24-hour window: the shop's approved reply template, their words inside it. */
   sendTemplate(chatId: number, text: string): Promise<Message>;
+  /**
+   * A picture on the chat (sales.html:4150 waSendImage: up to the shop's image bucket, then wa-send
+   * 'send-image', which refuses a shut 24-hour window). The order's picture as it is placed (SL07, SL28).
+   */
+  sendPicture(chatId: number, png: Blob, caption: string): Promise<Message>;
   note(chatId: number, body: string): Promise<ChatNote>;
   /** Take a new number as your customer (take_conversation, chat.take). */
   take(chatId: number): Promise<void>;
