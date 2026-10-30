@@ -130,7 +130,7 @@ export function saveDrafts(list: Draft[]): void {
 /** FACTS §4.6: Kyaligonza · 2 items · 186,000 and Lubowa · 1 item · 2,280,000, not placed. */
 function demoDrafts(): Draft[] {
   // &state=empty: nothing live, so nothing not placed yet either (CH06 draws no count on the +).
-  if (flags.state === 'empty') return [];
+  if (flags.state === 'empty' || flags.as) return []; // &as=ruth: another person's phone carries none of Grace's
   const b = (source as DemoSource).state.books, item = (id: string) => b.items.find((i) => i.id === id);
   const line = (id: string, qty: number, n: number) => {
     const it = item(id);
