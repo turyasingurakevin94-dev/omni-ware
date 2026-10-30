@@ -12,7 +12,7 @@
 import { sheet } from '../../../ui/sheet.tsx';
 import { nav } from '../shell/nav.ts';
 import { AislesSheet } from './AislesSheet.tsx';
-import { AmountSheet } from './AmountSheet.tsx';
+import { AmountSheet, type AmountProps } from './AmountSheet.tsx';
 import { ChargeSheet } from './ChargeSheet.tsx';
 import { ComingSheet } from './ComingSheet.tsx';
 import { DeliverySheet } from './DeliverySheet.tsx';
@@ -29,8 +29,8 @@ export function openPriceComing(itemId: string, lineId: number | null, qty?: num
 export function openCharge(): void {
   sheet.open(() => <ChargeSheet />, { label: 'Add a charge', top: 380 });
 }
-export function openAmount(o: { title: string; eyebrow?: string; value: number; onUse: (n: number) => void }): void {
-  sheet.open(() => <AmountSheet {...o} />, { label: o.title, top: 150 });
+export function openAmount(o: AmountProps): void {
+  sheet.open(() => <AmountSheet {...o} />, { label: o.title, top: 300 });
 }
 export function openDelivery(): void {
   sheet.open(() => <DeliverySheet />, { label: 'The shop delivers', top: 214 });

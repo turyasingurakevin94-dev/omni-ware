@@ -61,7 +61,7 @@ export function DeliverySheet(): JSX.Element | null {
       <div class="sl-dl-when">
         {WHEN.map(([k, d, t]) => <button key={k} type="button" aria-pressed={when === k} class={when === k ? 'on' : ''} onClick={() => setWhen(k)}><span>{d}</span><span>{t}</span></button>)}
       </div>
-      <button type="button" class="sl-dl-fee" aria-label="Change the delivery fee" onClick={() => openAmount({ title: 'Delivery fee', value: fee, onUse: (v) => { setFee(v); setDelivery({ where, phone, when }, v, area); } })}>
+      <button type="button" class="sl-dl-fee" aria-label="Change the delivery fee" onClick={() => openAmount({ title: 'Delivery fee', value: fee, verb: 'Use', onUse: (v) => { setFee(v); setDelivery({ where, phone, when }, v, area); } })}>
         <span class="sl-dl-t"><span class="b">Delivery fee</span><span>{sv ? `the shop’s fee for ${area}` : 'no fee set for this area'}</span></span>
         <span class="mono sl-dl-feev">{fig(fee, false, true)}</span><span class="sl-dl-penc"><Icon name="pen" size={18} stroke={2} /></span>
       </button>

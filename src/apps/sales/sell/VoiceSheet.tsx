@@ -1,8 +1,10 @@
 /*
  * SL10 · say it: the phone listens (the browser's speech recognition), the
  * words come back with what was understood marked, each item read with its
- * count, and one tap adds them all ("Add both · 1,712,000"). In the demo
- * the phone hears the sample shop's own sentence (seed/extra/sell.ts).
+ * count, and one tap adds them all ("Add both · 1,712,000"). While it
+ * listens (SL34) Add waits. Words with no item in them go into Add an item,
+ * where the find shows the closest (SL09). In the demo the phone hears the
+ * sample shop's own sentence (seed/extra/sell.ts) after 1.2 s.
  */
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -15,7 +17,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { books, isDemo, now } from '../shell/store.ts';
 import { findItems, readSaid } from './find.ts';
 import { rankFor } from './insights.ts';
-import { add, cur } from './model.ts';
+import { add, cur, query } from './model.ts';
 import './voice.css';
 
 /** The waveform as drawn: what was heard in mint, the fading tail in slate. */
@@ -56,7 +58,7 @@ export function VoiceSheet(): JSX.Element | null {
   const listen = () => {
     setText(''); setOn(true);
     const demo = isDemo ? (globalThis as { owDemoVoice?: string }).owDemoVoice : undefined;
-    if (demo) { window.setTimeout(() => { setText(demo); setOn(false); }, 400); return; }
+    if (demo) { window.setTimeout(() => { setText(demo); setOn(false); }, 1200); return; }
     const R = (globalThis as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec }).SpeechRecognition
       || (globalThis as unknown as { webkitSpeechRecognition?: new () => SpeechRec }).webkitSpeechRecognition;
     if (!R) { setOn(false); toast.show('This phone cannot listen', { kind: 'warn', sub: 'Type the item instead' }); return; }
@@ -68,10 +70,12 @@ export function VoiceSheet(): JSX.Element | null {
     r.start();
   };
   useEffect(listen, []);
+  const heard = b && text ? understand(b, text) : [];
+  // Said, but no item in it: the words go into Add an item, where the find shows the closest (SL09).
+  useEffect(() => { if (!on && text && !heard.length) { query.value = text; sheet.close(); } }, [on, text]);
   if (!b) return null;
-  const heard = text ? understand(b, text) : [];
   const total = heard.reduce((s, h) => s + h.qty * (h.it.price || 0), 0);
-  const word = heard.length === 2 ? 'Add both' : heard.length === 1 ? 'Add it' : `Add ${heard.length}`;
+  const word = heard.length === 2 ? 'Add both' : heard.length === 1 ? 'Add it' : heard.length ? `Add ${heard.length}` : 'Add';
   return (
     <div class="sl-voice">
       <button type="button" class="sl-voice-grab" aria-label="Close" onClick={sheet.close} />
@@ -94,7 +98,7 @@ export function VoiceSheet(): JSX.Element | null {
       )}
       <div class="sl-voice-f">
         <button type="button" class="sl-voice-again" aria-label="Say it again" onClick={listen}><Icon name="undo" size={22} stroke={2} /></button>
-        <button type="button" class="sl-voice-add" disabled={!heard.length} onClick={() => { heard.forEach((h) => add(h.it, h.qty)); sheet.close(); }}>{`${word} · `}<span class="mono">{fig(total)}</span></button>
+        <button type="button" class="sl-voice-add" disabled={!heard.length} onClick={() => { heard.forEach((h) => add(h.it, h.qty)); sheet.close(); }}>{heard.length ? <>{`${word} · `}<span class="mono">{fig(total)}</span></> : word}</button>
       </div>
     </div>
   );

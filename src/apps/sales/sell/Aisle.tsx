@@ -10,7 +10,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { Books, Item } from '../../../core/types.ts';
 import { avatarStyle } from '../../../ui/Avatar.tsx';
-import { AisleIcon, Duo, Icon, phSearch } from '../../../ui/icons.tsx';
+import { AisleIcon, Duo, Icon, phAgain, phFlame, phSearch, phSparkle } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
@@ -57,6 +57,9 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
   if (q.trim()) pool = all.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase()));
   const cards = cardsOf(b, pool).slice(0, shelf === 'most' ? 20 : undefined), shown = more ? cards : cards.slice(0, 4);
   const s = sums.value, n = x.lines.length, word = (kind || 'items').toLowerCase();
+  // A shelf from Browse the shop (SL33): its own name and icon, as on its chip in SL11.
+  const shelfName = shelf === 'usual' && c ? `${whose(c.name)} usual` : shelf === 'new' ? 'New' : 'Most sold';
+  const shelfIcon = shelf === 'usual' ? phAgain : shelf === 'new' ? phSparkle : phFlame;
   const inOrder = new Map(x.lines.map((l) => [itemKey(l), l]));
   return (
     <div class="sl-aisle">
@@ -66,7 +69,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
           <label class="sl-aisle-q"><Duo i={phSearch} size={20} color="#1C2233" /><input type="search" placeholder={`Search ${aisle || 'the shop'}`} aria-label={`Search ${aisle || 'the shop'}`} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} /></label>
         </div>
         <div role="group" aria-label="Show" class="sl-aisle-k">
-          <a href="#" class="sl-aisle-a" onClick={(e) => { e.preventDefault(); openAisles(); }}><span aria-hidden="true"><AisleIcon aisle={aisle} size={18} color="#FFFFFF" /></span>{aisle || shelf}<Icon name="chevron-down" size={14} stroke={2.4} /></a>
+          <a href="#" class="sl-aisle-a" onClick={(e) => { e.preventDefault(); openAisles(); }}><span aria-hidden="true">{shelfMode ? <Duo i={shelfIcon} size={18} color="#FFFFFF" /> : <AisleIcon aisle={aisle} size={18} color="#FFFFFF" />}</span>{shelfMode ? shelfName : aisle}<Icon name="chevron-down" size={14} stroke={2.4} /></a>
           {!shelfMode && kinds.map((k) => <button key={k.k} type="button" aria-pressed={kind === k.k} class={kind === k.k ? 'on' : ''} onClick={() => { setKind(k.k); setMore(false); }}>{k.k}<b class="mono">{k.n}</b></button>)}
         </div>
       </div>

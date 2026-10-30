@@ -36,7 +36,7 @@ export function ChargeSheet(): JSX.Element | null {
   const n = lines.reduce((s, l) => s + l.qty, 0), amount = sv ? (on ? n * sv.value : sv.value) : 0;
   const first = lines[0], it = first ? itemOf(b, first.itemId, first.variantIdx) : null;
   const thing = first ? first.name.split(' · ')[0].split(' ')[0].toLowerCase() : '';
-  const other = (label: string) => openAmount({ title: label, eyebrow: eye, value: 0, onUse: (v) => addCharge(label, v) });
+  const other = (label: string, rate?: number) => openAmount({ title: label, eyebrow: eye, value: 0, rate, verb: 'Add', onUse: (v) => addCharge(label, v) });
   const add = () => { if (sv && amount > 0) { addCharge(sv.label, amount); sheet.close(); } };
   return (
     <Frame title="Add a charge" eyebrow={eye} onClose={sheet.close} pad="12px 16px 20px"
@@ -56,7 +56,7 @@ export function ChargeSheet(): JSX.Element | null {
           <span class="sl-chg-n"><b class="mono">{n}</b>{` ${on.unit}s × `}<b class="mono">{fig(sv.value)}</b></span>
         </div>
       )}
-      <a href="#" class="sl-chg-other" onClick={(e) => { e.preventDefault(); other(sv ? sv.label : 'Other charge'); }}><Icon name="pen" size={16} stroke={2} />Other amount</a>
+      <a href="#" class="sl-chg-other" onClick={(e) => { e.preventDefault(); other(sv ? sv.label : 'Other charge', amount || undefined); }}><Icon name="pen" size={16} stroke={2} />Other amount</a>
     </Frame>
   );
 }

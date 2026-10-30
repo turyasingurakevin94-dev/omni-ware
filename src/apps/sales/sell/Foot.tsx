@@ -38,7 +38,7 @@ function RuthHead(p: { m: Who; title: string }): JSX.Element {
   return (
     <div class="sl-hold-h">
       <span aria-hidden="true" style={avatarStyle({ initials: p.m.initials, tint: p.m.tint, size: 32, font: 12 })} class="ow-av">{p.m.initials}</span>
-      <span class="sl-hold-t"><span>{p.title}</span><span>it places now · waits in Checking for her</span></span>
+      <span class="sl-hold-t"><span>{p.title}</span><span>{`it places now · waits in Checking for ${p.m.first}`}</span></span>
     </div>
   );
 }

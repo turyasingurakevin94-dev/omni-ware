@@ -57,7 +57,7 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAd
             <div role="radiogroup" aria-label="Sold by" class="sl-card2-u">
               {(units.length > 1 ? units : [it]).map((u) => <button key={u.id} type="button" role="radio" aria-checked={u.id === it.id} class={u.id === it.id ? 'on' : ''} onClick={() => setPick(u.id)}>{u.unit}</button>)}
             </div>
-            <button type="button" class="sl-card2-add" aria-label="Add" onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.4} /></button>
+            <button type="button" class="sl-card2-add" aria-label="Add" onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
           </div>
         )}
       </div>

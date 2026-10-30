@@ -22,6 +22,7 @@ import { first } from './insights.ts';
 import { itemOf } from './model.ts';
 import { buyer, manager, sourcing, store } from './people.ts';
 import { lastPlaced, pictures, sendPicture } from './picture.ts';
+import '../../../ui/button.css';
 import '../../../ui/moment.css';
 import './placed.css';
 
@@ -75,7 +76,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
           <span class="ow-moment-who-go"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
         </button>
         {pic && pic.state === 'sent' && <span class="ow-moment-note"><Duo i={phWhatsapp} size={16} color="#6FDCB0" />{`Picture sent to ${who}`}<Icon name="check" size={14} stroke={2.8} /></span>}
-        {pic && pic.state === 'sending' && <span class="ow-moment-note sl-pic-wait"><Duo i={phWhatsapp} size={16} color="#B3BCD2" />{`Sending the picture to ${who}`}</span>}
+        {pic && pic.state === 'sending' && <span class="ow-moment-note sl-pic-wait"><Duo i={phWhatsapp} size={16} color="#B3BCD2" />{`Sending the picture to ${who}`}<span aria-hidden="true" class="ow-spin sl-pic-spin" /></span>}
         {pic && pic.state === 'failed' && (
           <span class="sl-pic-fail"><Duo i={phWhatsapp} size={16} color="#F5B26B" />Picture not sent yet
             <button type="button" onClick={() => void sendPicture(o, pic.chatId)}><span>Try again</span></button></span>

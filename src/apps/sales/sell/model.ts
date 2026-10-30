@@ -218,7 +218,7 @@ export const sums = computed(() => {
   const c = customerOf(b, x.customerId), total = orderTotal(o);
   return {
     cash: cashTotal(o), credit: creditCharge(o), total, coming: pricesComing(x.lines),
-    /** Lines whose price the Manager decides (under the shop's price, until she answers). */
+    /** Lines whose price the Manager decides (under the shop's price, until they answer). */
     forRuth: x.lines.filter((l) => l.price != null && lineWaits(l)).length,
     hold: x.credit && c ? creditHold(c, total, true, dayOf(now.value), b.settings.holdDays) : null,
     allShelf: x.lines.length > 0 && x.lines.every((l) => { const it = itemOf(b, l.itemId, l.variantIdx); return l.from === 'shelf' && !!it && (it.onShelf || 0) >= l.qty; }),
