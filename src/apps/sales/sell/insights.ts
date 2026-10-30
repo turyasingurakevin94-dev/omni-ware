@@ -102,8 +102,16 @@ export function sellMost(b: Books, me: string, now: number, n = 3): { it: Item; 
 /** A customer's own items: their usual, and anything in half their orders or more (the aisles they buy from). */
 export function theirItems(b: Books, c: Customer): Set<string> {
   const orders = ordersOf(b, c.id), had = tally(orders), out = new Set(c.usual.map(itemKey));
-  had.forEach((n, k) => { if (orders.length && n * 2 >= orders.length) out.add(k); });
+  had.forEach((n, k) => { if (orders.length && n >= 3 && n * 2 >= orders.length) out.add(k); });
   return out;
+}
+
+/** How a found item ranks for them: their own (2), had in the last 7 days (1), else 0. */
+export function rankFor(b: Books, c: Customer | null, now: number): (key: string) => number {
+  if (!c) return () => 0;
+  const theirs = theirItems(b, c), week = new Set<string>();
+  ordersOf(b, c.id).filter((o) => now - o.placedAt <= 7 * 864e5).forEach((o) => o.lines.forEach((l) => week.add(itemKey(l))));
+  return (k) => (theirs.has(k) ? 2 : week.has(k) ? 1 : 0);
 }
 
 /** Per aisle, how many of their own items it holds. */

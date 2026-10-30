@@ -19,7 +19,7 @@ import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
 import { nav, stack } from '../shell/nav.ts';
 import { act, books, flush, me, now, online } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { ChatAsk, fromChat } from './ChatAsk.tsx';
+import { askMatch, ChatAsk, fromChat } from './ChatAsk.tsx';
 import { enterFind, Find } from './Find.tsx';
 import { CreditLine, Foot } from './Foot.tsx';
 import { whoLine } from './insights.ts';
@@ -90,13 +90,13 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
           : <WhoPill on={() => openSwitch()} face={{ initials: 'WI', tint: 't4' }} name="Walk-in order" sub="no name · the shop packs it" dot="#9AA1AE" />}
         search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: query.value, onInput: (v) => { query.value = v; }, onEnter: () => enterFind(), onMic: openVoice }}
         onAisles={openAisles} />
-      <main class={'sl-main' + (typing ? ' find' : '')}>
+      <main class={'sl-main' + (typing ? ' find' : !c && x.lines.length === 0 ? ' walkin' : '')}>
         {typing ? <Find b={b} c={c} />
           : x.lines.length === 0 ? <Start b={b} c={c} />
           : (
             <>
-              {x.chatId != null && <ChatAsk b={b} c={c} />}
-              <div class={'sl-first' + (plain.value ? ' fill' : '')}>
+              <ChatAsk b={b} c={c} />
+              <div class={'sl-first' + (plain.value ? ' fill' : '') + (askMatch(b, c) ? ' asked' : '')}>
                 <Lines me={mine} extra={<CreditLine b={b} />} />
                 {plain.value && <Suggest b={b} c={c} />}
               </div>

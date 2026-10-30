@@ -12,9 +12,9 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { books, isDemo } from '../shell/store.ts';
+import { books, isDemo, now } from '../shell/store.ts';
 import { findItems, readSaid } from './find.ts';
-import { theirItems } from './insights.ts';
+import { rankFor } from './insights.ts';
 import { add, cur } from './model.ts';
 import './voice.css';
 
@@ -28,7 +28,7 @@ type Heard = { it: Item; qty: number; unit: string };
 function understand(b: Books, text: string): Heard[] {
   const x = cur.value, c = x && x.customerId ? b.customers.find((y) => y.id === x.customerId) : null;
   return readSaid(text).map((a) => {
-    const it = findItems(b, a, c ? theirItems(b, c) : new Set())[0];
+    const it = findItems(b, a, rankFor(b, c || null, now.value))[0];
     return it ? { it, qty: a.qty || 1, unit: a.unit || it.unit } : null;
   }).filter((h): h is Heard => !!h && h.it.price != null);
 }

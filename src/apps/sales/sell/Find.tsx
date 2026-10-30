@@ -15,9 +15,9 @@ import { fig } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { useEffect } from 'preact/hooks';
-import { act, books, source } from '../shell/store.ts';
+import { act, books, now, source } from '../shell/store.ts';
 import { closest, findItems, readAsk, sameAsk, type Asked } from './find.ts';
-import { first, itemKey, lastQty, theirItems } from './insights.ts';
+import { first, itemKey, lastQty, rankFor, theirItems } from './insights.ts';
 import { askedAs, closeLine } from './Lines.tsx';
 import { add, cur, lineFor, openId, query } from './model.ts';
 import { sourcing } from './people.ts';
@@ -53,13 +53,13 @@ export function enterFind(): void {
   const b = books.value, x = cur.value;
   if (!b || !x) return;
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) || null : null;
-  const a = readAsk(query.value), hits = findItems(b, a, c ? theirItems(b, c) : new Set());
+  const a = readAsk(query.value), hits = findItems(b, a, rankFor(b, c, now.value));
   if (hits[0]) addAsked(b, hits[0], a, c);
 }
 
 export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
   const b = p.b, c = p.c, a = readAsk(query.value), theirs = c ? theirItems(b, c) : new Set<string>();
-  const hits = findItems(b, a, theirs);
+  const hits = findItems(b, a, rankFor(b, c, now.value));
   if (!hits.length) return <Nothing b={b} c={c} a={a} />;
   const top = hits[0], more = hits.slice(1), q = count.value ?? (a.qty || 1);
   const word = a.words[a.words.length - 1] || '';

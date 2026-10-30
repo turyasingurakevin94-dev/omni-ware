@@ -5,11 +5,11 @@
  */
 import type { JSX } from 'preact';
 import { howLong } from '../../../core/time.ts';
-import type { Books, Customer, Message } from '../../../core/types.ts';
+import type { Books, Customer, Item, Message } from '../../../core/types.ts';
 import { Duo, phWhatsapp } from '../../../ui/icons.tsx';
 import { chats, now } from '../shell/store.ts';
 import { findItems, readAsk } from './find.ts';
-import { first, theirItems } from './insights.ts';
+import { first, rankFor } from './insights.ts';
 import { add, cur } from './model.ts';
 
 /** Their newest words on the chat, while they wait for a reply. */
@@ -26,7 +26,7 @@ export function fromChat(b: Books, chatId: number): void {
   if (!m || !x) return;
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) || null : null;
   m.body.split(/\band\b|;/i).forEach((part) => {
-    const a = readAsk(part), it = findItems(b, a, c ? theirItems(b, c) : new Set())[0];
+    const a = readAsk(part), it = findItems(b, a, rankFor(b, c, now.value))[0];
     if (it && it.price != null) add(it, a.qty || 1);
   });
 }
@@ -48,12 +48,20 @@ function Marked(p: { text: string; words: string[]; count: string[] }): JSX.Elem
   return <>{out}</>;
 }
 
-export function ChatAsk(p: { b: Books; c: Customer | null }): JSX.Element | null {
+/** Their ask, when the order answers it: their words name an item that is on it. */
+export function askMatch(b: Books, c: Customer | null): { m: Message; it: Item } | null {
   const x = cur.value, m = x && x.chatId != null ? asked(x.chatId) : null;
-  if (!m || !p.c) return null;
-  const a = readAsk(m.body), it = findItems(p.b, a, theirItems(p.b, p.c))[0];
-  const words = it ? m.body.split(/[\s,?!.]+/).filter((w) => w && it.name.toLowerCase().includes(w.toLowerCase().replace(/(es|s)$/, ''))) : [];
-  const count = m.body.match(/\d+\s*[a-z]*/i);
+  if (!x || !m || !c) return null;
+  const it = findItems(b, readAsk(m.body), rankFor(b, c, now.value))[0];
+  return it && x.lines.some((l) => l.itemId === it.id) ? { m, it } : null;
+}
+
+export function ChatAsk(p: { b: Books; c: Customer | null }): JSX.Element | null {
+  const hit = askMatch(p.b, p.c);
+  if (!hit || !p.c) return null;
+  const { m, it } = hit;
+  const words = m.body.split(/[\s,?!.]+/).filter((w) => w && it.name.toLowerCase().includes(w.toLowerCase().replace(/(es|s)$/, '')));
+  const count = m.body.match(/\b\d+\s*[a-z]*/i);
   return (
     <div class="sl-asked">
       <span aria-hidden="true" class="sl-asked-ic"><Duo i={phWhatsapp} size={18} color="#0F6B43" /></span>

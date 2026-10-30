@@ -93,12 +93,12 @@ function fill(it: Item, qty: number): number {
   return 3;
 }
 
-/** The items that answer an ask, theirs first, then what fills the count best. */
-export function findItems(b: Books, a: Asked, theirs: Set<string>): Item[] {
+/** The items that answer an ask: theirs first (rank 2), what they had this week (1), then what fills the count best. */
+export function findItems(b: Books, a: Asked, rank: (key: string) => number = () => 0): Item[] {
   if (!a.words.length) return [];
   const hits = b.items.filter((it) => fits(it, a.words) && (!a.unit || it.unit === a.unit || it.packUnit === a.unit || nameWords(it).includes(a.unit)));
   const key = (it: Item) => `${it.id}::${it.variantIdx ?? ''}`, q = a.qty || 1;
-  return hits.sort((x, y) => (theirs.has(key(y)) ? 1 : 0) - (theirs.has(key(x)) ? 1 : 0) || fill(x, q) - fill(y, q));
+  return hits.sort((x, y) => rank(key(y)) - rank(key(x)) || fill(x, q) - fill(y, q));
 }
 
 /** Nothing called that: the items that share a word with it (SL09 "closest in the shop"). */
