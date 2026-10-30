@@ -21,7 +21,7 @@ const MARGIN = { dock: 16, notice: 12 };
 export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null {
   const x = cur.value, b = p.b, c = p.c, box = useRef<HTMLDivElement>(null), [fit, setFit] = useState<{ rows: number; chips: boolean }>({ rows: 3, chips: true });
   const newest = x && x.lines.length ? x.lines[x.lines.length - 1] : null;
-  const w = newest ? oftenWith(b, c ? c.id : null, itemKey(newest), new Set(x ? x.lines.map(itemKey) : []), me.value ? me.value.id : '') : null;
+  const w = newest ? oftenWith(b, c ? c.id : null, { itemId: newest.itemId, variantIdx: newest.variantIdx }, new Set(x ? x.lines.map(itemKey) : []), me.value ? me.value.id : '') : null;
   const key = `${x ? x.lines.map((l) => `${itemKey(l)}:${l.qty}`).join() : ''}|${w ? w.rows.length : 0}|${openId.value}|${openWarns.value}|${online.value}`;
   useLayoutEffect(() => {
     const el = box.current;

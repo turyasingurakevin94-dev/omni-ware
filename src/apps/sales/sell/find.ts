@@ -110,8 +110,10 @@ export function findItems(b: Books, a: Asked, rank: (key: string) => number = ()
 
 /** Nothing called that: the items that share a word with it (SL09 "closest in the shop"). */
 export function closest(b: Books, a: Asked, n = 2): Item[] {
-  const ws = a.words.filter((w) => w.length > 2);
-  return b.items.filter((it) => ws.some((w) => nameWords(it).includes(stem(w)))).slice(0, n);
+  // The most words in common first; a word of letters ("pipe") counts over a size ("25mm").
+  const ws = a.words.filter((w) => w.length > 2), weight = (w: string) => (/^[a-z]+$/i.test(w) ? 2 : 1);
+  const score = (it: Item) => ws.reduce((t, w) => t + (nameWords(it).includes(stem(w)) ? weight(w) : 0), 0);
+  return b.items.map((it) => ({ it, s: score(it) })).filter((x) => x.s > 0).sort((x, y) => y.s - x.s).slice(0, n).map((x) => x.it);
 }
 
 /** An ask already made of Sourcing that is this one, a letter or two off ("tile cuter" → "Tile cutter 600mm"). */

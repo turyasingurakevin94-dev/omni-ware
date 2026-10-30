@@ -105,7 +105,7 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
           : <WhoPill on={() => openSwitch()} face={{ initials: 'WI', tint: 't4' }} name="Walk-in order" sub="no name · the shop packs it" dot="#9AA1AE" />}
         search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: query.value, onInput: (v) => { query.value = v; }, onEnter: () => enterFind(), onMic: openVoice }}
         onAisles={openAisles} />
-      <main class={'sl-main' + (!typing && ((x.lines.length === 0 && c) || (x.lines.length > 0 && (sheet.isOpen || !!askMatch(b, c) || (openId.value != null && !openWarns.value)))) ? ' g12' : '')}>
+      <main class={'sl-main' + (!typing && ((x.lines.length === 0 && c) || (x.lines.length > 0 && (!!askMatch(b, c) || (openId.value != null && !openWarns.value)))) ? ' g12' : '')}>
         {typing ? <Find b={b} c={c} />
           : x.lines.length === 0 ? <Start b={b} c={c} />
           : (

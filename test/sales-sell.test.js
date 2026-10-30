@@ -32,18 +32,18 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(b.items.filter((i) => i.listedAt && now - i.listedAt <= 30 * 864e5).length === 18, 'New 18 (SL11)');
 
   /* ---- Kato (SL03, SL05) ---- */
-  const kato = cust(KATO), r = I.rhythm(b, kato, now);
+  const kato = cust(KATO), r = I.rhythmOf(b, kato, now), last = I.ordersOf(b, KATO)[0];
   t.check(I.ordersOf(b, KATO).length === 14, 'Kato: 14 orders');
   t.check(I.whoLine(b, kato, now).text === 'Every 10 days · owes 420k', 'the who pill: Every 10 days · owes 420k');
-  t.check(r.last.id === 553 && M.orderTotal(r.last) === 170000, 'last order #0553 · 170,000');
-  const w = I.oftenWith(b, KATO, 'iron-g28-3m::', new Set(['iron-g28-3m::', 'cement-hima-50::', 'hinge-soft-flat::']), GRACE);
-  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 7/14, Roofing nails 2.5" 5/14, Wire nails 4" · 25kg ctn 6/14', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}`).join(', ')})`);
+  t.check(last.id === 553 && M.orderTotal(last) === 170000 && r.every === 10, 'last order #0553 · 170,000, every 10 days');
+  const w = I.oftenWith(b, KATO, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::', 'cement-hima-50::', 'hinge-soft-flat::']), GRACE);
+  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 4/5, Roofing nails 2.5" 3/5, Wire nails 4" · 25kg ctn 2/5', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ')})`);
   const marks = I.aisleMarks(b, kato);
   t.check([...marks].map(([a, n]) => `${a} ${n}`).sort().join(', ') === 'Cement 1, Fasteners 1, Roofing 2', 'Kato buys from 3: Roofing 2 · Cement 1 · Fasteners 1');
 
   /* ---- Lubowa (SL04) ---- */
-  const lw = I.oftenWith(b, LUBOWA, 'iron-g28-3m::', new Set(['iron-g28-3m::']), GRACE);
-  t.check(lw.mine && lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ') === 'Ridge cap G28 4/5, Roofing nails 2.5" 3/5', 'Often with Iron sheet G28 in Lubowa’s orders: 4/5, 3/5');
+  const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
+  t.check(lw.mine && lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ') === 'Ridge cap G28 2/2, Roofing nails 2.5" 2/2', `Often with Iron sheet G28 in Lubowa’s orders (core/often.ts): 2/2, 2/2 (got ${lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ')})`);
   t.check(I.whoLine(b, cust(LUBOWA), now).text === '1 day late · every 5 days', 'Lubowa: 1 day late · every 5 days');
 
   /* ---- who is it for (SL01) ---- */

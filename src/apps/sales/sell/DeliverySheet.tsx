@@ -5,6 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
+import { deliveryFor } from '../../../core/services.ts';
 import { avatarStyle } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -20,7 +21,7 @@ const WHEN: [When, string, string][] = [['today-pm', 'Today', 'afternoon'], ['to
 export function DeliverySheet(): JSX.Element | null {
   const b = books.value, x = cur.value;
   const c = b && x && x.customerId ? b.customers.find((y) => y.id === x.customerId) || null : null;
-  const area = c ? c.place : '', sv = b ? b.settings.services.find((s) => s.id === `delivery-${area.toLowerCase()}`) : null;
+  const area = c ? c.place : '', sv = b ? deliveryFor(b.settings.services, area) : null;
   const had = x && x.delivery, oldFee = x ? x.charges.find((ch) => /^Delivery/.test(ch.label)) : null;
   const [where, setWhere] = useState(had ? had.where : c ? c.address : '');
   const [phone, setPhone] = useState(had ? had.phone : c ? c.phone : '');
@@ -29,7 +30,7 @@ export function DeliverySheet(): JSX.Element | null {
   const [edit, setEdit] = useState<'where' | 'phone' | null>(null);
   if (!b || !x) return null;
   const driver = b.members.find((m) => m.role === 'driver' && m.presence) || b.members.find((m) => m.role === 'driver');
-  const mins = sv ? (sv as { mins?: number }).mins : undefined;
+  const mins = sv ? sv.mins : undefined;
   const saved = !!c && where === c.address;
   const done = () => { setDelivery({ where, phone, when }, fee, area); sheet.close(); };
   return (

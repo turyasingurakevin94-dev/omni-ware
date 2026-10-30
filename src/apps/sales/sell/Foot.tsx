@@ -6,6 +6,7 @@
  * Credit is the Manager's to give (decision-rights): the order places now
  * and waits in Checking for her.
  */
+import { isDelivery } from '../../../core/services.ts';
 import type { JSX } from 'preact';
 import { openCharges, short } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
@@ -43,7 +44,11 @@ function RuthHead(p: { m: Who; title: string }): JSX.Element {
   );
 }
 
-/** Why a credit order waits for the Manager, as a picture. */
+/**
+ * Why a credit order waits for the Manager, as a picture: one reason, in this order (the boards that
+ * draw each): over the limit (SL24, Kato), else a bill past the hold (SL25, Kyaligonza has no limit
+ * too, and the old bill is what the board shows), else no limit set (SL23, Nansana).
+ */
 function Hold(p: { b: Books; c: Customer }): JSX.Element | null {
   const s = sums.value, b = p.b, c = p.c, m = manager(b);
   if (!s || !s.hold) return null;
@@ -113,7 +118,7 @@ export function Foot(p: { b: Books; c: Customer | null }): JSX.Element | null {
       {!x.credit && (
         <a href="#" class="sl-foot-r" onClick={(e) => { e.preventDefault(); openCharge(); }}>
           <span aria-hidden="true" class="sl-foot-ic info"><Icon name="plus" size={20} stroke={2} /></span>
-          <span class="sl-foot-t"><span>Add a charge</span><span>{b.settings.services.filter((s) => !/^delivery/.test(s.id)).map((s) => s.label.toLowerCase()).join(' · ')}</span></span>
+          <span class="sl-foot-t"><span>Add a charge</span><span>{b.settings.services.filter((s) => !isDelivery(s)).map((s) => s.label.toLowerCase()).join(' · ')}</span></span>
           <span class="sl-foot-go"><Icon name="chevron-right" size={16} stroke={2.4} /></span>
         </a>
       )}

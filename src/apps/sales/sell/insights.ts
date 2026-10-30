@@ -9,7 +9,9 @@
  * Pure functions over the books: no screen, no clock of its own.
  */
 import { short } from '../../../core/money.ts';
-import { addDays, dayLabel, dayOf, daysApart } from '../../../core/time.ts';
+import { dueCustomers, rhythm, type Rhythm } from '../../../core/customers.ts';
+import { oftenWith as often } from '../../../core/often.ts';
+import { dayLabel, dayOf, daysApart } from '../../../core/time.ts';
 import type { Books, Customer, Item, Order } from '../../../core/types.ts';
 
 const live = (o: Order) => !o.voided && !o.cancelled && !o.qa;
@@ -19,39 +21,23 @@ export function ordersOf(b: Books, customerId: string): Order[] {
   return b.orders.filter((o) => o.customerId === customerId && live(o)).sort((x, y) => y.placedAt - x.placedAt);
 }
 
-export interface Rhythm { every: number; last: Order | null; next: string | null; late: number; dueToday: boolean }
-
-export function rhythm(b: Books, c: Customer, now: number): Rhythm {
-  const last = ordersOf(b, c.id)[0] || null, today = dayOf(now);
-  if (!c.everyDays || !last) return { every: c.everyDays || 0, last, next: null, late: 0, dueToday: false };
-  const next = addDays(dayOf(last.placedAt), c.everyDays), d = daysApart(next, today);
-  return { every: c.everyDays, last, next, late: Math.max(0, d), dueToday: d === 0 };
-}
-
 const days = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
 
-/** The who pill's line and dot (SL03, SL04, SL25, SL30, SL23). */
+/** A customer's rhythm, by the one rule (core/customers.ts), over these books. */
+export const rhythmOf = (b: Books, c: Customer, now: number): Rhythm => rhythm(c, b.orders, dayOf(now));
+
+/** The who pill's line and dot (SL03, SL04, SL25, SL30, SL23): late or due by the one rule, else their gap and what they owe. */
 export function whoLine(b: Books, c: Customer, now: number): { text: string; dot: string } {
-  const r = rhythm(b, c, now), owes = c.owes > 0 ? `owes ${short(c.owes)}` : '';
-  if (r.late) return { text: `${days(r.late)} late · ${owes || `every ${days(r.every)}`}`, dot: '#95530C' };
-  if (r.dueToday) return { text: `Due today · ${owes || `every ${days(r.every)}`}`, dot: '#0F6B43' };
-  if (owes) return { text: `Every ${days(r.every)} · ${owes}`, dot: '#0F6B43' };
+  const r = rhythmOf(b, c, now), owes = c.owes > 0 ? `owes ${short(c.owes)}` : '', late = r.late || 0;
+  if (late > 0) return { text: `${days(late)} late · ${owes || `every ${days(r.every || 0)}`}`, dot: '#95530C' };
+  if (r.due) return { text: `Due today · ${owes || `every ${days(r.every || 0)}`}`, dot: '#0F6B43' };
+  if (owes && r.every) return { text: `Every ${days(r.every)} · ${owes}`, dot: '#0F6B43' };
   const credit = ordersOf(b, c.id).some((o) => o.credit);
   return { text: credit ? 'on credit before' : 'cash so far', dot: '#9AA1AE' };
 }
 
-/** "Due today · every 7 days", "4 days late · every 14 days" (SL01 Who's due). */
-export function dueLine(r: Rhythm): string {
-  return `${r.dueToday ? 'Due today' : `${days(r.late)} late`} · every ${days(r.every)}`;
-}
-
-/** Who's due: late or due today, due today first, then the latest. FACTS §3.2: 3. */
-export function whosDue(b: Books, now: number): { c: Customer; r: Rhythm }[] {
-  return b.customers.filter((c) => !c.qa).map((c) => ({ c, r: rhythm(b, c, now) }))
-    // Late by more than a whole round is gone quiet (FACTS §3.2: 8), not due.
-    .filter((x) => x.r.next && (x.r.dueToday || (x.r.late > 0 && x.r.late <= x.r.every)))
-    .sort((x, y) => (y.r.dueToday ? 1 : 0) - (x.r.dueToday ? 1 : 0) || y.r.late - x.r.late);
-}
+/** Who's due (SL01), by the one rule: FACTS §3.2, 3. */
+export const whosDue = (b: Books, now: number): { c: Customer; r: Rhythm }[] => dueCustomers(b.customers, b.orders, dayOf(now));
 
 /** "Kato Construction" → "Kato"; "Kyaligonza & Sons" → "Kyaligonza". */
 export const first = (name: string) => name.split(/\s+/)[0];
@@ -73,25 +59,11 @@ export function item(b: Books, k: string): Item | undefined {
   return b.items.find((i) => itemKey(i) === k);
 }
 
-/**
- * "Often with" an item: what came in the same orders as it, across this customer's orders when they
- * have had it twice or more (else across all of mine), less what is in the order already; each with
- * how many of their orders had it (agent.html oftenWith). Most often together first.
- */
-export function oftenWith(b: Books, customerId: string | null, anchor: string, inOrder: Set<string>, me: string, n = 3): { mine: boolean; of: number; rows: { it: Item; had: number }[] } {
-  const scan = (orders: Order[]) => {
-    const withIt = orders.filter((o) => o.lines.some((l) => itemKey(l) === anchor));
-    const together = tally(withIt), had = tally(orders);
-    const rows = [...together.entries()].filter(([k]) => k !== anchor && !inOrder.has(k))
-      .sort((x, y) => y[1] - x[1] || (had.get(y[0]) || 0) - (had.get(x[0]) || 0))
-      .map(([k]) => ({ it: item(b, k), had: had.get(k) || 0 })).filter((r): r is { it: Item; had: number } => !!r.it);
-    return { of: orders.length, with: withIt.length, rows };
-  };
-  let got = customerId ? scan(ordersOf(b, customerId)) : null, mine = true;
-  // A customer's own orders only (SL10: nothing for cement Kato had once); a walk-in's, mine.
-  if (got && got.with < 2) got = { ...got, rows: [] };
-  if (!got) { got = scan(b.orders.filter((o) => live(o) && o.placedBy === me)); mine = false; }
-  return { mine, of: got.of, rows: got.rows.slice(0, n) };
+/** "Often with" an item (P13), by the one rule (core/often.ts), as items: less what is in the order already. */
+export function oftenWith(b: Books, customerId: string | null, anchor: { itemId: string; variantIdx: number | null }, inOrder: Set<string>, me: string, n = 3): { mine: boolean; of: number; rows: { it: Item; had: number }[] } {
+  const w = often(b.orders, anchor, { customerId, me, skip: inOrder, n });
+  const rows = w.rows.map((r) => ({ it: item(b, key(r.itemId, r.variantIdx)), had: r.n })).filter((r): r is { it: Item; had: number } => !!r.it);
+  return { mine: w.theirs, of: w.of, rows };
 }
 
 /** What I sell most, the last 30 days (agent.html sellMostItems): how many of my orders had each. */

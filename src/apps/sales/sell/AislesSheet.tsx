@@ -46,7 +46,7 @@ export function AislesSheet(): JSX.Element | null {
             <a key={a.name} href="#" class="sl-tile" onClick={(e) => { e.preventDefault(); openAisle(a.name); }}>
               <ItemSquare aisle={a.name} size={38} />
               {mk ? <span class="mono sl-tile-mk"><Duo i={phAgain} size={12} color="#0F6B43" />{mk}</span> : null}
-              <span class="sl-tile-t"><b>{a.name}</b><span class="mono">{`${fig(a.count)} items`}</span></span>
+              <span class="sl-tile-t"><b class={a.name.length > 12 ? 'long' : undefined}>{a.name}</b><span class="mono">{`${fig(a.count)} items`}</span></span>
             </a>
           );
         })}

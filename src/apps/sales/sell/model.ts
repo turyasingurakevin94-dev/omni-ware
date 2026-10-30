@@ -28,7 +28,10 @@ export interface Build {
   customerId: string | null;
   client: { name: string; phone: string };
   chatId: number | null;
-  /** Oldest first; drawn newest first, except those kept from before (lineId up to `kept`), which keep their order below (SL25). */
+  /**
+   * Oldest first. Drawn newest first as they are added (SL05–SL07, SL13–SL15); an order resumed from
+   * "Still open" keeps the lines it was kept with (lineId up to `kept`) in their own order under them (SL25).
+   */
   lines: Line[];
   kept?: number;
   charges: Charge[];
@@ -65,8 +68,6 @@ export function lineFor(it: Item, qty: number, lineId: number): Line {
   };
 }
 
-/** The shop's own charges (presets.services): delivery by area, loading, cutting. */
-export const service = (b: Books, id: string) => b.settings.services.find((s) => s.id === id) || null;
 
 /* ---------------- starting, keeping, switching ---------------- */
 

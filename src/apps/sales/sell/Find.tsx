@@ -9,24 +9,23 @@ import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { lineTotal } from '../../../core/money.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
-import { Duo, Icon, phAgain, phPlane, phSearch } from '../../../ui/icons.tsx';
+import { Duo, Icon, phAgain, phSearch } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
-import { toast } from '../../../ui/toast.tsx';
 import { useEffect } from 'preact/hooks';
-import { act, books, now, source } from '../shell/store.ts';
+import { books, now, source } from '../shell/store.ts';
 import { closest, findItems, readAsk, sameAsk, type Asked } from './find.ts';
 import { first, itemKey, lastQty, rankFor, theirItems } from './insights.ts';
+import { AskCard, send } from './AskCard.tsx';
 import { askedAs, closeLine } from './Lines.tsx';
 import { add, cur, lineFor, openId, query } from './model.ts';
 import { sourcing } from './people.ts';
 import { openPriceComing } from './sheets.tsx';
 import './find.css';
 
-/** The count on the first answer (its stepper), and "This week" / "Any time" on an ask. */
+/** The count on the first answer (its stepper). */
 const count = signal<number | null>(null);
-const soon = signal(true);
 
 function Mark(p: { name: string; words: string[] }): JSX.Element {
   const ws = p.words.map((w) => w.replace(/(es|s)$/, '').toLowerCase()).filter((w) => w.length > 1);
@@ -92,7 +91,7 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
                   <span class="sl-more-t"><span><Mark name={it.name} words={a.words} /></span><span><span class="mono">{fig(it.price || 0)}</span><span>{`/${it.unit}`}</span>
                     {out ? <span class="sl-tag bad">Out</span> : it.orderIn && !(it.onShelf || 0) ? <span class="sl-tag info">Order in</span> : <span class="sl-shelf5"><b class="mono">{fig(it.onShelf as number)}</b> on shelf</span>}</span></span>
                   {out
-                    ? <a href="#" class="sl-more-ask" onClick={(e) => { e.preventDefault(); void askMoses(b, it.name, q, c); }}>{`Ask ${sourcing(b).first}`}</a>
+                    ? <a href="#" class="sl-more-ask" onClick={(e) => { e.preventDefault(); void send(it.name, q, c, `Sent to ${sourcing(b).first}`); }}>{`Ask ${sourcing(b).first}`}</a>
                     : <button type="button" class="mono sl-more-add" aria-label={`Add ${q}`} onClick={() => addAsked(b, it, { ...a, qty: q }, c)}>{`+${q}`}</button>}
                 </div>
               );
@@ -104,19 +103,8 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
   );
 }
 
-async function askMoses(b: Books, name: string, qty: number, c: Customer | null): Promise<void> {
-  const m = sourcing(b), x = cur.value;
-  try {
-    const r = await act('askSourcing', { name, qty, customerId: c ? c.id : null, chatId: x ? x.chatId : null });
-    toast.show(r.kept ? 'Kept on this phone' : `Sent to ${m.first}`, { kind: r.kept ? 'warn' : 'ok' });
-    query.value = '';
-  } catch (e) {
-    toast.show('Not sent yet', { kind: 'error', sub: (e as Error).message, retry: () => void askMoses(b, name, qty, c) });
-  }
-}
-
 function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
-  const b = p.b, c = p.c, a = p.a, near = closest(b, a), ask = sameAsk(b.asks, a), m = sourcing(b);
+  const b = p.b, c = p.c, a = p.a, near = closest(b, a), ask = sameAsk(b.asks, a);
   const name = ask ? ask.name : a.words.join(' ').replace(/^./, (s) => s.toUpperCase());
   const plain = name.replace(/\s+\d+\s*(mm|cm|m|inch|")$/i, '').toLowerCase();
   useEffect(() => {
@@ -142,17 +130,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
           ))}
         </div>
       )}
-      <div class="sl-stock">
-        <div class="sl-stock-h"><span aria-hidden="true"><Duo i={phPlane} size={22} color="#6FDCB0" /></span><span><span>{`Ask ${m.first} to stock it`}</span><span>{`${name}${c ? ` · for ${first(c.name)}` : ''}`}</span></span></div>
-        <div class="sl-stock-r">
-          <span class="mono sl-stock-n">{a.qty || 1} <span class="ow-word">pc</span></span>
-          <span role="radiogroup" aria-label="When" class="sl-stock-w">
-            <button type="button" role="radio" aria-checked={soon.value} class={soon.value ? 'on' : ''} onClick={() => { soon.value = true; }}>This week</button>
-            <button type="button" role="radio" aria-checked={!soon.value} class={!soon.value ? 'on' : ''} onClick={() => { soon.value = false; }}>Any time</button>
-          </span>
-        </div>
-        <button type="button" class="sl-stock-go" onClick={() => void askMoses(b, name, a.qty || 1, c)}><Icon name="send" size={17} stroke={2.2} />{`Send to ${m.first}`}</button>
-      </div>
+      <AskCard b={b} c={c} ask={ask && ask.status !== 'listed' ? ask : null} name={name} qty={a.qty || 1} />
     </div>
   );
 }

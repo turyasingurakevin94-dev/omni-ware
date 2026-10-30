@@ -1,12 +1,12 @@
 /*
  * SL16 · add a charge: the shop's own charges (presets.services) at the
- * shop's rate, worked out from the order (loading: a rate a bag, for the
- * bags in it; spec 04 Q3, the default), one tap; or any other amount.
+ * shop's rate, worked out from the order by core/services.ts (loading: a
+ * rate a bag, for the bags in it; spec 04 Q3), one tap; or any other amount.
  * The charge goes on the order as one line; the total is money.ts's.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import type { Books, Line } from '../../../core/types.ts';
+import { isDelivery, perLines, serviceAmount } from '../../../core/services.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -18,22 +18,16 @@ import { addCharge, cur, itemOf } from './model.ts';
 import { openAmount } from './sheets.tsx';
 import './charge.css';
 
-/** What a service is charged on: loading on the bags, cutting on the sheets. */
-const ON: Record<string, { unit: string; word: string; what: (l: Line, b: Books) => boolean }> = {
-  loading: { unit: 'bag', word: 'Loading', what: (l) => l.unit === 'bag' },
-  cutting: { unit: 'sheet', word: 'Cutting', what: (l, b) => /sheet/i.test(l.name) && (itemOf(b, l.itemId, l.variantIdx)?.aisle || '') === 'Roofing' },
-};
-
 export function ChargeSheet(): JSX.Element | null {
   const b = books.value, x = cur.value;
-  const list = b ? b.settings.services.filter((s) => !/^delivery/.test(s.id)) : [];
+  const list = b ? b.settings.services.filter((s) => !isDelivery(s)) : [];
   const [pick, setPick] = useState(list.length ? list[0].id : 'other');
   if (!b || !x) return null;
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) : null;
   const eye = `${c ? whose(c.name) : 'This'} order`;
-  const sv = list.find((s) => s.id === pick), on = sv && ON[sv.id];
-  const lines = on ? x.lines.filter((l) => on.what(l, b)) : [];
-  const n = lines.reduce((s, l) => s + l.qty, 0), amount = sv ? (on ? n * sv.value : sv.value) : 0;
+  const sv = list.find((s) => s.id === pick) || null, on = sv && sv.per ? sv.per : null;
+  const lines = sv ? perLines(sv, x.lines) : [];
+  const n = lines.reduce((s, l) => s + l.qty, 0), amount = sv ? serviceAmount(sv, x.lines) : 0;
   const first = lines[0], it = first ? itemOf(b, first.itemId, first.variantIdx) : null;
   const thing = first ? first.name.split(' · ')[0].split(' ')[0].toLowerCase() : '';
   const other = (label: string, rate?: number) => openAmount({ title: label, eyebrow: eye, value: 0, rate, verb: 'Add', onUse: (v) => addCharge(label, v) });
@@ -49,11 +43,11 @@ export function ChargeSheet(): JSX.Element | null {
         <div class="sl-chg">
           <div class="sl-chg-h">
             <ItemSquare aisle={it ? it.aisle : ''} size={44} />
-            <span class="sl-chg-t"><span>{`${on.word} the ${thing}`}</span><span>the shop’s rate · <span class="mono">{fig(sv.value)}</span>{` a ${on.unit}`}</span></span>
+            <span class="sl-chg-t"><span>{`${sv.label} the ${thing}`}</span><span>the shop’s rate · <span class="mono">{fig(sv.value)}</span>{` a ${on}`}</span></span>
             <span class="mono sl-chg-a">{fig(amount)}</span>
           </div>
-          <div role="img" aria-label={`${n} ${on.unit}s at ${fig(sv.value)} each`} class="sl-chg-blocks">{Array.from({ length: Math.min(n, 60) }, (_, i) => <span key={i} />)}</div>
-          <span class="sl-chg-n"><b class="mono">{n}</b>{` ${on.unit}s × `}<b class="mono">{fig(sv.value)}</b></span>
+          <div role="img" aria-label={`${n} ${on}s at ${fig(sv.value)} each`} class="sl-chg-blocks">{Array.from({ length: Math.min(n, 60) }, (_, i) => <span key={i} />)}</div>
+          <span class="sl-chg-n"><b class="mono">{n}</b>{` ${on}s × `}<b class="mono">{fig(sv.value)}</b></span>
         </div>
       )}
       <a href="#" class="sl-chg-other" onClick={(e) => { e.preventDefault(); other(sv ? sv.label : 'Other charge', amount || undefined); }}><Icon name="pen" size={16} stroke={2} />Other amount</a>

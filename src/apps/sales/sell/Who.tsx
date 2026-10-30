@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { cashTotal, orderTotal, short } from '../../../core/money.ts';
-import { dayLabel, dayOf, daysApart, howLong } from '../../../core/time.ts';
+import { addDays, dayLabel, howLong } from '../../../core/time.ts';
 import type { Books, Customer } from '../../../core/types.ts';
 import { avatarStyle, RingAvatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phArrowR, phBasket, phClock, phSearch, phUserPlus, phWhatsapp } from '../../../ui/icons.tsx';
@@ -16,7 +16,8 @@ import { fig } from '../../../ui/Money.tsx';
 import { useDragClose } from '../../../ui/sheet.tsx';
 import { nav, screen, stack } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
-import { dayWord, dueLine, first, lastOrder, ordersOf, rhythm, whosDue } from './insights.ts';
+import { dueWords } from '../../../core/customers.ts';
+import { dayWord, first, lastOrder, ordersOf, rhythmOf, whosDue } from './insights.ts';
 import { findCustomer } from './find.ts';
 import './who.css';
 
@@ -133,8 +134,8 @@ function Lists(p: { b: Books; pick: (x: Pick) => void }): JSX.Element {
           <div class="sl-who-due">
             {due.map(({ c, r }) => (
               <a key={c.id} href="#" class="sl-who-drow" onClick={(e) => { e.preventDefault(); p.pick({ kind: 'customer', id: c.id }); }}>
-                <RingAvatar initials={c.initials} tint={c.tint} tone={r.dueToday ? 'due' : 'late'} fill={1} />
-                <span class="sl-who-dt"><span>{c.name}</span><span class={r.dueToday ? 'due' : 'late'}>{dueLine(r)}</span></span>
+                <RingAvatar initials={c.initials} tint={c.tint} tone={r.late === 0 ? 'due' : 'late'} fill={1} />
+                <span class="sl-who-dt"><span>{c.name}</span><span class={r.late === 0 ? 'due' : 'late'}>{dueWords(r)}</span></span>
                 {c.owes > 0 && <span class="sl-who-owes"><span class="mono">{short(c.owes)}</span><span>owes</span></span>}
               </a>
             ))}
@@ -160,9 +161,9 @@ function Found(p: { b: Books; q: string; pick: (x: Pick) => void }): JSX.Element
 }
 
 function Card(p: { b: Books; c: Customer; off: number; mark: number; pick: (x: Pick) => void }): JSX.Element {
-  const b = p.b, c = p.c, t = now.value, r = rhythm(b, c, t), last = lastOrder(b, c.id), n = ordersOf(b, c.id).length;
-  const fill = r.last && r.every ? Math.min(1, daysApart(dayOf(r.last.placedAt), dayOf(t)) / r.every) : 0;
-  const due = r.late ? `${r.late} day${r.late === 1 ? '' : 's'} late` : r.dueToday ? 'Due today' : r.next ? `Due ${dayLabel(r.next)}` : '';
+  const b = p.b, c = p.c, t = now.value, r = rhythmOf(b, c, t), last = lastOrder(b, c.id), n = ordersOf(b, c.id).length, late = r.late;
+  const fill = r.since != null && r.every ? Math.min(1, r.since / r.every) : 0;
+  const due = late == null || !r.last || !r.every ? '' : late > 0 ? `${late} day${late === 1 ? '' : 's'} late` : late === 0 ? 'Due today' : `Due ${dayLabel(addDays(r.last, r.every))}`;
   const name = p.mark >= 0 ? <>{c.name.slice(0, p.mark)}<mark>{c.name[p.mark]}</mark>{c.name.slice(p.mark + 1)}</> : c.name;
   return (
     <>
@@ -171,7 +172,7 @@ function Card(p: { b: Books; c: Customer; off: number; mark: number; pick: (x: P
         <div class="sl-who-ch">
           <span aria-hidden="true" class="sl-who-ring">
             <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none" stroke="#EFECE6" stroke-width="3" />
-              <circle cx="26" cy="26" r="24" fill="none" stroke={r.late ? '#95530C' : r.dueToday ? '#0F6B43' : '#9AA1AE'} stroke-width="3" stroke-linecap="round" stroke-dasharray={`${Math.max(8, Math.round(150.8 * fill))} 150.8`} transform="rotate(-90 26 26)" /></svg>
+              <circle cx="26" cy="26" r="24" fill="none" stroke={late != null && late > 0 ? '#95530C' : late === 0 ? '#0F6B43' : '#9AA1AE'} stroke-width="3" stroke-linecap="round" stroke-dasharray={`${Math.max(8, Math.round(150.8 * fill))} 150.8`} transform="rotate(-90 26 26)" /></svg>
             <span style={avatarStyle({ initials: c.initials, tint: c.tint, size: 40, font: 14 })}>{c.initials}</span>
           </span>
           <span class="sl-who-ct"><span>{name}</span><span>{`${due}${r.every ? ` · every ${r.every} days` : ''}`}</span><span class="mono">{[c.place, c.phone].filter(Boolean).join(' · ')}</span></span>
