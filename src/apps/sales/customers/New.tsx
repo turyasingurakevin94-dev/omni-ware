@@ -74,7 +74,7 @@ function NewSheet(p: { params: ScreenProps['params'] }): JSX.Element {
       leave();
       if (r.kept) { nav.back(); toast.show('Kept on this phone · saved with signal'); return; }
       if (then === 'sell') nav.replace('sell/order', { customer: r.value.id, ...(chat ? { from: 'chat', chat: chat.id } : {}) });
-      else { nav.back(); toast.show(`${short(r.value.name)} added`); }
+      else { nav.back(); toast.show(`${r.value.name} added`); }
     } catch (e) {
       toast.show('Not added', { kind: 'error', sub: isDataError(e) ? e.message : '', retry: () => { void add(then); } });
     } finally { setBusy(null); }

@@ -48,7 +48,7 @@ export function PayDock(p: PayDockProps): JSX.Element {
   const head = p.walkin ? (
     <span class="cu-dk-owes">
       <span class="cu-dk-k">{orderNo(p.walkin.id)}</span><s class="mono">{money(p.walkin.total)}</s><span class="cu-dk-arrow">→</span>
-      <span class="mono cu-dk-after amber">{money(p.walkin.left)}{p.walkin.who && <span class="cu-dk-who">{` · ${p.walkin.who.name} owes `}<b class="mono">{money(p.walkin.who.owes)}</b></span>}</span>
+      <span class="mono cu-dk-after amber">{money(p.walkin.left)}{p.walkin.who && ' '}{p.walkin.who && <span class="cu-dk-who">{`· ${p.walkin.who.name} owes `}<b class="mono">{money(p.walkin.who.owes)}</b></span>}</span>
     </span>
   ) : (
     <span class="cu-dk-owes">

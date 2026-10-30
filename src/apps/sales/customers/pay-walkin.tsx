@@ -24,7 +24,7 @@ export function shareFor(b: Books, left: number): { charge: number; share: numbe
 /** Same first six digits after 0: the same company's phones (0772 418 905 → Kato's 0772 418 220). */
 function samePlace(a: string, c: Customer): boolean {
   const x = phone9(a), y = phone9(c.phone);
-  return !!x && !!y && x.slice(0, 5) === y.slice(0, 5);
+  return !!x && !!y && x.slice(0, 6) === y.slice(0, 6);
 }
 
 export function whoOptions(b: Books, o: Order): Customer[] {

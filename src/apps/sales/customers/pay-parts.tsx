@@ -107,7 +107,7 @@ export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null
   return (
     <div class="cu-who-card">
       <span class="cu-who-h"><span><b class="mono">{money(p.left)}</b> left · who owes it?</span>
-        <button type="button" aria-label="Find someone else" onClick={p.onFind}><Duo i={phSearch} size={18} color="#1C2233" /></button></span>
+        <button type="button" aria-label="Find someone else" onClick={p.onFind}><Duo i={phSearch} size={18} color="#5F6980" /></button></span>
       <div role="radiogroup" aria-label="Who owes the rest" class="cu-who-list">
         {p.opts.map((o) => {
           const t = TINTS[o.tint], on = p.chosen === o.id;
