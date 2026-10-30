@@ -53,8 +53,11 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const cust = chat.customerId ? b.customers.find((c) => c.id === chat.customerId) || null : null;
   const first = cust ? firstWord(cust.name) : chat.phone;
   const usual = usualItems(b, cust), back = () => { sheet.close(); };
-  const anchor = b.items.find((i) => i.id === [...picked].reverse().find((id) => b.items.find((x) => x.id === id)?.aisle === 'Roofing')) || usual.map((u) => u.it).find((i) => picked.includes(i.id)) || null;
-  const often = oftenWith(b, cust, anchor, new Set(usual.map((u) => u.it.id)));
+  // "It": the last item picked that has something of its own aisle bought with it, else the first of their usual that has.
+  const skip = new Set(usual.map((u) => u.it.id));
+  const tries = [...[...picked].reverse().map((id) => b.items.find((i) => i.id === id)), ...usual.map((u) => u.it)].filter((i): i is Item => !!i);
+  const lists = tries.map((it) => ({ it, l: oftenWith(b, cust, it, skip) }));
+  const often = (lists.find((x) => x.l[0] && x.l[0].it.price != null && x.l[0].it.aisle === x.it.aisle) || lists.find((x) => x.l.length) || { l: [] }).l;
   const ruth = managers(b)[0];
   const s = q.trim().toLowerCase();
   const found = s ? b.items.filter((i) => i.name.toLowerCase().includes(s)).slice(0, 6) : [];
@@ -70,7 +73,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
     if (it.price == null) {
       return asked.includes(it.id)
         ? <button type="button" disabled class="pr-asked" aria-label={`Asked ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`}><Icon name="check" size={14} stroke={2.6} />Asked</button>
-        : <button type="button" class="pr-ask" onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
+        : <button type="button" class="pr-ask" aria-label={`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`} onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
     }
     const on = picked.includes(it.id);
     return (
