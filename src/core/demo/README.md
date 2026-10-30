@@ -18,6 +18,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
 | `&wa=down` | The shop's WhatsApp does not answer: every send (a message, the order's picture) is refused | SL29 |
+| `&wa=slow` | The shop's WhatsApp answers slowly: the order's picture takes 10 s to go | SL35 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 

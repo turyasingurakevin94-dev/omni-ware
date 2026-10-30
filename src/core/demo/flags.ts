@@ -22,6 +22,8 @@ export interface DemoFlags {
   state: DemoStateName | null;
   /** The shop's WhatsApp is not answering (&wa=down). */
   waDown: boolean;
+  /** The shop's WhatsApp answers slowly: a picture takes 10 s to go (&wa=slow). */
+  waSlow: boolean;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -37,5 +39,6 @@ export function readFlags(search: string): DemoFlags {
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
     waDown: q.get('wa') === 'down',
+    waSlow: q.get('wa') === 'slow',
   };
 }
