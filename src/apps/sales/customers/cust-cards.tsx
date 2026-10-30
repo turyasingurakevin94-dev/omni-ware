@@ -8,6 +8,7 @@ import { Duo, Icon, phWhatsapp, STAGE_ICON, type IconName } from '../../../ui/ic
 import { Tap, cx } from '../../../ui/util.tsx';
 import { orderTotal, short as shortMoney } from '../../../core/money.ts';
 import { orderNo, STAGE_WORD, TINTS } from '../../../core/names.ts';
+import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Member, Order } from '../../../core/types.ts';
 import type { Bill } from './data.ts';
 
@@ -129,10 +130,10 @@ export function PaidBills(p: { orders: Order[]; onOrder: (id: number) => void })
       <BillsHead title="Last bills · paid" />
       <div class="cu-bills">
         {p.orders.map((o) => {
-          const d = new Date((o.invoicedAt || o.placedAt) + 3 * 3600 * 1000);
+          const [, date, mon] = dayLabel(dayOf(o.invoicedAt || o.placedAt)).split(' ');
           return (
             <Tap key={o.id} on={() => p.onOrder(o.id)} class="cu-bill" label={`${orderNo(o.id)}, ${fig(orderTotal(o))}, paid`}>
-              <span class="cu-bill-d"><span class="mono">{d.getUTCDate()}</span><span>{MONTHS[d.getUTCMonth()]}</span></span>
+              <span class="cu-bill-d"><span class="mono">{date}</span><span>{mon}</span></span>
               <span class="cu-bill-t"><span class="mono">{fig(orderTotal(o))}</span><span>{orderNo(o.id)}</span></span>
               <span class="cu-bill-act good"><Icon name="check" size={14} stroke={2.6} />Paid</span>
             </Tap>
@@ -140,5 +141,26 @@ export function PaidBills(p: { orders: Order[]; onOrder: (id: number) => void })
         })}
       </div>
     </>
+  );
+}
+
+/** CU16 · Today's money first: what they paid today, and what came over the bills, which opens the paid-over sheet (OR15). */
+export function TodayPaid(p: { rows: { id: number; amount: number; how: string; over: number; overSub: string; onOver: () => void }[] }): JSX.Element {
+  return (
+    <div class="cu-today">
+      {p.rows.map((r) => [
+        <div key={r.id} class="cu-today-r">
+          <span aria-hidden="true" class="cu-today-i good"><Icon name="check" size={16} stroke={2.6} /></span>
+          <span class="cu-today-t"><span>{'Paid '}<b class="mono">{fig(r.amount)}</b></span><span>{r.how}</span></span>
+        </div>,
+        r.over > 0 ? (
+          <Tap key={`${r.id}-over`} on={r.onOver} class="cu-today-r" label={`${fig(r.over)} paid over: ${r.overSub}`}>
+            <span aria-hidden="true" class="cu-today-i warn"><Icon name="cash" size={16} stroke={2.2} /></span>
+            <span class="cu-today-t"><span><b class="mono warn">{fig(r.over)}</b>{' paid over'}</span><span>{r.overSub}</span></span>
+            <span aria-hidden="true" class="cu-today-c"><Icon name="chevron-right" size={16} stroke={2.4} /></span>
+          </Tap>
+        ) : null,
+      ])}
+    </div>
   );
 }

@@ -23,7 +23,7 @@ export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: nu
       <span aria-hidden="true" class="ow-shead-grab" />
       <div class="ow-shead-row">
         <BigRing initials={c.initials} tint={c.tint} tone={p.tone} fill={p.fill} />
-        <div class="ow-shead-t"><span class="ow-shead-n">{c.name}</span><span class="ow-shead-s">{p.sub}</span></div>
+        <div class="ow-shead-t"><span class="ow-shead-n">{c.name}</span>{p.sub && <span class="ow-shead-s">{p.sub}</span>}</div>
         {c.phone && <Tap href={'tel:+256' + c.phone.replace(/\D/g, '').replace(/^0/, '')} label={`Call ${c.name}`} class="ow-shead-call"><Icon name="phone" size={18} stroke={2} /></Tap>}
         <Tap on={p.onClose} label="Close" class="ow-shead-x"><Icon name="close" size={16} stroke={2.2} /></Tap>
       </div>
@@ -34,12 +34,14 @@ export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: nu
 
 /** CU10 · Owes, the credit it sits in (the Manager's), and the bills on the road to the hold. */
 export function AgeTrack(p: { owes: number; bills: Bill[]; limit: number | null; manager: string; hold: number }): JSX.Element {
-  const SPAN = 30, at = (d: number) => Math.min(100, (d / SPAN) * 100), holdAt = at(p.hold);
+  // 30 days, or out to the oldest bill when it is older (Kyaligonza's 54 days sit at '54 d', CU17).
+  const SPAN = Math.max(30, ...p.bills.map((b) => b.age)), at = (d: number) => Math.min(100, (d / SPAN) * 100), holdAt = at(p.hold);
   const max = Math.max(...p.bills.map((b) => b.left));
   const used = p.limit ? Math.round((p.owes / p.limit) * 100) : 0;
   const n = p.bills.length, ages = p.bills.slice().sort((a, b) => a.age - b.age);
   const left = p.bills.length ? p.hold - p.bills[0].age : 0;
-  const label = `${n === 1 ? 'One bill' : `${['', 'One', 'Two', 'Three', 'Four', 'Five'][n] || n} bills`}: ${ages.map((b) => `${fig(b.left)} is ${b.age} days old`).join(', ')}. The ${p.hold}-day hold is ${left} days away.`;
+  const hold = left >= 0 ? `The ${p.hold}-day hold is ${left} days away.` : `Past the ${p.hold}-day hold by ${-left} days.`;
+  const label = `${n === 1 ? 'One bill' : `${['', 'One', 'Two', 'Three', 'Four', 'Five'][n] || n} bills`}: ${ages.map((b) => `${fig(b.left)} is ${b.age} days old`).join(', ')}. ${hold}`;
   return (
     <>
       <div class="cu-owes">
@@ -49,7 +51,7 @@ export function AgeTrack(p: { owes: number; bills: Bill[]; limit: number | null;
             <span><Icon name="lock" size={12} stroke={2.2} />credit <b class="mono">{shortMoney(p.limit)}</b>{` · ${p.manager}`}</span>
             <span aria-hidden="true" class="cu-credit-bar"><span style={{ width: `${used}%` }} /></span>
           </span>
-        ) : null}
+        ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />{`No limit set · ${p.manager} decides`}</span></span>}
       </div>
       <div role="img" aria-label={label} class="cu-track">
         <div class="cu-track-road">
@@ -113,14 +115,16 @@ export function ApartHead(p: { apart: number; owes: number; bills: Bill[]; check
 }
 
 /** CU16 · Nothing owed: 0 in mint and All paid (CU06's words), or the deposit they keep. */
-export function PaidUp(p: { deposit: number }): JSX.Element {
+export function PaidUp(p: { deposit: number; limit: number | null; manager: string }): JSX.Element {
   return (
     <div class="cu-paidup">
       <div class="cu-owes">
         <span class="cu-owes-k"><span>{p.deposit ? 'Deposit · the next bill uses it' : 'Owes'}</span><span class="mono mint">{fig(p.deposit)}</span></span>
         <span class="cu-allpaid"><Icon name="check" size={13} stroke={3} />All paid</span>
       </div>
-      <span aria-hidden="true" class="cu-none-bar" />
+      {/* Their credit, as Kato's head says his (FACTS §3.1: Nansana "No limit set · Ruth decides"). */}
+      <span class="cu-paidup-credit"><Icon name="lock" size={12} stroke={2.2} />
+        {p.limit ? <>{'credit '}<b class="mono">{shortMoney(p.limit)}</b>{` · ${p.manager}`}</> : `No limit set · ${p.manager} decides`}</span>
     </div>
   );
 }
