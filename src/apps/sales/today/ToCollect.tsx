@@ -65,7 +65,7 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
     : <><span class="mono">{money(w.owes)}</span>{` · hold ${dayLabel(holdOf(w, b) || today)}`}</>;
   const pay = () => (w.held ? go('sell/order', { customer: c.id }) : go('customers/pay', { customer: c.id }));
   return (
-    <div class="td-owe">
+    <div class={'td-owe' + (amount > 0 && !(w.checked > 0 || w.held || promise) ? ' tight' : '')}>
       <div class="td-owe-r">
         <Tap on={w.held ? pay : open} class="td-owe-who">
           <Avatar initials={c.initials} tint={c.tint} size={40} />

@@ -95,7 +95,7 @@ export function Asks(p: ScreenProps): JSX.Element {
   const b = books.value, n = now.value, L = useLocal();
   if (p.params.id) return <Ask params={p.params} />;
   if (!b) return <main class="td-wait" aria-busy="true" />;
-  const asks = myAsks(b), ready = asks.filter((a) => a.status === 'listed' && !L.told.includes('ask:' + a.id)), withMl = asks.filter((a) => a.status !== 'listed');
+  const asks = myAsks(b), ready = asks.filter((a) => a.status === 'listed' && !L.told.includes('ask:' + a.id)), withMl = asks.filter((a) => a.status !== 'listed').sort((x, y) => ASK_STAGES.indexOf(y.status) - ASK_STAGES.indexOf(x.status));
   const ml = b.members.find((m) => m.role === 'sourcing'), rn = b.members.find((m) => m.role === 'manager');
   const mine = b.orders.filter((o) => o.placedBy === b.me.id).map((o) => o.placedAt);
   const first = !asks.length && (!mine.length || daysApart(dayOf(Math.min(...mine)), dayOf(n)) < 7);

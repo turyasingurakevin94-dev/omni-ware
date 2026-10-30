@@ -40,4 +40,6 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 
 | Function | Owner | Boards |
 |---|---|---|
+| `openAsk({ name, qty?, customerId?, chatId?, quote? })` | today | TD23, TD24 (Ask Moses for something we don't sell; a chat can pass what they said) |
+| `openTell(i)` | today | TD04 (the i-th thing to tell: a new price here, an item that came in opens `today/asks { id }`) |
 | _(add as built)_ | | |

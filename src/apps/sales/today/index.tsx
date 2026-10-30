@@ -21,6 +21,10 @@ import { ToCollect } from './ToCollect.tsx';
 import { Today } from './Today.tsx';
 import { You } from './You.tsx';
 
+/** Sheets other tabs may open (ROUTES.md "Exported sheets"). */
+export { openAsk } from './AskNew.tsx';
+export { openTell } from './Tell.tsx';
+
 export const tab: TabModule = {
   id: 'today',
   root: 'today',

@@ -7,7 +7,7 @@ import { money } from '../../../core/money.ts';
 import type { Books, Item } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { Duo, Icon, phLink, phSearch, phStore } from '../../../ui/icons.tsx';
+import { Duo, Icon, phLink, phSearch } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { drafts } from '../shell/store.ts';
 import { openAsk } from './AskNew.tsx';
@@ -23,6 +23,11 @@ function addTo(itemId: string): void {
   const d = openDraft();
   if (d) go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId, items: itemId } : { customer: d.customerId, items: itemId });
   else go('sell');
+}
+
+/** The ids of what is bought with this item most (the two "Often with" shows). */
+export function oftenIds(b: Books, it: Item): string[] {
+  return oftenWith(b, it).map((x) => x.item.id);
 }
 
 /** Items bought with this one in the shop's orders: how many of its orders had each, the most first. */
@@ -63,7 +68,7 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
           </div>
         )}
         <div class="td-item-acts">
-          <Tap on={() => go('counter')} class="td-item-sell"><Duo i={phStore} size={17} color="#FFFFFF" />Sell at the counter</Tap>
+          <Tap on={() => go('counter')} class="td-item-sell"><Icon name="store" size={17} stroke={2} />Sell at the counter</Tap>
           {dc && <Tap on={() => addTo(it.id)} label={`Add to ${dc.name.split(' ')[0]}'s order`} class="td-item-add"><Avatar initials={dc.initials} tint={dc.tint} size={30} font={11} /><Icon name="plus" size={15} stroke={2.6} />Add</Tap>}
         </div>
       </div>

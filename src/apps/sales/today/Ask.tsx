@@ -140,7 +140,7 @@ export function Ask(p: ScreenProps): JSX.Element {
         <>
           <div class="td-ask-tiles">
             <div><span>{`A ${u}`}</span><span class="mono">{money(it && it.price)}</span>
-              {by('priced') && <span class="td-ask-by"><Avatar initials={(by('priced') as { initials: string }).initials} tint={(by('priced') as { tint: 't2' }).tint} size={16} />{`${firstWord((by('priced') as { name: string }).name)} priced it`}</span>}</div>
+              {by('priced') && <span class="td-ask-by"><Avatar initials={(by('priced') as { initials: string }).initials} tint={(by('priced') as { tint: 't2' }).tint} size={16} font={11} />{`${firstWord((by('priced') as { name: string }).name)} priced it`}</span>}</div>
             <div class="good"><span>Ready to sell</span><span class="mono">{`${it && it.onShelf ? it.onShelf : 0} `}<span class="ow-word">on shelf</span></span><span>{`${u}s`}</span></div>
           </div>
           <div class="td-ask-qty">

@@ -71,7 +71,7 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
     }
   };
   return (
-    <div class="td-sheet td-asknew">
+    <div class={'td-sheet td-asknew' + (state === 'kept' ? ' kept' : '')}>
       <span aria-hidden="true" class="td-sheet-grab" />
       <div class="td-sheet-h">
         <span class="td-sheet-ht"><span>Something we don’t sell</span><h2>{`Ask ${mlName}`}</h2></span>

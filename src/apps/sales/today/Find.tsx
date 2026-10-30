@@ -18,7 +18,7 @@ import { lastMessages, waitingChats } from '../../../core/chats.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import '../../../ui/section.css';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { Duo, Icon, STAGE_ICON, phAgain, phMic, phSearch } from '../../../ui/icons.tsx';
+import { Duo, Icon, STAGE_ICON, phAgain, phMic, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
@@ -27,7 +27,7 @@ import { lastOrderAt, mine } from './data.ts';
 import { askAisle, sellsMost } from './First.tsx';
 import { go, tel } from './go.ts';
 import { rememberOpened, rememberSearch, useLocal } from './local.ts';
-import { ItemFound, Nothing } from './FindItems.tsx';
+import { ItemFound, Nothing, oftenIds } from './FindItems.tsx';
 import './find.css';
 
 export type Kind = 'all' | 'chats' | 'customers' | 'orders' | 'items';
@@ -47,7 +47,12 @@ export function matches(b: Books, cb: ChatBooks | null, q: string) {
   const ids = new Set(customers.map((c) => c.id));
   const orders = w ? b.orders.filter((o) => !o.qa && !o.cancelled && ((o.customerId && ids.has(o.customerId)) || (digits.length >= 2 && String(o.id).includes(digits.replace(/^0+/, ''))))) : [];
   const chatsHit = w && cb ? cb.chats.filter((c) => (c.customerId && ids.has(c.customerId)) || has(c.profileName, w) || (digits.length >= 3 && c.phone.replace(/\s/g, '').includes(digits))) : [];
-  const items = w ? b.items.filter((i) => has(i.name, w)) : [];
+  // Items by name, ready to sell first (on the shelf and priced); then, up to three, the rest of their aisle
+  // that is not already bought with them (FindItems shows those under "Often with").
+  const ready = (i: Item) => Number(!!(i.onShelf && i.onShelf > 0)) + Number(i.price != null);
+  const named = w ? b.items.filter((i) => has(i.name, w)).sort((x, y) => ready(y) - ready(x)) : [];
+  const near = named.length && named.length < 3 ? b.items.filter((i) => !named.includes(i) && i.aisle === named[0].aisle && !oftenIds(b, named[0]).includes(i.id)) : [];
+  const items = [...named, ...near].slice(0, Math.max(3, named.length));
   return { customers, orders, chats: chatsHit, items, total: customers.length + orders.length + chatsHit.length + items.length };
 }
 
@@ -85,11 +90,11 @@ export function Find(p: ScreenProps): JSX.Element {
       </div>
       <main class="td-find-main">
         {(m.total > 0 || !typed) && (
-          <div class={cx('td-find-chips', !typed && 'fade', typed && 'tight')}>
+          <div class={cx('td-find-chips', !typed && 'fade', typed && chips.length > 3 && 'tight')}>
             <div role="group" aria-label="Show">
               {chips.map(([k, w, c]) => (
                 <button key={k} type="button" aria-pressed={kind === k} class={cx('td-chip', kind === k && 'on')} onClick={() => setKind(k)}>
-                  {!typed && k === 'chats' && <span aria-hidden="true" class="td-chip-wa"><Duo i={WA} size={16} /></span>}{w}{c != null && c > 0 && <b class="mono">{c}</b>}
+                  {!typed && k === 'chats' && <span aria-hidden="true" class="td-chip-wa"><Duo i={phWhatsapp} size={16} /></span>}{w}{c != null && c > 0 && <b class="mono">{c}</b>}
                 </button>
               ))}
             </div>
@@ -105,7 +110,6 @@ export function Find(p: ScreenProps): JSX.Element {
   );
 }
 
-const WA = "<path d='M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Zm0,192a87.87,87.87,0,0,1-44.06-11.81,8,8,0,0,0-6.54-.67L40,216,52.47,178.6a8,8,0,0,0-.66-6.54A88,88,0,1,1,128,216Z'/>";
 
 /** "Say it": the phone's own speech to text, when it has one. */
 function listen(set: (v: string) => void): void {
@@ -163,7 +167,7 @@ function ChatRow(p: { b: Books; c: Chat; cb: ChatBooks; now: Ms; q?: string; act
 }
 
 function Start(p: { b: Books; cb: ChatBooks | null; now: Ms; show: (k: Kind) => boolean; searches: string[]; lately: { kind: string; id: string }[]; onSearch: (q: string) => void }): JSX.Element {
-  const b = p.b, wait = p.cb ? waitingChats(p.cb, b.me.id, p.now) : [];
+  const b = p.b, wait = (p.cb ? waitingChats(p.cb, b.me.id, p.now) : []).sort((x, y) => x.since - y.since || y.chat.id - x.chat.id);
   const lately = p.lately.map((x) => ({ x, o: x.kind === 'order' ? b.orders.find((o) => String(o.id) === x.id) : null, c: x.kind === 'customer' ? b.customers.find((c) => c.id === x.id) : null, i: x.kind === 'item' ? b.items.find((i) => i.id === x.id) : null }))
     .filter((r) => r.o || r.c || r.i);
   const most = sellsMost(b);
@@ -248,11 +252,11 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
       {p.show('orders') && live.length > 0 && (
         <Group dot="#1A5A8A" title="On the move" meta={`${live.length} of ${all}`} sum={live.reduce((s, o) => s + orderTotal(o), 0)}>
           {live.map((o) => (
-            <Tap key={o.id} on={() => go('orders/order', { id: o.id })} class="td-find-row">
+            <button type="button" key={o.id} onClick={() => go('orders/order', { id: o.id })} class="td-find-row">
               <span aria-hidden="true" class="td-find-sq"><Icon name={STAGE_ICON[o.stage]} size={20} stroke={1.9} /></span>
               <span class="td-find-t"><span class="mono">{orderNo(o.id)}</span><span>{`${dayOf(o.placedAt) === dayOf(p.now) ? 'today ' : ''}${when(o.placedAt, p.now)}`}</span></span>
               <span class="td-find-st"><span>{STAGE_WORD[o.stage]}</span><span class="mono">{money(orderTotal(o))}</span></span>
-            </Tap>
+            </button>
           ))}
         </Group>
       )}
