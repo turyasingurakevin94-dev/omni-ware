@@ -1,1 +1,135 @@
-{}
+{
+ "KC01Counter.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Nothing visible differs (strict diff, threshold 10/255: 113 px, all glyph antialiasing; the 'Add an item' placeholder is #6B7480 per LANGUAGE.md §P05 where the board renders the browser default #757575, LANGUAGE wins). Controls: the four tiles add one each, the aisle chips search the aisle, the aisles button focuses the search, the who pill opens KC04, × goes back, the empty dock is inert. No horizontal scroll at 360, no text under 11 px, no page errors. Only small target is the shared mic (36 in a 48 field, as LANGUAGE rules).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC02Find.dc.html": {
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "Looks identical (82 px of antialiasing). Fewer/More, Add · 370,000 (adds 2 tins, clears the search), +2, Clear all work. FAIL on a control: 'Order in 2' (and every orderIn) calls nav.replace('sell/order', …) but never clears the counter: the lines stay in `sale` (and in localStorage in live mode), so the next counter sale opens with the goods that just became an order — the same goods can be sold twice. Fix: in Counter.tsx orderIn(), call reset() from state.ts after building the items param. Note (dependency, not scored): 'sell/order' is not registered yet, so today the tap throws 'No screen \"sell/order\"'; also document the items param format ([{itemId, qty, price}] as JSON) in the ROUTES.md sell/order row.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC03Picked.dc.html": {
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Looks identical (189 px of antialiasing). Controls work: Take it off at 1, More, the closed Wood glue row opens it, the shelf row adds, Exact preselected, 55,000/60,000, Other amount opens KC06, slide sells. FAIL on accessibility: Tap targets under 44 px on the open line (src/apps/sales/counter/local-line.tsx): the head button '<item>, N <unit>. Close it' is 40 px tall (231x40 on Cement) and the price chip button 'Change the price of each <unit>' is 27 px tall (63-87 x 27). Fix without moving a pixel: give .kc-open .kc-head (the button) min-height 44px with margin -2px 0, and give the chip button a hit area: button.kc-chip { position: relative } button.kc-chip::after { content: ''; position: absolute; inset: -9px -6px }.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC04Who.dc.html": {
+  "verdict": "pass",
+  "score": 9.0,
+  "note": "Looks identical (174 px: sheet-corner and glyph antialiasing). Walk-in chosen with the tick; Who's due 3 = Mukono, Kyaligonza, Lubowa per FACTS; search by name/place/phone works; picking Mukono sets the pill and the sale (Sold shows MR Mukono Roofing, the receipt prefills 0772 577 402); Close closes. 'New customer' pushes customers/new {phone,name} per ROUTES.md — that screen is not registered yet, so today it throws (dependency on the Customers tab, not scored). Shared-part note for the lead: the sheet grabber is a 360x15 'Close' button (src/ui/sheet.tsx) under 44 px. The pill's aria-label is 'Counter sale. Change customer' where the board says 'Counter sale, Walk-in · pay and go. Name the customer' (not visible).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC05Change.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (186 px antialiasing). 60,000 → Give change 8,000; slide sells #0558 52,000 cash and Sold shows 8,000 as 5,000 · 2,000 · 1,000.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC06Count.dc.html": {
+  "verdict": "fail",
+  "score": 7.0,
+  "note": "The sheet as drawn is identical (53 px antialiasing); notes add, ×N counts, − takes one back, Use puts the amount in the dock. FAIL: (1) 'Type it' is improvised in code: it swaps the big figure for a system-keyboard text input showing an unformatted '57000' with an underline, while the note tiles keep their ×1 badges for a different total. The manifest says Type it opens the S03 keypad; that state is not on the canvas. Fix: draw 'KC20CountType' (the count sheet with the S03 keypad, figure formatted) with /design, get it scored ≥8.5, then build it with src/ui Keypad; clear the note badges while a typed amount is shown. (2) Counting exactly the total (50,000 + 2,000 → 'Use 52,000') leaves no tender tile chosen (Exact, 55,000, 60,000 all aria-checked=false) while the slide says 52,000. Fix in Count.tsx use(): if counted === total, set({ given: 'exact', counted: null }).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC07Short.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (116 px antialiasing). 50,000 counted → fourth tile 50,000 with the pen, Short by 2,000 with the dashed 2,000 note, slide locked 'Short · 2,000' (amber); Count again and the 50,000 tile reopen KC06 with the 50,000 counted.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC08Momo.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (113 px antialiasing). Mobile shows Their SMS and the amber ID field; slide locked 'Type the ID first'; Paste reads the clipboard and takes 12045889301 from the SMS (checked with a stubbed clipboard; needs the clipboard permission on the phone, open question). Paste target 72x44. Note: the SMS example card and Paste also show for Bank, which no board draws and whose SMS is not a mobile-money SMS — consider showing them for Mobile only.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC09MomoReady.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (197 px antialiasing). ID in → mint border with tick, slide live; sells #0558 52,000 mobile with the ID kept (KC15 and the receipt show it). The ID field's placeholder is hard-coded #757575 in dock.css (matching the board's browser default) where the search uses the LANGUAGE token; pick one (LANGUAGE says #6B7480).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC10Below.dc.html": {
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Looks identical (124 px antialiasing). Their price 170,000 → −15,000 chip, ladder, 'Ruth decides' dock with 'Ask Ruth first' locked; the field's 'shop 185,000' puts the line back at 185,000; 'Shop price 218,500' puts every waiting line back (dock 218,500, live slide); navy Ask Ruth places the sale and opens counter/wait (one write; a double tap is disabled). FAIL on accessibility, same open line as KC03: Tap targets under 44 px on the open line (src/apps/sales/counter/local-line.tsx): the head button '<item>, N <unit>. Close it' is 40 px tall (231x40 on Cement) and the price chip button 'Change the price of each <unit>' is 27 px tall (63-87 x 27). Fix without moving a pixel: give .kc-open .kc-head (the button) min-height 44px with margin -2px 0, and give the chip button a hit area: button.kc-chip { position: relative } button.kc-chip::after { content: ''; position: absolute; inset: -9px -6px }.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC11Wait.dc.html": {
+  "verdict": "pass",
+  "score": 9.0,
+  "note": "Pixel-identical (0 px over threshold). Ask Ruth → 'Waiting for Ruth', 'On her phone · 2 m' after two real minutes; 'Serve the next walk-in' opens an empty counter and another sale goes through (#0559) while #0558 waits; Ruth's yes (3 min in the demo) brings the sale back as KC12 with a toast; 'Sell at the shop's price · 218,500' rewrites the waiting sale to the shop price (counterLines) and it sells as #0558 218,500 through counter_sale p_quote_id. Code notes (not visible on this board): Wait.tsx hand-rolls the P05 top bar markup (.ow-topbar/.ow-who) instead of the shared part, and for a named customer its avatar is o.client.name.slice(0,2) on tint t4 ('MU' for Mukono Roofing instead of MR on its own tint) — use the customer's initials and tint, and a static WhoPill (see KC13).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC12RuthYes.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (189 px antialiasing) after the real 3-minute wait. Ruth said yes · in 3 m, 185,000 struck to 170,000, chip ✓ 170,000, tender 205,000/210,000 (FACTS tender rule), slide sells 203,500 as the waiting sale (#0558, quote).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC13Selling.dc.html": {
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "FAIL, visible difference: the board draws the who pill without its up/down chevron while the sale is sending (a still pill, no link: the customer cannot change mid-send); the app still draws the chevron (64 px, max diff 160 at x 314-331, y 24-47) and the pill still opens KC04, so the customer can be changed while the write is on its way. Fix: while busy.value, render the pill still — add a `still` prop to src/ui WhoPill (a non-interactive div, no phSwap icon) via the lead, and use it here and in Wait.tsx (KC11 draws the same still pill). Otherwise identical; three Enter presses on the knob made one sale only (busy guard). Risk to note: lines added from the shelf rows during the send are wiped by reset() when the answer comes.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC14Sold.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Pixel-identical (0 px over threshold). #0558 · 52,000 · cash, Give change 8,000 as 5,000/2,000/1,000, Today at the counter 7 sales · 464,000 with this one in mint. Receipt opens KC16; Sell again and × open an empty counter; Back to Today goes Today (the lead's end-of-flow ruling; the board's href says KC01). Second walk-in back to back sells #0559.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC15SoldMomo.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Pixel-identical (0 px over threshold). Mobile · Paid 52,000, Transaction ID 12045889301 kept, 7 sales · 464,000. Bank also tested: Paid with its ID. Receipt, Sell again, Back to Today work.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC16Receipt.dc.html": {
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "FAIL, visible difference: the board's sheet casts box-shadow 0 -8px 30px rgba(0,0,0,.35) (--sh-sheet) onto the #2A3350 strip, darkening it from (41,50,78) to (33,41,64) just above the sheet (4,492 px, y 19-59); the app's FullSheet has no shadow, so the strip is flat #2A3350. Fix: add a `shadow` prop to src/ui FullSheet (box-shadow: var(--sh-sheet) on .ow-full-sheet; SL01Who draws the same) via the lead, or locally .ow-full-sheet:has(.kc-rhead) { box-shadow: var(--sh-sheet) } in receipt.css. Control difference: the board's 'Send on WhatsApp' returns to KC14 Sold; the app stays on the receipt after opening wa.me. Fix: nav.back() after window.open in send(). Everything else works: empty phone → 'Type their phone'; 0772 418 905 → wa.me/256772418905 with the receipt text, the phone kept on the sale; Share copies (or shares); Save image downloads receipt-0558.png; × goes back to Sold.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC17Offline.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (117 px antialiasing). &offline=1: the sand band, slide locked 'Back online to sell' (no knob); closing and reopening the counter keeps both lines (memory in the demo, localStorage per user live).",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC18NotOnShelf.dc.html": {
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "Looks identical (118 px antialiasing). 3 asked · 2 on shelf, 1 short box, locked '1 short'; Make it 2 sets 2 tins and the dock goes live (117,500). FAIL: (1) accessibility, same open line as KC03: Tap targets under 44 px on the open line (src/apps/sales/counter/local-line.tsx): the head button '<item>, N <unit>. Close it' is 40 px tall (231x40 on Cement) and the price chip button 'Change the price of each <unit>' is 27 px tall (63-87 x 27). Fix without moving a pixel: give .kc-open .kc-head (the button) min-height 44px with margin -2px 0, and give the chip button a hit area: button.kc-chip { position: relative } button.kc-chip::after { content: ''; position: absolute; inset: -9px -6px }. (2) 'Order in 1' turns the whole sale into an order but leaves it on the counter, as KC02: call reset() in orderIn().",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ },
+ "KC19Failed.dc.html": {
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Looks identical (184 px antialiasing). &fail=sale: 'Not sold · nothing taken / Slide again to sell' above the dock, lines and 60,000 kept, nothing written; × closes the card; sliding again sells #0558 with 8,000 change.",
+  "by": "counter critic",
+  "at": "2026-10-30"
+ }
+}
