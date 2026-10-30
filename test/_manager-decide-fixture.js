@@ -17,7 +17,8 @@ const DEL = [[2380, 'C5', 'Kato Construction', 0, 1.5, 20, 109000, 2180000], [23
   [2383, 'C1', 'Kyaligonza & Sons', 1, 4, 14, 121570, 0], [2384, 'C2', 'Mukono Roofing', 1, 6, 4, 97000, 388000], [2385, 'C6', 'Nansana Hardware', 3, 5, 10, 148000, 404000],
   [2386, 'C5', 'Kato Construction', 3, 7, 8, 117500, 940000], [2387, 'C3', 'Ggaba Stores', 4, 3, 5, 55000, 275000], [2389, 'C2', 'Mukono Roofing', 5, 4, 6, 100000, 600000]];
 function DELIVERED(){
-  return DEL.map(([id, cid, name, d, h, qty, price, paid], i) => { const at = NOW - d * DAY - h * H;
+  // Kept on its own calendar day: run early in the morning, "h hours back" would cross into the day before.
+  return DEL.map(([id, cid, name, d, h, qty, price, paid], i) => { const day0 = new Date(NOW - d * DAY).setHours(0, 0, 0, 0), at = Math.max(NOW - d * DAY - h * H, day0 + (i + 1) * 1000);
     return { id, status: 'completed', invoiced: true, invoicedAt: iso(at), date: iso(at), amountPaid: paid, voided: false, client: { name }, customerId: cid, items: [L(1, 'P1', 'Iron sheet G28 · 3 m', qty, 98000, price)], charges: [], payments: [],
       takenBy: ['u2', 'u3', 'u4'][i % 3], createdAt: new Date(at - 5 * H).toISOString(), stageEnteredAt: at, deliveredAt: at, deliveredPhoto: i % 4 === 2 ? null : 'p.jpg', assignedDeliveryId: 'D1' }; });
 }
