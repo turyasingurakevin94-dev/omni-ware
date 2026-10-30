@@ -12,7 +12,7 @@ import { phoneText } from '../../../core/names.ts';
 import type { Customer } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
-import { dueCustomers } from './shop.ts';
+import { dueOf } from './shop.ts';
 import { sale, set } from './state.ts';
 import './who.css';
 
@@ -44,7 +44,7 @@ function WhoSheet(): JSX.Element {
   const b = books.value;
   if (!b) return <LightSheet title="Who is it for?" onClose={sheet.close} ground><span /></LightSheet>;
   const chosen = sale.value.customerId, words = text.trim().toLowerCase(), digits = words.replace(/\D/g, '');
-  const due = dueCustomers(b, now.value);
+  const due = dueOf(b, now.value);
   const found = words ? b.customers.filter((c) => !c.qa && (c.name.toLowerCase().includes(words) || c.place.toLowerCase().includes(words) || (digits.length >= 3 && c.phone.replace(/\D/g, '').includes(digits)))).slice(0, 6) : [];
   const list = words ? found.map((c) => ({ c, words: [c.place, phoneText(c.phone)].filter(Boolean).join(' · '), tone: null })) : due.map((d) => ({ c: d.c, words: d.words, tone: d.late > 0 ? 'late' as const : 'due' as const }));
   return (

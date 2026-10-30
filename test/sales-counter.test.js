@@ -14,6 +14,8 @@ const t = createReporter('sales counter');
 const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const S = require(path.join(ROOT, 'src/apps/sales/counter/shop.ts'));
+const I = require(path.join(ROOT, 'src/core/items.ts'));
+const C = require(path.join(ROOT, 'src/core/customers.ts'));
 
 const item = (b, id) => b.items.find((i) => i.id === id);
 const line = (it, qty, n, price) => ({
@@ -43,10 +45,14 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const cem = item(b, 'cement-hima-50'), glue = item(b, 'wood-glue-1l'), gloss = item(b, 'gloss-white-4'), paint = item(b, 'roof-paint-maroon-20');
   t.check(S.soldWith(b, now, [line(cem, 1, 1), line(glue, 1, 2)])[0].name === 'Wire nails 4" · 1kg', 'KC03: under Cement and Wood glue, Wire nails first');
   t.check(same(S.soldWith(b, now, [line(gloss, 3, 1), line(cem, 1, 2)]).slice(0, 2).map((i) => i.id), ['nails-4-1kg', 'pvc-half-6m']), 'KC18: under Gloss paint and Cement, Wire nails then PVC pipe');
-  const due = S.dueCustomers(b, now);
+  const due = S.dueOf(b, now);
   t.check(same(due.map((d) => d.c.name), ['Mukono Roofing', 'Kyaligonza & Sons', 'Lubowa Builders']), `KC04: who's due 3 (got ${due.map((d) => d.c.name).join(', ')})`);
   t.check(same(due.map((d) => d.words), ['Due today · every 7 days', '4 days late · every 14 days', '1 day late · every 5 days']), 'KC04: their rhythm in words');
-  t.check(same(S.readQuery('2 paint'), { qty: 2, words: 'paint' }) && same(S.find(b, 'paint').map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
+  t.check(same(I.readQuery('2 paint'), { qty: 2, words: 'paint', counted: true }) && same(I.findItems(b.items, 'paint').map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
+
+  const T = require(path.join(ROOT, 'src/core/time.ts'));
+  const quiet = b.customers.filter((c) => C.rhythm(c, b.orders, T.dayOf(now)).quiet);
+  t.check(quiet.length === 8, `gone quiet: 8, more than twice their gap (got ${quiet.length})`);
 
   /* ---- a cash sale (KC05 → KC14) ---- */
   const r = await demo.counterSale(draft([line(cem, 1, 1), line(glue, 1, 2)]), { method: 'cash', given: 60000, ref: '' });

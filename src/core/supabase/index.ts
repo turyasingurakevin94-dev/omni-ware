@@ -11,7 +11,7 @@ import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
 import type { Books, Order, Session } from '../types.ts';
 import { client, isNetwork, type Sb } from './client.ts';
-import { readBooks, readChats, readSession, readThread } from './read.ts';
+import { readBooks, readChats, readOrder, readSession, readThread } from './read.ts';
 import * as W from './write.ts';
 
 export function supabaseSource(): DataSource {
@@ -67,6 +67,7 @@ export function supabaseSource(): DataSource {
       return readChats(sb(), me().shopId, (await books()).customers, Date.now());
     },
     thread: (chatId) => readThread(sb(), chatId),
+    order: (id) => readOrder(sb(), me(), id),
 
     async placeOrder(d) {
       const b = await books(), now = Date.now();

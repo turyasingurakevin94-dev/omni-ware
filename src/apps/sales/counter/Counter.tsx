@@ -8,6 +8,7 @@ import { useEffect } from 'preact/hooks';
 import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { findItems, readQuery } from '../../../core/items.ts';
 import { likelyNotes } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
 import { howLong } from '../../../core/time.ts';
@@ -20,7 +21,7 @@ import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefFi
 import { Find } from './Find.tsx';
 import { Picked } from './Picked.tsx';
 import { OtherAisles, SoldHead, SoldRows, Tiles } from './Shelf.tsx';
-import { bestSellers, counterToday, find, readQuery, soldWith } from './shop.ts';
+import { bestSellers, counterToday, soldWith } from './shop.ts';
 import { add, busy, failed, q, restore, sale, sell, set, setPrice, setQty, toggle, totalOf, waitingLines } from './state.ts';
 import { openWho } from './Who.tsx';
 import './counter.css';
@@ -74,8 +75,8 @@ export function Counter(): JSX.Element {
 
   let body: JSX.Element;
   if (text.trim()) {
-    const r = readQuery(text), found = find(b, r.words);
-    body = <Find qty={r.qty} words={r.words} read={r.qty > 1} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
+    const r = readQuery(text), found = findItems(b.items, r.words);
+    body = <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);
     body = (

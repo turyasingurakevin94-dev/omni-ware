@@ -9,11 +9,11 @@
  */
 import { dataError } from '../datasource.ts';
 import { dayOf } from '../time.ts';
-import type { Books, ChatBooks, Customer, Goal, Role, Session, Thread } from '../types.ts';
+import type { Books, ChatBooks, Customer, Goal, Order, Role, Session, Thread } from '../types.ts';
 import { isNetwork, type Row, type Sb } from './client.ts';
 import {
   askOf, billAskOf, cancelAskOf, chatOf, customerOf, eventOf, heldOf, itemsOf, membersOf, messageOf, noteOf, orderOf,
-  paymentAskOf, paymentOf, priceBookOf, promiseOf, settingsOf,
+  paymentAskOf, paymentOf, priceBookOf, promiseOf, settingsOf, type PriceBook,
 } from './rows.ts';
 
 /** sales.html:3866 selectAll: a whole table for the shop, 1,000 rows a page, by key. */
@@ -32,6 +32,9 @@ async function selectAll(sb: Sb, shopId: string, table: string, keyCol: string =
   }
   return rows;
 }
+
+/** The price book of the last full read: a single order (readOrder) prices its lines with it. */
+let lastBook: PriceBook | null = null;
 
 const quiet = <T>(p: Promise<T>, empty: T): Promise<T> => p.then((x) => x, () => empty);
 const data = (r: { data?: Row[] | null; error?: unknown }): Row[] => (r && !r.error && r.data) || [];
@@ -89,6 +92,7 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
   ]);
   const presets: Row = (settingsR && settingsR.data && settingsR.data.presets) || {};
   const pb = priceBookOf(products, prices, stock, lots, presets.defaultMarkup || {});
+  lastBook = pb;
   const logBy = new Map<string, Row[]>();
   debtLog.forEach((l) => { const k = String(l.customer_id); if (!logBy.has(k)) logBy.set(k, []); (logBy.get(k) as Row[]).push(l); });
   const custs: Customer[] = customers.map((c) => customerOf(c, logBy.get(String(c.id)) || []));
@@ -121,6 +125,14 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
 }
 
 /** sales.html:4059 loadWA: the newest 100 chats and 500 messages; wa-send says whether the number is connected. */
+/** One order as the books hold it now (a sale that waits, read while the customer waits); null when gone. */
+export async function readOrder(sb: Sb, s: Session, id: number): Promise<Order | null> {
+  let r: { data: Row | null; error: unknown };
+  try { r = await sb.from('saved_quotes').select('*').eq('shop_id', s.shopId).eq('id', id).maybeSingle(); } catch (e) { throw isNetwork(e) ? dataError('offline', 'No signal') : e; }
+  if (r.error) throw isNetwork(r.error) ? dataError('offline', 'No signal') : dataError('refused', String((r.error as { message?: string }).message || r.error));
+  return r.data ? orderOf(r.data, lastBook || priceBookOf([], [], [], [], {})) : null;
+}
+
 export async function readChats(sb: Sb, shopId: string, customers: Customer[], now: number): Promise<ChatBooks> {
   const [cR, mR] = await Promise.all([
     sb.from('wa_conversations').select('*').eq('shop_id', shopId).order('last_message_at', { ascending: false }).limit(100),
