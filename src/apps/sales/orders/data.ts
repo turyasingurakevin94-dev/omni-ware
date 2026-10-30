@@ -163,7 +163,9 @@ export function twinOf(b: Books, o: Order): { orig: Order; copy: Order } | null 
 /** What a payment brought over what it cleared (OR15: Nansana's 560,000 cleared 470,000; 90,000 over), and its ask to Accounts. */
 export function overOf(b: Books, p: Payment): { cleared: number; over: number } {
   const c = p.customerId ? b.customers.find((x) => x.id === p.customerId) : null;
-  const cleared = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : p.amount;
+  const onBills = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : 0;
+  const onOrders = b.orders.reduce((a, o) => a + o.payments.filter((x) => x.paymentId === p.id).reduce((s, x) => s + x.amount, 0), 0);
+  const cleared = c ? Math.max(onBills, onOrders) : p.amount;
   return { cleared, over: Math.max(0, p.amount - cleared) };
 }
 export const overAsk = (b: Books, p: Payment): PaymentAsk | null => b.paymentAsks.find((a) => a.paymentId === p.id && a.what === 'over' && a.status === 'sent') || null;

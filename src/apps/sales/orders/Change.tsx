@@ -64,7 +64,7 @@ function ChangeSheet(p: { id: number }): JSX.Element | null {
   const ruth = ruthOf(b), rn = firstWord(ruth?.name || 'Manager'), rf = ruth ? faceOfMember(ruth) : undefined, at = STAGES.indexOf(o.stage);
   const asked = openAsk(b, o, 'cancel');
   return (
-    <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, o)} title="Change this order" onClose={sheet.close} pad="12px 16px 26px">
+    <LightSheet class="or-sheet or-full" ground eyebrow={eyebrow(b, o)} title="Change this order" onClose={sheet.close} pad="12px 16px 26px">
       <div role="img" aria-label={`${STAGE_WORD[o.stage]} now. Until it is delivered ${rn} can cancel it; after that it is a return`} class="or-smap">
         <div class="or-smap-g">
           {STAGES.map((s, i) => (
@@ -176,7 +176,7 @@ function TwiceSheet(p: { id: number }): JSX.Element | null {
     <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, copy)} title="Entered twice?" onClose={sheet.close} pad="12px 16px 22px">
       <div class="or-tws"><Card b={b} o={orig} t={t} /><Card b={b} o={copy} copy t={t} /></div>
       <div class="or-checks">{checks.map((c) => <div key={c}><span aria-hidden="true"><Icon name="check" size={11} stroke={3.2} /></span><span>{c}</span></div>)}</div>
-      <div class="or-dots"><StageDots stage={copy.stage} all={copy.stage === 'delivered'} skipped={STAGES.slice(0, STAGES.indexOf(copy.stage)).filter((s) => !copy.stageLog.some((x) => x.stage === s))} /></div>
+      <div class="or-dots"><StageDots stage={copy.stage} all={copy.stage === 'delivered'} skipped={copy.stageLog.some((x) => x.stage === 'checking') ? [] : STAGES.slice(0, STAGES.indexOf(copy.stage)).filter((s) => !copy.stageLog.some((x) => x.stage === s))} /></div>
       {billed ? <Who face={rf}>{`${rn} voids ${orderNo(copy.id)} · ${copy.paid > 0 ? 'the money goes back' : 'nothing to give back'}`}</Who> : <>
         <Who face={rf}>{`${rn} cancels ${orderNo(copy.id)}`}</Who>
         {store && <Who face={faceOfMember(store)}>{`${firstWord(store.name)} puts back what was packed`}</Who>}

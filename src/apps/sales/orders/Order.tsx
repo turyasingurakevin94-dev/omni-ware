@@ -53,7 +53,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   return (
     <FullSheet onBack={nav.back} backLabel="Back to Orders" gap={v.returnAsk ? 8 : 10}
       head={(
-        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(o.placedAt, t)}`} subMono phone={phone || undefined} callLabel={`Call ${name}`} onClose={nav.back}>
+        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(delivered && o.invoicedAt && t - o.placedAt > 7 * 864e5 ? o.invoicedAt : o.placedAt, t)}`} subMono phone={phone || undefined} callLabel={`Call ${name}`} onClose={nav.back}>
           <Track stage={o.stage} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
         </SheetHead>
       )}>

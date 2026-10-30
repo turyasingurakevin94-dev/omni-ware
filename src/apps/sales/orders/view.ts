@@ -4,7 +4,7 @@
  * stage of #0552's life comes out as its board draws it.
  */
 import { goodsTotal, lineTotal, orderOwes, orderTotal } from '../../../core/money.ts';
-import { firstWord, STAGES } from '../../../core/names.ts';
+import { firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
 import type { Tile } from './local-Parts.tsx';
@@ -48,10 +48,12 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   const holder = member(b, o.holderId), hn = holder ? firstWord(holder.name) : '';
   const waiting = o.lines.filter(waitsRuth), fresh = freshPrice(o), ret = openAsk(b, o, 'credit');
   const logAt = (s: Stage) => o.stageLog.find((x) => x.stage === s)?.at;
-  const skipped = o.stage === 'checking' ? [] : STAGES.slice(0, STAGES.indexOf(o.stage)).filter((s) => logAt(s) == null);
+  // Skipped: an order that started past Checking (all on our shelf). Otherwise a stage the log lacks takes the next one's time.
+  const skipped = o.stage === 'checking' || logAt('checking') != null ? [] : STAGES.slice(0, STAGES.indexOf(o.stage)).filter((s) => logAt(s) == null);
   const times: Partial<Record<Stage, string>> = {};
   STAGES.forEach((s) => { const a = logAt(s); if (a != null) times[s] = railTime(a, now); });
   if (o.stage === 'delivered' && o.deliveredAt) times.delivered = railTime(o.deliveredAt, now);
+  STAGES.slice(0, STAGES.indexOf(o.stage)).reverse().forEach((s, i, l) => { if (!times[s] && !skipped.includes(s)) times[s] = i ? times[l[i - 1]] : times[o.stage]; });
 
   let sub = '';
   if (o.stage === 'checking') sub = waiting.length ? `${rn} decides ${waiting.length} price${waiting.length > 1 ? 's' : ''}` : orderOwes(o) > 0 ? 'Not paid yet' : `${rn} · checking`;
@@ -70,8 +72,11 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (fresh) left.old = goodsTotal(o.lines.map((l) => (l === fresh ? { ...l, price: (fresh.priceReview as { was: number }).was } : l)));
   else if (o.stage !== 'checking' && o.stage !== 'buying' && !ret) left.note = `${kept(o).length} lines`;
   if (ret) left.k = `${who} paid`;
+  const billOwes = o.invoiced && !ret && orderOwes(o) > 0;
+  if (billOwes) { left.k = `Bill ${orderNo(o.id)}`; left.note = undefined; }
   let right: Tile;
   if (ret) right = { k: 'Credit asked', v: ret.amount, tone: 'warn', dot: true };
+  else if (billOwes) right = { k: 'Owes', v: orderOwes(o), tone: 'warn' };
   else if (paid >= total && total > 0) {
     const ms = [...new Set(o.payments.map((x) => ({ cash: 'cash', momo: 'mobile', bank: 'bank' })[x.method]))];
     right = { k: 'Paid', v: paid, tone: 'good', note: ms.join(' + ') };

@@ -57,7 +57,7 @@ export function StageDots(p: { stage: Stage; skipped?: Stage[]; all?: boolean })
         const k = sk.includes(s) ? 'skip' : i < at || p.all ? 'done' : i === at ? 'now' : 'next';
         return (
           <span key={s} class={cx('ow-sdot', k)}>
-            <span aria-hidden="true">{k === 'skip' ? <Icon name="minus" size={13} stroke={2.4} /> : k === 'done' ? <Icon name="check" size={13} stroke={3} /> : <Icon name={STAGE_ICON[s]} size={14} stroke={2} />}</span>
+            <span aria-hidden="true">{k === 'skip' ? <Icon name="minus" size={12} stroke={2.6} /> : k === 'done' ? <Icon name="check" size={12} stroke={3} /> : <Icon name={STAGE_ICON[s]} size={13} stroke={2} />}</span>
             <b>{STAGE_WORD[s]}</b>
           </span>
         );

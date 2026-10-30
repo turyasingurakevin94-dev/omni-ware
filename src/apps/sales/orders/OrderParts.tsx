@@ -128,7 +128,7 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
   const what = line ? `${n} ${line.unit}${n > 1 ? 's' : ''}` : ask.amount.toLocaleString('en-US');
   const undo = async () => {
     setBusy(true);
-    try { await act('withdrawBillAsk', ask.id); toast.show('Ask taken back', { kind: 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
+    try { await act('withdrawBillAsk', ask.id); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };
   return (
     <div class="or-asks">
@@ -136,7 +136,7 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
         <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
       <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span><span aria-hidden="true" class="or-step-line" />
         <span class="or-step-t"><span>You asked</span><span>{`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`}</span></span></div>
-      <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} style={{ boxShadow: '0 0 0 2px #F5B26B' }} />}</span>
+      <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B' }} />}</span>
         <span class="or-step-t warn"><span>{`${rn} checks it`}</span><span>{`then the credit note, ${ask.amount.toLocaleString('en-US')}`}</span></span></div>
     </div>
   );
