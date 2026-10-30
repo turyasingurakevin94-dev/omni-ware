@@ -5,15 +5,15 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { firstWord, phone9 } from '../../../core/names.ts';
+import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { orderTotal } from '../../../core/money.ts';
-import { clock, replyWindow, when } from '../../../core/time.ts';
-import type { BillAsk, Books, Line, Order } from '../../../core/types.ts';
+import { clock, dayOf, replyWindow, weekday, when } from '../../../core/time.ts';
+import type { BillAsk, Books, Line, Order, Payment } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
-import { byRole, custOf, faceOfMember, member, shortItem, shortName } from './data.ts';
+import { byRole, custOf, faceOfMember, member, overOf, shortItem, shortName, twinOf } from './data.ts';
 import { MonoText, chatFor, sayMoney } from './msg.tsx';
 import './sheets.css';
 
@@ -145,6 +145,38 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
         <span class="or-step-t"><span>You asked</span><span>{`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`}</span></span></div>
       <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} />}</span>
         <span class="or-step-t warn"><span>{`${rn} checks it`}</span><span>{`then the credit note, ${ask.amount.toLocaleString('en-US')}`}</span></span></div>
+    </div>
+  );
+}
+
+/** OR27 · the payment that brought more than the bill: what went to it, what is over. */
+export function OverRow(p: { b: Books; p: Payment }): JSX.Element {
+  const { cleared, over } = overOf(p.b, p.p), t = now.value, at = p.p.at;
+  const m = ({ cash: ['Cash', 'cash'], momo: ['Mobile', 'mobile'], bank: ['Bank', 'bank'] } as const)[p.p.method];
+  return (
+    <div class="or-prow">
+      <span aria-hidden="true" class="w"><Icon name={m[1]} size={18} stroke={2} /></span>
+      <span><span>{`${m[0]} · ${dayOf(at) === dayOf(t) ? `today ${clock(at)}` : when(at, t)}`}</span><span>{`${cleared.toLocaleString('en-US')} to the bill · ${over.toLocaleString('en-US')} over`}</span></span>
+      <span class="mono">{p.p.amount.toLocaleString('en-US')}</span>
+    </div>
+  );
+}
+
+/** OR29 · entered twice, after the void: the one kept, the copy voided. */
+export function TwinCard(p: { b: Books; o: Order }): JSX.Element | null {
+  const tw = twinOf(p.b, p.o, true);
+  if (!tw) return null;
+  const row = (x: Order, copy: boolean) => (
+    <div class={'or-twr' + (copy ? ' copy' : '')}>
+      <span><b class="mono">{orderNo(x.id)}</b><span>{`Invoice · ${x.invoicedAt ? `${weekday(x.invoicedAt)} ${clock(x.invoicedAt)}` : ''}${copy ? ' · the copy' : ''}`}</span></span>
+      {x.voided ? <s class="mono">{orderTotal(x).toLocaleString('en-US')}</s> : <span class="mono">{orderTotal(x).toLocaleString('en-US')}</span>}
+      {x.voided ? <span class="or-crow-p info">Voided</span> : x.paid >= orderTotal(x) ? <span class="or-crow-p good"><Icon name="check" size={11} stroke={3.2} />Paid</span> : <span class="or-crow-p warn">Owes</span>}
+    </div>
+  );
+  return (
+    <div role="group" aria-label={`Entered twice: ${orderNo(tw.orig.id)} kept, ${orderNo(tw.copy.id)} ${tw.copy.voided ? 'voided' : 'the copy'}`} class="or-twc">
+      <div class="or-twc-h">Entered twice</div>
+      {row(tw.orig, false)}{row(tw.copy, true)}
     </div>
   );
 }

@@ -24,10 +24,10 @@ const M: Record<Payment['method'], { word: string; icon: IconName }> = { cash: {
 export function PaidOverScreen(p: ScreenProps): JSX.Element {
   const b = books.value, x = b && b.payments.find((y) => y.id === Number(p.params.payment));
   if (!b || !x) return <FullSheet onBack={nav.back} backLabel="Back" head={<div class="ow-shead" />}><p class="or-gone">{b ? 'This payment is no longer in the books' : ''}</p></FullSheet>;
-  return <PaidOver b={b} x={x} />;
+  return <PaidOver b={b} x={x} from={String(p.params.from || '')} />;
 }
 
-function PaidOver(p: { b: Books; x: Payment }): JSX.Element {
+function PaidOver(p: { b: Books; x: Payment; from: string }): JSX.Element {
   const { b, x } = p, t = now.value, c = b.customers.find((y) => y.id === x.customerId) || null;
   const [how, setHow] = useState<'change' | 'deposit'>('change');
   const [busy, setBusy] = useState(false);
@@ -57,7 +57,7 @@ function PaidOver(p: { b: Books; x: Payment }): JSX.Element {
   );
   const sms = `sms:${c && phone9(c.phone) ? '+256' + phone9(c.phone) : ''}?body=${encodeURIComponent(`Hello ${who}, you paid ${x.amount.toLocaleString('en-US')}: ${cleared.toLocaleString('en-US')} cleared your bills and ${over.toLocaleString('en-US')} is over. ${askedHow === 'deposit' ? 'We keep it for your next order.' : 'We give it back to you.'}`)}`;
   return (
-    <FullSheet onBack={nav.back} backLabel="Back" head={(
+    <FullSheet onBack={nav.back} backLabel={p.from === 'order' ? 'Back to the order' : 'Back to Customers'} head={(
       <SheetHead face={c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' }} name={c ? c.name : 'Walk-in'} sub={when} subMono phone={c?.phone} callLabel={`Call ${c ? c.name : ''}`} onClose={nav.back}>
         <div class="or-over">
           <span class="or-over-h"><span><span>{`${who} paid`}</span><span class="mono">{x.amount.toLocaleString('en-US')}</span></span>

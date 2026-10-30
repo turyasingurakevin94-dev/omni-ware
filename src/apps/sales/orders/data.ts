@@ -152,11 +152,11 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
 }
 
 /** The same order entered twice (OR19, OR23): same customer, same items, a few minutes apart, by the same person. The later is the copy. */
-export function twinOf(b: Books, o: Order): { orig: Order; copy: Order } | null {
+export function twinOf(b: Books, o: Order, voided = false): { orig: Order; copy: Order } | null {
   const sig = (x: Order) => x.lines.map((l) => `${l.itemId}:${l.qty}`).sort().join('|');
-  const t = b.orders.find((x) => x.id !== o.id && !x.voided && !x.cancelled && !x.qa && x.placedBy === o.placedBy
+  const t = b.orders.find((x) => x.id !== o.id && (voided || !x.voided) && !x.cancelled && !x.qa && x.placedBy === o.placedBy
     && (x.customerId || x.client.name) === (o.customerId || o.client.name) && sig(x) === sig(o) && Math.abs(x.placedAt - o.placedAt) <= 10 * 60000 && x.invoiced === o.invoiced);
-  if (!t || o.voided || o.cancelled) return null;
+  if (!t || (!voided && o.voided) || o.cancelled) return null;
   return t.id < o.id ? { orig: t, copy: o } : { orig: o, copy: t };
 }
 

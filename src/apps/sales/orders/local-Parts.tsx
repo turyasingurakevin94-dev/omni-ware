@@ -34,15 +34,15 @@ export function ActBar(p: { acts: Act[] }): JSX.Element {
   );
 }
 
-const Box = (p: { on?: () => void; class: string; children: ComponentChildren }) => (p.on ? <button type="button" class={p.class} onClick={p.on}>{p.children}</button> : <div class={p.class}>{p.children}</div>);
+const Box = (p: { on?: () => void; label?: string; class: string; children: ComponentChildren }) => (p.on ? <button type="button" class={p.class} aria-label={p.label} onClick={p.on}>{p.children}<span aria-hidden="true" class="or-tap-ch"><Icon name="chevron-right" size={16} stroke={2.2} /></span></button> : <div class={p.class}>{p.children}</div>);
 
-export type Tile = MoneyTile & { struck?: boolean; dot?: boolean };
+export type Tile = MoneyTile & { struck?: boolean; dot?: boolean; label?: string };
 
 export function Tiles(p: { tiles: Tile[] }): JSX.Element {
   return (
     <div class="ow-mtiles">
       {p.tiles.map((t, i) => (
-        <Box key={i} on={t.on} class={cx('ow-mtile', t.tone && 't-' + t.tone, t.on && 'or-tap')}>
+        <Box key={i} on={t.on} label={t.label} class={cx('ow-mtile', t.tone && 't-' + t.tone, t.on && 'or-tap')}>
           <span class="ow-mtile-k">{t.dot ? <span class="or-kdot"><span aria-hidden="true" />{t.k}</span> : t.k}</span>
           <span class="ow-mtile-v"><span class="mono">{fig(t.v)}</span></span>
           {t.old != null && <s class="mono or-old">{fig(t.old)}</s>}

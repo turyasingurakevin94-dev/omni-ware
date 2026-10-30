@@ -60,6 +60,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   let sub = '';
   if (o.stage === 'checking') sub = waiting.length ? `${rn} decides ${waiting.length} price${waiting.length > 1 ? 's' : ''}` : orderOwes(o) > 0 ? 'Not paid yet' : `${rn} · checking`;
   else if (fresh) sub = `${rn} set ${(fresh.price as number).toLocaleString('en-US')} · ${clock((fresh.priceReview as { at: number }).at)}`;
+  else if (o.voided) sub = `Voided by ${rn}`;
   else if (o.stage === 'delivered') {
     const at = o.deliveredAt || o.stageAt;
     sub = daysApart(dayOf(at), dayOf(now)) < 7 ? `At the door ${dayOf(at) === dayOf(now) ? clock(at) : `${weekday(at)} ${clock(at)}`}` : `Billed ${dayLabel(o.invoicedAt || at)}`;

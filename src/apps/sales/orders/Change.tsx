@@ -77,9 +77,10 @@ function ChangeSheet(p: { id: number }): JSX.Element | null {
       </div>
       <div class="or-rows">
         {asked ? (
-          <div class="or-row" aria-disabled="true">
+          <div class="or-row">
             <span aria-hidden="true" class="or-row-ic bad"><Icon name="close" size={19} stroke={2.2} /></span>
-            <span class="or-row-t"><span class="bad">Cancel asked</span><span>{rf && <Avatar {...rf} size={18} />}{`${rn} decides · asked ${clock(asked.at)}`}</span></span>
+            <span class="or-row-t"><span class="bad">Cancel asked</span><span class="nw">{rf && <Avatar {...rf} size={18} />}{`${rn} · asked ${clock(asked.at)}`}</span></span>
+            <button type="button" class="or-undo" aria-label="Undo the cancel ask" onClick={() => takeBack(asked.id)}><span><Icon name="undo" size={14} stroke={2.4} />Undo ask</span></button>
           </div>
         ) : (
           <button type="button" class="or-row" onClick={() => openCancel(o.id)}>
