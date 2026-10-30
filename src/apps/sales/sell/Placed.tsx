@@ -92,7 +92,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
       ) : (
         <div class="ow-moment-items">
           <span aria-hidden="true" class="ow-moment-sq">
-            {o.lines.slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
+            {o.lines.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
           </span>
           <span class="ow-moment-items-t"><span>{`${n} items · ${mode}`}</span>{unpaid && <span>Not paid yet</span>}</span>
           <span class="mono ow-moment-items-a">{fig(orderTotal(o))}</span>
