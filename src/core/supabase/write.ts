@@ -162,17 +162,29 @@ export async function addCustomer(sb: Sb, s: Session, a: { name: string; phone: 
 }
 
 /** sales.html:10618 srcWrite: one lead per item; asked again adds a request to it, as the server has it now. */
-export async function askSourcing(sb: Sb, s: Session, a: { name: string; qty: number; customerId: string | null; chatId: number | null }, existingId: string | null, now: number): Promise<SourcingAsk> {
+export async function askSourcing(sb: Sb, s: Session, a: { name: string; qty: number; customerId: string | null; chatId: number | null; photo?: Blob | null }, existingId: string | null, now: number): Promise<SourcingAsk> {
   const ask = { at: new Date(now).toISOString(), source: 'sourcing.ask', customerId: a.customerId, customerName: '', phone: '', variant: '', qty: a.qty || 1, orderId: null, conversationId: a.chatId, note: '', by: s.userId, salesName: s.name };
+  const image = a.photo ? await uploadLeadPhoto(sb, s, a.photo, now) : null;
   if (existingId) {
     const cur = await ok<Row>(sb.from('sourcing_leads').select('*').eq('shop_id', s.shopId).eq('id', existingId).maybeSingle());
-    const requests = ((cur && cur.requests) || []).concat([ask]);
-    await ok(sb.from('sourcing_leads').update({ requests }).eq('shop_id', s.shopId).eq('id', existingId));
-    return askOf({ ...(cur || {}), requests });
+    const requests = ((cur && cur.requests) || []).concat([ask]), patch: Row = { requests };
+    if (image && !(cur && cur.image)) patch.image = image;
+    await ok(sb.from('sourcing_leads').update(patch).eq('shop_id', s.shopId).eq('id', existingId));
+    return askOf({ ...(cur || {}), ...patch });
   }
-  const row = { id: 'SRC-' + now.toString(36).toUpperCase(), shop_id: s.shopId, name: a.name, notes: '', status: 'asked', created_at: new Date(now).toISOString(), stage_entered_at: now, requests: [ask], candidates: [] };
+  const row: Row = { id: 'SRC-' + now.toString(36).toUpperCase(), shop_id: s.shopId, name: a.name, notes: '', status: 'asked', created_at: new Date(now).toISOString(), stage_entered_at: now, requests: [ask], candidates: [] };
+  if (image) row.image = image;
   await ok(sb.from('sourcing_leads').insert(row));
   return askOf(row);
+}
+
+/** sales.html:10603 srcUploadPhoto: a lead's photo to the shop's product-images folder (0074), its public link. */
+async function uploadLeadPhoto(sb: Sb, s: Session, file: Blob, now: number): Promise<string> {
+  const ext = /png/.test(file.type) ? 'png' : /webp/.test(file.type) ? 'webp' : 'jpg';
+  const name = (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) || String(now);
+  const path = `${s.shopId}/${name}.${ext}`;
+  await ok(sb.storage.from('product-images').upload(path, file, { contentType: file.type || 'image/jpeg' }));
+  return String(sb.storage.from('product-images').getPublicUrl(path).data.publicUrl);
 }
 
 /** sales.html:8160: a search that found nothing (log_search_miss, 0146). Never waits, never fails out loud. */
@@ -215,12 +227,15 @@ async function waInvoke(sb: Sb, body: Row): Promise<Row> {
 }
 
 /** sales.html:4146 waUploadBlob and 4152 waSendImage: the picture to the shop's image bucket, then wa-send posts its link. */
-export async function waSendImage(sb: Sb, s: Session, chatId: number, file: Blob, caption: string, now: number): Promise<Message> {
-  const ext = (file.type || '').includes('jpeg') ? 'jpg' : 'png';
-  const name = (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) || String(now);
-  const path = `${s.shopId}/receipts/${name}.${ext}`;
-  await ok(sb.storage.from('product-images').upload(path, file, { contentType: file.type || 'image/png' }));
-  const link = String(sb.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+export async function waSendImage(sb: Sb, s: Session, chatId: number, file: Blob | string, caption: string, now: number): Promise<Message> {
+  let link = typeof file === 'string' ? file : '';
+  if (typeof file !== 'string') {
+    const ext = (file.type || '').includes('jpeg') ? 'jpg' : 'png';
+    const name = (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) || String(now);
+    const path = `${s.shopId}/receipts/${name}.${ext}`;
+    await ok(sb.storage.from('product-images').upload(path, file, { contentType: file.type || 'image/png' }));
+    link = String(sb.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+  }
   const d = await waInvoke(sb, { shopId: s.shopId, action: 'send-image', conversationId: chatId, link, caption: caption || '' });
   if (!d.sent) throw dataError('refused', 'the send was refused');
   return { ...messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: 'image', body: caption || '', sent_by: s.userId, status: 'sent' }), media: link };

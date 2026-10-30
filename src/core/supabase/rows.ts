@@ -88,7 +88,7 @@ export function customerOf(c: Row, log: Row[]): Customer {
 
 /** The pricing context the order and item mappers need: products, supplier rows, lots, the shop's default markup. */
 export interface PriceBook {
-  products: Map<string, ProductRow & { name: string; category: string; variantsRaw: Row[] }>;
+  products: Map<string, ProductRow & { name: string; category: string; image: string | null; variantsRaw: Row[] }>;
   rows: Map<string, PriceRow[]>;
   lots: Map<string, { qty: number; cost: number | null }[]>;
   stock: Map<string, number>;
@@ -117,7 +117,7 @@ export function priceBookOf(products: Row[], prices: Row[], stock: Row[], lots: 
   lots.forEach((l) => { const k = String(l.key); if (!lotMap.has(k)) lotMap.set(k, []); (lotMap.get(k) as { qty: number; cost: number | null }[]).push({ qty: num(l.qty), cost: l.cost == null ? null : Number(l.cost) }); });
   return {
     products: new Map(products.map((p) => [String(p.id), {
-      id: String(p.id), name: String(p.name || ''), category: String(p.category || ''), variantsRaw: p.variants || [], variants: p.variants || [],
+      id: String(p.id), name: String(p.name || ''), category: String(p.category || ''), image: p.image ? String(p.image) : null, variantsRaw: p.variants || [], variants: p.variants || [],
       wholesaleMarkupType: p.wholesale_markup_type === 'fixed' ? 'fixed' : 'percent', wholesaleMarkupValue: num(p.wholesale_markup_value),
       retailMarkupType: p.retail_markup_type === 'fixed' ? 'fixed' : 'percent', retailMarkupValue: num(p.retail_markup_value),
       stockWholesaleMarkupType: p.stock_wholesale_markup_type === 'fixed' ? 'fixed' : 'percent', stockWholesaleMarkupValue: num(p.stock_wholesale_markup_value),
@@ -207,6 +207,7 @@ export function itemsOf(pb: PriceBook, held: Map<string, number>): Item[] {
         unit: best ? best.unit : '', packUnit: best ? best.packUnit : '', packQty: best ? best.packQty : 0,
         price, packPrice: null, cost: cost && cost > 0 ? whole(cost) : null,
         onShelf: Math.max(0, onHand - (held.get(k) || 0)), orderIn: !!best, listedAt: null,
+        image: (vi != null && p.variantsRaw[vi] && typeof (p.variantsRaw[vi] as Row).image === 'string' && (p.variantsRaw[vi] as Row).image) || p.image,
       });
     });
   });
@@ -247,6 +248,7 @@ export function askOf(r: Row): SourcingAsk {
     itemId: r.product_id ? String(r.product_id) : null,
     requests: (Array.isArray(r.requests) ? r.requests : []).map((x: Row) => ({ at: ms(x.at) || 0, by: x.by ? String(x.by) : null, customerId: x.customerId != null ? String(x.customerId) : null, qty: num(x.qty) || 1 })),
     tried: (Array.isArray(r.candidates) ? r.candidates : []).map((x: Row) => ({ supplier: String(x.supplierName || x.name || ''), at: ms(x.askedAt || x.at) || 0 })),
+    image: r.image ? String(r.image) : null,
   };
 }
 

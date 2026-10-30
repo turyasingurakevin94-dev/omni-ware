@@ -126,8 +126,10 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askSourcing: (a) => write(() => {
       const name = a.name.trim(), hit = s.books.asks.find((x) => x.status !== 'dropped' && x.name.toLowerCase() === name.toLowerCase());
       const req = { at: s.now, by: me.id, customerId: a.customerId, qty: a.qty || 1 };
-      if (hit) { hit.requests.push(req); return copy(hit); }
-      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [] };
+      // The demo keeps no files: a photo stands as 'photo:<name>' (as Message.media's 'aisle:<Aisle>').
+      const image = a.photo ? 'photo:' + name : null;
+      if (hit) { hit.requests.push(req); if (image && !hit.image) hit.image = image; return copy(hit); }
+      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [], image };
       s.books.asks.push(ask);
       return copy(ask);
     }),

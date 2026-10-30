@@ -142,7 +142,7 @@ export interface DataSource {
   addCustomer(a: { name: string; phone: string; place: string; kind: CustomerKind | null }): Promise<Customer>;
 
   /* sourcing */
-  askSourcing(a: { name: string; qty: number; customerId: string | null; chatId: number | null }): Promise<SourcingAsk>;
+  askSourcing(a: { name: string; qty: number; customerId: string | null; chatId: number | null; photo?: Blob | null }): Promise<SourcingAsk>;
   /** A search that found nothing, for Sourcing (log_search_miss). Fire and forget. */
   logSearchMiss(words: string, client: string | null): void;
 
@@ -150,8 +150,11 @@ export interface DataSource {
   send(chatId: number, text: string): Promise<Message>;
   /** After the 24-hour window: the shop's approved reply template, their words inside it. */
   sendTemplate(chatId: number, text: string): Promise<Message>;
-  /** A picture, with words under it (wa-send 'send-image': the shop's image bucket, then its link). */
-  sendImage(chatId: number, file: Blob, caption: string): Promise<Message>;
+  /**
+   * A picture, with words under it (wa-send 'send-image': the shop's image bucket, then its link).
+   * A string is a link already in the bucket (an item's photo): sent as it is, not uploaded again.
+   */
+  sendImage(chatId: number, file: Blob | string, caption: string): Promise<Message>;
   /** The shop's WhatsApp catalogue as a card they can browse (wa-send 'send-catalog'). */
   sendCatalog(chatId: number): Promise<Message>;
   /** A customer's picture, voice note or document: its link (wa-send 'media'). */
