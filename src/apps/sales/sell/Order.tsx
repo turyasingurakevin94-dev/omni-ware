@@ -74,7 +74,8 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
   if (!b || !x) return <main class="sl-order" aria-busy="true" />;
   const c = customerOf(b, x.customerId), mine = me.value ? me.value.id : '';
   const line = c ? whoLine(b, c, now.value) : null;
-  const typing = query.value.trim().length > 0;
+  // What was typed is found, unless a sheet took it up (SL21: the hinge's sheet over the order).
+  const typing = query.value.trim().length > 0 && !sheet.isOpen;
 
   const place = async (): Promise<void> => {
     closeLine();

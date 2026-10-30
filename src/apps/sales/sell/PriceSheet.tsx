@@ -13,7 +13,8 @@ import { avatarStyle } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Keypad, ladderPct } from '../../../ui/Keypad.tsx';
 import { fig } from '../../../ui/Money.tsx';
-import { LightSheet, sheet } from '../../../ui/sheet.tsx';
+import { sheet } from '../../../ui/sheet.tsx';
+import { Frame } from './Frame.tsx';
 import { books, me } from '../shell/store.ts';
 import { first, lastPaid } from './insights.ts';
 import { cur, setPrice } from './model.ts';
@@ -42,7 +43,7 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
   const was = lineTotal(l), will = lineTotal({ ...l, price: v });
   const label = `${fig(v)} is ${under ? 'under' : low ? 'under the cost, below' : 'at'} the shop's price of ${fig(shop)}${last === shop ? `, which is also what ${c ? first(c.name) : 'they'} paid last` : ''}`;
   return (
-    <LightSheet title={`Price · ${short}`} onClose={sheet.close} pad="10px 16px 20px" gap={10}>
+    <Frame title={`Price · ${short}`} onClose={sheet.close} pad="10px 16px 20px" gap={10}>
       <div role="img" aria-label={label} class="sl-ladder">
         <div class="sl-ladder-t">
           <span class="sl-ladder-b" />
@@ -69,6 +70,6 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
             ? <><button type="button" class="sl-btn ghost" onClick={() => use(v)}>Yes, <span class="mono">{fig(v)}</span></button><button type="button" class="sl-btn navy" onClick={() => use(Math.round(v / 10))}>Make it <span class="mono">{fig(Math.round(v / 10))}</span></button></>
             : <><button type="button" class="sl-btn ghost" onClick={keep}>Keep <span class="mono">{fig(shop)}</span></button><button type="button" class="sl-btn navy" disabled={!(v > 0)} onClick={() => use(v)}>Use <span class="mono">{fig(v)}</span></button></>}
       </div>
-    </LightSheet>
+    </Frame>
   );
 }
