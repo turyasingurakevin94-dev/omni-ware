@@ -26,7 +26,7 @@ import { PaidCard, WantsCard } from './Cards.tsx';
 import { ChatComposer } from './Composer.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
 import { chatView, faceOf, salesTeam, managers, type ChatView } from './model.ts';
-import { open, write } from './parts.tsx';
+import { open, write, wrote } from './parts.tsx';
 import { openOrder, readyAnswers, saysPaid, wantsToBuy } from './read.ts';
 import { Thread, entries } from './Thread.tsx';
 import { sendPending, shown } from './undo.tsx';
@@ -60,7 +60,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
     let live = true;
     source.thread(id).then((x) => { if (live) { copies.set(id, x); setTh(x); } }, () => { /* the copy stays */ });
     return () => { live = false; };
-  }, [id, chat && chat.lastAt, chat && chat.ownerId, keptN]);
+  }, [id, chat && chat.lastAt, chat && chat.ownerId, keptN, wrote.value]);
   // Opened: read (with signal; no signal keeps nothing for it), here for the team.
   useEffect(() => {
     if (chat && online.value && chat.lastReadAt !== chat.lastAt) void act('markRead', id).catch(() => {});

@@ -7,6 +7,7 @@
  *   open       open a screen another tab owns, by its ROUTES.md id
  *   say        word a write's outcome: kept on this phone, or the server's reason
  */
+import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { isDataError } from '../../../core/datasource.ts';
@@ -65,10 +66,14 @@ export function open(id: string, params: Params = {}): void {
   if (screen(id)) nav.push(id, params);
 }
 
+/** Each write that landed or was kept (a chat reads its thread again). */
+export const wrote = signal(0);
+
 /** A write, worded: done (ok), kept on this phone, or refused with the server's reason. Resolves true when it landed or was kept. */
 export async function write(kind: Parameters<typeof act>[0], args: unknown[], done?: string): Promise<boolean> {
   try {
     const r = await act(kind, ...args);
+    wrote.value += 1;
     if (r.kept) toast.show('Kept on this phone', { kind: 'warn' });
     else if (done) toast.show(done);
     return true;
