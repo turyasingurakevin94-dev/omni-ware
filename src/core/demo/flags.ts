@@ -9,6 +9,7 @@
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
+ *   &wa=off                  the shop's WhatsApp is not connected: nothing reaches a customer (CU43: the receipt waits)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -22,6 +23,8 @@ export interface DemoFlags {
   state: DemoStateName | null;
   /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
   as: string | null;
+  /** &wa=off: the shop's WhatsApp number is not connected (ChatBooks.connected false). */
+  waOff: boolean;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -38,5 +41,6 @@ export function readFlags(search: string): DemoFlags {
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
     as: /^[a-z]+$/.test(as) ? as : null,
+    waOff: q.get('wa') === 'off',
   };
 }

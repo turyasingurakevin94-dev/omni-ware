@@ -12,9 +12,6 @@ import type { DemoState } from '../index.ts';
 
 export function extra(s: DemoState, f: DemoFlags): void {
   const b = s.books;
-  // CU43: &wa=off, the shop's WhatsApp is not connected, so a receipt cannot reach anyone (no tap can cause it).
-  // Read here until the shared flags (flags.ts) carry it.
-  if (typeof location !== 'undefined' && /[?&]wa=off(&|$)/.test(location.search)) s.connected = false;
   if (f.state === 'empty') {
     // CU06: nobody owes, but who is due still reads FACTS §3.2 (Kyaligonza 4 days late, Lubowa 1): their last
     // orders (#0530, #0546) stay in the books, delivered and paid, from before this week.
