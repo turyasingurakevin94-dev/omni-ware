@@ -12,7 +12,8 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { custOf, nameOf, orderOf, shortName } from './data.ts';
-import { MonoText, chatFor, tellText } from './msg.tsx';
+import { chatFor, tellText } from './msg.ts';
+import { MonoText } from './OrderParts.tsx';
 import { orderPicture } from './picture.ts';
 import './sheets.css';
 

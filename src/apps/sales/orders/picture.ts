@@ -49,8 +49,9 @@ export function orderPicture(b: Books, o: Order, now: number): Promise<Blob> {
   });
   y += 4; line(y, INK, 1.5); y += 32;
   const total = orderTotal(o), due = Math.max(0, total - o.paid), settled = total > 0 && due === 0;
-  text(settled ? 'PAID' : o.paid > 0 ? 'LEFT TO PAY' : 'TO PAY', 32, y, `800 14px ${SANS}`, INK);
-  text(`UGX ${f(settled ? total : due)}`, w - 32, y, `700 20px ${MONO}`, settled ? '#0F6B43' : RED, 'right');
+  // A voided bill is never to pay: the picture says VOID and nothing owed (OR29).
+  text(o.voided ? 'VOID · NOTHING OWED' : settled ? 'PAID' : o.paid > 0 ? 'LEFT TO PAY' : 'TO PAY', 32, y, `800 14px ${SANS}`, INK);
+  text(`UGX ${f(o.voided ? 0 : settled ? total : due)}`, w - 32, y, `700 20px ${MONO}`, settled || o.voided ? '#0F6B43' : RED, 'right');
   y += 40;
   text({ checking: 'We are confirming your order with our suppliers.', buying: 'We are bringing in your order.', packing: 'We are packing your order.', road: 'Your order is on the way.', delivered: 'Your order is delivered.' }[o.stage], 32, y, `500 12px ${SANS}`, MUTE);
   text([b.shop.name, b.settings.shopPhone].filter(Boolean).join(' · '), 32, y + 20, `600 12px ${SANS}`, MUTE);

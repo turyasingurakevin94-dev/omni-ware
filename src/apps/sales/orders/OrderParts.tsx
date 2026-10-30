@@ -13,8 +13,8 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
-import { byRole, custOf, faceOfMember, member, overOf, shortItem, shortName, twinOf } from './data.ts';
-import { MonoText, chatFor, sayMoney } from './msg.tsx';
+import { backLines, byRole, custOf, faceOfMember, member, overOf, shortItem, shortName, twinOf } from './data.ts';
+import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
 
 /** OR09 · at the door: the photo square, where, who delivered, when. */
@@ -130,9 +130,8 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
 export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Element {
   const { b, o, ask } = p, ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager');
   const [busy, setBusy] = useState(false);
-  const line = o.lines.find((l) => l.price && ask.amount % l.price === 0 && ask.amount / l.price <= l.qty);
-  const n = line && line.price ? ask.amount / line.price : 0;
-  const what = line ? `${n} ${line.unit}${n > 1 ? 's' : ''}` : ask.amount.toLocaleString('en-US');
+  const back = backLines(o, ask);
+  const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''}`).join(' + ') : ask.amount.toLocaleString('en-US');
   const undo = async () => {
     setBusy(true);
     try { await act('withdrawBillAsk', ask.id); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
@@ -149,15 +148,23 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
   );
 }
 
-/** OR27 · the payment that brought more than the bill: what went to it, what is over. */
+/** OR27 · the payment that brought more than the bill: OR15's split bar, what went to it and what is over. */
 export function OverRow(p: { b: Books; p: Payment }): JSX.Element {
   const { cleared, over } = overOf(p.b, p.p), t = now.value, at = p.p.at;
   const m = ({ cash: ['Cash', 'cash'], momo: ['Mobile', 'mobile'], bank: ['Bank', 'bank'] } as const)[p.p.method];
+  const said = `${m[0]} · ${dayOf(at) === dayOf(t) ? `today ${clock(at)}` : when(at, t)}`, f = (n: number) => n.toLocaleString('en-US');
   return (
-    <div class="or-prow">
-      <span aria-hidden="true" class="w"><Icon name={m[1]} size={18} stroke={2} /></span>
-      <span><span>{`${m[0]} · ${dayOf(at) === dayOf(t) ? `today ${clock(at)}` : when(at, t)}`}</span><span>{`${cleared.toLocaleString('en-US')} to the bill · ${over.toLocaleString('en-US')} over`}</span></span>
-      <span class="mono">{p.p.amount.toLocaleString('en-US')}</span>
+    <div role="group" aria-label={`${said}, ${f(p.p.amount)}: ${f(cleared)} to the bill, ${f(over)} over`} class="or-ovr">
+      <div class="or-prow">
+        <span aria-hidden="true" class="w"><Icon name={m[1]} size={18} stroke={2} /></span>
+        <span><span>{said}</span><span>one payment, two parts</span></span>
+        <span class="mono">{f(p.p.amount)}</span>
+      </div>
+      <span aria-hidden="true" class="or-over-bar"><span style={{ flex: cleared }} /><span style={{ flex: over }} /></span>
+      <div class="or-ovr-k">
+        <span><span><i aria-hidden="true" />To the bill</span><span class="mono">{f(cleared)}</span></span>
+        <span><span><i aria-hidden="true" />Over</span><span class="mono">{f(over)}</span></span>
+      </div>
     </div>
   );
 }
@@ -170,13 +177,18 @@ export function TwinCard(p: { b: Books; o: Order }): JSX.Element | null {
     <div class={'or-twr' + (copy ? ' copy' : '')}>
       <span><b class="mono">{orderNo(x.id)}</b><span>{`Invoice · ${x.invoicedAt ? `${weekday(x.invoicedAt)} ${clock(x.invoicedAt)}` : ''}${copy ? ' · the copy' : ''}`}</span></span>
       {x.voided ? <s class="mono">{orderTotal(x).toLocaleString('en-US')}</s> : <span class="mono">{orderTotal(x).toLocaleString('en-US')}</span>}
-      {x.voided ? <span class="or-crow-p info">Voided</span> : x.paid >= orderTotal(x) ? <span class="or-crow-p good"><Icon name="check" size={11} stroke={3.2} />Paid</span> : <span class="or-crow-p warn">Owes</span>}
+      {x.voided ? <span class="or-crow-p bad">Void</span> : x.paid >= orderTotal(x) ? <span class="or-crow-p good"><Icon name="check" size={11} stroke={3.2} />Paid</span> : <span class="or-crow-p warn">Owes</span>}
     </div>
   );
   return (
-    <div role="group" aria-label={`Entered twice: ${orderNo(tw.orig.id)} kept, ${orderNo(tw.copy.id)} ${tw.copy.voided ? 'voided' : 'the copy'}`} class="or-twc">
+    <div role="group" aria-label={`Entered twice: ${orderNo(tw.orig.id)} kept, ${orderNo(tw.copy.id)} ${tw.copy.voided ? 'void' : 'the copy'}`} class="or-twc">
       <div class="or-twc-h">Entered twice</div>
       {row(tw.orig, false)}{row(tw.copy, true)}
     </div>
   );
+}
+
+/** The words, numbers and order numbers in mono, as the bubble draws them. */
+export function MonoText(p: { text: string }): JSX.Element {
+  return <>{p.text.split(/(#\d{4}|\d[\d,]*\d|\d)/).map((x, i) => (i % 2 ? <span key={i} class="mono or-m5">{x}</span> : x))}</>;
 }

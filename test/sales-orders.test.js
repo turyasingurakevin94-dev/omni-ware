@@ -15,6 +15,7 @@ const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const D = require(path.join(ROOT, 'src/apps/sales/orders/data.ts'));
 const V = require(path.join(ROOT, 'src/apps/sales/orders/view.ts'));
+const Msg = require(path.join(ROOT, 'src/apps/sales/orders/msg.ts'));
 
 const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(), now: s.now() }; };
 
@@ -66,6 +67,26 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     t.check(tw && tw.copy.id === 537 && tw.orig.id === 536, '#0537 stands at 9:15, the copy of #0536');
     const later = await at('?demo');
     t.check(D.orderOf(later.b, 537).voided, '#0537 is voided at 10:41 (Sold · October stays 12,480,000)');
+    /* OR29, OR30: after the void. */
+    const v = V.orderView(later.b, D.orderOf(later.b, 537), later.now);
+    t.check(v.tiles[0].struck && v.tiles[0].pill === 'Void' && v.tiles[1].k === 'Owes' && v.tiles[1].v === 0 && v.tiles[1].note === 'Ruth voided it today 9:20',
+      `OR29: Bill struck with Void · Owes 0 · Ruth voided it today 9:20 (got ${JSON.stringify(v.tiles[1])})`);
+    t.check(v.tellSub === 'the copy is struck out', 'OR29: Tell is about the copy');
+    const msg = Msg.tellText(later.b, D.orderOf(later.b, 537));
+    t.check(/entered twice, the same as #0536/.test(msg) && /Ruth struck it out, so nothing is owed on it/.test(msg) && /#0536 of 85,500 is paid/.test(msg), `OR29: the copy's message (got "${msg}")`);
+    const f = D.findOrders(later.b, '0537');
+    t.check(f.orders.map((o) => o.id).join() === '537,536', 'OR30: Find "0537" lists the copy and #0536');
+  }
+  /* OR22: which line comes back is read from the ask, not from the amount. */
+  {
+    const { b, now } = await at('?demo');
+    const o = D.orderOf(b, 548), ask = D.openAsk(b, o, 'credit');
+    const back = D.backLines(o, ask);
+    t.check(back.length === 1 && back[0].line.itemId === 'cement-hima-50' && back[0].n === 2, '#0548: 2 bags of cement come back (the ask\'s lines)');
+    t.check(D.backLines(o, { ...ask, lines: [] }).map((x) => x.n).join() === '2', 'an ask with no lines: read from its note');
+    t.check(D.backLines(o, { ...ask, lines: [], note: '' }).length === 0, 'an ask with neither: nothing guessed from the amount');
+    t.check(/2 bags of cement are coming back, damaged/.test(Msg.tellText(b, o)), 'OR22: the return message names the line');
+    t.check(V.orderView(b, o, now).lines[0].mark.k === 'back', 'OR22: the cement line is marked coming back');
   }
   /* The asks. */
   {
@@ -75,8 +96,8 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     await s.withdrawBillAsk(ask.id);
     const b2 = await s.books();
     t.check(!D.openAsk(b2, D.orderOf(b2, 552), 'cancel'), 'withdraw_cancel_ask: the ask is taken back');
-    const cr = await s.askBill({ orderId: 548, kind: 'credit', amount: 67000, reason: 'Damaged', note: 'Cement · Hima 50kg ×2' });
-    t.check(cr.kind === 'credit' && cr.amount === 67000, 'a credit note asked: 67,000');
+    const cr = await s.askBill({ orderId: 548, kind: 'credit', amount: 67000, reason: 'Damaged', note: 'Cement · Hima 50kg ×2', lines: [{ idx: 0, qty: 2 }] });
+    t.check(cr.kind === 'credit' && cr.amount === 67000 && cr.lines.length === 1 && cr.lines[0].idx === 0 && cr.lines[0].amount === 67000, 'a credit note asked: 67,000, its line kept as invoice_asks keeps it');
     const pf = await s.askPaymentFix({ paymentId: 9002, what: 'over', want: { over: 90000, how: 'change' }, note: '' });
     const b3 = await s.books();
     t.check(pf.what === 'over' && D.overAsk(b3, b3.payments.find((x) => x.id === 9002)), 'the paid-over is sent to Esther (payment_asks what over, 0165)');

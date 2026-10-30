@@ -29,6 +29,9 @@ export function extra(s: DemoState, f: DemoFlags): void {
   const b = s.books;
   const ret = b.billAsks.find((a) => a.orderId === 548 && a.kind === 'credit');
   if (ret) ret.reason = 'Damaged';
+  // FACTS §4.4: Ruth voided the copy #0537 today 9:20.
+  const copy537 = b.orders.find((o) => o.id === 537);
+  if (copy537 && copy537.voided) Object.assign(copy537, { voidedAt: t('9:20'), voidedBy: RUTH });
   // FACTS §4.5: #0498 (Kato, 24 Sep, Ruth's) is 1,505,000: 30 sheets, 2 wheelbarrows, 6 PVC pipes (OR03's Show 7 more).
   const o498 = b.orders.find((o) => o.id === 498);
   if (o498) {
@@ -42,7 +45,7 @@ export function extra(s: DemoState, f: DemoFlags): void {
   if (!f.clock || !MOMENTS.includes(f.clock)) return;
   const now = s.now;
   if (now < t('10:41')) b.orders = b.orders.filter((o) => o.placedAt <= now || o.counter);
-  if (now < t('9:20')) { const copy = b.orders.find((o) => o.id === 537); if (copy) copy.voided = false; }
+  if (now < t('9:20')) { const copy = b.orders.find((o) => o.id === 537); if (copy) Object.assign(copy, { voided: false, voidedAt: null, voidedBy: null }); }
   const o552 = b.orders.find((o) => o.id === 552);
   if (o552) play552(o552, now);
   if (now >= t('13:50')) {

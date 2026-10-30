@@ -80,12 +80,12 @@ export function ShowMore(p: { faces: Face[]; n: number; on: () => void }): JSX.E
 }
 
 /** A customer's own order (Find): the item's square or the stage's grey tile, when, the number and what, the amount and a pill. */
-export function CustOrderRow(p: { aisle?: string; icon?: IconName; title: string; sub: string; amount: number; pill: { text: string; tone: 'info' | 'good' | 'warn'; tick?: boolean }; on: () => void }): JSX.Element {
+export function CustOrderRow(p: { aisle?: string; icon?: IconName; title: string; sub: string; amount: number; struck?: boolean; pill: { text: string; tone: 'info' | 'good' | 'warn' | 'bad'; tick?: boolean }; on: () => void }): JSX.Element {
   return (
     <button type="button" class="or-crow" onClick={p.on}>
       {p.aisle ? <ItemSquare aisle={p.aisle} size={40} /> : <span aria-hidden="true" class="or-crow-ic"><Icon name={p.icon || 'receipt'} size={20} /></span>}
       <span class="ow-orow-t"><span class="ow-orow-n">{p.title}</span><span class="mono or-crow-s">{p.sub}</span></span>
-      <span class="or-crow-r"><span class="mono ow-orow-a">{fig(p.amount)}</span><span class={cx('or-crow-p', p.pill.tone)}>{p.pill.tick && <Icon name="check" size={11} stroke={3.2} />}{p.pill.text}</span></span>
+      <span class="or-crow-r">{p.struck ? <s class="mono ow-orow-a or-struck">{fig(p.amount)}</s> : <span class="mono ow-orow-a">{fig(p.amount)}</span>}<span class={cx('or-crow-p', p.pill.tone)}>{p.pill.tick && <Icon name="check" size={11} stroke={3.2} />}{p.pill.text}</span></span>
     </button>
   );
 }

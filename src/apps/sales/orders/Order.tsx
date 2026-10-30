@@ -43,7 +43,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const k = kept(o), waitN = o.lines.filter(waitsRuth).length;
   const pending = (o.stage === 'checking' && waitN > 0 && !o.toldTotal) || !!fresh;
   const op = delivered ? overPaymentOf(b, o) : null;
-  const tiles = op ? [v.tiles[0], { k: 'Paid over', v: overOf(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${overOf(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
+  const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: overOf(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${overOf(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
   const acts: Act[] = [];
   if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone ? 'tel:' + phone.replace(/\s/g, '') : undefined });
   else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });

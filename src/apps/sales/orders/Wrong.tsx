@@ -18,7 +18,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { openTwice, SendBtn, Who } from './Change.tsx';
 import { byRole, custOf, faceOfMember, nameOf, orderOf, shortName, twinOf } from './data.ts';
-import { chatFor } from './msg.tsx';
+import { chatFor } from './msg.ts';
 import { StageDots } from './local-Track.tsx';
 import './sheets.css';
 
@@ -103,7 +103,8 @@ function ReturnSheet(p: { id: number }): JSX.Element | null {
     setBusy(true);
     try {
       const note = lines.filter((l) => qty[l.lineId]).map((l) => `${l.name} ×${qty[l.lineId]}`).join(', ');
-      const r = await act('askBill', { orderId: o.id, kind: 'credit', amount, reason: WHY_BACK[why], note });
+      const back = lines.filter((l) => qty[l.lineId]).map((l) => ({ idx: o.lines.indexOf(l), qty: qty[l.lineId] }));
+      const r = await act('askBill', { orderId: o.id, kind: 'credit', amount, reason: WHY_BACK[why], note, lines: back });
       done();
       toast.show(r.kept ? 'Kept on this phone' : `Asked ${rn} for the credit note`, { kind: r.kept ? 'warn' : 'ok' });
     } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }

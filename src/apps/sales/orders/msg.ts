@@ -3,12 +3,11 @@
  * manifest: "the message is built from the order's state", no reason to pick). One sentence per
  * fact: a new price, where it is, what was not found, what is paid.
  */
-import type { JSX } from 'preact';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Order } from '../../../core/types.ts';
-import { byRole, custOf, dropped, member, openAsk, shortItem, shortName } from './data.ts';
+import { backLines, byRole, custOf, dropped, member, openAsk, shortItem, shortName, twinOf } from './data.ts';
 import { untold } from './view.ts';
 
 export const sayMoney = (n: number): string => Math.round(n).toLocaleString('en-US');
@@ -24,10 +23,17 @@ export function tellText(b: Books, o: Order): string {
   // A return asked: what is coming back, and who decides the credit (OR22).
   const ret = openAsk(b, o, 'credit');
   if (ret) {
-    const l = o.lines.find((x) => x.price && ret.amount % x.price === 0 && ret.amount / x.price <= x.qty), n = l && l.price ? ret.amount / l.price : 0;
-    const ruth = byRole(b, 'manager');
-    const what = l ? `${n} ${l.unit}${n > 1 ? 's' : ''} of ${plural(l.name).replace(/s$/, '').toLowerCase()}` : 'the items';
-    return `Hello ${who}, about order ${orderNo(o.id)}: ${what} ${n > 1 ? 'are' : 'is'} coming back${ret.reason ? `, ${ret.reason.toLowerCase()}` : ''}. ${firstWord(ruth?.name || 'The manager')} decides the credit note of ${sayMoney(ret.amount)}.`;
+    const back = backLines(o, ret), ruth = byRole(b, 'manager');
+    const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''} of ${plural(line.name).replace(/s$/, '').toLowerCase()}`).join(' and ') : 'the items';
+    const many = back.length > 1 || (back[0]?.n || 0) > 1;
+    return `Hello ${who}, about order ${orderNo(o.id)}: ${what} ${many ? 'are' : 'is'} coming back${ret.reason ? `, ${ret.reason.toLowerCase()}` : ''}. ${firstWord(ruth?.name || 'The manager')} decides the credit note of ${sayMoney(ret.amount)}.`;
+  }
+  // A voided bill: struck out, nothing owed on it; a copy says which bill stands and where it is (OR29).
+  if (o.voided) {
+    const tw = twinOf(b, o, true), vn = firstWord(member(b, o.voidedBy)?.name || byRole(b, 'manager')?.name || 'The manager');
+    const kept1 = tw && tw.orig.id !== o.id ? tw.orig : null, left = kept1 ? orderOwes(kept1) : 0;
+    return `Hello ${who}, about bill ${orderNo(o.id)}: ${kept1 ? `it was entered twice, the same as ${orderNo(kept1.id)}. ` : ''}${vn} struck it out, so nothing is owed on it.`
+      + (kept1 ? ` ${orderNo(kept1.id)} of ${sayMoney(orderTotal(kept1))} ${left > 0 ? `has ${sayMoney(left)} left to pay` : 'is paid'}.` : '');
   }
   // An owing bill: what is paid and what is left (OR24's order).
   if (o.invoiced && !o.voided && o.paid > 0 && orderOwes(o) > 0) return `Hello ${who}, about bill ${orderNo(o.id)} of ${sayMoney(total)}: ${sayMoney(o.paid)} paid, ${sayMoney(orderOwes(o))} left to pay.`;
@@ -46,11 +52,6 @@ export function tellText(b: Books, o: Order): string {
   const paid = o.paid >= total ? 'paid in full' : o.paid > 0 ? `${sayMoney(o.paid)} paid, ${sayMoney(total - o.paid)} to pay` : 'nothing paid yet';
   out.push(ch ? `${cap(paid)}.` : `Total ${sayMoney(total)}, ${paid}.`);
   return `Hello ${who}, about order ${orderNo(o.id)}: ` + out.map((s, i) => (i ? cap(s) : s)).join(' ');
-}
-
-/** The words, numbers and order numbers in mono, as the bubble draws them. */
-export function MonoText(p: { text: string }): JSX.Element {
-  return <>{p.text.split(/(#\d{4}|\d[\d,]*\d|\d)/).map((x, i) => (i % 2 ? <span key={i} class="mono or-m5">{x}</span> : x))}</>;
 }
 
 /** The customer's WhatsApp chat: theirs by customer, else by the order's phone. */

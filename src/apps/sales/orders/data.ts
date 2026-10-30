@@ -56,6 +56,15 @@ export function stageCounts(b: Books, now: Ms): Record<Stage, number> {
 export const openAsk = (b: Books, o: Order, kind: BillAsk['kind']): BillAsk | null =>
   b.billAsks.find((a) => a.orderId === o.id && a.kind === kind && a.status === 'sent') || null;
 
+/** What a return ask brings back, line by line: from the ask's lines, else from its note ("Cement · Hima 50kg ×2"). Never guessed from the amount. */
+export function backLines(o: Order, ask: BillAsk): { line: Line; n: number }[] {
+  if (ask.lines && ask.lines.length) return ask.lines.map((x) => ({ line: o.lines[x.idx], n: x.qty })).filter((x) => x.line && x.n > 0);
+  return (ask.note || '').split(/,\s*/).map((part) => {
+    const m = /^(.*?)\s*×\s*(\d+)$/.exec(part.trim()), line = m ? o.lines.find((l) => l.name === m[1]) : undefined;
+    return { line: line as Line, n: m ? Number(m[2]) : 0 };
+  }).filter((x) => x.line && x.n > 0);
+}
+
 /** "10:16" today, "29 Sep" before (a row's time placed). */
 export const placedWhen = (o: Order, now: Ms): string => (dayOf(o.placedAt) === dayOf(now) ? clock(o.placedAt) : dayLabel(o.placedAt).replace(/^\w+ /, ''));
 /** "today 8:50", "Fri 15:10", "Mon 11:05": when it was delivered. */
@@ -145,7 +154,12 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
   const t = q.trim().toLowerCase();
   if (!t) return { customer: null, orders: [] };
   const n = Number(t.replace(/^#/, ''));
-  if (/^#?\d+$/.test(t)) return { customer: null, orders: b.orders.filter((o) => !o.qa && (o.id === n || orderNo(o.id).includes(t))) };
+  if (/^#?\d+$/.test(t)) {
+    // A number search for a voided copy lists the bill that stands beside it (OR30).
+    const hit = b.orders.filter((o) => !o.qa && (o.id === n || orderNo(o.id).includes(t)));
+    const twins = hit.filter((o) => o.voided).map((o) => twinOf(b, o, true)?.orig).filter((x): x is Order => !!x && !hit.includes(x));
+    return { customer: null, orders: [...hit, ...twins] };
+  }
   const c = b.customers.find((x) => !x.qa && x.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(t))) || null;
   if (c) return { customer: c, orders: b.orders.filter((o) => o.customerId === c.id && !o.qa && !o.voided && !o.cancelled) };
   return { customer: null, orders: b.orders.filter((o) => !o.qa && !isGenericName(o.client.name) && o.client.name.toLowerCase().includes(t)) };
