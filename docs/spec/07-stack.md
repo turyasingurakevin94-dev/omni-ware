@@ -82,12 +82,17 @@ Each file stays at 200–500 lines; the size guard measures `src/`, not the buil
 
 | Measure | Today (Store) | New app |
 |---|---|---|
-| Page, compressed | 208 KB (`store.html`, 773 KB raw) | **at most 80 KB**, Preact included |
+| Page, compressed | 208 KB (`store.html`, 773 KB raw) | **at most 200 KB**, Preact included (was 80 KB; Kevin, 30 Oct 2026, see below) |
 | Supabase client | 54 KB, cached once | same file, same cache |
 | Largest source file | 6,296 lines | 500 (hard limit 1,000) |
 | A rule written in more than one app | money block in 4 apps | 0 |
 
 The build check (§6) fails a page that goes over budget.
+
+**Budget changed (Kevin, 2026-10-30).** The Sales canvas's 147 screens measured about 30 KB compressed per tab, so six tabs would not fit in 80 KB. Kevin chose, in order:
+1. fold each tab's own copies of a part into `src/ui`, so nothing ships twice;
+2. raise the page budget to 200 KB, still under today's 192–266 KB pages, so one page works now;
+3. then load each tab when it is first opened, so the first screen is small on bad signal. A live update must then carry the tab files with the page.
 
 ---
 
