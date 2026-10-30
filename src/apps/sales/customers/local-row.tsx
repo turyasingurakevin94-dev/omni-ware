@@ -5,7 +5,8 @@
  *   - a chip under the sub ("125k checked", the hatched dot);
  *   - the figure's word ("to take", "owes") or a two-line note ("+320k / #0551");
  *   - the sub in a tone (late amber, due green, being checked blue);
- *   - a ring that has not started still shows its 3 px start (Ring44).
+ *   - a ring that has not started still shows its 3 px start (Ring44);
+ *   - a gone-quiet row with its gap as two bars, Usually and Now (the agent's QuietClients; CU09).
  * And the list group's header (S09's GroupHead with a word after the sum, or words alone).
  */
 import type { ComponentChildren, JSX } from 'preact';
@@ -24,7 +25,7 @@ export interface RowProps {
   /** The name for labels ("Kyaligonza and Sons"). */
   label: string;
   sub: string;
-  subTone?: 'late' | 'due' | 'info' | null;
+  subTone?: 'late' | 'due' | 'info' | 'quiet' | null;
   chip?: string | null;
   fig?: string | null;
   word?: string | null;
@@ -34,7 +35,7 @@ export interface RowProps {
   onAct?: () => void;
 }
 
-const SUB = { late: '#95530C', due: '#0F6B43', info: '#1A5A8A' } as const;
+const SUB = { late: '#95530C', due: '#0F6B43', info: '#1A5A8A', quiet: '#8E2A22' } as const;
 
 export function Row(p: RowProps): JSX.Element {
   return (
@@ -67,6 +68,20 @@ export function Group(p: { dot?: string; hatch?: boolean; title: string; count?:
       <span class="mono cu-gh-n">{p.count != null ? p.count : ''}</span>
       {p.sum != null && <span class="mono cu-gh-sum"><b>{p.sum}</b> <span>{p.word}</span></span>}
       {p.right && <span class={cx('cu-gh-r', p.railGap && 'rail')}>{p.right}</span>}
+    </div>
+  );
+}
+
+/** A gone-quiet row: the row, then their usual gap and how long it has been, as two bars on one scale (CU09). */
+export function QuietRow(p: RowProps & { every: number; now: number; scale: number }): JSX.Element {
+  const w = (n: number) => `${Math.round((n / Math.max(1, p.scale)) * 100)}%`;
+  return (
+    <div class="cu-qrow">
+      <Row {...p} />
+      <span role="img" aria-label={`Usually orders every ${p.every} days; now ${p.now} days without an order`} class="cu-gap">
+        <span>Usually</span><span aria-hidden="true"><i class="good" style={{ width: w(p.every) }} /></span><span class="good">{`${p.every} d`}</span>
+        <span>Now</span><span aria-hidden="true"><i class="warn" style={{ width: w(p.now) }} /></span><span class="warn">{`${p.now} d`}</span>
+      </span>
     </div>
   );
 }
