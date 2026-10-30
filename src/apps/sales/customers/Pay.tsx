@@ -13,7 +13,7 @@ import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
 import { MethodPicker } from '../../../ui/PayMethod.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { isDataError, type PayArgs, type PayResult } from '../../../core/datasource.ts';
-import { changeFor, money, orderOwes, payPlan, settleOver } from '../../../core/money.ts';
+import { changeFor, money, orderOwes, payPlan, settleOver, splitPayment } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Customer, Method, Order } from '../../../core/types.ts';
@@ -78,14 +78,14 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const handed = method === 'cash' && given !== 'exact' ? given : amount;
   const plan = payPlan(payable, handed);
   const choice = method !== 'cash' ? amount > payable : amount >= payable && handed > payable;
-  const settle = choice ? settleOver(payable, handed, how) : { moneyIn: Math.min(amount, payable), change: method === 'cash' ? Math.max(0, changeFor(amount, handed)) : 0, deposit: 0, refused: false };
-  let left = Math.min(amount, payable);
+  // What goes to the debt (money.ts payPlan) and how it spreads over the bills (money.ts splitPayment, as receive_payment).
+  const applied = payPlan(payable, amount).toDebt, after = Math.max(0, owes - applied);
+  const settle = choice ? settleOver(payable, handed, how) : { moneyIn: applied, change: method === 'cash' ? Math.max(0, changeFor(amount, handed)) : 0, deposit: 0, refused: false };
+  const split = splitPayment(open.map((x) => ({ id: x.id, left: x.left })), applied, picks);
   const rows: PaysRow[] = open.map((x) => {
-    const on = !picks || picks.includes(x.id), applied = on ? Math.min(left, x.left) : 0;
-    if (on) left -= applied;
-    return { id: x.id, day: x.day, age: x.age, left: x.left, applied, on };
+    const on = !picks || picks.includes(x.id), hit = split.find((y) => y.id === x.id);
+    return { id: x.id, day: x.day, age: x.age, left: x.left, applied: hit ? hit.applied : 0, on };
   });
-  const applied = Math.min(amount, payable), after = Math.max(0, owes - applied);
 
   const toggle = (id: number) => {
     const cur = picks || open.map((x) => x.id), next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].sort((x, y) => open.findIndex((z) => z.id === x) - open.findIndex((z) => z.id === y));

@@ -110,23 +110,24 @@ export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null
         <button type="button" aria-label="Find someone else" onClick={p.onFind}><Duo i={phSearch} size={18} color="#5F6980" /></button></span>
       <div role="radiogroup" aria-label="Who owes the rest" class="cu-who-list">
         {p.opts.map((o) => {
-          const t = TINTS[o.tint], on = p.chosen === o.id;
-          return (
+          const t = TINTS[o.tint], on = p.chosen === o.id, cr = p.credit;
+          return [
             <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => p.onPick(o.id)}>
               <span aria-hidden="true" class="cu-who-av" style={{ background: t.bg, color: t.fg }}>{o.initials}</span>
               <span class="cu-who-t"><span>{o.name}</span><span>{o.sub}</span></span>
               {on && <span class="mono cu-who-amt">{money(p.share)}</span>}
               <span aria-hidden="true" class={cx('cu-choice-dot', on && 'on')}>{on && <Icon name="check" size={13} stroke={3.2} />}</span>
-            </button>
-          );
+            </button>,
+            // What the chosen one would owe, under their own row.
+            on && cr && cr.limit ? (
+              <span key={`${o.id}-credit`} role="img" aria-label={cr.label} class="cu-who-credit">
+                <span aria-hidden="true"><span style={{ flex: Math.round(cr.owes / 1000) }} /><span style={{ flex: Math.max(1, Math.round(p.share / 1000)) }} /><span style={{ flex: Math.max(0, Math.round((cr.limit - cr.owes - p.share) / 1000)) }} /></span>
+                <span>{'then owes '}<b class="mono">{money(cr.owes + p.share)}</b>{` of ${cr.limit >= 1e6 ? `${cr.limit / 1e6}M` : money(cr.limit)}`}</span>
+              </span>
+            ) : null,
+          ];
         })}
       </div>
-      {p.credit && p.credit.limit ? (
-        <span role="img" aria-label={p.credit.label} class="cu-who-credit">
-          <span aria-hidden="true"><span style={{ flex: Math.round(p.credit.owes / 1000) }} /><span style={{ flex: Math.max(1, Math.round((p.share) / 1000)) }} /><span style={{ flex: Math.max(0, Math.round((p.credit.limit - p.credit.owes - p.share) / 1000)) }} /></span>
-          <span>{'then owes '}<b class="mono">{money(p.credit.owes + p.share)}</b>{` of ${p.credit.limit >= 1e6 ? `${p.credit.limit / 1e6}M` : money(p.credit.limit)}`}</span>
-        </span>
-      ) : null}
     </div>
   );
 }
