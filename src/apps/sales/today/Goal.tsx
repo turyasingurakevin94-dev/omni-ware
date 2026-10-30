@@ -92,7 +92,7 @@ export function Goal(): JSX.Element {
             const sub = m.kind === 'due' ? `${m.d.late} days late · their usual` : m.kind === 'chat' ? `asked for ${countWord(m.qty, m.unit, (b.items.find((i) => i.unit === m.unit) || { name: '' }).name)}`
               : m.kind === 'ask' ? `${countWord(m.ask.requests[0].qty, it ? it.unit : '', '')} of ${(it ? it.name : m.ask.name).split(' · ')[0].toLowerCase()}` : '';
             const on = m.kind === 'due' ? () => { nav.home(); setTimeout(scrollToNext, 60); }
-              : m.kind === 'chat' ? () => go('sell/order', { customer: m.c.id, from: 'chat' })
+              : m.kind === 'chat' ? () => go('sell/order', { customer: m.c.id, from: 'chat', chat: m.chat })
               : m.kind === 'ask' ? () => go('today/asks', { id: m.ask.id }) : () => go('customers/customer', { id: m.c.id });
             return (
               <Tap key={m.c.id} on={on} class="td-goal-row">

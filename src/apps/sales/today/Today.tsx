@@ -24,7 +24,7 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, flush, kept, now, online } from '../shell/store.ts';
-import { custOf, doneWeek, faceOf, mine, needs, owing, soldIn, takeHeld, tiles, total } from './data.ts';
+import { custOf, doneWeek, faceOf, mine, needs, owing, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
 import { First } from './First.tsx';
 import { go } from './go.ts';
 import { useLocal } from './local.ts';
@@ -122,7 +122,7 @@ export function Today(): JSX.Element {
           }))}>
             {!off && held && heldOwing ? (
               <Mini face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`#${String(held.id).padStart(4, '0')} · Not paid yet`} subMono
-                pill={<ActionPill tone="warn" word="Take" amount={short(takeHeld(heldOwing))} />} on={() => go('sell/order', { customer: held.customerId })} />
+                pill={<ActionPill tone="warn" word="Take" amount={short(takeHeld(heldOwing))} />} on={() => go('customers/pay', takeOf(heldOwing, false))} />
             ) : paid.length > 0 ? (
               <Mini faces={paid.map((p) => faceOf(b, p))} name={`${paid.length} paid since morning`} sub={paid.map((p) => firstWord((custOf(b, p.customerId) || { name: '' }).name)).join(' · ')}
                 pill={<span class="td-mini-pill">{'+' + money(paid.reduce((s, p) => s + p.amount, 0))}</span>} on={() => nav.push('today/day', { view: 'money' })} />

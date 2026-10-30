@@ -2,7 +2,7 @@
  * TD19, TD20 · Asked of Sourcing: what Grace asked Moses for, as a five-step funnel (Asked · Looking ·
  * Found · Priced · Listed); what is ready to tell first (Tell, or start their order), then what is with
  * Moses, each on its own steps. In her first week: the ghost of an ask, one way in, and her searches
- * that found nothing this week. One ask opens on its own screen (Ask.tsx) when it is looking or listed.
+ * that found nothing this week. Every ask opens on its own screen (Ask.tsx, today/asks { id }).
  */
 import type { JSX } from 'preact';
 import { money } from '../../../core/money.ts';
@@ -20,7 +20,7 @@ import { books, now } from '../shell/store.ts';
 import { Ask, tellAsk } from './Ask.tsx';
 import { openAsk, prefillFromChats } from './AskNew.tsx';
 import { askValue, weekStart } from './data.ts';
-import { askAisle } from './First.tsx';
+import { askAisle } from './data.ts';
 import { useLocal } from './local.ts';
 import { ASK_STAGES } from './You.tsx';
 import './asks.css';
@@ -159,17 +159,15 @@ export function Asks(p: ScreenProps): JSX.Element {
                     const body = (
                       <>
                         <span class="td-withml-h">
-                          <ItemSquare aisle={askAisle(a.name)} size={38} icon={22} />
+                          <ItemSquare aisle={askAisle(b, a)} size={38} icon={22} />
                           <span class="td-withml-t"><span>{a.name}</span>
                             <span>{c && <Avatar initials={c.initials} tint={c.tint} size={18} style={PLAIN} />}{`${c ? firstWord(c.name) : ''} · ${askQty(a)} · ${why}`}</span></span>
-                          {a.status === 'looking' && <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>}
+                          <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
                         </span>
                         <Steps at={at} label={STEP_WORD[a.status]} />
                       </>
                     );
-                    return a.status === 'looking'
-                      ? <Tap key={a.id} on={() => nav.push('today/asks', { id: a.id })} class="td-withml">{body}</Tap>
-                      : <div key={a.id} class="td-withml">{body}</div>;
+                    return <Tap key={a.id} on={() => nav.push('today/asks', { id: a.id })} class="td-withml">{body}</Tap>;
                   })}
                 </div>
               </>
@@ -189,7 +187,7 @@ function Ready(p: { b: Books; a: SourcingAsk }): JSX.Element {
   return (
     <div class="td-ready">
       <Tap on={open} class="td-ready-h">
-        <ItemSquare aisle={it ? it.aisle : askAisle(a.name)} size={44} icon={26} />
+        <ItemSquare aisle={askAisle(b, a)} size={44} icon={26} />
         <span class="td-ready-t"><span>{it ? it.name : a.name}</span>
           <span><Icon name="check" size={12} stroke={3} />{`Listed by ${ml ? firstWord(ml.name) : 'Sourcing'} · ${dayOf(listedAt) === dayOf(now.value) ? '' : weekday(listedAt) + ' '}${clock(listedAt)}`}</span></span>
         {it && it.price != null && <span class="td-find-fig"><b class="mono big">{money(it.price)}</b><small>{`a ${it.unit === 'pc' ? 'piece' : it.unit}`}</small></span>}
@@ -198,7 +196,7 @@ function Ready(p: { b: Books; a: SourcingAsk }): JSX.Element {
         <span class="td-ready-who"><Avatar initials={c.initials} tint={c.tint} size={24} style={PLAIN} /><span>{`${firstWord(c.name)} asked for ${askQty(a)}`}</span><b class="mono">{money(askValue(b, a))}</b></span>
       )}
       <div class="td-ready-acts">
-        {c && <button type="button" class="td-ready-tell" onClick={() => { void tellAsk(b, a, askQty(a), true); }}><Duo i={phWhatsapp} size={18} color="#FFFFFF" />{`Tell ${firstWord(c.name)}`}</button>}
+        {c && <button type="button" class="td-ready-tell" onClick={() => { void tellAsk(b, a, askQty(a), false); }}><Duo i={phWhatsapp} size={18} color="#FFFFFF" />{`Tell ${firstWord(c.name)}`}</button>}
         <Tap on={open} class="td-ready-start"><Icon name="plus" size={15} stroke={2.6} />Start their order</Tap>
       </div>
     </div>

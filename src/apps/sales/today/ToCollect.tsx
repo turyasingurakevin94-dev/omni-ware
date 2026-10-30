@@ -17,7 +17,7 @@ import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, now } from '../shell/store.ts';
 import { TitleHead } from './bits.tsx';
-import { holdOf, owing, takeHeld, type Owing } from './data.ts';
+import { holdOf, owing, promiseToShow, takeHeld, takeOf, type Owing } from './data.ts';
 import { go } from './go.ts';
 import './collect.css';
 
@@ -44,7 +44,7 @@ export function ToCollect(): JSX.Element {
         </div>
       </TitleHead>
     }>
-      {past.length > 0 && <SectionHead title="Past 21 days" right={<PlayAll count={past.length} amount={short(take)} on={() => go('customers/pay', { customer: past[0].c.id })} />} />}
+      {past.length > 0 && <SectionHead title="Past 21 days" right={<PlayAll count={past.length} amount={short(take)} on={() => go('customers/pay', { ...takeOf(past[0], true), then: past.slice(1).map((w) => w.c.id).join(',') })} />} />}
       {past.length > 0 && <GroupCard>{past.map((w) => <OweRow key={w.c.id} b={b} w={w} past />)}</GroupCard>}
       {under.length > 0 && <SectionHead title="Under 21 days" meta={money(underSum)} after />}
       {under.length > 0 && <GroupCard>{under.map((w) => <OweRow key={w.c.id} b={b} w={w} />)}</GroupCard>}
@@ -56,14 +56,13 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
   const { b, w } = p, c = w.c, today = dayOf(now.value), who = c.name.replace('&', 'and');
   const open = () => go('customers/customer', { id: c.id });
   const takeBills = w.bills.filter((x) => x.past && !x.checked), checker = b.members.find((m) => m.role === 'accounts');
-  // A promise shows on the day it falls due (Mukono: today); a later one is on the customer's own screen.
-  const promise = b.promises.filter((x) => x.customerId === c.id && x.on === today)[0];
+  const promise = promiseToShow(b, c, today);
   const chat = chats.value ? chats.value.chats.find((x) => x.customerId === c.id) : null;
   const amount = p.past ? w.take : w.held ? takeHeld(w) : 0;
   const sub = p.past && takeBills.length === 1 && takeBills[0].orderId ? `${orderNo(takeBills[0].orderId)} · ${takeBills[0].age} days`
     : amount > 0 ? `${w.age} days · ${w.bills.length} bills`
     : <><span class="mono">{money(w.owes)}</span>{` · hold ${dayLabel(holdOf(w, b) || today)}`}</>;
-  const pay = () => (w.held ? go('sell/order', { customer: c.id }) : go('customers/pay', { customer: c.id }));
+  const pay = () => go('customers/pay', takeOf(w, !!p.past));
   return (
     <div class={'td-owe' + (amount > 0 && !(w.checked > 0 || w.held || promise) ? ' tight' : '')}>
       <div class="td-owe-r">
@@ -81,8 +80,9 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
             <Tap on={open} class="td-owe-chk"><span><Avatar initials={checker.initials} tint={checker.tint} size={20} /><span class="mono">{money(w.checked)}</span>{` being checked · ${firstWord(checker.name)}`}</span></Tap>
           )}
           {w.held && <span class="mono td-owe-sum">{`${money(w.owes)} + ${orderNo(w.held.id)} ${money(takeHeld(w) - w.owes)}`}</span>}
-          {promise && promise.amount && (
-            <span class="td-owe-prom"><Icon name="calendar" size={13} stroke={2.2} />Promised <span class="mono">{money(promise.amount)}</span>{' · today'}</span>
+          {promise && (
+            <span class={'td-owe-prom' + (promise.on < today ? ' missed' : '')}><Icon name="calendar" size={13} stroke={2.2} />
+              {promise.amount ? <>Promised <span class="mono">{money(promise.amount)}</span></> : 'Promised to pay'}{promise.on === today ? ' · today' : ` · missed ${dayLabel(promise.on)}`}</span>
           )}
         </div>
       )}

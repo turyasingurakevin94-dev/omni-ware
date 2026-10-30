@@ -14,6 +14,11 @@ export function go(id: string, params: Params = {}): void {
   }
 }
 
+/** ROUTES `items`: what to put on the order, as Sell reads it (a JSON list of { itemId, qty }). */
+export function itemsParam(itemId: string, qty: number = 1): string {
+  return JSON.stringify([{ itemId, qty }]);
+}
+
 /** A phone number for tel: (0772 418 220 → +256772418220). */
 export function tel(phone: string): string {
   const d = phone.replace(/[^0-9]/g, '');

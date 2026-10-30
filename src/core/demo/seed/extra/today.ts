@@ -4,7 +4,7 @@
  * (FACTS §1 "Boards allowed to show another moment").
  *
  *   always            #0528 being checked by Esther (FACTS §3.1: an ask to Accounts on that bill, TD05);
- *                     what Grace's phone keeps (searches, what she opened lately, alerts on: TD11, TD18, TD20)
+ *                     what Grace's phone keeps (searches, what she opened lately: TD11, TD20); her pushes off on her first day
  *   &state=first-day  TD06, TD20: Thu 1 Oct 8:00 ("30 days left"); nobody's chat waits on her; no drafts,
  *                     no asks of hers
  *   &clock=15:40      TD07 all told: #0552 delivered 14:05 and paid; #0559 Lubowa placed 13:50 (Ruth's 880,000);
@@ -22,7 +22,6 @@ import { L, O, P, pay } from '../build.ts';
 import { d, t } from '../clock.ts';
 import { GGABA, KYALIGONZA, LUBOWA, MUKONO } from '../orders-live.ts';
 import { BRIAN, COUNTER, ESTHER, GRACE, MOSES, RUTH, SSALI } from '../people.ts';
-import { AISLES } from '../items.ts';
 import { answerAll, busy, goalHit } from './today-whatif.ts';
 
 /** What the Today tab keeps on the phone (src/apps/sales/today/local.ts), seeded. */
@@ -31,15 +30,12 @@ export interface TodayLocal {
   searches: string[];
   misses: { words: string; n: number; at: number }[];
   lately: { kind: 'order' | 'customer' | 'item'; id: string }[];
-  alerts: boolean;
   bigText: boolean;
   drafts?: unknown[];
 }
 
 export function extra(s: DemoState, f: DemoFlags): void {
   const b = s.books, st = f.state;
-  // TD06, TD11, TD14: the shop's aisles, busiest first, with their item counts (FACTS §6; not in Books yet).
-  (b as typeof b & { aisles?: typeof AISLES }).aisles = AISLES.map((a) => ({ ...a }));
   // TD05: #0528 is being checked by Esther (Ggaba's 125,000 inside what they owe).
   if (!b.paymentAsks.some((a) => a.orderId === 528)) {
     b.paymentAsks.push({ id: 'pa-0528', paymentId: null, customerId: GGABA, orderId: 528, what: 'bill', amount: 125000, status: 'sent', by: ESTHER, at: d('2026-10-16', '11:00') });
@@ -56,13 +52,23 @@ export function extra(s: DemoState, f: DemoFlags): void {
       .forEach(([id, day, amount]) => b.payments.push({ id, at: d(day, '16:30'), day, amount, method: 'cash', customerId: null, orderId: null, by: GRACE, ref: '', qa: false }));
   }
   // TD14 "Or open an aisle": what a wheelbarrow is bought with in the shop's orders. Six September counter sales
-  // with cement, one with PVC pipe (with FACTS' own orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 1 · Paint 1).
+  // with cement, two with PVC pipe (with FACTS' own orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 2 · Paint 1).
   if (!b.orders.some((o) => o.id === 450)) {
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       const at_ = d(`2026-09-${String(20 + i).padStart(2, '0')}`, '10:00');
       b.orders.push(O({ id: 450 + i, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true,
         lines: [L('wheelbarrow-hd', 1), i < 6 ? L('cement-hima-50', 2) : L('pvc-half-6m', 2)], paid: -1 }));
     }
+  }
+  // TD06, TD11 "Sells most": the shop's counter sales of iron sheets, cement and nails, so that by money Roofing,
+  // Cement and Fasteners sell most in September (TD06, first day of October: "last month") and in October so far
+  // (TD11: "this month", ahead of Grace's emulsion paint). Counter sales are the counter team's: in none of Grace's figures.
+  if (!b.orders.some((o) => o.id === 480)) {
+    ([[480, '2026-09-05', 'iron-g28-3m', 110], [481, '2026-09-08', 'nails-4-25kg', 16], [485, '2026-09-12', 'cement-hima-50', 45],
+      [482, '2026-10-03', 'iron-g28-3m', 210], [483, '2026-10-06', 'cement-hima-50', 270], [484, '2026-10-08', 'nails-4-25kg', 60]] as const).forEach(([id, day, item, qty]) => {
+      const at_ = d(day, '12:00');
+      b.orders.push(O({ id, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true, lines: [L(item, qty)], paid: -1 }));
+    });
   }
   // TD13 "Often with this hinge · in the shop's orders": 8 counter sales with the Zawaina hinge in September,
   // 7 of them with wood screws, 4 with a door handle set.
@@ -83,13 +89,16 @@ export function extra(s: DemoState, f: DemoFlags): void {
     fan.log = [{ status: 'asked', at: fan.createdAt, by: GRACE }, { status: 'looking', at: fan.stageAt, by: MOSES }];
     (fan.tried[0] as { answer?: string }).answer = 'none';
   }
+  // TD22 "Send a photo of the tin": the paint's photo in the shop's bucket (the demo's 'aisle:<Aisle>' stands for it).
+  const paintItem = paint && paint.itemId ? b.items.find((i) => i.id === paint.itemId) : undefined;
+  if (paintItem && !paintItem.image) paintItem.image = 'aisle:' + paintItem.aisle;
   if (paint && !paint.log) {
     paint.createdAt = d('2026-10-12', '9:00'); paint.requests[0].at = paint.createdAt;
     paint.log = [{ status: 'asked', at: paint.createdAt, by: GRACE }, { status: 'looking', at: d('2026-10-13', '9:30'), by: MOSES },
       { status: 'found', at: d('2026-10-15', '11:00'), by: MOSES }, { status: 'priced', at: d('2026-10-16', '15:00'), by: RUTH }, { status: 'listed', at: paint.stageAt, by: MOSES }];
   }
   const local: TodayLocal = {
-    told: [], searches: ['hinge', 'Kato', 'wheelbarow'], alerts: true, bigText: false,
+    told: [], searches: ['hinge', 'Kato', 'wheelbarow'], bigText: false,
     misses: [['ppr pipe 25mm', 3], ['ceiling fan 56', 2], ['solar pump', 2], ['gate hinge, heavy', 1], ['tile cutter', 1]].map(([w, n], i) => ({ words: w as string, n: n as number, at: t('9:00') - i * 3600000 })),
     lately: [{ kind: 'order', id: '552' }, { kind: 'customer', id: MUKONO }, { kind: 'item', id: 'cement-hima-50' }],
   };
@@ -109,7 +118,7 @@ function firstDay(s: DemoState, local: TodayLocal): void {
   s.now = at('2026-10-01', '8:00'); b.at = s.now;
   s.chats.forEach((c) => { if (!c.ownerId) { c.ownerId = BRIAN; c.ownerAt = d('2026-09-30', '9:00'); } });
   b.asks = b.asks.filter((a) => !a.requests.some((r) => r.by === GRACE));
-  local.alerts = false; local.drafts = []; local.searches = []; local.lately = [];
+  s.push = false; local.drafts = []; local.searches = []; local.lately = [];
 }
 
 /** TD07: the calm afternoon at 15:40. */

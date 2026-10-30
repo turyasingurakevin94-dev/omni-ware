@@ -10,9 +10,10 @@
  *   moves(…)         Next move: one per customer, the best value first (P09)
  */
 import { waitingChats } from '../../../core/chats.ts';
-import { HOLD_DAYS, holdDay, oldestAge, openCharges, orderOwes, orderTotal } from '../../../core/money.ts';
+import { HOLD_DAYS, holdDay, lineTotal, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
+import { owedBy, type Owed } from '../../../core/owing.ts';
 import { addDays, daysApart, dayOf } from '../../../core/time.ts';
-import type { Books, ChatBooks, Customer, Day, Ms, Order, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
+import type { Books, ChatBooks, Customer, Day, Ms, Order, PayPromise, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
 
 export const LIVE: Stage[] = ['checking', 'buying', 'packing', 'road'];
@@ -83,40 +84,14 @@ export function tiles(b: Books, now: Ms): Tile[] {
 
 /* ---------------- who owes ---------------- */
 
-export interface Owing {
-  c: Customer;
-  owes: UGX;
-  /** Open bills, oldest first. */
-  bills: { day: Day; orderId: number | null; left: UGX; age: number; past: boolean; checked: boolean }[];
-  /** Past the hold and not being checked: the money to take now. */
-  take: UGX;
-  past: UGX;
-  under: UGX;
-  checked: UGX;
-  age: number;
-  /** A live order of theirs held for Grace's money ("Not paid yet"). */
+/** Who owes (core/owing.ts), with a live order of theirs held for Grace's money ("Not paid yet"). */
+export interface Owing extends Owed {
   held: Order | null;
 }
 
-/** Bills Accounts is checking (an open ask to Esther on that bill). */
-function checkedBills(b: Books): Set<number> {
-  return new Set(b.paymentAsks.filter((a) => a.status === 'sent' && a.what === 'bill' && a.orderId != null).map((a) => a.orderId as number));
-}
-
 export function owing(b: Books, now: Ms): Owing[] {
-  const today = dayOf(now), hold = b.settings.holdDays || HOLD_DAYS, checked = checkedBills(b), live = mine(b);
-  return b.customers.filter((c) => !c.qa && c.owes > 0).map((c) => {
-    const bills = openCharges(c).map((x) => {
-      const age = daysApart(x.day, today);
-      return { ...x, age, past: age > hold, checked: x.orderId != null && checked.has(x.orderId) };
-    });
-    const pick = (f: (x: typeof bills[0]) => boolean) => sum(bills.filter(f), (x) => x.left);
-    return {
-      c, owes: c.owes, bills, age: oldestAge(c, today),
-      past: pick((x) => x.past), under: pick((x) => !x.past), checked: pick((x) => x.checked), take: pick((x) => x.past && !x.checked),
-      held: live.find((o) => o.customerId === c.id && heldForMe(b, o)) || null,
-    };
-  });
+  const live = mine(b);
+  return owedBy(b, now).map((w) => ({ ...w, held: live.find((o) => o.customerId === w.c.id && heldForMe(b, o)) || null }));
 }
 
 /** The day a customer's oldest bill reaches the hold ("hold Fri 23 Oct"). */
@@ -124,6 +99,26 @@ export const holdOf = (w: Owing, b: Books): Day | null => (w.bills.length ? hold
 
 /** What taking a held order's money would ask for: what they owe plus the order (Mukono: Take 1.1M). */
 export const takeHeld = (w: Owing): UGX => w.owes + (w.held ? orderOwes(w.held) : 0);
+
+/**
+ * What a Take opens customers/pay with: the customer and the bills it pays (order ids, comma-separated). Past the hold: the bills past it;
+ * with an order held for the money: every bill and that order. A bill Accounts is checking is never in it
+ * (Ggaba: #0521 without the 125,000 of #0528).
+ */
+export function takeOf(w: Owing, past: boolean): { customer: string; bills: string } {
+  const bills = w.bills.filter((x) => !x.checked && x.orderId != null && (past ? x.past : true)).map((x) => x.orderId as number);
+  return { customer: w.c.id, bills: (!past && w.held ? [...bills, w.held.id] : bills).join(',') };
+}
+
+/**
+ * The promise to show on To collect: the one due today and still open, or one whose day has passed and was
+ * not kept (spec 02 §5.6). A promise for a later day is not shown here (it is on the customer's own screen).
+ */
+export function promiseToShow(b: Books, c: Customer, today: Day): PayPromise | null {
+  return b.promises.filter((p) => p.customerId === c.id).map((p) => ({ p, st: promiseState(p, c, today) }))
+    .filter((x) => (x.p.on === today && x.st === 'open') || x.st === 'broken')
+    .sort((x, y) => (y.p.on < x.p.on ? -1 : y.p.on > x.p.on ? 1 : y.p.id - x.p.id))[0]?.p || null;
+}
 
 /* ---------------- rhythm ---------------- */
 
@@ -194,7 +189,7 @@ export function needs(b: Books, cb: ChatBooks | null, now: Ms, told: string[]): 
 
 export type Move =
   | { kind: 'due'; c: Customer; value: UGX; d: Due }
-  | { kind: 'chat'; c: Customer; value: UGX; draftKey: string; qty: number; unit: string; since: Ms }
+  | { kind: 'chat'; c: Customer; value: UGX; draftKey: string; chat: number; qty: number; unit: string; since: Ms }
   | { kind: 'ask'; c: Customer; value: UGX; ask: SourcingAsk }
   | { kind: 'price'; c: Customer; value: UGX; order: Order };
 
@@ -206,7 +201,7 @@ export function moves(b: Books, cb: ChatBooks | null, now: Ms, told: string[], d
   due(b, now).forEach((d) => { if (d.usual > 0) all.push({ kind: 'due', c: d.c, value: d.usual, d }); });
   (cb ? waitingChats(cb, b.me.id, now) : []).forEach((w) => {
     const c = custOf(b, w.chat.customerId), dr = c && drafts.find((x) => x.chatId === w.chat.id);
-    if (c && dr) all.push({ kind: 'chat', c, value: sum(dr.lines, (l) => l.qty * (l.price || 0)), draftKey: dr.key, qty: sum(dr.lines, (l) => l.qty), unit: dr.lines[0] ? dr.lines[0].unit : '', since: w.since });
+    if (c && dr) all.push({ kind: 'chat', c, value: sum(dr.lines, (l) => l.qty * (l.price || 0)), draftKey: dr.key, chat: w.chat.id, qty: sum(dr.lines, (l) => l.qty), unit: dr.lines[0] ? dr.lines[0].unit : '', since: w.since });
   });
   askTells(b, told).forEach((a) => { const c = custOf(b, a.requests[0].customerId); if (c) all.push({ kind: 'ask', c, value: askValue(b, a), ask: a }); });
   priceTells(b).filter((o) => !told.includes('price:' + o.id)).forEach((o) => { const c = custOf(b, o.customerId); if (c) all.push({ kind: 'price', c, value: 0, order: o }); });
@@ -238,15 +233,47 @@ export function moneyInToday(b: Books, now: Ms) {
 
 /* ---------------- the shop's aisles ---------------- */
 
-/**
- * The shop's aisles, busiest first, and how many items each holds (FACTS §6: Roofing 86 · Cement 14 …).
- * Read from the books' `aisles` when the source gives it (the demo does; open question: add it to Books);
- * otherwise the aisles of the items in the books, by how many.
- */
-export function shopAisles(b: Books): { name: string; count: number }[] {
-  const given = (b as Books & { aisles?: { name: string; count: number }[] }).aisles;
-  if (given && given.length) return given;
+/** The month before ("2026-10" → "2026-09"). */
+const monthBefore = (m: string): string => { const [y, mo] = m.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
+
+/** Money sold in a month by aisle, the whole shop's (every seller and the counter; invoiced, up to now). */
+function soldByAisle(b: Books, month: string, now: Ms): Map<string, number> {
   const by = new Map<string, number>();
-  b.items.forEach((i) => by.set(i.aisle, (by.get(i.aisle) || 0) + 1));
-  return [...by].map(([name, count]) => ({ name, count })).sort((x, y) => y.count - x.count);
+  b.orders.filter((o) => counted(o) && o.invoiced && o.invoicedAt != null && o.invoicedAt <= now && dayOf(o.invoicedAt).startsWith(month)).forEach((o) => o.lines.forEach((l) => {
+    const it = b.items.find((i) => i.id === l.itemId);
+    if (it && it.aisle) by.set(it.aisle, (by.get(it.aisle) || 0) + lineTotal(l));
+  }));
+  return by;
+}
+
+/**
+ * Sells most: the aisles with the most money sold this month so far, the most first. On a month's first day,
+ * with nothing sold yet, last month's, and it says so (TD06 "the shop, last month"; TD11 "this month").
+ */
+export function sellsMost(b: Books, now: Ms, n = 3): { aisles: string[]; when: 'this month' | 'last month' } {
+  const month = dayOf(now).slice(0, 7);
+  let by = soldByAisle(b, month, now), when: 'this month' | 'last month' = 'this month';
+  if (!by.size) { by = soldByAisle(b, monthBefore(month), now); when = 'last month'; }
+  return { aisles: [...by].sort((x, y) => y[1] - x[1]).slice(0, n).map(([a]) => a), when };
+}
+
+/**
+ * The shop's aisles with how many products each holds (Books.aisles), the ones selling most this month first,
+ * then the most products (TD14 "Or open an aisle").
+ */
+export function shopAisles(b: Books, now: Ms): { name: string; count: number }[] {
+  const by = soldByAisle(b, dayOf(now).slice(0, 7), now);
+  return b.aisles.slice().sort((x, y) => (by.get(y.name) || 0) - (by.get(x.name) || 0) || y.count - x.count);
+}
+
+/**
+ * The aisle of what was asked of Sourcing: its catalogue item's (the ask's own item, else the one item named
+ * like it). With no match there is no aisle; it is never guessed from words.
+ */
+export function askAisle(b: Books, a: Pick<SourcingAsk, 'itemId' | 'name'>): string {
+  const own = a.itemId ? b.items.find((i) => i.id === a.itemId) : null;
+  if (own) return own.aisle;
+  const base = a.name.split(/ · |, /)[0].trim().toLowerCase();
+  const hit = base ? b.items.filter((i) => i.name.toLowerCase().includes(base)) : [];
+  return hit.length === 1 ? hit[0].aisle : '';
 }

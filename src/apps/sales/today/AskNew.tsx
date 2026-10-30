@@ -48,21 +48,32 @@ export function prefillFromChats(b: Books, nowMs: Ms): AskPrefill {
   return { name: words[0].toUpperCase() + words.slice(1), qty: n ? Number(n[1]) : 1, customerId: c ? c.customerId : null, chatId: hit.m.chatId, quote: { body: hit.m.body, at: hit.m.at } };
 }
 
-export function openAsk(pre: AskPrefill): void {
-  sheet.open(() => <AskSheet pre={pre} />, { label: 'Ask Moses' });
+/** An ask being written while Grace picks another customer ("Change customer"): what she typed, and its photo. */
+let held: (AskPrefill & { photo?: { file: File; url: string } | null }) | null = null;
+
+/**
+ * Open Ask Moses. After "Change customer", Sell opens it again with only the customer picked
+ * (ROUTES `sell { then: 'ask' }`): what was typed comes back with them.
+ */
+export function openAsk(pre: Partial<AskPrefill>): void {
+  const was = held;
+  held = null;
+  const full = { ...(was || { name: '' }), ...Object.fromEntries(Object.entries(pre).filter(([, v]) => v !== undefined)) } as AskPrefill & { photo?: { file: File; url: string } | null };
+  if (was && pre.customerId !== undefined && pre.customerId !== was.customerId) { full.chatId = null; full.quote = null; }
+  sheet.open(() => <AskSheet pre={full} />, { label: 'Ask Moses' });
 }
 
-function AskSheet(p: { pre: AskPrefill }): JSX.Element {
+function AskSheet(p: { pre: AskPrefill & { photo?: { file: File; url: string } | null } }): JSX.Element {
   const b = books.value as Books, ml = b.members.find((m) => m.role === 'sourcing'), rn = b.members.find((m) => m.role === 'manager');
   const [name, setName] = useState(p.pre.name), [qty, setQty] = useState(p.pre.qty || 1), [state, setState] = useState<'idle' | 'sending' | 'kept'>('idle');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ file: File; url: string } | null>(p.pre.photo || null);
   const c = p.pre.customerId ? b.customers.find((x) => x.id === p.pre.customerId) : null, who = c ? firstWord(c.name) : '';
   const mlName = ml ? firstWord(ml.name) : 'Sourcing';
   const send = async () => {
     if (!name.trim()) return;
     setState('sending');
     try {
-      const r = await act('askSourcing', { name: name.trim(), qty, customerId: c ? c.id : null, chatId: p.pre.chatId ?? null });
+      const r = await act('askSourcing', { name: name.trim(), qty, customerId: c ? c.id : null, chatId: p.pre.chatId ?? null, photo: photo ? photo.file : null });
       if (r.kept) { setState('kept'); return; }
       sheet.close();
       toast.show(`Asked ${mlName}`);
@@ -90,7 +101,7 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
         <div class="td-asknew-n"><span>How many</span><Stepper value={qty} unit="pieces" min={1} onChange={setQty} /></div>
         {c && (
           <div class="td-asknew-who"><span>Who asked</span>
-            <button type="button" aria-label={`${c.name}. Change customer`} onClick={() => { sheet.close(); go('sell'); }}>
+            <button type="button" aria-label={`${c.name}. Change customer`} onClick={() => { held = { ...p.pre, name, qty, photo }; sheet.close(); go('sell', { then: 'ask' }); }}>
               <Avatar initials={c.initials} tint={c.tint} size={38} />
               <span><span>{c.name}</span><span>{p.pre.quote ? `from their chat · ${clock(p.pre.quote.at)}` : c.place}</span></span>
               <Duo i={phSwap} size={18} color="#5F6980" />
@@ -99,8 +110,8 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
         )}
         <div class="td-asknew-ph">
           <label class="td-asknew-pic" aria-label="Add a photo">
-            {photo ? <img src={photo} alt="" /> : <><Icon name="camera" size={22} stroke={1.8} />Photo</>}
-            <input type="file" accept="image/*" capture="environment" onChange={(e) => { const f = (e.target as HTMLInputElement).files; if (f && f[0]) setPhoto(URL.createObjectURL(f[0])); }} />
+            {photo ? <img src={photo.url} alt="" /> : <><Icon name="camera" size={22} stroke={1.8} />Photo</>}
+            <input type="file" accept="image/*" capture="environment" onChange={(e) => { const f = (e.target as HTMLInputElement).files; if (f && f[0]) setPhoto({ file: f[0], url: URL.createObjectURL(f[0]) }); }} />
           </label>
           <span class="td-asknew-next">
             {ml && <span><Avatar initials={ml.initials} tint={ml.tint} size={22} style={PLAIN} />{`${mlName} looks for it`}</span>}
@@ -113,7 +124,7 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
         )}
         <div class="td-asknew-go">
           {state === 'kept'
-            ? <Button icon="check" stroke={2.4} onClick={() => sheet.close()}>Done · it sends itself</Button>
+            ? <Button icon="check" stroke={2.6} onClick={() => sheet.close()}>Done · it sends itself</Button>
             : <Button icon="send" state={state === 'sending' ? 'sending' : name.trim() ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{`Ask ${mlName}`}</Button>}
         </div>
       </div>

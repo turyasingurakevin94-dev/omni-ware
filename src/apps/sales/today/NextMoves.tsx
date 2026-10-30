@@ -72,7 +72,7 @@ function MoveRow(p: { b: Books; m: Move; now: Ms }): JSX.Element {
   if (m.kind === 'chat') {
     const it = p.b.items.find((i) => i.unit === m.unit) || null;
     return <Row lead={<IconTile icon="message" tone="info" size={42} />} title={m.c.name} sub={`${countWord(m.qty, m.unit, it ? it.name : '')} · ${howLong(m.since, p.now)}`} chip={chip}
-      act={{ icon: 'whatsapp', label: `Reply to ${who}`, on: () => go('sell/order', { customer: m.c.id, from: 'chat' }) }} />;
+      act={{ icon: 'whatsapp', label: `Reply to ${who}`, on: () => go('sell/order', { customer: m.c.id, from: 'chat', chat: m.chat }) }} />;
   }
   if (m.kind === 'ask') {
     const it = m.ask.itemId ? p.b.items.find((i) => i.id === m.ask.itemId) : null, r = m.ask.requests[0];

@@ -1,7 +1,7 @@
 /*
- * TD21, TD22 · One ask of Sourcing, on its own screen: the item, who asked, the five steps with
- * their days. Looking (TD21): who Moses asked and what they said, how long the customer has waited,
- * and telling them it is still coming. Listed (TD22): its price and shelf, how many they want and what
+ * TD21, TD22 · One ask of Sourcing, on its own screen (every ask has one): the item, who asked, the five
+ * steps with their days. Before it is listed (TD21, looking): who Moses asked and what they said, how long the
+ * customer has waited, and telling them where it is. Listed (TD22): its price and shelf, how many they want and what
  * it comes to, the message, then Tell them or start their order.
  */
 import type { JSX } from 'preact';
@@ -21,10 +21,10 @@ import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, chats, now } from '../shell/store.ts';
 import { Asks, StepIcon, STEP_WORD, askCustomer, askQty } from './Asks.tsx';
-import { askAisle } from './First.tsx';
-import { go } from './go.ts';
+import { askAisle } from './data.ts';
+import { go, itemsParam } from './go.ts';
 import { markTold } from './local.ts';
-import { Preview, sendTo } from './Tell.tsx';
+import { Preview, sendTo, sentToast } from './Tell.tsx';
 import { ASK_STAGES } from './You.tsx';
 import './ask.css';
 
@@ -45,19 +45,29 @@ export function askMessage(b: Books, a: SourcingAsk, qty: number): string {
     const u = it.unit === 'pc' ? 'piece' : it.unit;
     return `Hello ${who}, ${said(a, b, qty)} is in: ${money(it.price)} a ${u}. Shall I put ${qty} ${u}s on an order for you? That is ${money(it.price * qty)}.`;
   }
+  if (a.status === 'found' || a.status === 'priced') return `Hello ${who}, we have found ${said(a, b, qty)}. I will tell you the price as soon as it is set.`;
   return `Hello ${who}, we are still looking for ${said(a, b, qty)}. I will tell you as soon as we have them.`;
 }
 
-/** Tell the customer on WhatsApp; a listed ask is then told (kept on this phone). */
-export async function tellAsk(b: Books, a: SourcingAsk, qty: number, back: boolean): Promise<void> {
-  const c = askCustomer(b, a);
+/** Its photo: the item's own, else the one sent with the ask (a link in the shop's bucket), or null. */
+export function askPhoto(b: Books, a: SourcingAsk): string | null {
+  const it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null;
+  return (it && it.image) || a.image || null;
+}
+
+/**
+ * Tell the customer on WhatsApp, with the photo when asked; a listed ask is then told (kept on this phone).
+ * Nothing sent (no chat with them): an error, and it stays untold. `back` leaves the ask's own screen.
+ */
+export async function tellAsk(b: Books, a: SourcingAsk, qty: number, back: boolean, photo: boolean = false): Promise<void> {
+  const c = askCustomer(b, a), pic = photo ? askPhoto(b, a) : null;
   try {
-    await sendTo(chats.value, c ? c.id : null, askMessage(b, a, qty), now.value);
+    const sent = await sendTo(chats.value, c ? c.id : null, askMessage(b, a, qty), now.value, pic);
+    if (!sentToast(sent, c ? firstWord(c.name) : 'them', !!pic)) return;
     if (a.status === 'listed') markTold('ask:' + a.id);
-    toast.show(`Sent to ${c ? firstWord(c.name) : 'them'}`);
     if (back) nav.back();
   } catch (e) {
-    toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void tellAsk(b, a, qty, back); } });
+    toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void tellAsk(b, a, qty, back, photo); } });
   }
 }
 
@@ -93,18 +103,18 @@ export function Ask(p: ScreenProps): JSX.Element {
   const b = books.value, n = now.value, a = b ? (b.asks.find((x) => x.id === p.params.id) as Logged | undefined) : undefined;
   const [qty, setQty] = useState(a ? askQty(a) : 1), [photo, setPhoto] = useState(true);
   if (!b) return <main class="td-wait" aria-busy="true" />;
-  if (!a || (a.status !== 'looking' && a.status !== 'listed')) return <Asks params={{}} />;
+  if (!a || a.status === 'dropped') return <Asks params={{}} />;
   const today = dayOf(n), c = askCustomer(b, a), who = c ? firstWord(c.name) : '', it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null;
   const ml = b.members.find((m) => m.role === 'sourcing'), by = (s: string) => { const e = (a.log || []).find((x) => x.status === s); return e ? b.members.find((m) => m.id === e.by) : null; };
   const since = (a.log || []).find((x) => x.status === a.status), sinceAt = since ? since.at : a.stageAt;
   const first = a.requests[0], close = () => nav.back();
-  const u = it ? (it.unit === 'pc' ? 'piece' : it.unit) : 'piece';
+  const u = it ? (it.unit === 'pc' ? 'piece' : it.unit) : 'piece', pic = askPhoto(b, a);
   return (
     <FullSheet onBack={close} backLabel="Back to Asked of Sourcing" head={
       <div class="ow-shead">
         <span aria-hidden="true" class="ow-shead-grab" />
         <div class="ow-shead-row">
-          <ItemSquare aisle={it ? it.aisle : askAisle(a.name)} size={44} icon={26} />
+          <ItemSquare aisle={askAisle(b, a)} size={44} icon={26} />
           <div class="td-ask-ht"><span>{it ? it.name : a.name}</span>
             <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)} · ${weekday(first.at)}`}</span></div>
           <button type="button" class="ow-shead-x" aria-label="Close" onClick={close}><Icon name="close" size={16} stroke={2.2} /></button>
@@ -115,9 +125,9 @@ export function Ask(p: ScreenProps): JSX.Element {
         </div>
       </div>
     }>
-      {a.status === 'looking' ? (
+      {a.status !== 'listed' ? (
         <>
-          <div class="td-tried">
+          {a.tried.length > 0 && <div class="td-tried">
             <div class="td-tried-h"><span>{`Who ${ml ? firstWord(ml.name) : 'Sourcing'} asked`}</span>
               {(a.tried as Tried[]).some((t) => t.answer === 'none') && <span class="td-spill b"><Icon name="close" size={10} stroke={3.4} />{(a.tried as Tried[]).filter((t) => t.answer === 'none').length}</span>}
               {(a.tried as Tried[]).some((t) => !t.answer) && <span class="td-spill t"><Icon name="clock" size={11} stroke={2.6} />{(a.tried as Tried[]).filter((t) => !t.answer).length}</span>}</div>
@@ -128,13 +138,13 @@ export function Ask(p: ScreenProps): JSX.Element {
                 {t.answer === 'none' ? <span class="td-spill b">Has none</span> : t.answer === 'has' ? <span class="td-spill g">Has it</span> : <span class="td-spill w">No answer yet</span>}
               </div>
             ))}
-          </div>
+          </div>}
           <div class="td-ask-tiles">
             <div class="warn"><span>{`${who} waits`}</span><span class="mono">{`${daysApart(dayOf(first.at), today)} days`}</span></div>
             <div><span>Asked for</span><span class="mono">{`${askQty(a)} `}<span class="ow-word">{askQty(a) === 1 ? u : u + 's'}</span></span></div>
           </div>
           <Preview chip="What they get" who={firstWord(b.me.name)} wide>{askMessage(b, a, askQty(a))}</Preview>
-          <div class="td-ask-foot"><Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, askQty(a), true); }}>{`Tell ${who} · still looking`}</Button></div>
+          <div class="td-ask-foot"><Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, askQty(a), true); }}>{`Tell ${who} · ${a.status === 'found' || a.status === 'priced' ? 'found' : 'still looking'}`}</Button></div>
         </>
       ) : (
         <>
@@ -149,15 +159,15 @@ export function Ask(p: ScreenProps): JSX.Element {
             <span class="mono">{money((it && it.price ? it.price : 0) * qty)}</span>
           </div>
           <Preview chip="What they get" who={firstWord(b.me.name)} wide>{askMessage(b, a, qty)}</Preview>
-          <label class="td-ask-photo">
+          {pic && <label class="td-ask-photo">
             <span aria-hidden="true"><Icon name="camera" size={18} stroke={2} /></span>
             <span>{`Send a photo of the ${u}`}</span>
             <input type="checkbox" checked={photo} aria-label={`Send a photo of the ${u}`} onChange={() => setPhoto(!photo)} />
             <span aria-hidden="true" class={'td-switch' + (photo ? ' on' : '')}><i /></span>
-          </label>
+          </label>}
           <div class="td-ask-foot">
-            <Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, qty, true); }}>{`Tell ${who}`}</Button>
-            <Button kind="ghost" h={52} class="td-btn-in" onClick={() => go('sell/order', { customer: c ? c.id : null, items: a.itemId })}><Icon name="plus" size={16} stroke={2.6} />Start their order</Button>
+            <Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, qty, true, photo && !!pic); }}>{`Tell ${who}`}</Button>
+            <Button kind="ghost" h={52} class="td-btn-in" onClick={() => go('sell/order', { customer: c ? c.id : null, items: a.itemId ? itemsParam(a.itemId, qty) : null })}><Icon name="plus" size={16} stroke={2.6} />Start their order</Button>
           </div>
         </>
       )}

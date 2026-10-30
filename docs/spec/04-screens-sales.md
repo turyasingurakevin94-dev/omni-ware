@@ -62,3 +62,36 @@ Each row names the default being built until Kevin answers.
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
 - counter tender notes start at the next likely note (52,000 → 55,000 / 60,000).
+
+## 4. Rules the boards draw but do not state
+
+Each rule is written once in code (the place is named) and comes from the source given. A board that disagrees with one of these is corrected to it.
+
+### 4.1 Today
+
+| Rule | Where in code | Source |
+|---|---|---|
+| **Packing late.** An order 2 days or more in Packing is late. One late order shows on the Packing tile (the late dot) and on its own order. The Needs-you row is the batch ask ("ask Musa in one message"), so it appears only when 2 or more are late. | `today/data.ts` `packingLate`, `tiles`, `needs` | Lead ruling, 30 Oct 2026 |
+| **Stage-tile faces.** Late orders first, then the newest. On the road: first out first (who arrives first). Each customer once. Up to three faces; past three orders, two faces and "+n" for the orders not shown. | `today/data.ts` `tiles` | Lead ruling, 30 Oct 2026 (TD01) |
+| **Promises on To collect.** A promise shows when it is due today and still open, or when its day has passed and it was not kept. A promise for a later day is not shown there (it is on the customer's own screen). Kept, broken or open is worked out every time. | `today/data.ts` `promiseToShow`; `core/money.ts` `promiseState` | spec 02 §5.6 and Q10; lead ruling, 30 Oct 2026 |
+| **A Take pays named bills.** Every Take opens `customers/pay` with the bills it pays. Past 21 days: the bills past the hold. With an order held for the money: every bill and that order. A bill Accounts is checking is never included (Ggaba: #0521 without the 125,000 of #0528). Play all runs the customers in order (`then`). | `today/data.ts` `takeOf` | Lead ruling, 30 Oct 2026; `ROUTES.md` |
+| **Sells most.** The aisles with the most money sold this month so far, the most first. This counts the whole shop: every seller and the counter, invoiced orders only. On a month's first day, with nothing sold yet, last month's is used, and the label says "last month". | `today/data.ts` `sellsMost` | Lead ruling, 30 Oct 2026 (TD06, TD11) |
+| **The shop's aisles.** Each aisle with how many products it holds (`Books.aisles`: products counted by category). Ordered by the money each sold this month, then by how many products. | `today/data.ts` `shopAisles`; `core/supabase/read.ts` `aislesOf` | FACTS §6 |
+| **Aisles near a search that found nothing.** The aisle of the closest item comes first. Next come the aisles most often bought together with that item in the shop's orders. Then the shop's aisles, in the order above. | `today/FindItems.tsx` `nearAisles` | Lead ruling, 30 Oct 2026 (TD14) |
+| **An ask's aisle.** The aisle of its catalogue item: the ask's own item, or else the one item named like it. With no match it has no aisle; the aisle is never guessed from keywords. | `today/data.ts` `askAisle` | Lead ruling, 30 Oct 2026 |
+| **Every ask opens.** Every ask of Sourcing opens its own screen (`today/asks { id }`), whatever its step. | `today/Asks.tsx`, `today/Ask.tsx` | Lead ruling, 30 Oct 2026 |
+| **Every order row is a link** to its own order (`orders/order`). All order rows are one height: 49 px, or 65 px in Find. | `today/Day.tsx`, `today/Find.tsx` | Lead ruling, 30 Oct 2026 |
+| **A send is never claimed if it did not happen.** If the customer has no chat, the app shows an error, and nothing is marked told. With no signal, the message is kept on the phone and the app says so. A photo goes only inside the 24-hour window: the reply template carries words only, and the toast says so. | `today/Tell.tsx` `sendTo`, `sentToast` | Lead ruling, 30 Oct 2026 (TD04, TD19, TD21, TD22) |
+| **Alerts** are this phone's row in `push_subscriptions`. They are not a setting kept on the phone. The switch shows the real state, and when alerts cannot be on it says why. | `core/supabase/push.ts`; `today/local.ts` `setAlerts` | spec 06 §6a |
+
+### 4.2 Open: two copies of "who owes" (Kevin)
+
+Today and Customers both answer "what does this customer owe, bill by bill, and what is being checked". The two copies disagree, so neither has been picked:
+
+| | Today (`core/owing.ts` `owedBy`) | Customers (`customers/data.ts` `billsOf`, `moneyOf`) |
+|---|---|---|
+| Where the bills come from | The debt log, payments clearing the named bill and then the oldest (`openCharges`, spec 02 §5.3) | Invoiced orders with something left on them (`orderOwes`) |
+| Which bills are being checked | Only a bill an ask names (`what: 'bill'`) | That, plus every bill when an ask is on the whole balance (`what: 'balance'`) |
+| What can be taken now | Bills past the hold that nobody is checking | All they owe, less the bills an ask names |
+
+Until Kevin answers, each tab keeps its own copy. The one he picks moves into `core/owing.ts`, and the other copy is deleted.

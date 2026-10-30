@@ -20,6 +20,9 @@ import { Goal } from './Goal.tsx';
 import { ToCollect } from './ToCollect.tsx';
 import { Today } from './Today.tsx';
 import { You } from './You.tsx';
+import { startLocal } from './local.ts';
+
+startLocal();
 
 /** Sheets other tabs may open (ROUTES.md "Exported sheets"). */
 export { openAsk } from './AskNew.tsx';

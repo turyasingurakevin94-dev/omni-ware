@@ -16,7 +16,9 @@ import { nav } from '../shell/nav.ts';
 import { books, now, signOut } from '../shell/store.ts';
 import { doneWeek, due, mine } from './data.ts';
 import { go, tel } from './go.ts';
-import { setLocal, useLocal } from './local.ts';
+import { toast } from '../../../ui/toast.tsx';
+import { isDataError } from '../../../core/datasource.ts';
+import { PUSH_WHY, push, setAlerts, setLocal, useLocal } from './local.ts';
 import { goalOf } from './Today.tsx';
 import './you.css';
 
@@ -40,7 +42,13 @@ export function You(): JSX.Element {
   const listed = asks.filter((a) => a.status === 'listed').length, open = asks.length - listed;
   const C = 2 * Math.PI * 37, pct = g ? Math.min(1, g.sold / g.target) : 0;
   const close = () => nav.back();
-  const toggle = (k: 'alerts' | 'bigText') => { setLocal({ [k]: !L[k] }); if (k === 'bigText') document.body.style.zoom = !L.bigText ? '1.125' : ''; };
+  const P = push.value, on = !!(P && P.on), why = P && !P.on && P.why ? PUSH_WHY[P.why] : '';
+  const alerts = async () => {
+    try {
+      const r = await setAlerts(!on);
+      if (!on && !r.on && r.why) toast.show('Alerts not on', { kind: 'error', sub: PUSH_WHY[r.why] });
+    } catch (e) { toast.show(on ? 'Alerts not off' : 'Alerts not on', { kind: 'error', sub: isDataError(e) ? e.message : String(e) }); }
+  };
   return (
     <FullSheet onBack={close} backLabel="Back to Today" pad="14px 16px 16px" head={
       <div class="ow-shead td-you-h">
@@ -96,12 +104,12 @@ export function You(): JSX.Element {
       <div class="td-you-toggles">
         <label class="td-you-tog">
           <span><span aria-hidden="true" class="td-you-bell"><Icon name="bell" size={18} stroke={2} /></span>
-            <input type="checkbox" checked={L.alerts} aria-label="Alerts" onChange={() => toggle('alerts')} /><span aria-hidden="true" class={'td-switch' + (L.alerts ? ' on' : '')}><i /></span></span>
-          <span><span>{L.alerts ? 'Alerts on' : 'Alerts off'}</span><span>chats · prices · paid</span></span>
+            <input type="checkbox" checked={on} disabled={!P} aria-label="Alerts" onChange={() => { void alerts(); }} /><span aria-hidden="true" class={'td-switch' + (on ? ' on' : '')}><i /></span></span>
+          <span><span>{on ? 'Alerts on' : 'Alerts off'}</span><span>{why || 'chats · prices · paid'}</span></span>
         </label>
         <label class="td-you-tog">
           <span><span aria-hidden="true" class="td-you-aa">Aa</span>
-            <input type="checkbox" checked={L.bigText} aria-label="Big text" onChange={() => toggle('bigText')} /><span aria-hidden="true" class={'td-switch' + (L.bigText ? ' on' : '')}><i /></span></span>
+            <input type="checkbox" checked={L.bigText} aria-label="Big text" onChange={() => setLocal({ bigText: !L.bigText })} /><span aria-hidden="true" class={'td-switch' + (L.bigText ? ' on' : '')}><i /></span></span>
           <span><span>Big text</span><span>every size a step up</span></span>
         </label>
       </div>

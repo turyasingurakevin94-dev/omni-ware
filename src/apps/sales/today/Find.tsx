@@ -20,12 +20,13 @@ import '../../../ui/section.css';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Duo, Icon, STAGE_ICON, phAgain, phMic, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
+import { ListenSheet, hasSpeech } from '../../../ui/Listen.tsx';
+import { sheet } from '../../../ui/sheet.tsx';
 import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, chats, drafts, now, source } from '../shell/store.ts';
-import { lastOrderAt, mine } from './data.ts';
-import { askAisle, sellsMost } from './First.tsx';
-import { go, tel } from './go.ts';
+import { askAisle, lastOrderAt, mine, sellsMost } from './data.ts';
+import { go, itemsParam, tel } from './go.ts';
 import { rememberOpened, rememberSearch, useLocal } from './local.ts';
 import { ItemFound, Nothing, oftenIds } from './FindItems.tsx';
 import './find.css';
@@ -85,7 +86,7 @@ export function Find(p: ScreenProps): JSX.Element {
             onInput={(e) => { setQ((e.target as HTMLInputElement).value); setKind('all'); }} />
           {typed
             ? <button type="button" aria-label="Clear" class="td-find-clear" onClick={() => { setQ(''); if (input.current) input.current.focus(); }}><Icon name="close" size={15} stroke={2.4} /></button>
-            : <button type="button" aria-label="Say it" class="td-find-mic" onClick={() => listen(setQ)}><span><Duo i={phMic} size={18} color="#FFFFFF" /></span></button>}
+            : <button type="button" aria-label="Say it" class="td-find-mic" onClick={() => sayIt((w) => { setQ(w); setKind('all'); }, input.current)}><span><Duo i={phMic} size={18} color="#FFFFFF" /></span></button>}
         </label>
       </div>
       <main class="td-find-main">
@@ -104,21 +105,17 @@ export function Find(p: ScreenProps): JSX.Element {
           : m.customers.length > 0 ? <CustomerFound b={b} cb={cb} now={n} q={q} m={m} show={show} />
           : m.items.length > 0 ? <ItemFound b={b} q={q} items={m.items} />
           : m.total > 0 ? <OrdersOnly b={b} now={n} orders={m.orders} />
-          : <Nothing b={b} q={q} />}
+          : <Nothing b={b} q={q} now={n} onSearch={setQ} />}
       </main>
     </div>
   );
 }
 
 
-/** "Say it": the phone's own speech to text, when it has one. */
-function listen(set: (v: string) => void): void {
-  const W = window as unknown as { webkitSpeechRecognition?: new () => { lang: string; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; start: () => void } };
-  if (!W.webkitSpeechRecognition) return;
-  const r = new W.webkitSpeechRecognition();
-  r.lang = 'en-UG';
-  r.onresult = (e) => set(e.results[0][0].transcript);
-  r.start();
+/** "Say it": the phone listening (SL34); where it cannot, the field takes focus so the keyboard's mic is one tap away. */
+function sayIt(set: (v: string) => void, field: HTMLInputElement | null): void {
+  if (!hasSpeech()) { if (field) field.focus(); return; }
+  sheet.open(() => <ListenSheet act="Find" onDone={set} />, { label: 'Say it' });
 }
 
 /** The wait as a pill: amber from 10 minutes, grey before. */
@@ -170,7 +167,7 @@ function Start(p: { b: Books; cb: ChatBooks | null; now: Ms; show: (k: Kind) => 
   const b = p.b, wait = (p.cb ? waitingChats(p.cb, b.me.id, p.now) : []).sort((x, y) => x.since - y.since || y.chat.id - x.chat.id);
   const lately = p.lately.map((x) => ({ x, o: x.kind === 'order' ? b.orders.find((o) => String(o.id) === x.id) : null, c: x.kind === 'customer' ? b.customers.find((c) => c.id === x.id) : null, i: x.kind === 'item' ? b.items.find((i) => i.id === x.id) : null }))
     .filter((r) => r.o || r.c || r.i);
-  const most = sellsMost(b);
+  const most = sellsMost(b, p.now);
   return (
     <>
       {p.show('chats') && wait.length > 0 && p.cb && (
@@ -205,10 +202,10 @@ function Start(p: { b: Books; cb: ChatBooks | null; now: Ms; show: (k: Kind) => 
           <div class="td-find-words">{p.searches.map((w) => <Tap key={w} on={() => p.onSearch(w)}>{w}</Tap>)}</div>
         </>
       )}
-      {most.length > 0 && (
-        <Tap on={() => go('sell/order')} class="td-most">
-          <span class="td-most-t"><span>Sells most</span><span>the shop, this month</span></span>
-          <span class="td-most-ic">{most.map((a) => <ItemSquare key={a} aisle={a} size={34} icon={20} />)}</span>
+      {most.aisles.length > 0 && (
+        <Tap on={() => go('sell', { aisle: most.aisles[0] })} class="td-most">
+          <span class="td-most-t"><span>Sells most</span><span>{`the shop, ${most.when}`}</span></span>
+          <span class="td-most-ic">{most.aisles.map((a) => <ItemSquare key={a} aisle={a} size={34} icon={20} />)}</span>
           <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>
       )}
@@ -272,7 +269,7 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
               if (!it) return null;
               const short = it.name.split(/ ·| G\d|,/)[0];
               return (
-                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: it.id })} label={`Start ${first}'s order with ${short}`} class="td-usual-t">
+                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: itemsParam(it.id) })} label={`Start ${first}'s order with ${short}`} class="td-usual-t">
                   <ItemSquare aisle={it.aisle} size={36} icon={22} />
                   <span><span>{short}</span><span class="mono">{money(it.price || 0)}</span></span>
                   <span aria-hidden="true" class="td-usual-plus"><Icon name="plus" size={14} stroke={2.6} /></span>
@@ -284,7 +281,7 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
       )}
       {asked.map((a) => (
         <Tap key={a.id} on={() => go('today/asks', { id: a.id })} class="td-askcard">
-          <ItemSquare aisle={askAisle(a.name)} size={38} icon={22} />
+          <ItemSquare aisle={askAisle(b, a)} size={38} icon={22} />
           <span class="td-find-t"><span>{`${first} asked ${firstWord((b.members.find((x) => x.role === 'sourcing') || { name: 'Sourcing' }).name)} for`}</span><span>{`${a.name} · ${a.requests.filter((r) => r.customerId === c.id).reduce((s, r) => s + r.qty, 0)} · ${STAGE_ASK[a.status]}`}</span></span>
           <span class="td-spill">{STAGE_ASK[a.status]}</span>
           <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>

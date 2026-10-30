@@ -4,7 +4,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
-import type { Books, Item } from '../../../core/types.ts';
+import type { Books, Item, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Duo, Icon, phLink, phSearch } from '../../../ui/icons.tsx';
@@ -13,7 +13,7 @@ import { drafts } from '../shell/store.ts';
 import { openAsk } from './AskNew.tsx';
 import { shopAisles } from './data.ts';
 import { Marked, shelf, unitWord } from './Find.tsx';
-import { go } from './go.ts';
+import { go, itemsParam } from './go.ts';
 
 /** The order being built most lately (the red +'s), to add to. */
 function openDraft() {
@@ -21,8 +21,9 @@ function openDraft() {
 }
 function addTo(itemId: string): void {
   const d = openDraft();
-  if (d) go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId, items: itemId } : { customer: d.customerId, items: itemId });
-  else go('sell');
+  const items = itemsParam(itemId);
+  if (d) go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId, items } : { customer: d.customerId, items });
+  else go('sell', { items });
 }
 
 /** The ids of what is bought with this item most (the two "Often with" shows). */
@@ -103,10 +104,10 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
 
 /**
  * The aisles closest to what was searched: the closest items' own aisle first, then the aisles bought with
- * them most often in the shop's orders, then the shop's own order (TD14: Tools, Cement, Roofing … for a wheelbarrow).
+ * them most often in the shop's orders, then the shop's aisles as shopAisles orders them (TD14: Tools, Cement, Roofing … for a wheelbarrow).
  */
-export function nearAisles(b: Books, close: Item[]): { name: string; count: number }[] {
-  const all = shopAisles(b), ids = new Set(close.map((i) => i.id)), own = close[0] ? close[0].aisle : null, by = new Map<string, number>();
+export function nearAisles(b: Books, close: Item[], now: Ms): { name: string; count: number }[] {
+  const all = shopAisles(b, now), ids = new Set(close.map((i) => i.id)), own = close[0] ? close[0].aisle : null, by = new Map<string, number>();
   b.orders.filter((o) => !o.voided && !o.qa && o.lines.some((l) => ids.has(l.itemId))).forEach((o) => {
     new Set(o.lines.filter((l) => !ids.has(l.itemId)).map((l) => (b.items.find((i) => i.id === l.itemId) || { aisle: '' }).aisle)).forEach((a) => { if (a) by.set(a, (by.get(a) || 0) + 1); });
   });
@@ -124,13 +125,13 @@ function dist(a: string, b: string): number {
   return m[b.length];
 }
 
-export function Nothing(p: { b: Books; q: string }): JSX.Element {
+export function Nothing(p: { b: Books; q: string; now: Ms; onSearch: (q: string) => void }): JSX.Element {
   const b = p.b, q = p.q.trim(), words = new Set<string>();
   b.items.forEach((i) => i.name.toLowerCase().split(/[^a-z]+/).forEach((w) => { if (w.length > 3) words.add(w); }));
   const best = [...words].map((w) => ({ w, d: dist(q.toLowerCase(), w) })).sort((x, y) => x.d - y.d)[0];
   const mean = best && best.d <= Math.max(2, Math.floor(q.length / 4)) ? best.w : null;
   const close = mean ? b.items.filter((i) => i.name.toLowerCase().includes(mean)) : [];
-  const tiles = nearAisles(b, close).slice(0, 6);
+  const tiles = nearAisles(b, close, p.now).slice(0, 6);
   return (
     <>
       <div class="td-none">
@@ -144,11 +145,11 @@ export function Nothing(p: { b: Books; q: string }): JSX.Element {
           <div>
             {close.slice(0, 3).map((i) => (
               <div key={i.id} class="td-closest-r">
-                <button type="button" class="td-find-main-a" onClick={() => addTo(i.id)}>
+                <button type="button" class="td-find-main-a" onClick={() => p.onSearch(i.name)}>
                   <ItemSquare aisle={i.aisle} size={40} />
                   <span class="td-find-t"><span>{i.name}</span><span>{shelf(i)}{i.price != null && <>{' · '}<span class="mono td-ink">{money(i.price)}</span></>}</span></span>
                 </button>
-                <Tap on={() => go('sell')} label={`Put ${i.name} on an order`} class="td-find-act"><Icon name="plus" size={17} stroke={2.2} /></Tap>
+                <Tap on={() => go('sell', { items: itemsParam(i.id) })} label={`Put ${i.name} on an order`} class="td-find-act"><Icon name="plus" size={17} stroke={2.2} /></Tap>
               </div>
             ))}
           </div>
@@ -158,7 +159,7 @@ export function Nothing(p: { b: Books; q: string }): JSX.Element {
       <div class="td-aisles-h">Or open an aisle</div>
       <div class="td-aisles">
         {tiles.map((a) => (
-          <Tap key={a.name} on={() => go('sell/order')} class="td-aisle">
+          <Tap key={a.name} on={() => go('sell', { aisle: a.name })} class="td-aisle">
             <ItemSquare aisle={a.name} size={38} icon={22} />
             <span><span>{a.name}</span><span class="mono">{`${a.count} items`}</span></span>
           </Tap>

@@ -17,7 +17,7 @@ import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, chats } from '../shell/store.ts';
+import { act, books, chats, now } from '../shell/store.ts';
 import { askTells, priceTells } from './data.ts';
 import { markTold, useLocal } from './local.ts';
 import './tell.css';
@@ -40,11 +40,30 @@ export function Preview(p: { chip: string; who: string; wide?: boolean; children
   );
 }
 
-/** Send on WhatsApp through the shop's line; after the 24 hours, as the reply template. */
-export async function sendTo(cb: ChatBooks | null, customerId: string | null, text: string, nowMs: number): Promise<boolean> {
+/**
+ * What a send did: nothing (no chat with them), the words only, the words under the photo, or kept on this
+ * phone with no signal (it sends itself).
+ */
+export type Sent = 'no-chat' | 'text' | 'photo' | 'kept';
+
+/**
+ * Send on WhatsApp through the shop's line; after the 24 hours, as the reply template (which carries words
+ * only, so a photo goes only inside the 24 hours). A photo is a link in the shop's bucket, sent with the words under it.
+ */
+export async function sendTo(cb: ChatBooks | null, customerId: string | null, text: string, nowMs: number, photo: string | null = null): Promise<Sent> {
   const c = cb && customerId ? cb.chats.find((x) => x.customerId === customerId) : null;
-  if (!c) return false;
-  await act(replyWindow(c.lastInAt, nowMs).open ? 'send' : 'sendTemplate', c.id, text);
+  if (!c) return 'no-chat';
+  const open = replyWindow(c.lastInAt, nowMs).open;
+  const r = open && photo ? await act('sendImage', c.id, photo, text) : await act(open ? 'send' : 'sendTemplate', c.id, text);
+  return r.kept ? 'kept' : open && photo ? 'photo' : 'text';
+}
+
+/** Says what a send did, once; false when nothing went (no chat with them: nothing is marked told). */
+export function sentToast(sent: Sent, who: string, photo: boolean): boolean {
+  if (sent === 'no-chat') { toast.show(`No chat with ${who}`, { kind: 'error', sub: 'Nothing was sent' }); return false; }
+  if (sent === 'kept') toast.show('No signal · kept on this phone', { sub: 'It sends itself' });
+  else if (photo && sent === 'text') toast.show(`Sent to ${who}`, { sub: 'Words only: their 24 hours are over, a photo cannot go' });
+  else toast.show(`Sent to ${who}`);
   return true;
 }
 
@@ -69,14 +88,15 @@ function TellSheet(p: { i: number }): JSX.Element {
   const next = prices[p.i + 1] || null, nextAsk = next ? null : asks[0] || null;
   const nextCust = next ? b.customers.find((x) => x.id === next.customerId) : nextAsk ? b.customers.find((x) => x.id === nextAsk.requests[0].customerId) : null;
   const goNext = () => openTell(next ? p.i + 1 : prices.length);
-  const done = (sent: boolean) => {
+  const done = () => {
     markTold('price:' + o.id);
     void act('markPriceTold', o.id).catch(() => { /* kept on this phone; it goes when there is signal */ });
-    if (sent) toast.show(`Sent to ${who}`);
     if (next || nextAsk) openTell(next ? p.i : prices.length - 1); else sheet.close();
   };
   const send = async () => {
-    try { const ok = await sendTo(chats.value, o.customerId, priceMessage(b, o), b.at); done(ok); } catch (e) { toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void send(); } }); }
+    try {
+      if (sentToast(await sendTo(chats.value, o.customerId, priceMessage(b, o), now.value), who, false)) done();
+    } catch (e) { toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void send(); } }); }
   };
   return (
     <div class="td-sheet">
@@ -119,7 +139,7 @@ function TellSheet(p: { i: number }): JSX.Element {
         )}
         <div class="td-tell-acts">
           <Button kind="green" duo={phWhatsapp} onClick={() => { void send(); }}>{`Send to ${who}`}</Button>
-          <Button kind="ghost" h={52} class="td-btn-in" onClick={() => done(false)}><Icon name="check" size={16} stroke={2.6} />They know already</Button>
+          <Button kind="ghost" h={52} class="td-btn-in" onClick={done}><Icon name="check" size={16} stroke={2.6} />They know already</Button>
         </div>
       </div>
     </div>
