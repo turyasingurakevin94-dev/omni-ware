@@ -21,9 +21,10 @@ export function heldOrder(id: number): Order | undefined {
   return held.value[id] || (b ? b.orders.find((o) => o.id === id) : undefined);
 }
 
-/** Grace's counter sales not sold yet, as last known. */
-function mine(): Order[] {
-  const b = books.peek();
+/** Grace's counter sales not sold yet, as last known (read in a render: it follows the books). */
+export function mine(): Order[] {
+  void held.value;
+  const b = books.value;
   if (!b) return [];
   const ids = new Set([...b.orders.filter((o) => o.counter && !o.invoiced && !o.cancelled && !o.voided && o.placedBy === b.me.id).map((o) => o.id), ...Object.keys(held.peek()).map(Number)]);
   return [...ids].map((id) => {

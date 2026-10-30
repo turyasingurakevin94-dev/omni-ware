@@ -19,6 +19,7 @@ import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
 import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefField, Tender } from './CounterDock.tsx';
 import { Find } from './Find.tsx';
+import { Held } from './Held.tsx';
 import { FindNone } from './FindNone.tsx';
 import { StillWho } from './local-whopill.tsx';
 import { Picked } from './Picked.tsx';
@@ -88,8 +89,10 @@ export function Counter(): JSX.Element {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);
     body = (
       <>
+        <Held b={b} ruth={ruth} />
         <SoldHead meta={`${sales.length} sales · ${sales.reduce((a, x) => a + x.amount, 0).toLocaleString('en-US')}`} />
         <Tiles items={best} onAdd={(it) => pick(it)} />
+        {/* With a sale waiting above, the aisles go under the tiles: the page scrolls to them (KC24). */}
         <OtherAisles skip={[...new Set(best.map((i) => i.aisle))]} onAisle={(a) => { q.value = a; }} />
       </>
     );
