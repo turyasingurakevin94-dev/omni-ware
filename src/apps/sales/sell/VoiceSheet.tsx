@@ -85,7 +85,7 @@ export function VoiceSheet(): JSX.Element | null {
           {heard.map((h) => (
             <div class="sl-heard-r" key={h.it.id}>
               <span class="sl-heard-sq"><ItemSquare aisle={h.it.aisle} size={38} icon={22} /></span>
-              <span class="sl-heard-t"><span>{h.it.name}</span><span class="mono">{fig(h.qty * (h.it.price || 0))}{(h.it.onShelf || 0) > 0 && <span class="sl-heard-s"><b class="mono">{h.it.onShelf}</b> on shelf</span>}</span></span>
+              <span class="sl-heard-t"><span>{h.it.name}</span><span class="mono">{fig(h.qty * (h.it.price || 0))}{(h.it.onShelf || 0) > 0 && <span class="sl-heard-s"><b>{h.it.onShelf}</b> on shelf</span>}</span></span>
               <span class="mono sl-heard-n">{`×${h.qty}${h.unit !== 'pc' && h.unit !== h.it.unit ? ` ${h.unit}` : h.it.unit !== 'pc' ? ` ${h.it.unit}` : ''}`}</span>
               <span role="img" aria-label="Understood" class="sl-heard-ok"><Icon name="check" size={13} stroke={3.2} /></span>
             </div>

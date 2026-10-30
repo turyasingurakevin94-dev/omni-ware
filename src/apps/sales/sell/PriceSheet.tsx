@@ -37,7 +37,7 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) : null;
   const short = l.name.split(' · ')[0];
   const pct = low ? 2.5 : high ? 98 : ladderPct(v, l.cost || 0, shop);
-  const tone = low || high ? 'bad' : '';
+  const tone = low || high ? 'bad' : '', ring = last === shop && !high && !low;
   const keep = () => { if (now !== shop) setPrice(l.lineId, shop, ''); sheet.close(); };
   const use = (n: number) => { setPrice(l.lineId, n, me.value ? me.value.id : ''); sheet.close(); };
   const was = lineTotal(l), will = lineTotal({ ...l, price: v });
@@ -48,11 +48,11 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
         <div class="sl-ladder-t">
           <span class="sl-ladder-b" />
           <span class="sl-ladder-k" />
-          {last === shop && !high && !low && <span aria-hidden="true" class="sl-ladder-last" />}
-          {high ? <span class="mono sl-ladder-x">{`×${Math.round(v / shop)}`}<Icon name="arrow-right" size={11} stroke={2.6} /></span>
+          {ring && <span aria-hidden="true" class="sl-ladder-last" />}
+          {high ? <span class="mono sl-ladder-x">{`×${Math.round(v / shop)}`}<Icon name="arrow-right" size={12} stroke={2.6} /></span>
             : <span class={'sl-ladder-m' + (low ? ' bad' : '')} style={{ left: `calc(${pct}% - 10px)` }} />}
         </div>
-        <div class="sl-ladder-l"><span>cost</span><span class="mono">{`shop${last === shop ? ' · last' : ''} ${fig(shop)}`}</span></div>
+        <div class="sl-ladder-l"><span>cost</span><span class="mono">{`shop${ring ? ' · last' : ''} ${fig(shop)}`}</span></div>
       </div>
       <div class={'sl-pf ' + tone}>
         <span class="sl-pf-t"><span>Their price, each</span><span class="mono">{fig(v)}<span aria-hidden="true" class="sl-caret" /></span></span>
@@ -60,8 +60,8 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
       </div>
       <div class="sl-outcome"><span>{`${countWord(l.qty, l.name, l.unit)} come to`}</span>{low ? <span class="mono faint">—</span> : <span class="mono">{v !== now && <><s>{fig(was)}</s>{' → '}</>}{fig(will)}</span>}</div>
       {under && <div class="sl-callout warn"><span aria-hidden="true" class="ow-av" style={avatarStyle({ initials: m.initials, tint: m.tint, size: 28, font: 11 })}>{m.initials}</span><span>{`Under the shop’s price. ${m.first} says yes before it is packed.`}</span></div>}
-      {high && <div class="sl-callout bad"><Icon name="warning" size={18} stroke={2} /><span>About {Math.round(v / shop)} times the shop’s <span class="mono">{fig(shop)}</span>. A zero too many?</span></div>}
-      {low && <div class="sl-callout bad"><Icon name="lock" size={18} stroke={2} /><span>Under what it costs the shop. It can’t go this low.</span></div>}
+      {high && <div role="alert" class="sl-callout bad"><Icon name="warning" size={18} stroke={2} /><span>About <span class="mono">{Math.round(v / shop)}</span> times the shop’s <span class="mono">{fig(shop)}</span>. A zero too many?</span></div>}
+      {low && <div role="alert" class="sl-callout bad"><Icon name="lock" size={18} stroke={2} /><span>Under what it costs the shop. It can’t go this low.</span></div>}
       <Keypad value={typed == null ? '' : typed} onChange={(d) => setTyped(d)} />
       <div class={'sl-two' + (low ? ' one' : '')}>
         {low

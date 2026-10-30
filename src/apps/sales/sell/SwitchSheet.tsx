@@ -60,7 +60,7 @@ export function SwitchSheet(p: { to: string }): JSX.Element | null {
         <button type="button" class="sl-btn navy" onClick={() => { moveTo(to.id); sheet.close(); }}>{`Change · ${items}`}</button></div>}>
       <div role="img" aria-label={`${from ? `${from.name}'s` : 'The'} ${items} change to ${to.name}`} class="sl-sw">
         {from && <span aria-hidden="true" class="ow-av sl-sw-av" style={avatarStyle({ initials: from.initials, tint: from.tint, size: 48, font: 15 })}>{from.initials}</span>}
-        <span class="sl-sw-items">{x.lines.slice(0, 3).map((l) => <ItemSquare key={l.lineId} aisle={(itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle} size={30} radius={9} icon={18} />)}</span>
+        <span class="sl-sw-items">{x.lines.slice().reverse().slice(0, 3).map((l) => <ItemSquare key={l.lineId} aisle={(itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle} size={30} radius={9} icon={18} />)}</span>
         <span class="sl-sw-arrow"><Icon name="arrow-right" size={20} stroke={2.2} /></span>
         <span aria-hidden="true" class="ow-av sl-sw-av" style={{ ...avatarStyle({ initials: to.initials, tint: to.tint, size: 48, font: 15 }), boxShadow: '0 0 0 3px #FFFFFF, 0 0 0 5px #16203C' }}>{to.initials}</span>
       </div>

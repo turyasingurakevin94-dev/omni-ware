@@ -10,7 +10,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { Books, Item } from '../../../core/types.ts';
 import { avatarStyle } from '../../../ui/Avatar.tsx';
-import { AisleIcon, Icon } from '../../../ui/icons.tsx';
+import { AisleIcon, Duo, Icon, phSearch } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
@@ -63,7 +63,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
       <div class="sl-aisle-top">
         <div class="sl-aisle-r">
           <button type="button" class="ow-close-c" aria-label={`Back to ${c ? whose(c.name) : 'the'} order`} onClick={() => nav.back()}><Icon name="back" size={20} stroke={2.2} /></button>
-          <label class="sl-aisle-q"><Icon name="search" size={20} stroke={2} /><input type="search" placeholder={`Search ${aisle || 'the shop'}`} aria-label={`Search ${aisle || 'the shop'}`} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} /></label>
+          <label class="sl-aisle-q"><Duo i={phSearch} size={20} color="#1C2233" /><input type="search" placeholder={`Search ${aisle || 'the shop'}`} aria-label={`Search ${aisle || 'the shop'}`} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} /></label>
         </div>
         <div role="group" aria-label="Show" class="sl-aisle-k">
           <a href="#" class="sl-aisle-a" onClick={(e) => { e.preventDefault(); openAisles(); }}><span aria-hidden="true"><AisleIcon aisle={aisle} size={18} color="#FFFFFF" /></span>{aisle || shelf}<Icon name="chevron-down" size={14} stroke={2.4} /></a>
@@ -83,7 +83,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
       <div class="sl-aisle-bar">
         <span class="sl-aisle-who">{c ? <span aria-hidden="true" class="ow-av" style={avatarStyle({ initials: c.initials, tint: c.tint, size: 42, font: 13 })}>{c.initials}</span> : null}<span aria-hidden="true" class="mono sl-aisle-n">{n}</span></span>
         <span class="sl-aisle-t"><span class="mono">{fig(s ? s.total : 0)}</span>{s && s.coming > 0 && <span class="mono">{`${s.coming} price${s.coming === 1 ? '' : 's'} coming`}</span>}</span>
-        <a href="#" class="sl-aisle-done" onClick={(e) => { e.preventDefault(); nav.back(); }}>Done<Icon name="check" size={18} stroke={2.4} /></a>
+        <a href="#" class="sl-aisle-done" onClick={(e) => { e.preventDefault(); nav.back(); }}>Done<Icon name="check" size={16} stroke={2.6} /></a>
       </div>
     </div>
   );
