@@ -23,7 +23,7 @@ import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, chats, drafts, now, source } from '../shell/store.ts';
-import { lastOrderAt, mine, opensOwn } from './data.ts';
+import { lastOrderAt, mine } from './data.ts';
 import { askAisle, sellsMost } from './First.tsx';
 import { go, tel } from './go.ts';
 import { rememberOpened, rememberSearch, useLocal } from './local.ts';
@@ -252,11 +252,11 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
       {p.show('orders') && live.length > 0 && (
         <Group dot="#1A5A8A" title="On the move" meta={`${live.length} of ${all}`} sum={live.reduce((s, o) => s + orderTotal(o), 0)}>
           {live.map((o) => (
-            <button type="button" key={o.id} onClick={() => go('orders/order', { id: o.id })} class={cx('td-find-row', opensOwn(o) && 'own')}>
+            <Tap key={o.id} on={() => go('orders/order', { id: o.id })} class="td-find-row">
               <span aria-hidden="true" class="td-find-sq"><Icon name={STAGE_ICON[o.stage]} size={20} stroke={1.9} /></span>
               <span class="td-find-t"><span class="mono">{orderNo(o.id)}</span><span>{`${dayOf(o.placedAt) === dayOf(p.now) ? 'today ' : ''}${when(o.placedAt, p.now)}`}</span></span>
               <span class="td-find-st"><span>{STAGE_WORD[o.stage]}</span><span class="mono">{money(orderTotal(o))}</span></span>
-            </button>
+            </Tap>
           ))}
         </Group>
       )}

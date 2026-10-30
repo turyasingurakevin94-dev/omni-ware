@@ -18,7 +18,7 @@ import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, now } from '../shell/store.ts';
-import { faceOf, moneyInToday, opensOwn, owing, placedToday, readyToCollect, soldIn, total, weekStart } from './data.ts';
+import { faceOf, moneyInToday, owing, placedToday, readyToCollect, soldIn, total, weekStart } from './data.ts';
 import { Faces } from './bits.tsx';
 import { go } from './go.ts';
 import './day.css';
@@ -92,12 +92,12 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
         {shown.map((o) => {
           const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) : null;
           return (
-            <button type="button" key={o.id} class={cx('td-day-row', o.qa && 'qa', opensOwn(o) && 'own')} onClick={() => go('orders/order', { id: o.id })}>
+            <Tap key={o.id} class={cx('td-day-row', o.qa && 'qa')} on={() => go('orders/order', { id: o.id })}>
               <span class="mono td-day-at">{clock(o.placedAt)}</span>
               {o.qa ? <span aria-hidden="true" class="td-day-flag"><Icon name="flag" size={14} stroke={2} /></span> : <Avatar {...faceOf(b, o)} size={32} />}
               <span class="td-day-t2"><span>{c ? c.name : o.qa ? o.client.name : 'Walk-in order'}</span><span>{!o.qa && <span class="mono">{orderNo(o.id)}</span>}{stagePill(o)}</span></span>
               <span class="mono td-day-amt">{money(orderTotal(o))}</span>
-            </button>
+            </Tap>
           );
         })}
         <div class="td-day-tot"><span>{`${real.length} orders`}</span><span class="mono">{money(total(real))}</span></div>
