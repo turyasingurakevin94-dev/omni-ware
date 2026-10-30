@@ -83,6 +83,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       if (flags.state === 'loading') return new Promise(() => {});
       return Promise.resolve(copy({ at: flags.offline ? SAVED_AT : s.now, connected: s.connected, chats: s.chats, recent: s.messages.slice(-500) }));
     },
+    order: (id) => Promise.resolve(flags.state === 'loading' ? null : copy(s.books.orders.find((o) => o.id === id) || null)),
     thread: (chatId) => Promise.resolve(copy({
       chatId, messages: s.messages.filter((m) => m.chatId === chatId), notes: s.notes.filter((n) => n.chatId === chatId), events: s.events.filter((e) => e.chatId === chatId),
     })),

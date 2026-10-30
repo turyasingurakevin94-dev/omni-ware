@@ -114,6 +114,8 @@ export interface DataSource {
   books(): Promise<Books>;
   chats(): Promise<ChatBooks>;
   thread(chatId: number): Promise<Thread>;
+  /** One order as the books hold it now, null when it is gone: read again while a customer waits on it (a counter price). */
+  order(id: number): Promise<Order | null>;
 
   /* orders */
   placeOrder(d: OrderDraft): Promise<Order>;
