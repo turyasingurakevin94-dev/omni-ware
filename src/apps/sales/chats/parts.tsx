@@ -42,7 +42,7 @@ export function Dots(): JSX.Element {
 }
 
 /** A photo they sent, in a box of the given size. */
-export function Pic(p: { m: Message; w: number | string; h: number; r: number; icon: number }): JSX.Element {
+export function Pic(p: { m: Message; w: number | string; h: number; r: number; icon: number; flat?: boolean }): JSX.Element {
   const [link, setLink] = useState<string | null>(p.m.media && !p.m.media.startsWith('aisle:') ? p.m.media : null);
   const aisle = p.m.media && p.m.media.startsWith('aisle:') ? p.m.media.slice(6) : '';
   useEffect(() => {
@@ -51,9 +51,10 @@ export function Pic(p: { m: Message; w: number | string; h: number; r: number; i
   }, [p.m.id]);
   const a = AISLE[aisleKey(aisle)];
   const style: JSX.CSSProperties = { width: typeof p.w === 'number' ? `${p.w}px` : p.w, height: `${p.h}px`, borderRadius: `${p.r}px`,
-    background: link ? '#E6E3DD' : `linear-gradient(145deg, ${a.soft} 0%, #FFFFFF 150%)`, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.05)' };
+    background: link ? '#E6E3DD' : p.flat ? `linear-gradient(160deg, ${a.soft} 0%, #FFFFFF 160%)` : `linear-gradient(145deg, ${a.soft} 0%, #FFFFFF 150%)`,
+    boxShadow: p.flat ? undefined : 'inset 0 0 0 1px rgba(0,0,0,.05)' };
   return (
-    <span aria-hidden="true" class="ch-pic" style={style}>
+    <span role="img" aria-label={p.m.body ? `Their photo: ${p.m.body}` : 'Their photo'} class="ch-pic" style={style}>
       {link ? <img src={link} alt="" /> : aisle ? <Duo i={a.i} size={p.icon} color={a.ink} /> : <Icon name="camera" size={p.icon} stroke={1.8} style={{ color: '#5F6980' }} />}
     </span>
   );

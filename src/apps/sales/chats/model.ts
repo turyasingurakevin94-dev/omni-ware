@@ -163,7 +163,7 @@ export function whose(m: Member | null): string {
 }
 
 /** A face for any member. */
-export function faceOf(m: Member): Face {
+export function faceOf(m: { name: string; initials: string; tint: Face["tint"] }): Face {
   return { initials: m.initials || initials(m.name), tint: m.tint || tintFor(m.name) };
 }
 
