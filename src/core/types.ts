@@ -181,6 +181,9 @@ export interface Order {
   invoiced: boolean;
   invoicedAt: Ms | null;
   voided: boolean;
+  /** When and by whom (payload.voidedBy {by, at}, 0176; before it payload.voidedAt, voidedBy). */
+  voidedAt: Ms | null;
+  voidedBy: string | null;
   /** status 'cancelled' (0177), or a void before the invoice. */
   cancelled: boolean;
   /** A counter sale: invoiced and paid on the spot (counter_sale). */
