@@ -9,9 +9,10 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { Books, Customer } from '../../../core/types.ts';
 import { AisleChips } from '../../../ui/Aisles.tsx';
 import { OftenWith, OftenWithHead } from '../../../ui/OftenWith.tsx';
-import { me } from '../shell/store.ts';
+import { me, online } from '../shell/store.ts';
+import { openWarns } from './Lines.tsx';
 import { aisles, itemKey, oftenWith, whose } from './insights.ts';
-import { add, cur } from './model.ts';
+import { add, cur, openId } from './model.ts';
 import { openAisle } from './sheets.tsx';
 
 /** How far above the dock (or the notice over it) a suggestion must end. */
@@ -21,7 +22,7 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
   const x = cur.value, b = p.b, c = p.c, box = useRef<HTMLDivElement>(null), [fit, setFit] = useState<{ rows: number; chips: boolean }>({ rows: 3, chips: true });
   const newest = x && x.lines.length ? x.lines[x.lines.length - 1] : null;
   const w = newest ? oftenWith(b, c ? c.id : null, itemKey(newest), new Set(x ? x.lines.map(itemKey) : []), me.value ? me.value.id : '') : null;
-  const key = `${x ? x.lines.map(itemKey).join() : ''}|${w ? w.rows.length : 0}`;
+  const key = `${x ? x.lines.map((l) => `${itemKey(l)}:${l.qty}`).join() : ''}|${w ? w.rows.length : 0}|${openId.value}|${openWarns.value}|${online.value}`;
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
@@ -36,6 +37,9 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
       if (k.dataset.fit === 'row' && bottom(k) <= limit) rows++;
       if (k.dataset.fit === 'chips') chips = rows === kids.filter((y) => y.dataset.fit === 'row').length && bottom(k) <= limit;
     }
+    // Put back what the measure showed (preact keeps its own style when the state does not change).
+    let r = 0;
+    kids.forEach((k) => { const on = k.dataset.fit === 'chips' ? chips : r++ < rows; k.style.display = on ? '' : 'none'; });
     if (rows !== fit.rows || chips !== fit.chips) setFit({ rows, chips });
   }, [key]);
   if (!w || !newest) return null;

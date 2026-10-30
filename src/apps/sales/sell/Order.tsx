@@ -14,6 +14,7 @@ import { useState } from 'preact/hooks';
 import { isDataError } from '../../../core/datasource.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Notice } from '../../../ui/Notice.tsx';
+import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
 import { nav, stack } from '../shell/nav.ts';
@@ -23,8 +24,8 @@ import { askMatch, ChatAsk, fromChat } from './ChatAsk.tsx';
 import { enterFind, Find } from './Find.tsx';
 import { CreditLine, Foot } from './Foot.tsx';
 import { whoLine } from './insights.ts';
-import { closeLine, Lines } from './Lines.tsx';
-import { cur, customerOf, forget, keep, plain, query, resume, start, toDraft } from './model.ts';
+import { closeLine, Lines, openWarns } from './Lines.tsx';
+import { cur, customerOf, forget, keep, openId, plain, query, resume, start, toDraft } from './model.ts';
 import { OrderDock } from './OrderDock.tsx';
 import { sendPicture } from './picture.ts';
 import { openAisles, openSwitch, openVoice } from './sheets.tsx';
@@ -90,7 +91,7 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
           : <WhoPill on={() => openSwitch()} face={{ initials: 'WI', tint: 't4' }} name="Walk-in order" sub="no name · the shop packs it" dot="#9AA1AE" />}
         search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: query.value, onInput: (v) => { query.value = v; }, onEnter: () => enterFind(), onMic: openVoice }}
         onAisles={openAisles} />
-      <main class={'sl-main' + (typing ? ' find' : !c && x.lines.length === 0 ? ' walkin' : '')}>
+      <main class={'sl-main' + (!typing && ((x.lines.length === 0 && c) || (x.lines.length > 0 && (sheet.isOpen || !!askMatch(b, c) || (openId.value != null && !openWarns.value)))) ? ' g12' : '')}>
         {typing ? <Find b={b} c={c} />
           : x.lines.length === 0 ? <Start b={b} c={c} />
           : (

@@ -7,7 +7,7 @@
  *   SL22  a price under the shop's: Ruth decides before it is packed
  * The count is taken when the line closes (tap its head, another line, or anything else).
  */
-import { signal } from '@preact/signals';
+import { computed, signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { lineTotal } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
@@ -28,6 +28,9 @@ import './lines.css';
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
 /** The count being changed on the open line, before it is taken. */
 const editQty = signal<number | null>(null);
+
+/** The open line shows a warning of its own (a count under 1, a carton for kg): the boards set it closer (SL14, SL15). */
+export const openWarns = computed(() => openId.value != null && ((editQty.value != null && editQty.value < 1) || askedAs.value.has(openId.value)));
 
 /** Close the open line, taking its count. */
 export function closeLine(): void {
