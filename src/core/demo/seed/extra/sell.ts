@@ -154,10 +154,17 @@ export function extra(s: DemoState, f: DemoFlags): void {
   lines(s, f);
   lubowa0559(s, f);
   const b = s.books;
-  // SL16: the shop's cutting charge (spec 04 Q3 asks how charges are set; this is the demo's).
-  if (!b.settings.services.some((x) => x.id === 'cutting')) b.settings.services.push({ id: 'cutting', label: 'Cutting', type: 'fixed', value: 1000 });
+  // SL16: loading per bag (FACTS §6: 20 bags is 10,000; spec 04 Q3), and the demo's own cutting rate
+  // (a seed value, named in the demo README): presets.services as core/services.ts reads them.
+  // SL18: the iron sheet's cost (never shown; not in FACTS) puts 36,500 at the ladder's 66% (ui/Keypad ladderPct);
+  // SL20's 24,000 is under it, so the floor refuses it (0171).
+  const sheet = b.items.find((i) => i.id === 'iron-g28-3m');
+  if (sheet) sheet.cost = 24500;
+  const sv = b.settings.services, loading = sv.find((x) => x.id === 'loading');
+  if (loading) loading.per = 'bag';
+  if (!sv.some((x) => x.id === 'cutting')) sv.push({ id: 'cutting', label: 'Cutting', type: 'fixed', value: 1000, per: 'sheet' });
   // SL17: about 35 minutes to Ntinda (FACTS §4.2: leaves 13:20, there ~13:55).
-  const ntinda = b.settings.services.find((x) => x.id === 'delivery-ntinda') as { mins?: number } | undefined;
+  const ntinda = sv.find((x) => x.id === 'delivery-ntinda');
   if (ntinda) ntinda.mins = 35;
   // SL10: what the demo hears when Grace says it (the demo has no microphone).
   (globalThis as { owDemoVoice?: string }).owDemoVoice = 'forty sheets of G28 and two cartons of four inch nails';
