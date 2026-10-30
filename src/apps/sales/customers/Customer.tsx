@@ -18,8 +18,8 @@ import { nav } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { openBillCheck } from './BillCheck.tsx';
-import { AgeTrack, ApartHead, CustHead, SplitHead, first } from './cust-head.tsx';
-import { Acts, AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, Rhythm } from './cust-cards.tsx';
+import { AgeTrack, ApartHead, CustHead, PaidUp, SplitHead, first } from './cust-head.tsx';
+import { Acts, AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, PaidBills, Rhythm } from './cust-cards.tsx';
 import { liveOf, moneyOf, placeKind, rhythmOf, short } from './data.ts';
 import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
@@ -48,6 +48,9 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
   if (m.apart > 0) picture = <ApartHead apart={m.apart} owes={m.owes} bills={m.bills} checker={esther} />;
   else if (m.checkedIn > 0) picture = <SplitHead owes={m.owes} oldest={m.oldest} collect={m.take} checked={m.checkedIn} checker={esther} onChecked={() => checkBill(m.bills.find((x) => x.checked)!.id)} />;
   else if (m.owes > 0) picture = <AgeTrack owes={m.owes} bills={m.bills} limit={c.creditLimit} manager={first(ruth.name)} hold={b.settings.holdDays} />;
+  else picture = <PaidUp deposit={Math.max(0, -c.owes)} />;
+  // Nothing owed: their last bills, paid, so the page still says how they pay (CU16).
+  const paid = m.owes > 0 || m.apart > 0 ? [] : b.orders.filter((o) => o.customerId === c.id && o.invoiced && !o.voided && !o.counter).sort((x, y) => (y.invoicedAt || 0) - (x.invoicedAt || 0)).slice(0, 3);
 
   const head = m.apart > 0 ? <BillsHead title="Open bills · oldest first" note={`owes ${fig(m.owes)} in the books`} />
     : m.past ? <BillsHead title="Bills · oldest first" hold={`new credit waits for ${first(ruth.name)}`} /> : null;
@@ -94,6 +97,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       )}
       {showMove && <OnTheMove orders={live} onOrder={(id) => nav.push('orders/order', { id })} />}
       {rh}
+      {paid.length > 0 && <PaidBills orders={paid} onOrder={(id) => nav.push('orders/order', { id })} />}
       <div class="cu-sell"><Button icon={sell.icon} stroke={sell.icon === 'plus' ? 2.4 : 2.2} onClick={sell.on}>{sell.word}</Button></div>
     </FullSheet>
   );

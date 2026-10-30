@@ -121,3 +121,24 @@ export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: str
     </div>
   );
 }
+
+/** CU16 · Their last bills, paid: the day, the amount, the number, a Paid tick. Each opens its order. */
+export function PaidBills(p: { orders: Order[]; onOrder: (id: number) => void }): JSX.Element {
+  return (
+    <>
+      <BillsHead title="Last bills · paid" />
+      <div class="cu-bills">
+        {p.orders.map((o) => {
+          const d = new Date((o.invoicedAt || o.placedAt) + 3 * 3600 * 1000);
+          return (
+            <Tap key={o.id} on={() => p.onOrder(o.id)} class="cu-bill" label={`${orderNo(o.id)}, ${fig(orderTotal(o))}, paid`}>
+              <span class="cu-bill-d"><span class="mono">{d.getUTCDate()}</span><span>{MONTHS[d.getUTCMonth()]}</span></span>
+              <span class="cu-bill-t"><span class="mono">{fig(orderTotal(o))}</span><span>{orderNo(o.id)}</span></span>
+              <span class="cu-bill-act good"><Icon name="check" size={14} stroke={2.6} />Paid</span>
+            </Tap>
+          );
+        })}
+      </div>
+    </>
+  );
+}

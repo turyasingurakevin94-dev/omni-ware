@@ -112,6 +112,19 @@ export function ApartHead(p: { apart: number; owes: number; bills: Bill[]; check
   );
 }
 
+/** CU16 · Nothing owed: 0 in mint and All paid (CU06's words), or the deposit they keep. */
+export function PaidUp(p: { deposit: number }): JSX.Element {
+  return (
+    <div class="cu-paidup">
+      <div class="cu-owes">
+        <span class="cu-owes-k"><span>{p.deposit ? 'Deposit · the next bill uses it' : 'Owes'}</span><span class="mono mint">{fig(p.deposit)}</span></span>
+        <span class="cu-allpaid"><Icon name="check" size={13} stroke={3} />All paid</span>
+      </div>
+      <span aria-hidden="true" class="cu-none-bar" />
+    </div>
+  );
+}
+
 /** "Esther" from "Esther Auma". */
 export function first(name: string): string {
   return String(name || '').split(/\s+/)[0];

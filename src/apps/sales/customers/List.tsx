@@ -15,7 +15,7 @@ import type { Books, Customer } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
 import { act, books, chats, flush, now, online } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { AllBody, DueBody, LoadingBody, NobodyBody, OweBody, type Acts } from './list-bodies.tsx';
+import { AllBody, DueBody, LoadingBody, NobodyBody, OweBody, QuietBody, type Acts } from './list-bodies.tsx';
 import { listData, openedLately } from './list-data.ts';
 import { CompactHead, LoadingHead, NoneHead, OweHead, PlainHead, TypingHead } from './list-head.tsx';
 import { SearchBody } from './list-search.tsx';
@@ -99,7 +99,7 @@ export function ListScreen(p: ScreenProps): JSX.Element {
   if (typing) { body = <SearchBody b={b} d={d} q={q} a={a} opened={openedLately(b, openedOf(b), t)} onNew={go.onNew} />; gap = 10; }
   else if (filter === 'due') body = <>{chips}<DueBody d={d} a={a} day={day} /></>;
   else if (filter === 'all') body = <>{chips}<AllBody d={d} a={a} onHello={() => { void sayHi(); }} sending={hello} /></>;
-  else if (filter === 'quiet') body = <>{chips}<AllBody d={{ ...d, all: d.quiet }} a={a} onHello={() => { void sayHi(); }} sending={hello} /></>;
+  else if (filter === 'quiet') body = <>{chips}<QuietBody d={d} a={a} onHello={() => { void sayHi(); }} sending={hello} /></>;
   else if (d.owes > 0) { body = <>{chips}<OweBody b={b} d={d} today={today} a={a} more={!off} /></>; gap = off ? 14 : 12; }
   else { body = <>{chips}<NobodyBody d={d} a={a} /></>; gap = 12; }
 

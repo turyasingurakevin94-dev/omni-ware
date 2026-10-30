@@ -12,7 +12,7 @@ import { orderNo, TINTS } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Tint } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
-import { books, now } from '../shell/store.ts';
+import { books, flush, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { short } from './data.ts';
 import { dm } from './pay-parts.tsx';
@@ -43,7 +43,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
     <main class="cu-paid">
       <div class="cu-paid-x"><button type="button" aria-label="Close" onClick={nav.home}><Icon name="close" size={16} stroke={2.2} /></button></div>
       <div class="cu-paid-top">
-        <span aria-hidden="true" class="cu-paid-tick"><Icon name="check" size={34} stroke={2.8} /></span>
+        <span aria-hidden="true" class={p.kept ? 'cu-paid-tick kept' : 'cu-paid-tick'}><Icon name={p.kept ? 'clock' : 'check'} size={34} stroke={p.kept ? 2.4 : 2.8} /></span>
         <h1>{p.kept ? 'Kept on this phone' : 'Paid'}</h1>
         <span class="cu-paid-who"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{p.initials}</span><span>{p.name}</span><span class="mono">{money(p.amount)}</span></span>
         <span class="cu-paid-how">{how}</span>
@@ -66,11 +66,18 @@ function PaidView(props: { p: Paid }): JSX.Element {
           {p.deposit > 0 && (
             <div class="cu-slip-l dep"><span aria-hidden="true" /><span>Deposit <span>next bill uses it</span></span><span class="mono">{money(p.deposit)}</span></div>
           )}
-          <div class="cu-slip-t"><span>Paid</span><span class="mono">{money(p.amount)}</span></div>
+          <div class="cu-slip-t"><span>{p.kept ? 'To record' : 'Paid'}</span><span class="mono">{money(p.amount)}</span></div>
           <div class="cu-slip-o"><span>Owes now</span><span aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><s class="mono">{money(p.before)}</s><b class="mono">{money(p.after)}</b></div>
         </div>
         <div class="cu-slip-edge bottom" />
       </div>
+      {p.kept && (
+        <div class="cu-rc failed">
+          <span class="cu-rc-row"><span aria-hidden="true" class="cu-rc-ic warn"><Icon name="offline" size={20} stroke={2} /></span>
+            <span class="cu-rc-t"><span>Not sent yet</span><span>Records when signal comes back</span></span></span>
+          <span class="cu-rc-acts"><button type="button" class="cu-rc-again" onClick={() => { void flush(); }}><Icon name="undo" size={15} stroke={2.2} />Try again</button></span>
+        </div>
+      )}
       {p.receipt.state === 'failed' ? (
         <div class="cu-rc failed">
           <span class="cu-rc-row"><span aria-hidden="true" class="cu-rc-ic warn"><Icon name="receipt" size={20} stroke={2} /></span>

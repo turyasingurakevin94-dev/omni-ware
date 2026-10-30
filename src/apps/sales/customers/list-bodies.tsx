@@ -113,14 +113,7 @@ export function AllBody(p: { d: ListData; a: Acts; onHello: () => void; sending:
   const cur = rows.length ? rows[0].c.name[0].toUpperCase() : null;
   return (
     <>
-      {d.quiet.length > 0 && (
-        <div class="cu-grp"><Group dot="#8E2A22" title="Gone quiet" count={d.quiet.length} right="worth a hello" />
-          <div class="cu-quiet">
-            <div><span aria-hidden="true" class="cu-ghosts s30">{d.quiet.slice(0, 4).map((_, i) => <span key={i} style={{ background: GHOST[i % 4] }} />)}{d.quiet.length > 4 && <span class="more mono">{`+${d.quiet.length - 4}`}</span>}</span>
-              <span>{`${d.quiet.length} regulars · twice their usual gap or more`}</span></div>
-            <button type="button" class="cu-hello" disabled={p.sending} onClick={p.onHello}><Duo i={phWhatsapp} size={20} color="#FFFFFF" />{p.sending ? 'Sending…' : `Say hi to all ${d.quiet.length}`}</button>
-          </div></div>
-      )}
+      {d.quiet.length > 0 && <QuietCard d={d} onHello={p.onHello} sending={p.sending} />}
       <div class="cu-grp"><Group title="Everyone" count={everyone.length} right="A–Z" railGap />
         <div class="cu-az">
           <div class="cu-az-l"><Card>
@@ -134,6 +127,31 @@ export function AllBody(p: { d: ListData; a: Acts; onHello: () => void; sending:
             ))}
           </nav>
         </div></div>
+    </>
+  );
+}
+
+/** Gone quiet: who it is, at a glance, and one hello for all of them (CU04, CU09). */
+function QuietCard(p: { d: ListData; onHello: () => void; sending: boolean }): JSX.Element {
+  const { d } = p;
+  return (
+    <div class="cu-grp"><Group dot="#8E2A22" title="Gone quiet" count={d.quiet.length} right="worth a hello" />
+      <div class="cu-quiet">
+        <div><span aria-hidden="true" class="cu-ghosts s30">{d.quiet.slice(0, 4).map((_, i) => <span key={i} style={{ background: GHOST[i % 4] }} />)}{d.quiet.length > 4 && <span class="more mono">{`+${d.quiet.length - 4}`}</span>}</span>
+          <span>{`${d.quiet.length} regulars · twice their usual gap or more`}</span></div>
+        <button type="button" class="cu-hello" disabled={p.sending} onClick={p.onHello}><Duo i={phWhatsapp} size={20} color="#FFFFFF" />{p.sending ? 'Sending…' : `Say hi to all ${d.quiet.length}`}</button>
+      </div></div>
+  );
+}
+
+/** Quiet (CU09): the hello for all of them, then each one, the longest gap first, WhatsApp from the row. */
+export function QuietBody(p: { d: ListData; a: Acts; onHello: () => void; sending: boolean }): JSX.Element {
+  const { d, a } = p, rows = d.quiet.slice().sort((x, y) => x.r.toDue - y.r.toDue);
+  return (
+    <>
+      <QuietCard d={d} onHello={p.onHello} sending={p.sending} />
+      <div class="cu-grp"><Group title="Longest gap first" count={rows.length} />
+        <Card>{rows.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone="late" act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />)}</Card></div>
     </>
   );
 }
