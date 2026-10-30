@@ -17,7 +17,7 @@
  * measures src/, not the page, and test/retire-list.test.js knows the role
  * has a built page. Nobody edits the page; it is made again every time.
  *
- * Fails when the page is over its budget: 80 KB gzip (spec 07 §4).
+ * Fails when the page is over its budget: 200 KB gzip (spec 07 §4; Kevin, 30 Oct 2026).
  *
  * The demo (the sample shop of the canvas, src/core/demo) is its own file
  * beside the page, loaded only on ?demo: the page never carries it, so its
@@ -30,7 +30,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
-const BUDGET = 80 * 1024;
+const BUDGET = 200 * 1024;
 // The pinned client, the same file and tag as sales.html:3565 (apps/sales/src/transform.js swaps it).
 const SUPABASE_TAG = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
