@@ -376,6 +376,8 @@ export interface Books {
   customers: Customer[];
   orders: Order[];
   items: Item[];
+  /** The shop's aisles (products.category) and how many products each holds, the most first ("Roofing · 86 items"). */
+  aisles: { name: string; count: number }[];
   payments: Payment[];
   promises: PayPromise[];
   asks: SourcingAsk[];
