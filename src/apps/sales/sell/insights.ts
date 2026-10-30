@@ -88,7 +88,9 @@ export function oftenWith(b: Books, customerId: string | null, anchor: string, i
     return { of: orders.length, with: withIt.length, rows };
   };
   let got = customerId ? scan(ordersOf(b, customerId)) : null, mine = true;
-  if (!got || got.with < 2 || !got.rows.length) { got = scan(b.orders.filter((o) => live(o) && o.placedBy === me)); mine = false; }
+  // A customer's own orders only (SL10: nothing for cement Kato had once); a walk-in's, mine.
+  if (got && got.with < 2) got = { ...got, rows: [] };
+  if (!got) { got = scan(b.orders.filter((o) => live(o) && o.placedBy === me)); mine = false; }
   return { mine, of: got.of, rows: got.rows.slice(0, n) };
 }
 

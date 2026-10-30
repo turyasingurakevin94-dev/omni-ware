@@ -57,8 +57,15 @@ const UNIT: Record<string, string> = {
 
 /** "forty" → 40, "4" → 4; "four inch" → 4". */
 function words(s: string): string[] {
-  return norm(s).replace(/(\d+(?:\.\d+)?)\s*(?:inch|in|")(?![a-z])/g, '$1"').split(/[\s,?!]+/).filter(Boolean)
-    .map((w) => (NUM[w] != null ? String(NUM[w]) : w));
+  const ws = norm(s).split(/[\s,?!]+/).filter(Boolean).map((w) => (NUM[w] != null ? String(NUM[w]) : w));
+  // "4 inch", "four inch", "4in" → 4"
+  return ws.reduce<string[]>((out, w) => {
+    const m = w.match(/^(\d+(?:\.\d+)?)(?:in|inch)$/);
+    if (m) out.push(m[1] + '"');
+    else if ((w === 'inch' || w === 'in') && out.length && /^\d+(\.\d+)?$/.test(out[out.length - 1])) out[out.length - 1] += '"';
+    else out.push(w);
+    return out;
+  }, []);
 }
 const stem = (w: string) => w.replace(/(es|s)$/, '').replace(/"$/, '"');
 const nameWords = (it: Item) => words(it.name.replace(/·/g, ' ')).map(stem);

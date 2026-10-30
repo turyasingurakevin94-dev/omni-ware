@@ -54,6 +54,8 @@ export function enterFind(): void {
   if (!b || !x) return;
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) || null : null;
   const a = readAsk(query.value), hits = findItems(b, a, rankFor(b, c, now.value));
+  // Added: the field lets go (SL15); a "Price coming" sheet keeps it (SL21).
+  if (hits[0] && hits[0].price != null) (document.activeElement as HTMLElement | null)?.blur();
   if (hits[0]) addAsked(b, hits[0], a, c);
 }
 
@@ -123,7 +125,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
     return () => clearTimeout(t);
   }, [query.value]);
   return (
-    <>
+    <div class="sl-nothing">
       <div class="sl-none">
         <span aria-hidden="true" class="sl-none-ic"><Duo i={phSearch} size={26} color="#5F6980" /><span>?</span></span>
         <span class="sl-none-t"><span>{`Nothing called “${query.value.trim()}”`}</span><span>{`The shop doesn’t sell a ${plain}`}</span></span>
@@ -151,6 +153,6 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
         </div>
         <button type="button" class="sl-stock-go" onClick={() => void askMoses(b, name, a.qty || 1, c)}><Icon name="send" size={17} stroke={2.2} />{`Send to ${m.first}`}</button>
       </div>
-    </>
+    </div>
   );
 }

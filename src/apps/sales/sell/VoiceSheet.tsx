@@ -37,14 +37,17 @@ function understand(b: Books, text: string): Heard[] {
 function Said(p: { text: string; heard: Heard[] }): JSX.Element {
   const nouns = new Set(p.heard.flatMap((h) => h.it.name.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3).map((w) => w.replace(/s$/, ''))));
   const keep = (w: string) => NUMS.test(w) || UNITS.test(w) || nouns.has(w.toLowerCase().replace(/s$/, ''));
-  const parts = p.text.split(/(\s+)/), out: (string | JSX.Element)[] = [];
-  let run = '';
-  const flush = (k: number) => { if (run.trim()) out.push(<mark key={k}>{run.trim()}</mark>, run.endsWith(' ') ? ' ' : ''); run = ''; };
-  parts.forEach((t, i) => {
-    if (/^\s+$/.test(t)) { if (run) run += t; else out.push(t); return; }
-    if (keep(t)) run += t; else { flush(i); out.push(t); }
+  // Each word read is marked; a size stays with its word ("four inch nails").
+  const out: (string | JSX.Element)[] = [];
+  let run: string[] = [], last = '';
+  const flush = () => { if (run.length) out.push(<mark key={out.length}>{run.join(' ')}</mark>); run = []; };
+  p.text.split(/\s+/).forEach((w, i) => {
+    const k = keep(w), join = k && run.length > 0 && (w === 'inch' || last === 'inch');
+    if (!join) { flush(); if (i) out.push(' '); }
+    if (k) run.push(w); else out.push(w);
+    last = k ? w : '';
   });
-  flush(parts.length);
+  flush();
   return <p class="sl-said">“{out}”</p>;
 }
 

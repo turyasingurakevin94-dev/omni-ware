@@ -135,7 +135,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   if (asked && asked.unit !== l.unit) {
     const alt = asked.alt;
     return (
-      <div class="sl-open">
+      <div class="sl-open g12">
         <div class="sl-open-h"><Head l={l} b={b} /></div>
         {stepRow}
         <div class="sl-whole">
