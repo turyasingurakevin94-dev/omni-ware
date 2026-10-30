@@ -7,7 +7,7 @@
  * Each names the server function it stands in for.
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
-import { cashTotal, orderOwes, orderTotal, payPlan } from '../money.ts';
+import { cashTotal, orderOwes, orderTotal, payPlan, splitPayment } from '../money.ts';
 import { initials, invoiceNo, isGenericName, tintFor } from '../names.ts';
 import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
@@ -145,12 +145,12 @@ export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   if (over > 0 && !a.over) throw dataError('refused', 'That is more than they owe: give change or keep a deposit', 'OWOVR');
   const bills = b.orders.filter((o) => o.customerId === c.id && o.invoiced && !o.voided && orderOwes(o) > 0)
     .sort((x, y) => (x.invoicedAt || 0) - (y.invoicedAt || 0));
-  const ordered = a.picks ? a.picks.map((id) => bills.find((o) => o.id === id)).filter((o): o is Order => !!o) : bills;
+  const split = splitPayment(bills.map((o) => ({ id: o.id, left: orderOwes(o) })), toDebt, a.picks);
   let left = toDebt;
   const made: Payment[] = [];
-  for (const o of ordered) {
-    if (!(left > 0)) break;
-    const take = Math.min(left, orderOwes(o));
+  for (const { id, applied: take } of split) {
+    if (!(take > 0)) continue;
+    const o = bills.find((x) => x.id === id) as Order;
     const p = receipt(s, take, a, o.id, c.id);
     onOrder(o, p); made.push(p); left -= take;
     c.debtLog.push({ id: c.debtLog.length + 1000, day: p.day, type: 'payment', amount: take, orderId: o.id, paymentId: p.id, note: 'Payment — ' + invoiceNo(o.id) });

@@ -150,6 +150,21 @@ export function payPlan(owes: UGX, amount: UGX): { toDebt: UGX; over: UGX } {
   return { toDebt, over: left - toDebt };
 }
 
+/**
+ * How a payment spreads over a customer's open bills (given oldest first, each with what it still owes):
+ * the ticked bills in the order ticked (ones not open are skipped, each once), else every bill oldest
+ * first; each takes the least of what is left and what it owes until the amount runs out. One rule with
+ * receive_payment (0140: ordered_ids, pay_q := least(left_amt, due)). Pass what goes to the debt
+ * (payPlan(...).toDebt), not what was handed over. Returns the walked bills in walk order.
+ */
+export function splitPayment(bills: { id: number; left: UGX }[], amount: UGX, picks?: number[] | null): { id: number; applied: UGX }[] {
+  const walk: { id: number; left: UGX }[] = [];
+  if (picks) picks.forEach((id) => { const b = bills.find((x) => x.id === id); if (b && !walk.includes(b)) walk.push(b); });
+  else walk.push(...bills);
+  let left = Math.max(0, whole(amount));
+  return walk.map((b) => { const applied = Math.max(0, Math.min(left, whole(b.left))); left -= applied; return { id: b.id, applied }; });
+}
+
 /** What the payment records, by how the over is settled. spec 02 §6 (0165 p_over). */
 export function settleOver(owes: UGX, amount: UGX, how: 'change' | 'deposit' | null): { moneyIn: UGX; change: UGX; deposit: UGX; refused: boolean } {
   const { toDebt, over } = payPlan(owes, amount);
