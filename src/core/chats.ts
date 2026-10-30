@@ -49,16 +49,16 @@ export interface Served { by: string; messages: number; orders: number; total: n
 /**
  * Who served a customer this year (CH33; the lead's ruling, 30 Oct; spec 04 §4): the messages each
  * person sent in their chat (chat_served), and the orders each person took for the customer this
- * year (saved_quotes payload.takenBy) with their total. Listed: whoever wrote in the chat, and the
- * Sales team's order takers (an order another role took before the customer was given to Sales,
- * such as the Manager's, is not Sales' serving: FACTS #0498). Biggest total first, then most messages.
+ * year (saved_quotes payload.takenBy) with their total. Only the Sales team's order takers count
+ * orders: a Manager's order is never Sales' serving, even when she wrote in the chat (FACTS #0498;
+ * the lead's ruling, 30 Oct). Biggest total first, then most messages.
  */
 export function servedThisYear(orders: Order[], customerId: string, messages: { by: string; messages: number }[], year: string, sales: Set<string>): Served[] {
   const per = new Map<string, Served>();
   const get = (by: string) => { let s = per.get(by); if (!s) { s = { by, messages: 0, orders: 0, total: 0 }; per.set(by, s); } return s; };
   messages.forEach((m) => { get(m.by).messages += m.messages; });
   orders.filter((o) => o.customerId === customerId && o.placedBy && !o.voided && !o.cancelled && dayOf(o.placedAt).startsWith(year))
-    .filter((o) => per.has(o.placedBy as string) || sales.has(o.placedBy as string))
+    .filter((o) => sales.has(o.placedBy as string))
     .forEach((o) => { const s = get(o.placedBy as string); s.orders += 1; s.total += orderTotal(o); });
   return [...per.values()].sort((a, b) => b.total - a.total || b.messages - a.messages);
 }
