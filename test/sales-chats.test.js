@@ -69,9 +69,16 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   t.check(served.find((s) => s.by === 'u-grace').messages === 86 && served.find((s) => s.by === 'u-brian').messages === 31, 'who served Kato: Grace 86 messages, Brian 31 (CH33)');
   const { servedThisYear } = require(path.join(ROOT, 'src/core/chats.ts'));
   const fresh = demoSource('?demo'), fb = await fresh.books();
-  const who = servedThisYear(fb.orders, 101, await fresh.served(101), '2026');
-  t.check(who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ') === 'u-grace:86:3:5600000 u-brian:31:3:2180000 u-faith:7:1:500000',
-    `served from Kato's chat this year, by who took them (got ${who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ')})`);
+  const who = servedThisYear(fb.orders, 'C001', await fresh.served(101), '2026', new Set(['u-grace', 'u-brian', 'u-faith']));
+  t.check(who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ') === 'u-grace:86:9:10812000 u-brian:31:3:2180000 u-faith:7:1:500000',
+    `who served Kato this year: messages, and the orders each took (Ruth's #0498 is not Sales') (got ${who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ')})`);
+  const { oftenWith } = require(path.join(ROOT, 'src/core/often.ts'));
+  const ow = oftenWith(fb.orders, { itemId: 'iron-g28-3m', variantIdx: null }, { customerId: 'C001', me: 'u-grace', skip: new Set(['cement-hima-50', 'iron-g28-3m', 'nails-4-25kg']), n: 99 });
+  const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');
+  t.check(ow.theirs && ow.of === 5 && owTxt.startsWith('wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
+    `often with Kato's sheets (CH21, CH34): Wheelbarrow, heavy duty in 2 of 5, the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
+  const once = oftenWith(fb.orders, { itemId: 'cement-hima-50', variantIdx: null }, { customerId: 'C001', me: 'u-grace' });
+  t.check(!once.theirs, 'often with: an item they had once is counted over my orders, not theirs (agent.html oftenWith)');
 
   t.done();
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -42,6 +42,15 @@ The app sometimes needs a state, sheet, error, empty view or step that the canva
 
 Nothing is improvised in code.
 
+## 2a. Rules a board's figures follow
+
+Where a board's sample figures disagree with `FACTS.md` and the seed, the board is corrected, not the data (the lead's ruling, 30 Oct 2026).
+
+| Board | Rule | Where it lives | Source |
+|---|---|---|---|
+| CH33 · "Who served Kato this year" | Per person: the messages they sent in the customer's chat (`chat_served`), and the orders they took for this customer this year (`payload.takenBy`, not voided or cancelled), with the orders' total. Listed: whoever wrote in the chat and the Sales team's order takers; an order another role took (the Manager's #0498) is not Sales' serving. Biggest total first; the bar is each total's share. | `src/core/chats.ts` `servedThisYear` | the lead's ruling, 30 Oct 2026; `sales.html:10455-10460` (PAGE.chatcust sums `takenBy` totals); migration `0170` (`chat_served`) |
+| CH21, CH34 · "Often with it" | What came with "it" in this customer's own orders when they have had it twice or more, each with how many of those orders had it ("2 of 5"), less their usual (shown above). "It" is the last of their usual ticked that they have had twice or more, else the first of their usual that they have. The top row with a price, then any row with no price yet ("Price coming"). For Kato: Wheelbarrow, heavy duty, 2 of 5 orders with Iron sheet G28 · 3m; Soft close hinge · flat (#0552) has no price. | `src/core/often.ts` `oftenWith` (the one rule, also for Sell's P13) | `agent.html:8890` oftenWith; `LANGUAGE.md` P13 |
+
 ## 3. Open questions (Kevin)
 
 Each row names the default being built until Kevin answers.

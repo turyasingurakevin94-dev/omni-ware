@@ -8,6 +8,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
+import { oftenWith } from '../../../core/often.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Button } from '../../../ui/Button.tsx';
@@ -27,20 +28,22 @@ export const shortName = (it: Item) => it.name.split(' · ')[0].replace(/ \d.*$/
 /** "sheets" for an iron sheet: what an item is, plural. */
 const kindOf = (it: Item) => (shortName(it).split(' ').filter((w) => !/^G\d+$/.test(w)).pop() || '').toLowerCase() + 's';
 
-/** Often with an item in this customer's orders: k of the n orders that had its kind; then the aisle's items with no price yet. */
-function oftenWith(b: Books, c: Customer | null, anchor: Item | null, skip: Set<string>): { it: Item; sub: string }[] {
-  if (!c || !anchor) return [];
-  const kind = shortName(anchor).replace(/ G\d+$/, '');
-  const had = b.orders.filter((o) => o.customerId === c.id && !o.cancelled && o.lines.some((l) => l.name.startsWith(kind)));
-  const count = new Map<string, number>();
-  had.forEach((o) => new Set(o.lines.map((l) => l.itemId)).forEach((id) => count.set(id, (count.get(id) || 0) + 1)));
-  // What goes on with it: its own aisle first (ridge caps with sheets), then anything bought with it.
-  const same = (id: string) => (b.items.find((i) => i.id === id)?.aisle === anchor.aisle ? 1 : 0);
-  const best = [...count].filter(([id]) => !skip.has(id) && !b.items.find((i) => i.id === id)?.name.startsWith(kind))
-    .sort((x, y) => same(y[0]) - same(x[0]) || y[1] - x[1]).slice(0, 1)
-    .map(([id, k]) => ({ it: b.items.find((i) => i.id === id) as Item, sub: `with ${kindOf(anchor)}, ${k} of ${had.length}` })).filter((x) => x.it && x.it.price != null);
-  const coming = b.items.filter((i) => i.price == null && i.aisle === anchor.aisle && !skip.has(i.id)).map((it) => ({ it, sub: '' }));
-  return [...best, ...coming];
+/**
+ * "Often with it" (the one rule, core/often.ts; LANGUAGE P13): what came with "it" in this customer's
+ * own orders, less their usual (shown above). "It" is the last of their usual ticked that they have had
+ * twice or more, else the first of their usual that they have; ticking a row here does not move it.
+ * The top row with a price, then any of those rows with no price yet ("Price coming", to ask the Manager).
+ */
+function oftenRows(b: Books, c: Customer | null, tries: Item[], skip: Set<string>): { it: Item; sub: string }[] {
+  if (!c) return [];
+  for (const it of tries) {
+    const r = oftenWith(b.orders, { itemId: it.id, variantIdx: null }, { customerId: c.id, me: b.me.id, skip, n: 99 });
+    if (!r.theirs || !r.rows.length) continue;
+    const rows = r.rows.map((x) => ({ it: b.items.find((i) => i.id === x.itemId), n: x.n })).filter((x): x is { it: Item; n: number } => !!x.it);
+    const top = rows.filter((x) => x.it.price != null).slice(0, 1).map((x) => ({ it: x.it, sub: `with ${kindOf(it)}, ${x.n} of ${r.of}` }));
+    return [...top, ...rows.filter((x) => x.it.price == null).map((x) => ({ it: x.it, sub: '' }))];
+  }
+  return [];
 }
 
 export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: string) => void }): JSX.Element {
@@ -53,11 +56,9 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const cust = chat.customerId ? b.customers.find((c) => c.id === chat.customerId) || null : null;
   const first = cust ? firstWord(cust.name) : chat.phone;
   const usual = usualItems(b, cust), back = () => { sheet.close(); };
-  // "It": the last item picked that has something of its own aisle bought with it, else the first of their usual that has.
   const skip = new Set(usual.map((u) => u.it.id));
-  const tries = [...[...picked].reverse().map((id) => b.items.find((i) => i.id === id)), ...usual.map((u) => u.it)].filter((i): i is Item => !!i);
-  const lists = tries.map((it) => ({ it, l: oftenWith(b, cust, it, skip) }));
-  const often = (lists.find((x) => x.l[0] && x.l[0].it.price != null && x.l[0].it.aisle === x.it.aisle) || lists.find((x) => x.l.length) || { l: [] }).l;
+  const tries = [...[...picked].reverse().filter((id) => skip.has(id)), ...skip].map((id) => b.items.find((i) => i.id === id)).filter((i): i is Item => !!i);
+  const often = oftenRows(b, cust, tries, skip);
   const ruth = managers(b)[0];
   const s = q.trim().toLowerCase();
   const found = s ? b.items.filter((i) => i.name.toLowerCase().includes(s)).slice(0, 6) : [];

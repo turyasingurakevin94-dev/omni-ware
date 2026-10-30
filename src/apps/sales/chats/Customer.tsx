@@ -37,8 +37,8 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
   const first = firstWord(cust.name), year = dayOf(t).slice(0, 4), me = b.me;
   const owner = b.members.find((m) => m.id === chat.ownerId) || null;
   const orders = b.orders.filter((o) => o.customerId === cust.id && !o.voided && !o.cancelled && dayOf(o.placedAt).startsWith(year));
-  // Who served them: messages in this chat, and the orders placed from it (src/core/chats.ts).
-  const rows = servedThisYear(b.orders, id, served || [], year).map((x) => ({ m: b.members.find((m) => m.id === x.by) as Member, msgs: x.messages, n: x.orders, sum: x.total })).filter((r) => r.m);
+  // Who served them: messages in this chat, and the orders each person took for them this year (src/core/chats.ts).
+  const rows = servedThisYear(b.orders, cust.id, served || [], year, new Set(b.members.filter((m) => m.role === 'sales').map((m) => m.id))).map((x) => ({ m: b.members.find((m) => m.id === x.by) as Member, msgs: x.messages, n: x.orders, sum: x.total })).filter((r) => r.m);
   const all = rows.reduce((a, r) => a + r.sum, 0) || 1;
   // Lately: orders placed and the Manager's prices on them, newest first.
   const feed: { at: Ms; who: Member | undefined; what: JSX.Element; sub: string }[] = [];
