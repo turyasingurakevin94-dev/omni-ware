@@ -122,7 +122,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       const paid: Paid = {
         key, customerId: who0 ? who0.id : null, name: who0 ? who0.name : name, initials: who0 ? who0.initials : 'WI', tint: who0 ? who0.tint : 't4', phone: who0 ? who0.phone : o ? o.client.phone : '',
         amount: r.kept ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
-        before: owes, after: r.kept ? after : c ? r.value.after : Math.max(0, owes - args.amount), change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, at: now.value, kept: r.kept,
+        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, at: now.value, kept: r.kept,
         receipt: { state: receipt && c && !r.kept ? 'sending' : 'off', at: null, chatId: null },
       };
       putPaid(paid);

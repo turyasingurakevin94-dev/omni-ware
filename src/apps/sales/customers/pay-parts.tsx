@@ -16,7 +16,7 @@ export function QuickAmounts(p: { opts: { word: string; amount: number }[]; chos
     <button key={key} type="button" role="radio" aria-checked={on} class="cu-q36" onClick={click}><span class={cx(on && 'on')}>{inner}</span></button>
   );
   return (
-    <div role="radiogroup" aria-label="Quick amounts" class="cu-quick">
+    <div role="radiogroup" aria-label="Quick amounts" class="cu-quick36">
       {p.opts.map((o, i) => b(p.chosen === i, <>{o.word + ' '}<b class="mono">{money(o.amount)}</b></>, () => p.onPick(i), o.word))}
       {b(p.chosen == null, 'Other', p.onOther, 'other')}
     </div>
