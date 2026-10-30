@@ -88,7 +88,7 @@ export function OpenLine(p: OpenLineProps): JSX.Element {
             <span class="kc-head-s mono">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${l.price == null ? '…' : fig(l.price)}`}</span>
           </span>
         </button>
-        <LineChip chip={p.chip} on={p.onChip} label={`Their price for each ${l.unit}`} />
+        <LineChip chip={p.chip} on={p.onChip} label={`Change the price of each ${l.unit}`} />
       </div>
       <div class="kc-ctl">
         <QtyStep qty={l.qty} unit={l.unit} onChange={p.onQty} bin />

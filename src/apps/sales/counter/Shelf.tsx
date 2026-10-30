@@ -79,12 +79,13 @@ export function SoldRows(p: { items: Item[]; onAdd: (it: Item) => void }): JSX.E
     const el = box.current;
     if (!el) return;
     el.style.display = 'contents';
-    const dock = document.querySelector('.ow-dock') as HTMLElement | null;
-    const limit = window.innerHeight - (dock ? dock.offsetHeight : 0) - 8;
+    // What sits on the screen's foot: the no-signal band (KC17), else the dock.
+    const foot = (document.querySelector('.kc-band') || document.querySelector('.ow-dock')) as HTMLElement | null;
+    const limit = (foot ? foot.getBoundingClientRect().top : window.innerHeight) - 8;
     const rows = [...el.querySelectorAll<HTMLElement>('.kc-row')];
     rows.forEach((r) => { r.style.display = ''; });
     let shown = 0;
-    rows.forEach((r) => { if (r.getBoundingClientRect().bottom + window.scrollY <= limit) shown++; else r.style.display = 'none'; });
+    rows.forEach((r) => { if (r.getBoundingClientRect().bottom <= limit) shown++; else r.style.display = 'none'; });
     el.style.display = shown ? 'contents' : 'none';
   });
   if (!p.items.length) return null;

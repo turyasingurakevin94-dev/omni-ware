@@ -29,10 +29,10 @@ export function bestSellers(b: Books, now: number): Item[] {
     .map((id) => b.items.find((i) => i.id === id)).filter(sellable);
 }
 
-/** Under a basket: the best sellers not in it, those sold most often with what is in it first. */
+/** Under a basket: the day's four best sellers not in it, those sold most often with what is in it first. */
 export function soldWith(b: Books, now: number, lines: Line[]): Item[] {
   const inBasket = new Set(lines.map((l) => l.itemId)), sales = counterToday(b, now).map(({ o }) => new Set(o.lines.map((l) => l.itemId)));
-  const best = bestSellers(b, now).filter((i) => !inBasket.has(i.id));
+  const best = bestSellers(b, now).slice(0, 4).filter((i) => !inBasket.has(i.id));
   const withIt = (id: string) => sales.filter((s) => s.has(id) && [...inBasket].some((x) => s.has(x))).length;
   return best.map((it, rank) => ({ it, rank, w: withIt(it.id) })).sort((x, y) => y.w - x.w || x.rank - y.rank).map((x) => x.it);
 }
@@ -62,7 +62,7 @@ export function markOf(name: string, words: string): [string, string] | null {
 
 export interface Due { c: Customer; late: number; words: string }
 
-/** Who is due (late or due today by their rhythm: last order + every N days), the most owed first. */
+/** Who is due (late or due today by their rhythm: last order + every N days, not gone quiet), the most owed first. */
 export function dueCustomers(b: Books, now: number): Due[] {
   const today = dayOf(now), out: Due[] = [];
   b.customers.forEach((c) => {
@@ -70,7 +70,8 @@ export function dueCustomers(b: Books, now: number): Due[] {
     const last = b.orders.filter((o) => o.customerId === c.id && !o.cancelled && !o.voided).reduce((m, o) => Math.max(m, o.placedAt), 0);
     if (!last) return;
     const late = daysApart(addDays(dayOf(last), c.everyDays), today);
-    if (late < 0) return;
+    // Gone quiet (twice their gap and more since the last order) is not due: it is its own group (Customers).
+    if (late < 0 || daysApart(dayOf(last), today) >= 2 * c.everyDays) return;
     const every = `every ${c.everyDays} days`;
     out.push({ c, late, words: late === 0 ? `Due today · ${every}` : `${late} day${late === 1 ? '' : 's'} late · ${every}` });
   });

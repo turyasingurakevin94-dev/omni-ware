@@ -44,7 +44,7 @@ function Price(p: { line: Line; onPrice: (v: number) => void; onShop: () => void
           <input type="text" inputmode="numeric" aria-label={`Their price for each ${l.unit}`} value={typed != null ? typed : fig(price)}
             onInput={(e) => {
               const raw = (e.target as HTMLInputElement).value, v = Number(raw.replace(/[^0-9]/g, '')) || 0;
-              setTyped(raw);
+              setTyped(v > 0 ? fig(v) : raw.replace(/[^0-9]/g, ''));
               if (v > 0) p.onPrice(v);
             }}
             onBlur={() => setTyped(null)} />
@@ -80,9 +80,9 @@ export function Picked(p: PickedProps): JSX.Element {
       {p.lines.map((l) => {
         const it = p.items.find((i) => i.id === l.itemId), aisle = it ? it.aisle : '';
         if (p.open !== l.lineId) return <LineRow key={l.lineId} line={l} aisle={aisle} chip={chipOf(l)} on={() => p.onOpen(l.lineId)} />;
-        const shelf = it && it.onShelf != null ? it.onShelf : null, pricing = p.pricing === l.lineId;
+        const pricing = p.pricing === l.lineId, shelf = it && it.onShelf != null ? it.onShelf : null;
         return (
-          <OpenLine key={l.lineId} line={l} aisle={aisle} chip={chipOf(l)} shelf={shelf}
+          <OpenLine key={l.lineId} line={l} aisle={aisle} chip={chipOf(l)} shelf={pricing ? null : shelf}
             onChip={() => p.onPricing(pricing ? null : l.lineId)} onHead={() => p.onOpen(l.lineId)} onQty={(n) => p.onQty(l.lineId, n)}>
             {pricing && <Price line={l} onPrice={(v) => p.onPrice(l.lineId, v)} onShop={() => { p.onPrice(l.lineId, l.shopPrice || 0); p.onPricing(null); }} />}
             {shelf != null && l.qty > shelf && <Short line={l} shelf={shelf} onMake={() => p.onQty(l.lineId, shelf)} onOrderIn={p.onOrderIn} />}

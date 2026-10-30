@@ -17,6 +17,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=empty` | Nothing live, nobody owes, no chats | CH06, OR04, CU06 |
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
+| `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 
