@@ -16,7 +16,8 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `chats/chat` | `{ id }` (a conversation id; demo ids match FACTS) | chats | CH10–CH33 |
 | `chats/new` | — | chats | CH05 |
 | `sell` | — | sell | SL01 Who (the red +) |
-| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` | sell | SL03–SL27, SL30, SL31 |
+| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, draft? }` (`customer: ''` is a walk-in; `draft` an order still open) | sell | SL03–SL27, SL30, SL31 |
+| `sell/aisle` | `{ aisle, group? }`, or a shelf `{ group: 'usual' \| 'new' \| 'most' }` | sell | SL12 |
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
