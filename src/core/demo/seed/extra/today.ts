@@ -47,6 +47,23 @@ export function extra(s: DemoState, f: DemoFlags): void {
   // TD17: Nansana's 560,000 by Mobile at 8:52 shows its transaction ID (only TD17 draws it).
   const p9002 = b.payments.find((p) => p.id === 9002);
   if (p9002) p9002.ref = '12045833167';
+  // TD17 "This week in 4,884,000": what Grace herself took each day, Mon 12 – Sat 17 Oct: 853,000 · 1,450,000 ·
+  // 289,000 · 958,000 · 290,000 · 1,044,000 (today, FACTS §5). Every amount and bill FACTS names stays as it is;
+  // only who took Monday's and Friday's receipts changes (Brian), and Grace's own counter cash fills the rest.
+  if (st !== 'first-day' && !b.payments.some((p) => p.id === 7101)) {
+    b.payments.forEach((p) => { if (p.id === 7004 || (p.id >= 8000 && p.id <= 8007)) p.by = BRIAN; });
+    ([[7101, '2026-10-12', 853000], [7102, '2026-10-13', 1101000], [7103, '2026-10-14', 147000], [7104, '2026-10-15', 958000], [7105, '2026-10-16', 290000]] as const)
+      .forEach(([id, day, amount]) => b.payments.push({ id, at: d(day, '16:30'), day, amount, method: 'cash', customerId: null, orderId: null, by: GRACE, ref: '', qa: false }));
+  }
+  // TD14 "Or open an aisle": what a wheelbarrow is bought with in the shop's orders. Six September counter sales
+  // with cement, one with PVC pipe (with FACTS' own orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 1 · Paint 1).
+  if (!b.orders.some((o) => o.id === 450)) {
+    for (let i = 0; i < 7; i++) {
+      const at_ = d(`2026-09-${String(20 + i).padStart(2, '0')}`, '10:00');
+      b.orders.push(O({ id: 450 + i, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true,
+        lines: [L('wheelbarrow-hd', 1), i < 6 ? L('cement-hima-50', 2) : L('pvc-half-6m', 2)], paid: -1 }));
+    }
+  }
   // TD13 "Often with this hinge · in the shop's orders": 8 counter sales with the Zawaina hinge in September,
   // 7 of them with wood screws, 4 with a door handle set.
   if (!b.orders.some((o) => o.id === 470)) {

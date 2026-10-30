@@ -101,6 +101,19 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
   );
 }
 
+/**
+ * The aisles closest to what was searched: the closest items' own aisle first, then the aisles bought with
+ * them most often in the shop's orders, then the shop's own order (TD14: Tools, Cement, Roofing … for a wheelbarrow).
+ */
+export function nearAisles(b: Books, close: Item[]): { name: string; count: number }[] {
+  const all = shopAisles(b), ids = new Set(close.map((i) => i.id)), own = close[0] ? close[0].aisle : null, by = new Map<string, number>();
+  b.orders.filter((o) => !o.voided && !o.qa && o.lines.some((l) => ids.has(l.itemId))).forEach((o) => {
+    new Set(o.lines.filter((l) => !ids.has(l.itemId)).map((l) => (b.items.find((i) => i.id === l.itemId) || { aisle: '' }).aisle)).forEach((a) => { if (a) by.set(a, (by.get(a) || 0) + 1); });
+  });
+  const rank = (a: string) => (a === own ? -1e9 : -(by.get(a) || 0));
+  return all.slice().sort((x, y) => rank(x.name) - rank(y.name) || all.indexOf(x) - all.indexOf(y));
+}
+
 /** Edit distance, for "Did you mean". */
 function dist(a: string, b: string): number {
   const m = Array.from({ length: b.length + 1 }, (_x, j) => j);
@@ -117,8 +130,7 @@ export function Nothing(p: { b: Books; q: string }): JSX.Element {
   const best = [...words].map((w) => ({ w, d: dist(q.toLowerCase(), w) })).sort((x, y) => x.d - y.d)[0];
   const mean = best && best.d <= Math.max(2, Math.floor(q.length / 4)) ? best.w : null;
   const close = mean ? b.items.filter((i) => i.name.toLowerCase().includes(mean)) : [];
-  const first = close[0] ? close[0].aisle : null;
-  const aisles = shopAisles(b), tiles = [...(first ? aisles.filter((a) => a.name === first) : []), ...aisles.filter((a) => a.name !== first)].slice(0, 6);
+  const tiles = nearAisles(b, close).slice(0, 6);
   return (
     <>
       <div class="td-none">

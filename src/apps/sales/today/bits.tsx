@@ -55,6 +55,9 @@ export function TitleHead(p: { title: ComponentChildren; sub?: ComponentChildren
   );
 }
 
+/** A small avatar as the Asks boards draw it: no tight letter-spacing. */
+export const PLAIN = { letterSpacing: 'normal' };
+
 /** A stack of 24 px faces, overlapping 6, the first on top, ringed in the ground they sit on. */
 export function Faces(p: { faces: Face[]; ground?: string }): JSX.Element {
   return (

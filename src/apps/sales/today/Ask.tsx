@@ -106,7 +106,7 @@ export function Ask(p: ScreenProps): JSX.Element {
         <div class="ow-shead-row">
           <ItemSquare aisle={it ? it.aisle : askAisle(a.name)} size={44} icon={26} />
           <div class="td-ask-ht"><span>{it ? it.name : a.name}</span>
-            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} />}{`${c ? c.name : 'They'} asked for ${askQty(a)} · ${weekday(first.at)}`}</span></div>
+            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)} · ${weekday(first.at)}`}</span></div>
           <button type="button" class="ow-shead-x" aria-label="Close" onClick={close}><Icon name="close" size={16} stroke={2.2} /></button>
         </div>
         <div class="td-ask-state">
@@ -140,7 +140,7 @@ export function Ask(p: ScreenProps): JSX.Element {
         <>
           <div class="td-ask-tiles">
             <div><span>{`A ${u}`}</span><span class="mono">{money(it && it.price)}</span>
-              {by('priced') && <span class="td-ask-by"><Avatar initials={(by('priced') as { initials: string }).initials} tint={(by('priced') as { tint: 't2' }).tint} size={16} font={11} />{`${firstWord((by('priced') as { name: string }).name)} priced it`}</span>}</div>
+              {by('priced') && <span class="td-ask-by"><Avatar initials={(by('priced') as { initials: string }).initials} tint={(by('priced') as { tint: 't2' }).tint} size={16} font={11} style={{ letterSpacing: 'normal' }} />{`${firstWord((by('priced') as { name: string }).name)} priced it`}</span>}</div>
             <div class="good"><span>Ready to sell</span><span class="mono">{`${it && it.onShelf ? it.onShelf : 0} `}<span class="ow-word">on shelf</span></span><span>{`${u}s`}</span></div>
           </div>
           <div class="td-ask-qty">

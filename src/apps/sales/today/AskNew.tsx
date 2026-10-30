@@ -10,6 +10,7 @@ import { firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { PLAIN } from './bits.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Duo, Icon, phSwap } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -80,7 +81,7 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
       <div class="td-sheet-b td-asknew-b">
         {p.pre.quote && c && (
           <div class="td-asknew-q">
-            <span><Avatar initials={c.initials} tint={c.tint} size={20} />{`${who} · in their chat · `}<span class="mono">{clock(p.pre.quote.at)}</span></span>
+            <span><Avatar initials={c.initials} tint={c.tint} size={20} style={PLAIN} />{`${who} · in their chat · `}<span class="mono">{clock(p.pre.quote.at)}</span></span>
             <div>{p.pre.quote.body}</div>
           </div>
         )}
@@ -102,9 +103,9 @@ function AskSheet(p: { pre: AskPrefill }): JSX.Element {
             <input type="file" accept="image/*" capture="environment" onChange={(e) => { const f = (e.target as HTMLInputElement).files; if (f && f[0]) setPhoto(URL.createObjectURL(f[0])); }} />
           </label>
           <span class="td-asknew-next">
-            {ml && <span><Avatar initials={ml.initials} tint={ml.tint} size={22} />{`${mlName} looks for it`}</span>}
-            {rn && <span><Avatar initials={rn.initials} tint={rn.tint} size={22} />{`${firstWord(rn.name)} sets the price`}</span>}
-            <span><Avatar initials={b.me.initials} tint="me" size={22} />{`you tell ${who || 'them'}`}</span>
+            {ml && <span><Avatar initials={ml.initials} tint={ml.tint} size={22} style={PLAIN} />{`${mlName} looks for it`}</span>}
+            {rn && <span><Avatar initials={rn.initials} tint={rn.tint} size={22} style={PLAIN} />{`${firstWord(rn.name)} sets the price`}</span>}
+            <span><Avatar initials={b.me.initials} tint="me" size={22} style={PLAIN} />{`you tell ${who || 'them'}`}</span>
           </span>
         </div>
         {state === 'kept' && (

@@ -10,6 +10,7 @@ import { firstWord } from '../../../core/names.ts';
 import { clock, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { Books, Customer, SourcingAsk } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { PLAIN } from './bits.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
@@ -69,7 +70,7 @@ export function AsksHead(p: { b: Books; asks: SourcingAsk[]; first: boolean; onA
       {(p.first || n('asked') === 0) && (
         <div class="td-asks-who">
           {p.first && <span class="td-asks-first">Your first week</span>}
-          {ml && <Avatar initials={ml.initials} tint={ml.tint} size={24} />}
+          {ml && <Avatar initials={ml.initials} tint={ml.tint} size={24} style={PLAIN} />}
           <span><b>{ml ? firstWord(ml.name) : 'Sourcing'}</b>{` finds them${p.first || !rn ? '' : ` · ${firstWord(rn.name)} sets the price`}`}</span>
         </div>
       )}
@@ -116,7 +117,7 @@ export function Asks(p: ScreenProps): JSX.Element {
                   return (
                     <span key={s}>
                       <span><StepIcon s={s} size={13} stroke={2} /></span><span>{STEP_WORD[s]}</span>
-                      <span aria-hidden="true">{who ? <Avatar initials={who.initials} tint={who.id === b.me.id ? 'me' : who.tint} size={20} /> : <Duo i={phWhatsapp} size={18} color="#0F6B43" />}</span>
+                      <span aria-hidden="true">{who ? <Avatar initials={who.initials} tint={who.id === b.me.id ? 'me' : who.tint} size={20} style={PLAIN} /> : <Duo i={phWhatsapp} size={18} color="#0F6B43" />}</span>
                     </span>
                   );
                 })}
@@ -149,7 +150,7 @@ export function Asks(p: ScreenProps): JSX.Element {
             {withMl.length > 0 && (
               <>
                 <div class={cx('td-asks-dot', ready.length > 0 && 'after')}><span aria-hidden="true" style={{ background: '#1A5A8A' }} /><h2>{`With ${ml ? firstWord(ml.name) : 'Sourcing'}`}</h2>
-                  {ml && <Avatar initials={ml.initials} tint={ml.tint} size={22} />}<span class="mono">{withMl.length}</span></div>
+                  {ml && <Avatar initials={ml.initials} tint={ml.tint} size={22} style={PLAIN} />}<span class="mono">{withMl.length}</span></div>
                 <div class="ow-group p14">
                   {withMl.map((a) => {
                     const c = askCustomer(b, a), at = ASK_STAGES.indexOf(a.status);
@@ -160,7 +161,7 @@ export function Asks(p: ScreenProps): JSX.Element {
                         <span class="td-withml-h">
                           <ItemSquare aisle={askAisle(a.name)} size={38} icon={22} />
                           <span class="td-withml-t"><span>{a.name}</span>
-                            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={18} />}{`${c ? firstWord(c.name) : ''} · ${askQty(a)} · ${why}`}</span></span>
+                            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={18} style={PLAIN} />}{`${c ? firstWord(c.name) : ''} · ${askQty(a)} · ${why}`}</span></span>
                           {a.status === 'looking' && <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>}
                         </span>
                         <Steps at={at} label={STEP_WORD[a.status]} />
@@ -194,7 +195,7 @@ function Ready(p: { b: Books; a: SourcingAsk }): JSX.Element {
         {it && it.price != null && <span class="td-find-fig"><b class="mono big">{money(it.price)}</b><small>{`a ${it.unit === 'pc' ? 'piece' : it.unit}`}</small></span>}
       </Tap>
       {c && (
-        <span class="td-ready-who"><Avatar initials={c.initials} tint={c.tint} size={24} /><span>{`${firstWord(c.name)} asked for ${askQty(a)}`}</span><b class="mono">{money(askValue(b, a))}</b></span>
+        <span class="td-ready-who"><Avatar initials={c.initials} tint={c.tint} size={24} style={PLAIN} /><span>{`${firstWord(c.name)} asked for ${askQty(a)}`}</span><b class="mono">{money(askValue(b, a))}</b></span>
       )}
       <div class="td-ready-acts">
         {c && <button type="button" class="td-ready-tell" onClick={() => { void tellAsk(b, a, askQty(a), true); }}><Duo i={phWhatsapp} size={18} color="#FFFFFF" />{`Tell ${firstWord(c.name)}`}</button>}

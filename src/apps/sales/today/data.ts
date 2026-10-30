@@ -236,6 +236,15 @@ export function moneyInToday(b: Books, now: Ms) {
   return b.payments.filter((p) => p.by === b.me.id && p.day === today && p.at <= now && !p.qa).sort((x, y) => x.at - y.at);
 }
 
+/* ---------------- rows that open an order's own screen ---------------- */
+
+/**
+ * An order row opens the order's own screen with its link rule: the canvas draws these rows as links to their own
+ * board and the rest as buttons, a row of 49 (or 65) against 48 (or 64). The Orders tab draws its own screen for an
+ * order in Packing (OR07 #0552, OR19 #0556), so those rows carry it (TD12, TD16, TD25).
+ */
+export const opensOwn = (o: Pick<Order, 'stage'>): boolean => o.stage === 'packing';
+
 /* ---------------- the shop's aisles ---------------- */
 
 /**
