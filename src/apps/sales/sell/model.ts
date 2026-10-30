@@ -28,8 +28,9 @@ export interface Build {
   customerId: string | null;
   client: { name: string; phone: string };
   chatId: number | null;
-  /** Oldest first; drawn newest first. */
+  /** Oldest first; drawn newest first, except those kept from before (lineId up to `kept`), which keep their order below (SL25). */
   lines: Line[];
+  kept?: number;
   charges: Charge[];
   credit: boolean;
   mode: Mode;
@@ -85,7 +86,8 @@ function fromDraft(d: Draft): Build {
   const parts = d.deliverTo ? d.deliverTo.split(SEP) : [];
   const when = (Object.keys(WHEN_WORD) as When[]).find((w) => WHEN_WORD[w] === parts[1]) || 'today-pm';
   return {
-    key: d.key, at: d.at, customerId: d.customerId, client: d.client, chatId: d.chatId, lines: d.lines.slice(), charges: d.charges.slice(),
+    key: d.key, at: d.at, customerId: d.customerId, client: d.client, chatId: d.chatId ?? chatOf(d.customerId), lines: d.lines.slice(),
+    kept: d.lines.reduce((m, l) => Math.max(m, l.lineId), 0), charges: d.charges.slice(),
     credit: !!d.credit, mode: d.deliverTo ? 'delivery' : 'pickup', delivery: d.deliverTo ? { where: parts[0], phone: parts[2] || '', when } : null, pic: true,
   };
 }

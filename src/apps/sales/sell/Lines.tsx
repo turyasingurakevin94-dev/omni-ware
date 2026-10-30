@@ -203,11 +203,11 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   );
 }
 
-/** All the lines: the open one first, then the rest, newest first. */
+/** All the lines: the open one first, then the rest, newest first (an order resumed keeps its own order under them). */
 export function Lines(p: { me: string; extra?: JSX.Element | null }): JSX.Element | null {
   const x = cur.value, b = books.value;
   if (!x || !b || !x.lines.length) return null;
-  const list = x.lines.slice().reverse(), open = list.find((l) => l.lineId === openId.value) || null;
+  const k = x.kept || 0, list = [...x.lines.filter((l) => l.lineId > k).reverse(), ...x.lines.filter((l) => l.lineId <= k)], open = list.find((l) => l.lineId === openId.value) || null;
   const rest = list.filter((l) => l !== open);
   return (
     <>

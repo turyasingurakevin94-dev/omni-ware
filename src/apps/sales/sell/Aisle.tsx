@@ -66,7 +66,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
           <label class="sl-aisle-q"><Icon name="search" size={20} stroke={2} /><input type="search" placeholder={`Search ${aisle || 'the shop'}`} aria-label={`Search ${aisle || 'the shop'}`} value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} /></label>
         </div>
         <div role="group" aria-label="Show" class="sl-aisle-k">
-          <a href="#" class="sl-aisle-a" onClick={(e) => { e.preventDefault(); openAisles(); }}><span aria-hidden="true"><AisleIcon aisle={aisle} size={18} color="#FFFFFF" /></span>{aisle || shelf}<Icon name="chevron-down" size={16} stroke={2.4} /></a>
+          <a href="#" class="sl-aisle-a" onClick={(e) => { e.preventDefault(); openAisles(); }}><span aria-hidden="true"><AisleIcon aisle={aisle} size={18} color="#FFFFFF" /></span>{aisle || shelf}<Icon name="chevron-down" size={14} stroke={2.4} /></a>
           {!shelfMode && kinds.map((k) => <button key={k.k} type="button" aria-pressed={kind === k.k} class={kind === k.k ? 'on' : ''} onClick={() => { setKind(k.k); setMore(false); }}>{k.k}<b class="mono">{k.n}</b></button>)}
         </div>
       </div>

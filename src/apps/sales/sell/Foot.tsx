@@ -48,17 +48,6 @@ function Hold(p: { b: Books; c: Customer }): JSX.Element | null {
   const s = sums.value, b = p.b, c = p.c, m = manager(b);
   if (!s || !s.hold) return null;
   const h = s.hold, total = s.total;
-  if (h.noLimit) {
-    return (
-      <div class="sl-hold">
-        <RuthHead m={m} title={`No limit set · ${m.first} decides`} />
-        <div role="img" aria-label={`This order ${fig(total)} on credit; no limit set`} class="sl-hold-nl">
-          <span class="sl-hold-nlb"><span /><span /></span>
-          <span class="sl-hold-nlw">this <span class="mono">{short(total, 2)}</span> · limit <span class="mono">?</span></span>
-        </div>
-      </div>
-    );
-  }
   if (h.over && c.creditLimit) {
     const owes = Math.max(0, c.owes), all = owes + total, lim = c.creditLimit, over = all - lim;
     const a = Math.round((1000 * owes) / all) / 10, at = Math.round((1000 * lim) / all) / 10;
@@ -68,6 +57,17 @@ function Hold(p: { b: Books; c: Customer }): JSX.Element | null {
         <div role="img" aria-label={`Owes ${fig(owes)}, this order ${fig(total)}, limit ${fig(lim)}: ${fig(over)} over`} class="sl-hold-bar">
           <div class="sl-hold-ov"><span style={{ width: `${a}%` }} /><span style={{ width: `${Math.round(10 * (at - a - 0.4)) / 10}%` }} /><span /><i aria-hidden="true" style={{ left: `${at}%` }} /></div>
           <div class="sl-hold-l"><span>owes <span class="mono">{short(owes)}</span> + this <span class="mono">{short(total, 2)}</span></span><span class="bad"><span class="mono">{fig(over)}</span> over <span class="mono">{short(lim)}</span></span></div>
+        </div>
+      </div>
+    );
+  }
+  if (!h.old) {
+    return (
+      <div class="sl-hold">
+        <RuthHead m={m} title={`No limit set · ${m.first} decides`} />
+        <div role="img" aria-label={`This order ${fig(total)} on credit; no limit set`} class="sl-hold-nl">
+          <span class="sl-hold-nlb"><span /><span /></span>
+          <span class="sl-hold-nlw">this <span class="mono">{short(total, 2)}</span> · limit <span class="mono">?</span></span>
         </div>
       </div>
     );

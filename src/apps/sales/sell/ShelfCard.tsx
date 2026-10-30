@@ -13,9 +13,9 @@ import { fig } from '../../../ui/Money.tsx';
 
 export interface Card { name: string; items: Item[]; sold: number }
 
-/** A nail at its length: 4 in → a 64 px shank, 2.5 in → 44 (13⅓ px an inch), centred. */
+/** A nail at its length: 16 px an inch and 4 more (2 in → 36, 3 in → 52), at most 64 (4 in and longer), centred. */
 function Nail(p: { inches: number; ink: string }): JSX.Element {
-  const len = Math.round(44 + (p.inches - 2.5) * (40 / 3)), x0 = 60 - len / 2, x1 = 60 + len / 2;
+  const len = Math.min(64, Math.round(4 + 16 * p.inches)), x0 = 60 - len / 2, x1 = 60 + len / 2;
   return (
     <svg width="120" height="40" viewBox="0 0 120 40" aria-hidden="true">
       <rect x={x0} y="17" width={len} height="5" rx="2.5" fill={p.ink} opacity=".75" />
@@ -48,16 +48,16 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAd
           : it.orderIn ? <span class="sl-card2-o">Order in</span> : <span class="sl-card2-o bad">Out</span>}
         {p.line ? (
           <div class="sl-card2-step">
-            <button type="button" aria-label="Fewer" onClick={() => p.onQty((p.line as Line).lineId, Math.max(1, (p.line as Line).qty - 1))}><Icon name="minus" size={18} stroke={2.2} /></button>
+            <button type="button" aria-label="Fewer" onClick={() => p.onQty((p.line as Line).lineId, Math.max(1, (p.line as Line).qty - 1))}><Icon name="minus" size={16} stroke={2.4} /></button>
             <span class="mono">{`${p.line.qty} `}<span class="ow-word">{p.line.unit}</span></span>
-            <button type="button" aria-label="More" onClick={() => p.onQty((p.line as Line).lineId, (p.line as Line).qty + 1)}><Icon name="plus" size={18} stroke={2.2} /></button>
+            <button type="button" aria-label="More" onClick={() => p.onQty((p.line as Line).lineId, (p.line as Line).qty + 1)}><Icon name="plus" size={16} stroke={2.4} /></button>
           </div>
         ) : (
           <div class="sl-card2-r">
             <div role="radiogroup" aria-label="Sold by" class="sl-card2-u">
               {(units.length > 1 ? units : [it]).map((u) => <button key={u.id} type="button" role="radio" aria-checked={u.id === it.id} class={u.id === it.id ? 'on' : ''} onClick={() => setPick(u.id)}>{u.unit}</button>)}
             </div>
-            <button type="button" class="sl-card2-add" aria-label="Add" onClick={() => p.onAdd(it)}><Icon name="plus" size={18} stroke={2.4} /></button>
+            <button type="button" class="sl-card2-add" aria-label="Add" onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.4} /></button>
           </div>
         )}
       </div>
