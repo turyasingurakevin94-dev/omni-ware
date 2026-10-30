@@ -13,6 +13,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { custOf, nameOf, orderOf, shortName } from './data.ts';
 import { MonoText, chatFor, tellText } from './msg.tsx';
+import './sheets.css';
 
 export function openTell(id: number): void {
   const b = books.value, o = b && orderOf(b, id);
@@ -45,7 +46,7 @@ function TellSheet(p: { id: number }): JSX.Element | null {
     <LightSheet class="or-sheet" ground eyebrow={`Order ${orderNo(o.id)} · ${nameOf(b, o)}`} title={`Tell ${who}`} onClose={sheet.close} pad="12px 16px 22px">
       {shut && c && c.lastInAt && (
         <div role="status" class="or-shut">
-          <span class="or-shut-a"><Icon name="lock" size={16} />Chat shut · <span class="mono">{`${w ? w.daysShut : 0} days`}</span></span>
+          <span class="or-shut-a"><Icon name="lock" size={16} stroke={2.2} />Chat shut · <span class="mono">{`${w ? w.daysShut : 0} days`}</span></span>
           <span class="or-shut-b">{`last wrote ${weekday(c.lastInAt)} `}<span class="mono">{clock(c.lastInAt)}</span></span>
         </div>
       )}
@@ -55,7 +56,7 @@ function TellSheet(p: { id: number }): JSX.Element | null {
           <span key={text} ref={words} contentEditable aria-label="The message" class="or-bub-t" onBlur={(e) => setText((e.target as HTMLElement).innerText.trim())}><MonoText text={text} /></span>
           <span class="mono or-bub-at">now</span>
         </div>
-        <button type="button" aria-label="Change the message" class="or-edit" onClick={edit}><span><Icon name="pen" size={15} />Edit words</span></button>
+        <button type="button" aria-label="Change the message" class="or-edit" onClick={edit}><span><Icon name="pen" size={15} stroke={2.2} />Edit words</span></button>
       </div>
       {!shut && (
         <label class="or-pic">
@@ -67,12 +68,12 @@ function TellSheet(p: { id: number }): JSX.Element | null {
       )}
       {shut ? (
         <div class="or-two s">
-          <a href={`https://wa.me/${p9 ? '256' + p9 : ''}?text=${body}`} target="_blank" rel="noopener" class="or-btn-w s"><Icon name="whatsapp" size={18} />WhatsApp</a>
-          <a href={sms} class="or-btn-n"><Icon name="message" size={18} />Send as SMS</a>
+          <a href={`https://wa.me/${p9 ? '256' + p9 : ''}?text=${body}`} target="_blank" rel="noopener" class="or-btn-w s"><Icon name="whatsapp" size={18} stroke={2} />WhatsApp</a>
+          <a href={sms} class="or-btn-n"><Icon name="message" size={18} stroke={2} />Send as SMS</a>
         </div>
       ) : (
         <div class="or-two">
-          <a href={sms} class="or-btn-w s"><Icon name="message" size={18} />Send as SMS</a>
+          <a href={sms} class="or-btn-w s"><Icon name="message" size={18} stroke={2} />Send as SMS</a>
           <button type="button" class="or-btn-g" onClick={send} disabled={busy}><Duo i={phWhatsapp} size={20} />{busy ? 'Sending…' : 'Send on WhatsApp'}</button>
         </div>
       )}

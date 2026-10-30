@@ -10,7 +10,7 @@ import { lineWaits } from '../../../core/orders.ts';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
-import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Role, Stage, Tint } from '../../../core/types.ts';
+import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
 
 export const LIVE: Stage[] = ['checking', 'buying', 'packing', 'road'];
@@ -150,3 +150,22 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
   if (c) return { customer: c, orders: b.orders.filter((o) => o.customerId === c.id && !o.qa && !o.voided && !o.cancelled) };
   return { customer: null, orders: b.orders.filter((o) => !o.qa && !isGenericName(o.client.name) && o.client.name.toLowerCase().includes(t)) };
 }
+
+/** The same order entered twice (OR19, OR23): same customer, same items, a few minutes apart, by the same person. The later is the copy. */
+export function twinOf(b: Books, o: Order): { orig: Order; copy: Order } | null {
+  const sig = (x: Order) => x.lines.map((l) => `${l.itemId}:${l.qty}`).sort().join('|');
+  const t = b.orders.find((x) => x.id !== o.id && !x.voided && !x.cancelled && !x.qa && x.placedBy === o.placedBy
+    && (x.customerId || x.client.name) === (o.customerId || o.client.name) && sig(x) === sig(o) && Math.abs(x.placedAt - o.placedAt) <= 10 * 60000 && x.invoiced === o.invoiced);
+  if (!t || o.voided || o.cancelled) return null;
+  return t.id < o.id ? { orig: t, copy: o } : { orig: o, copy: t };
+}
+
+/** What a payment brought over what it cleared (OR15: Nansana's 560,000 cleared 470,000; 90,000 over), and its ask to Accounts. */
+export function overOf(b: Books, p: Payment): { cleared: number; over: number } {
+  const c = p.customerId ? b.customers.find((x) => x.id === p.customerId) : null;
+  const cleared = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : p.amount;
+  return { cleared, over: Math.max(0, p.amount - cleared) };
+}
+export const overAsk = (b: Books, p: Payment): PaymentAsk | null => b.paymentAsks.find((a) => a.paymentId === p.id && a.what === 'over' && a.status === 'sent') || null;
+/** The order's payment that was paid over and not settled yet. */
+export const overPaymentOf = (b: Books, o: Order): Payment | null => b.payments.find((p) => p.orderId === o.id && !p.qa && overOf(b, p).over > 0) || null;

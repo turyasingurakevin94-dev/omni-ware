@@ -5,10 +5,11 @@
 import type { TabModule } from '../shell/types.ts';
 import { OrdersList } from './List.tsx';
 import { OrderScreen } from './Order.tsx';
+import { PaidOverScreen } from './PaidOver.tsx';
 
 export { openTell } from './Tell.tsx';
 export { openWrong } from './Wrong.tsx';
-export { openChange } from './Change.tsx';
+export { openChange, openTwice } from './Change.tsx';
 
 export const tab: TabModule = {
   id: 'orders',
@@ -16,5 +17,6 @@ export const tab: TabModule = {
   screens: {
     'orders': { view: OrdersList },
     'orders/order': { view: OrderScreen },
+    'orders/paid-over': { view: PaidOverScreen },
   },
 };

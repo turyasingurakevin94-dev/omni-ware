@@ -5,7 +5,7 @@
  *   Tiles   P19 with the old figure struck on its own line under the new one (OR13) and a waiting
  *           dot before the key (OR22 "Credit asked"); class for class the part's otherwise.
  */
-import type { JSX } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 import { Duo, Icon, type IconName } from '../../../ui/icons.tsx';
 import type { MoneyTile } from '../../../ui/MoneyTiles.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -34,18 +34,20 @@ export function ActBar(p: { acts: Act[] }): JSX.Element {
   );
 }
 
+const Box = (p: { on?: () => void; class: string; children: ComponentChildren }) => (p.on ? <button type="button" class={p.class} onClick={p.on}>{p.children}</button> : <div class={p.class}>{p.children}</div>);
+
 export type Tile = MoneyTile & { struck?: boolean; dot?: boolean };
 
 export function Tiles(p: { tiles: Tile[] }): JSX.Element {
   return (
     <div class="ow-mtiles">
       {p.tiles.map((t, i) => (
-        <div key={i} class={cx('ow-mtile', t.tone && 't-' + t.tone)}>
+        <Box key={i} on={t.on} class={cx('ow-mtile', t.tone && 't-' + t.tone, t.on && 'or-tap')}>
           <span class="ow-mtile-k">{t.dot ? <span class="or-kdot"><span aria-hidden="true" />{t.k}</span> : t.k}</span>
           <span class="ow-mtile-v"><span class="mono">{fig(t.v)}</span></span>
           {t.old != null && <s class="mono or-old">{fig(t.old)}</s>}
           {t.note && <span class="ow-mtile-n">{t.note}</span>}
-        </div>
+        </Box>
       ))}
     </div>
   );

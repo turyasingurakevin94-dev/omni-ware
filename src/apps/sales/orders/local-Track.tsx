@@ -21,7 +21,7 @@ export interface TrackProps {
 export function Track(p: TrackProps): JSX.Element {
   const at = STAGES.indexOf(p.stage), done = p.stage === 'delivered', t = p.times || {}, sk = p.skipped || [];
   return (
-    <div class="ow-track">
+    <div class="ow-track or-track">
       <div class="ow-track-h"><span class="ow-track-w">{STAGE_WORD[p.stage]}</span><span class="ow-track-s">{p.sub}</span></div>
       <div role="img" aria-label={`${STAGE_WORD[p.stage]}: step ${at + 1} of 5`} class="ow-rail">
         <div class="ow-rail-stops">

@@ -5,8 +5,8 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { firstWord, phoneText } from '../../../core/names.ts';
-import { lineTotal, orderTotal } from '../../../core/money.ts';
+import { firstWord } from '../../../core/names.ts';
+import { orderTotal } from '../../../core/money.ts';
 import { clock, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -14,7 +14,8 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
 import { byRole, faceOfMember, member, shortItem, shortName } from './data.ts';
-import { chatFor, sayMoney } from './msg.tsx';
+import { MonoText, chatFor, sayMoney } from './msg.tsx';
+import './sheets.css';
 
 /** OR09 · at the door: the photo square, where, who delivered, when. */
 export function DoorCard(p: { place: string; by?: string; at: string }): JSX.Element {
@@ -42,21 +43,21 @@ export function MapCard(p: { b: Books; o: Order }): JSX.Element {
           <path d="M170 66 C210 60 250 44 296 36" fill="none" stroke="#0F6B43" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 7" />
         </svg>
         <span class="or-map-eta">Arrives <b class="mono">{`~${arrive}`}</b></span>
-        <span aria-hidden="true" class="or-map-shop"><Icon name="store" size={16} /></span>
-        <span aria-hidden="true" class="or-map-truck"><Icon name="truck" size={16} /></span>
-        <span aria-hidden="true" class="or-map-pin"><Icon name="pin" size={24} /></span>
+        <span aria-hidden="true" class="or-map-shop"><Icon name="store" size={16} stroke={2} /></span>
+        <span aria-hidden="true" class="or-map-truck"><Icon name="truck" size={16} stroke={2} /></span>
+        <span aria-hidden="true" class="or-map-pin"><Icon name="pin" size={24} stroke={2.2} /></span>
         <span class="mono or-map-l">{`left ${clock(o.stageAt)}`}</span>
         <span class="or-map-r">{`usually ${usual} min`}</span>
       </div>
       <div class="or-map-row">
-        <span aria-hidden="true" class="or-map-ic"><Icon name="pin" size={18} /></span>
+        <span aria-hidden="true" class="or-map-ic"><Icon name="pin" size={18} stroke={2} /></span>
         <span class="or-map-t"><span>{(o.deliverTo || '').split(',')[0]}</span><span>{`${who}'s site manager receives it`}</span></span>
       </div>
       {d && (
         <div class="or-map-row">
           <Avatar initials={d.initials} tint={d.tint} size={40} />
           <span class="or-map-t"><span>{`${firstWord(d.name)} · driving`}</span><span>{`has ${who}'s number`}</span></span>
-          {phone && <a href={'tel:+256' + phone.replace(/\s/g, '').slice(1)} class="or-map-call"><Icon name="phone" size={16} />{`Call ${firstWord(d.name)}`}</a>}
+          {phone && <a href={'tel:+256' + phone.replace(/\s/g, '').slice(1)} class="or-map-call"><Icon name="phone" size={16} stroke={2} />{`Call ${firstWord(d.name)}`}</a>}
         </div>
       )}
     </div>
@@ -105,20 +106,18 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
   const send = async () => {
     if (!chat) { toast.show(`${who} has no chat yet`, { kind: 'warn' }); return; }
     setBusy('send');
-    try { await act('send', chat.id, plain(text)); await act('markPriceTold', o.id); toast.show(`Sent to ${who}`, { kind: 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
+    try { await act('send', chat.id, text); await act('markPriceTold', o.id); toast.show(`Sent to ${who}`, { kind: 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
   };
   return (
     <div class="or-ptell">
-      <div class="or-ptell-m"><span>{text.split(/(\d[\d,]*|#\d{4})/).map((x, i) => (i % 2 ? <span key={i} class="mono">{x}</span> : x))}</span></div>
+      <div class="or-ptell-m"><span><MonoText text={text} /></span></div>
       <div class="or-ptell-b">
-        <button type="button" class="or-btn-w" onClick={told} disabled={!!busy}><Icon name="check" size={18} />{busy === 'told' ? 'Sending…' : 'Told them'}</button>
+        <button type="button" class="or-btn-w" onClick={told} disabled={!!busy}><Icon name="check" size={18} stroke={2.6} />{busy === 'told' ? 'Sending…' : 'Told them'}</button>
         <button type="button" class="or-btn-g" onClick={send} disabled={!!busy}><Duo i={phWhatsapp} size={20} />{busy === 'send' ? 'Sending…' : 'Send on WhatsApp'}</button>
       </div>
-      {lineTotal(l) < 0 && null}
     </div>
   );
 }
-const plain = (s: string) => s;
 
 /** OR22 · a return asked: waiting, Undo, and its two steps (you asked · Ruth checks it, then the credit note). */
 export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Element {
@@ -134,13 +133,11 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
   return (
     <div class="or-asks">
       <div class="or-asks-h"><span>Return asked<span class="or-wait">Waiting</span></span>
-        <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
-      <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3.2} /></span><span aria-hidden="true" class="or-step-line" />
+        <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
+      <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span><span aria-hidden="true" class="or-step-line" />
         <span class="or-step-t"><span>You asked</span><span>{`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`}</span></span></div>
       <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} style={{ boxShadow: '0 0 0 2px #F5B26B' }} />}</span>
         <span class="or-step-t warn"><span>{`${rn} checks it`}</span><span>{`then the credit note, ${ask.amount.toLocaleString('en-US')}`}</span></span></div>
     </div>
   );
 }
-
-export { phoneText };

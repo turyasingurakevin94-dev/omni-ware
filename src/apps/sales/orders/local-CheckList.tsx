@@ -83,7 +83,7 @@ export function CheckList(p: { head: CHead; lines: CLine[] }): JSX.Element {
             <ItemSquare aisle={l.aisle} size={34} radius={9} icon={20} dropped={l.gone} />
             <span class="ow-chk-t">
               <span class="ow-chk-n">{l.name}</span>
-              <span class={cx('mono ow-chk-s', (l.was != null || l.word ) && 'or-chk-s')}>
+              <span class={cx('mono ow-chk-s', (l.was != null || !!l.word || !!l.under || l.mark.k === 'face') && 'or-chk-s')}>
                 {`${fig(l.qty)} `}<span class="ow-word or-unit">{l.unit}</span>{' · '}
                 {l.note ? l.note : <>{l.was != null && <><s>{fig(l.was)}</s>{' '}</>}{l.amount != null && fig(l.amount)}</>}
                 {l.word && <>{l.amount != null ? ' · ' : ''}<span class={cx('or-w', l.word.tone)}>{l.word.text}</span></>}

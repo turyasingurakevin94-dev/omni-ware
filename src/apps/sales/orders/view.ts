@@ -75,7 +75,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (paid >= total && total > 0) {
     const ms = [...new Set(o.payments.map((x) => ({ cash: 'cash', momo: 'mobile', bank: 'bank' })[x.method]))];
     right = { k: 'Paid', v: paid, tone: 'good', note: ms.join(' + ') };
-  } else right = { k: 'Not paid yet', v: orderOwes(o), tone: 'warn', note: o.stage === 'buying' ? 'before it leaves' : o.stage === 'checking' && waiting.length && !o.toldTotal ? undefined : 'leaves when paid' };
+  } else right = { k: 'Not paid yet', v: orderOwes(o), tone: 'warn', note: fresh ? undefined : o.stage === 'buying' ? 'before it leaves' : o.stage === 'checking' && waiting.length && !o.toldTotal ? undefined : 'leaves when paid' };
 
   // The check list.
   const lines: CLine[] = o.lines.map((l) => {
