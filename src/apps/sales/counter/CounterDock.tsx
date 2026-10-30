@@ -98,7 +98,7 @@ export function Tender(p: TenderProps): JSX.Element {
 const notesShort = (v: number): number[] => notesFor(Math.ceil(v / 1000) * 1000).slice(0, 3);
 
 /** The transaction ID (Mobile, Bank): amber until it is in, mint with a tick once it is; Paste reads their SMS. */
-export function RefField(p: { value: string; onInput: (v: string) => void }): JSX.Element {
+export function RefField(p: { value: string; paste: boolean; onInput: (v: string) => void }): JSX.Element {
   const ok = !!p.value.trim();
   const paste = async () => {
     try {
@@ -115,7 +115,7 @@ export function RefField(p: { value: string; onInput: (v: string) => void }): JS
           onInput={(e) => p.onInput((e.target as HTMLInputElement).value)} />
       </span>
       {ok ? <span aria-hidden="true" class="kc-ref-ok"><Icon name="check" size={14} stroke={3.2} /></span>
-        : <button type="button" class="kc-paste" aria-label="Paste the ID" onClick={(e) => { e.preventDefault(); void paste(); }}><span>Paste</span></button>}
+        : p.paste && <button type="button" class="kc-paste" aria-label="Paste the ID" onClick={(e) => { e.preventDefault(); void paste(); }}><span>Paste</span></button>}
     </label>
   );
 }

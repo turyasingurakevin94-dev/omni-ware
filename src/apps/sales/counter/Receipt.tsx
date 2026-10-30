@@ -38,6 +38,7 @@ export function Receipt(p: ScreenProps): JSX.Element {
     if (n.length !== 9) { toast.show('Type their phone', { kind: 'warn' }); return; }
     try { await act('setClientPhone', id, phoneText(phone)); } catch (_e) { /* the receipt still goes */ }
     window.open(`https://wa.me/256${n}?text=${encodeURIComponent(text)}`, '_blank');
+    nav.back();
   };
   const share = async () => {
     const nav2 = navigator as Navigator & { share?: (d: { title: string; text: string }) => Promise<void> };

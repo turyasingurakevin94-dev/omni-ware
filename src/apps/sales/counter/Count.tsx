@@ -28,7 +28,8 @@ export function CountSheet(p: { total: number }): JSX.Element {
   const counted = typed != null ? Number(typed.replace(/[^0-9]/g, '')) || 0 : NOTES.reduce((t, x) => t + x * (n[x] || 0), 0);
   const over = counted >= p.total, top = Math.max(p.total, counted, 1);
   const bump = (x: number, d: number) => { setTyped(null); setN({ ...n, [x]: Math.max(0, (n[x] || 0) + d) }); };
-  const use = () => { if (!counted) return; set({ counted, given: counted }); sheet.close(); };
+  // Exactly the total is Exact (KC03's tile), not a fourth tile.
+  const use = () => { if (!counted) return; set(counted === p.total ? { counted: null, given: 'exact' } : { counted, given: counted }); sheet.close(); };
   return (
     <LightSheet eyebrow={`Counter sale · ${fig(p.total)}`} title="Count what they gave" onClose={sheet.close}>
       <div class="kc-cnt-h">

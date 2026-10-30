@@ -19,10 +19,12 @@ import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
 import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefField, Tender } from './CounterDock.tsx';
 import { Find } from './Find.tsx';
+import { StillWho } from './local-whopill.tsx';
 import { Picked } from './Picked.tsx';
 import { OtherAisles, SoldHead, SoldRows, Tiles } from './Shelf.tsx';
 import { bestSellers, counterToday, soldWith } from './shop.ts';
-import { add, busy, failed, q, restore, sale, sell, set, setPrice, setQty, toggle, totalOf, waitingLines } from './state.ts';
+import { add, busy, failed, q, reset, restore, sale, sell, set, setPrice, setQty, toggle, totalOf, waitingLines } from './state.ts';
+import { startWatch } from './watch.ts';
 import { openWho } from './Who.tsx';
 import './counter.css';
 
@@ -38,6 +40,8 @@ export function manager(b: Books): { initials: string; tint: Customer['tint']; f
  */
 export function orderIn(items: { itemId: string; qty: number; price: number | null }[], customerId: string | null): void {
   nav.replace('sell/order', { customer: customerId, items: JSON.stringify(items) });
+  // The goods are the order's now: off the counter, so they cannot be sold twice.
+  reset();
 }
 const asItems = (lines: Line[]) => lines.map((l) => ({ itemId: l.itemId, qty: l.qty, price: l.price }));
 
@@ -53,7 +57,7 @@ function listen(): void {
 interface SpeechLike { lang: string; start(): void; onresult: (e: { results: { transcript: string }[][] }) => void }
 
 export function Counter(): JSX.Element {
-  useEffect(() => { restore(); }, []);
+  useEffect(() => { restore(); startWatch(); }, []);
   const b = books.value;
   if (!b) return <main class="kc" aria-busy="true" />;
   const s = sale.value, text = q.value, t = now.value, total = totalOf(s.lines);
@@ -61,14 +65,15 @@ export function Counter(): JSX.Element {
   const itemOf = (l: Line) => b.items.find((i) => i.id === l.itemId);
   const short = s.lines.find((l) => { const it = itemOf(l); return !!it && it.onShelf != null && l.qty > it.onShelf; });
   const waits = s.quote == null ? waitingLines(s.lines) : [];
-  const ruth = manager(b);
+  const ruth = manager(b), face = cust ? { initials: cust.initials, tint: cust.tint } : { initials: 'WI', tint: 't4' as const };
   const pick = (it: Item, n = 1) => { add(it, n); q.value = ''; };
   const close = () => { sheet.close(); if (stack.value.length > 1) nav.back(); else nav.home(); };
 
   const top = (
     <TopBar onClose={close} closeLabel="Close the counter sale"
-      who={<WhoPill on={openWho} face={cust ? { initials: cust.initials, tint: cust.tint } : { initials: 'WI', tint: 't4' }}
-        name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="#0F6B43" />}
+      who={busy.value
+        ? <StillWho face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />
+        : <WhoPill on={openWho} face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />}
       search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: text, onInput: (v) => { q.value = v; }, onMic: listen, class: 'kc-search' }}
       onAisles={() => { if (q.value) q.value = ''; else (document.querySelector('.kc-search input') as HTMLInputElement | null)?.focus(); }} />
   );
@@ -93,7 +98,7 @@ export function Counter(): JSX.Element {
       <>
         <Picked lines={s.lines} items={b.items} open={s.open} pricing={s.pricing} onOpen={toggle} onPricing={(id) => set({ pricing: id })}
           onQty={setQty} onPrice={setPrice} onOrderIn={() => orderIn(asItems(s.lines), s.customerId)} />
-        {s.method !== 'cash' && !waits.length && <Sms total={total} shop={b.shop.name} />}
+        {s.method === 'momo' && !waits.length && <Sms total={total} shop={b.shop.name} />}
         {!!waits.length && (
           <AskCard ruth={ruth} shopTotal={totalOf(s.lines.map((l) => ({ ...l, price: l.shopPrice ?? l.price })))} asking={busy.value}
             onShop={() => { waits.forEach((l) => setPrice(l.lineId, l.shopPrice || 0)); set({ pricing: null }); }} onAsk={() => void ask()} />
@@ -166,7 +171,8 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
   }
   const notes = likelyNotes(p.total), given = s.given === 'exact' ? p.total : s.given;
   const cash = s.method === 'cash', shortBy = cash && given < p.total ? p.total - given : 0, change = cash && given > p.total;
-  const needId = !cash && !s.ref.trim();
+  // Spec 04 Q6: mobile money needs its ID; a bank slip's is kept when typed.
+  const needId = s.method === 'momo' && !s.ref.trim();
   const locked = off ? { icon: 'offline' as const, label: 'Back online to sell' }
     : shortBy ? { icon: 'lock' as const, label: `Short · ${shortBy.toLocaleString('en-US')}`, amber: true }
       : needId ? { icon: 'lock' as const, label: 'Type the ID first' } : null;
@@ -176,7 +182,7 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
       <Methods value={s.method} dim={sending} onChange={(m) => set({ method: m })} />
       {cash
         ? <Tender total={p.total} notes={notes} given={s.given} counted={s.counted} dim={sending} onPick={(v) => set({ given: v })} onCount={() => openCount(p.total)} />
-        : <RefField value={s.ref} onInput={(v) => set({ ref: v })} />}
+        : <RefField value={s.ref} paste={s.method === 'momo'} onInput={(v) => set({ ref: v })} />}
       <Move sending={sending} locked={locked} label={`Slide to sell · ${p.total.toLocaleString('en-US')}`} onSell={() => doSell(cash ? given : 0)} />
     </NavyDock>
   );
