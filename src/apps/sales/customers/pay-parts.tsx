@@ -103,7 +103,7 @@ export function OrderCard(p: { id: number; where: string; status: string | null;
 export interface WhoOpt { id: string; initials: string; tint: Tint; name: string; sub: string; owes: number }
 
 /** "6,000 left · who owes it?": the likely ones, the chosen one's share with its credit charge, and where it leaves them. */
-export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null; onPick: (id: string) => void; onFind: () => void; share: number; credit: { pct: number; charge: number; owes: number; limit: number | null; label: string } | null }): JSX.Element {
+export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null; onPick: (id: string) => void; onFind: () => void; share: number; credit: { owes: number; limit: number | null; label: string } | null }): JSX.Element {
   return (
     <div class="cu-who-card">
       <span class="cu-who-h"><span><b class="mono">{money(p.left)}</b> left · who owes it?</span>
@@ -124,7 +124,7 @@ export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null
       {p.credit && p.credit.limit ? (
         <span role="img" aria-label={p.credit.label} class="cu-who-credit">
           <span aria-hidden="true"><span style={{ flex: Math.round(p.credit.owes / 1000) }} /><span style={{ flex: Math.max(1, Math.round((p.share) / 1000)) }} /><span style={{ flex: Math.max(0, Math.round((p.credit.limit - p.credit.owes - p.share) / 1000)) }} /></span>
-          <span>{`+${money(p.credit.charge)} credit charge · `}<b class="mono">{money(p.credit.owes + p.share)}</b>{` of ${p.credit.limit >= 1e6 ? `${p.credit.limit / 1e6}M` : money(p.credit.limit)}`}</span>
+          <span>{'then owes '}<b class="mono">{money(p.credit.owes + p.share)}</b>{` of ${p.credit.limit >= 1e6 ? `${p.credit.limit / 1e6}M` : money(p.credit.limit)}`}</span>
         </span>
       ) : null}
     </div>

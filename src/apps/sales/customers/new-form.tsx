@@ -4,7 +4,7 @@
  * saved when the name or number is theirs, and two buttons.
  */
 import type { JSX, RefObject } from 'preact';
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
@@ -23,21 +23,14 @@ function HardHat(): JSX.Element {
 
 const KINDS: [CustomerKind, string][] = [['contractor', 'Contractor'], ['reseller', 'Reseller'], ['retail', 'Retail']];
 
-/** Pronoun from a WhatsApp name, when it says one ("Mama Shine" → her). */
-function whose(name: string): string {
-  return /^(mama|mrs|ms|miss|sister|auntie|aunt|madam|maama|nnalongo)\b/i.test(name) ? 'her' : /^(mr|baba|brother|uncle|sir|ssebo|taata)\b/i.test(name) ? 'his' : 'their';
-}
-
 export function NewForm(p: {
   b: Books; today: string; name: string; onName: (v: string) => void; phone: string; onPhone: (v: string) => void; phoneRef: RefObject<HTMLInputElement>;
   phoneWarn: string | null; onPhoneBlur: () => void; onPhoneFocus: () => void; place: string; onPlace: (v: string) => void;
   kind: CustomerKind | null; onKind: (k: CustomerKind) => void; ruth: string; face: string;
   chat: { at: number; phone: string; name: string; filled: boolean; on: () => void } | null;
-  dup: Dup | null; short9: boolean; top: number; busy: 'add' | 'sell' | null; onClose: () => void; acts: { left: Act; right: Act };
+  dup: Dup | null; short9: boolean; busy: 'add' | 'sell' | null; onClose: () => void; acts: { left: Act; right: Act };
 }): JSX.Element {
   const [focus, setFocus] = useState<string | null>(null);
-  const root = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => { const el = root.current && root.current.parentElement; if (el && el.classList.contains('ow-sheet')) el.style.top = `${p.top}px`; }, [p.top]);
   const ticks: [string, boolean][] = [['Name', !!p.name.trim()], ['Phone', p.phone.length === 9], ['Kind', !!p.kind]];
   const done = ticks.every(([, x]) => x), off = p.short9;
   const field = (k: string, warn = false) => cx('cu-nf-box', warn ? 'warn' : focus === k && 'focus');
@@ -60,7 +53,7 @@ export function NewForm(p: {
     );
   };
   return (
-    <div ref={root} class="ow-lsheet cu-ls cu-nf">
+    <div class="ow-lsheet cu-ls cu-nf">
       <button type="button" class="ow-grab" aria-label="Close" onClick={p.onClose} />
       <div class="ow-lsheet-h"><div class="ow-lsheet-ht"><h2>New customer</h2></div>
         <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></div>
@@ -74,7 +67,7 @@ export function NewForm(p: {
         {p.chat && (
           <button type="button" class="cu-nf-chat" onClick={p.chat.on}>
             <span aria-hidden="true"><Duo i={phWhatsapp} size={18} /></span>
-            <span><span>{`From ${whose(p.chat.name)} chat · ${clock(p.chat.at)}`}</span><span class="mono">{`${p.chat.phone} · “${p.chat.name}”`}</span></span>
+            <span><span>{`From their chat · ${clock(p.chat.at)}`}</span><span class="mono">{`${p.chat.phone} · “${p.chat.name}”`}</span></span>
             <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={15} stroke={2.4} /></span>
           </button>
         )}

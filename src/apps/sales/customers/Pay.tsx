@@ -140,7 +140,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       foot={<PayDock method={method} given={given} notes={notesFor(amount)} onGiven={setGiven} amount={amount} owes={owes} after={after} payable={payable}
         over={choice ? { how, amount: plan.over } : null} change={settle.change} record={choice ? record : amount}
         receipt={c ? { on: receipt, label: `Send ${name} the receipt on WhatsApp`, toggle: () => setReceipt(!receipt) } : null}
-        walkin={o && !c ? { id: o.id, total: owes, who: whoC ? { name: short(whoC.name), owes: whoC.owes + shareFor(b, walkLeft).share } : null, left: walkLeft } : null}
+        walkin={o && !c ? { id: o.id, total: owes, who: whoC ? { name: short(whoC.name), owes: whoC.owes + shareFor(o as Order, amount) } : null, left: walkLeft } : null}
         words={words} sending={busy} onCommit={commit} />}>
       <div class="cu-amt-card">
         <label class="cu-amt-l"><span class="cu-k">{`${name} pays now`}</span>
@@ -151,7 +151,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       {method === 'momo' && <RefField label="Transaction ID" value={ref} placeholder="from their SMS" warn={ref.trim() ? null : 'Mobile needs its transaction ID'} onInput={setRef} />}
       {method === 'bank' && <RefField label="Bank reference" value={ref} placeholder="if there is one" warn={null} onInput={setRef} />}
       {o && !c && <OrderCard id={o.id} where={o.client.name === 'Walk-in' || !o.client.name ? 'walk-in · at the gate' : 'at the gate'} status={o.stage === 'road' && !o.deliverTo ? 'Ready to collect' : null} paid={Math.min(amount, owes)} total={owes} />}
-      {o && !c && walkLeft > 0 && <WalkinWho b={b} o={o} left={walkLeft} opts={whos} chosen={who} onPick={setWho} />}
+      {o && !c && walkLeft > 0 && <WalkinWho b={b} o={o} left={walkLeft} paying={amount} opts={whos} chosen={who} onPick={setWho} />}
       {c && (choice
         ? <OverCard pays={payable} over={plan.over} bills={rows.filter((x) => x.on).map((x) => x.id)} how={how} onHow={setHow} name={name} checker={{ initials: esther.initials, tint: esther.tint, name: first(esther.name) }} />
         : open.length > 0 && <PaysCard rows={rows} pick={!!picks} onToggle={toggle} />)}
