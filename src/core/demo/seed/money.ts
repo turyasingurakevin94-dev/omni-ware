@@ -60,7 +60,7 @@ export function promises(): PayPromise[] {
 export function billAsks(): BillAsk[] {
   return [
     // #0548: 2 of the 3 bags came back torn → credit 67,000 of 119,000; asked Ruth Fri 15:40 (FACTS §4.4).
-    { id: 'ba1', orderId: 548, customerId: GGABA, kind: 'credit', amount: 67000, reason: 'Torn bags', status: 'sent', by: GRACE, at: d('2026-10-16', '15:40') },
+    { id: 'ba1', orderId: 548, customerId: GGABA, kind: 'credit', amount: 67000, reason: 'Torn bags', lines: [{ idx: 0, name: 'Cement · Hima 50kg', qty: 2, price: 33500, amount: 67000 }], note: 'Cement · Hima 50kg ×2', status: 'sent', by: GRACE, at: d('2026-10-16', '15:40') },
     // #0550: cancel asked (FACTS §4.1); on the books, a cancel_asks row (0181).
     { id: 'ba2', orderId: 550, customerId: null, kind: 'cancel', amount: 52000, reason: 'They changed their mind', status: 'sent', by: GRACE, at: t('9:30') },
   ];

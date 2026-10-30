@@ -255,7 +255,8 @@ export function askOf(r: Row): SourcingAsk {
 
 /** invoice_asks → BillAsk (sales.html rowToAsk). */
 export function billAskOf(r: Row): BillAsk {
-  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: r.kind === 'credit' ? 'credit' : 'void', amount: whole(r.amount), reason: String(r.reason || ''), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: r.kind === 'credit' ? 'credit' : 'void', amount: whole(r.amount), reason: String(r.reason || ''),
+    lines: Array.isArray(r.lines) ? r.lines.map((l: Row) => ({ idx: num(l.idx), name: String(l.name || ''), qty: num(l.qty), price: whole(l.price), amount: whole(l.amount) })) : [], note: String(r.note || ''), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
 /** cancel_asks (0181) → BillAsk, kind 'cancel': what the order came to when asked, and why. */

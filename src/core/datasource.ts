@@ -122,7 +122,7 @@ export interface DataSource {
   markPriceTold(orderId: number): Promise<void>;
   setClientPhone(orderId: number, phone: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
-  askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string }): Promise<BillAsk>;
+  askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk>;
   /** Take back any ask of yours that still waits: a void, a credit or a cancel. */
   withdrawBillAsk(id: string): Promise<void>;
   /**

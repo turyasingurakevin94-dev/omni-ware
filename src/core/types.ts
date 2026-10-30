@@ -321,10 +321,17 @@ export interface BillAsk {
   kind: 'void' | 'credit' | 'cancel';
   amount: UGX;
   reason: string;
+  /** A return's lines (invoice_asks.lines, 0123): idx is the line's place on the order, as the Manager reads it. */
+  lines?: AskLine[];
+  /** The asker's words (invoice_asks.note); a return from this app writes its lines here too ("Cement · Hima 50kg ×2"). */
+  note?: string;
   status: 'sent' | 'accepted' | 'declined' | 'withdrawn';
   by: string;
   at: Ms;
 }
+
+/** One line of a return ask: which line (its place on the order), how many come back, at what price. */
+export interface AskLine { idx: number; name: string; qty: number; price: UGX; amount: UGX }
 
 /** An ask to Accounts to correct a payment (payment_asks, 0130), or to settle paid-over money. */
 export interface PaymentAsk {
