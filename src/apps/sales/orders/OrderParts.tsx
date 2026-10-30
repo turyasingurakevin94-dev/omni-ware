@@ -5,15 +5,15 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { firstWord } from '../../../core/names.ts';
+import { firstWord, phone9 } from '../../../core/names.ts';
 import { orderTotal } from '../../../core/money.ts';
-import { clock, when } from '../../../core/time.ts';
+import { clock, replyWindow, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
-import { byRole, faceOfMember, member, shortItem, shortName } from './data.ts';
+import { byRole, custOf, faceOfMember, member, shortItem, shortName } from './data.ts';
 import { MonoText, chatFor, sayMoney } from './msg.tsx';
 import './sheets.css';
 
@@ -21,7 +21,7 @@ import './sheets.css';
 export function DoorCard(p: { place: string; by?: string; at: string }): JSX.Element {
   return (
     <div class="or-door">
-      <button type="button" class="or-door-ph" aria-label="See the photo at the door" onClick={() => toast.show('The photo comes with the driver’s app', { kind: 'warn' })}><Icon name="camera" size={22} />photo</button>
+      <button type="button" class="or-door-ph" aria-label="See the photo at the door" disabled><Icon name="camera" size={22} />photo</button>
       <span class="or-door-t"><span>At the door</span><span>{p.place}</span><span>{p.by ? `${firstWord(p.by)} delivered` : 'Delivered'}</span><span class="mono">{p.at}</span></span>
     </div>
   );
@@ -98,22 +98,29 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
   const word = shortItem(l.name).toLowerCase();
   const total = orderTotal(o);
   const text = `Hello ${who}, ${word} is now ${sayMoney(rv.price)} a ${l.unit}, not ${sayMoney(rv.was || 0)}. Order #${String(o.id).padStart(4, '0')} is now ${sayMoney(total)}.`;
-  const chat = chatFor(b, o, chats.value);
+  const chat = chatFor(b, o, chats.value), shut = !chat || !replyWindow(chat.lastInAt, now.value).open;
+  const p9 = phone9(custOf(b, o)?.phone || o.client.phone), sms = `sms:${p9 ? '+256' + p9 : ''}?body=${encodeURIComponent(text)}`;
   const told = async () => {
     setBusy('told');
-    try { await act('markPriceTold', o.id); toast.show(`${who} told`, { kind: 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
+    try { const r = await act('markPriceTold', o.id); toast.show(r.kept ? 'Kept on this phone' : `${who} told`, { kind: r.kept ? 'warn' : 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
   };
   const send = async () => {
     if (!chat) { toast.show(`${who} has no chat yet`, { kind: 'warn' }); return; }
     setBusy('send');
-    try { await act('send', chat.id, text); await act('markPriceTold', o.id); toast.show(`Sent to ${who}`, { kind: 'ok' }); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
+    try {
+      const r = await act('send', chat.id, text);
+      await act('markPriceTold', o.id);
+      toast.show(r.kept ? 'Kept on this phone' : `Sent to ${who}`, { kind: r.kept ? 'warn' : 'ok' });
+    } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(''); }
   };
   return (
     <div class="or-ptell">
       <div class="or-ptell-m"><span><MonoText text={text} /></span></div>
       <div class="or-ptell-b">
         <button type="button" class="or-btn-w" onClick={told} disabled={!!busy}><Icon name="check" size={18} stroke={2.6} />{busy === 'told' ? 'Sending…' : 'Told them'}</button>
-        <button type="button" class="or-btn-g" onClick={send} disabled={!!busy}><Duo i={phWhatsapp} size={20} />{busy === 'send' ? 'Sending…' : 'Send on WhatsApp'}</button>
+        {shut
+          ? <a href={sms} class="or-btn-n" onClick={() => { void act('markPriceTold', o.id); }}><Icon name="message" size={18} stroke={2} />Send as SMS</a>
+          : <button type="button" class="or-btn-g" onClick={send} disabled={!!busy}><Duo i={phWhatsapp} size={20} />{busy === 'send' ? 'Sending…' : 'Send on WhatsApp'}</button>}
       </div>
     </div>
   );
@@ -136,7 +143,7 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
         <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
       <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span><span aria-hidden="true" class="or-step-line" />
         <span class="or-step-t"><span>You asked</span><span>{`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`}</span></span></div>
-      <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B' }} />}</span>
+      <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} />}</span>
         <span class="or-step-t warn"><span>{`${rn} checks it`}</span><span>{`then the credit note, ${ask.amount.toLocaleString('en-US')}`}</span></span></div>
     </div>
   );

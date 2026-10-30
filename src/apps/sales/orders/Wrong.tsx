@@ -60,15 +60,29 @@ function WrongSheet(p: { id: number }): JSX.Element | null {
       <Reason tone="bad" icon="void" title="Cancel the bill" sub={<><Icon name="lock" size={13} stroke={2.2} />{o.stage === 'delivered' ? 'Delivered · use a return' : `${rn} decides`}</>} off={o.stage === 'delivered'} on={() => openTwice(o.id)} />
       <Reason tone="warn" icon="cash" title="Payment recorded wrong" off={!pays.length}
         sub={<>{acc && <Avatar {...faceOfMember(acc)} size={18} />}{one ? `${METHOD[one.method].word} ${one.amount.toLocaleString('en-US')} · ${when(one.at, t).split(' ')[0] === 'today' ? clock(one.at) : weekday(one.at)} · ${an} corrects it` : pays.length ? `${pays.length} payments · ${an} corrects it` : 'Nothing paid yet'}</>}
-        on={() => (one ? openPayWrong(o.id, one.id) : openPayWhich(o.id))} />
+        on={() => (one ? openPayWrong(o.id, one.id, 'wrong') : openPayWhich(o.id))} />
       <Reason tone="" icon="note" title="Something else" sub={<>{rf}{`Tell ${rn} in a few words`}</>} on={() => openElse(o.id)} />
     </LightSheet>
   );
 }
 
 /** OR21 · which items come back and how many, why, and the credit it comes to. */
+/** Back to the sheet this one was opened from: its Close, the scrim, a pull, the phone's back (never after a send). */
+let sent = false;
+const backTo = (open: () => void) => () => { if (!sent) open(); };
+/** After a send: close for good. */
+const done = () => { sent = true; sheet.close(); sent = false; };
+
 export function openReturn(id: number): void {
-  sheet.open(() => <ReturnSheet id={id} />, { label: 'Items coming back', top: 230 });
+  sheet.open(() => <ReturnSheet id={id} />, { label: 'Items coming back', top: 230, onClose: backTo(() => openWrong(id)) });
+}
+
+/** Fix it on an owing bill: the money is the question, so it asks Accounts: its one payment's fix, or which payment (OR24). */
+export function openPayFix(id: number): void {
+  const b = books.value, o = b && orderOf(b, id);
+  if (!b || !o) return;
+  const pays = paysOf(b, o);
+  if (pays.length === 1) openPayWrong(id, pays[0].id); else openPayWhich(id);
 }
 
 const WHY_BACK = ['Wrong size', 'Damaged', 'Not needed'];
@@ -85,12 +99,12 @@ function ReturnSheet(p: { id: number }): JSX.Element | null {
   const pick = (l: Line) => setQty({ ...qty, [l.lineId]: qty[l.lineId] ? 0 : 1 });
   const step = (l: Line, d: number) => setQty({ ...qty, [l.lineId]: Math.max(1, Math.min(l.qty, (qty[l.lineId] || 1) + d)) });
   const send = async () => {
-    if (!(amount > 0) || why < 0) { toast.show(why < 0 ? 'Tap why they come back' : 'Tick what comes back', { kind: 'warn' }); return; }
+    if (!(amount > 0) || why < 0) { toast.show(!(amount > 0) ? 'Tick what comes back' : 'Tap why they come back', { kind: 'warn' }); return; }
     setBusy(true);
     try {
       const note = lines.filter((l) => qty[l.lineId]).map((l) => `${l.name} ×${qty[l.lineId]}`).join(', ');
       const r = await act('askBill', { orderId: o.id, kind: 'credit', amount, reason: WHY_BACK[why], note });
-      sheet.close();
+      done();
       toast.show(r.kept ? 'Kept on this phone' : `Asked ${rn} for the credit note`, { kind: r.kept ? 'warn' : 'ok' });
     } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };
@@ -139,7 +153,7 @@ function ReturnSheet(p: { id: number }): JSX.Element | null {
 
 /** OR26 · something else: tap a reason, a few words, to Ruth. */
 export function openElse(id: number): void {
-  sheet.open(() => <ElseSheet id={id} />, { label: 'Something else', top: 340 });
+  sheet.open(() => <ElseSheet id={id} />, { label: 'Something else', top: 340, onClose: backTo(() => openWrong(id)) });
 }
 
 const ELSE = ['Came late', 'Wrong place', 'Short'];
@@ -158,8 +172,8 @@ function ElseSheet(p: { id: number }): JSX.Element | null {
     if (!c) { toast.show(`${shortName(b, o)} has no chat to note it on`, { kind: 'error' }); return; }
     setBusy(true);
     try {
-      const r = await act('note', c.id, `${orderNo(o.id)} · ${text.trim()}`);
-      sheet.close();
+      const r = await act('note', c.id, `@${rn} ${orderNo(o.id)} · ${text.trim()}`, ruth ? [ruth.id] : []);
+      done();
       toast.show(r.kept ? 'Kept on this phone' : `Sent to ${rn}`, { kind: r.kept ? 'warn' : 'ok' });
     } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };
@@ -193,7 +207,7 @@ function PayWhich(p: { id: number }): JSX.Element | null {
         {pays.map((x) => {
           const m = METHOD[x.method], by = b.members.find((mm) => mm.id === x.by), today = dayOf(x.at) === dayOf(t);
           return (
-            <button key={x.id} type="button" class="or-pay" onClick={() => openPayWrong(o.id, x.id)}>
+            <button key={x.id} type="button" class="or-pay" onClick={() => openPayWrong(o.id, x.id, 'which')}>
               <span aria-hidden="true" class={'or-row-ic s40 ' + m.tone}><Icon name={m.icon} size={20} stroke={1.9} /></span>
               <span class="or-row-t"><span class="s14">{`${m.word} · ${today ? `today ${clock(x.at)}` : dayLabel(x.at)}`}</span>
                 <span class="nw">{by && <Avatar initials={by.initials} tint={by.tint} size={18} />}{`${firstWord(by?.name || '')}${x.method === 'momo' && x.ref ? ` · ID ${x.ref}` : today ? '' : ` · ${clock(x.at)}`}`}</span></span>
@@ -213,8 +227,8 @@ function PayWhich(p: { id: number }): JSX.Element | null {
 }
 
 /** OR25 · the payment as recorded beside what it should be; the method; the ID; what they will owe after. */
-export function openPayWrong(id: number, paymentId: number): void {
-  sheet.open(() => <PayWrong id={id} paymentId={paymentId} />, { label: 'Payment recorded wrong', top: 200 });
+export function openPayWrong(id: number, paymentId: number, from?: 'which' | 'wrong'): void {
+  sheet.open(() => <PayWrong id={id} paymentId={paymentId} />, { label: 'Payment recorded wrong', top: 200, onClose: from ? backTo(() => (from === 'which' ? openPayWhich(id) : openWrong(id))) : undefined });
 }
 
 function PayWrong(p: { id: number; paymentId: number }): JSX.Element | null {
@@ -234,7 +248,7 @@ function PayWrong(p: { id: number; paymentId: number }): JSX.Element | null {
       const ids: string[] = [];
       if (m !== x.method || (m !== 'cash' && ref !== x.ref)) { const r = await act<{ id: string }>('askPaymentFix', { paymentId: x.id, what: 'method', want: { method: m, ref: m === 'cash' ? '' : ref.trim() }, note: '' }); if (!r.kept) ids.push(r.value.id); }
       if (should !== x.amount) { const r = await act<{ id: string }>('askPaymentFix', { paymentId: x.id, what: 'amount', want: { amount: should }, note: '' }); if (!r.kept) ids.push(r.value.id); }
-      sheet.close();
+      done();
       toast.show(`Asked ${an} to correct it`, { undo: ids.length ? () => { ids.forEach((id) => { void act('withdrawPaymentAsk', id); }); toast.show('Ask taken back'); } : undefined });
     } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };

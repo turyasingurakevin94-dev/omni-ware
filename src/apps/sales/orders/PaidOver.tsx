@@ -49,7 +49,7 @@ function PaidOver(p: { b: Books; x: Payment }): JSX.Element {
   const step = (k: 'ok' | 'face' | 'to', title: string, sub: string, line: boolean, tone = '') => (
     <div class="or-step">
       {k === 'ok' ? <span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span>
-        : k === 'face' && acc ? <span aria-hidden="true" class="or-step-face"><Avatar {...faceOfMember(acc)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B' }} /></span>
+        : k === 'face' && acc ? <span aria-hidden="true" class="or-step-face"><Avatar {...faceOfMember(acc)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} /></span>
           : <span aria-hidden="true" class="or-step-to" />}
       {line && <span aria-hidden="true" class="or-step-line" />}
       <span class={'or-step-t ' + tone}><span>{title}</span><span>{sub}</span></span>

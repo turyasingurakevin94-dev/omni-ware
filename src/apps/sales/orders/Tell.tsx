@@ -13,6 +13,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { custOf, nameOf, orderOf, shortName } from './data.ts';
 import { MonoText, chatFor, tellText } from './msg.tsx';
+import { orderPicture } from './picture.ts';
 import './sheets.css';
 
 export function openTell(id: number): void {
@@ -36,7 +37,7 @@ function TellSheet(p: { id: number }): JSX.Element | null {
     if (!c) return;
     setBusy(true);
     try {
-      const r = await act('send', c.id, text);
+      const r = pic && !shut ? await act('sendImage', c.id, await orderPicture(b, o, now.value), text) : await act('send', c.id, text);
       sheet.close();
       toast.show(r.kept ? 'Kept on this phone' : `Sent to ${who}`, { kind: r.kept ? 'warn' : 'ok', sub: r.kept ? 'It goes when there is signal' : undefined });
     } catch (e) { toast.show((e as Error).message, { kind: 'error', retry: send }); } finally { setBusy(false); }

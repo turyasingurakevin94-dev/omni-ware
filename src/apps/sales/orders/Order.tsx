@@ -6,7 +6,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
-import { firstWord, orderNo } from '../../../core/names.ts';
+import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Button } from '../../../ui/Button.tsx';
@@ -24,7 +24,7 @@ import { Track } from './local-Track.tsx';
 import { AskTimeline, DoorCard, LadderUnder, MapCard, PriceTell } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
-import { openWrong } from './Wrong.tsx';
+import { openPayFix, openWrong } from './Wrong.tsx';
 import { freshPrice, orderView } from './view.ts';
 import './order.css';
 
@@ -39,28 +39,30 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const [open, setOpen] = useState(false);
   const c = custOf(b, o), phone = c?.phone || o.client.phone, fresh = freshPrice(o);
   const delivered = o.stage === 'delivered', owes = orderOwes(o), total = orderTotal(o);
-  const ruth = firstWord(b.members.find((m) => m.role === 'manager')?.name || 'Manager');
+  const ruth = firstWord(b.members.find((m) => m.role === 'manager')?.name || 'Manager'), esther = firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts');
   const k = kept(o), waitN = o.lines.filter(waitsRuth).length;
   const pending = (o.stage === 'checking' && waitN > 0 && !o.toldTotal) || !!fresh;
   const op = delivered ? overPaymentOf(b, o) : null;
   const tiles = op ? [v.tiles[0], { k: 'Paid over', v: overOf(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id }) }] : v.tiles;
   const acts: Act[] = [];
   if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone ? 'tel:' + phone.replace(/\s/g, '') : undefined });
-  else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
-  acts.push({ bg: '#DCEAF8', fg: '#1A5A8A', icon: 'receipt', word: 'Receipt', sub: pending ? 'as it stands' : total.toLocaleString('en-US'), on: () => go('customers/paid', { id: o.id }) });
-  if (delivered) acts.push({ bg: '#FDEEE1', fg: '#7A4A02', icon: 'warning', word: 'Fix it', sub: `ask ${ruth}`, label: v.returnAsk ? 'Something wrong with this sale' : 'Fix it: something wrong with this sale', on: () => openWrong(o.id) });
+  else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
+  acts.push({ bg: '#DCEAF8', fg: '#1A5A8A', icon: 'receipt', word: 'Receipt', sub: o.voided ? 'voided' : pending ? 'as it stands' : v.bill ? `${o.paid.toLocaleString('en-US')} paid` : total.toLocaleString('en-US'), on: () => go('customers/paid', { id: o.id }) });
+  if (o.voided) { /* nothing to fix on a voided bill */ }
+  else if (v.bill) acts.push({ bg: '#FDEEE1', fg: '#7A4A02', icon: 'warning', word: 'Fix it', sub: `ask ${esther}`, label: 'Something wrong with this bill', on: () => openPayFix(o.id) });
+  else if (delivered) acts.push({ bg: '#FDEEE1', fg: '#7A4A02', icon: 'warning', word: 'Fix it', sub: `ask ${ruth}`, label: v.returnAsk ? 'Something wrong with this sale' : 'Fix it: something wrong with this sale', on: () => openWrong(o.id) });
   else acts.push({ bg: '#F1EEE8', fg: '#5F6980', icon: 'pen', word: 'Change', sub: `ask ${ruth}`, label: `Change this order: ask ${ruth}`, on: () => openChange(o.id) });
   return (
     <FullSheet onBack={nav.back} backLabel="Back to Orders" gap={v.returnAsk ? 8 : 10}
       head={(
-        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(delivered && o.invoicedAt && t - o.placedAt > 7 * 864e5 ? o.invoicedAt : o.placedAt, t)}`} subMono phone={phone || undefined} callLabel={`Call ${name}`} onClose={nav.back}>
+        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(delivered && o.invoicedAt && t - o.placedAt > 7 * 864e5 ? o.invoicedAt : o.placedAt, t)}`} subMono phone={phone9(phone) ? '+256' + phone9(phone) : undefined} callLabel={`Call ${name}`} onClose={nav.back}>
           <Track stage={o.stage} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
         </SheetHead>
       )}>
       {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} />}
       {o.stage === 'road' && <MapCard b={b} o={o} />}
       <Tiles tiles={tiles} />
-      {o.stage === 'road' ? null : delivered && !v.returnAsk && !open ? (
+      {o.stage === 'road' || v.bill ? null : delivered && !v.returnAsk && !open ? (
         <div class="or-fold">
           <ItemIcon b={b} o={o} />
           <span class="or-fold-n">{k.length ? `${k[0].name.split(' · ')[0]}${k.length > 1 ? ` +${k.length - 1}` : ''}` : shortItem(o.lines[0]?.name || '')}</span>
@@ -74,10 +76,10 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       {v.returnAsk && <AskTimeline b={b} o={o} ask={v.returnAsk} />}
       <div class="or-foot">
         <ActBar acts={acts} />
-        {owes > 0 && !v.returnAsk && !pending
+        {owes > 0 && !v.returnAsk && !pending && !o.voided
           ? <Button kind="red" icon="cash" class="or-take" onClick={() => payFor(b, o)}>Take payment · <span class="mono">{owes.toLocaleString('en-US')}</span></Button>
           : null}
-        {delivered && !v.returnAsk && <button type="button" class="ow-btn k-ghost h52" onClick={() => go('sell/order', { customer: o.customerId, from: 'again', items: o.id })}><Icon name="undo" size={18} stroke={2} />Sell again</button>}
+        {delivered && !v.returnAsk && !v.bill && !o.voided && <button type="button" class="ow-btn k-ghost h52" onClick={() => go('sell/order', { customer: o.customerId, from: 'again', items: o.id })}><Icon name="undo" size={18} stroke={2} />Sell again</button>}
       </div>
     </FullSheet>
   );

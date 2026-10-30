@@ -41,6 +41,8 @@ export interface OrderView {
   lines: CLine[];
   tellSub: string;
   returnAsk: BillAsk | null;
+  /** An owing bill with money on it: its money is the question (OR24's order). */
+  bill: boolean;
 }
 
 export function orderView(b: Books, o: Order, now: Ms): OrderView {
@@ -72,11 +74,13 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (fresh) left.old = goodsTotal(o.lines.map((l) => (l === fresh ? { ...l, price: (fresh.priceReview as { was: number }).was } : l)));
   else if (o.stage !== 'checking' && o.stage !== 'buying' && !ret) left.note = `${kept(o).length} lines`;
   if (ret) left.k = `${who} paid`;
-  const billOwes = o.invoiced && !ret && orderOwes(o) > 0;
-  if (billOwes) { left.k = `Bill ${orderNo(o.id)}`; left.note = undefined; }
+  const billOwes = o.invoiced && !ret && !o.voided && orderOwes(o) > 0;
+  const billDay = o.invoicedAt ? dayLabel(o.invoicedAt) : '';
+  if (billOwes || o.voided) { left.k = `Bill ${orderNo(o.id)}`; left.note = billDay; }
   let right: Tile;
   if (ret) right = { k: 'Credit asked', v: ret.amount, tone: 'warn', dot: true };
-  else if (billOwes) right = { k: 'Owes', v: orderOwes(o), tone: 'warn' };
+  else if (o.voided) right = { k: 'Voided', v: 0, tone: 'info', note: `${rn} voided it` };
+  else if (billOwes) { const age = o.invoicedAt ? daysApart(dayOf(o.invoicedAt), dayOf(now)) : 0; right = { k: 'Owes', v: orderOwes(o), tone: 'warn', note: `${age} day${age === 1 ? '' : 's'}` }; }
   else if (paid >= total && total > 0) {
     const ms = [...new Set(o.payments.map((x) => ({ cash: 'cash', momo: 'mobile', bank: 'bank' })[x.method]))];
     right = { k: 'Paid', v: paid, tone: 'good', note: ms.join(' + ') };
@@ -124,10 +128,11 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   // The Tell tile's sub.
   let tellSub = 'it\'s being checked';
   if (ret) tellSub = 'about the return';
+  else if (billOwes && o.paid > 0) tellSub = 'what is owed';
   else if (o.stage === 'buying' && goneLines.length) tellSub = 'what was found';
   else if (o.stage === 'checking' && o.lines.some(untold)) tellSub = 'a new price';
   else if (waiting.length) tellSub = `${rn} is deciding`;
   else tellSub = { checking: 'it\'s being checked', buying: 'it\'s being bought', packing: 'it\'s packing', road: 'it\'s on the way', delivered: 'it\'s delivered' }[o.stage];
 
-  return { sub, waits: o.stage === 'checking' && (waiting.length > 0 || orderOwes(o) > 0), times, skipped, tiles: [left, right], head, lines, tellSub, returnAsk: ret };
+  return { sub, waits: o.stage === 'checking' && (waiting.length > 0 || orderOwes(o) > 0), times, skipped, tiles: [left, right], head, lines, tellSub, returnAsk: ret, bill: billOwes && o.paid > 0 };
 }

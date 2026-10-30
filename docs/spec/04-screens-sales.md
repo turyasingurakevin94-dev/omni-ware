@@ -62,3 +62,12 @@ Each row names the default being built until Kevin answers.
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
 - counter tender notes start at the next likely note (52,000 → 55,000 / 60,000).
+
+## 4. Rules the Orders screens follow (from the old app)
+
+| Rule | Source | Built in |
+|---|---|---|
+| **Tell sends the order picture with the words as its caption** when "Order picture" is on and the chat's 24-hour window is open (one `wa-send` send-image, not two messages). The picture is drawn from the order's own lines: the shop's letterhead, ORDER #0552, each line with its state (not found struck, a new price beside the old one struck, "Price coming", "On the way"), then what is to pay. Never an invoice: Sales cannot raise one. With the window shut, the words go by SMS or open in WhatsApp typed (no picture). | `sales.html:6331-6410` (`ordDrawPicture`), `6474` (`waSendImage(conv.id, blob, text)`) | `src/apps/sales/orders/picture.ts`, `Tell.tsx` |
+| **"Something else" to the Manager** is a team note on the customer's chat that mentions the Manager, so `wa_notes_push` (0170) pushes her. (The old app inserted an `'other'` invoice ask, which `invoice_asks` refuses; lead ruling 30 Oct: no migration.) | `sales.html:6221-6280`; 0170 | `Wrong.tsx` (OR26) |
+| **Fix it on an owing bill asks Accounts.** A delivered, invoiced order with money paid on it and money still owed: the question is the money, so Fix it says "ask Esther" and opens the payment fix (one payment) or Which payment? (several). Any other delivered order opens Something wrong, and the Manager decides. | the canvas, OR24 (lead ruling 30 Oct) | `Order.tsx`, `view.ts` |
+| **A paid-over payment** is the money a payment brought over what it cleared on its bills and its order. Sales asks Accounts to settle it as change (the default) or a deposit (`payment_asks` what `over`, 0165), and the choice is kept on the ask (`want`). | `sales.html:5745-5770` | `PaidOver.tsx` |

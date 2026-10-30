@@ -126,9 +126,9 @@ export const takeAmount = (b: Books, o: Order): number => Math.max(0, custOf(b, 
 
 /** Groups of rows, in the canvas's order: newest number first; delivered by bill, newest first, then not billed yet. */
 export function sortRows(list: Order[], stage: Stage, oldest: boolean): Order[] {
+  if (oldest) return list.slice().sort((x, y) => (stage === 'delivered' ? (x.deliveredAt || 0) - (y.deliveredAt || 0) : x.placedAt - y.placedAt));
   const key = (o: Order) => (stage === 'delivered' ? (o.invoicedAt ?? -1) : o.id);
-  const s = list.slice().sort((x, y) => key(y) - key(x));
-  return oldest ? s.reverse() : s;
+  return list.slice().sort((x, y) => key(y) - key(x));
 }
 
 /** Which rows show before "Show N more": in All, a group over 3 shows its 2 largest; one stage shows 6. */

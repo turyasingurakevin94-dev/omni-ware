@@ -29,6 +29,12 @@ export function extra(s: DemoState, f: DemoFlags): void {
   const b = s.books;
   const ret = b.billAsks.find((a) => a.orderId === 548 && a.kind === 'credit');
   if (ret) ret.reason = 'Damaged';
+  // FACTS §4.5: #0498 (Kato, 24 Sep, Ruth's) is 1,505,000: 30 sheets, 2 wheelbarrows, 6 PVC pipes (OR03's Show 7 more).
+  const o498 = b.orders.find((o) => o.id === 498);
+  if (o498) {
+    o498.lines = [L('iron-g28-3m', 30), L('wheelbarrow-hd', 2), L('pvc-half-6m', 6)].map((l, i) => ({ ...l, lineId: i + 1 }));
+    o498.paid = 1505000;
+  }
   if (f.state === 'empty') {
     const mon = '2026-10-12';
     b.orders = b.orders.filter((o) => !(o.placedBy === GRACE && o.stage === 'delivered' && o.deliveredAt != null && dayOf(o.deliveredAt) >= mon));

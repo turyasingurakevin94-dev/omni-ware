@@ -163,12 +163,12 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
           <GroupHead dot={STAGE_DOT.delivered} title="Delivered" count={gone.length} sum="" />
           <GroupCard>
             {(more ? gone : gone.slice(0, 4)).map((o) => {
-              const owes = orderOwes(o) > 0 && o.invoicedAt != null;
+              const owes = !o.voided && orderOwes(o) > 0 && o.invoicedAt != null;
               const at = owes ? (o.invoicedAt as number) : (o.deliveredAt || o.placedAt);
               const age = daysApart(dayOf(at), today);
               return <CustOrderRow key={o.id} icon="receipt" title={`${owes ? 'Billed' : 'Delivered'} ${daysApart(dayOf(at), today) < 7 ? weekday(at) + ' ' + clock(at) : dayLabel(at)}`}
-                sub={owes ? `${orderNo(o.id)} · ${age} days` : orderNo(o.id)} amount={orderTotal(o)}
-                pill={owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => openOrder(o.id)} />;
+                sub={owes ? `${orderNo(o.id)} · ${age} day${age === 1 ? '' : 's'}` : orderNo(o.id)} amount={orderTotal(o)}
+                pill={o.voided ? { text: 'Voided', tone: 'info' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => openOrder(o.id)} />;
             })}
             {!more && gone.length > 4 && <ShowMore faces={[]} n={gone.length - 4} on={() => setMore(true)} />}
           </GroupCard>

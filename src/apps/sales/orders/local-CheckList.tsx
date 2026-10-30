@@ -48,7 +48,7 @@ function MarkView(p: { m: Mark }): JSX.Element {
     case 'spin': return <span class="ow-chk-m">{m.word && <span class={cx('ow-chk-w', m.wordTone === 'info' && 'or-info')}>{m.word}</span>}<span role="img" aria-label={m.label} class="ow-chk-d spin" /></span>;
     case 'no': return <span role="img" aria-label={m.label} class="ow-chk-d no"><Icon name="close" size={11} stroke={3.4} /></span>;
     case 'face': return <span role="img" aria-label={m.label} style={{ display: 'flex' }}><Avatar {...m.face} size={24} style={{ boxShadow: '0 0 0 2px #F5B26B' }} /></span>;
-    case 'back': return <span role="img" aria-label={m.label} class="or-back"><Icon name="return" size={13} stroke={2.2} />{`${m.n} back`}</span>;
+    case 'back': return <span role="img" aria-label={m.label} class="or-back"><Icon name="return" size={13} stroke={2.4} />{`${m.n} back`}</span>;
     default: return <span role="img" aria-label={m.label} class="ow-chk-d wait" />;
   }
 }
@@ -57,8 +57,8 @@ export function Pills(p: { pills: NonNullable<CHead['pills']> }): JSX.Element {
   return (
     <>
       {p.pills.map((x) => x.k === 'back'
-        ? <span key={x.k} class="or-back h"><Icon name="return" size={12} stroke={2.2} />{x.n}</span>
-        : <span key={x.k} class={cx('or-cpill', x.k)}><Icon name={x.k === 'ok' ? 'check' : 'close'} size={x.k === 'ok' ? 11 : 10} stroke={3.2} />{x.n}</span>)}
+        ? <span key={x.k} class="or-back h"><Icon name="return" size={12} stroke={2.4} />{x.n}</span>
+        : <span key={x.k} class={cx('or-cpill', x.k)}><Icon name={x.k === 'ok' ? 'check' : 'close'} size={x.k === 'ok' ? 11 : 10} stroke={x.k === 'ok' ? 3.2 : 3.4} />{x.n}</span>)}
     </>
   );
 }
