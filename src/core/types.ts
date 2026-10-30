@@ -349,8 +349,12 @@ export interface ShopSettings {
   holdDays: number;
   /** presets.chaseAfterDays (7 when unset). */
   chaseAfterDays: number;
-  /** presets.services: delivery and loading fees the order can carry. */
-  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number }[];
+  /**
+   * presets.services: delivery and loading fees the order can carry (core/services.ts). `per`: the
+   * value is for each one of these on the order ("bag": loading; spec 04 Q3). `mins`: a delivery's
+   * usual time from the shop. Both optional in presets; sales.html sets neither.
+   */
+  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number; per?: string; mins?: number }[];
   shopPhone: string;
   shopAddress: string;
 }

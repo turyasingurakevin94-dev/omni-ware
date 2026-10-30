@@ -75,6 +75,9 @@ Each is written once in `src/core` and used by every tab that shows it.
 | Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
 | A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
 | Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Often with | What came in the same orders as an item: across this customer's orders when they had it twice or more, else across mine; "4/5" is how many of the orders with the item had it | `agent.html:8890` (`oftenWith`) | `core/often.ts` `oftenWith` |
+| The delivery fee | The shop's service whose name says deliver or transport, the one naming the customer's area first | `sales.html:8351` (`nwChargeKind`) | `core/services.ts` `deliveryFor` |
+| A charge's amount | Percent: of the goods; fixed: its value; fixed with `per` ("bag"): its value for each bag on the order (Q3) | `sales.html:8358`, Q3 | `core/services.ts` `serviceAmount` |
 | Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
 
 Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way.
