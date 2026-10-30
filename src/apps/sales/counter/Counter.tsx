@@ -95,7 +95,7 @@ export function Counter(): JSX.Element {
         {s.method !== 'cash' && !waits.length && <Sms total={total} shop={b.shop.name} />}
         {!!waits.length && (
           <AskCard ruth={ruth} shopTotal={totalOf(s.lines.map((l) => ({ ...l, price: l.shopPrice ?? l.price })))} asking={busy.value}
-            onShop={() => waits.forEach((l) => setPrice(l.lineId, l.shopPrice || 0))} onAsk={() => void ask()} />
+            onShop={() => { waits.forEach((l) => setPrice(l.lineId, l.shopPrice || 0)); set({ pricing: null }); }} onAsk={() => void ask()} />
         )}
         {yes && yes.priceReview && held && (
           <YesCard ruth={ruth} took={howLong(held.placedAt, yes.priceReview.at)} was={yes.shopPrice || 0} now={yes.price || 0} unit={yes.unit} />

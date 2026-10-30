@@ -20,6 +20,8 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
+| `counter/wait` | `{ id }` (the counter sale waiting for the Manager's price) | counter | KC11 |
+| `counter/receipt` | `{ id }` | counter | KC16 |
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR26 |
 | `customers` | `{ filter? }` | customers | CU01–CU08 |
