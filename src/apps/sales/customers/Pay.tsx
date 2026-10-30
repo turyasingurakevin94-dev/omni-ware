@@ -27,7 +27,7 @@ import { AmountInput } from './local-amount.tsx';
 import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
 import { PayDock } from './pay-dock.tsx';
 import { putPaid, sendReceipt, type Paid } from './paid-store.ts';
-import { shareFor, WalkinWho, whoOptions } from './pay-walkin.tsx';
+import { shareFor, WalkinWho, whoOptions, whoPicked } from './pay-walkin.tsx';
 import './customers.css';
 import './pay.css';
 
@@ -64,7 +64,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const [given, setGiven] = useState<number | 'exact'>('exact');
   const [how, setHow] = useState<'change' | 'deposit'>('change');
   const [receipt, setReceipt] = useState(true);
-  const [who, setWho] = useState<string | null>(null);
+  const [who, setWho] = useState<string | null>(o && whoPicked.value && whoPicked.value.order === o.id ? whoPicked.value.id : null);
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLInputElement>(null);
 

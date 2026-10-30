@@ -5,6 +5,7 @@
  * move, their rhythm, and one navy button to sell to them.
  */
 import type { JSX } from 'preact';
+import { useEffect } from 'preact/hooks';
 import { Button } from '../../../ui/Button.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
@@ -20,6 +21,7 @@ import { openBillCheck } from './BillCheck.tsx';
 import { AgeTrack, ApartHead, CustHead, SplitHead, first } from './cust-head.tsx';
 import { Acts, AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, Rhythm } from './cust-cards.tsx';
 import { liveOf, moneyOf, placeKind, rhythmOf, short } from './data.ts';
+import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
 import { sendStatement } from './statement.ts';
 import './customers.css';
@@ -30,6 +32,7 @@ export function role(b: Books, r: 'manager' | 'accounts') {
 
 export function CustomerScreen(p: ScreenProps): JSX.Element {
   const b = books.value, c = b ? b.customers.find((x) => x.id === p.params.id) : null;
+  useEffect(() => { if (c) markOpened(c.id, now.value); }, [c && c.id]);
   if (!b || !c) return <FullSheet onBack={() => nav.back()} backLabel="Back to Customers" head={<div class="ow-shead cu-head"><span aria-hidden="true" class="ow-shead-grab" /></div>} />;
   return <Sheet b={b} c={c} cb={chats.value} />;
 }

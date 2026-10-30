@@ -22,6 +22,7 @@ import { SearchBody } from './list-search.tsx';
 import { WeekHead } from './local-week.tsx';
 import { openedOf } from './opened.ts';
 import { shareList } from './share.ts';
+import { whoPicked } from './pay-walkin.tsx';
 import { short } from './data.ts';
 import './customers.css';
 import './list.css';
@@ -57,7 +58,8 @@ export function ListScreen(p: ScreenProps): JSX.Element {
 
   const d = listData(b, today), off = !online.value;
   const a: Acts = {
-    open: (c) => nav.push('customers/customer', { id: c.id }),
+    // Picking who owes a walk-in's rest (CU34 "Find someone else"): the row is the answer.
+    open: (c) => (p.params.pick != null ? (whoPicked.value = { order: Number(p.params.pick), id: c.id }, nav.back()) : nav.push('customers/customer', { id: c.id })),
     take: (c) => nav.push('customers/pay', { customer: c.id }),
     wa: (c) => whatsapp(b, c),
   };

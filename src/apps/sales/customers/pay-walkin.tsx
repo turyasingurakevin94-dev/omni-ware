@@ -5,6 +5,7 @@
  * (money.ts creditCharge: the shop's pct, one line, never in unit prices),
  * and where that leaves them against the Manager's limit.
  */
+import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { creditCharge, money } from '../../../core/money.ts';
 import { phone9 } from '../../../core/names.ts';
@@ -27,12 +28,17 @@ function samePlace(a: string, c: Customer): boolean {
   return !!x && !!y && x.slice(0, 6) === y.slice(0, 6);
 }
 
+/** "Find someone else": the customer picked from the list for this order (List.tsx, { pick: order }). */
+export const whoPicked = signal<{ order: number; id: string } | null>(null);
+
 export function whoOptions(b: Books, o: Order): Customer[] {
   const mine = b.customers.filter((c) => !c.qa);
+  const picked = whoPicked.value && whoPicked.value.order === o.id ? mine.find((c) => c.id === (whoPicked.value as { id: string }).id) : null;
   const lastAt = (c: Customer) => b.orders.filter((x) => x.customerId === c.id).reduce((m, x) => Math.max(m, x.placedAt), 0);
   const match = mine.filter((c) => o.client.phone && samePlace(o.client.phone, c));
   const recent = mine.filter((c) => !match.includes(c)).sort((x, y) => lastAt(y) - lastAt(x));
-  return [...match, ...recent].slice(0, 2);
+  const two = [...match, ...recent].slice(0, 2);
+  return picked && !two.includes(picked) ? [picked, two[0]] : two;
 }
 
 export function WalkinWho(p: { b: Books; o: Order; left: number; opts: Customer[]; chosen: string | null; onPick: (id: string) => void }): JSX.Element {

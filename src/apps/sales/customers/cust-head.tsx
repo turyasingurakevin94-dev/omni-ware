@@ -7,7 +7,6 @@
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { fig } from '../../../ui/Money.tsx';
-import { Avatar } from '../../../ui/Avatar.tsx';
 import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
@@ -113,9 +112,8 @@ export function ApartHead(p: { apart: number; owes: number; bills: Bill[]; check
   );
 }
 
-/** A plain head picture when nothing is owed or checked: what they owe (0). */
+/** "Esther" from "Esther Auma". */
 export function first(name: string): string {
   return String(name || '').split(/\s+/)[0];
 }
 
-export { Avatar };

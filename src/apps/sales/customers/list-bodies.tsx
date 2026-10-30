@@ -8,6 +8,7 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { Shim, Loading } from '../../../ui/Skeleton.tsx';
 import { money, short as shortMoney } from '../../../core/money.ts';
 import { orderNo, TINTS } from '../../../core/names.ts';
+import { weekday } from '../../../core/time.ts';
 import type { Books, Customer, Day } from '../../../core/types.ts';
 import { dueSub, oweSub, waitingNote, type ListData, type Who } from './list-data.ts';
 import { Card, Group, Row } from './local-row.tsx';
@@ -56,7 +57,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
               return (
                 <button key={w.c.id} type="button" class="cu-prom-t" onClick={() => a.open(w.c)}>
                   <span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{w.c.initials}</span>
-                  <span><b class="mono">{money(pr.amount || 0)}</b><span class={on ? 'good' : undefined}>{`${short(w.c.name)} · ${on ? 'today' : weekdayOf(pr.on)}`}</span></span>
+                  <span><b class="mono">{money(pr.amount || 0)}</b><span class={on ? 'good' : undefined}>{`${short(w.c.name)} · ${on ? 'today' : weekday(pr.on)}`}</span></span>
                 </button>
               );
             })}</div></div>
@@ -73,8 +74,6 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
   );
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-function weekdayOf(day: Day): string { return DAYS[new Date(day + 'T00:00:00Z').getUTCDay()]; }
 
 /** Due (CU03): reach out today, then who is coming up this week. */
 export function DueBody(p: { d: ListData; a: Acts; day: Day | null }): JSX.Element {
@@ -83,7 +82,7 @@ export function DueBody(p: { d: ListData; a: Acts; day: Day | null }): JSX.Eleme
   const reach = p.day ? (d.week.find(([x]) => x === p.day) || [p.day, []])[1] : d.due;
   return (
     <>
-      <div class="cu-grp"><Group dot="#95530C" title={p.day ? `Due ${weekdayOf(p.day)}` : 'Reach out today'} count={reach.length} />
+      <div class="cu-grp"><Group dot="#95530C" title={p.day ? `Due ${weekday(p.day)}` : 'Reach out today'} count={reach.length} />
         {reach.length > 0 && <Card>{reach.map((w) => (
           <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : w.r.tone === 'due' ? 'due' : null}
             fig={w.m.owes > 0 ? shortMoney(w.m.owes) : null} word="owes" act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />
@@ -94,7 +93,7 @@ export function DueBody(p: { d: ListData; a: Acts; day: Day | null }): JSX.Eleme
           {open ? <Card>{comingAll.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, false)} act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />)}</Card> : (
             <button type="button" class="cu-coming" onClick={() => setOpen(true)}>
               <span aria-hidden="true" class="cu-ghosts s26">{comingAll.slice(0, 4).map((_, i) => <span key={i} style={{ background: GHOST[i % 3] }} />)}</span>
-              <span class="cu-coming-t">{coming.map(([day, l]) => `${weekdayOf(day)} ${l.length}`).join(' · ')}</span>
+              <span class="cu-coming-t">{coming.map(([day, l]) => `${weekday(day)} ${l.length}`).join(' · ')}</span>
               <span class="cu-coming-s">{`Show ${comingAll.length}`}<Icon name="chevron-down" size={14} stroke={2.4} /></span>
             </button>
           )}

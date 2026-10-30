@@ -57,12 +57,12 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
         <>
           <div class="cu-mean"><h2>Did you mean</h2><span>nobody is called that</span></div>
           {near.map((h) => {
-            const n = h.w.c.name, ins = h.word && h.word[1].length > h.word[0].length;
+            const n = h.w.c.name;
             const name = <>{n.slice(0, h.at)}<b class="cu-mark">{n[h.at]}</b>{n.slice(h.at + 1)}</>;
             return (
               <div key={h.w.c.id} class="cu-near">
                 {row(h.w, [h.w.c.place, `${orders(h.w.c)} orders`].filter(Boolean).join(' · '), name)}
-                {h.word && <div class="cu-near-fix"><s class="mono">{h.word[0]}</s><span aria-hidden="true"><Icon name="arrow-right" size={14} stroke={2.2} /></span><b>{h.word[1]}</b><span>{ins || h.word[1].length === h.word[0].length ? 'one letter off' : 'one letter off'}</span></div>}
+                {h.word && <div class="cu-near-fix"><s class="mono">{h.word[0]}</s><span aria-hidden="true"><Icon name="arrow-right" size={14} stroke={2.2} /></span><b>{h.word[1]}</b><span>one letter off</span></div>}
               </div>
             );
           })}
