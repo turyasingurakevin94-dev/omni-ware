@@ -69,8 +69,8 @@ export function billAsks(): BillAsk[] {
 export function paymentAsks(): PaymentAsk[] {
   return [
     // Kyaligonza's 14 Oct payment: Mobile 124,000, not Cash 142,000; Esther is checking (CH01 "Esther is checking it").
-    { id: 'pa1', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'method', amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
-    { id: 'pa2', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'amount', amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
+    { id: 'pa1', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'method', want: { method: 'momo' }, amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
+    { id: 'pa2', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'amount', want: { amount: 124000 }, amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
   ];
 }
 

@@ -263,7 +263,7 @@ export function cancelAskOf(r: Row): BillAsk {
 
 /** payment_asks → PaymentAsk (sales.html rowToPayAsk). */
 export function paymentAskOf(r: Row): PaymentAsk {
-  return { id: String(r.id), paymentId: r.cash_txn_id == null ? null : Number(r.cash_txn_id), customerId: r.customer_id ? String(r.customer_id) : null, orderId: r.quote_id == null ? null : Number(r.quote_id), what: r.what, amount: whole(r.amount), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+  return { id: String(r.id), paymentId: r.cash_txn_id == null ? null : Number(r.cash_txn_id), customerId: r.customer_id ? String(r.customer_id) : null, orderId: r.quote_id == null ? null : Number(r.quote_id), what: r.what, want: r.want && typeof r.want === 'object' ? r.want : {}, amount: whole(r.amount), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
 /** wa_conversations → Chat; the customer is the one whose number ends the same, if exactly one does (sales.html waMatchCustomer). */

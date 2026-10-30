@@ -330,6 +330,8 @@ export interface PaymentAsk {
   customerId: string | null;
   orderId: number | null;
   what: 'method' | 'amount' | 'bill' | 'day' | 'over' | 'balance';
+  /** What it should be (payment_asks.want): { method, ref } · { amount } · { over, how: 'change' | 'deposit' } … */
+  want: Record<string, unknown>;
   amount: UGX;
   status: 'sent' | 'done' | 'declined' | 'withdrawn';
   by: string;

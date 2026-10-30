@@ -115,7 +115,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askPaymentFix: (a) => write(() => {
       const pay = s.books.payments.find((x) => x.id === a.paymentId);
       if (!pay) throw dataError('refused', 'That payment is not in the books');
-      const ask = { id: 'pa' + (s.books.paymentAsks.length + 1), paymentId: pay.id, customerId: pay.customerId, orderId: pay.orderId, what: a.what, amount: pay.amount, status: 'sent' as const, by: me.id, at: s.now };
+      const ask = { id: 'pa' + (s.books.paymentAsks.length + 1), paymentId: pay.id, customerId: pay.customerId, orderId: pay.orderId, what: a.what, want: { ...a.want }, amount: a.what === 'over' && Number(a.want.over) > 0 ? Number(a.want.over) : pay.amount, status: 'sent' as const, by: me.id, at: s.now };
       s.books.paymentAsks.push(ask);
       return copy(ask);
     }),

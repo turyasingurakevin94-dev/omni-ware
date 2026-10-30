@@ -135,7 +135,7 @@ export interface DataSource {
   receivePayment(a: PayArgs): Promise<PayResult>;
   recordPromise(a: { customerId: string; on: Day; amount: UGX | null }): Promise<PayPromise>;
   /** Ask Accounts to correct a payment (payment_asks). */
-  askPaymentFix(a: { paymentId: number; what: 'method' | 'amount' | 'bill' | 'day'; want: Record<string, unknown>; note: string }): Promise<PaymentAsk>;
+  askPaymentFix(a: { paymentId: number; what: 'method' | 'amount' | 'bill' | 'day' | 'over'; want: Record<string, unknown>; note: string }): Promise<PaymentAsk>;
   withdrawPaymentAsk(id: string): Promise<void>;
 
   /* customers */
