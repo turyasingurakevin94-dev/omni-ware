@@ -10,7 +10,7 @@
  */
 import type { OrderDraft } from './datasource.ts';
 import { creditHold, linePriced } from './money.ts';
-import type { Customer, Day, Item, Line, Stage } from './types.ts';
+import type { Customer, Day, Item, Line, Order, Stage } from './types.ts';
 
 /** Why the Manager decides a line's price, or null (sales.html:4423 priceNoteFor). */
 export function priceNote(l: Line): 'under' | 'nomargin' | 'nocost' | null {
@@ -74,4 +74,19 @@ export function orderPayload(d: OrderDraft, stage: Stage, by: string, now: numbe
     ...(d.deliverTo ? { deliverTo: d.deliverTo } : {}),
     ...(d.chatId != null ? { waConvId: d.chatId } : {}),
   };
+}
+
+/**
+ * The same order entered twice (OR19, OR23; FACTS: #0557 is #0556's copy, 10:02 / 10:03): another order of
+ * the same customer, with the same lines, placed by the same person up to 5 minutes before it (or at the
+ * same minute with a lower number), neither voided nor cancelled. The later one is the copy: it does not
+ * count (Placed today, a customer's last order). Open for Kevin: Today's copyOf allows 5 minutes, the
+ * Orders tab's twinOf 10 and also asks the same invoiced state; this is the one rule they should both use.
+ */
+export function isCopy(orders: Order[], o: Order): boolean {
+  if (o.voided || o.cancelled || o.qa) return false;
+  const sig = (x: Order) => x.lines.map((l) => `${l.itemId}:${l.variantIdx ?? ''}:${l.qty}`).sort().join('|');
+  const who = (x: Order) => x.customerId || x.client.name.trim().toLowerCase();
+  return orders.some((x) => x.id !== o.id && !x.voided && !x.cancelled && !x.qa && x.placedBy === o.placedBy && who(x) === who(o) && !!who(o)
+    && (x.placedAt < o.placedAt || (x.placedAt === o.placedAt && x.id < o.id)) && o.placedAt - x.placedAt <= 5 * 60000 && sig(x) === sig(o));
 }
