@@ -8,8 +8,8 @@
  * no road through wa-send yet.
  */
 import type { JSX } from 'preact';
+import { useRef } from 'preact/hooks';
 import { Icon } from '../../../ui/icons.tsx';
-import { toast } from '../../../ui/toast.tsx';
 
 export interface ComposerProps {
   to: string;
@@ -26,26 +26,27 @@ export interface ComposerProps {
 
 type Rec = { lang: string; interimResults: boolean; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; onerror: () => void; start: () => void };
 
-function listen(into: (t: string) => void): void {
+/** Say it: what is said goes into the box. A phone that cannot listen, or a word not heard, puts the cursor in the box instead (as TD11 does): no toast. */
+function listen(into: (t: string) => void, type: () => void): void {
   const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
   const R = w.SpeechRecognition || w.webkitSpeechRecognition;
-  if (!R) { toast.show('This phone cannot listen. Type it', { kind: 'warn' }); return; }
+  if (!R) { type(); return; }
   const r = new R();
   r.lang = 'en-UG'; r.interimResults = false;
   r.onresult = (e) => into(e.results[0][0].transcript);
-  r.onerror = () => toast.show('Did not hear it. Try again', { kind: 'warn' });
-  r.start();
+  r.onerror = type;
+  try { r.start(); } catch (_e) { type(); }
 }
 
 export function ChatComposer(p: ComposerProps): JSX.Element {
-  const has = p.value.trim().length > 0;
+  const has = p.value.trim().length > 0, field = useRef<HTMLInputElement>(null);
   return (
     <div class="cv-comp">
       <button type="button" class={'note' + (p.note ? ' on' : '')} aria-label={p.note ? 'Write a message instead' : 'Write a team note'} aria-pressed={p.note} onClick={p.onNote}>
         <Icon name="note" size={18} stroke={2} />
       </button>
       <label class={'cv-field' + (p.note ? ' note' : '')}>
-        <input type="text" value={p.value} placeholder={p.note ? '' : `Message ${p.to}`} aria-label={p.note ? 'Team note' : `Message ${p.toName}`}
+        <input ref={field} type="text" value={p.value} placeholder={p.note ? '' : `Message ${p.to}`} aria-label={p.note ? 'Team note' : `Message ${p.toName}`}
           onInput={(e) => p.onInput((e.target as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === 'Enter' && has) p.onSend(); }} />
         {!p.note && (p.shut
           ? <span aria-hidden="true"><Icon name="attach" size={19} stroke={2} /></span>
@@ -58,7 +59,7 @@ export function ChatComposer(p: ComposerProps): JSX.Element {
           {p.shut && !p.note && <i aria-hidden="true"><Icon name="lock" size={11} stroke={2.4} /></i>}
         </button>
       ) : (
-        <button type="button" class="mic" aria-label="Record a voice note" onClick={() => listen((t) => p.onInput((p.value ? p.value + ' ' : '') + t))}>
+        <button type="button" class="mic" aria-label="Say it" onClick={() => listen((t) => p.onInput((p.value ? p.value + ' ' : '') + t), () => field.current?.focus())}>
           <Icon name="mic" size={18} stroke={2} />
         </button>
       )}

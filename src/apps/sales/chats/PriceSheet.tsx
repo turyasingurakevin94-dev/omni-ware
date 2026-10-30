@@ -1,7 +1,7 @@
 /*
  * CH21 · Send a price: their usual first (tick what goes in the message), what is often bought
- * with it in their orders, a search over the price list. An item with no price yet ("Price
- * coming") is asked of the Manager in one tap: a team note to her on this chat (wa_notes
+ * with it (P13), a search over the price list. An item with no price yet ("Price coming", CH34)
+ * is asked of the Manager in one tap: a team note to her on this chat (wa_notes
  * mentions, so she gets a push), held 10 s for Undo. The message as it will read, then Send.
  */
 import type { JSX } from 'preact';
@@ -28,22 +28,23 @@ export const shortName = (it: Item) => it.name.split(' · ')[0].replace(/ \d.*$/
 /** "sheets" for an iron sheet: what an item is, plural. */
 const kindOf = (it: Item) => (shortName(it).split(' ').filter((w) => !/^G\d+$/.test(w)).pop() || '').toLowerCase() + 's';
 
+interface Often { it: Item; whose: string; rows: { it: Item; sub: string }[] }
+
 /**
- * "Often with it" (the one rule, core/often.ts; LANGUAGE P13): what came with "it" in this customer's
- * own orders, less their usual (shown above). "It" is the last of their usual ticked that they have had
- * twice or more, else the first of their usual that they have; ticking a row here does not move it.
- * The top row with a price, then any of those rows with no price yet ("Price coming", to ask the Manager).
+ * "Often with it" (LANGUAGE P13, the one rule: core/often.ts, agent.html:8890): the top two by count of
+ * what came with "it", each with how many of those orders had it, less what the sheet shows already.
+ * On the sheet, "it" is the last of their usual ticked that they have had twice or more, else the
+ * first of their usual that they have (their own orders only). Searching, "it" is the item found
+ * first, counted as the rule counts it (theirs, else mine; the header says which).
  */
-function oftenRows(b: Books, c: Customer | null, tries: Item[], skip: Set<string>): { it: Item; sub: string }[] {
-  if (!c) return [];
+function oftenFor(b: Books, c: Customer | null, tries: Item[], skip: Set<string>, theirsOnly: boolean): Often | null {
   for (const it of tries) {
-    const r = oftenWith(b.orders, { itemId: it.id, variantIdx: null }, { customerId: c.id, me: b.me.id, skip, n: 99 });
-    if (!r.theirs || !r.rows.length) continue;
+    const r = oftenWith(b.orders, { itemId: it.id, variantIdx: null }, { customerId: c ? c.id : null, me: b.me.id, skip, n: 2 });
+    if ((theirsOnly && !r.theirs) || !r.rows.length) continue;
     const rows = r.rows.map((x) => ({ it: b.items.find((i) => i.id === x.itemId), n: x.n })).filter((x): x is { it: Item; n: number } => !!x.it);
-    const top = rows.filter((x) => x.it.price != null).slice(0, 1).map((x) => ({ it: x.it, sub: `with ${kindOf(it)}, ${x.n} of ${r.of}` }));
-    return [...top, ...rows.filter((x) => x.it.price == null).map((x) => ({ it: x.it, sub: '' }))];
+    return { it, whose: r.theirs && c ? `in ${firstWord(c.name)}’s orders` : 'in your orders', rows: rows.map((x) => ({ it: x.it, sub: `with ${kindOf(it)}, ${x.n} of ${r.of}` })) };
   }
-  return [];
+  return null;
 }
 
 export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: string) => void }): JSX.Element {
@@ -56,18 +57,19 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const cust = chat.customerId ? b.customers.find((c) => c.id === chat.customerId) || null : null;
   const first = cust ? firstWord(cust.name) : chat.phone;
   const usual = usualItems(b, cust), back = () => { sheet.close(); };
-  const skip = new Set(usual.map((u) => u.it.id));
-  const tries = [...[...picked].reverse().filter((id) => skip.has(id)), ...skip].map((id) => b.items.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  const often = oftenRows(b, cust, tries, skip);
+  const theirs = new Set(usual.map((u) => u.it.id));
   const ruth = managers(b)[0];
   const s = q.trim().toLowerCase();
   const found = s ? b.items.filter((i) => i.name.toLowerCase().includes(s)).slice(0, 6) : [];
+  const often = s
+    ? oftenFor(b, cust, found.slice(0, 1), new Set([...picked, ...found.map((i) => i.id)]), false)
+    : oftenFor(b, cust, [...[...picked].reverse().filter((id) => theirs.has(id)), ...theirs].map((id) => b.items.find((i) => i.id === id)).filter((i): i is Item => !!i), theirs, true);
   const toggle = (id: string) => setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
   const lines = picked.map((id) => b.items.find((i) => i.id === id)).filter((i): i is Item => !!i && i.price != null);
   const ask = (it: Item) => {
     if (!ruth) return;
     setAsked([...asked, it.id]);
-    undoable(`Sent to ${firstWord(ruth.name)} · ${it.name}`, () => write('note', [chat.id, `@${firstWord(ruth.name)} the price of ${it.name}? ${first} asks.`, [ruth.id]]),
+    undoable(`Sent to ${firstWord(ruth.name)} · ${it.name}`, () => write('note', [chat.id, `@${firstWord(ruth.name)} the price of ${it.name}? For ${first}.`, [ruth.id]]),
       { top: 14, onUndo: () => setAsked((a) => a.filter((x) => x !== it.id)) });
   };
   const act = (it: Item) => {
@@ -83,6 +85,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
       </button>
     );
   };
+  const coming = <span class="pr-coming"><span>Price coming</span></span>;
   const send = async () => {
     if (!lines.length) return;
     const text = lines.map((i) => `${i.name}: ${money(i.price)} a ${i.unit}`).join('\n');
@@ -94,23 +97,20 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
       <label class="nc-search pr-search"><Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Cement, iron sheets…" aria-label="Find an item" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
       </label>
-      {s ? <GroupCard class="bb">{found.map((it) => <PriceRow key={it.id} it={it} sub={it.aisle} act={act(it)} />)}</GroupCard> : (
-        <>
-          {!!usual.length && <>
-            <div class="ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>{`${first}’s usual`}</span><span class="mono g">{`${usual.filter((u) => picked.includes(u.it.id)).length}/${usual.length}`}</span></div>
-            <GroupCard class="bb">{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
-          </>}
-          {!!often.length && <>
-            <div class="ad-h"><Duo i={phAgain} size={18} color="#5F6980" /><span>Often with it</span></div>
-            <GroupCard class="bb">{often.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? <span class="pr-coming"><span>Price coming</span></span> : sub} act={act(it)} />)}</GroupCard>
-          </>}
-        </>
-      )}
+      {s ? <GroupCard class="bb">{found.map((it) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : it.aisle} act={act(it)} />)}</GroupCard>
+        : !!usual.length && <>
+          <div class="ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>{`${first}’s usual`}</span><span class="mono g">{`${usual.filter((u) => picked.includes(u.it.id)).length}/${usual.length}`}</span></div>
+          <GroupCard class="bb">{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
+        </>}
+      {often && <>
+        <div class="ad-h"><Duo i={phAgain} size={18} color="#5F6980" /><span>Often with it</span><span>{often.whose}</span></div>
+        <GroupCard class="bb">{often.rows.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : sub} act={act(it)} />)}</GroupCard>
+      </>}
       <div class="pr-foot">
         {!!lines.length && (
           <div class="pr-preview"><span>{lines.map((i, k) => <span key={i.id}>{k > 0 && <br />}{`${i.name}: `}<b class="mono">{money(i.price)}</b>{` a ${i.unit}`}</span>)}</span></div>
         )}
-        <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 1 ? 'Send 1 price' : `Send ${lines.length} prices`}</Button>
+        <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 0 ? 'Send a price' : lines.length === 1 ? 'Send 1 price' : `Send ${lines.length} prices`}</Button>
       </div>
     </LSheet>
   );

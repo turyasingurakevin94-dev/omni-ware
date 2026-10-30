@@ -17,6 +17,13 @@ interface Pending { id: number; text: string; top: number; commit: () => unknown
 export const pending = signal<Pending | null>(null);
 /** A give that waits its 10 s: the chat shows it done meanwhile (its event and note). */
 export const shown = { give: null as null | { chatId: number; event: import('../../../core/types.ts').ChatEvent } };
+/** The Manager's move that waits its 10 s: every screen shows the chat as the new person's meanwhile (CH32). */
+export const moving = signal<{ chatId: number; to: string } | null>(null);
+/** The chats as they are about to be: a waiting move already applied. */
+export function seen<T extends { chats: { id: number; ownerId: string | null }[] }>(cb: T | null): T | null {
+  const m = moving.value;
+  return cb && m ? { ...cb, chats: cb.chats.map((c) => (c.id === m.chatId ? { ...c, ownerId: m.to } : c)) } : cb;
+}
 let n = 0;
 
 /** What waits goes now (its 10 s ran out, the screen is left, or another write comes). */

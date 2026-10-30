@@ -22,6 +22,7 @@ import { Tap } from '../../../ui/util.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, drafts, isDemo, now, source } from '../shell/store.ts';
+import { seen } from './undo.tsx';
 import type { ScreenProps } from '../shell/types.ts';
 import { Empty, Loading } from './ListEmpty.tsx';
 import { ListHead, type PillFace } from './ListHead.tsx';
@@ -50,7 +51,7 @@ function pill(b: Books | null): PillFace[] {
 export function ChatsList(p: ScreenProps): JSX.Element {
   const [filter, setFilter] = useState<Filter>(((p.params.filter as Filter) || 'mine'));
   const [q, setQ] = useState('');
-  const b = books.value, cb = chats.value, t = now.value;
+  const b = books.value, cb = seen(chats.value), t = now.value;
   const manager = !!b && b.me.role === 'manager';
   const f: Filter = manager ? 'team' : filter;
   const head = (scope: 'mine' | 'team') => {

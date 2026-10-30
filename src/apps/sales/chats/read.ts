@@ -8,7 +8,7 @@
  * Words follow GLOSSARY: Packing, On the road; money in full where someone acts on it.
  */
 import { money, orderTotal } from '../../../core/money.ts';
-import { orderNo } from '../../../core/names.ts';
+import { firstWord, orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Customer, Item, Message, Method, Ms, Order } from '../../../core/types.ts';
 
@@ -94,7 +94,7 @@ export function giveNote(b: Books, cust: Customer | null, msgs: Message[], now: 
   if (place) parts.push(`${place}${w ? ' ' + w.replace(/^It (comes|is) /, '') : ''}`);
   const total = orderTotal(o), changed = o.lines.find((l) => l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at));
   if (changed && o.toldTotal != null && o.toldTotal !== total) {
-    parts.push(`tell him the ${noun(changed.name)} price (${money(total)})`);
+    parts.push(`tell ${cust ? firstWord(cust.name) : 'them'} the ${noun(changed.name)} price (${money(total)})`); // never guess him or her from a name (the lead's ruling)
   }
   return parts.join(' · ');
 }

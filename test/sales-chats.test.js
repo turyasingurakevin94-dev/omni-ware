@@ -39,7 +39,7 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const katoMsgs = cb.recent.filter((m) => m.chatId === 101);
   const cust = b.customers.find((c) => c.id === 'C001');
   t.check(R.readyAnswers(b, cust, katoMsgs, now).map((a) => a.text).join(' | ') === 'Yes, to the Ntinda site | It comes this afternoon', 'ready answers from #0552: to the Ntinda site, this afternoon');
-  t.check(R.giveNote(b, cust, katoMsgs, now) === '#0552 packing · Ntinda site this afternoon · tell him the sheet price (1,810,000)', 'the give note from #0552 (CH30)');
+  t.check(R.giveNote(b, cust, katoMsgs, now) === '#0552 packing · Ntinda site this afternoon · tell Kato the sheet price (1,810,000)', 'the give note from #0552 (CH30)');
   const want = R.wantsToBuy(b, 'Do you have 3m iron sheets? How much?');
   t.check(want.length === 1 && want[0].name === 'Iron sheet G28 · 3m' && want[0].onShelf === 412, 'Mama Shine wants Iron sheet G28 · 3m, 412 on shelf (CH14)');
   const paid = R.saysPaid(cb.recent.filter((m) => m.chatId === 106).pop());
@@ -72,6 +72,9 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const who = servedThisYear(fb.orders, 'C001', await fresh.served(101), '2026', new Set(['u-grace', 'u-brian', 'u-faith']));
   t.check(who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ') === 'u-grace:86:9:10812000 u-brian:31:3:2180000 u-faith:7:1:500000',
     `who served Kato this year: messages, and the orders each took (Ruth's #0498 is not Sales') (got ${who.map((x) => `${x.by}:${x.messages}:${x.orders}:${x.total}`).join(' ')})`);
+  const withRuth = servedThisYear(fb.orders, 'C001', [...await fresh.served(101), { by: 'u-ruth', messages: 4 }], '2026', new Set(['u-grace', 'u-brian', 'u-faith']));
+  const ruthRow = withRuth.find((x) => x.by === 'u-ruth');
+  t.check(!!ruthRow && ruthRow.orders === 0 && ruthRow.total === 0, 'a Manager who wrote in the chat: her messages count, her orders (#0498) never do (the lead\'s ruling)');
   const { oftenWith } = require(path.join(ROOT, 'src/core/often.ts'));
   const ow = oftenWith(fb.orders, { itemId: 'iron-g28-3m', variantIdx: null }, { customerId: 'C001', me: 'u-grace', skip: new Set(['cement-hima-50', 'iron-g28-3m', 'nails-4-25kg']), n: 99 });
   const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');

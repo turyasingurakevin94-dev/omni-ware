@@ -20,7 +20,7 @@ import { LSheet } from './LSheet.tsx';
 import { chatView, faceOf, managers, ownedBy, salesTeam } from './model.ts';
 import { Ring, write } from './parts.tsx';
 import { METHOD_WORD, giveNote, saysPaid } from './read.ts';
-import { shown, undoable } from './undo.tsx';
+import { moving, shown, undoable } from './undo.tsx';
 import './sheets.css';
 
 export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Element {
@@ -47,7 +47,12 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
   const text = note ?? filled;
   const go = () => {
     sheet.close();
-    if (move) { void write('give', [chat.id, pick, text], `${v.title} is ${firstWord(target.name)}’s now`); return; }
+    if (move) {
+      // The Manager's move waits its 10 s with Undo, as a give does (one rule; CH32 → CH37).
+      moving.value = { chatId: chat.id, to: pick };
+      undoable(`${v.title} is ${firstWord(target.name)}’s now`, async () => { await write('give', [chat.id, pick, text]); await refresh(); moving.value = null; }, { top: 14, onUndo: () => { moving.value = null; } });
+      return;
+    }
     shown.give = { chatId: chat.id, event: { id: 'pending-give', chatId: chat.id, at: t, kind: 'handed', by: me.id, to: pick, note: text.trim() } };
     const done = () => { shown.give = null; if (p.onDone) p.onDone(); };
     undoable(`${first} is ${firstWord(target.name)}’s now`, async () => { await write('give', [chat.id, pick, text]); shown.give = null; await refresh(); }, { top: 4, onUndo: done });

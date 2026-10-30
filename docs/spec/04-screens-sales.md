@@ -2,7 +2,7 @@
 
 What this covers: every screen of the Sales app, and the questions still open on them.
 Date: 2026-10-29
-Status: **screens decided** (the approved canvas). **Ten questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
+Status: **screens decided** (the approved canvas). **Eleven questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
 
 ---
 
@@ -48,8 +48,10 @@ Where a board's sample figures disagree with `FACTS.md` and the seed, the board 
 
 | Board | Rule | Where it lives | Source |
 |---|---|---|---|
-| CH33 · "Who served Kato this year" | Per person: the messages they sent in the customer's chat (`chat_served`), and the orders they took for this customer this year (`payload.takenBy`, not voided or cancelled), with the orders' total. Listed: whoever wrote in the chat and the Sales team's order takers; an order another role took (the Manager's #0498) is not Sales' serving. Biggest total first; the bar is each total's share. | `src/core/chats.ts` `servedThisYear` | the lead's ruling, 30 Oct 2026; `sales.html:10455-10460` (PAGE.chatcust sums `takenBy` totals); migration `0170` (`chat_served`) |
-| CH21, CH34 · "Often with it" | What came with "it" in this customer's own orders when they have had it twice or more, each with how many of those orders had it ("2 of 5"), less their usual (shown above). "It" is the last of their usual ticked that they have had twice or more, else the first of their usual that they have. The top row with a price, then any row with no price yet ("Price coming"). For Kato: Wheelbarrow, heavy duty, 2 of 5 orders with Iron sheet G28 · 3m; Soft close hinge · flat (#0552) has no price. | `src/core/often.ts` `oftenWith` (the one rule, also for Sell's P13) | `agent.html:8890` oftenWith; `LANGUAGE.md` P13 |
+| CH33 · "Who served Kato this year" | Per person: the messages they sent in the customer's chat (`chat_served`), and the orders they took for this customer this year (`payload.takenBy`, not voided or cancelled), with the orders' total. Only the Sales team's order takers count orders: a Manager's order is never Sales' serving, even when she wrote in the chat (Ruth's #0498). Biggest total first; the bar is each total's share. | `src/core/chats.ts` `servedThisYear` | `sales.html:10455-10460` (PAGE.chatcust: `chat_served` messages, `takenBy` orders and totals, any role); the lead's ruling, 30 Oct 2026 (orders taken, Sales only); migration `0170` (`chat_served`) |
+| CH21, CH34, CH36 · "Often with it" | P13's rule only: what came with "it" in this customer's orders when they have had it twice or more, else in mine; the top two by how many of those orders had each ("2 of 5"), less what the sheet shows already; the header says whose orders ("in Kato's orders", "in your orders"). On the sheet, "it" is the last of their usual ticked that they have had twice or more, else the first of their usual that they have, counted in their own orders. Searching, "it" is the item found first. Kato's sheets: Wheelbarrow, heavy duty 2 of 5, Tile glue 1 of 5 (CH21). The hinge Kato had once: in your orders, Iron sheet G28 and the wheelbarrow, 1 of 1 (CH34). An item with no price ("Price coming") is asked of the Manager from its own row: a team note "@Ruth the price of …? For Kato." | `src/core/often.ts` `oftenWith` (the one rule; Sell's P13 reads it too) | `agent.html:8890` oftenWith (theirs when twice or more, else mine; counts); `LANGUAGE.md` P13 (the top rows by count, "in Kato's orders"); the lead's ruling, 30 Oct 2026 (the top two only; CH34 opened on an item with no price; "For Kato") |
+| CH08 · searching the chats | The search finds a chat by the person's name, the customer's name or the number (3 digits or more), and by **any message** in the chat, not only the last. A hit in a message shows that message, the word marked, at its own time. | `src/apps/sales/chats` (to build after CH08 is approved) | the lead's ruling, 30 Oct 2026 (every message); `sales.html:9922` (the old search: names and number only); CH01's field "Name, phone or what they said" |
+| CH09 · a number with no chat | A typed number (9 digits or more) with a chat opens that chat; with none, "Message this number · opens WhatsApp" opens WhatsApp on this phone (`wa.me`), because the shop's number can only write to someone who wrote in the last 24 hours. A customer with no chat opens WhatsApp the same way. | `src/apps/sales/chats/NewChat.tsx` | `sales.html:9970-9977` (chatNewListHTML: "a new chat opens in WhatsApp on this phone"); open question Q11 |
 
 ## 3. Open questions (Kevin)
 
@@ -67,6 +69,7 @@ Each row names the default being built until Kevin answers.
 | Q8 | May Sales see the searches that found nothing for them (TD20)? | Yes, their own searches only | `manifest/today.json` |
 | Q9 | Should "To collect" (1,910,000, which includes 125,000 still being checked) be called "Owes"? | "To collect", with "Being checked" shown apart | `manifest/today.json` |
 | Q10 | When an item is not in stock: Moses finds the cost, Ruth prices it at Checking, then Denis buys it. Is that order right? | That order ("Price coming") | `manifest/sell.json` |
+| Q11 | A customer or number with no open chat: Grace writes from her own WhatsApp (`wa.me`, as today), or the shop sends its reply template from the shop's number (one way, as CH13 does for a shut chat)? | Her own WhatsApp, as today (CH09) | `sales.html:9970`; chats critic, 30 Oct |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
