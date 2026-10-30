@@ -84,6 +84,15 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const shop = await d3.counterSale(draft([]), { method: 'momo', given: 0, ref: '12045889301', quote: 558 });
   t.check(!shop.waiting && shop.paid === 218500 && d3.state.books.payments.some((p) => p.orderId === 558 && p.ref === '12045889301'), 'at the shop\'s price: 218,500 by mobile, the ID kept');
 
+  /* ---- nothing called "tile cutter": the walk-in is added to Moses' open ask (KC21, KC25) ---- */
+  const d5 = demoSource('?demo');
+  const b5 = await d5.books();
+  t.check(I.findItems(b5.items, 'tile cutter').length === 0, 'the shop sells no tile cutter (KC21)');
+  const open5 = b5.asks.find((a) => a.name === 'Tile cutter 600mm');
+  t.check(open5 && open5.status === 'found' && open5.requests.length === 1, 'Moses found it already: one ask (FACTS §6)');
+  const added = await d5.askSourcing({ name: 'Tile cutter 600mm', qty: 1, customerId: null, chatId: null });
+  t.check(added.id === open5.id && added.requests.length === 2, 'Add this walk-in: the same ask, 2 asked (KC25)');
+
   /* ---- &fail=sale: the first sale is lost on its way, nothing taken (KC19) ---- */
   const d4 = demoSource('?demo&fail=sale');
   const b4 = await d4.books();
