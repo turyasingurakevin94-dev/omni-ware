@@ -30,7 +30,8 @@ export function settingsOf(presets: Row): ShopSettings {
     chaseAfterDays: presets.chaseAfterDays != null ? Number(presets.chaseAfterDays) : 7,
     services: (Array.isArray(presets.services) ? presets.services : []).map((s: Row, i: number) => ({
       id: String(s.id ?? i), label: String(s.label || s.name || 'Charge'), type: s.type === 'percent' ? 'percent' : 'fixed', value: num(s.value ?? s.price),
-      ...(s.per ? { per: String(s.per) } : {}), ...(Number(s.mins) > 0 ? { mins: Number(s.mins) } : {}),
+      ...(s.per ? { per: String(s.per) } : {}), ...(s.kind === 'delivery' ? { kind: 'delivery' as const } : {}),
+      ...(s.area ? { area: String(s.area) } : {}), ...(Number(s.mins) > 0 ? { mins: Number(s.mins) } : {}),
     })),
     shopPhone: String(presets.shopPhone ?? presets.waPhone ?? ''),
     shopAddress: String(presets.shopAddress || ''),

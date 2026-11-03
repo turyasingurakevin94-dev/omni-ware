@@ -368,10 +368,11 @@ export interface ShopSettings {
   chaseAfterDays: number;
   /**
    * presets.services: delivery and loading fees the order can carry (core/services.ts). `per`: the
-   * value is for each one of these on the order ("bag": loading; spec 04 Q3). `mins`: a delivery's
-   * usual time from the shop. Both optional in presets; sales.html sets neither.
+   * value is for each one on the lines sold by that unit ("bag": loading; spec 04 Q3). `kind:
+   * 'delivery'` with its `area`: the delivery fee there; `mins`: its usual time from the shop. All
+   * optional in presets; sales.html sets none, and then a service is a flat fee.
    */
-  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number; per?: string; mins?: number }[];
+  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number; per?: string; kind?: 'delivery'; area?: string; mins?: number }[];
   shopPhone: string;
   shopAddress: string;
 }
