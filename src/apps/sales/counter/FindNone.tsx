@@ -41,7 +41,7 @@ function standing(a: SourcingAsk, moses: string, ruth: string): string {
 }
 
 /** Found: the magnifier with a tick (TD21). */
-const FOUND = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M8.3 11.2l1.9 1.9 3.4-3.6" /></svg>;
+const found = (n: number) => <svg width={n} height={n} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M8.3 11.2l1.9 1.9 3.4-3.6" /></svg>;
 
 /** The five steps on navy (TD21's dot row), the one it is at in mint. */
 function Dots(p: { a: SourcingAsk }): JSX.Element {
@@ -52,7 +52,7 @@ function Dots(p: { a: SourcingAsk }): JSX.Element {
         <span aria-hidden="true" class="rail" /><span aria-hidden="true" class="fill" style={{ width: `${at * 20}%` }} />
         {STEPS.map((s, i) => (
           <span key={s.status} class={i < at ? 'done' : i === at ? 'now' : 'next'}>
-            {i < at ? <Icon name="check" size={12} stroke={2.8} /> : i === at && s.status === 'found' ? FOUND : <Icon name={s.icon} size={i === at ? 16 : 12} stroke={2.2} />}
+            {i < at ? <Icon name="check" size={12} stroke={2.8} /> : s.status === 'found' ? found(i === at ? 16 : 12) : <Icon name={s.icon} size={i === at ? 16 : 12} stroke={2.2} />}
           </span>
         ))}
       </div>
