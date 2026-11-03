@@ -10,7 +10,8 @@ import { money } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { replyWindow } from '../../../core/time.ts';
 import type { Method } from '../../../core/types.ts';
-import { act, books, chats, kept, now } from '../shell/store.ts';
+import type { PayResult } from '../../../core/datasource.ts';
+import { act, books, chats, kept, now, onKeptRefused, onKeptSent } from '../shell/store.ts';
 import { dm } from './pay-parts.tsx';
 
 export interface PaidLine { id: number; day: string; amount: number }
@@ -37,6 +38,10 @@ export interface Paid {
   kept: boolean;
   /** The outbox id of the kept write. */
   keptId: string | null;
+  /** The server refused the kept write: its reason (CU46). */
+  refused: string | null;
+  /** The kept write was thrown away: nothing was recorded. */
+  discarded: boolean;
   /** waiting: Receipt was on and the payment is not recorded yet; it goes once it records. */
   receipt: { state: 'off' | 'waiting' | 'sending' | 'sent' | 'failed'; at: number | null; chatId: number | null };
 }
@@ -72,16 +77,33 @@ export async function sendReceipt(key: string, shop: string, now: number): Promi
   }
 }
 
-/**
- * A kept payment leaves the outbox once it is recorded (by itself when signal comes back, or Try again):
- * its Paid turns to Paid, and the receipt that waited for it goes (CU44).
+/*
+ * A kept payment is recorded only when the outbox says it went (onSent): then it reads Paid, takes the
+ * books' answer, and the receipt that waited goes. Refused (onRefused): it keeps the server's reason, to fix
+ * or discard (spec 06 Q5, CU46). Gone from the outbox without either: discarded, so it reads "Not recorded"
+ * and its receipt is off.
  */
+const byKept = (id: string): Paid | undefined => Object.values(paidResults.peek()).find((p) => p.keptId === id);
+
+onKeptSent((id, value) => {
+  const p = byKept(id);
+  if (!p) return;
+  const r = value as Partial<PayResult> | undefined;
+  putPaid({ ...p, kept: false, keptId: null, refused: null, amount: r && typeof r.amount === 'number' ? r.amount : p.amount,
+    after: r && typeof r.after === 'number' && p.customerId ? Math.max(0, r.after) : p.after });
+  const b = books.peek();
+  if (p.receipt.state === 'waiting') void sendReceipt(p.key, b ? b.shop.name : '', now.peek());
+});
+
+onKeptRefused((id, reason) => {
+  const p = byKept(id);
+  if (p) putPaid({ ...p, refused: reason });
+});
+
 effect(() => {
   const ids = new Set(kept.value.map((k) => k.id));
   Object.values(paidResults.peek()).forEach((p) => {
     if (!p.kept || !p.keptId || ids.has(p.keptId)) return;
-    putPaid({ ...p, kept: false, keptId: null });
-    const b = books.peek();
-    if (p.receipt.state === 'waiting') void sendReceipt(p.key, b ? b.shop.name : '', now.peek());
+    putPaid({ ...p, kept: false, keptId: null, discarded: true, receipt: { ...p.receipt, state: 'off' } });
   });
 });

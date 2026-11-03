@@ -116,6 +116,16 @@ async function flows(browser) {
   await ctx.close();
 
   ({ ctx, p, errors } = await open(browser));
+  await p.locator('input[aria-label="Find a customer"]').fill('Nansana');
+  await p.getByText('Nansana Hardware', { exact: true }).first().click();
+  let s16 = await text(p);
+  t.check(/Paid 560,000/.test(s16) && /90,000 paid over/.test(s16) && /No limit set · Ruth decides/.test(s16) && /last order today 10:02/.test(s16), 'nothing owed: today\'s money, the over, her credit, the last order (not the copy)');
+  await p.getByLabel('Order #0557, the copy, Packing').click();
+  await p.waitForTimeout(300);
+  t.check(/Entered twice\?/.test(await text(p)) || await p.getByText('Entered twice?').count() > 0, 'nothing owed: the copy #0557 opens Entered twice? (OR19)');
+  await ctx.close();
+
+  ({ ctx, p, errors } = await open(browser));
   await p.getByLabel('New customer').first().click();
   await p.getByText('From their chat · 10:37').click();
   t.check((await p.locator('input[aria-label=Name]').inputValue()) === 'Mama Shine', 'new: filled from their chat');
@@ -140,7 +150,7 @@ async function flows(browser) {
   t.check(/Not sent yet/.test(k) && /Once it records/.test(k) && !/Owes now/.test(k), 'offline: Not sent yet, and nothing says it is owed 0 before it records');
   t.check(/The receipt goes to Kato once it records/.test(k), 'offline: the receipt waits for the payment');
   await p.getByRole('button', { name: 'Try again' }).click();
-  t.check(/Still no signal · not sent yet/.test(await toastText(p)), 'offline: Try again with no signal says so');
+  t.check(/Still no signal/.test(await toastText(p)), 'offline: Try again with no signal says so');
   await ctx.close();
 }
 

@@ -43,7 +43,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
     setTrying(true);
     try { await flush(); } catch (_e) { /* still kept */ } finally { setTrying(false); }
     const now0 = paidResults.value[p.key];
-    if (now0 && now0.kept) toast.show('Still no signal · not sent yet', { kind: 'warn' });
+    if (now0 && now0.kept && !now0.refused) toast.show('Still no signal', { kind: 'warn' });
   };
   const sms = () => {
     const text = b ? receiptText(p, b.shop.name) : '';
@@ -53,8 +53,8 @@ function PaidView(props: { p: Paid }): JSX.Element {
     <main class="cu-paid">
       <div class="cu-paid-x"><button type="button" aria-label="Close" onClick={nav.home}><Icon name="close" size={16} stroke={2.2} /></button></div>
       <div class="cu-paid-top">
-        <span aria-hidden="true" class={p.kept ? 'cu-paid-tick kept' : 'cu-paid-tick'}><Icon name={p.kept ? 'clock' : 'check'} size={34} stroke={p.kept ? 2.4 : 2.8} /></span>
-        <h1>{p.kept ? 'Not sent yet' : 'Paid'}</h1>
+        <span aria-hidden="true" class={p.kept || p.discarded ? 'cu-paid-tick kept' : 'cu-paid-tick'}><Icon name={p.kept ? 'clock' : p.discarded ? 'close' : 'check'} size={34} stroke={p.kept ? 2.4 : 2.8} /></span>
+        <h1>{p.kept ? 'Not sent yet' : p.discarded ? 'Not recorded' : 'Paid'}</h1>
         <span class="cu-paid-who"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{p.initials}</span><span>{p.name}</span><span class="mono">{money(p.amount)}</span></span>
         <span class="cu-paid-how">{how}</span>
       </div>
@@ -70,14 +70,14 @@ function PaidView(props: { p: Paid }): JSX.Element {
         <div class="cu-slip-b">
           <div class="cu-slip-h"><span>{(b ? b.shop.name : '').toUpperCase()}</span><span class="mono">{stamp}</span></div>
           {p.lines.map((l) => (
-            <div key={l.id} class="cu-slip-l"><span aria-hidden="true"><Icon name="check" size={11} stroke={3.2} /></span>
+            <div key={l.id} class={p.kept || p.discarded ? 'cu-slip-l hollow' : 'cu-slip-l'}><span aria-hidden="true"><Icon name="check" size={11} stroke={3.2} /></span>
               <span>{`${orderNo(l.id)} `}<span>{dm(l.day)}</span></span><span class="mono">{money(l.amount)}</span></div>
           ))}
           {p.deposit > 0 && (
             <div class="cu-slip-l dep"><span aria-hidden="true" /><span>Deposit <span>next bill uses it</span></span><span class="mono">{money(p.deposit)}</span></div>
           )}
-          <div class="cu-slip-t"><span>{p.kept ? 'To record' : 'Paid'}</span><span class="mono">{money(p.amount)}</span></div>
-          <div class={p.kept ? 'cu-slip-o kept' : 'cu-slip-o'}><span>{p.kept ? 'Once it records' : 'Owes now'}</span><span aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><s class="mono">{money(p.before)}</s><b class="mono">{money(p.after)}</b></div>
+          <div class="cu-slip-t"><span>{p.kept ? 'To record' : p.discarded ? 'Not recorded' : 'Paid'}</span><span class="mono">{money(p.amount)}</span></div>
+          <div class={p.kept || p.discarded ? 'cu-slip-o kept' : 'cu-slip-o'}><span>{p.kept ? 'Once it records' : p.discarded ? 'Still owes' : 'Owes now'}</span><span aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><s class="mono">{money(p.before)}</s><b class="mono">{money(p.after)}</b></div>
         </div>
         <div class="cu-slip-edge bottom" />
       </div>

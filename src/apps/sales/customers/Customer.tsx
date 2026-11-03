@@ -11,6 +11,8 @@ import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { lastMessages } from '../../../core/chats.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
+import { daysInStage, isCopy, LATE_DAYS } from '../../../core/orders.ts';
+import { openTwice } from '../orders/index.tsx';
 import { clock, dayLabel, dayOf, daysApart, howLong, when } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
 import { isDataError } from '../../../core/datasource.ts';
@@ -118,7 +120,8 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
             sub={x.checked && m.checkedIn > 0 ? `#${String(x.id).padStart(4, '0')} · paid already?` : undefined} />)}
         </BillsCard>
       )}
-      {showMove && <OnTheMove orders={live} onOrder={(id) => nav.push('orders/order', { id })} />}
+      {showMove && <OnTheMove orders={live} onOrder={(id) => nav.push('orders/order', { id })} copies={live.filter((o) => isCopy(b.orders, o)).map((o) => o.id)} onCopy={openTwice}
+        late={live.filter((o) => (o.stage === 'packing' || o.stage === 'road') && daysInStage(o, t) >= LATE_DAYS).map((o) => o.id)} />}
       {rh}
       {paid.length > 0 && <PaidBills orders={paid} onOrder={(id) => nav.push('orders/order', { id })} />}
       <div class="cu-sell"><Button icon={sell.icon} stroke={sell.icon === 'plus' ? 2.4 : 2.2} onClick={sell.on}>{sell.word}</Button></div>
