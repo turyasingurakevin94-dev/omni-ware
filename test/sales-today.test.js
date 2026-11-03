@@ -38,6 +38,9 @@ const by = (ws, id) => ws.find((w) => w.c.id === id);
   t.check(D.takeOf(by(ow, 'C002'), true).bills === '533', 'Kyaligonza\'s Take pays #0533');
   t.check(D.takeOf(by(ow, 'C004'), false).bills === '532,541,551', 'Mukono\'s Take pays every bill and the order held for it');
   t.check(D.takeOf(ggaba, true).customer === 'C003', 'a Take names its customer');
+  const O = require(path.join(ROOT, 'src/core/owing.ts'));
+  const opening = { bills: [{ day: '2026-08-01', orderId: null, left: 50000, age: 77, past: true, checked: false }, { day: '2026-09-01', orderId: 520, left: 90000, age: 46, past: true, checked: false }] };
+  t.check(O.takeBills(opening, true).join() === 'debt,520', 'a charge with no order goes in the Take as "debt", so it pays all it says');
 
   /* ---- Needs you ---- */
   const n = D.needs(b, cb, now, []);
@@ -84,6 +87,11 @@ const by = (ws, id) => ws.find((w) => w.c.id === id);
   kept.promises.push({ id: 91, customerId: 'C003', on: '2026-10-15', madeOn: '2026-10-12', amount: 100000 });
   kc.debtLog.push({ id: 9e6, day: '2026-10-14', type: 'payment', amount: 100000, orderId: null, paymentId: null, note: 'Payment' });
   t.check(D.promiseToShow(kept, kc, today) === null, 'a kept promise does not show');
+
+  /* ---- an ask's message: no plural after a size ---- */
+  const A = { itemId: null, requests: [{ customerId: 'C001', qty: 2 }], tried: [] };
+  t.check(D.askSaid({ ...A, name: 'Solar water pump 1hp' }, b, 2) === 'the solar water pump 1hp', 'many of a thing named with a size: no s ("the solar water pump 1hp")');
+  t.check(D.askSaid({ ...A, name: 'Ceiling fan, 56 inch' }, b, 4) === 'the 56 inch ceiling fans', 'many fans: "the 56 inch ceiling fans"');
 
   /* ---- Sells most, an ask's aisle ---- */
   const most = D.sellsMost(b, now);

@@ -1,7 +1,8 @@
 /*
- * TD21, TD22 · One ask of Sourcing, on its own screen (every ask has one): the item, who asked, the five
- * steps with their days. Before it is listed (TD21, looking): who Moses asked and what they said, how long the
- * customer has waited, and telling them where it is. Listed (TD22): its price and shelf, how many they want and what
+ * TD21, TD22, TD26, TD27 · One ask of Sourcing, on its own screen (every ask has one): the item, who asked,
+ * the five steps with their days. Before it is listed: who has it now (TD26 asked, TD27 found), or, while
+ * Moses is looking, who he asked and what they said (TD21); how long the customer has waited, and telling
+ * them where it is. Listed (TD22): its price and shelf, how many they want and what
  * it comes to, the message, then Tell them or start their order.
  */
 import type { JSX } from 'preact';
@@ -21,7 +22,7 @@ import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, chats, now } from '../shell/store.ts';
 import { Asks, StepIcon, STEP_WORD, askCustomer, askQty } from './Asks.tsx';
-import { askAisle } from './data.ts';
+import { askAisle, askSaid } from './data.ts';
 import { go, itemsParam } from './go.ts';
 import { markTold } from './local.ts';
 import { Preview, sendTo, sentToast } from './Tell.tsx';
@@ -31,22 +32,14 @@ import './ask.css';
 type Logged = SourcingAsk & { log?: { status: string; at: number; by: string }[] };
 type Tried = SourcingAsk['tried'][0] & { answer?: 'none' | 'has' | null };
 
-/** "the maroon roof paint", "the 56 inch ceiling fans": what it is, as said to a customer. */
-function said(a: SourcingAsk, b: Books, qty: number): string {
-  const it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null, name = it ? it.name : a.name;
-  const [base, variant] = name.split(/ · |, /);
-  const v = (variant || '').replace(/\b\d+\s?(L|kg|m|mm)\b/g, '').trim();
-  return `the ${v ? v + ' ' : ''}${base.toLowerCase()}${!it && qty > 1 ? 's' : ''}`;
-}
-
 export function askMessage(b: Books, a: SourcingAsk, qty: number): string {
   const c = askCustomer(b, a), who = c ? firstWord(c.name) : '', it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null;
   if (a.status === 'listed' && it && it.price != null) {
     const u = it.unit === 'pc' ? 'piece' : it.unit;
-    return `Hello ${who}, ${said(a, b, qty)} is in: ${money(it.price)} a ${u}. Shall I put ${qty} ${u}s on an order for you? That is ${money(it.price * qty)}.`;
+    return `Hello ${who}, ${askSaid(a, b, qty)} is in: ${money(it.price)} a ${u}. Shall I put ${qty} ${u}s on an order for you? That is ${money(it.price * qty)}.`;
   }
-  if (a.status === 'found' || a.status === 'priced') return `Hello ${who}, we have found ${said(a, b, qty)}. I will tell you the price as soon as it is set.`;
-  return `Hello ${who}, we are still looking for ${said(a, b, qty)}. I will tell you as soon as we have them.`;
+  if (a.status === 'found' || a.status === 'priced') return `Hello ${who}, we have found ${askSaid(a, b, qty)}. I will tell you the price as soon as it is set.`;
+  return `Hello ${who}, we are ${a.status === 'asked' ? '' : 'still '}looking for ${askSaid(a, b, qty)}. I will tell you as soon as we have ${qty > 1 ? 'them' : 'it'}.`;
 }
 
 /** Its photo: the item's own, else the one sent with the ask (a link in the shop's bucket), or null. */
@@ -69,6 +62,41 @@ export async function tellAsk(b: Books, a: SourcingAsk, qty: number, back: boole
   } catch (e) {
     toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void tellAsk(b, a, qty, back, photo); } });
   }
+}
+
+/** The one action before an ask is listed: what it tells them. */
+const TELL: Record<string, string> = { asked: 'looking for it', looking: 'still looking', found: 'found it', priced: 'found it' };
+
+/**
+ * TD26, TD27 · who has the ask now, and who has it next: Moses looks for it (or found it), Ruth sets the price
+ * (or priced it), Moses puts it on the shelf, you tell them. The step in hand is amber ("since 9:20").
+ */
+function WhoHasIt(p: { b: Books; a: Logged; who: string; today: string }): JSX.Element {
+  const { b, a } = p, mem = (r: string) => b.members.find((m) => m.role === r);
+  const ml = mem('sourcing'), rn = mem('manager'), me = b.me, log = a.log || [];
+  const at = (s: string) => { const e = log.find((x) => x.status === s); return e ? e.at : s === a.status ? a.stageAt : null; };
+  const day = (ms: number | null) => (ms == null ? '' : dayOf(ms) === p.today ? clock(ms) : weekday(ms));
+  const name = (m: typeof ml) => (m ? firstWord(m.name) : '');
+  type Row = { m: typeof ml; words: string; state: 'done' | 'now' | ''; when: string };
+  const rows: Row[] = a.status === 'asked' || a.status === 'looking'
+    ? [{ m: ml, words: `${name(ml)} looks for it`, state: 'now', when: 'since ' + day(at(a.status) ?? a.createdAt) }, { m: rn, words: `${name(rn)} sets the price`, state: '', when: '' }]
+    : a.status === 'found'
+      ? [{ m: ml, words: `${name(ml)} found it`, state: 'done', when: day(at('found')) }, { m: rn, words: `${name(rn)} sets the price`, state: 'now', when: 'since ' + day(at('found')) }]
+      : [{ m: rn, words: `${name(rn)} priced it`, state: 'done', when: day(at('priced')) }, { m: ml, words: `${name(ml)} puts it on the shelf`, state: 'now', when: 'since ' + day(at('priced')) }];
+  rows.push({ m: me, words: `You tell ${p.who}`, state: '', when: '' });
+  return (
+    <div class="td-who">
+      <div class="td-who-h">Who has it</div>
+      {rows.map((r) => (
+        <div key={r.words} class={'td-who-r' + (r.state === 'now' ? ' now' : '')}>
+          {r.m && <Avatar initials={r.m.initials} tint={r.m === me ? 'me' : r.m.tint} size={28} font={12} />}
+          <span>{r.words}</span>
+          {r.state === 'done' && <span class="td-who-done"><Icon name="check" size={11} stroke={3} /><span class="mono">{r.when}</span></span>}
+          {r.state === 'now' && <span class="td-who-now">{r.when}</span>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** When a step happened: the weekday, or the time today. */
@@ -109,6 +137,7 @@ export function Ask(p: ScreenProps): JSX.Element {
   const since = (a.log || []).find((x) => x.status === a.status), sinceAt = since ? since.at : a.stageAt;
   const first = a.requests[0], close = () => nav.back();
   const u = it ? (it.unit === 'pc' ? 'piece' : it.unit) : 'piece', pic = askPhoto(b, a);
+  const tried = a.status === 'looking' && a.tried.length > 0, waits = daysApart(dayOf(first.at), today);
   return (
     <FullSheet onBack={close} backLabel="Back to Asked of Sourcing" head={
       <div class="ow-shead">
@@ -116,18 +145,18 @@ export function Ask(p: ScreenProps): JSX.Element {
         <div class="ow-shead-row">
           <ItemSquare aisle={askAisle(b, a)} size={44} icon={26} />
           <div class="td-ask-ht"><span>{it ? it.name : a.name}</span>
-            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)} · ${weekday(first.at)}`}</span></div>
+            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)}${tried ? ' · ' + weekday(first.at) : ''}`}</span></div>
           <button type="button" class="ow-shead-x" aria-label="Close" onClick={close}><Icon name="close" size={16} stroke={2.2} /></button>
         </div>
         <div class="td-ask-state">
-          <div class="td-ask-st"><span>{STEP_WORD[a.status]}</span><span>{`${ml ? firstWord(ml.name) : 'Sourcing'} · ${dayOf(sinceAt) === today ? 'today ' + clock(sinceAt) : 'since ' + weekday(sinceAt)}`}</span></div>
+          <div class="td-ask-st"><span>{STEP_WORD[a.status]}</span><span>{`${ml ? firstWord(ml.name) : 'Sourcing'} · ${dayOf(sinceAt) === today ? 'today ' + clock(sinceAt) : a.status === 'looking' ? 'since ' + weekday(sinceAt) : weekday(sinceAt) + ' ' + clock(sinceAt)}`}</span></div>
           <Rail a={a} today={today} />
         </div>
       </div>
     }>
       {a.status !== 'listed' ? (
         <>
-          {a.tried.length > 0 && <div class="td-tried">
+          {!tried ? <WhoHasIt b={b} a={a} who={who} today={today} /> : <div class="td-tried">
             <div class="td-tried-h"><span>{`Who ${ml ? firstWord(ml.name) : 'Sourcing'} asked`}</span>
               {(a.tried as Tried[]).some((t) => t.answer === 'none') && <span class="td-spill b"><Icon name="close" size={10} stroke={3.4} />{(a.tried as Tried[]).filter((t) => t.answer === 'none').length}</span>}
               {(a.tried as Tried[]).some((t) => !t.answer) && <span class="td-spill t"><Icon name="clock" size={11} stroke={2.6} />{(a.tried as Tried[]).filter((t) => !t.answer).length}</span>}</div>
@@ -140,11 +169,13 @@ export function Ask(p: ScreenProps): JSX.Element {
             ))}
           </div>}
           <div class="td-ask-tiles">
-            <div class="warn"><span>{`${who} waits`}</span><span class="mono">{`${daysApart(dayOf(first.at), today)} days`}</span></div>
+            {waits > 0
+              ? <div class="warn"><span>{`${who} waits`}</span><span class="mono">{`${waits} ${waits === 1 ? 'day' : 'days'}`}</span></div>
+              : <div><span class="td-ask-w">{`${who} waits`}</span><span class="td-ask-today">today</span></div>}
             <div><span>Asked for</span><span class="mono">{`${askQty(a)} `}<span class="ow-word">{askQty(a) === 1 ? u : u + 's'}</span></span></div>
           </div>
           <Preview chip="What they get" who={firstWord(b.me.name)} wide>{askMessage(b, a, askQty(a))}</Preview>
-          <div class="td-ask-foot"><Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, askQty(a), true); }}>{`Tell ${who} · ${a.status === 'found' || a.status === 'priced' ? 'found' : 'still looking'}`}</Button></div>
+          <div class="td-ask-foot"><Button kind="green" duo={phWhatsapp} onClick={() => { void tellAsk(b, a, askQty(a), true); }}>{`Tell ${who} · ${TELL[a.status]}`}</Button></div>
         </>
       ) : (
         <>

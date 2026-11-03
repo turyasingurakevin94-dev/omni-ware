@@ -52,9 +52,9 @@ export function extra(s: DemoState, f: DemoFlags): void {
       .forEach(([id, day, amount]) => b.payments.push({ id, at: d(day, '16:30'), day, amount, method: 'cash', customerId: null, orderId: null, by: GRACE, ref: '', qa: false }));
   }
   // TD14 "Or open an aisle": what a wheelbarrow is bought with in the shop's orders. Six September counter sales
-  // with cement, two with PVC pipe (with FACTS' own orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 2 · Paint 1).
+  // with cement, one with PVC pipe (with the shop's other orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 2 · Paint, Adhesives, Doors & locks 1).
   if (!b.orders.some((o) => o.id === 450)) {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 7; i++) {
       const at_ = d(`2026-09-${String(20 + i).padStart(2, '0')}`, '10:00');
       b.orders.push(O({ id: 450 + i, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true,
         lines: [L('wheelbarrow-hd', 1), i < 6 ? L('cement-hima-50', 2) : L('pvc-half-6m', 2)], paid: -1 }));
@@ -84,6 +84,11 @@ export function extra(s: DemoState, f: DemoFlags): void {
   // the paint was asked Mon 12 Oct and listed today 10:34 (TD22: Asked Mon · Looking Tue · Found Thu · Priced Fri).
   type Logged = (typeof b.asks)[0] & { log?: { status: string; at: number; by: string }[] };
   const fan = b.asks.find((a) => a.id === 'SRC-FAN') as Logged | undefined, paint = b.asks.find((a) => a.id === 'SRC-PAINT') as Logged | undefined;
+  // TD27: the tile cutter, asked Thu 15 Oct 16:15, Moses looking from Fri 9:00 and found it Fri 14:00 (FACTS §6: Ruth prices it).
+  const cutter = b.asks.find((a) => a.id === 'SRC-CUTTER') as Logged | undefined;
+  if (cutter && !cutter.log) {
+    cutter.log = [{ status: 'asked', at: cutter.createdAt, by: GRACE }, { status: 'looking', at: d('2026-10-16', '9:00'), by: MOSES }, { status: 'found', at: cutter.stageAt, by: MOSES }];
+  }
   if (fan && !fan.log) {
     fan.createdAt = d('2026-10-13', '16:00'); fan.requests[0].at = fan.createdAt;
     fan.log = [{ status: 'asked', at: fan.createdAt, by: GRACE }, { status: 'looking', at: fan.stageAt, by: MOSES }];

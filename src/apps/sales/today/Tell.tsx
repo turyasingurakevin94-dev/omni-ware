@@ -62,7 +62,7 @@ export async function sendTo(cb: ChatBooks | null, customerId: string | null, te
 export function sentToast(sent: Sent, who: string, photo: boolean): boolean {
   if (sent === 'no-chat') { toast.show(`No chat with ${who}`, { kind: 'error', sub: 'Nothing was sent' }); return false; }
   if (sent === 'kept') toast.show('No signal · kept on this phone', { sub: 'It sends itself' });
-  else if (photo && sent === 'text') toast.show(`Sent to ${who}`, { sub: 'Words only: their 24 hours are over, a photo cannot go' });
+  else if (photo && sent === 'text') toast.show('Sent the words. The photo can’t go after 24 hours.');
   else toast.show(`Sent to ${who}`);
   return true;
 }

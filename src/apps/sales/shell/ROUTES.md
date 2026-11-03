@@ -26,7 +26,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `customers` | `{ filter? }` | customers | CU01–CU08 |
 | `customers/customer` | `{ id }` | customers | CU10–CU15 |
 | `customers/new` | `{ phone?, name? }` | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: string, then?: string }` (bills: order ids joined by commas, "544" or "531,544", never a bill Accounts is checking; it may name a live order held for the money), or `{ order }` for a walk-in's order before its invoice (CU34); `then`: the customer ids to take next, joined by commas: once paid, open `customers/pay` for the next (Today's Play all) | customers | CU30–CU36 |
+| `customers/pay` | `{ customer, bills?: string, then?: string }` (bills: order ids joined by commas, "544" or "531,544", never a bill Accounts is checking; it may name a live order held for the money, and `debt` for a charge that names no order, such as an opening balance), or `{ order }` for a walk-in's order before its invoice (CU34); `then`: the customer ids to take next, joined by commas: once paid, open `customers/pay` for the next (Today's Play all) | customers | CU30–CU36 |
 | `customers/paid` | `{ id }` | customers | CU40–CU43 |
 
 ## Rules

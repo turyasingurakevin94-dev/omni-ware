@@ -11,7 +11,7 @@
  */
 import { waitingChats } from '../../../core/chats.ts';
 import { HOLD_DAYS, holdDay, lineTotal, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
-import { owedBy, type Owed } from '../../../core/owing.ts';
+import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
 import { addDays, daysApart, dayOf } from '../../../core/time.ts';
 import type { Books, ChatBooks, Customer, Day, Ms, Order, PayPromise, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
@@ -101,13 +101,13 @@ export const holdOf = (w: Owing, b: Books): Day | null => (w.bills.length ? hold
 export const takeHeld = (w: Owing): UGX => w.owes + (w.held ? orderOwes(w.held) : 0);
 
 /**
- * What a Take opens customers/pay with: the customer and the bills it pays (order ids, comma-separated). Past the hold: the bills past it;
- * with an order held for the money: every bill and that order. A bill Accounts is checking is never in it
- * (Ggaba: #0521 without the 125,000 of #0528).
+ * What a Take opens customers/pay with: the customer and the bills it pays, comma-separated (core/owing.ts
+ * takeBills: never a bill being checked; `debt` for a charge with no order). With an order held for the money:
+ * every bill and that order.
  */
 export function takeOf(w: Owing, past: boolean): { customer: string; bills: string } {
-  const bills = w.bills.filter((x) => !x.checked && x.orderId != null && (past ? x.past : true)).map((x) => x.orderId as number);
-  return { customer: w.c.id, bills: (!past && w.held ? [...bills, w.held.id] : bills).join(',') };
+  const bills = takeBills(w, past);
+  return { customer: w.c.id, bills: (!past && w.held ? [...bills, String(w.held.id)] : bills).join(',') };
 }
 
 /**
@@ -163,6 +163,16 @@ export function askTells(b: Books, told: string[]): SourcingAsk[] {
 export function askValue(b: Books, a: SourcingAsk): UGX {
   const it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null, r = a.requests[0];
   return it && it.price && r ? it.price * r.qty : 0;
+}
+
+/** "the maroon roof paint", "the 56 inch ceiling fans": what it is, as said to a customer. */
+export function askSaid(a: Pick<SourcingAsk, 'itemId' | 'name'>, b: Books, qty: number): string {
+  const it = a.itemId ? b.items.find((i) => i.id === a.itemId) : null, name = it ? it.name : a.name;
+  const [base, variant] = name.split(/ · |, /);
+  const v = (variant || '').replace(/\b\d+\s?(L|kg|m|mm)\b/g, '').trim();
+  // Many of a thing take an s, but not after a size ("the solar water pump 1hp", "the tile cutter 600mm").
+  const plural = !it && qty > 1 && !/\d/.test(base.trim().split(/\s+/).pop() || '');
+  return `the ${v ? v + ' ' : ''}${base.toLowerCase()}${plural ? 's' : ''}`;
 }
 
 /* ---------------- needs you ---------------- */

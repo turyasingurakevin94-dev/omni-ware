@@ -269,7 +269,7 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
               if (!it) return null;
               const short = it.name.split(/ ·| G\d|,/)[0];
               return (
-                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: itemsParam(it.id) })} label={`Start ${first}'s order with ${short}`} class="td-usual-t">
+                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: itemsParam(it.id, u.qty) })} label={`Start ${first}'s order with ${short}`} class="td-usual-t">
                   <ItemSquare aisle={it.aisle} size={36} icon={22} />
                   <span><span>{short}</span><span class="mono">{money(it.price || 0)}</span></span>
                   <span aria-hidden="true" class="td-usual-plus"><Icon name="plus" size={14} stroke={2.6} /></span>

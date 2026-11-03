@@ -34,12 +34,12 @@ export function ToCollect(): JSX.Element {
         <div class="td-col-pic">
           <span class="td-col-fig"><span>UGX</span><span class="mono">{money(sum)}</span></span>
           <span role="img" aria-label={`${money(pastNotChecked)} past 21 days, ${money(underSum)} under 21 days, ${money(checked)} being checked`} class="td-col-bar">
-            <span style={{ flex: pastNotChecked }} /><span style={{ flex: underSum }} />{checked > 0 && <span style={{ flex: checked }} />}
+            {pastNotChecked > 0 && <span class="take" style={{ flex: pastNotChecked }} />}{underSum > 0 && <span class="under" style={{ flex: underSum }} />}{checked > 0 && <span class="chk" style={{ flex: checked }} />}
           </span>
           <span class="td-col-key">
-            <span><span aria-hidden="true" />Take <b class="mono">{money(take)}</b></span>
-            <span><span aria-hidden="true" />Under 21 days</span>
-            {checked > 0 && <span><span aria-hidden="true" />Being checked</span>}
+            {take > 0 && <span class="take"><span aria-hidden="true" />Take <b class="mono">{money(take)}</b></span>}
+            {underSum > 0 && <span class="under"><span aria-hidden="true" />Under 21 days</span>}
+            {checked > 0 && <span class="chk"><span aria-hidden="true" />Being checked</span>}
           </span>
         </div>
       </TitleHead>
