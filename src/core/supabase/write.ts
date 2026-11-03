@@ -102,6 +102,12 @@ export async function setClientPhone(sb: Sb, s: Session, orderId: number, phone:
   await patchOrder(sb, s, orderId, { client }, null, phone);
 }
 
+/** sales.html:9290 payOrderFor: a walk-in's order on a customer's account (their id and name on it). */
+export async function assignOrder(sb: Sb, s: Session, orderId: number, c: { id: string; name: string; phone: string; phone2: string }): Promise<void> {
+  const client = { name: c.name, phone: c.phone || c.phone2 || '' };
+  await patchOrder(sb, s, orderId, { customerId: c.id, client }, client.name, client.phone || '');
+}
+
 /** sales.html:6283: an ask to the Manager about a bill (invoice_asks, 0123). */
 export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk> {
   const row = {

@@ -97,6 +97,11 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       o.toldTotal = null;
     }),
     setClientPhone: (orderId, phone) => write(() => { const o = s.books.orders.find((x) => x.id === orderId); if (o) o.client.phone = phone; }),
+    assignOrder: (orderId, customerId) => write(() => {
+      const o = s.books.orders.find((x) => x.id === orderId), c = s.books.customers.find((x) => x.id === customerId);
+      if (!o || !c) throw dataError('refused', 'That order or customer is not in the books', 'P0002');
+      o.customerId = c.id; o.client = { name: c.name, phone: c.phone || c.phone2 || '' };
+    }),
     askBill: (a) => write(() => {
       const o = s.books.orders.find((x) => x.id === a.orderId);
       if (!o || !o.invoiced) throw dataError('refused', 'Only a bill can be voided or credited');

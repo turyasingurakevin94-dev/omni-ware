@@ -121,6 +121,11 @@ export interface DataSource {
   /** The customer was told the Manager's new price (items[].priceToldAt). */
   markPriceTold(orderId: number): Promise<void>;
   setClientPhone(orderId: number, phone: string): Promise<void>;
+  /**
+   * A walk-in's order goes on a customer's account: they owe what is left of it (CU34, "who owes it?";
+   * sales.html:9290 payOrderFor, the order's customerId and client by ow_patch_order).
+   */
+  assignOrder(orderId: number, customerId: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
   askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk>;
   /** Take back any ask of yours that still waits: a void, a credit or a cancel. */

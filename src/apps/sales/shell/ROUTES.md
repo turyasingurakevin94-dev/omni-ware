@@ -23,11 +23,11 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
 | `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |
-| `customers` | `{ filter? }` | customers | CU01–CU08 |
-| `customers/customer` | `{ id }` | customers | CU10–CU15 |
-| `customers/new` | `{ phone?, name? }` | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: number[] }` | customers | CU30–CU36 |
-| `customers/paid` | `{ id }` | customers | CU40–CU43 |
+| `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU09 (CU09: the Quiet chip) |
+| `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
+| `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
+| `customers/pay` | `{ customer, bills?: string }` (bills: order ids joined by commas, "544" or "531,544"), or `{ order }` for a walk-in's order before its invoice (CU34) | customers | CU37 (all, cash), CU30–CU36 |
+| `customers/paid` | `{ id }` | customers | CU40–CU45 (CU44: not sent yet, no signal; CU45: Try again, still no signal) |
 
 ## Rules
 

@@ -8,7 +8,7 @@
  * source, no clock (the caller passes `today`), so tests import them as they
  * are (test/sales-core-money.test.js).
  */
-import type { Charge, Customer, Day, Line, Order, UGX } from './types.ts';
+import type { Charge, Customer, Day, Line, Order, Payment, UGX } from './types.ts';
 
 /* ---------------- whole shillings ---------------- */
 
@@ -148,6 +148,34 @@ export function orderOwes(o: Pick<Order, 'lines' | 'charges' | 'discount' | 'cre
 export function payPlan(owes: UGX, amount: UGX): { toDebt: UGX; over: UGX } {
   const left = Math.max(0, whole(amount)), toDebt = Math.min(left, Math.max(0, whole(owes)));
   return { toDebt, over: left - toDebt };
+}
+
+/**
+ * How a payment spreads over a customer's open bills (given oldest first, each with what it still owes):
+ * the ticked bills in the order ticked (ones not open are skipped, each once), else every bill oldest
+ * first; each takes the least of what is left and what it owes until the amount runs out. One rule with
+ * receive_payment (0140: ordered_ids, pay_q := least(left_amt, due)). Pass what goes to the debt
+ * (payPlan(...).toDebt), not what was handed over. Returns the walked bills in walk order.
+ */
+export function splitPayment(bills: { id: number; left: UGX }[], amount: UGX, picks?: number[] | null): { id: number; applied: UGX }[] {
+  const walk: { id: number; left: UGX }[] = [];
+  if (picks) picks.forEach((id) => { const b = bills.find((x) => x.id === id); if (b && !walk.includes(b)) walk.push(b); });
+  else walk.push(...bills);
+  let left = Math.max(0, whole(amount));
+  return walk.map((b) => { const applied = Math.max(0, Math.min(left, whole(b.left))); left -= applied; return { id: b.id, applied }; });
+}
+
+/**
+ * What a payment brought over what it cleared (OR15: Nansana's 560,000 cleared 470,000; 90,000 over): what it
+ * paid on their bills (the debt log) or on orders (order payments), whichever is more; a payment with no
+ * customer cleared all of it. Moved here from the Orders tab's overOf, unchanged, so Customers uses the same rule.
+ */
+export function paidOver(b: { customers: Pick<Customer, 'id' | 'debtLog'>[]; orders: Pick<Order, 'payments'>[] }, p: Payment): { cleared: UGX; over: UGX } {
+  const c = p.customerId ? b.customers.find((x) => x.id === p.customerId) : null;
+  const onBills = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : 0;
+  const onOrders = b.orders.reduce((a, o) => a + o.payments.filter((x) => x.paymentId === p.id).reduce((t, x) => t + x.amount, 0), 0);
+  const cleared = c ? Math.max(onBills, onOrders) : p.amount;
+  return { cleared, over: Math.max(0, p.amount - cleared) };
 }
 
 /** What the payment records, by how the over is settled. spec 02 §6 (0165 p_over). */

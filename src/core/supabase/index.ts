@@ -84,6 +84,11 @@ export function supabaseSource(): DataSource {
     },
     async markPriceTold(orderId) { await W.markPriceTold(sb(), me(), orderId, Date.now()); },
     async setClientPhone(orderId, phone) { await W.setClientPhone(sb(), me(), orderId, phone); },
+    async assignOrder(orderId, customerId) {
+      const c = (await books()).customers.find((x) => x.id === customerId);
+      if (!c) throw dataError('refused', 'That customer is not in the books', 'P0002');
+      await W.assignOrder(sb(), me(), orderId, c);
+    },
     async askBill(a) { return W.askBill(sb(), me(), await order(a.orderId), a); },
     async withdrawBillAsk(id) {
       // A cancel ask is withdrawn through its own function (0181); a void or credit ask through 0123's.

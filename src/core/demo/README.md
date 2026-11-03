@@ -16,6 +16,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=first-day` | A new salesperson's first day: 8:00, nothing of Grace's yet (no orders, payments or chats) | TD06 |
 | `&state=empty` | Nothing live, nobody owes, no chats | CH06, OR04, CU06 |
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
+| `&wa=off` | The shop's WhatsApp number is not connected: a receipt or statement cannot reach the customer | CU43 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32 |
 
