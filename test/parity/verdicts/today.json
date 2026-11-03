@@ -30,7 +30,7 @@
   "TD05ToCollect.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (avatar-initial antialiasing). Every Take now opens customers/pay with named bills (Ggaba #0521 only, never #0528 being checked; Mukono every bill + #0551) and Play all passes then. Promise shown by promiseState (due today and open, or broken). Cross-tab links land on that tab's root until it is merged; route ids and params checked in code against ROUTES.md. Note on takeOf: a debt-log charge with no order id is left out of `bills`, so a Take whose amount includes such a charge would pay less than it says; the demo has none, but core/owing.ts should carry it (lead).",
+    "note": "Identical (avatar-initial antialiasing). Every Take now opens customers/pay with named bills (Ggaba #0521 only, never #0528 being checked; Mukono every bill + #0551) and Play all passes then. Promise shown by promiseState (due today and open, or broken). Cross-tab links land on that tab's root until it is merged; route ids and params checked in code against ROUTES.md. Note on takeOf: a debt-log charge with no order id is left out of `bills`, so a Take whose amount includes such a charge would pay less than it says; the demo has none, but core/owing.ts should carry it (lead). Final check: takeBills (core/owing.ts) now names a charge with no order as 'debt', so every Take pays all it says; the keys show only what is there (Take, Under 21 days, Being checked), which also removes the 'Take 0' key reached from TD07.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -44,7 +44,7 @@
   "TD07TodayCalm.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Harness 0%; strict diff sub-pixel antialiasing only (centroids within 0.4 px). Controls right. Leftover note: '1.3M to collect' opens To collect with a 'Take 0' key, an undrawn state of TD05 (hide the Take key when nothing is past).",
+    "note": "Harness 0%; strict diff antialiasing only. Controls right. To collect reached from here no longer shows a 'Take 0' key (keys show only what is there).",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -77,9 +77,9 @@
     "at": "2026-11-03"
   },
   "TD12FindTyped.dc.html": {
-    "verdict": "fail",
-    "score": 8.0,
-    "note": "Visual within the row ruling (1 px from #0553 down, nothing else). Controls right except one: 'Kato asked Moses for Solar water pump 1hp' -> today/asks {id} now opens that ask's own screen at 'Asked', which no board draws (the board still links TD19Asks). Fix: draw the ask screens the lead's 'every ask opens' ruling now reaches, as new boards in the TD series with /design (an ask at Asked: Kato's solar water pump 1hp; an ask at Found/Priced: Nansana's tile cutter 600mm), get them scored (at least 8.5 on every axis), set TD19's three bare <a> rows and TD12's 'Kato asked Moses for' card to href them, and build Ask.tsx to them. What the app shows today on those screens has visible faults the boards must settle: 'Kato waits 0 days' (say 'today'), 'the solar water pump 1hps' (askMessage/said pluralises a name ending in a size), and the screen is half empty under the message (BRIEF: filled to the bottom). Minor: the 'usually buys' tiles start the order with qty 1, not the usual's quantity.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Final check on 819e56b2: within the row ruling (1 px from #0553 down), nothing else differs. 'Kato asked Moses for' now goes to his ask's own board (TD26), as the board links; the usual tiles now carry the usual's quantity (itemsParam(it.id, u.qty)); order rows open the merged Orders tab's own order screens. Other controls right.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -93,7 +93,7 @@
   "TD14FindNothing.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Fixed: a closest row now opens that item in Find (no write into anyone's order); '+' -> sell {items}; aisle tiles -> sell {aisle}. Identical (1 px antialiasing). nearAisles is a real rule (spec 04 §4.1); its demo seed (invented September counter sales) is fitted to give the drawn order — see report.",
+    "note": "Final check with its new seed: 1 px of antialiasing; the aisles still come out Tools, Cement, Roofing, Fasteners, Plumbing, Paint from the real rules. Rows open the item; + -> sell {items}; aisle tiles -> sell {aisle}; Ask -> Ask Moses.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -126,9 +126,9 @@
     "at": "2026-11-03"
   },
   "TD19Asks.dc.html": {
-    "verdict": "fail",
-    "score": 8.0,
-    "note": "Visual identical (the board was redrawn to the 'every ask opens' ruling: three rows are now <a> with no href). Fixed: Tell Mukono keeps Grace on the list, and no send is claimed without a chat. FAIL: the Tile cutter (Found) and Solar water pump (Asked) rows open ask screens that no board draws (the canvas rows have no href to give). Fix: draw the ask screens the lead's 'every ask opens' ruling now reaches, as new boards in the TD series with /design (an ask at Asked: Kato's solar water pump 1hp; an ask at Found/Priced: Nansana's tile cutter 600mm), get them scored (at least 8.5 on every axis), set TD19's three bare <a> rows and TD12's 'Kato asked Moses for' card to href them, and build Ask.tsx to them. What the app shows today on those screens has visible faults the boards must settle: 'Kato waits 0 days' (say 'today'), 'the solar water pump 1hps' (askMessage/said pluralises a name ending in a size), and the screen is half empty under the message (BRIEF: filled to the bottom).",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Pixel-identical. Every row now opens its own board: paint -> TD22, tile cutter -> TD27, ceiling fan -> TD21, solar pump -> TD26 (all re-tapped). Tell Mukono stays on the list; no send is claimed without a chat.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -147,9 +147,9 @@
     "at": "2026-11-03"
   },
   "TD22AskListed.dc.html": {
-    "verdict": "pass",
-    "score": 9.0,
-    "note": "Pixel-identical. Fixed: Tell Mukono with the photo switch on writes sendImage(104, the paint's photo, the message); inside the 24 hours only, otherwise words only and the toast says so. Start their order -> sell/order {customer, items:[{itemId, qty}]} with the chosen quantity.",
+    "verdict": "fail",
+    "score": 7.5,
+    "note": "REGRESSION in 819e56b2: the head reads 'Mukono Roofing asked for 6' where the board reads 'Mukono Roofing asked for 6 · Mon' (strict diff 1,696 px; bbox ends at x254, board x286). Cause: Ask.tsx line 148 shows the asked day only when `a.status === 'looking' && a.tried.length > 0` — a rule fitted to TD21 (· Tue), TD26 and TD27 (no day). Fix: the real rule — show ' · ' + weekday(first.at) unless it was asked today (dayOf(first.at) === today); and correct TD27's board head to 'Nansana Hardware asked for 1 · Thu' (TD26 stays without a day: asked today). Controls re-tapped and right: Tell Mukono writes sendImage(104, photo, message); Start their order -> sell/order {customer, items:[{itemId, qty}]}.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -171,6 +171,20 @@
     "verdict": "pass",
     "score": 9.0,
     "note": "Within the row ruling (1-4 px down the list, as the note says); nothing else differs. TEST row struck and not counted; controls as TD16.",
+    "by": "today critic",
+    "at": "2026-11-03"
+  },
+  "TD26AskAsked.dc.html": {
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "New board, built: harness 0%; the strict diff is sub-pixel text antialiasing only (centroids within 0.12 px). 'today' in Figtree; 'the solar water pump 1hp' with no plural after the size (askSaid). Back/Close -> TD19; Tell Kato · looking for it writes send(101) and toasts.",
+    "by": "today critic",
+    "at": "2026-11-03"
+  },
+  "TD27AskFound.dc.html": {
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "New board, built: 8 px of antialiasing at threshold 6. Back/Close -> TD19; Tell Nansana · found it writes sendTemplate(105) (her 24 hours are over) and toasts. Note: its board omits the asked day, which is what the fitted rule in TD22's note copies — fix the board with TD22.",
     "by": "today critic",
     "at": "2026-11-03"
   }
