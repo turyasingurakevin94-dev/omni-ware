@@ -227,7 +227,8 @@ Delivery is **today, afternoon**, before the Friday Kato asked for. No board pro
   - the cost went up; the shop's new price is 35,500. **Ruth sets 35,000 a bag at 15:05** → 700,000 → **880,000**.
 - **#0562 Nansana** (OR31), placed **today 14:40** by Grace, later today:
   - lines: her usual pair, Cement · Hima 50kg 2 bag × 33,500 = **67,000** · Wood glue · 1L 1 tin **18,500** → **85,500**; both on our shelf;
-  - Ruth's 15:05 cement price reaches it: 2 × 35,000 = 70,000 → **88,500**; it moves to Packing (Musa), nothing packed yet, not paid;
+  - Ruth prices #0562's cement at 35,000 too (15:05): 2 × 35,000 = 70,000 → **88,500**; Buying is skipped (both on our shelf) and it moves to Packing (Musa), nothing packed yet, not paid;
+  - it exists only at the 15:05 moment (like #0559), never at 10:41 or 15:40, so no other board's counts change;
   - her chat is shut (last wrote Thu 15 Oct 16:02, **2 days**), so the new price goes by SMS.
 - **#0533 Kyaligonza** (OR24, OR25): a bill from Mon 24 Aug; **owes 420,000 now**.
   - Payments on it: Fri 9 Oct **Mobile 160,000** (Brian, ID 1193442087) · Wed 14 Oct **Cash 142,000** (Grace, 10:02) · today 10:40 **Bank 388,000**.
