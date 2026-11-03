@@ -18,8 +18,9 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&wa=off` | The shop's WhatsApp number is not connected: a receipt or statement cannot reach the customer | CU43 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
-| `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32 |
+| `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
+| `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 
@@ -56,7 +57,6 @@ Writes take 250 ms, so "Sending…" is seen. With `&offline=1` every write is re
 ## Known gaps (FACTS that the seed does not make true yet)
 
 - **This week in 4,884,000** (money in this week): the seed's week does not add up to it.
-- **Kato this year 8.2M** (Grace 5.6M · 10, Brian 2.1M · 3, Faith 500k · 1, CH33): Kato's 14 orders are seeded, the split is not.
 - **Nansana's 90,000 over** (OR15/OR16): her 560,000 is in the cash book and 470,000 of it cleared her bills; the 90,000 waits for Give change or Deposit, which the Orders tab models.
 - **#0537** is seeded voided (so Nansana owes 0); OR23 draws it before Ruth voids it.
 - **After-10:41 boards** (OR08, OR09, OR12, OR13: #0552 on the road and delivered, #0559 Lubowa at 13:50) need `&clock=` plus the Orders tab's own `extra` rows.

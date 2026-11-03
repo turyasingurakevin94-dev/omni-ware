@@ -42,6 +42,17 @@ The app sometimes needs a state, sheet, error, empty view or step that the canva
 
 Nothing is improvised in code.
 
+## 2a. Rules a board's figures follow
+
+Where a board's sample figures disagree with `FACTS.md` and the seed, the board is corrected, not the data (the lead's ruling, 30 Oct 2026).
+
+| Board | Rule | Where it lives | Source |
+|---|---|---|---|
+| CH33 · "Who served Kato this year" | Per person: the messages they sent in the customer's chat (`chat_served`), and the orders they took for this customer this year (`payload.takenBy`, not voided or cancelled), with the orders' total. Only the Sales team's order takers count orders: a Manager's order is never Sales' serving, even when she wrote in the chat (Ruth's #0498). Biggest total first; the bar is each total's share. | `src/core/chats.ts` `servedThisYear` | `sales.html:10455-10460` (PAGE.chatcust: `chat_served` messages, `takenBy` orders and totals, any role); the lead's ruling, 30 Oct 2026 (orders taken, Sales only); migration `0170` (`chat_served`) |
+| CH21, CH34, CH36 · "Often with it" | P13's rule only: what came with "it" in this customer's orders when they have had it twice or more, else in mine; the top two by how many of those orders had each ("2 of 5"), less what the sheet shows already; the header says whose orders ("in Kato's orders", "in your orders"). On the sheet, "it" is the last of their usual ticked that they have had twice or more, else the first of their usual that they have, counted in their own orders. Searching, "it" is the item found first. Kato's sheets: Wheelbarrow, heavy duty 2 of 5, Tile glue 1 of 5 (CH21). The hinge Kato had once: in your orders, Iron sheet G28 and the wheelbarrow, 1 of 1 (CH34). An item with no price ("Price coming") is asked of the Manager from its own row: a team note "@Ruth the price of …? For Kato." | `src/core/often.ts` `oftenWith` (the one rule; Sell's P13 reads it too) | `agent.html:8890` oftenWith (theirs when twice or more, else mine; counts); `LANGUAGE.md` P13 (the top rows by count, "in Kato's orders"); the lead's ruling, 30 Oct 2026 (the top two only; CH34 opened on an item with no price; "For Kato") |
+| CH08 · searching the chats | The search finds a chat by the person's name, the customer's name or the number (3 digits or more), and by **any message** in the chat, not only the last. A hit in a message shows that message, the word marked, at its own time. | `src/apps/sales/chats` (to build after CH08 is approved) | the lead's ruling, 30 Oct 2026 (every message); `sales.html:9922` (the old search: names and number only); CH01's field "Name, phone or what they said" |
+| CH09 · a number with no chat | A typed number (9 digits or more) with a chat opens that chat; with none, "Message this number · opens WhatsApp" opens WhatsApp on this phone (`wa.me`), because the shop's number can only write to someone who wrote in the last 24 hours. A customer with no chat opens WhatsApp the same way. | `src/apps/sales/chats/NewChat.tsx` | `sales.html:9970-9977` (chatNewListHTML: "a new chat opens in WhatsApp on this phone"); open question Q11 |
+
 ## 3. Open questions (Kevin)
 
 Each row names the default being built until Kevin answers.
@@ -60,6 +71,7 @@ Each row names the default being built until Kevin answers.
 | Q10 | When an item is not in stock: Moses finds the cost, Ruth prices it at Checking, then Denis buys it. Is that order right? | That order ("Price coming") | `manifest/sell.json` |
 | Q11 | How far apart may two identical orders be and still be the same order entered twice? Orders' rule allowed 10 minutes, Customers' and Today's 5. Should a copy also need the same invoiced state (Orders' rule did)? | One rule (`core/orders.ts` `twinOf`, `isCopy`): 5 minutes, the same person, customer and lines (and variant), both invoiced or both not. Every seeded pair is a minute apart, so no board moves. | `src/core/orders.ts`; the integration pass, 3 Nov |
 | Q12 | Which notes does "They gave" offer? Two rules disagreed. FACTS' tender rule (the counter, KC03): the next 5,000 and the next 10,000 above the total (52,000 → 55,000 / 60,000; 420,000 → 425,000 / 430,000). Customers' Take payment drew the next half and whole of the leading place (420,000 → 450,000 / 500,000 on CU35-CU37), which fits a big debt paid in big notes. | FACTS' rule, in `core/money.ts` `likelyNotes`, on both screens. CU35, CU36, CU37, CU41 and CU42 are corrected to it: Kato gives 430,000 for 420,000, 10,000 over (was 500,000, 80,000 over). | `src/core/money.ts`; `Pay.tsx`'s `notesFor` (removed); the integration pass, 3 Nov |
+| Q13 | A customer or number with no open chat: Grace writes from her own WhatsApp (`wa.me`, as today), or the shop sends its reply template from the shop's number (one way, as CH13 does for a shut chat)? | Her own WhatsApp, as today (CH09) | `sales.html:9970`; chats critic, 30 Oct |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;

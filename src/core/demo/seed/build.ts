@@ -43,6 +43,7 @@ export interface OrderSpec {
   deliverTo?: string | null;
   deliveredAt?: Ms | null;
   toldTotal?: number | null;
+  chatId?: number | null;
   credit?: { pct: number; days: number } | null;
 }
 
@@ -56,7 +57,7 @@ export function O(s: OrderSpec): Order {
     lines, charges: [], credit: s.credit ?? null, discount: 0,
     payments: s.payments ?? [], paid: 0,
     invoiced: s.invoicedAt != null, invoicedAt: s.invoicedAt ?? null, voided: !!s.voided, voidedAt: null, voidedBy: null, cancelled: !!s.cancelled, counter: !!s.counter,
-    deliverTo: s.deliverTo ?? null, deliveredAt: s.deliveredAt ?? null, toldTotal: s.toldTotal ?? null, qa: false,
+    deliverTo: s.deliverTo ?? null, deliveredAt: s.deliveredAt ?? null, toldTotal: s.toldTotal ?? null, chatId: s.chatId ?? null, qa: false,
   };
   o.paid = s.paid === -1 ? orderTotal(o) : s.paid ?? o.payments.reduce((a, p) => a + p.amount, 0);
   return o;
