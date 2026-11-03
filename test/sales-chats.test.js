@@ -75,6 +75,8 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const withRuth = servedThisYear(fb.orders, 'C001', [...await fresh.served(101), { by: 'u-ruth', messages: 4 }], '2026', new Set(['u-grace', 'u-brian', 'u-faith']));
   const ruthRow = withRuth.find((x) => x.by === 'u-ruth');
   t.check(!!ruthRow && ruthRow.orders === 0 && ruthRow.total === 0, 'a Manager who wrote in the chat: her messages count, her orders (#0498) never do (the lead\'s ruling)');
+  const F = require(path.join(ROOT, 'src/core/demo/flags.ts'));
+  t.check(F.readFlags('?demo&listen=1').listen && !F.readFlags('?demo').listen && F.HEARD === 'Yes, it can come to the Ntinda site', '&listen=1: the demo phone listens and hears Grace\'s answer to Kato (CH16)');
   const { oftenWith } = require(path.join(ROOT, 'src/core/often.ts'));
   const ow = oftenWith(fb.orders, { itemId: 'iron-g28-3m', variantIdx: null }, { customerId: 'C001', me: 'u-grace', skip: new Set(['cement-hima-50', 'iron-g28-3m', 'nails-4-25kg']), n: 99 });
   const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');

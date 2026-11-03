@@ -51,6 +51,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const [text, setText] = useState(typed.get(id) || '');
   const [note, setNote] = useState(false);
   const [sending, setSending] = useState(false);
+  const [listening, setListening] = useState(false);
   const [, redraw] = useState(0);
   const scroll = useRef<HTMLDivElement>(null);
   const keptN = kept.value.length;
@@ -80,7 +81,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const paid = cust && cust.owes > 0 ? saysPaid(v.waitMins != null ? lastIn : null) : null;
   const wants = (nobody || mine) && v.waitMins != null && lastIn ? wantsToBuy(b, lastIn.body) : [];
   const pend = shown.give && shown.give.chatId === id ? shown.give.event : null;
-  const answers = ((mine && !pend) || nobody) && v.waitMins != null && !note ? readyAnswers(b, cust, msgs, t) : [];
+  const answers = ((mine && !pend) || nobody) && v.waitMins != null && !note && !listening ? readyAnswers(b, cust, msgs, t) : [];
   const notes: ChatNote[] = th ? th.notes : [], events = [...(th ? th.events : []), ...(pend ? [pend] : [])];
   const items = entries(msgs, notes, events, kept.value, id);
   const whoseNow = pend ? b.members.find((m) => m.id === pend.to) || owner : owner;
@@ -173,7 +174,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
             </div></div>
           )}
           {note && <div class="cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
-          <ChatComposer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)}
+          <ChatComposer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
             shut={shut && !note} onAdd={add} sending={sending} />
         </>
       }>

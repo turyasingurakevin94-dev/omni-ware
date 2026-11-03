@@ -5,12 +5,12 @@
  * shows it done meanwhile, and leaving the chat sends it at once.
  *
  *   undoable('Kato is Brian’s now', () => write('give', […]), { top: 4, onUndo: … })
- *   the toast (CH21, CH31) is drawn on the page, above every sheet
+ *   the toast (CH31, CH36) is the shared P28 toast (ToastView), drawn on the page above every sheet
  *   sendPending()      leaving: what waits goes now
  */
 import { signal } from '@preact/signals';
 import { render, type JSX } from 'preact';
-import { Icon } from '../../../ui/icons.tsx';
+import { ToastView } from '../../../ui/toast.tsx';
 
 interface Pending { id: number; text: string; top: number; commit: () => unknown; onUndo: () => void; timer: number }
 
@@ -63,11 +63,10 @@ function undo(): void {
 export function UndoToast(): JSX.Element | null {
   const p = pending.value;
   if (!p) return null;
+  // The shared P28 toast, its Undo variant; the write itself waits here (sent on time out or on leaving).
   return (
-    <div role="status" class="cv-toast" style={{ top: `${p.top}px` }}>
-      <span aria-hidden="true"><Icon name="check" size={15} stroke={3} /></span>
-      <span>{p.text}</span>
-      <button type="button" onClick={undo}><span>Undo</span></button>
+    <div class="cv-toast-at" style={{ top: `${p.top}px` }}>
+      <ToastView key={p.id} text={p.text} undo={undo} onClose={() => {}} />
     </div>
   );
 }
