@@ -44,3 +44,17 @@ export function owedBy(b: Books, now: Ms): Owed[] {
     };
   });
 }
+
+/**
+ * The bills a Take pays, as customers/pay names them: the order ids, and `debt` for a charge that names no
+ * order (an opening balance or an adjustment), so the Take pays all that it says. Past the hold: the bills past
+ * it; otherwise every bill. A bill Accounts is checking is never in it (Ggaba: #0521 without #0528).
+ */
+export function takeBills(w: Pick<Owed, 'bills'>, past: boolean): string[] {
+  const out: string[] = [];
+  w.bills.filter((x) => !x.checked && (past ? x.past : true)).forEach((x) => {
+    const k = x.orderId == null ? 'debt' : String(x.orderId);
+    if (!out.includes(k)) out.push(k);
+  });
+  return out;
+}
