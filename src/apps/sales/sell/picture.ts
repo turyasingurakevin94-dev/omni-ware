@@ -3,7 +3,7 @@
  * Kato"; SL28 "Picture sent", SL29 "Picture not sent yet · Try again"):
  * the order drawn as the customer reads it (sales.html:6353 ordDrawPicture:
  * the shop, the number, each line, the total; a price coming says so), then
- * act('sendPicture'), so no signal keeps it to send again.
+ * act('sendImage'), so no signal keeps it to send again.
  */
 import { signal } from '@preact/signals';
 import { extraRows, lineTotal, money, orderTotal } from '../../../core/money.ts';
@@ -55,7 +55,7 @@ export async function sendPicture(o: Order, chatId: number): Promise<void> {
   set(o.id, { state: 'sending', chatId });
   try {
     const b = books.value, png = await drawOrder(o, b ? b.shop.name : 'Your order');
-    const r = await act('sendPicture', chatId, png, `${b ? b.shop.name : 'Your order'} · order ${orderNo(o.id)}`);
+    const r = await act('sendImage', chatId, png, `${b ? b.shop.name : 'Your order'} · order ${orderNo(o.id)}`);
     set(o.id, { state: r.kept ? 'failed' : 'sent', chatId });
   } catch (_e) {
     set(o.id, { state: 'failed', chatId });

@@ -181,6 +181,9 @@ export interface Order {
   invoiced: boolean;
   invoicedAt: Ms | null;
   voided: boolean;
+  /** When and by whom (payload.voidedBy {by, at}, 0176; before it payload.voidedAt, voidedBy). */
+  voidedAt: Ms | null;
+  voidedBy: string | null;
   /** status 'cancelled' (0177), or a void before the invoice. */
   cancelled: boolean;
   /** A counter sale: invoiced and paid on the spot (counter_sale). */
@@ -260,6 +263,11 @@ export interface Message {
   by: string | null;
   /** sent → delivered → read, or failed; 'kept' = on this phone, not sent yet. */
   state: 'sent' | 'delivered' | 'read' | 'failed' | 'kept' | null;
+  /**
+   * A picture's or file's link once known (payload.media_link; wa-send 'media' fetches it).
+   * The demo has no pictures: 'aisle:<Aisle>' stands for a photo of an item from that aisle.
+   */
+  media?: string | null;
 }
 
 /** A team note on a chat, never sent to the customer (wa_notes, 0170). */
@@ -313,10 +321,17 @@ export interface BillAsk {
   kind: 'void' | 'credit' | 'cancel';
   amount: UGX;
   reason: string;
+  /** A return's lines (invoice_asks.lines, 0123): idx is the line's place on the order, as the Manager reads it. */
+  lines?: AskLine[];
+  /** The asker's words (invoice_asks.note); a return from this app writes its lines here too ("Cement · Hima 50kg ×2"). */
+  note?: string;
   status: 'sent' | 'accepted' | 'declined' | 'withdrawn';
   by: string;
   at: Ms;
 }
+
+/** One line of a return ask: which line (its place on the order), how many come back, at what price. */
+export interface AskLine { idx: number; name: string; qty: number; price: UGX; amount: UGX }
 
 /** An ask to Accounts to correct a payment (payment_asks, 0130), or to settle paid-over money. */
 export interface PaymentAsk {
@@ -325,6 +340,8 @@ export interface PaymentAsk {
   customerId: string | null;
   orderId: number | null;
   what: 'method' | 'amount' | 'bill' | 'day' | 'over' | 'balance';
+  /** What it should be (payment_asks.want): { method, ref } · { amount } · { over, how: 'change' | 'deposit' } … */
+  want: Record<string, unknown>;
   amount: UGX;
   status: 'sent' | 'done' | 'declined' | 'withdrawn';
   by: string;

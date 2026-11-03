@@ -9,6 +9,7 @@
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
  *   &wa=down                 the shop's WhatsApp does not answer: sends are refused (SL29 "Picture not sent yet")
+ *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -24,6 +25,8 @@ export interface DemoFlags {
   waDown: boolean;
   /** The shop's WhatsApp answers slowly: a picture takes 10 s to go (&wa=slow). */
   waSlow: boolean;
+  /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
+  as: string | null;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -33,6 +36,7 @@ export function readFlags(search: string): DemoFlags {
   const q = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const clock = q.get('clock');
   const state = q.get('state') as DemoStateName | null;
+  const as = (q.get('as') || '').trim().toLowerCase();
   return {
     on: q.has('demo'),
     offline: q.get('offline') === '1',
@@ -40,5 +44,6 @@ export function readFlags(search: string): DemoFlags {
     state: state && STATES.includes(state) ? state : null,
     waDown: q.get('wa') === 'down',
     waSlow: q.get('wa') === 'slow',
+    as: /^[a-z]+$/.test(as) ? as : null,
   };
 }
