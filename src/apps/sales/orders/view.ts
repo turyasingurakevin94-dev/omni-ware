@@ -51,8 +51,10 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   const waiting = o.lines.filter(waitsRuth), fresh = freshPrice(o), ret = openAsk(b, o, 'credit');
   const vn = firstWord(member(b, o.voidedBy)?.name || rn), vAt = o.voidedAt ? (dayOf(o.voidedAt) === dayOf(now) ? `today ${clock(o.voidedAt)}` : when(o.voidedAt, now)) : '';
   const logAt = (s: Stage) => o.stageLog.find((x) => x.stage === s)?.at;
-  // Skipped: an order that started past Checking (all on our shelf). Otherwise a stage the log lacks takes the next one's time.
-  const skipped = o.stage === 'checking' || logAt('checking') != null ? [] : STAGES.slice(0, STAGES.indexOf(o.stage)).filter((s) => logAt(s) == null);
+  // Skipped: an order that started past Checking (all on our shelf), or a live one that went past a stage the log lacks
+  // (OR31: Checking → Packing, Buying skipped). A delivered order's missing stage takes the next one's time.
+  const missing = STAGES.slice(0, STAGES.indexOf(o.stage)).filter((s) => logAt(s) == null);
+  const skipped = o.stage === 'checking' || (logAt('checking') != null && o.stage === 'delivered') ? [] : missing;
   const times: Partial<Record<Stage, string>> = {};
   STAGES.forEach((s) => { const a = logAt(s); if (a != null) times[s] = railTime(a, now); });
   if (o.stage === 'delivered' && o.deliveredAt) times.delivered = railTime(o.deliveredAt, now);
@@ -114,7 +116,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
     }
     // Packing and after.
     if (l.state === 'packed' || o.stage !== 'packing') return { ...base, amount, mark: { k: 'ok', at: l.stateAt && o.stage === 'packing' ? clock(l.stateAt) : undefined, label: l.stateAt ? `Packed at ${clock(l.stateAt)}` : 'Packed' } };
-    return { ...base, amount, mark: { k: 'spin', word: 'packing', label: 'Packing now' } };
+    return { ...base, amount, was: l === fresh && rv && rv.was != null ? Math.round(rv.was * l.qty) : undefined, mark: { k: 'spin', word: 'packing', label: 'Packing now' } };
   });
   const live = lines.filter((l) => !l.gone);
   const okN = live.filter((l) => l.mark.k === 'ok').length;

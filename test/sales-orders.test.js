@@ -60,6 +60,14 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const c = await at('?demo&clock=15:05'), o2 = D.orderOf(c.b, 559), v2 = V.orderView(c.b, o2, c.now);
     t.check(M.orderTotal(o2) === 880000 && v2.tiles[0].old === 850000 && v2.sub === 'Ruth set 35,000 · 15:05', '#0559 at 15:05: 880,000 (was 850,000), Ruth set 35,000');
   }
+  /* OR31: Nansana's #0562 lives only at 15:05 (never at 10:41 or 15:40, so TD07's counts stay). */
+  {
+    const a = await at('?demo&clock=15:05'), o = D.orderOf(a.b, 562), v = V.orderView(a.b, o, a.now);
+    t.check(o && o.stage === 'packing' && M.orderTotal(o) === 88500 && v.sub === 'Ruth set 35,000 · 15:05', `#0562 at 15:05: Packing, 88,500, Ruth set 35,000 (got ${o && o.stage}, ${v.sub})`);
+    t.check(v.skipped.join() === 'buying' && v.times.checking === '14:40', 'OR31: Checking 14:40, Buying skipped');
+    t.check(v.lines[0].was === 67000 && v.head.summary === '0 of 2 packed', 'OR31: cement 67,000 struck, 0 of 2 packed');
+    for (const q of ['', '&clock=15:40']) { const x = await at('?demo' + q); t.check(!D.orderOf(x.b, 562), `#0562 is not there at ${q || '10:41'}`); }
+  }
   /* OR23: before the void. */
   {
     const { b } = await at('?demo&clock=9:15');

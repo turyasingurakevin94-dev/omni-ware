@@ -20,7 +20,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
-| `orders` | `{ stage? }` | orders | OR01–OR04 |
+| `orders` | `{ stage?, q? }` (`q`: the Find query, kept when an order is opened from Find so Back lands on it, OR29 → OR30) | orders | OR01–OR04, OR30 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
 | `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |
 | `customers` | `{ filter? }` | customers | CU01–CU08 |

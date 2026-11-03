@@ -35,7 +35,7 @@ export function OrdersList(p: ScreenProps): JSX.Element {
   const b = books.value, t = now.value;
   const [filter, setFilter] = useState<Filter>((p.params.stage as Stage) || 'all');
   const [oldest, setOldest] = useState(false);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(typeof p.params.q === 'string' ? p.params.q : '');
   const [open, setOpen] = useState<Stage[]>([]);
   const chips = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -56,7 +56,9 @@ export function OrdersList(p: ScreenProps): JSX.Element {
       <FindField value={q} onInput={setQ} />
     </PageHead>
   );
-  if (q.trim()) return <>{head}<Found b={b} q={q} t={t} /></>;
+  // An order opened from Find keeps the query on this screen's params, so Back and Close land on the same rows (OR29 → OR30).
+  const openFound = (id: number) => { nav.replace('orders', { ...p.params, q }); openOrder(id); };
+  if (q.trim()) return <>{head}<Found b={b} q={q} t={t} onOpen={openFound} /></>;
   if (!total) return <>{head}<Empty b={b} /></>;
   const stages = filter === 'all' ? STAGES : [filter];
   return (
@@ -124,7 +126,7 @@ function FindField(p: { value: string; onInput: (v: string) => void }): JSX.Elem
 }
 
 /** OR03 · what Find found: the customer with the one act, then their orders on the move and delivered. */
-function Found(p: { b: Books; q: string; t: number }): JSX.Element {
+function Found(p: { b: Books; q: string; t: number; onOpen: (id: number) => void }): JSX.Element {
   const { b, t } = p, r = findOrders(b, p.q), c = r.customer;
   const moving = r.orders.filter((o) => o.stage !== 'delivered').sort((x, y) => y.placedAt - x.placedAt);
   const gone = r.orders.filter((o) => o.stage === 'delivered').sort((x, y) => (y.invoicedAt || y.deliveredAt || 0) - (x.invoicedAt || x.deliveredAt || 0));
@@ -153,7 +155,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
               const it = first && b.items.find((x) => x.id === first.itemId);
               const what = o.stage === 'road' ? `with ${(b.members.find((m) => m.id === o.holderId)?.name || 'the driver').split(' ')[0]}` : first ? (k.length > 1 ? `${shortItem(first.name)} +${k.length - 1}` : `${shortItem(first.name)} ×${first.qty}`) : '';
               return <CustOrderRow key={o.id} aisle={o.stage === 'road' ? undefined : it?.aisle} icon={STAGE_ICON.road} title={`Placed ${when(o.placedAt)}`} sub={`${orderNo(o.id)} · ${what}`}
-                amount={orderTotal(o)} pill={{ text: STAGE_WORD[o.stage], tone: 'info' }} on={() => openOrder(o.id)} />;
+                amount={orderTotal(o)} pill={{ text: STAGE_WORD[o.stage], tone: 'info' }} on={() => p.onOpen(o.id)} />;
             })}
           </GroupCard>
         </div>
@@ -168,7 +170,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
               const age = daysApart(dayOf(at), today), tw = o.voided ? twinOf(b, o, true) : null;
               return <CustOrderRow key={o.id} icon="receipt" title={`${owes ? 'Billed' : 'Delivered'} ${daysApart(dayOf(at), today) < 7 ? weekday(at) + ' ' + clock(at) : dayLabel(at)}`}
                 sub={owes ? `${orderNo(o.id)} · ${age} day${age === 1 ? '' : 's'}` : o.voided && tw && tw.copy === o ? `${orderNo(o.id)} · copy of ${orderNo(tw.orig.id)}` : orderNo(o.id)} amount={orderTotal(o)} struck={o.voided}
-                pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => openOrder(o.id)} />;
+                pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => p.onOpen(o.id)} />;
             })}
             {!more && gone.length > 4 && <ShowMore faces={[]} n={gone.length - 4} on={() => setMore(true)} />}
           </GroupCard>
