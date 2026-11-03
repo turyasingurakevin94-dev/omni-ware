@@ -109,7 +109,7 @@ export function supabaseSource(): DataSource {
     },
     async askPaymentFix(a) {
       const p = (await books()).payments.find((x) => x.id === a.paymentId);
-      return W.askPaymentFix(sb(), me(), { ...a, amount: p ? p.amount : 0, customerId: p ? p.customerId : null, orderId: p ? p.orderId : null });
+      return W.askPaymentFix(sb(), me(), { ...a, amount: a.what === 'over' && Number(a.want.over) > 0 ? Number(a.want.over) : p ? p.amount : 0, customerId: p ? p.customerId : null, orderId: p ? p.orderId : null });
     },
     async withdrawPaymentAsk(id) { await W.withdrawPaymentAsk(sb(), id); },
 

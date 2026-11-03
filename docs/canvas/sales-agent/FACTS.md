@@ -38,6 +38,7 @@ Two rules hold everything together:
 | OR08 | today **13:30**: #0552 on the road | #0552's life after now |
 | OR09 | today **14:05**: #0552 delivered | #0552's life after now |
 | OR12, OR13 | today **13:50 / 15:05**: #0559 (Lubowa) | an order placed after now |
+| OR31 | today **15:05**: #0562 (Nansana) | the same new cement price, told on a shut chat |
 | TD07 | today **15:40**, "all caught up" state | a calm what-if |
 | TD02 | an afternoon "busy" what-if | its counts are its own; names, tints, prices and rhythms still follow this file |
 | TD06 | **a new salesperson's first day** (Sat 17 Oct, 8:00) | "Your first day" |
@@ -235,6 +236,10 @@ Delivery is **today, afternoon**, before the Friday Kato asked for. No board pro
 - **#0559 Lubowa** (OR12, OR13), placed **today 13:50**, later today:
   - lines: Cement · Hima 50kg 20 bag × 33,500 = **670,000** · Timber 4x2 · 12ft 10 pc **180,000** → **850,000**;
   - the cost went up; the shop's new price is 35,500. **Ruth sets 35,000 a bag at 15:05** → 700,000 → **880,000**.
+- **#0562 Nansana** (OR31), placed **today 14:40** by Grace, later today:
+  - lines: her usual pair, Cement · Hima 50kg 2 bag × 33,500 = **67,000** · Wood glue · 1L 1 tin **18,500** → **85,500**; both on our shelf;
+  - Ruth's 15:05 cement price reaches it: 2 × 35,000 = 70,000 → **88,500**; it moves to Packing (Musa), nothing packed yet, not paid;
+  - her chat is shut (last wrote Thu 15 Oct 16:02, **2 days**), so the new price goes by SMS.
 - **#0533 Kyaligonza** (OR24, OR25): a bill from Mon 24 Aug; **owes 420,000 now**.
   - Payments on it: Fri 9 Oct **Mobile 160,000** (Brian, ID 1193442087) · Wed 14 Oct **Cash 142,000** (Grace, 10:02) · today 10:40 **Bank 388,000**.
   - The 14 Oct one should be **Mobile 124,000** (18,000 less paid), so after Esther's correction KS owes **438,000**.
