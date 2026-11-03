@@ -134,6 +134,8 @@ const sum = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
   const O = require(path.join(ROOT, 'src/core/orders.ts'));
   const copies = b.orders.filter((o) => O.isCopy(b.orders, o)).map((o) => o.id).sort();
   t.check(copies.includes(557) && !copies.includes(556), `entered twice: #0557 is #0556's copy, #0556 is not (copies: ${copies.join(', ')})`);
+  const lateLive = b.orders.filter((o) => (o.stage === 'packing' || o.stage === 'road') && !o.voided && !o.cancelled && O.daysInStage(o, now) >= O.LATE_DAYS).map((o) => o.id);
+  t.check(lateLive.join() === '530', `late: only #0530 has sat 2+ days in packing or on the road (got ${lateLive.join(', ')})`);
   const n9002 = b.payments.find((p) => p.id === 9002);
   t.check(M.paidOver(b, n9002).over === 90000, "Nansana's 560,000 at 8:52 is 90,000 over");
 
