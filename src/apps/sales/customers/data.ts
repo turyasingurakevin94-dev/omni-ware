@@ -5,8 +5,8 @@
  * src/core/money.ts's (orderOwes, holdDay, pastHold), never re-derived here.
  */
 import { holdDay, orderOwes, pastHold } from '../../../core/money.ts';
-import { isCopy } from '../../../core/orders.ts';
-import { addDays, dayOf, daysApart } from '../../../core/time.ts';
+import { rhythm } from '../../../core/customers.ts';
+import { dayOf, daysApart } from '../../../core/time.ts';
 import type { Books, Customer, Day, Order, PayPromise, PaymentAsk } from '../../../core/types.ts';
 
 export interface Bill {
@@ -82,16 +82,16 @@ export interface Rhythm {
   fill: number;
 }
 
-/** Last order = the most recent order placed (FACTS §3.2); next due = last + their rhythm; twice the gap = gone quiet. */
+/**
+ * The ring and dots of a customer's rhythm, read off the one rule (core/customers.ts rhythm: last order, due,
+ * gone quiet). Only the picture is worked out here: the tone and how much of their gap has run out.
+ */
 export function rhythmOf(b: Books, c: Customer, today: Day): Rhythm {
-  // A copy (entered twice) and a voided order are not an order they placed (FACTS: Nansana's last is #0556 10:02, not the copy #0557).
-  const mine = b.orders.filter((o) => o.customerId === c.id && !o.qa && !o.cancelled && !o.voided && !isCopy(b.orders, o));
-  const last = mine.reduce<Order | null>((m, o) => (!m || o.placedAt > m.placedAt ? o : m), null);
-  const every = c.everyDays && c.everyDays > 0 ? c.everyDays : null;
-  if (!last || !every) return { every, last, lastDay: last ? dayOf(last.placedAt) : null, due: null, toDue: 1, tone: 'early', fill: 0 };
-  const lastDay = dayOf(last.placedAt), due = addDays(lastDay, every), toDue = daysApart(today, due), gone = daysApart(lastDay, today);
-  const tone: RingTone = gone >= every * 2 ? 'quiet' : toDue < 0 ? 'late' : toDue === 0 ? 'due' : 'early';
-  return { every, last, lastDay, due, toDue, tone, fill: tone === 'early' ? Math.max(0, Math.min(1, gone / every)) : 1 };
+  const r = rhythm(c, b.orders, today), last = r.lastOrder, every = r.every;
+  if (!last || !every || !r.last || !r.next) return { every, last, lastDay: r.last, due: null, toDue: 1, tone: 'early', fill: 0 };
+  const toDue = -(r.late || 0), gone = r.since || 0;
+  const tone: RingTone = r.quiet ? 'quiet' : toDue < 0 ? 'late' : toDue === 0 ? 'due' : 'early';
+  return { every, last, lastDay: r.last, due: r.next, toDue, tone, fill: tone === 'early' ? Math.max(0, Math.min(1, gone / every)) : 1 };
 }
 
 /** The promise to pay still ahead (or today), soonest first. */

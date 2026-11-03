@@ -7,7 +7,7 @@
  *   - Take payment, cash, all of it, from the list's row: Paid, owes now 0,
  *     the receipt sent; the list then has 3 who owe;
  *   - Mobile with no transaction ID: the slide waits (Q6);
- *   - change and deposit: what is recorded (420,000 and 500,000);
+ *   - change and deposit: what is recorded (420,000 and 430,000);
  *   - a promise to pay is recorded; a bill being checked goes to Esther; Message Esther is a team note;
  *   - a new customer from the newest unsaved chat is added; a number
  *     already saved is caught and opens that customer;
@@ -85,14 +85,14 @@ async function flows(browser) {
   await p.getByLabel('Transaction ID').fill('12046113570');
   t.check((await p.locator('.ow-knob').count()) === 1, 'mobile: with the ID the slide can go');
   await p.getByRole('radio', { name: 'Cash' }).click();
-  await p.getByRole('radio', { name: '500,000' }).click();
-  t.check(/80,000 change/.test(await text(p)), 'cash over: 80,000 change');
+  await p.getByRole('radio', { name: '430,000' }).click();
+  t.check(/10,000 change/.test(await text(p)), 'cash over: 10,000 change');
   t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 420,000', 'cash over, change: records 420,000');
   await p.getByRole('radio', { name: 'Deposit' }).click();
-  t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 500,000', 'cash over, deposit: records 500,000');
+  t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 430,000', 'cash over, deposit: records 430,000');
   await slide(p);
   s = await text(p);
-  t.check(/Deposit/.test(s) && /Kato said keep 80,000/.test(s), 'deposit: on the slip, and said on Paid');
+  t.check(/Deposit/.test(s) && /Kato said keep 10,000/.test(s), 'deposit: on the slip, and said on Paid');
   await ctx.close();
 
   ({ ctx, p, errors } = await open(browser));

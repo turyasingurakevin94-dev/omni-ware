@@ -13,7 +13,7 @@ import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
 import { MethodPicker } from '../../../ui/PayMethod.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { isDataError, type PayArgs, type PayResult } from '../../../core/datasource.ts';
-import { changeFor, money, orderOwes, payPlan, settleOver, splitPayment } from '../../../core/money.ts';
+import { changeFor, likelyNotes, money, orderOwes, payPlan, settleOver, splitPayment } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Customer, Method, Order } from '../../../core/types.ts';
@@ -37,14 +37,6 @@ export function PayScreen(p: ScreenProps): JSX.Element {
   const o = b && p.params.order != null ? b.orders.find((x) => x.id === Number(p.params.order)) || null : null;
   if (!b || (!c && !o)) return <FullSheet onBack={() => nav.back()} backLabel="Back" head={<div class="ow-shead"><span aria-hidden="true" class="ow-shead-grab" /></div>} />;
   return <Pay b={b} c={c} o={o} bills={p.params.bills != null ? String(p.params.bills).split(',').map(Number).filter((n) => n > 0) : null} />;
-}
-
-/** The two likely notes above a figure: the next half and whole of its leading place (420,000 → 450,000 · 500,000; 52,000 → 55,000 · 60,000). */
-export function notesFor(n: number): number[] {
-  if (!(n > 0)) return [];
-  const place = Math.pow(10, Math.floor(Math.log10(n))), out: number[] = [];
-  [place / 2, place, place * 2].forEach((s) => { const v = Math.ceil((n + 1) / s) * s; if (v > n && !out.includes(v)) out.push(v); });
-  return out.slice(0, 2);
 }
 
 function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null }): JSX.Element {
@@ -137,7 +129,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const face = c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' as const };
   return (
     <FullSheet onBack={() => nav.back()} backLabel="Back" head={<SheetHead face={face} name="Take payment" sub={sub} onClose={() => nav.back()} />}
-      foot={<PayDock method={method} given={given} notes={notesFor(amount)} onGiven={setGiven} amount={amount} owes={owes} after={after} payable={payable}
+      foot={<PayDock method={method} given={given} notes={likelyNotes(amount)} onGiven={setGiven} amount={amount} owes={owes} after={after} payable={payable}
         over={choice ? { how, amount: plan.over } : null} change={settle.change} record={choice ? record : amount}
         receipt={c ? { on: receipt, label: `Send ${name} the receipt on WhatsApp`, toggle: () => setReceipt(!receipt) } : null}
         walkin={o && !c ? { id: o.id, total: owes, who: whoC ? { name: short(whoC.name), owes: whoC.owes + shareFor(o as Order, amount) } : null, left: walkLeft } : null}

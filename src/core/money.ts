@@ -199,6 +199,7 @@ export const NOTES: UGX[] = [50000, 20000, 10000, 5000, 2000, 1000];
  * The two notes a customer most likely hands over for a total: the next 5,000 and the next 10,000 above it
  * (then 20,000, 50,000, 100,000 when those are the same). FACTS "Tender rule": 52,000 → 55,000 / 60,000;
  * 203,500 → 205,000 / 210,000. sales.html ctGivenChoices started at the next 1,000; the canvas (KC03) wins.
+ * The counter (They gave) and Take payment (CU35-CU37) both use it; spec 04 Q12 asks Kevin.
  */
 export function likelyNotes(total: UGX): UGX[] {
   const t = whole(total), out: UGX[] = [];
