@@ -142,14 +142,14 @@
   "TD21AskLooking.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (the board's item square now neutral: no catalogue item, no aisle). Tell Lubowa · still looking writes send(102), toasts, back to the list; a no-chat send would now show an error and claim nothing.",
+    "note": "On 6cefb496: parity 0%, strict diff 17 px of antialiasing; 'Lubowa Builders asked for 4 · Tue' still whole. Controls right. Take the head change in TD22's note with the others, so the four ask heads stay one design.",
     "by": "today critic",
     "at": "2026-11-03"
   },
   "TD22AskListed.dc.html": {
     "verdict": "fail",
-    "score": 7.5,
-    "note": "REGRESSION in 819e56b2: the head reads 'Mukono Roofing asked for 6' where the board reads 'Mukono Roofing asked for 6 · Mon' (strict diff 1,696 px; bbox ends at x254, board x286). Cause: Ask.tsx line 148 shows the asked day only when `a.status === 'looking' && a.tried.length > 0` — a rule fitted to TD21 (· Tue), TD26 and TD27 (no day). Fix: the real rule — show ' · ' + weekday(first.at) unless it was asked today (dayOf(first.at) === today); and correct TD27's board head to 'Nansana Hardware asked for 1 · Thu' (TD26 stays without a day: asked today). Controls re-tapped and right: Tell Mukono writes sendImage(104, photo, message); Start their order -> sell/order {customer, items:[{itemId, qty}]}.",
+    "score": 8.0,
+    "note": "On 6cefb496: parity 0%, strict diff 7 px of antialiasing, controls right (Tell Mukono writes sendImage; Start their order -> sell/order {customer, items}). The day rule is now real (shown unless asked today). FAIL on polish/truth, in board and app alike: the head now reads 'Mukono Roofi…  asked for 6 · Mon' — the long-name rule cuts the customer's name, on the screen whose one job is telling that customer, to keep words the screen already shows elsewhere; before 0bc3880a the whole line fit. Fix (boards TD21, TD22, TD26, TD27 and Ask.tsx/ask.css together): take 'asked for N · Day' out of the head; the line under the item becomes the customer's avatar and full name only, cut with an ellipsis only if the name alone is wider than the space before Close. Nothing is lost: the rail already shows the day (Asked Mon / Tue / Thu / now) and the quantity is on the screen (the 'Asked for N' tile on TD21, TD26, TD27; 'MR 6 tins' on TD22). Also remove the stray gap the current markup leaves between the ellipsis and 'asked' (a &nbsp; in its own flex:none span). Do not move the words to a third line: that grows the head 16 px on every ask and TD21 has no slack above its button.",
     "by": "today critic",
     "at": "2026-11-03"
   },
@@ -177,14 +177,14 @@
   "TD26AskAsked.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "New board, built: harness 0%; the strict diff is sub-pixel text antialiasing only (centroids within 0.12 px). 'today' in Figtree; 'the solar water pump 1hp' with no plural after the size (askSaid). Back/Close -> TD19; Tell Kato · looking for it writes send(101) and toasts.",
+    "note": "On 6cefb496: parity 0%, strict diff 8 px of antialiasing; 'Kato Construction asked for 2' whole (asked today, no day). Controls right. Take the head change in TD22's note with the others.",
     "by": "today critic",
     "at": "2026-11-03"
   },
   "TD27AskFound.dc.html": {
-    "verdict": "pass",
-    "score": 9.0,
-    "note": "New board, built: 8 px of antialiasing at threshold 6. Back/Close -> TD19; Tell Nansana · found it writes sendTemplate(105) (her 24 hours are over) and toasts. Note: its board omits the asked day, which is what the fitted rule in TD22's note copies — fix the board with TD22.",
+    "verdict": "fail",
+    "score": 8.0,
+    "note": "On 6cefb496: parity 0%, strict diff 8 px of antialiasing, controls right (Tell Nansana · found it writes sendTemplate(105)). FAIL on polish/truth: the default state reads 'Nansana Hard…  asked for 1 · Thu' — not acceptable; the name is what Grace reads to know who she is telling. Fix (boards TD21, TD22, TD26, TD27 and Ask.tsx/ask.css together): take 'asked for N · Day' out of the head; the line under the item becomes the customer's avatar and full name only, cut with an ellipsis only if the name alone is wider than the space before Close. Nothing is lost: the rail already shows the day (Asked Mon / Tue / Thu / now) and the quantity is on the screen (the 'Asked for N' tile on TD21, TD26, TD27; 'MR 6 tins' on TD22). Also remove the stray gap the current markup leaves between the ellipsis and 'asked' (a &nbsp; in its own flex:none span). Do not move the words to a third line: that grows the head 16 px on every ask and TD21 has no slack above its button.",
     "by": "today critic",
     "at": "2026-11-03"
   }
