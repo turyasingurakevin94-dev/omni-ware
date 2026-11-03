@@ -45,7 +45,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const op = delivered ? overPaymentOf(b, o) : null;
   const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: overOf(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${overOf(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
   const acts: Act[] = [];
-  if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone ? 'tel:' + phone.replace(/\s/g, '') : undefined });
+  if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone9(phone) ? 'tel:+256' + phone9(phone) : undefined });
   else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
   acts.push({ bg: '#DCEAF8', fg: '#1A5A8A', icon: 'receipt', word: 'Receipt', sub: o.voided ? 'voided' : pending ? 'as it stands' : v.bill ? `${o.paid.toLocaleString('en-US')} paid` : total.toLocaleString('en-US'), on: () => go('customers/paid', { id: o.id }) });
   if (o.voided) { /* nothing to fix on a voided bill */ }
