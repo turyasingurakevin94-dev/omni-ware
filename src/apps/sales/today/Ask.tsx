@@ -145,7 +145,7 @@ export function Ask(p: ScreenProps): JSX.Element {
         <div class="ow-shead-row">
           <ItemSquare aisle={askAisle(b, a)} size={44} icon={26} />
           <div class="td-ask-ht"><span>{it ? it.name : a.name}</span>
-            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)}${tried ? ' · ' + weekday(first.at) : ''}`}</span></div>
+            <span>{c && <Avatar initials={c.initials} tint={c.tint} size={20} style={{ letterSpacing: 'normal' }} />}{`${c ? c.name : 'They'} asked for ${askQty(a)}${dayOf(first.at) === today ? '' : ' · ' + weekday(first.at)}`}</span></div>
           <button type="button" class="ow-shead-x" aria-label="Close" onClick={close}><Icon name="close" size={16} stroke={2.2} /></button>
         </div>
         <div class="td-ask-state">
