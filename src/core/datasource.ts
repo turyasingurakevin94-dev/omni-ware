@@ -127,7 +127,7 @@ export interface DataSource {
    */
   assignOrder(orderId: number, customerId: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
-  askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string }): Promise<BillAsk>;
+  askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk>;
   /** Take back any ask of yours that still waits: a void, a credit or a cancel. */
   withdrawBillAsk(id: string): Promise<void>;
   /**
@@ -140,7 +140,7 @@ export interface DataSource {
   receivePayment(a: PayArgs): Promise<PayResult>;
   recordPromise(a: { customerId: string; on: Day; amount: UGX | null }): Promise<PayPromise>;
   /** Ask Accounts to correct a payment (payment_asks). */
-  askPaymentFix(a: { paymentId: number; what: 'method' | 'amount' | 'bill' | 'day'; want: Record<string, unknown>; note: string }): Promise<PaymentAsk>;
+  askPaymentFix(a: { paymentId: number; what: 'method' | 'amount' | 'bill' | 'day' | 'over'; want: Record<string, unknown>; note: string }): Promise<PaymentAsk>;
   withdrawPaymentAsk(id: string): Promise<void>;
 
   /* customers */

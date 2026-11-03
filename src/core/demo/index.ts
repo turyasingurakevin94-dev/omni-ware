@@ -6,6 +6,7 @@
  * below), as the server function it stands in for would.
  */
 import { dataError, type DataSource } from '../datasource.ts';
+import { askLines } from '../orders.ts';
 import type { Kept } from '../outbox.ts';
 import { dayOf, replyWindow } from '../time.ts';
 import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
@@ -104,7 +105,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askBill: (a) => write(() => {
       const o = s.books.orders.find((x) => x.id === a.orderId);
       if (!o || !o.invoiced) throw dataError('refused', 'Only a bill can be voided or credited');
-      const ask = { id: 'ba' + (s.books.billAsks.length + 1), orderId: o.id, customerId: o.customerId, kind: a.kind, amount: Math.round(a.amount), reason: a.reason || (a.kind === 'void' ? 'Raised twice' : ''), status: 'sent' as const, by: me.id, at: s.now };
+      const ask = { id: 'ba' + (s.books.billAsks.length + 1), orderId: o.id, customerId: o.customerId, kind: a.kind, amount: Math.round(a.amount), reason: a.reason || (a.kind === 'void' ? 'Raised twice' : ''), lines: a.kind === 'void' ? [] : askLines(o, a.lines), note: a.note.trim(), status: 'sent' as const, by: me.id, at: s.now };
       s.books.billAsks.push(ask);
       return copy(ask);
     }),
@@ -120,7 +121,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askPaymentFix: (a) => write(() => {
       const pay = s.books.payments.find((x) => x.id === a.paymentId);
       if (!pay) throw dataError('refused', 'That payment is not in the books');
-      const ask = { id: 'pa' + (s.books.paymentAsks.length + 1), paymentId: pay.id, customerId: pay.customerId, orderId: pay.orderId, what: a.what, amount: pay.amount, status: 'sent' as const, by: me.id, at: s.now };
+      const ask = { id: 'pa' + (s.books.paymentAsks.length + 1), paymentId: pay.id, customerId: pay.customerId, orderId: pay.orderId, what: a.what, want: { ...a.want }, amount: a.what === 'over' && Number(a.want.over) > 0 ? Number(a.want.over) : pay.amount, status: 'sent' as const, by: me.id, at: s.now };
       s.books.paymentAsks.push(ask);
       return copy(ask);
     }),

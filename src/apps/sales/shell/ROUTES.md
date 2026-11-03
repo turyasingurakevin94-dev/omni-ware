@@ -21,7 +21,8 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
-| `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR26 |
+| `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
+| `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |
 | `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU09 (CU09: the Quiet chip) |
 | `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
 | `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
@@ -40,4 +41,9 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 
 | Function | Owner | Boards |
 |---|---|---|
-| _(add as built)_ | | |
+| `openTell(orderId)` | orders | OR10, OR11 (over the order on screen) |
+| `openChange(orderId)` | orders | OR17 → OR18; a live copy entered twice goes to OR19 |
+| `openTwice(orderId)` | orders | OR19 (live), OR23 (invoiced): either order of the pair; TD16's copy row |
+| `openWrong(orderId)` | orders | OR20 "Something wrong" → OR21, OR24 → OR25, OR26; an invoiced copy goes to OR23 |
+
+A sheet opens over whatever is on screen; to show it over its order, `nav.push('orders/order', { id })` first, then call it.
