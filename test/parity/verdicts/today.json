@@ -2,176 +2,176 @@
   "TD01Today.dc.html": {
     "verdict": "pass",
     "score": 9.5,
-    "note": "Pixel-identical (6 px of tab-bar icon antialiasing at a strict threshold). Every control checked: Find, You, Sold (today/day placed), Goal, +3.2M and stage tiles (orders {stage}), 1.9M and Take payment (today/to-collect), Mukono Take 1.1M (sell/order {customer}), Tell (openTell(0) sheet), Chats waiting (nav.tab chats), Play all (scrolls to Next move), tab bar. Cross-tab links land on that tab's root until it is merged; route ids checked in code against ROUTES.md. Note: Call Kyaligonza dials the seed's 0772 455 610; the board's href is a placeholder (+256772000105), not a FACTS figure. Rule concern (not this board's fault): no 'Packing 2+ days' row with 1 late order is a fitted threshold, see report.",
+    "note": "Re-judged on 1b2d25a7: pixel-identical (21 px of corner and tab-icon antialiasing at threshold 6). All controls re-tapped and right. Mukono's 'Take 1.1M' now opens customers/pay {customer, bills: unchecked bills + #0551} per spec 04 §4.1 'A Take pays named bills' (the board's SL30Mukono href predates that ruling; accepted). Cross-tab links land on that tab's root until it is merged; route ids and params checked in code against ROUTES.md. Note: Call Kyaligonza dials the seed's 0772 455 610, not the board's placeholder href.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD02TodayBusy.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical but for 14 px of corner antialiasing. Controls as TD01 plus 'Packing 2+ days' -> orders {stage:'packing'}, which matches the board's OR01. Stale spec note: '&state=busy is read from the address until flags.ts lists it' — flags.ts now lists it; fix the note.",
+    "note": "Harness 0%; the strict diff shows only sub-pixel text antialiasing (no glyph moves a whole pixel). Controls right; 'Packing 2+ days' -> orders {stage:'packing'} (batch-ask rule, spec 04 §4.1).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD03TodayNext.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (46 px of card-corner antialiasing). Back to the top scrolls up; Order usual -> sell/order {customer, from:'usual'}; Tell Mukono the paint -> today/asks {id} (TD22); Tell Kato the new price -> Tell sheet (TD04); Resume Lubowa -> sell/order {customer, from:'chat', chat}. Note (cross-tab param): 'Reply to Lubowa Builders' (NextMoves.tsx MoveRow, kind 'chat') calls sell/order {customer, from:'chat'} without the chat id that Resume passes for the same board (SL04FromChat); pass chat: the draft's chatId.",
+    "note": "Identical (corner antialiasing). Reply to Lubowa now passes chat (sell/order {customer, from:'chat', chat}); Order usual, Tell Mukono the paint (TD22), Tell Kato the new price (TD04), Resume rows all right.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD04TodayTell.dc.html": {
-    "verdict": "fail",
-    "score": 7.5,
-    "note": "Visual: identical (sheet-corner antialiasing only). Controls: Close, Next -> TD22, Send to Kato (send to chat 101 + markPriceTold 552 + toast, then TD22), They know already (markPriceTold 552, then TD22) all right. FAIL on what it writes: Tell.tsx TellSheet.send calls done(ok) even when sendTo returns false (the customer has no WhatsApp chat), so done() marks the price told on this phone AND writes act('markPriceTold') to the books although nothing was sent. Fix: in send(), `if (!ok) { toast.show(`No chat with ${who}`, { kind: 'error' }); return; }` and only call done(true) after a real send. Also use now.value, not b.at, for the 24-hour reply window in sendTo's caller.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Fixed: a send with no chat now shows 'No chat with X · Nothing was sent' and marks nothing told (sentToast); the reply window uses now.value. Re-tapped: Send to Kato writes send(101) + markPriceTold(552) and goes to TD22; They know already writes markPriceTold(552) only; Close shuts the sheet. Visual identical (sheet-corner antialiasing).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD05ToCollect.dc.html": {
     "verdict": "pass",
-    "score": 8.5,
-    "note": "Identical but for 28 px of avatar-initial antialiasing ('EA'). Controls: Back/Close -> Today; Ggaba row and 'EA 125,000 being checked' -> customers/customer {id}; Kyaligonza row -> customers/customer; Take 420,000 and Take 165,000 -> customers/pay {customer}; Mukono row and Take 1,100,000 -> sell/order {customer} (SL30); Kato row -> customers/customer; Remind Kato -> chats/chat {id}. Cross-tab links land on that tab's root until it is merged; route ids checked in code against ROUTES.md. Notes for the lead: (1) the board links Ggaba's Take to CU11CustomerChecked (customers/customer), the app goes straight to customers/pay — fewer taps and consistent with Kyaligonza's, accepted, but say so in ROUTES; (2) no Take passes `bills`, so the Pay tab cannot know to leave out Ggaba's 125,000 being checked (165,000, not 290,000): pass bills: the past, not-checked bill ids (ROUTES customers/pay has bills?); (3) Play all 2 opens only the first customer's payment. Rule concern: promises show only on their due day (fitted; hides Ggaba's Tue 20 Oct promise and every broken promise), see report.",
+    "score": 9.0,
+    "note": "Identical (avatar-initial antialiasing). Every Take now opens customers/pay with named bills (Ggaba #0521 only, never #0528 being checked; Mukono every bill + #0551) and Play all passes then. Promise shown by promiseState (due today and open, or broken). Cross-tab links land on that tab's root until it is merged; route ids and params checked in code against ROUTES.md. Note on takeOf: a debt-log charge with no order id is left out of `bills`, so a Take whose amount includes such a charge would pay less than it says; the demo has none, but core/owing.ts should carry it (lead).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD06TodayFirst.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (single-pixel antialiasing). Take your first order -> sell (SL01); Turn on alerts -> today/you; Sells most -> sell/order (SL11). Rule concern: 'Sells most' is not computed from sales (first three of a static seeded aisle list) and the same list is labelled 'last month' here and 'this month' on TD11, see report.",
+    "note": "Harness 0%; strict diff sub-pixel antialiasing only. 'Sells most · the shop, last month' now computed from last month's invoiced sales (Roofing, Cement, Fasteners) because nothing has sold on 1 Oct; controls right.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD07TodayCalm.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (21 px antialiasing). '2 paid since morning' -> today/day {view:'money'} (TD17); Kyaligonza card -> sell/order {customer, from:'usual'} (board links TD03, where that Order usual lives; going straight to the order is the card's own label, accepted); Mukono 'Say hi' -> chats/chat {id} (CH12). Note: 1.3M to collect then opens To collect with a 'Take 0' key — an undrawn state of TD05 (hide the Take key and the Past 21 days section when nothing is past).",
+    "note": "Harness 0%; strict diff sub-pixel antialiasing only (centroids within 0.4 px). Controls right. Leftover note: '1.3M to collect' opens To collect with a 'Take 0' key, an undrawn state of TD05 (hide the Take key when nothing is past).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD08TodayGoalHit.dc.html": {
-    "verdict": "fail",
-    "score": 7.0,
-    "note": "FAIL colour: in 'Goal hit · +1.2M over' the board draws +1.2M in mint #6FDCB0 (inherits the span's colour); the app draws it white (#FFFFFF), 191 px. Cause: src/ui/hero.css `.ow-hero-goal-l b { color:#FFFFFF }` beats local-hero.css `.td-hero-hit b`. Fix in local-hero.css: `.ow-hero-goal-l .td-hero-hit b { color: inherit; }`. Everything else identical; controls (35M passed card scrolls to Next move; Take payment -> to-collect) work.",
+    "verdict": "pass",
+    "score": 9.5,
+    "note": "Fixed: '+1.2M' is mint. Identical (16 px antialiasing). Controls right.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD09TodayOffline.dc.html": {
-    "verdict": "fail",
-    "score": 8.0,
-    "note": "FAIL: 'Try again' text sits 1 px lower inside its pill than the board (ink rows 247-259 vs 246-258; the pill itself matches). Cause: src/ui/notice.css `.ow-notice-act` sets only font-family, so the button keeps line-height: normal; the board's button has `font: inherit`. Fix (shared part, own commit): `.ow-notice-act { font: inherit; color: inherit; }` — verified: with it the board and app differ by 6 px of tab-bar antialiasing only. Controls: Try again and 'Not sent yet · Send' flush the outbox (send chat 103), Take payment -> to-collect, tiles -> orders; Chats count hidden offline (shell commit 6b4bd99e) matches.",
+    "verdict": "pass",
+    "score": 9.5,
+    "note": "Fixed: 'Try again' sits on the board's line (Notice part inherits font). Identical apart from antialiasing. Try again and 'Not sent yet · Send' flush the outbox.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD10SignedElsewhere.dc.html": {
     "verdict": "pass",
     "score": 9.5,
-    "note": "Pixel-identical. Sign in as yourself -> signOut then the sign-in screen; Open the Store app -> store.html.",
+    "note": "Pixel-identical. Sign in as yourself -> signOut; Open the Store app -> store.html.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD11Find.dc.html": {
-    "verdict": "fail",
-    "score": 8.0,
-    "note": "Visual: identical but the placeholder is #6B7480 (LANGUAGE's colour on white) where the board shows the browser default #757575 — accepted under the placeholder ruling. Controls: Back, chips (filter), waiting chats (Lubowa -> sell/order from chat; Kato and the new number -> chats/chat), Lately (#0552 -> orders/order {id:552}; Mukono -> sell/order {customer}), Cement opens the item, past searches fill the query, Sells most -> sell/order. FAIL: 'Say it' (Find.tsx listen) is a silent tap: it starts recognition with no listening state, no onerror, and does nothing at all where webkitSpeechRecognition is missing (the Capacitor Android WebView). Fix: draw a listening state (TD board) and build it; where speech is missing, focus the field so the keyboard's own mic is one tap away; handle onerror with a toast.",
-    "by": "today critic",
-    "at": "2026-10-30"
-  },
-  "TD12FindTyped.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Within the row-height ruling: everything from #0553 down sits exactly 1 px lower; the #0553 row's contents centre half a pixel differently (expected from a 65 px row). Nothing else differs. Note: the spec note says 2 px by the Chats group; the app actually shifts 1 px, because #0534 (last row, no divider) is 64 px in the app too — correct the note. Controls: Best match -> customers/customer; New order for Kato -> sell/order {customer}; Chat -> chats/chat; Call tel:+256772418220; #0553/#0552/#0534 -> orders/order {id}; chat row -> chats/chat; usual tiles -> sell/order {customer, items}; Kato's ask -> today/asks {id}, which shows the list (TD19) because Ask.tsx falls back for an ask that is not looking or listed — matches the board.",
+    "note": "Pixel-identical (the board now draws LANGUAGE's placeholder colour). 'Say it' opens the shared ListenSheet (SL34) and focuses the field where the phone cannot listen. SL34's own board is not in this worktree, so its parity is the Sell critic's to judge. Other controls right; Sells most -> sell {aisle}.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
+  },
+  "TD12FindTyped.dc.html": {
+    "verdict": "fail",
+    "score": 8.0,
+    "note": "Visual within the row ruling (1 px from #0553 down, nothing else). Controls right except one: 'Kato asked Moses for Solar water pump 1hp' -> today/asks {id} now opens that ask's own screen at 'Asked', which no board draws (the board still links TD19Asks). Fix: draw the ask screens the lead's 'every ask opens' ruling now reaches, as new boards in the TD series with /design (an ask at Asked: Kato's solar water pump 1hp; an ask at Found/Priced: Nansana's tile cutter 600mm), get them scored (at least 8.5 on every axis), set TD19's three bare <a> rows and TD12's 'Kato asked Moses for' card to href them, and build Ask.tsx to them. What the app shows today on those screens has visible faults the boards must settle: 'Kato waits 0 days' (say 'today'), 'the solar water pump 1hps' (askMessage/said pluralises a name ending in a size), and the screen is half empty under the message (BRIEF: filled to the bottom). Minor: the 'usually buys' tiles start the order with qty 1, not the usual's quantity.",
+    "by": "today critic",
+    "at": "2026-11-03"
   },
   "TD13FindItem.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Pixel-identical. Sell at the counter -> counter; Add to Lubowa's order and the two Often-with + -> sell/order {customer, from:'chat', chat, items}; other hinge rows open that item; Ask -> Ask Moses sheet prefilled.",
+    "note": "Pixel-identical. Sell at the counter -> counter; Add to Lubowa's order and the Often-with + -> sell/order {customer, from, chat, items:[{itemId,qty}]}; Ask -> Ask Moses prefilled.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD14FindNothing.dc.html": {
-    "verdict": "fail",
-    "score": 7.5,
-    "note": "Visual: identical (9 px antialiasing). FAIL on a control: tapping a closest row ('Wheelbarrow, heavy duty') runs addTo(), which puts the item on the newest draft — Lubowa's order — although the row names no customer and the board draws it as a plain button. A search result must not write into someone's order. Fix (FindItems.tsx Nothing): the row opens the item in Find as TD11's Cement row does (set the query to the item's name); keep '+' as the way onto an order. Notes (cross-tab params): '+ Put X on an order' calls go('sell') and the item is lost (ROUTES `sell` takes no params — add items? there or use sell/order {items}); aisle tiles call sell/order with no aisle (no ROUTES param for it). 'Did you mean' scrolls to #closest, as drawn. Rule: nearAisles (own aisle, then aisles bought with them, then shop order) is a real rule, but its seed (7 invented September counter sales in today.ts) was written to produce exactly the board's order — see report.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Fixed: a closest row now opens that item in Find (no write into anyone's order); '+' -> sell {items}; aisle tiles -> sell {aisle}. Identical (1 px antialiasing). nearAisles is a real rule (spec 04 §4.1); its demo seed (invented September counter sales) is fitted to give the drawn order — see report.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD15Goal.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical but for sub-pixel antialiasing of text and the pace mark (no shift of a whole pixel anywhere). Controls: Back/Close; On the move -> orders; Kyaligonza -> Today, scrolled to Next move (TD03); Lubowa -> sell/order {customer, from:'chat'}; Mukono -> today/asks {id} (TD22). Note: Lubowa's link omits the chat id (pass chat, as Resume does).",
+    "note": "Identical but for sub-pixel antialiasing of the 'RN' avatar and the pace mark. Lubowa now passes chat. Other controls right.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD16DaySold.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Within the row-height ruling: 1 px from #0550, 2 px from #0555, 3 px from #0553, the total and Best customers — exactly the note. Nothing else differs (avatar-initial antialiasing). Controls: Placed/Money in switch; Sold today -> orders/order {id:543}; each row -> orders/order {id}; Best customers -> today/goal (replace). Note: '3 earlier' unfolds the list in place — an undrawn state; draw it or keep it as a pure continuation of the same rows.",
+    "note": "Within the row ruling (1/2/3 px, as the note says); nothing else differs. Controls right. Note: '3 earlier' still unfolds in place (undrawn, but only more of the same rows).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD17DayMoney.dc.html": {
-    "verdict": "fail",
-    "score": 8.5,
-    "note": "Canvas fix, not an app fix: the board draws today's bar 46 px under 'This week in', but 1,044,000 (FACTS) / 1,450,000 x 62 = 44.6, so the honest bar is 45 px and its label 1.04M sits 1 px lower — the app is right. The lead should correct the board (bar height 45px) or rule it a known artifact; do not fit the app. Everything else identical. Controls: payment rows -> customers/paid {id}; Still to collect -> today/to-collect (replace). Seed concern: today.ts reassigns FACTS receipts 7004 and 8000-8007 to Brian so the week bars come out as drawn.",
+    "verdict": "pass",
+    "score": 9.5,
+    "note": "The board's today bar is now 45 px (1,044,000 / 1,450,000 x 62); 0 px differ. Payment rows -> customers/paid {id}; Still to collect -> to-collect.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD18You.dc.html": {
-    "verdict": "fail",
-    "score": 7.0,
-    "note": "Visual: identical (antialiasing). Navigation all right: ring -> goal, Sold -> day, Orders/Customers -> their tabs, Payments -> day {money}, Chats -> chats tab, Call the shop tel:, Asked of Sourcing -> today/asks, Sign out -> signOut. FAIL: (1) the Alerts switch only flips a local flag (local.ts) — nothing registers or removes this phone's push subscription (spec 06: phones register into push_subscriptions); fix: add a push register/unregister call to DataSource (core, own commit) and call it on toggle, the switch showing the real state; (2) Big text sets body.style.zoom only when toggled — after a reload the switch reads on but text is normal size; apply the stored flag at start (shell). The 40 px 'Back to Today' strip is the board's own FullSheet part (accepted; 44 px close sits beside it).",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Fixed: Alerts is this phone's push_subscriptions row (pushState/pushOn/pushOff; the tap wrote pushOff) and says why when it cannot be on; big text is applied at start for each login (the demo keeps nothing across reloads by design). Visual identical. Call the shop dials the seed's 0772 400 100 (board placeholder +256414000100; not a FACTS figure).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD19Asks.dc.html": {
     "verdict": "fail",
-    "score": 7.5,
-    "note": "Visual: pixel-identical. FAIL: 'Tell Mukono' on the list calls tellAsk(b, a, qty, true), so after sending it runs nav.back() and throws Grace out of Asked of Sourcing to You. Fix (Asks.tsx Ready): tellAsk(..., false) so she stays on the list. Also (Ask.tsx tellAsk): it ignores sendTo's false (no chat) and still shows 'Sent to Mukono' and marks it told — show an error and keep it untold. Other controls: Back -> You; + -> Ask Moses sheet prefilled from Kato's chat; the paint and Start their order -> today/asks {id} (TD22); Lubowa's fan -> TD21. Rule concern: only 'looking' asks open (fitted to 'only Lubowa's opens a board').",
+    "score": 8.0,
+    "note": "Visual identical (the board was redrawn to the 'every ask opens' ruling: three rows are now <a> with no href). Fixed: Tell Mukono keeps Grace on the list, and no send is claimed without a chat. FAIL: the Tile cutter (Found) and Solar water pump (Asked) rows open ask screens that no board draws (the canvas rows have no href to give). Fix: draw the ask screens the lead's 'every ask opens' ruling now reaches, as new boards in the TD series with /design (an ask at Asked: Kato's solar water pump 1hp; an ask at Found/Priced: Nansana's tile cutter 600mm), get them scored (at least 8.5 on every axis), set TD19's three bare <a> rows and TD12's 'Kato asked Moses for' card to href them, and build Ask.tsx to them. What the app shows today on those screens has visible faults the boards must settle: 'Kato waits 0 days' (say 'today'), 'the solar water pump 1hps' (askMessage/said pluralises a name ending in a size), and the screen is half empty under the message (BRIEF: filled to the bottom).",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD20AsksEmpty.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Identical (sub-pixel text antialiasing only). Back -> You; Ask Moses and each 'found nothing' row -> Ask Moses sheet prefilled with those words. Q8 (Sales sees its own misses) remains Kevin's; misses are kept on this phone only.",
+    "note": "Pixel-identical. Back -> You; Ask Moses and each search that found nothing -> Ask Moses prefilled.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD21AskLooking.dc.html": {
-    "verdict": "fail",
-    "score": 8.5,
-    "note": "Visual: identical (17 px antialiasing). Back/Close -> list. FAIL (one shared fix with TD19): 'Tell Lubowa · still looking' goes through tellAsk, which shows 'Sent to Lubowa' even when sendTo returns false (no chat). Fix in Ask.tsx tellAsk: `const ok = await sendTo(...); if (!ok) { toast.show(`No chat with ${who}`, { kind: 'error' }); return; }`.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Identical (the board's item square now neutral: no catalogue item, no aisle). Tell Lubowa · still looking writes send(102), toasts, back to the list; a no-chat send would now show an error and claim nothing.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD22AskListed.dc.html": {
-    "verdict": "fail",
-    "score": 6.5,
-    "note": "Visual: pixel-identical. FAIL: (1) 'Send a photo of the tin' (on by default) does nothing — tellAsk never sends a photo and the DataSource has no way to send an image; a customer is promised a photo and gets none. Fix: add an image send to DataSource (core, own commit; the lead image is migration 0074) and pass `photo` into tellAsk; (2) tellAsk's false 'Sent' (TD21). Notes: Fewer/More change the message and total correctly; Start their order -> sell/order {customer, items} but the chosen 6 tins are lost — ROUTES' items should carry qty.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Pixel-identical. Fixed: Tell Mukono with the photo switch on writes sendImage(104, the paint's photo, the message); inside the 24 hours only, otherwise words only and the toast says so. Start their order -> sell/order {customer, items:[{itemId, qty}]} with the chosen quantity.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD23AskNew.dc.html": {
-    "verdict": "fail",
-    "score": 7.0,
-    "note": "Visual: identical (sheet-corner antialiasing). Ask Moses writes askSourcing {name:'Solar water pump 1hp', qty:2, customerId:C001, chatId:101}, toasts 'Asked Moses' and lands on the list — right (Sourcing finds items). FAIL: 'Add a photo' picks a photo and then drops it: askSourcing has no photo field. Fix: add photo to DataSource.askSourcing (core, own commit; sourcing lead image, migration 0074) and send it. Note: 'Change customer' -> sell closes this sheet and loses the ask being written (no way back).",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Identical (antialiasing). Fixed: a photo picked with 'Add a photo' goes with the ask (askSourcing {..., photo: Blob}; supabase uploads it as the lead image, 0074). Change customer now holds what was typed and comes back via sell {then:'ask'}.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD24AskNotSent.dc.html": {
-    "verdict": "fail",
-    "score": 7.0,
-    "note": "FAIL: (1) 'Try again' text 1 px low in its pill — the Notice part, same fix as TD09 (`.ow-notice-act { font: inherit; }`); (2) the check on 'Done · it sends itself' is stroke 2.4, the board 2.6 — AskNew.tsx line 116: stroke={2.6}; (3) the photo is dropped (TD23). Controls otherwise right: Try again flushes the outbox, Done closes the sheet onto the list, the ask kept on this phone.",
+    "verdict": "pass",
+    "score": 9.0,
+    "note": "Fixed: Try again on the board's line; Done's check is stroke 2.6. Identical apart from the sheet edge antialiasing. Try again flushes the outbox; Done closes onto the list.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   },
   "TD25DayTest.dc.html": {
     "verdict": "pass",
     "score": 9.0,
-    "note": "Within the row-height ruling: 1/2/3 px down the Placed list and 4 px below the TEST row, as the note says; nothing else differs. TEST row struck, 'Test · not counted', left out of 8 orders · 2,440,500. Controls as TD16; the TEST row -> orders/order {id}.",
+    "note": "Within the row ruling (1-4 px down the list, as the note says); nothing else differs. TEST row struck and not counted; controls as TD16.",
     "by": "today critic",
-    "at": "2026-10-30"
+    "at": "2026-11-03"
   }
 }
