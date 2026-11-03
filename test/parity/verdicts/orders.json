@@ -77,16 +77,16 @@
   "at": "2026-11-03"
  },
  "OR12PriceUp.dc.html": {
-  "verdict": "fail",
-  "score": 9.0,
-  "note": "REGRESSION in 8411e308: the board draws the check list's '0 of 2' in good green #0F6B43; the app now draws every count that starts with '0 ' in ink-soft (local-CheckList.tsx: or-sum0; order.css .ow-chk-sum .mono.or-sum0). Strict diff: x287-329 y380-389, maxd 80. The OR31 rule is right (green reads as done when nothing is done), so fix the canvas, not the code: redraw OR12's '0 of 2' (and OR19's, hidden under its sheet) in #5F6980, re-run, and OR12 passes. Otherwise scope or-sum0 to 'packed' counts only, but then the canvas keeps two colours for the same count. Controls unchanged and correct.",
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Final (02906de7 / 98910c3d): the board now draws '0 of 2' in ink-soft #5F6980, the same rule as OR31; parity is pixel-identical (0 px over 6). Tell (Ruth is deciding) and Change work.",
   "by": "orders critic",
   "at": "2026-11-03"
  },
  "OR13PriceTell.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Final check (8411e308): re-run, strictly diffed, still passes. Pixel-identical. Told them writes markPriceTold(559); Send on WhatsApp writes send + markPriceTold; offline now says 'Kept on this phone'; a shut chat leads with SMS (code read; Lubowa's chat is open at 15:05).",
+  "note": "Final: pixel-identical. Told them writes markPriceTold(559); Send on WhatsApp writes send + markPriceTold; offline 'Kept on this phone'; a shut chat leads with SMS. The Call Lubowa tile and the head both dial tel:+256772410233, as drawn.",
   "by": "orders critic",
   "at": "2026-11-03"
  },
@@ -121,7 +121,7 @@
  "OR19Twice.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Final check (8411e308): re-run, strictly diffed, still passes. Identical. askCancel(557, 'Entered twice'); Undo withdraws.",
+  "note": "Final: '0 of 2' behind the sheet is ink-soft on the board and in the app; only sheet corners and dashed dots antialias. askCancel(557, 'Entered twice'); Undo withdraws.",
   "by": "orders critic",
   "at": "2026-11-03"
  },
@@ -189,9 +189,9 @@
   "at": "2026-11-03"
  },
  "OR29Voided.dc.html": {
-  "verdict": "fail",
-  "score": 9.0,
-  "note": "Fixed as asked: Back to Orders and Close now land on the two '0537' rows (input '0537'), as the board links to OR30. Voided is still respected everywhere. NEW DEFECT from the same fix: the query is saved on the 'orders' route only when an order is opened from Find (List.tsx:60 nav.replace('orders', {...p.params, q})). Clearing the field does not update it. Sequence: Find 0537 → #0537 → Back → Clear (full list) → #0552 → Back lands on the '0537' search again, not the list (OR07's Back goes to OR01). Fix: keep the route's q in step with the field (nav.replace on every input and on Clear), or save q: '' when a row of the full list is opened.",
+  "verdict": "pass",
+  "score": 9.5,
+  "note": "Final: parity identical (a first run hit the known font flake; the re-run is clean). Back and Close return to the two '0537' rows. The stale search is gone: Find 0537 → #0537 → Back (0537 kept) → Clear → #0552 → Back lands on the full list with the field empty. Retyping keeps the newest query, and typing keeps focus (no remount per keystroke). Voided respected: Owes 0 'Ruth voided it today 9:20', struck Bill with 'Void', no Take payment or Fix it, Tell says nothing is owed.",
   "by": "orders critic",
   "at": "2026-11-03"
  },
@@ -205,7 +205,7 @@
  "OR31PriceTellShut.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Board approved (review/new-orders.json, 9 on every axis). Parity: the skipped Buying disc antialias only (maxd 30). Controls: Told them writes markPriceTold(562) ('Nansana told'); Send as SMS opens sms:+256772590774 with the price words and marks it told; Change opens 'Change this order'; Call in the head is tel:+256772590774. #0562 is absent at 10:41 and 15:40. Note: the 'Call Nansana' act tile is tel:0772590774; the board's is tel:+256772590774 (same number; also true of OR13's Call Lubowa). Use '+256'+phone9 in Order.tsx's fresh-price act, as the head does.",
+  "note": "Board approved; parity identical (skipped-disc antialias only, after a flake re-run). Told them writes markPriceTold(562); Send as SMS opens sms:+256772590774 with the price words and marks it told; the Call tile and the head dial tel:+256772590774; Change opens its sheet. #0562 exists only at 15:05 (absent at 10:41 and 15:40).",
   "by": "orders critic",
   "at": "2026-11-03"
  }
