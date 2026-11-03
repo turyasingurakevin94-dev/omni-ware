@@ -16,7 +16,8 @@ import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { SendBtn } from './Change.tsx';
-import { byRole, faceOfMember, overAsk, overOf } from './data.ts';
+import { paidOver } from '../../../core/money.ts';
+import { byRole, faceOfMember, overAsk } from './data.ts';
 import './sheets.css';
 
 const M: Record<Payment['method'], { word: string; icon: IconName }> = { cash: { word: 'Cash', icon: 'cash' }, momo: { word: 'Mobile', icon: 'mobile' }, bank: { word: 'Bank', icon: 'bank' } };
@@ -33,7 +34,7 @@ function PaidOver(p: { b: Books; x: Payment; from: string }): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(0);
   useEffect(() => { if (!sent) return undefined; const k = window.setTimeout(() => setSent(0), 10000); return () => clearTimeout(k); }, [sent]);
-  const { cleared, over } = overOf(b, x), asked = overAsk(b, x);
+  const { cleared, over } = paidOver(b, x), asked = overAsk(b, x);
   const who = c ? firstWord(c.name) : 'They', acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
   const m = M[x.method], when = `${m.word} · ${dayOf(x.at) === dayOf(t) ? 'today ' : ''}${clock(x.at)}`, owes = c ? Math.max(0, c.owes) : 0;
   const askedHow = asked && (asked as unknown as { want?: { how?: string } }).want?.how === 'deposit' ? 'deposit' : how;

@@ -71,6 +71,7 @@ export function seed(f: DemoFlags): DemoState {
   // &as=ruth: another member of the team is signed in on this phone (CH32).
   const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;
   if (as) s.books.me = as;
+  if (f.waOff) s.connected = false;
   if (f.state === 'empty') emptyShop(s);
   if (f.state === 'first-day') firstDay(s);
   // Each tab's own additions, in tab order.
