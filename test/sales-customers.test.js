@@ -136,7 +136,11 @@ async function flows(browser) {
   t.check(/No signal · the list saved 7:52/.test(await text(p)), 'offline: the saved list says when');
   await p.getByLabel('Take payment from Kato Construction').click();
   await slide(p);
-  t.check(/Kept on this phone/.test(await text(p)), 'offline: the payment is kept on the phone');
+  let k = await text(p);
+  t.check(/Not sent yet/.test(k) && /Once it records/.test(k) && !/Owes now/.test(k), 'offline: Not sent yet, and nothing says it is owed 0 before it records');
+  t.check(/The receipt goes to Kato once it records/.test(k), 'offline: the receipt waits for the payment');
+  await p.getByRole('button', { name: 'Try again' }).click();
+  t.check(/Still no signal · not sent yet/.test(await toastText(p)), 'offline: Try again with no signal says so');
   await ctx.close();
 }
 

@@ -31,7 +31,7 @@ import './customers.css';
 async function noteFor(chatId: number, who: Member, body: string): Promise<void> {
   try {
     const r = await act('note', chatId, body, [who.id]);
-    toast.show(r.kept ? 'Kept on this phone · sends with signal' : `${first(who.name)} gets a push`);
+    toast.show(r.kept ? 'Not sent yet · sends with signal' : `${first(who.name)} gets a push`);
   } catch (e) {
     toast.show('Not sent', { kind: 'error', sub: isDataError(e) ? e.message : '' });
   }

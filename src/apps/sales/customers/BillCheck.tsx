@@ -52,7 +52,7 @@ function BillCheck(p: { customerId: string; orderId: number }): JSX.Element {
     try {
       const r = await act('askPaymentFix', { paymentId: pay.id, what: 'bill', want: { orderId: bill.id, paidAlready: paid }, note: paid ? 'Already paid that day' : 'Still owed' });
       sheet.close();
-      toast.show(r.kept ? 'Kept on this phone · sends with signal' : `Sent to ${first(esther.name)}`);
+      toast.show(r.kept ? 'Not sent yet · sends with signal' : `Sent to ${first(esther.name)}`);
     } catch (e) {
       toast.show('Not sent', { kind: 'error', sub: isDataError(e) ? e.message : '', retry: () => { void send(); } });
     } finally { setBusy(false); }

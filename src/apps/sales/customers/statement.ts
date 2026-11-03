@@ -25,7 +25,7 @@ export async function sendStatement(b: Books, c: Customer, cb: ChatBooks | null)
   const text = statementText(b, c, dayOf(now.value)), open = replyWindow(chat.lastInAt, now.value).open;
   try {
     const r = await act(open ? 'send' : 'sendTemplate', chat.id, text);
-    return r.kept ? 'Kept on this phone · sends with signal' : `Statement sent to ${short(c.name)}`;
+    return r.kept ? 'Not sent yet · sends with signal' : `Statement sent to ${short(c.name)}`;
   } catch (e) {
     return isDataError(e) ? e.message : 'Not sent · try again';
   }

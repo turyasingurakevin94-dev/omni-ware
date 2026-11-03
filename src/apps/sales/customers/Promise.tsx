@@ -45,7 +45,7 @@ function PromiseSheet(p: { customerId: string }): JSX.Element {
     try {
       const r = await act('recordPromise', { customerId: c.id, on, amount });
       sheet.close();
-      toast.show(r.kept ? 'Kept on this phone · sends with signal' : `Promise recorded · ${dayLabel(on)}`);
+      toast.show(r.kept ? 'Not sent yet · sends with signal' : `Promise recorded · ${dayLabel(on)}`);
     } catch (e) {
       toast.show('Not recorded', { kind: 'error', sub: isDataError(e) ? e.message : '', retry: () => { void record(); } });
     } finally { setBusy(false); }

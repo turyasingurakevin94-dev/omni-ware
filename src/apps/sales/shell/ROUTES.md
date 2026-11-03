@@ -26,7 +26,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
 | `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
 | `customers/pay` | `{ customer, bills?: string }` (bills: order ids joined by commas, "544" or "531,544"), or `{ order }` for a walk-in's order before its invoice (CU34) | customers | CU37 (all, cash), CU30–CU36 |
-| `customers/paid` | `{ id }` | customers | CU40–CU44 (CU44: kept on this phone, no signal) |
+| `customers/paid` | `{ id }` | customers | CU40–CU45 (CU44: not sent yet, no signal; CU45: Try again, still no signal) |
 
 ## Rules
 

@@ -5,12 +5,12 @@
  * own chat through act() (wa-send); when WhatsApp cannot reach them it waits
  * on Paid for Send by SMS or Try again (CU43).
  */
-import { signal } from '@preact/signals';
+import { effect, signal } from '@preact/signals';
 import { money } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { replyWindow } from '../../../core/time.ts';
 import type { Method } from '../../../core/types.ts';
-import { act, chats } from '../shell/store.ts';
+import { act, books, chats, kept, now } from '../shell/store.ts';
 import { dm } from './pay-parts.tsx';
 
 export interface PaidLine { id: number; day: string; amount: number }
@@ -33,9 +33,12 @@ export interface Paid {
   given: number;
   deposit: number;
   at: number;
-  /** Kept on this phone: recorded when signal comes back. */
+  /** Not sent yet (kept on this phone): recorded when signal comes back. */
   kept: boolean;
-  receipt: { state: 'off' | 'sending' | 'sent' | 'failed'; at: number | null; chatId: number | null };
+  /** The outbox id of the kept write. */
+  keptId: string | null;
+  /** waiting: Receipt was on and the payment is not recorded yet; it goes once it records. */
+  receipt: { state: 'off' | 'waiting' | 'sending' | 'sent' | 'failed'; at: number | null; chatId: number | null };
 }
 
 export const paidResults = signal<Record<string, Paid>>({});
@@ -68,3 +71,17 @@ export async function sendReceipt(key: string, shop: string, now: number): Promi
     patch(key, { state: 'failed' });
   }
 }
+
+/**
+ * A kept payment leaves the outbox once it is recorded (by itself when signal comes back, or Try again):
+ * its Paid turns to Paid, and the receipt that waited for it goes (CU44).
+ */
+effect(() => {
+  const ids = new Set(kept.value.map((k) => k.id));
+  Object.values(paidResults.peek()).forEach((p) => {
+    if (!p.kept || !p.keptId || ids.has(p.keptId)) return;
+    putPaid({ ...p, kept: false, keptId: null });
+    const b = books.peek();
+    if (p.receipt.state === 'waiting') void sendReceipt(p.key, b ? b.shop.name : '', now.peek());
+  });
+});
