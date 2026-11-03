@@ -7,7 +7,7 @@
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
 import { invoiceNo } from '../names.ts';
-import { linePayload, orderPayload } from '../orders.ts';
+import { askLines, linePayload, orderPayload } from '../orders.ts';
 import type { BillAsk, ChatNote, Customer, CustomerKind, Day, Line, Message, Order, PayPromise, PaymentAsk, Session, SourcingAsk, Stage, UGX } from '../types.ts';
 import { isMissing, isNetwork, type Row, type Sb } from './client.ts';
 import { askOf, billAskOf, cancelAskOf, customerOf, messageOf, paymentAskOf, promiseOf } from './rows.ts';
@@ -120,9 +120,9 @@ export async function setClientPhone(sb: Sb, s: Session, orderId: number, phone:
 }
 
 /** sales.html:6283: an ask to the Manager about a bill (invoice_asks, 0123). */
-export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 'credit'; amount: UGX; reason: string; note: string }): Promise<BillAsk> {
+export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk> {
   const row = {
-    shop_id: s.shopId, quote_id: o.id, customer_id: o.customerId, kind: a.kind, lines: [], amount: Math.round(a.amount),
+    shop_id: s.shopId, quote_id: o.id, customer_id: o.customerId, kind: a.kind, lines: a.kind === 'void' ? [] : askLines(o, a.lines), amount: Math.round(a.amount),
     reason: a.kind === 'void' && !a.reason ? 'Raised twice' : a.reason || null, note: a.note.trim() || null,
     asked_by: s.userId, asked_by_name: s.name, asked_role: s.role, status: 'sent',
   };
@@ -219,9 +219,47 @@ export async function waSend(sb: Sb, s: Session, chatId: number, text: string, t
   return messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: template ? 'template' : 'text', body: text, sent_by: s.userId, status: 'sent' });
 }
 
-/** sales.html:10407: a team note, never sent (wa_notes, 0170). */
-export async function addNote(sb: Sb, s: Session, chatId: number, body: string, now: number): Promise<ChatNote> {
-  await ok(sb.from('wa_notes').insert({ shop_id: s.shopId, conversation_id: chatId, body, by_user: s.userId, by_name: s.name, mentions: [] }));
+/** wa-send's own actions (send-image, send-catalog, media): its reason classified as waSend does. */
+async function waInvoke(sb: Sb, body: Row): Promise<Row> {
+  let res: Row;
+  try { res = await sb.functions.invoke('wa-send', { body }); } catch (e) { return fail(e); }
+  if (res.error) {
+    const why = await waReason(res.error);
+    if (isNetwork(why) || /Failed to send a request/i.test(why)) throw dataError('offline', 'No signal');
+    throw dataError(/Unknown action/i.test(why) ? 'missing' : 'refused', why);
+  }
+  return res.data || {};
+}
+
+/** sales.html:4146 waUploadBlob and 4152 waSendImage: the picture to the shop's image bucket, then wa-send posts its link. */
+export async function waSendImage(sb: Sb, s: Session, chatId: number, file: Blob, caption: string, now: number): Promise<Message> {
+  const ext = (file.type || '').includes('jpeg') ? 'jpg' : 'png';
+  const name = (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) || String(now);
+  const path = `${s.shopId}/receipts/${name}.${ext}`;
+  await ok(sb.storage.from('product-images').upload(path, file, { contentType: file.type || 'image/png' }));
+  const link = String(sb.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+  const d = await waInvoke(sb, { shopId: s.shopId, action: 'send-image', conversationId: chatId, link, caption: caption || '' });
+  if (!d.sent) throw dataError('refused', 'the send was refused');
+  return { ...messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: 'image', body: caption || '', sent_by: s.userId, status: 'sent' }), media: link };
+}
+
+/** sales.html:4171 waSendCatalog: the shop's WhatsApp catalogue, as a card they can browse and cart from. */
+export async function waSendCatalog(sb: Sb, s: Session, chatId: number, now: number): Promise<Message> {
+  const d = await waInvoke(sb, { shopId: s.shopId, action: 'send-catalog', conversationId: chatId });
+  if (!d.sent) throw dataError('refused', 'the send was refused');
+  return messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: 'interactive', body: '', sent_by: s.userId, status: 'sent' });
+}
+
+/** sales.html:4180 waMedia: a customer's picture, voice note or document, kept in the shop's bucket by wa-send. */
+export async function waMedia(sb: Sb, s: Session, messageId: string): Promise<{ link: string; mime: string }> {
+  const d = await waInvoke(sb, { shopId: s.shopId, action: 'media', messageId });
+  if (!d.link) throw dataError('refused', 'no file came back');
+  return { link: String(d.link), mime: String(d.mime || '') };
+}
+
+/** sales.html:10407: a team note, never sent (wa_notes, 0170); each person @named gets a push (wa_notes_push). */
+export async function addNote(sb: Sb, s: Session, chatId: number, body: string, mentions: string[], now: number): Promise<ChatNote> {
+  await ok(sb.from('wa_notes').insert({ shop_id: s.shopId, conversation_id: chatId, body, by_user: s.userId, by_name: s.name, mentions }));
   return { id: 'n' + now, chatId, at: now, by: s.userId, body };
 }
 

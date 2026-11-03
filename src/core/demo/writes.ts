@@ -29,7 +29,7 @@ function newOrder(s: DemoState, d: OrderDraft, id: number, stage: Order['stage']
     id, customerId: d.customerId, client: { name: d.client.name || 'Walk-in', phone: d.client.phone || '' },
     placedAt: now, placedBy: me, stage, stageAt: now, stageLog: [{ stage, at: now, by: me }], holderId: null,
     lines: d.lines.map((l, i) => ({ ...l, lineId: i + 1 })), charges: d.charges, credit: d.credit, discount: 0,
-    payments: [], paid: 0, invoiced: false, invoicedAt: null, voided: false, cancelled: false, counter: false,
+    payments: [], paid: 0, invoiced: false, invoicedAt: null, voided: false, voidedAt: null, voidedBy: null, cancelled: false, counter: false,
     deliverTo: d.deliverTo, deliveredAt: null, toldTotal: null, qa: false,
   };
 }
