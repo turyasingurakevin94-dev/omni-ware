@@ -12,6 +12,7 @@ import { replyWindow } from '../../../core/time.ts';
 import type { Method } from '../../../core/types.ts';
 import type { PayResult } from '../../../core/datasource.ts';
 import { act, books, chats, kept, now, onKeptRefused, onKeptSent } from '../shell/store.ts';
+import { toast } from '../../../ui/toast.tsx';
 import { dm } from './pay-parts.tsx';
 
 export interface PaidLine { id: number; day: string; amount: number }
@@ -89,6 +90,8 @@ onKeptSent((id, value) => {
   const p = byKept(id);
   if (!p) return;
   const r = value as Partial<PayResult> | undefined;
+  // A "Still no signal" from an earlier Try again no longer holds.
+  if (toast.text === 'Still no signal') toast.hide();
   putPaid({ ...p, kept: false, keptId: null, refused: null, amount: r && typeof r.amount === 'number' ? r.amount : p.amount,
     after: r && typeof r.after === 'number' && p.customerId ? Math.max(0, r.after) : p.after });
   const b = books.peek();

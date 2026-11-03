@@ -77,7 +77,10 @@ function PaidView(props: { p: Paid }): JSX.Element {
             <div class="cu-slip-l dep"><span aria-hidden="true" /><span>Deposit <span>next bill uses it</span></span><span class="mono">{money(p.deposit)}</span></div>
           )}
           <div class="cu-slip-t"><span>{p.kept ? 'To record' : p.discarded ? 'Not recorded' : 'Paid'}</span><span class="mono">{money(p.amount)}</span></div>
-          <div class={p.kept || p.discarded ? 'cu-slip-o kept' : 'cu-slip-o'}><span>{p.kept ? 'Once it records' : p.discarded ? 'Still owes' : 'Owes now'}</span><span aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><s class="mono">{money(p.before)}</s><b class="mono">{money(p.after)}</b></div>
+          {p.discarded
+            // Thrown away: what the books say, nothing struck, nothing filled (CU47).
+            ? <div class="cu-slip-o gone"><span>Still owes</span><span aria-hidden="true" /><b class="mono">{money(p.before)}</b></div>
+            : <div class={p.kept ? 'cu-slip-o kept' : 'cu-slip-o'}><span>{p.kept ? 'Once it records' : 'Owes now'}</span><span aria-hidden="true"><span style={{ width: `${pct}%` }} /></span><s class="mono">{money(p.before)}</s><b class="mono">{money(p.after)}</b></div>}
         </div>
         <div class="cu-slip-edge bottom" />
       </div>

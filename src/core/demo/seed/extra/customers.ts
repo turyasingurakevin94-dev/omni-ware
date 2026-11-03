@@ -19,6 +19,12 @@ export function extra(s: DemoState, f: DemoFlags): void {
       const done = o.placedAt + 3600 * 1000;
       b.orders.push({ ...o, stage: 'delivered', stageAt: done, deliveredAt: done, invoiced: true, invoicedAt: done, paid: orderTotal(o), holderId: null });
     });
+    // CU06: Ggaba stays a regular, not gone quiet (Quiet 8): an order inside their 10 days, delivered and paid Fri 9 Oct,
+    // before this week, so OR04 still shows nothing of Grace's done this week.
+    liveOrders().filter((o) => o.id === 549).forEach((o) => {
+      const at = d('2026-10-09', '9:00'), done = d('2026-10-09', '15:00');
+      b.orders.push({ ...o, id: 525, placedAt: at, stage: 'delivered', stageAt: done, deliveredAt: done, invoiced: true, invoicedAt: done, paid: orderTotal(o), holderId: null });
+    });
     b.orders.sort((x, y) => x.id - y.id);
   }
   if (f.state === 'empty' || f.state === 'first-day') return;
