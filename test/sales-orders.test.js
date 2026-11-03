@@ -14,6 +14,7 @@ const t = createReporter('sales orders');
 const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const D = require(path.join(ROOT, 'src/apps/sales/orders/data.ts'));
+const O = require(path.join(ROOT, 'src/core/orders.ts'));
 const V = require(path.join(ROOT, 'src/apps/sales/orders/view.ts'));
 const Msg = require(path.join(ROOT, 'src/apps/sales/orders/msg.ts'));
 
@@ -36,10 +37,10 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     t.check(st(548).text === 'Return asked', '#0548: Return asked');
     const f = D.findOrders(b, 'kato');
     t.check(f.customer && f.customer.id === 'C001' && f.orders.length === 14, `Find "kato": Kato Construction, 14 orders (got ${f.orders.length})`);
-    const tw = D.twinOf(b, D.orderOf(b, 556));
+    const tw = O.twinOf(b.orders, D.orderOf(b, 556));
     t.check(tw && tw.orig.id === 556 && tw.copy.id === 557, '#0557 is the copy of #0556 (OR19)');
     const p = b.payments.find((x) => x.id === 9002);
-    t.check(D.overOf(b, p).over === 90000 && D.overOf(b, p).cleared === 470000, "Nansana's 560,000: 470,000 cleared, 90,000 over (OR15)");
+    t.check(M.paidOver(b, p).over === 90000 && M.paidOver(b, p).cleared === 470000, "Nansana's 560,000: 470,000 cleared, 90,000 over (OR15)");
     t.check(!D.overPaymentOf(b, D.orderOf(b, 552)), '#0552 is not paid over');
   }
   /* OR05–OR09: #0552's day. */
@@ -63,7 +64,7 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
   /* OR23: before the void. */
   {
     const { b } = await at('?demo&clock=9:15');
-    const tw = D.twinOf(b, D.orderOf(b, 537));
+    const tw = O.twinOf(b.orders, D.orderOf(b, 537));
     t.check(tw && tw.copy.id === 537 && tw.orig.id === 536, '#0537 stands at 9:15, the copy of #0536');
     const later = await at('?demo');
     t.check(D.orderOf(later.b, 537).voided, '#0537 is voided at 10:41 (Sold · October stays 12,480,000)');

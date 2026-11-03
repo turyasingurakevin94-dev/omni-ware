@@ -7,11 +7,11 @@
  * Each names the server function it stands in for.
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
-import { cashTotal, orderOwes, orderTotal, payPlan } from '../money.ts';
+import { cashTotal, orderOwes, orderTotal, payPlan, splitPayment } from '../money.ts';
 import { initials, invoiceNo, isGenericName, tintFor } from '../names.ts';
 import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
-import type { BillAsk, Customer, Order, OrderPayment, Payment } from '../types.ts';
+import type { BillAsk, Customer, Line, Order, OrderPayment, Payment } from '../types.ts';
 import type { DemoState } from './seed/index.ts';
 
 const nextOrderId = (s: DemoState) => s.books.orders.reduce((m, o) => (o.id < 1000 ? Math.max(m, o.id) : m), 0) + 1;
@@ -87,27 +87,61 @@ export function withdrawAsk(s: DemoState, id: string): void {
   a.status = 'withdrawn';
 }
 
-/** counter_sale (0136/0155): placed, paid, delivered and invoiced in one write; a price under the shop's waits. */
+/** A line under the shop's price waits until the Manager answered for that figure (ow_gate_reason 'price'). */
+const waitsForPrice = (l: Line) => l.shopPrice != null && l.price != null && l.price < l.shopPrice && !(l.priceReview && l.priceReview.price === l.price);
+
+/** The waiting counter sale `id`, as counter_sale finds it with p_quote_id (0136: P0002, OWCTR). */
+function waitingSale(s: DemoState, id: number): Order {
+  const o = s.books.orders.find((x) => x.id === id);
+  if (!o) throw dataError('refused', 'That sale is not in this shop.', 'P0002');
+  if (o.voided || o.cancelled) throw dataError('refused', 'That sale was cancelled.', 'OWCTR');
+  if (o.invoiced) throw dataError('refused', 'That sale is already invoiced.', 'OWCTR');
+  if (!o.counter) throw dataError('refused', 'Only a counter sale is sold this way.', 'OWCTR');
+  return o;
+}
+
+/**
+ * counter_sale (0136/0155): placed, paid, delivered and invoiced in one write; a price under the shop's waits.
+ * With pay.quote, the sale that waited is sold as the books hold it (p_quote_id).
+ */
 export function counterSale(s: DemoState, d: OrderDraft, pay: CounterPay): CounterResult {
-  checkCost(d);
-  if (d.lines.some((l) => l.price == null)) throw dataError('refused', 'A line has no price yet', 'OWTPC');
-  const b = s.books, id = nextOrderId(s);
-  const waiting = d.lines.some((l) => l.shopPrice != null && l.price != null && l.price < l.shopPrice && !l.priceReview);
-  if (waiting) {
-    const o = newOrder(s, d, id, 'checking');
-    o.counter = true; b.orders.push(o);
+  const b = s.books, held = pay.quote != null ? waitingSale(s, pay.quote) : null;
+  const lines = held ? held.lines : d.lines;
+  checkCost({ ...d, lines });
+  if (lines.some((l) => l.price == null)) throw dataError('refused', 'A line has no price yet', 'OWTPC');
+  const id = held ? held.id : nextOrderId(s);
+  if (lines.some(waitsForPrice)) {
+    const o = held || newOrder(s, d, id, 'checking');
+    if (!held) { o.counter = true; b.orders.push(o); }
     return { order: o, invoice: invoiceNo(id), paid: 0, change: 0, waiting: 'price' };
   }
-  const total = cashTotal({ lines: d.lines, charges: d.charges, discount: 0 });
+  const total = cashTotal({ lines, charges: held ? held.charges : d.charges, discount: 0 });
   if (pay.method === 'cash' && pay.given > 0 && pay.given < total) throw dataError('refused', 'They gave less than the total', 'OWSHT');
   const pid = nextPaymentId(s);
-  const o = newOrder(s, d, id, 'delivered');
-  Object.assign(o, { counter: true, invoiced: true, invoicedAt: s.now, deliveredAt: s.now, paid: total });
-  o.stageLog = [{ stage: 'checking', at: s.now, by: b.me.id }, { stage: 'delivered', at: s.now, by: b.me.id }];
+  const o = held || newOrder(s, d, id, 'delivered');
+  Object.assign(o, { stage: 'delivered', stageAt: s.now, counter: true, invoiced: true, invoicedAt: s.now, deliveredAt: s.now, paid: total });
+  o.stageLog = [...(held ? held.stageLog : [{ stage: 'checking' as const, at: s.now, by: b.me.id }]), { stage: 'delivered', at: s.now, by: b.me.id }];
   o.payments = [{ id: 1, day: dayOf(s.now), amount: total, method: pay.method, paymentId: pid }];
-  b.orders.push(o);
-  b.payments.push({ id: pid, at: s.now, day: dayOf(s.now), amount: total, method: pay.method, customerId: d.customerId, orderId: id, by: b.me.id, ref: pay.ref, qa: false });
+  if (!held) b.orders.push(o);
+  b.payments.push({ id: pid, at: s.now, day: dayOf(s.now), amount: total, method: pay.method, customerId: o.customerId, orderId: id, by: b.me.id, ref: pay.ref, qa: false });
   return { order: o, invoice: invoiceNo(id), paid: total, change: pay.method === 'cash' ? Math.max(0, pay.given - total) : 0, waiting: null };
+}
+
+/**
+ * ow_patch_order on a counter sale that waits (sales.html:11136 countershop): your own, not sold yet. A line
+ * keeps the Manager's answer only while its price is the one she answered (0175: nobody else writes it).
+ */
+export function counterLines(s: DemoState, orderId: number, lines: Line[]): void {
+  const o = waitingSale(s, orderId);
+  if (o.placedBy !== s.books.me.id) throw dataError('refused', 'Only the one who took it changes it', '42501');
+  if (!lines.length) throw dataError('refused', 'Nothing is on the counter.', 'OWCTR');
+  checkCost({ customerId: o.customerId, client: o.client, lines, charges: [], credit: null, deliverTo: null, chatId: null });
+  const was = o.lines;
+  o.lines = lines.map((l, i) => {
+    const old = was.find((x) => x.itemId === l.itemId && x.variantIdx === l.variantIdx);
+    const review = old && old.priceReview && old.priceReview.price === l.price ? old.priceReview : null;
+    return { ...l, lineId: i + 1, priceReview: review };
+  });
 }
 
 function receipt(s: DemoState, amount: number, a: PayArgs, orderId: number | null, customerId: string | null): Payment {
@@ -126,7 +160,8 @@ function onOrder(o: Order, p: Payment): void {
 export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   const b = s.books, amount = Math.round(a.amount);
   if (!(amount > 0)) throw dataError('refused', 'Type how much they paid');
-  if (a.method !== 'cash' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
+  // Mobile needs its transaction ID (spec 04 Q6, CU33); a bank reference is "if there is one" (CU31; 0155 keeps it optional).
+  if (a.method === 'momo' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
   if (a.orderId != null) {
     const o = b.orders.find((x) => x.id === a.orderId);
     if (!o || o.voided) throw dataError('refused', 'That order is not in the books');
@@ -144,12 +179,12 @@ export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   if (over > 0 && !a.over) throw dataError('refused', 'That is more than they owe: give change or keep a deposit', 'OWOVR');
   const bills = b.orders.filter((o) => o.customerId === c.id && o.invoiced && !o.voided && orderOwes(o) > 0)
     .sort((x, y) => (x.invoicedAt || 0) - (y.invoicedAt || 0));
-  const ordered = a.picks ? a.picks.map((id) => bills.find((o) => o.id === id)).filter((o): o is Order => !!o) : bills;
+  const split = splitPayment(bills.map((o) => ({ id: o.id, left: orderOwes(o) })), toDebt, a.picks);
   let left = toDebt;
   const made: Payment[] = [];
-  for (const o of ordered) {
-    if (!(left > 0)) break;
-    const take = Math.min(left, orderOwes(o));
+  for (const { id, applied: take } of split) {
+    if (!(take > 0)) continue;
+    const o = bills.find((x) => x.id === id) as Order;
     const p = receipt(s, take, a, o.id, c.id);
     onOrder(o, p); made.push(p); left -= take;
     c.debtLog.push({ id: c.debtLog.length + 1000, day: p.day, type: 'payment', amount: take, orderId: o.id, paymentId: p.id, note: 'Payment — ' + invoiceNo(o.id) });

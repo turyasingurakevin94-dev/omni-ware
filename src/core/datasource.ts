@@ -61,6 +61,11 @@ export interface CounterPay {
   given: UGX;
   /** The transaction ID for Mobile or Bank. */
   ref: string;
+  /**
+   * A counter sale placed already, that waited for the Manager's yes on a price: sold now as the books
+   * hold it (counter_sale p_quote_id; sales.html:11098 slide:counterpay). The draft is not read then.
+   */
+  quote?: number | null;
 }
 
 export interface CounterResult {
@@ -114,13 +119,26 @@ export interface DataSource {
   books(): Promise<Books>;
   chats(): Promise<ChatBooks>;
   thread(chatId: number): Promise<Thread>;
+  /** One order as the books hold it now, null when it is gone: read again while a customer waits on it (a counter price). */
+  order(id: number): Promise<Order | null>;
 
   /* orders */
   placeOrder(d: OrderDraft): Promise<Order>;
   counterSale(d: OrderDraft, pay: CounterPay): Promise<CounterResult>;
+  /**
+   * New lines on your own counter sale that waits (not yet sold): back to the shop's price, or lines
+   * added after the Manager's yes (ow_patch_order, as sales.html:11136 countershop). A line the Manager
+   * answered keeps her answer while its price stays hers.
+   */
+  counterLines(orderId: number, lines: Line[]): Promise<void>;
   /** The customer was told the Manager's new price (items[].priceToldAt). */
   markPriceTold(orderId: number): Promise<void>;
   setClientPhone(orderId: number, phone: string): Promise<void>;
+  /**
+   * A walk-in's order goes on a customer's account: they owe what is left of it (CU34, "who owes it?";
+   * sales.html:9290 payOrderFor, the order's customerId and client by ow_patch_order).
+   */
+  assignOrder(orderId: number, customerId: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
   askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk>;
   /** Take back any ask of yours that still waits: a void, a credit or a cancel. */

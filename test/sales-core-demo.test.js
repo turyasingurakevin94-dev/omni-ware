@@ -131,6 +131,12 @@ const sum = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
   const empty = await demoSource('?demo&state=empty').books();
   t.check(empty.orders.every((o) => o.stage === 'delivered') && empty.customers.every((c) => c.owes === 0), '&state=empty: nothing live, nobody owes');
   t.check((await demoSource('?demo&state=signed-elsewhere').session()).role === 'store', '&state=signed-elsewhere: the login under the screen is the Store\'s');
+  const O = require(path.join(ROOT, 'src/core/orders.ts'));
+  const copies = b.orders.filter((o) => O.isCopy(b.orders, o)).map((o) => o.id).sort();
+  t.check(copies.includes(557) && !copies.includes(556), `entered twice: #0557 is #0556's copy, #0556 is not (copies: ${copies.join(', ')})`);
+  const n9002 = b.payments.find((p) => p.id === 9002);
+  t.check(M.paidOver(b, n9002).over === 90000, "Nansana's 560,000 at 8:52 is 90,000 over");
+
   const first = await demoSource('?demo&state=first-day').books();
   t.check(first.orders.every((o) => o.placedBy !== GRACE), '&state=first-day: nothing of Grace\'s yet');
 

@@ -33,7 +33,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   const flags = typeof search === 'string' ? readFlags(search) : search;
   const s = seed(flags);
   const me = s.books.me;
-  let signedIn = true;
+  let signedIn = true, failed = false;
 
   const write = <T>(fn: () => T): Promise<T> => {
     if (flags.offline) return Promise.reject(dataError('offline', 'No signal'));
@@ -84,12 +84,18 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       if (flags.state === 'loading') return new Promise(() => {});
       return Promise.resolve(copy({ at: flags.offline ? SAVED_AT : s.now, connected: s.connected, chats: s.chats, recent: s.messages.slice(-500) }));
     },
+    order: (id) => Promise.resolve(flags.state === 'loading' ? null : copy(s.books.orders.find((o) => o.id === id) || null)),
     thread: (chatId) => Promise.resolve(copy({
       chatId, messages: s.messages.filter((m) => m.chatId === chatId), notes: s.notes.filter((n) => n.chatId === chatId), events: s.events.filter((e) => e.chatId === chatId),
     })),
 
     placeOrder: (d) => write(() => copy(W.placeOrder(s, d))),
-    counterSale: (d, pay) => write(() => copy(W.counterSale(s, d, pay))),
+    counterSale: (d, pay) => {
+      // &fail=sale: the first sale is lost on its way (KC19), the next goes through.
+      if (flags.fail === 'sale' && !failed) { failed = true; return later(() => { throw dataError('offline', 'No signal'); }); }
+      return write(() => copy(W.counterSale(s, d, pay)));
+    },
+    counterLines: (orderId, lines) => write(() => W.counterLines(s, orderId, lines)),
     markPriceTold: (orderId) => write(() => {
       const o = s.books.orders.find((x) => x.id === orderId);
       if (!o) throw dataError('refused', 'That order is not in the books');
@@ -97,6 +103,11 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       o.toldTotal = null;
     }),
     setClientPhone: (orderId, phone) => write(() => { const o = s.books.orders.find((x) => x.id === orderId); if (o) o.client.phone = phone; }),
+    assignOrder: (orderId, customerId) => write(() => {
+      const o = s.books.orders.find((x) => x.id === orderId), c = s.books.customers.find((x) => x.id === customerId);
+      if (!o || !c) throw dataError('refused', 'That order or customer is not in the books', 'P0002');
+      o.customerId = c.id; o.client = { name: c.name, phone: c.phone || c.phone2 || '' };
+    }),
     askBill: (a) => write(() => {
       const o = s.books.orders.find((x) => x.id === a.orderId);
       if (!o || !o.invoiced) throw dataError('refused', 'Only a bill can be voided or credited');

@@ -16,18 +16,20 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `chats/chat` | `{ id }` (a conversation id; demo ids match FACTS) | chats | CH10–CH33 |
 | `chats/new` | — | chats | CH05 |
 | `sell` | — | sell | SL01 Who (the red +) |
-| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` (`items`: JSON `[{ itemId, qty }]`) | sell | SL03–SL27, SL30, SL31. Called by CH14's Start order with `{ from: 'chat', chat, items }` |
+| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` (`items`: a JSON string of `[{ itemId, qty, price? }]`; the Counter's Order in sends prices, CH14's Start order does not) | sell | SL03–SL27, SL30, SL31. Called by CH14's Start order with `{ from: 'chat', chat, items }` and by the Counter's Order in |
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
+| `counter/wait` | `{ id }` (the counter sale waiting for the Manager's price) | counter | KC11 |
+| `counter/receipt` | `{ id }` | counter | KC16 |
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
 | `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |
-| `customers` | `{ filter? }` | customers | CU01–CU08 |
-| `customers/customer` | `{ id }` | customers | CU10–CU15 |
-| `customers/new` | `{ phone?, name? }` | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: number[] }` | customers | CU30–CU36 |
-| `customers/paid` | `{ id }` | customers | CU40–CU43 |
+| `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU09 (CU09: the Quiet chip) |
+| `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
+| `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
+| `customers/pay` | `{ customer, bills?: string }` (bills: order ids joined by commas, "544" or "531,544"), or `{ order }` for a walk-in's order before its invoice (CU34) | customers | CU37 (all, cash), CU30–CU36 |
+| `customers/paid` | `{ id }` | customers | CU40–CU45 (CU44: not sent yet, no signal; CU45: Try again, still no signal) |
 
 ## Rules
 

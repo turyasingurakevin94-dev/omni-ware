@@ -7,8 +7,8 @@
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
 import { invoiceNo } from '../names.ts';
-import { askLines, orderPayload } from '../orders.ts';
-import type { BillAsk, ChatNote, Customer, CustomerKind, Day, Message, Order, PayPromise, PaymentAsk, Session, SourcingAsk, Stage, UGX } from '../types.ts';
+import { askLines, linePayload, orderPayload } from '../orders.ts';
+import type { BillAsk, ChatNote, Customer, CustomerKind, Day, Line, Message, Order, PayPromise, PaymentAsk, Session, SourcingAsk, Stage, UGX } from '../types.ts';
 import { isMissing, isNetwork, type Row, type Sb } from './client.ts';
 import { askOf, billAskOf, cancelAskOf, customerOf, messageOf, paymentAskOf, promiseOf } from './rows.ts';
 
@@ -68,10 +68,27 @@ async function rpcWithRef(sb: Sb, fn: string, args: Row, ref: string): Promise<R
 export async function counterSale(sb: Sb, s: Session, d: OrderDraft, pay: CounterPay, now: number): Promise<{ id: number; invoice: string; paid: UGX; change: UGX; waiting: 'price' | null }> {
   const payload = orderPayload(d, 'checking', s.userId, now);
   const row = { client_name: d.client.name || 'Walk-in', client_phone: d.client.phone || null, payload: { client: payload.client, items: payload.items, charges: payload.charges, credit: payload.credit, customerId: d.customerId } };
-  const ref = pay.method === 'cash' ? '' : String(pay.ref || '').trim().slice(0, 40);
-  const r = await rpcWithRef(sb, 'counter_sale', { p_shop_id: s.shopId, p_quote_id: null, p_row: row, p_method: pay.method, p_given: Number(pay.given) || 0 }, ref);
+  const ref = pay.method === 'cash' ? '' : String(pay.ref || '').trim().slice(0, 40), quote = pay.quote != null ? Number(pay.quote) : null;
+  const r = await rpcWithRef(sb, 'counter_sale', { p_shop_id: s.shopId, p_quote_id: quote, p_row: quote != null ? null : row, p_method: pay.method, p_given: Number(pay.given) || 0 }, ref);
   if (!r || !r.ok) throw dataError('refused', 'the sale did not go through');
   return { id: Number(r.id), invoice: r.invoice || invoiceNo(Number(r.id)), paid: Number(r.pay) || 0, change: Number(r.change) || 0, waiting: r.waiting === 'price' ? 'price' : null };
+}
+
+/**
+ * sales.html:11136 countershop: new lines on your counter sale that waits, through ow_patch_order. A line the
+ * Manager answered is kept as the server holds it (her priceReview) while its price is the one she answered.
+ */
+export async function counterLines(sb: Sb, s: Session, orderId: number, lines: Line[], now: number): Promise<void> {
+  const cur = await ok<Row>(sb.from('saved_quotes').select('payload').eq('shop_id', s.shopId).eq('id', orderId).maybeSingle());
+  if (!cur) throw dataError('refused', 'That sale is not on the server');
+  const was: Row[] = (cur.payload && Array.isArray(cur.payload.items)) ? cur.payload.items : [];
+  const iso = new Date(now).toISOString();
+  const items = lines.map((l, i) => {
+    const old = was.find((it) => String(it.productId) === l.itemId && (it.variantIdx ?? null) === l.variantIdx);
+    if (old && old.priceReview && Number(old.priceReview.price) === l.price) return { ...old, lineId: i + 1, qty: l.qty };
+    return linePayload({ ...l, lineId: i + 1 }, s.userId, iso);
+  });
+  await patchOrder(sb, s, orderId, { items });
 }
 
 export type CounterOut = Omit<CounterResult, 'order'>;
@@ -100,6 +117,12 @@ export async function setClientPhone(sb: Sb, s: Session, orderId: number, phone:
   const cur = await ok<Row>(sb.from('saved_quotes').select('payload').eq('shop_id', s.shopId).eq('id', orderId).maybeSingle());
   const client = { ...((cur && cur.payload && cur.payload.client) || {}), phone };
   await patchOrder(sb, s, orderId, { client }, null, phone);
+}
+
+/** sales.html:9290 payOrderFor: a walk-in's order on a customer's account (their id and name on it). */
+export async function assignOrder(sb: Sb, s: Session, orderId: number, c: { id: string; name: string; phone: string; phone2: string }): Promise<void> {
+  const client = { name: c.name, phone: c.phone || c.phone2 || '' };
+  await patchOrder(sb, s, orderId, { customerId: c.id, client }, client.name, client.phone || '');
 }
 
 /** sales.html:6283: an ask to the Manager about a bill (invoice_asks, 0123). */
