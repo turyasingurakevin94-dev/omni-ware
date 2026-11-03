@@ -77,7 +77,24 @@ async function openOutbox(userId: string): Promise<void> {
   const store = isDemo ? memoryStore((source as DemoSource).kept()) : (typeof indexedDB === 'undefined' ? memoryStore() : idbStore('sales', userId));
   outbox = new Outbox(store, send, () => source.now());
   outbox.onChange((l) => { kept.value = l; });
+  outbox.onSent((id, value) => { sentFns.forEach((fn) => fn(id, value)); });
+  outbox.onRefused((id, reason) => { refusedFns.forEach((fn) => fn(id, reason)); });
   kept.value = await outbox.items();
+}
+
+const sentFns = new Set<(id: string, value: unknown) => void>();
+const refusedFns = new Set<(id: string, reason: string) => void>();
+
+/** A kept write went: its outbox id (from act's { kept: true, id }) and the server's answer. */
+export function onKeptSent(fn: (id: string, value: unknown) => void): () => void {
+  sentFns.add(fn);
+  return () => { sentFns.delete(fn); };
+}
+
+/** A kept write the server refused, with its reason (spec 06 Q5: shown until fixed or discarded). */
+export function onKeptRefused(fn: (id: string, reason: string) => void): () => void {
+  refusedFns.add(fn);
+  return () => { refusedFns.delete(fn); };
 }
 
 /** Read the books and the chats again (every 45 s and 15 s; on signal back; after a write). */
