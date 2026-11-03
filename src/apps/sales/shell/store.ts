@@ -132,6 +132,13 @@ export async function discardKept(id: string): Promise<void> {
   if (outbox) await outbox.discard(id);
 }
 
+/** A refused kept write, fixed: its new arguments (or the same) go back in its place, then the outbox tries again (spec 06 Q5). */
+export async function retryKept(id: string, args?: unknown): Promise<void> {
+  if (!outbox) return;
+  await outbox.retry(id, args);
+  await flush();
+}
+
 /** The person's own drafts (localStorage, per login; sales.html keeps them so too). The demo seeds FACTS §4.6. */
 function loadDrafts(userId: string): Draft[] {
   if (isDemo) return demoDrafts();
