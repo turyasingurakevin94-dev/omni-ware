@@ -17,7 +17,8 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=empty` | Nothing live, nobody owes, no chats | CH06, OR04, CU06 |
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
-| `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32 |
+| `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
+| `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 

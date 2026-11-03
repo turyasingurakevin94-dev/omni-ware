@@ -9,6 +9,7 @@
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
+ *   &listen=1                the phone can listen: "Say it" hears HEARD until Stop (CH16; no tap can cause speech)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -22,7 +23,12 @@ export interface DemoFlags {
   state: DemoStateName | null;
   /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
   as: string | null;
+  /** The phone listens (CH16): "Say it" hears HEARD and keeps listening until Stop. */
+  listen: boolean;
 }
+
+/** What the demo's phone hears when it listens (&listen=1): Grace's answer to Kato's 10:29 (CH16). */
+export const HEARD = 'Yes, it can come to the Ntinda site';
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
 
@@ -38,5 +44,6 @@ export function readFlags(search: string): DemoFlags {
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
     as: /^[a-z]+$/.test(as) ? as : null,
+    listen: q.get('listen') === '1',
   };
 }
