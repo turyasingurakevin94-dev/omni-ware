@@ -11,7 +11,7 @@ import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
 import type { Books, Order, Session } from '../types.ts';
 import { client, isNetwork, type Sb } from './client.ts';
-import { readBooks, readChats, readSession, readThread } from './read.ts';
+import { readBooks, readChats, readOrder, readSession, readThread } from './read.ts';
 import * as W from './write.ts';
 
 export function supabaseSource(): DataSource {
@@ -67,6 +67,7 @@ export function supabaseSource(): DataSource {
       return readChats(sb(), me().shopId, (await books()).customers, Date.now());
     },
     thread: (chatId) => readThread(sb(), chatId),
+    order: (id) => readOrder(sb(), me(), id),
 
     async placeOrder(d) {
       const b = await books(), now = Date.now();
@@ -82,6 +83,7 @@ export function supabaseSource(): DataSource {
       await src.books();
       return { order: await order(r.id), invoice: r.invoice || invoiceNo(r.id), paid: r.paid, change: r.change, waiting: r.waiting };
     },
+    async counterLines(orderId, lines) { await W.counterLines(sb(), me(), orderId, lines, Date.now()); },
     async markPriceTold(orderId) { await W.markPriceTold(sb(), me(), orderId, Date.now()); },
     async setClientPhone(orderId, phone) { await W.setClientPhone(sb(), me(), orderId, phone); },
     async assignOrder(orderId, customerId) {

@@ -64,7 +64,23 @@ Smaller notes from the designers are in each `manifest/<tab>.json` under `open_q
 - Mama Shine is not yet in `docs/canvas-cast.md`;
 - counter tender notes start at the next likely note (52,000 → 55,000 / 60,000).
 
-## 4. Rules the Orders screens follow (from the old app)
+## 4. Rules the screens share
+
+Each is written once in `src/core` and used by every tab that shows it.
+
+| Rule | What it says | Source | Code |
+|---|---|---|---|
+| Last order | A customer's most recent order placed, not cancelled or voided | FACTS rule 1 | `core/customers.ts` `rhythm` |
+| Due | Today is on or after last order + their usual gap ("every N days"). "Due today" at 0, "N days late" after | `sales.html:4674` (`r.due`) | `rhythm`, `dueWords` |
+| Gone quiet | **More than twice** their gap since the last order (`since > every × 2`). A quiet customer is in its own group, never "Who's due" | `sales.html:4674` (`r.overdue`), `:6927` (`due && !overdue`) | `rhythm`, `dueCustomers` |
+| Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
+| A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
+| Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
+
+Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way.
+
+## 5. Rules the Orders screens follow (from the old app)
 
 | Rule | Source | Built in |
 |---|---|---|

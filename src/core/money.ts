@@ -192,6 +192,28 @@ export function changeFor(total: UGX, given: UGX): UGX {
   return whole(given) - whole(total);
 }
 
+/** The shilling notes a cashier counts, largest first (KC06 "Count what they gave", KC14 the change as notes). */
+export const NOTES: UGX[] = [50000, 20000, 10000, 5000, 2000, 1000];
+
+/**
+ * The two notes a customer most likely hands over for a total: the next 5,000 and the next 10,000 above it
+ * (then 20,000, 50,000, 100,000 when those are the same). FACTS "Tender rule": 52,000 → 55,000 / 60,000;
+ * 203,500 → 205,000 / 210,000. sales.html ctGivenChoices started at the next 1,000; the canvas (KC03) wins.
+ */
+export function likelyNotes(total: UGX): UGX[] {
+  const t = whole(total), out: UGX[] = [];
+  [5000, 10000, 20000, 50000, 100000].forEach((s) => { const v = (Math.floor(t / s) + 1) * s; if (!out.includes(v) && out.length < 2) out.push(v); });
+  return out;
+}
+
+/** An amount as the fewest notes, largest first (8,000 → 5,000 · 2,000 · 1,000); what is under 1,000 is left out. */
+export function notesFor(amount: UGX): UGX[] {
+  let left = Math.max(0, whole(amount));
+  const out: UGX[] = [];
+  NOTES.forEach((n) => { while (left >= n) { out.push(n); left -= n; } });
+  return out;
+}
+
 /* ---------------- the 21-day hold ---------------- */
 
 /** Days from a to b (both Kampala days). */

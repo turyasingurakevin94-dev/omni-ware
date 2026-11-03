@@ -10,6 +10,7 @@
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
  *   &wa=off                  the shop's WhatsApp is not connected: nothing reaches a customer (CU43: the receipt waits)
+ *   &fail=sale               the next counter sale is lost on its way, as when the signal drops mid-send (KC19)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
@@ -25,6 +26,8 @@ export interface DemoFlags {
   as: string | null;
   /** &wa=off: the shop's WhatsApp number is not connected (ChatBooks.connected false). */
   waOff: boolean;
+  /** 'sale': the next counter sale does not reach the server (KC19). */
+  fail: 'sale' | null;
 }
 
 const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
@@ -42,5 +45,6 @@ export function readFlags(search: string): DemoFlags {
     state: state && STATES.includes(state) ? state : null,
     as: /^[a-z]+$/.test(as) ? as : null,
     waOff: q.get('wa') === 'off',
+    fail: q.get('fail') === 'sale' ? 'sale' : null,
   };
 }
