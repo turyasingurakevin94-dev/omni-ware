@@ -38,7 +38,7 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `money.ts` | §5: the cash book this month, promises, asks to Ruth and Esther, the goal, the shop's settings (Credit charge 3%) |
 | `asks.ts` | §6: the four asks of Sourcing |
 | `extra/<tab>.ts` | **each tab's own additions**, owned by that tab's builder |
-| `extra/sell.ts` | Sell: the catalogue to FACTS' 1,153 items in 12 aisles (SL11 draws the counts; generated, not listed); Kato's and Lubowa's orders re-lined at the same totals; Grace's background orders re-lined (SL31); Lubowa #0508; #0559 after 13:50 when no other file added it; **loading 500 a bag** (`per: 'bag'`, FACTS 20 bags = 10,000) and **cutting 1,000 a sheet** (a seed value, not FACTS); Ntinda about 35 minutes |
+| `extra/sell.ts` | Sell: the catalogue to FACTS' 1,153 items in 12 aisles (SL11 draws the counts; generated, not listed); Kato's and Lubowa's orders re-lined at the same totals; Grace's background orders re-lined (SL31); Lubowa #0508; #0559 after 13:50 when no other file added it; **loading 500 a bag** (`per: 'bag'`, FACTS 20 bags = 10,000), **cutting 10,000 flat** (a seed value, not FACTS), Ntinda's delivery as `kind: 'delivery'`, `area: 'Ntinda'`, about 35 minutes |
 
 `test/sales-core-demo.test.js` checks that the figures the boards draw come out of the seed by the app's own rules: 12 live · +3,240,000, the four stage tiles, Sold · October 12,480,000, Placed today 8 · 2,440,500, Money in today 1,044,000, 38 customers, 4 owe 1,910,000, Who's due 3, Gone quiet 8, Chats waiting 3 · oldest 12 m, and the writes below. If a board needs a figure the seed does not give, add the rows in your tab's `extra/<tab>.ts` and a check in your own test; never change another tab's file.
 

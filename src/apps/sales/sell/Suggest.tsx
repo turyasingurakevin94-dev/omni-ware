@@ -7,16 +7,17 @@
 import type { JSX } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { Books, Customer } from '../../../core/types.ts';
+import { chipAisles } from '../../../core/aisles.ts';
 import { AisleChips } from '../../../ui/Aisles.tsx';
 import { OftenWith, OftenWithHead } from '../../../ui/OftenWith.tsx';
 import { me, online } from '../shell/store.ts';
 import { openWarns } from './Lines.tsx';
-import { aisles, itemKey, oftenWith, whose } from './insights.ts';
+import { itemKey, oftenWith, whose } from './insights.ts';
 import { add, cur, openId } from './model.ts';
 import { openAisle } from './sheets.tsx';
 
-/** How far above the dock a suggestion must end (SL06, SL22), or above the no-signal notice over it (SL27). */
-const MARGIN = { dock: 16, notice: 12 };
+/** How far above the dock, or the no-signal notice over it, a suggestion must end: 16 (SL06, SL22, SL27; the lead's ruling). */
+const MARGIN = 16;
 
 export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null {
   const x = cur.value, b = p.b, c = p.c, box = useRef<HTMLDivElement>(null), [fit, setFit] = useState<{ rows: number; chips: boolean }>({ rows: 3, chips: true });
@@ -27,7 +28,7 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
     const el = box.current;
     if (!el) return;
     const notice = document.querySelector('.sl-notice'), bar = notice || document.querySelector('.sl-dock');
-    const limit = (bar ? bar.getBoundingClientRect().top : window.innerHeight) - (notice ? MARGIN.notice : MARGIN.dock) + window.scrollY;
+    const limit = (bar ? bar.getBoundingClientRect().top : window.innerHeight) - MARGIN + window.scrollY;
     const kids = [...el.querySelectorAll<HTMLElement>('[data-fit]')];
     let rows = 0, chips = false;
     const bottom = (k: HTMLElement) => k.getBoundingClientRect().bottom + window.scrollY;
@@ -52,7 +53,7 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
         </div>
       ))}
       <div data-fit="chips" style={fit.chips ? undefined : { display: 'none' }}>
-        <AisleChips aisles={aisles(b).map((a) => ({ name: a.name, on: () => openAisle(a.name) }))} />
+        <AisleChips aisles={chipAisles(b.items, b.orders, c ? c.id : null).map((a) => ({ name: a, on: () => openAisle(a) }))} />
       </div>
     </div>
   );

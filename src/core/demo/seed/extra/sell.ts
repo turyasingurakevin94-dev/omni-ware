@@ -4,18 +4,18 @@
  *
  *   the shop's 1,153 items in 12 aisles (FACTS §6), so the aisles count as drawn (SL03, SL11)
  *     and an aisle has its kinds (SL12: Nails 9 · Screws 24 · Bolts 18; 18 new; a carton beside the kg)
- *   Kato's 14 orders hold what "Often with Iron sheet G28" counts (SL05: Ridge cap 7/14,
- *     Roofing nails 2.5" 5/14, Wire nails 4" · 25kg ctn 6/14) and the aisles he buys from (SL03: 3)
- *   Lubowa's 5 orders (SL04: Ridge cap 4/5, Roofing nails 3/5)
+ *   Kato's orders hold what "Often with Iron sheet G28" counts by core/often.ts (SL05) and the
+ *     aisles he buys from (SL03: 3), each at the total it had (FACTS §3.2's year by seller)
+ *   Lubowa's 5 orders (SL04: Often with Iron sheet G28 2/2 · 2/2)
  *   what Grace sells most, the last 30 days (SL31: Cement, Iron sheet G28, Wire nails 4" · 1kg),
  *     and the five aisles she sells from most (SL03, SL30, SL31): only the 29 background orders
  *     whose figures FACTS never gives are re-lined, each paid in full again
  *   the shop's cutting charge, Ntinda's travel time (SL16, SL17); the sentence the demo hears (SL10)
- *   after 13:50 (&clock=), Lubowa's #0559 (FACTS §4.4), so Sell's endings are #0560 and #0561
+ *   (Sell's endings, #0560 and #0561, are placed at &clock=15:05, after the Orders tab's #0559)
  */
 import { orderTotal } from '../../../money.ts';
 import { at } from '../../../time.ts';
-import type { Item, Line, Order } from '../../../types.ts';
+import type { Item, Line } from '../../../types.ts';
 import type { DemoFlags } from '../../flags.ts';
 import { L, O, P, charge, pay } from '../build.ts';
 import { d, TODAY } from '../clock.ts';
@@ -108,14 +108,11 @@ function reline(s: DemoState, id: number, lines: Line[], total?: number): void {
 const shelfL = (id: string, q: number) => L(id, q, { from: 'shelf', supplierId: '__stock__' });
 
 function lines(s: DemoState, f: DemoFlags): void {
-  // Kato (SL05, SL03): ridge cap in 7 of his 14, roofing nails in 5, wire nails 25kg in 6, with the sheets most.
+  // Kato (SL05 Often with Iron sheet G28 has ridge caps and roofing nails): two orders whose lines FACTS
+  // never draws, each at its own total (FACTS §3.2's year by seller: Brian 2,180,000 · 3). #0498 is the
+  // Orders tab's (FACTS §4.5); #0490 stays the usual.
   reline(s, 545, [L('iron-g28-3m', 20), L('nails-4-25kg', 4), L('ridge-g28', 3), L('roofing-nails-2-5', 10)], 1240000);
-  reline(s, 498, [L('iron-g28-3m', 30), L('ridge-g28', 6), L('roofing-nails-2-5', 10), L('emulsion-cream-20', 1), L('iron-g26-3m', 1), L('nails-4-1kg', 1)], 1505000);
-  reline(s, 490, [L('cement-hima-50', 40), L('iron-g28-3m', 30), L('nails-4-25kg', 2), L('ridge-g28', 2), L('roofing-nails-2-5', 5)]);
-  reline(s, 437, [L('iron-g28-3m', 1), L('ridge-g28', 2)]);
-  reline(s, 402, [L('wheelbarrow-hd', 2), L('tile-glue-20', 5), L('ridge-g28', 1)]);
-  reline(s, 479, [L('iron-g26-3m', 4), L('nails-4-25kg', 6), L('roofing-nails-2-5', 4)]);
-  reline(s, 466, [L('emulsion-cream-20', 4), L('roofing-nails-2-5', 3)]);
+  reline(s, 437, [L('iron-g28-3m', 10), L('ridge-g28', 10)], 560000);
   // Lubowa (SL04): the bills keep their 380,000, 180,000 and 169,000.
   reline(s, 540, [L('iron-g28-3m', 7), L('ridge-g28', 4), L('roofing-nails-2-5', 10)], 380000);
   reline(s, 539, [L('ridge-g28', 10)], 180000);
@@ -141,31 +138,23 @@ function lines(s: DemoState, f: DemoFlags): void {
   });
 }
 
-/* ---------------- after 13:50 (&clock=) ---------------- */
-
-function lubowa0559(s: DemoState, f: DemoFlags): void {
-  if (f.state === 'first-day' || !f.clock || at(TODAY, f.clock) < at(TODAY, '13:50') || s.books.orders.some((o) => o.id === 559)) return;
-  const o: Order = O({ id: 559, customerId: LUBOWA, by: GRACE, placedAt: at(TODAY, '13:50'), stage: 'checking', lines: [L('cement-hima-50', 20), L('timber-4x2-12', 10)] });
-  s.books.orders.push(o);
-}
-
 export function extra(s: DemoState, f: DemoFlags): void {
   catalogue(s);
   lines(s, f);
-  lubowa0559(s, f);
   const b = s.books;
-  // SL16: loading per bag (FACTS §6: 20 bags is 10,000; spec 04 Q3), and the demo's own cutting rate
-  // (a seed value, named in the demo README): presets.services as core/services.ts reads them.
   // SL18: the iron sheet's cost (never shown; not in FACTS) puts 36,500 at the ladder's 66% (ui/Keypad ladderPct);
   // SL20's 24,000 is under it, so the floor refuses it (0171).
   const sheet = b.items.find((i) => i.id === 'iron-g28-3m');
   if (sheet) sheet.cost = 24500;
+  // SL16, SL17: the shop's charges as presets.services would carry them (core/services.ts reads the
+  // preset's own fields): loading 500 a bag (FACTS §6: 20 bags is 10,000; per: 'bag', spec 04 Q3); the
+  // demo's own cutting fee, 10,000 flat (a seed value, named in the demo README); Ntinda's delivery
+  // (kind: 'delivery', its area) about 35 minutes (FACTS §4.2: leaves 13:20, there ~13:55).
   const sv = b.settings.services, loading = sv.find((x) => x.id === 'loading');
   if (loading) loading.per = 'bag';
-  if (!sv.some((x) => x.id === 'cutting')) sv.push({ id: 'cutting', label: 'Cutting', type: 'fixed', value: 1000, per: 'sheet' });
-  // SL17: about 35 minutes to Ntinda (FACTS §4.2: leaves 13:20, there ~13:55).
+  if (!sv.some((x) => x.id === 'cutting')) sv.push({ id: 'cutting', label: 'Cutting', type: 'fixed', value: 10000 });
   const ntinda = sv.find((x) => x.id === 'delivery-ntinda');
-  if (ntinda) ntinda.mins = 35;
+  if (ntinda) Object.assign(ntinda, { kind: 'delivery' as const, area: 'Ntinda', mins: 35 });
   // SL10: what the demo hears when Grace says it (the demo has no microphone).
   (globalThis as { owDemoVoice?: string }).owDemoVoice = 'forty sheets of G28 and two cartons of four inch nails';
 }

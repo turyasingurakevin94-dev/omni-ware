@@ -190,8 +190,9 @@ export function restore(l: Line): void {
 
 /* ---------------- how it goes, how it is paid ---------------- */
 
+/** Pickup takes the delivery fee off; Delivery puts it back through its sheet (SL17, setDelivery). */
 export function setMode(m: Mode): void {
-  edit((x) => ({ ...x, mode: m }));
+  edit((x) => ({ ...x, mode: m, ...(m === 'pickup' ? { charges: x.charges.filter((c) => !/^Delivery/.test(c.label)) } : {}) }));
 }
 export function setDelivery(d: Delivery, fee: number, area: string): void {
   edit((x) => ({

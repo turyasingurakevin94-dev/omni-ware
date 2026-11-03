@@ -39,7 +39,7 @@ function steps(b: Books, o: Order, who: string): Step[] {
     return [
       { icon: 'checking', title: 'Checking', sub: 'skipped · all on our shelf', skipped: true },
       { icon: 'orders', title: 'Packing', sub: `now · ${st.first} packs it`, now: true },
-      ...(o.paid < orderTotal(o) ? [{ icon: 'cash' as IconName, title: 'Not paid yet', sub: `${who} pays at the gate · Take payment` }] : []),
+      ...(o.paid < orderTotal(o) ? [{ icon: 'cash' as IconName, title: 'Not paid yet', sub: `${who} leaves when paid · Take payment` }] : []),
     ];
   }
   const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit` : `${m.first} checks it`;

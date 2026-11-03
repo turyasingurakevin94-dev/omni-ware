@@ -37,9 +37,17 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(I.whoLine(b, kato, now).text === 'Every 10 days · owes 420k', 'the who pill: Every 10 days · owes 420k');
   t.check(last.id === 553 && M.orderTotal(last) === 170000 && r.every === 10, 'last order #0553 · 170,000, every 10 days');
   const w = I.oftenWith(b, KATO, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::', 'cement-hima-50::', 'hinge-soft-flat::']), GRACE);
-  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 4/5, Roofing nails 2.5" 3/5, Wire nails 4" · 25kg ctn 2/5', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ')})`);
+  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 2/5, Wire nails 4" · 25kg ctn 2/5, Wheelbarrow, heavy duty 2/5', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ')})`);
   const marks = I.aisleMarks(b, kato);
-  t.check([...marks].map(([a, n]) => `${a} ${n}`).sort().join(', ') === 'Cement 1, Fasteners 1, Roofing 2', 'Kato buys from 3: Roofing 2 · Cement 1 · Fasteners 1');
+  t.check([...marks].map(([a, n]) => `${a} ${n}`).sort().join(', ') === 'Cement 1, Fasteners 1, Roofing 1', `Kato buys from 3: Roofing 1 · Cement 1 · Fasteners 1, his usual (got ${[...marks].map(([a, n]) => `${a} ${n}`).join(', ')})`);
+
+  // FACTS §3.2 (CH33): Kato's year by seller holds after the re-lines (Brian 2,180,000 · 3, Faith 500,000 · 1); #0490 is the usual.
+  const year = (by) => b.orders.filter((o) => o.customerId === KATO && o.placedBy === by && !o.voided && !o.cancelled);
+  const sum = (os) => os.reduce((n, o) => n + M.orderTotal(o), 0);
+  t.check(year('u-brian').length === 3 && sum(year('u-brian')) === 2180000, `Brian sold Kato 3 orders, 2,180,000 (got ${year('u-brian').length} · ${sum(year('u-brian'))})`);
+  t.check(year('u-faith').length === 1 && sum(year('u-faith')) === 500000, `Faith sold Kato 1 order, 500,000 (got ${year('u-faith').length} · ${sum(year('u-faith'))})`);
+  t.check(M.orderTotal(order(490)) === 2672000, '#0490 is the usual, 2,672,000');
+  t.check([[545, 1240000], [437, 560000], [540, 380000], [539, 180000], [542, 169000]].every(([id, n]) => M.orderTotal(order(id)) === n), 'every re-lined order keeps its total');
 
   /* ---- Lubowa (SL04) ---- */
   const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
@@ -69,9 +77,9 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   /* ---- FACTS totals the seed additions keep ---- */
   t.check([[545, 1240000], [498, 1505000], [540, 380000], [539, 180000], [542, 169000], [553, 170000], [552, 1810000]].every(([id, v]) => M.orderTotal(order(id)) === v), 'Kato’s and Lubowa’s bills keep their totals');
   t.check(cust(KATO).owes === 420000 && cust(LUBOWA).owes === 0, 'Kato owes 420,000; Lubowa 0');
-  const after = demoSource('?demo&clock=14:10');
+  const after = demoSource('?demo&clock=15:05');
   const ab = await after.books();
-  t.check(ab.orders.some((o) => o.id === 559) && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'after 13:50 Lubowa’s #0559 is in, so the next is #0560');
+  t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 15:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
 
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
