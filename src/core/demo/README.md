@@ -11,12 +11,13 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | Address | What you get | Boards |
 |---|---|---|
 | `?demo` | Sat 17 Oct 2026, 10:41, Kampala. Grace Akello (Sales) is signed in. | almost all |
-| `&offline=1` | No signal: reads come from the copy saved at 7:52, every write is refused as `offline` (the outbox keeps it), and the outbox starts with 2 kept writes ("2 not sent yet") | TD09, CU07, SL27, KC17, CH12 |
+| `&offline=1` | No signal: reads come from the copy saved at 7:52, every write is refused as `offline` (the outbox keeps it), and the outbox starts with 2 kept writes ("2 not sent yet": Grace's two answers to Mukono, 10:40 and 10:41) | TD09, CU07, SL27, KC17, CH12 |
 | `&clock=15:40` | Another time of day; the day and the data stay (a tab's `extra` file may change the data for its what-if) | TD07 |
 | `&state=first-day` | A new salesperson's first day: 8:00, nothing of Grace's yet (no orders, payments or chats) | TD06 |
 | `&state=empty` | Nothing live, nobody owes, no chats | CH06, OR04, CU06 |
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
+| `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 
@@ -46,7 +47,7 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `counterSale` | `counter_sale` (0136/0155) | placed, paid, delivered and invoiced at once; change for cash; a price under the shop's waits (`waiting: 'price'`) |
 | `receivePayment` | `receive_payment` (0169) | a customer's bills oldest first (or the ticked ones); more than owed needs `change` or `deposit`, else `OWOVR`; Mobile and Bank need the transaction ID |
 | `askBill`, `askCancel`, `askPaymentFix`, `recordPromise`, `askSourcing` | `invoice_asks`, (none yet), `payment_asks`, `payment_promises`, `sourcing_leads` | recorded, visible on the next read |
-| `send`, `sendTemplate`, `note`, `take`, `give`, `markRead` | `wa-send`, `wa_notes`, `take_conversation`, `hand_conversation` | a shut 24-hour window refuses a plain message; taking someone else's chat is refused |
+| `send`, `sendTemplate`, `sendImage`, `sendCatalog`, `media`, `note`, `take`, `give`, `markRead` | `wa-send` (`send`, `send-reply-template`, `send-image`, `send-catalog`, `media`), `wa_notes`, `take_conversation`, `hand_conversation` | a shut 24-hour window refuses a plain message or a picture; taking someone else's chat is refused; only your own customer is given, except by the Manager, whose give is a move (`moved`); `served` adds `servedBefore`, the year before the seeded thread |
 
 Writes take 250 ms, so "Sending…" is seen. With `&offline=1` every write is refused as `offline`.
 
