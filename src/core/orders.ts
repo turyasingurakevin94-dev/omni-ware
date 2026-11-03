@@ -7,10 +7,11 @@
  *   the price tag     a line the Manager decides carries who set it and why (decision-rights
  *                     "The price decision"; sales.html:4428-4440 priceNoteFor, placedPriceTag)
  *   the payload       the order as sales.html writes it (8722-8738), so every other app reads it
+ *   a return's lines  as invoice_asks keeps them, so the Manager reads which lines come back
  */
 import type { OrderDraft } from './datasource.ts';
 import { creditHold, linePriced } from './money.ts';
-import type { Customer, Day, Item, Line, Stage } from './types.ts';
+import type { AskLine, Customer, Day, Item, Line, Order, Stage } from './types.ts';
 
 /** Why the Manager decides a line's price, or null (sales.html:4423 priceNoteFor). */
 export function priceNote(l: Line): 'under' | 'nomargin' | 'nocost' | null {
@@ -74,4 +75,12 @@ export function orderPayload(d: OrderDraft, stage: Stage, by: string, now: numbe
     ...(d.deliverTo ? { deliverTo: d.deliverTo } : {}),
     ...(d.chatId != null ? { waConvId: d.chatId } : {}),
   };
+}
+
+/** A return's lines as invoice_asks keeps them (sales.html:6279): the line's place, its name, how many, at the line's price. */
+export function askLines(o: Order, ls: { idx: number; qty: number }[] = []): AskLine[] {
+  return ls.filter((x) => o.lines[x.idx] && x.qty > 0).map((x) => {
+    const l = o.lines[x.idx], price = l.price || 0;
+    return { idx: x.idx, name: l.name, qty: x.qty, price, amount: Math.round(x.qty * price) };
+  });
 }

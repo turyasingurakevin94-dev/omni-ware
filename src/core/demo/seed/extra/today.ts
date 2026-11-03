@@ -38,7 +38,7 @@ export function extra(s: DemoState, f: DemoFlags): void {
   const b = s.books, st = f.state;
   // TD05: #0528 is being checked by Esther (Ggaba's 125,000 inside what they owe).
   if (!b.paymentAsks.some((a) => a.orderId === 528)) {
-    b.paymentAsks.push({ id: 'pa-0528', paymentId: null, customerId: GGABA, orderId: 528, what: 'bill', amount: 125000, status: 'sent', by: ESTHER, at: d('2026-10-16', '11:00') });
+    b.paymentAsks.push({ id: 'pa-0528', paymentId: null, customerId: GGABA, orderId: 528, what: 'bill', want: {}, amount: 125000, status: 'sent', by: ESTHER, at: d('2026-10-16', '11:00') });
   }
   // TD17: Nansana's 560,000 by Mobile at 8:52 shows its transaction ID (only TD17 draws it).
   const p9002 = b.payments.find((p) => p.id === 9002);

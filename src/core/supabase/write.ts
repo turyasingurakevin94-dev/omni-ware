@@ -7,7 +7,7 @@
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
 import { invoiceNo } from '../names.ts';
-import { orderPayload } from '../orders.ts';
+import { askLines, orderPayload } from '../orders.ts';
 import type { BillAsk, ChatNote, Customer, CustomerKind, Day, Message, Order, PayPromise, PaymentAsk, Session, SourcingAsk, Stage, UGX } from '../types.ts';
 import { isMissing, isNetwork, type Row, type Sb } from './client.ts';
 import { askOf, billAskOf, cancelAskOf, customerOf, messageOf, paymentAskOf, promiseOf } from './rows.ts';
@@ -103,9 +103,9 @@ export async function setClientPhone(sb: Sb, s: Session, orderId: number, phone:
 }
 
 /** sales.html:6283: an ask to the Manager about a bill (invoice_asks, 0123). */
-export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 'credit'; amount: UGX; reason: string; note: string }): Promise<BillAsk> {
+export async function askBill(sb: Sb, s: Session, o: Order, a: { kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk> {
   const row = {
-    shop_id: s.shopId, quote_id: o.id, customer_id: o.customerId, kind: a.kind, lines: [], amount: Math.round(a.amount),
+    shop_id: s.shopId, quote_id: o.id, customer_id: o.customerId, kind: a.kind, lines: a.kind === 'void' ? [] : askLines(o, a.lines), amount: Math.round(a.amount),
     reason: a.kind === 'void' && !a.reason ? 'Raised twice' : a.reason || null, note: a.note.trim() || null,
     asked_by: s.userId, asked_by_name: s.name, asked_role: s.role, status: 'sent',
   };

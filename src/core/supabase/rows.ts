@@ -182,7 +182,10 @@ export function orderOf(q: Row, pb: PriceBook): Order {
     discount: whole(p.discount),
     payments, paid: whole(q.amount_paid),
     invoiced: !!q.invoiced, invoicedAt: ms(q.invoiced_ts) || ms(q.invoiced_at),
-    voided: !!q.voided, cancelled: q.status === 'cancelled' || !!p.cancelledAt,
+    voided: !!q.voided,
+    voidedAt: ms(p.voidedBy && typeof p.voidedBy === 'object' ? p.voidedBy.at : p.voidedAt),
+    voidedBy: p.voidedBy && typeof p.voidedBy === 'object' ? (p.voidedBy.by ? String(p.voidedBy.by) : null) : p.voidedBy ? String(p.voidedBy) : null,
+    cancelled: q.status === 'cancelled' || !!p.cancelledAt,
     counter: !!(p.counter || p.counterSale),
     deliverTo: p.deliveryAddress ? String(p.deliveryAddress) : p.deliverTo ? String(p.deliverTo) : null,
     deliveredAt: ms(p.deliveredAt),
@@ -254,7 +257,8 @@ export function askOf(r: Row): SourcingAsk {
 
 /** invoice_asks → BillAsk (sales.html rowToAsk). */
 export function billAskOf(r: Row): BillAsk {
-  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: r.kind === 'credit' ? 'credit' : 'void', amount: whole(r.amount), reason: String(r.reason || ''), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: r.kind === 'credit' ? 'credit' : 'void', amount: whole(r.amount), reason: String(r.reason || ''),
+    lines: Array.isArray(r.lines) ? r.lines.map((l: Row) => ({ idx: num(l.idx), name: String(l.name || ''), qty: num(l.qty), price: whole(l.price), amount: whole(l.amount) })) : [], note: String(r.note || ''), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
 /** cancel_asks (0181) → BillAsk, kind 'cancel': what the order came to when asked, and why. */
@@ -265,7 +269,7 @@ export function cancelAskOf(r: Row): BillAsk {
 
 /** payment_asks → PaymentAsk (sales.html rowToPayAsk). */
 export function paymentAskOf(r: Row): PaymentAsk {
-  return { id: String(r.id), paymentId: r.cash_txn_id == null ? null : Number(r.cash_txn_id), customerId: r.customer_id ? String(r.customer_id) : null, orderId: r.quote_id == null ? null : Number(r.quote_id), what: r.what, amount: whole(r.amount), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+  return { id: String(r.id), paymentId: r.cash_txn_id == null ? null : Number(r.cash_txn_id), customerId: r.customer_id ? String(r.customer_id) : null, orderId: r.quote_id == null ? null : Number(r.quote_id), what: r.what, want: r.want && typeof r.want === 'object' ? r.want : {}, amount: whole(r.amount), status: r.status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
 /** wa_conversations → Chat; the customer is the one whose number ends the same, if exactly one does (sales.html waMatchCustomer). */
