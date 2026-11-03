@@ -24,7 +24,8 @@ import { GhostTiles } from '../../../ui/StageTiles.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { LIVE, doneThisWeek, faceOf, findOrders, liveOrders, nameOf, placedWhen, doneWhen, rowStatus, shortItem, shownRows, sortRows, stageCounts, takeAmount, kept, twinOf } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { LIVE, doneThisWeek, faceOf, findOrders, liveOrders, nameOf, placedWhen, doneWhen, rowStatus, shortItem, shownRows, sortRows, stageCounts, takeAmount, kept } from './data.ts';
 import { CustOrderRow, OrderRow, ShowMore } from './local-OrderRow.tsx';
 import { go, openOrder, payFor } from './links.ts';
 import { openTell } from './Tell.tsx';
@@ -165,7 +166,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
             {(more ? gone : gone.slice(0, 4)).map((o) => {
               const owes = !o.voided && orderOwes(o) > 0 && o.invoicedAt != null;
               const at = owes ? (o.invoicedAt as number) : (o.deliveredAt || o.placedAt);
-              const age = daysApart(dayOf(at), today), tw = o.voided ? twinOf(b, o, true) : null;
+              const age = daysApart(dayOf(at), today), tw = o.voided ? twinOf(b.orders, o, true) : null;
               return <CustOrderRow key={o.id} icon="receipt" title={`${owes ? 'Billed' : 'Delivered'} ${daysApart(dayOf(at), today) < 7 ? weekday(at) + ' ' + clock(at) : dayLabel(at)}`}
                 sub={owes ? `${orderNo(o.id)} · ${age} day${age === 1 ? '' : 's'}` : o.voided && tw && tw.copy === o ? `${orderNo(o.id)} · copy of ${orderNo(tw.orig.id)}` : orderNo(o.id)} amount={orderTotal(o)} struck={o.voided}
                 pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => openOrder(o.id)} />;

@@ -19,6 +19,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&wa=off` | The shop's WhatsApp number is not connected: a receipt or statement cannot reach the customer | CU43 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32 |
+| `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 

@@ -2,7 +2,7 @@
 
 What this covers: every screen of the Sales app, and the questions still open on them.
 Date: 2026-10-29
-Status: **screens decided** (the approved canvas). **Ten questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
+Status: **screens decided** (the approved canvas). **Questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
 
 ---
 
@@ -58,12 +58,30 @@ Each row names the default being built until Kevin answers.
 | Q8 | May Sales see the searches that found nothing for them (TD20)? | Yes, their own searches only | `manifest/today.json` |
 | Q9 | Should "To collect" (1,910,000, which includes 125,000 still being checked) be called "Owes"? | "To collect", with "Being checked" shown apart | `manifest/today.json` |
 | Q10 | When an item is not in stock: Moses finds the cost, Ruth prices it at Checking, then Denis buys it. Is that order right? | That order ("Price coming") | `manifest/sell.json` |
+| Q11 | How far apart may two identical orders be and still be the same order entered twice? Orders' rule allowed 10 minutes, Customers' and Today's 5. Should a copy also need the same invoiced state (Orders' rule did)? | One rule (`core/orders.ts` `twinOf`, `isCopy`): 5 minutes, the same person, customer and lines (and variant), both invoiced or both not. Every seeded pair is a minute apart, so no board moves. | `src/core/orders.ts`; the integration pass, 3 Nov |
+| Q12 | Which notes does "They gave" offer? Two rules disagreed. FACTS' tender rule (the counter, KC03): the next 5,000 and the next 10,000 above the total (52,000 → 55,000 / 60,000; 420,000 → 425,000 / 430,000). Customers' Take payment drew the next half and whole of the leading place (420,000 → 450,000 / 500,000 on CU35-CU37), which fits a big debt paid in big notes. | FACTS' rule, in `core/money.ts` `likelyNotes`, on both screens. CU35, CU36, CU37, CU41 and CU42 are corrected to it: Kato gives 430,000 for 420,000, 10,000 over (was 500,000, 80,000 over). | `src/core/money.ts`; `Pay.tsx`'s `notesFor` (removed); the integration pass, 3 Nov |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
 - counter tender notes start at the next likely note (52,000 → 55,000 / 60,000).
 
-## 4. Rules the Orders screens follow (from the old app)
+## 4. Rules the screens share
+
+Each is written once in `src/core` and used by every tab that shows it.
+
+| Rule | What it says | Source | Code |
+|---|---|---|---|
+| Last order | A customer's most recent order placed, not cancelled, voided, a test record or the copy of an order entered twice (Q11) | FACTS rule 1 | `core/customers.ts` `rhythm` |
+| Due | Today is on or after last order + their usual gap ("every N days"). "Due today" at 0, "N days late" after | `sales.html:4674` (`r.due`) | `rhythm`, `dueWords` |
+| Gone quiet | **More than twice** their gap since the last order (`since > every × 2`). A quiet customer is in its own group, never "Who's due" | `sales.html:4674` (`r.overdue`), `:6927` (`due && !overdue`) | `rhythm`, `dueCustomers` |
+| Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
+| A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
+| Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
+
+Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way. Customers' own copy (gone ≥ twice) is gone: CU09 reads the core, though its words say "twice their usual gap or more".
+
+## 5. Rules the Orders screens follow (from the old app)
 
 | Rule | Source | Built in |
 |---|---|---|

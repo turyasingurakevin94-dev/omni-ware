@@ -16,10 +16,12 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `chats/chat` | `{ id }` (a conversation id; demo ids match FACTS) | chats | CH10–CH33 |
 | `chats/new` | — | chats | CH05 |
 | `sell` | — | sell | SL01 Who (the red +) |
-| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` | sell | SL03–SL27, SL30, SL31 |
+| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` (`items`: a JSON string of `[{ itemId, qty, price }]`; the Counter's Order in sends it) | sell | SL03–SL27, SL30, SL31 |
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
+| `counter/wait` | `{ id }` (the counter sale waiting for the Manager's price) | counter | KC11 |
+| `counter/receipt` | `{ id }` | counter | KC16 |
 | `orders` | `{ stage? }` | orders | OR01–OR04 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
 | `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |

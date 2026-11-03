@@ -85,20 +85,31 @@ export function askLines(o: Order, ls: { idx: number; qty: number }[] = []): Ask
   });
 }
 
+/** How many minutes apart an order and its copy can be placed (open for Kevin, spec 04 §3 Q11: Orders had 10). */
+export const COPY_MINUTES = 5;
+
 /**
- * The same order entered twice (OR19, OR23; FACTS: #0557 is #0556's copy, 10:02 / 10:03): another order of
- * the same customer, with the same lines, placed by the same person up to 5 minutes before it (or at the
- * same minute with a lower number), neither voided nor cancelled. The later one is the copy: it does not
- * count (Placed today, a customer's last order). Open for Kevin: Today's copyOf allows 5 minutes, the
- * Orders tab's twinOf 10 and also asks the same invoiced state; this is the one rule they should both use.
+ * The same order entered twice (OR19, OR23; FACTS: #0557 is #0556's copy, 10:02 / 10:03): two orders of the
+ * same customer, with the same lines, placed by the same person up to COPY_MINUTES apart, both invoiced or
+ * both not, neither cancelled nor a test record. The later one (or, at the same minute, the higher number) is
+ * the copy: it does not count (Placed today, a customer's last order). A voided order makes a pair only when
+ * `voided` is asked (OR23, OR29, OR30: the struck copy beside the bill that stands). One rule for Orders,
+ * Customers and Today (it was Orders' twinOf, 10 minutes, and Customers' isCopy, 5).
  */
-export function isCopy(orders: Order[], o: Order): boolean {
-  if (o.voided || o.cancelled || o.qa) return false;
+export function twinOf(orders: Order[], o: Order, voided = false): { orig: Order; copy: Order } | null {
+  if (o.cancelled || o.qa || (!voided && o.voided)) return null;
   const sig = (x: Order) => x.lines.map((l) => `${l.itemId}:${l.variantIdx ?? ''}:${l.qty}`).sort().join('|');
   const who = (x: Order) => x.customerId || x.client.name.trim().toLowerCase();
-  return orders.some((x) => x.id !== o.id && !x.voided && !x.cancelled && !x.qa && x.placedBy === o.placedBy && who(x) === who(o) && !!who(o)
-    && (x.placedAt < o.placedAt || (x.placedAt === o.placedAt && x.id < o.id)) && o.placedAt - x.placedAt <= 5 * 60000 && sig(x) === sig(o));
+  if (!who(o)) return null;
+  const t = orders.find((x) => x.id !== o.id && (voided || !x.voided) && !x.cancelled && !x.qa && x.placedBy === o.placedBy && who(x) === who(o)
+    && x.invoiced === o.invoiced && Math.abs(x.placedAt - o.placedAt) <= COPY_MINUTES * 60000 && sig(x) === sig(o));
+  if (!t) return null;
+  const tFirst = t.placedAt < o.placedAt || (t.placedAt === o.placedAt && t.id < o.id);
+  return tFirst ? { orig: t, copy: o } : { orig: o, copy: t };
 }
+
+/** The later of an order entered twice: it does not count. */
+export const isCopy = (orders: Order[], o: Order): boolean => twinOf(orders, o)?.copy === o;
 
 /** Days an order has sat in its stage, and when that is late: 2 or more (OR01's "2+ days" chip; FACTS: #0530, Packing since Thu, the 1 late). */
 export const LATE_DAYS = 2;

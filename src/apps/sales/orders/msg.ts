@@ -7,7 +7,8 @@ import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Order } from '../../../core/types.ts';
-import { backLines, byRole, custOf, dropped, member, openAsk, shortItem, shortName, twinOf } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { backLines, byRole, custOf, dropped, member, openAsk, shortItem, shortName } from './data.ts';
 import { untold } from './view.ts';
 
 export const sayMoney = (n: number): string => Math.round(n).toLocaleString('en-US');
@@ -30,7 +31,7 @@ export function tellText(b: Books, o: Order): string {
   }
   // A voided bill: struck out, nothing owed on it; a copy says which bill stands and where it is (OR29).
   if (o.voided) {
-    const tw = twinOf(b, o, true), vn = firstWord(member(b, o.voidedBy)?.name || byRole(b, 'manager')?.name || 'The manager');
+    const tw = twinOf(b.orders, o, true), vn = firstWord(member(b, o.voidedBy)?.name || byRole(b, 'manager')?.name || 'The manager');
     const kept1 = tw && tw.orig.id !== o.id ? tw.orig : null, left = kept1 ? orderOwes(kept1) : 0;
     return `Hello ${who}, about bill ${orderNo(o.id)}: ${kept1 ? `it was entered twice, the same as ${orderNo(kept1.id)}. ` : ''}${vn} struck it out, so nothing is owed on it.`
       + (kept1 ? ` ${orderNo(kept1.id)} of ${sayMoney(orderTotal(kept1))} ${left > 0 ? `has ${sayMoney(left)} left to pay` : 'is paid'}.` : '');

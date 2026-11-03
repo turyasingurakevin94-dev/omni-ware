@@ -17,7 +17,8 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { openTwice, SendBtn, Who } from './Change.tsx';
-import { byRole, custOf, faceOfMember, nameOf, orderOf, shortName, twinOf } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { byRole, custOf, faceOfMember, nameOf, orderOf, shortName } from './data.ts';
 import { chatFor } from './msg.ts';
 import { StageDots } from './local-Track.tsx';
 import './sheets.css';
@@ -31,7 +32,7 @@ const when = (at: number, t: number) => (dayOf(at) === dayOf(t) ? `today ${clock
 export function openWrong(id: number): void {
   const b = books.value, o = b && orderOf(b, id);
   if (!b || !o) return;
-  const tw = twinOf(b, o);
+  const tw = twinOf(b.orders, o);
   if (tw && tw.copy.id === o.id && o.invoiced) { openTwice(id); return; }
   sheet.open(() => <WrongSheet id={id} />, { label: 'Something wrong', top: 322 });
 }
