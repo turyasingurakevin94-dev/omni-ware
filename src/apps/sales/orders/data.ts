@@ -6,8 +6,8 @@
  *   a row         who holds it and the one thing to say (Ruth decides, Not paid yet, 1 of 2 came …)
  *   an order      its customer, its lines' marks, what is still possible
  */
-import { lineWaits } from '../../../core/orders.ts';
-import { orderOwes, orderTotal } from '../../../core/money.ts';
+import { lineWaits, twinOf } from '../../../core/orders.ts';
+import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
@@ -157,7 +157,7 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
   if (/^#?\d+$/.test(t)) {
     // A number search for a voided copy lists the bill that stands beside it (OR30).
     const hit = b.orders.filter((o) => !o.qa && (o.id === n || orderNo(o.id).includes(t)));
-    const twins = hit.filter((o) => o.voided).map((o) => twinOf(b, o, true)?.orig).filter((x): x is Order => !!x && !hit.includes(x));
+    const twins = hit.filter((o) => o.voided).map((o) => twinOf(b.orders, o, true)?.orig).filter((x): x is Order => !!x && !hit.includes(x));
     return { customer: null, orders: [...hit, ...twins] };
   }
   const c = b.customers.find((x) => !x.qa && x.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(t))) || null;
@@ -165,23 +165,7 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
   return { customer: null, orders: b.orders.filter((o) => !o.qa && !isGenericName(o.client.name) && o.client.name.toLowerCase().includes(t)) };
 }
 
-/** The same order entered twice (OR19, OR23): same customer, same items, a few minutes apart, by the same person. The later is the copy. */
-export function twinOf(b: Books, o: Order, voided = false): { orig: Order; copy: Order } | null {
-  const sig = (x: Order) => x.lines.map((l) => `${l.itemId}:${l.qty}`).sort().join('|');
-  const t = b.orders.find((x) => x.id !== o.id && (voided || !x.voided) && !x.cancelled && !x.qa && x.placedBy === o.placedBy
-    && (x.customerId || x.client.name) === (o.customerId || o.client.name) && sig(x) === sig(o) && Math.abs(x.placedAt - o.placedAt) <= 10 * 60000 && x.invoiced === o.invoiced);
-  if (!t || (!voided && o.voided) || o.cancelled) return null;
-  return t.id < o.id ? { orig: t, copy: o } : { orig: o, copy: t };
-}
 
-/** What a payment brought over what it cleared (OR15: Nansana's 560,000 cleared 470,000; 90,000 over), and its ask to Accounts. */
-export function overOf(b: Books, p: Payment): { cleared: number; over: number } {
-  const c = p.customerId ? b.customers.find((x) => x.id === p.customerId) : null;
-  const onBills = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : 0;
-  const onOrders = b.orders.reduce((a, o) => a + o.payments.filter((x) => x.paymentId === p.id).reduce((s, x) => s + x.amount, 0), 0);
-  const cleared = c ? Math.max(onBills, onOrders) : p.amount;
-  return { cleared, over: Math.max(0, p.amount - cleared) };
-}
 export const overAsk = (b: Books, p: Payment): PaymentAsk | null => b.paymentAsks.find((a) => a.paymentId === p.id && a.what === 'over' && a.status === 'sent') || null;
 /** The order's payment that was paid over and not settled yet. */
-export const overPaymentOf = (b: Books, o: Order): Payment | null => b.payments.find((p) => p.orderId === o.id && !p.qa && overOf(b, p).over > 0) || null;
+export const overPaymentOf = (b: Books, o: Order): Payment | null => b.payments.find((p) => p.orderId === o.id && !p.qa && paidOver(b, p).over > 0) || null;

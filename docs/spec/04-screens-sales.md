@@ -2,7 +2,7 @@
 
 What this covers: every screen of the Sales app, and the questions still open on them.
 Date: 2026-10-29
-Status: **screens decided** (the approved canvas). **Ten questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
+Status: **screens decided** (the approved canvas). **Questions open** (§3): until Kevin answers, the new app builds what the canvas draws, which is the default listed beside each one.
 
 ---
 
@@ -58,6 +58,7 @@ Each row names the default being built until Kevin answers.
 | Q8 | May Sales see the searches that found nothing for them (TD20)? | Yes, their own searches only | `manifest/today.json` |
 | Q9 | Should "To collect" (1,910,000, which includes 125,000 still being checked) be called "Owes"? | "To collect", with "Being checked" shown apart | `manifest/today.json` |
 | Q10 | When an item is not in stock: Moses finds the cost, Ruth prices it at Checking, then Denis buys it. Is that order right? | That order ("Price coming") | `manifest/sell.json` |
+| Q11 | How far apart may two identical orders be and still be the same order entered twice? Orders' rule allowed 10 minutes, Customers' and Today's 5. Should a copy also need the same invoiced state (Orders' rule did)? | One rule (`core/orders.ts` `twinOf`, `isCopy`): 5 minutes, the same person, customer and lines (and variant), both invoiced or both not. Every seeded pair is a minute apart, so no board moves. | `src/core/orders.ts`; the integration pass, 3 Nov |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;

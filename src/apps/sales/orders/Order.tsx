@@ -5,7 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { orderOwes, orderTotal } from '../../../core/money.ts';
+import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
@@ -16,7 +16,8 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overOf, overPaymentOf, shortItem, shortName, twinOf, waitsRuth } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, shortItem, shortName, waitsRuth } from './data.ts';
 import { go, payFor } from './links.ts';
 import { CheckList, Pills } from './local-CheckList.tsx';
 import { ActBar, Tiles, type Act } from './local-Parts.tsx';
@@ -43,7 +44,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const k = kept(o), waitN = o.lines.filter(waitsRuth).length;
   const pending = (o.stage === 'checking' && waitN > 0 && !o.toldTotal) || !!fresh;
   const op = delivered ? overPaymentOf(b, o) : null;
-  const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: overOf(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${overOf(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
+  const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: paidOver(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${paidOver(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
   const acts: Act[] = [];
   if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone ? 'tel:' + phone.replace(/\s/g, '') : undefined });
   else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
@@ -73,7 +74,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       ) : (
         <CheckList head={v.head} lines={v.lines.map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
       )}
-      {o.voided && twinOf(b, o, true) && <TwinCard b={b} o={o} />}
+      {o.voided && twinOf(b.orders, o, true) && <TwinCard b={b} o={o} />}
       {fresh && <PriceTell b={b} o={o} l={fresh} />}
       {v.returnAsk && <AskTimeline b={b} o={o} ask={v.returnAsk} />}
       <div class="or-foot">
