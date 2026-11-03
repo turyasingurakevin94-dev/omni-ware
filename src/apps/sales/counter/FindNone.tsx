@@ -15,6 +15,7 @@ import { findItems } from '../../../core/items.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Item, SourcingAsk } from '../../../core/types.ts';
 import { act } from '../shell/store.ts';
+import { sale, set } from './state.ts';
 import './findnone.css';
 
 /** The closest: items holding any one of the words, on the shelf, two at most, A to Z. */
@@ -68,29 +69,32 @@ function Dots(p: { a: SourcingAsk }): JSX.Element {
 }
 
 export function FindNone(p: { b: Books; words: string; qty: number; customer: string | null; who: string; onAdd: (it: Item) => void }): JSX.Element {
-  const [sent, setSent] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const w = p.words.trim(), near = closest(p.b, w), lw = w.toLowerCase();
   // An ask Sourcing has open with these words: this walk-in's request is added to it.
   const ask = p.b.asks.find((a) => a.status !== 'dropped' && a.status !== 'listed' && a.name.toLowerCase().includes(lw));
   const name = ask ? ask.name : w;
+  // Asked once per sale: what this sale sent is shown sent (KC25), never asked again.
+  const sent = sale.value.asked.includes(name.toLowerCase());
+  const [count, setCount] = useState(0);
   const moses = p.b.members.find((m) => m.role === 'sourcing'), first = moses ? moses.name.split(' ')[0] : 'Sourcing';
   const ruth = p.b.members.find((m) => m.role === 'manager'), ruthFirst = ruth ? ruth.name.split(' ')[0] : 'the Manager';
   const send = async () => {
-    if (busy || sent != null) return;
+    if (busy || sent) return;
     setBusy(true);
     try {
       const r = await act<SourcingAsk>('askSourcing', { name, qty: p.qty, customerId: p.customer, chatId: null });
-      setSent(r.kept ? (ask ? ask.requests.length + 1 : 1) : r.value.requests.length);
+      setCount(r.kept ? (ask ? ask.requests.length + 1 : 1) : r.value.requests.length);
+      set({ asked: [...sale.peek().asked, name.toLowerCase()] });
     } catch (e) {
       toast.show('Not sent', { kind: 'error', sub: (e as Error).message });
     } finally { setBusy(false); }
   };
-  const foot = sent != null ? (
+  const foot = sent ? (
     <div role="status" class="kc-sent">
       <span aria-hidden="true"><Icon name="check" size={14} stroke={3.2} /></span>
       <b>{`Sent to ${first} · just now`}</b>
-      <span>{`${sent} asked`}</span>
+      <span>{`${count || (ask ? ask.requests.length : 1)} asked`}</span>
     </div>
   ) : (
     <div class="kc-askm-o">

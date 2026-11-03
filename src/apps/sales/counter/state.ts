@@ -33,9 +33,11 @@ export interface Sale {
   ref: string;
   /** The sale already in the books (it waited for the Manager): sold with counter_sale p_quote_id. */
   quote: number | null;
+  /** What this sale asked of Sourcing (KC21 → KC25): asked once per sale. */
+  asked: string[];
 }
 
-const fresh = (): Sale => ({ lines: [], open: null, pricing: null, customerId: null, method: 'cash', given: 'exact', counted: null, ref: '', quote: null });
+const fresh = (): Sale => ({ lines: [], open: null, pricing: null, customerId: null, method: 'cash', given: 'exact', counted: null, ref: '', quote: null, asked: [] });
 
 export const sale = signal<Sale>(fresh());
 export const q = signal('');

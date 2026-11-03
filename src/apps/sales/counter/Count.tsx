@@ -45,6 +45,8 @@ export function CountSheet(p: { total: number }): JSX.Element {
   });
   /** The digits typed on the keypad; null: counting notes. */
   const [typed, setTyped] = useState<string | null>(null);
+  /** The amount typed in is the counted one until the first key: that key starts it afresh. */
+  const [fresh, setFresh] = useState(false);
   const counted = typed != null ? Number(typed) || 0 : NOTES.reduce((t, x) => t + x * (n[x] || 0), 0);
   const over = counted >= p.total, top = Math.max(p.total, counted, 1);
   const bump = (x: number, d: number) => setN({ ...n, [x]: Math.max(0, (n[x] || 0) + d) });
@@ -74,7 +76,7 @@ export function CountSheet(p: { total: number }): JSX.Element {
         </div>
         <div class="kc-cnt-l"><span>{'Sale '}<span class="mono">{fig(p.total)}</span></span><span>{'Counted '}<span class="mono">{fig(counted)}</span></span></div>
       </div>
-      {typed != null ? <Keypad value={typed} onChange={setTyped} max={9} /> : (
+      {typed != null ? <Keypad value={typed} max={8} onChange={(v) => { setTyped(fresh ? (v.length > typed.length ? v.slice(typed.length).replace(/^0+(?=\d)/, '') : '') : v); setFresh(false); }} /> : (
         <div role="group" aria-label="Tap each note they hand over" class="kc-notes">
           {NOTES.map((x) => {
             const c = n[x] || 0, t = TINTS[TINT[x]];
@@ -91,9 +93,10 @@ export function CountSheet(p: { total: number }): JSX.Element {
       )}
       <div class="kc-cnt-f">
         {typed != null
-          ? <button type="button" class="kc-typeit" onClick={() => setTyped(null)}><Icon name="cash" size={18} stroke={2} />Count notes</button>
+          // Back to the notes: the typed amount laid out as the notes that make it.
+          ? <button type="button" class="kc-typeit" onClick={() => { const m: Record<number, number> = {}; notesFor(counted).forEach((x) => { m[x] = (m[x] || 0) + 1; }); setN(m); setTyped(null); }}><Icon name="cash" size={18} stroke={2} />Count notes</button>
           // Typing replaces the notes: their counts clear while a typed amount stands.
-          : <button type="button" class="kc-typeit" onClick={() => { setN({}); setTyped(counted ? String(counted) : ''); }}><Icon name="pen" size={18} stroke={2} />Type it</button>}
+          : <button type="button" class="kc-typeit" onClick={() => { setN({}); setTyped(counted ? String(counted) : ''); setFresh(!!counted); }}><Icon name="pen" size={18} stroke={2} />Type it</button>}
         <button type="button" class="kc-use" disabled={!counted} onClick={use}>{`Use ${fig(counted)}`}</button>
       </div>
     </LightSheet>
