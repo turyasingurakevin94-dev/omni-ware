@@ -102,6 +102,8 @@ export function extra(s: DemoState, f: DemoFlags): void {
     paint.log = [{ status: 'asked', at: paint.createdAt, by: GRACE }, { status: 'looking', at: d('2026-10-13', '9:30'), by: MOSES },
       { status: 'found', at: d('2026-10-15', '11:00'), by: MOSES }, { status: 'priced', at: d('2026-10-16', '15:00'), by: RUTH }, { status: 'listed', at: paint.stageAt, by: MOSES }];
   }
+  // The what-ifs below run once: a second run finds this phone's own state already there.
+  if ((s as DemoState & { today?: TodayLocal }).today) return;
   const local: TodayLocal = {
     told: [], searches: ['hinge', 'Kato', 'wheelbarow'], bigText: false,
     misses: [['ppr pipe 25mm', 3], ['ceiling fan 56', 2], ['solar pump', 2], ['gate hinge, heavy', 1], ['tile cutter', 1]].map(([w, n], i) => ({ words: w as string, n: n as number, at: t('9:00') - i * 3600000 })),
