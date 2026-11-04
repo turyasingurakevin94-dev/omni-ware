@@ -131,7 +131,7 @@ Each is written once in `src/core` and used by every tab that shows it.
 | Often with | What came in the same orders as an item: across this customer's orders when they had it twice or more, else across mine; "4/5" is how many of the orders with the item had it | `agent.html:8890` (`oftenWith`) | `core/often.ts` `oftenWith` |
 | The delivery fee | The shop's service with `kind: 'delivery'`, the one whose `area` is the customer's first; never guessed from a name (lead, 3 Nov; `sales.html:8351` guesses it from the name) | lead ruling | `core/services.ts` `deliveryFor` |
 | A charge's amount | Percent: of the goods; fixed: its value; fixed with `per` ("bag"): its value for each one on the lines sold by that unit (Q3). No `per` or `kind`: a flat fee, as `sales.html` | `sales.html:8358`, Q3 | `core/services.ts` `serviceAmount` |
-| The aisle chips | Five: the aisles this customer buys from most (in how many of their orders), filled from the shop's most-sold aisles | lead, 3 Nov (SL04, SL10, SL27, SL34) | `core/aisles.ts` `chipAisles` |
+| The aisles offered | Five, by how many orders hold each aisle: the customer's own if one is chosen (the chips), else the seller's own (the tiles, SL03, SL31), then the shop's most-sold to fill | lead, 3 and 4 Nov (SL03, SL04, SL10, SL27, SL31, SL34) | `core/aisles.ts` `chipAisles` |
 | Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
 
 Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way.

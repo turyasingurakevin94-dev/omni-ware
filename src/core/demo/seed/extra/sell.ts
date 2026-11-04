@@ -38,7 +38,7 @@ const KINDS: Record<string, [string[], string[]]> = {
   Steel: [['Rebar', 'Angle bar', 'Flat bar', 'Square tube', 'Round tube', 'Mesh roll', 'Binding coil', 'Channel'], ['8mm', '10mm', '12mm', '16mm', '25mm', '40mm', '50mm', '6m']],
   'Doors & locks': [['Padlock', 'Door lock', 'Bolt latch', 'Door stopper', 'Door closer', 'Key blank', 'Hasp', 'Mortice lock', 'Cylinder', 'Lever set'], ['30mm', '40mm', '50mm', '60mm', 'brass', 'chrome', 'black']],
   Sanitary: [['Basin', 'Toilet seat', 'Cistern', 'Shower head', 'Sink', 'Mirror', 'Towel rail', 'Soap dish', 'Floor drain', 'Bidet spray', 'Urinal'], ['white', 'ivory', 'steel', 'small', 'large', 'single', 'double', 'round', 'square']],
-  Adhesives: [['Sealant', 'Silicone', 'Contact cement', 'Epoxy', 'Putty'], ['clear', 'white', 'brown', 'grey', '300ml', '1L']],
+  Adhesives: [['Sealant', 'Silicone', 'Contact adhesive', 'Epoxy', 'Putty'], ['clear', 'white', 'brown', 'grey', '300ml', '1L']],
 };
 
 /** Fasteners: the kinds SL12 draws (Nails 9 · Screws 24 · Bolts 18), then the rest, each fewer than Bolts. */
@@ -57,9 +57,10 @@ const FASTENERS: [string, string[], string[]][] = [
 const FASTENER_COUNT = [5, 23, 18, 16, 14, 12, 10, 9, 8, 8];
 
 /**
- * A generated item. Only the Fasteners aisle (SL12's cards) is priced; the other aisles' fillers only make
- * FACTS' counts (SL11) and carry no price, so a search for a word or an aisle ("paint", KC02) finds only
- * the shop's real items.
+ * A generated item, priced and named as a catalogue would, never with a word a board searches
+ * (sheet, tile, paint, cement, hinge, pipe, nails …). One exception waits on the lead (see extra()):
+ * the Paint aisle's fillers carry no price, because core/items.ts findItems matches an aisle's name and
+ * KC02 draws "paint" finding the shop's three paints only.
  */
 function made(id: string, name: string, aisle: string, n: number, unit = 'pc', priced = true): Item {
   const p = 1000 * (3 + ((n * 7) % 40)), price = priced ? p : null, out = n % 9 === 4, orderIn = n % 5 === 2;
@@ -88,7 +89,7 @@ function catalogue(s: DemoState): void {
     if (a.name === 'Fasteners') return;
     const have = b.items.filter((i) => i.aisle === a.name).length, [bases, sizes] = KINDS[a.name];
     const names = bases.flatMap((x) => sizes.map((z) => `${x} ${z}`));
-    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n, 'pc', false));
+    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n, 'pc', a.name !== 'Paint'));
   });
   // 17 listed in the last 30 days, with the roof paint: "New 18" (SL11).
   added.filter((i) => i.aisle === 'Electrical' || i.aisle === 'Sanitary').slice(0, 17).forEach((i, k) => { i.listedAt = at(TODAY, '9:00') - (k + 1) * 864e5; });
