@@ -6,6 +6,7 @@
  * At most two cards above the aisles: what they asked for, what waits on money, their usual, their last order.
  */
 import type { JSX } from 'preact';
+import { chipAisles } from '../../../core/aisles.ts';
 import { orderTotal, short } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
@@ -145,13 +146,8 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
 }
 
 /** The five aisles worth a tile: the ones I sell from most, in the shop's order (agent.html topCategories). */
+/** The aisle tiles (SL03, SL31): the seller's five by the one rule (core/aisles.ts), in the shop's order. */
 export function tileAisles(b: Books, mine: string): string[] {
-  const by = new Map<string, number>();
-  b.orders.filter((o) => o.placedBy === mine && !o.voided).forEach((o) => o.lines.forEach((l) => {
-    const it = itemOf(b, l.itemId, l.variantIdx);
-    if (it) by.set(it.aisle, (by.get(it.aisle) || 0) + 1);
-  }));
-  const order = aisles(b).map((a) => a.name);
-  const top = new Set(order.slice().sort((x, y) => (by.get(y) || 0) - (by.get(x) || 0)).slice(0, 5));
-  return order.filter((a) => top.has(a));
+  const top = new Set(chipAisles(b.items, b.orders, null, mine));
+  return aisles(b).map((a) => a.name).filter((a) => top.has(a));
 }
