@@ -30,6 +30,9 @@ const BACK_MS = 8000;
 
 interface Step { icon: IconName; title: string; sub: string; now?: boolean; skipped?: boolean }
 
+/** What the Buyer buys, as said: "the hinge" (its price still coming), "8 Iron sheet G26" (a count of it, SL40). */
+const bought = (l: Order['lines'][number]) => (l.price == null ? `the ${l.name.split(' · ')[0].split(' ').slice(-1)[0].toLowerCase()}` : `${l.qty} ${l.name.split(' · ')[0]}`);
+
 /** What happens next, from where it starts and what waits (spec 01: the five stages). */
 function steps(b: Books, o: Order, who: string): Step[] {
   const coming = o.lines.some((l) => l.price == null), under = o.lines.some((l) => l.price != null && lineWaits(l));
@@ -44,7 +47,7 @@ function steps(b: Books, o: Order, who: string): Step[] {
   }
   const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit` : `${m.first} checks it`;
   const out: Step[] = [{ icon: 'checking', title: 'Checking', sub: `now · ${why}`, now: true }];
-  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length === 1 ? `the ${buy[0].name.split(' · ')[0].split(' ').slice(-1)[0].toLowerCase()}` : `${buy.length} items`}` });
+  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length <= 2 ? buy.map(bought).join(' and ') : `${buy.length} items`}` });
   out.push({ icon: 'orders', title: 'Packing', sub: `${st.first} packs it` });
   return out;
 }
