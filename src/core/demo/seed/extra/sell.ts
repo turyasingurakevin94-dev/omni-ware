@@ -56,16 +56,11 @@ const FASTENERS: [string, string[], string[]][] = [
 ];
 const FASTENER_COUNT = [5, 23, 18, 16, 14, 12, 10, 9, 8, 8];
 
-/**
- * A generated item, priced and named as a catalogue would, never with a word a board searches
- * (sheet, tile, paint, cement, hinge, pipe, nails …). One exception waits on the lead (see extra()):
- * the Paint aisle's fillers carry no price, because core/items.ts findItems matches an aisle's name and
- * KC02 draws "paint" finding the shop's three paints only.
- */
-function made(id: string, name: string, aisle: string, n: number, unit = 'pc', priced = true): Item {
-  const p = 1000 * (3 + ((n * 7) % 40)), price = priced ? p : null, out = n % 9 === 4, orderIn = n % 5 === 2;
+/** A generated item, priced and named as a catalogue would, never with a word a board searches (sheet, tile, paint, cement, hinge, pipe, nails …). */
+function made(id: string, name: string, aisle: string, n: number, unit = 'pc'): Item {
+  const price = 1000 * (3 + ((n * 7) % 40)), out = n % 9 === 4, orderIn = n % 5 === 2;
   return {
-    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, packPrice: null, cost: price == null ? null : Math.round(price / 1.25),
+    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, packPrice: null, cost: Math.round(price / 1.25),
     onShelf: orderIn || out ? 0 : 6 + ((n * 13) % 90), orderIn, listedAt: null,
   };
 }
@@ -89,7 +84,7 @@ function catalogue(s: DemoState): void {
     if (a.name === 'Fasteners') return;
     const have = b.items.filter((i) => i.aisle === a.name).length, [bases, sizes] = KINDS[a.name];
     const names = bases.flatMap((x) => sizes.map((z) => `${x} ${z}`));
-    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n, 'pc', a.name !== 'Paint'));
+    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n));
   });
   // 17 listed in the last 30 days, with the roof paint: "New 18" (SL11).
   added.filter((i) => i.aisle === 'Electrical' || i.aisle === 'Sanitary').slice(0, 17).forEach((i, k) => { i.listedAt = at(TODAY, '9:00') - (k + 1) * 864e5; });
