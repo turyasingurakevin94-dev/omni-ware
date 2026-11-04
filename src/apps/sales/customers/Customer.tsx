@@ -12,7 +12,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { lastMessages } from '../../../core/chats.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { daysInStage, isCopy, LATE_DAYS } from '../../../core/orders.ts';
-import { openTwice } from '../orders/index.tsx';
+import { callTab } from '../shell/tabs.ts';
 import { clock, dayLabel, dayOf, daysApart, howLong, when } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
 import { isDataError } from '../../../core/datasource.ts';
@@ -29,6 +29,9 @@ import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
 import { sendStatement } from './statement.ts';
 import './customers.css';
+
+/** Orders' sheet for an order entered twice (ROUTES.md), Orders loaded first: its own file. */
+const openTwice = (id: number): void => { void callTab('orders', 'openTwice', id); };
 
 /** "Message Esther": a team note on their chat that mentions the checker, so 0170 pushes them (never sent to the customer). */
 async function noteFor(chatId: number, who: Member, body: string): Promise<void> {

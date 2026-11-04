@@ -72,6 +72,7 @@ Words in use for the same thing: "No signal" (Store, Manager) and "No connection
 | How | Who | Detail |
 |---|---|---|
 | **Native live update** | all six phone apps, same code | every 30 min (**Manager: every 3 min**, `manager.html:125`), on resume, and 5 s after start, the app asks `omni-ware.vercel.app/<app>.html` (ETag); refuses a page under 100,000 characters or with no `</html>`; stores it and switches when the app next goes to the background, never in the middle of a task (`store.html:138-235`, `apps/*/src/transform.js`) |
+| **New apps, per-tab loading** | Sales (`/next/sales.html`) | the page loads each tab from a file beside it (spec 07 §4); `sales-sw.js` keeps one build's page and tab files together on the phone; the phone app's build and live update carry the files the page names in `<meta name="ow-files">` |
 | **Service worker** | Store only | `store-sw.js`: the page answered from the phone at once and fetched behind it; "Update ready · Reload" when it changed; Supabase never cached. The other apps' web versions cannot open without signal; their phone apps can. `agent-sw.js` and `supplier-sw.js` are for pushes only. |
 
 ---
