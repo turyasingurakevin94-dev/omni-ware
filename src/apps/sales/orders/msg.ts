@@ -6,10 +6,9 @@
 import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
-import type { Books, Chat, ChatBooks, Order } from '../../../core/types.ts';
-import { twinOf } from '../../../core/orders.ts';
+import type { Books, Chat, ChatBooks, Line, Order } from '../../../core/types.ts';
+import { priceUntold, twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, custOf, dropped, member, openAsk, shortItem, shortName } from './data.ts';
-import { untold } from './view.ts';
 
 export const sayMoney = (n: number): string => Math.round(n).toLocaleString('en-US');
 /** "the iron sheets", "the PVC pipes", "the soft close hinges": the short name, sizes dropped, the last word made plural. */
@@ -19,10 +18,21 @@ const plural = (name: string, last = false): string => {
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** What the message is about before the order's state: a return asked, a voided bill, an owing bill (each its own words). */
+const aside = (b: Books, o: Order): 'return' | 'void' | 'owing' | null => (openAsk(b, o, 'credit') ? 'return' : o.voided ? 'void' : o.invoiced && o.paid > 0 && orderOwes(o) > 0 ? 'owing' : null);
+
+/**
+ * The line whose new price the order's message tells them, or null. Sending that message tells it, so the
+ * send marks it told (markPriceTold), as Today's Tell and the order's own price tell (OR13) do.
+ */
+export function tellsPrice(b: Books, o: Order): Line | null {
+  return aside(b, o) ? null : o.lines.find(priceUntold) || null;
+}
+
 export function tellText(b: Books, o: Order): string {
-  const who = shortName(b, o), total = orderTotal(o), out: string[] = [];
+  const who = shortName(b, o), total = orderTotal(o), out: string[] = [], kind = aside(b, o);
   // A return asked: what is coming back, and who decides the credit (OR22).
-  const ret = openAsk(b, o, 'credit');
+  const ret = kind === 'return' ? openAsk(b, o, 'credit') : null;
   if (ret) {
     const back = backLines(o, ret), ruth = byRole(b, 'manager');
     const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''} of ${plural(line.name).replace(/s$/, '').toLowerCase()}`).join(' and ') : 'the items';
@@ -30,15 +40,15 @@ export function tellText(b: Books, o: Order): string {
     return `Hello ${who}, about order ${orderNo(o.id)}: ${what} ${many ? 'are' : 'is'} coming back${ret.reason ? `, ${ret.reason.toLowerCase()}` : ''}. ${firstWord(ruth?.name || 'The manager')} decides the credit note of ${sayMoney(ret.amount)}.`;
   }
   // A voided bill: struck out, nothing owed on it; a copy says which bill stands and where it is (OR29).
-  if (o.voided) {
+  if (kind === 'void') {
     const tw = twinOf(b.orders, o, true), vn = firstWord(member(b, o.voidedBy)?.name || byRole(b, 'manager')?.name || 'The manager');
     const kept1 = tw && tw.orig.id !== o.id ? tw.orig : null, left = kept1 ? orderOwes(kept1) : 0;
     return `Hello ${who}, about bill ${orderNo(o.id)}: ${kept1 ? `it was entered twice, the same as ${orderNo(kept1.id)}. ` : ''}${vn} struck it out, so nothing is owed on it.`
       + (kept1 ? ` ${orderNo(kept1.id)} of ${sayMoney(orderTotal(kept1))} ${left > 0 ? `has ${sayMoney(left)} left to pay` : 'is paid'}.` : '');
   }
   // An owing bill: what is paid and what is left (OR24's order).
-  if (o.invoiced && !o.voided && o.paid > 0 && orderOwes(o) > 0) return `Hello ${who}, about bill ${orderNo(o.id)} of ${sayMoney(total)}: ${sayMoney(o.paid)} paid, ${sayMoney(orderOwes(o))} left to pay.`;
-  const ch = o.lines.find(untold), skipped = !o.stageLog.some((s) => s.stage === 'checking');
+  if (kind === 'owing') return `Hello ${who}, about bill ${orderNo(o.id)} of ${sayMoney(total)}: ${sayMoney(o.paid)} paid, ${sayMoney(orderOwes(o))} left to pay.`;
+  const ch = tellsPrice(b, o), skipped = !o.stageLog.some((s) => s.stage === 'checking');
   if (ch && ch.priceReview) out.push(`the ${plural(ch.name)} are ${sayMoney(ch.priceReview.price)} each, not ${sayMoney(ch.priceReview.was || 0)}, so the total is ${sayMoney(total)}${o.toldTotal ? `, not ${sayMoney(o.toldTotal)}` : ''}.`);
   const live = o.lines.filter((l) => l.state !== 'dropped');
   if (o.stage === 'checking') out.push('we are checking it now.');

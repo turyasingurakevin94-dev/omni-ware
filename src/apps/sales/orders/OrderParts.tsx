@@ -6,9 +6,9 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo, phone9 } from '../../../core/names.ts';
-import { orderTotal, paidOver } from '../../../core/money.ts';
+import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { clock, dayOf, replyWindow, weekday, when } from '../../../core/time.ts';
-import type { BillAsk, Books, Line, Order, Payment } from '../../../core/types.ts';
+import type { BillAsk, Books, Line, Member, Order, Payment, PaymentAsk } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { OrderPill } from '../../../ui/StageGroup.tsx';
@@ -16,7 +16,7 @@ import { AskStep } from '../../../ui/Track.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { backLines, byRole, custOf, faceOfMember, member, shortItem, shortName } from './data.ts';
+import { askedBy, backLines, byRole, custOf, faceOfMember, member, METHOD, owesOnceFixed, payFixAsks, payFixWant, paysOf, shortItem, shortName } from './data.ts';
 import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
 
@@ -134,22 +134,50 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
   );
 }
 
-/** OR22 · a return asked: waiting, Undo, and its two steps (you asked · Ruth checks it, then the credit note). */
-export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Element {
-  const { b, o, ask } = p, ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager');
-  const [busy, setBusy] = useState(false);
-  const back = backLines(o, ask);
-  const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''}`).join(' + ') : ask.amount.toLocaleString('en-US');
+/** OR22, OR32 · an ask that waits: what it is, Waiting, Undo, and its two steps (you asked · who answers it, then what follows). */
+function AskSteps(p: { b: Books; by: string; title: string; did: string; m: Member | null; who: string; then: string; undo: () => Promise<unknown>; label?: string }): JSX.Element {
+  const [busy, setBusy] = useState(false), asker = askedBy(p.b, p.by);
   const undo = async () => {
     setBusy(true);
-    try { await act('withdrawBillAsk', ask.id); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
+    try { await p.undo(); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };
   return (
     <div class="or-asks">
-      <div class="or-asks-h"><span>Return asked<span class="or-wait">Waiting</span></span>
-        <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
-      <AskStep mark="ok" title="You asked" sub={`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`} line />
-      <AskStep mark={ruth ? faceOfMember(ruth) : 'to'} title={`${rn} checks it`} sub={`then the credit note, ${ask.amount.toLocaleString('en-US')}`} tone="warn" />
+      <div class="or-asks-h"><span>{p.title}<span class="or-wait">Waiting</span></span>
+        {asker.mine && <button type="button" class="or-undo" aria-label={p.label} onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button>}</div>
+      <AskStep mark="ok" title={asker.said} sub={p.did} line />
+      <AskStep mark={p.m ? faceOfMember(p.m) : 'to'} title={p.who} sub={p.then} tone="warn" />
+    </div>
+  );
+}
+
+/** OR22 · a return asked: Ruth checks it, then the credit note. */
+export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Element {
+  const { b, o, ask } = p, ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager');
+  const back = backLines(o, ask);
+  const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''}`).join(' + ') : ask.amount.toLocaleString('en-US');
+  return <AskSteps b={b} by={ask.by} title="Return asked" did={`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`} m={ruth} who={`${rn} checks it`}
+    then={`then the credit note, ${ask.amount.toLocaleString('en-US')}`} undo={() => act('withdrawBillAsk', ask.id)} />;
+}
+
+/** OR32 · a payment fix asked of Esther: what it was and should be, then what they owe; Undo takes back every ask on it. */
+export function PayFixAsked(p: { b: Books; o: Order; pay: Payment; asks: PaymentAsk[] }): JSX.Element {
+  const { b, o, pay, asks } = p, acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
+  const want = payFixWant(pay, asks), after = owesOnceFixed(b, o, { pay, asks }), f = (n: number) => n.toLocaleString('en-US');
+  const did = `${METHOD[pay.method].word} ${f(pay.amount)} → ${METHOD[want.method].word} ${f(want.amount)} · ${when(asks[0].at, now.value)}`;
+  return <AskSteps b={b} by={asks[0].by} title="Payment fix asked" did={did} m={acc} who={`${an} corrects it`} then={`then they owe ${f(after)}`}
+    undo={() => Promise.all(asks.map((a) => act('withdrawPaymentAsk', a.id)))} label="Undo the payment fix ask" />;
+}
+
+/** OR24, OR32, OR33 · the bill's split bar: one segment per payment (an asked one hatched warn), then what is owed. */
+export function PaidBar(p: { b: Books; o: Order }): JSX.Element {
+  const { b, o } = p, pays = paysOf(b, o), total = orderTotal(o), owes = orderOwes(o), paid = pays.reduce((a, x) => a + x.amount, 0), f = (n: number) => n.toLocaleString('en-US');
+  const asked = pays.filter((x) => payFixAsks(b, x).length), acc = firstWord(byRole(b, 'accounts')?.name || 'Accounts');
+  const label = `Bill ${f(total)}: ${f(paid)} paid, ${f(owes)} owed` + asked.map((x) => `; the ${METHOD[x.method].word} ${f(x.amount)} is asked of ${acc}`).join('');
+  return (
+    <div role="img" aria-label={label} class="or-paid">
+      <span>{pays.map((x) => <i key={x.id} class={asked.includes(x) ? 'ask' : undefined} style={{ flex: x.amount }} />)}{owes > 0 && <i class="o" style={{ flex: owes }} />}</span>
+      <span><span>{'paid '}<b class="mono g">{f(paid)}</b>{` in ${pays.length}`}</span><span>{'owes '}<b class="mono w">{f(owes)}</b>{` of ${f(total)}`}</span></span>
     </div>
   );
 }
@@ -157,12 +185,12 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
 /** OR27 · the payment that brought more than the bill: OR15's split bar, what went to it and what is over. */
 export function OverRow(p: { b: Books; p: Payment }): JSX.Element {
   const { cleared, over } = paidOver(p.b, p.p), t = now.value, at = p.p.at;
-  const m = ({ cash: ['Cash', 'cash'], momo: ['Mobile', 'mobile'], bank: ['Bank', 'bank'] } as const)[p.p.method];
-  const said = `${m[0]} · ${dayOf(at) === dayOf(t) ? `today ${clock(at)}` : when(at, t)}`, f = (n: number) => n.toLocaleString('en-US');
+  const m = METHOD[p.p.method];
+  const said = `${m.word} · ${dayOf(at) === dayOf(t) ? `today ${clock(at)}` : when(at, t)}`, f = (n: number) => n.toLocaleString('en-US');
   return (
     <div role="group" aria-label={`${said}, ${f(p.p.amount)}: ${f(cleared)} to the bill, ${f(over)} over`} class="or-ovr">
       <div class="or-prow">
-        <span aria-hidden="true" class="w"><Icon name={m[1]} size={18} stroke={2} /></span>
+        <span aria-hidden="true" class="w"><Icon name={m.icon} size={18} stroke={2} /></span>
         <span><span>{said}</span><span>one payment, two parts</span></span>
         <span class="mono">{f(p.p.amount)}</span>
       </div>

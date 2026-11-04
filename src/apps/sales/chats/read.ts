@@ -9,6 +9,7 @@
  */
 import { money, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
+import { priceUntold } from '../../../core/orders.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Customer, Item, Message, Method, Ms, Order } from '../../../core/types.ts';
 
@@ -92,7 +93,7 @@ export function giveNote(b: Books, cust: Customer | null, msgs: Message[], now: 
   const parts = [`${orderNo(o.id)} ${o.stage === 'road' ? 'on the road' : o.stage}`];
   const place = placeOf(o), w = comes(o, now);
   if (place) parts.push(`${place}${w ? ' ' + w.replace(/^It (comes|is) /, '') : ''}`);
-  const total = orderTotal(o), changed = o.lines.find((l) => l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at));
+  const total = orderTotal(o), changed = o.lines.find(priceUntold);
   if (changed && o.toldTotal != null && o.toldTotal !== total) {
     parts.push(`tell ${cust ? firstWord(cust.name) : 'them'} the ${noun(changed.name)} price (${money(total)})`); // never guess him or her from a name (the lead's ruling)
   }

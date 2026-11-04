@@ -7,8 +7,8 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
-import { clock, dayLabel, dayOf, weekday, daysApart } from '../../../core/time.ts';
-import type { Books, Line, Method, Order, Payment } from '../../../core/types.ts';
+import { clock, dayLabel, dayOf, weekday, daysApart, when as at } from '../../../core/time.ts';
+import type { Books, Line, Method, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Chevron } from '../../../ui/ActRow.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
@@ -18,14 +18,13 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { openTwice, SendBtn, Who } from './Change.tsx';
 import { twinOf } from '../../../core/orders.ts';
-import { byRole, custOf, faceOfMember, nameOf, orderOf, shortName } from './data.ts';
+import { byRole, custOf, faceOfMember, METHOD, nameOf, orderOf, owesNow, payFixAsks, paysOf, shortName } from './data.ts';
+import { PaidBar } from './OrderParts.tsx';
 import { chatFor } from './msg.ts';
 import { StageDots } from '../../../ui/Track.tsx';
 import './sheets.css';
 
 const eyebrow = (b: Books, o: Order, word = 'Order') => `${word} ${orderNo(o.id)} · ${nameOf(b, o)}`;
-const METHOD: Record<Method, { word: string; icon: IconName; tone: string }> = { cash: { word: 'Cash', icon: 'cash', tone: 'good' }, momo: { word: 'Mobile', icon: 'mobile', tone: 'warn' }, bank: { word: 'Bank', icon: 'bank', tone: 'info' } };
-const paysOf = (b: Books, o: Order): Payment[] => b.payments.filter((p) => p.orderId === o.id && !p.qa).sort((x, y) => x.at - y.at);
 const when = (at: number, t: number) => (dayOf(at) === dayOf(t) ? `today ${clock(at)}` : daysApart(dayOf(at), dayOf(t)) < 7 ? weekday(at) : dayLabel(at));
 
 /** Fix it: the Something wrong sheet (OR20); for an invoiced copy entered twice, OR23 straight away. Other tabs open it too. */
@@ -53,15 +52,15 @@ function WrongSheet(p: { id: number }): JSX.Element | null {
   if (!b || !o) return null;
   const ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager'), rf = ruth && <Avatar {...faceOfMember(ruth)} size={18} />;
   const acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts'), pays = paysOf(b, o);
-  const one = pays.length === 1 ? pays[0] : null;
+  const one = pays.length === 1 ? pays[0] : null, asked = !!one && payFixAsks(b, one).length > 0;
   return (
     <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, o)} title="Something wrong" onClose={sheet.close} pad="12px 16px 22px" gap={8}>
       <div class="or-dots"><StageDots stage={o.stage} all={o.stage === 'delivered'} /></div>
       <Reason tone="info" icon="return" title="Items coming back" sub={<>{rf}{`${rn} gives the credit note`}</>} on={() => openReturn(o.id)} />
       <Reason tone="bad" icon="void" title="Cancel the bill" sub={<><Icon name="lock" size={13} stroke={2.2} />{o.stage === 'delivered' ? 'Delivered · use a return' : `${rn} decides`}</>} off={o.stage === 'delivered'} on={() => openTwice(o.id)} />
       <Reason tone="warn" icon="cash" title="Payment recorded wrong" off={!pays.length}
-        sub={<>{acc && <Avatar {...faceOfMember(acc)} size={18} />}{one ? `${METHOD[one.method].word} ${one.amount.toLocaleString('en-US')} · ${when(one.at, t).split(' ')[0] === 'today' ? clock(one.at) : weekday(one.at)} · ${an} corrects it` : pays.length ? `${pays.length} payments · ${an} corrects it` : 'Nothing paid yet'}</>}
-        on={() => (one ? openPayWrong(o.id, one.id, 'wrong') : openPayWhich(o.id))} />
+        sub={<>{acc && <Avatar {...faceOfMember(acc)} size={18} />}{one ? `${METHOD[one.method].word} ${one.amount.toLocaleString('en-US')} · ${asked ? 'asked' : when(one.at, t).split(' ')[0] === 'today' ? clock(one.at) : weekday(one.at)} · ${an} corrects it` : pays.length ? `${pays.length} payments · ${an} corrects it` : 'Nothing paid yet'}</>}
+        on={() => (one && !asked ? openPayWrong(o.id, one.id, 'wrong') : openPayWhich(o.id))} />
       <Reason tone="" icon="note" title="Something else" sub={<>{rf}{`Tell ${rn} in a few words`}</>} on={() => openElse(o.id)} />
     </LightSheet>
   );
@@ -83,7 +82,7 @@ export function openPayFix(id: number): void {
   const b = books.value, o = b && orderOf(b, id);
   if (!b || !o) return;
   const pays = paysOf(b, o);
-  if (pays.length === 1) openPayWrong(id, pays[0].id); else openPayWhich(id);
+  if (pays.length === 1 && !payFixAsks(b, pays[0]).length) openPayWrong(id, pays[0].id); else openPayWhich(id);
 }
 
 const WHY_BACK = ['Wrong size', 'Damaged', 'Not needed'];
@@ -197,21 +196,30 @@ export function openPayWhich(id: number): void {
 function PayWhich(p: { id: number }): JSX.Element | null {
   const b = books.value, o = b && orderOf(b, p.id), t = now.value;
   if (!b || !o) return null;
-  const pays = paysOf(b, o), total = orderTotal(o), owes = orderOwes(o), paid = pays.reduce((a, x) => a + x.amount, 0);
+  const pays = paysOf(b, o), total = orderTotal(o), owes = orderOwes(o);
   const acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
   return (
     <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, o, 'Bill')} title="Which payment?" onClose={sheet.close} pad="12px 16px 22px">
-      <div role="img" aria-label={`Bill ${total.toLocaleString('en-US')}: ${paid.toLocaleString('en-US')} paid, ${owes.toLocaleString('en-US')} owed`} class="or-paid">
-        <span>{pays.map((x) => <i key={x.id} style={{ flex: x.amount }} />)}{owes > 0 && <i class="o" style={{ flex: owes }} />}</span>
-        <span><span>{'paid '}<b class="mono g">{paid.toLocaleString('en-US')}</b>{` in ${pays.length}`}</span><span>{'owes '}<b class="mono w">{owes.toLocaleString('en-US')}</b>{` of ${total.toLocaleString('en-US')}`}</span></span>
-      </div>
+      <PaidBar b={b} o={o} />
       <div class="or-rows">
         {pays.map((x) => {
           const m = METHOD[x.method], by = b.members.find((mm) => mm.id === x.by), today = dayOf(x.at) === dayOf(t);
+          const title = `${m.word} · ${today ? `today ${clock(x.at)}` : dayLabel(x.at)}`, head = <span class="s14">{title}</span>, ic = <span aria-hidden="true" class={'or-row-ic s40 ' + m.tone}><Icon name={m.icon} size={20} stroke={1.9} /></span>;
+          const asked = payFixAsks(b, x);
+          if (asked.length) {
+            return (
+              <div key={x.id} role="group" aria-disabled="true" aria-label={`${title}, ${x.amount.toLocaleString('en-US')}: asked of ${an}, waiting`} class="or-pay">
+                {ic}
+                <span class="or-row-t">{head}<span class="nw or-pay-asked">{acc && <Avatar {...faceOfMember(acc)} size={18} />}{`Asked ${an} · ${at(asked[0].at, t)}`}</span></span>
+                <span class="or-pay-w"><span class="mono or-pay-a">{x.amount.toLocaleString('en-US')}</span><span class="or-wait">Waiting</span></span>
+                <span aria-hidden="true" class="or-pay-gap" />
+              </div>
+            );
+          }
           return (
             <button key={x.id} type="button" class="or-pay" onClick={() => openPayWrong(o.id, x.id, 'which')}>
-              <span aria-hidden="true" class={'or-row-ic s40 ' + m.tone}><Icon name={m.icon} size={20} stroke={1.9} /></span>
-              <span class="or-row-t"><span class="s14">{`${m.word} · ${today ? `today ${clock(x.at)}` : dayLabel(x.at)}`}</span>
+              {ic}
+              <span class="or-row-t">{head}
                 <span class="nw">{by && <Avatar initials={by.initials} tint={by.tint} size={18} />}{`${firstWord(by?.name || '')}${x.method === 'momo' && x.ref ? ` · ID ${x.ref}` : today ? '' : ` · ${clock(x.at)}`}`}</span></span>
               <span class="mono or-pay-a">{x.amount.toLocaleString('en-US')}</span>
               <Chevron />
@@ -241,9 +249,10 @@ function PayWrong(p: { id: number; paymentId: number }): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   if (!b || !o || !x) return null;
   const c = custOf(b, o), acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
-  const should = Number(amt.replace(/[^0-9]/g, '')) || 0, owes = c ? c.owes : orderOwes(o), after = owes + (x.amount - should);
+  const should = Number(amt.replace(/[^0-9]/g, '')) || 0, owes = owesNow(b, o), after = owes + (x.amount - should);
   const changed = should !== x.amount || m !== x.method, needRef = m !== 'cash' && !ref.trim();
   const send = async () => {
+    if (payFixAsks(b, x).length) { toast.show(`Asked ${an} already`, { kind: 'warn' }); return; }
     if (!changed || needRef || !should) { toast.show(needRef ? 'Type the transaction ID' : 'Change the amount or how they paid', { kind: 'warn' }); return; }
     setBusy(true);
     try {

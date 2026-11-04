@@ -32,6 +32,8 @@ export interface MoneyTile {
   /** The figure itself struck (voided), with a pill beside it. */
   struck?: boolean;
   pill?: string;
+  /** Words after the note in warn ink (OR32: "· 54 days"). */
+  warnNote?: string;
   on?: () => void;
   label?: string;
 }
@@ -48,7 +50,7 @@ export function MoneyTiles(p: { tiles: MoneyTile[] }): JSX.Element {
           <span class="ow-mtile-k">{t.dot ? <span class="ow-mtile-dot"><span aria-hidden="true" />{t.k}</span> : t.k}</span>
           <span class="ow-mtile-v">{t.struck ? <s class="mono">{fig(t.v)}</s> : <span class="mono">{fig(t.v)}</span>}{t.pill && <OrderPill tone="bad">{t.pill}</OrderPill>}</span>
           {t.old != null && <s class="mono ow-mtile-old">{fig(t.old)}</s>}
-          {t.note && <span class="ow-mtile-n">{t.note}</span>}
+          {t.note && <span class="ow-mtile-n">{t.note}{t.warnNote && <>{' · '}<span class="ow-mtile-warn">{t.warnNote}</span></>}</span>}
         </Box>
       ))}
     </div>

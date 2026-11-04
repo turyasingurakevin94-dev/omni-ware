@@ -12,7 +12,7 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { custOf, nameOf, orderOf, shortName } from './data.ts';
-import { chatFor, tellText } from './msg.ts';
+import { chatFor, tellsPrice, tellText } from './msg.ts';
 import { MonoText } from './OrderParts.tsx';
 import { orderPicture } from './picture.ts';
 import './sheets.css';
@@ -36,9 +36,13 @@ function TellSheet(p: { id: number }): JSX.Element | null {
   const sms = `sms:${p9 ? '+256' + p9 : ''}${text ? `?body=${body}` : ''}`;
   const send = async () => {
     if (!c) return;
+    // Read before it goes, from the same order the words were built from (msg.ts tellsPrice).
+    const price = !!tellsPrice(b, o);
     setBusy(true);
     try {
       const r = pic && !shut ? await act('sendImage', c.id, await orderPicture(b, o, now.value), text) : await act('send', c.id, text);
+      // The message told them the new price (sent, or kept to go with signal), so it is told: Today stops asking.
+      if (price) await act('markPriceTold', o.id);
       sheet.close();
       toast.show(r.kept ? 'Kept on this phone' : `Sent to ${who}`, { kind: r.kept ? 'warn' : 'ok', sub: r.kept ? 'It goes when there is signal' : undefined });
     } catch (e) { toast.show((e as Error).message, { kind: 'error', retry: send }); } finally { setBusy(false); }

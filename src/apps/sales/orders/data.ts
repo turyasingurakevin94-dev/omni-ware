@@ -12,8 +12,9 @@ import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { RowStatus as UiStatus } from '../../../ui/StageGroup.tsx';
-import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
+import type { BillAsk, Books, Customer, Line, Member, Method, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
+import type { IconName } from '../../../ui/icons.tsx';
 
 export const LIVE: Stage[] = ['checking', 'buying', 'packing', 'road'];
 
@@ -22,6 +23,14 @@ export const orderOf = (b: Books, id: number): Order | null => b.orders.find((o)
 export const member = (b: Books, id: string | null): Member | null => (id ? b.members.find((m) => m.id === id) || null : null);
 export const byRole = (b: Books, r: Role): Member | null => b.members.find((m) => m.role === r) || null;
 export const faceOfMember = (m: Member): Face => ({ initials: m.initials, tint: m.tint });
+/**
+ * Who made an ask, as its card says it: "You asked" with Undo for Grace's own; a teammate's says their name
+ * and has no Undo (the server takes back only the asker's own: 0130 withdraw_payment_ask, invoice_asks).
+ */
+export function askedBy(b: Books, by: string): { mine: boolean; said: string } {
+  const mine = by === b.me.id, m = member(b, by);
+  return { mine, said: mine ? 'You asked' : `${m ? firstWord(m.name) : 'A teammate'} asked` };
+}
 
 /** The customer's face, or the walk-in's grey one. */
 export function faceOf(b: Books, o: Order): Face {
@@ -168,6 +177,31 @@ export function findOrders(b: Books, q: string): { customer: Customer | null; or
   return { customer: null, orders: b.orders.filter((o) => !o.qa && !isGenericName(o.client.name) && o.client.name.toLowerCase().includes(t)) };
 }
 
+/** How a payment came, as every Orders screen says and draws it (OR24, OR25, OR27). */
+export const METHOD: Record<Method, { word: string; icon: IconName; tone: string }> = { cash: { word: 'Cash', icon: 'cash', tone: 'good' }, momo: { word: 'Mobile', icon: 'mobile', tone: 'warn' }, bank: { word: 'Bank', icon: 'bank', tone: 'info' } };
+
+/** The fixes asked of Accounts on a payment (its method, its amount) while they wait: such a payment is not asked about again (OR32, OR33). */
+export const payFixAsks = (b: Books, p: Payment): PaymentAsk[] => b.paymentAsks.filter((a) => a.paymentId === p.id && a.status === 'sent' && (a.what === 'method' || a.what === 'amount'));
+
+/** What a payment should be, from its asks: { method, amount } as Accounts will correct it. */
+export function payFixWant(p: Payment, asks: PaymentAsk[]): { method: Method; amount: number } {
+  const m = asks.find((a) => a.what === 'method'), a = asks.find((x) => x.what === 'amount');
+  return { method: ((m && (m.want.method as Method)) || p.method), amount: a && Number(a.want.amount) > 0 ? Number(a.want.amount) : p.amount };
+}
+
+/** What they owe now, which a payment fix moves (OR25 "They will owe", OR32 "then they owe"). */
+export const owesNow = (b: Books, o: Order): number => custOf(b, o)?.owes ?? orderOwes(o);
+
+/** An order's payments, oldest first (OR24's rows and its split bar). */
+export const paysOf = (b: Books, o: Order): Payment[] => b.payments.filter((p) => p.orderId === o.id && !p.qa).sort((x, y) => x.at - y.at);
+
+/** An order's payments with a fix asked of Accounts, each with its asks (OR32). */
+export const payFixesOf = (b: Books, o: Order): { pay: Payment; asks: PaymentAsk[] }[] => paysOf(b, o).map((pay) => ({ pay, asks: payFixAsks(b, pay) })).filter((x) => x.asks.length > 0);
+
+/** What they owe once Accounts makes a payment's asked fix (OR32 "then they owe", "438,000 once fixed"). */
+export function owesOnceFixed(b: Books, o: Order, fix: { pay: Payment; asks: PaymentAsk[] }): number {
+  return Math.max(0, owesNow(b, o) + fix.pay.amount - payFixWant(fix.pay, fix.asks).amount);
+}
 
 export const overAsk = (b: Books, p: Payment): PaymentAsk | null => b.paymentAsks.find((a) => a.paymentId === p.id && a.what === 'over' && a.status === 'sent') || null;
 /** The order's payment that was paid over and not settled yet. */
