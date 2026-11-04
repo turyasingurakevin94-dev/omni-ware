@@ -29,7 +29,8 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     t.check(M.orderTotal(D.orderOf(b, 552)) === 1810000, '#0552 is 1,810,000');
     const st = (id) => D.rowStatus(b, D.orderOf(b, id), now);
     t.check(st(553).text === 'Ruth decides' && st(551).act === 'take' && st(550).text === 'Cancel asked', 'Checking: Ruth decides · Not paid yet (Take) · Cancel asked');
-    t.check(D.takeAmount(b, D.orderOf(b, 551)) === 1100000, 'Take 1.1M = 780,000 owed + 320,000');
+    const tk = D.takeFor(b, D.orderOf(b, 551), now);
+    t.check(tk.amount === 1100000 && tk.params.customer === 'C004' && tk.params.bills === '532,541,551', `Take 1.1M = 780,000 owed + 320,000, paying #0532, #0541 and #0551 (got ${JSON.stringify(tk)})`);
     t.check(st(549).text === '1 of 2 came' && st(546).text === '1 not found' && st(546).chip.text === '6 days', 'Buying: 1 of 2 came · 6 days, 1 not found');
     t.check(st(530).chip.text === '2+ days' && st(552).text === 'Musa packing', 'Packing: 2+ days (#0530) · Musa packing (#0552)');
     const done = D.sortRows(D.doneThisWeek(b, now), 'delivered', false).map((o) => o.id);

@@ -8,6 +8,7 @@
  */
 import { daysInStage, LATE_DAYS, lineWaits, twinOf } from '../../../core/orders.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
+import { owingOf, takeBills } from '../../../core/owing.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
@@ -130,8 +131,18 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
   return {};
 }
 
-/** What Grace takes from the row ("Take 1.1M"): what the customer owes and this order. */
-export const takeAmount = (b: Books, o: Order): number => Math.max(0, custOf(b, o)?.owes || 0) + orderOwes(o);
+/**
+ * What the row's Take takes ("Take 1.1M"), and the bills it names for customers/pay, so the pill pays what it says:
+ * the customer's open bills as Today's Take names them (core takeBills: every bill, none Accounts is checking), then
+ * this order (Mukono: #0532, #0541 and #0551, 780,000 + 320,000). A walk-in's order is only itself.
+ */
+export function takeFor(b: Books, o: Order, now: Ms): { amount: number; params: { customer: string; bills: string } | { customer: string; order: number } } {
+  const c = custOf(b, o);
+  if (!c) return { amount: orderOwes(o), params: { customer: '', order: o.id } };
+  const w = owingOf(b, c, dayOf(now)), ids = takeBills(w, false).filter((k) => k !== String(o.id));
+  const amount = w.bills.filter((x) => ids.includes(x.orderId == null ? 'debt' : String(x.orderId))).reduce((s, x) => s + x.left, 0) + orderOwes(o);
+  return { amount, params: { customer: c.id, bills: [...ids, String(o.id)].join(',') } };
+}
 
 /** Groups of rows, in the canvas's order: newest number first; delivered by bill, newest first, then not billed yet. */
 export function sortRows(list: Order[], stage: Stage, oldest: boolean): Order[] {

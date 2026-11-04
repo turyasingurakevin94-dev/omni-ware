@@ -25,9 +25,9 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { LIVE, doneThisWeek, faceOf, findOrders, liveOrders, nameOf, placedWhen, doneWhen, rowStatus, shortItem, shownRows, sortRows, stageCounts, takeAmount, kept } from './data.ts';
+import { LIVE, doneThisWeek, faceOf, findOrders, liveOrders, nameOf, placedWhen, doneWhen, rowStatus, shortItem, shownRows, sortRows, stageCounts, takeFor, kept } from './data.ts';
 import { CustOrderRow, OrderRow, ShowMore } from './local-OrderRow.tsx';
-import { go, openOrder, payFor } from './links.ts';
+import { go, openOrder } from './links.ts';
 import { openTell } from './Tell.tsx';
 
 type Filter = Stage | 'all';
@@ -100,9 +100,9 @@ function uniqueFaces(b: Books, l: Order[]) {
 type Leave = (go1: () => void) => () => void;
 
 function Row(p: { b: Books; o: Order; t: number; leave: Leave }): JSX.Element {
-  const { b, o, t } = p, st = rowStatus(b, o, t), name = nameOf(b, o);
+  const { b, o, t } = p, st = rowStatus(b, o, t), name = nameOf(b, o), tk = takeFor(b, o, t);
   const act = st.act === 'take'
-    ? { word: 'Take', amount: short(takeAmount(b, o)), tone: 'warn' as const, label: `Take payment from ${name}, ${takeAmount(b, o).toLocaleString('en-US')}`, on: p.leave(() => payFor(b, o)) }
+    ? { word: 'Take', amount: short(tk.amount), tone: 'warn' as const, label: `Take payment from ${name}, ${tk.amount.toLocaleString('en-US')}`, on: p.leave(() => go('customers/pay', tk.params)) }
     : st.act === 'tell' ? { word: 'Tell', duo: phWhatsapp, tone: 'good' as const, label: `Tell ${name} what was found`, on: () => openTell(o.id) } : undefined;
   return <OrderRow face={faceOf(b, o)} name={name} no={orderNo(o.id)} status={st} amount={orderTotal(o)}
     time={o.stage === 'delivered' && o.deliveredAt ? doneWhen(o.deliveredAt, t) : placedWhen(o, t)} act={act} on={p.leave(() => openOrder(o.id))} />;
