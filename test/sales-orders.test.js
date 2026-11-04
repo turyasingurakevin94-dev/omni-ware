@@ -107,5 +107,5 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const { b, now } = await at('?demo&state=empty');
     t.check(D.stageCounts(b, now).delivered === 0 && D.liveOrders(b).length === 0, '&state=empty: Orders 0 (OR04)');
   }
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

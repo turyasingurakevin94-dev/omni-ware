@@ -15,7 +15,7 @@ import { fig } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { useEffect } from 'preact/hooks';
 import { books, now, source } from '../shell/store.ts';
-import { closest, findItems, readAsk, sameAsk, type Asked } from './find.ts';
+import { closest, findItems, readAsk, sameAsk, type Asked } from '../../../core/find.ts';
 import { first, itemKey, lastQty, rankFor, theirItems } from './insights.ts';
 import { AskCard, send } from './AskCard.tsx';
 import { askedAs, closeLine } from './Lines.tsx';

@@ -14,7 +14,7 @@ const t = createReporter('sales counter');
 const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const S = require(path.join(ROOT, 'src/apps/sales/counter/shop.ts'));
-const I = require(path.join(ROOT, 'src/core/items.ts'));
+const I = require(path.join(ROOT, 'src/core/find.ts'));
 const C = require(path.join(ROOT, 'src/core/customers.ts'));
 
 const item = (b, id) => b.items.find((i) => i.id === id);
@@ -48,7 +48,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const due = S.dueOf(b, now);
   t.check(same(due.map((d) => d.c.name), ['Mukono Roofing', 'Kyaligonza & Sons', 'Lubowa Builders']), `KC04: who's due 3 (got ${due.map((d) => d.c.name).join(', ')})`);
   t.check(same(due.map((d) => d.words), ['Due today · every 7 days', '4 days late · every 14 days', '1 day late · every 5 days']), 'KC04: their rhythm in words');
-  t.check(same(I.readQuery('2 paint'), { qty: 2, words: 'paint', counted: true }) && same(I.findItems(b.items, 'paint').map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
+  const ask = I.readAsk('2 paint');
+  t.check(ask.qty === 2 && same(ask.words, ['paint']) && same(I.findItems(b, ask).filter((i) => i.price != null).map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
 
   const T = require(path.join(ROOT, 'src/core/time.ts'));
   const quiet = b.customers.filter((c) => C.rhythm(c, b.orders, T.dayOf(now)).quiet);
@@ -87,7 +88,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   /* ---- nothing called "tile cutter": the walk-in is added to Moses' open ask (KC21, KC25) ---- */
   const d5 = demoSource('?demo');
   const b5 = await d5.books();
-  t.check(I.findItems(b5.items, 'tile cutter').length === 0, 'the shop sells no tile cutter (KC21)');
+  t.check(I.findItems(b5, I.readAsk('tile cutter')).length === 0, 'the shop sells no tile cutter (KC21)');
   const open5 = b5.asks.find((a) => a.name === 'Tile cutter 600mm');
   t.check(open5 && open5.status === 'found' && open5.requests.length === 1, 'Moses found it already: one ask (FACTS §6)');
   const added = await d5.askSourcing({ name: 'Tile cutter 600mm', qty: 1, customerId: null, chatId: null });

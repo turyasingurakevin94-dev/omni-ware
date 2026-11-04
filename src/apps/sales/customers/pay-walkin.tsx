@@ -5,6 +5,7 @@
  * (money.ts creditCharge: the shop's pct, one line, never in unit prices),
  * and where that leaves them against the Manager's limit.
  */
+import { lastOrderOf } from '../../../core/customers.ts';
 import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { money, orderOwes } from '../../../core/money.ts';
@@ -37,7 +38,7 @@ export const whoPicked = signal<{ order: number; id: string } | null>(null);
 export function whoOptions(b: Books, o: Order): Customer[] {
   const mine = b.customers.filter((c) => !c.qa);
   const picked = whoPicked.value && whoPicked.value.order === o.id ? mine.find((c) => c.id === (whoPicked.value as { id: string }).id) : null;
-  const lastAt = (c: Customer) => b.orders.filter((x) => x.customerId === c.id).reduce((m, x) => Math.max(m, x.placedAt), 0);
+  const lastAt = (c: Customer) => (lastOrderOf(c.id, b.orders) || { placedAt: 0 }).placedAt;
   const match = mine.filter((c) => o.client.phone && samePlace(o.client.phone, c));
   const recent = mine.filter((c) => !match.includes(c)).sort((x, y) => lastAt(y) - lastAt(x));
   const two = [...match, ...recent].slice(0, 2);

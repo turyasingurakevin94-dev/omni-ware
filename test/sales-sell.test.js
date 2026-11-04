@@ -15,7 +15,7 @@ const t = createReporter('sales sell');
 const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const I = require(path.join(ROOT, 'src/apps/sales/sell/insights.ts'));
-const F = require(path.join(ROOT, 'src/apps/sales/sell/find.ts'));
+const F = require(path.join(ROOT, 'src/core/find.ts'));
 
 const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
 
