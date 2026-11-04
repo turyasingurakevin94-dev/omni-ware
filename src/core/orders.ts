@@ -8,6 +8,8 @@
  *                     "The price decision"; sales.html:4428-4440 priceNoteFor, placedPriceTag)
  *   the payload       the order as sales.html writes it (8722-8738), so every other app reads it
  *   a return's lines  as invoice_asks keeps them, so the Manager reads which lines come back
+ *   a price untold    the Manager's new price the customer has not been told yet (sales.html:6104
+ *                     ordMarkTold writes priceToldAt; every Tell and Today read this one rule)
  */
 import type { OrderDraft } from './datasource.ts';
 import { creditHold, linePriced, orderOwes } from './money.ts';
@@ -18,6 +20,11 @@ export function priceNote(l: Line): 'under' | 'nomargin' | 'nocost' | null {
   if (!(l.cost && l.cost > 0)) return 'nocost';
   if (l.shopPrice == null) return 'nomargin';
   return l.price != null && l.price < l.shopPrice ? 'under' : null;
+}
+
+/** The Manager changed this line's price and the customer has not been told it since (items[].priceToldAt). */
+export function priceUntold(l: Line): boolean {
+  return !!l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at);
 }
 
 /** Below cost is refused, always (sales.html:4428 priceTooLow; server 0171 OWCST). */

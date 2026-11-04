@@ -7,7 +7,7 @@
  */
 import { withUsuals } from '../customers.ts';
 import { dataError, type DataSource } from '../datasource.ts';
-import { askLines } from '../orders.ts';
+import { askLines, priceUntold } from '../orders.ts';
 import type { Kept } from '../outbox.ts';
 import { dayOf, replyWindow } from '../time.ts';
 import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
@@ -102,7 +102,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     markPriceTold: (orderId) => write(() => {
       const o = s.books.orders.find((x) => x.id === orderId);
       if (!o) throw dataError('refused', 'That order is not in the books');
-      o.lines.forEach((l) => { if (l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at)) l.priceToldAt = s.now; });
+      o.lines.forEach((l) => { if (priceUntold(l)) l.priceToldAt = s.now; });
       o.toldTotal = null;
     }),
     setClientPhone: (orderId, phone) => write(() => { const o = s.books.orders.find((x) => x.id === orderId); if (o) o.client.phone = phone; }),
