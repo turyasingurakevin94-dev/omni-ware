@@ -3,6 +3,7 @@
  * Each entity has its own file; each tab adds what only it needs in
  * extra/<tab>.ts, which only that tab's builder edits.
  */
+import { orderTotal } from '../../money.ts';
 import { at } from '../../time.ts';
 import type { Books, Chat, ChatEvent, ChatNote, Message, Ms } from '../../types.ts';
 import type { DemoFlags } from '../flags.ts';
@@ -11,7 +12,7 @@ import { backgroundCustomers, backgroundOrders } from './background.ts';
 import { chatEvents, chats, messages } from './chats.ts';
 import { NOW, TODAY } from './clock.ts';
 import { castCustomers } from './customers.ts';
-import { items } from './items.ts';
+import { AISLES, items } from './items.ts';
 import { billAsks, goal, payments, paymentAsks, promises, settings } from './money.ts';
 import { liveOrders } from './orders-live.ts';
 import { pastOrders } from './orders-past.ts';
@@ -37,6 +38,8 @@ export interface DemoState {
    * year; the demo seeds only the days the boards draw). By chat id, then member id.
    */
   servedBefore: Record<number, Record<string, number>>;
+  /** This phone gets Grace's pushes (push_subscriptions). */
+  push: boolean;
 }
 
 export function seed(f: DemoFlags): DemoState {
@@ -53,6 +56,8 @@ export function seed(f: DemoFlags): DemoState {
       customers: [...castCustomers(), ...backgroundCustomers()],
       orders: [...liveOrders(), ...pastOrders(), ...backgroundOrders()].sort((a, b) => a.id - b.id),
       items: items(),
+      // FACTS §6: the whole shop's aisles (the demo seeds only the items the boards name).
+      aisles: AISLES.map((a) => ({ ...a })).sort((x, y) => y.count - x.count),
       payments: payments(),
       promises: promises(),
       asks: sourcingAsks(),
@@ -66,6 +71,7 @@ export function seed(f: DemoFlags): DemoState {
     notes: [],
     events: chatEvents(),
     servedBefore: {},
+    push: true,
   };
   if (f.waDown) s.connected = false;
   // &as=ruth: another member of the team is signed in on this phone (CH32).
@@ -83,6 +89,8 @@ export function seed(f: DemoFlags): DemoState {
 function emptyShop(s: DemoState): void {
   const b = s.books;
   b.orders = b.orders.filter((o) => o.stage === 'delivered' && o.invoiced);
+  // Nobody owes by the books' own rule (core/owing.ts, ow_customer_balance): every bill kept is paid in full.
+  b.orders.forEach((o) => { o.paid = orderTotal(o); });
   b.customers.forEach((c) => { c.owes = 0; c.debtLog = []; });
   b.promises = []; b.billAsks = []; b.paymentAsks = []; b.asks = [];
   s.chats = []; s.messages = []; s.events = [];

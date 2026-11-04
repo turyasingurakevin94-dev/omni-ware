@@ -15,7 +15,7 @@ const t = createReporter('sales sell');
 const { demoSource } = require(path.join(ROOT, 'src/core/demo/index.ts'));
 const M = require(path.join(ROOT, 'src/core/money.ts'));
 const I = require(path.join(ROOT, 'src/apps/sales/sell/insights.ts'));
-const F = require(path.join(ROOT, 'src/apps/sales/sell/find.ts'));
+const F = require(path.join(ROOT, 'src/core/find.ts'));
 
 const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
 
@@ -49,15 +49,14 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(M.orderTotal(order(490)) === 2672000, '#0490 is the usual, 2,672,000');
   t.check([[545, 1240000], [437, 560000], [540, 380000], [539, 180000], [542, 169000]].every(([id, n]) => M.orderTotal(order(id)) === n), 'every re-lined order keeps its total');
 
-  /* ---- the search rule (core/items.ts; the lead's rulings, 4 Nov) ---- */
-  const IT = require(path.join(ROOT, 'src/core/items.ts'));
-  const sold = { orders: b.orders, now };
-  const paint = IT.findItems(b.items, 'paint', sold).map((i) => i.id);
-  t.check(paint.join() === 'roof-paint-maroon-20,gloss-white-4,emulsion-cream-20', `"paint": the names first, then what sells in the Paint aisle, no fillers (got ${paint.join()})`);
-  const plumbing = IT.findItems(b.items, 'plumbing', sold);
-  t.check(plumbing.length > 0 && plumbing.every((i) => i.aisle === 'Plumbing' && !i.id.startsWith('g-')), `"plumbing": what has sold in Plumbing (got ${plumbing.map((i) => i.id).join()})`);
+  /* ---- the search rule (core/find.ts; the lead's ruling, 4 Nov) ---- */
+  const FI = require(path.join(ROOT, 'src/core/find.ts'));
+  const finds = (q) => FI.findItems(b, FI.readAsk(q)).filter((i) => i.price != null);
+  t.check(finds('paint').map((i) => i.id).join() === 'roof-paint-maroon-20,gloss-white-4,emulsion-cream-20', `"paint": the names first, then what sold in the Paint aisle in 90 days, no fillers (got ${finds('paint').map((i) => i.id).join()})`);
+  t.check(finds('plumbing').length > 0 && finds('plumbing').every((i) => i.aisle === 'Plumbing' && !i.id.startsWith('g-')), '"plumbing": what sold in Plumbing lists, no fillers');
   const filler = b.items.find((i) => i.aisle === 'Paint' && i.id.startsWith('g-'));
-  t.check(filler.price != null && IT.findItems(b.items, filler.name, sold).some((i) => i.id === filler.id), 'a filler that never sells is priced and still found by its own name');
+  t.check(filler.price != null && FI.findItems(b, FI.readAsk(filler.name)).some((i) => i.id === filler.id), 'a filler that never sells is priced and still found by its own name');
+  t.check(b.items.filter((i) => i.aisle === 'Paint').every((i) => i.price != null), 'every item in the Paint aisle has a price');
 
   /* ---- Lubowa (SL04) ---- */
   const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
@@ -87,9 +86,9 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   /* ---- FACTS totals the seed additions keep ---- */
   t.check([[545, 1240000], [498, 1505000], [540, 380000], [539, 180000], [542, 169000], [553, 170000], [552, 1810000]].every(([id, v]) => M.orderTotal(order(id)) === v), 'Kato’s and Lubowa’s bills keep their totals');
   t.check(cust(KATO).owes === 420000 && cust(LUBOWA).owes === 0, 'Kato owes 420,000; Lubowa 0');
-  const after = demoSource('?demo&clock=15:05');
+  const after = demoSource('?demo&clock=14:05');
   const ab = await after.books();
-  t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 15:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
+  t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 14:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
 
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

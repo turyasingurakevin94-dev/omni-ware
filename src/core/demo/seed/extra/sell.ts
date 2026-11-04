@@ -11,7 +11,8 @@
  *     and the five aisles she sells from most (SL03, SL30, SL31): only the 29 background orders
  *     whose figures FACTS never gives are re-lined, each paid in full again
  *   the shop's cutting charge, Ntinda's travel time (SL16, SL17); the sentence the demo hears (SL10)
- *   (Sell's endings, #0560 and #0561, are placed at &clock=15:05, after the Orders tab's #0559)
+ *   (Sell's endings, #0560 and #0561, are placed at &clock=14:05: after the Orders tab's #0559, 13:50, and before
+ *   Nansana's #0562, 14:40, which is in at 15:05 for OR31)
  */
 import { orderTotal } from '../../../money.ts';
 import { at } from '../../../time.ts';
@@ -66,6 +67,7 @@ function made(id: string, name: string, aisle: string, n: number, unit = 'pc'): 
 }
 
 function catalogue(s: DemoState): void {
+  if (s.books.items.some((i) => i.id === 'g-1')) return; // added already
   const b = s.books, by = (id: string) => b.items.find((i) => i.id === id) as Item;
   const sib = (from: string, id: string, name: string, unit: string, price: number, extra: Partial<Item>): Item =>
     ({ ...by(from), id, name, unit, price, cost: Math.round(price / 1.25), packPrice: null, listedAt: null, ...extra });

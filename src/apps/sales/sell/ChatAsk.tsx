@@ -8,7 +8,7 @@ import { howLong } from '../../../core/time.ts';
 import type { Books, Customer, Item, Message } from '../../../core/types.ts';
 import { Duo, phWhatsapp } from '../../../ui/icons.tsx';
 import { chats, now } from '../shell/store.ts';
-import { findItems, readAsk } from './find.ts';
+import { findItems, readAsk } from '../../../core/find.ts';
 import { first, rankFor } from './insights.ts';
 import { add, cur } from './model.ts';
 

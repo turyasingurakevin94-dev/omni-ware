@@ -4,24 +4,23 @@
  * count, and one tap adds them all ("Add both · 1,712,000"). While it
  * listens (SL34) Add waits. Words with no item in them go into Add an item,
  * where the find shows the closest (SL09). In the demo the phone hears the
- * sample shop's own sentence (seed/extra/sell.ts) after 1.2 s.
+ * sample shop's own sentence (seed/extra/sell.ts) after 1.2 s. The sheet itself is the shared listening
+ * part (src/ui/Listen.tsx); only what was understood is Sell's.
  */
 import type { JSX } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
 import type { Books, Item } from '../../../core/types.ts';
-import { Duo, Icon, phMic } from '../../../ui/icons.tsx';
+import { Icon } from '../../../ui/icons.tsx';
+import { ListenSheet, hasSpeech } from '../../../ui/Listen.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { books, isDemo, now } from '../shell/store.ts';
-import { findItems, readSaid } from './find.ts';
+import { findItems, readSaid } from '../../../core/find.ts';
 import { rankFor } from './insights.ts';
 import { add, cur, query } from './model.ts';
 import './voice.css';
 
-/** The waveform as drawn: what was heard in mint, the fading tail in slate. */
-const WAVE = [10, 16, 22, 14, 28, 34, 20, 38, 30, 18, 40, 26, 34, 22, 14, 30, 36, 20, 12, 24, 16, 10, 8, 6, 6, 6];
 const UNITS = /^(cartons?|ctns?|bags?|pcs?|pieces?|kgs?|tins?|pairs?|boxes|box|inch|in)$/i;
 const NUMS = /^(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|thirty|forty|fifty|sixty|hundred)$/i;
 
@@ -50,58 +49,50 @@ function Said(p: { text: string; heard: Heard[] }): JSX.Element {
     last = k ? w : '';
   });
   flush();
-  return <p class="sl-said">“{out}”</p>;
+  return <p class="ow-listen-said sl-said" aria-live="polite">“{out}”</p>;
+}
+
+/** What the demo's phone hears (seed/extra/sell.ts), or nothing on a real phone. */
+const demoSaid = (): string | undefined => (isDemo ? (globalThis as { owDemoVoice?: string }).owDemoVoice : undefined);
+
+/** Whether Say it can open: the phone listens, or the demo says the sample sentence. */
+export function canListen(): boolean {
+  if (demoSaid() || hasSpeech()) return true;
+  toast.show('This phone cannot listen', { kind: 'warn', sub: 'Type the item instead' });
+  return false;
 }
 
 export function VoiceSheet(): JSX.Element | null {
-  const b = books.value, [text, setText] = useState(''), [on, setOn] = useState(true);
-  const listen = () => {
-    setText(''); setOn(true);
-    const demo = isDemo ? (globalThis as { owDemoVoice?: string }).owDemoVoice : undefined;
-    if (demo) { window.setTimeout(() => { setText(demo); setOn(false); }, 1200); return; }
-    const R = (globalThis as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec }).SpeechRecognition
-      || (globalThis as unknown as { webkitSpeechRecognition?: new () => SpeechRec }).webkitSpeechRecognition;
-    if (!R) { setOn(false); toast.show('This phone cannot listen', { kind: 'warn', sub: 'Type the item instead' }); return; }
-    const r = new R();
-    r.lang = 'en-GB'; r.interimResults = true;
-    r.onresult = (e) => setText(Array.from(e.results).map((x) => x[0].transcript).join(' '));
-    r.onend = () => setOn(false);
-    r.onerror = () => setOn(false);
-    r.start();
-  };
-  useEffect(listen, []);
-  const heard = b && text ? understand(b, text) : [];
-  // Said, but no item in it: the words go into Add an item, where the find shows the closest (SL09).
-  useEffect(() => { if (!on && text && !heard.length) { query.value = text; sheet.close(); } }, [on, text]);
+  const b = books.value;
   if (!b) return null;
-  const total = heard.reduce((s, h) => s + h.qty * (h.it.price || 0), 0);
-  const word = heard.length === 2 ? 'Add both' : heard.length === 1 ? 'Add it' : heard.length ? `Add ${heard.length}` : 'Add';
+  const heardOf = (text: string) => (text ? understand(b, text) : []);
+  const word = (n: number) => (n === 2 ? 'Add both' : n === 1 ? 'Add it' : n ? `Add ${n}` : 'Add');
   return (
-    <div class="sl-voice">
-      <button type="button" class="sl-voice-grab" aria-label="Close" onClick={sheet.close} />
-      <div class="sl-voice-r">
-        <button type="button" class="sl-voice-mic" aria-label={on ? 'Stop listening' : 'Listen again'} onClick={() => (on ? setOn(false) : listen())}><Duo i={phMic} size={28} color="#FFFFFF" /></button>
-        <span aria-hidden="true" class={'sl-wave' + (on ? ' on' : '')}>{WAVE.map((h, i) => <span key={i} style={{ height: `${h}px` }} class={i >= 20 ? 'tail' : ''} />)}</span>
-      </div>
-      {text ? <Said text={text} heard={heard} /> : <p class="sl-said dim">Listening…</p>}
-      {heard.length > 0 && (
-        <div class="sl-heard">
-          {heard.map((h) => (
-            <div class="sl-heard-r" key={h.it.id}>
-              <span class="sl-heard-sq"><ItemSquare aisle={h.it.aisle} size={38} icon={22} /></span>
-              <span class="sl-heard-t"><span>{h.it.name}</span><span class="mono">{fig(h.qty * (h.it.price || 0))}{(h.it.onShelf || 0) > 0 && <span class="sl-heard-s"><b>{h.it.onShelf}</b> on shelf</span>}</span></span>
-              <span class="mono sl-heard-n">{`×${h.qty}${h.unit !== 'pc' && h.unit !== h.it.unit ? ` ${h.unit}` : h.it.unit !== 'pc' ? ` ${h.it.unit}` : ''}`}</span>
-              <span role="img" aria-label="Understood" class="sl-heard-ok"><Icon name="check" size={13} stroke={3.2} /></span>
-            </div>
-          ))}
-        </div>
-      )}
-      <div class="sl-voice-f">
-        <button type="button" class="sl-voice-again" aria-label="Say it again" onClick={listen}><Icon name="undo" size={22} stroke={2} /></button>
-        <button type="button" class="sl-voice-add" disabled={!heard.length} onClick={() => { heard.forEach((h) => add(h.it, h.qty)); sheet.close(); }}>{heard.length ? <>{`${word} · `}<span class="mono">{fig(total)}</span></> : word}</button>
-      </div>
-    </div>
+    <ListenSheet hold demo={demoSaid()}
+      // Said, but no item in it: the words go into Add an item, where the find shows the closest (SL09).
+      onHeard={(text) => { if (text && !heardOf(text).length) { query.value = text; sheet.close(); } }}
+      ready={(text) => heardOf(text).length > 0}
+      onDone={(text) => heardOf(text).forEach((h) => add(h.it, h.qty))}
+      act={(text) => {
+        const heard = heardOf(text), total = heard.reduce((s, h) => s + h.qty * (h.it.price || 0), 0);
+        return heard.length ? <>{`${word(heard.length)} · `}<span class="mono">{fig(total)}</span></> : word(0);
+      }}
+      said={(text) => <Said text={text} heard={heardOf(text)} />}>
+      {(text) => {
+        const heard = heardOf(text);
+        return heard.length > 0 && (
+          <div class="sl-heard">
+            {heard.map((h) => (
+              <div class="sl-heard-r" key={h.it.id}>
+                <span class="sl-heard-sq"><ItemSquare aisle={h.it.aisle} size={38} icon={22} /></span>
+                <span class="sl-heard-t"><span>{h.it.name}</span><span class="mono">{fig(h.qty * (h.it.price || 0))}{(h.it.onShelf || 0) > 0 && <span class="sl-heard-s"><b>{h.it.onShelf}</b> on shelf</span>}</span></span>
+                <span class="mono sl-heard-n">{`×${h.qty}${h.unit !== 'pc' && h.unit !== h.it.unit ? ` ${h.unit}` : h.it.unit !== 'pc' ? ` ${h.it.unit}` : ''}`}</span>
+                <span role="img" aria-label="Understood" class="sl-heard-ok"><Icon name="check" size={13} stroke={3.2} /></span>
+              </div>
+            ))}
+          </div>
+        );
+      }}
+    </ListenSheet>
   );
 }
-
-interface SpeechRec { lang: string; interimResults: boolean; start(): void; onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: () => void }

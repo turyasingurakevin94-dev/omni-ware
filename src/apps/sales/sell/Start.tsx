@@ -18,7 +18,7 @@ import { UsualCard } from '../../../ui/UsualCard.tsx';
 import { nav } from '../shell/nav.ts';
 import { chats, me, now } from '../shell/store.ts';
 import { aisleMarks, aisles, dayWord, first, item, itemKey, lastOrder, sellMost, whose } from './insights.ts';
-import { readAsk } from './find.ts';
+import { readAsk } from '../../../core/find.ts';
 import { add, cur, itemOf } from './model.ts';
 import { openAisle, openAisles } from './sheets.tsx';
 import './start.css';

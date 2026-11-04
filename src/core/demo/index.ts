@@ -11,9 +11,10 @@ import type { Kept } from '../outbox.ts';
 import { dayOf, replyWindow } from '../time.ts';
 import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
 import { readFlags, type DemoFlags } from './flags.ts';
-import { SAVED_AT } from './seed/clock.ts';
 import { seed, type DemoState } from './seed/index.ts';
-import { CHAT, MUSA } from './seed/people.ts';
+import { SAVED_AT, t } from './seed/clock.ts';
+import { KATO } from './seed/orders-live.ts';
+import { BRIAN, CHAT, MUSA } from './seed/people.ts';
 import * as W from './writes.ts';
 
 const copy = <T>(x: T): T => structuredClone(x);
@@ -33,7 +34,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   const flags = typeof search === 'string' ? readFlags(search) : search;
   const s = seed(flags);
   const me = s.books.me;
-  let signedIn = true, failed = false;
+  let signedIn = true, failed = false, payKept = false, brianTook = false;
 
   const write = <T>(fn: () => T): Promise<T> => {
     if (flags.offline) return Promise.reject(dataError('offline', 'No signal'));
@@ -119,7 +120,17 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     withdrawBillAsk: (id) => write(() => W.withdrawAsk(s, id)),
     askCancel: (orderId, why) => write(() => copy(W.askCancel(s, orderId, why))),
 
-    receivePayment: (a) => write(() => copy(W.receivePayment(s, a))),
+    receivePayment: (a) => {
+      // &fail=pay (CU46): the first payment finds no signal and is kept; before it goes again, Brian takes 120,000
+      // of Kato's #0544 at 10:50 (FACTS §1), so the kept one is now more than Kato owes and the shop refuses it.
+      if (flags.fail === 'pay' && !payKept) { payKept = true; return later(() => { throw dataError('offline', 'No signal'); }); }
+      if (flags.fail === 'pay' && !brianTook) {
+        brianTook = true;
+        const r = W.receivePayment(s, { customerId: KATO, orderId: null, amount: 120000, method: 'cash', ref: '', picks: [544], over: null });
+        r.payments.forEach((x) => { const y = s.books.payments.find((z) => z.id === x.id); if (y) { y.by = BRIAN; y.at = t('10:50'); } });
+      }
+      return write(() => copy(W.receivePayment(s, a)));
+    },
     recordPromise: (a) => write(() => {
       const p = { id: s.books.promises.reduce((m, x) => Math.max(m, x.id), 0) + 1, customerId: a.customerId, on: a.on, madeOn: dayOf(s.now), amount: a.amount };
       s.books.promises.push(p);
@@ -139,12 +150,18 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askSourcing: (a) => write(() => {
       const name = a.name.trim(), hit = s.books.asks.find((x) => x.status !== 'dropped' && x.name.toLowerCase() === name.toLowerCase());
       const req = { at: s.now, by: me.id, customerId: a.customerId, qty: a.qty || 1 };
-      if (hit) { hit.requests.push(req); return copy(hit); }
-      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [] };
+      // The demo keeps no files: a photo stands as 'photo:<name>' (as Message.media's 'aisle:<Aisle>').
+      const image = a.photo ? 'photo:' + name : null;
+      if (hit) { hit.requests.push(req); if (image && !hit.image) hit.image = image; return copy(hit); }
+      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [], image };
       s.books.asks.push(ask);
       return copy(ask);
     }),
     logSearchMiss() { /* the demo keeps no search log */ },
+    // The demo phone is the installed app: pushes on (FACTS), off on her first day (TD20).
+    pushState: () => Promise.resolve({ on: s.push, why: null }),
+    pushOn: () => write(() => { s.push = true; return { on: true, why: null }; }),
+    pushOff: () => write(() => { s.push = false; return { on: false, why: null }; }),
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),

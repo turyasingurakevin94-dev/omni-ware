@@ -18,7 +18,7 @@ import { nav, screen, stack } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
 import { dueWords } from '../../../core/customers.ts';
 import { dayWord, first, lastOrder, ordersOf, rhythmOf, whosDue } from './insights.ts';
-import { findCustomer } from './find.ts';
+import { findCustomer } from '../../../core/find.ts';
 import './who.css';
 
 /** The screen it was opened over, drawn under the sheet (TD01 behind SL02). */

@@ -1,7 +1,7 @@
 /*
  * What the counter reads from the books, once: today's counter sales (KC01's "6 sales · 412,000",
  * KC14's bars) and the shelf's best sellers (KC01 tiles; the rows under a basket). The search and
- * who is due are core rules (core/items.ts, core/customers.ts).
+ * who is due are core rules (core/find.ts, core/customers.ts).
  */
 import { orderTotal } from '../../../core/money.ts';
 import { dueCustomers, dueWords } from '../../../core/customers.ts';

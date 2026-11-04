@@ -58,10 +58,11 @@ export const readError = signal<string | null>(null);
 export const elsewhere = signal<Member | null>(null);
 
 export const me = computed(() => (books.value ? books.value.me : null));
-/** Chats waiting for this salesperson (the Chats tab's count). */
+/** Chats waiting for this salesperson (the Chats tab's count). With no signal it shows none: the copy
+ * cannot say who wrote since (TD09: "Chats waiting · back online"). */
 export const waitingCount = computed(() => {
   const cb = chats.value, m = me.value;
-  return cb && m ? waitingChats(cb, m.id, now.value).length : 0;
+  return cb && m && online.value ? waitingChats(cb, m.id, now.value).length : 0;
 });
 
 let outbox: Outbox | null = null;
@@ -77,7 +78,24 @@ async function openOutbox(userId: string): Promise<void> {
   const store = isDemo ? memoryStore((source as DemoSource).kept()) : (typeof indexedDB === 'undefined' ? memoryStore() : idbStore('sales', userId));
   outbox = new Outbox(store, send, () => source.now());
   outbox.onChange((l) => { kept.value = l; });
+  outbox.onSent((id, value) => { sentFns.forEach((fn) => fn(id, value)); });
+  outbox.onRefused((id, reason) => { refusedFns.forEach((fn) => fn(id, reason)); });
   kept.value = await outbox.items();
+}
+
+const sentFns = new Set<(id: string, value: unknown) => void>();
+const refusedFns = new Set<(id: string, reason: string) => void>();
+
+/** A kept write went: its outbox id (from act's { kept: true, id }) and the server's answer. */
+export function onKeptSent(fn: (id: string, value: unknown) => void): () => void {
+  sentFns.add(fn);
+  return () => { sentFns.delete(fn); };
+}
+
+/** A kept write the server refused, with its reason (spec 06 Q5: shown until fixed or discarded). */
+export function onKeptRefused(fn: (id: string, reason: string) => void): () => void {
+  refusedFns.add(fn);
+  return () => { refusedFns.delete(fn); };
 }
 
 /** Read the books and the chats again (every 45 s and 15 s; on signal back; after a write). */
@@ -115,6 +133,13 @@ export async function discardKept(id: string): Promise<void> {
   if (outbox) await outbox.discard(id);
 }
 
+/** A refused kept write, fixed: its new arguments (or the same) go back in its place, then the outbox tries again (spec 06 Q5). */
+export async function retryKept(id: string, args?: unknown): Promise<void> {
+  if (!outbox) return;
+  await outbox.retry(id, args);
+  await flush();
+}
+
 /** The person's own drafts (localStorage, per login; sales.html keeps them so too). The demo seeds FACTS §4.6. */
 function loadDrafts(userId: string): Draft[] {
   if (isDemo) return demoDrafts();
@@ -129,6 +154,8 @@ export function saveDrafts(list: Draft[]): void {
 
 /** FACTS §4.6: Kyaligonza · 2 items · 186,000 and Lubowa · 1 item · 2,280,000, not placed. */
 function demoDrafts(): Draft[] {
+  // &state=empty: nothing live, so nothing not placed yet either (CH06 draws no count on the +).
+  if (flags.state === 'empty' || flags.as) return []; // &as=ruth: another person's phone carries none of Grace's
   const b = (source as DemoSource).state.books, item = (id: string) => b.items.find((i) => i.id === id);
   const line = (id: string, qty: number, n: number) => {
     const it = item(id);

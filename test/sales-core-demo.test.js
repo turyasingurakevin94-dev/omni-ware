@@ -134,11 +134,35 @@ const sum = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
   const O = require(path.join(ROOT, 'src/core/orders.ts'));
   const copies = b.orders.filter((o) => O.isCopy(b.orders, o)).map((o) => o.id).sort();
   t.check(copies.includes(557) && !copies.includes(556), `entered twice: #0557 is #0556's copy, #0556 is not (copies: ${copies.join(', ')})`);
+  const lateLive = b.orders.filter((o) => (o.stage === 'packing' || o.stage === 'road') && !o.voided && !o.cancelled && O.daysInStage(o, now) >= O.LATE_DAYS).map((o) => o.id);
+  t.check(lateLive.join() === '530', `late: only #0530 has sat 2+ days in packing or on the road (got ${lateLive.join(', ')})`);
   const n9002 = b.payments.find((p) => p.id === 9002);
   t.check(M.paidOver(b, n9002).over === 90000, "Nansana's 560,000 at 8:52 is 90,000 over");
 
+  const emptyD = demoSource('?demo&state=empty'), emptyB = await emptyD.books();
+  t.check(require(path.join(ROOT, 'src/core/owing.ts')).owedBy(emptyB, emptyD.now()).length === 0, '&state=empty: nobody owes by the one rule (core/owing.ts reads the bills, so the empty shop pays them)');
+
   const first = await demoSource('?demo&state=first-day').books();
   t.check(first.orders.every((o) => o.placedBy !== GRACE), '&state=first-day: nothing of Grace\'s yet');
+
+  // Every tab's extra runs, and runs idempotently: a second run of each finds its rows by their ids and changes nothing
+  // (the integration pass, 4 Nov). One ask on Ggaba's #0528, whichever tab's seed adds it first.
+  {
+    const { seed } = require(path.join(ROOT, 'src/core/demo/seed/index.ts'));
+    const { readFlags } = require(path.join(ROOT, 'src/core/demo/flags.ts'));
+    const tabs = ['today', 'chats', 'sell', 'counter', 'orders', 'customers'];
+    const bad = [];
+    for (const q of ['?demo', '?demo&clock=13:50', '?demo&clock=15:05', '?demo&clock=15:40', '?demo&state=busy', '?demo&state=goal-hit', '?demo&state=test-record', '?demo&state=first-day', '?demo&state=empty']) {
+      const f = readFlags(q), st = seed(f);
+      for (const tab of tabs) {
+        const before = JSON.stringify(st);
+        require(path.join(ROOT, `src/core/demo/seed/extra/${tab}.ts`)).extra(st, f);
+        if (JSON.stringify(st) !== before) bad.push(`${tab} ${q}`);
+      }
+    }
+    t.check(!bad.length, `each tab's extra runs twice to the same books (changed: ${bad.join(', ') || 'none'})`);
+    t.check(b.paymentAsks.filter((a) => a.orderId === 528 && a.status === 'sent').length === 1, "one ask on Ggaba's #0528, not one per tab");
+  }
 
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

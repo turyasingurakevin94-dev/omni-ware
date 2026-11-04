@@ -193,6 +193,8 @@ export interface Order {
   deliveredAt: Ms | null;
   /** What the customer was told it comes to, when that differs from now (#0552: told 1,750,000). */
   toldTotal: UGX | null;
+  /** The WhatsApp chat it was taken from (payload.waConvId), when it was. */
+  chatId: number | null;
   qa: boolean;
 }
 
@@ -233,6 +235,8 @@ export interface Item {
   orderIn: boolean;
   /** Listed today by Sourcing (Roof paint: 10:34). */
   listedAt: Ms | null;
+  /** Its photo: a link into the shop's product-images bucket (products.image), or null. */
+  image?: string | null;
 }
 
 /** A WhatsApp chat (wa_conversations). */
@@ -310,6 +314,8 @@ export interface SourcingAsk {
   requests: { at: Ms; by: string | null; customerId: string | null; qty: number }[];
   /** Suppliers asked, and when ("Katwe Fabricators Wed 14 Oct"). */
   tried: { supplier: string; at: Ms }[];
+  /** A photo of what is wanted (sourcing_leads.image, 0074): a link into product-images, or null. */
+  image?: string | null;
 }
 
 /** An ask to the Manager about a bill: void it, or credit a return (invoice_asks, 0123). */
@@ -389,6 +395,8 @@ export interface Books {
   customers: Customer[];
   orders: Order[];
   items: Item[];
+  /** The shop's aisles (products.category) and how many products each holds, the most first ("Roofing · 86 items"). */
+  aisles: { name: string; count: number }[];
   payments: Payment[];
   promises: PayPromise[];
   asks: SourcingAsk[];

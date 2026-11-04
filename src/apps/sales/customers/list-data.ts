@@ -6,11 +6,12 @@
 import { orderOwes } from '../../../core/money.ts';
 import { addDays, clock, dayLabel, dayOf, weekday } from '../../../core/time.ts';
 import type { Books, Customer, Day, Ms, PayPromise } from '../../../core/types.ts';
-import { customersOf, moneyOf, promiseOf, rhythmOf, waitingOnMe, type Money, type Rhythm } from './data.ts';
+import { owingOf, type Owing } from '../../../core/owing.ts';
+import { customersOf, promiseOf, rhythmOf, waitingOnMe, type Rhythm } from './data.ts';
 
 export interface Who {
   c: Customer;
-  m: Money;
+  m: Owing;
   r: Rhythm;
   promise: PayPromise | null;
   /** The nearer of their promise and the day their oldest bill reaches the hold. */
@@ -37,14 +38,14 @@ export interface ListData {
 
 export function listData(b: Books, today: Day): ListData {
   const all = customersOf(b).map((c) => {
-    const m = moneyOf(b, c, today), r = rhythmOf(b, c, today), promise = promiseOf(b, c, today);
+    const m = owingOf(b, c, today), r = rhythmOf(b, c, today), promise = promiseOf(b, c, today);
     const next = [promise ? promise.on : '9999', m.hold || '9999'].sort()[0];
     return { c, m, r, promise, next };
   });
   const byNext = (x: Who, y: Who) => (x.next < y.next ? -1 : x.next > y.next ? 1 : y.m.owes - x.m.owes);
   const owe = all.filter((w) => w.m.owes > 0);
-  const past = owe.filter((w) => w.m.past).sort(byNext), under = owe.filter((w) => !w.m.past).sort(byNext);
-  const checked = all.filter((w) => w.m.checkedIn > 0 || w.m.apart > 0).sort((x, y) => (x.m.past === y.m.past ? 0 : x.m.past ? -1 : 1));
+  const past = owe.filter((w) => w.m.pastHold).sort(byNext), under = owe.filter((w) => !w.m.pastHold).sort(byNext);
+  const checked = all.filter((w) => w.m.checkedIn > 0 || w.m.apart > 0).sort((x, y) => (x.m.pastHold === y.m.pastHold ? 0 : x.m.pastHold ? -1 : 1));
   const promised = all.filter((w) => w.promise && w.m.owes > 0).sort((x, y) => ((x.promise as PayPromise).on < (y.promise as PayPromise).on ? -1 : 1));
   const due = all.filter((w) => w.r.tone === 'late' || w.r.tone === 'due').sort((x, y) => x.r.toDue - y.r.toDue);
   const quiet = all.filter((w) => w.r.tone === 'quiet');
@@ -52,15 +53,15 @@ export function listData(b: Books, today: Day): ListData {
   const sum = (l: Who[], f: (w: Who) => number) => l.reduce((s, w) => s + f(w), 0);
   return {
     all, owe, past, under, checked, promised, due, quiet, week,
-    owes: sum(owe, (w) => w.m.owes), take: sum(past, (w) => w.m.take), under21: sum(under, (w) => w.m.take),
+    owes: sum(owe, (w) => w.m.owes), take: sum(past, (w) => w.m.canTake), under21: sum(under, (w) => w.m.canTake),
     checkedIn: sum(owe, (w) => w.m.checkedIn), checkedAll: sum(checked, (w) => w.m.checkedIn + w.m.apart),
   };
 }
 
 /** "67 days · 2 bills" past the hold; under it "9 days · promised today" or "15 days · hold Fri 23 Oct". */
 export function oweSub(w: Who, today: Day): string {
-  const n = w.m.bills.length, age = `${w.m.oldest} days`;
-  if (w.m.past) return `${age} · ${n} bill${n === 1 ? '' : 's'}`;
+  const n = w.m.bills.length, age = `${w.m.age} days`;
+  if (w.m.pastHold) return `${age} · ${n} bill${n === 1 ? '' : 's'}`;
   if (w.promise) return `${age} · promised ${w.promise.on === today ? 'today' : weekday(w.promise.on)}`;
   return `${age} · hold ${w.m.hold ? dayLabel(w.m.hold) : ''}`;
 }

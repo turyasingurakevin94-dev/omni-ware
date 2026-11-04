@@ -9,7 +9,7 @@
  * Pure functions over the books: no screen, no clock of its own.
  */
 import { short } from '../../../core/money.ts';
-import { dueCustomers, rhythm, type Rhythm } from '../../../core/customers.ts';
+import { dueCustomers, lastOrderOf, rhythm, type Rhythm } from '../../../core/customers.ts';
 import { oftenWith as often } from '../../../core/often.ts';
 import { dayLabel, dayOf, daysApart } from '../../../core/time.ts';
 import type { Books, Customer, Item, Order } from '../../../core/types.ts';
@@ -96,17 +96,14 @@ export function aisleMarks(b: Books, c: Customer | null): Map<string, number> {
   return m;
 }
 
-/** The aisles in the shop's order (as its items list them), with how many items each holds. */
+/** The shop's aisles and how many products each holds (Books.aisles), in the shop's order (as its items list them). */
 export function aisles(b: Books): { name: string; count: number }[] {
-  const m = new Map<string, number>();
-  b.items.forEach((i) => m.set(i.aisle, (m.get(i.aisle) || 0) + 1));
-  return [...m].map(([name, count]) => ({ name, count }));
+  const order = [...new Set(b.items.map((i) => i.aisle))];
+  return b.aisles.slice().sort((x, y) => order.indexOf(x.name) - order.indexOf(y.name));
 }
 
-/** Their last order (SL03 "Last order #0553 · today 10:16 · 170,000"). */
-export function lastOrder(b: Books, customerId: string): Order | null {
-  return ordersOf(b, customerId)[0] || null;
-}
+/** Their last order (SL03 "Last order #0553 · today 10:16 · 170,000"), by the one rule (core/customers.ts). */
+export const lastOrder = (b: Books, customerId: string): Order | null => lastOrderOf(customerId, b.orders);
 
 export function dayWord(ms: number, now: number): string {
   const d = daysApart(dayOf(ms), dayOf(now));
