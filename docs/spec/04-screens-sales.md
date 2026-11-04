@@ -78,6 +78,7 @@ Each row names the default being built until Kevin answers.
 | Q16 | While a payment fix waits on Esther, what does the bill's Tell say? #0533's "Tell them · what is owed" sends "690,000 paid, 420,000 left to pay", the recorded figures, while Grace has asked a fix that makes it 438,000. Should Tell wait for Esther, or say that a fix is asked? | The recorded figures (420,000): nothing has been corrected yet | the orders critic, 4 Nov (OR32); `src/apps/sales/orders/msg.ts` |
 | Q17 | Does sending an order's paper (its Receipt) tell the customer Ruth's new price? | Yes (the lead's ruling, 4 Nov): sent on WhatsApp, or kept to send with signal, it marks the price told through the same rule as an order's Tell (`msg.ts` `tellsPrice`, `core/orders.ts` `priceUntold`) | OR34, OR35 |
 | Q18 | An unpaid order's paper is not a receipt. Is "Receipt" still the word? | "Receipt": every approved OR board's tile says it (the lead's ruling, 4 Nov) | OR05–OR33, OR34 |
+| Q19 | "Sell again" on an order (OR09, OR27) and a customer's last order (SL03): at today's shop price, or at the price that order sold at (Ruth's 17,000 on #0553's ridge cap, now 18,000 in the shop)? | Today's shop price (the manifest's "Sell again uses today's prices"); a price Ruth set holds only for its own order | `orders/Order.tsx` `againItems` (no price), `sell/Start.tsx` `sellAgain`; the Sell audit, 4 Nov |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
