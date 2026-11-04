@@ -5,14 +5,14 @@
  * shows it done meanwhile, and leaving the chat sends it at once.
  *
  *   undoable('Kato is Brian’s now', () => write('give', […]), { top: 4, onUndo: … })
- *   the toast (CH21, CH31) is drawn on the page, above every sheet
+ *   the toast (CH31, CH36) is the shared P28 toast (ToastView), drawn on the page above every sheet
  *   sendPending()      leaving: what waits goes now
  */
 import { signal } from '@preact/signals';
 import { render, type JSX } from 'preact';
-import { Icon } from '../../../ui/icons.tsx';
+import { ToastView } from '../../../ui/toast.tsx';
 
-interface Pending { id: number; text: string; top: number; commit: () => unknown; onUndo: () => void; timer: number }
+interface Pending { id: number; text: string; top: number; wide: boolean; commit: () => unknown; onUndo: () => void; timer: number }
 
 export const pending = signal<Pending | null>(null);
 /** A give that waits its 10 s: the chat shows it done meanwhile (its event and note). */
@@ -44,12 +44,12 @@ function mount(): void {
   render(<UndoToast />, host);
 }
 
-export function undoable(text: string, commit: () => unknown, o: { top?: number; onUndo?: () => void; ms?: number } = {}): void {
+export function undoable(text: string, commit: () => unknown, o: { top?: number; wide?: boolean; onUndo?: () => void; ms?: number } = {}): void {
   mount();
   sendPending();
   const id = ++n;
   const timer = window.setTimeout(() => { if (pending.value && pending.value.id === id) sendPending(); }, o.ms ?? 10000);
-  pending.value = { id, text, top: o.top ?? 4, commit, onUndo: o.onUndo || (() => {}), timer };
+  pending.value = { id, text, top: o.top ?? 4, wide: !!o.wide, commit, onUndo: o.onUndo || (() => {}), timer };
 }
 
 function undo(): void {
@@ -63,11 +63,10 @@ function undo(): void {
 export function UndoToast(): JSX.Element | null {
   const p = pending.value;
   if (!p) return null;
+  // The shared P28 toast, its Undo variant; the write itself waits here (sent on time out or on leaving).
   return (
-    <div role="status" class="cv-toast" style={{ top: `${p.top}px` }}>
-      <span aria-hidden="true"><Icon name="check" size={15} stroke={3} /></span>
-      <span>{p.text}</span>
-      <button type="button" onClick={undo}><span>Undo</span></button>
+    <div class={'cv-toast-at' + (p.wide ? ' wide' : '')} style={{ top: `${p.top}px` }}>
+      <ToastView key={p.id} text={p.text} undo={undo} onClose={() => {}} />
     </div>
   );
 }

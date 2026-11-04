@@ -62,7 +62,11 @@ export function ListHead(p: ListHeadProps): JSX.Element {
           </div>
         ) : <div aria-hidden="true" class="ch-wl-t"><i class={w ? undefined : 'shim'} /></div>}
       </div>
-      <Search tone="navy" placeholder="Name, phone or what they said" label="Find a chat" value={p.q} onInput={p.onQ} />
+      <div class={'ch-q' + (p.q ? ' on' : '')}>
+        <Search tone="navy" placeholder="Name, phone or what they said" label="Find a chat" value={p.q} onInput={p.onQ} />
+        {/* CH08: a typed search clears in one tap (the shared navy field draws no clear of its own). */}
+        {p.q && <button type="button" class="ch-q-x" aria-label="Clear the search" onClick={() => p.onQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
+      </div>
     </header>
   );
 }
