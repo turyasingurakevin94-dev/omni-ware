@@ -9,8 +9,7 @@ import { money } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
 import { clock, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { Books, Customer, SourcingAsk } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
-import { PLAIN } from './bits.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
@@ -28,10 +27,7 @@ import './asks.css';
 export const STEP_WORD: Record<string, string> = { asked: 'Asked', looking: 'Looking', found: 'Found', priced: 'Priced', listed: 'Listed' };
 /** Each step's mark: asked a message, looking the lens, found the lens ticked, priced the tag, listed the shop. */
 export function StepIcon(p: { s: string; size: number; stroke: number }): JSX.Element {
-  if (p.s === 'found') {
-    return <svg width={p.size} height={p.size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width={p.stroke} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M8.3 11.2l1.9 1.9 3.4-3.6" /></svg>;
-  }
-  const name: Record<string, IconName> = { asked: 'message', looking: 'search', priced: 'tag', listed: 'store' };
+  const name: Record<string, IconName> = { asked: 'message', looking: 'search', found: 'found', priced: 'tag', listed: 'store' };
   return <Icon name={name[p.s]} size={p.size} stroke={p.stroke} />;
 }
 

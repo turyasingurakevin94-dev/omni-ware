@@ -93,7 +93,7 @@ export function Column2(): JSX.Element {
   return (
     <Col gap={14}>
       <Part k="P02 · Today hero" meta="sold, never earned · TD01">
-        <Hero greeting="Good morning, Grace" date="Sat 17 Oct" me={{ initials: 'GA', tint: 'me' }} onMe={nop}
+        <Hero greeting="Good morning, Grace" line="Sat 17 Oct" status="live" me={{ initials: 'GA', tint: 'me' }} onMe={nop}
           month="October" sold={12480000} onSold={nop} goal={{ pct: 36, movePct: 9, target: '35M', daysLeft: 14 }} onGoal={nop}
           doors={[{ tone: 'mint', icon: 'trend', value: '+3.2M', label: 'on the move', on: nop }, { tone: 'amber', icon: 'cash', value: '1.9M', label: 'to collect', on: nop }]} />
       </Part>

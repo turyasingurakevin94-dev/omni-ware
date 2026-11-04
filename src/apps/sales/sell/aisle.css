@@ -48,8 +48,11 @@
 .sl-card2-step .ow-word { font-size: 12px; color: var(--on-navy); }
 .sl-card2-r { display: flex; gap: 6px; align-items: center; }
 .sl-card2-u { flex: 1; display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--tile); }
-.sl-card2-u button { flex: 1; height: 44px; border: none; border-radius: 9px; background: transparent; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
-.sl-card2-u button.on { background: #FFFFFF; box-shadow: 0 1px 3px rgba(22,32,60,.12); color: var(--ink); }
+/* Each unit is a 44 px target: the button reaches 1.5 px past the segment it draws (its ::before) on each side. */
+.sl-card2-u button { position: relative; z-index: 0; flex: 1; height: 44px; margin: 0 -1.5px; padding: 0; border: none; background: transparent; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.sl-card2-u button::before { content: ''; position: absolute; inset: 0 1.5px; z-index: -1; border-radius: 9px; }
+.sl-card2-u button.on { color: var(--ink); }
+.sl-card2-u button.on::before { background: #FFFFFF; box-shadow: 0 1px 3px rgba(22,32,60,.12); }
 .sl-card2-add { width: 44px; height: 44px; flex: none; border: none; padding: 0; border-radius: 12px; background: var(--navy); color: #FFFFFF; display: flex; align-items: center; justify-content: center; }
 /* SL33 · a customer's usual on the card, and one wide + when there is one unit. */
 .sl-card2-usual { display: inline-flex; align-items: center; gap: 4px; margin-top: -4px; font-size: 12px; font-weight: 700; color: #0F6B43; }

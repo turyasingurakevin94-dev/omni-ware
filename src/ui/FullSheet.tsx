@@ -107,3 +107,18 @@ export function SheetHead(p: SheetHeadProps): JSX.Element {
 export function HeadChip(p: { on: () => void; label: string; children: ComponentChildren }): JSX.Element {
   return <Tap on={p.on} label={p.label} class="ow-hchip"><span>{p.children}</span></Tap>;
 }
+
+/** A full sheet's navy head about a page, not a person (TD05, TD15–TD22): the grabber, the title and its line, the ×, then the picture. */
+export function TitleHead(p: { title: ComponentChildren; sub?: ComponentChildren; lead?: ComponentChildren; onClose: () => void; small?: boolean; children?: ComponentChildren; class?: string }): JSX.Element {
+  return (
+    <div class={cx('ow-shead', p.class)}>
+      <span aria-hidden="true" class="ow-shead-grab" />
+      <div class="ow-shead-row">
+        {p.lead}
+        <span class={cx('ow-thead-t', p.small && 'small')}><span>{p.title}</span>{p.sub && <span>{p.sub}</span>}</span>
+        <button type="button" class="ow-shead-x" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>
+      </div>
+      {p.children}
+    </div>
+  );
+}

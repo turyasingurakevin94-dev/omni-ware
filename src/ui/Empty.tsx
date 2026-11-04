@@ -13,9 +13,9 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { GroupCard } from './ActRow.tsx';
 import { Button } from './Button.tsx';
-import { Icon, type IconName } from './icons.tsx';
+import { Duo, Icon, phSearch, type IconName } from './icons.tsx';
 import { SectionHead } from './SectionHead.tsx';
-import { Tap } from './util.tsx';
+import { Tap, cx } from './util.tsx';
 import './empty.css';
 
 export interface FirstMove {
@@ -66,5 +66,17 @@ export function EmptyState(p: EmptyStateProps): JSX.Element {
       {p.steps && p.steps.length > 0 && <Checklist steps={p.steps} />}
       <Button icon={p.way.icon} stroke={2.4} onClick={p.way.on}>{p.way.label}</Button>
     </div>
+  );
+}
+
+/**
+ * The nothing-found mark: the lens in a soft disc with an amber "?". big: 84 (a page's search:
+ * TD14, CH18); else 56 beside its words (KC21, SL09), drawn with the row shadow (`lift`) or a hairline.
+ */
+export function NoneMark(p: { big?: boolean; lift?: boolean }): JSX.Element {
+  return (
+    <span aria-hidden="true" class={cx('ow-nonemark', p.big ? 'big' : p.lift && 'lift')}>
+      <Duo i={phSearch} size={p.big ? 40 : 26} color={p.big ? '#8A93A3' : '#5F6980'} /><span>?</span>
+    </span>
   );
 }

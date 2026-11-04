@@ -54,14 +54,25 @@ export function PlayAll(p: { count: number; amount: string; on: () => void }): J
   );
 }
 
-/** A list group's header: the 10 px tone dot, the title 14/700, the count (mono 12), the sum at the right. */
-export function GroupHead(p: { dot: string; title: string; count: number; sum?: Fig }): JSX.Element {
+/**
+ * A list group's header: the 10 px tone dot (or hatched: being checked), the title 14/700, the count (mono 12),
+ * the sum at the right with its word ("420k owes"), or words alone (`right`; `railGap` keeps clear of a rail).
+ */
+export function GroupHead(p: { dot?: string; hatch?: boolean; title: string; count?: number | string; sum?: Fig; word?: string; right?: string; railGap?: boolean }): JSX.Element {
   return (
     <div class="ow-ghead">
-      <span aria-hidden="true" style={{ background: p.dot }} />
+      {(p.dot || p.hatch) && <span aria-hidden="true" class={cx('ow-ghead-dot', p.hatch && 'hatch')} style={p.dot ? { background: p.dot } : undefined} />}
       <span class="ow-ghead-t">{p.title}</span>
-      <span class="mono ow-ghead-n">{p.count}</span>
-      {p.sum != null && <span class="mono ow-ghead-sum">{fig(p.sum)}</span>}
+      <span class="mono ow-ghead-n">{p.count != null ? p.count : ''}</span>
+      {p.sum != null && (p.word != null
+        ? <span class="mono ow-ghead-sum"><b>{fig(p.sum)}</b> <span>{p.word}</span></span>
+        : <span class="mono ow-ghead-sum">{fig(p.sum)}</span>)}
+      {p.right && <span class={cx('ow-ghead-r', p.railGap && 'rail')}>{p.right}</span>}
     </div>
   );
+}
+
+/** A small grey head with a mono meta, inside a section (TD03 "Then · 3 more · 3.4M"). */
+export function SubHead(p: { title: string; meta: string }): JSX.Element {
+  return <div class="ow-subhead"><span>{p.title}</span><span class="mono">{p.meta}</span></div>;
 }

@@ -5,9 +5,10 @@
  * "Sent to Moses · just now", the button gone.
  */
 import type { JSX } from 'preact';
+import { NoneMark } from '../../../ui/Empty.tsx';
 import { useState } from 'preact/hooks';
 import { Avatar } from '../../../ui/Avatar.tsx';
-import { Duo, Icon, phPlane, phSearch, type IconName } from '../../../ui/icons.tsx';
+import { Duo, Icon, phPlane, type IconName } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
@@ -102,7 +103,7 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
   return (
     <>
       <div class="kc-none">
-        <span aria-hidden="true" class="kc-none-i"><Duo i={phSearch} size={26} color="#5F6980" /><span>?</span></span>
+        <NoneMark lift />
         <span class="kc-none-t"><b>{`Nothing called “${w}”`}</b><span>{`The shop doesn’t sell a ${w}`}</span></span>
       </div>
       {!!close.length && (

@@ -8,6 +8,7 @@
  *   goal hit    sold ≥ the goal                  the bar in proportion, "35M passed on …"
  *   no signal   the phone is offline             Updating · saved 7:52, Not sent yet first, chats wait
  */
+import { MiniRow } from '../../../ui/ActRow.tsx';
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { money, short } from '../../../core/money.ts';
@@ -28,8 +29,7 @@ import { custOf, doneWeek, faceOf, mine, needs, owing, soldIn, takeHeld, takeOf,
 import { First } from './First.tsx';
 import { go } from './go.ts';
 import { useLocal } from './local.ts';
-import { GoalStrip, TodayHero, type HeroGoal } from './local-hero.tsx';
-import { Mini } from './bits.tsx';
+import { GoalStrip, Hero, type HeroGoal } from '../../../ui/Hero.tsx';
 import { NextMoves, WhoDue, scrollToNext } from "./NextMoves.tsx";
 import { openTell } from './Tell.tsx';
 import './today.css';
@@ -70,7 +70,7 @@ export function Today(): JSX.Element {
       label: `${monthName(today)} goal hit: ${money(goal.sold)} of ${money(goal.target)}, ${money(goal.sold - goal.target)} over` }
     : { pct: goal.pct, movePct: goal.movePct, target: short(goal.target), daysLeft: goal.daysLeft };
   const hero = (
-    <TodayHero greeting={`${first ? 'Welcome' : greeting(hm)}, ${name}`} line={first ? 'Your first day' : dayLabel(n)}
+    <Hero greeting={`${first ? 'Welcome' : greeting(hm)}, ${name}`} line={first ? 'Your first day' : dayLabel(n)}
       status={off ? 'updating' : 'live'} savedAt={clock(b.at)} me={{ initials: me.initials, tint: 'me' }}
       onMe={() => nav.push('today/you')} onFind={() => nav.push('today/find')}
       compact={busy ? <><b>{live.length}</b> on the move · <b class="w">{nd.total}</b> need you</> : undefined}
@@ -121,10 +121,10 @@ export function Today(): JSX.Element {
             label: `${t.orders.length} ${STAGE_LABEL[t.stage as keyof typeof STAGE_LABEL]}${t.need && t.mark === 'money' ? `, ${t.need} needs you` : t.mark === 'late' ? `, ${t.need || 1} late` : t.mark === 'ready' ? ', 1 ready to collect' : ''}`,
           }))}>
             {!off && held && heldOwing ? (
-              <Mini face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`#${String(held.id).padStart(4, '0')} · Not paid yet`} subMono
+              <MiniRow face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`#${String(held.id).padStart(4, '0')} · Not paid yet`} subMono
                 pill={<ActionPill tone="warn" word="Take" amount={short(takeHeld(heldOwing))} />} on={() => go('customers/pay', takeOf(heldOwing, false))} />
             ) : paid.length > 0 ? (
-              <Mini faces={paid.map((p) => faceOf(b, p))} name={`${paid.length} paid since morning`} sub={paid.map((p) => firstWord((custOf(b, p.customerId) || { name: '' }).name)).join(' · ')}
+              <MiniRow faces={paid.map((p) => faceOf(b, p))} name={`${paid.length} paid since morning`} sub={paid.map((p) => firstWord((custOf(b, p.customerId) || { name: '' }).name)).join(' · ')}
                 pill={<span class="td-mini-pill">{'+' + money(paid.reduce((s, p) => s + p.amount, 0))}</span>} on={() => nav.push('today/day', { view: 'money' })} />
             ) : null}
           </StageTiles>

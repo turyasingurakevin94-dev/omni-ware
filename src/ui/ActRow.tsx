@@ -10,7 +10,7 @@
  *   <IconTile duo={phCoins} tone="warn" />              a 38 px tone square holding an icon (P08, P10b, S07)
  */
 import type { ComponentChildren, JSX } from 'preact';
-import { Avatar, type Face } from './Avatar.tsx';
+import { Avatar, type Face, FaceStack } from './Avatar.tsx';
 import { Duo, Icon, type IconName } from './icons.tsx';
 import { Tap, cx } from './util.tsx';
 import './actrow.css';
@@ -66,6 +66,8 @@ export interface ActRowProps {
   /** Words after the title, quieter ("· asked"). */
   aside?: string;
   sub?: ComponentChildren;
+  /** An amount chip before the act (TD03 "1.9M"). */
+  chip?: string;
   act?: RowAct;
   /** The row itself opens something. */
   on?: () => void;
@@ -85,6 +87,7 @@ export function ActRow(p: ActRowProps): JSX.Element {
   return (
     <div class="ow-arow">
       {p.on ? <button type="button" class="ow-arow-main" onClick={p.on}>{body}</button> : <span class="ow-arow-main">{body}</span>}
+      {p.chip && <span class="mono ow-arow-chip">{p.chip}</span>}
       {p.act && (
         <button type="button" class={cx('ow-arow-act', p.act.kind === 'tile' && 'tile')} aria-label={p.act.label} onClick={p.act.on}>
           <Icon name={p.act.icon} size={17} stroke={2.2} />
@@ -94,12 +97,15 @@ export function ActRow(p: ActRowProps): JSX.Element {
   );
 }
 
-/** P07's row under the stage tiles: 48 tall, a 32 px face, the name 14/600, the act pill, a chevron. The whole row is the link. */
-export function MiniRow(p: { face: Face; name: string; pill: ComponentChildren; on: () => void; label?: string }): JSX.Element {
+/**
+ * P07's row under the stage tiles: 48 tall, a 32 px face, the name 14/600, the act pill, a chevron. The whole row is the link.
+ * sub: a second line (TD01 "#0551 · Not paid yet", mono with subMono); faces: a face stack in place of the face (TD07 "2 paid").
+ */
+export function MiniRow(p: { face?: Face; faces?: Face[]; name: string; sub?: string; subMono?: boolean; pill: ComponentChildren; on: () => void; label?: string }): JSX.Element {
   return (
-    <Tap on={p.on} label={p.label} class="ow-mini">
-      <Avatar {...p.face} size={32} />
-      <span class="ow-mini-n">{p.name}</span>
+    <Tap on={p.on} label={p.label} class={cx('ow-mini', p.faces && 'faces')}>
+      {p.faces ? <FaceStack faces={p.faces} max={p.faces.length} ground="#FFFFFF" /> : p.face && <Avatar {...p.face} size={32} />}
+      {p.sub ? <span class="ow-mini-t"><span>{p.name}</span><span class={p.subMono ? 'mono' : undefined}>{p.sub}</span></span> : <span class="ow-mini-n">{p.name}</span>}
       {p.pill}
       <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
     </Tap>

@@ -9,6 +9,8 @@
  *   nothing         "Did you mean", the closest items, Ask Moses, the aisles
  */
 import type { ComponentChildren, JSX } from 'preact';
+import { GroupCard } from '../../../ui/ActRow.tsx';
+import { GroupHead } from '../../../ui/SectionHead.tsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { money, orderTotal } from '../../../core/money.ts';
 import { owingOf } from '../../../core/owing.ts';
@@ -137,8 +139,8 @@ function quote(ms: Message[], chatId: number): string {
 export function Group(p: { dot: string; title: string; meta: string | number; sum?: number; children: ComponentChildren }): JSX.Element {
   return (
     <>
-      <div class="ow-ghead"><span aria-hidden="true" style={{ background: p.dot }} /><span class="ow-ghead-t">{p.title}</span><span class="mono ow-ghead-n">{p.meta}</span>{p.sum != null && <span class="mono ow-ghead-sum">{money(p.sum)}</span>}</div>
-      <div class="ow-group p14">{p.children}</div>
+      <GroupHead dot={p.dot} title={p.title} count={p.meta} sum={p.sum} />
+      <GroupCard pad={14}>{p.children}</GroupCard>
     </>
   );
 }

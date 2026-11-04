@@ -6,14 +6,13 @@ import type { JSX } from 'preact';
 import { money, orderTotal, short } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
 import type { Books, ChatBooks, Customer, Ms } from '../../../core/types.ts';
-import { GroupCard, IconTile } from '../../../ui/ActRow.tsx';
+import { GroupCard, IconTile, ActRow } from '../../../ui/ActRow.tsx';
 import { RingAvatar } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { NextMove } from '../../../ui/NextMove.tsx';
-import { PlayAll, SectionHead } from '../../../ui/SectionHead.tsx';
+import { PlayAll, SectionHead, SubHead } from '../../../ui/SectionHead.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { drafts } from '../shell/store.ts';
-import { Row, SubHead } from './bits.tsx';
 import { askValue, due, moves, usualValue, type Move } from './data.ts';
 import { go, tel } from './go.ts';
 import { openTell } from './Tell.tsx';
@@ -55,9 +54,9 @@ export function NextMoves(p: { b: Books; cb: ChatBooks | null; now: Ms; told: st
             {ds.map((d) => {
               const c = d.customerId ? b.customers.find((x) => x.id === d.customerId) : null, name = c ? c.name : d.client.name || 'Walk-in';
               return (
-                <Row key={d.key} lead={<RingAvatar face={{ initials: c ? c.initials : 'WI', tint: c ? c.tint : 't4' }} tone="late" fill={1} />} title={name}
+                <ActRow key={d.key} lead={<RingAvatar face={{ initials: c ? c.initials : 'WI', tint: c ? c.tint : 't4' }} tone="late" fill={1} />} title={name}
                   sub={`${d.lines.length} item${d.lines.length === 1 ? '' : 's'} · ${money(orderTotal({ lines: d.lines, charges: d.charges, discount: 0, credit: d.credit }))}`}
-                  act={{ icon: 'chevron-right', tile: true, label: `Resume ${name.replace('&', 'and')} order`, on: () => go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId } : { customer: d.customerId }) }} />
+                  act={{ icon: 'chevron-right', kind: 'tile', label: `Resume ${name.replace('&', 'and')} order`, on: () => go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId } : { customer: d.customerId }) }} />
               );
             })}
           </GroupCard>
@@ -71,21 +70,21 @@ function MoveRow(p: { b: Books; m: Move; now: Ms }): JSX.Element {
   const m = p.m, chip = m.value > 0 ? short(m.value) : undefined, who = m.c.name.replace('&', 'and');
   if (m.kind === 'chat') {
     const it = p.b.items.find((i) => i.unit === m.unit) || null;
-    return <Row lead={<IconTile icon="message" tone="info" size={42} />} title={m.c.name} sub={`${countWord(m.qty, m.unit, it ? it.name : '')} · ${howLong(m.since, p.now)}`} chip={chip}
+    return <ActRow lead={<IconTile icon="message" tone="info" size={42} />} title={m.c.name} sub={`${countWord(m.qty, m.unit, it ? it.name : '')} · ${howLong(m.since, p.now)}`} chip={chip}
       act={{ icon: 'whatsapp', label: `Reply to ${who}`, on: () => go('sell/order', { customer: m.c.id, from: 'chat', chat: m.chat }) }} />;
   }
   if (m.kind === 'ask') {
     const it = m.ask.itemId ? p.b.items.find((i) => i.id === m.ask.itemId) : null, r = m.ask.requests[0];
-    return <Row lead={<ItemSquare aisle={it ? it.aisle : ''} size={42} icon={24} />} title={`${(it ? it.name : m.ask.name).split(' · ')[0]} is in`}
+    return <ActRow lead={<ItemSquare aisle={it ? it.aisle : ''} size={42} icon={24} />} title={`${(it ? it.name : m.ask.name).split(' · ')[0]} is in`}
       sub={`${firstWord(m.c.name)} asked for ${countWord(r.qty, it ? it.unit : '', it ? it.name : '')}`} chip={chip}
       act={{ icon: 'chevron-right', label: `Tell ${who} the ${(it ? it.name : m.ask.name).split(' · ')[0].split(' ').pop()} is in`, on: () => go('today/asks', { id: m.ask.id }) }} />;
   }
   if (m.kind === 'price') {
-    return <Row lead={<IconTile icon="tag" tone="info" size={42} />} title={`${firstWord(m.c.name)} · a new price`}
+    return <ActRow lead={<IconTile icon="tag" tone="info" size={42} />} title={`${firstWord(m.c.name)} · a new price`}
       sub={`#${String(m.order.id).padStart(4, '0')} · ${money(m.order.toldTotal || 0)} → ${money(orderTotal(m.order))}`}
       act={{ icon: 'chevron-right', label: `Tell ${who} the new price`, on: () => openTell(0) }} />;
   }
-  return <Row lead={<RingAvatar face={{ initials: m.c.initials, tint: m.c.tint }} tone="late" fill={1} />} title={m.c.name} sub={`${m.d.late} days late`} chip={chip}
+  return <ActRow lead={<RingAvatar face={{ initials: m.c.initials, tint: m.c.tint }} tone="late" fill={1} />} title={m.c.name} sub={`${m.d.late} days late`} chip={chip}
     act={{ icon: 'chevron-right', label: `Order ${who}'s usual`, on: () => go('sell/order', { customer: m.c.id, from: 'usual' }) }} />;
 }
 

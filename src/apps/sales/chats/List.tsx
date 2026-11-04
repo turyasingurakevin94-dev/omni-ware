@@ -7,6 +7,7 @@
  * A row opens the chat, or the order started from it; Take takes a new number in one tap.
  */
 import type { JSX } from 'preact';
+import { NoneMark } from '../../../ui/Empty.tsx';
 import { FilterChip } from '../../../ui/Pill.tsx';
 import { useState } from 'preact/hooks';
 import { waitingChats } from '../../../core/chats.ts';
@@ -17,7 +18,7 @@ import type { Books, Chat, ChatBooks, Message } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
-import { Duo, Icon, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
+import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
@@ -180,7 +181,7 @@ function SearchView(p: { b: Books; cb: ChatBooks; t: number; q: string; order: C
       {!rows.length && (
         // CH18: nothing found, in TD14's mark; then the one way on.
         <div class="ch-none">
-          <span aria-hidden="true"><Duo i={phSearch} size={40} color="#8A93A3" /><span>?</span></span>
+          <NoneMark big />
           <span>{`No chat has “${q}”`}</span>
         </div>
       )}

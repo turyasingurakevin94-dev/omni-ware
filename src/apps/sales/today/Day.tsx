@@ -10,7 +10,7 @@ import { money, orderTotal, short } from '../../../core/money.ts';
 import { orderNo, STAGE_WORD } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, monthName, monthOf, weekday } from '../../../core/time.ts';
 import type { Books, Method, Order } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import { Avatar, FaceStack } from '../../../ui/Avatar.tsx';
 import { IconTile } from '../../../ui/ActRow.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Icon, STAGE_ICON, phCoins, type IconName } from '../../../ui/icons.tsx';
@@ -19,7 +19,6 @@ import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, now } from '../shell/store.ts';
 import { faceOf, moneyInToday, owing, placedToday, readyToCollect, soldIn, total, weekStart } from './data.ts';
-import { Faces } from './bits.tsx';
 import { go } from './go.ts';
 import './day.css';
 
@@ -84,7 +83,7 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
         {early.length > 0 && (
           <button type="button" class="td-day-row" onClick={() => setOpen(true)}>
             <span class="mono td-day-at">{clock(early[0].placedAt)}</span>
-            <span class="td-day-early"><Faces faces={early.map((o) => faceOf(b, o))} />{`${early.length} earlier`}</span>
+            <span class="td-day-early"><FaceStack ground="#FFFFFF" max={99} faces={early.map((o) => faceOf(b, o))} />{`${early.length} earlier`}</span>
             <span class="mono td-day-amt">{money(total(early))}</span>
             <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
           </button>
@@ -183,7 +182,7 @@ function MoneyBody(p: { b: Books; now: number }): JSX.Element {
       {oweSum > 0 && (
         <Tap on={() => nav.replace('today/to-collect')} class="td-still">
           <IconTile tone="warn" duo={phCoins} size={38} />
-          <span class="td-still-t"><span>Still to collect</span><span class="td-still-f"><Faces faces={owe.slice().sort((x, y) => Number(!!y.held) - Number(!!x.held) || Number(y.checked > 0) - Number(x.checked > 0) || (x.c.id < y.c.id ? -1 : 1)).map((w) => ({ initials: w.c.initials, tint: w.c.tint }))} /></span></span>
+          <span class="td-still-t"><span>Still to collect</span><span class="td-still-f"><FaceStack ground="#FFFFFF" max={99} faces={owe.slice().sort((x, y) => Number(!!y.held) - Number(!!x.held) || Number(y.checked > 0) - Number(x.checked > 0) || (x.c.id < y.c.id ? -1 : 1)).map((w) => ({ initials: w.c.initials, tint: w.c.tint }))} /></span></span>
           <b class="mono">{money(oweSum)}</b>
           <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>

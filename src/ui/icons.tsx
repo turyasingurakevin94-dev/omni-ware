@@ -28,6 +28,10 @@ const S = {
   plus: "<path d='M12 5v14M5 12h14'/>",
   minus: "<path d='M5 12h14'/>",
   search: "<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4.2-4.2'/>",
+  /** A hard hat: the Contractor kind of customer (CU25; the truck means Delivery). */
+  hardhat: "<path d='M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9V6h4v3'/>",
+  /** The lens ticked: a sourcing ask found (TD20). */
+  found: "<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4.2-4.2M8.3 11.2l1.9 1.9 3.4-3.6'/>",
   mic: "<rect x='9' y='3' width='6' height='11' rx='3'/><path d='M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21'/>",
   grid: "<rect x='4' y='4' width='6.5' height='6.5' rx='1.5'/><rect x='13.5' y='4' width='6.5' height='6.5' rx='1.5'/><rect x='4' y='13.5' width='6.5' height='6.5' rx='1.5'/><rect x='13.5' y='13.5' width='6.5' height='6.5' rx='1.5'/>",
   close: "<path d='M6 6l12 12M18 6 6 18'/>",

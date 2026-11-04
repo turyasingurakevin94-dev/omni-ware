@@ -9,12 +9,11 @@ import { isDataError } from '../../../core/datasource.ts';
 import { firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Books, Ms } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
-import { PLAIN } from './bits.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Duo, Icon, phSwap } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
-import { sheet } from '../../../ui/sheet.tsx';
+import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, flush } from '../shell/store.ts';
@@ -83,13 +82,7 @@ function AskSheet(p: { pre: AskPrefill & { photo?: { file: File; url: string } |
     }
   };
   return (
-    <div class={'td-sheet td-asknew' + (state === 'kept' ? ' kept' : '')}>
-      <span aria-hidden="true" class="td-sheet-grab" />
-      <div class="td-sheet-h">
-        <span class="td-sheet-ht"><span>Something we don’t sell</span><h2>{`Ask ${mlName}`}</h2></span>
-        <button type="button" class="ow-x-tile" aria-label="Close" onClick={() => sheet.close()}><Icon name="close" size={16} stroke={2.2} /></button>
-      </div>
-      <div class="td-sheet-b td-asknew-b">
+    <LightSheet ground titleSize={21} pad="12px 16px 16px" gap={14} class={'td-asknew' + (state === 'kept' ? ' kept' : '')} eyebrow="Something we don’t sell" title={`Ask ${mlName}`} onClose={() => sheet.close()}>
         {p.pre.quote && c && (
           <div class="td-asknew-q">
             <span><Avatar initials={c.initials} tint={c.tint} size={20} style={PLAIN} />{`${who} · in their chat · `}<span class="mono">{clock(p.pre.quote.at)}</span></span>
@@ -127,7 +120,6 @@ function AskSheet(p: { pre: AskPrefill & { photo?: { file: File; url: string } |
             ? <Button icon="check" stroke={2.6} onClick={() => sheet.close()}>Done · it sends itself</Button>
             : <Button icon="send" state={state === 'sending' ? 'sending' : name.trim() ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{`Ask ${mlName}`}</Button>}
         </div>
-      </div>
-    </div>
+    </LightSheet>
   );
 }

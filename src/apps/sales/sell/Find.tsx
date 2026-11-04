@@ -5,11 +5,12 @@
  *   SL09  nothing called that: the closest the shop has, and "Ask Moses to stock it" (an ask of Sourcing)
  * Enter takes the first answer: added with the count, or its "Price coming" sheet, or a carton for a kg.
  */
+import { NoneMark } from '../../../ui/Empty.tsx';
 import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { lineTotal } from '../../../core/money.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
-import { Duo, Icon, phAgain, phSearch } from '../../../ui/icons.tsx';
+import { Duo, Icon, phAgain } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
@@ -116,7 +117,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
   return (
     <div class="sl-nothing">
       <div class="sl-none">
-        <span aria-hidden="true" class="sl-none-ic"><Duo i={phSearch} size={26} color="#5F6980" /><span>?</span></span>
+        <NoneMark />
         <span class="sl-none-t"><span>{`Nothing called “${a.words.join(" ") || query.value.trim()}”`}</span><span>{`The shop doesn’t sell a ${plain}`}</span></span>
       </div>
       {near.length > 0 && (

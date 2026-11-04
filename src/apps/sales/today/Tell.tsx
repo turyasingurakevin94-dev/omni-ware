@@ -13,7 +13,7 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Icon, phWhatsapp } from '../../../ui/icons.tsx';
-import { sheet } from '../../../ui/sheet.tsx';
+import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
@@ -81,7 +81,7 @@ function TellSheet(p: { i: number }): JSX.Element {
   const b = books.value as Books, L = useLocal();
   const prices = priceTells(b).filter((o) => !L.told.includes('price:' + o.id)), asks = askTells(b, L.told), all = prices.length + asks.length;
   const o = prices[p.i];
-  if (!o) return <div class="td-sheet" />;
+  if (!o) return <div class="ow-lsheet ground" />;
   const c = b.customers.find((x) => x.id === o.customerId), who = firstWord(c ? c.name : o.client.name);
   const l = o.lines.find((x) => x.priceReview && x.priceReview.state === 'changed'), r = l && l.priceReview;
   const by = r ? b.members.find((m) => m.id === r.by) : null, it = l ? b.items.find((x) => x.id === l.itemId) : null;
@@ -99,16 +99,8 @@ function TellSheet(p: { i: number }): JSX.Element {
     } catch (e) { toast.show('Not sent', { kind: 'error', sub: (e as Error).message, retry: () => { void send(); } }); }
   };
   return (
-    <div class="td-sheet">
-      <span aria-hidden="true" class="td-sheet-grab" />
-      <div class="td-sheet-h">
-        <span class="td-sheet-ht"><span>{`Order ${orderNo(o.id)} · ${p.i + 1} of ${all}`}</span><h2>{`Tell ${who}`}</h2></span>
-        <span class="td-sheet-hr">
-          <span aria-hidden="true" class="td-dots">{Array.from({ length: all }, (_x, k) => <span key={k} class={k === p.i ? 'on' : undefined} />)}</span>
-          <button type="button" class="ow-x-tile" aria-label="Close" onClick={() => sheet.close()}><Icon name="close" size={16} stroke={2.2} /></button>
-        </span>
-      </div>
-      <div class="td-sheet-b">
+    <LightSheet ground titleSize={21} pad="12px 16px 16px" eyebrow={`Order ${orderNo(o.id)} · ${p.i + 1} of ${all}`} title={`Tell ${who}`} onClose={() => sheet.close()}
+      extra={<span aria-hidden="true" class="td-dots">{Array.from({ length: all }, (_x, k) => <span key={k} class={k === p.i ? 'on' : undefined} />)}</span>}>
         {l && r && (
           <div class="td-tell-line">
             <ItemSquare aisle={it ? it.aisle : ''} size={40} />
@@ -141,7 +133,6 @@ function TellSheet(p: { i: number }): JSX.Element {
           <Button kind="green" duo={phWhatsapp} onClick={() => { void send(); }}>{`Send to ${who}`}</Button>
           <Button kind="ghost" h={52} class="td-btn-in" onClick={done}><Icon name="check" size={16} stroke={2.6} />They know already</Button>
         </div>
-      </div>
-    </div>
+    </LightSheet>
   );
 }

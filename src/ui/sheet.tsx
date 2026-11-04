@@ -139,8 +139,10 @@ export interface LightSheetProps {
   foot?: ComponentChildren;
   /** #F7F5F2 instead of white. */
   ground?: boolean;
-  /** Beside the × (a chat's sheet: the customer's chip). */
+  /** Beside the × (a chat's sheet: the customer's chip; Today's Tell: its progress dots). */
   extra?: ComponentChildren;
+  /** The title's size when not 22 (Today's sheets draw 21). */
+  titleSize?: number;
   class?: string;
   children: ComponentChildren;
 }
@@ -153,7 +155,7 @@ export function LightSheet(p: LightSheetProps): JSX.Element {
       <div class="ow-lsheet-h">
         <div class="ow-lsheet-ht">
           {p.eyebrow && <span class="ow-lsheet-eye">{p.eyebrow}</span>}
-          <h2>{p.title}</h2>
+          <h2 style={p.titleSize ? { fontSize: `${p.titleSize}px` } : undefined}>{p.title}</h2>
         </div>
         {p.extra
           ? <span class="ow-lsheet-x">{p.extra}<button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></span>

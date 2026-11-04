@@ -1,6 +1,7 @@
 /*
  * Find, when the words are an item (TD13) or nothing at all (TD14).
  */
+import { NoneMark } from '../../../ui/Empty.tsx';
 import { nearAisles } from '../../../core/aisles.ts';
 import { oftenWith as often } from '../../../core/often.ts';
 import type { JSX } from 'preact';
@@ -9,7 +10,7 @@ import { money } from '../../../core/money.ts';
 import type { Books, Item, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { Duo, Icon, phLink, phSearch } from '../../../ui/icons.tsx';
+import { Duo, Icon, phLink } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { drafts } from '../shell/store.ts';
 import { openAsk } from './AskNew.tsx';
@@ -122,7 +123,7 @@ export function Nothing(p: { b: Books; q: string; now: Ms; onSearch: (q: string)
   return (
     <>
       <div class="td-none">
-        <span aria-hidden="true" class="td-none-pic"><Duo i={phSearch} size={40} color="#8A93A3" /><span>?</span></span>
+        <NoneMark big />
         <span class="td-none-t">{`Nothing called “${q}”`}</span>
         {mean && <Tap on={() => { const el = document.getElementById('closest'); if (el) el.scrollIntoView({ block: 'start' }); }} class="td-none-mean">Did you mean <span>{mean}</span></Tap>}
       </div>

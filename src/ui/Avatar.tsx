@@ -13,6 +13,7 @@ import type { JSX } from 'preact';
 import { TINTS } from '../core/names.ts';
 import type { Tint } from '../core/types.ts';
 import { Icon } from './icons.tsx';
+import { cx } from './util.tsx';
 import './avatar.css';
 
 export interface Face { initials: string; tint: Tint }
@@ -60,20 +61,25 @@ export interface FaceStackProps {
   size?: number;
   /** The ground behind, for the 2 px ring (P07 tiles: #F7F5F2). */
   ground?: string;
+  /** How many faces before "+n" (3). */
+  max?: number;
 }
 
 /** P07 · who is in a stage: up to three faces overlapping -6, then "+n". */
 export function FaceStack(p: FaceStackProps): JSX.Element {
-  const size = p.size || 24, n = Math.min(3, p.faces.length);
+  const size = p.size || 24, n = Math.min(p.max || 3, p.faces.length);
   return (
     <span aria-hidden="true" class="ow-faces">
-      {p.faces.slice(0, 3).map((f, i) => (
+      {p.faces.slice(0, n).map((f, i) => (
         <span key={i} class="ow-av ow-face" style={{ ...avatarStyle({ ...f, size }), borderColor: p.ground || '#F7F5F2', marginLeft: i ? '-6px' : undefined, position: 'relative', zIndex: n - i }}>{f.initials}</span>
       ))}
       {!!p.more && <span class="ow-faces-more mono">{`+${p.more}`}</span>}
     </span>
   );
 }
+
+/** A small avatar as the Asks boards draw it: no tight letter-spacing. */
+export const PLAIN = { letterSpacing: 'normal' };
 
 /** P10's ring tones: due green, late amber, gone quiet crimson (full), early grey. */
 export const RING_TONE = { due: '#0F6B43', late: '#95530C', quiet: '#8E2A22', early: '#9AA1AE' } as const;
@@ -86,20 +92,24 @@ export interface RingAvatarProps {
   fill: number;
   /** The 22 px face of whose it is, at the foot (a chat: whose chat). */
   badge?: Face | null;
+  /** A ring with nothing run out yet still draws its start, a 3 px dot at the top (the Customers boards). */
+  start?: boolean;
+  /** The customer sheet's 56 px ring on navy (r 26, the track glass, 16 px letters). */
+  big?: boolean;
 }
 
 /** P10 · the due ring: 44 box, r 20, stroke 3 on #EFECE6, the avatar inset 6 px. */
 export function RingAvatar(p: RingAvatarProps): JSX.Element {
-  const c = 125.7, f = Math.max(0, Math.min(1, p.fill));
+  const box = p.big ? 56 : 44, r = p.big ? 26 : 20, m = box / 2, c = p.big ? 163.4 : 125.7, f = Math.max(0, Math.min(1, p.fill));
   return (
-    <span aria-hidden="true" class="ow-ring">
-      <svg width="44" height="44" viewBox="0 0 44 44">
-        {p.face ? <circle cx="22" cy="22" r="20" fill="none" stroke="#EFECE6" stroke-width="3" />
-          : <circle cx="22" cy="22" r="20" fill="none" stroke="#9AA1AE" stroke-width="1.5" stroke-dasharray="3 4" />}
-        {f > 0 && <circle cx="22" cy="22" r="20" fill="none" stroke={RING_TONE[p.tone]} stroke-width="3" stroke-linecap="round"
-          stroke-dasharray={`${(c * f).toFixed(1)} ${c}`} transform="rotate(-90 22 22)" />}
+    <span aria-hidden="true" class={cx('ow-ring', p.big && 'big')}>
+      <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`}>
+        {p.face ? <circle cx={m} cy={m} r={r} fill="none" stroke={p.big ? 'rgba(255,255,255,.12)' : '#EFECE6'} stroke-width="3" />
+          : <circle cx={m} cy={m} r={r} fill="none" stroke="#9AA1AE" stroke-width="1.5" stroke-dasharray="3 4" />}
+        {(f > 0 || p.start) && <circle cx={m} cy={m} r={r} fill="none" stroke={RING_TONE[p.tone]} stroke-width="3" stroke-linecap="round"
+          stroke-dasharray={`${(c * f).toFixed(1)} ${c}`} transform={`rotate(-90 ${m} ${m})`} />}
       </svg>
-      {p.face ? <span class="ow-av" style={avatarStyle({ ...p.face, size: 32, font: 12 })}>{p.face.initials}</span>
+      {p.face ? <span class="ow-av" style={avatarStyle({ ...p.face, size: 32, font: p.big ? 16 : 12 })}>{p.face.initials}</span>
         : <span class="ow-ring-ph"><Icon name="phone" size={15} stroke={2} /></span>}
       {p.badge && <Avatar {...p.badge} size={22} class="badge" />}
     </span>
