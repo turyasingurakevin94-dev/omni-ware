@@ -62,3 +62,19 @@ export function nearAisles(b: Books, close: Item[], now: Ms): { name: string; co
   const rank = (a: string) => (a === own ? -1e9 : -(by.get(a) || 0));
   return all.slice().sort((x, y) => rank(x.name) - rank(y.name) || all.indexOf(x) - all.indexOf(y));
 }
+
+/** How many times each item was sold: its lines on orders not voided or cancelled. What "most sold" means on an aisle. */
+export function timesSold(b: Books): Map<string, number> {
+  const sold = new Map<string, number>();
+  b.orders.forEach((o) => { if (!o.voided && !o.cancelled) o.lines.forEach((l) => sold.set(l.itemId, (sold.get(l.itemId) || 0) + 1)); });
+  return sold;
+}
+
+/**
+ * An aisle open (SL12, and a tile or chip at the counter): every item in it, the most sold first, then by
+ * name. Sell's sell/aisle and the Counter list an aisle with this, never with a word search.
+ */
+export function aisleItems(b: Books, aisle: string): Item[] {
+  const sold = timesSold(b);
+  return b.items.filter((i) => i.aisle === aisle).sort((x, y) => (sold.get(y.id) || 0) - (sold.get(x.id) || 0) || x.name.localeCompare(y.name));
+}
