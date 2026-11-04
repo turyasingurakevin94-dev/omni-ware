@@ -12,7 +12,7 @@
 import { soldByAisle } from '../../../core/aisles.ts';
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
-import { daysInStage, LATE_DAYS } from '../../../core/orders.ts';
+import { daysInStage, heldFor, LATE_DAYS } from '../../../core/orders.ts';
 import { HOLD_DAYS, holdDay, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
@@ -60,7 +60,7 @@ export const packingLate = (o: Order, now: Ms) => o.stage === 'packing' && daysI
 /** On the road with nowhere to go: ready to collect at the gate. */
 export const readyToCollect = (o: Order) => o.stage === 'road' && !o.deliverTo;
 /** In Checking and held for Grace: the money comes first ("Not paid yet"). */
-export const heldForMe = (b: Books, o: Order) => o.stage === 'checking' && o.holderId === b.me.id;
+export const heldForMe = (b: Books, o: Order) => heldFor(o, b.me.id);
 
 export interface Tile { stage: Stage; orders: Order[]; faces: Face[]; more: number; mark?: 'money' | 'ready' | 'late'; need?: number }
 

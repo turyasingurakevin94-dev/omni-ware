@@ -10,7 +10,7 @@
  *   a return's lines  as invoice_asks keeps them, so the Manager reads which lines come back
  */
 import type { OrderDraft } from './datasource.ts';
-import { creditHold, linePriced } from './money.ts';
+import { creditHold, linePriced, orderOwes } from './money.ts';
 import type { AskLine, Customer, Day, Item, Line, Ms, Order, Stage } from './types.ts';
 
 /** Why the Manager decides a line's price, or null (sales.html:4423 priceNoteFor). */
@@ -115,4 +115,13 @@ export const isCopy = (orders: Order[], o: Order): boolean => twinOf(orders, o)?
 export const LATE_DAYS = 2;
 export function daysInStage(o: Order, now: Ms): number {
   return Math.floor((now - o.stageAt) / 864e5);
+}
+
+/**
+ * Held for the seller's money (Mukono's #0551, "Not paid yet"): a live order in Checking that the seller holds
+ * (the gate hands it back to whoever must take the money first), not billed, not called off, with money still to
+ * take. One rule for Today (the Checking tile's mark, a Take with the order) and Customers (waiting on me).
+ */
+export function heldFor(o: Order, me: string): boolean {
+  return o.stage === 'checking' && o.holderId === me && !o.invoiced && !o.cancelled && !o.voided && !o.qa && orderOwes(o) > 0;
 }

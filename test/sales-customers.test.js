@@ -250,6 +250,60 @@ async function flows(browser) {
   t.check((await p.locator('input[aria-label="Phone number after +256"]').inputValue()).replace(/\D/g, '') === '772999111', 'new: the typed number is the phone');
   await ctx.close();
 
+  // SL30 / Today "Take 1.1M": Mukono's bills (780,000) and the live #0551 held for the money (320,000), in one payment.
+  ({ ctx, p, errors } = await open(browser));
+  await p.getByText('Today', { exact: true }).last().click().catch(() => {});
+  await p.locator(':is(a,button):has-text("Not paid yet")').first().click();
+  await p.waitForTimeout(400);
+  k = await text(p);
+  t.check(/#0551/.test(k) && /the order · not paid yet/.test(k) && /Slide to record 1,100,000/.test(k), 'held order: #0551 is offered with the bills, 1,100,000 in all');
+  await slide(p);
+  await p.waitForTimeout(500);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /1,100,000/.test(k) && /#0551/.test(k) && /#0532/.test(k), 'held order: Paid 1,100,000, #0532 and #0551 on the slip');
+  await p.getByText('Back to Today').click();
+  await p.waitForTimeout(400);
+  t.check(!/#0551 · Not paid yet/.test(await text(p)), 'held order: #0551 is paid, so it no longer waits on Today');
+  await p.getByText('Customers', { exact: true }).last().click();
+  await p.waitForTimeout(300);
+  t.check(/3 owe/.test(await text(p)), 'held order: Mukono\'s bills are cleared (3 owe)');
+  await ctx.close();
+
+  // From an order (the Orders tab's Take payment): that order's amount, and the write goes for that order.
+  // OR07 #0552, live (not invoiced): 1,810,000 for the order itself; Kato's bills are not touched.
+  ({ ctx, p, errors } = await open(browser));
+  await p.getByText('Orders', { exact: true }).last().click();
+  await p.locator('button.ow-orow-main:has-text("#0552")').click();
+  await p.locator('.or-take').click();
+  await p.waitForTimeout(400);
+  k = await text(p);
+  t.check(/#0552/.test(k) && /Slide to record 1,810,000/.test(k) && /not this time/.test(k), 'from #0552: Take payment offers that order, 1,810,000; the bills are not ticked');
+  await slide(p);
+  await p.waitForTimeout(500);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /#0552/.test(k) && !/#0531/.test(k) && /1,810,000/.test(k), 'from #0552: paid on #0552 alone');
+  await p.getByText('Back to Today').click();
+  await p.getByText('Customers', { exact: true }).last().click();
+  await p.waitForTimeout(300);
+  t.check(/4 owe/.test(await text(p)) && /1,910,000/.test(await text(p)), 'from #0552: Kato still owes his bills (4 owe, 1,910,000)');
+  await ctx.close();
+
+  // An invoiced order with money owed: Kato's #0544, 120,000: that bill alone.
+  ({ ctx, p, errors } = await open(browser));
+  await p.getByText('Orders', { exact: true }).last().click();
+  await p.getByPlaceholder('Customer or #0552').fill('#0544');
+  await p.locator('button.or-crow:has-text("#0544")').click();
+  await p.locator('.or-take').click();
+  await p.waitForTimeout(400);
+  k = await text(p);
+  t.check(/Slide to record 120,000/.test(k) && /#0531[\s\S]*not this time/.test(k), 'from #0544: Take payment offers that bill, 120,000');
+  await slide(p);
+  await p.waitForTimeout(500);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /#0544/.test(k) && !/#0531/.test(k) && /300,000/.test(k), 'from #0544: paid on #0544, Kato owes 300,000');
+  t.check(errors.length === 0, `from an order: no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
+  await ctx.close();
+
   // Paid over by Mobile (CU41's path): 500,000 sent for 420,000 owed; they sent 500,000, 80,000 change.
   ({ ctx, p, errors } = await open(browser));
   await p.getByLabel('Take payment from Kato Construction').click();

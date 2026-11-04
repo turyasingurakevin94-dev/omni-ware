@@ -3,7 +3,7 @@
  * Who owes and their bills are core/owing.ts's (owingOf), the rhythm core/customers.ts's, the money
  * rules core/money.ts's: never re-derived here.
  */
-import { orderOwes } from '../../../core/money.ts';
+import { heldFor } from '../../../core/orders.ts';
 import { rhythm } from '../../../core/customers.ts';
 import type { Books, Customer, Day, Order, PayPromise } from '../../../core/types.ts';
 
@@ -40,7 +40,7 @@ export function promiseOf(b: Books, c: Customer, today: Day): PayPromise | null 
 
 /** Live orders that wait on Sales for money before they move (Mukono's #0551: "Not paid yet"). */
 export function waitingOnMe(b: Books, c: Customer): Order[] {
-  return b.orders.filter((o) => o.customerId === c.id && !o.invoiced && !o.cancelled && !o.voided && o.stage !== 'delivered' && o.holderId === b.me.id && orderOwes(o) > 0);
+  return b.orders.filter((o) => o.customerId === c.id && heldFor(o, b.me.id));
 }
 
 /** Live orders (not delivered, not called off), newest first. */
