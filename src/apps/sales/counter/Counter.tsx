@@ -82,7 +82,7 @@ export function Counter(): JSX.Element {
 
   let body: JSX.Element;
   if (text.trim()) {
-    const r = readQuery(text), found = findItems(b.items, r.words);
+    const r = readQuery(text), found = findItems(b.items, r.words, { orders: b.orders, now: b.at });
     body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} />
       : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {

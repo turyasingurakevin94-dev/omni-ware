@@ -21,7 +21,7 @@ import './findnone.css';
 /** The closest: items holding any one of the words, on the shelf, two at most, A to Z. */
 function closest(b: Books, words: string): Item[] {
   const seen = new Set<string>(), out: Item[] = [];
-  words.split(/\s+/).filter((w) => w.length > 2).forEach((w) => findItems(b.items, w).forEach((it) => {
+  words.split(/\s+/).filter((w) => w.length > 2).forEach((w) => findItems(b.items, w, { orders: b.orders, now: b.at }).forEach((it) => {
     if (!seen.has(it.id) && (it.onShelf || 0) > 0 && out.length < 2) { seen.add(it.id); out.push(it); }
   }));
   return out.sort((x, y) => x.name.localeCompare(y.name));
