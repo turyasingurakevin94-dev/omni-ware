@@ -65,20 +65,38 @@ export function Find(p: FindProps): JSX.Element {
       {!!rest.length && (
         <div class="kc-more">
           {rest.map((it) => (
-            <div key={it.id} class="kc-more-r">
-              <ItemSquare aisle={it.aisle} size={44} />
-              <span class="kc-more-t">
-                <span class="kc-row-n">{it.name}</span>
-                <span class="mono kc-per">{`${fig(it.price || 0)} /${it.unit}`}</span>
-                <Shelf it={it} />
-              </span>
-              {onShelf(it)
-                ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${it.name}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
-                : <button type="button" class="kc-orderin" aria-label={`Order in ${p.qty} ${it.name.split(' · ')[0]}: the sale becomes an order`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
-            </div>
+            <MoreRow key={it.id} it={it} qty={p.qty} onAdd={p.onAdd} onOrderIn={p.onOrderIn} />
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+/** One item to add (+n) or, with none on the shelf, to order in. */
+function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
+  const it = p.it;
+  return (
+    <div class="kc-more-r">
+      <ItemSquare aisle={it.aisle} size={44} />
+      <span class="kc-more-t">
+        <span class="kc-row-n">{it.name}</span>
+        <span class="mono kc-per">{`${fig(it.price || 0)} /${it.unit}`}</span>
+        <Shelf it={it} />
+      </span>
+      {onShelf(it)
+        ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${it.name}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
+        : <button type="button" class="kc-orderin" aria-label={`Order in ${p.qty} ${it.name.split(' · ')[0]}: the sale becomes an order`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
+    </div>
+  );
+}
+
+/** An aisle open from a tile or chip: every priced item in it, the most sold first (core/aisles.ts aisleItems). */
+export function AisleList(p: { name: string; items: Item[]; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
+  return (
+    <>
+      <div class="kc-aisles-h">{p.name}<span class="kc-per">{` · ${p.items.length} item${p.items.length === 1 ? '' : 's'}`}</span></div>
+      {!!p.items.length && <div class="kc-more">{p.items.map((it) => <MoreRow key={it.id} it={it} qty={1} onAdd={p.onAdd} onOrderIn={p.onOrderIn} />)}</div>}
     </>
   );
 }
