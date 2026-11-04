@@ -68,7 +68,7 @@ export function Main2Board(): JSX.Element {
             <Dock inline style={{ borderRadius: '26px', padding: '16px' }} words="Counter sale · 2 items" total={52000}
               slide={{ label: 'Slide to sell · 52,000', knobLabel: 'Sell this', onCommit: nop }}>
               <MethodPicker navy value="cash" onChange={nop} />
-              <TheyGave notes={[55000, 60000]} value={55000} onPick={nop} change={3000} />
+              <TheyGave total={52000} notes={[55000, 60000]} given={55000} onPick={nop} />
             </Dock>
           </Part>
           <Part k="S06 · Being checked" meta="what to collect vs what Esther checks">

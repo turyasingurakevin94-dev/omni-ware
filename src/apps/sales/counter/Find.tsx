@@ -9,7 +9,7 @@ import { Duo, phSparkle } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import type { Item } from '../../../core/types.ts';
-import { QtyStep } from './local-line.tsx';
+import { Stepper } from '../../../ui/Stepper.tsx';
 import { markOf } from './shop.ts';
 import './find.css';
 
@@ -55,7 +55,7 @@ export function Find(p: FindProps): JSX.Element {
             </span>
           </div>
           <div class="kc-best-f">
-            <QtyStep qty={n} unit={top.unit} onChange={(v) => setN(Math.max(1, v))} />
+            <Stepper value={n} unit={top.unit} min={0} onChange={(v) => setN(Math.max(1, v))} />
             {onShelf(top)
               ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{fig(n * (top.price || 0))}</span></button>
               : <button type="button" class="kc-add" onClick={() => p.onOrderIn(top, n)}>Order in<span class="mono">{fig(n)}</span></button>}

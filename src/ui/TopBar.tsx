@@ -8,6 +8,7 @@
  *   <WhoPill on={pick} />                                                           empty: dashed, "Who is it for?"
  *   <WhoPill on={pick} face={{ initials: 'KC', tint: 't0' }} name="Kato Construction" sub="Every 10 days · owes 420k" dot="#0F6B43" />
  *   <WhoPill on={pick} face={…} name="Nakato Mary" sub="New customer" isNew />
+ *   <WhoPill still face={…} name="Counter sale" sub="Walk-in · waiting for Ruth" dot="var(--warn)" on={…} />   cannot change now (KC11, KC13)
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
@@ -17,7 +18,8 @@ import { Tap } from './util.tsx';
 import './topbar.css';
 
 export interface WhoPillProps {
-  on: () => void;
+  /** Not with `still`. */
+  on?: () => void;
   face?: Face;
   name?: string;
   sub?: string;
@@ -27,9 +29,22 @@ export interface WhoPillProps {
   isNew?: boolean;
   /** Words in place of "Who is it for?" (a counter sale's pill). */
   empty?: string;
+  /** It cannot be changed now (a sale on its way, KC13; waiting for the Manager, KC11): a plain box, no arrows, no link. */
+  still?: boolean;
 }
 
 export function WhoPill(p: WhoPillProps): JSX.Element {
+  if (p.still && p.face && p.name) {
+    return (
+      <div class="ow-who">
+        <Avatar {...p.face} size={38} />
+        <span class="ow-who-t">
+          <span class="ow-who-n">{p.name}</span>
+          {p.sub && <span class="ow-who-s"><span aria-hidden="true" class="ow-who-dot" style={{ background: p.dot || '#0F6B43' }} />{p.sub}</span>}
+        </span>
+      </div>
+    );
+  }
   if (!p.face || !p.name) {
     return (
       <Tap on={p.on} class="ow-who empty">

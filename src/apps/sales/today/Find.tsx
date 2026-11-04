@@ -19,7 +19,7 @@ import { lastMessages, waitingChats } from '../../../core/chats.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import '../../../ui/section.css';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { Duo, Icon, STAGE_ICON, phAgain, phMic, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
+import { Duo, Icon, STAGE_ICON, phAgain, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { ListenSheet, hasSpeech } from '../../../ui/Listen.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
@@ -32,6 +32,7 @@ import { go, itemsParam, tel } from './go.ts';
 import { rememberOpened, rememberSearch, useLocal } from './local.ts';
 import { ItemFound, Nothing, oftenIds } from './FindItems.tsx';
 import './find.css';
+import { ClearButton, MicButton } from '../../../ui/Search.tsx';
 
 export type Kind = 'all' | 'chats' | 'customers' | 'orders' | 'items';
 
@@ -87,8 +88,8 @@ export function Find(p: ScreenProps): JSX.Element {
           <input ref={input} type="search" placeholder="Name, order or item" aria-label="Find a chat, customer, order or item" value={q} autoFocus
             onInput={(e) => { setQ((e.target as HTMLInputElement).value); setKind('all'); }} />
           {typed
-            ? <button type="button" aria-label="Clear" class="td-find-clear" onClick={() => { setQ(''); if (input.current) input.current.focus(); }}><Icon name="close" size={15} stroke={2.4} /></button>
-            : <button type="button" aria-label="Say it" class="td-find-mic" onClick={() => sayIt((w) => { setQ(w); setKind('all'); }, input.current)}><span><Duo i={phMic} size={18} color="#FFFFFF" /></span></button>}
+            ? <ClearButton label="Clear" disc={44} on={() => { setQ(''); if (input.current) input.current.focus(); }} />
+            : <MicButton on={() => sayIt((w) => { setQ(w); setKind('all'); }, input.current)} />}
         </label>
       </div>
       <main class="td-find-main">

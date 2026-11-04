@@ -7,6 +7,7 @@ import type { JSX } from 'preact';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
+import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { notesFor, orderTotal } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
@@ -96,13 +97,10 @@ export function Sold(p: ScreenProps): JSX.Element {
         </div>
       )}
       <Day id={id} />
-      <div class="kc-sold-f">
-        <div>
-          <button type="button" class="kc-pillbtn" onClick={() => nav.push('counter/receipt', { id })}><Icon name="receipt" size={18} stroke={2} style={{ color: '#6FDCB0' }} />Receipt</button>
-          <button type="button" class="kc-pillbtn" onClick={again}><Icon name="plus" size={18} stroke={2.4} style={{ color: '#6FDCB0' }} />Sell again</button>
-        </div>
-        <a href="#" class="kc-home" onClick={(e) => { e.preventDefault(); reset(); nav.home(); }}>Back to Today</a>
-      </div>
+      <EndOfFlow bar={false} on={() => { reset(); nav.home(); }} moves={[
+        { label: 'Receipt', icon: 'receipt', on: () => nav.push('counter/receipt', { id }) },
+        { label: 'Sell again', icon: 'plus', stroke: 2.4, on: again },
+      ]} />
     </main>
   );
 }

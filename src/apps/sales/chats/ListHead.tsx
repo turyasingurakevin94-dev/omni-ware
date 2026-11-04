@@ -6,7 +6,7 @@
 import type { JSX } from 'preact';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
-import { Search } from '../../../ui/Search.tsx';
+import { ClearButton, Search } from '../../../ui/Search.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import type { WaitMark } from './model.ts';
 
@@ -65,7 +65,7 @@ export function ListHead(p: ListHeadProps): JSX.Element {
       <div class={'ch-q' + (p.q ? ' on' : '')}>
         <Search tone="navy" placeholder="Name, phone or what they said" label="Find a chat" value={p.q} onInput={p.onQ} />
         {/* CH08: a typed search clears in one tap (the shared navy field draws no clear of its own). */}
-        {p.q && <button type="button" class="ch-q-x" aria-label="Clear the search" onClick={() => p.onQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
+        {p.q && <ClearButton navy disc={26} class="ch-q-x" label="Clear the search" on={() => p.onQ('')} />}
       </div>
     </header>
   );

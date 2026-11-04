@@ -15,13 +15,15 @@ const KIND: Record<'offline' | 'someone' | 'paused', IconName> = { offline: 'off
 export interface NoticeProps {
   kind: 'offline' | 'someone' | 'paused';
   action?: { label: string; on: () => void };
+  /** Above the dock (KC17): the band runs on under the dock's rounded top. */
+  under?: boolean;
   class?: string;
   children: ComponentChildren;
 }
 
 export function Notice(p: NoticeProps): JSX.Element {
   return (
-    <div role="status" class={'ow-notice k-' + p.kind + (p.class ? ' ' + p.class : '')}>
+    <div role="status" class={'ow-notice k-' + p.kind + (p.under ? ' under' : '') + (p.class ? ' ' + p.class : '')}>
       <span class="ow-notice-ic"><Icon name={KIND[p.kind]} size={18} stroke={2} /></span>
       <span class="ow-notice-t">{p.children}</span>
       {p.action && <button type="button" class="ow-notice-act" onClick={p.action.on}><span>{p.action.label}</span></button>}

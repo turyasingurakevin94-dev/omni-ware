@@ -37,6 +37,8 @@ export interface FullSheetProps {
   inline?: boolean;
   /** Below the body, outside its scroll (the chat composer, a dock). */
   foot?: ComponentChildren;
+  /** The sheet's shadow over the strip (KC16, SL01: a sheet over a screen drawn behind it). */
+  shadow?: boolean;
   children?: ComponentChildren;
 }
 
@@ -46,7 +48,7 @@ export function FullSheet(p: FullSheetProps): JSX.Element {
   return (
     <div class={cx('ow-full', p.inline && 'inline')}>
       <Tap on={p.onBack} label={p.backLabel} class="ow-full-back" />
-      <div ref={box} class="ow-full-sheet" style={p.ground ? { background: p.ground } : undefined}>
+      <div ref={box} class={cx('ow-full-sheet', p.shadow && 'shadow')} style={p.ground ? { background: p.ground } : undefined}>
         {p.head}
         <div class="ow-full-body" style={{ padding: p.pad, gap: p.gap != null ? `${p.gap}px` : undefined }}>{p.children}</div>
         {p.foot}

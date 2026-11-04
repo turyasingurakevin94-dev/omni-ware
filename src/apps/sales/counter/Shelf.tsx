@@ -80,7 +80,7 @@ export function SoldRows(p: { items: Item[]; onAdd: (it: Item) => void }): JSX.E
     if (!el) return;
     el.style.display = 'contents';
     // What sits on the screen's foot: the no-signal band (KC17), else the dock.
-    const foot = (document.querySelector('.kc-band') || document.querySelector('.ow-dock')) as HTMLElement | null;
+    const foot = (document.querySelector('.ow-dockwrap > .ow-notice') || document.querySelector('.ow-dock')) as HTMLElement | null;
     const limit = (foot ? foot.getBoundingClientRect().top : window.innerHeight) - 8;
     const rows = [...el.querySelectorAll<HTMLElement>('.kc-row')];
     rows.forEach((r) => { r.style.display = ''; });
