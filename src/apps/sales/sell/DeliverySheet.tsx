@@ -15,6 +15,7 @@ import { Frame } from './Frame.tsx';
 import { cur, setDelivery, type When } from './model.ts';
 import { openAmount } from './sheets.tsx';
 import './delivery.css';
+import { ClearButton } from '../../../ui/Search.tsx';
 
 const WHEN: [When, string, string][] = [['today-pm', 'Today', 'afternoon'], ['tomorrow-am', 'Tomorrow', 'morning'], ['tomorrow-pm', 'Tomorrow', 'afternoon']];
 
@@ -45,7 +46,7 @@ export function DeliverySheet(): JSX.Element | null {
               <span class="sl-dl-ft"><span>Where</span>
                 <input value={where} aria-label="Where it goes" autoFocus onFocus={(e) => { const t = e.target as HTMLInputElement; t.setSelectionRange(t.value.length, t.value.length); t.scrollLeft = t.scrollWidth; }}
                   onInput={(e) => { const t = e.target as HTMLInputElement; setWhere(t.value); if (t.selectionEnd === t.value.length) requestAnimationFrame(() => { t.scrollLeft = t.scrollWidth; }); }} onBlur={() => setEdit(null)} /></span>
-              <button type="button" class="sl-dl-clear" aria-label="Clear where it goes" onMouseDown={(e) => e.preventDefault()} onClick={() => setWhere('')}><span><Icon name="close" size={14} stroke={2.4} /></span></button>
+              <ClearButton label="Clear where it goes" disc={28} icon={14} stroke={2.4} keepFocus on={() => setWhere('')} />
             </label>
           </div>
         ) : (

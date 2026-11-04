@@ -98,6 +98,10 @@ export interface EndOfFlowProps {
   pct?: number;
   /** The quieter second move, a glass pill above. */
   quiet?: { label: string; icon?: IconName; on: () => void };
+  /** Side by side above the button, glass pills with a mint icon (KC14 Sold: Receipt · Sell again). */
+  moves?: { label: string; icon: IconName; stroke?: number; on: () => void }[];
+  /** false: no bar, it does not go back by itself (a cashier giving change must not lose the screen). */
+  bar?: boolean;
 }
 
 /** The end of every flow: one white button, one label, and the mint bar that returns to Today by itself. */
@@ -111,10 +115,15 @@ export function EndOfFlow(p: EndOfFlowProps): JSX.Element {
   }, [p.ms]);
   const w = p.ms ? (run ? '100%' : '0%') : `${p.pct ?? 0}%`;
   return (
-    <div class="ow-end">
+    <div class={cx('ow-end', p.moves && 'moves')}>
+      {p.moves && (
+        <div class="ow-end-moves">
+          {p.moves.map((m) => <button key={m.label} type="button" class="ow-end-move" onClick={m.on}><Icon name={m.icon} size={18} stroke={m.stroke ?? 2} style={{ color: '#6FDCB0' }} />{m.label}</button>)}
+        </div>
+      )}
       {p.quiet && <button type="button" class="ow-end-quiet" onClick={p.quiet.on}>{p.quiet.icon && <Icon name={p.quiet.icon} size={16} stroke={2.2} />}{p.quiet.label}</button>}
       <Tap on={p.on} class="ow-end-btn">{p.label || 'Back to Today'}</Tap>
-      <span aria-hidden="true" class="ow-end-bar"><span style={{ width: w, transition: p.ms ? `width ${p.ms}ms linear` : undefined }} /></span>
+      {p.bar !== false && <span aria-hidden="true" class="ow-end-bar"><span style={{ width: w, transition: p.ms ? `width ${p.ms}ms linear` : undefined }} /></span>}
     </div>
   );
 }

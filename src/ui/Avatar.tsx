@@ -5,7 +5,7 @@
  *
  *   <Avatar initials="KC" tint="t0" size={40} />
  *   <Avatar initials="GA" tint="me" onNavy size={46} ring="me" />        Today's "You" (mint ring)
- *   <FaceStack faces={[{ initials: 'KS', tint: 't1' }]} more={2} />      P07: up to 3, 24 px, overlap -6
+ *   <FaceStack faces={[{ initials: 'KS', tint: 't1' }]} more={2} />      P07: up to 3, 24 px, overlap -6, the first on top
  *   <RingAvatar initials="KS" tint="t1" tone="late" fill={1} />          P10: the due ring, 44 px
  */
 import type { JSX } from 'preact';
@@ -62,11 +62,11 @@ export interface FaceStackProps {
 
 /** P07 · who is in a stage: up to three faces overlapping -6, then "+n". */
 export function FaceStack(p: FaceStackProps): JSX.Element {
-  const size = p.size || 24;
+  const size = p.size || 24, n = Math.min(3, p.faces.length);
   return (
     <span aria-hidden="true" class="ow-faces">
       {p.faces.slice(0, 3).map((f, i) => (
-        <span key={i} class="ow-av ow-face" style={{ ...avatarStyle({ ...f, size }), borderColor: p.ground || '#F7F5F2', marginLeft: i ? '-6px' : undefined }}>{f.initials}</span>
+        <span key={i} class="ow-av ow-face" style={{ ...avatarStyle({ ...f, size }), borderColor: p.ground || '#F7F5F2', marginLeft: i ? '-6px' : undefined, position: 'relative', zIndex: n - i }}>{f.initials}</span>
       ))}
       {!!p.more && <span class="ow-faces-more mono">{`+${p.more}`}</span>}
     </span>

@@ -9,7 +9,10 @@ import { PriceLadder, ladderPct } from '../../../ui/Keypad.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { lineTotal } from '../../../core/money.ts';
 import type { Item, Line } from '../../../core/types.ts';
-import { LineRow, OpenLine, type Chip } from './local-line.tsx';
+import { LineLink, OpenLine, type PriceChipKind } from '../../../ui/LineCard.tsx';
+
+type Chip = { kind: PriceChipKind; v: number };
+const words = (l: Line) => ({ name: l.name, qty: l.qty, unit: l.unit, price: l.price });
 import '../../../ui/keypad.css';
 
 export interface PickedProps {
@@ -79,10 +82,10 @@ export function Picked(p: PickedProps): JSX.Element {
     <div class="kc-lines">
       {p.lines.map((l) => {
         const it = p.items.find((i) => i.id === l.itemId), aisle = it ? it.aisle : '';
-        if (p.open !== l.lineId) return <LineRow key={l.lineId} line={l} aisle={aisle} chip={chipOf(l)} on={() => p.onOpen(l.lineId)} />;
+        if (p.open !== l.lineId) return <LineLink key={l.lineId} {...words(l)} aisle={aisle} chip={chipOf(l)} on={() => p.onOpen(l.lineId)} />;
         const pricing = p.pricing === l.lineId, shelf = it && it.onShelf != null ? it.onShelf : null;
         return (
-          <OpenLine key={l.lineId} line={l} aisle={aisle} chip={chipOf(l)} shelf={pricing ? null : shelf}
+          <OpenLine key={l.lineId} {...words(l)} aisle={aisle} chip={chipOf(l)} shelf={pricing ? null : shelf}
             onChip={() => p.onPricing(pricing ? null : l.lineId)} onHead={() => p.onOpen(l.lineId)} onQty={(n) => p.onQty(l.lineId, n)}>
             {pricing && <Price line={l} onPrice={(v) => p.onPrice(l.lineId, v)} onShop={() => { p.onPrice(l.lineId, l.shopPrice || 0); p.onPricing(null); }} />}
             {shelf != null && l.qty > shelf && <Short line={l} shelf={shelf} onMake={() => p.onQty(l.lineId, shelf)} onOrderIn={p.onOrderIn} />}

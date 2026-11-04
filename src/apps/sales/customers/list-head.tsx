@@ -14,6 +14,7 @@ import { Duo, Icon, phSearch } from '../../../ui/icons.tsx';
 import { Shim } from '../../../ui/Skeleton.tsx';
 import { money } from '../../../core/money.ts';
 import { cx } from '../../../ui/util.tsx';
+import { ClearButton } from '../../../ui/Search.tsx';
 
 export interface OwedBar { take: number; under: number; checkedIn: number; checkedAll: number; owes: number }
 
@@ -84,7 +85,7 @@ export function TypingHead(p: HeadProps & { q: string; onQ: (v: string) => void 
       <div class="cu-typing">
         <label><Duo i={phSearch} size={19} color="#B3BCD2" />
           <input type="search" aria-label="Find a customer" value={p.q} autoFocus onInput={(e) => p.onQ((e.target as HTMLInputElement).value)} /></label>
-        <button type="button" aria-label="Clear" onClick={() => p.onQ('')}><Icon name="close" size={14} stroke={2.4} /></button>
+        <ClearButton navy disc={44} icon={14} fill="rgba(255,255,255,.10)" label="Clear" on={() => p.onQ('')} />
       </div>
     </header>
   );

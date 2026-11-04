@@ -16,19 +16,33 @@
  *   fetched. The shop's data is never touched here: Supabase goes straight
  *   to the network; the books on the phone are the app's own (IndexedDB).
  *
+ * - A tapped notification (spec 06 Q8) opens its page: an open Sales
+ *   window is focused and posted the push (it opens the page from the
+ *   phone's copy, no reload); with none, the page opens at
+ *   #push=<kind>&… (shell/open-push.ts).
+ *
  * Built by tools/build-app.js into next/sales-sw.js, beside the page.
  */
+import { pushQuery, type PushData } from './shell/pushes.ts';
+
 declare const __OW_BUILD__: string;
 declare const __OW_FILES__: string[];
 
 interface SwEvent extends Event { waitUntil(p: Promise<unknown>): void }
 interface FetchEv extends SwEvent { request: Request; respondWith(r: Promise<Response> | Response): void }
+interface Win { url: string; focus(): Promise<unknown>; postMessage(m: unknown): void }
+interface ClickEv extends SwEvent { notification: { data?: unknown; close(): void } }
 interface Sw {
   location: Location;
   registration: { scope: string };
-  clients: { claim(): Promise<void> };
+  clients: {
+    claim(): Promise<void>;
+    matchAll(o: { type: 'window'; includeUncontrolled: boolean }): Promise<Win[]>;
+    openWindow(url: string): Promise<unknown>;
+  };
   addEventListener(type: 'install' | 'activate', fn: (e: SwEvent) => void): void;
   addEventListener(type: 'fetch', fn: (e: FetchEv) => void): void;
+  addEventListener(type: 'notificationclick', fn: (e: ClickEv) => void): void;
 }
 
 const sw = self as unknown as Sw;
@@ -77,4 +91,28 @@ sw.addEventListener('fetch', (e) => {
   if (/(^|\.)supabase\.co$/.test(url.hostname)) return;
   if (url.origin === sw.location.origin && MINE.has(url.pathname)) e.respondWith(mine(req, url.pathname));
   else if (isLib(url)) e.respondWith(lib(req));
+});
+
+/** A notification's push data: as the page showed it, or as FCM's web SDK wraps it (FCM_MSG.data). */
+function pushOf(raw: unknown): PushData {
+  const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const fcm = o.FCM_MSG as { data?: unknown } | undefined;
+  const d = (fcm && fcm.data && typeof fcm.data === 'object' ? fcm.data : o) as Record<string, unknown>;
+  const out: PushData = {};
+  Object.keys(d).forEach((k) => { if (d[k] != null && typeof d[k] !== 'object') out[k] = String(d[k]); });
+  return out;
+}
+
+sw.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const d = pushOf(e.notification.data), page = urlOf(__OW_FILES__[0]), path = new URL(page).pathname;
+  e.waitUntil((async () => {
+    const open = (await sw.clients.matchAll({ type: 'window', includeUncontrolled: true })).filter((c) => new URL(c.url).pathname === path);
+    if (open.length) {
+      if (d.kind) open[0].postMessage({ owPush: d });
+      await open[0].focus();
+    } else {
+      await sw.clients.openWindow(d.kind ? `${page}#${pushQuery(d)}` : page);
+    }
+  })());
 });

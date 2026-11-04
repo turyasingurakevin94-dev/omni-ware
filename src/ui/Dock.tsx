@@ -7,6 +7,7 @@
  *     slide={{ label: 'Slide to place · 3 items', knobLabel: 'Place this order', onCommit: place }} />
  *   <Dock words="Counter sale · 2 items" total={52000} slide={…}><MethodPicker navy … /><TheyGave … /></Dock>   S02, a counter sale
  *   total={null}: nothing in it (the dashed dots and "0"); mode.value 'delivery' with `address`: the field row on top.
+ *   <Dock words="Ruth decides first" amber tight total={…} above={offline ? <Notice kind="offline" under>…</Notice> : null} slide={{ …, lock: { icon: 'hourglass', label: 'Waiting for Ruth' } }}>…</Dock>
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { Icon } from './icons.tsx';
@@ -39,7 +40,14 @@ export interface DockProps {
   sub?: { text: string; tone: 'mint' | 'amber' | 'rose' };
   /** The delivery field (shown when mode is delivery). */
   address?: { value: string; onInput: (v: string) => void; placeholder?: string };
-  slide: SlideProps;
+  /** The one move; without it the children end with their own. */
+  slide?: SlideProps;
+  /** The words in amber: something waits (the counter: "10 asked · 4 on shelf", "Ruth decides first"). */
+  amber?: boolean;
+  /** 12 between its rows instead of 14 (the counter with the transaction ID). */
+  tight?: boolean;
+  /** What sits on it, above (the no-signal band, an error card): the dock and it are fixed together. null: nothing now. */
+  above?: ComponentChildren;
   /** Drawn in place (the parts gallery) instead of fixed to the bottom. */
   inline?: boolean;
   style?: JSX.CSSProperties;
@@ -49,15 +57,15 @@ export interface DockProps {
 
 export function Dock(p: DockProps): JSX.Element {
   const empty = p.total == null;
-  return (
-    <div class={cx('ow-dock', p.inline && 'inline', empty && 'empty')} style={p.style}>
+  const dock = (
+    <div class={cx('ow-dock', p.inline && 'inline', empty && 'empty', p.tight && 'tight')} style={p.style}>
       {p.address && p.mode && p.mode.value === 'delivery' && (
         <label class="ow-dock-addr"><Icon name="pin" size={18} style={{ color: '#B3BCD2' }} />
           <input value={p.address.value} placeholder={p.address.placeholder || 'Where to'} aria-label="Delivery address" onInput={(e) => p.address && p.address.onInput((e.target as HTMLInputElement).value)} />
         </label>
       )}
       <div class={cx('ow-dock-top', p.words && 'words')}>
-        {p.words ? <span class="ow-dock-words">{p.words}</span> : p.mode && <ModeSwitch {...p.mode} />}
+        {p.words ? <span class={cx('ow-dock-words', p.amber && 'amber')}>{p.words}</span> : p.mode && <ModeSwitch {...p.mode} />}
         <div class="ow-dock-sum">
           {empty
             ? <span class="ow-dock-none"><span aria-hidden="true"><i /><i /><i /></span><span class="mono">0</span></span>
@@ -66,7 +74,8 @@ export function Dock(p: DockProps): JSX.Element {
         </div>
       </div>
       {p.children}
-      <Slide {...p.slide} state={empty ? 'empty' : p.slide.state} />
+      {p.slide && <Slide {...p.slide} state={empty ? 'empty' : p.slide.state} />}
     </div>
   );
+  return p.above === undefined ? dock : <div class="ow-dockwrap">{p.above}{dock}</div>;
 }

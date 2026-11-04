@@ -24,6 +24,7 @@ import type { ScreenProps } from '../shell/types.ts';
 import { ChatsList } from './List.tsx';
 import { chatView, whose, type ChatView } from './model.ts';
 import './newchat.css';
+import { ClearButton } from '../../../ui/Search.tsx';
 
 /** Leaving for another screen: the sheet closes without going back (the screen takes this one's place). */
 let leaving = false;
@@ -104,7 +105,7 @@ function NewChatSheet(p: { q?: string }): JSX.Element {
       <label class={'ch-nc-search' + (q ? ' on' : '')}>
         <Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Customer, or a phone number" aria-label="Customer, or a phone number" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
-        {q && <button type="button" class="ch-nc-x" aria-label="Clear the search" onClick={() => setQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
+        {q && <ClearButton disc={26} label="Clear the search" on={() => setQ('')} />}
       </label>
       {!s && <div class="ch-nc-h"><Duo i={phClock} size={18} color="#5F6980" /><span>Wrote lately</span><span><i />24 h to reply</span></div>}
       {!s && !!lately.length && <GroupCard pad={14}>{lately.map((v) => <Row key={v.chat.id} v={v} />)}</GroupCard>}

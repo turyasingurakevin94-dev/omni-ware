@@ -20,6 +20,7 @@ import { dueWords } from '../../../core/customers.ts';
 import { dayWord, first, lastOrder, ordersOf, rhythmOf, whosDue } from './insights.ts';
 import { findCustomer } from '../../../core/find.ts';
 import './who.css';
+import { ClearButton } from '../../../ui/Search.tsx';
 
 /** The screen it was opened over, drawn under the sheet (TD01 behind SL02). */
 export function Under(): JSX.Element | null {
@@ -49,7 +50,7 @@ export function WhoBody(p: { b: Books | null; pick: (x: Pick) => void }): JSX.El
       <label class={'sl-who-q' + (typing ? ' on' : '')}>
         <Duo i={phSearch} size={19} color="#5F6980" />
         <input type="search" placeholder="Name, phone or place" aria-label="Customer name, phone or place" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
-        {typing && <button type="button" class="ow-search-clear" aria-label="Clear" onClick={() => setQ('')}><Icon name="close" size={15} stroke={2.4} style={{ color: '#5F6980' }} /></button>}
+        {typing && <ClearButton label="Clear" tight on={() => setQ('')} />}
       </label>
       {p.b && (typing ? <Found b={p.b} q={q.trim()} pick={p.pick} /> : <Lists b={p.b} pick={p.pick} />)}
     </div>

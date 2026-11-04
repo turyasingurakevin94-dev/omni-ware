@@ -78,3 +78,20 @@ export function ToastHost(p: { above: number }): JSX.Element | null {
   if (!t) return null;
   return <ToastView key={t.id} text={t.text} kind={t.kind} sub={t.sub} undo={t.undo} retry={t.retry} above={p.above} />;
 }
+
+/**
+ * An error that stays where the move is, above the dock, until it is closed (KC19 "Not sold · nothing
+ * taken"): the error toast's look, in place.
+ *   <FailCard title="Not sold · nothing taken" sub="Slide again to sell" onClose={…} />
+ */
+export function FailCard(p: { title: string; sub?: string; onClose: () => void }): JSX.Element {
+  return (
+    <div role="alert" class="ow-fail">
+      <div>
+        <span aria-hidden="true" class="ow-fail-i"><Icon name="warning" size={18} stroke={2.2} /></span>
+        <span class="ow-fail-t"><b>{p.title}</b>{p.sub && <span>{p.sub}</span>}</span>
+        <button type="button" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>
+      </div>
+    </div>
+  );
+}

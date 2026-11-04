@@ -3,6 +3,7 @@
  * Grace may serve the next walk-in meanwhile; Ruth's yes brings this one back (KC12). Or the walk-in
  * takes the shop's price, and pays now.
  */
+import { WhoPill } from '../../../ui/TopBar.tsx';
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Icon } from '../../../ui/icons.tsx';
@@ -15,9 +16,10 @@ import { act, books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { WaitCard } from './Ask.tsx';
 import { manager } from './Counter.tsx';
-import { DockFrame, Methods, Move, NavyDock } from './CounterDock.tsx';
-import { LineHead } from './local-line.tsx';
-import { StillWho } from './local-whopill.tsx';
+import { Dock } from '../../../ui/Dock.tsx';
+import { MethodPicker } from '../../../ui/PayMethod.tsx';
+import './dock.css';
+import { LineHead } from '../../../ui/LineCard.tsx';
 import { chipOf } from './Picked.tsx';
 import { askedAt, bringBack, reset, totalOf, waitingLines } from './state.ts';
 import { heldOrder, startWatch } from './watch.ts';
@@ -63,14 +65,14 @@ export function Wait(p: ScreenProps): JSX.Element {
       <div class="ow-topbar">
         <div class="ow-topbar-r">
           <button type="button" class="ow-close-c" aria-label="Close the counter sale" onClick={close}><Icon name="close" size={18} stroke={2} /></button>
-          <StillWho face={c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' }} name="Counter sale" sub={`${c ? c.name : 'Walk-in'} · waiting for ${ruth.first}`} dot="var(--warn)" />
+          <WhoPill still face={c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' }} name="Counter sale" sub={`${c ? c.name : 'Walk-in'} · waiting for ${ruth.first}`} dot="var(--warn)" />
         </div>
       </div>
       <div class="kc-body" style={{ paddingBottom: '380px' }}>
         <div class="kc-lines">
           {o.lines.map((l) => {
             const it = b.items.find((i) => i.id === l.itemId);
-            return <div key={l.lineId} class="ow-line"><LineHead line={l} aisle={it ? it.aisle : ''} chip={chipOf(l)} /></div>;
+            return <div key={l.lineId} class="ow-line"><LineHead name={l.name} qty={l.qty} unit={l.unit} price={l.price} aisle={it ? it.aisle : ''} chip={chipOf(l)} /></div>;
           })}
         </div>
         <WaitCard ruth={ruth} waited={howLong(0, waited(o))} was={w.shopPrice || 0} now={w.price || 0} unit={w.unit} />
@@ -80,13 +82,11 @@ export function Wait(p: ScreenProps): JSX.Element {
           <span class="kc-next-c"><Icon name="chevron-right" size={16} stroke={2.4} /></span>
         </a>
       </div>
-      <DockFrame>
-        <NavyDock words={`${ruth.first} decides first`} amber total={total} tight>
-          <Methods value="cash" dim onChange={() => undefined} />
-          <button type="button" class="kc-glassbtn" disabled={busy} onClick={() => void shopPrice()}>Sell at the shop’s price ·<span class="mono">{fig(totalOf(atShop))}</span></button>
-          <Move sending={false} locked={{ icon: 'hourglass', label: `Waiting for ${ruth.first}` }} label="" onSell={() => undefined} />
-        </NavyDock>
-      </DockFrame>
+      <Dock above={null} words={`${ruth.first} decides first`} amber total={total} tight
+        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'hourglass', label: `Waiting for ${ruth.first}` } }}>
+        <MethodPicker navy value="cash" dim onChange={() => undefined} />
+        <button type="button" class="kc-glassbtn" disabled={busy} onClick={() => void shopPrice()}>Sell at the shop’s price ·<span class="mono">{fig(totalOf(atShop))}</span></button>
+      </Dock>
     </main>
   );
 }

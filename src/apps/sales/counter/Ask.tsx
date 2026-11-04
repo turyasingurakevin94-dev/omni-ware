@@ -7,29 +7,10 @@
  */
 import type { JSX } from 'preact';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
-import { Icon, type IconName } from '../../../ui/icons.tsx';
+import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
+import { Steps } from '../../../ui/Track.tsx';
 import './ask.css';
-
-export interface Step { word: string; icon: IconName; state: 'done' | 'now' | 'next' }
-
-/** The three steps on a rail; the green part runs to the step that is now. */
-export function Steps(p: { steps: Step[] }): JSX.Element {
-  const now = p.steps.findIndex((s) => s.state === 'now');
-  return (
-    <div role="list" aria-label="Steps" class="kc-steps">
-      <span aria-hidden="true" class="kc-steps-rail"><span style={{ width: `${Math.max(0, now) * 50}%` }} /></span>
-      {p.steps.map((s) => (
-        <span key={s.word} role="listitem" class={'kc-step-i ' + s.state}>
-          <span class="kc-step-d">
-            {s.state === 'done' ? <Icon name="check" size={14} stroke={3.2} /> : <Icon name={s.icon} size={s.state === 'now' ? 15 : 14} stroke={s.state === 'now' ? 2.2 : 2} />}
-          </span>
-          <span class="kc-step-w">{s.word}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
 
 export function AskCard(p: { ruth: Face & { first: string }; shopTotal: number; onShop: () => void; onAsk: () => void; asking: boolean }): JSX.Element {
   return (

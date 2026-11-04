@@ -143,11 +143,11 @@ export interface LightSheetProps {
   children: ComponentChildren;
 }
 
-/** P17 · a light sheet: the grabber (a 24 px band that closes), the title 22/700 and a 44 px ×, the body, the one button last. */
+/** P17 · a light sheet: the grabber (a band a finger can tap to close; hidden from a screen reader, whose close is the ×), the title 22/700 and a 44 px ×, the body, the one button last. */
 export function LightSheet(p: LightSheetProps): JSX.Element {
   return (
     <div class={cx('ow-lsheet', p.ground && 'ground', p.class)}>
-      <button type="button" class="ow-grab" aria-label="Close" onClick={p.onClose} />
+      <button type="button" class="ow-grab" aria-hidden="true" tabIndex={-1} onClick={p.onClose} />
       <div class="ow-lsheet-h">
         <div class="ow-lsheet-ht">
           {p.eyebrow && <span class="ow-lsheet-eye">{p.eyebrow}</span>}

@@ -9,10 +9,15 @@
  *   <Slide label="Slide to place · 3 items" knobLabel="Place this order" onCommit={place} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
  *   state: 'ready' · 'sending' (the fill runs the width, "Sending…") · 'blocked' (grey knob: no customer)
  *          · 'offline' (grey knob, "Back online to sell") · 'empty' (glass knob with the basket)
+ *   lock: it cannot go yet, and the knob says why (the counter, KC07–KC18): a lock (Type the ID first,
+ *         Ask Ruth first), an hourglass (Waiting for Ruth), no signal, the box in amber (1 short)
+ *   <Slide … lock={{ icon: 'lock', label: 'Type the ID first' }} />
+ *   <Slide … lock={{ icon: 'box', label: '1 short' }} />   <Slide … lock={{ icon: 'lock', label: 'Short · 2,000', amber: true }} />
+ *   Sending (KC13): the fill runs the whole width, the knob waits at the end with a spinner.
  */
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Duo, Icon, phBasket } from './icons.tsx';
+import { Duo, Icon, phBasket, phBox } from './icons.tsx';
 import { cx } from './util.tsx';
 import './slide.css';
 
@@ -25,6 +30,35 @@ export interface SlideProps {
   onCommit: () => unknown;
   onHint?: () => void;
   state?: SlideState;
+  /** It cannot go yet: the knob says why, the label in #B3BCD2 (amber when short). */
+  lock?: { icon: LockIcon; label: string; amber?: boolean };
+}
+
+export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
+
+/** The slide that cannot go yet (the knob grey, its icon saying why). */
+function Locked(p: { icon: LockIcon; label: string; amber?: boolean }): JSX.Element {
+  const knob = p.icon === 'box' ? <Duo i={phBox} size={22} color="#F5B26B" />
+    : <Icon name={p.icon} size={20} stroke={2} style={{ color: p.icon === 'lock' ? '#DDE3F0' : '#F5B26B' }} />;
+  return (
+    <button type="button" class="ow-lslide" disabled aria-disabled="true">
+      <span aria-hidden="true" class="ow-lslide-k">{knob}</span>
+      <span class={cx('ow-lslide-l', p.amber && 'amber')}>{p.label}</span>
+    </button>
+  );
+}
+
+/** Sending (KC13): the fill the whole width, "Sending…", the knob at the end with a spinner. */
+function Sending(): JSX.Element {
+  return (
+    <div role="status" class="ow-sslide">
+      <span aria-hidden="true" class="ow-sslide-f" />
+      <span class="ow-sslide-l">Sending…</span>
+      <span aria-hidden="true" class="ow-sslide-k">
+        <svg width="22" height="22" viewBox="0 0 24 24" class="ow-sslide-spin"><circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.6" /><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" /></svg>
+      </span>
+    </div>
+  );
 }
 
 export function Slide(p: SlideProps): JSX.Element {
@@ -80,8 +114,10 @@ export function Slide(p: SlideProps): JSX.Element {
   };
 
   const words = state === 'sending' || done ? 'Sending…' : state === 'offline' ? 'Back online to sell' : p.label;
+  if (state === 'sending' || done) return <Sending />;
+  if (p.lock) return <Locked {...p.lock} />;
   return (
-    <div ref={track} class={cx('ow-slide', 's-' + state, done && 's-sending')}>
+    <div ref={track} class={cx('ow-slide', 's-' + state)}>
       <span ref={fill} aria-hidden="true" class="ow-slide-fill" />
       <button ref={knob} type="button" class="ow-knob" aria-label={p.knobLabel} disabled={!live}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}

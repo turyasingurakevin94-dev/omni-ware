@@ -8,7 +8,7 @@
  *     springs back; a full drag commits, says "Sending…", and the toast's
  *     Undo undoes it; a keyboard press commits;
  *   - a light sheet opens and a pull down past a third closes it;
- *   - a full sheet goes back by its 40 px strip;
+ *   - a full sheet goes back by its 40 px strip (a 44 px hit area over it);
  *   - the stepper counts, the keypad types, chips and methods choose,
  *     the composer sends.
  * It also checks, on both parts boards (?demo&parts=main|main2), that every
@@ -79,7 +79,7 @@ async function tryParts(browser) {
   t.check(!(await logOf(p)).includes('placed 1'), 'a short slide springs back and places nothing');
   await drag(p, 300);
   await p.waitForTimeout(80);
-  t.check((await p.locator('.ow-slide-l').innerText()) === 'Sending…', 'a full slide commits: "Sending…"');
+  t.check((await p.locator('.ow-sslide-l').innerText()) === 'Sending…', 'a full slide commits: "Sending…"');
   await p.waitForTimeout(400);
   t.check((await logOf(p)).includes('placed 1'), 'and the order is placed');
   t.check(await p.getByText('Placed #0558').isVisible(), 'the toast says so');
@@ -103,7 +103,7 @@ async function tryParts(browser) {
   // The full sheet and its back strip.
   await p.getByRole('button', { name: 'Open one order' }).click();
   const strip = await p.getByLabel('Back to Orders').boundingBox();
-  t.check(strip && Math.round(strip.height) === 40 && strip.y === 0, 'a full sheet leaves a 40 px strip at the top');
+  t.check(strip && Math.round(strip.height) >= 44 && strip.y === 0, 'a full sheet goes back from its top strip (a 44 px hit area)');
   await p.getByLabel('Back to Orders').click();
   t.check((await logOf(p)).includes('order closed') && !(await p.getByLabel('Back to Orders').count()), 'the strip goes back');
   // The rest.
@@ -132,7 +132,7 @@ async function audit(browser, which, size) {
     const small = [], unnamed = [], tiny = [];
     document.querySelectorAll('a, button, input, [role=radio]').forEach((el) => {
       const b = el.getBoundingClientRect();
-      if (el.matches('input[type=radio]')) return;
+      if (el.matches('input[type=radio]') || el.closest('[aria-hidden=true]')) return;
       const name = el.getAttribute('aria-label') || el.textContent.trim() || (el.labels && el.labels[0] && el.labels[0].textContent.trim());
       if (!name) unnamed.push(el.outerHTML.slice(0, 80));
       if (b.height < 44 && !el.closest('label') && !el.matches('.ow-grab')) small.push(`${el.textContent.trim() || el.getAttribute('aria-label')} ${Math.round(b.width)}×${Math.round(b.height)}`);

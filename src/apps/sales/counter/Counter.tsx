@@ -18,11 +18,14 @@ import { nav, stack } from '../shell/nav.ts';
 import { books, now, online } from '../shell/store.ts';
 import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
-import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefField, Tender } from './CounterDock.tsx';
+import { Dock } from '../../../ui/Dock.tsx';
+import { Notice } from '../../../ui/Notice.tsx';
+import { MethodPicker, RefField, TheyGave } from '../../../ui/PayMethod.tsx';
+import { FailCard } from '../../../ui/toast.tsx';
+import { EmptyDock, pasteRef } from './CounterDock.tsx';
 import { AisleList, Find } from './Find.tsx';
 import { Held } from './Held.tsx';
 import { FindNone } from './FindNone.tsx';
-import { StillWho } from './local-whopill.tsx';
 import { Picked } from './Picked.tsx';
 import { OtherAisles, SoldHead, SoldRows, Tiles } from './Shelf.tsx';
 import { bestSellers, counterToday, soldWith } from './shop.ts';
@@ -77,7 +80,7 @@ export function Counter(): JSX.Element {
   const top = (
     <TopBar onClose={close} closeLabel="Close the counter sale"
       who={busy.value
-        ? <StillWho face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />
+        ? <WhoPill still face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />
         : <WhoPill on={openWho} face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />}
       search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: text, onInput: (v) => { q.value = v; aisle.value = null; }, onMic: listen, class: 'kc-search' }}
       onAisles={() => { if (q.value) { q.value = ''; aisle.value = null; } else (document.querySelector('.kc-search input') as HTMLInputElement | null)?.focus(); }} />
@@ -168,21 +171,15 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
   if (p.short) {
     const miss = p.short.line.qty - p.short.shelf;
     return (
-      <DockFrame>
-        <NavyDock words={`${p.short.line.qty} asked · ${p.short.shelf} on shelf`} amber total={p.total}>
-          <Move sending={false} locked={{ icon: 'box', label: `${miss} short` }} label="" onSell={() => undefined} />
-        </NavyDock>
-      </DockFrame>
+      <Dock above={null} words={`${p.short.line.qty} asked · ${p.short.shelf} on shelf`} amber total={p.total}
+        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'box', label: `${miss} short` } }} />
     );
   }
   if (p.waits.length) {
     const under = p.waits.reduce((a, l) => a + ((l.price || 0) - (l.shopPrice || 0)) * l.qty, 0);
     return (
-      <DockFrame>
-        <NavyDock words={`−${Math.abs(under).toLocaleString('en-US')} · ${p.ruth} decides`} amber total={p.total}>
-          <Move sending={false} locked={{ icon: 'lock', label: `Ask ${p.ruth} first` }} label="" onSell={() => undefined} />
-        </NavyDock>
-      </DockFrame>
+      <Dock above={null} words={`−${Math.abs(under).toLocaleString('en-US')} · ${p.ruth} decides`} amber total={p.total}
+        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'lock', label: `Ask ${p.ruth} first` } }} />
     );
   }
   const notes = likelyNotes(p.total), given = s.given === 'exact' ? p.total : s.given;
@@ -193,17 +190,18 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
     : shortBy ? { icon: 'lock' as const, label: `Short · ${shortBy.toLocaleString('en-US')}`, amber: true }
       : needId ? { icon: 'lock' as const, label: 'Type the ID first' } : null;
   const tight = !off && (sending || change || shortBy > 0 || !cash);
-  const dock = (
-    <NavyDock words={`Counter sale · ${p.lines.length} item${p.lines.length === 1 ? '' : 's'}`} total={p.total} tight={tight}>
-      <Methods value={s.method} dim={sending} onChange={(m) => set({ method: m })} />
-      {cash
-        ? <Tender total={p.total} notes={notes} given={s.given} counted={s.counted} dim={sending} onPick={(v) => set({ given: v })} onCount={() => openCount(p.total)} />
-        : <RefField value={s.ref} paste={s.method === 'momo'} onInput={(v) => set({ ref: v })} />}
-      <Move sending={sending} locked={locked} label={`Slide to sell · ${p.total.toLocaleString('en-US')}`} onSell={() => doSell(cash ? given : 0)} />
-    </NavyDock>
-  );
+  const onRef = (v: string) => set({ ref: v });
   return (
-    <DockFrame above={off ? <NoSignal /> : failed.value ? <NotSold onClose={() => { failed.value = false; }} /> : null}>{dock}</DockFrame>
+    <Dock words={`Counter sale · ${p.lines.length} item${p.lines.length === 1 ? '' : 's'}`} total={p.total} tight={tight}
+      above={off ? <Notice kind="offline" under>No signal · your lines are kept on this phone</Notice>
+        : failed.value ? <FailCard title="Not sold · nothing taken" sub="Slide again to sell" onClose={() => { failed.value = false; }} /> : null}
+      slide={{ label: `Slide to sell · ${p.total.toLocaleString('en-US')}`, knobLabel: 'Sell it', state: sending ? 'sending' : 'ready', lock: !sending && locked ? locked : undefined,
+        onCommit: () => doSell(cash ? given : 0), onHint: () => toast.show('Slide the red button across', { kind: 'warn' }) }}>
+      <MethodPicker navy value={s.method} dim={sending} onChange={(m) => set({ method: m })} />
+      {cash
+        ? <TheyGave total={p.total} notes={notes} given={s.given} counted={s.counted} dim={sending} onPick={(v) => set({ given: v })} onCount={() => openCount(p.total)} />
+        : <RefField value={s.ref} ok={!!s.ref.trim()} onInput={onRef} onPaste={s.method === 'momo' ? () => void pasteRef(onRef) : undefined} />}
+    </Dock>
   );
 }
 
