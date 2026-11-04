@@ -29,7 +29,8 @@ async function shareNumber(): Promise<void> {
   try {
     if (navigator.share) { await navigator.share({ text }); return; }
   } catch (_e) { return; /* they closed the share sheet */ }
-  location.href = 'https://wa.me/?text=' + encodeURIComponent(text);
+  // Beside the app, never in its place (sales.html:7503 window.open(…, '_blank')).
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
   toast.show('Opening WhatsApp');
 }
 

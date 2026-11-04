@@ -117,7 +117,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
           {whoseNow.id === me.id ? <span class="ch-cv-chip-i"><Icon name="swap" size={14} stroke={2.2} /></span> : whoseNow.presence !== 'on' && <span class="ch-cv-chip-away">· away</span>}
         </HeadChip>
       )}
-      {(nobody || mine) && !cust && <HeadChip on={() => open('customers/new', { phone: chat.phone, name: v.waName })} label="Save this number as a new customer"><Icon name="person-plus" size={15} stroke={2.2} />Save as a customer</HeadChip>}
+      {(nobody || mine) && !cust && <HeadChip on={() => open('customers/new', { phone: chat.phone, name: v.waName, chat: chat.id })} label="Save this number as a new customer"><Icon name="person-plus" size={15} stroke={2.2} />Save as a customer</HeadChip>}
       {mine && shut ? (
         <button type="button" class="ow-hchip ch-shut" style={{ border: 'none', background: 'transparent', font: 'inherit', color: 'inherit' }} aria-label={`The chat is shut: they last wrote ${v.window.daysShut} days ago`}>
           <span><span class="ch-cv-chip-i amber"><Icon name="lock" size={14} stroke={2.2} /></span>shut<b>{`${v.window.daysShut} days`}</b></span>
