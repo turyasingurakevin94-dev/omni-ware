@@ -27,6 +27,14 @@ export function freshPrice(o: Order): Line | null {
   return o.lines.find((l) => priceUntold(l) && (l.priceReview as { at: number }).at >= o.stageAt) || null;
 }
 
+/**
+ * The order's figures are "as it stands", not final (the Receipt tile, the order's paper OR34–OR37): in Checking with
+ * a price waiting for Ruth and the total not told yet, or a price Ruth set in this stage that is not told yet.
+ */
+export function pendingOf(o: Order): boolean {
+  return (o.stage === 'checking' && o.lines.some(waitsRuth) && !o.toldTotal) || !!freshPrice(o);
+}
+
 const aisleOf = (b: Books, l: Line): string => b.items.find((i) => i.id === l.itemId)?.aisle || '';
 const ruthName = (b: Books): string => firstWord(byRole(b, 'manager')?.name || 'Manager');
 

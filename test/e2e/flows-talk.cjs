@@ -81,6 +81,19 @@ async function tellOrder(open) {
   const wa = await ph.p.locator('a.or-btn-w').getAttribute('href');
   check(/^https:\/\/wa\.me\/256\d{9}\?text=/.test(wa || ''), 'OR11: WhatsApp opens with it typed (wa.me)', wa);
   ph.note('OR11: Send as SMS hands the words to the phone and records nothing; a status tell has no "told" state to assert (orders/Tell.tsx, spec 04 l.100 "a send is never claimed")');
+
+  // OR35: the order's paper (Receipt) on Lubowa's #0559 at 15:05 is as it stands; sending it tells Ruth's 35,000 (Q17).
+  const p2 = await open('&clock=15:05');
+  await p2.tab('orders');
+  await p2.tap({ sel: 'button.ow-orow-main:has-text("#0559")' });
+  p2.check(/Told them/.test(await p2.text()), 'OR13: #0559 waits to tell Lubowa the new price before the paper goes');
+  await p2.tap({ sel: 'button.ow-act:has-text("Receipt")' });
+  const paper = await p2.text();
+  p2.check(/Order · #0559 · as it stands/.test(paper) && /UGX 880,000/.test(paper) && /Owes on it\s*880,000/.test(paper) && /Ruth set 35,000 · not told yet/.test(paper), 'OR35: the paper is as it stands, UGX 880,000, owes 880,000, Ruth set 35,000 · not told yet', paper);
+  await p2.tap('Send on WhatsApp', 1200);
+  p2.check(/Sent to Lubowa/.test(await p2.all()), 'OR35: "Sent to Lubowa" shows');
+  const after = await p2.text();
+  p2.check(!/Told them/.test(after) && /#0559/.test(after), 'OR35: the paper told the new price, so #0559 no longer asks to tell it (Q17)', after.slice(0, 900));
   return ph;
 }
 

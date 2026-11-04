@@ -14,7 +14,7 @@
  *   pay             Today's to collect → Take → 150,000 cash → Paid; owed drops by exactly 150,000
  *   pay-offline     &offline=1: the payment is kept on the phone, not taken off what is owed
  *   tell-today      Today's Tell them → Send to Kato → Kato's new price is told
- *   tell-order      an order's Tell (OR10 on #0552, OR11 on #0556) → sent → told
+ *   tell-order      an order's Tell (OR10 on #0552, OR11 on #0556) → sent → told; #0559's paper (OR35) → sent → told
  *   chats           reply to Kato; the new number (CH14) → Take → Start order → the item once → placed
  *   give            Kato's chat → Give to Brian with a note → the handover shows
  *   wrong-return    #0548 Fix it (OR20) → items coming back (OR21) → asked Ruth → shows as asked
