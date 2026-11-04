@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { orderOwes, orderTotal, short } from '../../../core/money.ts';
-import { STAGES, STAGE_WORD, orderNo } from '../../../core/names.ts';
+import { counted, orderNo, STAGE_WORD, STAGES } from '../../../core/names.ts';
 import { dayOf, daysApart, dayLabel, weekday, clock } from '../../../core/time.ts';
 import type { Books, Order, Stage } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -168,7 +168,7 @@ function Found(p: { b: Books; q: string; t: number; leave: Leave }): JSX.Element
               const at = owes ? (o.invoicedAt as number) : (o.deliveredAt || o.placedAt);
               const age = daysApart(dayOf(at), today), tw = o.voided ? twinOf(b.orders, o, true) : null;
               return <CustOrderRow key={o.id} icon="receipt" title={`${owes ? 'Billed' : 'Delivered'} ${daysApart(dayOf(at), today) < 7 ? weekday(at) + ' ' + clock(at) : dayLabel(at)}`}
-                sub={owes ? `${orderNo(o.id)} · ${age} day${age === 1 ? '' : 's'}` : o.voided && tw && tw.copy === o ? `${orderNo(o.id)} · copy of ${orderNo(tw.orig.id)}` : orderNo(o.id)} amount={orderTotal(o)} struck={o.voided}
+                sub={owes ? `${orderNo(o.id)} · ${counted(age, 'day')}` : o.voided && tw && tw.copy === o ? `${orderNo(o.id)} · copy of ${orderNo(tw.orig.id)}` : orderNo(o.id)} amount={orderTotal(o)} struck={o.voided}
                 pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={p.leave(() => openOrder(o.id))} />;
             })}
             {!more && gone.length > 4 && <ShowMore faces={[]} n={gone.length - 4} on={() => setMore(true)} />}

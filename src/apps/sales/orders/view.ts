@@ -4,7 +4,7 @@
  * stage of #0552's life comes out as its board draws it.
  */
 import { goodsTotal, lineTotal, orderOwes, orderTotal } from '../../../core/money.ts';
-import { firstWord, orderNo, STAGES } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
 import type { MoneyTile as Tile } from '../../../ui/MoneyTiles.tsx';
@@ -68,7 +68,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   STAGES.slice(0, STAGES.indexOf(o.stage)).reverse().forEach((s, i, l) => { if (!times[s] && !skipped.includes(s)) times[s] = i ? times[l[i - 1]] : times[o.stage]; });
 
   let sub = '';
-  if (o.stage === 'checking') sub = waiting.length ? `${rn} decides ${waiting.length} price${waiting.length > 1 ? 's' : ''}` : orderOwes(o) > 0 ? 'Not paid yet' : `${rn} · checking`;
+  if (o.stage === 'checking') sub = waiting.length ? `${rn} decides ${counted(waiting.length, 'price')}` : orderOwes(o) > 0 ? 'Not paid yet' : `${rn} · checking`;
   else if (fresh) sub = `${rn} set ${(fresh.price as number).toLocaleString('en-US')} · ${clock((fresh.priceReview as { at: number }).at)}`;
   else if (o.voided) sub = `Voided by ${vn}`;
   else if (o.stage === 'delivered') {
@@ -83,7 +83,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   if (o.stage === 'checking' && o.lines.some((l) => l.price == null && l.state !== 'dropped')) { left.k = 'Priced so far'; if (o.toldTotal) left.note = `told ${o.toldTotal.toLocaleString('en-US')}`; }
   else if (o.stage === 'buying' && goneLines.length) left.note = `${shortItem(goneLines[0].name).split(' ').pop()?.toLowerCase()}s not in it`;
   else if (fresh) left.old = goodsTotal(o.lines.map((l) => (l === fresh ? { ...l, price: (fresh.priceReview as { was: number }).was } : l)));
-  else if (o.stage !== 'checking' && o.stage !== 'buying' && !ret) left.note = `${kept(o).length} lines`;
+  else if (o.stage !== 'checking' && o.stage !== 'buying' && !ret) left.note = counted(kept(o).length, 'line');
   if (ret) left.k = `${who} paid`;
   const billOwes = o.invoiced && !ret && !o.voided && orderOwes(o) > 0;
   const billDay = o.invoicedAt ? dayLabel(o.invoicedAt) : '';
@@ -92,7 +92,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   let right: Tile;
   if (ret) right = { k: 'Credit asked', v: ret.amount, tone: 'warn', dot: true };
   else if (o.voided) right = { k: 'Owes', v: 0, note: `${vn} voided it${vAt ? ' ' + vAt : ''}` };
-  else if (billOwes) { const age = o.invoicedAt ? daysApart(dayOf(o.invoicedAt), dayOf(now)) : 0; right = { k: 'Owes', v: orderOwes(o), tone: 'warn', note: `${age} day${age === 1 ? '' : 's'}` }; }
+  else if (billOwes) { const age = o.invoicedAt ? daysApart(dayOf(o.invoicedAt), dayOf(now)) : 0; right = { k: 'Owes', v: orderOwes(o), tone: 'warn', note: counted(age, 'day') }; }
   else if (paid >= total && total > 0) {
     const ms = [...new Set(o.payments.map((x) => ({ cash: 'cash', momo: 'mobile', bank: 'bank' })[x.method]))];
     right = { k: 'Paid', v: paid, tone: 'good', note: ms.join(' + ') };

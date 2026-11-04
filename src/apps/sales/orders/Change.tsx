@@ -6,7 +6,7 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { orderTotal } from '../../../core/money.ts';
-import { STAGES, STAGE_WORD, firstWord, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, STAGE_WORD, STAGES } from '../../../core/names.ts';
 import { clock, weekday } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
@@ -166,7 +166,7 @@ function TwiceSheet(p: { id: number }): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   if (!b || !o || !tw) return null;
   const { orig, copy } = tw, ruth = ruthOf(b), rn = firstWord(ruth?.name || 'Manager'), rf = ruth ? faceOfMember(ruth) : undefined, store = byRole(b, 'store');
-  const mins = Math.max(1, Math.round(Math.abs(copy.placedAt - orig.placedAt) / 60000)), apart = `${mins} minute${mins > 1 ? 's' : ''} apart`;
+  const mins = Math.max(1, Math.round(Math.abs(copy.placedAt - orig.placedAt) / 60000)), apart = `${counted(mins, 'minute')} apart`;
   const billed = copy.invoiced, paidOn = [orig, copy].filter((x) => x.paid > 0);
   const checks = billed
     ? ['Same customer, same items', `Both invoiced, ${apart}`, paidOn.length === 1 ? `Paid once, on ${orderNo(paidOn[0].id)}` : paidOn.length ? 'Both paid' : 'Nothing paid']

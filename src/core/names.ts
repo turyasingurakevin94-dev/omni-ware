@@ -39,6 +39,11 @@ export function orderNo(id: number): string {
   return '#' + String(id).padStart(4, '0');
 }
 
+/** A count and its word, one rule for the plural: "1 line", "2 lines", "1 day", "3 days". */
+export function counted(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
 /** "INV-0552" (sales.html:4600 invoiceLabel). */
 export function invoiceNo(id: number): string {
   return 'INV-' + String(id).padStart(4, '0');

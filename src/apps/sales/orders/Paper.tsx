@@ -113,7 +113,7 @@ function PaperBody(p: { b: Books; o: Order }): JSX.Element {
   };
   const face = faceOf(b, o), ruth = byRole(b, 'manager');
   return (
-    <FullSheet onBack={nav.back} backLabel="Back to the order" ground="#FFFFFF" pad="16px" gap={12}
+    <FullSheet onBack={nav.back} backLabel="Back to the order" ground="#FFFFFF" pad="16px" gap={12} shadow
       head={(
         <SlipHead eyebrow={`${paper.word} ${paper.no} · ${nameOf(b, o)}`} title="Receipt" onClose={nav.back} />
       )}>
