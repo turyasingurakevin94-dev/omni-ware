@@ -30,7 +30,7 @@ function oweRow(b: Books, w: Who, today: Day, a: Acts): JSX.Element {
   const note = waitingNote(b, w.c);
   return (
     <Row key={w.c.id} {...face(w)} name={w.c.name} sub={oweSub(w, today)} chip={w.m.checkedIn > 0 ? `${shortMoney(w.m.checkedIn)} checked` : null}
-      fig={shortMoney(w.m.take)} word="to take" note={note ? [`+${shortMoney(note[0])}`, orderNo(note[1])] : null}
+      fig={shortMoney(w.m.canTake)} word="to take" note={note ? [`+${shortMoney(note[0])}`, orderNo(note[1])] : null}
       act="take" on={() => a.open(w.c)} onAct={() => a.take(w.c)} />
   );
 }

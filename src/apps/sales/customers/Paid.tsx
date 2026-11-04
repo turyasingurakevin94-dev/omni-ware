@@ -62,8 +62,8 @@ function PaidView(props: { p: Paid }): JSX.Element {
     <main class={refused || p.discarded ? 'cu-paid stay' : 'cu-paid'}>
       <div class="cu-paid-x"><button type="button" aria-label="Close" onClick={nav.home}><Icon name="close" size={16} stroke={2.2} /></button></div>
       <div class="cu-paid-top">
-        <span aria-hidden="true" class={refused ? 'cu-paid-tick refused' : p.kept || p.discarded ? 'cu-paid-tick kept' : 'cu-paid-tick'}>
-          <Icon name={refused ? 'warning' : p.kept ? 'clock' : p.discarded ? 'close' : 'check'} size={refused ? 32 : 34} stroke={p.kept ? 2.4 : 2.8} /></span>
+        <span aria-hidden="true" class={refused ? 'cu-paid-tick refused' : p.discarded ? 'cu-paid-tick gone' : p.kept ? 'cu-paid-tick kept' : 'cu-paid-tick'}>
+          <Icon name={refused ? 'warning' : p.kept ? 'clock' : p.discarded ? 'close' : 'check'} size={refused ? 32 : p.discarded ? 30 : 34} stroke={p.kept ? 2.4 : p.discarded ? 2.6 : 2.8} /></span>
         <h1>{refused || p.discarded ? 'Not recorded' : p.kept ? 'Not sent yet' : 'Paid'}</h1>
         <span class="cu-paid-who"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{p.initials}</span><span>{p.name}</span><span class="mono">{money(p.amount)}</span></span>
         <span class="cu-paid-how">{how}</span>
@@ -109,6 +109,20 @@ function PaidView(props: { p: Paid }): JSX.Element {
             {p.customerId && p.keptId && <button type="button" class="cu-rc-sms" onClick={() => nav.push('customers/pay', { customer: p.customerId as string, fix: p.keptId as string, paid: p.key })}><Icon name="pen" size={17} stroke={2.2} />Fix it</button>}
             <button type="button" class="cu-rc-again" onClick={() => throwAway(p.key)}><Icon name="trash" size={15} stroke={2.2} />Throw it away</button>
           </span>
+        </div>
+      )}
+      {p.discarded && (
+        // CU47: nothing went in the books, and the cash is still in her hand.
+        <div class="cu-rc failed">
+          <span class="cu-rc-row"><span aria-hidden="true" class="cu-rc-ic gone"><Icon name="trash" size={20} stroke={2} /></span>
+            <span class="cu-rc-t"><span>Thrown away</span><span>Nothing went in the books · no receipt</span></span></span>
+          {p.method === 'cash' && (
+            <>
+              <span class="cu-rc-row line"><span aria-hidden="true" class="cu-rc-ic warn"><Icon name="cash" size={20} stroke={2} /></span>
+                <span class="cu-rc-t"><span>{'You still hold '}<b class="mono">{money(p.amount)}</b>{' cash'}</span><span>Give it back or take it again</span></span></span>
+              {p.customerId && <button type="button" class="cu-rc-again" onClick={() => nav.replace('customers/pay', { customer: p.customerId as string })}><Icon name="cash" size={15} stroke={2.2} />Take it again</button>}
+            </>
+          )}
         </div>
       )}
       {refused && <span class="cu-paid-where"><Icon name="today" size={14} stroke={2} />Also on Today · Not sent</span>}

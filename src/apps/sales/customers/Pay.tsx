@@ -54,11 +54,14 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const sumOf = (ids: number[]) => open.filter((x) => ids.includes(x.id)).reduce((s, x) => s + x.left, 0);
 
   const [picks, setPicks] = useState<number[] | null>(initPicks && initPicks.length ? initPicks : null);
-  const [amount, setAmount] = useState<number>(p.fix ? p.fix.args.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
-  const [other, setOther] = useState(!!p.fix && p.fix.args.amount !== take);
+  // Fix it (CU46): cash opens as CU35 draws it: All of what they owe now, and the kept amount as what they gave.
+  // Mobile or bank has no notes to hand back: the kept amount is what they pay, over what they owe.
+  const fixCash = !!p.fix && p.fix.args.method === 'cash';
+  const [amount, setAmount] = useState<number>(p.fix && !fixCash ? p.fix.args.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
+  const [other, setOther] = useState(!!p.fix && !fixCash && p.fix.args.amount !== take);
   const [method, setMethod] = useState<Method>(p.fix ? p.fix.args.method : 'cash');
   const [ref, setRef] = useState(p.fix ? p.fix.args.ref || '' : '');
-  const [given, setGiven] = useState<number | 'exact'>('exact');
+  const [given, setGiven] = useState<number | 'exact'>(p.fix && fixCash ? p.fix.args.amount : 'exact');
   const [how, setHow] = useState<'change' | 'deposit'>('change');
   const [receipt, setReceipt] = useState(true);
   const [who, setWho] = useState<string | null>(o && whoPicked.value && whoPicked.value.order === o.id ? whoPicked.value.id : null);
@@ -139,11 +142,13 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
     } finally { setBusy(false); }
   };
 
+  // The notes they likely gave; on Fix it, the kept amount is one of them (CU46 → CU35).
+  const notes = p.fix && fixCash ? [likelyNotes(amount)[0], p.fix.args.amount].filter((n, i, a) => n > amount && a.indexOf(n) === i).sort((x, y) => x - y) : likelyNotes(amount);
   const sub = c ? `${c.name} · owes ${money(owes)}` : o ? `${o.client.name || 'Walk-in'} · ${orderNo(o.id)} · ${money(owes)}` : '';
   const face = c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' as const };
   return (
     <FullSheet onBack={() => nav.back()} backLabel="Back" head={<SheetHead face={face} name="Take payment" sub={sub} onClose={() => nav.back()} />}
-      foot={<PayDock method={method} given={given} notes={likelyNotes(amount)} onGiven={setGiven} amount={amount} owes={owes} after={after} payable={payable}
+      foot={<PayDock method={method} given={given} notes={notes} onGiven={setGiven} amount={method === 'cash' ? plan.toDebt : amount} owes={owes} after={after} payable={payable}
         over={choice ? { how, amount: plan.over } : null} change={settle.change} record={choice ? record : amount}
         receipt={c ? { on: receipt, label: `Send ${name} the receipt on WhatsApp`, toggle: () => setReceipt(!receipt) } : null}
         walkin={o && !c ? { id: o.id, total: owes, who: whoC ? { name: short(whoC.name), owes: whoC.owes + shareFor(o as Order, amount) } : null, left: walkLeft } : null}

@@ -172,6 +172,9 @@ async function flows(browser) {
   await p.waitForTimeout(300);
   k = await text(p);
   t.check(/Give change/.test(k) && /Deposit/.test(k) && /120,000/.test(k), 'Fix it: Take payment again, 120,000 over: Give change or Deposit');
+  t.check((await p.getByLabel('Amount Kato pays now').inputValue()) === '300,000' && (await p.getByRole('radio', { name: '420,000' }).getAttribute('aria-checked')) === 'true',
+    'Fix it opens as CU35: All 300,000, they gave the kept 420,000');
+  t.check(/pays now\s*300,000/.test(await p.locator('.cu-gave-h').innerText()), 'Fix it: pays now 300,000 (payPlan toDebt)');
   await slide(p).catch(() => {});
   await p.waitForTimeout(800);
   k = await text(p);
