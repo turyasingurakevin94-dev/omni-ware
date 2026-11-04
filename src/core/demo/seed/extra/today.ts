@@ -149,6 +149,9 @@ function allTold(s: DemoState, local: TodayLocal): void {
     if (!c) return;
     b.payments.push({ id, at: t(hm), day: '2026-10-17', amount, method: 'cash', customerId: cid, orderId, by: GRACE, ref: '', qa: false });
     c.debtLog.push(pay('2026-10-17', amount, orderId, id)); c.owes -= amount;
+    // The bill it pays goes down too, as receive_payment writes it (who owes reads the bills: core/owing.ts).
+    const o = b.orders.find((x) => x.id === orderId);
+    if (o) { o.paid += amount; o.payments.push(P(o.payments.length + 1, t(hm), amount, 'cash', id)); }
   };
   paid(KYALIGONZA, 9203, 420000, 533, '12:40');
   paid(GGABA, 9204, 165000, 521, '14:30');

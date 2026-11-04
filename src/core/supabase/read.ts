@@ -7,6 +7,7 @@
  * suppliers, product_links, collection_trips, statements_sent,
  * buyer_handoffs (item switches: the Orders tab adds them when it needs "Tell them").
  */
+import { withUsuals } from '../customers.ts';
 import { dataError } from '../datasource.ts';
 import { dayOf } from '../time.ts';
 import type { Books, ChatBooks, Customer, Goal, Order, Role, Session, Thread } from '../types.ts';
@@ -112,7 +113,7 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
     at: now,
     shop: { id, name: s.shopName },
     settings: settingsOf(presets),
-    me, members, customers: custs, orders,
+    me, members, customers: withUsuals({ customers: custs, orders }).customers, orders,
     items: itemsOf(pb, heldOf(orders)),
     aisles: aislesOf(pb.products),
     // Money in: the receipts receive_payment and counter_sale write (0169: type 'receipt').

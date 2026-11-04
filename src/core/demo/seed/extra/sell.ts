@@ -114,7 +114,8 @@ function lines(s: DemoState, f: DemoFlags): void {
   // Kato (SL05 Often with Iron sheet G28 has ridge caps and roofing nails): two orders whose lines FACTS
   // never draws, each at its own total (FACTS §3.2's year by seller: Brian 2,180,000 · 3). #0498 is the
   // Orders tab's (FACTS §4.5); #0490 stays the usual.
-  reline(s, 545, [L('iron-g28-3m', 20), L('nails-4-25kg', 4), L('ridge-g28', 3), L('roofing-nails-2-5', 10)], 1240000);
+  // #0545 carries Kato's usual too (Cement every order, nails 3 of 7: core/customers.ts usualOf; the integration pass, 4 Nov).
+  reline(s, 545, [L('iron-g28-3m', 19), L('nails-4-25kg', 2), L('ridge-g28', 6), L('cement-hima-50', 4), L('gloss-white-4', 2)], 1240000);
   reline(s, 437, [L('iron-g28-3m', 10), L('ridge-g28', 10)], 560000);
   // Lubowa (SL04): the bills keep their 380,000, 180,000 and 169,000.
   reline(s, 540, [L('iron-g28-3m', 7), L('ridge-g28', 4), L('roofing-nails-2-5', 10)], 380000);

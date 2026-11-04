@@ -82,7 +82,7 @@ export function customerOf(c: Row, log: Row[]): Customer {
     kind: (['contractor', 'reseller', 'retail'].includes(c.kind) ? c.kind : null) as CustomerKind | null,
     address: String(c.address || c.location || ''),
     owes: whole(c.debt), creditLimit: c.credit_limit == null ? null : num(c.credit_limit), termsDays: c.terms_days ?? null,
-    // The rhythm and the usual come from their orders; the Customers tab works them out (sales.html custRhythm).
+    // The rhythm's gap is the customer's own; the usual comes from their orders (core/customers.ts withUsuals, in readBooks).
     everyDays: null, usual: [],
     debtLog, qa: !!c.qa,
   };

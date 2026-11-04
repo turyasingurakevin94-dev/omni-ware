@@ -63,10 +63,13 @@ function threads(): Record<number, M[]> {
 export function extra(s: DemoState, _f: DemoFlags): void {
   if (!s.chats.length) return;
   const redo = threads();
-  const kept = s.messages.filter((m) => !(m.chatId in redo));
-  const all = [...kept.map(({ id: _id, ...m }) => m), ...Object.values(redo).flat()].sort((a, b) => a.at - b.at);
+  // The shared seed's messages (ids m<n>) of these chats are redrawn; a message another tab's extra added (its own
+  // id, as Today's busy afternoon) is kept, and keeps its id (the integration pass, 4 Nov: TD02 lost its chats).
+  const base = (id: string) => /^m\d+$/.test(id);
+  const kept = s.messages.filter((m) => !(m.chatId in redo) || !base(m.id));
+  const all: (Omit<Message, 'id'> & { own?: string })[] = [...kept.map(({ id, ...m }) => (base(id) ? m : { ...m, own: id })), ...Object.values(redo).flat()].sort((a, b) => a.at - b.at);
   // Ids in order, so a message the demo adds later (m<n+1>) never repeats one.
-  s.messages = all.map((m, i) => ({ id: 'm' + (i + 1), ...m }));
+  s.messages = all.map(({ own, ...m }, i) => ({ id: own || 'm' + (i + 1), ...m }));
   s.chats.forEach((c) => {
     const mine = s.messages.filter((m) => m.chatId === c.id);
     if (!mine.length || !(c.id in redo)) return;

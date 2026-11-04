@@ -75,6 +75,13 @@ The six tabs' extras ran on one page for the first time. What was reconciled, an
   Iron sheet G28 in Kato's orders" is Ridge cap G28 2/5, Wire nails 25kg 2/5, Wheelbarrow 2/5 (SL05), and with the
   nails in the message, Ridge cap and Wheelbarrow 2 of 5 each (CH21, corrected from Wheelbarrow 2/5 and Tile glue
   1/5). Kato's usual (cement every order, sheets 5 of 7, nails 3 of 7) still holds.
+- **Usuals are counted from the orders** (`core/customers.ts` `usualOf`, applied by both DataSources), never stored in
+  `customers.ts`. So Kato's last 7 bills are re-lined at their totals to give FACTS' usual: Cement in all 7 (#0490 40,
+  #0498 4, #0511 8, #0531 1, #0529 40, #0544 1, #0545 4), Iron sheet G28 in 5 (#0490 30, #0498 30, #0511 11, #0529 29,
+  #0545 19), Wire nails 25kg in 3 (#0490, #0531, #0545, 2 each); no other item in 3. Kyaligonza gets three earlier
+  bills of the usual (#0488, #0494, #0505, Jun-Aug, paid), and #0535 is re-lined without nails. "Often with Iron
+  sheet G28 in Kato's orders" is now Ridge cap 3/7, Wire nails 2/7, Wheelbarrow 2/7 (SL05; CH21 Ridge cap 3 of 7,
+  Wheelbarrow 2 of 7): both boards corrected.
 - **Ggaba's #0528 has one ask** to Esther (`pa-0528`): Today, Chats and Customers each added one; whichever runs first
   adds it, and Customers names the payment it may be (#0264, `paymentId` 6264) on it.
 - **Sell's endings are placed at `&clock=14:05`** (SL28, SL29, SL35): after the Orders tab's #0559 (13:50) and before

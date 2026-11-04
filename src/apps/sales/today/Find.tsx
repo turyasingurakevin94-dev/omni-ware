@@ -127,7 +127,8 @@ function Wait(p: { since: Ms; now: Ms }): JSX.Element {
 
 /** Their last words, quoted ("“G28 iron sheets, 60 pcs?”"), the first question when it runs on. */
 function quote(ms: Message[], chatId: number): string {
-  const t = ms.filter((x) => x.chatId === chatId && x.dir === 'in' && x.kind === 'text' && x.body).sort((x, y) => y.at - x.at)[0];
+  // Their last words: a text, or a photo's caption (Mama Shine's sheets photo, CH14).
+  const t = ms.filter((x) => x.chatId === chatId && x.dir === 'in' && (x.kind === 'text' || x.kind === 'image') && x.body).sort((x, y) => y.at - x.at)[0];
   return t ? `“${t.body.split('?')[0]}${t.body.includes('?') ? '?' : ''}”` : '';
 }
 

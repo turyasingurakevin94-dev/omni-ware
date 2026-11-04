@@ -33,10 +33,11 @@ export function extra(s: DemoState, f: DemoFlags): void {
   // FACTS §4.4: Ruth voided the copy #0537 today 9:20.
   const copy537 = b.orders.find((o) => o.id === 537);
   if (copy537 && copy537.voided) Object.assign(copy537, { voidedAt: t('9:20'), voidedBy: RUTH });
-  // FACTS §4.5: #0498 (Kato, 24 Sep, Ruth's) is 1,505,000: 30 sheets, 2 wheelbarrows, 6 PVC pipes (OR03's Show 7 more).
+  // FACTS §4.5: #0498 (Kato, 24 Sep, Ruth's) is 1,505,000 (OR03's Show 7 more): 30 sheets, 4 bags of cement and 7 of the
+  // 2.5m sheets, so Kato's usual counts from the orders (Cement every order, sheets 5 of 7; the integration pass, 4 Nov).
   const o498 = b.orders.find((o) => o.id === 498);
   if (o498) {
-    o498.lines = [L('iron-g28-3m', 30), L('wheelbarrow-hd', 2), L('pvc-half-6m', 6)].map((l, i) => ({ ...l, lineId: i + 1 }));
+    o498.lines = [L('iron-g28-3m', 30), L('cement-hima-50', 4), L('iron-g28-2m5', 7)].map((l, i) => ({ ...l, lineId: i + 1 }));
     o498.paid = 1505000;
   }
   if (f.state === 'empty') {

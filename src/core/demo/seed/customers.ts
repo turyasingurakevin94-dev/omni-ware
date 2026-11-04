@@ -8,21 +8,16 @@
  * two bills say 349,000 (a payment of 13 Oct names no bill: being checked).
  * The other 32 of the 38 are in background.ts.
  */
-import type { Customer, UsualLine } from '../../types.ts';
+import type { Customer } from '../../types.ts';
 import { C, charge, pay } from './build.ts';
 import { GGABA, KATO, KYALIGONZA, LUBOWA, MUKONO, NANSANA } from './orders-live.ts';
 
-/** Kato's and Kyaligonza's usual (LANGUAGE P09, FACTS §3.2 O7): 2,672,000. */
-const USUAL: UsualLine[] = [
-  { itemId: 'cement-hima-50', variantIdx: null, qty: 40, seen: 7, of: 7 },
-  { itemId: 'iron-g28-3m', variantIdx: null, qty: 30, seen: 5, of: 7 },
-  { itemId: 'nails-4-25kg', variantIdx: null, qty: 2, seen: 3, of: 7 },
-];
+// Kato's and Kyaligonza's usual (LANGUAGE P09, FACTS §3.2 O7) is counted from their orders (core/customers.ts usualOf).
 
 export function castCustomers(): Customer[] {
   return [
     C({ id: KATO, name: 'Kato Construction', initials: 'KC', tint: 't0', phone: '0772 418 220', place: 'Ntinda', kind: 'contractor',
-      address: 'Ntinda site, Plot 12, Ntinda Rd', owes: 420000, creditLimit: 2000000, everyDays: 10, usual: USUAL,
+      address: 'Ntinda site, Plot 12, Ntinda Rd', owes: 420000, creditLimit: 2000000, everyDays: 10, usual: [],
       debtLog: [
         charge('2026-10-02', 980000, 511), pay('2026-10-02', 980000, 511, 7000),
         charge('2026-10-02', 300000, 531),
@@ -30,7 +25,7 @@ export function castCustomers(): Customer[] {
         charge('2026-10-09', 120000, 544),
         charge('2026-10-16', 1240000, 545), pay('2026-10-16', 1000000, 545, 8000), pay('2026-10-16', 240000, 545, 8001),
       ] }),
-    C({ id: KYALIGONZA, name: 'Kyaligonza & Sons', initials: 'KS', tint: 't1', phone: '0772 455 610', owes: 420000, everyDays: 14, usual: USUAL,
+    C({ id: KYALIGONZA, name: 'Kyaligonza & Sons', initials: 'KS', tint: 't1', phone: '0772 455 610', owes: 420000, everyDays: 14, usual: [],
       debtLog: [
         charge('2026-08-24', 1110000, 533),
         pay('2026-10-09', 160000, 533, 7002), pay('2026-10-14', 142000, 533, 7005), pay('2026-10-17', 388000, 533, 9003),

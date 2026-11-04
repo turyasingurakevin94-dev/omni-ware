@@ -5,6 +5,7 @@
  * shop by accident; every write goes through writes.ts (or the small ones
  * below), as the server function it stands in for would.
  */
+import { withUsuals } from '../customers.ts';
 import { dataError, type DataSource } from '../datasource.ts';
 import { askLines } from '../orders.ts';
 import type { Kept } from '../outbox.ts';
@@ -78,7 +79,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     books() {
       // &state=loading: the books never come (the skeletons stay).
       if (flags.state === 'loading') return new Promise(() => {});
-      const b = copy(s.books);
+      const b = withUsuals(copy(s.books));
       b.at = flags.offline ? SAVED_AT : s.now;
       return Promise.resolve(b);
     },

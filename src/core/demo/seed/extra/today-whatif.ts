@@ -8,6 +8,7 @@
  *   goal hit (TD08)  Thu 29 Oct 9:10: sold 36,220,000 (35M passed Wed 28 Oct); 9 live (2 · 1 · 4 · 2),
  *                    11 done; +2.1M on the move, 1.4M to collect; 1 needs her: 840,000, 23 days
  */
+import { orderTotal } from '../../../money.ts';
 import { at } from '../../../time.ts';
 import type { Line, Order, Stage } from '../../../types.ts';
 import type { DemoState } from '../index.ts';
@@ -116,6 +117,8 @@ export function goalHit(s: DemoState, local: TodayLocal): void {
     b.orders.push(O({ id: 720 + i, customerId: bgId(17 + (i % 15)), by: GRACE, placedAt: when - 86400000, stage: 'delivered', stageAt: when, deliveredAt: when, invoicedAt: when, lines, paid: -1 }));
   });
   // Who owes: Ggaba 840,000 from Tue 6 Oct (23 days), Kato 560,000 from Tue 20 Oct.
+  // Every bill paid but these two debts (who owes reads the bills: core/owing.ts, ow_customer_balance).
+  b.orders.forEach((o) => { if (o.invoiced) o.paid = Math.max(o.paid, orderTotal(o)); });
   b.customers.forEach((c) => { c.owes = 0; c.debtLog = []; });
   b.paymentAsks = b.paymentAsks.filter((a) => a.status !== 'sent');
   const owe = (cid: string, amount: number, dd: string) => { const c = b.customers.find((x) => x.id === cid); if (c) { c.owes = amount; c.debtLog = [charge(dd, amount, null)]; } };

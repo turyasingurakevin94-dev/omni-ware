@@ -11,7 +11,7 @@
  */
 import { isCopy } from './orders.ts';
 import { addDays, dayOf, daysApart } from './time.ts';
-import type { Customer, Day, Order } from './types.ts';
+import type { Customer, Day, Order, UsualLine } from './types.ts';
 
 export interface Rhythm {
   /** Their usual gap in days (Customer.everyDays), null when not known. */
@@ -51,8 +51,49 @@ export function dueWords(r: Rhythm): string {
   return late === 0 ? `Due today · ${every}` : `${late} day${late === 1 ? '' : 's'} late · ${every}`;
 }
 
+/** Each customer's usual, counted from the orders (the books carry it so every tab reads one rule). */
+export function withUsuals<B extends { customers: Customer[]; orders: Order[] }>(b: B): B {
+  b.customers.forEach((c) => { c.usual = usualOf(c.id, b.orders); });
+  return b;
+}
+
 /** Who is due (FACTS "Who's due 3"), the most owed first, then the latest. Test records are left out. */
 export function dueCustomers(customers: Customer[], orders: Order[], today: Day): { c: Customer; r: Rhythm }[] {
   return customers.filter((c) => !c.qa).map((c) => ({ c, r: rhythm(c, orders, today) })).filter((x) => x.r.due)
     .sort((x, y) => y.c.owes - x.c.owes || (y.r.late || 0) - (x.r.late || 0));
+}
+
+/** How many of their last bills the usual is counted over (FACTS §3.2: "Iron sheet 5 of 7"). */
+export const USUAL_OF = 7;
+
+/**
+ * Their usual, counted from their orders (one rule; sales.html:4659 usualLinesNow, with FACTS' window): over their
+ * last USUAL_OF invoiced orders (not voided, not a test record), each item in at least a third of them and at least
+ * twice (one order is not a usual), the most often first; its count is the one they take most often (a tie, the
+ * larger). Kato: Cement every order, Iron sheet G28 5 of 7, Wire nails 3 of 7; 40 bag, 30 pc, 2 ctn (SL03, SL33).
+ * Open for Kevin (spec 04 Q14): sales.html counts every order, needs half of them (one order's items when there is
+ * one) and takes the middle count.
+ */
+export function usualOf(customerId: string, orders: Order[]): UsualLine[] {
+  const hist = orders.filter((o) => o.customerId === customerId && o.invoiced && !o.voided && !o.qa && !o.cancelled)
+    .sort((x, y) => (x.invoicedAt || x.placedAt) - (y.invoicedAt || y.placedAt) || x.id - y.id).slice(-USUAL_OF);
+  const n = hist.length;
+  if (n < 2) return [];
+  const need = Math.max(2, Math.ceil(n / 3));
+  const seen = new Map<string, { itemId: string; variantIdx: number | null; orders: number; qtys: number[]; first: number }>();
+  hist.forEach((o, i) => {
+    const here = new Map<string, number>();
+    o.lines.forEach((l) => { if (!l.itemId) return; const k = `${l.itemId}::${l.variantIdx ?? ''}`; here.set(k, (here.get(k) || 0) + (Number(l.qty) || 0)); });
+    here.forEach((q, k) => {
+      const l = o.lines.find((x) => `${x.itemId}::${x.variantIdx ?? ''}` === k)!;
+      const e = seen.get(k) || { itemId: l.itemId, variantIdx: l.variantIdx ?? null, orders: 0, qtys: [], first: i };
+      e.orders++; e.qtys.push(q); seen.set(k, e);
+    });
+  });
+  const mode = (qs: number[]) => {
+    const c = new Map<number, number>(); qs.filter((q) => q > 0).forEach((q) => c.set(q, (c.get(q) || 0) + 1));
+    return [...c].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] || 1;
+  };
+  return [...seen.values()].filter((e) => e.orders >= need).sort((a, b) => b.orders - a.orders || a.first - b.first)
+    .map((e) => ({ itemId: e.itemId, variantIdx: e.variantIdx, qty: mode(e.qtys), seen: e.orders, of: n }));
 }

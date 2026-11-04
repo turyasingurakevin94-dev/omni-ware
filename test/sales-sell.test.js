@@ -37,7 +37,7 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(I.whoLine(b, kato, now).text === 'Every 10 days · owes 420k', 'the who pill: Every 10 days · owes 420k');
   t.check(last.id === 553 && M.orderTotal(last) === 170000 && r.every === 10, 'last order #0553 · 170,000, every 10 days');
   const w = I.oftenWith(b, KATO, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::', 'cement-hima-50::', 'hinge-soft-flat::']), GRACE);
-  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 2/5, Wire nails 4" · 25kg ctn 2/5, Wheelbarrow, heavy duty 2/5', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ')})`);
+  t.check(w.mine && w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ') === 'Ridge cap G28 3/7, Wire nails 4" · 25kg ctn 2/7, Wheelbarrow, heavy duty 2/7', `Often with Iron sheet G28 in Kato's orders (got ${w.rows.map((x) => `${x.it.name} ${x.had}/${w.of}`).join(', ')})`);
   const marks = I.aisleMarks(b, kato);
   t.check([...marks].map(([a, n]) => `${a} ${n}`).sort().join(', ') === 'Cement 1, Fasteners 1, Roofing 1', `Kato buys from 3: Roofing 1 · Cement 1 · Fasteners 1, his usual (got ${[...marks].map(([a, n]) => `${a} ${n}`).join(', ')})`);
 

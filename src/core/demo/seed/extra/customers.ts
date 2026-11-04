@@ -28,9 +28,6 @@ export function extra(s: DemoState, f: DemoFlags): void {
     b.orders.sort((x, y) => x.id - y.id);
   }
   if (f.state === 'empty' || f.state === 'first-day') return;
-  // CU11 "Order usual": Ggaba's usual, from their own orders (wood glue in #0547 and #0548). FACTS gives no list.
-  const gs = b.customers.find((c) => c.id === GGABA);
-  if (gs && !gs.usual.length) gs.usual = [{ itemId: 'wood-glue-1l', variantIdx: null, qty: 1, seen: 2, of: 3 }];
   // CU12: #0264, 125,000 paid in cash on 17 Aug: the payment Ggaba's #0528 may be (FACTS §3.1, §4.5).
   if (!b.payments.some((p) => p.id === 6264)) {
     b.payments.push({ id: 6264, at: d('2026-08-17', '9:30'), day: '2026-08-17', amount: 125000, method: 'cash', customerId: GGABA, orderId: 264, by: GRACE, ref: '', qa: false });
