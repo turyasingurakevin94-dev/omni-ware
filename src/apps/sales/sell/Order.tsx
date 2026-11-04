@@ -5,9 +5,9 @@
  * order's foot, and the dock that places it.
  *
  * Opened with { customer } (a regular, "" for a walk-in), { draft } (an
- * order still open), { customer, from: 'usual' | 'again' } (their usual or
- * last order in it), or { customer, from: 'chat', chat } (what they asked on
- * WhatsApp: SL04).
+ * order still open), { customer, from: 'usual' } (their usual in it),
+ * { customer, from: 'again', items } (that order's own lines, OR09), or
+ * { customer, from: 'chat', chat } (what they asked on WhatsApp: SL04).
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -26,7 +26,7 @@ import { ChargeLines } from './ChargeLines.tsx';
 import { CreditLine, Foot } from './Foot.tsx';
 import { whoLine } from './insights.ts';
 import { closeLine, Lines, openWarns } from './Lines.tsx';
-import { add, cur, customerOf, forget, keep, openId, plain, query, resume, setPrice, start, toDraft } from './model.ts';
+import { add, cur, customerOf, forget, itemOf, keep, openId, plain, query, resume, setPrice, start, toDraft } from './model.ts';
 import { OrderDock } from './OrderDock.tsx';
 import { sendPicture } from './picture.ts';
 import { openAisles, openSwitch, openVoice } from './sheets.tsx';
@@ -40,14 +40,15 @@ function init(b: Books, p: ScreenProps['params']): void {
   const fresh = !(cur.value && cur.value.customerId === id && !p.from && !p.draft);
   if (fresh) start(id, { chatId: typeof p.chat === 'number' ? p.chat : null });
   if (fresh && id && p.from === 'usual') usualInto(b, id);
-  if (fresh && id && p.from === 'again') sellAgain(b, id);
   if (fresh && p.from === 'chat' && typeof p.chat === 'number') fromChat(b, p.chat);
-  // From the counter ("Order in", KC07/KC18) or Today ("Start Kato's order with…"): [{ itemId, qty, price? }].
+  // From the counter ("Order in", KC07/KC18), Today ("Start Kato's order with…") or an order's Sell again: [{ itemId, variantIdx?, qty, price? }].
   if (typeof p.items === 'string' && p.items) {
-    let list: { itemId: string; qty: number; price?: number | null }[] = [];
+    let list: { itemId: string; variantIdx?: number | null; qty: number; price?: number | null }[] = [];
     try { list = JSON.parse(p.items); } catch (_e) { list = []; }
+    // Sell again (OR09, OR27): that order's own lines, at today's prices; never the customer's last order.
+    if (p.from === 'again') { if (fresh) sellAgain(b, list); list = []; }
     list.forEach((r) => {
-      const it = b.items.find((i) => i.id === r.itemId);
+      const it = (r.variantIdx != null && itemOf(b, r.itemId, r.variantIdx)) || b.items.find((i) => i.id === r.itemId);
       if (!it || !(r.qty > 0)) return;
       const l = add(it, r.qty);
       if (r.price != null && r.price !== l.price) setPrice(l.lineId, r.price, b.me.id);

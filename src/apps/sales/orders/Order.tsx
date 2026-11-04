@@ -62,7 +62,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
           <Track stage={o.stage} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
         </SheetHead>
       )}>
-      {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} />}
+      {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} photo={o.deliveredPhoto} />}
       {o.stage === 'road' && <MapCard b={b} o={o} />}
       <MoneyTiles tiles={tiles} />
       {op && <OverRow b={b} p={op} />}
@@ -71,7 +71,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
           <ItemIcon b={b} o={o} />
           <span class="or-fold-n">{k.length ? `${k[0].name.split(' · ')[0]}${k.length > 1 ? ` +${k.length - 1}` : ''}` : shortItem(o.lines[0]?.name || '')}</span>
           {v.head.pills && <CheckPills pills={v.head.pills} />}
-          <button type="button" class="or-fold-b" aria-label="Show the items" onClick={() => setOpen(true)}><Icon name="chevron-down" size={16} stroke={2.2} /></button>
+          <button type="button" class="or-fold-b" aria-label="Show the items" onClick={() => setOpen(true)}><Icon name="chevron-down" size={16} stroke={2.4} /></button>
         </div>
       ) : (
         <CheckList head={v.head} lines={v.lines.map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
@@ -86,11 +86,14 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
         {owes > 0 && !v.returnAsk && !pending && !o.voided
           ? <Button kind="red" icon="cash" class="or-take" onClick={() => payFor(b, o)}>Take payment · <span class="mono">{owes.toLocaleString('en-US')}</span></Button>
           : null}
-        {delivered && !v.returnAsk && !v.bill && !o.voided && <button type="button" class="ow-btn k-ghost h52" onClick={() => go('sell/order', { customer: o.customerId, from: 'again', items: o.id })}><Icon name="undo" size={18} stroke={2} />Sell again</button>}
+        {delivered && !v.returnAsk && !v.bill && !o.voided && <button type="button" class="ow-btn k-ghost h52" onClick={() => go('sell/order', { customer: o.customerId, from: 'again', items: againItems(o) })}><Icon name="undo" size={18} stroke={2} />Sell again</button>}
       </div>
     </FullSheet>
   );
 }
+
+/** Sell again: this order's own lines, at today's prices (ROUTES.md sell/order `items`). */
+const againItems = (o: Order): string => JSON.stringify(kept(o).map((l) => ({ itemId: l.itemId, variantIdx: l.variantIdx, qty: l.qty })));
 
 function ItemIcon(p: { b: Books; o: Order }): JSX.Element {
   const l = kept(p.o)[0], it = l && p.b.items.find((i) => i.id === l.itemId);

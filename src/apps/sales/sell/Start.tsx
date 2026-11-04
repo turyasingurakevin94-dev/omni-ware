@@ -28,11 +28,9 @@ export const inchLabel = (s: string) => s.replace(/"/g, ' inch');
 /** A tile's name: the first words, no grade (FACTS §7: "Iron sheet", "Cement", "Wire nails 4""). */
 export const tileName = (s: string) => s.split(' · ')[0].split(' ').filter((w) => !/^G\d+$/.test(w)).join(' ');
 
-/** Their order before this one, again at today's prices (manifest note: "Sell again uses today's prices"). */
-export function sellAgain(b: Books, customerId: string): void {
-  const last = lastOrder(b, customerId);
-  if (!last) return;
-  last.lines.filter((l) => l.state !== 'dropped').forEach((l) => { const it = itemOf(b, l.itemId, l.variantIdx); if (it) add(it, l.qty); });
+/** One order's lines again, at today's prices (manifest note: "Sell again uses today's prices"): what was not dropped. */
+export function sellAgain(b: Books, lines: { itemId: string; variantIdx?: number | null; qty: number; state?: string | null }[]): void {
+  lines.filter((l) => l.state !== 'dropped' && l.qty > 0).forEach((l) => { const it = itemOf(b, l.itemId, l.variantIdx ?? null) || b.items.find((i) => i.id === l.itemId); if (it) add(it, l.qty); });
 }
 
 /** Their usual, all of it (Today's "Order usual": { from: 'usual' }). */
@@ -149,7 +147,7 @@ export function LastOrder(p: { b: Books; c: Customer }): JSX.Element | null {
   const b = p.b, last = lastOrder(b, p.c.id);
   if (!last || !last.lines.length) return null;
   return (
-    <a href="#" class="sl-last" onClick={(e) => { e.preventDefault(); sellAgain(b, p.c.id); }}>
+    <a href="#" class="sl-last" onClick={(e) => { e.preventDefault(); sellAgain(b, last.lines); }}>
       <ItemSquare aisle={(itemOf(b, last.lines[0].itemId, last.lines[0].variantIdx) || { aisle: '' }).aisle} size={36} radius={10} icon={22} />
       <span class="sl-last-t"><span>Last order <span class="mono">{orderNo(last.id)}</span></span><span class="mono">{`${dayWord(last.placedAt, now.value)} ${clock(last.placedAt)} · ${fig(orderTotal(last))}`}</span></span>
       <span class="sl-last-again"><Icon name="return" size={15} stroke={2.2} />Sell again</span>
