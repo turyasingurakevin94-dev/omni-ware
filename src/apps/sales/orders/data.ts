@@ -131,11 +131,17 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
   return {};
 }
 
-/** What Grace takes from the row ("Take 1.1M"): what the customer owes and this order. */
-export const takeAmount = (b: Books, o: Order): number => {
+/**
+ * What the row's Take takes ("Take 1.1M"), and the bills it names for customers/pay, so the pill pays what it says
+ * (core/owing.ts takeWithHeld, the one rule: the open bills nobody is checking, then this order). A walk-in's
+ * order is only itself.
+ */
+export function takeFor(b: Books, o: Order, now: Ms): { amount: number; params: { customer: string; bills: string } | { customer: string; order: number } } {
   const c = custOf(b, o);
-  return c ? takeWithHeld(owingOf(b, c, dayOf(b.at)), c.id, o).amount : orderOwes(o);
-};
+  if (!c) return { amount: orderOwes(o), params: { customer: '', order: o.id } };
+  const t = takeWithHeld(owingOf(b, c, dayOf(now)), c.id, o);
+  return { amount: t.amount, params: { customer: t.customer, bills: t.bills } };
+}
 
 /** Groups of rows, in the canvas's order: newest number first; delivered by bill, newest first, then not billed yet. */
 export function sortRows(list: Order[], stage: Stage, oldest: boolean): Order[] {
