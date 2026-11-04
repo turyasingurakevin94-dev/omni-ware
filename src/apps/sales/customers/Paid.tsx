@@ -56,6 +56,11 @@ function PaidView(props: { p: Paid }): JSX.Element {
     const now0 = paidResults.value[p.key];
     if (now0 && now0.kept && !now0.refused) toast.show('Still no signal', { kind: 'warn' });
   };
+  // Try again on WhatsApp with no luck answers with a toast, as CU45's Try again does (a tap is never silent).
+  const sendAgain = async () => {
+    if (!b) return;
+    if (!(await sendReceipt(p.key, b.shop.name, now.value))) toast.show('Still not sent', { kind: 'warn' });
+  };
   const sms = () => {
     const text = b ? receiptText(p, b.shop.name) : '';
     window.location.href = `sms:${p.phone.replace(/\s/g, '')}?body=${encodeURIComponent(text)}`;
@@ -141,7 +146,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
             <span class="cu-rc-t"><span>Receipt not sent yet</span><span>{`WhatsApp can’t reach ${name} now`}</span></span></span>
           <span class="cu-rc-acts">
             <button type="button" class="cu-rc-sms" onClick={sms}><Icon name="message" size={17} stroke={2.2} />Send by SMS</button>
-            <button type="button" class="cu-rc-again" onClick={() => { if (b) void sendReceipt(p.key, b.shop.name, now.value); }}><Icon name="undo" size={15} stroke={2.2} />Try again on WhatsApp</button>
+            <button type="button" class="cu-rc-again" onClick={() => { void sendAgain(); }}><Icon name="undo" size={15} stroke={2.2} />Try again on WhatsApp</button>
           </span>
         </div>
       ) : p.receipt.state !== 'off' && p.receipt.state !== 'waiting' && (

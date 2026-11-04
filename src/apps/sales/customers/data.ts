@@ -5,6 +5,7 @@
  */
 import { heldFor } from '../../../core/orders.ts';
 import { rhythm } from '../../../core/customers.ts';
+import { takeWithHeld, type Owing } from '../../../core/owing.ts';
 import type { Books, Customer, Day, Order, PayPromise } from '../../../core/types.ts';
 
 export type RingTone = 'due' | 'late' | 'quiet' | 'early';
@@ -41,6 +42,18 @@ export function promiseOf(b: Books, c: Customer, today: Day): PayPromise | null 
 /** Live orders that wait on Sales for money before they move (Mukono's #0551: "Not paid yet"). */
 export function waitingOnMe(b: Books, c: Customer): Order[] {
   return b.orders.filter((o) => o.customerId === c.id && heldFor(o, b.me.id));
+}
+
+/**
+ * What Take payment takes and what it opens customers/pay with. With an order held for my money, the one rule
+ * Today, Orders and Sell use (core/owing.ts takeWithHeld: Mukono's 780,000 and #0551's 320,000, "Take 1.1M");
+ * otherwise all Sales can take (canTake).
+ */
+export function takeOf(b: Books, c: Customer, m: Owing): { amount: number; params: { customer: string; bills?: string } } {
+  const held = waitingOnMe(b, c)[0] || null;
+  if (!held) return { amount: m.canTake, params: { customer: c.id } };
+  const t = takeWithHeld(m, c.id, held);
+  return { amount: t.amount, params: { customer: t.customer, bills: t.bills } };
 }
 
 /** Live orders (not delivered, not called off), newest first. */

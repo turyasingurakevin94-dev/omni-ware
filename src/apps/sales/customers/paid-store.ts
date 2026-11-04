@@ -63,18 +63,20 @@ export function receiptText(p: Paid, shop: string): string {
   return [`${shop} · receipt`, `${p.name} paid ${money(p.amount)}`, ...rows, ...(p.deposit ? [`Deposit · ${money(p.deposit)}`] : []), `Owes now ${money(p.after)}`].join('\n');
 }
 
-/** Send the receipt into their chat. No chat, or the shop's WhatsApp is not connected: it waits (CU43). */
-export async function sendReceipt(key: string, shop: string, now: number): Promise<void> {
+/** Send the receipt into their chat. No chat, or the shop's WhatsApp is not connected: it waits (CU43). Resolves true once sent. */
+export async function sendReceipt(key: string, shop: string, now: number): Promise<boolean> {
   const p = paidResults.value[key], cb = chats.value;
-  if (!p) return;
+  if (!p) return false;
   const chat = cb && p.customerId ? cb.chats.find((c) => c.customerId === p.customerId) : null;
-  if (!cb || !cb.connected || !chat) { patch(key, { state: 'failed', chatId: chat ? chat.id : null }); return; }
+  if (!cb || !cb.connected || !chat) { patch(key, { state: 'failed', chatId: chat ? chat.id : null }); return false; }
   patch(key, { state: 'sending', chatId: chat.id });
   try {
     await act(replyWindow(chat.lastInAt, now).open ? 'send' : 'sendTemplate', chat.id, receiptText(p, shop));
     patch(key, { state: 'sent', at: now });
+    return true;
   } catch (_e) {
     patch(key, { state: 'failed' });
+    return false;
   }
 }
 

@@ -25,7 +25,7 @@ import { openBillCheck } from './BillCheck.tsx';
 import { AgeTrack, ApartHead, CustHead, PaidUp, SplitHead, first } from './cust-head.tsx';
 import { AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, PaidBills, Rhythm, TodayPaid } from './cust-cards.tsx';
 import { billNo, owingOf } from '../../../core/owing.ts';
-import { liveOf, placeKind, rhythmOf, short } from './data.ts';
+import { liveOf, placeKind, rhythmOf, short, takeOf } from './data.ts';
 import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
 import { sendStatement } from './statement.ts';
@@ -61,7 +61,8 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
   const { b, c } = p, t = now.value, today = dayOf(t);
   const m = owingOf(b, c, today), r = rhythmOf(b, c, today), live = liveOf(b, c);
   const ruth = role(b, 'manager'), esther = role(b, 'accounts'), name = short(c.name);
-  const pay = (bills?: number[]) => nav.push('customers/pay', bills ? { customer: c.id, bills: bills.join(',') } : { customer: c.id });
+  const take = takeOf(b, c, m);
+  const pay = (bills?: number[]) => nav.push('customers/pay', bills ? { customer: c.id, bills: bills.join(',') } : take.params);
   const checkBill = (id: number) => openBillCheck(c.id, id);
 
   let picture: JSX.Element | null = null;
@@ -111,7 +112,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       head={<CustHead c={c} sub={placeKind(c)} tone={r.tone} fill={r.fill} onClose={() => nav.back()}>{picture}</CustHead>}>
       {todays.length > 0 && <TodayPaid rows={todays} />}
       {m.owes > 0 && <ActBar icon={20} acts={[
-        { tone: 'take', icon: 'cash', word: 'Take payment', sub: m.canTake.toLocaleString('en-US'), on: () => pay() },
+        { tone: 'take', icon: 'cash', word: 'Take payment', sub: take.amount.toLocaleString('en-US'), on: () => pay() },
         { tone: 'promise', icon: 'calendar', word: 'Promise', sub: 'by when', on: () => openPromise(c.id) },
         { tone: 'tell', icon: 'receipt', word: 'Statement', sub: 'on WhatsApp', on: () => { void sendStatement(b, c, p.cb).then((w) => toast.show(w)); } },
       ]} />}

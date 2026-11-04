@@ -23,7 +23,8 @@ import { WeekHead } from './week-head.tsx';
 import { openedOf } from './opened.ts';
 import { shareList } from './share.ts';
 import { whoPicked } from './pay-walkin.tsx';
-import { short } from './data.ts';
+import { short, takeOf } from './data.ts';
+import { owingOf } from '../../../core/owing.ts';
 import './customers.css';
 import './list.css';
 
@@ -67,7 +68,7 @@ export function ListScreen(p: ScreenProps): JSX.Element {
   const a: Acts = {
     // Picking who owes a walk-in's rest (CU34 "Find someone else"): the row is the answer.
     open: (c) => (p.params.pick != null ? (whoPicked.value = { order: Number(p.params.pick), id: c.id }, nav.back()) : nav.push('customers/customer', { id: c.id })),
-    take: (c) => nav.push('customers/pay', { customer: c.id }),
+    take: (c) => nav.push('customers/pay', takeOf(b, c, owingOf(b, c, today)).params),
     wa: (c) => whatsapp(b, c),
   };
   const sayHi = async () => {
