@@ -112,6 +112,21 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const b3 = await s.books();
     t.check(pf.what === 'over' && D.overAsk(b3, b3.payments.find((x) => x.id === 9002)), 'the paid-over is sent to Esther (payment_asks what over, 0165)');
   }
+  /* OR22, OR32: an ask card names who asked; only Grace's own has Undo (the server takes back only the asker's). */
+  {
+    const { s, b } = await at('?demo');
+    const mine = D.askedBy(b, b.me.id), brian = D.askedBy(b, 'u-brian');
+    t.check(mine.mine && mine.said === 'You asked', `Grace's own ask: "You asked", with Undo (got ${JSON.stringify(mine)})`);
+    t.check(!brian.mine && brian.said === 'Brian asked', `a teammate's ask: "Brian asked", no Undo (got ${JSON.stringify(brian)})`);
+    t.check(D.askedBy(b, 'u-nobody').said === 'A teammate asked', 'an asker not in the team: "A teammate asked", never a blank');
+    // OR32: Grace's payment fix on #0533 shows as asked, and its payment is not open to a second ask.
+    await s.askPaymentFix({ paymentId: 7005, what: 'method', want: { method: 'momo', ref: '1194026113' }, note: '' });
+    await s.askPaymentFix({ paymentId: 7005, what: 'amount', want: { amount: 124000 }, note: '' });
+    const b2 = await s.books(), o = D.orderOf(b2, 533), fx = D.payFixesOf(b2, o);
+    t.check(fx.length === 1 && fx[0].pay.id === 7005 && fx[0].asks.length === 2 && D.askedBy(b2, fx[0].asks[0].by).mine, 'OR32: #0533 shows one payment fix asked, by Grace');
+    const w = D.payFixWant(fx[0].pay, fx[0].asks);
+    t.check(w.method === 'momo' && w.amount === 124000 && D.owesNow(b2, o) + fx[0].pay.amount - w.amount === 438000, 'OR32: Cash 142,000 → Mobile 124,000, then they owe 438,000');
+  }
   {
     const { b, now } = await at('?demo&state=empty');
     t.check(D.stageCounts(b, now).delivered === 0 && D.liveOrders(b).length === 0, '&state=empty: Orders 0 (OR04)');

@@ -22,6 +22,14 @@ export const orderOf = (b: Books, id: number): Order | null => b.orders.find((o)
 export const member = (b: Books, id: string | null): Member | null => (id ? b.members.find((m) => m.id === id) || null : null);
 export const byRole = (b: Books, r: Role): Member | null => b.members.find((m) => m.role === r) || null;
 export const faceOfMember = (m: Member): Face => ({ initials: m.initials, tint: m.tint });
+/**
+ * Who made an ask, as its card says it: "You asked" with Undo for Grace's own; a teammate's says their name
+ * and has no Undo (the server takes back only the asker's own: 0130 withdraw_payment_ask, invoice_asks).
+ */
+export function askedBy(b: Books, by: string): { mine: boolean; said: string } {
+  const mine = by === b.me.id, m = member(b, by);
+  return { mine, said: mine ? 'You asked' : `${m ? firstWord(m.name) : 'A teammate'} asked` };
+}
 
 /** The customer's face, or the walk-in's grey one. */
 export function faceOf(b: Books, o: Order): Face {

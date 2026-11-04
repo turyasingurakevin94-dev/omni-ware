@@ -14,7 +14,7 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { backLines, byRole, custOf, faceOfMember, member, METHOD, owesNow, payFixWant, shortItem, shortName } from './data.ts';
+import { askedBy, backLines, byRole, custOf, faceOfMember, member, METHOD, owesNow, payFixWant, shortItem, shortName } from './data.ts';
 import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
 
@@ -133,8 +133,8 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
 }
 
 /** OR22, OR32 · an ask that waits: what it is, Waiting, Undo, and its two steps (you asked · who answers it, then what follows). */
-function AskSteps(p: { title: string; did: string; m: Member | null; who: string; then: string; undo: () => Promise<unknown>; label?: string }): JSX.Element {
-  const [busy, setBusy] = useState(false);
+function AskSteps(p: { b: Books; by: string; title: string; did: string; m: Member | null; who: string; then: string; undo: () => Promise<unknown>; label?: string }): JSX.Element {
+  const [busy, setBusy] = useState(false), asker = askedBy(p.b, p.by);
   const undo = async () => {
     setBusy(true);
     try { await p.undo(); } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
@@ -142,9 +142,9 @@ function AskSteps(p: { title: string; did: string; m: Member | null; who: string
   return (
     <div class="or-asks">
       <div class="or-asks-h"><span>{p.title}<span class="or-wait">Waiting</span></span>
-        <button type="button" class="or-undo" aria-label={p.label} onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
+        {asker.mine && <button type="button" class="or-undo" aria-label={p.label} onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button>}</div>
       <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span><span aria-hidden="true" class="or-step-line" />
-        <span class="or-step-t"><span>You asked</span><span>{p.did}</span></span></div>
+        <span class="or-step-t"><span>{asker.said}</span><span>{p.did}</span></span></div>
       <div class="or-step"><span aria-hidden="true" class="or-step-face">{p.m && <Avatar {...faceOfMember(p.m)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} />}</span>
         <span class="or-step-t warn"><span>{p.who}</span><span>{p.then}</span></span></div>
     </div>
@@ -156,7 +156,7 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
   const { b, o, ask } = p, ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager');
   const back = backLines(o, ask);
   const what = back.length ? back.map(({ line, n }) => `${n} ${line.unit}${n > 1 ? 's' : ''}`).join(' + ') : ask.amount.toLocaleString('en-US');
-  return <AskSteps title="Return asked" did={`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`} m={ruth} who={`${rn} checks it`}
+  return <AskSteps b={b} by={ask.by} title="Return asked" did={`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`} m={ruth} who={`${rn} checks it`}
     then={`then the credit note, ${ask.amount.toLocaleString('en-US')}`} undo={() => act('withdrawBillAsk', ask.id)} />;
 }
 
@@ -165,7 +165,7 @@ export function PayFixAsked(p: { b: Books; o: Order; pay: Payment; asks: Payment
   const { b, o, pay, asks } = p, acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
   const want = payFixWant(pay, asks), after = Math.max(0, owesNow(b, o) + pay.amount - want.amount), f = (n: number) => n.toLocaleString('en-US');
   const did = `${METHOD[pay.method].word} ${f(pay.amount)} → ${METHOD[want.method].word} ${f(want.amount)} · ${when(asks[0].at, now.value)}`;
-  return <AskSteps title="Payment fix asked" did={did} m={acc} who={`${an} corrects it`} then={`then they owe ${f(after)}`}
+  return <AskSteps b={b} by={asks[0].by} title="Payment fix asked" did={did} m={acc} who={`${an} corrects it`} then={`then they owe ${f(after)}`}
     undo={() => Promise.all(asks.map((a) => act('withdrawPaymentAsk', a.id)))} label="Undo the payment fix ask" />;
 }
 
