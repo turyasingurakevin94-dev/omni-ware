@@ -37,6 +37,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 - **Links follow the canvas's ruling** (`docs/canvas/sales-agent/BRIEF.md`, "Lead ruling · links").
   - A control opens THAT customer's or THAT order's own screen.
   - A list screen opens only for a list action.
+- **A tapped push opens a route here**, never a screen of its own: the one map is `shell/pushes.ts` (push kind → id and params, from the push's data), opened by `shell/open-push.ts`; `test/sales-push-routes.test.js` checks every id it opens is in this table.
 - **Sheets are not routes.** A sheet opens with `sheet.open(...)` inside its own tab's code.
   - If another tab needs that tab's sheet, the owning tab exports a function from its `index.tsx` (for example `export function openSomethingWrong(id)`) and lists it below.
 

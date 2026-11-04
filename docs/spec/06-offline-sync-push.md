@@ -102,11 +102,11 @@ flowchart LR
 
 **Phones register** with Capacitor `PushNotifications` into `push_subscriptions`. Store asks only when the person turns Alerts on and has a staff row (5923, 2649); the others ask at start.
 
-**A tap** reloads, then opens the push's page. With no signal the reload fails and nothing opens, in every app but Owner, which opens first (`store.html:2662`, `sales.html:4900`, `owner.html:1684`).
+**A tap** reloads, then opens the push's page. With no signal the reload fails and nothing opens, in every app but Owner, which opens first (`store.html:2662`, `sales.html:4900`, `owner.html:1684`). The new Sales app opens the page at once from the phone's copy and reads behind it (Q8; `src/apps/sales/shell/open-push.ts`): a native tap, a web notification's tap (`sales-sw.js` focuses the open window and hands it the push, else opens `sales.html#push=<kind>&…`), or the demo's `?demo&push=<kind>&<key>=<value>`.
 
 ### 6b. Every push
 
-To a task means every login whose role holds it (`role_tasks`). "Opens" = the receiving app has a page for the push; ✗ = it arrives, but a tap opens the app's start.
+To a task means every login whose role holds it (`role_tasks`). "Opens" = the receiving app has a page for the push; ✗ = it arrives, but a tap opens the app's start. The new Sales app's pages are one map, `src/apps/sales/shell/pushes.ts` (a push without its id opens the list it lives in); `test/sales-push-routes.test.js` pairs it with every kind the migrations send and with this table (Q9).
 
 | Push | To | Sent by | Opens |
 |---|---|---|---|
@@ -125,19 +125,20 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | `store.extra` | Manager (`trip.difference`) | the yard found an item on the truck not on the list: keep it? (0157) | ✗ |
 | `store.closed` | Manager (role) | the yard closed: what is out, what carries over (0157) | ✗ |
 | `stock_count` (notify-stock-count) | owner, admin, Manager | a stock take done | ✗ in Manager; opens in Store |
-| `price.decided` | the salesperson | the Manager decided the price | ✓ |
-| `credit.decided` | the salesperson | credit released or held (0131) | ✓ |
-| `price.changed` | the salesperson | a supplier line's price changed on an open order | ✓ |
-| `line.dropped` | the salesperson | a line dropped from an order (0136) | ✓ |
-| `item.switch` | the salesperson (or `quote.make`) | the Buyer switched an item | ✓ |
-| `order.invoiced` | the salesperson, and Accounts (`invoice.send`) | an order invoiced (0138) | ✓ both |
-| `invoice.ask.decided`, `payment.ask.decided` | who asked | the Manager or Accounts answered | ✓ |
-| `request.listed` | who asked | Sourcing listed the item | ✓ |
-| `chat.handed`, `chat.note`, `chat.reply_by_other` | the chat's salesperson | a chat handed, noted, answered by someone else (0170) | ✓ |
-| `order.cancelled` | the salesperson, and the yard (`order.pick`) when it was packing | the Manager cancelled it (0177) | ✗ both |
-| `order.cancel.ask.decided` | who asked | the Manager said no, the order was voided another way, or it was invoiced first (0181) | ✗ (the new Sales app's page is to come) |
-| `customer.changed` | the salesperson who last sold to them | the Manager edited the customer (0158) | ✗ |
-| `trip.short` | the salesperson (or `quote.make`) | a trip came back short for an order | ✗ |
+| `price.decided` | the salesperson | the Manager decided the price | ✓ (new Sales: `orders/order`) |
+| `credit.decided` | the salesperson | credit released or held (0131) | ✓ (new Sales: `orders/order`) |
+| `price.changed` | the salesperson | a supplier line's price changed on an open order | ✓ (new Sales: `orders/order`) |
+| `line.dropped` | the salesperson | a line dropped from an order (0136) | ✓ (new Sales: `orders/order`) |
+| `item.switch` | the salesperson (or `quote.make`) | the Buyer switched an item | ✓ (new Sales: `orders/order`) |
+| `order.invoiced` | the salesperson, and Accounts (`invoice.send`) | an order invoiced (0138) | ✓ both (new Sales: `orders/order`) |
+| `invoice.ask.decided` | who asked | the Manager answered a void or return ask | ✓ (new Sales: `orders/order`, by the ask's `quote`) |
+| `payment.ask.decided` | who asked | Accounts answered a payment ask | ✓ (new Sales, from the copy: the ask's order `orders/order`, else its customer `customers/customer`, else `today/day` money; the push names only the ask) |
+| `request.listed` | who asked | Sourcing listed the item | ✓ (new Sales: `today/asks`) |
+| `chat.handed`, `chat.note`, `chat.reply_by_other` | the chat's salesperson | a chat handed, noted, answered by someone else (0170) | ✓ (new Sales: `chats/chat`) |
+| `order.cancelled` | the salesperson, and the yard (`order.pick`) when it was packing | the Manager cancelled it (0177) | ✓ Sales (new Sales: `orders/order`); ✗ the yard |
+| `order.cancel.ask.decided` | who asked | the Manager said no, the order was voided another way, or it was invoiced first (0181) | ✓ (new Sales: `orders/order`, by the ask's `quote`) |
+| `customer.changed` | the salesperson who last sold to them | the Manager edited the customer (0158) | ✓ (new Sales: `customers/customer`) |
+| `trip.short` | the salesperson (or `quote.make`) | a trip came back short for an order | ✓ (new Sales: `orders/order`) |
 | `order.buying` | Buyer (`trip.plan`) | an order entered Buying (0131) | ✓ |
 | `supplier.answered` | Buyer (`supplier.confirm`) | a supplier answered in its app (0133) | ✓ |
 | `restock.held`, `restock.released` | Buyer (`buy.restock`) | the Manager held or let go a restock line (0136) | ✓ |
