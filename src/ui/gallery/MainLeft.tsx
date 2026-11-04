@@ -119,7 +119,7 @@ export function Column2(): JSX.Element {
       </Part>
       <Part k="P10 · Customer row" meta="due ring">
         <GroupCard>
-          <CustomerRow class="div" face={{ initials: 'KS', tint: 't1' }} tone="late" fill={1} name="Kyaligonza & Sons" sub="4 days late · every 14 days" owes="420k" on={nop} onWhatsApp={nop} />
+          <CustomerRow class="div" face={{ initials: 'KS', tint: 't1' }} tone="late" fill={1} name="Kyaligonza & Sons" label="Kyaligonza and Sons" sub="4 days late · every 14 days" subTone="late" fig="420k" word="owes" act="wa" on={nop} onAct={nop} />
         </GroupCard>
       </Part>
       <Part k="P24 · Empty" meta="ghost · checklist · one way in · OR04">

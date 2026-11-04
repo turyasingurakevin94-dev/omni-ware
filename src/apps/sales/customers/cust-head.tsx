@@ -6,6 +6,7 @@
  *   ApartHead    the bills say more than the balance: Esther is checking (CU13)
  */
 import type { ComponentChildren, JSX } from 'preact';
+import { RingAvatar } from '../../../ui/Avatar.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -15,7 +16,6 @@ import { TINTS } from '../../../core/names.ts';
 import type { Customer, Member } from '../../../core/types.ts';
 import { billNo, type OpenBill } from '../../../core/owing.ts';
 import type { RingTone } from './data.ts';
-import { BigRing } from './local-rings.tsx';
 
 export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: number; onClose: () => void; children?: ComponentChildren }): JSX.Element {
   const c = p.c;
@@ -23,7 +23,7 @@ export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: nu
     <div class="ow-shead cu-head">
       <span aria-hidden="true" class="ow-shead-grab" />
       <div class="ow-shead-row">
-        <BigRing initials={c.initials} tint={c.tint} tone={p.tone} fill={p.fill} />
+        <RingAvatar big start face={{ initials: c.initials, tint: c.tint }} tone={p.tone} fill={p.fill} />
         <div class="ow-shead-t"><span class="ow-shead-n">{c.name}</span>{p.sub && <span class="ow-shead-s">{p.sub}</span>}</div>
         {c.phone && <Tap href={'tel:+256' + c.phone.replace(/\D/g, '').replace(/^0/, '')} label={`Call ${c.name}`} class="ow-shead-call"><Icon name="phone" size={18} stroke={2} /></Tap>}
         <Tap on={p.onClose} label="Close" class="ow-shead-x"><Icon name="close" size={16} stroke={2.2} /></Tap>

@@ -20,6 +20,7 @@ import './acttiles.css';
 const TONE = {
   call: ['#E4E6FA', '#3A3F9B'], tell: ['#E4F4EA', '#0F6B43'], receipt: ['#DCEAF8', '#1A5A8A'],
   fix: ['#FDEEE1', '#7A4A02'], wrong: ['#FBE5E2', '#8E2A22'], change: ['#F1EEE8', '#5F6980'], plain: ['#F1EEE8', '#1C2233'],
+  take: ['#FDEEE1', '#95530C'], promise: ['#E3EEFB', '#1A5A8A'],
 } as const;
 
 /** A link when it goes somewhere, else a button. */
@@ -41,13 +42,14 @@ export interface Act {
   label?: string;
 }
 
-export function ActBar(p: { acts: Act[] }): JSX.Element {
+/** icon: the discs' icon size (19; the customer sheet draws 20 at stroke 2). */
+export function ActBar(p: { acts: Act[]; icon?: 20 }): JSX.Element {
   return (
     <div class="ow-actbar">
       {p.acts.map((a, i) => (
         <Act key={i} a={a} class="ow-act">
           <span aria-hidden="true" class="ow-act-disc" style={{ background: TONE[a.tone][0], color: TONE[a.tone][1] }}>
-            {a.duo ? <Duo i={a.duo} size={19} /> : a.icon && <Icon name={a.icon} size={19} />}
+            {a.duo ? <Duo i={a.duo} size={19} /> : a.icon && <Icon name={a.icon} size={p.icon || 19} stroke={p.icon ? 2 : undefined} />}
           </span>
           <span class="ow-act-w">{a.word}</span>
           {a.sub && <span class="ow-act-s">{a.sub}</span>}

@@ -132,13 +132,3 @@ export function WhoCard(p: { left: number; opts: WhoOpt[]; chosen: string | null
     </div>
   );
 }
-
-/** LOCAL PART · the slide when it cannot go yet: the grey knob with a lock, the words of what it waits for (CU33). */
-export function WaitSlide(p: { words: string; onHint: () => void }): JSX.Element {
-  return (
-    <button type="button" class="cu-wslide" aria-disabled="true" onClick={p.onHint}>
-      <span aria-hidden="true"><Icon name="lock" size={20} stroke={2} /></span>
-      <span>{p.words}</span>
-    </button>
-  );
-}

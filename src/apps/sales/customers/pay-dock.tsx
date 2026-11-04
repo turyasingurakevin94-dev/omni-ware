@@ -12,7 +12,6 @@ import { cx } from '../../../ui/util.tsx';
 import { money } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
 import type { Method } from '../../../core/types.ts';
-import { WaitSlide } from './pay-parts.tsx';
 
 export interface PayDockProps {
   method: Method;
@@ -81,7 +80,7 @@ export function PayDock(p: PayDockProps): JSX.Element {
           ) : top}
         </div>
       ) : top}
-      {p.words ? <WaitSlide words={p.words} onHint={() => toast.show(p.words as string, { kind: 'warn' })} />
+      {p.words ? <Slide label="" knobLabel="" onCommit={() => undefined} lock={{ icon: 'lock', label: p.words, quiet: true, onTap: () => toast.show(p.words as string, { kind: 'warn' }) }} />
         : <Slide label={`Slide to record ${money(p.record)}`} knobLabel={`Record ${money(p.record)}`} state={p.sending ? 'sending' : 'ready'} onCommit={p.onCommit}
           onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}
     </div>

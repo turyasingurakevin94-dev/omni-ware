@@ -4,6 +4,7 @@
  * saved when the name or number is theirs, and two buttons.
  */
 import type { JSX, RefObject } from 'preact';
+import { RingAvatar } from '../../../ui/Avatar.tsx';
 import { useState } from 'preact/hooks';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
@@ -11,15 +12,10 @@ import { short as shortMoney } from '../../../core/money.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Customer, CustomerKind } from '../../../core/types.ts';
 import { rhythmOf, spaced } from './data.ts';
-import { Ring44 } from './local-rings.tsx';
 
 export interface Dup { kind: 'name' | 'phone'; c: Customer }
 interface Act { word: string; on: () => void; icon?: IconName }
 
-/** LOCAL PART · a hard hat in the 24-grid stroke style: the Contractor kind (the truck means Delivery). */
-function HardHat(): JSX.Element {
-  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9V6h4v3" /></svg>;
-}
 
 const KINDS: [CustomerKind, string][] = [['contractor', 'Contractor'], ['reseller', 'Reseller'], ['retail', 'Retail']];
 
@@ -40,7 +36,7 @@ export function NewForm(p: {
       <div class="cu-dup">
         <span class="cu-dup-h"><Icon name="person" size={14} stroke={2.2} />{d.kind === 'name' ? 'Already saved · same name' : 'Same number · a number is saved once'}</span>
         <div class="cu-dup-who">
-          <Ring44 initials={d.c.initials} tint={d.c.tint} tone={r.tone} fill={r.fill} />
+          <RingAvatar face={{ initials: d.c.initials, tint: d.c.tint }} tone={r.tone} fill={r.fill} start />
           <span><span>{d.c.name}</span><span>{[d.c.place, `${orders.length} orders`, r.every ? `every ${r.every} days` : ''].filter(Boolean).join(' · ')}</span></span>
           {d.c.owes > 0 && <span class="cu-dup-f"><span class="mono">{shortMoney(d.c.owes)}</span><span>owes</span></span>}
         </div>
@@ -93,7 +89,7 @@ export function NewForm(p: {
           <div role="radiogroup" aria-label="Kind of customer" class="cu-nf-kinds">
             {KINDS.map(([k, w]) => (
               <button key={k} type="button" role="radio" aria-checked={p.kind === k} class={p.kind === k ? 'on' : undefined} onClick={() => p.onKind(k)}>
-                {k === 'contractor' ? <HardHat /> : <Icon name={k === 'reseller' ? 'store' : 'basket'} size={17} stroke={1.9} />}{w}
+                <Icon name={k === 'contractor' ? 'hardhat' : k === 'reseller' ? 'store' : 'basket'} size={17} stroke={1.9} />{w}
               </button>
             ))}
           </div>

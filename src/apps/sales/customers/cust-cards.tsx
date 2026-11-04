@@ -4,7 +4,7 @@
  */
 import type { JSX } from 'preact';
 import { fig } from '../../../ui/Money.tsx';
-import { Duo, Icon, phWhatsapp, STAGE_ICON, type IconName } from '../../../ui/icons.tsx';
+import { Duo, Icon, phWhatsapp, STAGE_ICON } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { orderTotal, short as shortMoney } from '../../../core/money.ts';
 import { orderNo, STAGE_WORD, TINTS } from '../../../core/names.ts';
@@ -86,25 +86,6 @@ export function Rhythm(p: { every: number; gone: number; late: number; pill: str
         {Array.from({ length: p.late }, (_, i) => <span key={'l' + i} class="late" />)}
       </div>
       {p.labels && <div class="cu-days-l">{p.labels.map((l, i) => <span key={i} class={i === 2 && p.late ? 'late' : undefined}>{l}</span>)}</div>}
-    </div>
-  );
-}
-
-/**
- * LOCAL PART · P21's joined bar as the customer sheet draws it: the discs are the act's own soft and ink
- * (Take payment sand #FDEEE1 / #95530C, Promise info #E3EEFB / #1A5A8A, Statement good), icons 20.
- */
-const ACT_TONE = { take: ['#FDEEE1', '#95530C'], promise: ['#E3EEFB', '#1A5A8A'], statement: ['#E4F4EA', '#0F6B43'] } as const;
-
-export function Acts(p: { acts: { tone: keyof typeof ACT_TONE; icon: IconName; word: string; sub: string; on: () => void }[] }): JSX.Element {
-  return (
-    <div class="cu-acts">
-      {p.acts.map((a) => (
-        <Tap key={a.word} on={a.on} class="cu-act">
-          <span aria-hidden="true" style={{ background: ACT_TONE[a.tone][0], color: ACT_TONE[a.tone][1] }}><Icon name={a.icon} size={20} stroke={2} /></span>
-          <span>{a.word}</span><span>{a.sub}</span>
-        </Tap>
-      ))}
     </div>
   );
 }

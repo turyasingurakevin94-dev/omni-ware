@@ -19,7 +19,7 @@ import { AllBody, DueBody, LoadingBody, NobodyBody, OweBody, QuietBody, type Act
 import { listData, openedLately } from './list-data.ts';
 import { CompactHead, LoadingHead, NoneHead, OweHead, PlainHead, TypingHead } from './list-head.tsx';
 import { SearchBody } from './list-search.tsx';
-import { WeekHead } from './local-week.tsx';
+import { WeekHead } from './week-head.tsx';
 import { openedOf } from './opened.ts';
 import { shareList } from './share.ts';
 import { whoPicked } from './pay-walkin.tsx';

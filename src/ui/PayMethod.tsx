@@ -9,10 +9,10 @@
  *   <TheyGave … counted={53000} onCount={count} dim={!customer} />     the counter: Other amount, a counted tile, Short by
  *   <RefField value={ref} ok={ref.length >= 6} onInput={setRef} onPaste={paste} />                  Mobile and Bank
  */
-import type { JSX } from 'preact';
+import type { JSX, RefObject } from 'preact';
 import type { Method } from '../core/types.ts';
 import { Icon, type IconName } from './icons.tsx';
-import { notesFor } from '../core/money.ts';
+import { money, notesFor } from '../core/money.ts';
 import { fig } from './Money.tsx';
 import { cx, type Fig } from './util.tsx';
 import './paymethod.css';
@@ -137,6 +137,23 @@ export function RefField(p: { value: string; ok: boolean; onInput: (v: string) =
       </span>
       {p.ok ? <span aria-hidden="true" class="ow-ref-ok"><Icon name="check" size={14} stroke={3.2} /></span>
         : p.onPaste && <button type="button" class="ow-ref-paste" aria-label="Paste the ID" onClick={(e) => { e.preventDefault(); (p.onPaste as () => void)(); }}><span>Paste</span></button>}
+    </label>
+  );
+}
+
+/** The amount as a field you type in (CU15, CU30–CU36): 56 tall, a 2 px ink outline, "UGX" small before the figure in mono 26/600, written with commas as it is typed. */
+/** The whole shillings in what was typed: "420,000" → 420000. */
+export function digits(s: string): number {
+  const d = String(s || '').replace(/\D/g, '');
+  return d ? Math.min(Number(d), 999999999) : 0;
+}
+
+export function AmountInput(p: { value: number; label: string; onInput: (v: number) => void; inputRef?: RefObject<HTMLInputElement> }): JSX.Element {
+  return (
+    <label class="ow-amt-in">
+      <span>UGX</span>
+      <input ref={p.inputRef} type="text" inputMode="numeric" class="mono" aria-label={p.label} value={p.value ? money(p.value) : ''}
+        onInput={(e) => { const el = e.target as HTMLInputElement, v = digits(el.value); el.value = v ? money(v) : ''; p.onInput(v); }} />
     </label>
   );
 }

@@ -24,7 +24,7 @@ import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
 import { billNo, owingOf, readBills, type OpenBill } from '../../../core/owing.ts';
 import { short } from './data.ts';
-import { AmountInput } from './local-amount.tsx';
+import { AmountInput } from '../../../ui/PayMethod.tsx';
 import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
 import { PayDock } from './pay-dock.tsx';
 import { paidResults, putPaid, sendReceipt, type Paid } from './paid-store.ts';

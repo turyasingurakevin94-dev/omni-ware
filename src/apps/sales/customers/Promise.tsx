@@ -17,7 +17,7 @@ import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
 import { billNo, owingOf } from '../../../core/owing.ts';
 import { short } from './data.ts';
-import { AmountInput } from './local-amount.tsx';
+import { AmountInput } from '../../../ui/PayMethod.tsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 

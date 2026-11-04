@@ -101,7 +101,9 @@ export function StageBar(p: { counts: Record<Stage, number> }): JSX.Element {
 export interface WeekDay {
   name: string;
   count: number;
-  faces: Face[];
+  /** Who is due, as their tint dots; or `dots`, any colours (the ones a list does not name: soft dots, CU03). */
+  faces?: Face[];
+  dots?: string[];
   kind?: 'late' | 'today';
   selected?: boolean;
   on: () => void;
@@ -118,7 +120,7 @@ export function WeekStrip(p: { days: WeekDay[]; title?: string; hint?: string })
             aria-label={`${d.name}: ${d.count ? d.count + ' due' : 'none due'}`} onClick={d.on}>
             <span class="ow-week-box">
               <span class={cx('mono', !d.count && 'none')}>{d.count || '·'}</span>
-              <span class="ow-week-faces">{d.faces.slice(0, 3).map((f, i) => <span key={i} style={{ background: (TINTS[f.tint] || TINTS.t4).bg }} />)}</span>
+              <span class="ow-week-faces">{(d.dots || (d.faces || []).map((f) => (TINTS[f.tint] || TINTS.t4).bg)).slice(0, 3).map((bg, i) => <span key={i} style={{ background: bg }} />)}</span>
             </span>
             <span class="ow-week-n">{d.name}</span>
           </button>

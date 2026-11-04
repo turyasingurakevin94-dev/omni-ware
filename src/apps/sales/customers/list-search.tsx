@@ -10,7 +10,9 @@ import { phone9 } from '../../../core/names.ts';
 import type { Books, Customer } from '../../../core/types.ts';
 import type { Acts } from './list-bodies.tsx';
 import type { ListData, Who } from './list-data.ts';
-import { Card, Group, Row } from './local-row.tsx';
+import { GroupCard as Card } from '../../../ui/ActRow.tsx';
+import { CustomerRow } from '../../../ui/CustomerRow.tsx';
+import { GroupHead as Group } from '../../../ui/SectionHead.tsx';
 import { placeKind } from './data.ts';
 
 /** One edit apart (a letter missing, extra or changed): the index where they part. */
@@ -47,7 +49,7 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
   const { found, near } = search(p.d, p.q), byId = (c: Customer) => p.d.all.find((w) => w.c.id === c.id) as Who;
   const orders = (c: Customer) => p.b.orders.filter((o) => o.customerId === c.id).length;
   const row = (w: Who, sub: string, name: JSX.Element | string = w.c.name) => (
-    <Row key={w.c.id} initials={w.c.initials} tint={w.c.tint} tone={w.r.tone} fill={w.r.fill} label={w.c.name.replace(/&/g, 'and')} name={name} sub={sub}
+    <CustomerRow key={w.c.id} face={{ initials: w.c.initials, tint: w.c.tint }} tone={w.r.tone} fill={w.r.fill} label={w.c.name.replace(/&/g, 'and')} name={name} sub={sub}
       fig={w.m.owes > 0 ? shortMoney(w.m.owes) : null} word="owes" act="wa" on={() => p.a.open(w.c)} onAct={() => p.a.wa(w.c)} />
   );
   return (

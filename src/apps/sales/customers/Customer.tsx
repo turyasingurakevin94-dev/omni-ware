@@ -5,6 +5,7 @@
  * move, their rhythm, and one navy button to sell to them.
  */
 import type { JSX } from 'preact';
+import { ActBar } from '../../../ui/ActTiles.tsx';
 import { useEffect } from 'preact/hooks';
 import { Button } from '../../../ui/Button.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
@@ -22,7 +23,7 @@ import { act, books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { openBillCheck } from './BillCheck.tsx';
 import { AgeTrack, ApartHead, CustHead, PaidUp, SplitHead, first } from './cust-head.tsx';
-import { Acts, AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, PaidBills, Rhythm, TodayPaid } from './cust-cards.tsx';
+import { AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, PaidBills, Rhythm, TodayPaid } from './cust-cards.tsx';
 import { billNo, owingOf } from '../../../core/owing.ts';
 import { liveOf, placeKind, rhythmOf, short } from './data.ts';
 import { markOpened } from './opened.ts';
@@ -109,10 +110,10 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
     <FullSheet onBack={() => nav.back()} backLabel="Back to Customers" pad={showMove ? '12px 16px 14px' : undefined} gap={showMove ? 8 : undefined}
       head={<CustHead c={c} sub={placeKind(c)} tone={r.tone} fill={r.fill} onClose={() => nav.back()}>{picture}</CustHead>}>
       {todays.length > 0 && <TodayPaid rows={todays} />}
-      {m.owes > 0 && <Acts acts={[
+      {m.owes > 0 && <ActBar icon={20} acts={[
         { tone: 'take', icon: 'cash', word: 'Take payment', sub: m.canTake.toLocaleString('en-US'), on: () => pay() },
         { tone: 'promise', icon: 'calendar', word: 'Promise', sub: 'by when', on: () => openPromise(c.id) },
-        { tone: 'statement', icon: 'receipt', word: 'Statement', sub: 'on WhatsApp', on: () => { void sendStatement(b, c, p.cb).then((w) => toast.show(w)); } },
+        { tone: 'tell', icon: 'receipt', word: 'Statement', sub: 'on WhatsApp', on: () => { void sendStatement(b, c, p.cb).then((w) => toast.show(w)); } },
       ]} />}
       {m.apart > 0 && <AsksCard checker={esther} askedAt={ask ? `asked ${dayOf(ask.at) === today ? 'today' : dayLabel(ask.at)} ${clock(ask.at)} · you get a push` : 'you get a push'}
         chat={asked && chat ? { who: name, ago: howLong(asked.at, t), text: asked.body, on: () => nav.push('chats/chat', { id: chat.id }) } : null}

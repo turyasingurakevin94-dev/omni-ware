@@ -12,7 +12,9 @@ import { orderNo, TINTS } from '../../../core/names.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Customer, Day } from '../../../core/types.ts';
 import { dueSub, oweSub, waitingNote, type ListData, type Who } from './list-data.ts';
-import { Card, Group, QuietRow, Row } from './local-row.tsx';
+import { GroupCard as Card } from '../../../ui/ActRow.tsx';
+import { CustomerRow, type CustomerRowProps } from '../../../ui/CustomerRow.tsx';
+import { GroupHead as Group } from '../../../ui/SectionHead.tsx';
 import { short } from './data.ts';
 
 export interface Acts {
@@ -22,14 +24,14 @@ export interface Acts {
 }
 
 const label = (c: Customer) => c.name.replace(/&/g, 'and');
-const face = (w: Who) => ({ initials: w.c.initials, tint: w.c.tint, tone: w.r.tone, fill: w.r.fill, label: label(w.c) });
+const face = (w: Who) => ({ face: { initials: w.c.initials, tint: w.c.tint }, tone: w.r.tone, fill: w.r.fill, label: label(w.c) });
 /** Faces of customers the list does not name: soft dots, not identity tints. */
 export const GHOST = ['#ECE7F7', '#DDF1F0', '#F6EBD9', '#FBE5E2'];
 
 function oweRow(b: Books, w: Who, today: Day, a: Acts): JSX.Element {
   const note = waitingNote(b, w.c);
   return (
-    <Row key={w.c.id} {...face(w)} name={w.c.name} sub={oweSub(w, today)} chip={w.m.checkedIn > 0 ? `${shortMoney(w.m.checkedIn)} checked` : null}
+    <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={oweSub(w, today)} chip={w.m.checkedIn > 0 ? `${shortMoney(w.m.checkedIn)} checked` : null}
       fig={shortMoney(w.m.canTake)} word="to take" note={note ? [`+${shortMoney(note[0])}`, orderNo(note[1])] : null}
       act="take" on={() => a.open(w.c)} onAct={() => a.take(w.c)} />
   );
@@ -48,7 +50,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
             <Card>{d.checked.map((w) => {
               const bill = w.m.bills.find((x) => x.checked);
               const sub = w.m.apart > 0 ? `${w.m.bills.length} bills · ${shortMoney(w.m.apart)} apart · owes ${money(w.m.owes)}` : bill ? `${billNo(bill.id)} · ${shortMoney(bill.left)} · Esther` : '';
-              return <Row key={w.c.id} {...face(w)} name={w.c.name} sub={sub} subTone="info" act="chev" on={() => a.open(w.c)} />;
+              return <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={sub} subTone="info" act="chev" on={() => a.open(w.c)} />;
             })}</Card></div>
         )}
         {p.more && d.promised.length > 0 && (
@@ -85,13 +87,13 @@ export function DueBody(p: { d: ListData; a: Acts; day: Day | null }): JSX.Eleme
     <>
       <div class="cu-grp"><Group dot="#95530C" title={p.day ? `Due ${weekday(p.day)}` : 'Reach out today'} count={reach.length} />
         {reach.length > 0 && <Card>{reach.map((w) => (
-          <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : w.r.tone === 'due' ? 'due' : null}
+          <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : w.r.tone === 'due' ? 'due' : null}
             fig={w.m.owes > 0 ? shortMoney(w.m.owes) : null} word="owes" act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />
         ))}</Card>}
       </div>
       {!p.day && comingAll.length > 0 && (
         <div class="cu-grp"><Group dot="#9AA1AE" title="Coming up" count={comingAll.length} />
-          {open ? <Card>{comingAll.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, false)} act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />)}</Card> : (
+          {open ? <Card>{comingAll.map((w) => <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, false)} act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />)}</Card> : (
             <button type="button" class="cu-coming" onClick={() => setOpen(true)}>
               <span aria-hidden="true" class="cu-ghosts s26">{comingAll.slice(0, 4).map((_, i) => <span key={i} style={{ background: GHOST[i % 3] }} />)}</span>
               <span class="cu-coming-t">{coming.map(([day, l]) => `${weekday(day)} ${l.length}`).join(' · ')}</span>
@@ -118,7 +120,7 @@ export function AllBody(p: { d: ListData; a: Acts; onHello: () => void; sending:
       <div class="cu-grp"><Group title="Everyone" count={everyone.length} right="A–Z" railGap />
         <div class="cu-az">
           <div class="cu-az-l"><Card>
-            {rows.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, false)} subTone={w.r.tone === 'late' || w.r.tone === 'quiet' ? 'late' : w.r.tone === 'due' ? 'due' : null}
+            {rows.map((w) => <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, false)} subTone={w.r.tone === 'late' || w.r.tone === 'quiet' ? 'late' : w.r.tone === 'due' ? 'due' : null}
               fig={w.m.owes > 0 ? shortMoney(w.m.owes) : null} word="owes" act="wa" on={() => a.open(w.c)} onAct={() => a.wa(w.c)} />)}
             {left > 0 && <button type="button" class="cu-showmore" onClick={() => setShow(show + left)}>{`Show ${left} more`}<Icon name="chevron-down" size={14} stroke={2.4} /></button>}
           </Card></div>
@@ -168,7 +170,7 @@ export function NobodyBody(p: { d: ListData; a: Acts }): JSX.Element {
         <div class="cu-ghost-ok"><span aria-hidden="true"><Icon name="check" size={22} stroke={2.8} /></span><span><span>Nobody owes</span><span>Every bill is paid</span></span></div>
       </div>
       {p.d.due.length > 0 && <div class="cu-grp after"><Group dot="#95530C" title="Who’s due" count={p.d.due.length} />
-        <Card>{p.d.due.map((w) => <Row key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : 'due'} act="wa" on={() => p.a.open(w.c)} onAct={() => p.a.wa(w.c)} />)}</Card></div>}
+        <Card>{p.d.due.map((w) => <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={dueSub(w, true)} subTone={w.r.tone === 'late' ? 'late' : 'due'} act="wa" on={() => p.a.open(w.c)} onAct={() => p.a.wa(w.c)} />)}</Card></div>}
     </>
   );
 }
@@ -186,5 +188,19 @@ export function LoadingBody(): JSX.Element {
       <div class="cu-grp"><div class="cu-loadhead"><Shim w={120} h={12} /><Loading text="Getting your customers" /></div>{rows()}</div>
       <div class="cu-grp"><div class="cu-loadhead"><Shim w={96} h={12} /></div>{rows()}</div>
     </>
+  );
+}
+
+/** A gone-quiet row: the row, then their usual gap and how long it has been, as two bars on one scale (CU09). */
+function QuietRow(p: CustomerRowProps & { every: number; now: number; scale: number }): JSX.Element {
+  const w = (n: number) => `${Math.round((n / Math.max(1, p.scale)) * 100)}%`;
+  return (
+    <div class="cu-qrow">
+      <CustomerRow {...p} />
+      <span role="img" aria-label={`Usually orders every ${p.every} days; now ${p.now} days without an order`} class="cu-gap">
+        <span>Usually</span><span aria-hidden="true"><i class="good" style={{ width: w(p.every) }} /></span><span class="good">{`${p.every} d`}</span>
+        <span>Now</span><span aria-hidden="true"><i class="warn" style={{ width: w(p.now) }} /></span><span class="warn">{`${p.now} d`}</span>
+      </span>
+    </div>
   );
 }

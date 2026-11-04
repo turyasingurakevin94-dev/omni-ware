@@ -31,17 +31,18 @@ export interface SlideProps {
   onHint?: () => void;
   state?: SlideState;
   /** It cannot go yet: the knob says why, the label in #B3BCD2 (amber when short). */
-  lock?: { icon: LockIcon; label: string; amber?: boolean };
+  /** Why it cannot go yet; quiet: the paler track that says it when tapped (CU33, Take payment). */
+  lock?: { icon: LockIcon; label: string; amber?: boolean; quiet?: boolean; onTap?: () => void };
 }
 
 export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
 
 /** The slide that cannot go yet (the knob grey, its icon saying why). */
-function Locked(p: { icon: LockIcon; label: string; amber?: boolean }): JSX.Element {
+function Locked(p: { icon: LockIcon; label: string; amber?: boolean; quiet?: boolean; onTap?: () => void }): JSX.Element {
   const knob = p.icon === 'box' ? <Duo i={phBox} size={22} color="#F5B26B" />
-    : <Icon name={p.icon} size={20} stroke={2} style={{ color: p.icon === 'lock' ? '#DDE3F0' : '#F5B26B' }} />;
+    : <Icon name={p.icon} size={20} stroke={2} style={{ color: p.quiet ? '#FFFFFF' : p.icon === 'lock' ? '#DDE3F0' : '#F5B26B' }} />;
   return (
-    <button type="button" class="ow-lslide" disabled aria-disabled="true">
+    <button type="button" class={cx('ow-lslide', p.quiet && 'quiet')} disabled={!p.onTap} aria-disabled="true" onClick={p.onTap}>
       <span aria-hidden="true" class="ow-lslide-k">{knob}</span>
       <span class={cx('ow-lslide-l', p.amber && 'amber')}>{p.label}</span>
     </button>
