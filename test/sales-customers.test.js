@@ -152,6 +152,32 @@ async function flows(browser) {
   await p.getByRole('button', { name: 'Try again' }).click();
   t.check(/Still no signal/.test(await toastText(p)), 'offline: Try again with no signal says so');
   await ctx.close();
+
+  // CU46: kept, then refused (Brian took 120,000 meanwhile); Throw it away with Undo; Fix it as change.
+  ({ ctx, p, errors } = await open(browser, '&fail=pay'));
+  await p.getByLabel('Take payment from Kato Construction').click();
+  await slide(p);
+  await p.getByRole('button', { name: 'Try again' }).click();
+  await p.waitForTimeout(700);
+  k = await text(p);
+  t.check(/Not recorded/.test(k) && /The shop said no/.test(k) && /more than they owe/.test(k), 'refused: Not recorded, with the shop\'s reason');
+  t.check(/Brian took 120,000 at 10:50/.test(k) && /so Kato owes 300,000 now/.test(k) && /Also on Today · Not sent/.test(k), 'refused: why, with what the books say now');
+  t.check((await p.locator('.ow-end-bar:visible').count()) === 0, 'refused: no countdown, an error never leaves by itself');
+  await p.getByRole('button', { name: 'Throw it away' }).click();
+  k = await text(p);
+  t.check(/Thrown away/.test(await toastText(p)) && /Still owes/.test(k) && /300,000/.test(k) && !/The shop said no/.test(k), 'thrown away: Not recorded, still owes 300,000 (the books), and an Undo');
+  await p.getByRole('button', { name: 'Undo' }).click();
+  t.check(/The shop said no/.test(await text(p)), 'Undo: the refused payment is back');
+  await p.getByRole('button', { name: 'Fix it' }).click();
+  await p.waitForTimeout(300);
+  k = await text(p);
+  t.check(/Give change/.test(k) && /Deposit/.test(k) && /120,000/.test(k), 'Fix it: Take payment again, 120,000 over: Give change or Deposit');
+  await slide(p).catch(() => {});
+  await p.waitForTimeout(800);
+  k = await text(p);
+  t.check(/Paid/.test(k) && !/Not recorded/.test(k) && /120,000/.test(k), 'fixed: it goes, with 120,000 change');
+  t.check(errors.length === 0, `refused: no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
+  await ctx.close();
 }
 
 /** Every control: a name, at least 44 px tall; no text under 11 px. */

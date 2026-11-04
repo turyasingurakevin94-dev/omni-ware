@@ -11,7 +11,7 @@ import { orderNo } from '../../../core/names.ts';
 import { replyWindow } from '../../../core/time.ts';
 import type { Method } from '../../../core/types.ts';
 import type { PayResult } from '../../../core/datasource.ts';
-import { act, books, chats, kept, now, onKeptRefused, onKeptSent } from '../shell/store.ts';
+import { act, books, chats, discardKept, kept, now, onKeptRefused, onKeptSent } from '../shell/store.ts';
 import { toast } from '../../../ui/toast.tsx';
 import { dm } from './pay-parts.tsx';
 
@@ -110,3 +110,26 @@ effect(() => {
     putPaid({ ...p, kept: false, keptId: null, discarded: true, receipt: { ...p.receipt, state: 'off' } });
   });
 });
+
+/*
+ * Throw it away (CU46 → CU47): the screen turns Not recorded at once and the toast offers Undo for 10 s;
+ * only then is the kept write discarded from the outbox. Undo puts the refused entry back as it was.
+ */
+const throwing = new Map<string, number>();
+
+export function throwAway(key: string): void {
+  const p = paidResults.peek()[key];
+  if (!p || !p.keptId) return;
+  const id = p.keptId, was = p;
+  putPaid({ ...p, kept: false, keptId: null, discarded: true, receipt: { ...p.receipt, state: 'off' } });
+  const timer = window.setTimeout(() => { throwing.delete(key); void discardKept(id); }, 10000);
+  throwing.set(key, timer);
+  toast.show('Thrown away', {
+    undo: () => {
+      const t0 = throwing.get(key);
+      if (t0 == null) return;
+      clearTimeout(t0); throwing.delete(key);
+      putPaid(was);
+    },
+  });
+}
