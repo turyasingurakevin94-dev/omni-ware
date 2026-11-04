@@ -70,7 +70,7 @@ export function Who(): JSX.Element {
       <Under />
       <div ref={scrim} class="ow-scrim sl-who-scrim" aria-hidden="true" onClick={() => nav.back()} />
       <div ref={box} class="sl-who-sheet" role="dialog" aria-modal="true" aria-label="Who is it for?">
-        <button type="button" class="ow-grab" aria-label="Close" onClick={() => nav.back()} />
+        <span aria-hidden="true" class="ow-grab" />
         <div class="ow-lsheet-h">
           <div class="ow-lsheet-ht"><h2>Who is it for?</h2></div>
           <button type="button" class="ow-x-tile" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>

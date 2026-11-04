@@ -37,7 +37,7 @@ function choose(x: Pick): void {
 export function PickSheet(): JSX.Element {
   return (
     <div class="ow-lsheet ground">
-      <button type="button" class="ow-grab" aria-label="Close" onClick={sheet.close} />
+      <span aria-hidden="true" class="ow-grab" />
       <div class="ow-lsheet-h">
         <div class="ow-lsheet-ht"><h2 class="sl-frame-h">Who is it for?</h2></div>
         <button type="button" class="ow-x-tile" aria-label="Close" onClick={sheet.close}><Icon name="close" size={16} stroke={2.2} /></button>

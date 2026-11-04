@@ -51,7 +51,7 @@ export function NewForm(p: {
   };
   return (
     <div class="ow-lsheet cu-ls cu-nf">
-      <button type="button" class="ow-grab" aria-label="Close" onClick={p.onClose} />
+      <span aria-hidden="true" class="ow-grab" />
       <div class="ow-lsheet-h"><div class="ow-lsheet-ht"><h2>New customer</h2></div>
         <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></div>
       <div class="ow-lsheet-b cu-nf-b">

@@ -28,7 +28,7 @@ export interface FrameProps {
 export function Frame(p: FrameProps): JSX.Element {
   return (
     <div class={cx('ow-lsheet', p.ground && 'ground', p.eyebrow && 'sl-sheet21', p.class)}>
-      <button type="button" class="ow-grab" aria-label="Close" onClick={p.onClose} />
+      <span aria-hidden="true" class="ow-grab" />
       <div class="ow-lsheet-h">
         <div class="ow-lsheet-ht">
           {p.eyebrow && <span class="ow-lsheet-eye">{p.eyebrow}</span>}
