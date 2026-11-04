@@ -22,6 +22,7 @@ import { L, O, P } from '../build.ts';
 import { TODAY, t } from '../clock.ts';
 import type { DemoState } from '../index.ts';
 import { DENIS, GRACE, MUSA, RUTH, SSALI } from '../people.ts';
+import { NANSANA } from '../orders-live.ts';
 
 const MOMENTS = ['9:15', '9:30', '9:50', '13:30', '14:05', '13:50', '15:05'];
 
@@ -51,6 +52,8 @@ export function extra(s: DemoState, f: DemoFlags): void {
   if (now >= t('13:50')) {
     const o = order559(now);
     b.orders.push(o);
+    // OR31: Nansana's #0562 (placed 14:40), priced by Ruth at 15:05 too; only at this moment, never at 10:41 or 15:40.
+    if (now >= t('15:05')) b.orders.push(order562());
     b.orders.sort((x, y) => x.id - y.id);
   }
   if (o552 && now >= t('13:20')) {
@@ -83,6 +86,19 @@ function play552(o: Order, now: number): void {
     o.stageLog = [...o.stageLog, { stage: 'delivered', at: t('14:05'), by: SSALI }];
     Object.assign(o, { stage: 'delivered', stageAt: t('14:05'), deliveredAt: t('14:05') });
   }
+}
+
+/** #0562 Nansana (FACTS §4.4, OR31): her usual pair, placed 14:40; Ruth prices its cement at 35,000 too at 15:05, and with
+ * both lines on our shelf it goes from Checking straight to Packing (Musa), nothing packed yet. Her chat is shut. */
+function order562(): Order {
+  const cement = L('cement-hima-50', 2, { cost: 31500, shopPrice: 35500, priceBy: GRACE, priceNote: 'under', from: 'shelf', supplierId: '__stock__' });
+  Object.assign(cement, { price: 35000, priceReview: { state: 'changed', price: 35000, was: 33500, by: RUTH, byName: 'Ruth Nakato', at: t('15:05') } });
+  const glue = L('wood-glue-1l', 1, { from: 'shelf', supplierId: '__stock__' });
+  return O({
+    id: 562, customerId: NANSANA, placedAt: t('14:40'), by: GRACE, stage: 'packing', stageAt: t('15:05'), holder: MUSA,
+    log: [{ stage: 'checking', at: t('14:40'), by: GRACE }, { stage: 'packing', at: t('15:05'), by: RUTH }],
+    lines: [cement, glue], deliverTo: 'Nansana',
+  });
 }
 
 /** #0559 Lubowa (FACTS §4.4): placed 13:50; the cement's cost went up; Ruth sets 35,000 at 15:05. */

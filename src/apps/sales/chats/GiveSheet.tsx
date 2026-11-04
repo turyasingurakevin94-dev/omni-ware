@@ -50,7 +50,7 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
     if (move) {
       // The Manager's move waits its 10 s with Undo, as a give does (one rule; CH32 → CH37).
       moving.value = { chatId: chat.id, to: pick };
-      undoable(`${v.title} is ${firstWord(target.name)}’s now`, async () => { await write('give', [chat.id, pick, text]); await refresh(); moving.value = null; }, { top: 14, onUndo: () => { moving.value = null; } });
+      undoable(`${v.title} is ${firstWord(target.name)}’s now`, async () => { await write('give', [chat.id, pick, text]); await refresh(); moving.value = null; }, { top: 14, wide: true, onUndo: () => { moving.value = null; } });
       return;
     }
     shown.give = { chatId: chat.id, event: { id: 'pending-give', chatId: chat.id, at: t, kind: 'handed', by: me.id, to: pick, note: text.trim() } };

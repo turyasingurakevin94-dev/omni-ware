@@ -82,10 +82,12 @@ export function Counter(): JSX.Element {
 
   let body: JSX.Element;
   if (text.trim()) {
-    const a = readAsk(text), r = { qty: a.qty || 1, words: a.words.join(' '), counted: a.qty != null };
+    // The words as typed, less the count ("2 paint" → paint; "PPR pipe 25mm" keeps its capitals).
+    const a = readAsk(text), typed = text.trim().replace(/^\d+\s*[x×]?\s+/i, '').replace(/\s+[x×]?\d+$/i, '');
+    const r = { qty: a.qty || 1, words: a.qty != null ? typed : text.trim(), counted: a.qty != null };
     // The counter sells only what has a price (an item with none waits for Sourcing).
     const found = findItems(b, a).filter((i) => i.price != null);
-    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} />
+    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} onAisle={(a) => { q.value = a; }} />
       : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);

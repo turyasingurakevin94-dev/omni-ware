@@ -3,6 +3,9 @@
  * reply window as a bar (open: hours left; shut: dashed, the shop's message only), your best
  * customers first; a search over every customer and number; one way out: New customer.
  * A row opens the chat (or the order started from it); a customer with no chat opens WhatsApp.
+ * CH09 · searching: "Customers n", a teammate's chat with whose it is, a customer with no chat
+ * "no chat yet · opens WhatsApp". CH19 · a typed number no chat has: "Message this number · opens
+ * WhatsApp" (sales.html:9975; the shop's number can only answer someone who wrote in 24 hours).
  */
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -12,14 +15,14 @@ import { dayOf } from '../../../core/time.ts';
 import type { Books, Customer } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
-import { Duo, Icon, phClock, phSearch, phUserPlus } from '../../../ui/icons.tsx';
+import { Duo, Icon, phClock, phSearch, phUserPlus, phWhatsapp } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { nav, screen } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { ChatsList } from './List.tsx';
-import { chatView, type ChatView } from './model.ts';
+import { chatView, whose, type ChatView } from './model.ts';
 import './newchat.css';
 
 /** Leaving for another screen: the sheet closes without going back (the screen takes this one's place). */
@@ -42,27 +45,41 @@ function spend(b: Books, id: string | null): number {
 }
 
 function Row(p: { v: ChatView }): JSX.Element {
-  const v = p.v, w = v.window;
+  const v = p.v, w = v.window, me = books.value?.me;
+  // A teammate's chat says whose it is (CH09: "Brian’s · shut").
+  const theirs = v.owner && me && v.owner.id !== me.id ? `${whose(v.owner)} · ` : '';
   return (
-    <Tap on={() => goChat(v)} class="nc-row">
+    <Tap on={() => goChat(v)} class="nc-row" label={theirs ? `${v.title}, ${whose(v.owner)}${w.open ? '' : ', the chat is shut'}` : undefined}>
       {v.face && <Avatar {...v.face} size={40} />}
       <span class="nc-t">
         <span>{v.title}</span>
-        {w.open ? <span class="open"><Icon name="clock" size={13} stroke={2.2} /><b class="mono">{w.hoursLeft}</b> h to reply</span>
-          : <span><Icon name="lock" size={13} stroke={2.2} />shut</span>}
+        {w.open ? <span class="open"><Icon name="clock" size={13} stroke={2.2} />{theirs}<b class="mono">{w.hoursLeft}</b> h to reply</span>
+          : <span><Icon name="lock" size={13} stroke={2.2} />{`${theirs}shut`}</span>}
       </span>
       <span aria-hidden="true" class={'nc-bar' + (w.open ? '' : ' shut')}>{w.open && <span style={{ width: `${Math.round(w.hoursLeft / 24 * 100)}%` }} />}</span>
     </Tap>
   );
 }
 
-/** A customer with no chat: WhatsApp on this phone, with their number. */
+/** A customer with no chat: WhatsApp on this phone, with their number (spec 04 §2a, Q11). */
 function Other(p: { c: Customer }): JSX.Element {
   const d = phone9(p.c.phone);
   return (
     <Tap href={d ? `https://wa.me/256${d}` : undefined} class="nc-row">
       <Avatar initials={p.c.initials} tint={p.c.tint} size={40} />
-      <span class="nc-t"><span>{p.c.name}</span><span><Icon name="whatsapp" size={13} stroke={2.2} />opens WhatsApp</span></span>
+      <span class="nc-t"><span>{p.c.name}</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />no chat yet · opens WhatsApp</span></span>
+      <span aria-hidden="true" class="nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+    </Tap>
+  );
+}
+
+/** CH19 · a typed number that no chat has: message it from WhatsApp on this phone. */
+function Number_(p: { d: string; shown: string }): JSX.Element {
+  return (
+    <Tap href={`https://wa.me/256${p.d}`} label={`Message ${p.shown} on WhatsApp`} class="nc-row">
+      <span aria-hidden="true" class="nc-wa"><Duo i={phWhatsapp} size={22} color="#0F6B43" /></span>
+      <span class="nc-t"><span>Message this number</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />opens WhatsApp</span></span>
+      <span aria-hidden="true" class="nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
     </Tap>
   );
 }
@@ -78,15 +95,25 @@ function NewChatSheet(): JSX.Element {
   const s = q.trim().toLowerCase(), digits = s.replace(/[^0-9]/g, '');
   const hits = s ? b.customers.filter((c) => !c.qa && (c.name.toLowerCase().includes(s) || (digits.length >= 3 && c.phone.replace(/[^0-9]/g, '').includes(digits)))).slice(0, 8) : [];
   const withChat = (c: Customer) => cb.chats.find((x) => x.customerId === c.id);
+  // A whole number (9 digits, no letters): its chat if one has it, else "Message this number" (sales.html:9973-9977).
+  const num = digits.length >= 9 && !/[a-z]/.test(s) ? digits.slice(-9) : '';
+  const numChat = num ? cb.chats.find((x) => phone9(x.phone) === num) || null : null;
   return (
     <LightSheet title="New chat" onClose={sheet.close} pad="12px 16px 24px" gap={12}
       foot={<Tap on={() => go('customers/new', digits.length >= 9 ? { phone: q.trim() } : {})} class="nc-new"><Duo i={phUserPlus} size={20} color="#FFFFFF" />New customer</Tap>}>
-      <label class="nc-search">
+      <label class={'nc-search' + (q ? ' on' : '')}>
         <Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Customer, or a phone number" aria-label="Customer, or a phone number" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
+        {q && <button type="button" class="nc-x" aria-label="Clear the search" onClick={() => setQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
       </label>
       {!s && <div class="nc-h"><Duo i={phClock} size={18} color="#5F6980" /><span>Wrote lately</span><span><i />24 h to reply</span></div>}
       {!s && !!lately.length && <GroupCard pad={14}>{lately.map((v) => <Row key={v.chat.id} v={v} />)}</GroupCard>}
+      {!!num && !numChat && !hits.length && <>
+        <div class="nc-h"><Icon name="phone" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>No chat with this number</span></div>
+        <GroupCard pad={14}><Number_ d={num} shown={q.trim()} /></GroupCard>
+      </>}
+      {!!numChat && !hits.some((c) => c.id === numChat.customerId) && <GroupCard pad={14}><Row v={chatView(b, cb, numChat, t, drafts.value)} /></GroupCard>}
+      {!!hits.length && <div class="nc-h"><Icon name="customers" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>Customers</span><span class="mono">{hits.length}</span></div>}
       {!!hits.length && (
         <GroupCard pad={14}>{hits.map((c) => {
           const ch = withChat(c);

@@ -11,6 +11,7 @@
  */
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
+import { daysInStage, LATE_DAYS } from '../../../core/orders.ts';
 import { HOLD_DAYS, holdDay, lineTotal, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
@@ -54,7 +55,7 @@ export function soldIn(b: Books, month: string, upTo?: Day): Order[] {
 export const total = (os: Order[]): UGX => sum(os, orderTotal);
 
 /** Packing for two days or more (the yard is late with it). */
-export const packingLate = (o: Order, now: Ms) => o.stage === 'packing' && now - o.stageAt >= 2 * 864e5;
+export const packingLate = (o: Order, now: Ms) => o.stage === 'packing' && daysInStage(o, now) >= LATE_DAYS;
 /** On the road with nowhere to go: ready to collect at the gate. */
 export const readyToCollect = (o: Order) => o.stage === 'road' && !o.deliverTo;
 /** In Checking and held for Grace: the money comes first ("Not paid yet"). */
