@@ -14,7 +14,7 @@ import { lineWaits } from '../../../core/orders.ts';
 import type { Books, Item, Line } from '../../../core/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, PRICE_COMING } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { books } from '../shell/store.ts';
@@ -26,7 +26,7 @@ import './lines.css';
 
 /** What was asked of a line in other words than its own ("20 kg" of a carton-only item: SL15). */
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
-/** The count being changed on the open line, before it is taken. */
+/** A count under 1 on the open line, held until More or the bin (any other count is taken at once). */
 const editQty = signal<number | null>(null);
 
 /** The open line shows a warning of its own (a count under 1, a carton for kg): the boards set it closer (SL14, SL15). */
@@ -72,7 +72,7 @@ function Head(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
     <>
       <ItemSquare aisle={it ? it.aisle : ''} size={40} />
       <span class="sl-line-t"><span class="sl-line-n">{l.name}</span><Sub l={l} it={it} /></span>
-      {p.chip || (l.price == null ? <span class="sl-chip warn">Price coming</span> : <span class="mono sl-chip">{fig(lineTotal(l))}</span>)}
+      {p.chip || (l.price == null ? <span class="sl-chip warn">{PRICE_COMING}</span> : <span class="mono sl-chip">{fig(lineTotal(l))}</span>)}
     </>
   );
 }
@@ -118,7 +118,9 @@ function PriceLink(p: { l: Line }): JSX.Element {
 /** The open line. */
 export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string | null }): JSX.Element {
   const l = p.l, b = p.b, it = itemOf(b, l.itemId, l.variantIdx), shelf = it && it.onShelf != null ? it.onShelf : null;
-  const q = editQty.value ?? l.qty, set = (n: number) => { editQty.value = n; };
+  // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does; only a count
+  // under 1 waits on the line (SL14: the bin removes it, More brings it back).
+  const q = editQty.value ?? l.qty, set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n); } else editQty.value = n; };
   const asked = askedAs.value.get(l.lineId);
   const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, rest = split != null && q > split ? q - split : 0;
   const shortNow = !rest && l.from === 'shelf' && shelf != null && q > shelf ? q - shelf : 0;

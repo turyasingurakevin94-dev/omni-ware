@@ -8,7 +8,7 @@ const { money } = require('./lib.cjs');
 
 const CEMENT = 33500, NAILS_CTN = 96000, GLUE = 18500;
 
-/** 1. Sell: the red +, Kato, a carton of nails from the Fasteners aisle, 20 cement by search, slide to place. */
+/** 1. Sell: the red +, Kato, a carton of nails from the Fasteners aisle, 20 cement by search, one More, slide to place. */
 async function sell(open) {
   const ph = await open('');
   const { tap, type, press, slide, check, text } = ph;
@@ -38,11 +38,18 @@ async function sell(open) {
   check(before.includes(money(total)), `sell: the foot says ${money(total)}`, before.slice(-300));
   check(/Slide to place · 2 items/.test(before), 'sell: the slide says "Slide to place · 2 items"', before.slice(-200));
 
+  // More on the open line: the line and the dock follow the count at once (SL06), and the slide places that total.
+  await tap({ sel: 'a.sl-line:has-text("Cement")' });
+  await tap({ label: 'More' });
+  const more = 21 * CEMENT + NAILS_CTN, after = await text();
+  check(after.includes(money(21 * CEMENT)), `sell: after More the cement line says ${money(21 * CEMENT)} at once`, after.slice(-400));
+  check(after.includes(money(more)), `sell: after More the dock says ${money(more)} at once`, after.slice(-300));
+
   await slide();
   await ph.wait('Placed');
   const placed = await text();
   check(/#0558/.test(placed), 'sell: Placed shows the next number, #0558', placed);
-  check(placed.includes(money(total)), `sell: Placed shows the total ${money(total)}`, placed);
+  check(placed.includes(money(more)), `sell: Placed shows the total ${money(more)}, the count the dock showed`, placed);
   check(/Kato Construction/.test(placed), 'sell: Placed names Kato', placed);
 
   // The order then shows in Orders.
@@ -52,7 +59,7 @@ async function sell(open) {
   check(found, 'sell: #0558 is in Orders', await text());
   if (found) {
     const r = (await ph.p.locator('button.ow-orow-main:has-text("#0558")').first().innerText()).replace(/\s+/g, ' ');
-    check(/Kato/.test(r) && r.includes(money(total)), `sell: the Orders row says Kato and ${money(total)}`, r);
+    check(/Kato/.test(r) && r.includes(money(more)), `sell: the Orders row says Kato and ${money(more)}`, r);
     await tap({ sel: 'button.ow-orow-main:has-text("#0558")' });
     const o = await text();
     check(/Cement · Hima 50kg/.test(o) && /Wire nails 4"/.test(o), 'sell: #0558 opens with both lines', o);
