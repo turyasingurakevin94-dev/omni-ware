@@ -67,18 +67,18 @@ export function ChatComposer(p: ComposerProps): JSX.Element {
   return (
     <>
       {listening && (
-        <div role="status" class="cv-listen">
+        <div role="status" class="ch-cv-listen">
           <Icon name="mic" size={16} stroke={2.2} /><span>Listening</span>
           <span aria-hidden="true">{WAVE.map((h, k) => <i key={k} class={k >= 20 ? 'to' : undefined} style={{ height: `${h}px` }} />)}</span>
         </div>
       )}
-      <div class="cv-comp">
+      <div class="ch-cv-comp">
         <button type="button" class={'note' + (p.note ? ' on' : '')} aria-label={p.note ? 'Write a message instead' : 'Write a team note'} aria-pressed={p.note} onClick={p.onNote}>
           <Icon name="note" size={18} stroke={2} />
         </button>
-        <label class={'cv-field' + (p.note ? ' note' : '')}>
+        <label class={'ch-cv-field' + (p.note ? ' note' : '')}>
           {listening
-            ? <span role="textbox" aria-readonly="true" aria-label={`Message ${p.toName}`} class="cv-heard"><span>{p.value}</span><i aria-hidden="true" /></span>
+            ? <span role="textbox" aria-readonly="true" aria-label={`Message ${p.toName}`} class="ch-cv-heard"><span>{p.value}</span><i aria-hidden="true" /></span>
             : <input ref={field} type="text" value={p.value} placeholder={p.note ? '' : `Message ${p.to}`} aria-label={p.note ? 'Team note' : `Message ${p.toName}`}
               onInput={(e) => p.onInput((e.target as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === 'Enter' && has) p.onSend(); }} />}
           {!p.note && (p.shut

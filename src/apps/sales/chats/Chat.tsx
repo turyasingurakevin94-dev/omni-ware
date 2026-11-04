@@ -113,18 +113,18 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
       {whoseNow && (
         <HeadChip label={whoseNow.id === me.id ? `${firstWord(me.name)}’s. Give ${first} to a teammate` : pend ? `${firstWord(whoseNow.name)}’s customer now` : `${firstWord(whoseNow.name)}’s customer${whoseNow.presence !== 'on' ? `, ${firstWord(whoseNow.name)} is away` : ''}`}
           on={() => (whoseNow.id === me.id || me.role === 'manager' ? give() : theirs())}>
-          <Avatar {...faceOf(whoseNow)} size={22} class="cv-chip-face" />{`${firstWord(whoseNow.name)}’s`}
-          {whoseNow.id === me.id ? <span class="cv-chip-i"><Icon name="swap" size={14} stroke={2.2} /></span> : whoseNow.presence !== 'on' && <span class="cv-chip-away">· away</span>}
+          <Avatar {...faceOf(whoseNow)} size={22} class="ch-cv-chip-face" />{`${firstWord(whoseNow.name)}’s`}
+          {whoseNow.id === me.id ? <span class="ch-cv-chip-i"><Icon name="swap" size={14} stroke={2.2} /></span> : whoseNow.presence !== 'on' && <span class="ch-cv-chip-away">· away</span>}
         </HeadChip>
       )}
       {(nobody || mine) && !cust && <HeadChip on={() => open('customers/new', { phone: chat.phone, name: v.waName })} label="Save this number as a new customer"><Icon name="person-plus" size={15} stroke={2.2} />Save as a customer</HeadChip>}
       {mine && shut ? (
-        <button type="button" class="ow-hchip shut" style={{ border: 'none', background: 'transparent', font: 'inherit', color: 'inherit' }} aria-label={`The chat is shut: they last wrote ${v.window.daysShut} days ago`}>
-          <span><span class="cv-chip-i amber"><Icon name="lock" size={14} stroke={2.2} /></span>shut<b>{`${v.window.daysShut} days`}</b></span>
+        <button type="button" class="ow-hchip ch-shut" style={{ border: 'none', background: 'transparent', font: 'inherit', color: 'inherit' }} aria-label={`The chat is shut: they last wrote ${v.window.daysShut} days ago`}>
+          <span><span class="ch-cv-chip-i amber"><Icon name="lock" size={14} stroke={2.2} /></span>shut<b>{`${v.window.daysShut} days`}</b></span>
         </button>
       ) : order && (mine || named) && (
         <HeadChip on={() => open('orders/order', { id: order.id })} label={`Order ${orderNo(order.id)}, ${STAGE_WORD[order.stage]}. Open it`}>
-          <span class="cv-chip-i amber"><Icon name={STAGE_ICON[order.stage]} size={14} stroke={2.4} /></span><span class="mono" style={{ fontWeight: 600 }}>{orderNo(order.id)}</span><span class="cv-chip-dim">·</span>{STAGE_WORD[order.stage]}<span class="cv-chip-i"><Icon name="chevron-right" size={13} stroke={2.4} /></span>
+          <span class="ch-cv-chip-i amber"><Icon name={STAGE_ICON[order.stage]} size={14} stroke={2.4} /></span><span class="mono" style={{ fontWeight: 600 }}>{orderNo(order.id)}</span><span class="ch-cv-chip-dim">·</span>{STAGE_WORD[order.stage]}<span class="ch-cv-chip-i"><Icon name="chevron-right" size={13} stroke={2.4} /></span>
         </HeadChip>
       )}
     </>
@@ -132,8 +132,8 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const face = cust ? faceOf(cust) : null;
   const who = (
     <>
-      {face ? <Avatar {...face} size={44} /> : <span aria-hidden="true" class="cv-num mono">{chat.phone.slice(-3)}</span>}
-      <span class="ow-shead-t"><span class={'ow-shead-n' + (face ? '' : ' mono')}>{v.title}</span><span class="ow-shead-s">{sub}</span></span>
+      {face ? <Avatar {...face} size={44} /> : <span aria-hidden="true" class="ch-cv-num mono">{chat.phone.slice(-3)}</span>}
+      <span class="ow-shead-t"><span class={'ow-shead-n' + (face ? '' : ' mono ch-num')}>{v.title}</span><span class="ow-shead-s">{sub}</span></span>
     </>
   );
   const phone = ((cust && cust.phone) || chat.phone).replace(/\s/g, '');
@@ -155,7 +155,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
       foot={
         <>
           {!!answers.length && (
-            <div role="group" aria-label="Quick replies" class="cv-quick">
+            <div role="group" aria-label="Quick replies" class="ch-cv-quick">
               {answers.map((a) => (
                 <button key={a.text} type="button" onClick={() => setText(a.text)}>
                   <span>{a.smart && <span style={{ display: 'flex' }}><Duo i={phSparkle} size={14} color="#0F6B43" /></span>}{a.text}</span>
@@ -164,7 +164,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
             </div>
           )}
           {mention != null && (
-            <div class="cv-mention"><div role="listbox" aria-label="Name a teammate">
+            <div class="ch-cv-mention"><div role="listbox" aria-label="Name a teammate">
               {people.map((m, i) => (
                 <button key={m.id} type="button" class={i === 0 ? 'on' : undefined} onClick={() => setText(text.replace(/@\w*$/, `@${firstWord(m.name)} `))}>
                   <Avatar {...faceOf(m)} size={34} font={12} />
@@ -173,33 +173,33 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
               ))}
             </div></div>
           )}
-          {note && <div class="cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
+          {note && <div class="ch-cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
           <ChatComposer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
             shut={shut && !note} onAdd={add} sending={sending} />
         </>
       }>
       {nobody && (
-        <div class="cv-take">
+        <div class="ch-cv-take">
           {v.looking && <Avatar {...faceOf(v.looking)} size={24} />}
           <span><span>Nobody has this number yet</span><span>{v.looking ? `${firstWord(v.looking.name)} is in this chat too` : 'first to take it has it'}</span></span>
           <button type="button" onClick={() => { void write('take', [id], `${v.title} is yours`); }}><Icon name="check" size={16} stroke={2.6} />Take</button>
         </div>
       )}
       {(!online.value || keptN > 0) && items.some((x) => x.k === 'kept') && (
-        <Notice kind="offline" class="cv-offline">No signal · <b class="mono">{keptN}</b> not sent yet, kept on this phone</Notice>
+        <Notice kind="offline" class="ch-cv-offline">No signal · <b class="mono">{keptN}</b> not sent yet, kept on this phone</Notice>
       )}
       {typing && <Typing face={faceOf(typing)}>{`${firstWord(typing.name)} is typing a reply`}</Typing>}
       {told && owner && (
-        <div class="cv-told">
+        <div class="ch-cv-told">
           <span><Avatar {...faceOf(me)} size={24} /><Icon name="arrow-right" size={14} stroke={2.4} /><Avatar {...faceOf(owner)} size={24} /></span>
           <span>{`Your reply shows your name · ${firstWord(owner.name)} is told`}</span>
         </div>
       )}
-      <div ref={scroll} class="cv-scroll">
+      <div ref={scroll} class="ch-cv-scroll">
         <Thread items={items} members={b.members} meId={me.id} who={first} now={t} days={online.value}
           onRetry={() => { void flush(); }} onChange={(k, s) => { void discardKept(k); setText(s); }}
           tail={<>
-            {mine && shut && <span class="cv-shutnote"><Icon name="lock" size={13} stroke={2.4} />shut · goes as the shop</span>}
+            {mine && shut && <span class="ch-cv-shutnote"><Icon name="lock" size={13} stroke={2.4} />shut · goes as the shop</span>}
             {!!wants.length && lastIn && <WantsCard who={v.waName || v.title} at={lastIn.at} items={wants} onStart={() => open('sell/order', { from: 'chat', chat: id, items: JSON.stringify(wants.map((x) => ({ itemId: x.id, qty: 1 }))) })} />}
             {paid && cust && <PaidCard who={cust.name} paid={paid} owes={cust.owes} checked={checking(b, cust.id)} checker={firstWord((b.members.find((m) => m.role === 'accounts') || { name: 'Accounts' }).name)}
               onTake={() => open('customers/customer', { id: cust.id })} />}
