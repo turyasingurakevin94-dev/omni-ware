@@ -14,6 +14,8 @@
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
  *   &wa=off                  the shop's WhatsApp is not connected: nothing reaches a customer (CU43: the receipt waits)
  *   &fail=sale               the next counter sale is lost on its way, as when the signal drops mid-send (KC19)
+ *   &fail=pay                the next payment is kept (no signal); meanwhile Brian takes 120,000 of Kato's at 10:50, so when it
+ *                            goes again the shop refuses it as more than they owe (CU46)
  *   &listen=1                the phone can listen: "Say it" hears HEARD until Stop (CH16; no tap can cause speech)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
@@ -30,8 +32,8 @@ export interface DemoFlags {
   as: string | null;
   /** &wa=off: the shop's WhatsApp number is not connected (ChatBooks.connected false). */
   waOff: boolean;
-  /** 'sale': the next counter sale does not reach the server (KC19). */
-  fail: 'sale' | null;
+  /** 'sale': the next counter sale does not reach the server (KC19). 'pay': the next payment is kept, then refused (CU46). */
+  fail: 'sale' | 'pay' | null;
   /** The phone listens (CH16): "Say it" hears HEARD and keeps listening until Stop. */
   listen: boolean;
 }
@@ -54,7 +56,7 @@ export function readFlags(search: string): DemoFlags {
     state: state && STATES.includes(state) ? state : null,
     as: /^[a-z]+$/.test(as) ? as : null,
     waOff: q.get('wa') === 'off',
-    fail: q.get('fail') === 'sale' ? 'sale' : null,
+    fail: q.get('fail') === 'sale' ? 'sale' : q.get('fail') === 'pay' ? 'pay' : null,
     listen: q.get('listen') === '1',
   };
 }

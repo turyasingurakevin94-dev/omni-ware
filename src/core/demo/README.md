@@ -22,6 +22,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=goal-hit` | Thu 29 Oct 9:10: 36,220,000 sold, the 35M goal passed Wed 28 Oct; 9 live, 1 needs her | TD08 |
 | `&state=test-record` | A TEST order of Grace's at 10:30 (TEST Claude QA, 50,000): kept, struck through, in no figure (0167) | TD25 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
+| `&fail=pay` | The next payment finds no signal and is kept; before it goes again Brian takes 120,000 of Kato's #0544 (10:50), so the shop refuses the kept one as more than Kato owes | CU46, CU47 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 | `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
 
