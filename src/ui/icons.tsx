@@ -27,6 +27,8 @@ const S = {
   customers: "<circle cx='9' cy='8' r='3.5'/><path d='M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6z'/><path d='M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .9 3.2 2.9 3.5 5.7' fill='none'/>",
   plus: "<path d='M12 5v14M5 12h14'/>",
   minus: "<path d='M5 12h14'/>",
+  /** A stage the order skipped, on a rail's 12 px disc (OR11, OR19, OR31): shorter than minus. */
+  skip: "<path d='M6 12h12'/>",
   search: "<circle cx='11' cy='11' r='6.5'/><path d='m20 20-4.2-4.2'/>",
   /** A hard hat: the Contractor kind of customer (CU25; the truck means Delivery). */
   hardhat: "<path d='M3 18h18M5 18v-2.5a7 7 0 0 1 14 0V18M10 9V6h4v3'/>",

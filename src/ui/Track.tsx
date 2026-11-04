@@ -49,7 +49,7 @@ export function Track(p: TrackProps): JSX.Element {
           <span aria-hidden="true" class="ow-rail-line" />
           {at > 0 && <span aria-hidden="true" class="ow-rail-line on" style={{ width: `${at * 20}%` }} />}
           {STAGES.map((s, i) => sk.includes(s)
-            ? <span key={s} class="ow-stop next"><Icon name="minus" size={12} stroke={2.2} /></span>
+            ? <span key={s} class="ow-stop next"><Icon name="skip" size={12} stroke={2.6} /></span>
             : i < at || done
               ? <span key={s} class="ow-stop done"><Icon name="check" size={12} stroke={2.8} /></span>
               : i === at
@@ -81,7 +81,7 @@ export function StageDots(p: { stage: Stage; waits?: boolean; ready?: boolean; s
         const k = sk.includes(s) ? 'skip' : i < at || p.all ? 'done' : i === at ? 'now' : 'next';
         return (
           <span key={s} class={cx('ow-sdot', k, k === 'now' && p.waits && 'waits', k === 'now' && p.ready && 'ready')}>
-            <span aria-hidden="true">{k === 'skip' ? <Icon name="minus" size={12} stroke={2.6} /> : k === 'done' ? <Icon name="check" size={12} stroke={3} /> : <Icon name={STAGE_ICON[s]} size={13} stroke={2} />}</span>
+            <span aria-hidden="true">{k === 'skip' ? <Icon name="skip" size={12} stroke={2.6} /> : k === 'done' ? <Icon name="check" size={12} stroke={3} /> : <Icon name={STAGE_ICON[s]} size={13} stroke={2} />}</span>
             <b>{STAGE_WORD[s]}</b>
           </span>
         );

@@ -124,7 +124,7 @@ export function ShowMore(p: { faces: Face[]; n: number; on: () => void }): JSX.E
   return (
     <button type="button" class="ow-more" onClick={p.on}>
       {p.faces.length > 0 && <span aria-hidden="true" class="ow-more-f">{p.faces.map((f, i) => <Avatar key={i} {...f} size={24} class="ow-more-a" />)}</span>}
-      {`Show ${p.n} more`}<Icon name="chevron-down" size={14} stroke={2.2} />
+      {`Show ${p.n} more`}<Icon name="chevron-down" size={14} stroke={2.4} />
     </button>
   );
 }
@@ -138,7 +138,7 @@ export function OrderPill(p: { tone: 'info' | 'good' | 'warn' | 'bad'; tick?: bo
 export function CustOrderRow(p: { aisle?: string; icon?: IconName; title: string; sub: string; amount: number; struck?: boolean; pill: { text: string; tone: 'info' | 'good' | 'warn' | 'bad'; tick?: boolean }; on: () => void }): JSX.Element {
   return (
     <button type="button" class="ow-corow" onClick={p.on}>
-      {p.aisle ? <ItemSquare aisle={p.aisle} size={40} /> : <span aria-hidden="true" class="ow-corow-ic"><Icon name={p.icon || 'receipt'} size={20} /></span>}
+      {p.aisle ? <ItemSquare aisle={p.aisle} size={40} /> : <span aria-hidden="true" class="ow-corow-ic"><Icon name={p.icon || 'receipt'} size={20} stroke={1.9} /></span>}
       <span class="ow-orow-t"><span class="ow-orow-n">{p.title}</span><span class="mono ow-corow-s">{p.sub}</span></span>
       <span class="ow-corow-r">{p.struck ? <s class="mono ow-orow-a ow-corow-x">{fig(p.amount)}</s> : <span class="mono ow-orow-a">{fig(p.amount)}</span>}<OrderPill tone={p.pill.tone} tick={p.pill.tick}>{p.pill.text}</OrderPill></span>
     </button>
