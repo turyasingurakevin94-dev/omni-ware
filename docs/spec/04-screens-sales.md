@@ -9,9 +9,9 @@ Status: **screens decided** (the approved canvas). **Questions open** (§3): unt
 ## 1. The screens are the canvas
 
 The approved canvas is "Sales — in the agent app's language" (https://claude.ai/artifact/SwqWmXv4c2KbB1zgErYsWQ). Its source is in [`docs/canvas/sales-agent/`](../canvas/sales-agent/README.md).
-- It has 196 boards: 194 phone screens at 360 × 800, plus the two parts boards.
+- It has 199 boards: 197 phone screens at 360 × 800, plus the two parts boards.
   - 147 screens were drawn first. Every one scored at least 8.5 out of 10 on fidelity, show-don't-tell, fewest steps, polish and Sales rules, in an independent audit on 29 Oct 2026 (`review/`).
-  - 47 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
+  - 50 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
 
 | Tab | Prefix | Boards | Main flows (taps before → after) |
 |---|---|---|---|
@@ -19,7 +19,7 @@ The approved canvas is "Sales — in the agent app's language" (https://claude.a
 | Chats | CH | 29 | 36 → 26 |
 | Sell (the red +) | SL | 40 | 91 → 40 |
 | Counter | KC | 29 | 66 → 51 |
-| Orders | OR | 33 | 51 → 46 |
+| Orders | OR | 36 | 51 → 46 |
 | Customers | CU | 36 | 39 → 31 |
 | Parts | Main, Main2 | 2 | — |
 
@@ -76,6 +76,8 @@ Each row names the default being built until Kevin answers.
 | Q14 | How is a customer's usual counted? `sales.html` (`usualLinesNow`, 4659) counts every invoiced order, keeps an item in half of them or more (with one order, that order's items) and takes the middle count. FACTS draws Kato's as Cement every order, sheets **5 of 7**, nails **3 of 7**, at 40 bag, 30 pc, 2 ctn: over the last 7, a third is enough, and the middle count cannot be 40 at those bills' totals. | FACTS: `core/customers.ts` `usualOf` counts their last 7 bills, keeps an item in a third of them and at least twice (one order is not a usual), the most often first, at the count they take most often (a tie, the larger). The demo's bills are re-lined so it gives FACTS' usual. | `src/core/customers.ts`; the integration pass, 4 Nov |
 | Q15 | Is Kyaligonza's 14 Oct payment already asked of Esther? Kyaligonza's chat (CH01) has Grace saying at 10:12 "Esther is checking it", and the demo seed held two sent asks on it from that line. OR24 and OR25 draw Grace asking it at 10:41, and OR32 once asked. | Not asked at 10:41: the seed's two asks are removed (no screen read them; once the bill showed an ask they shut OR25). CH01's words stay. Should they say "I will ask Esther"? | `src/core/demo/seed/money.ts`; the e2e run, 4 Nov |
 | Q16 | While a payment fix waits on Esther, what does the bill's Tell say? #0533's "Tell them · what is owed" sends "690,000 paid, 420,000 left to pay", the recorded figures, while Grace has asked a fix that makes it 438,000. Should Tell wait for Esther, or say that a fix is asked? | The recorded figures (420,000): nothing has been corrected yet | the orders critic, 4 Nov (OR32); `src/apps/sales/orders/msg.ts` |
+| Q17 | Does sending an order's paper (its Receipt) tell the customer Ruth's new price? | Yes (the lead's ruling, 4 Nov): sent on WhatsApp, or kept to send with signal, it marks the price told through the same rule as an order's Tell (`msg.ts` `tellsPrice`, `core/orders.ts` `priceUntold`) | OR34, OR35 |
+| Q18 | An unpaid order's paper is not a receipt. Is "Receipt" still the word? | "Receipt": every approved OR board's tile says it (the lead's ruling, 4 Nov) | OR05–OR33, OR34 |
 
 Smaller notes from the designers are in each `manifest/<tab>.json` under `open_questions`. Examples:
 - Mama Shine is not yet in `docs/canvas-cast.md`;
@@ -155,3 +157,4 @@ Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or mor
 | **An order's Tell that carries a new price marks it told.** When the message built for the order tells the Manager's new price (it is not about a return, a void or an owing bill), sending it on WhatsApp, or keeping it to go with signal, marks the price told (`markPriceTold`), so Today stops asking. "Send as SMS" and a shut chat's WhatsApp link hand the words to the phone and record nothing (a send is never claimed). One rule says a price is untold (`core/orders.ts` `priceUntold`), and one says the message tells it (`msg.ts` `tellsPrice`). | `sales.html:6104` (`ordMarkTold`); the e2e run, 4 Nov (OR10) | `src/apps/sales/orders/Tell.tsx`, `msg.ts` |
 | **A payment fix asked shows until Accounts answers.** A payment with a sent ask about its method or amount (`payment_asks` what `method` or `amount`) shows on its bill as OR22 shows a return asked: what was asked, Esther corrects it, then what they owe, and Undo ask takes every ask on that payment back. In Which payment? its row is not a link; it says Asked and Waiting, so it cannot be asked about twice. When a bill's one payment is asked, Fix it opens Which payment? to show it. Every ask card (OR22, OR32) names who asked: "You asked" with Undo for Grace's own; a teammate's says "Brian asked" and has no Undo, because the server takes back only the asker's own ask (0130). | the e2e run, 4 Nov (OR25); boards OR32, OR33 | `src/apps/sales/orders/Wrong.tsx`, `OrderParts.tsx`, `data.ts` (`payFixAsks`, `askedBy`) |
 | **A buyer with no name is named by their number.** With no customer and no name on the order (a walk-in from a new number, CH14), Placed names the chat's number as the boards write it ("Picture sent to 0701 552 904", "0701 552 904 leaves when paid"). With no number either, it says "them" and "They leave". | CH14 (the number as its title); the e2e run, 4 Nov | `src/apps/sales/sell/Placed.tsx` |
+| **The order's paper (Receipt) says "as it stands" exactly when the order screen does.** The Receipt tile opens the order's paper: KC16's slip, dated by its invoice else its placing, its lines (one not found struck), the total, paid so far, what is owed on it, and a pill (Not paid yet · Paid · cash · Void · nothing owed, the total struck). It is "as it stands" when the order screen's own `pending` holds, read from it, not copied: the order is in Checking with a price waiting for Ruth and the total not told yet, or a price Ruth set in the current stage is not told yet. Then the paper's sub-line ends "· as it stands" and the line under it says what is not final ("Ruth set 35,000 · not told yet"). It goes on WhatsApp to their chat; a shut chat shares the picture or saves it; a walk-in with no number types one, as at the counter. | the lead's ruling, 4 Nov (OR34–OR37); `Order.tsx` `pending` | `src/apps/sales/orders/` (to build) |

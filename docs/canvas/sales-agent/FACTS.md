@@ -82,7 +82,7 @@ Grace's customer list has **38 customers**. **4 owe**, and together they owe **1
 | **Kyaligonza & Sons** | KS · t1 plum | (place and kind not shown) | **420,000** | Past 21 days: **#0533** billed Mon 24 Aug, **54 d**. New credit waits for Ruth | — |
 | **Ggaba Stores** | GS · t4 slate | Ggaba · Reseller | **290,000** | Past 21 days. **To collect 165,000**: **#0521** 11 Aug, **67 d**. **Being checked 125,000**: **#0528** 17 Aug, Esther. It may be the same as **#0264**, 125,000 paid in cash on 17 Aug | new credit waits for Ruth |
 | **Mukono Roofing** | MR · t3 indigo | Mukono | **780,000** | Under 21 days, 2 bills: Thu 8 Oct 470,000 (**9 d**) + **#0541** Sun 11 Oct 310,000 left (6 d). **Promised 310,000 · today** | — |
-| **Nansana Hardware** | NH · t5 sand | Nansana | **0**. Paid 560,000 at 8:52 today | — | **No limit set · Ruth decides** |
+| **Nansana Hardware** | NH · t5 sand | Nansana · **0772 590 774** (the seed's; OR36) | **0**. Paid 560,000 at 8:52 today | — | **No limit set · Ruth decides** |
 | **Lubowa Builders** | LB · t2 teal | Lubowa · Contractor · **0772 410 233** | **0** in the books | **Being checked 349,000 apart**: the two open bills, #0539 Tue 6 Oct 180,000 (11 d) and #0542 Mon 12 Oct 169,000 (5 d), say 349,000. The balance says 0. Esther asked today 9:12 | — |
 
 **Totals:**
@@ -212,7 +212,7 @@ Delivery is **today, afternoon**, before the Friday Kato asked for. No board pro
 
 | # | Customer | Delivered | Total | State |
 |---|---|---|---|---|
-| #0543 | Walk-in | today **8:50** (placed 8:20) | 96,000 | Paid · cash (in money in today) |
+| #0543 | Walk-in | today **8:50** (placed 8:20) | 96,000: 1 ctn Wire nails 4" · 25kg ctn (the seed's; OR37); no phone | Paid · cash (in money in today) |
 | #0538 | Nansana | Fri 15:10 | 2,460,000 | Paid |
 | #0548 | Ggaba | Fri 13:30 | **119,000** | Paid cash Fri · **Return asked** |
 | #0540 | Lubowa | Fri 12:45 | 380,000 | **Paid** |
