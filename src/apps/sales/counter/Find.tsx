@@ -81,17 +81,18 @@ function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => v
       <ItemSquare aisle={it.aisle} size={44} />
       <span class="kc-more-t">
         <span class="kc-row-n">{it.name}</span>
-        <span class="mono kc-per">{`${fig(it.price || 0)} /${it.unit}`}</span>
+        {it.price == null ? <span class="kc-pill coming">Price coming</span> : <span class="mono kc-per">{`${fig(it.price)} /${it.unit}`}</span>}
         <Shelf it={it} />
       </span>
-      {onShelf(it)
+      {/* Not priced yet (Ruth prices it): listed, never sold at the counter. */}
+      {it.price == null ? null : onShelf(it)
         ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${it.name}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
         : <button type="button" class="kc-orderin" aria-label={`Order in ${p.qty} ${it.name.split(' · ')[0]}: the sale becomes an order`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
     </div>
   );
 }
 
-/** An aisle open from a tile or chip: every priced item in it, the most sold first (core/aisles.ts aisleItems). */
+/** An aisle open from a tile or chip: every item in it, the most sold first (core/aisles.ts aisleItems); one not priced yet says Price coming. */
 export function AisleList(p: { name: string; items: Item[]; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
   return (
     <>

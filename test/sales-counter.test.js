@@ -105,6 +105,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const fs = require('fs');
   const ctr = fs.readFileSync(path.join(ROOT, 'src/apps/sales/counter/Counter.tsx'), 'utf8');
   t.check(/aisleItems\(b, aisle\.value\)/.test(ctr) && !/onAisle=\{\(a\) => \{ q\.value = a; \}\}/.test(ctr), 'the counter\'s tiles and chips open the aisle with core/aisles.ts aisleItems');
+  t.check(!/aisleItems\(b, aisle\.value\)\.filter/.test(ctr) && A.aisleItems(ba, 'Roofing').length === 86, 'an open aisle lists every item, priced or not: Roofing 86, as its tile says');
 
   /* ---- &fail=sale: the first sale is lost on its way, nothing taken (KC19) ---- */
   const d4 = demoSource('?demo&fail=sale');

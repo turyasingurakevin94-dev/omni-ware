@@ -85,8 +85,8 @@ export function Counter(): JSX.Element {
 
   let body: JSX.Element;
   if (aisle.value && text === aisle.value) {
-    // The counter sells only what has a price.
-    body = <AisleList name={aisle.value} items={aisleItems(b, aisle.value).filter((i) => i.price != null)} onAdd={(it) => pick(it)}
+    // Every item in it, as the tile counts them; one with no price yet is listed, not sold.
+    body = <AisleList name={aisle.value} items={aisleItems(b, aisle.value)} onAdd={(it) => pick(it)}
       onOrderIn={(it) => orderIn([...asItems(s.lines), { itemId: it.id, qty: 1, price: it.price }], s.customerId)} />;
   } else if (text.trim()) {
     // The words as typed, less the count ("2 paint" → paint; "PPR pipe 25mm" keeps its capitals).
