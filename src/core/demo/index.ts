@@ -46,6 +46,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   };
   const say = (chatId: number, body: string, kind: Message['kind']): Message => {
     const c = chat(chatId);
+    if (!s.connected) throw dataError('refused', 'WhatsApp is not connected yet', 'WAOFF');
     if (kind !== 'template' && !replyWindow(c.lastInAt, s.now).open) throw dataError('refused', 'The 24-hour window is shut: send it as the reply template', 'WSHUT');
     const m: Message = { id: 'm' + (s.messages.length + 1), chatId, at: s.now, dir: 'out', kind, body, by: me.id, state: 'sent' };
     s.messages.push(m); c.lastAt = s.now;
@@ -138,16 +139,25 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     askSourcing: (a) => write(() => {
       const name = a.name.trim(), hit = s.books.asks.find((x) => x.status !== 'dropped' && x.name.toLowerCase() === name.toLowerCase());
       const req = { at: s.now, by: me.id, customerId: a.customerId, qty: a.qty || 1 };
-      if (hit) { hit.requests.push(req); return copy(hit); }
-      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [] };
+      // The demo keeps no files: a photo stands as 'photo:<name>' (as Message.media's 'aisle:<Aisle>').
+      const image = a.photo ? 'photo:' + name : null;
+      if (hit) { hit.requests.push(req); if (image && !hit.image) hit.image = image; return copy(hit); }
+      const ask: SourcingAsk = { id: 'SRC-' + s.now.toString(36).toUpperCase(), name, status: 'asked', createdAt: s.now, stageAt: s.now, itemId: null, requests: [req], tried: [], image };
       s.books.asks.push(ask);
       return copy(ask);
     }),
     logSearchMiss() { /* the demo keeps no search log */ },
+    // The demo phone is the installed app: pushes on (FACTS), off on her first day (TD20).
+    pushState: () => Promise.resolve({ on: s.push, why: null }),
+    pushOn: () => write(() => { s.push = true; return { on: true, why: null }; }),
+    pushOff: () => write(() => { s.push = false; return { on: false, why: null }; }),
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),
-    sendImage: (chatId, _file, caption) => write(() => say(chatId, caption, 'image')),
+    // &wa=slow: the shop's WhatsApp takes 10 s to take a picture (SL35).
+    sendImage: (chatId, _file, caption) => (flags.waSlow
+      ? new Promise<void>((ok) => setTimeout(ok, 10000)).then(() => write(() => say(chatId, caption, 'image')))
+      : write(() => say(chatId, caption, 'image'))),
     sendCatalog: (chatId) => write(() => say(chatId, '', 'catalog')),
     media: (messageId) => {
       const m = s.messages.find((x) => x.id === messageId);

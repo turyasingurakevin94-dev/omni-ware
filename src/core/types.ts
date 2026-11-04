@@ -235,6 +235,8 @@ export interface Item {
   orderIn: boolean;
   /** Listed today by Sourcing (Roof paint: 10:34). */
   listedAt: Ms | null;
+  /** Its photo: a link into the shop's product-images bucket (products.image), or null. */
+  image?: string | null;
 }
 
 /** A WhatsApp chat (wa_conversations). */
@@ -312,6 +314,8 @@ export interface SourcingAsk {
   requests: { at: Ms; by: string | null; customerId: string | null; qty: number }[];
   /** Suppliers asked, and when ("Katwe Fabricators Wed 14 Oct"). */
   tried: { supplier: string; at: Ms }[];
+  /** A photo of what is wanted (sourcing_leads.image, 0074): a link into product-images, or null. */
+  image?: string | null;
 }
 
 /** An ask to the Manager about a bill: void it, or credit a return (invoice_asks, 0123). */
@@ -368,8 +372,13 @@ export interface ShopSettings {
   holdDays: number;
   /** presets.chaseAfterDays (7 when unset). */
   chaseAfterDays: number;
-  /** presets.services: delivery and loading fees the order can carry. */
-  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number }[];
+  /**
+   * presets.services: delivery and loading fees the order can carry (core/services.ts). `per`: the
+   * value is for each one on the lines sold by that unit ("bag": loading; spec 04 Q3). `kind:
+   * 'delivery'` with its `area`: the delivery fee there; `mins`: its usual time from the shop. All
+   * optional in presets; sales.html sets none, and then a service is a flat fee.
+   */
+  services: { id: string; label: string; type: 'fixed' | 'percent'; value: number; per?: string; kind?: 'delivery'; area?: string; mins?: number }[];
   shopPhone: string;
   shopAddress: string;
 }
@@ -386,6 +395,8 @@ export interface Books {
   customers: Customer[];
   orders: Order[];
   items: Item[];
+  /** The shop's aisles (products.category) and how many products each holds, the most first ("Roofing · 86 items"). */
+  aisles: { name: string; count: number }[];
   payments: Payment[];
   promises: PayPromise[];
   asks: SourcingAsk[];

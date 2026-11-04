@@ -6,15 +6,15 @@
  */
 import { isDataError } from '../../../core/datasource.ts';
 import { money } from '../../../core/money.ts';
-import { orderNo } from '../../../core/names.ts';
 import { dayLabel, dayOf, replyWindow } from '../../../core/time.ts';
 import type { Books, ChatBooks, Customer } from '../../../core/types.ts';
 import { act, now } from '../shell/store.ts';
-import { moneyOf, short } from './data.ts';
+import { billNo, owingOf } from '../../../core/owing.ts';
+import { short } from './data.ts';
 
 export function statementText(b: Books, c: Customer, today: string): string {
-  const m = moneyOf(b, c, today);
-  const lines = m.bills.map((x) => `${orderNo(x.id)} · ${dayLabel(x.day)} · ${money(x.left)}`);
+  const m = owingOf(b, c, today);
+  const lines = m.bills.map((x) => `${billNo(x.id)} · ${dayLabel(x.day)} · ${money(x.left)}`);
   return [`${b.shop.name} · statement for ${c.name}`, ...lines, `Owes ${money(m.owes)}`].join('\n');
 }
 

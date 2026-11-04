@@ -13,6 +13,7 @@ import type { Books, Order, Session } from '../types.ts';
 import { client, isNetwork, type Sb } from './client.ts';
 import { readBooks, readChats, readOrder, readSession, readThread } from './read.ts';
 import * as W from './write.ts';
+import * as Push from './push.ts';
 
 export function supabaseSource(): DataSource {
   let session: Session | null = null;
@@ -131,6 +132,9 @@ export function supabaseSource(): DataSource {
       return W.askSourcing(sb(), me(), a, lead ? lead.id : null, Date.now());
     },
     logSearchMiss(words, clientName) { try { W.logSearchMiss(sb(), me(), words, clientName); } catch (_e) { /* fire and forget */ } },
+    pushState: () => Push.pushState(),
+    pushOn: () => Push.pushOn(sb(), me()),
+    pushOff: () => Push.pushOff(sb(), me()),
 
     send: (chatId, text) => W.waSend(sb(), me(), chatId, text, false, Date.now()),
     sendTemplate: (chatId, text) => W.waSend(sb(), me(), chatId, text, true, Date.now()),

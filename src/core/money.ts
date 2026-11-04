@@ -8,7 +8,7 @@
  * source, no clock (the caller passes `today`), so tests import them as they
  * are (test/sales-core-money.test.js).
  */
-import type { Charge, Customer, Day, Line, Order, Payment, UGX } from './types.ts';
+import type { Charge, Customer, Day, Line, Order, Payment, PayPromise, UGX } from './types.ts';
 
 /* ---------------- whole shillings ---------------- */
 
@@ -213,6 +213,20 @@ export function notesFor(amount: UGX): UGX[] {
   const out: UGX[] = [];
   NOTES.forEach((n) => { while (left >= n) { out.push(n); left -= n; } });
   return out;
+}
+
+/* ---------------- promises to pay ---------------- */
+
+/**
+ * A promise to pay, worked out from the debt log every time (spec 02 §5.6, decided Q10; sales.html:7162
+ * custPromiseState): kept when they owe nothing (0.5 or less), or when what they paid from the day it was made to
+ * the promised day reaches the amount it named; otherwise broken once the promised day has passed, else open.
+ */
+export function promiseState(p: Pick<PayPromise, 'on' | 'madeOn' | 'amount'>, c: Pick<Customer, 'owes' | 'debtLog'>, today: Day): 'kept' | 'broken' | 'open' {
+  if (!(c.owes > 0.5)) return 'kept';
+  const paid = c.debtLog.filter((e) => e.type === 'payment' && e.day >= p.madeOn && e.day <= p.on).reduce((s, e) => s + Math.abs(e.amount), 0);
+  if (p.amount != null && p.amount > 0 && paid >= p.amount - 0.5) return 'kept';
+  return p.on < today ? 'broken' : 'open';
 }
 
 /* ---------------- the 21-day hold ---------------- */
