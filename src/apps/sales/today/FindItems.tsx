@@ -1,6 +1,7 @@
 /*
  * Find, when the words are an item (TD13) or nothing at all (TD14).
  */
+import { oftenWith as often } from '../../../core/often.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
@@ -31,11 +32,10 @@ export function oftenIds(b: Books, it: Item): string[] {
   return oftenWith(b, it).map((x) => x.item.id);
 }
 
-/** Items bought with this one in the shop's orders: how many of its orders had each, the most first. */
+/** Items bought with this one in the shop's orders (core/often.ts, P13's rule over the whole shop): how many of its orders had each. */
 function oftenWith(b: Books, it: Item): { item: Item; had: number; of: number }[] {
-  const os = b.orders.filter((o) => !o.voided && !o.qa && o.lines.some((l) => l.itemId === it.id)), by = new Map<string, number>();
-  os.forEach((o) => new Set(o.lines.map((l) => l.itemId)).forEach((id) => { if (id !== it.id) by.set(id, (by.get(id) || 0) + 1); }));
-  return [...by].sort((x, y) => y[1] - x[1]).slice(0, 2).map(([id, had]) => ({ item: b.items.find((i) => i.id === id) as Item, had, of: os.length })).filter((x) => x.item);
+  const r = often(b.orders, { itemId: it.id, variantIdx: it.variantIdx ?? null }, { customerId: null, me: null, n: 2 });
+  return r.rows.map((x) => ({ item: b.items.find((i) => i.id === x.itemId && (i.variantIdx ?? null) === x.variantIdx) || b.items.find((i) => i.id === x.itemId) as Item, had: x.n, of: r.of })).filter((x) => x.item);
 }
 
 function AskCard(p: { b: Books; title: string; name: string }): JSX.Element {

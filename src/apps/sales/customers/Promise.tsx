@@ -10,12 +10,13 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { isDataError } from '../../../core/datasource.ts';
 import { money } from '../../../core/money.ts';
-import { orderNo, TINTS } from '../../../core/names.ts';
+import { TINTS } from '../../../core/names.ts';
 import { addDays, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import { act, books, now } from '../shell/store.ts';
 import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
-import { moneyOf, short } from './data.ts';
+import { billNo, owingOf } from '../../../core/owing.ts';
+import { short } from './data.ts';
 import { AmountInput } from './local-amount.tsx';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -28,10 +29,10 @@ export function openPromise(customerId: string): void {
 
 function PromiseSheet(p: { customerId: string }): JSX.Element {
   const b = books.value!, c = b.customers.find((x) => x.id === p.customerId)!, today = dayOf(now.value);
-  const m = moneyOf(b, c, today), oldest = m.bills[0] || null, name = short(c.name), ruth = role(b, 'manager');
+  const m = owingOf(b, c, today), oldest = m.bills[0] || null, name = short(c.name), ruth = role(b, 'manager');
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i));
   const hold = m.hold && week.includes(m.hold) ? m.hold : null;
-  const quick = [{ word: 'All', amount: m.owes }, ...(oldest && m.bills.length > 1 ? [{ word: orderNo(oldest.id), amount: oldest.left }] : [])];
+  const quick = [{ word: 'All', amount: m.owes }, ...(oldest && m.bills.length > 1 ? [{ word: billNo(oldest.id), amount: oldest.left }] : [])];
   const [amount, setAmount] = useState<number>(oldest && m.bills.length > 1 ? oldest.left : m.owes);
   const [chosen, setChosen] = useState<number | null>(quick.length - 1);
   const [on, setOn] = useState<string>(hold || week[week.length - 1]);
@@ -79,7 +80,7 @@ function PromiseSheet(p: { customerId: string }): JSX.Element {
             );
           })}
         </div>
-        {hold && oldest && <span class="cu-pr-hold"><span aria-hidden="true" />{`${orderNo(oldest.id)} reaches the ${b.settings.holdDays}-day hold that day`}</span>}
+        {hold && oldest && <span class="cu-pr-hold"><span aria-hidden="true" />{`${billNo(oldest.id)} reaches the ${b.settings.holdDays}-day hold that day`}</span>}
       </div>
       <div class="cu-who"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{ruth.initials}</span>{`On ${name}’s account · ${first(ruth.name)} sees it`}</div>
     </LightSheet>

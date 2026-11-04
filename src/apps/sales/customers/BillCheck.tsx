@@ -19,7 +19,8 @@ import type { Books, Payment } from '../../../core/types.ts';
 import { act, books, now } from '../shell/store.ts';
 import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
-import { moneyOf, short } from './data.ts';
+import { billNo, owingOf } from '../../../core/owing.ts';
+import { short } from './data.ts';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dm = (day: string) => { const d = new Date(day + 'T00:00:00Z'); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`; };
@@ -38,7 +39,7 @@ export function openBillCheck(customerId: string, orderId: number): void {
 
 function BillCheck(p: { customerId: string; orderId: number }): JSX.Element {
   const b = books.value!, c = b.customers.find((x) => x.id === p.customerId)!, today = dayOf(now.value);
-  const m = moneyOf(b, c, today), bill = m.bills.find((x) => x.id === p.orderId);
+  const m = owingOf(b, c, today), bill = m.bills.find((x) => x.id === p.orderId);
   const esther = role(b, 'accounts'), name = short(c.name), t = TINTS[esther.tint];
   const [paid, setPaid] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -66,17 +67,17 @@ function BillCheck(p: { customerId: string; orderId: number }): JSX.Element {
   );
 
   return (
-    <LightSheet class="cu-ls" eyebrow={`Bill ${orderNo(bill.id)} · ${c.name}`} title="Paid already?" onClose={sheet.close} pad="12px 16px 20px" gap={12}
+    <LightSheet class="cu-ls" eyebrow={`Bill ${billNo(bill.id)} · ${c.name}`} title="Paid already?" onClose={sheet.close} pad="12px 16px 20px" gap={12}
       foot={<Button icon="send" state={busy ? 'sending' : 'idle'} onClick={() => { void send(); }}>{`Send to ${first(esther.name)}`}</Button>}>
       <BillMatch label={`This bill, ${money(bill.left)} open from ${dm(bill.day)}, matches ${pay && pay.orderId ? `order ${orderNo(pay.orderId)}` : 'a payment'}, ${money(pay ? pay.amount : bill.left)} paid in ${how} the same day`}
-        bill={{ k: `${orderNo(bill.id)} · open`, v: bill.left, sub: `billed ${dm(bill.day)}` }}
+        bill={{ k: `${billNo(bill.id)} · open`, v: bill.left, sub: `billed ${dm(bill.day)}` }}
         paid={{ k: `paid in ${how}`, v: pay ? pay.amount : bill.left, sub: `receipt · ${dm(pay ? pay.day : bill.day)}` }} />
       <span class="cu-ask-h">{`What does ${name} say?`}</span>
       <div role="radiogroup" aria-label={`What does ${name} say?`} class="cu-choices">
         {choice(paid, 'Already paid that day', `the ${money(bill.left)} ${how} · take the bill off`, () => setPaid(true))}
         {choice(!paid, 'Still owed', 'keep it on the bill', () => setPaid(false))}
       </div>
-      <div class="cu-who p4"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{esther.initials}</span>{`${first(esther.name)} checks it · ${name}’s ${money(m.take)} can still be taken`}</div>
+      <div class="cu-who p4"><span aria-hidden="true" style={{ background: t.bg, color: t.fg }}>{esther.initials}</span>{`${first(esther.name)} checks it · ${name}’s ${money(m.canTake)} can still be taken`}</div>
     </LightSheet>
   );
 }

@@ -103,4 +103,21 @@ t.check(!M.pastHold('2026-10-02', '2026-10-17') && M.pastHold('2026-08-24', '202
   t.check(h && h.old && h.age === 54 && h.noLimit, 'Kyaligonza: 54 days past the hold and no limit set → new credit waits for Ruth');
 }
 
+{
+  // Who owes, one rule (core/owing.ts, the server's ow_customer_balance 0169): an opening balance (a charge with no
+  // order) plus what each live invoice still owes; the opening balance is its own bill, named `debt` in a Take.
+  const W = require(path.join(ROOT, 'src/core/owing.ts'));
+  const inv = (id, day, total, paid) => ({ ...order([line(1, total)], { paid }), id, customerId: 'C9', invoiced: true, invoicedAt: Date.parse(day + 'T07:00:00Z'), placedAt: Date.parse(day + 'T07:00:00Z'), voided: false, qa: false });
+  const c = { id: 'C9', owes: 0, debtLog: [{ id: 1, day: '2026-08-01', type: 'charge', amount: 200000, orderId: null }, { id: 2, day: '2026-09-01', type: 'payment', amount: 50000, orderId: null }] };
+  const b = { orders: [inv(601, '2026-10-10', 300000, 100000), inv(602, '2026-10-12', 80000, 80000)], paymentAsks: [], settings: { holdDays: 21 } };
+  const w = W.owingOf(b, c, '2026-10-17');
+  t.check(w.owes === 350000, 'owes: 150,000 opening + 200,000 left on #0601 (a paid invoice adds nothing)');
+  t.check(w.bills.length === 2 && w.bills[0].id === W.DEBT && w.bills[0].left === 150000 && w.bills[0].past && w.bills[1].id === 601, 'the opening balance is its own bill, oldest first, past the hold');
+  t.check(W.takeBills(w, true).join(',') === 'debt' && W.takeBills(w, false).join(',') === 'debt,601', 'a Take names the opening balance `debt`');
+  t.check(JSON.stringify(W.readBills('debt,601')) === JSON.stringify([W.DEBT, 601]) && W.readBills('') === null, 'customers/pay reads `debt` beside bill numbers');
+  t.check(W.billNo(W.DEBT) === 'Opening balance' && W.billNo(601) === '#0601', 'the opening balance is named, never #0000');
+  const asked = W.owingOf({ ...b, paymentAsks: [{ customerId: 'C9', status: 'sent', what: 'bill', orderId: 601 }] }, c, '2026-10-17');
+  t.check(asked.checkedIn === 200000 && asked.canTake === 150000 && asked.take === 150000 && asked.owes === 350000, 'a bill being checked stays in what they owe, never in a Take');
+}
+
 process.exit(t.done() ? 1 : 0);

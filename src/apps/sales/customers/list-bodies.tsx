@@ -2,6 +2,7 @@
  * The Customers list's bodies, one per filter (CU01–CU08). Each row acts
  * where it stands: Take payment from the row, WhatsApp from the row.
  */
+import { billNo } from '../../../core/owing.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
@@ -46,7 +47,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
           <div class="cu-grp"><Group hatch title="Being checked" count={d.checked.length} sum={shortMoney(d.checkedAll)} word="Esther" />
             <Card>{d.checked.map((w) => {
               const bill = w.m.bills.find((x) => x.checked);
-              const sub = w.m.apart > 0 ? `${w.m.bills.length} bills · ${shortMoney(w.m.apart)} apart · owes ${money(w.m.owes)}` : bill ? `${orderNo(bill.id)} · ${shortMoney(bill.left)} · Esther` : '';
+              const sub = w.m.apart > 0 ? `${w.m.bills.length} bills · ${shortMoney(w.m.apart)} apart · owes ${money(w.m.owes)}` : bill ? `${billNo(bill.id)} · ${shortMoney(bill.left)} · Esther` : '';
               return <Row key={w.c.id} {...face(w)} name={w.c.name} sub={sub} subTone="info" act="chev" on={() => a.open(w.c)} />;
             })}</Card></div>
         )}

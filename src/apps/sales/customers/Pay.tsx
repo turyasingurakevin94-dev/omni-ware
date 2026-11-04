@@ -22,7 +22,8 @@ import { act, books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
-import { moneyOf, short, type Bill } from './data.ts';
+import { billNo, owingOf, readBills, type OpenBill } from '../../../core/owing.ts';
+import { short } from './data.ts';
 import { AmountInput } from './local-amount.tsx';
 import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
 import { PayDock } from './pay-dock.tsx';
@@ -36,14 +37,14 @@ export function PayScreen(p: ScreenProps): JSX.Element {
   const c = b && p.params.customer ? b.customers.find((x) => x.id === p.params.customer) || null : null;
   const o = b && p.params.order != null ? b.orders.find((x) => x.id === Number(p.params.order)) || null : null;
   if (!b || (!c && !o)) return <FullSheet onBack={() => nav.back()} backLabel="Back" head={<div class="ow-shead"><span aria-hidden="true" class="ow-shead-grab" /></div>} />;
-  return <Pay b={b} c={c} o={o} bills={p.params.bills != null ? String(p.params.bills).split(',').map(Number).filter((n) => n > 0) : null} />;
+  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} />;
 }
 
 function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null }): JSX.Element {
   const { b, c, o } = p, today = dayOf(now.value), esther = role(b, 'accounts');
-  const m = c ? moneyOf(b, c, today) : null;
-  const open: Bill[] = m ? m.bills.filter((x) => !x.checked) : [];
-  const owes = m ? m.owes : o ? orderOwes(o) : 0, take = m ? m.take : owes;
+  const m = c ? owingOf(b, c, today) : null;
+  const open: OpenBill[] = m ? m.bills.filter((x) => !x.checked) : [];
+  const owes = m ? m.owes : o ? orderOwes(o) : 0, take = m ? m.canTake : owes;
   const name = c ? short(c.name) : o ? o.client.name || 'Walk-in' : '';
   const initPicks = p.bills ? p.bills.filter((id) => open.some((x) => x.id === id)) : null;
   const sumOf = (ids: number[]) => open.filter((x) => ids.includes(x.id)).reduce((s, x) => s + x.left, 0);
@@ -62,7 +63,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
 
   // The quick amounts: all of it, one bill (the picked one, else the oldest), or typed.
   const chipBill = picks && picks.length === 1 ? open.find((x) => x.id === picks[0]) : open[0];
-  const opts = [{ word: 'All', amount: take }, ...(c && open.length > 1 && chipBill ? [{ word: orderNo(chipBill.id), amount: chipBill.left }] : [])];
+  const opts = [{ word: 'All', amount: take }, ...(c && open.length > 1 && chipBill ? [{ word: billNo(chipBill.id), amount: chipBill.left }] : [])];
   const chosen = other ? null : !picks && amount === take ? 0 : picks && picks.length === 1 && opts.length > 1 && amount === opts[1].amount ? 1 : null;
 
   // What it pays: over the ticked bills (or all, oldest first).

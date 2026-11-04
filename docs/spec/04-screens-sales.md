@@ -98,17 +98,21 @@ Each rule is written once in code (the place is named) and comes from the source
 | **A send is never claimed if it did not happen.** If the customer has no chat, the app shows an error, and nothing is marked told. With no signal, the message is kept on the phone and the app says so. A photo goes only inside the 24-hour window: the reply template carries words only, and the toast says so. | `today/Tell.tsx` `sendTo`, `sentToast` | Lead ruling, 30 Oct 2026 (TD04, TD19, TD21, TD22) |
 | **Alerts** are this phone's row in `push_subscriptions`. They are not a setting kept on the phone. The switch shows the real state, and when alerts cannot be on it says why. | `core/supabase/push.ts`; `today/local.ts` `setAlerts` | spec 06 §6a |
 
-### 4.2 Open: two copies of "who owes" (Kevin)
+### 4.2 Who owes: one rule (`core/owing.ts`)
 
-Today and Customers both answer "what does this customer owe, bill by bill, and what is being checked". The two copies disagree, so neither has been picked:
+Today and Customers had two copies that disagreed (Today read the debt log, bill-named asks only; Customers read invoiced orders, and a balance ask checked every bill). The integration pass (3 Nov 2026) made one rule, the server's own (`ow_customer_balance`, 0169), and deleted both copies:
 
-| | Today (`core/owing.ts` `owedBy`) | Customers (`customers/data.ts` `billsOf`, `moneyOf`) |
+| | The rule | Code |
 |---|---|---|
-| Where the bills come from | The debt log, payments clearing the named bill and then the oldest (`openCharges`, spec 02 §5.3) | Invoiced orders with something left on them (`orderOwes`) |
-| Which bills are being checked | Only a bill an ask names (`what: 'bill'`) | That, plus every bill when an ask is on the whole balance (`what: 'balance'`) |
-| What can be taken now | Bills past the hold that nobody is checking | All they owe, less the bills an ask names |
+| What they owe | The opening balance (the debt log's lines that name no order: charges less everything else, as the server sums them) plus what each live invoice still owes (invoiced, not voided, total less paid); never below 0. A charge with no order still counts | `owingOf` |
+| Their open bills | Those invoices, oldest first, and one **Opening balance** bill when the lines with no order still owe something. A Take names it `debt` in `customers/pay { bills }` (`takeBills`, `readBills`), so a Take pays all its label says | `owingOf`, `takeBills`, `readBills`, `billNo` |
+| Being checked | An open ask to Accounts names the bill (`what: 'bill'`), or asks about the whole balance (`what: 'balance'`: every bill). A bill being checked is **shown apart**: it stays in what they owe (To collect 1,910,000 holds Ggaba's 125,000, Q9) but is never in a Take | `owingOf` (`checked`, `named`, `checkedIn`) |
+| Apart | When the bills say more than the balance (money paid that named no bill) and Accounts checks the balance: the difference (Lubowa: bills 349,000, balance 0) | `owingOf` (`apart`) |
+| Take now (Today) | The bills past the hold that nobody is checking | `take` |
+| Can take (Customers) | What they owe less the bills an ask names | `canTake` |
+| Oldest | The oldest open bill's age; past the hold when it is over the hold days | `age`, `pastHold`, `hold` |
 
-Until Kevin answers, each tab keeps its own copy. The one he picks moves into `core/owing.ts`, and the other copy is deleted.
+Still apart from it: the credit hold at Checking (`money.ts` `creditHold`, spec 02 §5.4) ages the debt log (`oldestAge`), as the server's gate does (0174). In the sample shop both give the same days.
 
 ### 4.3 Rules the screens share
 

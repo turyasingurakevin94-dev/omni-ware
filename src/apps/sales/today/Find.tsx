@@ -10,7 +10,8 @@
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { money, oldestAge, orderTotal } from '../../../core/money.ts';
+import { money, orderTotal } from '../../../core/money.ts';
+import { owingOf } from '../../../core/owing.ts';
 import { firstWord, orderNo, STAGE_WORD } from '../../../core/names.ts';
 import { addDays, dayLabel, dayOf, howLong, when } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Customer, Item, Message, Ms, Order } from '../../../core/types.ts';
@@ -184,7 +185,7 @@ function Start(p: { b: Books; cb: ChatBooks | null; now: Ms; show: (k: Kind) => 
           ) : r.c ? (
             <Tap key={r.x.id} on={() => { rememberOpened({ kind: 'customer', id: (r.c as Customer).id }); go('sell/order', { customer: (r.c as Customer).id }); }} class="td-find-row">
               <Avatar initials={r.c.initials} tint={r.c.tint} size={40} />
-              <span class="td-find-t"><span>{r.c.name}</span><span>{r.c.owes > 0 ? `oldest bill ${oldestAge(r.c, dayOf(p.now))} days` : r.c.place}</span></span>
+              <span class="td-find-t"><span>{r.c.name}</span><span>{r.c.owes > 0 ? `oldest bill ${owingOf(b, r.c, dayOf(p.now)).age} days` : r.c.place}</span></span>
               {r.c.owes > 0 && <span class="td-find-fig"><b class="mono">{money(r.c.owes)}</b><small>owes</small></span>}
             </Tap>
           ) : (
