@@ -75,13 +75,15 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const withRuth = servedThisYear(fb.orders, 'C001', [...await fresh.served(101), { by: 'u-ruth', messages: 4 }], '2026', new Set(['u-grace', 'u-brian', 'u-faith']));
   const ruthRow = withRuth.find((x) => x.by === 'u-ruth');
   t.check(!!ruthRow && ruthRow.orders === 0 && ruthRow.total === 0, 'a Manager who wrote in the chat: her messages count, her orders (#0498) never do (the lead\'s ruling)');
+  const F = require(path.join(ROOT, 'src/core/demo/flags.ts'));
+  t.check(F.readFlags('?demo&listen=1').listen && !F.readFlags('?demo').listen && F.HEARD === 'Yes, it can come to the Ntinda site', '&listen=1: the demo phone listens and hears Grace\'s answer to Kato (CH16)');
   const { oftenWith } = require(path.join(ROOT, 'src/core/often.ts'));
   const ow = oftenWith(fb.orders, { itemId: 'iron-g28-3m', variantIdx: null }, { customerId: 'C001', me: 'u-grace', skip: new Set(['cement-hima-50', 'iron-g28-3m', 'nails-4-25kg']), n: 99 });
   const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');
-  t.check(ow.theirs && ow.of === 5 && owTxt.startsWith('wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
-    `often with Kato's sheets (CH21, CH34): Wheelbarrow, heavy duty in 2 of 5, the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
+  t.check(ow.theirs && ow.of === 5 && owTxt.startsWith('ridge-g28:2 wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
+    `often with Kato's sheets (CH21, CH34; SL05's lines): Ridge cap G28 and Wheelbarrow, heavy duty in 2 of 5, the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
   const once = oftenWith(fb.orders, { itemId: 'cement-hima-50', variantIdx: null }, { customerId: 'C001', me: 'u-grace' });
   t.check(!once.theirs, 'often with: an item they had once is counted over my orders, not theirs (agent.html oftenWith)');
 
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

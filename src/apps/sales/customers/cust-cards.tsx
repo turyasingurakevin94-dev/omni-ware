@@ -10,24 +10,24 @@ import { orderTotal, short as shortMoney } from '../../../core/money.ts';
 import { orderNo, STAGE_WORD, TINTS } from '../../../core/names.ts';
 import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Member, Order } from '../../../core/types.ts';
-import type { Bill } from './data.ts';
+import { billNo, type OpenBill } from '../../../core/owing.ts';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** One bill: the day it was billed, what is left, its number and age, and its act (Take, or Being checked). */
-export function BillRow(p: { b: Bill; onTake: () => void; onChecked?: () => void; sub?: string }): JSX.Element {
+export function BillRow(p: { b: OpenBill; onTake: () => void; onChecked?: () => void; sub?: string }): JSX.Element {
   const b = p.b, d = new Date(b.day + 'T00:00:00Z');
   const inner = (
     <>
       <span class="cu-bill-d"><span class="mono">{d.getUTCDate()}</span><span>{MONTHS[d.getUTCMonth()]}</span></span>
-      <span class="cu-bill-t"><span class="mono">{fig(b.left)}</span><span class={cx(p.sub && 'info')}>{p.sub || `${orderNo(b.id)} · ${b.age} days`}</span></span>
+      <span class="cu-bill-t"><span class="mono">{fig(b.left)}</span><span class={cx(p.sub && 'info')}>{p.sub || `${billNo(b.id)} · ${b.age} days`}</span></span>
       {b.checked
         ? <span class="cu-bill-act info"><Icon name="clock" size={14} stroke={2.2} />Being checked</span>
         : <span class="cu-bill-act"><Icon name="cash" size={14} stroke={2.2} />{`Take ${shortMoney(b.left)}`}</span>}
     </>
   );
   if (b.checked && !p.onChecked) return <div class="cu-bill">{inner}</div>;
-  return <Tap on={b.checked ? p.onChecked : p.onTake} class="cu-bill" label={b.checked ? `${orderNo(b.id)}, ${fig(b.left)}, being checked` : `Take ${fig(b.left)} for ${orderNo(b.id)}`}>{inner}</Tap>;
+  return <Tap on={b.checked ? p.onChecked : p.onTake} class="cu-bill" label={b.checked ? `${billNo(b.id)}, ${fig(b.left)}, being checked` : `Take ${fig(b.left)} for ${billNo(b.id)}`}>{inner}</Tap>;
 }
 
 export function BillsCard(p: { children: JSX.Element[] }): JSX.Element {
@@ -46,18 +46,25 @@ export function BillsHead(p: { title: string; hold?: string; note?: string }): J
 }
 
 /** "On the move 3 · 2,100,000": a tile per live order, the one packing lit. */
-export function OnTheMove(p: { orders: Order[]; onOrder: (id: number) => void }): JSX.Element {
+export function OnTheMove(p: { orders: Order[]; onOrder: (id: number) => void; copies?: number[]; onCopy?: (id: number) => void; late?: number[] }): JSX.Element {
   const sum = p.orders.reduce((s, o) => s + orderTotal(o), 0);
   return (
     <div class="cu-move">
       <span class="cu-move-h"><span>On the move <span class="mono">{p.orders.length}</span></span><b class="mono">{fig(sum)}</b></span>
       <div class="cu-move-tiles">
-        {p.orders.slice(0, 3).map((o) => (
-          <Tap key={o.id} on={() => p.onOrder(o.id)} label={`Order ${orderNo(o.id)}, ${STAGE_WORD[o.stage]}`} class={cx('cu-move-tile', o.stage === 'packing' && 'lit')}>
-            <span><Icon name={STAGE_ICON[o.stage]} size={14} stroke={2} /><b class="mono">{orderNo(o.id)}</b></span>
-            <span>{STAGE_WORD[o.stage]}</span>
-          </Tap>
-        ))}
+        {p.orders.slice(0, 3).map((o) => {
+          // The copy of an order entered twice opens Entered twice? (OR19); a late one says so, with the late dot.
+          const copy = !!p.copies && p.copies.includes(o.id), late = !!p.late && p.late.includes(o.id);
+          const word = copy ? `Copy · ${STAGE_WORD[o.stage]}` : late ? `${STAGE_WORD[o.stage]} · 2+ days` : STAGE_WORD[o.stage];
+          return (
+            <Tap key={o.id} on={() => (copy && p.onCopy ? p.onCopy(o.id) : p.onOrder(o.id))} label={`Order ${orderNo(o.id)}, ${copy ? 'the copy, ' : ''}${STAGE_WORD[o.stage]}${late ? ', 2+ days: late' : ''}`}
+              class={cx('cu-move-tile', o.stage === 'packing' && 'lit', late && 'late')}>
+              <span><Icon name={STAGE_ICON[o.stage]} size={14} stroke={2} /><b class="mono">{orderNo(o.id)}</b></span>
+              <span>{word}</span>
+              {late && <span aria-hidden="true" class="cu-move-dot" />}
+            </Tap>
+          );
+        })}
       </div>
     </div>
   );

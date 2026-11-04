@@ -36,7 +36,7 @@ export function OrdersList(p: ScreenProps): JSX.Element {
   const b = books.value, t = now.value;
   const [filter, setFilter] = useState<Filter>((p.params.stage as Stage) || 'all');
   const [oldest, setOldest] = useState(false);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(typeof p.params.q === 'string' ? p.params.q : '');
   const [open, setOpen] = useState<Stage[]>([]);
   const chips = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -57,7 +57,11 @@ export function OrdersList(p: ScreenProps): JSX.Element {
       <FindField value={q} onInput={setQ} />
     </PageHead>
   );
-  if (q.trim()) return <>{head}<Found b={b} q={q} t={t} /></>;
+  // Every way off this list first writes the Find query into its params ('' once cleared), so Back lands where it
+  // left: on the search rows (OR29 → OR30), or on the full list after Clear. Written on leaving, not per key: a
+  // replace remounts the screen, which would drop the field's focus on every letter.
+  const leave: Leave = (go1) => () => { if ((typeof p.params.q === 'string' ? p.params.q : '') !== q) nav.replace('orders', { ...p.params, q }); go1(); };
+  if (q.trim()) return <>{head}<Found b={b} q={q} t={t} leave={leave} /></>;
   if (!total) return <>{head}<Empty b={b} /></>;
   const stages = filter === 'all' ? STAGES : [filter];
   return (
@@ -77,7 +81,7 @@ export function OrdersList(p: ScreenProps): JSX.Element {
             <div key={s} class="ow-sgroup">
               <GroupHead dot={STAGE_DOT[s]} title={s === 'delivered' ? 'Delivered this week' : STAGE_WORD[s]} count={rows.length} sum={rows.reduce((a, o) => a + orderTotal(o), 0)} />
               <GroupCard>
-                {shown.map((o) => <Row key={o.id} b={b} o={o} t={t} />)}
+                {shown.map((o) => <Row key={o.id} b={b} o={o} t={t} leave={leave} />)}
                 {folded.length > 0 && <ShowMore faces={uniqueFaces(b, folded)} n={folded.length} on={() => setOpen([...open, s])} />}
               </GroupCard>
             </div>
@@ -93,13 +97,15 @@ function uniqueFaces(b: Books, l: Order[]) {
   return l.map((o) => faceOf(b, o)).filter((f) => (seen.has(f.initials) ? false : (seen.add(f.initials), true))).slice(0, 3);
 }
 
-function Row(p: { b: Books; o: Order; t: number }): JSX.Element {
+type Leave = (go1: () => void) => () => void;
+
+function Row(p: { b: Books; o: Order; t: number; leave: Leave }): JSX.Element {
   const { b, o, t } = p, st = rowStatus(b, o, t), name = nameOf(b, o);
   const act = st.act === 'take'
-    ? { word: 'Take', amount: short(takeAmount(b, o)), tone: 'warn' as const, label: `Take payment from ${name}, ${takeAmount(b, o).toLocaleString('en-US')}`, on: () => payFor(b, o) }
+    ? { word: 'Take', amount: short(takeAmount(b, o)), tone: 'warn' as const, label: `Take payment from ${name}, ${takeAmount(b, o).toLocaleString('en-US')}`, on: p.leave(() => payFor(b, o)) }
     : st.act === 'tell' ? { word: 'Tell', duo: phWhatsapp, tone: 'good' as const, label: `Tell ${name} what was found`, on: () => openTell(o.id) } : undefined;
   return <OrderRow face={faceOf(b, o)} name={name} no={orderNo(o.id)} status={st} amount={orderTotal(o)}
-    time={o.stage === 'delivered' && o.deliveredAt ? doneWhen(o.deliveredAt, t) : placedWhen(o, t)} act={act} on={() => openOrder(o.id)} />;
+    time={o.stage === 'delivered' && o.deliveredAt ? doneWhen(o.deliveredAt, t) : placedWhen(o, t)} act={act} on={p.leave(() => openOrder(o.id))} />;
 }
 
 /** The head's bar when nothing moves: one quiet track, every count 0. */
@@ -125,7 +131,7 @@ function FindField(p: { value: string; onInput: (v: string) => void }): JSX.Elem
 }
 
 /** OR03 · what Find found: the customer with the one act, then their orders on the move and delivered. */
-function Found(p: { b: Books; q: string; t: number }): JSX.Element {
+function Found(p: { b: Books; q: string; t: number; leave: Leave }): JSX.Element {
   const { b, t } = p, r = findOrders(b, p.q), c = r.customer;
   const moving = r.orders.filter((o) => o.stage !== 'delivered').sort((x, y) => y.placedAt - x.placedAt);
   const gone = r.orders.filter((o) => o.stage === 'delivered').sort((x, y) => (y.invoicedAt || y.deliveredAt || 0) - (x.invoicedAt || x.deliveredAt || 0));
@@ -139,7 +145,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
           <Avatar initials={c.initials} tint={c.tint} size={36} font={13} />
           <span class="or-cust-t"><span>{c.name}</span><span><span class="mono">{r.orders.length}</span>{' orders · owes '}<span class="mono">{c.owes.toLocaleString('en-US')}</span></span></span>
           {c.owes > 0 && (
-            <button type="button" class="or-cust-act" aria-label={`Take payment from ${c.name}, ${c.owes.toLocaleString('en-US')}`} onClick={() => go('customers/pay', { customer: c.id })}>
+            <button type="button" class="or-cust-act" aria-label={`Take payment from ${c.name}, ${c.owes.toLocaleString('en-US')}`} onClick={p.leave(() => go('customers/pay', { customer: c.id }))}>
               <span class="or-apill warn">Take <span class="mono">{short(c.owes)}</span></span>
             </button>
           )}
@@ -154,7 +160,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
               const it = first && b.items.find((x) => x.id === first.itemId);
               const what = o.stage === 'road' ? `with ${(b.members.find((m) => m.id === o.holderId)?.name || 'the driver').split(' ')[0]}` : first ? (k.length > 1 ? `${shortItem(first.name)} +${k.length - 1}` : `${shortItem(first.name)} ×${first.qty}`) : '';
               return <CustOrderRow key={o.id} aisle={o.stage === 'road' ? undefined : it?.aisle} icon={STAGE_ICON.road} title={`Placed ${when(o.placedAt)}`} sub={`${orderNo(o.id)} · ${what}`}
-                amount={orderTotal(o)} pill={{ text: STAGE_WORD[o.stage], tone: 'info' }} on={() => openOrder(o.id)} />;
+                amount={orderTotal(o)} pill={{ text: STAGE_WORD[o.stage], tone: 'info' }} on={p.leave(() => openOrder(o.id))} />;
             })}
           </GroupCard>
         </div>
@@ -169,7 +175,7 @@ function Found(p: { b: Books; q: string; t: number }): JSX.Element {
               const age = daysApart(dayOf(at), today), tw = o.voided ? twinOf(b.orders, o, true) : null;
               return <CustOrderRow key={o.id} icon="receipt" title={`${owes ? 'Billed' : 'Delivered'} ${daysApart(dayOf(at), today) < 7 ? weekday(at) + ' ' + clock(at) : dayLabel(at)}`}
                 sub={owes ? `${orderNo(o.id)} · ${age} day${age === 1 ? '' : 's'}` : o.voided && tw && tw.copy === o ? `${orderNo(o.id)} · copy of ${orderNo(tw.orig.id)}` : orderNo(o.id)} amount={orderTotal(o)} struck={o.voided}
-                pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={() => openOrder(o.id)} />;
+                pill={o.voided ? { text: 'Void', tone: 'bad' } : owes ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true }} on={p.leave(() => openOrder(o.id))} />;
             })}
             {!more && gone.length > 4 && <ShowMore faces={[]} n={gone.length - 4} on={() => setMore(true)} />}
           </GroupCard>

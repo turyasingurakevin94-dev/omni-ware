@@ -12,7 +12,7 @@ import { waitingChats } from '../../../core/chats.ts';
 import type { DemoSource } from '../../../core/demo/index.ts';
 import { firstWord } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
-import type { Books, Chat, ChatBooks } from '../../../core/types.ts';
+import type { Books, Chat, ChatBooks, Message } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
@@ -73,11 +73,12 @@ export function ChatsList(p: ScreenProps): JSX.Element {
     const digits = s.replace(/[^0-9]/g, '');
     return [v.title, v.waName, said(v.last)].join(' ').toLowerCase().includes(s) || (digits.length >= 3 && v.chat.waId.includes(digits.replace(/^0/, '')));
   };
+  const searching = !manager && q.trim().length > 0;
   return (
     <div>
       {head(f === 'team' ? 'team' : 'mine')}
       <main class="ch-main">
-        {!manager && (
+        {searching ? <SearchView b={b} cb={cb} t={t} q={q.trim()} order={mine} match={match} /> : !manager && (
           <div role="group" aria-label="Show" class="ch-chips">
             {([['mine', 'Mine', owned], ['waiting', 'Waiting', waits.length], ['new', 'New', fresh.length], ['team', 'Team', null]] as [Filter, string, number | null][]).map(([k, w, n]) => (
               <button key={k} type="button" class={'ch-chip' + (f === k ? ' on' : '')} aria-pressed={f === k} onClick={() => setFilter(k)}>
@@ -86,10 +87,10 @@ export function ChatsList(p: ScreenProps): JSX.Element {
             ))}
           </div>
         )}
-        {f === 'mine' && <MineView rows={mine.filter(match)} />}
-        {f === 'waiting' && <WaitingView b={b} cb={cb} t={t} match={match} />}
-        {f === 'new' && <NewView b={b} cb={cb} t={t} match={match} />}
-        {f === 'team' && <TeamView b={b} cb={cb} t={t} match={match} onNew={() => setFilter('new')} />}
+        {!searching && f === 'mine' && <MineView rows={mine.filter(match)} />}
+        {!searching && f === 'waiting' && <WaitingView b={b} cb={cb} t={t} match={match} />}
+        {!searching && f === 'new' && <NewView b={b} cb={cb} t={t} match={match} />}
+        {!searching && f === 'team' && <TeamView b={b} cb={cb} t={t} match={match} onNew={() => setFilter('new')} />}
       </main>
     </div>
   );
@@ -109,10 +110,13 @@ function Ticks(p: { read: boolean }): JSX.Element {
   );
 }
 
-function MineRow(p: { v: ChatView }): JSX.Element {
-  const v = p.v, me = books.value?.me, fresh = !v.chat.ownerId, last = v.last, t = now.value;
+function MineRow(p: { v: ChatView; hit?: Hit | null }): JSX.Element {
+  const v = p.v, me = books.value?.me, fresh = !v.chat.ownerId, last = v.last, t = now.value, hit = p.hit;
+  const atLast = !hit || (!!last && hit.m.id === last.id);
   let sub: JSX.Element;
-  if (v.typing && !fresh) {
+  if (hit) {
+    sub = <>{atLast && v.waitMins != null && <><b class="mono">{`${v.waitMins} m`}</b><span aria-hidden="true" class="dot">·</span></>}<span class="ch-ell">{hit.words}</span></>;
+  } else if (v.typing && !fresh) {
     sub = <span class="ch-typing"><span aria-hidden="true" class="ch-dots"><i /><i /><i /></span><span class="ch-ell">{`${firstWord(v.typing.name)} is typing a reply`}</span></span>;
   } else if (v.waitMins != null) {
     const words = said(last);
@@ -127,11 +131,58 @@ function MineRow(p: { v: ChatView }): JSX.Element {
       <Tap on={() => openChat(v)} class="ch-row-m">
         <Ring face={v.face} mins={v.waitMins} />
         <span class="ch-row-t">
-          <span class="ch-row-1"><span class={v.face ? undefined : 'num'}>{v.title}</span><span class={'mono' + (un ? ' un' : '')}>{listTime(v.chat.lastAt, t)}</span></span>
+          <span class="ch-row-1"><span class={v.face ? undefined : 'num'}>{v.title}</span><span class={'mono' + (un && atLast ? ' un' : '')}>{listTime(hit ? hit.m.at : v.chat.lastAt, t)}</span></span>
           <span class="ch-row-2"><span>{sub}</span>{un && <span aria-label={`${v.unread} unread`} class="ch-unread">{v.unread}</span>}</span>
         </span>
       </Tap>
       {fresh && <button type="button" class="ch-take" aria-label={`Take ${v.title} as your customer`} onClick={() => { void take(v.chat); }}>Take</button>}
+    </div>
+  );
+}
+
+/* ---------------- Searching (CH08) ---------------- */
+
+interface Hit { m: Message; words: JSX.Element }
+
+/** The sentence of a message that holds what was typed, in quotes, the word marked (TD12's sand). */
+function marked(body: string, q: string): JSX.Element {
+  const lc = q.toLowerCase();
+  const sentence = body.split(/(?<=[.?!])\s+/).find((x) => x.toLowerCase().includes(lc)) || body;
+  const out: (string | JSX.Element)[] = [];
+  let at = 0, k = sentence.toLowerCase().indexOf(lc);
+  while (k >= 0 && lc) {
+    out.push(sentence.slice(at, k), <mark key={k} class="ch-mark">{sentence.slice(k, k + q.length)}</mark>);
+    at = k + q.length; k = sentence.toLowerCase().indexOf(lc, at);
+  }
+  out.push(sentence.slice(at));
+  return <>“{out}”</>;
+}
+
+/**
+ * Searching your chats and the new numbers (spec 04 §2a): by name or number, and by every message the
+ * phone holds (the newest 500 across the shop), not only the last. A hit shows the message that holds
+ * the word, newest first in each chat, at its own time; the chats keep Mine's order. Not here? New chat.
+ */
+function SearchView(p: { b: Books; cb: ChatBooks; t: number; q: string; order: ChatView[]; match: (v: ChatView) => boolean }): JSX.Element {
+  const { b, cb, t, q } = p, lc = q.toLowerCase();
+  const ours = cb.chats.filter((c) => !c.ownerId || c.ownerId === b.me.id);
+  const rank = (id: number) => { const k = p.order.findIndex((v) => v.chat.id === id); return k < 0 ? 1e6 : k; };
+  const rows = ours.map((c) => {
+    const m = cb.recent.filter((x) => x.chatId === c.id && x.body && x.body.toLowerCase().includes(lc)).pop() || null;
+    const v = p.order.find((x) => x.chat.id === c.id) || chatView(b, cb, c, t, drafts.value);
+    return { v, hit: m ? { m, words: marked(m.body, q) } : null };
+  }).filter((r) => r.hit || p.match(r.v))
+    .sort((x, y) => rank(x.v.chat.id) - rank(y.v.chat.id) || (y.v.chat.lastAt || 0) - (x.v.chat.lastAt || 0));
+  const hits = rows.filter((r) => r.hit), named = rows.filter((r) => !r.hit);
+  return (
+    <div class="ch-list">
+      {!!named.length && <><GroupHead title="Chats" n={named.length} /><GroupCard>{named.map((r) => <MineRow key={r.v.chat.id} v={r.v} />)}</GroupCard></>}
+      {!!hits.length && <><GroupHead title={`Said “${q}”`} n={hits.length} /><GroupCard>{hits.map((r) => <MineRow key={r.v.chat.id} v={r.v} hit={r.hit} />)}</GroupCard></>}
+      <Tap on={() => nav.push('chats/new')} class="ch-notfound">
+        <span aria-hidden="true"><Icon name="pen" size={18} stroke={2} /></span>
+        <span><span>Not here? Start a new chat</span><span>a customer, or a phone number</span></span>
+        <span aria-hidden="true"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+      </Tap>
     </div>
   );
 }
@@ -148,7 +199,7 @@ function GroupHead(p: { title: string; n: number; dot?: 'warn' | 'bad' | null; g
   );
 }
 
-function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element; onRow?: () => void }): JSX.Element {
+function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element; onRow?: () => void; act?: JSX.Element }): JSX.Element {
   const v = p.v, me = books.value?.me, mine = v.owner?.id === me?.id;
   const fresh = !v.chat.ownerId, late = (v.waitMins || 0) >= 30;
   return (
@@ -163,12 +214,12 @@ function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Ele
           <span class="ch-row-s">{p.sub}</span>
         </span>
       </Tap>
-      {fresh ? <button type="button" class="ch-take" aria-label={`Take ${v.title} as your customer`} onClick={() => { void take(v.chat); }}>Take</button>
+      {p.act || (fresh ? <button type="button" class="ch-take" aria-label={`Take ${v.title} as your customer`} onClick={() => { void take(v.chat); }}>Take</button>
         : v.waitMins != null && (
           <Tap on={() => openChat(v)} label={mine ? `Reply to ${v.title}` : `Reply to ${v.title}, ${firstWord(v.owner?.name || '')} is told`} class="ch-wa">
             <Duo i={phWhatsapp} size={19} color="#0F6B43" />
           </Tap>
-        )}
+        ))}
     </div>
   );
 }
@@ -266,7 +317,7 @@ function TeamView(p: { b: Books; cb: ChatBooks; t: number; match: (v: ChatView) 
   const fresh = ws.filter((w) => !w.chat.ownerId).length;
   const manager = b.me.role === 'manager';
   return (
-    <div class="ch-list" style={manager ? { padding: 0 } : undefined}>
+    <div class={manager ? 'ch-mgr' : 'ch-list'}>
       <div class={'ch-strip' + (manager ? ' flat' : '')}>
         {people.map((m) => {
           const n = ownedBy(cb, m.id).length, waiting = ws.filter((w) => w.chat.ownerId === m.id).length, mgr = m.role === 'manager';
@@ -282,15 +333,21 @@ function TeamView(p: { b: Books; cb: ChatBooks; t: number; match: (v: ChatView) 
           );
         })}
       </div>
+      <div class={manager ? 'ch-list' : 'ch-contents'}>
+      {/* The Manager moves chats; taking a new number is Sales' job (decision-rights), so her view has no "+1 new" (CH35). */}
       <GroupHead dot="bad" title="Waiting, oldest first" n={views.length}
-        more={fresh ? <Tap on={p.onNew}>{`+${fresh} new`}<Icon name="chevron-right" size={14} stroke={2.4} /></Tap> : undefined} />
+        more={manager ? <></> : fresh ? <Tap on={p.onNew}>{`+${fresh} new`}<Icon name="chevron-right" size={14} stroke={2.4} /></Tap> : undefined} />
       <GroupCard>{views.map((v) => {
         const sub = v.typing ? `${firstWord(v.typing.name)} is typing a reply` : `${whose(v.owner)}${v.owner && v.owner.presence !== 'on' ? ' · away' : ''}`;
-        // The Manager moves any teammate's chat from here (CH32); the WhatsApp disc still opens it.
-        const move = manager && v.owner && v.owner.id !== b.me.id
-          ? () => sheet.open(() => <GiveSheet chatId={v.chat.id} />, { label: `Move ${v.title}`, top: 196 }) : undefined;
-        return <WaitRow key={v.chat.id} v={v} sub={sub} badge onRow={move} />;
+        if (!manager) return <WaitRow key={v.chat.id} v={v} sub={sub} badge />;
+        // CH35: the row opens the chat; the navy disc moves it to a teammate (CH32).
+        const move = () => sheet.open(() => <GiveSheet chatId={v.chat.id} />, { label: `Move ${v.title}`, top: 196 });
+        return (
+          <WaitRow key={v.chat.id} v={v} sub={sub} badge onRow={() => nav.push('chats/chat', { id: v.chat.id })}
+            act={v.owner && v.owner.id !== b.me.id ? <button type="button" class="ch-move" aria-label={`Move ${v.title} to a teammate`} onClick={move}><Icon name="hand-over" size={19} stroke={2} /></button> : undefined} />
+        );
       })}</GroupCard>
+      </div>
     </div>
   );
 }

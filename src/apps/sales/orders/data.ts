@@ -6,7 +6,7 @@
  *   a row         who holds it and the one thing to say (Ruth decides, Not paid yet, 1 of 2 came …)
  *   an order      its customer, its lines' marks, what is still possible
  */
-import { lineWaits, twinOf } from '../../../core/orders.ts';
+import { daysInStage, LATE_DAYS, lineWaits, twinOf } from '../../../core/orders.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
@@ -112,7 +112,7 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
     return orderOwes(o) > 0 ? { text: 'Owes', tone: 'warn' } : { text: 'Paid', tone: 'good', tick: true };
   }
   if (openAsk(b, o, 'cancel')) return { text: 'Cancel asked', face: rf, tone: 'info' };
-  const days = Math.floor((now - o.stageAt) / 864e5);
+  const days = daysInStage(o, now);
   if (o.stage === 'checking') {
     if (o.lines.some(waitsRuth)) return { text: `${ruth ? firstWord(ruth.name) : 'Manager'} decides`, face: rf, tone: 'info' };
     if (o.paid < orderTotal(o)) return { text: 'Not paid yet', tone: 'warn', act: 'take' };
@@ -123,7 +123,7 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
     const came = o.lines.filter((l) => l.state === 'came').length;
     return { text: `${came} of ${o.lines.length} came`, tone: 'good', bar: { done: came, of: o.lines.length } };
   }
-  if (days >= 2) return { chip: { text: `${days}+ days`, tone: 'bad' } };
+  if (days >= LATE_DAYS) return { chip: { text: `${days}+ days`, tone: 'bad' } };
   const h = member(b, o.holderId);
   if (o.stage === 'packing') return { text: `${h ? firstWord(h.name) : 'Store'} packing`, tone: 'info' };
   if (o.stage === 'road') return h ? { text: `${firstWord(h.name)} driving`, tone: 'info' } : { text: 'Ready to collect', tone: 'good' };

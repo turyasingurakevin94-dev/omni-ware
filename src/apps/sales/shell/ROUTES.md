@@ -17,19 +17,20 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `chats/new` | — | chats | CH05 |
 | `sell` | `{ items?, aisle?, then?: 'ask' }`: `items` and `aisle` carry on to the order once the customer is picked (Today's "Put X on an order", "Or open an aisle", "Sells most"); `then: 'ask'` comes back to Ask Moses with the customer picked: `openAsk({ customerId })` (what was typed is kept) | sell | SL01 Who (the red +) |
 | `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items?, aisle?, draft? }`: `customer: ''` is a walk-in; `items` a JSON string of `[{ itemId, qty, price? }]` put in the order (Counter's "Order in", KC07/KC18; Today's "Start Kato's order with…", "Start their order" with the quantity chosen); `aisle` opens the order at that aisle (SL12; Today's "Sells most" / "Or open an aisle"); `draft` an order still open; `chat` the conversation it came from (Today's "Reply to Lubowa") (CH14's Start order sends `{ from: 'chat', chat, items }`, with no prices) | sell | SL03–SL27, SL30, SL31 |
+| `sell/aisle` | `{ aisle, group? }`, or a shelf `{ group: 'usual' \| 'new' \| 'most' }` | sell | SL12 |
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
 | `counter/wait` | `{ id }` (the counter sale waiting for the Manager's price) | counter | KC11 |
 | `counter/receipt` | `{ id }` | counter | KC16 |
-| `orders` | `{ stage? }` | orders | OR01–OR04 |
+| `orders` | `{ stage?, q? }` (`q`: the Find query, written into the params whenever the list is left, `''` once cleared, so Back lands on the search, OR29 → OR30, or on the full list) | orders | OR01–OR04, OR30 |
 | `orders/order` | `{ id }` (e.g. 552 is Kato's #0552, OR07) | orders | OR05–OR13, OR22 (OR10–OR26 are its sheets) |
 | `orders/paid-over` | `{ payment }` (a cash-book id; 9002 is Nansana's 560,000) | orders | OR15, OR16 |
 | `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU09 (CU09: the Quiet chip) |
 | `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
 | `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: string, then?: string }` (bills: order ids joined by commas, "544" or "531,544", never a bill Accounts is checking; it may name a live order held for the money, and `debt` for a charge that names no order, such as an opening balance), or `{ order }` for a walk-in's order before its invoice (CU34); `then`: the customer ids to take next, joined by commas: once paid, open `customers/pay` for the next (Today's Play all) | customers | CU37 (all, cash), CU30–CU36 |
-| `customers/paid` | `{ id }` | customers | CU40–CU45 (CU44: not sent yet, no signal; CU45: Try again, still no signal) |
+| `customers/pay` | `{ customer, bills?: string, then?: string }` (bills: order ids joined by commas, "544" or "531,544", never a bill Accounts is checking; it may name a live order held for the money, and `debt` for a charge that names no order, such as an opening balance), or `{ order }` for a walk-in's order before its invoice (CU34); `{ customer, fix, paid }` opens a refused kept payment again to fix it (`fix`: its outbox id, `paid`: its Paid entry; CU46); `then`: the customer ids to take next, joined by commas: once paid, open `customers/pay` for the next (Today's Play all) | customers | CU37 (all, cash), CU30–CU36 |
+| `customers/paid` | `{ id }` | customers | CU40–CU47 (CU44: not sent yet, no signal; CU45: Try again, still no signal; CU46: refused; CU47: thrown away) |
 
 ## Rules
 

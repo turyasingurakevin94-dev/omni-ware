@@ -11,9 +11,10 @@ import type { Kept } from '../outbox.ts';
 import { dayOf, replyWindow } from '../time.ts';
 import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
 import { readFlags, type DemoFlags } from './flags.ts';
-import { SAVED_AT } from './seed/clock.ts';
 import { seed, type DemoState } from './seed/index.ts';
-import { CHAT, MUSA } from './seed/people.ts';
+import { SAVED_AT, t } from './seed/clock.ts';
+import { KATO } from './seed/orders-live.ts';
+import { BRIAN, CHAT, MUSA } from './seed/people.ts';
 import * as W from './writes.ts';
 
 const copy = <T>(x: T): T => structuredClone(x);
@@ -33,7 +34,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   const flags = typeof search === 'string' ? readFlags(search) : search;
   const s = seed(flags);
   const me = s.books.me;
-  let signedIn = true, failed = false;
+  let signedIn = true, failed = false, payKept = false, brianTook = false;
 
   const write = <T>(fn: () => T): Promise<T> => {
     if (flags.offline) return Promise.reject(dataError('offline', 'No signal'));
@@ -46,6 +47,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   };
   const say = (chatId: number, body: string, kind: Message['kind']): Message => {
     const c = chat(chatId);
+    if (!s.connected) throw dataError('refused', 'WhatsApp is not connected yet', 'WAOFF');
     if (kind !== 'template' && !replyWindow(c.lastInAt, s.now).open) throw dataError('refused', 'The 24-hour window is shut: send it as the reply template', 'WSHUT');
     const m: Message = { id: 'm' + (s.messages.length + 1), chatId, at: s.now, dir: 'out', kind, body, by: me.id, state: 'sent' };
     s.messages.push(m); c.lastAt = s.now;
@@ -118,7 +120,17 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
     withdrawBillAsk: (id) => write(() => W.withdrawAsk(s, id)),
     askCancel: (orderId, why) => write(() => copy(W.askCancel(s, orderId, why))),
 
-    receivePayment: (a) => write(() => copy(W.receivePayment(s, a))),
+    receivePayment: (a) => {
+      // &fail=pay (CU46): the first payment finds no signal and is kept; before it goes again, Brian takes 120,000
+      // of Kato's #0544 at 10:50 (FACTS §1), so the kept one is now more than Kato owes and the shop refuses it.
+      if (flags.fail === 'pay' && !payKept) { payKept = true; return later(() => { throw dataError('offline', 'No signal'); }); }
+      if (flags.fail === 'pay' && !brianTook) {
+        brianTook = true;
+        const r = W.receivePayment(s, { customerId: KATO, orderId: null, amount: 120000, method: 'cash', ref: '', picks: [544], over: null });
+        r.payments.forEach((x) => { const y = s.books.payments.find((z) => z.id === x.id); if (y) { y.by = BRIAN; y.at = t('10:50'); } });
+      }
+      return write(() => copy(W.receivePayment(s, a)));
+    },
     recordPromise: (a) => write(() => {
       const p = { id: s.books.promises.reduce((m, x) => Math.max(m, x.id), 0) + 1, customerId: a.customerId, on: a.on, madeOn: dayOf(s.now), amount: a.amount };
       s.books.promises.push(p);
@@ -153,7 +165,10 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),
-    sendImage: (chatId, _file, caption) => write(() => say(chatId, caption, 'image')),
+    // &wa=slow: the shop's WhatsApp takes 10 s to take a picture (SL35).
+    sendImage: (chatId, _file, caption) => (flags.waSlow
+      ? new Promise<void>((ok) => setTimeout(ok, 10000)).then(() => write(() => say(chatId, caption, 'image')))
+      : write(() => say(chatId, caption, 'image'))),
     sendCatalog: (chatId) => write(() => say(chatId, '', 'catalog')),
     media: (messageId) => {
       const m = s.messages.find((x) => x.id === messageId);

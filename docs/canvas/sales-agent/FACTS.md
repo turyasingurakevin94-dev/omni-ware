@@ -43,6 +43,7 @@ Two rules hold everything together:
 | TD02 | an afternoon "busy" what-if | its counts are its own; names, tints, prices and rhythms still follow this file |
 | TD06 | **a new salesperson's first day** (Sat 17 Oct, 8:00) | "Your first day" |
 | TD08 | **Thu 29 Oct** | goal hit |
+| CU46, CU47 | today **10:50**: Brian takes **120,000** of Kato's (#0544) while Grace's phone has no signal, so Kato owes **300,000**; Grace's kept 420,000 then comes back refused (and, in CU47, is thrown away) | a kept payment's life after now |
 | CH06, OR04, CU06, CU08, CH07 | empty and loading states | everything they do show follows this file |
 
 Every other board is at 10:41 today. No "now" board shows a clock time after 10:41. Any order placed at 10:41 (counter sale, Sell, CH22) takes the next number, **#0558**.
@@ -238,7 +239,8 @@ Delivery is **today, afternoon**, before the Friday Kato asked for. No board pro
   - the cost went up; the shop's new price is 35,500. **Ruth sets 35,000 a bag at 15:05** → 700,000 → **880,000**.
 - **#0562 Nansana** (OR31), placed **today 14:40** by Grace, later today:
   - lines: her usual pair, Cement · Hima 50kg 2 bag × 33,500 = **67,000** · Wood glue · 1L 1 tin **18,500** → **85,500**; both on our shelf;
-  - Ruth's 15:05 cement price reaches it: 2 × 35,000 = 70,000 → **88,500**; it moves to Packing (Musa), nothing packed yet, not paid;
+  - Ruth prices #0562's cement at 35,000 too (15:05): 2 × 35,000 = 70,000 → **88,500**; Buying is skipped (both on our shelf) and it moves to Packing (Musa), nothing packed yet, not paid;
+  - it exists only at the 15:05 moment (like #0559), never at 10:41 or 15:40, so no other board's counts change;
   - her chat is shut (last wrote Thu 15 Oct 16:02, **2 days**), so the new price goes by SMS.
 - **#0533 Kyaligonza** (OR24, OR25): a bill from Mon 24 Aug; **owes 420,000 now**.
   - Payments on it: Fri 9 Oct **Mobile 160,000** (Brian, ID 1193442087) · Wed 14 Oct **Cash 142,000** (Grace, 10:02) · today 10:40 **Bank 388,000**.

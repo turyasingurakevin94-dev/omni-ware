@@ -11,7 +11,7 @@
  */
 import type { OrderDraft } from './datasource.ts';
 import { creditHold, linePriced } from './money.ts';
-import type { AskLine, Customer, Day, Item, Line, Order, Stage } from './types.ts';
+import type { AskLine, Customer, Day, Item, Line, Ms, Order, Stage } from './types.ts';
 
 /** Why the Manager decides a line's price, or null (sales.html:4423 priceNoteFor). */
 export function priceNote(l: Line): 'under' | 'nomargin' | 'nocost' | null {
@@ -110,3 +110,9 @@ export function twinOf(orders: Order[], o: Order, voided = false): { orig: Order
 
 /** The later of an order entered twice: it does not count. */
 export const isCopy = (orders: Order[], o: Order): boolean => twinOf(orders, o)?.copy === o;
+
+/** Days an order has sat in its stage, and when that is late: 2 or more (OR01's "2+ days" chip; FACTS: #0530, Packing since Thu, the 1 late). */
+export const LATE_DAYS = 2;
+export function daysInStage(o: Order, now: Ms): number {
+  return Math.floor((now - o.stageAt) / 864e5);
+}

@@ -11,7 +11,7 @@ import { Duo, Icon, phPlane, phSearch, type IconName } from '../../../ui/icons.t
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { findItems } from '../../../core/items.ts';
+import { closest, readAsk } from '../../../core/find.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Item, SourcingAsk } from '../../../core/types.ts';
 import { act, now } from '../shell/store.ts';
@@ -19,14 +19,8 @@ import { shopAisles } from '../today/data.ts';
 import { sale, set } from './state.ts';
 import './findnone.css';
 
-/** The closest: items holding any one of the words, on the shelf, two at most, A to Z. */
-function closest(b: Books, words: string): Item[] {
-  const seen = new Set<string>(), out: Item[] = [];
-  words.split(/\s+/).filter((w) => w.length > 2).forEach((w) => findItems(b.items, w).forEach((it) => {
-    if (!seen.has(it.id) && (it.onShelf || 0) > 0 && out.length < 2) { seen.add(it.id); out.push(it); }
-  }));
-  return out.sort((x, y) => x.name.localeCompare(y.name));
-}
+/** The closest (core/find.ts, the one rule SL09 uses): what is on the shelf, two at most. */
+const near = (b: Books, words: string): Item[] => closest(b, readAsk(words), 2, (it) => (it.onShelf || 0) > 0 && it.price != null);
 
 const STEPS: { status: SourcingAsk['status']; word: string; icon: IconName }[] = [
   { status: 'asked', word: 'Asked', icon: 'clock' }, { status: 'looking', word: 'Looking', icon: 'search' },
@@ -71,7 +65,7 @@ function Dots(p: { a: SourcingAsk }): JSX.Element {
 
 export function FindNone(p: { b: Books; words: string; qty: number; customer: string | null; who: string; onAdd: (it: Item) => void; onAisle: (name: string) => void }): JSX.Element {
   const [busy, setBusy] = useState(false);
-  const w = p.words.trim(), near = closest(p.b, w), lw = w.toLowerCase();
+  const w = p.words.trim(), close = near(p.b, w), lw = w.toLowerCase();
   // An ask Sourcing has open with these words: this walk-in's request is added to it.
   const ask = p.b.asks.find((a) => a.status !== 'dropped' && a.status !== 'listed' && a.name.toLowerCase().includes(lw));
   const name = ask ? ask.name : w;
@@ -111,10 +105,10 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
         <span aria-hidden="true" class="kc-none-i"><Duo i={phSearch} size={26} color="#5F6980" /><span>?</span></span>
         <span class="kc-none-t"><b>{`Nothing called “${w}”`}</b><span>{`The shop doesn’t sell a ${w}`}</span></span>
       </div>
-      {!!near.length && (
+      {!!close.length && (
         <div class="kc-near">
           <span class="kc-near-k">Closest in the shop</span>
-          {near.map((it) => (
+          {close.map((it) => (
             <div key={it.id} class="kc-near-r">
               <ItemSquare aisle={it.aisle} size={40} />
               <span class="kc-near-t">
@@ -143,15 +137,15 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
         )}
         {foot}
       </div>
-      <OpenAisle b={p.b} near={near} onAisle={p.onAisle} />
+      <OpenAisle b={p.b} near={close} onAisle={p.onAisle} />
     </>
   );
 }
 
 /**
  * "Or open an aisle" (TD14's tiles; KC26, KC28): the closest item's aisle first, then the shop's aisles in
- * the shop's order (today/data.ts shopAisles over Books.aisles), three. On every "Nothing called" state
- * (spec 04 §4.3): page content, it may run under the dock and scrolls clear.
+ * the shop's order (today/data.ts shopAisles over Books.aisles), three. Shown where one close item or none
+ * leaves the room (KC21's two close items fill it).
  */
 function OpenAisle(p: { b: Books; near: Item[]; onAisle: (name: string) => void }): JSX.Element | null {
   const all = shopAisles(p.b, now.value), own = p.near[0] ? all.find((a) => a.name === p.near[0].aisle) : undefined;

@@ -11,9 +11,13 @@
  *   &state=busy              an afternoon with 38 live and 22 needing Grace (TD02)
  *   &state=goal-hit          Thu 29 Oct, the month's goal passed (TD08)
  *   &state=test-record       a TEST order of Grace's at 10:30, in no figure (TD25)
+ *   &wa=down                 the shop's WhatsApp does not answer: sends are refused (SL29 "Picture not sent yet")
+ *   &wa=slow                 the shop's WhatsApp answers slowly: a picture takes 10 s to go (SL35)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
  *   &wa=off                  the shop's WhatsApp is not connected: nothing reaches a customer (CU43: the receipt waits)
  *   &fail=sale               the next counter sale is lost on its way, as when the signal drops mid-send (KC19)
+ *   &fail=pay                the next payment is kept (no signal); meanwhile Brian takes 120,000 of Kato's at 10:50, so when it
+ *                            goes again the shop refuses it as more than they owe (CU46)
  *   &listen=1                the phone can listen: "Say it" hears HEARD until Stop (CH16; no tap can cause speech)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
@@ -26,12 +30,16 @@ export interface DemoFlags {
   /** "15:40", or null for 10:41. */
   clock: string | null;
   state: DemoStateName | null;
+  /** The shop's WhatsApp is not answering (&wa=down). */
+  waDown: boolean;
+  /** The shop's WhatsApp answers slowly: a picture takes 10 s to go (&wa=slow). */
+  waSlow: boolean;
   /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
   as: string | null;
   /** &wa=off: the shop's WhatsApp number is not connected (ChatBooks.connected false). */
   waOff: boolean;
-  /** 'sale': the next counter sale does not reach the server (KC19). */
-  fail: 'sale' | null;
+  /** 'sale': the next counter sale does not reach the server (KC19). 'pay': the next payment is kept, then refused (CU46). */
+  fail: 'sale' | 'pay' | null;
   /** The phone listens (CH16): "Say it" hears HEARD and keeps listening until Stop. */
   listen: boolean;
 }
@@ -52,9 +60,11 @@ export function readFlags(search: string): DemoFlags {
     offline: q.get('offline') === '1',
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
+    waDown: q.get('wa') === 'down',
+    waSlow: q.get('wa') === 'slow',
     as: /^[a-z]+$/.test(as) ? as : null,
     waOff: q.get('wa') === 'off',
-    fail: q.get('fail') === 'sale' ? 'sale' : null,
+    fail: q.get('fail') === 'sale' ? 'sale' : q.get('fail') === 'pay' ? 'pay' : null,
     listen: q.get('listen') === '1',
   };
 }

@@ -13,7 +13,8 @@ import { Tap } from '../../../ui/util.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
 import { TINTS } from '../../../core/names.ts';
 import type { Customer, Member } from '../../../core/types.ts';
-import type { Bill, RingTone } from './data.ts';
+import { billNo, type OpenBill } from '../../../core/owing.ts';
+import type { RingTone } from './data.ts';
 import { BigRing } from './local-rings.tsx';
 
 export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: number; onClose: () => void; children?: ComponentChildren }): JSX.Element {
@@ -33,7 +34,7 @@ export function CustHead(p: { c: Customer; sub: string; tone: RingTone; fill: nu
 }
 
 /** CU10 · Owes, the credit it sits in (the Manager's), and the bills on the road to the hold. */
-export function AgeTrack(p: { owes: number; bills: Bill[]; limit: number | null; manager: string; hold: number }): JSX.Element {
+export function AgeTrack(p: { owes: number; bills: OpenBill[]; limit: number | null; manager: string; hold: number }): JSX.Element {
   // 30 days, or out to the oldest bill when it is older (Kyaligonza's 54 days sit at '54 d', CU17).
   const SPAN = Math.max(30, ...p.bills.map((b) => b.age)), at = (d: number) => Math.min(100, (d / SPAN) * 100), holdAt = at(p.hold);
   const max = Math.max(...p.bills.map((b) => b.left));
@@ -51,7 +52,7 @@ export function AgeTrack(p: { owes: number; bills: Bill[]; limit: number | null;
             <span><Icon name="lock" size={12} stroke={2.2} />credit <b class="mono">{shortMoney(p.limit)}</b>{` · ${p.manager}`}</span>
             <span aria-hidden="true" class="cu-credit-bar"><span style={{ width: `${used}%` }} /></span>
           </span>
-        ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />{`No limit set · ${p.manager} decides`}</span></span>}
+        ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />No limit set</span></span>}
       </div>
       <div role="img" aria-label={label} class="cu-track">
         <div class="cu-track-road">
@@ -96,7 +97,7 @@ export function SplitHead(p: { owes: number; oldest: number; collect: number; ch
 }
 
 /** CU13 · The balance says one thing, the open bills another: how far apart, and who is checking. */
-export function ApartHead(p: { apart: number; owes: number; bills: Bill[]; checker: Member }): JSX.Element {
+export function ApartHead(p: { apart: number; owes: number; bills: OpenBill[]; checker: Member }): JSX.Element {
   const t = TINTS[p.checker.tint], sum = p.bills.reduce((s, b) => s + b.left, 0);
   return (
     <div role="img" class="cu-apart" aria-label={`Being checked: the balance says ${fig(p.owes)}; the open bills say ${fig(sum)}; ${fig(p.apart)} apart. ${first(p.checker.name)} is checking.`}>
@@ -108,7 +109,7 @@ export function ApartHead(p: { apart: number; owes: number; bills: Bill[]; check
         <span class="cu-apart-k"><span>Balance</span><span class="mono amber">{fig(p.owes)}</span></span>
         <span class="cu-apart-v"><span class="cu-apart-empty" /><span>what you can take</span></span>
         <span class="cu-apart-k"><span>Open bills</span><span class="mono">{fig(sum)}</span></span>
-        <span class="cu-apart-v"><span class="cu-apart-bills">{p.bills.map((b) => <span key={b.id} style={{ flex: b.left }} />)}</span><span>{p.bills.map((b) => '#' + String(b.id).padStart(4, '0')).join(' · ')}</span></span>
+        <span class="cu-apart-v"><span class="cu-apart-bills">{p.bills.map((b) => <span key={b.id} style={{ flex: b.left }} />)}</span><span>{p.bills.map((b) => billNo(b.id)).join(' · ')}</span></span>
       </div>
     </div>
   );

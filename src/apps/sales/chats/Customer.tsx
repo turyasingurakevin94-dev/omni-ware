@@ -55,9 +55,9 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
   return (
     <FullSheet onBack={nav.back} backLabel="Back to the chat" pad="12px 16px 18px" gap={8}
       head={
-        <div class="cu-head">
+        <div class="ck-head">
           <span aria-hidden="true" class="ow-shead-grab" />
-          <div class="cu-row">
+          <div class="ck-row">
             <Avatar {...faceOf(cust)} size={44} ring="0 0 0 3px #16203C, 0 0 0 5px rgba(255,255,255,.18)" />
             <div><span>{cust.name}</span><span>{[cust.place, cust.kind ? KIND[cust.kind] : '', cust.everyDays ? `every ${cust.everyDays} days` : ''].filter(Boolean).join(' · ')}</span></div>
             <button type="button" class="ow-shead-x" aria-label="Close" onClick={nav.back}><Icon name="close" size={16} stroke={2.2} /></button>
@@ -73,12 +73,12 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
           </div>
         </div>
       }>
-      <div class="cu-gh"><h2>{`Who served ${first}`}</h2><span class="mono">this year</span></div>
-      <div role="img" aria-label={`Who served ${first} this year: ${rows.map((r) => `${firstWord(r.m.name)} ${short(r.sum)}`).join(', ')}`} class="cu-card">
+      <div class="ck-gh"><h2>{`Who served ${first}`}</h2><span class="mono">this year</span></div>
+      <div role="img" aria-label={`Who served ${first} this year: ${rows.map((r) => `${firstWord(r.m.name)} ${short(r.sum)}`).join(', ')}`} class="ck-card">
         {rows.map((r) => {
           const tint = TINTS[r.m.tint] || TINTS.t4;
           return (
-            <div key={r.m.id} class="cu-who">
+            <div key={r.m.id} class="ck-who">
               <Avatar {...faceOf(r.m)} size={34} font={12} />
               <span>
                 <span><span>{firstWord(r.m.name)}</span><b class="mono">{short(r.sum)}</b></span>
@@ -89,21 +89,21 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
           );
         })}
       </div>
-      {!!lately.length && <div class="cu-gh gap"><h2>Lately</h2></div>}
+      {!!lately.length && <div class="ck-gh gap"><h2>Lately</h2></div>}
       {!!lately.length && (
-        <div class="cu-card feed">
+        <div class="ck-card feed">
           {lately.map((f, i) => (
-            <div key={i} class="cu-f">
+            <div key={i} class="ck-f">
               <span>{f.who && <Avatar {...faceOf(f.who)} size={28} font={11} />}{i < lately.length - 1 && <i />}</span>
               <span class={i < lately.length - 1 ? undefined : 'last'}><span>{f.what}</span><span class="mono">{f.sub ? `${when(f.at)} · ${f.sub}` : when(f.at)}</span></span>
             </div>
           ))}
         </div>
       )}
-      <div class="cu-acts">
-        <Tap href={`tel:${cust.phone.replace(/\s/g, '')}`} class="cu-act"><span class="i"><Icon name="phone" size={19} stroke={1.8} /></span><b>Call</b><span>{first}</span></Tap>
-        <Tap on={() => open('customers/pay', { customer: cust.id })} class="cu-act"><span class="w"><Icon name="cash" size={19} stroke={1.8} /></span><b>Take payment</b><span class="mono">{money(Math.max(0, cust.owes))}</span></Tap>
-        <Tap on={() => sheet.open(() => <GiveSheet chatId={id} />, { label: `Give ${first} to…`, top: 178 })} class="cu-act"><span class="b"><Icon name="hand-over" size={19} stroke={1.8} /></span><b>Give</b><span>to a teammate</span></Tap>
+      <div class="ck-acts">
+        <Tap href={`tel:${cust.phone.replace(/\s/g, '')}`} class="ck-act"><span class="i"><Icon name="phone" size={19} stroke={1.8} /></span><b>Call</b><span>{first}</span></Tap>
+        <Tap on={() => open('customers/pay', { customer: cust.id })} class="ck-act"><span class="w"><Icon name="cash" size={19} stroke={1.8} /></span><b>Take payment</b><span class="mono">{money(Math.max(0, cust.owes))}</span></Tap>
+        <Tap on={() => sheet.open(() => <GiveSheet chatId={id} />, { label: `Give ${first} to…`, top: 178 })} class="ck-act"><span class="b"><Icon name="hand-over" size={19} stroke={1.8} /></span><b>Give</b><span>to a teammate</span></Tap>
       </div>
     </FullSheet>
   );

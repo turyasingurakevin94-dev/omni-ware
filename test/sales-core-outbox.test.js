@@ -44,7 +44,16 @@ const { dataError } = require(path.join(ROOT, 'src/core/datasource.ts'));
   const k3 = await box.run('send', { n: 5 });
   t.check(k3.kept, 'with signal back, a new write still waits behind the kept ones (sent in order)');
 
+  const told = [], refusals = [];
+  let seenGone = null;
+  box.onSent((id, value) => { told.push([id, value]); });
+  box.onRefused((id, reason) => { refusals.push([id, reason]); });
+  const unsee = box.onChange(() => { if (seenGone === null) seenGone = told.length; });
   const r = await box.flush();
+  unsee();
+  t.check(told.length === 2 && told[0][0] === k1.id && told[1][0] === k3.id && told[0][1] && told[0][1].ok === 3, 'onSent: each kept write that went, by its id, with the answer');
+  t.check(seenGone >= 1, 'onSent is told before the list changes');
+  t.check(refusals.length === 1 && refusals[0][0] === k2.id && /under what it costs/.test(refusals[0][1]), "onRefused: the refused write's id and the server's reason");
   t.check(sent.join(',') === 'send:1,send:3,send:5' && r.sent === 2 && r.refused === 1, `flush sends in order and keeps the refused one (sent ${sent.join(',')})`);
   const left = await box.items();
   t.check(left.length === 1 && left[0].state === 'refused' && /under what it costs/.test(left[0].reason), "the refused write stays, with the server's reason (Q5)");
@@ -55,8 +64,9 @@ const { dataError } = require(path.join(ROOT, 'src/core/datasource.ts'));
 
   signal = false;
   await box.run('send', { n: 6 });
+  const before = told.length;
   await box.discard((await box.items())[0].id);
-  t.check((await box.items()).length === 0, 'the person may discard a kept write');
+  t.check((await box.items()).length === 0 && told.length === before, 'the person may discard a kept write; it is not told as sent');
 
   t.check(isOffline(new TypeError('Failed to fetch')) && !isOffline(dataError('refused', 'no')), 'a failed fetch is no signal; a refusal is not');
 

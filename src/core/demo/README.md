@@ -21,7 +21,10 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=busy` | Sat 17 Oct 14:20, a busy afternoon (its counts are its own, FACTS §1): 38 live, 212 done this week, 22 need Grace, 3 not placed yet | TD02 |
 | `&state=goal-hit` | Thu 29 Oct 9:10: 36,220,000 sold, the 35M goal passed Wed 28 Oct; 9 live, 1 needs her | TD08 |
 | `&state=test-record` | A TEST order of Grace's at 10:30 (TEST Claude QA, 50,000): kept, struck through, in no figure (0167) | TD25 |
+| `&wa=down` | The shop's WhatsApp does not answer: every send (a message, the order's picture) is refused | SL29 |
+| `&wa=slow` | The shop's WhatsApp answers slowly: a picture (`sendImage`) takes 10 s to go | SL35 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
+| `&fail=pay` | The next payment finds no signal and is kept; before it goes again Brian takes 120,000 of Kato's #0544 (10:50), so the shop refuses the kept one as more than Kato owes | CU46, CU47 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 | `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
 
@@ -42,6 +45,7 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `money.ts` | §5: the cash book this month, promises, asks to Ruth and Esther, the goal, the shop's settings (Credit charge 3%) |
 | `asks.ts` | §6: the four asks of Sourcing |
 | `extra/<tab>.ts` | **each tab's own additions**, owned by that tab's builder. A row another tab may also add is guarded by its id (`if (!orders.some((o) => o.id === 559))`), so the seeds can run in any order |
+| `extra/sell.ts` | Sell: the catalogue to FACTS' 1,153 items in 12 aisles (SL11 draws the counts; generated, not listed); Kato's and Lubowa's orders re-lined at the same totals; Grace's background orders re-lined (SL31); Lubowa #0508; #0559 after 13:50 when no other file added it; **loading 500 a bag** (`per: 'bag'`, FACTS 20 bags = 10,000), **cutting 10,000 flat** (a seed value, not FACTS), Ntinda's delivery as `kind: 'delivery'`, `area: 'Ntinda'`, about 35 minutes |
 
 `test/sales-core-demo.test.js` checks that the figures the boards draw come out of the seed by the app's own rules: 12 live · +3,240,000, the four stage tiles, Sold · October 12,480,000, Placed today 8 · 2,440,500, Money in today 1,044,000, 38 customers, 4 owe 1,910,000, Who's due 3, Gone quiet 8, Chats waiting 3 · oldest 12 m, and the writes below. If a board needs a figure the seed does not give, add the rows in your tab's `extra/<tab>.ts` and a check in your own test; never change another tab's file.
 
@@ -56,6 +60,29 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `send`, `sendTemplate`, `sendImage`, `sendCatalog`, `media`, `note`, `take`, `give`, `markRead` | `wa-send` (`send`, `send-reply-template`, `send-image`, `send-catalog`, `media`), `wa_notes`, `take_conversation`, `hand_conversation` | a shut 24-hour window refuses a plain message or a picture; taking someone else's chat is refused; only your own customer is given, except by the Manager, whose give is a move (`moved`); `served` adds `servedBefore`, the year before the seeded thread |
 
 Writes take 250 ms, so "Sending…" is seen. With `&offline=1` every write is refused as `offline`.
+
+## One seed for every board (the integration pass, 4 Nov 2026)
+
+The six tabs' extras ran on one page for the first time. What was reconciled, and why:
+
+- **Every extra runs, in tab order, and runs idempotently.** Each row an extra adds is guarded by its id (or, for a
+  what-if, by an id it adds: busy #2000, goal-hit #0720, this phone's `today` state), so a second run changes nothing.
+  `test/sales-core-demo.test.js` runs each extra twice under nine flag sets and checks the books did not move.
+  Fixed on the way: Sell's catalogue (1,153 items) added again, Customers' two asks and its empty-shop orders,
+  the Orders tab's #0559, #0562, payments 9201/9202 and #0552's road and delivered steps, Today's what-ifs.
+- **Kato's past orders: one set of lines.** Sell re-lines #0545 (G28 sheets 20, nails 25kg 4, ridge caps 3, roofing
+  nails 10) and #0437 (G28 10, ridge caps 10) at their FACTS totals; Chats and Today keep Sell's lines. So "Often with
+  Iron sheet G28 in Kato's orders" is Ridge cap G28 2/5, Wire nails 25kg 2/5, Wheelbarrow 2/5 (SL05), and with the
+  nails in the message, Ridge cap and Wheelbarrow 2 of 5 each (CH21, corrected from Wheelbarrow 2/5 and Tile glue
+  1/5). Kato's usual (cement every order, sheets 5 of 7, nails 3 of 7) still holds.
+- **Ggaba's #0528 has one ask** to Esther (`pa-0528`): Today, Chats and Customers each added one; whichever runs first
+  adds it, and Customers names the payment it may be (#0264, `paymentId` 6264) on it.
+- **Sell's endings are placed at `&clock=14:05`** (SL28, SL29, SL35): after the Orders tab's #0559 (13:50) and before
+  Nansana's #0562 (placed 14:40, in at 15:05 for OR31), so the next number is #0560 as FACTS numbers them.
+- **`&state=empty` pays every bill it keeps.** Who owes is now one rule over the bills (`core/owing.ts`, as the
+  server's `ow_customer_balance`), so clearing the debt log alone no longer makes nobody owe (CU06, OR04, TD05).
+- **The catalogue's fillers** ("Contact cement", "Fence staples 25mm") are named like real items: Today's ask aisle
+  reads an item's very name first, and the closest-in-the-shop rule needs a word of letters in common.
 
 ## Known gaps (FACTS that the seed does not make true yet)
 
