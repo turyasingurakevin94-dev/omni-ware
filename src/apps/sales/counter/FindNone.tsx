@@ -143,15 +143,15 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
         )}
         {foot}
       </div>
-      {near.length < 2 && <OpenAisle b={p.b} near={near} onAisle={p.onAisle} />}
+      <OpenAisle b={p.b} near={near} onAisle={p.onAisle} />
     </>
   );
 }
 
 /**
  * "Or open an aisle" (TD14's tiles; KC26, KC28): the closest item's aisle first, then the shop's aisles in
- * the shop's order (today/data.ts shopAisles over Books.aisles), three. Shown where one close item or none
- * leaves the room (KC21's two close items fill it).
+ * the shop's order (today/data.ts shopAisles over Books.aisles), three. On every "Nothing called" state
+ * (spec 04 §4.3): page content, it may run under the dock and scrolls clear.
  */
 function OpenAisle(p: { b: Books; near: Item[]; onAisle: (name: string) => void }): JSX.Element | null {
   const all = shopAisles(p.b, now.value), own = p.near[0] ? all.find((a) => a.name === p.near[0].aisle) : undefined;

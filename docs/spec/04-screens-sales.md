@@ -122,6 +122,7 @@ Each is written once in `src/core` and used by every tab that shows it.
 | Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
 | A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
 | Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Nothing called … (the counter) | Every "Nothing called …" state shows, in this order: the closest items, the ask card (an open ask, or Ask Moses to stock it), then three aisle tiles: the closest item's aisle first, then the shop's aisles in its order (`shopAisles`). The tiles are page content: they may run under the dock and scroll clear | TD14; lead ruling, 4 Nov 2026 (KC21, KC25, KC26, KC28) | `counter/FindNone.tsx` `OpenAisle` |
 | Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
 
 Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way. Customers' own copy (gone ≥ twice) is gone: CU09 reads the core, though its words say "twice their usual gap or more".
