@@ -1,9 +1,9 @@
 # Sales — in the agent app's language (canvas source)
 
 The approved canvas: https://claude.ai/artifact/SwqWmXv4c2KbB1zgErYsWQ (29 Oct 2026; republished 4 Nov).
-193 boards — 191 phone screens at 360 × 800 plus the two parts boards (`Main`, `Main2`).
+195 boards — 193 phone screens at 360 × 800 plus the two parts boards (`Main`, `Main2`).
 The first 147 screens each scored at least 8.5 on fidelity, show-don't-tell, fewest steps,
-polish and Sales rules in an independent final audit (`review/`). The 44 drawn while the app
+polish and Sales rules in an independent final audit (`review/`). The 46 drawn while the app
 was built were each scored on the same axes by their tab's critic before being built
 (`review/new-<tab>.json`, every axis at least 8.5).
 

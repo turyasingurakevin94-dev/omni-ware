@@ -9,9 +9,9 @@ Status: **screens decided** (the approved canvas). **Questions open** (§3): unt
 ## 1. The screens are the canvas
 
 The approved canvas is "Sales — in the agent app's language" (https://claude.ai/artifact/SwqWmXv4c2KbB1zgErYsWQ). Its source is in [`docs/canvas/sales-agent/`](../canvas/sales-agent/README.md).
-- It has 193 boards: 191 phone screens at 360 × 800, plus the two parts boards.
+- It has 195 boards: 193 phone screens at 360 × 800, plus the two parts boards.
   - 147 screens were drawn first. Every one scored at least 8.5 out of 10 on fidelity, show-don't-tell, fewest steps, polish and Sales rules, in an independent audit on 29 Oct 2026 (`review/`).
-  - 44 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
+  - 46 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
 
 | Tab | Prefix | Boards | Main flows (taps before → after) |
 |---|---|---|---|
@@ -19,7 +19,7 @@ The approved canvas is "Sales — in the agent app's language" (https://claude.a
 | Chats | CH | 29 | 36 → 26 |
 | Sell (the red +) | SL | 40 | 91 → 40 |
 | Counter | KC | 29 | 66 → 51 |
-| Orders | OR | 30 | 51 → 46 |
+| Orders | OR | 32 | 51 → 46 |
 | Customers | CU | 36 | 39 → 31 |
 | Parts | Main, Main2 | 2 | — |
 
@@ -150,3 +150,6 @@ Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or mor
 | **A return ask carries its lines.** Items coming back sends each line's place on the order, how many, its price and amount (`invoice_asks.lines` as `{idx, name, qty, price, amount}`), so the Manager reads which lines come back; the words go in `note` too ("Cement · Hima 50kg ×2"). The order screen and Tell read which line comes back from the ask's lines (else its note), never from the amount. | `sales.html:6279-6284` (`ordasksend`), `manager.html:5354` (reads `ask.lines` by `idx`); critic ruling 30 Oct (OR22) | `src/core/orders.ts` (`askLines`), `src/apps/sales/orders/data.ts` (`backLines`) |
 | **A voided bill says so everywhere.** Its figure is struck with the bad-tone "Void" pill (LANGUAGE P23), it owes 0 with who voided it and when (`payload.voidedBy {by, at}`, 0176), there is no Take payment or Fix it, and Tell says it is struck out and nothing is owed; a copy entered twice names the bill that stands and what is left on it, and its picture says VOID, nothing owed. A number search for a voided copy lists the bill that stands beside it. | `supabase/migrations/0176_void_and_credit_note_one_write.sql` (voidedBy); critic ruling 30 Oct (OR29, OR30) | `src/apps/sales/orders/view.ts`, `msg.ts`, `picture.ts`, `data.ts` (`findOrders`) |
 | **A stage an order went past is drawn skipped.** An order placed straight in Packing (all on our shelf) skips Checking and Buying; one Checking sends straight to Packing (both lines on our shelf, `0173` allows Checking → Packing) skips Buying. The rail shows the skipped disc and the word "skipped", never a borrowed time. A delivered order whose log lacks a stage takes the next stage's time instead. | `supabase/migrations/0173_stage_moves_need_their_task.sql`; critic ruling 3 Nov (OR11, OR31) | `src/apps/sales/orders/view.ts` |
+| **An order's Tell that carries a new price marks it told.** When the message built for the order tells the Manager's new price (it is not about a return, a void or an owing bill), sending it on WhatsApp, or keeping it to go with signal, marks the price told (`markPriceTold`), so Today stops asking. "Send as SMS" and a shut chat's WhatsApp link hand the words to the phone and record nothing (a send is never claimed). One rule says a price is untold (`core/orders.ts` `priceUntold`), and one says the message tells it (`msg.ts` `tellsPrice`). | `sales.html:6104` (`ordMarkTold`); the e2e run, 4 Nov (OR10) | `src/apps/sales/orders/Tell.tsx`, `msg.ts` |
+| **A payment fix asked shows until Accounts answers.** A payment with a sent ask about its method or amount (`payment_asks` what `method` or `amount`) shows on its bill as OR22 shows a return asked: what was asked, Esther corrects it, then what they owe, and Undo ask takes every ask on that payment back. In Which payment? its row is not a link; it says Asked and Waiting, so it cannot be asked about twice. When a bill's one payment is asked, Fix it opens Which payment? to show it. | the e2e run, 4 Nov (OR25); boards OR32, OR33 | `src/apps/sales/orders/Wrong.tsx`, `OrderParts.tsx`, `data.ts` (`payAskOf`) |
+| **A buyer with no name is named by their number.** With no customer and no name on the order (a walk-in from a new number, CH14), Placed names the chat's number as the boards write it ("Picture sent to 0701 552 904", "0701 552 904 leaves when paid"). With no number either, it says "them" and "They leave". | CH14 (the number as its title); the e2e run, 4 Nov | `src/apps/sales/sell/Placed.tsx` |
