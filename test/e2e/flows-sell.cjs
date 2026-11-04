@@ -1,0 +1,111 @@
+'use strict';
+/*
+ * Sell and the counter, from Today, by taps (test/e2e/sales-flows.cjs runs them).
+ * Figures from docs/canvas/sales-agent/FACTS.md §4.1, §5, §6: the next number at 10:41 is #0558;
+ * Cement · Hima 50kg 33,500 a bag; Wire nails 4" · 25kg ctn 96,000; Wood glue · 1L 18,500.
+ */
+const { money } = require('./lib.cjs');
+
+const CEMENT = 33500, NAILS_CTN = 96000, GLUE = 18500;
+
+/** 1. Sell: the red +, Kato, a carton of nails from the Fasteners aisle, 20 cement by search, slide to place. */
+async function sell(open) {
+  const ph = await open('');
+  const { tap, type, press, slide, check, text } = ph;
+  await tap({ sel: 'a.ow-plus' });
+  check((await ph.p.getByLabel('Customer name, phone or place').count()) > 0, 'sell: the red + asks who it is for');
+  await type('Kato', 'Customer name, phone or place');
+  await tap('New order for Kato');
+  check(/Kato Construction/.test(await text()), 'sell: the order is Kato\'s', await text());
+
+  // From an aisle: Fasteners → Wire nails 4" by the carton → Add → Done.
+  await tap({ sel: 'a.sl-tile:has-text("Fasteners")' });
+  await tap({ sel: '.sl-card2:has-text("Wire nails 4") button[role=radio]:text-is("ctn")' });
+  await tap({ sel: '.sl-card2:has-text("Wire nails 4") [aria-label=Add]' });
+  await tap('Done');
+  // From search: "20 cement", Enter takes the best match.
+  await type('20 cement', 'Add an item: type its name');
+  await press('Enter');
+
+  // Review: the two lines at the seed's prices, and the total on the slide's foot.
+  const lines = await ph.p.locator('a.sl-line').allInnerTexts();
+  const flat = lines.map((s) => s.replace(/\s+/g, ' '));
+  const total = 20 * CEMENT + NAILS_CTN;
+  check(flat.length === 2, 'sell: the order has 2 lines', flat.join(' / '));
+  check(flat.some((s) => s.includes('Cement · Hima 50kg') && s.includes('20 bag × 33,500') && s.includes(money(20 * CEMENT))), 'sell: Cement · Hima 50kg 20 bag × 33,500 = 670,000', flat.join(' / '));
+  check(flat.some((s) => s.includes('Wire nails 4" · 25kg ctn') && s.includes('1 ctn × 96,000')), 'sell: Wire nails 4" · 25kg ctn 1 ctn × 96,000 (from the aisle)', flat.join(' / '));
+  const before = await text();
+  check(before.includes(money(total)), `sell: the foot says ${money(total)}`, before.slice(-300));
+  check(/Slide to place · 2 items/.test(before), 'sell: the slide says "Slide to place · 2 items"', before.slice(-200));
+
+  await slide();
+  await ph.wait('Placed');
+  const placed = await text();
+  check(/#0558/.test(placed), 'sell: Placed shows the next number, #0558', placed);
+  check(placed.includes(money(total)), `sell: Placed shows the total ${money(total)}`, placed);
+  check(/Kato Construction/.test(placed), 'sell: Placed names Kato', placed);
+
+  // The order then shows in Orders.
+  await tap('Back to Today');
+  await ph.tab('orders');
+  const found = await ph.orderRow('#0558');
+  check(found, 'sell: #0558 is in Orders', await text());
+  if (found) {
+    const r = (await ph.p.locator('button.ow-orow-main:has-text("#0558")').first().innerText()).replace(/\s+/g, ' ');
+    check(/Kato/.test(r) && r.includes(money(total)), `sell: the Orders row says Kato and ${money(total)}`, r);
+    await tap({ sel: 'button.ow-orow-main:has-text("#0558")' });
+    const o = await text();
+    check(/Cement · Hima 50kg/.test(o) && /Wire nails 4"/.test(o), 'sell: #0558 opens with both lines', o);
+  }
+  return ph;
+}
+
+/** 2a. Counter: cash with change (60,000 for 52,000 → 8,000), Sold, the receipt. */
+async function counterCash(open) {
+  const ph = await open('');
+  const { tap, slide, check, text } = ph;
+  await tap({ sel: 'a.ow-plus' });
+  await tap('Counter sale');
+  await tap('Add one Cement · Hima 50kg');
+  await tap('Add one Wood glue · 1L');
+  const due = CEMENT + GLUE;
+  let s = await text();
+  check(s.includes(money(due)), `counter: 2 items come to ${money(due)}`, s);
+  await tap('60,000');
+  s = await text();
+  check(/Give change\s*8,000/.test(s), 'counter: 60,000 given shows Give change 8,000 before the slide', s.slice(-300));
+  check(/Slide to sell · 52,000/.test(s), 'counter: the slide says "Slide to sell · 52,000"', s.slice(-200));
+  await slide();
+  await ph.wait('Give change');
+  s = await text();
+  check(/^Sold/m.test(s) || /\bSold\b/.test(s), 'counter: Sold shows', s);
+  check(/#0558 · 52,000 · cash/.test(s), 'counter: Sold says #0558 · 52,000 · cash', s);
+  check(/They gave 60,000/.test(s) && /\n8,000\n/.test(s), 'counter: the change figure is 8,000 (They gave 60,000)', s);
+  check(/7 sales · 464,000/.test(s), 'counter: Today at the counter becomes 7 sales · 464,000 (FACTS §5)', s);
+  await tap('Receipt');
+  s = await text();
+  check(/Receipt/.test(s) && /Counter sale · #0558/.test(s), 'counter: the receipt is #0558', s);
+  check(/Total\s*UGX 52,000/.test(s) && /Cash given\s*60,000/.test(s) && /Change\s*8,000/.test(s), 'counter: the receipt says Total 52,000, Cash given 60,000, Change 8,000', s);
+  return ph;
+}
+
+/** 2b. Counter: Mobile money with its transaction ID. */
+async function counterMobile(open) {
+  const ph = await open('');
+  const { tap, type, slide, check, text } = ph;
+  await tap({ sel: 'a.ow-plus' });
+  await tap('Counter sale');
+  await tap('Add one Cement · Hima 50kg');
+  await tap('Add one Wood glue · 1L');
+  await tap('Mobile');
+  check(await ph.p.locator('.ow-knob').count() === 0, 'counter mobile: no slide until the transaction ID is in');
+  await type('12045889301', 'Transaction ID');
+  await slide();
+  await ph.wait('Transaction ID');
+  const s = await text();
+  check(/#0558 · 52,000 · mobile/.test(s), 'counter mobile: Sold says #0558 · 52,000 · mobile', s);
+  check(/Transaction ID\s*12045889301/.test(s), 'counter mobile: Sold shows the transaction ID 12045889301', s);
+  return ph;
+}
+
+module.exports = { sell, counterCash, counterMobile };
