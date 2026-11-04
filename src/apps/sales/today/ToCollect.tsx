@@ -5,7 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { money, short } from '../../../core/money.ts';
-import { firstWord, orderNo } from '../../../core/names.ts';
+import { firstWord, orderNo, sayName } from '../../../core/names.ts';
 import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Books } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -53,7 +53,7 @@ export function ToCollect(): JSX.Element {
 }
 
 function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
-  const { b, w } = p, c = w.c, today = dayOf(now.value), who = c.name.replace('&', 'and');
+  const { b, w } = p, c = w.c, today = dayOf(now.value), who = sayName(c.name);
   const open = () => go('customers/customer', { id: c.id });
   // TD05: the "being checked" chip opens that bill's sheet (CU12); Mukono's row, with an order held for the money, opens their order (SL30).
   const chk = w.bills.find((x) => x.checked);

@@ -89,7 +89,7 @@ export function Search(p: SearchProps): JSX.Element {
         onFocus={() => setFocus(true)} onBlur={() => setFocus(false)} />
       {typed && <ClearButton navy disc={32} label="Clear" on={p.onClear as () => void} />}
       {!navy && (focus && v
-        ? <ClearButton label="Clear" keepFocus tight on={() => p.onInput && p.onInput('')} />
+        ? <ClearButton label="Clear the search" keepFocus tight on={() => p.onInput && p.onInput('')} />
         : p.onMic && <MicButton on={p.onMic} />)}
     </label>
   );

@@ -6,6 +6,7 @@
 import type { JSX } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
+import { ListenSheet, hasSpeech } from '../../../ui/Listen.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { aisleItems } from '../../../core/aisles.ts';
@@ -15,7 +16,7 @@ import { firstWord } from '../../../core/names.ts';
 import { howLong } from '../../../core/time.ts';
 import type { Books, Customer, Item, Line } from '../../../core/types.ts';
 import { nav, stack } from '../shell/nav.ts';
-import { books, now, online } from '../shell/store.ts';
+import { books, isDemo, now, online } from '../shell/store.ts';
 import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
 import { Dock } from '../../../ui/Dock.tsx';
@@ -51,16 +52,12 @@ export function orderIn(items: { itemId: string; qty: number; price: number | nu
 }
 const asItems = (lines: Line[]) => lines.map((l) => ({ itemId: l.itemId, qty: l.qty, price: l.price }));
 
+/** "Say it": the one listening sheet (src/ui/Listen.tsx, as Sell and Today use it); what it hears goes in the find. */
 function listen(): void {
-  const W = window as unknown as { SpeechRecognition?: new () => SpeechLike; webkitSpeechRecognition?: new () => SpeechLike };
-  const R = W.SpeechRecognition || W.webkitSpeechRecognition;
-  if (!R) { toast.show('Type it in the box', { kind: 'warn' }); return; }
-  const r = new R();
-  r.lang = 'en-UG';
-  r.onresult = (e) => { q.value = e.results[0][0].transcript; };
-  r.start();
+  const demo = isDemo ? (globalThis as { owDemoCounterVoice?: string }).owDemoCounterVoice : undefined;
+  if (!demo && !hasSpeech()) { toast.show('This phone cannot listen', { kind: 'warn', sub: 'Type the item instead' }); return; }
+  sheet.open(() => <ListenSheet act="Find" demo={demo} onDone={(w) => { q.value = w; aisle.value = null; }} />, { label: 'Say it' });
 }
-interface SpeechLike { lang: string; start(): void; onresult: (e: { results: { transcript: string }[][] }) => void }
 
 export function Counter(): JSX.Element {
   useEffect(() => { restore(); startWatch(); }, []);

@@ -41,6 +41,8 @@ export function extra(s: DemoState, _f: DemoFlags): void {
     o.payments = o.payments.map((p) => ({ ...p, amount: total, method }));
     b.payments.filter((p) => p.orderId === id).forEach((p) => { p.amount = total; p.method = method; });
   });
+  // KC01 "Say it": what the demo's phone hears at the counter (it has no microphone), into the find.
+  (globalThis as { owDemoCounterVoice?: string }).owDemoCounterVoice = 'wood glue';
   const paint = b.items.find((i) => i.id === 'roof-paint-maroon-20');
   if (paint) paint.cost = 50000;
   if (typeof window !== 'undefined') ruthAnswers(s);

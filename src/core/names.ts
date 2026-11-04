@@ -44,6 +44,11 @@ export function counted(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
+/** A name as a control's label says it: "&" spoken as "and" ("Kyaligonza and Sons. Change customer", SL01, CU01). */
+export function sayName(name: string): string {
+  return name.replace(/\s*&\s*/g, ' and ');
+}
+
 /** "INV-0552" (sales.html:4600 invoiceLabel). */
 export function invoiceNo(id: number): string {
   return 'INV-' + String(id).padStart(4, '0');

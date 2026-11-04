@@ -72,9 +72,9 @@ export function ListenSheet(p: ListenProps): JSX.Element {
   const ok = p.ready ? p.ready(text) : !!text.trim();
   return (
     <div class="ow-listen">
-      <button type="button" class="ow-listen-grab" aria-label="Close" onClick={sheet.close} />
+      <span aria-hidden="true" class="ow-listen-grab" />
       <div class="ow-listen-r">
-        <button type="button" class="ow-listen-mic" aria-label={on ? 'Stop listening' : 'Listen again'} onClick={() => (on ? stop() : listen())}><Duo i={phMic} size={28} color="#FFFFFF" /></button>
+        <button type="button" class="ow-listen-mic" aria-label="Stop listening" onClick={() => (on ? stop() : listen())}><Duo i={phMic} size={28} color="#FFFFFF" /></button>
         <span aria-hidden="true" class={'ow-wave' + (on ? ' on' : '')}>{WAVE.map((h, i) => <span key={i} style={{ height: `${h}px` }} class={i >= 20 ? 'tail' : undefined} />)}</span>
       </div>
       {text && p.said ? p.said(text) : <p class={'ow-listen-said' + (text ? '' : ' dim')} aria-live="polite">{text ? `“${text}”` : on ? 'Listening…' : 'Nothing heard'}</p>}

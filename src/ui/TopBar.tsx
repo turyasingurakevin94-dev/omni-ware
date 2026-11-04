@@ -14,6 +14,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
 import { Duo, Icon, phBasket, phGrid, phSparkle, phSwap } from './icons.tsx';
 import { Search, type SearchProps } from './Search.tsx';
+import { sayName } from '../core/names.ts';
 import { Tap } from './util.tsx';
 import './topbar.css';
 
@@ -55,7 +56,7 @@ export function WhoPill(p: WhoPillProps): JSX.Element {
     );
   }
   return (
-    <Tap on={p.on} label={`${p.name}. Change customer`} class="ow-who">
+    <Tap on={p.on} label={`${sayName(p.name)}. Change customer`} class="ow-who">
       <Avatar {...p.face} size={38} />
       <span class="ow-who-t">
         <span class="ow-who-n">{p.name}</span>
