@@ -9,7 +9,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { Item, Line } from '../../../core/types.ts';
 import { AISLE, Duo, Icon, aisleKey } from '../../../ui/icons.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, PRICE_COMING } from '../../../ui/Money.tsx';
 
 export interface Card { name: string; items: Item[]; sold: number }
 
@@ -44,7 +44,7 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; usua
       <div class="sl-card2-b">
         <span class="sl-card2-n">{cd.name}</span>
         {p.usual && <span class="sl-card2-usual"><Icon name="return" size={12} stroke={2.4} />usually <b class="mono">{p.usual.qty}</b>{` ${it.unit}`}</span>}
-        {it.price == null ? <span class="sl-card2-o coming">Price coming</span> : <span class="sl-card2-p"><span class="mono">{fig(it.price)}</span><span>{`/${it.unit}`}</span></span>}
+        {it.price == null ? <span class="sl-card2-o coming">{PRICE_COMING}</span> : <span class="sl-card2-p"><span class="mono">{fig(it.price)}</span><span>{`/${it.unit}`}</span></span>}
         {shelf > 0 ? <span class="sl-card2-s"><b class="mono">{fig(shelf)}</b> on shelf</span>
           : it.orderIn ? <span class="sl-card2-o">Order in</span> : <span class="sl-card2-o bad">Out</span>}
         {p.line ? (

@@ -49,7 +49,7 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
       {w.rows.length > 0 && fit.rows > 0 && <OftenWithHead item={name} whose={`in ${w.mine && c ? whose(c.name).replace('’', "'") : 'your'} orders`} />}
       {w.rows.map((r, i) => (
         <div key={itemKey(r.it)} data-fit="row" style={i < fit.rows ? undefined : { display: 'none' }}>
-          <OftenWith aisle={r.it.aisle} name={r.it.name} had={r.had} of={w.of} price={r.it.price || 0} unit={r.it.unit} onAdd={() => add(r.it, 1)} />
+          <OftenWith aisle={r.it.aisle} name={r.it.name} had={r.had} of={w.of} price={r.it.price} unit={r.it.unit} onAdd={() => add(r.it, 1)} />
         </div>
       ))}
       <div data-fit="chips" style={fit.chips ? undefined : { display: 'none' }}>

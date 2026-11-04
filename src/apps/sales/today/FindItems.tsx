@@ -16,6 +16,7 @@ import { drafts } from '../shell/store.ts';
 import { openAsk } from './AskNew.tsx';
 import { Marked, shelf, unitWord } from './Find.tsx';
 import { go, itemsParam } from './go.ts';
+import { isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 
 /** The order being built most lately (the red +'s), to add to. */
 function openDraft() {
@@ -92,7 +93,7 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
             <div key={o.item.id} class="td-often">
               <ItemSquare aisle={o.item.aisle} size={44} icon={26} />
               <span class="td-often-t"><span>{o.item.name}</span><span><span aria-hidden="true"><span style={{ width: `${Math.round((o.had / o.of) * 100)}%` }} /></span><b class="mono">{`${o.had}/${o.of}`}</b></span></span>
-              <span class="td-find-fig"><b class="mono">{money(o.item.price || 0)}</b><small>{`per ${unitWord(o.item.unit)}`}</small></span>
+              {isPriced(o.item.price) ? <span class="td-find-fig"><b class="mono">{money(o.item.price)}</b><small>{`per ${unitWord(o.item.unit)}`}</small></span> : <span class="td-find-fig"><small>{PRICE_COMING}</small></span>}
               <button type="button" aria-label={`Add ${o.item.name}`} class="td-often-add" onClick={() => addTo(o.item.id)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}

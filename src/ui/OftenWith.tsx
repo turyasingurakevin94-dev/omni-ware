@@ -12,7 +12,7 @@ import type { JSX } from 'preact';
 import { Meter } from './Bar.tsx';
 import { AISLE, Duo, Icon, aisleKey, phLink } from './icons.tsx';
 import { ItemSquare } from './ItemSquare.tsx';
-import { fig } from './Money.tsx';
+import { fig, PRICE_COMING } from './Money.tsx';
 import type { Fig } from './util.tsx';
 import './oftenwith.css';
 
@@ -32,7 +32,8 @@ export interface OftenWithProps {
   /** In how many of their orders, of how many. */
   had: number;
   of: number;
-  price: Fig;
+  /** null: no selling price yet ("Price coming", never 0). */
+  price: Fig | null;
   unit: string;
   onAdd: () => void;
 }
@@ -45,7 +46,9 @@ export function OftenWith(p: OftenWithProps): JSX.Element {
         <span class="ow-often-n">{p.name}</span>
         <span class="ow-often-bar"><Meter pct={(100 * p.had) / Math.max(1, p.of)} fill={AISLE[aisleKey(p.aisle)].ink} /><b class="mono">{`${p.had}/${p.of}`}</b></span>
       </span>
-      <span class="ow-often-p"><b class="mono">{fig(p.price)}</b><small>per {p.unit}</small></span>
+      {p.price == null
+        ? <span class="ow-often-p"><small>{PRICE_COMING}</small></span>
+        : <span class="ow-often-p"><b class="mono">{fig(p.price)}</b><small>per {p.unit}</small></span>}
       <button type="button" class="ow-often-add" aria-label={`Add ${p.name}`} onClick={p.onAdd}><Icon name="plus" size={16} stroke={2.6} /></button>
     </div>
   );

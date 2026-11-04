@@ -12,13 +12,13 @@ import { lineTotal } from '../../../core/money.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { Duo, Icon, phAgain } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { useEffect } from 'preact/hooks';
 import { books, now, source } from '../shell/store.ts';
 import { closest, findItems, readAsk, sameAsk, type Asked } from '../../../core/find.ts';
 import { first, itemKey, lastQty, rankFor, theirItems } from './insights.ts';
-import { AskCard, send } from './AskCard.tsx';
+import { AskCard } from './AskCard.tsx';
 import { askedAs, closeLine } from './Lines.tsx';
 import { add, cur, lineFor, openId, query } from './model.ts';
 import { sourcing } from './people.ts';
@@ -27,6 +27,8 @@ import './find.css';
 
 /** The count on the first answer (its stepper). */
 const count = signal<number | null>(null);
+/** SL08 → SL09: Ask Moses on an item that is out opens its ask (the count, then "Add Kato's ask"), for these words only. */
+const asking = signal<{ q: string; name: string } | null>(null);
 
 function Mark(p: { name: string; words: string[] }): JSX.Element {
   const ws = p.words.map((w) => w.replace(/(es|s)$/, '').toLowerCase()).filter((w) => w.length > 1);
@@ -63,6 +65,11 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
   const b = p.b, c = p.c, a = readAsk(query.value), theirs = c ? theirItems(b, c) : new Set<string>();
   const hits = findItems(b, a, rankFor(b, c, now.value));
   if (!hits.length) return <Nothing b={b} c={c} a={a} />;
+  const out = asking.value && asking.value.q === query.value ? asking.value.name : null;
+  if (out) {
+    const ask = sameAsk(b.asks, readAsk(out));
+    return <div class="sl-nothing"><AskCard b={b} c={c} ask={ask && ask.status !== 'listed' ? ask : null} name={out} qty={a.qty || 1} /></div>;
+  }
   const top = hits[0], more = hits.slice(1), q = count.value ?? (a.qty || 1);
   const word = a.words[a.words.length - 1] || '';
   const line = lineFor(top, q, 0);
@@ -72,12 +79,12 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
       <div class="sl-top">
         <div class="sl-top-h">
           <ItemSquare aisle={top.aisle} size={44} />
-          <div class="sl-top-t"><span><Mark name={top.name} words={a.words} /></span><span><span class="mono">{fig(top.price || 0)}</span><span>{`/${top.unit}`}</span>{(top.onShelf || 0) > 0 && <span class="sl-shelf5"><b class="mono">{fig(top.onShelf as number)}</b> on shelf</span>}</span></div>
+          <div class="sl-top-t"><span><Mark name={top.name} words={a.words} /></span><span>{isPriced(top.price) ? <><span class="mono">{fig(top.price)}</span><span>{`/${top.unit}`}</span></> : <span>{PRICE_COMING}</span>}{(top.onShelf || 0) > 0 && <span class="sl-shelf5"><b class="mono">{fig(top.onShelf as number)}</b> on shelf</span>}</span></div>
           {c && theirs.has(itemKey(top)) && <span class="sl-buys"><Duo i={phAgain} size={12} color="#0F6B43" />{`${first(c.name)} buys`}</span>}
         </div>
         <div class="sl-top-r">
           <Stepper value={q} unit={top.unit} min={1} onChange={(n) => { count.value = n; }} />
-          <a href="#" class="sl-top-add" onClick={(e) => { e.preventDefault(); addAsked(b, top, { ...a, qty: q }, c); }}>Add · <span class="mono">{fig(lineTotal(line))}</span></a>
+          <a href="#" class="sl-top-add" onClick={(e) => { e.preventDefault(); addAsked(b, top, { ...a, qty: q }, c); }}>{isPriced(top.price) ? <>Add · <span class="mono">{fig(lineTotal(line))}</span></> : `Add · ${PRICE_COMING.toLowerCase()}`}</a>
         </div>
       </div>
       {more.length > 0 && (
@@ -89,10 +96,10 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
               return (
                 <div class="sl-more-r" key={itemKey(it)}>
                   <ItemSquare aisle={it.aisle} size={40} />
-                  <span class="sl-more-t"><span><Mark name={it.name} words={a.words} /></span><span><span class="mono">{fig(it.price || 0)}</span><span>{`/${it.unit}`}</span>
+                  <span class="sl-more-t"><span><Mark name={it.name} words={a.words} /></span><span>{isPriced(it.price) ? <><span class="mono">{fig(it.price)}</span><span>{`/${it.unit}`}</span></> : <span>{PRICE_COMING}</span>}
                     {out ? <span class="sl-tag bad">Out</span> : it.orderIn && !(it.onShelf || 0) ? <span class="sl-tag info">Order in</span> : <span class="sl-shelf5"><b class="mono">{fig(it.onShelf as number)}</b> on shelf</span>}</span></span>
                   {out
-                    ? <a href="#" class="sl-more-ask" onClick={(e) => { e.preventDefault(); void send(it.name, q, c, `Sent to ${sourcing(b).first}`); }}>{`Ask ${sourcing(b).first}`}</a>
+                    ? <a href="#" class="sl-more-ask" onClick={(e) => { e.preventDefault(); asking.value = { q: query.value, name: it.name }; }}>{`Ask ${sourcing(b).first}`}</a>
                     : <button type="button" class="mono sl-more-add" aria-label={`Add ${q}`} onClick={() => addAsked(b, it, { ...a, qty: q }, c)}>{`+${q}`}</button>}
                 </div>
               );
@@ -126,7 +133,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
           {near.map((it) => (
             <div class="sl-near-r" key={itemKey(it)}>
               <ItemSquare aisle={it.aisle} size={40} />
-              <span class="sl-more-t"><span>{it.name}</span><span><span class="mono b">{fig(it.price || 0)}</span><span>{`/${it.unit}`}</span>{(it.onShelf || 0) > 0 && <span class="sl-shelf"><b class="mono">{fig(it.onShelf as number)}</b> on shelf</span>}</span></span>
+              <span class="sl-more-t"><span>{it.name}</span><span>{isPriced(it.price) ? <><span class="mono b">{fig(it.price)}</span><span>{`/${it.unit}`}</span></> : <span>{PRICE_COMING}</span>}{(it.onShelf || 0) > 0 && <span class="sl-shelf"><b class="mono">{fig(it.onShelf as number)}</b> on shelf</span>}</span></span>
               <button type="button" class="sl-near-add" aria-label={`Add ${it.name}`} onClick={() => addAsked(b, it, { ...a, qty: 1, unit: null }, c)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}

@@ -15,7 +15,7 @@ import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { Duo, Icon, phAgain, phCoins, phFlame, phGrid, phSparkle } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 import { UsualCard } from '../../../ui/UsualCard.tsx';
 import { nav } from '../shell/nav.ts';
 import { me, now } from '../shell/store.ts';
@@ -108,7 +108,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
             <div class="sl-most" key={it.id}>
               <span class="sl-most-sq"><ItemSquare aisle={it.aisle} size={44} /><span aria-hidden="true" class={'mono sl-rank' + (i === 0 ? ' top' : '')}>{i + 1}</span></span>
               <span class="sl-most-t"><span>{it.name}</span>{it.onShelf ? <span class="sl-shelf"><b class="mono">{it.onShelf}</b> on shelf</span> : null}</span>
-              <span class="ow-often-p"><b class="mono">{fig(it.price || 0)}</b><small>per {it.unit}</small></span>
+              {isPriced(it.price) ? <span class="ow-often-p"><b class="mono">{fig(it.price)}</b><small>per {it.unit}</small></span> : <span class="ow-often-p"><small>{PRICE_COMING}</small></span>}
               <button type="button" class="ow-often-add" aria-label={`Add ${inchLabel(it.name)}`} onClick={() => add(it, 1)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}

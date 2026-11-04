@@ -7,7 +7,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { Duo, phSparkle } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 import type { Item } from '../../../core/types.ts';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { markOf } from './shop.ts';
@@ -51,13 +51,13 @@ export function Find(p: FindProps): JSX.Element {
             <ItemSquare aisle={top.aisle} size={44} />
             <span class="kc-best-t">
               <span class="kc-best-n">{mark ? <><mark>{mark[0]}</mark>{mark[1]}</> : top.name}</span>
-              <span class="kc-best-s"><span class="mono kc-per">{`${fig(top.price || 0)} /${top.unit}`}</span><Shelf it={top} mono11 /></span>
+              <span class="kc-best-s"><span class="mono kc-per">{isPriced(top.price) ? `${fig(top.price)} /${top.unit}` : PRICE_COMING}</span><Shelf it={top} mono11 /></span>
             </span>
           </div>
           <div class="kc-best-f">
             <Stepper value={n} unit={top.unit} min={0} onChange={(v) => setN(Math.max(1, v))} />
             {onShelf(top)
-              ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{fig(n * (top.price || 0))}</span></button>
+              ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{isPriced(top.price) ? fig(n * top.price) : PRICE_COMING.toLowerCase()}</span></button>
               : <button type="button" class="kc-add" onClick={() => p.onOrderIn(top, n)}>Order in<span class="mono">{fig(n)}</span></button>}
           </div>
         </div>

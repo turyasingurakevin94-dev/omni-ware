@@ -19,6 +19,13 @@ export function fig(v: Fig, isShort?: boolean, sign?: boolean): string {
   return (v < 0 ? '−' : sign && v > 0 ? '+' : '') + s;
 }
 
+/**
+ * An unpriced figure: an item or line with no selling price yet is never drawn as 0. It reads "Price coming"
+ * (GLOSSARY; SL21, SL22 and the aisle cards), and "Add · price coming" on its add button (SL21).
+ */
+export const PRICE_COMING = 'Price coming';
+export const isPriced = (price: number | null | undefined): price is number => price != null;
+
 export interface MoneyProps {
   n: Fig;
   short?: boolean;
