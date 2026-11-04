@@ -5,6 +5,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
+import { Slip, SlipHead } from '../../../ui/Slip.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
@@ -53,44 +54,13 @@ export function Receipt(p: ScreenProps): JSX.Element {
   return (
     <FullSheet shadow onBack={() => nav.back()} backLabel="Back to Sold" ground="#FFFFFF" pad="16px" gap={12}
       head={(
-        <div class="kc-rhead">
-          <span aria-hidden="true" class="kc-rgrab" />
-          <div class="ow-lsheet-h">
-            <div class="ow-lsheet-ht"><span class="ow-lsheet-eye">{`Counter sale · ${orderNo(id)}`}</span><h2>Receipt</h2></div>
-            <button type="button" class="ow-x-tile" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
-          </div>
-        </div>
+        <SlipHead eyebrow={`Counter sale · ${orderNo(id)}`} title="Receipt" onClose={() => nav.back()} />
       )}>
       <div class="kc-paperbox">
-        <div class="kc-paper" id="kc-paper">
-          <div class="kc-paper-h">
-            <span><b>{b.shop.name}</b><span>{'Counter sale · '}<span class="mono">{orderNo(id)}</span></span></span>
-            <span class="r"><span>{`${longDay(at)} · `}<span class="mono">{clock(at)}</span></span><b>{`For: ${name}`}</b></span>
-          </div>
-          <div>
-            <div class="kc-tbl kc-tbl-h"><span>QTY</span><span>ITEM</span><span>RATE</span><span>AMOUNT</span></div>
-            {o.lines.map((l) => (
-              <div key={l.lineId} class="kc-tbl">
-                <span class="mono b">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span></span>
-                <span class="n">{l.name}</span>
-                <span class="mono soft">{fig(l.price || 0)}</span>
-                <span class="mono b">{fig(lineTotal(l))}</span>
-              </div>
-            ))}
-          </div>
-          <div class="kc-paper-t"><span>Total</span><span class="mono">{`UGX ${fig(total)}`}</span></div>
-          {s.method === 'cash' && s.given > 0 && (
-            <div class="kc-paper-g">
-              <span>Cash given</span><span class="r"><span class="mono">{fig(s.given)}</span></span>
-              <span>Change</span><span class="r"><span class="mono">{fig(change)}</span></span>
-            </div>
-          )}
-          {s.method !== 'cash' && !!s.ref && <div class="kc-paper-g"><span>Transaction ID</span><span class="r"><span class="mono">{s.ref}</span></span></div>}
-          <div class="kc-paper-f">
-            <span class="kc-paid-l"><Icon name="check" size={11} stroke={3.2} />{`Paid · ${METHOD[s.method]}`}</span>
-            {seller && <span>{`Sold by ${seller.name}`}</span>}
-          </div>
-        </div>
+        <Slip shop={b.shop.name} word="Counter sale" no={orderNo(id)} day={longDay(at)} at={clock(at)} forName={name}
+          lines={o.lines.map((l) => ({ key: l.lineId, qty: fig(l.qty), unit: l.unit, name: l.name, rate: fig(l.price || 0), amount: fig(lineTotal(l)) }))}
+          total={fig(total)} rows={s.method === 'cash' && s.given > 0 ? [['Cash given', fig(s.given)], ['Change', fig(change)]] : s.method !== 'cash' && s.ref ? [['Transaction ID', s.ref]] : []}
+          pill={{ text: `Paid · ${METHOD[s.method]}`, tone: 'good', tick: true }} foot={seller ? `Sold by ${seller.name}` : undefined} />
       </div>
       <div class="kc-phone-r">
         <label class="kc-phone">

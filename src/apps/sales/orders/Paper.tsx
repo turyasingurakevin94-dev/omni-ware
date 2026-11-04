@@ -20,7 +20,7 @@ import { nav } from '../shell/nav.ts';
 import { act, books, chats, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { byRole, custOf, faceOf, faceOfMember, member, nameOf, orderOf, shortName } from './data.ts';
-import { Slip, type SlipProps } from './local-slip.tsx';
+import { Slip, SlipHead, type SlipProps } from '../../../ui/Slip.tsx';
 import { chatFor, tellsPrice } from './msg.ts';
 import { orderPicture } from './picture.ts';
 import { freshPrice, pendingOf } from './view.ts';
@@ -57,7 +57,7 @@ export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null }
     lines: o.lines.filter((l) => l.qty > 0).map((l) => ({ key: l.lineId, qty: f(l.qty), unit: l.unit, name: l.name, rate: l.price == null ? '…' : f(l.price), amount: f(lineTotal(l)), gone: l.state === 'dropped' })),
     total: f(total), struck: o.voided,
     rows: [['Paid so far', f(o.voided ? 0 : o.paid)], ['Owes on it', f(owes), owes > 0]],
-    pill, by: member(b, o.placedBy)?.name, under,
+    pill, foot: member(b, o.placedBy) ? `Taken by ${member(b, o.placedBy)?.name}` : undefined, under,
   };
 }
 
@@ -115,13 +115,7 @@ function PaperBody(p: { b: Books; o: Order }): JSX.Element {
   return (
     <FullSheet onBack={nav.back} backLabel="Back to the order" ground="#FFFFFF" pad="16px" gap={12}
       head={(
-        <div class="or-pp-head">
-          <span aria-hidden="true" class="or-pp-grab" />
-          <div class="ow-lsheet-h">
-            <div class="ow-lsheet-ht"><span class="ow-lsheet-eye">{`${paper.word} ${paper.no} · ${nameOf(b, o)}`}</span><h2>Receipt</h2></div>
-            <button type="button" class="ow-x-tile" aria-label="Close" onClick={nav.back}><Icon name="close" size={16} stroke={2.2} /></button>
-          </div>
-        </div>
+        <SlipHead eyebrow={`${paper.word} ${paper.no} · ${nameOf(b, o)}`} title="Receipt" onClose={nav.back} />
       )}>
       <div class="or-pp-box">
         <Slip {...paper} />
