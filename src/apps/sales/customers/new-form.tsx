@@ -20,7 +20,7 @@ interface Act { word: string; on: () => void; icon?: IconName }
 const KINDS: [CustomerKind, string][] = [['contractor', 'Contractor'], ['reseller', 'Reseller'], ['retail', 'Retail']];
 
 export function NewForm(p: {
-  b: Books; today: string; name: string; onName: (v: string) => void; phone: string; onPhone: (v: string) => void; phoneRef: RefObject<HTMLInputElement>;
+  b: Books | null; today: string; name: string; onName: (v: string) => void; phone: string; onPhone: (v: string) => void; phoneRef: RefObject<HTMLInputElement>;
   phoneWarn: string | null; onPhoneBlur: () => void; onPhoneFocus: () => void; place: string; onPlace: (v: string) => void;
   kind: CustomerKind | null; onKind: (k: CustomerKind) => void; ruth: string; face: string;
   chat: { at: number; phone: string; name: string; filled: boolean; on: () => void } | null;
@@ -31,6 +31,7 @@ export function NewForm(p: {
   const done = ticks.every(([, x]) => x), off = p.short9;
   const field = (k: string, warn = false) => cx('cu-nf-box', warn ? 'warn' : focus === k && 'focus');
   const dupCard = (d: Dup) => {
+    if (!p.b) return null;
     const r = rhythmOf(p.b, d.c, p.today), orders = p.b.orders.filter((o) => o.customerId === d.c.id), today = orders.some((o) => dayOf(o.placedAt) === p.today);
     return (
       <div class="cu-dup">
