@@ -10,6 +10,9 @@
  *   www/fonts/            Figtree and IBM Plex Mono, the weights the page uses
  *   www/transform.js      the swaps again, for the live updates (the
  *                         native layer itself is inside sales.html)
+ *   www/<files>           the files the page loads beside itself, which a built
+ *                         page lists in <meta name="ow-files"> (the new app's tab
+ *                         files, docs/spec/07-stack.md §4); none for the old page
  *   www/bundle.json       which sales.html this is, and the files beside it
  *
  * Run: node scripts/build-www.js   (or: npm run build)
@@ -50,6 +53,13 @@ function put(rel, data) {
 }
 
 put('index.html', html);
+// A built page loads some of itself from files beside it (its tabs): they ship with it, and a
+// page that names a file not there is a failed build, never a tab that cannot open offline.
+const named = (html.match(/<meta name="ow-files" content="([^"]*)">/) || [, ''])[1].split(/\s+/).filter(Boolean);
+for (const f of named) {
+  if (!/^[\w.-]+$/.test(f) || !fs.existsSync(path.join(ROOT, f))) throw new Error(`build-www: sales.html loads ${f}, which is not beside it`);
+  put(f, fs.readFileSync(path.join(ROOT, f)));
+}
 put('vendor/supabase.js', fs.readFileSync(path.join(NM, '@supabase/supabase-js/dist/umd/supabase.js')));
 put('transform.js', fs.readFileSync(path.join(APP, 'src/transform.js')));
 

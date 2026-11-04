@@ -43,6 +43,19 @@ try { esbuild = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { es
   const gz = zlib.gzipSync(Buffer.from(page), { level: 9 }).length;
   t.check(gz <= tool.BUDGET, `it is within budget: ${(gz / 1024).toFixed(1)} KB of ${tool.BUDGET / 1024} KB compressed`);
 
+  // Per-tab loading (spec 07 §4): each lazy tab is its own file beside the page, named by it, within its budget.
+  const named = ((page.match(/<meta name="ow-files" content="([^"]*)">/) || [])[1] || '').split(/\s+/).filter(Boolean);
+  t.check(tool.ROLES.sales.lazy.every((x) => named.includes(`sales-${x}.js`)), `the page names each lazy tab's file (${named.join(', ')})`);
+  for (const f of named) {
+    const file = path.join(ROOT, 'next', f), text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    t.check(text.startsWith('// GENERATED from src/'), `next/${f} is committed, built from src/`);
+    const g = zlib.gzipSync(Buffer.from(text), { level: 9 }).length;
+    t.check(g <= tool.TAB_BUDGET, `next/${f} is within its budget: ${(g / 1024).toFixed(1)} KB of ${tool.TAB_BUDGET / 1024} KB compressed`);
+    const build = (page.match(/window\.owSalesBuild="(\w+)"/) || [])[1];
+    t.check(!!build && text.includes(`"${build}")`), `next/${f} is of the page's build (${build})`);
+  }
+  t.check(fs.existsSync(path.join(ROOT, 'next/sales-sw.js')), 'next/sales-sw.js, the service worker that keeps the page and its tabs on the phone, is committed');
+
   if (!esbuild) {
     console.log('  (skipped: esbuild is not installed here, so the build itself is checked by build-check.yml)');
   } else {
@@ -53,6 +66,11 @@ try { esbuild = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { es
     const parts = fs.existsSync(built.partsOut) ? fs.readFileSync(built.partsOut, 'utf8') : '';
     t.check(built.parts === parts, 'next/sales-parts.js is exactly what src/ui/gallery builds');
     t.check(built.gz <= tool.BUDGET, 'the fresh build is within budget');
+    for (const f of built.files) {
+      const cur = fs.existsSync(f.out) ? fs.readFileSync(f.out, 'utf8') : '';
+      t.check(cur === f.text, `${path.relative(ROOT, f.out)} is exactly what src/ builds`);
+      if (f.budget) t.check(f.gz <= f.budget, `${path.relative(ROOT, f.out)} is within its budget fresh`);
+    }
   }
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
