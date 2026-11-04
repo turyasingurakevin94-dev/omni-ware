@@ -27,8 +27,6 @@ export function openTell(id: number): void {
 function TellSheet(p: { id: number }): JSX.Element | null {
   const b = books.value, o = b && orderOf(b, p.id), t = now.value;
   const [text, setText] = useState(() => (b && o ? tellText(b, o) : ''));
-  // Read once, with the words: what this message tells is what it was built from.
-  const [price] = useState(() => !!(b && o && tellsPrice(b, o)));
   const [pic, setPic] = useState(true);
   const [busy, setBusy] = useState(false);
   const words = useRef<HTMLSpanElement>(null);
@@ -38,6 +36,8 @@ function TellSheet(p: { id: number }): JSX.Element | null {
   const sms = `sms:${p9 ? '+256' + p9 : ''}${text ? `?body=${body}` : ''}`;
   const send = async () => {
     if (!c) return;
+    // Read before it goes, from the same order the words were built from (msg.ts tellsPrice).
+    const price = !!tellsPrice(b, o);
     setBusy(true);
     try {
       const r = pic && !shut ? await act('sendImage', c.id, await orderPicture(b, o, now.value), text) : await act('send', c.id, text);

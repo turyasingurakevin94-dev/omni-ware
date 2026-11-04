@@ -17,12 +17,12 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, shortItem, shortName, waitsRuth } from './data.ts';
+import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, payFixesOf, shortItem, shortName, waitsRuth } from './data.ts';
 import { go, payFor } from './links.ts';
 import { CheckList, Pills } from './local-CheckList.tsx';
 import { ActBar, Tiles, type Act } from './local-Parts.tsx';
 import { Track } from './local-Track.tsx';
-import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PriceTell, TwinCard } from './OrderParts.tsx';
+import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
 import { openPayFix, openWrong } from './Wrong.tsx';
@@ -77,6 +77,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       {o.voided && twinOf(b.orders, o, true) && <TwinCard b={b} o={o} />}
       {fresh && <PriceTell b={b} o={o} l={fresh} />}
       {v.returnAsk && <AskTimeline b={b} o={o} ask={v.returnAsk} />}
+      {!o.voided && payFixesOf(b, o).map((x) => <PayFixAsked key={x.pay.id} b={b} o={o} pay={x.pay} asks={x.asks} />)}
       <div class="or-foot">
         <ActBar acts={acts} />
         {owes > 0 && !v.returnAsk && !pending && !o.voided
