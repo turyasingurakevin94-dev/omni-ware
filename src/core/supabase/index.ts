@@ -140,6 +140,7 @@ export function supabaseSource(): DataSource {
     sendTemplate: (chatId, text) => W.waSend(sb(), me(), chatId, text, true, Date.now()),
     sendImage: (chatId, file, caption) => W.waSendImage(sb(), me(), chatId, file, caption, Date.now()),
     sendCatalog: (chatId) => W.waSendCatalog(sb(), me(), chatId, Date.now()),
+    deliveryPhoto: (path) => W.deliveryPhoto(sb(), path),
     media: (messageId) => W.waMedia(sb(), me(), messageId),
     note: (chatId, body, mentions) => W.addNote(sb(), me(), chatId, body, mentions || [], Date.now()),
     take: (chatId) => W.takeChat(sb(), chatId),

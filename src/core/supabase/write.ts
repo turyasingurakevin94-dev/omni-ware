@@ -271,6 +271,14 @@ export async function waSendCatalog(sb: Sb, s: Session, chatId: number, now: num
   return messageOf({ id: 'sent-' + now, conversation_id: chatId, sent_at: new Date(now).toISOString(), direction: 'out', msg_type: 'interactive', body: '', sent_by: s.userId, status: 'sent' });
 }
 
+/** sales.html:5917 ordPhotoSrc: the delivery photo is private (0111), so it opens through a signed link that lasts an hour. */
+export async function deliveryPhoto(sb: Sb, path: string): Promise<string> {
+  const r = await sb.storage.from('delivery-photos').createSignedUrl(path, 3600);
+  const u = r.data && r.data.signedUrl;
+  if (r.error || !u) throw dataError('refused', 'the photo did not load');
+  return u;
+}
+
 /** sales.html:4180 waMedia: a customer's picture, voice note or document, kept in the shop's bucket by wa-send. */
 export async function waMedia(sb: Sb, s: Session, messageId: string): Promise<{ link: string; mime: string }> {
   const d = await waInvoke(sb, { shopId: s.shopId, action: 'media', messageId });

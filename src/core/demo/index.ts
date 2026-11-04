@@ -12,6 +12,7 @@ import type { Kept } from '../outbox.ts';
 import { dayOf, replyWindow } from '../time.ts';
 import type { ChatNote, Message, Session, SourcingAsk } from '../types.ts';
 import { readFlags, type DemoFlags } from './flags.ts';
+import { demoPhoto } from './photo.ts';
 import { seed, type DemoState } from './seed/index.ts';
 import { SAVED_AT, t } from './seed/clock.ts';
 import { KATO } from './seed/orders-live.ts';
@@ -171,6 +172,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       ? new Promise<void>((ok) => setTimeout(ok, 10000)).then(() => write(() => say(chatId, caption, 'image')))
       : write(() => say(chatId, caption, 'image'))),
     sendCatalog: (chatId) => write(() => say(chatId, '', 'catalog')),
+    deliveryPhoto: (path) => (path.startsWith('photo:') ? Promise.resolve(demoPhoto(path)) : Promise.reject(dataError('refused', 'the photo did not load'))),
     media: (messageId) => {
       const m = s.messages.find((x) => x.id === messageId);
       return m && m.media ? Promise.resolve({ link: m.media, mime: 'image/jpeg' }) : Promise.reject(dataError('refused', 'no file came back'));

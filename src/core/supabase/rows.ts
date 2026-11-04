@@ -191,6 +191,7 @@ export function orderOf(q: Row, pb: PriceBook): Order {
     counter: !!(p.counter || p.counterSale),
     deliverTo: p.deliveryAddress ? String(p.deliveryAddress) : p.deliverTo ? String(p.deliverTo) : null,
     deliveredAt: ms(p.deliveredAt),
+    deliveredPhoto: typeof p.deliveredPhoto === 'string' && p.deliveredPhoto ? p.deliveredPhoto : null,
     toldTotal: null,
     chatId: p.waConvId != null && p.waConvId !== '' ? num(p.waConvId) : null,
     qa: !!q.qa,

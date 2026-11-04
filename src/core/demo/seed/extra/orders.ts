@@ -85,7 +85,8 @@ function play552(o: Order, now: number): void {
   Object.assign(o, { stage: 'road', stageAt: t('13:20'), holderId: SSALI });
   if (now >= t('14:05')) {
     if (!o.stageLog.some((x) => x.stage === 'delivered')) o.stageLog = [...o.stageLog, { stage: 'delivered', at: t('14:05'), by: SSALI }];
-    Object.assign(o, { stage: 'delivered', stageAt: t('14:05'), deliveredAt: t('14:05') });
+    // Ssali's photo at the Ntinda site's door (OR09: "See the photo at the door").
+    Object.assign(o, { stage: 'delivered', stageAt: t('14:05'), deliveredAt: t('14:05'), deliveredPhoto: 'photo:door-0552' });
   }
 }
 

@@ -193,6 +193,8 @@ export interface DataSource {
   sendImage(chatId: number, file: Blob | string, caption: string): Promise<Message>;
   /** The shop's WhatsApp catalogue as a card they can browse (wa-send 'send-catalog'). */
   sendCatalog(chatId: number): Promise<Message>;
+  /** The photo at an order's door (Order.deliveredPhoto, 0111 delivery-photos): a short-lived link to open it. */
+  deliveryPhoto(path: string): Promise<string>;
   /** A customer's picture, voice note or document: its link (wa-send 'media'). */
   media(messageId: string): Promise<{ link: string; mime: string }>;
   /** A team note, never sent to the customer; each member in `mentions` gets a push (wa_notes.mentions). */

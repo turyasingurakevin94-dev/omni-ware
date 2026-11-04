@@ -191,6 +191,11 @@ export interface Order {
   /** Where it goes; null = they collect it. */
   deliverTo: string | null;
   deliveredAt: Ms | null;
+  /**
+   * The photo at their door (or the signed delivery note), taken by the Store when it marks the delivery done:
+   * a path in the private delivery-photos bucket (payload.deliveredPhoto, 0111), opened by DataSource.deliveryPhoto.
+   */
+  deliveredPhoto: string | null;
   /** What the customer was told it comes to, when that differs from now (#0552: told 1,750,000). */
   toldTotal: UGX | null;
   /** The WhatsApp chat it was taken from (payload.waConvId), when it was. */

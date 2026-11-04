@@ -14,21 +14,38 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { OrderPill } from '../../../ui/StageGroup.tsx';
 import { AskStep } from '../../../ui/Track.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { act, chats, now } from '../shell/store.ts';
+import { act, chats, now, source } from '../shell/store.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { askedBy, backLines, byRole, custOf, faceOfMember, member, METHOD, owesOnceFixed, payFixAsks, payFixWant, paysOf, shortItem, shortName } from './data.ts';
 import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
 
-/** OR09 · at the door: the photo square, where, who delivered, when. */
-export function DoorCard(p: { place: string; by?: string; at: string }): JSX.Element {
+/**
+ * OR09 · at the door: the photo square, where, who delivered, when. The photo is private (0111): its short-lived
+ * link opens in the phone's own viewer, a tab opened on the tap so the phone lets it through.
+ */
+export function DoorCard(p: { place: string; by?: string; at: string; photo: string | null }): JSX.Element {
+  const see = async () => {
+    if (!p.photo) return;
+    const w = window.open('', '_blank');
+    try {
+      const link = await source.deliveryPhoto(p.photo);
+      if (w) { w.opener = null; w.location.href = link; } else window.location.href = link;
+    } catch (_e) {
+      if (w) w.close();
+      toast.show('The photo didn’t load', { kind: 'warn', retry: () => { void see(); } });
+    }
+  };
   return (
     <div class="or-door">
-      <button type="button" class="or-door-ph" aria-label="See the photo at the door" disabled><Icon name="camera" size={22} />photo</button>
+      <button type="button" class="or-door-ph" aria-label={p.photo ? 'See the photo at the door' : 'No photo at the door yet'} disabled={!p.photo} onClick={() => { void see(); }}><Icon name="camera" size={22} />photo</button>
       <span class="or-door-t"><span>At the door</span><span>{p.place}</span><span>{p.by ? `${firstWord(p.by)} delivered` : 'Delivered'}</span><span class="mono">{p.at}</span></span>
     </div>
   );
 }
+
+/** Who takes the order where it goes (OR08): a customer's site manager; a walk-in themself (CU34's "walk-in · at the gate"). */
+const receiver = (o: Order, who: string): string => (o.customerId ? `${who}'s site manager receives it` : o.deliverTo ? 'The walk-in receives it' : 'The walk-in collects it');
 
 /** OR08 · on the road: the drawn route, when it arrives, where to, and the driver to call. */
 export function MapCard(p: { b: Books; o: Order }): JSX.Element {
@@ -54,7 +71,7 @@ export function MapCard(p: { b: Books; o: Order }): JSX.Element {
       </div>
       <div class="or-map-row">
         <span aria-hidden="true" class="or-map-ic"><Icon name="pin" size={18} stroke={2} /></span>
-        <span class="or-map-t"><span>{(o.deliverTo || '').split(',')[0]}</span><span>{`${who}'s site manager receives it`}</span></span>
+        <span class="or-map-t"><span>{o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'}</span><span>{receiver(o, who)}</span></span>
       </div>
       {d && (
         <div class="or-map-row">
@@ -123,7 +140,7 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
         <button type="button" class="or-btn-w" onClick={told} disabled={!!busy}><Icon name="check" size={18} stroke={2.6} />{busy === 'told' ? 'Sending…' : 'Told them'}</button>
         {shut
           ? (
-            <a href={sms} class="or-btn-n or-ptell-sms" aria-label={`Send as SMS: the chat is shut${win ? `, ${win.daysShut} days` : ''}`} onClick={() => { void act('markPriceTold', o.id); }}>
+            <a href={sms} class="or-btn-n or-ptell-sms" aria-label={`Send as SMS: the chat is shut${win ? `, ${win.daysShut} days` : ''}`}>
               <span><Icon name="message" size={18} stroke={2} />Send as SMS</span>
               {win && <span><Icon name="lock" size={11} stroke={2.4} />{'chat shut · '}<span class="mono">{`${win.daysShut} days`}</span></span>}
             </a>

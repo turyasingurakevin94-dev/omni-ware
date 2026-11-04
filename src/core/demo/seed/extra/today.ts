@@ -133,7 +133,7 @@ function allTold(s: DemoState, local: TodayLocal): void {
   const b = s.books;
   const o552 = b.orders.find((o) => o.id === 552);
   if (o552) {
-    o552.stage = 'delivered'; o552.stageAt = t('14:05'); o552.deliveredAt = t('14:05'); o552.holderId = SSALI;
+    o552.stage = 'delivered'; o552.stageAt = t('14:05'); o552.deliveredAt = t('14:05'); o552.deliveredPhoto = 'photo:door-0552'; o552.holderId = SSALI;
     o552.stageLog.push({ stage: 'road', at: t('13:20'), by: null }, { stage: 'delivered', at: t('14:05'), by: null });
     o552.payments = [P(1, t('13:10'), 1000000, 'momo', 9201), P(2, t('13:10'), 810000, 'cash', 9202)]; o552.paid = 1810000;
     o552.lines.forEach((l) => { if (l.priceReview) l.priceToldAt = t('10:50'); });
