@@ -181,6 +181,82 @@ async function flows(browser) {
   t.check(/Paid/.test(k) && !/Not recorded/.test(k) && /120,000/.test(k), 'fixed: it goes, with 120,000 change');
   t.check(errors.length === 0, `refused: no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
   await ctx.close();
+
+  // Kept with no signal, then refused (&fail=pay): the screen it ends on, ready for Fix it or Throw it away.
+  const refusedKato = async (how) => {
+    const r = await open(browser, '&fail=pay');
+    await r.p.getByLabel('Take payment from Kato Construction').click();
+    if (how === 'momo') {
+      await r.p.getByRole('radio', { name: 'Mobile' }).click();
+      await r.p.getByLabel('Transaction ID').fill('12046113570');
+    }
+    await slide(r.p);
+    await r.p.getByRole('button', { name: 'Try again' }).click();
+    await r.p.waitForTimeout(700);
+    return r;
+  };
+
+  // Fix it by Mobile: a cash payment refused, sent again by Mobile with its ID; Paid says Mobile and the ID, never Cash.
+  ({ ctx, p, errors } = await refusedKato('cash'));
+  await p.getByRole('button', { name: 'Fix it' }).click();
+  await p.getByRole('radio', { name: 'Mobile' }).click();
+  await p.getByLabel('Transaction ID').fill('12049988776');
+  await slide(p).catch(() => {});
+  await p.waitForTimeout(800);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /Mobile · ID 1204…8776/.test(k) && !/\bCash\b/.test(k), 'Fix it by Mobile: Paid says Mobile with its ID');
+  await ctx.close();
+
+  // Fix it by Bank: the same, by Bank with its reference.
+  ({ ctx, p, errors } = await refusedKato('cash'));
+  await p.getByRole('button', { name: 'Fix it' }).click();
+  await p.getByRole('radio', { name: 'Bank' }).click();
+  await p.getByLabel('Bank reference').fill('STB 99120');
+  await slide(p).catch(() => {});
+  await p.waitForTimeout(800);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /Bank · ref STB 99120/.test(k) && !/\bCash\b/.test(k), 'Fix it by Bank: Paid says Bank with its reference');
+  await ctx.close();
+
+  // A Mobile payment refused, fixed as it was: 300,000 to the books, 120,000 change; they sent 420,000.
+  ({ ctx, p, errors } = await refusedKato('momo'));
+  await p.getByRole('button', { name: 'Fix it' }).click();
+  await p.waitForTimeout(300);
+  await slide(p).catch(() => {});
+  await p.waitForTimeout(800);
+  k = await text(p);
+  t.check(/Mobile · ID/.test(k) && /they sent\s*420,000/.test(k) && !/they gave/.test(k), 'Fix it, Mobile kept: they sent 420,000, the change is 120,000');
+  await ctx.close();
+
+  // Take it again (CU47): opens as Fix it does, with the 420,000 she still holds as what they gave.
+  ({ ctx, p, errors } = await refusedKato('cash'));
+  await p.getByRole('button', { name: 'Throw it away' }).click();
+  await p.getByRole('button', { name: 'Take it again' }).click();
+  await p.waitForTimeout(300);
+  t.check((await p.getByLabel('Amount Kato pays now').inputValue()) === '300,000' && (await p.getByRole('radio', { name: '420,000' }).getAttribute('aria-checked')) === 'true',
+    'Take it again: All 300,000, they gave the 420,000 she holds');
+  const tn = await toastNow(p);
+  t.check(!tn || !/Thrown away/.test(tn), 'Take it again: the Thrown away Undo closes when Paid is left');
+  t.check(/Give change/.test(await text(p)) && /120,000/.test(await text(p)), 'Take it again: Give change 120,000');
+  await ctx.close();
+
+  // Paid over by Mobile (CU41's path): 500,000 sent for 420,000 owed; they sent 500,000, 80,000 change.
+  ({ ctx, p, errors } = await open(browser));
+  await p.getByLabel('Take payment from Kato Construction').click();
+  await p.getByRole('radio', { name: 'Mobile' }).click();
+  await p.getByLabel('Amount Kato pays now').fill('500000');
+  await p.getByLabel('Transaction ID').fill('12046113570');
+  await slide(p).catch(() => {});
+  await p.waitForTimeout(800);
+  k = await text(p);
+  t.check(/they sent\s*500,000/.test(k) && /80,000/.test(k) && !/they gave/.test(k), 'Mobile paid over: they sent 500,000, 80,000 change');
+  await ctx.close();
+}
+
+/** The toast showing now, or null. */
+async function toastNow(p) {
+  const el = p.locator('[role=status]');
+  return (await el.count()) ? el.first().innerText() : null;
 }
 
 /** Every control: a name, at least 44 px tall; no text under 11 px. */

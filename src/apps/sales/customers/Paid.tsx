@@ -5,7 +5,7 @@
  * them (or Send by SMS, Try again), and the one way out: Back to Today.
  */
 import type { JSX } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { toast } from '../../../ui/toast.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -32,6 +32,8 @@ export function PaidScreen(p: ScreenProps): JSX.Element {
 }
 
 function PaidView(props: { p: Paid }): JSX.Element {
+  // Leaving Paid closes its Thrown away Undo: an Undo on the next screen would bring back a write she has moved on from.
+  useEffect(() => () => { if (toast.text === 'Thrown away') toast.hide(); }, []);
   const p = props.p, b = books.value, name = short(p.name), t = TINTS[p.tint as Tint] || TINTS.t4;
   const how = p.method === 'cash'
     ? (p.deposit ? `Cash · ${name} said keep ${money(p.deposit)}` : 'Cash')
@@ -71,7 +73,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
       {p.change > 0 && (
         <div class="cu-paid-change">
           <span aria-hidden="true"><Icon name="cash" size={22} stroke={2} /></span>
-          <span><span>Give change now</span><span>they gave <b class="mono">{money(p.given)}</b></span></span>
+          <span><span>Give change now</span><span>{p.method === 'cash' ? 'they gave ' : 'they sent '}<b class="mono">{money(p.given)}</b></span></span>
           <b class="mono">{money(p.change)}</b>
         </div>
       )}
@@ -120,7 +122,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
             <>
               <span class="cu-rc-row line"><span aria-hidden="true" class="cu-rc-ic warn"><Icon name="cash" size={20} stroke={2} /></span>
                 <span class="cu-rc-t"><span>{'You still hold '}<b class="mono">{money(p.amount)}</b>{' cash'}</span><span>Give it back or take it again</span></span></span>
-              {p.customerId && <button type="button" class="cu-rc-again" onClick={() => nav.replace('customers/pay', { customer: p.customerId as string })}><Icon name="cash" size={15} stroke={2.2} />Take it again</button>}
+              {p.customerId && <button type="button" class="cu-rc-again" onClick={() => nav.replace('customers/pay', { customer: p.customerId as string, hold: p.amount, method: p.method, ref: p.ref })}><Icon name="cash" size={15} stroke={2.2} />Take it again</button>}
             </>
           )}
         </div>

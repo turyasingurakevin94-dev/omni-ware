@@ -41,10 +41,17 @@ export function PayScreen(p: ScreenProps): JSX.Element {
   const k = p.params.fix ? kept.value.find((x) => x.id === String(p.params.fix)) : null;
   const fixArgs = k && Array.isArray(k.args) ? (k.args[0] as PayArgs) : null;
   const fix = k && fixArgs ? { keptId: k.id, paidKey: String(p.params.paid || ''), args: fixArgs } : null;
-  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} fix={fix} />;
+  // What they hand over again: the refused payment (Fix it), or the one thrown away that she still holds (CU47 Take it again).
+  const held = Number(p.params.hold);
+  const pre: Pre | null = fixArgs ? { amount: fixArgs.amount, method: fixArgs.method, ref: fixArgs.ref || '' }
+    : held > 0 ? { amount: held, method: (['cash', 'momo', 'bank'].includes(String(p.params.method)) ? p.params.method : 'cash') as Method, ref: String(p.params.ref || '') } : null;
+  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} fix={fix} pre={pre} />;
 }
 
-function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null; fix: { keptId: string; paidKey: string; args: PayArgs } | null }): JSX.Element {
+/** What she was handed already: how much, how, and its ID or reference. */
+interface Pre { amount: number; method: Method; ref: string }
+
+function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null; fix: { keptId: string; paidKey: string; args: PayArgs } | null; pre: Pre | null }): JSX.Element {
   const { b, c, o } = p, today = dayOf(now.value), esther = role(b, 'accounts');
   const m = c ? owingOf(b, c, today) : null;
   const open: OpenBill[] = m ? m.bills.filter((x) => !x.checked) : [];
@@ -54,14 +61,14 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const sumOf = (ids: number[]) => open.filter((x) => ids.includes(x.id)).reduce((s, x) => s + x.left, 0);
 
   const [picks, setPicks] = useState<number[] | null>(initPicks && initPicks.length ? initPicks : null);
-  // Fix it (CU46): cash opens as CU35 draws it: All of what they owe now, and the kept amount as what they gave.
-  // Mobile or bank has no notes to hand back: the kept amount is what they pay, over what they owe.
-  const fixCash = !!p.fix && p.fix.args.method === 'cash';
-  const [amount, setAmount] = useState<number>(p.fix && !fixCash ? p.fix.args.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
-  const [other, setOther] = useState(!!p.fix && !fixCash && p.fix.args.amount !== take);
-  const [method, setMethod] = useState<Method>(p.fix ? p.fix.args.method : 'cash');
-  const [ref, setRef] = useState(p.fix ? p.fix.args.ref || '' : '');
-  const [given, setGiven] = useState<number | 'exact'>(p.fix && fixCash ? p.fix.args.amount : 'exact');
+  // Fix it (CU46) and Take it again (CU47): cash opens as CU35 draws it: All of what they owe now, and the
+  // amount in hand as what they gave. Mobile or bank has no notes to hand back: it is what they pay, over what they owe.
+  const pre = p.pre, preCash = !!pre && pre.method === 'cash';
+  const [amount, setAmount] = useState<number>(pre && !preCash ? pre.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
+  const [other, setOther] = useState(!!pre && !preCash && pre.amount !== take);
+  const [method, setMethod] = useState<Method>(pre ? pre.method : 'cash');
+  const [ref, setRef] = useState(pre ? pre.ref : '');
+  const [given, setGiven] = useState<number | 'exact'>(pre && preCash ? pre.amount : 'exact');
   const [how, setHow] = useState<'change' | 'deposit'>('change');
   const [receipt, setReceipt] = useState(true);
   const [who, setWho] = useState<string | null>(o && whoPicked.value && whoPicked.value.order === o.id ? whoPicked.value.id : null);
@@ -116,7 +123,8 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       if (p.fix) {
         // The same kept write, fixed, goes again in its place (spec 06 Q5); its Paid screen is under this one.
         const was = paidResults.value[p.fix.paidKey];
-        if (was) putPaid({ ...was, amount: args.amount, before: owes, after, change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, refused: null,
+        // Its Paid entry takes the fix as it is now: how, its ID or reference, the change, what was handed, the bills.
+        if (was) putPaid({ ...was, method, ref: args.ref, amount: args.amount, before: owes, after, change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, refused: null,
           lines: rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied })) });
         await retryKept(p.fix.keptId, [args]);
         nav.back();
@@ -131,7 +139,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       const paid: Paid = {
         key, customerId: who0 ? who0.id : null, name: who0 ? who0.name : name, initials: who0 ? who0.initials : 'WI', tint: who0 ? who0.tint : 't4', phone: who0 ? who0.phone : o ? o.client.phone : '',
         amount: r.kept ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
-        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
+        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
         receipt: { state: receipt && c ? (r.kept ? 'waiting' : 'sending') : 'off', at: null, chatId: null },
       };
       putPaid(paid);
@@ -143,7 +151,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   };
 
   // The notes they likely gave; on Fix it, the kept amount is one of them (CU46 → CU35).
-  const notes = p.fix && fixCash ? [likelyNotes(amount)[0], p.fix.args.amount].filter((n, i, a) => n > amount && a.indexOf(n) === i).sort((x, y) => x - y) : likelyNotes(amount);
+  const notes = pre && preCash ? [likelyNotes(amount)[0], pre.amount].filter((n, i, a) => n > amount && a.indexOf(n) === i).sort((x, y) => x - y) : likelyNotes(amount);
   const sub = c ? `${c.name} · owes ${money(owes)}` : o ? `${o.client.name || 'Walk-in'} · ${orderNo(o.id)} · ${money(owes)}` : '';
   const face = c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' as const };
   return (
