@@ -116,7 +116,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
     <div class="sl-nothing">
       <div class="sl-none">
         <span aria-hidden="true" class="sl-none-ic"><Duo i={phSearch} size={26} color="#5F6980" /><span>?</span></span>
-        <span class="sl-none-t"><span>{`Nothing called “${query.value.trim()}”`}</span><span>{`The shop doesn’t sell a ${plain}`}</span></span>
+        <span class="sl-none-t"><span>{`Nothing called “${a.words.join(" ") || query.value.trim()}”`}</span><span>{`The shop doesn’t sell a ${plain}`}</span></span>
       </div>
       {near.length > 0 && (
         <div class="sl-near">
