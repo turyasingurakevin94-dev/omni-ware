@@ -48,7 +48,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const due = S.dueOf(b, now);
   t.check(same(due.map((d) => d.c.name), ['Mukono Roofing', 'Kyaligonza & Sons', 'Lubowa Builders']), `KC04: who's due 3 (got ${due.map((d) => d.c.name).join(', ')})`);
   t.check(same(due.map((d) => d.words), ['Due today · every 7 days', '4 days late · every 14 days', '1 day late · every 5 days']), 'KC04: their rhythm in words');
-  t.check(same(I.readQuery('2 paint'), { qty: 2, words: 'paint', counted: true }) && same(I.findItems(b.items, 'paint').map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
+  t.check(same(I.readQuery('2 paint'), { qty: 2, words: 'paint', counted: true }) && same(I.findItems(b.items, 'paint').map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4']), 'KC02: "2 paint" is 2 of paint: the items called paint (the lead\'s search ruling, 4 Nov: an aisle only when no name matches; KC02 to drop Emulsion)');
 
   const T = require(path.join(ROOT, 'src/core/time.ts'));
   const quiet = b.customers.filter((c) => C.rhythm(c, b.orders, T.dayOf(now)).quiet);

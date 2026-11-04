@@ -13,13 +13,16 @@ export function readQuery(text: string): { qty: number; words: string; counted: 
 }
 
 /**
- * Items with a price whose name or aisle holds every word; what is on the shelf first (most first),
- * then what can be ordered in, then the rest.
+ * Items with a price that the words find (the lead's ruling, 4 Nov): those whose own name holds every
+ * word; only when no item's name does, those whose aisle holds them ("plumbing" lists the aisle; "paint"
+ * finds the items called paint). Each group: what is on the shelf first (most first), then what can be
+ * ordered in, then the rest.
  */
 export function findItems(items: Item[], words: string): Item[] {
   const ws = words.toLowerCase().split(/\s+/).filter(Boolean);
   if (!ws.length) return [];
-  return items
-    .filter((i) => i.price != null && ws.every((w) => i.name.toLowerCase().includes(w) || i.aisle.toLowerCase().includes(w)))
-    .sort((x, y) => (y.onShelf || 0) - (x.onShelf || 0) || Number(y.orderIn) - Number(x.orderIn));
+  const priced = items.filter((i) => i.price != null);
+  const byName = priced.filter((i) => ws.every((w) => i.name.toLowerCase().includes(w)));
+  const found = byName.length ? byName : priced.filter((i) => ws.every((w) => i.aisle.toLowerCase().includes(w)));
+  return found.sort((x, y) => (y.onShelf || 0) - (x.onShelf || 0) || Number(y.orderIn) - Number(x.orderIn));
 }

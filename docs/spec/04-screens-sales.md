@@ -76,7 +76,7 @@ Each is written once in `src/core` and used by every tab that shows it.
 | Gone quiet | **More than twice** their gap since the last order (`since > every × 2`). A quiet customer is in its own group, never "Who's due" | `sales.html:4674` (`r.overdue`), `:6927` (`due && !overdue`) | `rhythm`, `dueCustomers` |
 | Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
 | A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
-| Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Items a search finds | Priced items whose own name holds every word; only when no item's name does, the items of an aisle whose name holds them ("plumbing" lists the aisle, "paint" finds what is called paint); on the shelf first (most first), then Order in | lead, 4 Nov | `findItems` |
 | Often with | What came in the same orders as an item: across this customer's orders when they had it twice or more, else across mine; "4/5" is how many of the orders with the item had it | `agent.html:8890` (`oftenWith`) | `core/often.ts` `oftenWith` |
 | The delivery fee | The shop's service with `kind: 'delivery'`, the one whose `area` is the customer's first; never guessed from a name (lead, 3 Nov; `sales.html:8351` guesses it from the name) | lead ruling | `core/services.ts` `deliveryFor` |
 | A charge's amount | Percent: of the goods; fixed: its value; fixed with `per` ("bag"): its value for each one on the lines sold by that unit (Q3). No `per` or `kind`: a flat fee, as `sales.html` | `sales.html:8358`, Q3 | `core/services.ts` `serviceAmount` |
