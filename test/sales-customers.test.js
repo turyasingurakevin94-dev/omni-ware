@@ -240,6 +240,16 @@ async function flows(browser) {
   t.check(/Give change/.test(await text(p)) && /120,000/.test(await text(p)), 'Take it again: Give change 120,000');
   await ctx.close();
 
+  // New customer for a typed number with no chat: the newest unknown chat (Mama Shine) is not offered for it.
+  ({ ctx, p, errors } = await open(browser));
+  await p.locator('input[aria-label="Find a customer"]').fill('0772 999 111');
+  await p.getByText('Someone new', { exact: true }).click();
+  await p.waitForTimeout(300);
+  k = await p.locator('.ow-sheet').innerText();
+  t.check(!/Mama Shine/.test(k) && !/From their chat/.test(k), 'new: a typed number with no chat does not fill from another chat');
+  t.check((await p.locator('input[aria-label="Phone number after +256"]').inputValue()).replace(/\D/g, '') === '772999111', 'new: the typed number is the phone');
+  await ctx.close();
+
   // Paid over by Mobile (CU41's path): 500,000 sent for 420,000 owed; they sent 500,000, 80,000 change.
   ({ ctx, p, errors } = await open(browser));
   await p.getByLabel('Take payment from Kato Construction').click();
