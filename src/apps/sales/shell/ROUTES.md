@@ -42,6 +42,8 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 
 ## Exported sheets
 
+Every tab but Today is its own file, loaded when first opened (docs/spec/07-stack.md §4). So another tab calls these through `callTab` (`shell/tabs.ts`), never by importing the owning tab's files (the build refuses that): `callTab('orders', 'openTwice', id)` loads Orders first if it is not here yet. A route id (`nav.push`) of a tab not loaded yet shows the loading state and then the screen. Today's own exports may be imported directly: Today is in the page.
+
 | Function | Owner | Boards |
 |---|---|---|
 | `openAsk({ name?, qty?, customerId?, chatId?, quote? })` | today | TD23, TD24 (Ask Moses for something we don't sell; a chat can pass what they said; after `sell { then: 'ask' }`, only `customerId`: what was typed comes back) |
