@@ -47,7 +47,12 @@ export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): 
   const answers = readyAnswers(b, cust, cb.recent.filter((m) => m.chatId === chat.id), now.value);
   const said = answers.map((a) => a.text.replace(/\.$/, '')).join('. ') + '.';
   const put = (s: string) => { sheet.close(); p.onPut(s); };
-  const price = (pick: string[]) => sheet.open(() => <PriceSheet chatId={p.chatId} picked={pick} onPut={p.onPut} />, { label: 'Send a price', top: 84 });
+  // CH21, CH34, CH36: the price sheet's ×, scrim and pull go back to this + sheet (CH20); sending closes both.
+  const price = (pick: string[]) => {
+    let sent = false;
+    const again = () => { if (!sent) sheet.open(() => <AddSheet chatId={p.chatId} onPut={p.onPut} />, { label: `Send ${first}`, top: 56 }); };
+    sheet.open(() => <PriceSheet chatId={p.chatId} picked={pick} onPut={p.onPut} onSent={() => { sent = true; }} />, { label: 'Send a price', top: 84, onClose: again });
+  };
   const usual = usualItems(b, cust);
   const photo = async (e: Event) => {
     const f = (e.target as HTMLInputElement).files?.[0];

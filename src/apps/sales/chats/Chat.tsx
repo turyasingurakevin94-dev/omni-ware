@@ -18,7 +18,7 @@ import { Duo, Icon, STAGE_ICON, phSparkle } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Typing } from '../../../ui/Chat.tsx';
-import { nav } from '../shell/nav.ts';
+import { nav, stack } from '../shell/nav.ts';
 import { act, books, chats, discardKept, drafts, flush, kept, now, online, source } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { AddSheet } from './AddSheet.tsx';
@@ -41,6 +41,13 @@ const typed = new Map<number, string>();
 function checking(b: Books, customerId: string): number {
   const ids = new Set(b.paymentAsks.filter((a) => a.customerId === customerId && a.what === 'bill' && a.status === 'sent' && a.orderId != null).map((a) => a.orderId));
   return b.orders.filter((o) => ids.has(o.id)).reduce((t, o) => t + orderOwes(o), 0);
+}
+
+/** Where Back lands: the Chats list under the filter it was opened from (CH14 "Back to new numbers", CH15 "Back to the team"). */
+function backWords(): string {
+  const prev = stack.value[stack.value.length - 2];
+  const f = prev && prev.id === 'chats' ? prev.params.filter : null;
+  return f === 'new' ? 'Back to new numbers' : f === 'team' ? 'Back to the team' : 'Back to Chats';
 }
 
 export function ChatScreen(p: ScreenProps): JSX.Element {
@@ -151,7 +158,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const typing = v.typing && v.typing.id !== chat.ownerId && !note && !pend ? v.typing : null;
   const told = owner && !mine && !nobody && owner.presence !== 'on' && !pend;
   return (
-    <FullSheet onBack={nav.back} backLabel="Back to Chats" ground="#EDE7DD" pad="0" gap={0} head={head}
+    <FullSheet onBack={nav.back} backLabel={backWords()} ground="#EDE7DD" pad="0" gap={0} head={head}
       foot={
         <>
           {!!answers.length && (

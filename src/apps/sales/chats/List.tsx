@@ -51,7 +51,9 @@ function pill(b: Books | null): PillFace[] {
 }
 
 export function ChatsList(p: ScreenProps): JSX.Element {
-  const [filter, setFilter] = useState<Filter>(((p.params.filter as Filter) || 'mine'));
+  const [filter, setShown] = useState<Filter>(((p.params.filter as Filter) || 'mine'));
+  // The filter is kept in the route (ROUTES.md chats { filter }), so Back, Close and the scrim from a chat land on it (CH14 → CH03, CH15 → CH04).
+  const setFilter = (k: Filter) => { setShown(k); nav.keep({ filter: k }); };
   const [q, setQ] = useState('');
   const b = books.value, cb = seen(chats.value), t = now.value;
   const manager = !!b && b.me.role === 'manager';
@@ -64,8 +66,9 @@ export function ChatsList(p: ScreenProps): JSX.Element {
         wait={wl && { ...wl, words: scope === 'team' ? 'waiting · the team' : wl.marks.length ? 'Waiting for a reply' : 'waiting for a reply' }} />
     );
   };
-  if (!b || !cb) return <div>{head('mine')}<Loading /></div>;
-  if (!cb.chats.length) return <div>{head('mine')}<Empty connected={cb.connected} /></div>;
+  if (!b || !cb) return <div>{head('mine')}<Loading filter={f} onFilter={setFilter} /></div>;
+  // CH06: no chats yet; the team pill still opens the team (CH04).
+  if (!cb.chats.length && f !== 'team') return <div>{head('mine')}<Empty connected={cb.connected} /></div>;
   const mine = mineList(b, cb, t, drafts.value), owned = ownedBy(cb, b.me.id).length;
   const waits = waitingChats(cb, b.me.id, t, 'mine');
   const fresh = cb.chats.filter((c) => !c.ownerId && waits.some((w) => w.chat.id === c.id));

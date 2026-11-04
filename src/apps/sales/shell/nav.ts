@@ -106,6 +106,11 @@ export const nav = {
     check(id);
     setStack([...stack.value.slice(0, -1), entry(id, params)], false);
   },
+  /** Write the screen's own state into its params (the same screen stays, scrolled where it is), so Back lands on it: Chats' filter. */
+  keep(params: Params): void {
+    const cur = stack.value[stack.value.length - 1];
+    if (cur) stack.value = [...stack.value.slice(0, -1), { ...cur, params: { ...cur.params, ...params } }];
+  },
   back(): void {
     if (stack.value.length > 1) history.back();
   },

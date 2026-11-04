@@ -46,7 +46,7 @@ function oftenFor(b: Books, c: Customer | null, tries: Item[], skip: Set<string>
   return null;
 }
 
-export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: string) => void }): JSX.Element {
+export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: string) => void; onSent?: () => void }): JSX.Element {
   const b = books.value, cb = chats.value;
   const [picked, setPicked] = useState<string[]>(p.picked);
   const [asked, setAsked] = useState<string[]>([]);
@@ -88,6 +88,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const send = async () => {
     if (!lines.length) return;
     const text = lines.map((i) => `${i.name}: ${money(i.price)} a ${i.unit}`).join('\n');
+    if (p.onSent) p.onSent();
     sheet.close();
     await write(replyWindow(chat.lastInAt, now.value).open ? 'send' : 'sendTemplate', [chat.id, text], lines.length === 1 ? 'Price sent' : `${lines.length} prices sent`);
   };

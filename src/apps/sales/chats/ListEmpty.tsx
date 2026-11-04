@@ -60,14 +60,15 @@ export function Empty(p: { connected: boolean }): JSX.Element {
 
 const sk = (w: number | string, h: number, round?: boolean) => <Shim w={w} h={h} round={round} />;
 
-export function Loading(): JSX.Element {
+/** CH07: the chips work while the chats load; the one picked shows once they are here (CH01–CH04). */
+export function Loading(p: { filter: string; onFilter: (k: 'mine' | 'waiting' | 'new' | 'team') => void }): JSX.Element {
   return (
     <main class="ch-main">
       <div role="group" aria-label="Show" class="ch-chips">
-        <FilterChip snug on>Mine</FilterChip>
-        <FilterChip snug dot="var(--warn)">Waiting</FilterChip>
-        <FilterChip snug>New</FilterChip>
-        <FilterChip snug>Team</FilterChip>
+        <FilterChip snug on={p.filter === 'mine'} onClick={() => p.onFilter('mine')}>Mine</FilterChip>
+        <FilterChip snug on={p.filter === 'waiting'} dot={p.filter === 'waiting' ? 'var(--amber-on-navy)' : 'var(--warn)'} onClick={() => p.onFilter('waiting')}>Waiting</FilterChip>
+        <FilterChip snug on={p.filter === 'new'} onClick={() => p.onFilter('new')}>New</FilterChip>
+        <FilterChip snug on={p.filter === 'team'} onClick={() => p.onFilter('team')}>Team</FilterChip>
       </div>
       <div class="ch-list">
         <div class="ch-gh" style={{ justifyContent: 'space-between' }}><h2 style={{ flex: 'none' }}>Your chats</h2><span role="status" class="ch-reading"><span aria-hidden="true" />Reading the chats</span></div>
