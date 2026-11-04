@@ -109,14 +109,15 @@ function inAisle(it: Item, ws: string[]): boolean {
 
 /**
  * The items that answer an ask: theirs first (rank 2), what they had this week (1), then what fills the count
- * best. After the items named so come the priced items of an aisle the words name (the counter's "2 paint" also
- * finds Emulsion, in Paint, KC02): an item with no price is found only by its own name.
+ * best. Only when no item's name holds the words, the priced items of an aisle that does ("plumbing" lists the
+ * aisle; "paint" finds what is called paint: the lead's ruling, 4 Nov). An item with no price is found only by
+ * its own name.
  */
 export function findItems(b: Books, a: Asked, rank: (key: string) => number = () => 0): Item[] {
   if (!a.words.length) return [];
   const unit = (it: Item) => !a.unit || it.unit === a.unit || it.packUnit === a.unit || nameWords(it).includes(a.unit);
   const hits = b.items.filter((it) => fits(it, a.words) && unit(it));
-  const more = b.items.filter((it) => it.price != null && !hits.includes(it) && inAisle(it, a.words) && unit(it));
+  const more = hits.length ? [] : b.items.filter((it) => it.price != null && inAisle(it, a.words) && unit(it));
   const key = (it: Item) => `${it.id}::${it.variantIdx ?? ''}`, q = a.qty || 1;
   const order = (x: Item, y: Item) => rank(key(y)) - rank(key(x)) || fill(x, q) - fill(y, q);
   return [...hits.sort(order), ...more.sort(order)];

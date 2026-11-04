@@ -49,6 +49,13 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(M.orderTotal(order(490)) === 2672000, '#0490 is the usual, 2,672,000');
   t.check([[545, 1240000], [437, 560000], [540, 380000], [539, 180000], [542, 169000]].every(([id, n]) => M.orderTotal(order(id)) === n), 'every re-lined order keeps its total');
 
+  /* ---- the search rule (core/find.ts; the lead's ruling, 4 Nov) ---- */
+  const FI = require(path.join(ROOT, 'src/core/find.ts'));
+  const finds = (q) => FI.findItems(b, FI.readAsk(q)).filter((i) => i.price != null);
+  t.check(finds('paint').every((i) => /paint/i.test(i.name)) && finds('paint').length === 2, 'a name match wins: "paint" finds the items called paint, not the Paint aisle');
+  t.check(finds('plumbing').length > 0 && finds('plumbing').every((i) => i.aisle === 'Plumbing'), 'no name matches "plumbing": the aisle is listed');
+  t.check(b.items.filter((i) => i.aisle === 'Paint').every((i) => i.price != null), 'every item in the Paint aisle has a price');
+
   /* ---- Lubowa (SL04) ---- */
   const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
   t.check(lw.mine && lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ') === 'Ridge cap G28 2/2, Roofing nails 2.5" 2/2', `Often with Iron sheet G28 in Lubowa’s orders (core/often.ts): 2/2, 2/2 (got ${lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ')})`);
