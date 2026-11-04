@@ -16,6 +16,7 @@ import { money } from '../../../core/money.ts';
 import { orderNo, TINTS } from '../../../core/names.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Payment } from '../../../core/types.ts';
+import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
 import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
@@ -29,6 +30,12 @@ const WORD = { cash: 'cash', momo: 'Mobile', bank: 'Bank' } as const;
 /** The payment the bill may be: theirs, the same amount, from the day it was billed, paid on another order. */
 export function matchFor(b: Books, customerId: string, orderId: number, left: number, day: string): Payment | null {
   return b.payments.find((x) => x.customerId === customerId && x.amount === left && x.day === day && x.orderId !== orderId) || null;
+}
+
+/** CU12 from another tab (TD05's "being checked" chip): the customer's own page, and the bill's sheet over it. */
+export function openBillChecked(customerId: string, orderId: number): void {
+  nav.push('customers/customer', { id: customerId });
+  openBillCheck(customerId, orderId);
 }
 
 export function openBillCheck(customerId: string, orderId: number): void {

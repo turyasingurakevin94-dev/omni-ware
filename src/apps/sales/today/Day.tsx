@@ -8,14 +8,16 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money, orderTotal, short } from '../../../core/money.ts';
 import { orderNo, STAGE_WORD } from '../../../core/names.ts';
+import { twinOf } from '../../../core/orders.ts';
 import { addDays, clock, dayLabel, dayOf, monthName, monthOf, weekday } from '../../../core/time.ts';
 import type { Books, Method, Order } from '../../../core/types.ts';
-import { Avatar, FaceStack } from '../../../ui/Avatar.tsx';
+import { Avatar, FaceStack, PLAIN } from '../../../ui/Avatar.tsx';
 import { IconTile } from '../../../ui/ActRow.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Icon, STAGE_ICON, phCoins, type IconName } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
+import { callTab } from '../shell/tabs.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, now } from '../shell/store.ts';
 import { faceOf, moneyInToday, owing, placedToday, readyToCollect, soldIn, total, weekStart } from './data.ts';
@@ -91,7 +93,7 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
         {shown.map((o) => {
           const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) : null;
           return (
-            <Tap key={o.id} class={cx('td-day-row', o.qa && 'qa')} on={() => go('orders/order', { id: o.id })}>
+            <Tap key={o.id} class={cx('td-day-row', o.qa && 'qa')} on={() => (twinOf(b.orders, o) ? void callTab('orders', 'openTwice', o.id) : go('orders/order', { id: o.id }))}>
               <span class="mono td-day-at">{clock(o.placedAt)}</span>
               {o.qa ? <span aria-hidden="true" class="td-day-flag"><Icon name="flag" size={14} stroke={2} /></span> : <Avatar {...faceOf(b, o)} size={32} />}
               <span class="td-day-t2"><span>{c ? c.name : o.qa ? o.client.name : 'Walk-in order'}</span><span>{!o.qa && <span class="mono">{orderNo(o.id)}</span>}{stagePill(o)}</span></span>
@@ -108,7 +110,7 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
           <span class="td-best-h"><span>{`Best customers · sold in ${monthName(p.now)}`}</span><span class="ow-chev"><Icon name="chevron-right" size={14} stroke={2.4} style={{ opacity: 0.7 }} /></span></span>
           {best.map((x) => (
             <span key={x.c.id} class="td-best-r">
-              <Avatar initials={x.c.initials} tint={x.c.tint} size={24} />
+              <Avatar initials={x.c.initials} tint={x.c.tint} size={24} style={PLAIN} />
               <span>{x.c.name}</span>
               <span aria-hidden="true"><span style={{ width: `${Math.round((x.sum / best[0].sum) * 100)}%` }} /></span>
               <b class="mono">{money(x.sum)}</b>

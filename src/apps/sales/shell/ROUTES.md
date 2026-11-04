@@ -55,5 +55,6 @@ Every tab but Today is its own file, loaded when first opened (docs/spec/07-stac
 | `openChange(orderId)` | orders | OR17 → OR18; a live copy entered twice goes to OR19 |
 | `openTwice(orderId)` | orders | OR19 (live), OR23 (invoiced): either order of the pair; TD16's copy row |
 | `openWrong(orderId)` | orders | OR20 "Something wrong" → OR21, OR24 → OR25, OR26; an invoiced copy goes to OR23 |
+| `openBillChecked(customerId, orderId)` | customers | CU12 (TD05's "being checked" chip: the customer's own page, with that bill's Paid already? sheet over it) |
 
 A sheet opens over whatever is on screen; to show it over its order, `nav.push('orders/order', { id })` first, then call it.

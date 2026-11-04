@@ -79,6 +79,11 @@ export function FaceStack(p: FaceStackProps): JSX.Element {
 }
 
 /** A small avatar as the Asks boards draw it: no tight letter-spacing. */
+/**
+ * The boards space a face's letters by series, not by size: at 24 px and under, Orders, Chats, Customers, Counter,
+ * Sell and every face stack draw -.04em; Today's lone faces beside words (TD04, TD05, TD15, TD16, TD18, TD19–TD27)
+ * and Sourcing's "asked for" faces (SL09, SL37) draw normal spacing. Those places pass PLAIN.
+ */
 export const PLAIN = { letterSpacing: 'normal' };
 
 /** P10's ring tones: due green, late amber, gone quiet crimson (full), early grey. */

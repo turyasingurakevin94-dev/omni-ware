@@ -7,7 +7,7 @@ import type { JSX } from 'preact';
 import { money, short } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
 import { dayOf, daysApart, monthName } from '../../../core/time.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet, TitleHead } from '../../../ui/FullSheet.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { StatusPill } from '../../../ui/Pill.tsx';
@@ -58,7 +58,7 @@ export function Goal(): JSX.Element {
   return (
     <FullSheet onBack={close} backLabel="Back to Today" head={
       <TitleHead small title={`Your ${month} goal`} onClose={close}
-        sub={<>{setter && <Avatar initials={setter.initials} tint={setter.tint} size={18} />}{`${setter ? firstWord(setter.name) + ' set it · ' : ''}${g.daysLeft} days left`}</>}>
+        sub={<>{setter && <Avatar initials={setter.initials} tint={setter.tint} size={18} style={PLAIN} />}{`${setter ? firstWord(setter.name) + ' set it · ' : ''}${g.daysLeft} days left`}</>}>
         <Dial sold={g.sold} move={g.move} target={g.target} pace={Math.min(1, gone / days)} pct={g.pct} />
         <div class="td-goal-tiles">
           <span><span>Sold</span><span class="mono">{short(g.sold, 2)}</span></span>

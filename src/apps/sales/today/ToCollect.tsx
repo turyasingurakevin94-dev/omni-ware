@@ -9,12 +9,13 @@ import { firstWord, orderNo } from '../../../core/names.ts';
 import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Books } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet, TitleHead } from '../../../ui/FullSheet.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { PlayAll, SectionHead } from '../../../ui/SectionHead.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
+import { callTab } from '../shell/tabs.ts';
 import { books, chats, now } from '../shell/store.ts';
 import { holdOf, owing, promiseToShow, takeHeld, takeOf, type Owing } from './data.ts';
 import { go } from './go.ts';
@@ -54,6 +55,9 @@ export function ToCollect(): JSX.Element {
 function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
   const { b, w } = p, c = w.c, today = dayOf(now.value), who = c.name.replace('&', 'and');
   const open = () => go('customers/customer', { id: c.id });
+  // TD05: the "being checked" chip opens that bill's sheet (CU12); Mukono's row, with an order held for the money, opens their order (SL30).
+  const chk = w.bills.find((x) => x.checked);
+  const openChecked = () => { if (chk && chk.orderId != null) void callTab('customers', 'openBillChecked', c.id, chk.orderId); else open(); };
   const takeBills = w.bills.filter((x) => x.past && !x.checked), checker = b.members.find((m) => m.role === 'accounts');
   const promise = promiseToShow(b, c, today);
   const chat = chats.value ? chats.value.chats.find((x) => x.customerId === c.id) : null;
@@ -65,7 +69,7 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
   return (
     <div class={'td-owe' + (amount > 0 && !(w.checked > 0 || w.held || promise) ? ' tight' : '')}>
       <div class="td-owe-r">
-        <Tap on={w.held ? pay : open} class="td-owe-who">
+        <Tap on={w.held ? () => go('sell/order', { customer: c.id }) : open} class="td-owe-who">
           <Avatar initials={c.initials} tint={c.tint} size={40} />
           <span class="td-owe-t"><span>{c.name}</span><span>{sub}</span></span>
         </Tap>
@@ -76,7 +80,7 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
       {(w.checked > 0 || w.held || promise) && (
         <div class="td-owe-x">
           {w.checked > 0 && checker && (
-            <Tap on={open} class="td-owe-chk"><span><Avatar initials={checker.initials} tint={checker.tint} size={20} /><span class="mono">{money(w.checked)}</span>{` being checked · ${firstWord(checker.name)}`}</span></Tap>
+            <Tap on={openChecked} class="td-owe-chk"><span><Avatar initials={checker.initials} tint={checker.tint} size={20} style={PLAIN} /><span class="mono">{money(w.checked)}</span>{` being checked · ${firstWord(checker.name)}`}</span></Tap>
           )}
           {w.held && <span class="mono td-owe-sum">{`${money(w.owes)} + ${orderNo(w.held.id)} ${money(takeHeld(w) - w.owes)}`}</span>}
           {promise && (

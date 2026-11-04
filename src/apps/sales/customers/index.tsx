@@ -10,6 +10,7 @@
  * Parity specs: test/parity/customers.json.
  */
 import type { TabModule } from '../shell/types.ts';
+export { openBillChecked } from './BillCheck.tsx';
 import { CustomerScreen } from './Customer.tsx';
 import { ListScreen } from './List.tsx';
 import { NewScreen } from './New.tsx';

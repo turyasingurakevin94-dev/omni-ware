@@ -9,7 +9,7 @@ import { money, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { clock, replyWindow } from '../../../core/time.ts';
 import type { Books, ChatBooks, Order } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { Icon, phWhatsapp } from '../../../ui/icons.tsx';
@@ -106,7 +106,7 @@ function TellSheet(p: { i: number }): JSX.Element {
             <ItemSquare aisle={it ? it.aisle : ''} size={40} />
             <span class="td-tell-lt"><span>{l.name}</span>
               <span class="mono">{`${l.qty} `}<span class="ow-word">{l.unit}</span>{' × '}<s>{money(r.was || 0)}</s>{' → '}<b>{money(r.price)}</b></span></span>
-            {by && <span class="td-tell-by"><Avatar initials={by.initials} tint={by.tint} size={24} />{firstWord(by.name)}</span>}
+            {by && <span class="td-tell-by"><Avatar initials={by.initials} tint={by.tint} size={24} style={PLAIN} />{firstWord(by.name)}</span>}
           </div>
         )}
         <div class="td-tell-tiles">

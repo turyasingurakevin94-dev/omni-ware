@@ -8,7 +8,7 @@ import { short } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
 import { dayOf, monthName } from '../../../core/time.ts';
 import type { SourcingAsk } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Duo, Icon, phStore, type IconName } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
@@ -86,8 +86,8 @@ export function You(): JSX.Element {
           ))}
         </div>
         <div class="td-you-chips">
-          {owner && <span><Avatar initials={owner.initials} tint={owner.tint} size={24} /><b>{firstWord(owner.name)}</b>switched these on</span>}
-          {manager && <span><Avatar initials={manager.initials} tint={manager.tint} size={24} /><b>{firstWord(manager.name)}</b>decides prices, credit</span>}
+          {owner && <span><Avatar initials={owner.initials} tint={owner.tint} size={24} style={PLAIN} /><b>{firstWord(owner.name)}</b>switched these on</span>}
+          {manager && <span><Avatar initials={manager.initials} tint={manager.tint} size={24} style={PLAIN} /><b>{firstWord(manager.name)}</b>decides prices, credit</span>}
         </div>
       </div>
       <div class="td-you-shop">
