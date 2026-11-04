@@ -23,7 +23,7 @@ Two rules hold everything together:
 |---|---|
 | Now | **Sat 17 Oct 2026, 10:41**. Greeting "Good morning, Grace". Header "Sat 17 Oct · Live" |
 | Offline / updating | "Updating · saved 7:52" (the last sync, 7:52) |
-| Shop | **Mukasa Hardware**, Kampala Road, Kampala |
+| Shop | **Mukasa Hardware**, Kampala Road, Kampala. The shop's WhatsApp number **0772 400 100** (CH06 "Send the shop's number") |
 | Phone holder | **Grace Akello (GA)**, Sales |
 | Month | October. **14 days left** (today not counted). On Thu 1 Oct that is **30 days left**; on Thu 29 Oct, 2 days left |
 | Durations | "12 m", "4 m", "38 m": with a space (GLOSSARY "How long") |
@@ -110,7 +110,7 @@ Grace's customer list has **38 customers**. **4 owe**, and together they owe **1
 - **Usuals:**
   - Kyaligonza's usual is 40 bag Cement · Hima 50kg, 30 pc Iron sheet G28 · 3m and 2 ctn Wire nails 4" · 25kg ctn = **2,672,000** (language P09).
   - Kato's usual is the same three items: Cement **every order**, Iron sheet **5 of 7**, Wire nails **3 of 7**.
-- Kato: **14 orders**. This year 8.2M: Grace 5.6M · 10 orders, Brian 2.1M · 3, Faith 500k · 1.
+- Kato: **14 orders**. Who served Kato this year (CH33: the orders each of the Sales team took for Kato, and their messages; the lead's ruling, 30 Oct): **Grace 10.8M** · 86 messages · 9 orders (#0479, #0490, #0529, #0531, #0534, #0544, #0545, #0552, #0553 = 10,812,000), **Brian 2.2M** · 31 · 3 (#0437, #0466, #0511 = 2,180,000), **Faith 500k** · 7 · 1 (#0402). Ruth's #0498 is not Sales' serving.
 
 ### 3.3 Open and pending, per customer
 - **Kato:**
@@ -144,6 +144,17 @@ Grace's customer list has **38 customers**. **4 owe**, and together they owe **1
 | **0701 552 904** | "Mama Shine" | New number, not saved. Wrote **10:37** "Do you have 3m iron sheets? How much?" (photo). **4 m** waiting. Brian is looking. This is the **new customer** in CU20/CU22/CU23 (Retail) |
 | 0782 310 117 | "Okot J." | Brian's since this morning. Not waiting, not new |
 | 0772 418 905 | — | The walk-in's phone on the counter receipt (KC16) |
+
+### 3.5 Searched in New chat (CH09, CH19)
+
+Two of the shop's other customers, named only where New chat searches "Kaw" (CH09); they owe nothing.
+
+| Customer | Initials · tint | Phone | Chat |
+|---|---|---|---|
+| Kawempe Hardware | KH · t0 blue | 0772 611 107 | **Brian's**; last wrote Fri 16 Oct 9:00, so **shut** |
+| Kawaala Hardware | KH · teal | 0772 634 268 | **No chat yet**: opens WhatsApp on this phone (spec 04 §2a, Q11) |
+
+A number typed in New chat that no chat has, **0772 999 111** (CH19): "Message this number · opens WhatsApp".
 
 ---
 
@@ -270,6 +281,7 @@ Kato's own list (OR03) has **14 orders**:
 | Chats waiting (Grace's view) | **3 · oldest 12 m · 1 new**: Lubowa 12 m (10:29), Kato 12 m (10:29), 0701 552 904 4 m (10:37) |
 | Chats head stat | "**3** Waiting for a reply · oldest **12 m**". Chips: **Mine 6 · Waiting 3 · New 1 · Team** (no count on Team) |
 | Team waiting | **4 · oldest 38 m** (adds Ggaba, Faith's, 10:03) |
+| Chats badge, the Manager's (Ruth, CH35) | **1**: the new number (0701 552 904). Ruth has no chats of her own, so her badge counts new numbers ("Chats, 1 new") |
 | Mukono's last chat | asked 10:31, photo 10:33, Grace answered 10:38 → "**answered in 7 m**" |
 | Needs you (Today) | **7** = Take payment **2** (**585,000 · oldest 67 days**) + Tell them **2** (a new price · an item is in) + Chats waiting **3** (oldest 12 m · 1 new) |
 | Needs you offline (TD09) | **4** = Not sent yet 2 + Take payment 2 |
@@ -410,7 +422,7 @@ Kato's own list (OR03) has **14 orders**:
   - #0511 (980,000) is Brian's.
 - **Nansana's and Mukono's October invoices** are all Grace's.
 - **TD16 "Best customers"** counts Grace's own invoiced sales only: Kato 5,280,000, Nansana 2,545,500, Mukono 1,990,000.
-- **CH33's yearly split stands as published.**
+- **CH33's yearly split** is the orders each of the Sales team took for Kato this year (§3.2: Grace 10.8M, Brian 2.2M, Faith 500k), not the figures first published (the lead's ruling, 30 Oct).
 - **TD07, the 15:40 calm state:** Kyaligonza and Ggaba have paid their past-21-day bills, 585,000. So it shows To collect 1,325,000 and Money in +585,000, with no Take row.
 - #0498 (24 Sep, 1,505,000) was sold by Ruth, before she gave Kato to Grace on Mon 12 Oct. It appears on no Sales board.
 

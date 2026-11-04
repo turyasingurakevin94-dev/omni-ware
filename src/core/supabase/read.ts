@@ -114,6 +114,7 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
     settings: settingsOf(presets),
     me, members, customers: custs, orders,
     items: itemsOf(pb, heldOf(orders)),
+    aisles: aislesOf(pb.products),
     // Money in: the receipts receive_payment and counter_sale write (0169: type 'receipt').
     payments: cash.filter((t) => t.type === 'receipt').map((t) => paymentOf(t, txnCustomer, orderCustomer)),
     promises: promises.map(promiseOf),
@@ -122,6 +123,13 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
     paymentAsks: data(payAsks).map(paymentAskOf),
     goal,
   };
+}
+
+/** The shop's aisles: its products counted by category (each product once, whatever its variants), the most first. */
+function aislesOf(products: Map<string, { category: string }>): { name: string; count: number }[] {
+  const by = new Map<string, number>();
+  products.forEach((p) => { if (p.category) by.set(p.category, (by.get(p.category) || 0) + 1); });
+  return [...by].map(([name, count]) => ({ name, count })).sort((x, y) => y.count - x.count || (x.name < y.name ? -1 : 1));
 }
 
 /** sales.html:4059 loadWA: the newest 100 chats and 500 messages; wa-send says whether the number is connected. */
