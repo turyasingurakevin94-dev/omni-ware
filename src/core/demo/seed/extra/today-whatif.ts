@@ -34,7 +34,7 @@ function katoPriced(): Line[] {
 export function answerAll(s: DemoState, when: number): void {
   s.chats.forEach((c) => {
     const m = s.messages.filter((x) => x.chatId === c.id).sort((x, y) => x.at - y.at).pop();
-    if (!m || m.dir !== 'in') return;
+    if (!m || m.dir !== 'in' || s.messages.some((x) => x.id === 'm-ans-' + c.id)) return;
     if (!c.ownerId) c.ownerId = BRIAN;
     s.messages.push({ id: 'm-ans-' + c.id, chatId: c.id, at: when, dir: 'out', kind: 'text', body: 'Thank you. Done.', by: c.ownerId, state: 'read' });
     c.lastAt = when;
@@ -45,6 +45,7 @@ const notMyLive = (o: Order) => !(o.placedBy === GRACE && o.stage !== 'delivered
 
 export function busy(s: DemoState, local: TodayLocal): void {
   const b = s.books;
+  if (b.orders.some((o) => o.id === 2000)) return; // the afternoon is in already
   s.now = t('14:20'); b.at = s.now;
   b.orders = b.orders.filter(notMyLive);
   let k = 0;
@@ -91,6 +92,7 @@ export function busy(s: DemoState, local: TodayLocal): void {
 
 export function goalHit(s: DemoState, local: TodayLocal): void {
   const b = s.books;
+  if (b.orders.some((o) => o.id === 720)) return; // Thu 29 Oct is in already
   s.now = at('2026-10-29', '9:10'); b.at = s.now;
   b.orders = b.orders.filter(notMyLive);
   const pvc = (n: number) => [L('pvc-half-6m', n)];

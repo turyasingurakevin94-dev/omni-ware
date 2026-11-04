@@ -3,6 +3,7 @@
  * Each entity has its own file; each tab adds what only it needs in
  * extra/<tab>.ts, which only that tab's builder edits.
  */
+import { orderTotal } from '../../money.ts';
 import { at } from '../../time.ts';
 import type { Books, Chat, ChatEvent, ChatNote, Message, Ms } from '../../types.ts';
 import type { DemoFlags } from '../flags.ts';
@@ -88,6 +89,8 @@ export function seed(f: DemoFlags): DemoState {
 function emptyShop(s: DemoState): void {
   const b = s.books;
   b.orders = b.orders.filter((o) => o.stage === 'delivered' && o.invoiced);
+  // Nobody owes by the books' own rule (core/owing.ts, ow_customer_balance): every bill kept is paid in full.
+  b.orders.forEach((o) => { o.paid = orderTotal(o); });
   b.customers.forEach((c) => { c.owes = 0; c.debtLog = []; });
   b.promises = []; b.billAsks = []; b.paymentAsks = []; b.asks = [];
   s.chats = []; s.messages = []; s.events = [];

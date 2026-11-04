@@ -47,19 +47,19 @@ function Ticks(p: { state: Message['state'] }): JSX.Element {
 }
 
 function Theirs(p: { m: Message; last: boolean }): JSX.Element {
-  const m = p.m, at = <span class="cv-at">{clock(m.at)}</span>;
+  const m = p.m, at = <span class="ch-cv-at">{clock(m.at)}</span>;
   if (m.kind === 'image') {
     if (m.body.length <= 20) {
-      return <div class="cv-b inline"><Pic m={m} w={52} h={52} r={12} icon={28} flat /><span><span>{m.body}</span>{at}</span></div>;
+      return <div class="ch-cv-b inline"><Pic m={m} w={52} h={52} r={12} icon={28} flat /><span><span>{m.body}</span>{at}</span></div>;
     }
     return (
-      <div class="cv-b pic" style={{ width: p.last ? '240px' : '200px' }}>
+      <div class="ch-cv-b pic" style={{ width: p.last ? '240px' : '200px' }}>
         <Pic m={m} w="auto" h={p.last ? 164 : 80} r={12} icon={p.last ? 44 : 36} flat />
         <span>{m.body}</span>{at}
       </div>
     );
   }
-  return <div class="cv-b"><span>{m.body || (m.kind === 'audio' ? 'Voice note' : m.kind === 'document' ? 'A file' : '')}</span>{at}</div>;
+  return <div class="ch-cv-b"><span>{m.body || (m.kind === 'audio' ? 'Voice note' : m.kind === 'document' ? 'A file' : '')}</span>{at}</div>;
 }
 
 export interface ThreadProps {
@@ -84,25 +84,25 @@ export function Thread(p: ThreadProps): JSX.Element {
   const lastMsg = [...p.items].reverse().find((x) => x.k === 'msg');
   p.items.forEach((x, i) => {
     const d = dayOf(x.at);
-    if (p.days && d !== day) out.push(<span key={'d' + d} class="cv-day">{d === dayOf(p.now) ? 'Today' : dayLabel(x.at)}</span>);
+    if (p.days && d !== day) out.push(<span key={'d' + d} class="ch-cv-day">{d === dayOf(p.now) ? 'Today' : dayLabel(x.at)}</span>);
     day = d;
     if (x.k === 'msg' && x.m.dir === 'in') out.push(<Theirs key={x.m.id} m={x.m} last={x === lastMsg} />);
     else if (x.k === 'msg') {
       const m = x.m;
       out.push(
-        <div key={m.id} class="cv-b ours">
-          {m.by && <span class="cv-who">{name(m.by)}</span>}
+        <div key={m.id} class="ch-cv-b ours">
+          {m.by && <span class="ch-cv-who">{name(m.by)}</span>}
           <span>{m.kind === 'catalog' ? 'The catalogue' : figures(m.body)}</span>
-          <span class="cv-at">{clock(m.at)}<Ticks state={m.state} /></span>
+          <span class="ch-cv-at">{clock(m.at)}<Ticks state={m.state} /></span>
         </div>,
       );
     } else if (x.k === 'kept') {
       out.push(
-        <div key={x.id} class="cv-b ours kept">
-          <span class="cv-who">{name(p.meId)}</span><span>{figures(x.text)}</span>
-          <span class="cv-at">{clock(x.at)}<span aria-label="not sent yet" class="warn"><Icon name="clock" size={12} stroke={2.4} /></span></span>
+        <div key={x.id} class="ch-cv-b ours kept">
+          <span class="ch-cv-who">{name(p.meId)}</span><span>{figures(x.text)}</span>
+          <span class="ch-cv-at">{clock(x.at)}<span aria-label="not sent yet" class="warn"><Icon name="clock" size={12} stroke={2.4} /></span></span>
         </div>,
-        <div key={x.id + 'a'} class="cv-ns">
+        <div key={x.id + 'a'} class="ch-cv-ns">
           <span><Icon name="clock" size={13} stroke={2.4} />Not sent yet</span>
           <button type="button" onClick={p.onRetry}><span>Try again</span></button>
           <button type="button" onClick={() => p.onChange(x.id, x.text)}><span>Change</span></button>
@@ -110,17 +110,17 @@ export function Thread(p: ThreadProps): JSX.Element {
       );
     } else if (x.k === 'event') {
       const e = x.e, words = e.kind === 'taken' ? `${name(e.by)} took ${p.who}` : `${name(e.by)} ${e.kind === 'moved' ? 'moved' : 'gave'} ${p.who} to ${name(e.to)}`;
-      out.push(<span key={e.id} class="cv-event"><Icon name="hand-over" size={14} stroke={2} />{words}<b>{clock(e.at)}</b></span>);
+      out.push(<span key={e.id} class="ch-cv-event"><Icon name="hand-over" size={14} stroke={2} />{words}<b>{clock(e.at)}</b></span>);
       if (e.note) out.push(<Note key={e.id + 'n'} by={name(e.by)} at={e.at}>{e.note}</Note>);
     } else out.push(<Note key={x.n.id} by={name(x.n.by)} at={x.at}>{x.n.body}</Note>);
     void i;
   });
-  return <div class="cv-thread">{out}{p.tail}</div>;
+  return <div class="ch-cv-thread">{out}{p.tail}</div>;
 }
 
 function Note(p: { by: string; at: Ms; children: ComponentChildren }): JSX.Element {
   return (
-    <div class="cv-note">
+    <div class="ch-cv-note">
       <span><Icon name="note" size={14} stroke={2} /><span>{`${p.by} · team note`}</span><span>{clock(p.at)}</span></span>
       <span>{p.children}</span>
     </div>

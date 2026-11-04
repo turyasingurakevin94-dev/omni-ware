@@ -137,7 +137,7 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
         )}
         {foot}
       </div>
-      {close.length < 2 && <OpenAisle b={p.b} near={close} onAisle={p.onAisle} />}
+      <OpenAisle b={p.b} near={close} onAisle={p.onAisle} />
     </>
   );
 }

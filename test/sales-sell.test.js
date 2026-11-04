@@ -49,6 +49,13 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(M.orderTotal(order(490)) === 2672000, '#0490 is the usual, 2,672,000');
   t.check([[545, 1240000], [437, 560000], [540, 380000], [539, 180000], [542, 169000]].every(([id, n]) => M.orderTotal(order(id)) === n), 'every re-lined order keeps its total');
 
+  /* ---- the search rule (core/find.ts; the lead's ruling, 4 Nov) ---- */
+  const FI = require(path.join(ROOT, 'src/core/find.ts'));
+  const finds = (q) => FI.findItems(b, FI.readAsk(q)).filter((i) => i.price != null);
+  t.check(finds('paint').every((i) => /paint/i.test(i.name)) && finds('paint').length === 2, 'a name match wins: "paint" finds the items called paint, not the Paint aisle');
+  t.check(finds('plumbing').length > 0 && finds('plumbing').every((i) => i.aisle === 'Plumbing'), 'no name matches "plumbing": the aisle is listed');
+  t.check(b.items.filter((i) => i.aisle === 'Paint').every((i) => i.price != null), 'every item in the Paint aisle has a price');
+
   /* ---- Lubowa (SL04) ---- */
   const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
   t.check(lw.mine && lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ') === 'Ridge cap G28 2/2, Roofing nails 2.5" 2/2', `Often with Iron sheet G28 in Lubowa’s orders (core/often.ts): 2/2, 2/2 (got ${lw.rows.map((x) => `${x.it.name} ${x.had}/${lw.of}`).join(', ')})`);
@@ -77,9 +84,9 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   /* ---- FACTS totals the seed additions keep ---- */
   t.check([[545, 1240000], [498, 1505000], [540, 380000], [539, 180000], [542, 169000], [553, 170000], [552, 1810000]].every(([id, v]) => M.orderTotal(order(id)) === v), 'Kato’s and Lubowa’s bills keep their totals');
   t.check(cust(KATO).owes === 420000 && cust(LUBOWA).owes === 0, 'Kato owes 420,000; Lubowa 0');
-  const after = demoSource('?demo&clock=15:05');
+  const after = demoSource('?demo&clock=14:05');
   const ab = await after.books();
-  t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 15:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
+  t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 14:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
 
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
