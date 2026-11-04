@@ -37,7 +37,7 @@ export function CustomerRow(p: CustomerRowProps): JSX.Element {
   return (
     <div class={'ow-crow' + (p.class ? ' ' + p.class : '')}>
       <button type="button" class="ow-crow-main" onClick={p.on}>
-        <RingAvatar {...p.face} tone={p.tone || 'early'} fill={p.tone ? p.fill ?? 1 : 0} />
+        <RingAvatar face={p.face} tone={p.tone || 'early'} fill={p.tone ? p.fill ?? 1 : 0} />
         <span class="ow-crow-t">
           <span class="ow-crow-name">{p.name}</span>
           <span class="ow-crow-sub" style={p.tone ? { color: RING_TONE[p.tone], fontWeight: 700 } : undefined}>{p.sub}</span>

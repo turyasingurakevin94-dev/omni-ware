@@ -29,7 +29,7 @@ function Row(p: { c: Customer; words: string; tone: 'due' | 'late' | null; last:
   const c = p.c;
   return (
     <a href="#" class={'kc-who-r' + (p.last ? ' last' : '')} onClick={(e) => { e.preventDefault(); pick(c); }}>
-      {p.tone ? <RingAvatar initials={c.initials} tint={c.tint} tone={p.tone} fill={1} /> : <Avatar initials={c.initials} tint={c.tint} size={44} />}
+      {p.tone ? <RingAvatar face={{ initials: c.initials, tint: c.tint }} tone={p.tone} fill={1} /> : <Avatar initials={c.initials} tint={c.tint} size={44} />}
       <span class="kc-who-t">
         <span class="kc-who-n">{c.name}</span>
         <span class={'kc-who-s' + (p.tone ? ' ' + p.tone : '')}>{p.words}</span>

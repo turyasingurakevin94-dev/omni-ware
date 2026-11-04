@@ -1,7 +1,6 @@
 /*
  * The Chats tab's own small parts (local until the lead moves them to src/ui):
- *   Ring       the 44 px wait ring round a face (P10's ring, plus the dashed ring of a number
- *              nobody has saved, and the 22 px face of whose chat it is)
+ *   Ring       the wait of a chat on src/ui RingAvatar (the hour it waits)
  *   Dots       the three typing dots
  *   Pic        a photo they sent: the picture once its link is known; in the demo, the item's aisle
  *   open       open a screen another tab owns, by its ROUTES.md id
@@ -12,7 +11,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { isDataError } from '../../../core/datasource.ts';
 import type { Message } from '../../../core/types.ts';
-import { Avatar, RING_TONE, type Face } from '../../../ui/Avatar.tsx';
+import { RingAvatar, type Face } from '../../../ui/Avatar.tsx';
 import { AISLE, Duo, Icon, aisleKey } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { nav, screen } from '../shell/nav.ts';
@@ -20,22 +19,9 @@ import { act, source } from '../shell/store.ts';
 import type { Params } from '../shell/types.ts';
 import { waitTone } from './model.ts';
 
-const C = 125.7;
-
+/** The 44 px wait ring round a face (P10's ring): the hour a chat waits; no saved name, a dashed ring; whose chat at its foot. */
 export function Ring(p: { face: Face | null; mins: number | null; badge?: Face | null }): JSX.Element {
-  const f = p.mins == null ? 0 : Math.min(1, p.mins / 60);
-  return (
-    <span aria-hidden="true" class="ch-ring">
-      <svg width="44" height="44" viewBox="0 0 44 44">
-        {p.face ? <circle cx="22" cy="22" r="20" fill="none" stroke="#EFECE6" stroke-width="3" />
-          : <circle cx="22" cy="22" r="20" fill="none" stroke="#9AA1AE" stroke-width="1.5" stroke-dasharray="3 4" />}
-        {f > 0 && <circle cx="22" cy="22" r="20" fill="none" stroke={RING_TONE[waitTone(p.mins as number)]} stroke-width="3" stroke-linecap="round"
-          stroke-dasharray={`${(C * f).toFixed(1)} ${C}`} transform="rotate(-90 22 22)" />}
-      </svg>
-      {p.face ? <Avatar {...p.face} size={32} font={12} /> : <span class="ch-ring-ph"><Icon name="phone" size={15} stroke={2} /></span>}
-      {p.badge && <Avatar {...p.badge} size={22} class="badge" />}
-    </span>
-  );
+  return <RingAvatar face={p.face} tone={p.mins == null ? 'late' : waitTone(p.mins)} fill={p.mins == null ? 0 : Math.min(1, p.mins / 60)} badge={p.badge} />;
 }
 
 export function Dots(): JSX.Element {

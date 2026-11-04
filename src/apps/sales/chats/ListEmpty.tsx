@@ -5,6 +5,7 @@
  * CH07 · loading: the real layout as shimmer, "Reading the chats".
  */
 import type { JSX } from 'preact';
+import { FilterChip } from '../../../ui/Pill.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { Shim } from '../../../ui/Skeleton.tsx';
@@ -63,10 +64,10 @@ export function Loading(): JSX.Element {
   return (
     <main class="ch-main">
       <div role="group" aria-label="Show" class="ch-chips">
-        <button type="button" class="ch-chip on" aria-pressed="true">Mine</button>
-        <button type="button" class="ch-chip"><i aria-hidden="true" />Waiting</button>
-        <button type="button" class="ch-chip">New</button>
-        <button type="button" class="ch-chip">Team</button>
+        <FilterChip snug on>Mine</FilterChip>
+        <FilterChip snug dot="var(--warn)">Waiting</FilterChip>
+        <FilterChip snug>New</FilterChip>
+        <FilterChip snug>Team</FilterChip>
       </div>
       <div class="ch-list">
         <div class="ch-gh" style={{ justifyContent: 'space-between' }}><h2 style={{ flex: 'none' }}>Your chats</h2><span role="status" class="ch-reading"><span aria-hidden="true" />Reading the chats</span></div>

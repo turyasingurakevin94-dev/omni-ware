@@ -6,11 +6,13 @@
  *   <Avatar initials="KC" tint="t0" size={40} />
  *   <Avatar initials="GA" tint="me" onNavy size={46} ring="me" />        Today's "You" (mint ring)
  *   <FaceStack faces={[{ initials: 'KS', tint: 't1' }]} more={2} />      P07: up to 3, 24 px, overlap -6, the first on top
- *   <RingAvatar initials="KS" tint="t1" tone="late" fill={1} />          P10: the due ring, 44 px
+ *   <RingAvatar face={{ initials: 'KS', tint: 't1' }} tone="late" fill={1} />   P10: the due ring, 44 px
+ *   <RingAvatar face={null} tone="quiet" fill={.5} badge={owner} />            a chat: a number nobody saved, whose chat
  */
 import type { JSX } from 'preact';
 import { TINTS } from '../core/names.ts';
 import type { Tint } from '../core/types.ts';
+import { Icon } from './icons.tsx';
 import './avatar.css';
 
 export interface Face { initials: string; tint: Tint }
@@ -76,10 +78,14 @@ export function FaceStack(p: FaceStackProps): JSX.Element {
 /** P10's ring tones: due green, late amber, gone quiet crimson (full), early grey. */
 export const RING_TONE = { due: '#0F6B43', late: '#95530C', quiet: '#8E2A22', early: '#9AA1AE' } as const;
 
-export interface RingAvatarProps extends Face {
+export interface RingAvatarProps {
+  /** Whose face; null: a number nobody has saved (a dashed ring round a phone, a chat). */
+  face: Face | null;
   tone: keyof typeof RING_TONE;
-  /** How much of their usual gap has run out, 0 to 1. */
+  /** How much of their usual gap has run out (or of the hour a chat waits), 0 to 1. */
   fill: number;
+  /** The 22 px face of whose it is, at the foot (a chat: whose chat). */
+  badge?: Face | null;
 }
 
 /** P10 · the due ring: 44 box, r 20, stroke 3 on #EFECE6, the avatar inset 6 px. */
@@ -88,11 +94,14 @@ export function RingAvatar(p: RingAvatarProps): JSX.Element {
   return (
     <span aria-hidden="true" class="ow-ring">
       <svg width="44" height="44" viewBox="0 0 44 44">
-        <circle cx="22" cy="22" r="20" fill="none" stroke="#EFECE6" stroke-width="3" />
+        {p.face ? <circle cx="22" cy="22" r="20" fill="none" stroke="#EFECE6" stroke-width="3" />
+          : <circle cx="22" cy="22" r="20" fill="none" stroke="#9AA1AE" stroke-width="1.5" stroke-dasharray="3 4" />}
         {f > 0 && <circle cx="22" cy="22" r="20" fill="none" stroke={RING_TONE[p.tone]} stroke-width="3" stroke-linecap="round"
           stroke-dasharray={`${(c * f).toFixed(1)} ${c}`} transform="rotate(-90 22 22)" />}
       </svg>
-      <span class="ow-av" style={avatarStyle({ ...p, size: 32, font: 12 })}>{p.initials}</span>
+      {p.face ? <span class="ow-av" style={avatarStyle({ ...p.face, size: 32, font: 12 })}>{p.face.initials}</span>
+        : <span class="ow-ring-ph"><Icon name="phone" size={15} stroke={2} /></span>}
+      {p.badge && <Avatar {...p.badge} size={22} class="badge" />}
     </span>
   );
 }

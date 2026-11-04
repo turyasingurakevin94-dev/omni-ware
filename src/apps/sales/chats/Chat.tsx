@@ -23,7 +23,7 @@ import { act, books, chats, discardKept, drafts, flush, kept, now, online, sourc
 import type { ScreenProps } from '../shell/types.ts';
 import { AddSheet } from './AddSheet.tsx';
 import { PaidCard, WantsCard } from './Cards.tsx';
-import { ChatComposer } from './Composer.tsx';
+import { Composer } from '../../../ui/Composer.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
 import { chatView, faceOf, salesTeam, managers, type ChatView } from './model.ts';
 import { open, write, wrote } from './parts.tsx';
@@ -174,7 +174,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
             </div></div>
           )}
           {note && <div class="ch-cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
-          <ChatComposer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
+          <Composer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
             shut={shut && !note} onAdd={add} sending={sending} />
         </>
       }>

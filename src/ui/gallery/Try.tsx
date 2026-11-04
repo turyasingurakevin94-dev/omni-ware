@@ -24,6 +24,7 @@ import { Track } from '../Track.tsx';
 const placed = signal(0), qty = signal(40), typed = signal('365'), chip = signal('all'), mode = signal<Mode>('pickup');
 const method = signal<Method>('cash'), text = signal(''), order = signal(false), sent = signal<string[]>([]), log = signal<string[]>([]);
 const say = (s: string) => { log.value = [...log.value, s]; };
+const nop = (): void => undefined;
 
 function place(): Promise<void> {
   return new Promise((done) => window.setTimeout(() => {
@@ -55,7 +56,7 @@ export function TryBoard(): JSX.Element {
       <MethodPicker value={method.value} onChange={(m) => { method.value = m; say('method ' + m); }} />
       <Button kind="ghost" onClick={openSheet}>Open a sheet</Button>
       <Button kind="ghost" onClick={() => { order.value = true; say('order open'); }}>Open one order</Button>
-      <Composer to="Kato" toName="Kato Construction" value={text.value} onInput={(v) => { text.value = v; }} onSend={(v) => { sent.value = [...sent.value, v]; text.value = ''; say('sent ' + v); }} onMic={() => say('mic')} />
+      <Composer to="Kato" toName="Kato Construction" value={text.value} onInput={(v) => { text.value = v; }} onSend={() => { const v = text.value; sent.value = [...sent.value, v]; text.value = ''; say('sent ' + v); }} note={false} onNote={nop} shut={false} onAdd={nop} sending={false} />
       <output id="log">{log.value.join('\n')}</output>
       <div style={{ height: '200px' }} />
       <Dock mode={{ value: mode.value, onChange: (m) => { mode.value = m; say('mode ' + m); } }} total={1750000 * (placed.value + 1)} sub={{ text: `${placed.value} placed`, tone: 'mint' }}

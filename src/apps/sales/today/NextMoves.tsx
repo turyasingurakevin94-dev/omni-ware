@@ -55,7 +55,7 @@ export function NextMoves(p: { b: Books; cb: ChatBooks | null; now: Ms; told: st
             {ds.map((d) => {
               const c = d.customerId ? b.customers.find((x) => x.id === d.customerId) : null, name = c ? c.name : d.client.name || 'Walk-in';
               return (
-                <Row key={d.key} lead={<RingAvatar initials={c ? c.initials : 'WI'} tint={c ? c.tint : 't4'} tone="late" fill={1} />} title={name}
+                <Row key={d.key} lead={<RingAvatar face={{ initials: c ? c.initials : 'WI', tint: c ? c.tint : 't4' }} tone="late" fill={1} />} title={name}
                   sub={`${d.lines.length} item${d.lines.length === 1 ? '' : 's'} · ${money(orderTotal({ lines: d.lines, charges: d.charges, discount: 0, credit: d.credit }))}`}
                   act={{ icon: 'chevron-right', tile: true, label: `Resume ${name.replace('&', 'and')} order`, on: () => go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId } : { customer: d.customerId }) }} />
               );
@@ -85,7 +85,7 @@ function MoveRow(p: { b: Books; m: Move; now: Ms }): JSX.Element {
       sub={`#${String(m.order.id).padStart(4, '0')} · ${money(m.order.toldTotal || 0)} → ${money(orderTotal(m.order))}`}
       act={{ icon: 'chevron-right', label: `Tell ${who} the new price`, on: () => openTell(0) }} />;
   }
-  return <Row lead={<RingAvatar initials={m.c.initials} tint={m.c.tint} tone="late" fill={1} />} title={m.c.name} sub={`${m.d.late} days late`} chip={chip}
+  return <Row lead={<RingAvatar face={{ initials: m.c.initials, tint: m.c.tint }} tone="late" fill={1} />} title={m.c.name} sub={`${m.d.late} days late`} chip={chip}
     act={{ icon: 'chevron-right', label: `Order ${who}'s usual`, on: () => go('sell/order', { customer: m.c.id, from: 'usual' }) }} />;
 }
 
@@ -109,7 +109,7 @@ export function WhoDue(p: { b: Books; cb: ChatBooks | null; now: Ms }): JSX.Elem
           const usual = d.usual > 0, chat = p.cb ? p.cb.chats.find((c) => c.customerId === d.c.id) : null;
           return (
             <Tap key={d.c.id} class="td-due-card" on={() => (usual ? go('sell/order', { customer: d.c.id, from: 'usual' }) : (chat ? go('chats/chat', { id: chat.id }) : go('customers/customer', { id: d.c.id })))}>
-              <RingAvatar initials={d.c.initials} tint={d.c.tint} tone={d.late > 0 ? 'late' : 'due'} fill={1} />
+              <RingAvatar face={{ initials: d.c.initials, tint: d.c.tint }} tone={d.late > 0 ? 'late' : 'due'} fill={1} />
               <span class="td-due-t"><span>{firstWord(d.c.name)}</span><span class={d.late > 0 ? 'late' : 'due'}>{d.late > 0 ? `${d.late} days late` : 'Due today'}</span></span>
               <span class={'td-due-p' + (usual ? '' : ' tile')}>{usual ? 'Order usual' : 'Say hi'}</span>
             </Tap>

@@ -11,10 +11,9 @@ import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Duo, Icon, phSparkle } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { sheet } from '../../../ui/sheet.tsx';
+import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { books, chats, now } from '../shell/store.ts';
-import { LSheet } from './LSheet.tsx';
 import { open, write } from './parts.tsx';
 import { PriceSheet, shortName } from './PriceSheet.tsx';
 import { readyAnswers } from './read.ts';
@@ -42,7 +41,7 @@ export function PriceRow(p: { it: Item; sub: JSX.Element | string; act: JSX.Elem
 export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): JSX.Element {
   const b = books.value, cb = chats.value, file = useRef<HTMLInputElement>(null);
   const chat = cb && cb.chats.find((c) => c.id === p.chatId);
-  if (!b || !cb || !chat) return <LSheet title="Send" onClose={sheet.close}><span /></LSheet>;
+  if (!b || !cb || !chat) return <LightSheet pad="12px 16px 22px" title="Send" onClose={sheet.close}><span /></LightSheet>;
   const cust = chat.customerId ? b.customers.find((c) => c.id === chat.customerId) || null : null;
   const first = cust ? firstWord(cust.name) : chat.phone;
   const answers = readyAnswers(b, cust, cb.recent.filter((m) => m.chatId === chat.id), now.value);
@@ -57,7 +56,7 @@ export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): 
     await write('sendImage', [chat.id, f, ''], 'Photo sent');
   };
   return (
-    <LSheet title={`Send ${first}`} onClose={sheet.close}
+    <LightSheet pad="12px 16px 22px" title={`Send ${first}`} onClose={sheet.close}
       extra={cust && cust.owes > 0 && (
         <Tap on={() => { sheet.close(); open('customers/customer', { id: cust.id }); }} class="ch-ad-owes"><span>Owes <b class="mono">{short(cust.owes)}</b><Icon name="chevron-right" size={13} stroke={2.4} /></span></Tap>
       )}>
@@ -85,6 +84,6 @@ export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): 
         <Tap on={() => file.current?.click()} class="ch-ad-tile"><span class="n"><Icon name="camera" size={19} stroke={1.9} /></span><b>Photo</b><span>or a picture</span></Tap>
         <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { void photo(e); }} />
       </div>
-    </LSheet>
+    </LightSheet>
   );
 }

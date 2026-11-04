@@ -56,6 +56,8 @@ export interface FilterChipProps {
   count?: Fig;
   /** An empty stage keeps its chip at 60% (S05). */
   dim?: boolean;
+  /** 13 at the sides instead of 14 (the chat boards' chips: Mine · Waiting · New · Team). */
+  snug?: boolean;
   onClick?: () => void;
   children: ComponentChildren;
 }
@@ -63,7 +65,7 @@ export interface FilterChipProps {
 /** A filter chip: 44 tall, white with a hairline; navy when chosen. */
 export function FilterChip(p: FilterChipProps): JSX.Element {
   return (
-    <button type="button" class={cx('ow-fchip', p.on && 'on', p.dim && 'dim')} aria-pressed={!!p.on} onClick={p.onClick}>
+    <button type="button" class={cx('ow-fchip', p.on && 'on', p.dim && 'dim', p.snug && 'snug')} aria-pressed={!!p.on} onClick={p.onClick}>
       {p.dot && <span aria-hidden="true" class="ow-fchip-dot" style={{ background: p.dot }} />}
       {p.children}
       {p.count != null && <b class="mono">{fig(p.count)}</b>}

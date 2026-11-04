@@ -7,6 +7,7 @@
  * A row opens the chat, or the order started from it; Take takes a new number in one tap.
  */
 import type { JSX } from 'preact';
+import { FilterChip } from '../../../ui/Pill.tsx';
 import { useState } from 'preact/hooks';
 import { waitingChats } from '../../../core/chats.ts';
 import type { DemoSource } from '../../../core/demo/index.ts';
@@ -81,9 +82,7 @@ export function ChatsList(p: ScreenProps): JSX.Element {
         {searching ? <SearchView b={b} cb={cb} t={t} q={q.trim()} order={mine} match={match} /> : !manager && (
           <div role="group" aria-label="Show" class="ch-chips">
             {([['mine', 'Mine', owned], ['waiting', 'Waiting', waits.length], ['new', 'New', fresh.length], ['team', 'Team', null]] as [Filter, string, number | null][]).map(([k, w, n]) => (
-              <button key={k} type="button" class={'ch-chip' + (f === k ? ' on' : '')} aria-pressed={f === k} onClick={() => setFilter(k)}>
-                {k === 'waiting' && <i aria-hidden="true" />}{w}{n != null && <b class="mono">{n}</b>}
-              </button>
+              <FilterChip key={k} snug on={f === k} dot={k === 'waiting' ? (f === k ? 'var(--amber-on-navy)' : 'var(--warn)') : undefined} count={n ?? undefined} onClick={() => setFilter(k)}>{w}</FilterChip>
             ))}
           </div>
         )}

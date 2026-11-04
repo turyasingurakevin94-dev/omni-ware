@@ -13,11 +13,10 @@ import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Duo, Icon, phAgain, phSearch, phSparkle } from '../../../ui/icons.tsx';
-import { sheet } from '../../../ui/sheet.tsx';
+import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { replyWindow } from '../../../core/time.ts';
 import { books, chats, now } from '../shell/store.ts';
 import { PriceRow, usualItems } from './AddSheet.tsx';
-import { LSheet } from './LSheet.tsx';
 import { managers } from './model.ts';
 import { write } from './parts.tsx';
 import { undoable } from './undo.tsx';
@@ -53,7 +52,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const [asked, setAsked] = useState<string[]>([]);
   const [q, setQ] = useState('');
   const chat = cb && cb.chats.find((c) => c.id === p.chatId);
-  if (!b || !cb || !chat) return <LSheet title="Send a price" onClose={sheet.close}><span /></LSheet>;
+  if (!b || !cb || !chat) return <LightSheet pad="12px 16px 22px" title="Send a price" onClose={sheet.close}><span /></LightSheet>;
   const cust = chat.customerId ? b.customers.find((c) => c.id === chat.customerId) || null : null;
   const first = cust ? firstWord(cust.name) : chat.phone;
   const usual = usualItems(b, cust), back = () => { sheet.close(); };
@@ -93,7 +92,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
     await write(replyWindow(chat.lastInAt, now.value).open ? 'send' : 'sendTemplate', [chat.id, text], lines.length === 1 ? 'Price sent' : `${lines.length} prices sent`);
   };
   return (
-    <LSheet ground title="Send a price" onClose={back}>
+    <LightSheet pad="12px 16px 22px" ground title="Send a price" onClose={back}>
       <label class="ch-nc-search ch-pr-search"><Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Cement, iron sheets…" aria-label="Find an item" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
       </label>
@@ -112,6 +111,6 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
         )}
         <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 0 ? 'Send a price' : lines.length === 1 ? 'Send 1 price' : `Send ${lines.length} prices`}</Button>
       </div>
-    </LSheet>
+    </LightSheet>
   );
 }

@@ -136,7 +136,7 @@ function Lists(p: { b: Books; pick: (x: Pick) => void }): JSX.Element {
           <div class="sl-who-due">
             {due.map(({ c, r }) => (
               <a key={c.id} href="#" class="sl-who-drow" onClick={(e) => { e.preventDefault(); p.pick({ kind: 'customer', id: c.id }); }}>
-                <RingAvatar initials={c.initials} tint={c.tint} tone={r.late === 0 ? 'due' : 'late'} fill={1} />
+                <RingAvatar face={{ initials: c.initials, tint: c.tint }} tone={r.late === 0 ? 'due' : 'late'} fill={1} />
                 <span class="sl-who-dt"><span>{c.name}</span><span class={r.late === 0 ? 'due' : 'late'}>{dueWords(r)}</span></span>
                 {c.owes > 0 && <span class="sl-who-owes"><span class="mono">{short(c.owes)}</span><span>owes</span></span>}
               </a>

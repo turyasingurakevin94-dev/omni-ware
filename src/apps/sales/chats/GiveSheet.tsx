@@ -14,9 +14,8 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon } from '../../../ui/icons.tsx';
-import { sheet } from '../../../ui/sheet.tsx';
+import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { books, chats, drafts, now, refresh } from '../shell/store.ts';
-import { LSheet } from './LSheet.tsx';
 import { chatView, faceOf, managers, ownedBy, salesTeam } from './model.ts';
 import { Ring, write } from './parts.tsx';
 import { METHOD_WORD, giveNote, saysPaid } from './read.ts';
@@ -28,7 +27,7 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
   const chat = cb && cb.chats.find((c) => c.id === p.chatId);
   const [to, setTo] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  if (!b || !cb || !chat) return <LSheet title="Give" onClose={sheet.close}><span /></LSheet>;
+  if (!b || !cb || !chat) return <LightSheet pad="12px 16px 22px" title="Give" onClose={sheet.close}><span /></LightSheet>;
   const v = chatView(b, cb, chat, t, drafts.value), me = b.me, owner = v.owner;
   const move = owner?.id !== me.id;
   const first = v.customer ? firstWord(v.customer.name) : v.title;
@@ -59,7 +58,7 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
     if (p.onDone) p.onDone();
   };
   return (
-    <LSheet ground={move} title={move ? `Move ${v.title}` : `Give ${first} to…`}
+    <LightSheet pad="12px 16px 22px" ground={move} title={move ? `Move ${v.title}` : `Give ${first} to…`}
       eyebrow={move ? `${firstWord(me.name)} · Manager · any chat` : `${v.title} · ${firstWord((owner || me).name)}’s`} onClose={sheet.close}>
       {move && owner && (
         <>
@@ -98,6 +97,6 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
         <span>{move && owner ? `${firstWord(owner.name)} and ${firstWord(target.name)} get a push` : `${firstWord(target.name)} gets a push · the chat keeps a record`}</span>
       </div>
       <Button icon="hand-over" class="ch-gv-go" onClick={go}>{`${move ? 'Move' : 'Give'} to ${firstWord(target.name)}`}</Button>
-    </LSheet>
+    </LightSheet>
   );
 }

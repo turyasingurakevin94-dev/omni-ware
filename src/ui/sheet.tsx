@@ -139,6 +139,8 @@ export interface LightSheetProps {
   foot?: ComponentChildren;
   /** #F7F5F2 instead of white. */
   ground?: boolean;
+  /** Beside the × (a chat's sheet: the customer's chip). */
+  extra?: ComponentChildren;
   class?: string;
   children: ComponentChildren;
 }
@@ -153,7 +155,9 @@ export function LightSheet(p: LightSheetProps): JSX.Element {
           {p.eyebrow && <span class="ow-lsheet-eye">{p.eyebrow}</span>}
           <h2>{p.title}</h2>
         </div>
-        <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>
+        {p.extra
+          ? <span class="ow-lsheet-x">{p.extra}<button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></span>
+          : <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>}
       </div>
       <div class="ow-lsheet-b" style={{ padding: p.pad, gap: p.gap != null ? `${p.gap}px` : undefined }}>
         {p.children}

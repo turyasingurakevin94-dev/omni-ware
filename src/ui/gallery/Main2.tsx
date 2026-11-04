@@ -47,7 +47,7 @@ export function Main2Board(): JSX.Element {
                 <Bubble from="ours" who="Grace" at="9:06" read>Yes Kato. Sending the price now.</Bubble>
                 <TeamNote who="Grace">Brian, #0552 leaves only when Kato pays 1,810,000.</TeamNote>
               </ChatThread>
-              <Composer to="Kato" toName="Kato Construction" value="" onInput={nop} onSend={nop} onNote={nop} onAttach={nop} />
+              <Composer to="Kato" toName="Kato Construction" value="" onInput={nop} onSend={nop} note={false} onNote={nop} shut={false} onAdd={nop} sending={false} />
             </div>
           </Part>
           <Part k="S04 · Hand over" meta="who is free, as a load bar">
