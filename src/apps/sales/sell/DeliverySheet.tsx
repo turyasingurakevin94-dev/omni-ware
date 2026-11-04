@@ -37,13 +37,24 @@ export function DeliverySheet(): JSX.Element | null {
     <Frame title="The shop delivers" icon={<span aria-hidden="true" class="sl-dl-van"><Icon name="truck" size={22} stroke={1.9} /></span>} onClose={sheet.close} pad="14px 16px 20px"
       foot={<button type="button" class="sl-btn navy" onClick={done}><Icon name="check" size={18} stroke={2.6} />Done</button>}>
       <div class="sl-dl-card">
-        <div class="sl-dl-r" onClick={() => setEdit('where')}>
-          <span aria-hidden="true" class="sl-dl-pin"><Icon name="pin" size={20} stroke={2} /></span>
-          <span class="sl-dl-t"><span class="good">Where{saved && <span class="sl-dl-saved">saved</span>}</span>
-            {edit === 'where' ? <input class="sl-dl-in" value={where} aria-label="Where it goes" autoFocus onInput={(e) => setWhere((e.target as HTMLInputElement).value)} onBlur={() => setEdit(null)} />
-              : <span class="b">{where.replace(/,\s*/, ' · ')}</span>}</span>
-          <button type="button" class="sl-dl-pen" aria-label="Change where it goes" onClick={() => setEdit('where')}><Icon name="pen" size={18} stroke={2} /></button>
-        </div>
+        {edit === 'where' ? (
+          // SL36 · being changed: the bordered field (as SL32's), the caret at the end, a clear in place of the pen.
+          <div class="sl-dl-r edit">
+            <span aria-hidden="true" class="sl-dl-pin"><Icon name="pin" size={20} stroke={2} /></span>
+            <label class="sl-dl-field">
+              <span class="sl-dl-ft"><span>Where</span>
+                <input value={where} aria-label="Where it goes" autoFocus onFocus={(e) => { const t = e.target as HTMLInputElement; t.setSelectionRange(t.value.length, t.value.length); t.scrollLeft = t.scrollWidth; }}
+                  onInput={(e) => { const t = e.target as HTMLInputElement; setWhere(t.value); if (t.selectionEnd === t.value.length) requestAnimationFrame(() => { t.scrollLeft = t.scrollWidth; }); }} onBlur={() => setEdit(null)} /></span>
+              <button type="button" class="sl-dl-clear" aria-label="Clear where it goes" onMouseDown={(e) => e.preventDefault()} onClick={() => setWhere('')}><span><Icon name="close" size={14} stroke={2.4} /></span></button>
+            </label>
+          </div>
+        ) : (
+          <div class="sl-dl-r" onClick={() => setEdit('where')}>
+            <span aria-hidden="true" class="sl-dl-pin"><Icon name="pin" size={20} stroke={2} /></span>
+            <span class="sl-dl-t"><span class="good">Where{saved && <span class="sl-dl-saved">saved</span>}</span><span class="b">{where.replace(/,\s*/, ' · ')}</span></span>
+            <button type="button" class="sl-dl-pen" aria-label="Change where it goes" onClick={() => setEdit('where')}><Icon name="pen" size={18} stroke={2} /></button>
+          </div>
+        )}
         <div class="sl-dl-r" onClick={() => setEdit('phone')}>
           {c && <span aria-hidden="true" class="ow-av sl-dl-av" style={avatarStyle({ initials: c.initials, tint: c.tint, size: 40, font: 13 })}>{c.initials}</span>}
           <span class="sl-dl-t"><span>{`Site phone${driver ? ` · ${driver.name.split(' ')[0]} calls it` : ''}`}</span>
@@ -52,11 +63,11 @@ export function DeliverySheet(): JSX.Element | null {
           <button type="button" class="sl-dl-pen" aria-label="Change the site phone" onClick={() => setEdit('phone')}><Icon name="pen" size={18} stroke={2} /></button>
         </div>
       </div>
-      <div role="img" aria-label={`${where.split(',')[0]}${mins ? `, about ${mins} minutes from the shop` : ''}`} class="sl-dl-map">
+      <div role="img" aria-label={edit === 'where' ? 'A new place: the map waits until it is saved' : `${where.split(',')[0]}${mins ? `, about ${mins} minutes from the shop` : ''}`} class={'sl-dl-map' + (edit === 'where' ? ' off' : '')}>
         <svg width="328" height="64" viewBox="0 0 328 64" aria-hidden="true"><path d="M0 46 C 60 40, 90 18, 150 24 S 250 50, 328 30" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" /><path d="M40 40 C 90 34, 110 20, 160 26 S 240 44, 286 34" fill="none" stroke="#16203C" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round" /><path d="M120 0 L 140 64 M 230 0 L 214 64" stroke="#FFFFFF" stroke-width="5" /></svg>
         <span class="sl-dl-shop"><Icon name="store" size={16} stroke={2} /></span>
         <span class="sl-dl-dest"><Icon name="pin" size={16} stroke={2} /></span>
-        {mins && <span class="mono sl-dl-mins">{`~${mins} m`}</span>}
+        {mins && edit !== 'where' && <span class="mono sl-dl-mins">{`~${mins} m`}</span>}
       </div>
       <span class="sl-dl-h">When</span>
       <div class="sl-dl-when">

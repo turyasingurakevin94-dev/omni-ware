@@ -206,8 +206,12 @@ export function setCredit(on: boolean): void {
 export function setPic(on: boolean): void {
   edit((x) => ({ ...x, pic: on }));
 }
+/** A charge on the order, one of each: adding Loading again replaces it, never doubles it (SL39). */
 export function addCharge(label: string, value: number): void {
-  edit((x) => ({ ...x, charges: [...x.charges, { id: x.charges.reduce((m, c) => Math.max(m, c.id), 1) + 1, label, type: 'fixed', value }] }));
+  edit((x) => ({ ...x, charges: [...x.charges.filter((c) => c.label !== label), { id: x.charges.reduce((m, c) => Math.max(m, c.id), 1) + 1, label, type: 'fixed', value }] }));
+}
+export function removeCharge(id: number): void {
+  edit((x) => ({ ...x, charges: x.charges.filter((c) => c.id !== id) }));
 }
 
 /* ---------------- what it comes to ---------------- */

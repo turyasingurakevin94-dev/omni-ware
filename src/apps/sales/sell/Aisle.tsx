@@ -20,6 +20,7 @@ import { itemKey, whose } from './insights.ts';
 import { add, cur, setQty, sums } from './model.ts';
 import { openAisles } from './sheets.tsx';
 import { ShelfCard, type Card } from './ShelfCard.tsx';
+import { LastOrder } from './Start.tsx';
 import './aisle.css';
 
 /** An item's kind: the plural word in its name ("Wire nails 4"" → Nails), else its first word. */
@@ -74,13 +75,15 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
         </div>
       </div>
       <main class="sl-aisle-m">
-        <div class="sl-aisle-c"><span><b class="mono">{cards.length}</b>{` ${word} · most sold first`}</span><span>tap + to add</span></div>
+        <div class="sl-aisle-c"><span><b class="mono">{cards.length}</b>{` ${word} · most sold first`}</span>{shelf !== 'usual' && <span>tap + to add</span>}</div>
         <div class="sl-aisle-g">
           {shown.map((cd) => {
             const l = cd.items.map((i) => inOrder.get(itemKey(i))).find(Boolean) || null;
-            return <ShelfCard key={cd.name} card={cd} kind={kind} line={l} onAdd={(it) => add(it, 1)} onQty={(id, v) => setQty(id, v)} />;
+            const u = shelf === 'usual' && c ? c.usual.find((y) => cd.items.some((i) => itemKey(i) === itemKey(y))) : null;
+            return <ShelfCard key={cd.name} card={cd} kind={kind} line={l} usual={u && c ? { qty: u.qty, who: whose(c.name) } : undefined} onAdd={(it, k) => add(it, k)} onQty={(id, v) => setQty(id, v)} />;
           })}
         </div>
+        {shelf === 'usual' && c && <LastOrder b={b} c={c} />}
         {!more && cards.length > 4 && <button type="button" class="sl-aisle-more" onClick={() => setMore(true)}>Show <span class="mono">{cards.length - 4}</span>{` more ${word}`}<Icon name="chevron-down" size={16} stroke={2.4} /></button>}
       </main>
       <div class="sl-aisle-bar">

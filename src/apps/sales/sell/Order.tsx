@@ -22,6 +22,7 @@ import { act, books, flush, me, now, online } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { askMatch, ChatAsk, fromChat } from './ChatAsk.tsx';
 import { enterFind, Find } from './Find.tsx';
+import { ChargeLines } from './ChargeLines.tsx';
 import { CreditLine, Foot } from './Foot.tsx';
 import { whoLine } from './insights.ts';
 import { closeLine, Lines, openWarns } from './Lines.tsx';
@@ -112,7 +113,7 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
             <>
               <ChatAsk b={b} c={c} />
               <div class={'sl-first' + (plain.value ? ' fill' : '') + (askMatch(b, c) ? ' asked' : '')}>
-                <Lines me={mine} extra={<CreditLine b={b} />} />
+                <Lines me={mine} extra={<><ChargeLines b={b} /><CreditLine b={b} /></>} />
                 {plain.value && <Suggest b={b} c={c} />}
               </div>
               <Foot b={b} c={c} />
