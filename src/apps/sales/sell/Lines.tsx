@@ -18,8 +18,8 @@ import { fig } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { books } from '../shell/store.ts';
-import { manager } from './people.ts';
-import { add, cur, itemOf, openId, orderInRest, remove, restore, setPrice, setQty } from './model.ts';
+import { buyer, manager } from './people.ts';
+import { add, cur, itemOf, openId, orderInRest, remove, restOf, restore, setPrice, setQty } from './model.ts';
 import { openPrice, openPriceComing } from './sheets.tsx';
 import { lastPaid } from './insights.ts';
 import './lines.css';
@@ -49,9 +49,21 @@ export function openLine(id: number): void {
 const noInch = (s: string) => s.replace(/"/g, ' inch');
 
 function Sub(p: { l: Line; it?: Item }): JSX.Element {
-  const l = p.l;
+  const l = p.l, x = cur.value, rest = x ? restOf(x, l) : 0;
   if (l.price == null) return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{' · '}<span class="ow-word">Order in</span></span>;
-  return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${fig(l.price)}`}</span>;
+  return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${fig(l.price)}${rest > 0 ? ' ' : ''}`}{rest > 0 && <span class="ow-word">{`· ${rest} order in`}</span>}</span>;
+}
+
+/** SL40 · part from our shelf, the rest ordered in: a split bar and who buys it. */
+function SplitPanel(p: { b: Books; shelf: number; rest: number }): JSX.Element {
+  const d = buyer(p.b), all = p.shelf + p.rest;
+  return (
+    <div class="sl-split">
+      <div class="sl-split-h"><span><Icon name="cart" size={16} stroke={2.2} /><b class="mono">{p.rest}</b> order in</span><span>{`${d.first} buys them`}</span></div>
+      <div role="img" aria-label={`${p.shelf} of ${all} from our shelf, ${p.rest} ordered in`} class="sl-split-bar"><span style={{ width: `${(100 * p.shelf) / all}%` }} /><span /></div>
+      <div class="sl-split-k"><span><i class="s" /><b class="mono">{p.shelf}</b> from our shelf</span><span><i class="o" /><b class="mono">{p.rest}</b> order in</span></div>
+    </div>
+  );
 }
 
 function Head(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
@@ -108,7 +120,8 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   const l = p.l, b = p.b, it = itemOf(b, l.itemId, l.variantIdx), shelf = it && it.onShelf != null ? it.onShelf : null;
   const q = editQty.value ?? l.qty, set = (n: number) => { editQty.value = n; };
   const asked = askedAs.value.get(l.lineId);
-  const shortNow = l.from === 'shelf' && shelf != null && q > shelf ? q - shelf : 0;
+  const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, rest = split != null && q > split ? q - split : 0;
+  const shortNow = !rest && l.from === 'shelf' && shelf != null && q > shelf ? q - shelf : 0;
   if (q < 1) {
     return (
       <div class="sl-open g12">
@@ -164,7 +177,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
           <div role="img" aria-label={`${shelf} of ${q} on shelf, ${shortNow} short`} class="sl-short-bar"><span style={{ width: `${(100 * shelf) / q}%` }} /><span /></div>
           <div class="sl-short-g">
             <button type="button" onClick={() => { editQty.value = null; setQty(l.lineId, shelf); }}>Make it <span class="mono">{shelf}</span></button>
-            <button type="button" onClick={() => { if (editQty.value != null) setQty(l.lineId, q); editQty.value = null; orderInRest(l.lineId); }}>Order in <span class="mono">{shortNow}</span></button>
+            <button type="button" onClick={() => { if (editQty.value != null) setQty(l.lineId, q); editQty.value = null; orderInRest(l.lineId, shelf); }}>Order in <span class="mono">{shortNow}</span></button>
           </div>
         </div>
         <PriceLink l={l} />
@@ -188,9 +201,10 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   }
   const last = p.customerId ? lastPaid(b, p.customerId, l.itemId, l.variantIdx) : null;
   return (
-    <div class="sl-open">
+    <div class={'sl-open' + (rest > 0 ? ' split' : '')}>
       <div class="sl-open-h"><Head l={l} b={b} /></div>
       {stepRow}
+      {rest > 0 && split != null && <SplitPanel b={b} shelf={split} rest={rest} />}
       <div class="sl-open-p">
         <PriceLink l={l} />
         <div class="sl-open-r g6">

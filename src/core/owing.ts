@@ -118,6 +118,16 @@ export function takeBills(w: Pick<Owing, 'bills'>, past: boolean): string[] {
 /** A bill's name: its order number (#0531), or "Opening balance" (GLOSSARY: never an unlabelled debt). */
 export const billNo = (id: number): string => (id === DEBT ? 'Opening balance' : orderNo(id));
 
+/**
+ * A Take with an order held for the money (Mukono: 780,000 owed and #0551's 320,000, "Take 1.1M"): what they owe
+ * and the order, as customers/pay names them (every bill nobody is checking, then the order). One rule for Today's
+ * Take, Sell's "Not paid yet" (SL30) and the Orders list's Take pill. Past the hold, only the bills past it.
+ */
+export function takeWithHeld(w: Pick<Owing, 'owes' | 'bills'>, customerId: string, held: Order | null, past = false): { customer: string; bills: string; amount: UGX } {
+  const bills = takeBills(w, past);
+  return { customer: customerId, bills: (!past && held ? [...bills, String(held.id)] : bills).join(','), amount: w.owes + (held ? orderOwes(held) : 0) };
+}
+
 /** customers/pay's `bills` param ("531,544", "debt,541") as bill ids: `debt` is DEBT. */
 export function readBills(param: unknown): number[] | null {
   if (param == null || param === '') return null;

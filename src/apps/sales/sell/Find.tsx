@@ -105,8 +105,9 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
 
 function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
   const b = p.b, c = p.c, a = p.a, near = closest(b, a), ask = sameAsk(b.asks, a);
-  const name = ask ? ask.name : a.words.join(' ').replace(/^./, (s) => s.toUpperCase());
-  const plain = name.replace(/\s+\d+\s*(mm|cm|m|inch|")$/i, '').toLowerCase();
+  const said = a.words.map((w) => (/^[b-df-hj-np-tv-z]{2,4}$/i.test(w) ? w.toUpperCase() : w)).join(' ');
+  const name = ask ? ask.name : said.replace(/^./, (s) => s.toUpperCase());
+  const plain = name.replace(/\s+\d+\s*(mm|cm|m|inch|")$/i, '').split(' ').map((w) => (/^[A-Z]{2,4}$/.test(w) ? w : w.toLowerCase())).join(' ');
   useEffect(() => {
     // A search that found nothing goes to Sourcing's log (log_search_miss), once per words.
     const t = window.setTimeout(() => source.logSearchMiss(query.value.trim(), c ? c.name : null), 1200);

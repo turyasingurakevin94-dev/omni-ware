@@ -30,6 +30,9 @@ const BACK_MS = 8000;
 
 interface Step { icon: IconName; title: string; sub: string; now?: boolean; skipped?: boolean }
 
+/** What the Buyer buys, as said: "the hinge" (its price still coming), "8 Iron sheet G26" (a count of it, SL40). */
+const bought = (l: Order['lines'][number]) => (l.price == null ? `the ${l.name.split(' · ')[0].split(' ').slice(-1)[0].toLowerCase()}` : `${l.qty} ${l.name.split(' · ')[0]}`);
+
 /** What happens next, from where it starts and what waits (spec 01: the five stages). */
 function steps(b: Books, o: Order, who: string): Step[] {
   const coming = o.lines.some((l) => l.price == null), under = o.lines.some((l) => l.price != null && lineWaits(l));
@@ -44,7 +47,7 @@ function steps(b: Books, o: Order, who: string): Step[] {
   }
   const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit` : `${m.first} checks it`;
   const out: Step[] = [{ icon: 'checking', title: 'Checking', sub: `now · ${why}`, now: true }];
-  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length === 1 ? `the ${buy[0].name.split(' · ')[0].split(' ').slice(-1)[0].toLowerCase()}` : `${buy.length} items`}` });
+  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length <= 2 ? buy.map(bought).join(' and ') : `${buy.length} items`}` });
   out.push({ icon: 'orders', title: 'Packing', sub: `${st.first} packs it` });
   return out;
 }
@@ -61,7 +64,8 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
   if (!b || !o) return <main class="ow-moment sl-placed" aria-busy="true" />;
   const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) || null : null;
   const who = c ? first(c.name) : 'They', pic = pictures.value.get(o.id);
-  const n = o.lines.length, mode = o.deliverTo ? 'delivery' : 'pickup', unpaid = o.paid < orderTotal(o);
+  // A line split between our shelf and the Buyer (SL40) is one item.
+  const items = o.lines.filter((l, i) => o.lines.findIndex((y) => y.itemId === l.itemId && y.variantIdx === l.variantIdx) === i), n = items.length, mode = o.deliverTo ? 'delivery' : 'pickup', unpaid = o.paid < orderTotal(o);
   const allShelf = o.lines.every((l) => l.from === 'shelf');
   return (
     <div class="ow-moment sl-placed">
@@ -93,7 +97,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
       ) : (
         <div class="ow-moment-items">
           <span aria-hidden="true" class="ow-moment-sq">
-            {o.lines.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
+            {items.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
           </span>
           <span class="ow-moment-items-t"><span>{`${n} items · ${mode}`}</span>{unpaid && <span>Not paid yet</span>}</span>
           <span class="mono ow-moment-items-a">{fig(orderTotal(o))}</span>

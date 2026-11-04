@@ -13,8 +13,8 @@ import { soldByAisle } from '../../../core/aisles.ts';
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
 import { daysInStage, heldFor, LATE_DAYS } from '../../../core/orders.ts';
-import { HOLD_DAYS, holdDay, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
-import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
+import { HOLD_DAYS, holdDay, orderTotal, promiseState } from '../../../core/money.ts';
+import { owedBy, takeWithHeld, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
 import type { Books, ChatBooks, Customer, Day, Ms, Order, PayPromise, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
@@ -101,7 +101,7 @@ export function owing(b: Books, now: Ms): Owing[] {
 export const holdOf = (w: Owing, b: Books): Day | null => (w.bills.length ? holdDay(w.bills[0].day, b.settings.holdDays || HOLD_DAYS) : null);
 
 /** What taking a held order's money would ask for: what they owe plus the order (Mukono: Take 1.1M). */
-export const takeHeld = (w: Owing): UGX => w.owes + (w.held ? orderOwes(w.held) : 0);
+export const takeHeld = (w: Owing): UGX => takeWithHeld(w, w.c.id, w.held).amount;
 
 /**
  * What a Take opens customers/pay with: the customer and the bills it pays, comma-separated (core/owing.ts
@@ -109,8 +109,8 @@ export const takeHeld = (w: Owing): UGX => w.owes + (w.held ? orderOwes(w.held) 
  * every bill and that order.
  */
 export function takeOf(w: Owing, past: boolean): { customer: string; bills: string } {
-  const bills = takeBills(w, past);
-  return { customer: w.c.id, bills: (!past && w.held ? [...bills, String(w.held.id)] : bills).join(',') };
+  const t = takeWithHeld(w, w.c.id, w.held, past);
+  return { customer: t.customer, bills: t.bills };
 }
 
 /**

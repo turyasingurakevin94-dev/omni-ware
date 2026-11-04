@@ -107,20 +107,30 @@ function inAisle(it: Item, ws: string[]): boolean {
   return ws.length > 0 && ws.every((w) => aw.includes(stem(w)));
 }
 
+/** How many orders in the last 90 days held each item (the books' own clock). */
+function soldLately(b: Books): Map<string, number> {
+  const since = b.at - 90 * 864e5, n = new Map<string, number>();
+  b.orders.filter((o) => !o.voided && !o.cancelled && !o.qa && o.placedAt >= since && o.placedAt <= b.at)
+    .forEach((o) => new Set(o.lines.map((l) => l.itemId)).forEach((id) => n.set(id, (n.get(id) || 0) + 1)));
+  return n;
+}
+
 /**
- * The items that answer an ask: theirs first (rank 2), what they had this week (1), then what fills the count
- * best. Only when no item's name holds the words, the priced items of an aisle that does ("plumbing" lists the
- * aisle; "paint" finds what is called paint: the lead's ruling, 4 Nov). An item with no price is found only by
- * its own name.
+ * The items that answer an ask (the lead's rulings, 4 Nov): first those whose own name holds the words,
+ * theirs first (rank 2), what they had this week (1), then what fills the count best; then the priced items
+ * of an aisle whose name holds the words, only those sold in the last 90 days, the most sold first. "paint"
+ * gives Roof paint, Gloss paint, then Emulsion; "plumbing" lists what sells in Plumbing. An item that never
+ * sells is found by its own name, not by its aisle's.
  */
 export function findItems(b: Books, a: Asked, rank: (key: string) => number = () => 0): Item[] {
   if (!a.words.length) return [];
   const unit = (it: Item) => !a.unit || it.unit === a.unit || it.packUnit === a.unit || nameWords(it).includes(a.unit);
   const hits = b.items.filter((it) => fits(it, a.words) && unit(it));
-  const more = hits.length ? [] : b.items.filter((it) => it.price != null && inAisle(it, a.words) && unit(it));
+  const named = new Set(hits), sold = soldLately(b);
+  const more = b.items.filter((it) => !named.has(it) && it.price != null && (sold.get(it.id) || 0) > 0 && inAisle(it, a.words) && unit(it));
   const key = (it: Item) => `${it.id}::${it.variantIdx ?? ''}`, q = a.qty || 1;
   const order = (x: Item, y: Item) => rank(key(y)) - rank(key(x)) || fill(x, q) - fill(y, q);
-  return [...hits.sort(order), ...more.sort(order)];
+  return [...hits.sort(order), ...more.sort((x, y) => (sold.get(y.id) || 0) - (sold.get(x.id) || 0))];
 }
 
 /**

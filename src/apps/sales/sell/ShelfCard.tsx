@@ -28,7 +28,7 @@ function Nail(p: { inches: number; ink: string }): JSX.Element {
 
 const big = (u: string) => /^(ctn|box|carton|bag)$/.test(u) ? 1 : 0;
 
-export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAdd: (it: Item) => void; onQty: (lineId: number, n: number) => void }): JSX.Element {
+export function ShelfCard(p: { card: Card; kind: string; line: Line | null; usual?: { qty: number; who: string }; onAdd: (it: Item, n: number) => void; onQty: (lineId: number, n: number) => void }): JSX.Element {
   const cd = p.card, units = cd.items.slice().sort((x, y) => big(x.unit) - big(y.unit) || x.unit.localeCompare(y.unit));
   const [pick, setPick] = useState(cd.items[0].id);
   const it = p.line ? cd.items.find((i) => i.id === p.line?.itemId) || cd.items[0] : cd.items.find((i) => i.id === pick) || cd.items[0];
@@ -43,6 +43,7 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAd
       {p.line && <span class="sl-card2-in"><Icon name="check" size={11} stroke={3.2} />In order</span>}
       <div class="sl-card2-b">
         <span class="sl-card2-n">{cd.name}</span>
+        {p.usual && <span class="sl-card2-usual"><Icon name="return" size={12} stroke={2.4} />usually <b class="mono">{p.usual.qty}</b>{` ${it.unit}`}</span>}
         {it.price == null ? <span class="sl-card2-o coming">Price coming</span> : <span class="sl-card2-p"><span class="mono">{fig(it.price)}</span><span>{`/${it.unit}`}</span></span>}
         {shelf > 0 ? <span class="sl-card2-s"><b class="mono">{fig(shelf)}</b> on shelf</span>
           : it.orderIn ? <span class="sl-card2-o">Order in</span> : <span class="sl-card2-o bad">Out</span>}
@@ -54,10 +55,15 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAd
           </div>
         ) : (
           <div class="sl-card2-r">
-            <div role="radiogroup" aria-label="Sold by" class="sl-card2-u">
-              {(units.length > 1 ? units : [it]).map((u) => <button key={u.id} type="button" role="radio" aria-checked={u.id === it.id} class={u.id === it.id ? 'on' : ''} onClick={() => setPick(u.id)}>{u.unit}</button>)}
-            </div>
-            <button type="button" class="sl-card2-add" aria-label="Add" onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
+            {units.length > 1 && (
+              <div role="radiogroup" aria-label="Sold by" class="sl-card2-u">
+                {units.map((u) => <button key={u.id} type="button" role="radio" aria-checked={u.id === it.id} class={u.id === it.id ? 'on' : ''} onClick={() => setPick(u.id)}>{u.unit}</button>)}
+              </div>
+            )}
+            {/* One unit: no choice to make, so the + takes the width and says what it adds (SL33). */}
+            {units.length > 1
+              ? <button type="button" class="sl-card2-add" aria-label={p.usual ? `Add ${p.usual.qty} ${it.unit}, ${p.usual.who} usual` : 'Add'} onClick={() => p.onAdd(it, p.usual ? p.usual.qty : 1)}><Icon name="plus" size={16} stroke={2.6} /></button>
+              : <button type="button" class="sl-card2-add wide" aria-label={`Add ${p.usual ? p.usual.qty : 1} ${it.unit}${p.usual ? `, ${p.usual.who} usual` : ''}`} onClick={() => p.onAdd(it, p.usual ? p.usual.qty : 1)}><Icon name="plus" size={14} stroke={2.6} /><span class="mono">{p.usual ? p.usual.qty : 1}</span><span class="ow-word">{it.unit}</span></button>}
           </div>
         )}
       </div>

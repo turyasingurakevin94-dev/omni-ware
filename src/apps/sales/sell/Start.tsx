@@ -9,16 +9,17 @@ import type { JSX } from 'preact';
 import { chipAisles } from '../../../core/aisles.ts';
 import { orderTotal, short } from '../../../core/money.ts';
 import { orderNo } from '../../../core/names.ts';
-import { clock } from '../../../core/time.ts';
+import { heldFor } from '../../../core/orders.ts';
+import { owingOf, takeWithHeld } from '../../../core/owing.ts';
+import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { Duo, Icon, phAgain, phCoins, phFlame, phGrid, phSparkle } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { UsualCard } from '../../../ui/UsualCard.tsx';
 import { nav } from '../shell/nav.ts';
-import { chats, me, now } from '../shell/store.ts';
+import { me, now } from '../shell/store.ts';
 import { aisleMarks, aisles, dayWord, first, item, itemKey, lastOrder, sellMost, whose } from './insights.ts';
-import { readAsk } from '../../../core/find.ts';
 import { add, cur, itemOf } from './model.ts';
 import { openAisle, openAisles } from './sheets.tsx';
 import './start.css';
@@ -40,16 +41,11 @@ export function usualInto(b: Books, customerId: string): void {
   if (c) c.usual.forEach((u) => { const it = itemOf(b, u.itemId, u.variantIdx); if (it) add(it, u.qty); });
 }
 
-/** What they asked for on WhatsApp that Sourcing has listed since (SL30). */
+/** What they asked Sourcing for that is now listed (SL30: Mukono's 6 tins of roof paint, FACTS §6): their own requests on the lead. */
 function askedIn(b: Books, c: Customer): { it: Item; qty: number } | null {
-  const cb = chats.value;
-  if (!cb) return null;
-  const chat = cb.chats.find((x) => x.customerId === c.id);
-  if (!chat) return null;
-  const said = cb.recent.filter((m) => m.chatId === chat.id && m.dir === 'in' && m.kind === 'text');
-  for (const it of b.items.filter((i) => i.listedAt)) {
-    const m = said.find((x) => x.at <= (it.listedAt as number) && readAsk(x.body).words.some((w) => w.length > 3 && it.name.toLowerCase().includes(w.replace(/s$/, ''))));
-    if (m) return { it, qty: readAsk(m.body).qty || 1 };
+  for (const ask of b.asks.filter((a) => a.status === 'listed' && a.itemId)) {
+    const it = b.items.find((i) => i.id === ask.itemId), qty = ask.requests.filter((r) => r.customerId === c.id).reduce((n, r) => n + r.qty, 0);
+    if (it && qty > 0) return { it, qty };
   }
   return null;
 }
@@ -72,13 +68,15 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
         </div>,
       );
     }
-    const unpaid = b.orders.find((o) => o.customerId === c.id && !o.voided && !o.cancelled && o.holderId === mine && o.stage === 'checking' && o.paid === 0 && !o.invoiced);
+    // Held for my money (core/orders.ts heldFor); its Take is what they owe and the order (core/owing.ts takeWithHeld).
+    const unpaid = b.orders.find((o) => o.customerId === c.id && heldFor(o, mine));
+    const take = unpaid ? takeWithHeld(owingOf(b, c, dayOf(now.value)), c.id, unpaid) : null;
     if (unpaid) {
       cards.push(
         <div class="sl-unpaid" key="unpaid">
           <span aria-hidden="true" class="sl-unpaid-ic"><Duo i={phCoins} size={20} color="#95530C" /></span>
           <span class="sl-unpaid-t"><span><span class="mono">{orderNo(unpaid.id)}</span> · Not paid yet</span><span>waits in Checking</span></span>
-          <a href="#" class="sl-unpaid-take" onClick={(e) => { e.preventDefault(); nav.push('customers/pay', { customer: c.id }); }}><span>Take <span class="mono">{short(Math.max(0, c.owes) + orderTotal(unpaid))}</span></span></a>
+          <a href="#" class="sl-unpaid-take" onClick={(e) => { e.preventDefault(); if (take) nav.push('customers/pay', { customer: take.customer, bills: take.bills }); }}><span>Take <span class="mono">{short(take ? take.amount : 0)}</span></span></a>
         </div>,
       );
     }
@@ -96,13 +94,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
     }
     const last = lastOrder(b, c.id);
     if (last && cards.length < 2) {
-      cards.push(
-        <a href="#" class="sl-last" key="last" onClick={(e) => { e.preventDefault(); sellAgain(b, c.id); }}>
-          <ItemSquare aisle={(itemOf(b, last.lines[0].itemId, last.lines[0].variantIdx) || { aisle: '' }).aisle} size={36} radius={10} icon={22} />
-          <span class="sl-last-t"><span>Last order <span class="mono">{orderNo(last.id)}</span></span><span class="mono">{`${dayWord(last.placedAt, now.value)} ${clock(last.placedAt)} · ${fig(orderTotal(last))}`}</span></span>
-          <span class="sl-last-again"><Icon name="return" size={15} stroke={2.2} />Sell again</span>
-        </a>,
-      );
+      cards.push(<LastOrder key="last" b={b} c={c} />);
     }
   }
   const most = c ? [] : sellMost(b, mine, now.value);
@@ -150,4 +142,17 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
 export function tileAisles(b: Books, mine: string): string[] {
   const top = new Set(chipAisles(b.items, b.orders, null, mine));
   return aisles(b).map((a) => a.name).filter((a) => top.has(a));
+}
+
+/** Their last order, and Sell again (SL03; under the usual shelf, SL33). */
+export function LastOrder(p: { b: Books; c: Customer }): JSX.Element | null {
+  const b = p.b, last = lastOrder(b, p.c.id);
+  if (!last || !last.lines.length) return null;
+  return (
+    <a href="#" class="sl-last" onClick={(e) => { e.preventDefault(); sellAgain(b, p.c.id); }}>
+      <ItemSquare aisle={(itemOf(b, last.lines[0].itemId, last.lines[0].variantIdx) || { aisle: '' }).aisle} size={36} radius={10} icon={22} />
+      <span class="sl-last-t"><span>Last order <span class="mono">{orderNo(last.id)}</span></span><span class="mono">{`${dayWord(last.placedAt, now.value)} ${clock(last.placedAt)} · ${fig(orderTotal(last))}`}</span></span>
+      <span class="sl-last-again"><Icon name="return" size={15} stroke={2.2} />Sell again</span>
+    </a>
+  );
 }

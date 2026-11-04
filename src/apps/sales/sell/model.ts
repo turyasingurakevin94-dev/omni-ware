@@ -34,6 +34,12 @@ export interface Build {
    */
   lines: Line[];
   kept?: number;
+  /**
+   * A line part on our shelf and the rest ordered in (SL13 "Order in 8", SL40): lineId → how many come
+   * from the shelf. Drawn as one line; written as two (the shelf's, supplierId '__stock__', and the rest
+   * with no supplier yet, for the Buyer), as place_order takes lines (0180).
+   */
+  split?: Record<number, number>;
   charges: Charge[];
   credit: boolean;
   mode: Mode;
@@ -105,7 +111,7 @@ export function resume(key: string): Build | null {
 export function toDraft(x: Build): Draft {
   const b = shop();
   return {
-    key: x.key, at: x.at, customerId: x.customerId, client: x.client, lines: x.lines, charges: x.charges,
+    key: x.key, at: x.at, customerId: x.customerId, client: x.client, lines: written(x), charges: x.charges,
     credit: x.credit ? { pct: b.settings.creditPct, days: b.settings.chaseAfterDays } : null,
     deliverTo: x.mode === 'delivery' && x.delivery ? [x.delivery.where, WHEN_WORD[x.delivery.when], x.delivery.phone].join(SEP) : null,
     chatId: x.chatId,
@@ -165,8 +171,26 @@ export function setQty(lineId: number, qty: number): void {
 }
 
 /** "Order in 8": the line stays at what they asked; what the shelf lacks is bought in. */
-export function orderInRest(lineId: number): void {
-  edit((x) => ({ ...x, lines: x.lines.map((l) => (l.lineId === lineId ? { ...l, from: 'none', supplierId: '' } : l)) }));
+/** Order in the rest (SL13 → SL40): what the shelf holds comes from it, the rest is bought. */
+export function orderInRest(lineId: number, shelf: number): void {
+  edit((x) => ({ ...x, split: { ...(x.split || {}), [lineId]: shelf } }));
+}
+
+/** How many of a line are ordered in (0 when none). */
+export function restOf(x: Build, l: Line): number {
+  const s = x.split && x.split[l.lineId];
+  return s != null && l.qty > s ? l.qty - s : 0;
+}
+
+/** The lines as they are written: a split line as its shelf part and the part ordered in. */
+function written(x: Build): Line[] {
+  const top = x.lines.reduce((m, l) => Math.max(m, l.lineId), 0);
+  let n = top;
+  return x.lines.flatMap((l) => {
+    const rest = restOf(x, l);
+    if (!rest) return [l];
+    return [{ ...l, qty: l.qty - rest, from: 'shelf' as const, supplierId: '__stock__' }, { ...l, lineId: ++n, qty: rest, from: 'none' as const, supplierId: '' }];
+  });
 }
 
 /** A price typed for them (SL18): under the shop's, the Manager decides it (decision-rights "The price decision"). */
@@ -206,8 +230,12 @@ export function setCredit(on: boolean): void {
 export function setPic(on: boolean): void {
   edit((x) => ({ ...x, pic: on }));
 }
+/** A charge on the order, one of each: adding Loading again replaces it, never doubles it (SL39). */
 export function addCharge(label: string, value: number): void {
-  edit((x) => ({ ...x, charges: [...x.charges, { id: x.charges.reduce((m, c) => Math.max(m, c.id), 1) + 1, label, type: 'fixed', value }] }));
+  edit((x) => ({ ...x, charges: [...x.charges.filter((c) => c.label !== label), { id: x.charges.reduce((m, c) => Math.max(m, c.id), 1) + 1, label, type: 'fixed', value }] }));
+}
+export function removeCharge(id: number): void {
+  edit((x) => ({ ...x, charges: x.charges.filter((c) => c.id !== id) }));
 }
 
 /* ---------------- what it comes to ---------------- */

@@ -49,8 +49,8 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   t.check(same(due.map((d) => d.c.name), ['Mukono Roofing', 'Kyaligonza & Sons', 'Lubowa Builders']), `KC04: who's due 3 (got ${due.map((d) => d.c.name).join(', ')})`);
   t.check(same(due.map((d) => d.words), ['Due today · every 7 days', '4 days late · every 14 days', '1 day late · every 5 days']), 'KC04: their rhythm in words');
   const ask = I.readAsk('2 paint');
-  t.check(ask.qty === 2 && same(ask.words, ['paint']) && same(I.findItems(b, ask).filter((i) => i.price != null).map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4']), 'KC02: "2 paint" is 2 of paint: the items called paint (the lead\'s search ruling, 4 Nov: an aisle only when no name matches)');
-  t.check(same(I.findItems(b, I.readAsk('plumbing')).filter((i) => i.price != null).length > 0 && I.findItems(b, I.readAsk('plumbing')).every((i) => i.aisle === 'Plumbing'), true), '"plumbing": no item is called that, so the aisle lists');
+  t.check(ask.qty === 2 && same(ask.words, ['paint']) && same(I.findItems(b, ask).filter((i) => i.price != null).map((i) => i.id), ['roof-paint-maroon-20', 'gloss-white-4', 'emulsion-cream-20']), 'KC02: "2 paint" is 2 of paint: Roof paint, Gloss paint, Emulsion');
+  t.check(same(I.findItems(b, I.readAsk('plumbing')).filter((i) => i.price != null).length > 0 && I.findItems(b, I.readAsk('plumbing')).every((i) => i.aisle === 'Plumbing'), true), '"plumbing": no item is called that; what sold in Plumbing lists');
 
   const T = require(path.join(ROOT, 'src/core/time.ts'));
   const quiet = b.customers.filter((c) => C.rhythm(c, b.orders, T.dayOf(now)).quiet);

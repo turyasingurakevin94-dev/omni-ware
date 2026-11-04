@@ -82,7 +82,7 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');
   t.check(ow.theirs && ow.of === 7 && owTxt.startsWith('ridge-g28:3 wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
     `often with Kato's sheets (CH21, CH34; SL05's lines): Ridge cap G28 in 3 of 7 and Wheelbarrow, heavy duty in 2 of 7 (Kato's usual counted from the orders), the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
-  const once = oftenWith(fb.orders, { itemId: 'emulsion-cream-20', variantIdx: null }, { customerId: 'C001', me: 'u-grace' });
+  const once = oftenWith(fb.orders, { itemId: 'gloss-white-4', variantIdx: null }, { customerId: 'C001', me: 'u-grace' });
   t.check(!once.theirs, 'often with: an item they had once is counted over my orders, not theirs (agent.html oftenWith)');
 
   process.exit(t.done() ? 1 : 0);

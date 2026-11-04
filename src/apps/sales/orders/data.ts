@@ -6,6 +6,7 @@
  *   a row         who holds it and the one thing to say (Ruth decides, Not paid yet, 1 of 2 came …)
  *   an order      its customer, its lines' marks, what is still possible
  */
+import { owingOf, takeWithHeld } from '../../../core/owing.ts';
 import { daysInStage, LATE_DAYS, lineWaits, twinOf } from '../../../core/orders.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
@@ -131,7 +132,10 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
 }
 
 /** What Grace takes from the row ("Take 1.1M"): what the customer owes and this order. */
-export const takeAmount = (b: Books, o: Order): number => Math.max(0, custOf(b, o)?.owes || 0) + orderOwes(o);
+export const takeAmount = (b: Books, o: Order): number => {
+  const c = custOf(b, o);
+  return c ? takeWithHeld(owingOf(b, c, dayOf(b.at)), c.id, o).amount : orderOwes(o);
+};
 
 /** Groups of rows, in the canvas's order: newest number first; delivered by bill, newest first, then not billed yet. */
 export function sortRows(list: Order[], stage: Stage, oldest: boolean): Order[] {

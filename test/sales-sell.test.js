@@ -52,8 +52,10 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   /* ---- the search rule (core/find.ts; the lead's ruling, 4 Nov) ---- */
   const FI = require(path.join(ROOT, 'src/core/find.ts'));
   const finds = (q) => FI.findItems(b, FI.readAsk(q)).filter((i) => i.price != null);
-  t.check(finds('paint').every((i) => /paint/i.test(i.name)) && finds('paint').length === 2, 'a name match wins: "paint" finds the items called paint, not the Paint aisle');
-  t.check(finds('plumbing').length > 0 && finds('plumbing').every((i) => i.aisle === 'Plumbing'), 'no name matches "plumbing": the aisle is listed');
+  t.check(finds('paint').map((i) => i.id).join() === 'roof-paint-maroon-20,gloss-white-4,emulsion-cream-20', `"paint": the names first, then what sold in the Paint aisle in 90 days, no fillers (got ${finds('paint').map((i) => i.id).join()})`);
+  t.check(finds('plumbing').length > 0 && finds('plumbing').every((i) => i.aisle === 'Plumbing' && !i.id.startsWith('g-')), '"plumbing": what sold in Plumbing lists, no fillers');
+  const filler = b.items.find((i) => i.aisle === 'Paint' && i.id.startsWith('g-'));
+  t.check(filler.price != null && FI.findItems(b, FI.readAsk(filler.name)).some((i) => i.id === filler.id), 'a filler that never sells is priced and still found by its own name');
   t.check(b.items.filter((i) => i.aisle === 'Paint').every((i) => i.price != null), 'every item in the Paint aisle has a price');
 
   /* ---- Lubowa (SL04) ---- */

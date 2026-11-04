@@ -83,8 +83,9 @@ export function Who(): JSX.Element {
 function Lists(p: { b: Books; pick: (x: Pick) => void }): JSX.Element {
   const b = p.b, t = now.value, due = whosDue(b, t), open = drafts.value.slice().sort((x, y) => x.at - y.at);
   const cb = chats.value, asking = cb ? cb.chats.filter((c) => !c.customerId && !c.ownerId && c.lastInAt && (!c.lastReadAt || c.lastReadAt < c.lastInAt)) : [];
+  // Their newest message that has words (a photo with no caption has none: SL01).
   const said = (id: number) => {
-    const m = cb ? cb.recent.filter((x) => x.chatId === id && x.dir === 'in' && x.kind === 'text').sort((x, y) => y.at - x.at)[0] : null;
+    const m = cb ? cb.recent.filter((x) => x.chatId === id && x.dir === 'in' && !!x.body && !!x.body.trim()).sort((x, y) => y.at - x.at)[0] : null;
     return m ? (m.body.match(/^[^?.!]*[?.!]?/) || [''])[0] : '';
   };
   return (
