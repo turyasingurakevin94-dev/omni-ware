@@ -11,6 +11,7 @@ import { daysInStage, LATE_DAYS, lineWaits, twinOf } from '../../../core/orders.
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
 import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
+import type { RowStatus as UiStatus } from '../../../ui/StageGroup.tsx';
 import type { BillAsk, Books, Customer, Line, Member, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
 
@@ -90,16 +91,8 @@ export function shortItem(name: string): string {
   return name.split(/ · |,/)[0].split(' ').filter((w) => !/^[A-Z]\d+$/.test(w)).join(' ');
 }
 
-export type RowTone = 'info' | 'warn' | 'bad' | 'good';
-export interface RowStatus {
-  text?: string;
-  tone?: RowTone;
-  face?: Face;
-  /** A small mono chip before the words ("6 days", "2+ days"). */
-  chip?: { text: string; tone: 'warn' | 'bad' };
-  /** The little bar of lines that came (Buying). */
-  bar?: { done: number; of: number };
-  tick?: boolean;
+/** What the row shows (src/ui/StageGroup.tsx RowStatus), and its one act. */
+export interface RowStatus extends UiStatus {
   /** The one act on the row. */
   act?: 'take' | 'tell';
 }

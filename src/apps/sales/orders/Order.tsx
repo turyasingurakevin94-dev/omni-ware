@@ -19,9 +19,10 @@ import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, shortItem, shortName, waitsRuth } from './data.ts';
 import { go, payFor } from './links.ts';
-import { CheckList, Pills } from './local-CheckList.tsx';
-import { ActBar, Tiles, type Act } from './local-Parts.tsx';
-import { Track } from './local-Track.tsx';
+import { CheckList, CheckPills } from '../../../ui/CheckList.tsx';
+import { ActBar, type Act } from '../../../ui/ActTiles.tsx';
+import { MoneyTiles } from '../../../ui/MoneyTiles.tsx';
+import { Track } from '../../../ui/Track.tsx';
 import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PriceTell, TwinCard } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
@@ -46,13 +47,13 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const op = delivered ? overPaymentOf(b, o) : null;
   const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: paidOver(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${paidOver(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
   const acts: Act[] = [];
-  if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone9(phone) ? 'tel:+256' + phone9(phone) : undefined });
-  else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
-  acts.push({ bg: '#DCEAF8', fg: '#1A5A8A', icon: 'receipt', word: 'Receipt', sub: o.voided ? 'voided' : pending ? 'as it stands' : v.bill ? `${o.paid.toLocaleString('en-US')} paid` : total.toLocaleString('en-US'), on: () => go('customers/paid', { id: o.id }) });
+  if (fresh) acts.push({ tone: 'call', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone9(phone) ? 'tel:+256' + phone9(phone) : undefined });
+  else acts.push({ tone: 'tell', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
+  acts.push({ tone: 'receipt', icon: 'receipt', word: 'Receipt', sub: o.voided ? 'voided' : pending ? 'as it stands' : v.bill ? `${o.paid.toLocaleString('en-US')} paid` : total.toLocaleString('en-US'), on: () => go('customers/paid', { id: o.id }) });
   if (o.voided) { /* nothing to fix on a voided bill */ }
-  else if (v.bill) acts.push({ bg: '#FDEEE1', fg: '#7A4A02', icon: 'warning', word: 'Fix it', sub: `ask ${esther}`, label: 'Something wrong with this bill', on: () => openPayFix(o.id) });
-  else if (delivered) acts.push({ bg: '#FDEEE1', fg: '#7A4A02', icon: 'warning', word: 'Fix it', sub: `ask ${ruth}`, label: v.returnAsk ? 'Something wrong with this sale' : 'Fix it: something wrong with this sale', on: () => openWrong(o.id) });
-  else acts.push({ bg: '#F1EEE8', fg: '#5F6980', icon: 'pen', word: 'Change', sub: `ask ${ruth}`, label: `Change this order: ask ${ruth}`, on: () => openChange(o.id) });
+  else if (v.bill) acts.push({ tone: 'fix', icon: 'warning', word: 'Fix it', sub: `ask ${esther}`, label: 'Something wrong with this bill', on: () => openPayFix(o.id) });
+  else if (delivered) acts.push({ tone: 'fix', icon: 'warning', word: 'Fix it', sub: `ask ${ruth}`, label: v.returnAsk ? 'Something wrong with this sale' : 'Fix it: something wrong with this sale', on: () => openWrong(o.id) });
+  else acts.push({ tone: 'change', icon: 'pen', word: 'Change', sub: `ask ${ruth}`, label: `Change this order: ask ${ruth}`, on: () => openChange(o.id) });
   return (
     <FullSheet onBack={nav.back} backLabel="Back to Orders" gap={v.returnAsk ? 8 : 10}
       head={(
@@ -62,13 +63,13 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       )}>
       {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} />}
       {o.stage === 'road' && <MapCard b={b} o={o} />}
-      <Tiles tiles={tiles} />
+      <MoneyTiles tiles={tiles} />
       {op && <OverRow b={b} p={op} />}
       {o.stage === 'road' || v.bill ? null : delivered && !v.returnAsk && !open ? (
         <div class="or-fold">
           <ItemIcon b={b} o={o} />
           <span class="or-fold-n">{k.length ? `${k[0].name.split(' · ')[0]}${k.length > 1 ? ` +${k.length - 1}` : ''}` : shortItem(o.lines[0]?.name || '')}</span>
-          {v.head.pills && <Pills pills={v.head.pills} />}
+          {v.head.pills && <CheckPills pills={v.head.pills} />}
           <button type="button" class="or-fold-b" aria-label="Show the items" onClick={() => setOpen(true)}><Icon name="chevron-down" size={16} stroke={2.2} /></button>
         </div>
       ) : (

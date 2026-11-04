@@ -8,8 +8,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { firstWord, phone9 } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Payment } from '../../../core/types.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
 import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
+import { AskStep } from '../../../ui/Track.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { nav } from '../shell/nav.ts';
@@ -47,14 +47,8 @@ function PaidOver(p: { b: Books; x: Payment; from: string }): JSX.Element {
     } catch (e) { toast.show((e as Error).message, { kind: 'error' }); } finally { setBusy(false); }
   };
   const undo = () => { setSent(0); if (asked) act('withdrawPaymentAsk', asked.id).catch((e) => toast.show((e as Error).message, { kind: 'error' })); };
-  const step = (k: 'ok' | 'face' | 'to', title: string, sub: string, line: boolean, tone = '') => (
-    <div class="or-step">
-      {k === 'ok' ? <span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span>
-        : k === 'face' && acc ? <span aria-hidden="true" class="or-step-face"><Avatar {...faceOfMember(acc)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} /></span>
-          : <span aria-hidden="true" class="or-step-to" />}
-      {line && <span aria-hidden="true" class="or-step-line" />}
-      <span class={'or-step-t ' + tone}><span>{title}</span><span>{sub}</span></span>
-    </div>
+  const step = (k: 'ok' | 'face' | 'to', title: string, sub: string, line: boolean, tone?: 'warn' | 'soft') => (
+    <AskStep mark={k === 'face' && acc ? faceOfMember(acc) : k === 'face' ? 'to' : k} title={title} sub={sub} line={line} tone={tone} />
   );
   const sms = `sms:${c && phone9(c.phone) ? '+256' + phone9(c.phone) : ''}?body=${encodeURIComponent(`Hello ${who}, you paid ${x.amount.toLocaleString('en-US')}: ${cleared.toLocaleString('en-US')} cleared your bills and ${over.toLocaleString('en-US')} is over. ${askedHow === 'deposit' ? 'We keep it for your next order.' : 'We give it back to you.'}`)}`;
   return (

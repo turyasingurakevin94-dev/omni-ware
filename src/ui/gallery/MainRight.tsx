@@ -56,10 +56,10 @@ export function Column3(): JSX.Element {
         </div>
       </Part>
       <Part k="P20 · What Kato gets" meta="#0552 at 10:41 · OR07">
-        <CheckList title="What Kato gets" bar={['#0F6B43', '#F5B26B']} summary="1 of 2 packed" lines={[
-          { aisle: 'Roofing', name: 'Iron sheet G28 · 3m', qty: 40, unit: 'pc', amount: 1520000, mark: 'confirmed', at: '10:30', markLabel: 'Packed at 10:30' },
-          { aisle: 'Tools', name: 'Wheelbarrow, heavy duty', qty: 2, unit: 'pc', amount: 290000, mark: 'checking', word: 'packing', markLabel: 'Packing now' },
-          { aisle: 'Doors & locks', name: 'Soft close hinge · flat', qty: 10, unit: 'pair', note: 'not found', mark: 'dropped', markLabel: 'Not found' },
+        <CheckList head={{ title: 'What Kato gets', bar: ['#0F6B43', '#F5B26B'], summary: '1 of 2 packed' }} lines={[
+          { aisle: 'Roofing', name: 'Iron sheet G28 · 3m', qty: 40, unit: 'pc', amount: 1520000, mark: { k: 'ok', at: '10:30', label: 'Packed at 10:30' } },
+          { aisle: 'Tools', name: 'Wheelbarrow, heavy duty', qty: 2, unit: 'pc', amount: 290000, mark: { k: 'spin', word: 'packing', label: 'Packing now' } },
+          { aisle: 'Doors & locks', name: 'Soft close hinge · flat', qty: 10, unit: 'pair', note: 'not found', gone: true, mark: { k: 'no', label: 'Not found' } },
         ]} />
       </Part>
       <Part k="P27 + P28 · Notice and toast" meta="Undo is 44 px">

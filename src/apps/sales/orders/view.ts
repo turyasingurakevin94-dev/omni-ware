@@ -7,10 +7,10 @@ import { goodsTotal, lineTotal, orderOwes, orderTotal } from '../../../core/mone
 import { firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
-import type { Tile } from './local-Parts.tsx';
+import type { MoneyTile as Tile } from '../../../ui/MoneyTiles.tsx';
 import { twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
-import type { CHead, CLine, Mark } from './local-CheckList.tsx';
+import type { CheckHead as CHead, CheckLine as CLine, CheckMark as Mark } from '../../../ui/CheckList.tsx';
 
 const GREEN = '#0F6B43', AMBER = '#F5B26B';
 

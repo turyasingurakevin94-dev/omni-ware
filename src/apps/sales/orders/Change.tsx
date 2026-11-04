@@ -18,7 +18,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, now } from '../shell/store.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { byRole, faceOfMember, nameOf, openAsk, orderOf, shortItem, shortName } from './data.ts';
-import { StageDots } from './local-Track.tsx';
+import { StageDots } from '../../../ui/Track.tsx';
 import './sheets.css';
 
 const eyebrow = (b: Books, o: Order) => `Order ${orderNo(o.id)} · ${nameOf(b, o)}`;

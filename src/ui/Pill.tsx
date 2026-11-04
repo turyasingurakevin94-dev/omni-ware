@@ -81,10 +81,10 @@ export function ChipRow(p: { label: string; wrap?: boolean; children: ComponentC
 export type ActTone = 'warn' | 'good' | 'info' | 'bad';
 
 /** The act on a row: tone soft, tone ink, 13/700, the amount in mono ("Take 1.1M"). 32 tall, or 30 inside a 44 target (S09). */
-export function ActionPill(p: { tone: ActTone; word: string; amount?: Fig; h?: 30 | 32 }): JSX.Element {
+export function ActionPill(p: { tone: ActTone; word: string; amount?: Fig; h?: 30 | 32; duo?: string }): JSX.Element {
   return (
-    <span class={cx('ow-apill', 'a-' + p.tone)} style={p.h === 30 ? { height: '30px' } : undefined}>
-      {p.word}{p.amount != null && <span class="mono">{fig(p.amount)}</span>}
+    <span class={cx('ow-apill', 'a-' + p.tone, p.duo && 'ic')} style={p.h === 30 ? { height: '30px' } : undefined}>
+      {p.duo && <Duo i={p.duo} size={15} />}{p.word}{p.amount != null && <span class="mono">{fig(p.amount)}</span>}
     </span>
   );
 }

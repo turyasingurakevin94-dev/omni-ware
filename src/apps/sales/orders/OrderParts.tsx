@@ -11,6 +11,8 @@ import { clock, dayOf, replyWindow, weekday, when } from '../../../core/time.ts'
 import type { BillAsk, Books, Line, Order, Payment } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
+import { OrderPill } from '../../../ui/StageGroup.tsx';
+import { AskStep } from '../../../ui/Track.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now } from '../shell/store.ts';
 import { twinOf } from '../../../core/orders.ts';
@@ -146,10 +148,8 @@ export function AskTimeline(p: { b: Books; o: Order; ask: BillAsk }): JSX.Elemen
     <div class="or-asks">
       <div class="or-asks-h"><span>Return asked<span class="or-wait">Waiting</span></span>
         <button type="button" class="or-undo" onClick={undo} disabled={busy}><span><Icon name="undo" size={14} stroke={2.4} />{busy ? 'Sending…' : 'Undo ask'}</span></button></div>
-      <div class="or-step"><span aria-hidden="true" class="or-step-ok"><Icon name="check" size={13} stroke={3} /></span><span aria-hidden="true" class="or-step-line" />
-        <span class="or-step-t"><span>You asked</span><span>{`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`}</span></span></div>
-      <div class="or-step"><span aria-hidden="true" class="or-step-face">{ruth && <Avatar {...faceOfMember(ruth)} size={28} font={11} style={{ boxShadow: '0 0 0 2px #F5B26B', letterSpacing: '-.04em' }} />}</span>
-        <span class="or-step-t warn"><span>{`${rn} checks it`}</span><span>{`then the credit note, ${ask.amount.toLocaleString('en-US')}`}</span></span></div>
+      <AskStep mark="ok" title="You asked" sub={`${what} · ${ask.reason.toLowerCase()} · ${when(ask.at, now.value)}`} line />
+      <AskStep mark={ruth ? faceOfMember(ruth) : 'to'} title={`${rn} checks it`} sub={`then the credit note, ${ask.amount.toLocaleString('en-US')}`} tone="warn" />
     </div>
   );
 }
@@ -183,7 +183,7 @@ export function TwinCard(p: { b: Books; o: Order }): JSX.Element | null {
     <div class={'or-twr' + (copy ? ' copy' : '')}>
       <span><b class="mono">{orderNo(x.id)}</b><span>{`Invoice · ${x.invoicedAt ? `${weekday(x.invoicedAt)} ${clock(x.invoicedAt)}` : ''}${copy ? ' · the copy' : ''}`}</span></span>
       {x.voided ? <s class="mono">{orderTotal(x).toLocaleString('en-US')}</s> : <span class="mono">{orderTotal(x).toLocaleString('en-US')}</span>}
-      {x.voided ? <span class="or-crow-p bad">Void</span> : x.paid >= orderTotal(x) ? <span class="or-crow-p good"><Icon name="check" size={11} stroke={3.2} />Paid</span> : <span class="or-crow-p warn">Owes</span>}
+      {x.voided ? <OrderPill tone="bad">Void</OrderPill> : x.paid >= orderTotal(x) ? <OrderPill tone="good" tick>Paid</OrderPill> : <OrderPill tone="warn">Owes</OrderPill>}
     </div>
   );
   return (

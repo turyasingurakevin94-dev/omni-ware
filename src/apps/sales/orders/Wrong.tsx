@@ -20,7 +20,7 @@ import { openTwice, SendBtn, Who } from './Change.tsx';
 import { twinOf } from '../../../core/orders.ts';
 import { byRole, custOf, faceOfMember, nameOf, orderOf, shortName } from './data.ts';
 import { chatFor } from './msg.ts';
-import { StageDots } from './local-Track.tsx';
+import { StageDots } from '../../../ui/Track.tsx';
 import './sheets.css';
 
 const eyebrow = (b: Books, o: Order, word = 'Order') => `${word} ${orderNo(o.id)} · ${nameOf(b, o)}`;

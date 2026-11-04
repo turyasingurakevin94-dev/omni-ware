@@ -15,20 +15,21 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Checklist } from '../../../ui/Empty.tsx';
 import { Button } from '../../../ui/Button.tsx';
-import { Duo, Icon, phSearch, phWhatsapp, STAGE_ICON } from '../../../ui/icons.tsx';
+import { phWhatsapp, STAGE_ICON } from '../../../ui/icons.tsx';
 import { PageHead, StageBar } from '../../../ui/PageHead.tsx';
-import { ChipRow, FilterChip } from '../../../ui/Pill.tsx';
+import { ActionPill, ChipRow, FilterChip } from '../../../ui/Pill.tsx';
 import { GroupHead } from '../../../ui/SectionHead.tsx';
-import { STAGE_DOT } from '../../../ui/StageGroup.tsx';
+import { CustOrderRow, OrderRow, STAGE_DOT, ShowMore } from '../../../ui/StageGroup.tsx';
 import { GhostTiles } from '../../../ui/StageTiles.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { LIVE, doneThisWeek, faceOf, findOrders, liveOrders, nameOf, placedWhen, doneWhen, rowStatus, shortItem, shownRows, sortRows, stageCounts, takeFor, kept } from './data.ts';
-import { CustOrderRow, OrderRow, ShowMore } from './local-OrderRow.tsx';
 import { go, openOrder } from './links.ts';
 import { openTell } from './Tell.tsx';
+import { Search } from '../../../ui/Search.tsx';
+import './orders.css';
 
 type Filter = Stage | 'all';
 
@@ -120,14 +121,7 @@ function EmptyBar(): JSX.Element {
 
 /** The navy find field; once typed, its ring is white and a Clear button takes the words away (OR03). */
 function FindField(p: { value: string; onInput: (v: string) => void }): JSX.Element {
-  const on = !!p.value;
-  return (
-    <label class={'ow-search navy' + (on ? ' or-q' : '')}>
-      <Duo i={phSearch} size={19} color={on ? '#FFFFFF' : '#B3BCD2'} />
-      <input type="search" placeholder="Customer or #0552" aria-label="Find an order" value={p.value} onInput={(e) => p.onInput((e.target as HTMLInputElement).value)} />
-      {on && <button type="button" class="or-search-x" aria-label="Clear" onClick={() => p.onInput('')}><span><Icon name="close" size={15} stroke={2.4} /></span></button>}
-    </label>
-  );
+  return <Search tone="navy" placeholder="Customer or #0552" label="Find an order" value={p.value} onInput={p.onInput} onClear={() => p.onInput('')} />;
 }
 
 /** OR03 · what Find found: the customer with the one act, then their orders on the move and delivered. */
@@ -146,7 +140,7 @@ function Found(p: { b: Books; q: string; t: number; leave: Leave }): JSX.Element
           <span class="or-cust-t"><span>{c.name}</span><span><span class="mono">{r.orders.length}</span>{' orders · owes '}<span class="mono">{c.owes.toLocaleString('en-US')}</span></span></span>
           {c.owes > 0 && (
             <button type="button" class="or-cust-act" aria-label={`Take payment from ${c.name}, ${c.owes.toLocaleString('en-US')}`} onClick={p.leave(() => go('customers/pay', { customer: c.id }))}>
-              <span class="or-apill warn">Take <span class="mono">{short(c.owes)}</span></span>
+              <ActionPill tone="warn" word="Take" amount={short(c.owes)} h={30} />
             </button>
           )}
         </div>

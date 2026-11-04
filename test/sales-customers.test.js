@@ -292,7 +292,7 @@ async function flows(browser) {
   ({ ctx, p, errors } = await open(browser));
   await p.getByText('Orders', { exact: true }).last().click();
   await p.getByPlaceholder('Customer or #0552').fill('#0544');
-  await p.locator('button.or-crow:has-text("#0544")').click();
+  await p.locator('button.ow-corow:has-text("#0544")').click();
   await p.locator('.or-take').click();
   await p.waitForTimeout(400);
   k = await text(p);
