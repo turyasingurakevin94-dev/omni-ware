@@ -65,27 +65,27 @@ function Row(p: { v: ChatView }): JSX.Element {
 function Other(p: { c: Customer }): JSX.Element {
   const d = phone9(p.c.phone);
   return (
-    <Tap href={d ? `https://wa.me/256${d}` : undefined} class="ch-nc-row">
+    <a href={d ? `https://wa.me/256${d}` : undefined} target="_blank" rel="noopener" class="ch-nc-row">
       <Avatar initials={p.c.initials} tint={p.c.tint} size={40} />
       <span class="ch-nc-t"><span>{p.c.name}</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />no chat yet · opens WhatsApp</span></span>
       <span aria-hidden="true" class="ch-nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
-    </Tap>
+    </a>
   );
 }
 
 /** CH19 · a typed number that no chat has: message it from WhatsApp on this phone. */
 function Number_(p: { d: string; shown: string }): JSX.Element {
   return (
-    <Tap href={`https://wa.me/256${p.d}`} label={`Message ${p.shown} on WhatsApp`} class="ch-nc-row">
+    <a href={`https://wa.me/256${p.d}`} target="_blank" rel="noopener" aria-label={`Message ${p.shown} on WhatsApp`} class="ch-nc-row">
       <span aria-hidden="true" class="ch-nc-wa"><Duo i={phWhatsapp} size={22} color="#0F6B43" /></span>
       <span class="ch-nc-t"><span>Message this number</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />opens WhatsApp</span></span>
       <span aria-hidden="true" class="ch-nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
-    </Tap>
+    </a>
   );
 }
 
-function NewChatSheet(): JSX.Element {
-  const [q, setQ] = useState('');
+function NewChatSheet(p: { q?: string }): JSX.Element {
+  const [q, setQ] = useState(p.q || '');
   const b = books.value, cb = chats.value, t = now.value;
   if (!b || !cb) return <LightSheet title="New chat" onClose={sheet.close}><span /></LightSheet>;
   const views = cb.chats.filter((c) => c.ownerId === b.me.id && c.lastInAt && t - c.lastInAt < LATELY_MS).map((c) => chatView(b, cb, c, t, drafts.value));
@@ -125,9 +125,10 @@ function NewChatSheet(): JSX.Element {
 }
 
 /** chats/new: the Chats list with the New chat sheet over it; closing the sheet goes back. */
-export function NewChatScreen(_p: ScreenProps): JSX.Element {
+export function NewChatScreen(p: ScreenProps): JSX.Element {
+  const q = typeof p.params.q === 'string' ? p.params.q : '';
   useEffect(() => {
-    sheet.open(() => <NewChatSheet />, { label: 'New chat', top: 236, onClose: () => { if (!leaving) nav.back(); } });
+    sheet.open(() => <NewChatSheet q={q} />, { label: 'New chat', top: 236, onClose: () => { if (!leaving) nav.back(); } });
     return () => { leaving = true; if (sheet.isOpen) sheet.close(); leaving = false; };
   }, []);
   return <ChatsList params={{}} />;

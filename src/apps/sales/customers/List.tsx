@@ -29,6 +29,13 @@ import './list.css';
 
 export type Filter = 'owe' | 'due' | 'quiet' | 'all';
 
+/** What they typed carries into New customer: a number as the phone, anything else as the name. */
+function newFrom(q: string): Record<string, string> {
+  const t = q.trim();
+  if (!t) return {};
+  return /^[+\d\s()-]+$/.test(t) && t.replace(/\D/g, '').length >= 9 ? { phone: t } : { name: t };
+}
+
 export function ListScreen(p: ScreenProps): JSX.Element {
   const [filter, setFilter] = useState<Filter>((p.params.filter as Filter) || 'owe');
   const [q, setQ] = useState(String(p.params.q || ''));
@@ -44,7 +51,7 @@ export function ListScreen(p: ScreenProps): JSX.Element {
     return () => window.removeEventListener('scroll', on);
   }, []);
 
-  const go = { onShare: () => { if (b) void shareList(b).then((w) => w && toast.show(w)); }, onNew: () => nav.push('customers/new', q.trim() ? { name: q.trim() } : {}) };
+  const go = { onShare: () => { if (b) void shareList(b).then((w) => w && toast.show(w)); }, onNew: () => nav.push('customers/new', newFrom(q)) };
   const findTop = () => { window.scrollTo(0, 0); setFilter('owe'); setTimeout(() => { const el = document.querySelector<HTMLInputElement>('input[aria-label="Find a customer"]'); if (el) el.focus(); }, 0); };
 
   if (!b) {

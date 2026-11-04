@@ -8,6 +8,7 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
+import { aisleItems, timesSold } from '../../../core/aisles.ts';
 import type { Books, Item } from '../../../core/types.ts';
 import { avatarStyle } from '../../../ui/Avatar.tsx';
 import { AisleIcon, Duo, Icon, phAgain, phFlame, phSearch, phSparkle } from '../../../ui/icons.tsx';
@@ -31,8 +32,7 @@ export function kindOf(name: string): string {
 
 /** Cards: an item and its other sizes of sale under one name, most sold first. */
 function cardsOf(b: Books, items: Item[]): Card[] {
-  const sold = new Map<string, number>();
-  b.orders.forEach((o) => { if (!o.voided && !o.cancelled) o.lines.forEach((l) => sold.set(l.itemId, (sold.get(l.itemId) || 0) + 1)); });
+  const sold = timesSold(b);
   const by = new Map<string, Item[]>();
   items.forEach((it) => { const k = it.name.split(' · ')[0]; by.set(k, [...(by.get(k) || []), it]); });
   return [...by].map(([name, its]) => {
@@ -44,7 +44,7 @@ function cardsOf(b: Books, items: Item[]): Card[] {
 export function AisleScreen(p: ScreenProps): JSX.Element | null {
   const b = books.value, x = cur.value, aisle = String(p.params.aisle || ''), shelf = String(p.params.group || '');
   const shelfMode = !aisle && !!shelf;
-  const all = b ? b.items.filter((i) => (shelfMode ? true : i.aisle === aisle)) : [];
+  const all = b ? (shelfMode ? b.items : aisleItems(b, aisle)) : [];
   // Its kinds, most sold first, then the biggest.
   const kinds = [...new Set(all.map((i) => kindOf(i.name)))].map((k) => { const cs = cardsOf(b as Books, all.filter((i) => kindOf(i.name) === k)); return { k, n: cs.length, sold: cs.reduce((t, c) => t + c.sold, 0) }; })
     .sort((m, n) => n.sold - m.sold || n.n - m.n);

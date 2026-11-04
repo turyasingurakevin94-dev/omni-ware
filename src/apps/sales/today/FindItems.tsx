@@ -1,6 +1,7 @@
 /*
  * Find, when the words are an item (TD13) or nothing at all (TD14).
  */
+import { nearAisles } from '../../../core/aisles.ts';
 import { oftenWith as often } from '../../../core/often.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -12,7 +13,6 @@ import { Duo, Icon, phLink, phSearch } from '../../../ui/icons.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { drafts } from '../shell/store.ts';
 import { openAsk } from './AskNew.tsx';
-import { shopAisles } from './data.ts';
 import { Marked, shelf, unitWord } from './Find.tsx';
 import { go, itemsParam } from './go.ts';
 
@@ -100,19 +100,6 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
       <AskCard b={b} title={`Not the ${word} they want?`} name={p.q.trim()} />
     </>
   );
-}
-
-/**
- * The aisles closest to what was searched: the closest items' own aisle first, then the aisles bought with
- * them most often in the shop's orders, then the shop's aisles as shopAisles orders them (TD14: Tools, Cement, Roofing … for a wheelbarrow).
- */
-export function nearAisles(b: Books, close: Item[], now: Ms): { name: string; count: number }[] {
-  const all = shopAisles(b, now), ids = new Set(close.map((i) => i.id)), own = close[0] ? close[0].aisle : null, by = new Map<string, number>();
-  b.orders.filter((o) => !o.voided && !o.qa && o.lines.some((l) => ids.has(l.itemId))).forEach((o) => {
-    new Set(o.lines.filter((l) => !ids.has(l.itemId)).map((l) => (b.items.find((i) => i.id === l.itemId) || { aisle: '' }).aisle)).forEach((a) => { if (a) by.set(a, (by.get(a) || 0) + 1); });
-  });
-  const rank = (a: string) => (a === own ? -1e9 : -(by.get(a) || 0));
-  return all.slice().sort((x, y) => rank(x.name) - rank(y.name) || all.indexOf(x) - all.indexOf(y));
 }
 
 /** Edit distance, for "Did you mean". */

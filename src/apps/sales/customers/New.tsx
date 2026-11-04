@@ -42,7 +42,9 @@ function NewSheet(p: { params: ScreenProps['params'] }): JSX.Element {
   const fromChat = p.params.chat != null ? (cb ? cb.chats.find((c) => c.id === Number(p.params.chat)) : null) : null;
   // The newest chat from a number nobody has saved yet: offered to fill from (CU20).
   const unknown = cb ? cb.chats.filter((c) => !c.customerId && c.lastInAt && (!c.ownerId || c.ownerId === me.id)).sort((x, y) => (y.lastInAt || 0) - (x.lastInAt || 0))[0] || null : null;
-  const chat = fromChat || unknown;
+  // The chat it was opened from wins; else the newest unknown chat, but only when no number came in or it is that chat's.
+  const asked = nine(String(p.params.phone || ''));
+  const chat = fromChat || (unknown && (!asked || nine(unknown.phone) === asked) ? unknown : null);
   const [name, setName] = useState(String(p.params.name || (fromChat ? fromChat.profileName : '') || ''));
   const [phone, setPhone] = useState(nine(String(p.params.phone || (fromChat ? fromChat.phone : '') || '')));
   const [place, setPlace] = useState('');

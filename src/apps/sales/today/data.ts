@@ -9,10 +9,11 @@
  *   needs(…)         Needs you, by kind (P08)
  *   moves(…)         Next move: one per customer, the best value first (P09)
  */
+import { soldByAisle } from '../../../core/aisles.ts';
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
 import { daysInStage, LATE_DAYS } from '../../../core/orders.ts';
-import { HOLD_DAYS, holdDay, lineTotal, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
+import { HOLD_DAYS, holdDay, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
 import type { Books, ChatBooks, Customer, Day, Ms, Order, PayPromise, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
@@ -236,16 +237,6 @@ export function moneyInToday(b: Books, now: Ms) {
 /** The month before ("2026-10" → "2026-09"). */
 const monthBefore = (m: string): string => { const [y, mo] = m.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
 
-/** Money sold in a month by aisle, the whole shop's (every seller and the counter; invoiced, up to now). */
-function soldByAisle(b: Books, month: string, now: Ms): Map<string, number> {
-  const by = new Map<string, number>();
-  b.orders.filter((o) => counted(o) && o.invoiced && o.invoicedAt != null && o.invoicedAt <= now && dayOf(o.invoicedAt).startsWith(month)).forEach((o) => o.lines.forEach((l) => {
-    const it = b.items.find((i) => i.id === l.itemId);
-    if (it && it.aisle) by.set(it.aisle, (by.get(it.aisle) || 0) + lineTotal(l));
-  }));
-  return by;
-}
-
 /**
  * Sells most: the aisles with the most money sold this month so far, the most first. On a month's first day,
  * with nothing sold yet, last month's, and it says so (TD06 "the shop, last month"; TD11 "this month").
@@ -255,15 +246,6 @@ export function sellsMost(b: Books, now: Ms, n = 3): { aisles: string[]; when: '
   let by = soldByAisle(b, month, now), when: 'this month' | 'last month' = 'this month';
   if (!by.size) { by = soldByAisle(b, monthBefore(month), now); when = 'last month'; }
   return { aisles: [...by].sort((x, y) => y[1] - x[1]).slice(0, n).map(([a]) => a), when };
-}
-
-/**
- * The shop's aisles with how many products each holds (Books.aisles), the ones selling most this month first,
- * then the most products (TD14 "Or open an aisle").
- */
-export function shopAisles(b: Books, now: Ms): { name: string; count: number }[] {
-  const by = soldByAisle(b, dayOf(now).slice(0, 7), now);
-  return b.aisles.slice().sort((x, y) => (by.get(y.name) || 0) - (by.get(x.name) || 0) || y.count - x.count);
 }
 
 /**
