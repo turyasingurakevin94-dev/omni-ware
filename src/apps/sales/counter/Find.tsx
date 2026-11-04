@@ -95,7 +95,7 @@ function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => v
 export function AisleList(p: { name: string; items: Item[]; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
   return (
     <>
-      <div class="kc-aisles-h">{p.name}<span class="kc-per">{` · ${p.items.length} item${p.items.length === 1 ? '' : 's'}`}</span></div>
+      <div class="kc-aisles-h">{p.name}<span class="mono kc-per">{` · ${p.items.length} item${p.items.length === 1 ? '' : 's'}`}</span></div>
       {!!p.items.length && <div class="kc-more">{p.items.map((it) => <MoreRow key={it.id} it={it} qty={1} onAdd={p.onAdd} onOrderIn={p.onOrderIn} />)}</div>}
     </>
   );
