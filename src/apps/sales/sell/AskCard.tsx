@@ -106,7 +106,7 @@ export function AskCard(p: { b: Books; c: Customer | null; ask: SourcingAsk | nu
       <div class="sl-stock-h"><span aria-hidden="true"><Duo i={phSearch} size={22} color="#6FDCB0" /></span><span><span>{title}</span><span>{`${ask.name} · ${next}`}</span></span></div>
       <Steps at={at} label={`${STAGES.slice(0, at + 1).map(([, w]) => w).join(', ')}; ${next}`} />
       <div class="sl-ask-who">
-        {faces.length > 0 && <span aria-hidden="true" class="sl-ask-faces">{faces.map((y) => <span key={y.id} class="ow-av" style={avatarStyle({ initials: y.initials, tint: y.tint, size: 24, font: 10 })}>{y.initials}</span>)}</span>}
+        {faces.length > 0 && <span aria-hidden="true" class="sl-ask-faces">{faces.map((y) => <span key={y.id} class="ow-av" style={avatarStyle({ initials: y.initials, tint: y.tint, size: 24, font: 11 })}>{y.initials}</span>)}</span>}
         {`${names.join(' and ')} asked for `}<b class="mono">{asked}</b>
       </div>
       {sent

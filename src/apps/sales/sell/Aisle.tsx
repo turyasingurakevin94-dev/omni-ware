@@ -24,11 +24,19 @@ import { ShelfCard, type Card } from './ShelfCard.tsx';
 import { LastOrder } from './Start.tsx';
 import './aisle.css';
 
-/** An item's kind: the plural word in its name ("Wire nails 4"" → Nails), else its first word. */
+/**
+ * An item's kind: the plural word in its name ("Wire nails 4"" → Nails), else its first word ("Wheelbarrow,
+ * heavy duty" → Wheelbarrow). Only letters count (no comma, size or number), a word in -ss is not a plural
+ * ("Padlock brass"), and an acronym keeps its capitals (PVC, PPR).
+ */
 export function kindOf(name: string): string {
-  const w = name.split(' · ')[0].split(/\s+/), k = w.find((x) => /^[a-z]{4,}s$/i.test(x)) || w[0];
-  return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
+  const w = name.split(' · ')[0].split(/\s+/).map((x) => x.replace(/[^A-Za-z-]/g, '').replace(/^-+|-+$/g, '')).filter((x) => /[A-Za-z]{2,}/.test(x));
+  const k = w.find((x) => /^[a-z]{4,}s$/i.test(x) && !/ss$/i.test(x)) || w[0] || name.trim();
+  return isAcronym(k) ? k : k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
 }
+const isAcronym = (k: string) => /^[A-Z]{2,4}$/.test(k);
+/** The kind in a sentence ("12 nails · most sold first", "3 PVC"). */
+const kindWord = (k: string) => (isAcronym(k) ? k : k.toLowerCase());
 
 /** Cards: an item and its other sizes of sale under one name, most sold first. */
 function cardsOf(b: Books, items: Item[]): Card[] {
@@ -57,7 +65,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
     : all.filter((i) => !kind || kindOf(i.name) === kind);
   if (q.trim()) pool = all.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase()));
   const cards = cardsOf(b, pool).slice(0, shelf === 'most' ? 20 : undefined), shown = more ? cards : cards.slice(0, 4);
-  const s = sums.value, n = x.lines.length, word = (kind || 'items').toLowerCase();
+  const s = sums.value, n = x.lines.length, word = kind ? kindWord(kind) : 'items';
   // A shelf from Browse the shop (SL33): its own name and icon, as on its chip in SL11.
   const shelfName = shelf === 'usual' && c ? `${whose(c.name)} usual` : shelf === 'new' ? 'New' : 'Most sold';
   const shelfIcon = shelf === 'usual' ? phAgain : shelf === 'new' ? phSparkle : phFlame;
