@@ -77,8 +77,12 @@ The six tabs' extras ran on one page for the first time. What was reconciled, an
   1/5). Kato's usual (cement every order, sheets 5 of 7, nails 3 of 7) still holds.
 - **Usuals are counted from the orders** (`core/customers.ts` `usualOf`, applied by both DataSources), never stored in
   `customers.ts`. So Kato's last 7 bills are re-lined at their totals to give FACTS' usual: Cement in all 7 (#0490 40,
-  #0498 4, #0511 8, #0531 1, #0529 40, #0544 1, #0545 4), Iron sheet G28 in 5 (#0490 30, #0498 30, #0511 11, #0529 29,
-  #0545 19), Wire nails 25kg in 3 (#0490, #0531, #0545, 2 each); no other item in 3. Kyaligonza gets three earlier
+  #0498 4, #0511 8, #0531 2, #0529 40, #0544 1, #0545 4), Iron sheet G28 in 5 (#0490 30, #0498 30, #0511 11, #0529 8,
+  #0545 19), Wire nails 25kg in 3 (#0490 2, #0531 1, #0545 2); no other item in 3. #0529 also carries what a wheelbarrow
+  went with (emulsion, PVC, concrete nails: TD14's aisles, SL12's most-sold nails) and #0531 the 1kg nails, not PVC
+  (SL31's "You sell most"). "Often with Cement in Kato's orders" (SL10, SL34) is Iron sheet G28 5/7, Wire nails 25kg
+  3/7, Ridge cap 2/7, the chips Roofing · Cement · Fasteners · Adhesives · Paint; KC26 and KC28's aisles Plumbing ·
+  Fasteners · Cement: all four boards corrected. Kyaligonza gets three earlier
   bills of the usual (#0488, #0494, #0505, Jun-Aug, paid), and #0535 is re-lined without nails. "Often with Iron
   sheet G28 in Kato's orders" is now Ridge cap 3/7, Wire nails 2/7, Wheelbarrow 2/7 (SL05; CH21 Ridge cap 3 of 7,
   Wheelbarrow 2 of 7): both boards corrected.
