@@ -99,7 +99,7 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
   const word = shortItem(l.name).toLowerCase();
   const total = orderTotal(o);
   const text = `Hello ${who}, ${word} is now ${sayMoney(rv.price)} a ${l.unit}, not ${sayMoney(rv.was || 0)}. Order #${String(o.id).padStart(4, '0')} is now ${sayMoney(total)}.`;
-  const chat = chatFor(b, o, chats.value), shut = !chat || !replyWindow(chat.lastInAt, now.value).open;
+  const chat = chatFor(b, o, chats.value), win = chat ? replyWindow(chat.lastInAt, now.value) : null, shut = !win || !win.open;
   const p9 = phone9(custOf(b, o)?.phone || o.client.phone), sms = `sms:${p9 ? '+256' + p9 : ''}?body=${encodeURIComponent(text)}`;
   const told = async () => {
     setBusy('told');
@@ -120,7 +120,12 @@ export function PriceTell(p: { b: Books; o: Order; l: Line }): JSX.Element {
       <div class="or-ptell-b">
         <button type="button" class="or-btn-w" onClick={told} disabled={!!busy}><Icon name="check" size={18} stroke={2.6} />{busy === 'told' ? 'Sending…' : 'Told them'}</button>
         {shut
-          ? <a href={sms} class="or-btn-n" onClick={() => { void act('markPriceTold', o.id); }}><Icon name="message" size={18} stroke={2} />Send as SMS</a>
+          ? (
+            <a href={sms} class="or-btn-n or-ptell-sms" aria-label={`Send as SMS: the chat is shut${win ? `, ${win.daysShut} days` : ''}`} onClick={() => { void act('markPriceTold', o.id); }}>
+              <span><Icon name="message" size={18} stroke={2} />Send as SMS</span>
+              {win && <span><Icon name="lock" size={11} stroke={2.4} />{'chat shut · '}<span class="mono">{`${win.daysShut} days`}</span></span>}
+            </a>
+          )
           : <button type="button" class="or-btn-g" onClick={send} disabled={!!busy}><Duo i={phWhatsapp} size={20} />{busy === 'send' ? 'Sending…' : 'Send on WhatsApp'}</button>}
       </div>
     </div>
