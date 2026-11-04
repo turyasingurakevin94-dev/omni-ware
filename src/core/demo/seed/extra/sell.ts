@@ -133,10 +133,14 @@ function lines(s: DemoState, f: DemoFlags): void {
   // Cement, Fasteners, Plumbing and Tools.
   b.orders.filter((o) => o.id >= 300 && o.id < 332).forEach((o) => {
     const i = o.id - 300;
-    const two = i < 2 ? [shelfL('pvc-half-6m', 2), shelfL('nails-3', 5)]
-      : i < 8 ? [shelfL('pvc-half-6m', 2), shelfL('wheelbarrow-tyre-16', 1)]
-        : i < 20 ? [shelfL('iron-g28-3m', 4 + (i % 5))]
-          : [shelfL('nails-4-1kg', 5 + (i % 4)), i % 2 ? shelfL('pvc-half-6m', 1) : shelfL('wheelbarrow-tyre-16', 1)];
+    // A wheelbarrow tyre goes with cement only, never beside plumbing or fasteners, so what is bought
+    // with a wheelbarrow stays as TD14 draws it (Tools · Cement · Roofing / Fasteners · Plumbing · Paint).
+    // Grace's last 30 days sell Cement, then the G28 sheets, then the 1kg nails (SL31); her five aisles are
+    // Roofing, Cement, Fasteners, Plumbing and Tools (SL03, SL31; core/aisles.ts); Wire nails 3" sells
+    // before Concrete nails 2" (SL12's cards).
+    const two = i < 9 ? [shelfL('wheelbarrow-tyre-16', 1)]
+      : i < 20 ? [shelfL('iron-g28-3m', 4 + (i % 5)), ...(i < 12 ? [shelfL('nails-4-1kg', 5)] : []), ...(i < 11 ? [shelfL('nails-3', 5)] : [])]
+        : [shelfL('nails-4-1kg', 5 + (i % 4)), shelfL('pvc-half-6m', 1), ...(i === 31 ? [shelfL('iron-g28-3m', 4)] : [])];
     reline(s, o.id, [shelfL('cement-hima-50', 4 + (i % 5)), ...two]);
   });
 }

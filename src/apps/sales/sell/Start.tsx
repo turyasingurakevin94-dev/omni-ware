@@ -16,9 +16,8 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { UsualCard } from '../../../ui/UsualCard.tsx';
 import { nav } from '../shell/nav.ts';
-import { chats, me, now } from '../shell/store.ts';
+import { me, now } from '../shell/store.ts';
 import { aisleMarks, aisles, dayWord, first, item, itemKey, lastOrder, sellMost, whose } from './insights.ts';
-import { readAsk } from '../../../core/find.ts';
 import { add, cur, itemOf } from './model.ts';
 import { openAisle, openAisles } from './sheets.tsx';
 import './start.css';
@@ -40,16 +39,11 @@ export function usualInto(b: Books, customerId: string): void {
   if (c) c.usual.forEach((u) => { const it = itemOf(b, u.itemId, u.variantIdx); if (it) add(it, u.qty); });
 }
 
-/** What they asked for on WhatsApp that Sourcing has listed since (SL30). */
+/** What they asked Sourcing for that is now listed (SL30: Mukono's 6 tins of roof paint, FACTS §6): their own requests on the lead. */
 function askedIn(b: Books, c: Customer): { it: Item; qty: number } | null {
-  const cb = chats.value;
-  if (!cb) return null;
-  const chat = cb.chats.find((x) => x.customerId === c.id);
-  if (!chat) return null;
-  const said = cb.recent.filter((m) => m.chatId === chat.id && m.dir === 'in' && m.kind === 'text');
-  for (const it of b.items.filter((i) => i.listedAt)) {
-    const m = said.find((x) => x.at <= (it.listedAt as number) && readAsk(x.body).words.some((w) => w.length > 3 && it.name.toLowerCase().includes(w.replace(/s$/, ''))));
-    if (m) return { it, qty: readAsk(m.body).qty || 1 };
+  for (const ask of b.asks.filter((a) => a.status === 'listed' && a.itemId)) {
+    const it = b.items.find((i) => i.id === ask.itemId), qty = ask.requests.filter((r) => r.customerId === c.id).reduce((n, r) => n + r.qty, 0);
+    if (it && qty > 0) return { it, qty };
   }
   return null;
 }
