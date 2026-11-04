@@ -49,11 +49,15 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   t.check(M.orderTotal(order(490)) === 2672000, '#0490 is the usual, 2,672,000');
   t.check([[545, 1240000], [437, 560000], [540, 380000], [539, 180000], [542, 169000]].every(([id, n]) => M.orderTotal(order(id)) === n), 'every re-lined order keeps its total');
 
-  /* ---- the search rule (core/items.ts; the lead's ruling, 4 Nov) ---- */
+  /* ---- the search rule (core/items.ts; the lead's rulings, 4 Nov) ---- */
   const IT = require(path.join(ROOT, 'src/core/items.ts'));
-  t.check(IT.findItems(b.items, 'paint').every((i) => /paint/i.test(i.name)) && IT.findItems(b.items, 'paint').length === 2, 'a name match wins: "paint" finds the items called paint, not the Paint aisle');
-  t.check(IT.findItems(b.items, 'plumbing').length > 0 && IT.findItems(b.items, 'plumbing').every((i) => i.aisle === 'Plumbing'), 'no name matches "plumbing": the aisle is listed');
-  t.check(b.items.filter((i) => i.aisle === 'Paint').every((i) => i.price != null), 'every item in the Paint aisle has a price');
+  const sold = { orders: b.orders, now };
+  const paint = IT.findItems(b.items, 'paint', sold).map((i) => i.id);
+  t.check(paint.join() === 'roof-paint-maroon-20,gloss-white-4,emulsion-cream-20', `"paint": the names first, then what sells in the Paint aisle, no fillers (got ${paint.join()})`);
+  const plumbing = IT.findItems(b.items, 'plumbing', sold);
+  t.check(plumbing.length > 0 && plumbing.every((i) => i.aisle === 'Plumbing' && !i.id.startsWith('g-')), `"plumbing": what has sold in Plumbing (got ${plumbing.map((i) => i.id).join()})`);
+  const filler = b.items.find((i) => i.aisle === 'Paint' && i.id.startsWith('g-'));
+  t.check(filler.price != null && IT.findItems(b.items, filler.name, sold).some((i) => i.id === filler.id), 'a filler that never sells is priced and still found by its own name');
 
   /* ---- Lubowa (SL04) ---- */
   const lw = I.oftenWith(b, LUBOWA, { itemId: 'iron-g28-3m', variantIdx: null }, new Set(['iron-g28-3m::']), GRACE);
