@@ -201,7 +201,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   }
   const last = p.customerId ? lastPaid(b, p.customerId, l.itemId, l.variantIdx) : null;
   return (
-    <div class="sl-open">
+    <div class={'sl-open' + (rest > 0 ? ' split' : '')}>
       <div class="sl-open-h"><Head l={l} b={b} /></div>
       {stepRow}
       {rest > 0 && split != null && <SplitPanel b={b} shelf={split} rest={rest} />}

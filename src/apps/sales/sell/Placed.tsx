@@ -64,7 +64,8 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
   if (!b || !o) return <main class="ow-moment sl-placed" aria-busy="true" />;
   const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) || null : null;
   const who = c ? first(c.name) : 'They', pic = pictures.value.get(o.id);
-  const n = o.lines.length, mode = o.deliverTo ? 'delivery' : 'pickup', unpaid = o.paid < orderTotal(o);
+  // A line split between our shelf and the Buyer (SL40) is one item.
+  const items = o.lines.filter((l, i) => o.lines.findIndex((y) => y.itemId === l.itemId && y.variantIdx === l.variantIdx) === i), n = items.length, mode = o.deliverTo ? 'delivery' : 'pickup', unpaid = o.paid < orderTotal(o);
   const allShelf = o.lines.every((l) => l.from === 'shelf');
   return (
     <div class="ow-moment sl-placed">
@@ -96,7 +97,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
       ) : (
         <div class="ow-moment-items">
           <span aria-hidden="true" class="ow-moment-sq">
-            {o.lines.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
+            {items.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
           </span>
           <span class="ow-moment-items-t"><span>{`${n} items · ${mode}`}</span>{unpaid && <span>Not paid yet</span>}</span>
           <span class="mono ow-moment-items-a">{fig(orderTotal(o))}</span>
