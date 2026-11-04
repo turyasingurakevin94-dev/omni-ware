@@ -14,7 +14,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `today/signed-elsewhere` | — | today | TD10 (the shell uses it) |
 | `chats` | `{ filter?: 'mine' \| 'waiting' \| 'new' \| 'team' }` | chats | CH01–CH07 |
 | `chats/chat` | `{ id }` (a conversation id; demo ids match FACTS) | chats | CH10–CH33 |
-| `chats/new` | — | chats | CH05 |
+| `chats/new` | `{ q? }` (`q`: what was typed in the Chats search, CH18's "Not here?") | chats | CH05, CH09, CH19 |
 | `sell` | `{ items?, aisle?, then?: 'ask' }`: `items` and `aisle` carry on to the order once the customer is picked (Today's "Put X on an order", "Or open an aisle", "Sells most"); `then: 'ask'` comes back to Ask Moses with the customer picked: `openAsk({ customerId })` (what was typed is kept) | sell | SL01 Who (the red +) |
 | `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items?, aisle?, draft? }`: `customer: ''` is a walk-in; `items` a JSON string of `[{ itemId, qty, price? }]` put in the order (Counter's "Order in", KC07/KC18; Today's "Start Kato's order with…", "Start their order" with the quantity chosen); `aisle` opens the order at that aisle (SL12; Today's "Sells most" / "Or open an aisle"); `draft` an order still open; `chat` the conversation it came from (Today's "Reply to Lubowa") (CH14's Start order sends `{ from: 'chat', chat, items }`, with no prices) | sell | SL03–SL27, SL30, SL31 |
 | `sell/aisle` | `{ aisle, group? }`, or a shelf `{ group: 'usual' \| 'new' \| 'most' }` | sell | SL12 |

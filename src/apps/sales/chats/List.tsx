@@ -16,7 +16,7 @@ import type { Books, Chat, ChatBooks, Message } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
-import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
+import { Duo, Icon, phSearch, phWhatsapp } from '../../../ui/icons.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
@@ -178,7 +178,15 @@ function SearchView(p: { b: Books; cb: ChatBooks; t: number; q: string; order: C
     <div class="ch-list">
       {!!named.length && <><GroupHead title="Chats" n={named.length} /><GroupCard>{named.map((r) => <MineRow key={r.v.chat.id} v={r.v} />)}</GroupCard></>}
       {!!hits.length && <><GroupHead title={`Said “${q}”`} n={hits.length} /><GroupCard>{hits.map((r) => <MineRow key={r.v.chat.id} v={r.v} hit={r.hit} />)}</GroupCard></>}
-      <Tap on={() => nav.push('chats/new')} class="ch-notfound">
+      {!rows.length && (
+        // CH18: nothing found, in TD14's mark; then the one way on.
+        <div class="ch-none">
+          <span aria-hidden="true"><Duo i={phSearch} size={40} color="#8A93A3" /><span>?</span></span>
+          <span>{`No chat has “${q}”`}</span>
+        </div>
+      )}
+      {/* New chat opens with what was typed already in its field. */}
+      <Tap on={() => nav.push('chats/new', { q })} class="ch-notfound">
         <span aria-hidden="true"><Icon name="pen" size={18} stroke={2} /></span>
         <span><span>Not here? Start a new chat</span><span>a customer, or a phone number</span></span>
         <span aria-hidden="true"><Icon name="chevron-right" size={16} stroke={2.2} /></span>

@@ -80,8 +80,8 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const { oftenWith } = require(path.join(ROOT, 'src/core/often.ts'));
   const ow = oftenWith(fb.orders, { itemId: 'iron-g28-3m', variantIdx: null }, { customerId: 'C001', me: 'u-grace', skip: new Set(['cement-hima-50', 'iron-g28-3m', 'nails-4-25kg']), n: 99 });
   const owTxt = ow.rows.map((r) => `${r.itemId}:${r.n}`).join(' ');
-  t.check(ow.theirs && ow.of === 5 && owTxt.startsWith('wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
-    `often with Kato's sheets (CH21, CH34): Wheelbarrow, heavy duty in 2 of 5, the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
+  t.check(ow.theirs && ow.of === 5 && owTxt.startsWith('ridge-g28:2 wheelbarrow-hd:2 ') && owTxt.includes('hinge-soft-flat:1'),
+    `often with Kato's sheets (CH21): Ridge cap G28 and Wheelbarrow, heavy duty, each in 2 of 5; the hinge with no price in 1 (got ${ow.of}: ${owTxt})`);
   const once = oftenWith(fb.orders, { itemId: 'cement-hima-50', variantIdx: null }, { customerId: 'C001', me: 'u-grace' });
   t.check(!once.theirs, 'often with: an item they had once is counted over my orders, not theirs (agent.html oftenWith)');
 
