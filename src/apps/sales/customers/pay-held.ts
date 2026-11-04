@@ -1,5 +1,6 @@
 /*
- * A live order held for the money, taken with the bills (SL30 "Take 1.1M": Mukono's #0532 and #0541, 780,000,
+ * A live order taken with the bills, or alone from its own screen (the Orders tab's Take payment, OR07 #0552),
+ * or held for the money (SL30 "Take 1.1M": Mukono's #0532 and #0541, 780,000,
  * plus #0551, 320,000, Not paid yet). ROUTES lets customers/pay's `bills` name such an order. Its money goes as
  * receive_payment takes an order before its invoice (spec 02 §6, { orderId }), the way the Orders tab's Take
  * payment on an order does; the bills go as before ({ customerId, picks }).
@@ -9,12 +10,15 @@ import { orderOwes } from '../../../core/money.ts';
 import type { OpenBill } from '../../../core/owing.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Customer } from '../../../core/types.ts';
-import { waitingOnMe } from './data.ts';
 
-/** The live orders the `bills` param names that wait on Sales for the money, as rows after the bills. */
+/**
+ * The live orders of theirs that customers/pay names (in `bills`, or as `order` from the Orders tab's Take
+ * payment), not invoiced yet and with money still to take, as rows after the bills.
+ */
 export function heldBills(b: Books, c: Customer | null, ids: number[] | null): OpenBill[] {
   if (!c || !ids) return [];
-  return waitingOnMe(b, c).filter((o) => ids.includes(o.id)).map((o) => ({
+  return b.orders.filter((o) => o.customerId === c.id && ids.includes(o.id) && !o.invoiced && !o.cancelled && !o.voided && !o.qa
+    && o.stage !== 'delivered' && orderOwes(o) > 0).map((o) => ({
     id: o.id, orderId: o.id, order: o, day: dayOf(o.placedAt), left: orderOwes(o), age: 0, past: false, checked: false, named: false,
   }));
 }

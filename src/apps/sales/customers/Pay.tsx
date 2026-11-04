@@ -46,7 +46,10 @@ export function PayScreen(p: ScreenProps): JSX.Element {
   const held = Number(p.params.hold);
   const pre: Pre | null = fixArgs ? { amount: fixArgs.amount, method: fixArgs.method, ref: fixArgs.ref || '' }
     : held > 0 ? { amount: held, method: (['cash', 'momo', 'bank'].includes(String(p.params.method)) ? p.params.method : 'cash') as Method, ref: String(p.params.ref || '') } : null;
-  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} fix={fix} pre={pre} />;
+  // From an order (the Orders tab's Take payment): that order's amount, and the write goes for that order: its
+  // bill once invoiced, else the order itself. The customer's other bills stay on the list, not ticked.
+  const bills = readBills(p.params.bills) || (c && o ? [o.id] : null);
+  return <Pay b={b} c={c} o={o} bills={bills} fix={fix} pre={pre} />;
 }
 
 /** What she was handed already: how much, how, and its ID or reference. */
@@ -140,7 +143,8 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       const writes = writesFor(args, held, split);
       let r = await act<PayResult>('receivePayment', writes[0]);
       for (const w of writes.slice(1)) r = await act<PayResult>('receivePayment', w);
-      const many = writes.length > 1;
+      // More than one write, or an order's own write (its answer is the order's, not their balance): figures are ours.
+      const many = writes.length > 1 || (!!c && writes.some((w) => w.orderId != null));
       const key = 'p' + now.value + '-' + Math.random().toString(36).slice(2, 6);
       const lines = r.kept || many ? rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied }))
         : r.value.payments.filter((x) => x.orderId != null).map((x) => ({ id: x.orderId as number, day: (open.find((z) => z.id === x.orderId) || { day: x.day }).day, amount: x.amount }));
