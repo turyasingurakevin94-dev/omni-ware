@@ -14,7 +14,8 @@ import { toast } from '../../../ui/toast.tsx';
 import { findItems } from '../../../core/items.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Item, SourcingAsk } from '../../../core/types.ts';
-import { act } from '../shell/store.ts';
+import { act, now } from '../shell/store.ts';
+import { shopAisles } from '../today/data.ts';
 import { sale, set } from './state.ts';
 import './findnone.css';
 
@@ -68,7 +69,7 @@ function Dots(p: { a: SourcingAsk }): JSX.Element {
   );
 }
 
-export function FindNone(p: { b: Books; words: string; qty: number; customer: string | null; who: string; onAdd: (it: Item) => void }): JSX.Element {
+export function FindNone(p: { b: Books; words: string; qty: number; customer: string | null; who: string; onAdd: (it: Item) => void; onAisle: (name: string) => void }): JSX.Element {
   const [busy, setBusy] = useState(false);
   const w = p.words.trim(), near = closest(p.b, w), lw = w.toLowerCase();
   // An ask Sourcing has open with these words: this walk-in's request is added to it.
@@ -141,6 +142,31 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
           </div>
         )}
         {foot}
+      </div>
+      {near.length < 2 && <OpenAisle b={p.b} near={near} onAisle={p.onAisle} />}
+    </>
+  );
+}
+
+/**
+ * "Or open an aisle" (TD14's tiles; KC26, KC28): the closest item's aisle first, then the shop's aisles in
+ * the shop's order (today/data.ts shopAisles over Books.aisles), three. Shown where one close item or none
+ * leaves the room (KC21's two close items fill it).
+ */
+function OpenAisle(p: { b: Books; near: Item[]; onAisle: (name: string) => void }): JSX.Element | null {
+  const all = shopAisles(p.b, now.value), own = p.near[0] ? all.find((a) => a.name === p.near[0].aisle) : undefined;
+  const tiles = [...(own ? [own] : []), ...all.filter((a) => a !== own)].slice(0, 3);
+  if (!tiles.length) return null;
+  return (
+    <>
+      <div class="kc-aisles-h">Or open an aisle</div>
+      <div class="kc-aisles">
+        {tiles.map((a) => (
+          <a key={a.name} href="#" class="kc-aisle" onClick={(e) => { e.preventDefault(); p.onAisle(a.name); }}>
+            <ItemSquare aisle={a.name} size={38} icon={22} />
+            <span><span>{a.name}</span><span class="mono">{`${a.count} items`}</span></span>
+          </a>
+        ))}
       </div>
     </>
   );

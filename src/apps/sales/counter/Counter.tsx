@@ -83,7 +83,7 @@ export function Counter(): JSX.Element {
   let body: JSX.Element;
   if (text.trim()) {
     const r = readQuery(text), found = findItems(b.items, r.words);
-    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} />
+    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} onAisle={(a) => { q.value = a; }} />
       : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);
