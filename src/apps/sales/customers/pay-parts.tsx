@@ -37,7 +37,7 @@ export function RefField(p: { label: string; value: string; placeholder: string;
   );
 }
 
-export interface PaysRow { id: number; day: string; age: number; left: number; applied: number; on: boolean }
+export interface PaysRow { id: number; day: string; age: number; left: number; applied: number; on: boolean; /** A live order held for the money, not a bill (SL30's #0551). */ order?: boolean }
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const dm = (day: string) => { const d = new Date(day + 'T00:00:00Z'); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`; };
@@ -56,7 +56,7 @@ export function PaysCard(p: { rows: PaysRow[]; pick: boolean; onToggle: (id: num
           <button key={r.id} type="button" role="checkbox" aria-checked={r.on} aria-label={`${billNo(r.id)}, ${money(r.left)}`} class="cu-pay-row" onClick={() => p.onToggle(r.id)}>
             <span aria-hidden="true" class={cx('cu-tick', r.on && 'on')}>{r.on && <Icon name="check" size={13} stroke={3.2} />}</span>
             <span class={cx('cu-pay-t', !r.on && 'off')}>
-              <span><span>{`${billNo(r.id)} `}<span>{`${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
+              <span><span>{`${billNo(r.id)} `}<span>{r.order ? 'the order · not paid yet' : `${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
               <span><span aria-hidden="true" class="cu-pay-bar"><span style={{ width: `${pct}%`, background: full ? '#0F6B43' : '#95530C' }} /></span><span class={'cu-tag ' + tag.c}>{tag.t}</span></span>
             </span>
           </button>

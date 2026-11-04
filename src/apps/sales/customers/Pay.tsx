@@ -28,6 +28,7 @@ import { AmountInput } from './local-amount.tsx';
 import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
 import { PayDock } from './pay-dock.tsx';
 import { paidResults, putPaid, sendReceipt, type Paid } from './paid-store.ts';
+import { heldBills, writesFor } from './pay-held.ts';
 import { shareFor, WalkinWho, whoOptions, whoPicked } from './pay-walkin.tsx';
 import './customers.css';
 import './pay.css';
@@ -54,7 +55,9 @@ interface Pre { amount: number; method: Method; ref: string }
 function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null; fix: { keptId: string; paidKey: string; args: PayArgs } | null; pre: Pre | null }): JSX.Element {
   const { b, c, o } = p, today = dayOf(now.value), esther = role(b, 'accounts');
   const m = c ? owingOf(b, c, today) : null;
-  const open: OpenBill[] = m ? m.bills.filter((x) => !x.checked) : [];
+  // The open bills, then any live order the bills param names that is held for the money (SL30's #0551).
+  const held = heldBills(b, c, p.bills);
+  const open: OpenBill[] = [...(m ? m.bills.filter((x) => !x.checked) : []), ...held];
   const owes = m ? m.owes : o ? orderOwes(o) : 0, take = m ? m.canTake : owes;
   const name = c ? short(c.name) : o ? o.client.name || 'Walk-in' : '';
   const initPicks = p.bills ? p.bills.filter((id) => open.some((x) => x.id === id)) : null;
@@ -86,12 +89,14 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const plan = payPlan(payable, handed);
   const choice = method !== 'cash' ? amount > payable : amount >= payable && handed > payable;
   // What goes to the debt (money.ts payPlan) and how it spreads over the bills (money.ts splitPayment, as receive_payment).
-  const applied = payPlan(payable, amount).toDebt, after = Math.max(0, owes - applied);
+  const applied = payPlan(payable, amount).toDebt;
   const settle = choice ? settleOver(payable, handed, how) : { moneyIn: applied, change: method === 'cash' ? Math.max(0, changeFor(amount, handed)) : 0, deposit: 0, refused: false };
   const split = splitPayment(open.map((x) => ({ id: x.id, left: x.left })), applied, picks);
+  // What they owe after it: a held order's money is not on their balance, so it does not lower it.
+  const heldIn = split.filter((x) => held.some((h) => h.id === x.id)).reduce((t, x) => t + x.applied, 0), after = Math.max(0, owes - (applied - heldIn));
   const rows: PaysRow[] = open.map((x) => {
     const on = !picks || picks.includes(x.id), hit = split.find((y) => y.id === x.id);
-    return { id: x.id, day: x.day, age: x.age, left: x.left, applied: hit ? hit.applied : 0, on };
+    return { id: x.id, day: x.day, age: x.age, left: x.left, applied: hit ? hit.applied : 0, on, order: held.includes(x) };
   });
 
   const toggle = (id: number) => {
@@ -131,15 +136,19 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
         return;
       }
       if (o && !c && whoC) await act('assignOrder', o.id, whoC.id);
-      const r = await act<PayResult>('receivePayment', args);
+      // One write, or the bills then each held order (pay-held.ts); the last answer stands for them all.
+      const writes = writesFor(args, held, split);
+      let r = await act<PayResult>('receivePayment', writes[0]);
+      for (const w of writes.slice(1)) r = await act<PayResult>('receivePayment', w);
+      const many = writes.length > 1;
       const key = 'p' + now.value + '-' + Math.random().toString(36).slice(2, 6);
-      const lines = r.kept ? rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied }))
+      const lines = r.kept || many ? rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied }))
         : r.value.payments.filter((x) => x.orderId != null).map((x) => ({ id: x.orderId as number, day: (open.find((z) => z.id === x.orderId) || { day: x.day }).day, amount: x.amount }));
       const who0 = c || whoC;
       const paid: Paid = {
         key, customerId: who0 ? who0.id : null, name: who0 ? who0.name : name, initials: who0 ? who0.initials : 'WI', tint: who0 ? who0.tint : 't4', phone: who0 ? who0.phone : o ? o.client.phone : '',
-        amount: r.kept ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
-        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
+        amount: r.kept || many ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
+        before: owes, after: Math.max(0, r.kept || many ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
         receipt: { state: receipt && c ? (r.kept ? 'waiting' : 'sending') : 'off', at: null, chatId: null },
       };
       putPaid(paid);

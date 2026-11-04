@@ -250,6 +250,25 @@ async function flows(browser) {
   t.check((await p.locator('input[aria-label="Phone number after +256"]').inputValue()).replace(/\D/g, '') === '772999111', 'new: the typed number is the phone');
   await ctx.close();
 
+  // SL30 / Today "Take 1.1M": Mukono's bills (780,000) and the live #0551 held for the money (320,000), in one payment.
+  ({ ctx, p, errors } = await open(browser));
+  await p.getByText('Today', { exact: true }).last().click().catch(() => {});
+  await p.locator(':is(a,button):has-text("Not paid yet")').first().click();
+  await p.waitForTimeout(400);
+  k = await text(p);
+  t.check(/#0551/.test(k) && /the order · not paid yet/.test(k) && /Slide to record 1,100,000/.test(k), 'held order: #0551 is offered with the bills, 1,100,000 in all');
+  await slide(p);
+  await p.waitForTimeout(500);
+  k = await text(p);
+  t.check(/Paid/.test(k) && /1,100,000/.test(k) && /#0551/.test(k) && /#0532/.test(k), 'held order: Paid 1,100,000, #0532 and #0551 on the slip');
+  await p.getByText('Back to Today').click();
+  await p.waitForTimeout(400);
+  t.check(!/#0551 · Not paid yet/.test(await text(p)), 'held order: #0551 is paid, so it no longer waits on Today');
+  await p.getByText('Customers', { exact: true }).last().click();
+  await p.waitForTimeout(300);
+  t.check(/3 owe/.test(await text(p)), 'held order: Mukono\'s bills are cleared (3 owe)');
+  await ctx.close();
+
   // Paid over by Mobile (CU41's path): 500,000 sent for 420,000 owed; they sent 500,000, 80,000 change.
   ({ ctx, p, errors } = await open(browser));
   await p.getByLabel('Take payment from Kato Construction').click();
