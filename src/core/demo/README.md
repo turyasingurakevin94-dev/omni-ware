@@ -27,6 +27,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&fail=pay` | The next payment finds no signal and is kept; before it goes again Brian takes 120,000 of Kato's #0544 (10:50), so the shop refuses the kept one as more than Kato owes | CU46, CU47 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 | `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
+| `&push=<kind>&<key>=<value>` | A tapped push: the app opens the push's page from the phone's copy, as a real tap does (the kind → route map is `src/apps/sales/shell/pushes.ts`; e.g. `&push=price.decided&orderId=552`) | — (`test/sales-push-open.test.js`) |
 
 Flags combine: `?demo&offline=1&clock=15:40`.
 
