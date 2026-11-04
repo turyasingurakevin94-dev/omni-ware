@@ -43,6 +43,7 @@ Two rules hold everything together:
 | TD02 | an afternoon "busy" what-if | its counts are its own; names, tints, prices and rhythms still follow this file |
 | TD06 | **a new salesperson's first day** (Sat 17 Oct, 8:00) | "Your first day" |
 | TD08 | **Thu 29 Oct** | goal hit |
+| CU46, CU47 | today **10:50**: Brian takes **120,000** of Kato's (#0544) while Grace's phone has no signal, so Kato owes **300,000**; Grace's kept 420,000 then comes back refused (and, in CU47, is thrown away) | a kept payment's life after now |
 | CH06, OR04, CU06, CU08, CH07 | empty and loading states | everything they do show follows this file |
 
 Every other board is at 10:41 today. No "now" board shows a clock time after 10:41. Any order placed at 10:41 (counter sale, Sell, CH22) takes the next number, **#0558**.
