@@ -11,7 +11,7 @@ import { backgroundCustomers, backgroundOrders } from './background.ts';
 import { chatEvents, chats, messages } from './chats.ts';
 import { NOW, TODAY } from './clock.ts';
 import { castCustomers } from './customers.ts';
-import { items } from './items.ts';
+import { AISLES, items } from './items.ts';
 import { billAsks, goal, payments, paymentAsks, promises, settings } from './money.ts';
 import { liveOrders } from './orders-live.ts';
 import { pastOrders } from './orders-past.ts';
@@ -37,6 +37,8 @@ export interface DemoState {
    * year; the demo seeds only the days the boards draw). By chat id, then member id.
    */
   servedBefore: Record<number, Record<string, number>>;
+  /** This phone gets Grace's pushes (push_subscriptions). */
+  push: boolean;
 }
 
 export function seed(f: DemoFlags): DemoState {
@@ -53,6 +55,8 @@ export function seed(f: DemoFlags): DemoState {
       customers: [...castCustomers(), ...backgroundCustomers()],
       orders: [...liveOrders(), ...pastOrders(), ...backgroundOrders()].sort((a, b) => a.id - b.id),
       items: items(),
+      // FACTS §6: the whole shop's aisles (the demo seeds only the items the boards name).
+      aisles: AISLES.map((a) => ({ ...a })).sort((x, y) => y.count - x.count),
       payments: payments(),
       promises: promises(),
       asks: sourcingAsks(),
@@ -66,6 +70,7 @@ export function seed(f: DemoFlags): DemoState {
     notes: [],
     events: chatEvents(),
     servedBefore: {},
+    push: true,
   };
   // &as=ruth: another member of the team is signed in on this phone (CH32).
   const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;

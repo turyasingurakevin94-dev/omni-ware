@@ -15,8 +15,8 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `chats` | `{ filter?: 'mine' \| 'waiting' \| 'new' \| 'team' }` | chats | CH01–CH07 |
 | `chats/chat` | `{ id }` (a conversation id; demo ids match FACTS) | chats | CH10–CH33 |
 | `chats/new` | — | chats | CH05 |
-| `sell` | — | sell | SL01 Who (the red +) |
-| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items? }` (`items`: a JSON string of `[{ itemId, qty, price? }]`; the Counter's Order in sends prices, CH14's Start order does not) | sell | SL03–SL27, SL30, SL31. Called by CH14's Start order with `{ from: 'chat', chat, items }` and by the Counter's Order in |
+| `sell` | `{ items?, aisle?, then?: 'ask' }`: `items` and `aisle` carry on to the order once the customer is picked (Today's "Put X on an order", "Or open an aisle", "Sells most"); `then: 'ask'` comes back to Ask Moses with the customer picked: `openAsk({ customerId })` (what was typed is kept) | sell | SL01 Who (the red +) |
+| `sell/order` | `{ customer?, from?: 'chat' \| 'usual' \| 'again', chat?, items?, aisle?, draft? }`: `customer: ''` is a walk-in; `items` a JSON string of `[{ itemId, qty, price? }]` put in the order (Counter's "Order in", KC07/KC18; Today's "Start Kato's order with…", "Start their order" with the quantity chosen); `aisle` opens the order at that aisle (SL12; Today's "Sells most" / "Or open an aisle"); `draft` an order still open; `chat` the conversation it came from (Today's "Reply to Lubowa") (CH14's Start order sends `{ from: 'chat', chat, items }`, with no prices) | sell | SL03–SL27, SL30, SL31 |
 | `sell/placed` | `{ id }` | sell | SL28, SL29 |
 | `counter` | — | counter | KC01 |
 | `counter/sold` | `{ id }` | counter | KC14–KC16 |
@@ -28,7 +28,7 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 | `customers` | `{ filter?: 'owe' \| 'due' \| 'quiet' \| 'all', q?, pick? }` (`pick`: an order id; the row tapped becomes who owes its rest, CU34) | customers | CU01–CU09 (CU09: the Quiet chip) |
 | `customers/customer` | `{ id }` | customers | CU10–CU17 (CU16: nothing owed; CU17: past the hold) |
 | `customers/new` | `{ phone?, name?, chat? }` (`chat`: the conversation it comes from, CH14) | customers | CU20–CU23 |
-| `customers/pay` | `{ customer, bills?: string }` (bills: order ids joined by commas, "544" or "531,544"), or `{ order }` for a walk-in's order before its invoice (CU34) | customers | CU37 (all, cash), CU30–CU36 |
+| `customers/pay` | `{ customer, bills?: string, then?: string }` (bills: order ids joined by commas, "544" or "531,544", never a bill Accounts is checking; it may name a live order held for the money, and `debt` for a charge that names no order, such as an opening balance), or `{ order }` for a walk-in's order before its invoice (CU34); `then`: the customer ids to take next, joined by commas: once paid, open `customers/pay` for the next (Today's Play all) | customers | CU37 (all, cash), CU30–CU36 |
 | `customers/paid` | `{ id }` | customers | CU40–CU45 (CU44: not sent yet, no signal; CU45: Try again, still no signal) |
 
 ## Rules
@@ -43,6 +43,9 @@ A screen in one tab opens a screen in another tab only through the ids below. Ea
 
 | Function | Owner | Boards |
 |---|---|---|
+| `openAsk({ name?, qty?, customerId?, chatId?, quote? })` | today | TD23, TD24 (Ask Moses for something we don't sell; a chat can pass what they said; after `sell { then: 'ask' }`, only `customerId`: what was typed comes back) |
+| `openTell(i)` | today | TD04 (the i-th thing to tell: a new price here, an item that came in opens `today/asks { id }`) |
+| _(add as built)_ | | |
 | `openTell(orderId)` | orders | OR10, OR11 (over the order on screen) |
 | `openChange(orderId)` | orders | OR17 → OR18; a live copy entered twice goes to OR19 |
 | `openTwice(orderId)` | orders | OR19 (live), OR23 (invoiced): either order of the pair; TD16's copy row |

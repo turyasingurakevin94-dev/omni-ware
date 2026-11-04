@@ -18,6 +18,9 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=signed-elsewhere` | The login under the screen is Musa's (Store): the shell shows the signed-elsewhere state | TD10 |
 | `&wa=off` | The shop's WhatsApp number is not connected: a receipt or statement cannot reach the customer | CU43 |
 | `&state=loading` | The books never arrive: the skeletons stay | CH07, CU08 |
+| `&state=busy` | Sat 17 Oct 14:20, a busy afternoon (its counts are its own, FACTS §1): 38 live, 212 done this week, 22 need Grace, 3 not placed yet | TD02 |
+| `&state=goal-hit` | Thu 29 Oct 9:10: 36,220,000 sold, the 35M goal passed Wed 28 Oct; 9 live, 1 needs her | TD08 |
+| `&state=test-record` | A TEST order of Grace's at 10:30 (TEST Claude QA, 50,000): kept, struck through, in no figure (0167) | TD25 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 | `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
@@ -38,7 +41,7 @@ Flags combine: `?demo&offline=1&clock=15:40`.
 | `chats.ts` | §2, §3.3-§3.4, §5: the chats, their messages (the boards' words), Brian taking Okot J. |
 | `money.ts` | §5: the cash book this month, promises, asks to Ruth and Esther, the goal, the shop's settings (Credit charge 3%) |
 | `asks.ts` | §6: the four asks of Sourcing |
-| `extra/<tab>.ts` | **each tab's own additions**, owned by that tab's builder |
+| `extra/<tab>.ts` | **each tab's own additions**, owned by that tab's builder. A row another tab may also add is guarded by its id (`if (!orders.some((o) => o.id === 559))`), so the seeds can run in any order |
 
 `test/sales-core-demo.test.js` checks that the figures the boards draw come out of the seed by the app's own rules: 12 live · +3,240,000, the four stage tiles, Sold · October 12,480,000, Placed today 8 · 2,440,500, Money in today 1,044,000, 38 customers, 4 owe 1,910,000, Who's due 3, Gone quiet 8, Chats waiting 3 · oldest 12 m, and the writes below. If a board needs a figure the seed does not give, add the rows in your tab's `extra/<tab>.ts` and a check in your own test; never change another tab's file.
 
