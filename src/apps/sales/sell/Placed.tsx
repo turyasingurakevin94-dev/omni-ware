@@ -8,7 +8,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { lineTotal, orderTotal } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
-import { orderNo } from '../../../core/names.ts';
+import { isGenericName, orderNo, phoneText } from '../../../core/names.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
@@ -16,7 +16,7 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { nav } from '../shell/nav.ts';
-import { books } from '../shell/store.ts';
+import { books, chats } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { first } from './insights.ts';
 import { itemOf } from './model.ts';
@@ -33,8 +33,20 @@ interface Step { icon: IconName; title: string; sub: string; now?: boolean; skip
 /** What the Buyer buys, as said: "the hinge" (its price still coming), "8 Iron sheet G26" (a count of it, SL40). */
 const bought = (l: Order['lines'][number]) => (l.price == null ? `the ${l.name.split(' · ')[0].split(' ').slice(-1)[0].toLowerCase()}` : `${l.qty} ${l.name.split(' · ')[0]}`);
 
+/**
+ * Who the words name: their first name; with no name, the number as the chat writes it ("0701 552 904", CH14);
+ * with neither, null, and the words say "them" / "They leave" (never a guessed "her" or "his").
+ */
+function whoOf(b: Books, o: Order, chatId: number | null): string | null {
+  const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) : null;
+  if (c) return first(c.name);
+  if (!isGenericName(o.client.name)) return first(o.client.name);
+  const chat = chatId != null && chats.value ? chats.value.chats.find((x) => x.id === chatId) : null;
+  return phoneText((chat && chat.phone) || o.client.phone) || null;
+}
+
 /** What happens next, from where it starts and what waits (spec 01: the five stages). */
-function steps(b: Books, o: Order, who: string): Step[] {
+function steps(b: Books, o: Order, who: string | null): Step[] {
   const coming = o.lines.some((l) => l.price == null), under = o.lines.some((l) => l.price != null && lineWaits(l));
   const buy = o.lines.filter((l) => l.from !== 'shelf');
   const m = manager(b), s = sourcing(b), d = buyer(b), st = store(b);
@@ -42,7 +54,7 @@ function steps(b: Books, o: Order, who: string): Step[] {
     return [
       { icon: 'checking', title: 'Checking', sub: 'skipped · all on our shelf', skipped: true },
       { icon: 'orders', title: 'Packing', sub: `now · ${st.first} packs it`, now: true },
-      ...(o.paid < orderTotal(o) ? [{ icon: 'cash' as IconName, title: 'Not paid yet', sub: `${who} leaves when paid · Take payment` }] : []),
+      ...(o.paid < orderTotal(o) ? [{ icon: 'cash' as IconName, title: 'Not paid yet', sub: `${who ? `${who} leaves` : 'They leave'} when paid · Take payment` }] : []),
     ];
   }
   const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit` : `${m.first} checks it`;
@@ -63,7 +75,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
   }, []);
   if (!b || !o) return <main class="ow-moment sl-placed" aria-busy="true" />;
   const c = o.customerId ? b.customers.find((x) => x.id === o.customerId) || null : null;
-  const who = c ? first(c.name) : 'They', pic = pictures.value.get(o.id);
+  const pic = pictures.value.get(o.id), who = whoOf(b, o, pic ? pic.chatId : null), to = who || 'them';
   // A line split between our shelf and the Buyer (SL40) is one item.
   const items = o.lines.filter((l, i) => o.lines.findIndex((y) => y.itemId === l.itemId && y.variantIdx === l.variantIdx) === i), n = items.length, mode = o.deliverTo ? 'delivery' : 'pickup', unpaid = o.paid < orderTotal(o);
   const allShelf = o.lines.every((l) => l.from === 'shelf');
@@ -79,8 +91,8 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
           <span class="mono ow-moment-who-r">{orderNo(o.id)}</span>
           <span class="ow-moment-who-go"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
         </button>
-        {pic && pic.state === 'sent' && <span class="ow-moment-note"><Duo i={phWhatsapp} size={16} color="#6FDCB0" />{`Picture sent to ${who}`}<Icon name="check" size={14} stroke={2.8} /></span>}
-        {pic && pic.state === 'sending' && <span class="ow-moment-note sl-pic-wait"><Duo i={phWhatsapp} size={16} color="#B3BCD2" />{`Sending the picture to ${who}`}<span aria-hidden="true" class="ow-spin sl-pic-spin" /></span>}
+        {pic && pic.state === 'sent' && <span class="ow-moment-note"><Duo i={phWhatsapp} size={16} color="#6FDCB0" />{`Picture sent to ${to}`}<Icon name="check" size={14} stroke={2.8} /></span>}
+        {pic && pic.state === 'sending' && <span class="ow-moment-note sl-pic-wait"><Duo i={phWhatsapp} size={16} color="#B3BCD2" />{`Sending the picture to ${to}`}<span aria-hidden="true" class="ow-spin sl-pic-spin" /></span>}
         {pic && pic.state === 'failed' && (
           <span class="sl-pic-fail"><Duo i={phWhatsapp} size={16} color="#F5B26B" />Picture not sent yet
             <button type="button" onClick={() => void sendPicture(o, pic.chatId)}><span>Try again</span></button></span>
