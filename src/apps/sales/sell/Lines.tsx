@@ -51,7 +51,7 @@ const noInch = (s: string) => s.replace(/"/g, ' inch');
 function Sub(p: { l: Line; it?: Item }): JSX.Element {
   const l = p.l, x = cur.value, rest = x ? restOf(x, l) : 0;
   if (l.price == null) return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{' · '}<span class="ow-word">Order in</span></span>;
-  return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${fig(l.price)}`}{rest > 0 && <span class="ow-word">{` · ${rest} order in`}</span>}</span>;
+  return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${fig(l.price)}${rest > 0 ? ' ' : ''}`}{rest > 0 && <span class="ow-word">{`· ${rest} order in`}</span>}</span>;
 }
 
 /** SL40 · part from our shelf, the rest ordered in: a split bar and who buys it. */
