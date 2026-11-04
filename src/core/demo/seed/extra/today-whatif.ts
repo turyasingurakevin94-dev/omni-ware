@@ -48,7 +48,10 @@ export function busy(s: DemoState, local: TodayLocal): void {
   const b = s.books;
   if (b.orders.some((o) => o.id === 2000)) return; // the afternoon is in already
   s.now = t('14:20'); b.at = s.now;
+  // Kyaligonza's #0530 stays, one of the 14 packing (since this morning here), so his rhythm is FACTS': last order Tue 29 Sep, 4 days late.
+  const k530 = b.orders.find((o) => o.id === 530);
   b.orders = b.orders.filter(notMyLive);
+  if (k530) { k530.stageAt = t('11:00'); k530.stageLog = k530.stageLog.map((x) => (x.stage === 'packing' ? { ...x, at: t('11:00') } : x)); b.orders.push(k530); }
   let k = 0;
   const bgLine = () => { const [item, qty] = CYCLE[k++ % CYCLE.length]; return [L(item, qty)]; };
   const add = (stage: Stage, rows: [number, string | null, Line[] | null, number?][]) => rows.forEach(([id, cid, lines, at_]) => {
@@ -59,7 +62,7 @@ export function busy(s: DemoState, local: TodayLocal): void {
   const bg = (from: number, to: number, base: number): [number, string, null][] => Array.from({ length: to - from + 1 }, (_x, i) => [to - i, bgId(base + i), null]);
   add('checking', [[611, KATO, katoPriced()], [610, MUKONO, null], ...bg(601, 609, 0)]);
   add('buying', [[621, MUKONO, null], [620, GGABA, null], ...bg(616, 619, 9)]);
-  add('packing', [[645, LUBOWA, null, d('2026-10-14', '9:00')], [644, KATO, katoPriced(), d('2026-10-15', '9:00')], ...bg(632, 643, 13)]);
+  add('packing', [[645, LUBOWA, null, d('2026-10-14', '9:00')], [644, KATO, katoPriced(), d('2026-10-15', '9:00')], ...bg(633, 643, 13)]);
   add('road', [[655, MUKONO, null, t('12:00')], [654, GGABA, null, t('12:10')], [653, bgId(25), null, t('12:30')], [652, KATO, katoPriced(), t('12:40')],
     [651, bgId(26), null, t('12:50')], [650, bgId(27), null, t('13:00')], [649, bgId(28), null, t('13:10')]]);
   b.orders.filter((o) => o.id === 645 || o.id === 644).forEach((o) => { o.placedAt = d('2026-10-14', '8:30'); });
@@ -95,7 +98,10 @@ export function goalHit(s: DemoState, local: TodayLocal): void {
   const b = s.books;
   if (b.orders.some((o) => o.id === 720)) return; // Thu 29 Oct is in already
   s.now = at('2026-10-29', '9:10'); b.at = s.now;
+  // Kyaligonza's #0530 stays, one of the 14 packing (since this morning here), so his rhythm is FACTS': last order Tue 29 Sep, 4 days late.
+  const k530 = b.orders.find((o) => o.id === 530);
   b.orders = b.orders.filter(notMyLive);
+  if (k530) { k530.stageAt = t('11:00'); k530.stageLog = k530.stageLog.map((x) => (x.stage === 'packing' ? { ...x, at: t('11:00') } : x)); b.orders.push(k530); }
   const pvc = (n: number) => [L('pvc-half-6m', n)];
   const day = (dd: string, hm: string) => at(`2026-10-${dd}`, hm);
   // 9 live: 2 checking · 1 buying · 4 packing · 2 on the road; +2,100,000.

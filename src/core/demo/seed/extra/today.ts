@@ -52,12 +52,14 @@ export function extra(s: DemoState, f: DemoFlags): void {
       .forEach(([id, day, amount]) => b.payments.push({ id, at: d(day, '16:30'), day, amount, method: 'cash', customerId: null, orderId: null, by: GRACE, ref: '', qa: false }));
   }
   // TD14 "Or open an aisle": what a wheelbarrow is bought with in the shop's orders. Six September counter sales
-  // with cement, one with PVC pipe (with the shop's other orders: Cement 6 · Roofing 5 · Fasteners 2 · Plumbing 2 · Paint, Adhesives, Doors & locks 1).
+  // with cement (the last of them with a kilo of 3" nails), one with PVC pipe (with the shop's other orders:
+  // Cement · Roofing 5 · Fasteners 2 · Plumbing 2 · Paint, Adhesives, Doors & locks 1; Fasteners before Plumbing
+  // on the tie, in the shop's order).
   if (!b.orders.some((o) => o.id === 450)) {
     for (let i = 0; i < 7; i++) {
       const at_ = d(`2026-09-${String(20 + i).padStart(2, '0')}`, '10:00');
       b.orders.push(O({ id: 450 + i, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true,
-        lines: [L('wheelbarrow-hd', 1), i < 6 ? L('cement-hima-50', 2) : L('pvc-half-6m', 2)], paid: -1 }));
+        lines: [L('wheelbarrow-hd', 1), i < 6 ? L('cement-hima-50', 2) : L('pvc-half-6m', 2), ...(i === 5 ? [L('nails-3', 1)] : [])], paid: -1 }));
     }
   }
   // TD06, TD11 "Sells most": the shop's counter sales of iron sheets, cement and nails, so that by money Roofing,
@@ -70,12 +72,13 @@ export function extra(s: DemoState, f: DemoFlags): void {
       b.orders.push(O({ id, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true, lines: [L(item, qty)], paid: -1 }));
     });
   }
-  // TD13 "Often with this hinge · in the shop's orders": 8 counter sales with the Zawaina hinge in September,
-  // 7 of them with wood screws, 4 with a door handle set.
+  // TD13 "Often with this hinge · in the shop's orders": 8 counter sales with the Zawaina hinge, 7 of them with
+  // wood screws, 4 with a door handle set. Today's #0516 (the counter seed's, KC14: cement and 5 hinges) is one of
+  // the 8, so September adds 7: each with wood screws, 4 with a door handle set.
   if (!b.orders.some((o) => o.id === 470)) {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 7; i++) {
       const at_ = d(`2026-09-${String(10 + i).padStart(2, '0')}`, '11:00');
-      const lines = [L('hinge-zawaina-4', 4), ...(i < 7 ? [L('wood-screws-1', 1)] : []), ...(i % 2 === 0 ? [L('door-handle-set', 1)] : [])];
+      const lines = [L('hinge-zawaina-4', 4), L('wood-screws-1', 1), ...(i % 2 === 0 ? [L('door-handle-set', 1)] : [])];
       b.orders.push(O({ id: 470 + i, customerId: null, by: COUNTER, placedAt: at_, stage: 'delivered', stageAt: at_, deliveredAt: at_, invoicedAt: at_, counter: true, lines, paid: -1 }));
     }
   }
