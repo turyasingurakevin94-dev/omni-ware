@@ -46,18 +46,25 @@ export function BillsHead(p: { title: string; hold?: string; note?: string }): J
 }
 
 /** "On the move 3 · 2,100,000": a tile per live order, the one packing lit. */
-export function OnTheMove(p: { orders: Order[]; onOrder: (id: number) => void }): JSX.Element {
+export function OnTheMove(p: { orders: Order[]; onOrder: (id: number) => void; copies?: number[]; onCopy?: (id: number) => void; late?: number[] }): JSX.Element {
   const sum = p.orders.reduce((s, o) => s + orderTotal(o), 0);
   return (
     <div class="cu-move">
       <span class="cu-move-h"><span>On the move <span class="mono">{p.orders.length}</span></span><b class="mono">{fig(sum)}</b></span>
       <div class="cu-move-tiles">
-        {p.orders.slice(0, 3).map((o) => (
-          <Tap key={o.id} on={() => p.onOrder(o.id)} label={`Order ${orderNo(o.id)}, ${STAGE_WORD[o.stage]}`} class={cx('cu-move-tile', o.stage === 'packing' && 'lit')}>
-            <span><Icon name={STAGE_ICON[o.stage]} size={14} stroke={2} /><b class="mono">{orderNo(o.id)}</b></span>
-            <span>{STAGE_WORD[o.stage]}</span>
-          </Tap>
-        ))}
+        {p.orders.slice(0, 3).map((o) => {
+          // The copy of an order entered twice opens Entered twice? (OR19); a late one says so, with the late dot.
+          const copy = !!p.copies && p.copies.includes(o.id), late = !!p.late && p.late.includes(o.id);
+          const word = copy ? `Copy · ${STAGE_WORD[o.stage]}` : late ? `${STAGE_WORD[o.stage]} · 2+ days` : STAGE_WORD[o.stage];
+          return (
+            <Tap key={o.id} on={() => (copy && p.onCopy ? p.onCopy(o.id) : p.onOrder(o.id))} label={`Order ${orderNo(o.id)}, ${copy ? 'the copy, ' : ''}${STAGE_WORD[o.stage]}${late ? ', 2+ days: late' : ''}`}
+              class={cx('cu-move-tile', o.stage === 'packing' && 'lit', late && 'late')}>
+              <span><Icon name={STAGE_ICON[o.stage]} size={14} stroke={2} /><b class="mono">{orderNo(o.id)}</b></span>
+              <span>{word}</span>
+              {late && <span aria-hidden="true" class="cu-move-dot" />}
+            </Tap>
+          );
+        })}
       </div>
     </div>
   );

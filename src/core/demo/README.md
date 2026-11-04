@@ -24,6 +24,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&wa=down` | The shop's WhatsApp does not answer: every send (a message, the order's picture) is refused | SL29 |
 | `&wa=slow` | The shop's WhatsApp answers slowly: a picture (`sendImage`) takes 10 s to go | SL35 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |
+| `&fail=pay` | The next payment finds no signal and is kept; before it goes again Brian takes 120,000 of Kato's #0544 (10:50), so the shop refuses the kept one as more than Kato owes | CU46, CU47 |
 | `&fail=sale` | The next counter sale is lost on its way, as when the signal drops mid-send; the one after goes through | KC19 |
 | `&listen=1` | The phone can listen: "Say it" in a chat starts listening and hears "Yes, it can come to the Ntinda site" (`HEARD` in `flags.ts`) until Stop. No tap can cause speech, so it is a flag | CH16 |
 

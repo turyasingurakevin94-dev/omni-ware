@@ -48,6 +48,8 @@ export class Outbox {
   private sender: Sender;
   private clock: () => Ms;
   private listeners = new Set<(list: Kept[]) => void>();
+  private sentFns = new Set<(id: string, value: unknown) => void>();
+  private refusedFns = new Set<(id: string, reason: string) => void>();
 
   constructor(store: OutboxStore, sender: Sender, clock: () => Ms = Date.now) {
     this.store = store;
@@ -64,6 +66,22 @@ export class Outbox {
   onChange(fn: (list: Kept[]) => void): () => void {
     this.listeners.add(fn);
     return () => { this.listeners.delete(fn); };
+  }
+
+  /**
+   * A kept write reached the server and was taken: its id and the server's answer. Told before the list
+   * changes, so a screen waiting on it knows it went before it sees it gone. Only this means "recorded";
+   * a write that leaves the list without it was discarded.
+   */
+  onSent(fn: (id: string, value: unknown) => void): () => void {
+    this.sentFns.add(fn);
+    return () => { this.sentFns.delete(fn); };
+  }
+
+  /** A kept write the server refused (Q5): its id and the server's reason. It stays, to fix or discard. */
+  onRefused(fn: (id: string, reason: string) => void): () => void {
+    this.refusedFns.add(fn);
+    return () => { this.refusedFns.delete(fn); };
   }
 
   /**
@@ -95,14 +113,16 @@ export class Outbox {
         if (k.state === 'refused') continue;
         k.state = 'sending'; k.tries += 1;
         try {
-          await this.sender(k.kind, k.args);
+          const value = await this.sender(k.kind, k.args);
           this.list = this.list.filter((x) => x.id !== k.id);
           sent += 1;
+          this.sentFns.forEach((fn) => fn(k.id, value));
         } catch (e) {
           if (isOffline(e)) { k.state = 'kept'; break; }
           k.state = 'refused';
           k.reason = String((e as Error)?.message || e);
           refused += 1;
+          this.refusedFns.forEach((fn) => fn(k.id, k.reason));
         }
         await this.persist();
       }
