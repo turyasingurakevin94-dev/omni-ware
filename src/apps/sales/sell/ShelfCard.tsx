@@ -43,7 +43,7 @@ export function ShelfCard(p: { card: Card; kind: string; line: Line | null; onAd
       {p.line && <span class="sl-card2-in"><Icon name="check" size={11} stroke={3.2} />In order</span>}
       <div class="sl-card2-b">
         <span class="sl-card2-n">{cd.name}</span>
-        <span class="sl-card2-p"><span class="mono">{fig(it.price || 0)}</span><span>{`/${it.unit}`}</span></span>
+        {it.price == null ? <span class="sl-card2-o coming">Price coming</span> : <span class="sl-card2-p"><span class="mono">{fig(it.price)}</span><span>{`/${it.unit}`}</span></span>}
         {shelf > 0 ? <span class="sl-card2-s"><b class="mono">{fig(shelf)}</b> on shelf</span>
           : it.orderIn ? <span class="sl-card2-o">Order in</span> : <span class="sl-card2-o bad">Out</span>}
         {p.line ? (

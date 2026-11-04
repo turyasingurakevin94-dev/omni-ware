@@ -8,6 +8,7 @@ import { useEffect } from 'preact/hooks';
 import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { aisleItems } from '../../../core/aisles.ts';
 import { findItems, readAsk } from '../../../core/find.ts';
 import { likelyNotes } from '../../../core/money.ts';
 import { firstWord } from '../../../core/names.ts';
@@ -18,14 +19,14 @@ import { books, now, online } from '../shell/store.ts';
 import { AskCard, YesCard } from './Ask.tsx';
 import { CountSheet } from './Count.tsx';
 import { DockFrame, EmptyDock, Methods, Move, NavyDock, NoSignal, NotSold, RefField, Tender } from './CounterDock.tsx';
-import { Find } from './Find.tsx';
+import { AisleList, Find } from './Find.tsx';
 import { Held } from './Held.tsx';
 import { FindNone } from './FindNone.tsx';
 import { StillWho } from './local-whopill.tsx';
 import { Picked } from './Picked.tsx';
 import { OtherAisles, SoldHead, SoldRows, Tiles } from './Shelf.tsx';
 import { bestSellers, counterToday, soldWith } from './shop.ts';
-import { add, busy, failed, q, reset, restore, sale, sell, set, setPrice, setQty, toggle, totalOf, waitingLines } from './state.ts';
+import { add, aisle, busy, failed, q, reset, restore, sale, sell, set, setPrice, setQty, toggle, totalOf, waitingLines } from './state.ts';
 import { startWatch } from './watch.ts';
 import { openWho } from './Who.tsx';
 import './counter.css';
@@ -68,7 +69,9 @@ export function Counter(): JSX.Element {
   const short = s.lines.find((l) => { const it = itemOf(l); return !!it && it.onShelf != null && l.qty > it.onShelf; });
   const waits = s.quote == null ? waitingLines(s.lines) : [];
   const ruth = manager(b), face = cust ? { initials: cust.initials, tint: cust.tint } : { initials: 'WI', tint: 't4' as const };
-  const pick = (it: Item, n = 1) => { add(it, n); q.value = ''; };
+  const pick = (it: Item, n = 1) => { add(it, n); q.value = ''; aisle.value = null; };
+  // A tile or chip opens the aisle itself, never a word search (spec 04 §4.1 "An aisle open").
+  const open = (name: string) => { aisle.value = name; q.value = name; window.scrollTo(0, 0); };
   const close = () => { sheet.close(); if (stack.value.length > 1) nav.back(); else nav.home(); };
 
   const top = (
@@ -76,18 +79,22 @@ export function Counter(): JSX.Element {
       who={busy.value
         ? <StillWho face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />
         : <WhoPill on={openWho} face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />}
-      search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: text, onInput: (v) => { q.value = v; }, onMic: listen, class: 'kc-search' }}
-      onAisles={() => { if (q.value) q.value = ''; else (document.querySelector('.kc-search input') as HTMLInputElement | null)?.focus(); }} />
+      search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: text, onInput: (v) => { q.value = v; aisle.value = null; }, onMic: listen, class: 'kc-search' }}
+      onAisles={() => { if (q.value) { q.value = ''; aisle.value = null; } else (document.querySelector('.kc-search input') as HTMLInputElement | null)?.focus(); }} />
   );
 
   let body: JSX.Element;
-  if (text.trim()) {
+  if (aisle.value && text === aisle.value) {
+    // Every item in it, as the tile counts them; one with no price yet is listed, not sold.
+    body = <AisleList name={aisle.value} items={aisleItems(b, aisle.value)} onAdd={(it) => pick(it)}
+      onOrderIn={(it) => orderIn([...asItems(s.lines), { itemId: it.id, qty: 1, price: it.price }], s.customerId)} />;
+  } else if (text.trim()) {
     // The words as typed, less the count ("2 paint" → paint; "PPR pipe 25mm" keeps its capitals).
     const a = readAsk(text), typed = text.trim().replace(/^\d+\s*[x×]?\s+/i, '').replace(/\s+[x×]?\d+$/i, '');
     const r = { qty: a.qty || 1, words: a.qty != null ? typed : text.trim(), counted: a.qty != null };
     // The counter sells only what has a price (an item with none waits for Sourcing).
     const found = findItems(b, a).filter((i) => i.price != null);
-    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} onAisle={(a) => { q.value = a; }} />
+    body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} onAisle={open} />
       : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {
     const sales = counterToday(b, t), best = bestSellers(b, t).slice(0, 4);
@@ -97,7 +104,7 @@ export function Counter(): JSX.Element {
         <SoldHead meta={`${sales.length} sales · ${sales.reduce((a, x) => a + x.amount, 0).toLocaleString('en-US')}`} />
         <Tiles items={best} onAdd={(it) => pick(it)} />
         {/* With a sale waiting above, the aisles go under the tiles: the page scrolls to them (KC24). */}
-        <OtherAisles skip={[...new Set(best.map((i) => i.aisle))]} onAisle={(a) => { q.value = a; }} />
+        <OtherAisles skip={[...new Set(best.map((i) => i.aisle))]} onAisle={open} />
       </>
     );
   } else {

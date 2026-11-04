@@ -41,6 +41,8 @@ const fresh = (): Sale => ({ lines: [], open: null, pricing: null, customerId: n
 
 export const sale = signal<Sale>(fresh());
 export const q = signal('');
+/** An aisle a tile or chip opened (its name is in the search box too); typing closes it. */
+export const aisle = signal<string | null>(null);
 export const busy = signal(false);
 export const failed = signal(false);
 export const sold = signal<(CounterResult & { given: number; ref: string }) | null>(null);
@@ -78,7 +80,7 @@ export function set(patch: Partial<Sale>): void {
 /** A new walk-in: nothing picked (Sell again, Serve the next walk-in). */
 export function reset(): void {
   sale.value = fresh();
-  q.value = ''; busy.value = false; failed.value = false;
+  q.value = ''; aisle.value = null; busy.value = false; failed.value = false;
   keep(sale.value);
 }
 
@@ -176,5 +178,5 @@ export async function sell(given: number): Promise<CounterResult | null> {
 /** Ruth's yes came: the sale comes back to the counter, to be paid (KC12). */
 export function bringBack(o: Order): void {
   sale.value = { ...fresh(), lines: o.lines.map((l) => ({ ...l })), customerId: o.customerId, quote: o.id };
-  q.value = ''; busy.value = false; failed.value = false;
+  q.value = ''; aisle.value = null; busy.value = false; failed.value = false;
 }

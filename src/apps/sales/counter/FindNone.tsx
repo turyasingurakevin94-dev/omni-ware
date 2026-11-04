@@ -11,11 +11,11 @@ import { Duo, Icon, phPlane, phSearch, type IconName } from '../../../ui/icons.t
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { nearAisles } from '../../../core/aisles.ts';
 import { closest, readAsk } from '../../../core/find.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Item, SourcingAsk } from '../../../core/types.ts';
 import { act, now } from '../shell/store.ts';
-import { shopAisles } from '../today/data.ts';
 import { sale, set } from './state.ts';
 import './findnone.css';
 
@@ -143,13 +143,12 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
 }
 
 /**
- * "Or open an aisle" (TD14's tiles; KC26, KC28): the closest item's aisle first, then the shop's aisles in
- * the shop's order (today/data.ts shopAisles over Books.aisles), three. Shown where one close item or none
- * leaves the room (KC21's two close items fill it).
+ * "Or open an aisle" (TD14's tiles) on every "Nothing called …" state, below the ask card: page content
+ * that may run under the dock (spec 04 §4.3). Their order is the one rule, core/aisles.ts nearAisles: the
+ * closest item's aisle, the aisles most often bought with it, then the shop's aisles. Three.
  */
 function OpenAisle(p: { b: Books; near: Item[]; onAisle: (name: string) => void }): JSX.Element | null {
-  const all = shopAisles(p.b, now.value), own = p.near[0] ? all.find((a) => a.name === p.near[0].aisle) : undefined;
-  const tiles = [...(own ? [own] : []), ...all.filter((a) => a !== own)].slice(0, 3);
+  const tiles = nearAisles(p.b, p.near, now.value).slice(0, 3);
   if (!tiles.length) return null;
   return (
     <>

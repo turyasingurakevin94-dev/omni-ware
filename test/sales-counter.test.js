@@ -95,6 +95,18 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const added = await d5.askSourcing({ name: 'Tile cutter 600mm', qty: 1, customerId: null, chatId: null });
   t.check(added.id === open5.id && added.requests.length === 2, 'Add this walk-in: the same ask, 2 asked (KC25)');
 
+  /* ---- a tile or chip opens the aisle itself (spec 04 §4.1 "An aisle open"; KC01, KC21, KC25, KC26, KC28) ---- */
+  const A = require(path.join(ROOT, 'src/core/aisles.ts'));
+  const ba = await demoSource('?demo').books();
+  const fas = A.aisleItems(ba, 'Fasteners');
+  t.check(fas.length === ba.items.filter((i) => i.aisle === 'Fasteners').length && fas.every((i) => i.aisle === 'Fasteners'), 'an aisle lists every item in it, not a word search');
+  const sold = A.timesSold(ba);
+  t.check(fas.every((it, k) => k === 0 || (sold.get(fas[k - 1].id) || 0) >= (sold.get(it.id) || 0)), 'the most sold first');
+  const fs = require('fs');
+  const ctr = fs.readFileSync(path.join(ROOT, 'src/apps/sales/counter/Counter.tsx'), 'utf8');
+  t.check(/aisleItems\(b, aisle\.value\)/.test(ctr) && !/onAisle=\{\(a\) => \{ q\.value = a; \}\}/.test(ctr), 'the counter\'s tiles and chips open the aisle with core/aisles.ts aisleItems');
+  t.check(!/aisleItems\(b, aisle\.value\)\.filter/.test(ctr) && A.aisleItems(ba, 'Roofing').length === 86, 'an open aisle lists every item, priced or not: Roofing 86, as its tile says');
+
   /* ---- &fail=sale: the first sale is lost on its way, nothing taken (KC19) ---- */
   const d4 = demoSource('?demo&fail=sale');
   const b4 = await d4.books();
