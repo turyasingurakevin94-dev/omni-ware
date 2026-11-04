@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, weekday, daysApart, when as at } from '../../../core/time.ts';
-import type { Books, Line, Method, Order, Payment } from '../../../core/types.ts';
+import type { Books, Line, Method, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Chevron } from '../../../ui/ActRow.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
@@ -18,13 +18,13 @@ import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { openTwice, SendBtn, Who } from './Change.tsx';
 import { twinOf } from '../../../core/orders.ts';
-import { byRole, custOf, faceOfMember, METHOD, nameOf, orderOf, owesNow, payFixAsks, shortName } from './data.ts';
+import { byRole, custOf, faceOfMember, METHOD, nameOf, orderOf, owesNow, payFixAsks, paysOf, shortName } from './data.ts';
+import { PaidBar } from './OrderParts.tsx';
 import { chatFor } from './msg.ts';
 import { StageDots } from './local-Track.tsx';
 import './sheets.css';
 
 const eyebrow = (b: Books, o: Order, word = 'Order') => `${word} ${orderNo(o.id)} · ${nameOf(b, o)}`;
-const paysOf = (b: Books, o: Order): Payment[] => b.payments.filter((p) => p.orderId === o.id && !p.qa).sort((x, y) => x.at - y.at);
 const when = (at: number, t: number) => (dayOf(at) === dayOf(t) ? `today ${clock(at)}` : daysApart(dayOf(at), dayOf(t)) < 7 ? weekday(at) : dayLabel(at));
 
 /** Fix it: the Something wrong sheet (OR20); for an invoiced copy entered twice, OR23 straight away. Other tabs open it too. */
@@ -196,14 +196,11 @@ export function openPayWhich(id: number): void {
 function PayWhich(p: { id: number }): JSX.Element | null {
   const b = books.value, o = b && orderOf(b, p.id), t = now.value;
   if (!b || !o) return null;
-  const pays = paysOf(b, o), total = orderTotal(o), owes = orderOwes(o), paid = pays.reduce((a, x) => a + x.amount, 0);
+  const pays = paysOf(b, o), total = orderTotal(o), owes = orderOwes(o);
   const acc = byRole(b, 'accounts'), an = firstWord(acc?.name || 'Accounts');
   return (
     <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, o, 'Bill')} title="Which payment?" onClose={sheet.close} pad="12px 16px 22px">
-      <div role="img" aria-label={`Bill ${total.toLocaleString('en-US')}: ${paid.toLocaleString('en-US')} paid, ${owes.toLocaleString('en-US')} owed`} class="or-paid">
-        <span>{pays.map((x) => <i key={x.id} style={{ flex: x.amount }} />)}{owes > 0 && <i class="o" style={{ flex: owes }} />}</span>
-        <span><span>{'paid '}<b class="mono g">{paid.toLocaleString('en-US')}</b>{` in ${pays.length}`}</span><span>{'owes '}<b class="mono w">{owes.toLocaleString('en-US')}</b>{` of ${total.toLocaleString('en-US')}`}</span></span>
-      </div>
+      <PaidBar b={b} o={o} />
       <div class="or-rows">
         {pays.map((x) => {
           const m = METHOD[x.method], by = b.members.find((mm) => mm.id === x.by), today = dayOf(x.at) === dayOf(t);
@@ -213,7 +210,7 @@ function PayWhich(p: { id: number }): JSX.Element | null {
             return (
               <div key={x.id} role="group" aria-disabled="true" aria-label={`${title}, ${x.amount.toLocaleString('en-US')}: asked of ${an}, waiting`} class="or-pay">
                 {ic}
-                <span class="or-row-t">{head}<span class="nw or-pay-asked">{acc && <Avatar {...faceOfMember(acc)} size={18} />}{`Asked · ${at(asked[0].at, t)}`}</span></span>
+                <span class="or-row-t">{head}<span class="nw or-pay-asked">{acc && <Avatar {...faceOfMember(acc)} size={18} />}{`Asked ${an} · ${at(asked[0].at, t)}`}</span></span>
                 <span class="or-pay-w"><span class="mono or-pay-a">{x.amount.toLocaleString('en-US')}</span><span class="or-wait">Waiting</span></span>
                 <span aria-hidden="true" class="or-pay-gap" />
               </div>

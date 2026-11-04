@@ -17,12 +17,12 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, payFixesOf, shortItem, shortName, waitsRuth } from './data.ts';
+import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName, waitsRuth } from './data.ts';
 import { go, payFor } from './links.ts';
 import { CheckList, Pills } from './local-CheckList.tsx';
 import { ActBar, Tiles, type Act } from './local-Parts.tsx';
 import { Track } from './local-Track.tsx';
-import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
+import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PaidBar, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
 import { openPayFix, openWrong } from './Wrong.tsx';
@@ -44,7 +44,8 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const k = kept(o), waitN = o.lines.filter(waitsRuth).length;
   const pending = (o.stage === 'checking' && waitN > 0 && !o.toldTotal) || !!fresh;
   const op = delivered ? overPaymentOf(b, o) : null;
-  const tiles = op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: paidOver(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${paidOver(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
+  const fixes = o.voided ? [] : payFixesOf(b, o);
+  const tiles = fixes.length && v.bill ? [{ ...v.tiles[0], warnNote: v.tiles[1].note }, { ...v.tiles[1], dot: true, note: `${owesOnceFixed(b, o, fixes[0]).toLocaleString('en-US')} once fixed` }] : op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: paidOver(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${paidOver(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
   const acts: Act[] = [];
   if (fresh) acts.push({ bg: '#E4E6FA', fg: '#3A3F9B', icon: 'phone', word: `Call ${who}`, sub: phone, href: phone9(phone) ? 'tel:+256' + phone9(phone) : undefined });
   else acts.push({ bg: '#E4F4EA', fg: '#0F6B43', duo: phWhatsapp, word: v.bill ? 'Tell them' : `Tell ${who}`, sub: v.tellSub, on: () => openTell(o.id) });
@@ -77,7 +78,8 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       {o.voided && twinOf(b.orders, o, true) && <TwinCard b={b} o={o} />}
       {fresh && <PriceTell b={b} o={o} l={fresh} />}
       {v.returnAsk && <AskTimeline b={b} o={o} ask={v.returnAsk} />}
-      {!o.voided && payFixesOf(b, o).map((x) => <PayFixAsked key={x.pay.id} b={b} o={o} pay={x.pay} asks={x.asks} />)}
+      {fixes.map((x) => <PayFixAsked key={x.pay.id} b={b} o={o} pay={x.pay} asks={x.asks} />)}
+      {fixes.length > 0 && v.bill && <PaidBar b={b} o={o} />}
       <div class="or-foot">
         <ActBar acts={acts} />
         {owes > 0 && !v.returnAsk && !pending && !o.voided

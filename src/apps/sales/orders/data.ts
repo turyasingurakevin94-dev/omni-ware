@@ -199,8 +199,16 @@ export function payFixWant(p: Payment, asks: PaymentAsk[]): { method: Method; am
 /** What they owe now, which a payment fix moves (OR25 "They will owe", OR32 "then they owe"). */
 export const owesNow = (b: Books, o: Order): number => custOf(b, o)?.owes ?? orderOwes(o);
 
+/** An order's payments, oldest first (OR24's rows and its split bar). */
+export const paysOf = (b: Books, o: Order): Payment[] => b.payments.filter((p) => p.orderId === o.id && !p.qa).sort((x, y) => x.at - y.at);
+
 /** An order's payments with a fix asked of Accounts, each with its asks (OR32). */
-export const payFixesOf = (b: Books, o: Order): { pay: Payment; asks: PaymentAsk[] }[] => b.payments.filter((p) => p.orderId === o.id && !p.qa).map((pay) => ({ pay, asks: payFixAsks(b, pay) })).filter((x) => x.asks.length > 0);
+export const payFixesOf = (b: Books, o: Order): { pay: Payment; asks: PaymentAsk[] }[] => paysOf(b, o).map((pay) => ({ pay, asks: payFixAsks(b, pay) })).filter((x) => x.asks.length > 0);
+
+/** What they owe once Accounts makes a payment's asked fix (OR32 "then they owe", "438,000 once fixed"). */
+export function owesOnceFixed(b: Books, o: Order, fix: { pay: Payment; asks: PaymentAsk[] }): number {
+  return Math.max(0, owesNow(b, o) + fix.pay.amount - payFixWant(fix.pay, fix.asks).amount);
+}
 
 export const overAsk = (b: Books, p: Payment): PaymentAsk | null => b.paymentAsks.find((a) => a.paymentId === p.id && a.what === 'over' && a.status === 'sent') || null;
 /** The order's payment that was paid over and not settled yet. */
