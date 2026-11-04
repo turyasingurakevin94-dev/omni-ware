@@ -47,6 +47,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
   };
   const say = (chatId: number, body: string, kind: Message['kind']): Message => {
     const c = chat(chatId);
+    if (!s.connected) throw dataError('refused', 'WhatsApp is not connected yet', 'WAOFF');
     if (kind !== 'template' && !replyWindow(c.lastInAt, s.now).open) throw dataError('refused', 'The 24-hour window is shut: send it as the reply template', 'WSHUT');
     const m: Message = { id: 'm' + (s.messages.length + 1), chatId, at: s.now, dir: 'out', kind, body, by: me.id, state: 'sent' };
     s.messages.push(m); c.lastAt = s.now;
@@ -164,7 +165,10 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
 
     send: (chatId, text) => write(() => say(chatId, text, 'text')),
     sendTemplate: (chatId, text) => write(() => say(chatId, text, 'template')),
-    sendImage: (chatId, _file, caption) => write(() => say(chatId, caption, 'image')),
+    // &wa=slow: the shop's WhatsApp takes 10 s to take a picture (SL35).
+    sendImage: (chatId, _file, caption) => (flags.waSlow
+      ? new Promise<void>((ok) => setTimeout(ok, 10000)).then(() => write(() => say(chatId, caption, 'image')))
+      : write(() => say(chatId, caption, 'image'))),
     sendCatalog: (chatId) => write(() => say(chatId, '', 'catalog')),
     media: (messageId) => {
       const m = s.messages.find((x) => x.id === messageId);

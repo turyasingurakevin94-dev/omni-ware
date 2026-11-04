@@ -98,17 +98,21 @@ Each rule is written once in code (the place is named) and comes from the source
 | **A send is never claimed if it did not happen.** If the customer has no chat, the app shows an error, and nothing is marked told. With no signal, the message is kept on the phone and the app says so. A photo goes only inside the 24-hour window: the reply template carries words only, and the toast says so. | `today/Tell.tsx` `sendTo`, `sentToast` | Lead ruling, 30 Oct 2026 (TD04, TD19, TD21, TD22) |
 | **Alerts** are this phone's row in `push_subscriptions`. They are not a setting kept on the phone. The switch shows the real state, and when alerts cannot be on it says why. | `core/supabase/push.ts`; `today/local.ts` `setAlerts` | spec 06 §6a |
 
-### 4.2 Open: two copies of "who owes" (Kevin)
+### 4.2 Who owes: one rule (`core/owing.ts`)
 
-Today and Customers both answer "what does this customer owe, bill by bill, and what is being checked". The two copies disagree, so neither has been picked:
+Today and Customers had two copies that disagreed (Today read the debt log, bill-named asks only; Customers read invoiced orders, and a balance ask checked every bill). The integration pass (3 Nov 2026) made one rule, the server's own (`ow_customer_balance`, 0169), and deleted both copies:
 
-| | Today (`core/owing.ts` `owedBy`) | Customers (`customers/data.ts` `billsOf`, `moneyOf`) |
+| | The rule | Code |
 |---|---|---|
-| Where the bills come from | The debt log, payments clearing the named bill and then the oldest (`openCharges`, spec 02 §5.3) | Invoiced orders with something left on them (`orderOwes`) |
-| Which bills are being checked | Only a bill an ask names (`what: 'bill'`) | That, plus every bill when an ask is on the whole balance (`what: 'balance'`) |
-| What can be taken now | Bills past the hold that nobody is checking | All they owe, less the bills an ask names |
+| What they owe | The opening balance (the debt log's lines that name no order: charges less everything else, as the server sums them) plus what each live invoice still owes (invoiced, not voided, total less paid); never below 0. A charge with no order still counts | `owingOf` |
+| Their open bills | Those invoices, oldest first, and one **Opening balance** bill when the lines with no order still owe something. A Take names it `debt` in `customers/pay { bills }` (`takeBills`, `readBills`), so a Take pays all its label says | `owingOf`, `takeBills`, `readBills`, `billNo` |
+| Being checked | An open ask to Accounts names the bill (`what: 'bill'`), or asks about the whole balance (`what: 'balance'`: every bill). A bill being checked is **shown apart**: it stays in what they owe (To collect 1,910,000 holds Ggaba's 125,000, Q9) but is never in a Take | `owingOf` (`checked`, `named`, `checkedIn`) |
+| Apart | When the bills say more than the balance (money paid that named no bill) and Accounts checks the balance: the difference (Lubowa: bills 349,000, balance 0) | `owingOf` (`apart`) |
+| Take now (Today) | The bills past the hold that nobody is checking | `take` |
+| Can take (Customers) | What they owe less the bills an ask names | `canTake` |
+| Oldest | The oldest open bill's age; past the hold when it is over the hold days | `age`, `pastHold`, `hold` |
 
-Until Kevin answers, each tab keeps its own copy. The one he picks moves into `core/owing.ts`, and the other copy is deleted.
+Still apart from it: the credit hold at Checking (`money.ts` `creditHold`, spec 02 §5.4) ages the debt log (`oldestAge`), as the server's gate does (0174). In the sample shop both give the same days.
 
 ### 4.3 Rules the screens share
 
@@ -119,13 +123,18 @@ Each is written once in `src/core` and used by every tab that shows it.
 | Last order | A customer's most recent order placed, not cancelled, voided, a test record or the copy of an order entered twice (Q11) | FACTS rule 1 | `core/customers.ts` `rhythm` |
 | Due | Today is on or after last order + their usual gap ("every N days"). "Due today" at 0, "N days late" after | `sales.html:4674` (`r.due`) | `rhythm`, `dueWords` |
 | Gone quiet | **More than twice** their gap since the last order (`since > every × 2`). A quiet customer is in its own group, never "Who's due" | `sales.html:4674` (`r.overdue`), `:6927` (`due && !overdue`) | `rhythm`, `dueCustomers` |
-| Who's due order | The most owed first, then the most days late | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers` |
-| A count in a search | "2 paint", "paint 2", "2x paint" are 2 of paint; no count is 1 | KC02 ("Read as ×2 · paint") | `core/items.ts` `readQuery` |
-| Items a search finds | Priced items whose name or aisle holds every word; on the shelf first (most first), then Order in | KC02 | `findItems` |
+| Who's due order | The most owed first, then the most days late (Today lists the same people, the latest first) | KC04 (Mukono, Kyaligonza, Lubowa) | `dueCustomers`; Today, Chats (who is due soonest), Sell, Customers all read `rhythm` / `lastOrderOf` |
+| Often with | What came with an item in this customer's orders when they had it twice or more, else in mine; Today's Find counts the shop's orders (`me: null`) | P13, CH21, SL05, TD13 | `core/often.ts` `oftenWith` |
+| Listening | One navy sheet (SL34): the mic, the waveform, what was heard, Say it again, one action. Today's Find hands the words to its search; Sell's Say it (SL10) holds the sheet to show what it understood | SL10, SL34 | `src/ui/Listen.tsx` `ListenSheet` |
+| A count in a search | "2 paint", "paint 2" are 2 of paint; "forty sheets of G28" is 40 of G28 sheets; units are read ("20 kg wire nails 4\""); no count is 1. Said aloud, "and" splits the asks | KC02, SL08, SL10, SL15 | `core/find.ts` `readAsk`, `readSaid` (Sell's, which beat the counter's `readQuery`, 4 Nov) |
+| Items a search finds | Items whose name holds every word ("40 sheets" finds Iron sheet G28): the customer's own first, then this week's, then what fills the count best (on the shelf, order in, part, out); after them the priced items of an aisle the words name ("paint" also finds Emulsion). The counter then keeps only what has a price | KC02, SL08 | `core/find.ts` `findItems` (and `closest`, `sameAsk`, `findCustomer`) |
+| Often with | What came in the same orders as an item: across this customer's orders when they had it twice or more, else across mine; "4/5" is how many of the orders with the item had it | `agent.html:8890` (`oftenWith`) | `core/often.ts` `oftenWith` |
+| The delivery fee | The shop's service with `kind: 'delivery'`, the one whose `area` is the customer's first; never guessed from a name (lead, 3 Nov; `sales.html:8351` guesses it from the name) | lead ruling | `core/services.ts` `deliveryFor` |
+| A charge's amount | Percent: of the goods; fixed: its value; fixed with `per` ("bag"): its value for each one on the lines sold by that unit (Q3). No `per` or `kind`: a flat fee, as `sales.html` | `sales.html:8358`, Q3 | `core/services.ts` `serviceAmount` |
+| The aisle chips | Five: the aisles this customer buys from most (in how many of their orders), filled from the shop's most-sold aisles | lead, 3 Nov (SL04, SL10, SL27, SL34) | `core/aisles.ts` `chipAisles` |
 | Likely notes | The next 5,000 and the next 10,000 above the total | FACTS tender rule | `core/money.ts` `likelyNotes` |
 
-Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way. Customers' own copy (gone ≥ twice) is gone: CU09 reads the core, though its words say "twice their usual gap or more".
-
+Open (Kevin): `test/sales-core-demo.test.js` counts gone quiet at **twice or more** (`>=`); `sales.html` at **more than twice** (`>`). The core follows `sales.html`; the sample shop gives 8 either way.
 ## 5. Rules the Orders screens follow (from the old app)
 
 | Rule | Source | Built in |

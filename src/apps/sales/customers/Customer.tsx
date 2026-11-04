@@ -23,7 +23,8 @@ import type { ScreenProps } from '../shell/types.ts';
 import { openBillCheck } from './BillCheck.tsx';
 import { AgeTrack, ApartHead, CustHead, PaidUp, SplitHead, first } from './cust-head.tsx';
 import { Acts, AsksCard, BillRow, BillsCard, BillsHead, OnTheMove, PaidBills, Rhythm, TodayPaid } from './cust-cards.tsx';
-import { liveOf, moneyOf, placeKind, rhythmOf, short } from './data.ts';
+import { billNo, owingOf } from '../../../core/owing.ts';
+import { liveOf, placeKind, rhythmOf, short } from './data.ts';
 import { markOpened } from './opened.ts';
 import { openPromise } from './Promise.tsx';
 import { sendStatement } from './statement.ts';
@@ -54,21 +55,21 @@ export function CustomerScreen(p: ScreenProps): JSX.Element {
 
 function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element {
   const { b, c } = p, t = now.value, today = dayOf(t);
-  const m = moneyOf(b, c, today), r = rhythmOf(b, c, today), live = liveOf(b, c);
+  const m = owingOf(b, c, today), r = rhythmOf(b, c, today), live = liveOf(b, c);
   const ruth = role(b, 'manager'), esther = role(b, 'accounts'), name = short(c.name);
   const pay = (bills?: number[]) => nav.push('customers/pay', bills ? { customer: c.id, bills: bills.join(',') } : { customer: c.id });
   const checkBill = (id: number) => openBillCheck(c.id, id);
 
   let picture: JSX.Element | null = null;
   if (m.apart > 0) picture = <ApartHead apart={m.apart} owes={m.owes} bills={m.bills} checker={esther} />;
-  else if (m.checkedIn > 0) picture = <SplitHead owes={m.owes} oldest={m.oldest} collect={m.take} checked={m.checkedIn} checker={esther} onChecked={() => checkBill(m.bills.find((x) => x.checked)!.id)} />;
+  else if (m.checkedIn > 0) picture = <SplitHead owes={m.owes} oldest={m.age} collect={m.canTake} checked={m.checkedIn} checker={esther} onChecked={() => checkBill(m.bills.find((x) => x.checked)!.id)} />;
   else if (m.owes > 0) picture = <AgeTrack owes={m.owes} bills={m.bills} limit={c.creditLimit} manager={first(ruth.name)} hold={b.settings.holdDays} />;
   else picture = <PaidUp deposit={Math.max(0, -c.owes)} limit={c.creditLimit} manager={first(ruth.name)} />;
   // Nothing owed: their last bills, paid, so the page still says how they pay (CU16).
   const paid = m.owes > 0 || m.apart > 0 ? [] : b.orders.filter((o) => o.customerId === c.id && o.invoiced && !o.voided && !o.counter && orderOwes(o) <= 0).sort((x, y) => (y.invoicedAt || 0) - (x.invoicedAt || 0)).slice(0, 3);
 
   const head = m.apart > 0 ? <BillsHead title="Open bills · oldest first" note={`owes ${fig(m.owes)} in the books`} />
-    : m.past ? <BillsHead title="Bills · oldest first" hold={`new credit waits for ${first(ruth.name)}`} /> : null;
+    : m.pastHold ? <BillsHead title="Bills · oldest first" hold={`new credit waits for ${first(ruth.name)}`} /> : null;
   // What is on the move, unless the sheet is about a bill being checked (CU11, CU13 need that room).
   const showMove = live.length > 0 && !m.apart && !m.checkedIn;
   // Nothing owed: today's money first (CU16: Nansana's 560,000 at 8:52, 90,000 over, OR15).
@@ -106,7 +107,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       head={<CustHead c={c} sub={placeKind(c)} tone={r.tone} fill={r.fill} onClose={() => nav.back()}>{picture}</CustHead>}>
       {todays.length > 0 && <TodayPaid rows={todays} />}
       {m.owes > 0 && <Acts acts={[
-        { tone: 'take', icon: 'cash', word: 'Take payment', sub: m.take.toLocaleString('en-US'), on: () => pay() },
+        { tone: 'take', icon: 'cash', word: 'Take payment', sub: m.canTake.toLocaleString('en-US'), on: () => pay() },
         { tone: 'promise', icon: 'calendar', word: 'Promise', sub: 'by when', on: () => openPromise(c.id) },
         { tone: 'statement', icon: 'receipt', word: 'Statement', sub: 'on WhatsApp', on: () => { void sendStatement(b, c, p.cb).then((w) => toast.show(w)); } },
       ]} />}
@@ -117,7 +118,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
       {m.bills.length > 0 && (
         <BillsCard>
           {m.bills.map((x) => <BillRow key={x.id} b={x} onTake={() => pay([x.id])} onChecked={m.checkedIn > 0 ? () => checkBill(x.id) : undefined}
-            sub={x.checked && m.checkedIn > 0 ? `#${String(x.id).padStart(4, '0')} · paid already?` : undefined} />)}
+            sub={x.checked && m.checkedIn > 0 ? `${billNo(x.id)} · paid already?` : undefined} />)}
         </BillsCard>
       )}
       {showMove && <OnTheMove orders={live} onOrder={(id) => nav.push('orders/order', { id })} copies={live.filter((o) => isCopy(b.orders, o)).map((o) => o.id)} onCopy={openTwice}

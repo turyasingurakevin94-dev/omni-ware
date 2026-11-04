@@ -3,6 +3,7 @@
  * amounts, the reference field, what the money pays bill by bill, the
  * paid-over split and its choice, the walk-in's order and who owes the rest.
  */
+import { billNo } from '../../../core/owing.ts';
 import type { ComponentChildren, JSX } from 'preact';
 import { Duo, Icon, phSearch } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
@@ -52,10 +53,10 @@ export function PaysCard(p: { rows: PaysRow[]; pick: boolean; onToggle: (id: num
         const pct = r.left ? Math.round((Math.min(r.applied, r.left) / r.left) * 100) : 0, full = r.applied >= r.left;
         const tag = !r.on || !(r.applied > 0) ? { t: 'not this time', c: 'neutral' } : full ? { t: 'clears', c: 'good' } : { t: `${money(r.left - r.applied)} left`, c: 'warn' };
         return (
-          <button key={r.id} type="button" role="checkbox" aria-checked={r.on} aria-label={`${orderNo(r.id)}, ${money(r.left)}`} class="cu-pay-row" onClick={() => p.onToggle(r.id)}>
+          <button key={r.id} type="button" role="checkbox" aria-checked={r.on} aria-label={`${billNo(r.id)}, ${money(r.left)}`} class="cu-pay-row" onClick={() => p.onToggle(r.id)}>
             <span aria-hidden="true" class={cx('cu-tick', r.on && 'on')}>{r.on && <Icon name="check" size={13} stroke={3.2} />}</span>
             <span class={cx('cu-pay-t', !r.on && 'off')}>
-              <span><span>{`${orderNo(r.id)} `}<span>{`${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
+              <span><span>{`${billNo(r.id)} `}<span>{`${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
               <span><span aria-hidden="true" class="cu-pay-bar"><span style={{ width: `${pct}%`, background: full ? '#0F6B43' : '#95530C' }} /></span><span class={'cu-tag ' + tag.c}>{tag.t}</span></span>
             </span>
           </button>
@@ -67,7 +68,7 @@ export function PaysCard(p: { rows: PaysRow[]; pick: boolean; onToggle: (id: num
 
 /** They gave more than they pay now: the split, and Give change or Deposit (CU35, CU36). */
 export function OverCard(p: { pays: number; over: number; bills: number[]; how: 'change' | 'deposit'; onHow: (h: 'change' | 'deposit') => void; name: string; checker: { initials: string; tint: Tint; name: string } }): JSX.Element {
-  const what = p.bills.length === 2 ? `${orderNo(p.bills[0])} and ${orderNo(p.bills[1])}` : p.bills.length === 1 ? orderNo(p.bills[0]) : p.bills.map(orderNo).join(', ');
+  const what = p.bills.length === 2 ? `${billNo(p.bills[0])} and ${billNo(p.bills[1])}` : p.bills.length === 1 ? billNo(p.bills[0]) : p.bills.map(billNo).join(', ');
   const word = p.how === 'change' ? 'change' : 'deposit', t = TINTS[p.checker.tint];
   const opt = (h: 'change' | 'deposit', label: string) => (
     <button type="button" role="radio" aria-checked={p.how === h} class={cx('cu-over-o', p.how === h && 'on')} onClick={() => p.onHow(h)}>

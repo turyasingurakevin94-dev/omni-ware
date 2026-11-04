@@ -16,7 +16,8 @@ import type { Tint } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { moneyOf, short } from './data.ts';
+import { owingOf } from '../../../core/owing.ts';
+import { short } from './data.ts';
 import { dm } from './pay-parts.tsx';
 import { paidResults, receiptText, sendReceipt, throwAway, type Paid } from './paid-store.ts';
 import './paid.css';
@@ -39,7 +40,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
   const stamp = `${dm(dayOf(p.at))} · ${clock(p.at)}`;
   // Refused or thrown away: what they owe now, from the books, never the figure from when Grace slid.
   const c = b && p.customerId ? b.customers.find((x) => x.id === p.customerId) || null : null;
-  const owesNow = b && c ? moneyOf(b, c, dayOf(now.value)).owes : p.before;
+  const owesNow = b && c ? owingOf(b, c, dayOf(now.value)).owes : p.before;
   const refused = p.kept && !!p.refused;
   // Why it was refused: someone else's payment of theirs since Grace slid (CU46: Brian took 120,000 at 10:50).
   const since = b && c && refused ? b.payments.filter((x) => x.customerId === c.id && !x.qa && x.by && x.by !== b.me.id && x.at >= p.at).sort((x, y) => y.at - x.at)[0] : null;

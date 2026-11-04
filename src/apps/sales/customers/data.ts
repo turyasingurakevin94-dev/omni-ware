@@ -1,72 +1,11 @@
 /*
- * What the Customers tab reads off the books, once (FACTS §3): each
- * customer's bills, what is being checked, their rhythm, promises and live
- * orders. Pure functions over Books and today; the money rules are
- * src/core/money.ts's (orderOwes, holdDay, pastHold), never re-derived here.
+ * What the Customers tab reads off the books (FACTS §3): their rhythm's ring, promises and live orders.
+ * Who owes and their bills are core/owing.ts's (owingOf), the rhythm core/customers.ts's, the money
+ * rules core/money.ts's: never re-derived here.
  */
-import { holdDay, orderOwes, pastHold } from '../../../core/money.ts';
+import { orderOwes } from '../../../core/money.ts';
 import { rhythm } from '../../../core/customers.ts';
-import { dayOf, daysApart } from '../../../core/time.ts';
-import type { Books, Customer, Day, Order, PayPromise, PaymentAsk } from '../../../core/types.ts';
-
-export interface Bill {
-  order: Order;
-  id: number;
-  /** The day it was billed (its invoice). */
-  day: Day;
-  /** Still to pay on it. */
-  left: number;
-  age: number;
-  past: boolean;
-  /** Esther is checking it: an open ask names it, or asks about their whole balance. */
-  checked: boolean;
-  /** An ask names this bill (it is inside what they owe and being checked). */
-  named: boolean;
-}
-
-/** A customer's open bills, oldest first: invoiced, not voided, with something left (receive_payment's order, 0169). */
-export function billsOf(b: Books, c: Customer, today: Day): Bill[] {
-  const asks = openAsks(b, c.id);
-  return b.orders
-    .filter((o) => o.customerId === c.id && o.invoiced && !o.voided && !o.qa && orderOwes(o) > 0)
-    .sort((x, y) => (x.invoicedAt || 0) - (y.invoicedAt || 0))
-    .map((o) => {
-      const day = dayOf(o.invoicedAt || o.placedAt);
-      return { order: o, id: o.id, day, left: orderOwes(o), age: daysApart(day, today), past: pastHold(day, today, b.settings.holdDays), checked: asks.some((a) => a.orderId === o.id || (a.what === 'balance' && a.orderId == null)), named: asks.some((a) => a.orderId === o.id) };
-    });
-}
-
-/** Asks to Esther that still wait on this customer (payment_asks, status sent). */
-export function openAsks(b: Books, customerId: string): PaymentAsk[] {
-  return b.paymentAsks.filter((a) => a.customerId === customerId && a.status === 'sent' && (a.what === 'bill' || a.what === 'balance'));
-}
-
-export interface Money {
-  owes: number;
-  bills: Bill[];
-  /** Inside what they owe and being checked (Ggaba's #0528). */
-  checkedIn: number;
-  /** The bills say more than the balance, and Esther is checking (Lubowa: 349,000 apart, owes 0). */
-  apart: number;
-  /** What Sales should take now: owes less what is being checked. */
-  take: number;
-  past: boolean;
-  oldest: number;
-  hold: Day | null;
-}
-
-export function moneyOf(b: Books, c: Customer, today: Day): Money {
-  const bills = billsOf(b, c, today), owes = Math.max(0, c.owes);
-  const checkedIn = bills.filter((x) => x.named).reduce((s, x) => s + x.left, 0);
-  const sum = bills.reduce((s, x) => s + x.left, 0);
-  const apart = openAsks(b, c.id).some((a) => a.what === 'balance') ? Math.max(0, sum - owes) : 0;
-  const oldest = owes > 0 && bills.length ? bills[0].age : 0;
-  return {
-    owes, bills, checkedIn, apart, take: Math.max(0, owes - checkedIn),
-    past: owes > 0 && oldest > b.settings.holdDays, oldest,
-    hold: owes > 0 && bills.length ? holdDay(bills[0].day, b.settings.holdDays) : null,
-  };
-}
+import type { Books, Customer, Day, Order, PayPromise } from '../../../core/types.ts';
 
 export type RingTone = 'due' | 'late' | 'quiet' | 'early';
 

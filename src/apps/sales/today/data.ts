@@ -10,9 +10,10 @@
  *   moves(…)         Next move: one per customer, the best value first (P09)
  */
 import { waitingChats } from '../../../core/chats.ts';
+import { dueCustomers } from '../../../core/customers.ts';
 import { HOLD_DAYS, holdDay, lineTotal, orderOwes, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeBills, type Owed } from '../../../core/owing.ts';
-import { addDays, daysApart, dayOf } from '../../../core/time.ts';
+import { addDays, dayOf } from '../../../core/time.ts';
 import type { Books, ChatBooks, Customer, Day, Ms, Order, PayPromise, SourcingAsk, Stage, UGX } from '../../../core/types.ts';
 import type { Face } from '../../../ui/Avatar.tsx';
 
@@ -122,25 +123,13 @@ export function promiseToShow(b: Books, c: Customer, today: Day): PayPromise | n
 
 /* ---------------- rhythm ---------------- */
 
-export function lastOrderAt(b: Books, cid: string): Ms | null {
-  const os = b.orders.filter((o) => o.customerId === cid && !o.voided && !o.qa);
-  return os.length ? Math.max(...os.map((o) => o.placedAt)) : null;
-}
 
 export interface Due { c: Customer; late: number; every: number; usual: UGX }
 
-/** Late or due today, not gone quiet (two rhythms or more): the latest first. */
+/** Late or due today, not gone quiet: who is due by the one rule (core/customers.ts), the latest first. */
 export function due(b: Books, now: Ms): Due[] {
-  const today = dayOf(now), out: Due[] = [];
-  b.customers.forEach((c) => {
-    if (c.qa || !c.everyDays) return;
-    const last = lastOrderAt(b, c.id);
-    if (last == null) return;
-    const gap = daysApart(dayOf(last), today), late = gap - c.everyDays;
-    if (late < 0 || gap >= 2 * c.everyDays) return;
-    out.push({ c, late, every: c.everyDays, usual: usualValue(b, c) });
-  });
-  return out.sort((x, y) => y.late - x.late);
+  return dueCustomers(b.customers, b.orders, dayOf(now)).map(({ c, r }) => ({ c, late: r.late || 0, every: r.every || 0, usual: usualValue(b, c) }))
+    .sort((x, y) => y.late - x.late);
 }
 
 export function usualValue(b: Books, c: Customer): UGX {
@@ -283,6 +272,9 @@ export function shopAisles(b: Books, now: Ms): { name: string; count: number }[]
 export function askAisle(b: Books, a: Pick<SourcingAsk, 'itemId' | 'name'>): string {
   const own = a.itemId ? b.items.find((i) => i.id === a.itemId) : null;
   if (own) return own.aisle;
+  // Its very name first (the catalogue grew to the shop's 1,153 items: "Contact cement" is named like "Cement" too).
+  const same = b.items.find((i) => i.name.toLowerCase() === a.name.trim().toLowerCase());
+  if (same) return same.aisle;
   const base = a.name.split(/ · |, /)[0].trim().toLowerCase();
   const hit = base ? b.items.filter((i) => i.name.toLowerCase().includes(base)) : [];
   return hit.length === 1 ? hit[0].aisle : '';

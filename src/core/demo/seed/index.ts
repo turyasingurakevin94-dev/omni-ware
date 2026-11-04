@@ -72,6 +72,7 @@ export function seed(f: DemoFlags): DemoState {
     servedBefore: {},
     push: true,
   };
+  if (f.waDown) s.connected = false;
   // &as=ruth: another member of the team is signed in on this phone (CH32).
   const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;
   if (as) s.books.me = as;

@@ -10,9 +10,10 @@
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { money, oldestAge, orderTotal } from '../../../core/money.ts';
+import { money, orderTotal } from '../../../core/money.ts';
+import { owingOf } from '../../../core/owing.ts';
 import { firstWord, orderNo, STAGE_WORD } from '../../../core/names.ts';
-import { addDays, dayLabel, dayOf, howLong, when } from '../../../core/time.ts';
+import { dayLabel, dayOf, howLong, when } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Customer, Item, Message, Ms, Order } from '../../../core/types.ts';
 import { lastMessages, waitingChats } from '../../../core/chats.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -25,7 +26,8 @@ import { sheet } from '../../../ui/sheet.tsx';
 import { nav } from '../shell/nav.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { books, chats, drafts, now, source } from '../shell/store.ts';
-import { askAisle, lastOrderAt, mine, sellsMost } from './data.ts';
+import { askAisle, mine, sellsMost } from './data.ts';
+import { rhythm } from '../../../core/customers.ts';
 import { go, itemsParam, tel } from './go.ts';
 import { rememberOpened, rememberSearch, useLocal } from './local.ts';
 import { ItemFound, Nothing, oftenIds } from './FindItems.tsx';
@@ -184,7 +186,7 @@ function Start(p: { b: Books; cb: ChatBooks | null; now: Ms; show: (k: Kind) => 
           ) : r.c ? (
             <Tap key={r.x.id} on={() => { rememberOpened({ kind: 'customer', id: (r.c as Customer).id }); go('sell/order', { customer: (r.c as Customer).id }); }} class="td-find-row">
               <Avatar initials={r.c.initials} tint={r.c.tint} size={40} />
-              <span class="td-find-t"><span>{r.c.name}</span><span>{r.c.owes > 0 ? `oldest bill ${oldestAge(r.c, dayOf(p.now))} days` : r.c.place}</span></span>
+              <span class="td-find-t"><span>{r.c.name}</span><span>{r.c.owes > 0 ? `oldest bill ${owingOf(b, r.c, dayOf(p.now)).age} days` : r.c.place}</span></span>
               {r.c.owes > 0 && <span class="td-find-fig"><b class="mono">{money(r.c.owes)}</b><small>owes</small></span>}
             </Tap>
           ) : (
@@ -223,8 +225,8 @@ export function shelf(i: Item): JSX.Element | string {
 
 function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; m: ReturnType<typeof matches>; show: (k: Kind) => boolean }): JSX.Element {
   const b = p.b, c = p.m.customers[0], first = firstWord(c.name);
-  const last = lastOrderAt(b, c.id), next = last != null && c.everyDays ? addDays(dayOf(last), c.everyDays) : null;
-  const gone = last != null && c.everyDays ? Math.min(1, (p.now - last) / (c.everyDays * 864e5)) : 0, ring = Math.max(4, 144.5 * gone);
+  const r = rhythm(c, b.orders, dayOf(p.now)), last = r.lastOrder ? r.lastOrder.placedAt : null, next = r.next;
+  const gone = last != null && r.every ? Math.min(1, (p.now - last) / (r.every * 864e5)) : 0, ring = Math.max(4, 144.5 * gone);
   const all = p.m.orders.filter((o) => o.customerId === c.id).length, live = mine(b).filter((o) => o.customerId === c.id).sort((x, y) => y.id - x.id);
   const chat = p.cb ? p.cb.chats.find((x) => x.customerId === c.id) : null;
   const asked = b.asks.filter((a) => a.status !== 'dropped' && a.status !== 'listed' && a.requests.some((r) => r.customerId === c.id));
