@@ -94,6 +94,21 @@ The build check (§6) fails a page that goes over budget.
 2. raise the page budget to 200 KB, still under today's 192–266 KB pages, so one page works now;
 3. then load each tab when it is first opened, so the first screen is small on bad signal. A live update must then carry the tab files with the page.
 
+**Per-tab loading (built 2026-11-04).** The merged app came to 220 KB, so step 3 came first.
+
+| File (`next/`) | Holds | Budget, compressed | Built 2026-11-04 |
+|---|---|---|---|
+| `sales.html` | the shell, `src/ui`, `src/core` and the **Today** tab: the first screen | **200 KB** | 104.9 KB |
+| `sales-chats.js` · `sales-sell.js` · `sales-counter.js` · `sales-orders.js` · `sales-customers.js` | each tab's own folder and CSS only | **60 KB each** (twice the ~30 KB a tab measured, room to grow; one tab over it is a tab to split) | 28.9 · 35.9 · 25.1 · 30.5 · 34.9 KB |
+| `sales-sw.js` | the service worker | — | 0.8 KB |
+
+- **One copy of each module.** A tab file never carries `src/ui`, `src/core`, the shell, Today or Preact: it takes them from the page (`window.owSalesMods`, filled by `tools/build-app.js` with exactly the modules the tabs use). A tab file importing another tab's own file fails the build: tabs reach each other only by a ROUTES.md id or `callTab()` (`src/apps/sales/shell/tabs.ts`).
+- **Loaded when first opened, and all of them after the first paint**, one after another, quietly, so they are on the phone before the signal goes. A screen of a tab still on its way is the canvas's loading state (P25: the head, the rows as shimmer); a tab that cannot load (no signal, not on the phone yet) says so with Try again.
+- **One build together.** The page and its tab files carry one build id; the page refuses a tab file of another build (and reloads once).
+- **Offline (web).** `sales-sw.js` puts this build's page and tab files on the phone when it installs, in one cache named for the build, and answers them from there. A new build installs behind the open app and takes over only when every Sales window is closed, so a page never meets another build's tabs. Supabase is never cached.
+- **Offline (phone app).** The page lists its files in `<meta name="ow-files">`. `apps/sales/scripts/build-www.js` copies them beside `index.html` and fails if one is missing. The live update (the native layer, which moves into the new page at the switch, spec 06 §4) must fetch those files **from the server, beside the page**, into the new copy's folder before it stages it, and stage nothing if any is missing. Today's native layer copies the running copy's files instead: right for the fonts and the Supabase client, wrong for tab files.
+- `tools/build-app.js sales --check` (build-check.yml) fails when any of the files differs from what `src/` builds or is over its budget.
+
 ---
 
 ## 5. How a new app goes live

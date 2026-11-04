@@ -145,6 +145,10 @@ async function shootApp(browser, spec, { W, H }) {
   await p.goto(`${ORIGIN}/next/sales.html?demo${spec.demo || ''}`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
   await p.locator('#app > *').first().waitFor({ timeout: 8000 });
+  // Per-tab loading (src/apps/sales/shell/tabs.ts): the other tabs' files arrive after the first
+  // paint; the page marks <html data-tabs> when they are all here. A tap before then still works
+  // (the tab loads first), but every board is shot with the whole app on the phone.
+  if (!/parts=/.test(spec.demo || '')) await p.waitForFunction(() => document.documentElement.dataset.tabs, null, { timeout: 8000 }).catch(() => {});
   await p.waitForTimeout(500);
   let taps = 0;
   for (const s of spec.steps || []) { await step(p, s); if (s.tap != null) taps++; }
