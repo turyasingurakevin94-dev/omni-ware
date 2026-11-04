@@ -35,6 +35,16 @@ export function dataError(kind: DataErrorKind, message: string, code: string = '
   return e;
 }
 
+/**
+ * This phone's pushes (spec 06 §6a). `why` says why they are off when the person cannot simply turn them on:
+ * not-app (a browser: pushes come in the installed app), old-app (an install with no Firebase), denied (off in
+ * the phone's settings), no-play (no Google Play services: no token).
+ */
+export interface PushState {
+  on: boolean;
+  why: 'not-app' | 'old-app' | 'denied' | 'no-play' | null;
+}
+
 export function isDataError(e: unknown): e is DataError {
   return !!e && typeof e === 'object' && 'kind' in e && e instanceof Error;
 }
@@ -134,6 +144,11 @@ export interface DataSource {
   /** The customer was told the Manager's new price (items[].priceToldAt). */
   markPriceTold(orderId: number): Promise<void>;
   setClientPhone(orderId: number, phone: string): Promise<void>;
+  /**
+   * A walk-in's order goes on a customer's account: they owe what is left of it (CU34, "who owes it?";
+   * sales.html:9290 payOrderFor, the order's customerId and client by ow_patch_order).
+   */
+  assignOrder(orderId: number, customerId: string): Promise<void>;
   /** Ask the Manager to void a bill or credit a return (invoice_asks). */
   askBill(a: { orderId: number; kind: 'void' | 'credit'; amount: UGX; reason: string; note: string; lines?: { idx: number; qty: number }[] }): Promise<BillAsk>;
   /** Take back any ask of yours that still waits: a void, a credit or a cancel. */
@@ -155,16 +170,27 @@ export interface DataSource {
   addCustomer(a: { name: string; phone: string; place: string; kind: CustomerKind | null }): Promise<Customer>;
 
   /* sourcing */
-  askSourcing(a: { name: string; qty: number; customerId: string | null; chatId: number | null }): Promise<SourcingAsk>;
+  askSourcing(a: { name: string; qty: number; customerId: string | null; chatId: number | null; photo?: Blob | null }): Promise<SourcingAsk>;
   /** A search that found nothing, for Sourcing (log_search_miss). Fire and forget. */
   logSearchMiss(words: string, client: string | null): void;
+
+  /* this phone */
+  /** Whether this phone gets the person's pushes (its token in push_subscriptions). */
+  pushState(): Promise<PushState>;
+  /** Sign this phone up: the phone is asked, its token saved to push_subscriptions. */
+  pushOn(): Promise<PushState>;
+  /** Take this phone off: its push_subscriptions row deleted, the phone unregistered. */
+  pushOff(): Promise<PushState>;
 
   /* chats */
   send(chatId: number, text: string): Promise<Message>;
   /** After the 24-hour window: the shop's approved reply template, their words inside it. */
   sendTemplate(chatId: number, text: string): Promise<Message>;
-  /** A picture, with words under it (wa-send 'send-image': the shop's image bucket, then its link). */
-  sendImage(chatId: number, file: Blob, caption: string): Promise<Message>;
+  /**
+   * A picture, with words under it (wa-send 'send-image': the shop's image bucket, then its link).
+   * A string is a link already in the bucket (an item's photo): sent as it is, not uploaded again.
+   */
+  sendImage(chatId: number, file: Blob | string, caption: string): Promise<Message>;
   /** The shop's WhatsApp catalogue as a card they can browse (wa-send 'send-catalog'). */
   sendCatalog(chatId: number): Promise<Message>;
   /** A customer's picture, voice note or document: its link (wa-send 'media'). */

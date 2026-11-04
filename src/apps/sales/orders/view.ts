@@ -8,7 +8,8 @@ import { firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
 import type { Tile } from './local-Parts.tsx';
-import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, twinOf, waitsRuth } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
 import type { CHead, CLine, Mark } from './local-CheckList.tsx';
 
 const GREEN = '#0F6B43', AMBER = '#F5B26B';
@@ -130,7 +131,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
 
   // The Tell tile's sub.
   let tellSub = 'it\'s being checked';
-  if (o.voided) tellSub = twinOf(b, o, true) ? 'the copy is struck out' : 'it is struck out';
+  if (o.voided) tellSub = twinOf(b.orders, o, true) ? 'the copy is struck out' : 'it is struck out';
   else if (ret) tellSub = 'about the return';
   else if (billOwes && o.paid > 0) tellSub = 'what is owed';
   else if (o.stage === 'buying' && goneLines.length) tellSub = 'what was found';

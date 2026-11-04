@@ -8,7 +8,7 @@
  * source, no clock (the caller passes `today`), so tests import them as they
  * are (test/sales-core-money.test.js).
  */
-import type { Charge, Customer, Day, Line, Order, UGX } from './types.ts';
+import type { Charge, Customer, Day, Line, Order, Payment, PayPromise, UGX } from './types.ts';
 
 /* ---------------- whole shillings ---------------- */
 
@@ -150,6 +150,34 @@ export function payPlan(owes: UGX, amount: UGX): { toDebt: UGX; over: UGX } {
   return { toDebt, over: left - toDebt };
 }
 
+/**
+ * How a payment spreads over a customer's open bills (given oldest first, each with what it still owes):
+ * the ticked bills in the order ticked (ones not open are skipped, each once), else every bill oldest
+ * first; each takes the least of what is left and what it owes until the amount runs out. One rule with
+ * receive_payment (0140: ordered_ids, pay_q := least(left_amt, due)). Pass what goes to the debt
+ * (payPlan(...).toDebt), not what was handed over. Returns the walked bills in walk order.
+ */
+export function splitPayment(bills: { id: number; left: UGX }[], amount: UGX, picks?: number[] | null): { id: number; applied: UGX }[] {
+  const walk: { id: number; left: UGX }[] = [];
+  if (picks) picks.forEach((id) => { const b = bills.find((x) => x.id === id); if (b && !walk.includes(b)) walk.push(b); });
+  else walk.push(...bills);
+  let left = Math.max(0, whole(amount));
+  return walk.map((b) => { const applied = Math.max(0, Math.min(left, whole(b.left))); left -= applied; return { id: b.id, applied }; });
+}
+
+/**
+ * What a payment brought over what it cleared (OR15: Nansana's 560,000 cleared 470,000; 90,000 over): what it
+ * paid on their bills (the debt log) or on orders (order payments), whichever is more; a payment with no
+ * customer cleared all of it. Moved here from the Orders tab's overOf, unchanged, so Customers uses the same rule.
+ */
+export function paidOver(b: { customers: Pick<Customer, 'id' | 'debtLog'>[]; orders: Pick<Order, 'payments'>[] }, p: Payment): { cleared: UGX; over: UGX } {
+  const c = p.customerId ? b.customers.find((x) => x.id === p.customerId) : null;
+  const onBills = c ? c.debtLog.filter((e) => e.type === 'payment' && e.paymentId === p.id).reduce((a, e) => a + e.amount, 0) : 0;
+  const onOrders = b.orders.reduce((a, o) => a + o.payments.filter((x) => x.paymentId === p.id).reduce((t, x) => t + x.amount, 0), 0);
+  const cleared = c ? Math.max(onBills, onOrders) : p.amount;
+  return { cleared, over: Math.max(0, p.amount - cleared) };
+}
+
 /** What the payment records, by how the over is settled. spec 02 §6 (0165 p_over). */
 export function settleOver(owes: UGX, amount: UGX, how: 'change' | 'deposit' | null): { moneyIn: UGX; change: UGX; deposit: UGX; refused: boolean } {
   const { toDebt, over } = payPlan(owes, amount);
@@ -171,6 +199,7 @@ export const NOTES: UGX[] = [50000, 20000, 10000, 5000, 2000, 1000];
  * The two notes a customer most likely hands over for a total: the next 5,000 and the next 10,000 above it
  * (then 20,000, 50,000, 100,000 when those are the same). FACTS "Tender rule": 52,000 → 55,000 / 60,000;
  * 203,500 → 205,000 / 210,000. sales.html ctGivenChoices started at the next 1,000; the canvas (KC03) wins.
+ * The counter (They gave) and Take payment (CU35-CU37) both use it; spec 04 Q12 asks Kevin.
  */
 export function likelyNotes(total: UGX): UGX[] {
   const t = whole(total), out: UGX[] = [];
@@ -184,6 +213,20 @@ export function notesFor(amount: UGX): UGX[] {
   const out: UGX[] = [];
   NOTES.forEach((n) => { while (left >= n) { out.push(n); left -= n; } });
   return out;
+}
+
+/* ---------------- promises to pay ---------------- */
+
+/**
+ * A promise to pay, worked out from the debt log every time (spec 02 §5.6, decided Q10; sales.html:7162
+ * custPromiseState): kept when they owe nothing (0.5 or less), or when what they paid from the day it was made to
+ * the promised day reaches the amount it named; otherwise broken once the promised day has passed, else open.
+ */
+export function promiseState(p: Pick<PayPromise, 'on' | 'madeOn' | 'amount'>, c: Pick<Customer, 'owes' | 'debtLog'>, today: Day): 'kept' | 'broken' | 'open' {
+  if (!(c.owes > 0.5)) return 'kept';
+  const paid = c.debtLog.filter((e) => e.type === 'payment' && e.day >= p.madeOn && e.day <= p.on).reduce((s, e) => s + Math.abs(e.amount), 0);
+  if (p.amount != null && p.amount > 0 && paid >= p.amount - 0.5) return 'kept';
+  return p.on < today ? 'broken' : 'open';
 }
 
 /* ---------------- the 21-day hold ---------------- */

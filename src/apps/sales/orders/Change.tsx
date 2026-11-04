@@ -16,7 +16,8 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, now } from '../shell/store.ts';
-import { byRole, faceOfMember, nameOf, openAsk, orderOf, shortItem, shortName, twinOf } from './data.ts';
+import { twinOf } from '../../../core/orders.ts';
+import { byRole, faceOfMember, nameOf, openAsk, orderOf, shortItem, shortName } from './data.ts';
 import { StageDots } from './local-Track.tsx';
 import './sheets.css';
 
@@ -53,7 +54,7 @@ const takeBack = (id: string) => { act('withdrawBillAsk', id).then(() => toast.s
 export function openChange(id: number): void {
   const b = books.value, o = b && orderOf(b, id);
   if (!b || !o) return;
-  const tw = twinOf(b, o);
+  const tw = twinOf(b.orders, o);
   if (tw && tw.copy.id === o.id) { openTwice(id); return; }
   sheet.open(() => <ChangeSheet id={id} />, { label: 'Change this order', top: 430 });
 }
@@ -137,7 +138,7 @@ function CancelSheet(p: { id: number }): JSX.Element | null {
 
 /** OR19, OR23 · the two side by side, what makes them the same, and ask Ruth to cancel (or void) the copy. */
 export function openTwice(id: number): void {
-  const b = books.value, o = b && orderOf(b, id), tw = b && o && twinOf(b, o);
+  const b = books.value, o = b && orderOf(b, id), tw = b && o && twinOf(b.orders, o);
   if (!b || !o || !tw) return;
   sheet.open(() => <TwiceSheet id={tw.copy.id} />, { label: 'Entered twice?', top: 150 });
 }
@@ -161,7 +162,7 @@ function Card(p: { b: Books; o: Order; copy?: boolean; t: number }): JSX.Element
 }
 
 function TwiceSheet(p: { id: number }): JSX.Element | null {
-  const b = books.value, o = b && orderOf(b, p.id), tw = b && o && twinOf(b, o), t = now.value;
+  const b = books.value, o = b && orderOf(b, p.id), tw = b && o && twinOf(b.orders, o), t = now.value;
   const [busy, setBusy] = useState(false);
   if (!b || !o || !tw) return null;
   const { orig, copy } = tw, ruth = ruthOf(b), rn = firstWord(ruth?.name || 'Manager'), rf = ruth ? faceOfMember(ruth) : undefined, store = byRole(b, 'store');

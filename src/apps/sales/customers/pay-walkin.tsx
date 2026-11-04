@@ -1,0 +1,58 @@
+/*
+ * CU34 · A walk-in pays part: "6,000 left · who owes it?". The likely ones
+ * first (someone whose number shares the walk-in's, then today's most recent
+ * customers), what it adds to their account with its Credit charge
+ * (money.ts creditCharge: the shop's pct, one line, never in unit prices),
+ * and where that leaves them against the Manager's limit.
+ */
+import { signal } from '@preact/signals';
+import type { JSX } from 'preact';
+import { money, orderOwes } from '../../../core/money.ts';
+import { phone9 } from '../../../core/names.ts';
+import type { Books, Customer, Order } from '../../../core/types.ts';
+import { nav } from '../shell/nav.ts';
+import { role } from './Customer.tsx';
+import { first } from './cust-head.tsx';
+import { short } from './data.ts';
+import { WhoCard, type WhoOpt } from './pay-parts.tsx';
+
+/**
+ * What goes on their account: what the order still owes once this is paid (money.ts orderOwes). The order
+ * keeps its own terms, so the server's invoice charges exactly this (0169: debt = total − paid); a walk-in's
+ * order carries no Credit charge, so none is added here.
+ */
+export function shareFor(o: Order, paying: number): number {
+  return orderOwes({ ...o, paid: o.paid + Math.max(0, paying) });
+}
+
+/** Same first six digits after 0: the same company's phones (0772 418 905 → Kato's 0772 418 220). */
+function samePlace(a: string, c: Customer): boolean {
+  const x = phone9(a), y = phone9(c.phone);
+  return !!x && !!y && x.slice(0, 6) === y.slice(0, 6);
+}
+
+/** "Find someone else": the customer picked from the list for this order (List.tsx, { pick: order }). */
+export const whoPicked = signal<{ order: number; id: string } | null>(null);
+
+export function whoOptions(b: Books, o: Order): Customer[] {
+  const mine = b.customers.filter((c) => !c.qa);
+  const picked = whoPicked.value && whoPicked.value.order === o.id ? mine.find((c) => c.id === (whoPicked.value as { id: string }).id) : null;
+  const lastAt = (c: Customer) => b.orders.filter((x) => x.customerId === c.id).reduce((m, x) => Math.max(m, x.placedAt), 0);
+  const match = mine.filter((c) => o.client.phone && samePlace(o.client.phone, c));
+  const recent = mine.filter((c) => !match.includes(c)).sort((x, y) => lastAt(y) - lastAt(x));
+  const two = [...match, ...recent].slice(0, 2);
+  return picked && !two.includes(picked) ? [picked, two[0]] : two;
+}
+
+export function WalkinWho(p: { b: Books; o: Order; left: number; paying: number; opts: Customer[]; chosen: string | null; onPick: (id: string) => void }): JSX.Element {
+  const { b, o } = p, ruth = first(role(b, 'manager').name), share = shareFor(o, p.paying);
+  const opts: WhoOpt[] = p.opts.map((c) => ({
+    id: c.id, initials: c.initials, tint: c.tint, name: c.name, owes: c.owes,
+    sub: o.client.phone && samePlace(o.client.phone, c) ? `${short(c.name)}’s worker · on their account` : c.creditLimit ? `credit ${money(c.creditLimit)} · ${ruth}` : `No limit set · ${ruth} decides`,
+  }));
+  const chosen = p.chosen ? b.customers.find((c) => c.id === p.chosen) || null : null;
+  return (
+    <WhoCard left={p.left} opts={opts} chosen={p.chosen} onPick={p.onPick} share={share} onFind={() => nav.push('customers', { pick: o.id })}
+      credit={chosen ? { owes: chosen.owes, limit: chosen.creditLimit, label: `${short(chosen.name)} would owe ${money(chosen.owes + share)} of a ${money(chosen.creditLimit || 0)} limit` } : null} />
+  );
+}

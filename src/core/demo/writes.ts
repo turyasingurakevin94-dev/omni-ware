@@ -7,7 +7,7 @@
  * Each names the server function it stands in for.
  */
 import { dataError, type CounterPay, type CounterResult, type OrderDraft, type PayArgs, type PayResult } from '../datasource.ts';
-import { cashTotal, orderOwes, orderTotal, payPlan } from '../money.ts';
+import { cashTotal, orderOwes, orderTotal, payPlan, splitPayment } from '../money.ts';
 import { initials, invoiceNo, isGenericName, tintFor } from '../names.ts';
 import { startStage } from '../orders.ts';
 import { dayOf } from '../time.ts';
@@ -30,7 +30,7 @@ function newOrder(s: DemoState, d: OrderDraft, id: number, stage: Order['stage']
     placedAt: now, placedBy: me, stage, stageAt: now, stageLog: [{ stage, at: now, by: me }], holderId: null,
     lines: d.lines.map((l, i) => ({ ...l, lineId: i + 1 })), charges: d.charges, credit: d.credit, discount: 0,
     payments: [], paid: 0, invoiced: false, invoicedAt: null, voided: false, voidedAt: null, voidedBy: null, cancelled: false, counter: false,
-    deliverTo: d.deliverTo, deliveredAt: null, toldTotal: null, qa: false,
+    deliverTo: d.deliverTo, deliveredAt: null, toldTotal: null, chatId: d.chatId, qa: false,
   };
 }
 
@@ -160,7 +160,8 @@ function onOrder(o: Order, p: Payment): void {
 export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   const b = s.books, amount = Math.round(a.amount);
   if (!(amount > 0)) throw dataError('refused', 'Type how much they paid');
-  if (a.method !== 'cash' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
+  // Mobile needs its transaction ID (spec 04 Q6, CU33); a bank reference is "if there is one" (CU31; 0155 keeps it optional).
+  if (a.method === 'momo' && !String(a.ref || '').trim()) throw dataError('refused', 'Type the transaction ID', 'OWREF');
   if (a.orderId != null) {
     const o = b.orders.find((x) => x.id === a.orderId);
     if (!o || o.voided) throw dataError('refused', 'That order is not in the books');
@@ -178,12 +179,12 @@ export function receivePayment(s: DemoState, a: PayArgs): PayResult {
   if (over > 0 && !a.over) throw dataError('refused', 'That is more than they owe: give change or keep a deposit', 'OWOVR');
   const bills = b.orders.filter((o) => o.customerId === c.id && o.invoiced && !o.voided && orderOwes(o) > 0)
     .sort((x, y) => (x.invoicedAt || 0) - (y.invoicedAt || 0));
-  const ordered = a.picks ? a.picks.map((id) => bills.find((o) => o.id === id)).filter((o): o is Order => !!o) : bills;
+  const split = splitPayment(bills.map((o) => ({ id: o.id, left: orderOwes(o) })), toDebt, a.picks);
   let left = toDebt;
   const made: Payment[] = [];
-  for (const o of ordered) {
-    if (!(left > 0)) break;
-    const take = Math.min(left, orderOwes(o));
+  for (const { id, applied: take } of split) {
+    if (!(take > 0)) continue;
+    const o = bills.find((x) => x.id === id) as Order;
     const p = receipt(s, take, a, o.id, c.id);
     onOrder(o, p); made.push(p); left -= take;
     c.debtLog.push({ id: c.debtLog.length + 1000, day: p.day, type: 'payment', amount: take, orderId: o.id, paymentId: p.id, note: 'Payment — ' + invoiceNo(o.id) });

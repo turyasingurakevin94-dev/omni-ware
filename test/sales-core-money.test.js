@@ -62,6 +62,24 @@ t.check(M.orderOwes(order([line(40, 38000), line(2, 145000)], { paid: 1000000 })
   t.check(M.settleOver(470000, 560000, null).refused, 'neither: refused (OWOVR)');
   t.check(M.payPlan(-50000, 100000).toDebt === 0, 'a deposit already held: nothing is owed');
 }
+{
+  // Kato: #0531 300,000 and #0544 120,000, oldest first (receive_payment 0140).
+  const bills = [{ id: 531, left: 300000 }, { id: 544, left: 120000 }];
+  const s = M.splitPayment(bills, 350000);
+  t.check(s.length === 2 && s[0].applied === 300000 && s[1].applied === 50000, 'split: 350,000 clears #0531, then 50,000 on #0544');
+  const k = M.splitPayment(bills, 120000, [544]);
+  t.check(k.length === 1 && k[0].id === 544 && k[0].applied === 120000, 'split: only the ticked #0544 takes it');
+  const r = M.splitPayment(bills, 400000, [544, 531, 544, 999]);
+  t.check(r.map((x) => x.id).join() === '544,531' && r[0].applied === 120000 && r[1].applied === 280000, 'split: ticked order, each once, a bill not open is skipped');
+  t.check(M.splitPayment(bills, M.payPlan(420000, 500000).toDebt).reduce((a, x) => a + x.applied, 0) === 420000, 'split: only what goes to the debt is spread, never the over');
+}
+{
+  const pay = { id: 9002, amount: 560000, customerId: 'C005' };
+  const books = { customers: [{ id: 'C005', debtLog: [{ type: 'payment', amount: 470000, paymentId: 9002 }] }], orders: [{ payments: [{ paymentId: 9002, amount: 470000 }] }] };
+  const o = M.paidOver(books, pay);
+  t.check(o.cleared === 470000 && o.over === 90000, 'paid over: Nansana 560,000 cleared 470,000, 90,000 over (OR15)');
+  t.check(M.paidOver({ customers: [], orders: [] }, { id: 1, amount: 96000, customerId: null }).over === 0, 'paid over: a walk-in payment clears all of it');
+}
 t.check(M.changeFor(52000, 60000) === 8000 && M.changeFor(52000, 50000) === -2000, 'counter change: 60,000 for 52,000 → 8,000; short is negative');
 
 /* ---- the 21-day hold (spec 02 Q8; FACTS §3.1) ---- */

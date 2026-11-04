@@ -75,6 +75,7 @@ Every part on the canvas's two parts boards (`docs/canvas/sales-agent/boards/Mai
 | S08 | `DayBlocks.tsx` | `DayBlocks` title, pill, rhythm, late, ahead, labels, label, onNavy | |
 | S09 | `StageGroup.tsx` | `StageGroup` stage, count, sum, children. `OrderRow` face, name, no, status `{text, face, tone}`, amount, time, act `{word, amount, label, on, tone}`, on. `STAGE_DOT` | |
 | S10 | `BillMatch.tsx` | `BillMatch` bill `{k, v, sub}`, paid, label, eyebrow, sign | |
+| SL34 | `Listen.tsx` | `ListenSheet` act, onDone(words): the phone listening (stop, waveform, what it heard, Say it again, one action). `hasSpeech()`: false where the phone cannot listen (focus the field instead) | `sheet.open(() => <ListenSheet act="Find" onDone={setQ} />, { label: 'Say it' })` |
 
 ## What the tab builders must know
 

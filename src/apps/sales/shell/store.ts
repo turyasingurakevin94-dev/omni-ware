@@ -58,10 +58,11 @@ export const readError = signal<string | null>(null);
 export const elsewhere = signal<Member | null>(null);
 
 export const me = computed(() => (books.value ? books.value.me : null));
-/** Chats waiting for this salesperson (the Chats tab's count). */
+/** Chats waiting for this salesperson (the Chats tab's count). With no signal it shows none: the copy
+ * cannot say who wrote since (TD09: "Chats waiting · back online"). */
 export const waitingCount = computed(() => {
   const cb = chats.value, m = me.value;
-  return cb && m ? waitingChats(cb, m.id, now.value).length : 0;
+  return cb && m && online.value ? waitingChats(cb, m.id, now.value).length : 0;
 });
 
 let outbox: Outbox | null = null;
@@ -129,6 +130,8 @@ export function saveDrafts(list: Draft[]): void {
 
 /** FACTS §4.6: Kyaligonza · 2 items · 186,000 and Lubowa · 1 item · 2,280,000, not placed. */
 function demoDrafts(): Draft[] {
+  // &state=empty: nothing live, so nothing not placed yet either (CH06 draws no count on the +).
+  if (flags.state === 'empty' || flags.as) return []; // &as=ruth: another person's phone carries none of Grace's
   const b = (source as DemoSource).state.books, item = (id: string) => b.items.find((i) => i.id === id);
   const line = (id: string, qty: number, n: number) => {
     const it = item(id);

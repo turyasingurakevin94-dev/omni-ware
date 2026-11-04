@@ -8,12 +8,17 @@
  *   &state=empty             nothing live, nobody owes, no chats (CH06, OR04, CU06)
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
- *   &fail=sale               the next counter sale is lost on its way, as when the signal drops mid-send (KC19)
+ *   &state=busy              an afternoon with 38 live and 22 needing Grace (TD02)
+ *   &state=goal-hit          Thu 29 Oct, the month's goal passed (TD08)
+ *   &state=test-record       a TEST order of Grace's at 10:30, in no figure (TD25)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
+ *   &wa=off                  the shop's WhatsApp is not connected: nothing reaches a customer (CU43: the receipt waits)
+ *   &fail=sale               the next counter sale is lost on its way, as when the signal drops mid-send (KC19)
+ *   &listen=1                the phone can listen: "Say it" hears HEARD until Stop (CH16; no tap can cause speech)
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
-export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading';
+export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading' | 'busy' | 'goal-hit' | 'test-record';
 
 export interface DemoFlags {
   on: boolean;
@@ -21,13 +26,20 @@ export interface DemoFlags {
   /** "15:40", or null for 10:41. */
   clock: string | null;
   state: DemoStateName | null;
-  /** 'sale': the next counter sale does not reach the server (KC19). */
-  fail: 'sale' | null;
   /** The first name of the team member signed in instead of Grace ("ruth"), or null. */
   as: string | null;
+  /** &wa=off: the shop's WhatsApp number is not connected (ChatBooks.connected false). */
+  waOff: boolean;
+  /** 'sale': the next counter sale does not reach the server (KC19). */
+  fail: 'sale' | null;
+  /** The phone listens (CH16): "Say it" hears HEARD and keeps listening until Stop. */
+  listen: boolean;
 }
 
-const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading'];
+/** What the demo's phone hears when it listens (&listen=1): Grace's answer to Kato's 10:29 (CH16). */
+export const HEARD = 'Yes, it can come to the Ntinda site';
+
+const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading', 'busy', 'goal-hit', 'test-record'];
 
 /** Reads ?demo&offline=1&clock=15:40&state=… from a query string. */
 export function readFlags(search: string): DemoFlags {
@@ -40,7 +52,9 @@ export function readFlags(search: string): DemoFlags {
     offline: q.get('offline') === '1',
     clock: clock && /^\d{1,2}:\d{2}$/.test(clock) ? clock : null,
     state: state && STATES.includes(state) ? state : null,
-    fail: q.get('fail') === 'sale' ? 'sale' : null,
     as: /^[a-z]+$/.test(as) ? as : null,
+    waOff: q.get('wa') === 'off',
+    fail: q.get('fail') === 'sale' ? 'sale' : null,
+    listen: q.get('listen') === '1',
   };
 }

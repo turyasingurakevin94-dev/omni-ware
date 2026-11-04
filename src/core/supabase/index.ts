@@ -13,6 +13,7 @@ import type { Books, Order, Session } from '../types.ts';
 import { client, isNetwork, type Sb } from './client.ts';
 import { readBooks, readChats, readOrder, readSession, readThread } from './read.ts';
 import * as W from './write.ts';
+import * as Push from './push.ts';
 
 export function supabaseSource(): DataSource {
   let session: Session | null = null;
@@ -86,6 +87,11 @@ export function supabaseSource(): DataSource {
     async counterLines(orderId, lines) { await W.counterLines(sb(), me(), orderId, lines, Date.now()); },
     async markPriceTold(orderId) { await W.markPriceTold(sb(), me(), orderId, Date.now()); },
     async setClientPhone(orderId, phone) { await W.setClientPhone(sb(), me(), orderId, phone); },
+    async assignOrder(orderId, customerId) {
+      const c = (await books()).customers.find((x) => x.id === customerId);
+      if (!c) throw dataError('refused', 'That customer is not in the books', 'P0002');
+      await W.assignOrder(sb(), me(), orderId, c);
+    },
     async askBill(a) { return W.askBill(sb(), me(), await order(a.orderId), a); },
     async withdrawBillAsk(id) {
       // A cancel ask is withdrawn through its own function (0181); a void or credit ask through 0123's.
@@ -126,6 +132,9 @@ export function supabaseSource(): DataSource {
       return W.askSourcing(sb(), me(), a, lead ? lead.id : null, Date.now());
     },
     logSearchMiss(words, clientName) { try { W.logSearchMiss(sb(), me(), words, clientName); } catch (_e) { /* fire and forget */ } },
+    pushState: () => Push.pushState(),
+    pushOn: () => Push.pushOn(sb(), me()),
+    pushOff: () => Push.pushOff(sb(), me()),
 
     send: (chatId, text) => W.waSend(sb(), me(), chatId, text, false, Date.now()),
     sendTemplate: (chatId, text) => W.waSend(sb(), me(), chatId, text, true, Date.now()),
