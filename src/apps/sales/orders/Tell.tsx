@@ -12,7 +12,7 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, books, chats, now } from '../shell/store.ts';
 import { custOf, nameOf, orderOf, shortName } from './data.ts';
-import { chatFor, tellText } from './msg.ts';
+import { chatFor, tellsPrice, tellText } from './msg.ts';
 import { MonoText } from './OrderParts.tsx';
 import { orderPicture } from './picture.ts';
 import './sheets.css';
@@ -27,6 +27,8 @@ export function openTell(id: number): void {
 function TellSheet(p: { id: number }): JSX.Element | null {
   const b = books.value, o = b && orderOf(b, p.id), t = now.value;
   const [text, setText] = useState(() => (b && o ? tellText(b, o) : ''));
+  // Read once, with the words: what this message tells is what it was built from.
+  const [price] = useState(() => !!(b && o && tellsPrice(b, o)));
   const [pic, setPic] = useState(true);
   const [busy, setBusy] = useState(false);
   const words = useRef<HTMLSpanElement>(null);
@@ -39,6 +41,8 @@ function TellSheet(p: { id: number }): JSX.Element | null {
     setBusy(true);
     try {
       const r = pic && !shut ? await act('sendImage', c.id, await orderPicture(b, o, now.value), text) : await act('send', c.id, text);
+      // The message told them the new price (sent, or kept to go with signal), so it is told: Today stops asking.
+      if (price) await act('markPriceTold', o.id);
       sheet.close();
       toast.show(r.kept ? 'Kept on this phone' : `Sent to ${who}`, { kind: r.kept ? 'warn' : 'ok', sub: r.kept ? 'It goes when there is signal' : undefined });
     } catch (e) { toast.show((e as Error).message, { kind: 'error', retry: send }); } finally { setBusy(false); }

@@ -8,7 +8,7 @@ import { firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
 import type { Tile } from './local-Parts.tsx';
-import { twinOf } from '../../../core/orders.ts';
+import { priceUntold, twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
 import type { CHead, CLine, Mark } from './local-CheckList.tsx';
 
@@ -21,12 +21,10 @@ export function railTime(at: Ms, now: Ms): string {
   return dayLabel(at).split(' ')[2];
 }
 
-/** The Manager's price that the customer has not been told yet. */
-export const untold = (l: Line): boolean => !!l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at);
 /** A price Ruth set in this stage, told to nobody yet: Tell it from the order itself (OR13). */
 export function freshPrice(o: Order): Line | null {
   if (o.stage === 'checking' || o.lines.some(waitsRuth)) return null;
-  return o.lines.find((l) => untold(l) && (l.priceReview as { at: number }).at >= o.stageAt) || null;
+  return o.lines.find((l) => priceUntold(l) && (l.priceReview as { at: number }).at >= o.stageAt) || null;
 }
 
 const aisleOf = (b: Books, l: Line): string => b.items.find((i) => i.id === l.itemId)?.aisle || '';
@@ -137,7 +135,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (ret) tellSub = 'about the return';
   else if (billOwes && o.paid > 0) tellSub = 'what is owed';
   else if (o.stage === 'buying' && goneLines.length) tellSub = 'what was found';
-  else if (o.stage === 'checking' && o.lines.some(untold)) tellSub = 'a new price';
+  else if (o.stage === 'checking' && o.lines.some(priceUntold)) tellSub = 'a new price';
   else if (waiting.length) tellSub = `${rn} is deciding`;
   else tellSub = { checking: 'it\'s being checked', buying: 'it\'s being bought', packing: 'it\'s packing', road: 'it\'s on the way', delivered: 'it\'s delivered' }[o.stage];
 

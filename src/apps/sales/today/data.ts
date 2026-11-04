@@ -12,7 +12,7 @@
 import { soldByAisle } from '../../../core/aisles.ts';
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
-import { daysInStage, heldFor, LATE_DAYS } from '../../../core/orders.ts';
+import { daysInStage, heldFor, LATE_DAYS, priceUntold } from '../../../core/orders.ts';
 import { HOLD_DAYS, holdDay, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeWithHeld, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
@@ -142,7 +142,7 @@ export function usualValue(b: Books, c: Customer): UGX {
 
 /** Live orders whose price the Manager changed, not told yet. */
 export function priceTells(b: Books): Order[] {
-  return mine(b).filter((o) => o.lines.some((l) => l.priceReview && l.priceReview.state === 'changed' && !(l.priceToldAt && l.priceToldAt >= l.priceReview.at)));
+  return mine(b).filter((o) => o.lines.some(priceUntold));
 }
 
 /** Asks of Grace's that Moses listed, not told yet (told: kept on this phone, `told`). */
