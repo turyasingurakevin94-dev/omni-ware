@@ -1,11 +1,12 @@
 /*
- * Finding what was typed or said: a customer by name, phone or place (or
+ * Finding what was typed or said, once for every tab (spec 04 §4.3; moved from Sell's find.ts, which beat the
+ * counter's core/items.ts: "40 sheets" finds Iron sheet G28): a customer by name, phone or place (or
  * the one a letter or two off: SL02), and items from words like
  * "40 sheets" (SL08), "20 kg wire nails 4"" (SL15) or "forty sheets of G28
  * and two cartons of four inch nails" (SL10). Nothing here decides a price.
  */
-import { phone9 } from '../../../core/names.ts';
-import type { Books, Customer, Item, SourcingAsk } from '../../../core/types.ts';
+import { phone9 } from './names.ts';
+import type { Books, Customer, Item, SourcingAsk } from './types.ts';
 
 const norm = (s: string) => s.toLowerCase().replace(/[“”"]/g, '"').replace(/\s+/g, ' ').trim();
 
@@ -100,20 +101,38 @@ function fill(it: Item, qty: number): number {
   return 3;
 }
 
-/** The items that answer an ask: theirs first (rank 2), what they had this week (1), then what fills the count best. */
-export function findItems(b: Books, a: Asked, rank: (key: string) => number = () => 0): Item[] {
-  if (!a.words.length) return [];
-  const hits = b.items.filter((it) => fits(it, a.words) && (!a.unit || it.unit === a.unit || it.packUnit === a.unit || nameWords(it).includes(a.unit)));
-  const key = (it: Item) => `${it.id}::${it.variantIdx ?? ''}`, q = a.qty || 1;
-  return hits.sort((x, y) => rank(key(y)) - rank(key(x)) || fill(x, q) - fill(y, q));
+/** An aisle that answers the words: every word is in the aisle's name ("paint" → Paint). */
+function inAisle(it: Item, ws: string[]): boolean {
+  const aw = words(it.aisle).map(stem);
+  return ws.length > 0 && ws.every((w) => aw.includes(stem(w)));
 }
 
-/** Nothing called that: the items that share a word with it (SL09 "closest in the shop"). */
-export function closest(b: Books, a: Asked, n = 2): Item[] {
-  // The most words in common first; a word of letters ("pipe") counts over a size ("25mm").
-  const ws = a.words.filter((w) => w.length > 2), weight = (w: string) => (/^[a-z]+$/i.test(w) ? 2 : 1);
-  const score = (it: Item) => ws.reduce((t, w) => t + (nameWords(it).includes(stem(w)) ? weight(w) : 0), 0);
-  return b.items.map((it) => ({ it, s: score(it) })).filter((x) => x.s > 0).sort((x, y) => y.s - x.s).slice(0, n).map((x) => x.it);
+/**
+ * The items that answer an ask: theirs first (rank 2), what they had this week (1), then what fills the count
+ * best. Only when no item's name holds the words, the priced items of an aisle that does ("plumbing" lists the
+ * aisle; "paint" finds what is called paint: the lead's ruling, 4 Nov). An item with no price is found only by
+ * its own name.
+ */
+export function findItems(b: Books, a: Asked, rank: (key: string) => number = () => 0): Item[] {
+  if (!a.words.length) return [];
+  const unit = (it: Item) => !a.unit || it.unit === a.unit || it.packUnit === a.unit || nameWords(it).includes(a.unit);
+  const hits = b.items.filter((it) => fits(it, a.words) && unit(it));
+  const more = hits.length ? [] : b.items.filter((it) => it.price != null && inAisle(it, a.words) && unit(it));
+  const key = (it: Item) => `${it.id}::${it.variantIdx ?? ''}`, q = a.qty || 1;
+  const order = (x: Item, y: Item) => rank(key(y)) - rank(key(x)) || fill(x, q) - fill(y, q);
+  return [...hits.sort(order), ...more.sort(order)];
+}
+
+/**
+ * Nothing called that: the items that share a word with it (SL09, KC21, KC26 "closest in the shop"). The most
+ * words in common first; a word of letters ("pipe") counts over a size ("25mm"), and a size alone is not close
+ * ("PPR pipe 25mm" finds PVC pipe, never Fence staples 25mm). One rule for Sell and the counter.
+ */
+export function closest(b: Books, a: Asked, n = 2, keep: (it: Item) => boolean = () => true): Item[] {
+  const ws = a.words.filter((w) => w.length > 2), letters = (w: string) => /^[a-z]+$/i.test(w);
+  const score = (it: Item) => ws.reduce((t, w) => t + (nameWords(it).includes(stem(w)) ? (letters(w) ? 2 : 1) : 0), 0);
+  const named = (it: Item) => ws.some((w) => letters(w) && nameWords(it).includes(stem(w)));
+  return b.items.filter((it) => named(it) && keep(it)).map((it) => ({ it, s: score(it) })).sort((x, y) => y.s - x.s).slice(0, n).map((x) => x.it);
 }
 
 /** An ask already made of Sourcing that is this one, a letter or two off ("tile cuter" → "Tile cutter 600mm"). */

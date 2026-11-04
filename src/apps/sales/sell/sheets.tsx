@@ -18,7 +18,7 @@ import { ComingSheet } from './ComingSheet.tsx';
 import { DeliverySheet } from './DeliverySheet.tsx';
 import { PriceSheet } from './PriceSheet.tsx';
 import { PickSheet, SwitchSheet } from './SwitchSheet.tsx';
-import { VoiceSheet } from './VoiceSheet.tsx';
+import { VoiceSheet, canListen } from './VoiceSheet.tsx';
 
 export function openPrice(lineId: number): void {
   sheet.open(() => <PriceSheet lineId={lineId} />, { label: 'Their price', top: 150 });
@@ -42,6 +42,7 @@ export function openSwitchTo(customerId: string): void {
   sheet.open(() => <SwitchSheet to={customerId} />, { label: 'Change the customer', top: 480 });
 }
 export function openVoice(): void {
+  if (!canListen()) return;
   sheet.open(() => <VoiceSheet />, { label: 'Say it' });
 }
 export function openAisles(): void {

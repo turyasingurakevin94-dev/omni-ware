@@ -18,7 +18,7 @@ import { orderNo } from '../../../core/names.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Customer, Method, Order } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
-import { act, books, now } from '../shell/store.ts';
+import { act, books, kept, now, retryKept } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { role } from './Customer.tsx';
 import { first } from './cust-head.tsx';
@@ -27,7 +27,7 @@ import { short } from './data.ts';
 import { AmountInput } from './local-amount.tsx';
 import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
 import { PayDock } from './pay-dock.tsx';
-import { putPaid, sendReceipt, type Paid } from './paid-store.ts';
+import { paidResults, putPaid, sendReceipt, type Paid } from './paid-store.ts';
 import { shareFor, WalkinWho, whoOptions, whoPicked } from './pay-walkin.tsx';
 import './customers.css';
 import './pay.css';
@@ -37,10 +37,14 @@ export function PayScreen(p: ScreenProps): JSX.Element {
   const c = b && p.params.customer ? b.customers.find((x) => x.id === p.params.customer) || null : null;
   const o = b && p.params.order != null ? b.orders.find((x) => x.id === Number(p.params.order)) || null : null;
   if (!b || (!c && !o)) return <FullSheet onBack={() => nav.back()} backLabel="Back" head={<div class="ow-shead"><span aria-hidden="true" class="ow-shead-grab" /></div>} />;
-  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} />;
+  // CU46 Fix it: the refused kept payment, opened again over what the books say now (Give change or Deposit).
+  const k = p.params.fix ? kept.value.find((x) => x.id === String(p.params.fix)) : null;
+  const fixArgs = k && Array.isArray(k.args) ? (k.args[0] as PayArgs) : null;
+  const fix = k && fixArgs ? { keptId: k.id, paidKey: String(p.params.paid || ''), args: fixArgs } : null;
+  return <Pay b={b} c={c} o={o} bills={readBills(p.params.bills)} fix={fix} />;
 }
 
-function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null }): JSX.Element {
+function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null; fix: { keptId: string; paidKey: string; args: PayArgs } | null }): JSX.Element {
   const { b, c, o } = p, today = dayOf(now.value), esther = role(b, 'accounts');
   const m = c ? owingOf(b, c, today) : null;
   const open: OpenBill[] = m ? m.bills.filter((x) => !x.checked) : [];
@@ -50,10 +54,10 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
   const sumOf = (ids: number[]) => open.filter((x) => ids.includes(x.id)).reduce((s, x) => s + x.left, 0);
 
   const [picks, setPicks] = useState<number[] | null>(initPicks && initPicks.length ? initPicks : null);
-  const [amount, setAmount] = useState<number>(initPicks && initPicks.length ? sumOf(initPicks) : take);
-  const [other, setOther] = useState(false);
-  const [method, setMethod] = useState<Method>('cash');
-  const [ref, setRef] = useState('');
+  const [amount, setAmount] = useState<number>(p.fix ? p.fix.args.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
+  const [other, setOther] = useState(!!p.fix && p.fix.args.amount !== take);
+  const [method, setMethod] = useState<Method>(p.fix ? p.fix.args.method : 'cash');
+  const [ref, setRef] = useState(p.fix ? p.fix.args.ref || '' : '');
   const [given, setGiven] = useState<number | 'exact'>('exact');
   const [how, setHow] = useState<'change' | 'deposit'>('change');
   const [receipt, setReceipt] = useState(true);
@@ -106,6 +110,15 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
     const over = choice ? how : null;
     const args: PayArgs = { customerId: c ? c.id : null, orderId: c ? null : o ? o.id : null, amount: over === 'deposit' ? handed : over === 'change' ? record : amount, method, ref: method === 'cash' ? '' : ref.trim(), picks: c ? picks : null, over };
     try {
+      if (p.fix) {
+        // The same kept write, fixed, goes again in its place (spec 06 Q5); its Paid screen is under this one.
+        const was = paidResults.value[p.fix.paidKey];
+        if (was) putPaid({ ...was, amount: args.amount, before: owes, after, change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, refused: null,
+          lines: rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied })) });
+        await retryKept(p.fix.keptId, [args]);
+        nav.back();
+        return;
+      }
       if (o && !c && whoC) await act('assignOrder', o.id, whoC.id);
       const r = await act<PayResult>('receivePayment', args);
       const key = 'p' + now.value + '-' + Math.random().toString(36).slice(2, 6);
@@ -115,7 +128,7 @@ function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[]
       const paid: Paid = {
         key, customerId: who0 ? who0.id : null, name: who0 ? who0.name : name, initials: who0 ? who0.initials : 'WI', tint: who0 ? who0.tint : 't4', phone: who0 ? who0.phone : o ? o.client.phone : '',
         amount: r.kept ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
-        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null,
+        before: owes, after: Math.max(0, r.kept ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : 0, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
         receipt: { state: receipt && c ? (r.kept ? 'waiting' : 'sending') : 'off', at: null, chatId: null },
       };
       putPaid(paid);

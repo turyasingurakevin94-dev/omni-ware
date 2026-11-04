@@ -49,14 +49,14 @@ function Row(p: { v: ChatView }): JSX.Element {
   // A teammate's chat says whose it is (CH09: "Brian’s · shut").
   const theirs = v.owner && me && v.owner.id !== me.id ? `${whose(v.owner)} · ` : '';
   return (
-    <Tap on={() => goChat(v)} class="nc-row" label={theirs ? `${v.title}, ${whose(v.owner)}${w.open ? '' : ', the chat is shut'}` : undefined}>
+    <Tap on={() => goChat(v)} class="ch-nc-row" label={theirs ? `${v.title}, ${whose(v.owner)}${w.open ? '' : ', the chat is shut'}` : undefined}>
       {v.face && <Avatar {...v.face} size={40} />}
-      <span class="nc-t">
+      <span class="ch-nc-t">
         <span>{v.title}</span>
         {w.open ? <span class="open"><Icon name="clock" size={13} stroke={2.2} />{theirs}<b class="mono">{w.hoursLeft}</b> h to reply</span>
           : <span><Icon name="lock" size={13} stroke={2.2} />{`${theirs}shut`}</span>}
       </span>
-      <span aria-hidden="true" class={'nc-bar' + (w.open ? '' : ' shut')}>{w.open && <span style={{ width: `${Math.round(w.hoursLeft / 24 * 100)}%` }} />}</span>
+      <span aria-hidden="true" class={'ch-nc-bar' + (w.open ? '' : ' shut')}>{w.open && <span style={{ width: `${Math.round(w.hoursLeft / 24 * 100)}%` }} />}</span>
     </Tap>
   );
 }
@@ -65,10 +65,10 @@ function Row(p: { v: ChatView }): JSX.Element {
 function Other(p: { c: Customer }): JSX.Element {
   const d = phone9(p.c.phone);
   return (
-    <a href={d ? `https://wa.me/256${d}` : undefined} target="_blank" rel="noopener" class="nc-row">
+    <a href={d ? `https://wa.me/256${d}` : undefined} target="_blank" rel="noopener" class="ch-nc-row">
       <Avatar initials={p.c.initials} tint={p.c.tint} size={40} />
-      <span class="nc-t"><span>{p.c.name}</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />no chat yet · opens WhatsApp</span></span>
-      <span aria-hidden="true" class="nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+      <span class="ch-nc-t"><span>{p.c.name}</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />no chat yet · opens WhatsApp</span></span>
+      <span aria-hidden="true" class="ch-nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
     </a>
   );
 }
@@ -76,10 +76,10 @@ function Other(p: { c: Customer }): JSX.Element {
 /** CH19 · a typed number that no chat has: message it from WhatsApp on this phone. */
 function Number_(p: { d: string; shown: string }): JSX.Element {
   return (
-    <a href={`https://wa.me/256${p.d}`} target="_blank" rel="noopener" aria-label={`Message ${p.shown} on WhatsApp`} class="nc-row">
-      <span aria-hidden="true" class="nc-wa"><Duo i={phWhatsapp} size={22} color="#0F6B43" /></span>
-      <span class="nc-t"><span>Message this number</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />opens WhatsApp</span></span>
-      <span aria-hidden="true" class="nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+    <a href={`https://wa.me/256${p.d}`} target="_blank" rel="noopener" aria-label={`Message ${p.shown} on WhatsApp`} class="ch-nc-row">
+      <span aria-hidden="true" class="ch-nc-wa"><Duo i={phWhatsapp} size={22} color="#0F6B43" /></span>
+      <span class="ch-nc-t"><span>Message this number</span><span class="open"><Icon name="whatsapp" size={13} stroke={2.2} />opens WhatsApp</span></span>
+      <span aria-hidden="true" class="ch-nc-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
     </a>
   );
 }
@@ -100,20 +100,20 @@ function NewChatSheet(p: { q?: string }): JSX.Element {
   const numChat = num ? cb.chats.find((x) => phone9(x.phone) === num) || null : null;
   return (
     <LightSheet title="New chat" onClose={sheet.close} pad="12px 16px 24px" gap={12}
-      foot={<Tap on={() => go('customers/new', digits.length >= 9 ? { phone: q.trim() } : {})} class="nc-new"><Duo i={phUserPlus} size={20} color="#FFFFFF" />New customer</Tap>}>
-      <label class={'nc-search' + (q ? ' on' : '')}>
+      foot={<Tap on={() => go('customers/new', digits.length >= 9 ? { phone: q.trim() } : {})} class="ch-nc-new"><Duo i={phUserPlus} size={20} color="#FFFFFF" />New customer</Tap>}>
+      <label class={'ch-nc-search' + (q ? ' on' : '')}>
         <Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Customer, or a phone number" aria-label="Customer, or a phone number" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
-        {q && <button type="button" class="nc-x" aria-label="Clear the search" onClick={() => setQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
+        {q && <button type="button" class="ch-nc-x" aria-label="Clear the search" onClick={() => setQ('')}><span><Icon name="close" size={12} stroke={2.8} /></span></button>}
       </label>
-      {!s && <div class="nc-h"><Duo i={phClock} size={18} color="#5F6980" /><span>Wrote lately</span><span><i />24 h to reply</span></div>}
+      {!s && <div class="ch-nc-h"><Duo i={phClock} size={18} color="#5F6980" /><span>Wrote lately</span><span><i />24 h to reply</span></div>}
       {!s && !!lately.length && <GroupCard pad={14}>{lately.map((v) => <Row key={v.chat.id} v={v} />)}</GroupCard>}
       {!!num && !numChat && !hits.length && <>
-        <div class="nc-h"><Icon name="phone" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>No chat with this number</span></div>
+        <div class="ch-nc-h"><Icon name="phone" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>No chat with this number</span></div>
         <GroupCard pad={14}><Number_ d={num} shown={q.trim()} /></GroupCard>
       </>}
       {!!numChat && !hits.some((c) => c.id === numChat.customerId) && <GroupCard pad={14}><Row v={chatView(b, cb, numChat, t, drafts.value)} /></GroupCard>}
-      {!!hits.length && <div class="nc-h"><Icon name="customers" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>Customers</span><span class="mono">{hits.length}</span></div>}
+      {!!hits.length && <div class="ch-nc-h"><Icon name="customers" size={18} stroke={1.8} style={{ color: '#5F6980' }} /><span>Customers</span><span class="mono">{hits.length}</span></div>}
       {!!hits.length && (
         <GroupCard pad={14}>{hits.map((c) => {
           const ch = withChat(c);

@@ -53,7 +53,7 @@ export function Suggest(p: { b: Books; c: Customer | null }): JSX.Element | null
         </div>
       ))}
       <div data-fit="chips" style={fit.chips ? undefined : { display: 'none' }}>
-        <AisleChips aisles={chipAisles(b.items, b.orders, c ? c.id : null).map((a) => ({ name: a, on: () => openAisle(a) }))} />
+        <AisleChips aisles={chipAisles(b.items, b.orders, c ? c.id : null, me.value ? me.value.id : null).map((a) => ({ name: a, on: () => openAisle(a) }))} />
       </div>
     </div>
   );

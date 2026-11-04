@@ -11,7 +11,8 @@
  *     and the five aisles she sells from most (SL03, SL30, SL31): only the 29 background orders
  *     whose figures FACTS never gives are re-lined, each paid in full again
  *   the shop's cutting charge, Ntinda's travel time (SL16, SL17); the sentence the demo hears (SL10)
- *   (Sell's endings, #0560 and #0561, are placed at &clock=15:05, after the Orders tab's #0559)
+ *   (Sell's endings, #0560 and #0561, are placed at &clock=14:05: after the Orders tab's #0559, 13:50, and before
+ *   Nansana's #0562, 14:40, which is in at 15:05 for OR31)
  */
 import { orderTotal } from '../../../money.ts';
 import { at } from '../../../time.ts';
@@ -38,7 +39,7 @@ const KINDS: Record<string, [string[], string[]]> = {
   Steel: [['Rebar', 'Angle bar', 'Flat bar', 'Square tube', 'Round tube', 'Mesh roll', 'Binding coil', 'Channel'], ['8mm', '10mm', '12mm', '16mm', '25mm', '40mm', '50mm', '6m']],
   'Doors & locks': [['Padlock', 'Door lock', 'Bolt latch', 'Door stopper', 'Door closer', 'Key blank', 'Hasp', 'Mortice lock', 'Cylinder', 'Lever set'], ['30mm', '40mm', '50mm', '60mm', 'brass', 'chrome', 'black']],
   Sanitary: [['Basin', 'Toilet seat', 'Cistern', 'Shower head', 'Sink', 'Mirror', 'Towel rail', 'Soap dish', 'Floor drain', 'Bidet spray', 'Urinal'], ['white', 'ivory', 'steel', 'small', 'large', 'single', 'double', 'round', 'square']],
-  Adhesives: [['Sealant', 'Silicone', 'Contact cement', 'Epoxy', 'Putty'], ['clear', 'white', 'brown', 'grey', '300ml', '1L']],
+  Adhesives: [['Sealant', 'Silicone', 'Contact adhesive', 'Epoxy', 'Putty'], ['clear', 'white', 'brown', 'grey', '300ml', '1L']],
 };
 
 /** Fasteners: the kinds SL12 draws (Nails 9 · Screws 24 · Bolts 18), then the rest, each fewer than Bolts. */
@@ -56,20 +57,17 @@ const FASTENERS: [string, string[], string[]][] = [
 ];
 const FASTENER_COUNT = [5, 23, 18, 16, 14, 12, 10, 9, 8, 8];
 
-/**
- * A generated item. Only the Fasteners aisle (SL12's cards) is priced; the other aisles' fillers only make
- * FACTS' counts (SL11) and carry no price, so a search for a word or an aisle ("paint", KC02) finds only
- * the shop's real items.
- */
-function made(id: string, name: string, aisle: string, n: number, unit = 'pc', priced = true): Item {
-  const p = 1000 * (3 + ((n * 7) % 40)), price = priced ? p : null, out = n % 9 === 4, orderIn = n % 5 === 2;
+/** A generated item, priced and named as a catalogue would, never with a word a board searches (sheet, tile, paint, cement, hinge, pipe, nails …). */
+function made(id: string, name: string, aisle: string, n: number, unit = 'pc'): Item {
+  const price = 1000 * (3 + ((n * 7) % 40)), out = n % 9 === 4, orderIn = n % 5 === 2;
   return {
-    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, packPrice: null, cost: price == null ? null : Math.round(price / 1.25),
+    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, packPrice: null, cost: Math.round(price / 1.25),
     onShelf: orderIn || out ? 0 : 6 + ((n * 13) % 90), orderIn, listedAt: null,
   };
 }
 
 function catalogue(s: DemoState): void {
+  if (s.books.items.some((i) => i.id === 'g-1')) return; // added already
   const b = s.books, by = (id: string) => b.items.find((i) => i.id === id) as Item;
   const sib = (from: string, id: string, name: string, unit: string, price: number, extra: Partial<Item>): Item =>
     ({ ...by(from), id, name, unit, price, cost: Math.round(price / 1.25), packPrice: null, listedAt: null, ...extra });
@@ -88,7 +86,7 @@ function catalogue(s: DemoState): void {
     if (a.name === 'Fasteners') return;
     const have = b.items.filter((i) => i.aisle === a.name).length, [bases, sizes] = KINDS[a.name];
     const names = bases.flatMap((x) => sizes.map((z) => `${x} ${z}`));
-    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n, 'pc', false));
+    for (let i = 0; have + i < a.count; i++) added.push(made(`g-${++n}`, names[i % names.length] + (i >= names.length ? ` · ${Math.floor(i / names.length) + 1}` : ''), a.name, n));
   });
   // 17 listed in the last 30 days, with the roof paint: "New 18" (SL11).
   added.filter((i) => i.aisle === 'Electrical' || i.aisle === 'Sanitary').slice(0, 17).forEach((i, k) => { i.listedAt = at(TODAY, '9:00') - (k + 1) * 864e5; });

@@ -30,9 +30,14 @@ export interface Rhythm {
   quiet: boolean;
 }
 
-export function rhythm(c: Customer, orders: Order[], today: Day): Rhythm {
-  const lastOrder = orders.filter((o) => o.customerId === c.id && !o.cancelled && !o.voided && !o.qa && !isCopy(orders, o))
+/** Their last order: the most recent placed, not cancelled, voided, a test record or a copy (FACTS rule 1). */
+export function lastOrderOf(customerId: string, orders: Order[]): Order | null {
+  return orders.filter((o) => o.customerId === customerId && !o.cancelled && !o.voided && !o.qa && !isCopy(orders, o))
     .reduce<Order | null>((m, o) => (!m || o.placedAt > m.placedAt ? o : m), null);
+}
+
+export function rhythm(c: Customer, orders: Order[], today: Day): Rhythm {
+  const lastOrder = lastOrderOf(c.id, orders);
   const last = lastOrder ? dayOf(lastOrder.placedAt) : null, every = c.everyDays && c.everyDays > 0 ? c.everyDays : null;
   const since = last ? daysApart(last, today) : null;
   const late = last && every ? daysApart(addDays(last, every), today) : null;

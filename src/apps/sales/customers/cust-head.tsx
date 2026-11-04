@@ -52,7 +52,7 @@ export function AgeTrack(p: { owes: number; bills: OpenBill[]; limit: number | n
             <span><Icon name="lock" size={12} stroke={2.2} />credit <b class="mono">{shortMoney(p.limit)}</b>{` · ${p.manager}`}</span>
             <span aria-hidden="true" class="cu-credit-bar"><span style={{ width: `${used}%` }} /></span>
           </span>
-        ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />{`No limit set · ${p.manager} decides`}</span></span>}
+        ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />No limit set</span></span>}
       </div>
       <div role="img" aria-label={label} class="cu-track">
         <div class="cu-track-road">

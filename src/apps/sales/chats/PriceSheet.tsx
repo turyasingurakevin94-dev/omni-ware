@@ -75,17 +75,17 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const act = (it: Item) => {
     if (it.price == null) {
       return asked.includes(it.id)
-        ? <button type="button" disabled class="pr-asked" aria-label={`Asked ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`}><Icon name="check" size={14} stroke={2.6} />Asked</button>
-        : <button type="button" class="pr-ask" aria-label={`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`} onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
+        ? <button type="button" disabled class="ch-pr-asked" aria-label={`Asked ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`}><Icon name="check" size={14} stroke={2.6} />Asked</button>
+        : <button type="button" class="ch-pr-ask" aria-label={`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`} onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
     }
     const on = picked.includes(it.id);
     return (
-      <button type="button" class={'ad-add' + (on ? ' on' : '')} aria-pressed={on} aria-label={on ? `${shortName(it)}, in the message` : `Add the price of ${shortName(it)}`} onClick={() => toggle(it.id)}>
+      <button type="button" class={'ch-ad-add' + (on ? ' on' : '')} aria-pressed={on} aria-label={on ? `${shortName(it)}, in the message` : `Add the price of ${shortName(it)}`} onClick={() => toggle(it.id)}>
         <Icon name={on ? 'check' : 'plus'} size={16} stroke={on ? 2.8 : 2.6} />
       </button>
     );
   };
-  const coming = <span class="pr-coming"><span>Price coming</span></span>;
+  const coming = <span class="ch-pr-coming"><span>Price coming</span></span>;
   const send = async () => {
     if (!lines.length) return;
     const text = lines.map((i) => `${i.name}: ${money(i.price)} a ${i.unit}`).join('\n');
@@ -94,21 +94,21 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   };
   return (
     <LSheet ground title="Send a price" onClose={back}>
-      <label class="nc-search pr-search"><Duo i={phSearch} size={20} color="#1C2233" />
+      <label class="ch-nc-search ch-pr-search"><Duo i={phSearch} size={20} color="#1C2233" />
         <input type="search" placeholder="Cement, iron sheets…" aria-label="Find an item" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} />
       </label>
-      {s ? <GroupCard class="bb">{found.map((it) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : it.aisle} act={act(it)} />)}</GroupCard>
+      {s ? <GroupCard class="ch-bb">{found.map((it) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : it.aisle} act={act(it)} />)}</GroupCard>
         : !!usual.length && <>
-          <div class="ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>{`${first}’s usual`}</span><span class="mono g">{`${usual.filter((u) => picked.includes(u.it.id)).length}/${usual.length}`}</span></div>
-          <GroupCard class="bb">{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
+          <div class="ch-ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>{`${first}’s usual`}</span><span class="mono g">{`${usual.filter((u) => picked.includes(u.it.id)).length}/${usual.length}`}</span></div>
+          <GroupCard class="ch-bb">{usual.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={sub} act={act(it)} />)}</GroupCard>
         </>}
       {often && <>
-        <div class="ad-h"><Duo i={phAgain} size={18} color="#5F6980" /><span>Often with it</span><span>{often.whose}</span></div>
-        <GroupCard class="bb">{often.rows.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : sub} act={act(it)} />)}</GroupCard>
+        <div class="ch-ad-h"><Duo i={phAgain} size={18} color="#5F6980" /><span>Often with it</span><span>{often.whose}</span></div>
+        <GroupCard class="ch-bb">{often.rows.map(({ it, sub }) => <PriceRow key={it.id} it={it} sub={it.price == null ? coming : sub} act={act(it)} />)}</GroupCard>
       </>}
-      <div class="pr-foot">
+      <div class="ch-pr-foot">
         {!!lines.length && (
-          <div class="pr-preview"><span>{lines.map((i, k) => <span key={i.id}>{k > 0 && <br />}{`${i.name}: `}<b class="mono">{money(i.price)}</b>{` a ${i.unit}`}</span>)}</span></div>
+          <div class="ch-pr-preview"><span>{lines.map((i, k) => <span key={i.id}>{k > 0 && <br />}{`${i.name}: `}<b class="mono">{money(i.price)}</b>{` a ${i.unit}`}</span>)}</span></div>
         )}
         <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 0 ? 'Send a price' : lines.length === 1 ? 'Send 1 price' : `Send ${lines.length} prices`}</Button>
       </div>

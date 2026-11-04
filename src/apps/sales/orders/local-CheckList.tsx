@@ -72,7 +72,7 @@ export function CheckList(p: { head: CHead; lines: CLine[] }): JSX.Element {
         {(h.bar || h.summary) && (
           <span class="ow-chk-sum">
             {h.bar && <span aria-hidden="true" class="ow-chk-bar">{h.bar.map((c, i) => <span key={i} style={{ background: c }} />)}</span>}
-            {h.summary && <span class="mono">{h.summary}</span>}
+            {h.summary && <span class={h.summary.startsWith('0 ') ? 'mono or-sum0' : 'mono'}>{h.summary}</span>}
           </span>
         )}
         {h.pills && <Pills pills={h.pills} />}

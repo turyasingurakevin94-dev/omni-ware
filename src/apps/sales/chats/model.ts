@@ -10,8 +10,9 @@
  */
 import type { Face } from '../../../ui/Avatar.tsx';
 import { waitingChats, type Waiting } from '../../../core/chats.ts';
+import { rhythm } from '../../../core/customers.ts';
 import { firstWord, initials, phoneText, tintFor } from '../../../core/names.ts';
-import { addDays, dayLabel, dayOf, daysApart, replyWindow, weekday, clock } from '../../../core/time.ts';
+import { dayLabel, dayOf, daysApart, replyWindow, weekday, clock } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Customer, Member, Message, Ms } from '../../../core/types.ts';
 import type { Draft } from '../shell/store.ts';
 
@@ -99,11 +100,9 @@ export function ownedBy(cb: ChatBooks, id: string): Chat[] {
   return cb.chats.filter((c) => c.ownerId === id);
 }
 
-/** A customer's next due day by their rhythm: their last order placed plus every-N-days (FACTS "Last order"). */
-export function dueDay(b: Books, cust: Customer | null): string | null {
-  if (!cust || !cust.everyDays) return null;
-  const last = b.orders.filter((o) => o.customerId === cust.id && !o.cancelled && !o.voided).reduce((m, o) => Math.max(m, o.placedAt), 0);
-  return last ? addDays(dayOf(last), cust.everyDays) : null;
+/** A customer's next due day by their rhythm (core/customers.ts: last order placed plus every N days). */
+export function dueDay(b: Books, cust: Customer | null, today: string): string | null {
+  return cust ? rhythm(cust, b.orders, today).next : null;
 }
 
 const recent = (c: Chat, now: Ms) => !!c.lastAt && daysApart(dayOf(c.lastAt), dayOf(now)) < MINE_DAYS;
@@ -114,7 +113,7 @@ export function mineList(b: Books, cb: ChatBooks, now: Ms, drafts: Draft[]): Cha
   const view = (c: Chat) => chatView(b, cb, c, now, drafts, waiting);
   const fresh = cb.chats.filter((c) => !c.ownerId && recent(c, now)).sort((x, y) => (y.lastAt || 0) - (x.lastAt || 0)).map(view);
   const mine = cb.chats.filter((c) => c.ownerId === b.me.id && recent(c, now)).map(view);
-  const due = (v: ChatView) => dueDay(b, v.customer) || '9999';
+  const due = (v: ChatView) => dueDay(b, v.customer, dayOf(now)) || '9999';
   const wait = mine.filter((v) => v.waitMins != null).sort((x, y) => (y.waitMins as number) - (x.waitMins as number));
   const rest = mine.filter((v) => v.waitMins == null).sort((x, y) => due(x).localeCompare(due(y)));
   return [...fresh, ...wait, ...rest];

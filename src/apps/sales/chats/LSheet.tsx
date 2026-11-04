@@ -17,7 +17,7 @@ export function LSheet(p: { title: string; eyebrow?: string; extra?: ComponentCh
           <button type="button" class="ow-x-tile" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>
         </span>
       </div>
-      <div class="ls-body">{p.children}</div>
+      <div class="ch-ls-body">{p.children}</div>
     </div>
   );
 }
