@@ -67,11 +67,11 @@ export function billAsks(): BillAsk[] {
 }
 
 export function paymentAsks(): PaymentAsk[] {
-  return [
-    // Kyaligonza's 14 Oct payment: Mobile 124,000, not Cash 142,000; Esther is checking (CH01 "Esther is checking it").
-    { id: 'pa1', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'method', want: { method: 'momo' }, amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
-    { id: 'pa2', paymentId: 7005, customerId: KYALIGONZA, orderId: 533, what: 'amount', want: { amount: 124000 }, amount: 142000, status: 'sent', by: GRACE, at: t('10:12') },
-  ];
+  // None at 10:41. Kyaligonza's 14 Oct payment (Cash 142,000, should be Mobile 124,000) is not asked yet:
+  // OR24 and OR25 draw Grace asking it, and OR32 once asked (FACTS §4.4). The two asks this seed held
+  // (10:12, from CH01's "Esther is checking it") were read by no screen until the bill showed an ask, and
+  // then they shut OR25. Open question for Kevin: CH01's 10:12 words against OR24/OR25 (spec 04).
+  return [];
 }
 
 /** Grace's October goal: 35,000,000 (docs/canvas-cast.md; set by Ruth, goal.set). */
