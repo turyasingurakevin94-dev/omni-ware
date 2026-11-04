@@ -63,41 +63,41 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
       eyebrow={move ? `${firstWord(me.name)} · Manager · any chat` : `${v.title} · ${firstWord((owner || me).name)}’s`} onClose={sheet.close}>
       {move && owner && (
         <>
-          <div class="gv-card">
+          <div class="ch-gv-card">
             <Ring face={v.face} mins={v.waitMins} badge={faceOf(owner)} />
             <span><span>{v.title}</span><span>{v.waitMins != null ? <>waiting <b class="mono">{v.waitMins}</b> m · </> : ''}{`${firstWord(owner.name)}${owner.presence !== 'on' ? ' away' : ''}`}</span></span>
           </div>
-          <div aria-hidden="true" class="gv-move">
+          <div aria-hidden="true" class="ch-gv-move">
             <span><span class={owner.presence !== 'on' ? 'dim' : undefined}><Avatar {...faceOf(owner)} size={44} /></span><b>{firstWord(owner.name)}</b></span>
             <span><i /><i /><Icon name="arrow-right" size={22} stroke={2.4} /></span>
             <span><Avatar {...faceOf(target)} size={44} ring="0 0 0 3px #F7F5F2, 0 0 0 5px #16203C" /><b>{firstWord(target.name)}</b></span>
           </div>
         </>
       )}
-      <div class="gv-people">
+      <div class="ch-gv-people">
         {people.map((m) => {
           const n = ownedBy(cb, m.id).length, w = waiting(m.id), self = m.id === me.id && !move, away = m.presence !== 'on';
           const line = m.role === 'manager' && m.id !== me.id ? `Manager · ${away ? 'away' : 'on now'} · ${n ? `${n} chats` : 'no chats'}`
             : `${self ? 'You · ' : ''}${n} chats · ${w ? `${w} waiting` : 'none waiting'}${away ? ' · away' : ''}`;
           const on = pick === m.id;
           return (
-            <label key={m.id} class="gv-p">
+            <label key={m.id} class="ch-gv-p">
               <span class={away ? 'dim' : undefined}><Avatar {...faceOf(m)} size={40} /><i class={away ? 'away' : undefined} /></span>
               <span><span>{m.name}</span><span>{line}</span></span>
               <Meter pct={Math.min(100, Math.round(4 + 4 * n + 2.5 * w + (away ? 10 : 0)))} w={48} h={6} fill={w >= 2 ? '#95530C' : '#0F6B43'} />
               <input type="radio" name="to" checked={on} disabled={self} aria-label={m.name} onChange={() => setTo(m.id)} />
-              {self ? <span class="gv-has">has it</span> : <span aria-hidden="true" class={'gv-mark' + (on ? ' on' : '')}>{on && <Icon name="check" size={13} stroke={3} />}</span>}
+              {self ? <span class="ch-gv-has">has it</span> : <span aria-hidden="true" class={'ch-gv-mark' + (on ? ' on' : '')}>{on && <Icon name="check" size={13} stroke={3} />}</span>}
             </label>
           );
         })}
       </div>
-      <label class="gv-note"><span>{`A note for ${firstWord(target.name)}`}</span>
+      <label class="ch-gv-note"><span>{`A note for ${firstWord(target.name)}`}</span>
         <textarea rows={2} value={text} onInput={(e) => setNote((e.target as HTMLTextAreaElement).value)} />
       </label>
-      <div class="gv-hint"><span><Icon name="bell" size={16} stroke={2} /></span>
+      <div class="ch-gv-hint"><span><Icon name="bell" size={16} stroke={2} /></span>
         <span>{move && owner ? `${firstWord(owner.name)} and ${firstWord(target.name)} get a push` : `${firstWord(target.name)} gets a push · the chat keeps a record`}</span>
       </div>
-      <Button icon="hand-over" class="gv-go" onClick={go}>{`${move ? 'Move' : 'Give'} to ${firstWord(target.name)}`}</Button>
+      <Button icon="hand-over" class="ch-gv-go" onClick={go}>{`${move ? 'Move' : 'Give'} to ${firstWord(target.name)}`}</Button>
     </LSheet>
   );
 }

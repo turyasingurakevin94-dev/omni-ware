@@ -30,10 +30,10 @@ export function usualItems(b: Books, c: Customer | null): { it: Item; sub: strin
 
 export function PriceRow(p: { it: Item; sub: JSX.Element | string; act: JSX.Element }): JSX.Element {
   return (
-    <div class="ad-row">
+    <div class="ch-ad-row">
       <ItemSquare aisle={p.it.aisle} size={38} radius={10} icon={22} />
       <span><span>{p.it.name}</span>{typeof p.sub === 'string' ? <span class="mono">{p.sub}</span> : p.sub}</span>
-      {p.it.price != null && <span class="ad-pr"><b class="mono">{money(p.it.price)}</b><small>{`a ${p.it.unit}`}</small></span>}
+      {p.it.price != null && <span class="ch-ad-pr"><b class="mono">{money(p.it.price)}</b><small>{`a ${p.it.unit}`}</small></span>}
       {p.act}
     </div>
   );
@@ -59,30 +59,30 @@ export function AddSheet(p: { chatId: number; onPut: (text: string) => void }): 
   return (
     <LSheet title={`Send ${first}`} onClose={sheet.close}
       extra={cust && cust.owes > 0 && (
-        <Tap on={() => { sheet.close(); open('customers/customer', { id: cust.id }); }} class="ad-owes"><span>Owes <b class="mono">{short(cust.owes)}</b><Icon name="chevron-right" size={13} stroke={2.4} /></span></Tap>
+        <Tap on={() => { sheet.close(); open('customers/customer', { id: cust.id }); }} class="ch-ad-owes"><span>Owes <b class="mono">{short(cust.owes)}</b><Icon name="chevron-right" size={13} stroke={2.4} /></span></Tap>
       )}>
       {!!answers.length && (
         <>
-          <div class="ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>For what they just wrote</span></div>
-          <button type="button" class="ad-use" onClick={() => put(said)}><span>{said}</span><span><Icon name="plus" size={14} stroke={2.6} />Use</span></button>
+          <div class="ch-ad-h"><Duo i={phSparkle} size={18} color="#0F6B43" /><span>For what they just wrote</span></div>
+          <button type="button" class="ch-ad-use" onClick={() => put(said)}><span>{said}</span><span><Icon name="plus" size={14} stroke={2.6} />Use</span></button>
         </>
       )}
       {!!usual.length && (
         <>
-          <div class="ad-h"><span class="g"><Icon name="tag" size={17} stroke={2} /></span><span>Prices of their usual</span><span>tap + to add</span></div>
-          <GroupCard class="bb">{usual.map(({ it, sub }) => (
+          <div class="ch-ad-h"><span class="g"><Icon name="tag" size={17} stroke={2} /></span><span>Prices of their usual</span><span>tap + to add</span></div>
+          <GroupCard class="ch-bb">{usual.map(({ it, sub }) => (
             <PriceRow key={it.id} it={it} sub={sub} act={
-              <button type="button" class="ad-add" aria-label={`Add the price of ${shortName(it)}`} onClick={() => price([it.id])}><Icon name="plus" size={16} stroke={2.6} /></button>
+              <button type="button" class="ch-ad-add" aria-label={`Add the price of ${shortName(it)}`} onClick={() => price([it.id])}><Icon name="plus" size={16} stroke={2.6} /></button>
             } />
           ))}</GroupCard>
         </>
       )}
-      <div class="ad-h"><span class="s"><Icon name="message" size={17} stroke={2} /></span><span>Quick replies</span><span>into the box</span></div>
-      <div role="group" aria-label="Quick replies" class="ad-quick">{QUICK.map((q) => <button key={q} type="button" onClick={() => put(q)}>{q}</button>)}</div>
-      <div class="ad-tiles">
-        <Tap on={() => price([])} class="ad-tile"><span class="g"><Icon name="tag" size={19} stroke={1.9} /></span><b>Other prices</b><span>the price list</span></Tap>
-        <Tap on={() => { sheet.close(); void write('sendCatalog', [chat.id], 'Catalogue sent'); }} class="ad-tile"><span class="i"><Icon name="grid" size={19} stroke={1.9} /></span><b>Catalogue</b><span>our items</span></Tap>
-        <Tap on={() => file.current?.click()} class="ad-tile"><span class="n"><Icon name="camera" size={19} stroke={1.9} /></span><b>Photo</b><span>or a picture</span></Tap>
+      <div class="ch-ad-h"><span class="s"><Icon name="message" size={17} stroke={2} /></span><span>Quick replies</span><span>into the box</span></div>
+      <div role="group" aria-label="Quick replies" class="ch-ad-quick">{QUICK.map((q) => <button key={q} type="button" onClick={() => put(q)}>{q}</button>)}</div>
+      <div class="ch-ad-tiles">
+        <Tap on={() => price([])} class="ch-ad-tile"><span class="g"><Icon name="tag" size={19} stroke={1.9} /></span><b>Other prices</b><span>the price list</span></Tap>
+        <Tap on={() => { sheet.close(); void write('sendCatalog', [chat.id], 'Catalogue sent'); }} class="ch-ad-tile"><span class="i"><Icon name="grid" size={19} stroke={1.9} /></span><b>Catalogue</b><span>our items</span></Tap>
+        <Tap on={() => file.current?.click()} class="ch-ad-tile"><span class="n"><Icon name="camera" size={19} stroke={1.9} /></span><b>Photo</b><span>or a picture</span></Tap>
         <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { void photo(e); }} />
       </div>
     </LSheet>

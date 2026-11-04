@@ -55,9 +55,9 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
   return (
     <FullSheet onBack={nav.back} backLabel="Back to the chat" pad="12px 16px 18px" gap={8}
       head={
-        <div class="ck-head">
+        <div class="ch-ck-head">
           <span aria-hidden="true" class="ow-shead-grab" />
-          <div class="ck-row">
+          <div class="ch-ck-row">
             <Avatar {...faceOf(cust)} size={44} ring="0 0 0 3px #16203C, 0 0 0 5px rgba(255,255,255,.18)" />
             <div><span>{cust.name}</span><span>{[cust.place, cust.kind ? KIND[cust.kind] : '', cust.everyDays ? `every ${cust.everyDays} days` : ''].filter(Boolean).join(' · ')}</span></div>
             <button type="button" class="ow-shead-x" aria-label="Close" onClick={nav.back}><Icon name="close" size={16} stroke={2.2} /></button>
@@ -65,20 +65,20 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
           <div class="ow-shead-chips">
             {owner && (
               <HeadChip on={() => open('customers/customer', { id: cust.id })} label={`${firstWord(owner.name)}’s customer since ${dayLabel(chat.ownerAt || t)}`}>
-                <Avatar {...faceOf(owner)} size={22} class="cv-chip-face" style={owner.id === me.id ? { background: '#2F3D66' } : undefined} />{`${firstWord(owner.name)}’s`}
-                <span class="cv-chip-away">{`· since ${dayLabel(chat.ownerAt || t)}`}</span>
+                <Avatar {...faceOf(owner)} size={22} class="ch-cv-chip-face" style={owner.id === me.id ? { background: '#2F3D66' } : undefined} />{`${firstWord(owner.name)}’s`}
+                <span class="ch-cv-chip-away">{`· since ${dayLabel(chat.ownerAt || t)}`}</span>
               </HeadChip>
             )}
-            <HeadChip on={() => open('customers/customer', { id: cust.id })} label={`Open ${cust.name}’s page`}>Their page<span class="cv-chip-i"><Icon name="chevron-right" size={13} stroke={2.4} /></span></HeadChip>
+            <HeadChip on={() => open('customers/customer', { id: cust.id })} label={`Open ${cust.name}’s page`}>Their page<span class="ch-cv-chip-i"><Icon name="chevron-right" size={13} stroke={2.4} /></span></HeadChip>
           </div>
         </div>
       }>
-      <div class="ck-gh"><h2>{`Who served ${first}`}</h2><span class="mono">this year</span></div>
-      <div role="img" aria-label={`Who served ${first} this year: ${rows.map((r) => `${firstWord(r.m.name)} ${short(r.sum)}`).join(', ')}`} class="ck-card">
+      <div class="ch-ck-gh"><h2>{`Who served ${first}`}</h2><span class="mono">this year</span></div>
+      <div role="img" aria-label={`Who served ${first} this year: ${rows.map((r) => `${firstWord(r.m.name)} ${short(r.sum)}`).join(', ')}`} class="ch-ck-card">
         {rows.map((r) => {
           const tint = TINTS[r.m.tint] || TINTS.t4;
           return (
-            <div key={r.m.id} class="ck-who">
+            <div key={r.m.id} class="ch-ck-who">
               <Avatar {...faceOf(r.m)} size={34} font={12} />
               <span>
                 <span><span>{firstWord(r.m.name)}</span><b class="mono">{short(r.sum)}</b></span>
@@ -89,21 +89,21 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
           );
         })}
       </div>
-      {!!lately.length && <div class="ck-gh gap"><h2>Lately</h2></div>}
+      {!!lately.length && <div class="ch-ck-gh gap"><h2>Lately</h2></div>}
       {!!lately.length && (
-        <div class="ck-card feed">
+        <div class="ch-ck-card feed">
           {lately.map((f, i) => (
-            <div key={i} class="ck-f">
+            <div key={i} class="ch-ck-f">
               <span>{f.who && <Avatar {...faceOf(f.who)} size={28} font={11} />}{i < lately.length - 1 && <i />}</span>
               <span class={i < lately.length - 1 ? undefined : 'last'}><span>{f.what}</span><span class="mono">{f.sub ? `${when(f.at)} · ${f.sub}` : when(f.at)}</span></span>
             </div>
           ))}
         </div>
       )}
-      <div class="ck-acts">
-        <Tap href={`tel:${cust.phone.replace(/\s/g, '')}`} class="ck-act"><span class="i"><Icon name="phone" size={19} stroke={1.8} /></span><b>Call</b><span>{first}</span></Tap>
-        <Tap on={() => open('customers/pay', { customer: cust.id })} class="ck-act"><span class="w"><Icon name="cash" size={19} stroke={1.8} /></span><b>Take payment</b><span class="mono">{money(Math.max(0, cust.owes))}</span></Tap>
-        <Tap on={() => sheet.open(() => <GiveSheet chatId={id} />, { label: `Give ${first} to…`, top: 178 })} class="ck-act"><span class="b"><Icon name="hand-over" size={19} stroke={1.8} /></span><b>Give</b><span>to a teammate</span></Tap>
+      <div class="ch-ck-acts">
+        <Tap href={`tel:${cust.phone.replace(/\s/g, '')}`} class="ch-ck-act"><span class="i"><Icon name="phone" size={19} stroke={1.8} /></span><b>Call</b><span>{first}</span></Tap>
+        <Tap on={() => open('customers/pay', { customer: cust.id })} class="ch-ck-act"><span class="w"><Icon name="cash" size={19} stroke={1.8} /></span><b>Take payment</b><span class="mono">{money(Math.max(0, cust.owes))}</span></Tap>
+        <Tap on={() => sheet.open(() => <GiveSheet chatId={id} />, { label: `Give ${first} to…`, top: 178 })} class="ch-ck-act"><span class="b"><Icon name="hand-over" size={19} stroke={1.8} /></span><b>Give</b><span>to a teammate</span></Tap>
       </div>
     </FullSheet>
   );
