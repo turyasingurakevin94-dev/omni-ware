@@ -82,7 +82,8 @@ for (const a of ['sales', 'buyer', 'store', 'manager', 'accounts', 'sourcing', '
   t.check(src.includes('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>') && !/supabase-js@2\/dist/.test(src), `${a}: supabase-js is pinned`);
   t.check(src.includes('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>'), `${a}: and preconnected`);
   const tr = require(path.join(__dirname, '..', 'apps', a, 'src', 'transform.js'));
-  const out = tr(src);
+  // The Sales phone app ships the new app's page, not the old sales.html (apps/sales/scripts/build-www.js).
+  const out = tr(a === 'sales' ? read('next/sales.html') : src);
   t.check(out.includes('<script src="vendor/supabase.js"></script>') && !/cdn\.jsdelivr\.net/.test(out), `${a}: the app's transform still swaps it for the bundled copy and drops the preconnect`);
 }
 
