@@ -1,5 +1,5 @@
 /*
- * SL16 · add a charge: the shop's own charges (presets.services) at the
+ * SL16, SL41 · add a charge: the shop's own charges (presets.services) at the
  * shop's rate, worked out from the order by core/services.ts (loading: a
  * rate a bag, for the bags in it; spec 04 Q3), one tap; or any other amount.
  * The charge goes on the order as one line; the total is money.ts's.
@@ -50,7 +50,17 @@ export function ChargeSheet(): JSX.Element | null {
           <span class="sl-chg-n"><b class="mono">{n}</b>{` ${on}s × `}<b class="mono">{fig(sv.value)}</b></span>
         </div>
       )}
-      <a href="#" class="sl-chg-other" onClick={(e) => { e.preventDefault(); other(sv ? sv.label : 'Other charge', amount || undefined); }}><Icon name="pen" size={16} stroke={2} />Other amount</a>
+      {sv && !on && sv.type === 'fixed' && (
+        // SL41 · a charge at one price for the order (Cutting): no goods to count, the shop's rate and what it adds.
+        <div class="sl-chg">
+          <div class="sl-chg-h">
+            <span aria-hidden="true" class="sl-chg-ic"><Icon name="receipt" size={20} stroke={1.9} /></span>
+            <span class="sl-chg-t flat"><span>{sv.label}</span><span>the shop’s rate · per order</span></span>
+            <span class="mono sl-chg-a">{fig(amount)}</span>
+          </div>
+        </div>
+      )}
+      <a href="#" class={'sl-chg-other' + (sv && !on && sv.type === 'fixed' ? ' flat' : '')} onClick={(e) => { e.preventDefault(); other(sv ? sv.label : 'Other charge', amount || undefined); }}><Icon name="pen" size={16} stroke={2} />Other amount</a>
     </Frame>
   );
 }
