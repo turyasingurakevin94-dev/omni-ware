@@ -6,11 +6,18 @@
  * yet (navy). The + is hidden on screens with the dock, a full sheet or the
  * chat composer (the shell does that: it shows the bar only on tab roots).
  *
+ * The tabs share the bar equally either side of the + (a slot never grows, so the + stays centred).
+ * The bar has no room to grow: at 100% the boards already put "Customers" 3 px from the edge. So when
+ * the phone enlarges text (Android's font size, the WebView's textZoom), the labels stay at their own
+ * 12 px (tabFontSize): inside their slots, never nearer the edge than the boards, never overlapping.
+ *
  *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
  *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)
  */
 import type { JSX } from 'preact';
+import { useRef } from 'preact/hooks';
 import { Icon, type IconName } from './icons.tsx';
+import { useFit } from './tabfit.ts';
 import { cx } from './util.tsx';
 import './tabbar.css';
 
@@ -40,19 +47,21 @@ export interface TabBarProps<T extends string = BarTab> {
 
 export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Element {
   const items = (p.items || SALES) as BarItem<T>[], half = Math.ceil(items.length / 2);
+  const ref = useRef<HTMLElement>(null);
+  useFit(ref, `${p.active}|${p.waiting}|${items.map((t) => t.word).join()}`);
   const tab = (t: BarItem<T>) => {
     const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
       <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} waiting` : undefined}
         onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
-        <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} />{t.word}
+        <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} /><span class="ow-tab-w">{t.word}</span>
         {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
       </a>
     );
   };
   const plus = p.plusLabel || 'New sale';
   return (
-    <nav aria-label="Main" class={cx('ow-tabbar', p.inline && 'inline')} style={{ gridTemplateColumns: [...items.slice(0, half).map(() => '1fr'), '96px', ...items.slice(half).map(() => '1fr')].join(' ') }}>
+    <nav ref={ref} aria-label="Main" class={cx('ow-tabbar', p.inline && 'inline')} style={{ gridTemplateColumns: [...items.slice(0, half).map(() => 'minmax(0, 1fr)'), '96px', ...items.slice(half).map(() => 'minmax(0, 1fr)')].join(' ') }}>
       {items.slice(0, half).map(tab)}
       <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} not placed yet` : plus}
         onClick={(e) => { e.preventDefault(); p.onPlus(); }}>
