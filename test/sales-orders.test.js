@@ -55,6 +55,16 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const v = V.orderView(b, D.orderOf(b, 552), now);
     t.check(v.tiles[0].note === 'hinges not in it' && v.tellSub === 'what was found', 'OR06: hinges not in it · Tell what was found');
   }
+  /* OR38: #0555, the walk-in's pickup at the gate (core/orders.ts readyToCollect). */
+  {
+    const { b, now } = await at('?demo');
+    const o = D.orderOf(b, 555), v = V.orderView(b, o, now);
+    t.check(v.ready && v.word === 'Ready to collect' && v.sub === 'at the gate' && v.tellSub === "it's ready to collect", 'OR38: #0555 is Ready to collect, at the gate; Tell says it is ready to collect', JSON.stringify({ word: v.word, sub: v.sub, tell: v.tellSub }));
+    t.check(v.skipped.join() === 'buying,packing' && v.lines.every((l) => l.mark.k === 'ok' && l.mark.label === 'Ready' && !l.mark.at), 'OR38: Packing skipped, so each line\'s tick says Ready, with no time');
+    t.check(v.head.pills && v.head.pills[0].n === 1 && !v.head.bar && !v.head.summary, 'OR38: past Packing the list head is the tick pill alone');
+    const k = D.orderOf(b, 552), kv = V.orderView(b, k, now);
+    t.check(!kv.ready && !kv.word, 'a delivery is never ready to collect (#0552)');
+  }
   /* OR12, OR13: #0559. */
   {
     const a = await at('?demo&clock=13:50'), o = D.orderOf(a.b, 559);

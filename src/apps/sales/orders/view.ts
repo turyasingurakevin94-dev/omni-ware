@@ -8,7 +8,7 @@ import { counted, firstWord, orderNo, STAGES } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, weekday, when } from '../../../core/time.ts';
 import type { BillAsk, Books, Line, Ms, Order, Stage } from '../../../core/types.ts';
 import type { MoneyTile as Tile } from '../../../ui/MoneyTiles.tsx';
-import { priceUntold, twinOf } from '../../../core/orders.ts';
+import { priceUntold, readyToCollect, twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
 import type { CheckHead as CHead, CheckLine as CLine, CheckMark as Mark } from '../../../ui/CheckList.tsx';
 
@@ -39,6 +39,10 @@ const aisleOf = (b: Books, l: Line): string => b.items.find((i) => i.id === l.it
 const ruthName = (b: Books): string => firstWord(byRole(b, 'manager')?.name || 'Manager');
 
 export interface OrderView {
+  /** The track's big word when not the stage's own ("Ready to collect"). */
+  word?: string;
+  /** On the road with nowhere to go: ready to collect at the gate (core/orders.ts readyToCollect, OR38). */
+  ready: boolean;
   sub: string;
   waits: boolean;
   times: Partial<Record<Stage, string>>;
@@ -67,6 +71,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   if (o.stage === 'delivered' && o.deliveredAt) times.delivered = railTime(o.deliveredAt, now);
   STAGES.slice(0, STAGES.indexOf(o.stage)).reverse().forEach((s, i, l) => { if (!times[s] && !skipped.includes(s)) times[s] = i ? times[l[i - 1]] : times[o.stage]; });
 
+  const ready = readyToCollect(o);
   let sub = '';
   if (o.stage === 'checking') sub = waiting.length ? `${rn} decides ${counted(waiting.length, 'price')}` : orderOwes(o) > 0 ? 'Not paid yet' : `${rn} · checking`;
   else if (fresh) sub = `${rn} set ${(fresh.price as number).toLocaleString('en-US')} · ${clock((fresh.priceReview as { at: number }).at)}`;
@@ -74,7 +79,8 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (o.stage === 'delivered') {
     const at = o.deliveredAt || o.stageAt;
     sub = daysApart(dayOf(at), dayOf(now)) < 7 ? `At the door ${dayOf(at) === dayOf(now) ? clock(at) : `${weekday(at)} ${clock(at)}`}` : `Billed ${dayLabel(o.invoicedAt || at)}`;
-  } else if (o.stage === 'road') sub = `${hn} · left ${clock(o.stageAt)}`;
+  } else if (ready) sub = 'at the gate';
+  else if (o.stage === 'road') sub = `${hn} · left ${clock(o.stageAt)}`;
   else sub = skipped.length ? `${hn} · all on our shelf` : `${hn} · since ${clock(o.stageAt)}`;
 
   // The money tiles.
@@ -122,7 +128,8 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
       return { ...base, amount, mark: { k: 'ok', label: l.from === 'shelf' ? 'On the shelf' : 'The supplier said yes' } };
     }
     // Packing and after.
-    if (l.state === 'packed' || o.stage !== 'packing') return { ...base, amount, mark: { k: 'ok', at: l.stateAt && o.stage === 'packing' ? clock(l.stateAt) : undefined, label: l.stateAt ? `Packed at ${clock(l.stateAt)}` : 'Packed' } };
+    // Under a rail where Packing was skipped the tick says Ready, never a packed time it did not have (OR38).
+    if (l.state === 'packed' || o.stage !== 'packing') return { ...base, amount, mark: { k: 'ok', at: l.stateAt && o.stage === 'packing' ? clock(l.stateAt) : undefined, label: skipped.includes('packing') ? 'Ready' : l.stateAt ? `Packed at ${clock(l.stateAt)}` : 'Packed' } };
     return { ...base, amount, was: l === fresh && rv && rv.was != null ? Math.round(rv.was * l.qty) : undefined, mark: { k: 'spin', word: 'packing', label: 'Packing now' } };
   });
   const live = lines.filter((l) => !l.gone);
@@ -145,7 +152,8 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   else if (o.stage === 'buying' && goneLines.length) tellSub = 'what was found';
   else if (o.stage === 'checking' && o.lines.some(priceUntold)) tellSub = 'a new price';
   else if (waiting.length) tellSub = `${rn} is deciding`;
+  else if (ready) tellSub = 'it\'s ready to collect';
   else tellSub = { checking: 'it\'s being checked', buying: 'it\'s being bought', packing: 'it\'s packing', road: 'it\'s on the way', delivered: 'it\'s delivered' }[o.stage];
 
-  return { sub, waits: o.stage === 'checking' && (waiting.length > 0 || orderOwes(o) > 0), times, skipped, tiles: [left, right], head, lines, tellSub, returnAsk: ret, bill: billOwes && o.paid > 0 };
+  return { word: ready ? 'Ready to collect' : undefined, ready, sub, waits: o.stage === 'checking' && (waiting.length > 0 || orderOwes(o) > 0), times, skipped, tiles: [left, right], head, lines, tellSub, returnAsk: ret, bill: billOwes && o.paid > 0 };
 }

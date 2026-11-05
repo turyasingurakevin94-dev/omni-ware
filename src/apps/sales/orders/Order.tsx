@@ -23,7 +23,7 @@ import { CheckList, CheckPills } from '../../../ui/CheckList.tsx';
 import { ActBar, type Act } from '../../../ui/ActTiles.tsx';
 import { MoneyTiles } from '../../../ui/MoneyTiles.tsx';
 import { Track } from '../../../ui/Track.tsx';
-import { AskTimeline, DoorCard, LadderUnder, MapCard, OverRow, PaidBar, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
+import { AskTimeline, DoorCard, GateCard, LadderUnder, MapCard, OverRow, PaidBar, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
 import { openPayFix, openWrong } from './Wrong.tsx';
@@ -59,14 +59,14 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
     <FullSheet onBack={nav.back} backLabel="Back to Orders" gap={v.returnAsk ? 8 : 10}
       head={(
         <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(delivered && o.invoicedAt && t - o.placedAt > 7 * 864e5 ? o.invoicedAt : o.placedAt, t)}`} subMono phone={phone9(phone) ? '+256' + phone9(phone) : undefined} callLabel={`Call ${name}`} onClose={nav.back}>
-          <Track stage={o.stage} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
+          <Track stage={o.stage} word={v.word} ready={v.ready} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
         </SheetHead>
       )}>
       {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} photo={o.deliveredPhoto} />}
-      {o.stage === 'road' && <MapCard b={b} o={o} />}
+      {v.ready ? <GateCard o={o} /> : o.stage === 'road' && <MapCard b={b} o={o} />}
       <MoneyTiles tiles={tiles} />
       {op && <OverRow b={b} p={op} />}
-      {o.stage === 'road' || v.bill ? null : delivered && !v.returnAsk && !open ? (
+      {(o.stage === 'road' && !v.ready) || v.bill ? null : delivered && !v.returnAsk && !open ? (
         <div class="or-fold">
           <ItemIcon b={b} o={o} />
           <span class="or-fold-n">{k.length ? `${k[0].name.split(' · ')[0]}${k.length > 1 ? ` +${k.length - 1}` : ''}` : shortItem(o.lines[0]?.name || '')}</span>
@@ -74,7 +74,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
           <button type="button" class="or-fold-b" aria-label="Show the items" onClick={() => setOpen(true)}><Icon name="chevron-down" size={16} stroke={2.4} /></button>
         </div>
       ) : (
-        <CheckList head={v.head} lines={v.lines.map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
+        <CheckList tight={v.ready} head={v.head} lines={v.lines.map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
       )}
       {o.voided && twinOf(b.orders, o, true) && <TwinCard b={b} o={o} />}
       {fresh && <PriceTell b={b} o={o} l={fresh} />}

@@ -134,6 +134,11 @@ export function isPickup(o: Pick<Order, 'deliverTo'>): boolean {
   return !o.deliverTo;
 }
 
+/** On the road with nowhere to go: ready to collect at the gate (OR38; Today's ready mark, Your day's pill). */
+export function readyToCollect(o: Pick<Order, 'stage' | 'deliverTo'>): boolean {
+  return o.stage === 'road' && isPickup(o);
+}
+
 export function heldFor(o: Order, me: string): boolean {
   return o.stage === 'checking' && o.holderId === me && !o.invoiced && !o.cancelled && !o.voided && !o.qa && orderOwes(o) > 0;
 }

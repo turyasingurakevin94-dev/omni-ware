@@ -48,6 +48,32 @@ export function DoorCard(p: { place: string; by?: string; at: string; photo: str
 /** Who takes the order where it goes (OR08): a customer's site manager; a walk-in themself (CU34's "walk-in · at the gate"). */
 const receiver = (o: Order, who: string): string => (o.customerId ? `${who}'s site manager receives it` : o.deliverTo ? 'The walk-in receives it' : 'The walk-in collects it');
 
+/**
+ * OR38 · ready to collect at the gate (core/orders.ts readyToCollect): the shop and its gate, the order waiting
+ * at it, since it was put there. No route, no driver, no arrival time.
+ */
+export function GateCard(p: { o: Order }): JSX.Element {
+  const since = clock(p.o.stageAt);
+  return (
+    <div class="or-map gate">
+      <div role="img" aria-label={`Ready to collect at the gate since ${since}`} class="or-map-pic gate">
+        <svg width="328" height="124" viewBox="0 0 328 124" aria-hidden="true">
+          <path d="M0 110 H328" fill="none" stroke="#FFFFFF" stroke-width="16" />
+          <rect x="28" y="58" width="120" height="44" rx="4" fill="#E1E4DC" />
+          <rect x="24" y="56" width="128" height="8" rx="3" fill="#D3D7CD" />
+          <rect x="74" y="74" width="28" height="28" rx="3" fill="#D3D7CD" />
+          <rect x="40" y="72" width="22" height="16" rx="2" fill="#D3D7CD" /><rect x="114" y="72" width="22" height="16" rx="2" fill="#D3D7CD" />
+          <path d="M148 102 H300" fill="none" stroke="#D3D7CD" stroke-width="2" />
+          <rect x="186" y="44" width="8" height="58" rx="2" fill="#5F6980" /><rect x="290" y="44" width="8" height="58" rx="2" fill="#5F6980" />
+          <path d="M194 54 H222 M194 92 H222 M262 54 H290 M262 92 H290 M202 54 V92 M212 54 V92 M270 54 V92 M280 54 V92" fill="none" stroke="#9AA1AE" stroke-width="3" stroke-linecap="round" />
+        </svg>
+        <span class="or-map-eta">Ready since <b class="mono">{since}</b></span>
+        <span aria-hidden="true" class="or-gate-box"><Icon name="orders" size={16} stroke={2.2} /></span>
+      </div>
+    </div>
+  );
+}
+
 /** OR08 · on the road: the drawn route, when it arrives, where to, and the driver to call. */
 export function MapCard(p: { b: Books; o: Order }): JSX.Element {
   const { b, o } = p, d = member(b, o.holderId), who = shortName(b, o), usual = 35;

@@ -87,10 +87,11 @@ function Sub(l: CheckLine): JSX.Element {
   );
 }
 
-export function CheckList(p: { head: CheckHead; lines: CheckLine[] }): JSX.Element {
+/** tight: the head 36 and the rows 48, under a picture that leaves less room (OR38). */
+export function CheckList(p: { head: CheckHead; lines: CheckLine[]; tight?: boolean }): JSX.Element {
   const h = p.head;
   return (
-    <div class="ow-chk">
+    <div class={cx('ow-chk', p.tight && 'tight')}>
       <div class="ow-chk-h">
         <span class="ow-chk-title">{h.title}</span>
         {(h.bar || h.summary) && (

@@ -10,6 +10,7 @@
  *   <Track stage="checking" waits sub="Not paid yet" />                 the now-stop amber
  *   <Track stage="delivered" sub="Collected 11:42" times={…} />          every stop ticked, the line full
  *   <Track stage="packing" skipped={['checking', 'buying']} … />          all on our shelf: those stops a dash, "skipped"
+ *   <Track stage="road" word="Ready to collect" sub="at the gate" ready … />   a pickup at the gate (OR38)
  *
  * P18b · StageDots: the small dots of one order on a light card (a customer's orders).
  *   <StageDots stage="packing" ready={false} waits={false} />
@@ -36,6 +37,8 @@ export interface TrackProps {
   word?: string;
   /** Stages it skipped (all on our shelf: Checking and Buying, OR11, OR19): a dash, and "skipped" under. */
   skipped?: Stage[];
+  /** Ready to collect at the gate (OR38): the word over its line, the road stop the store with "ready" under it. */
+  ready?: boolean;
 }
 
 export function Track(p: TrackProps): JSX.Element {
@@ -43,8 +46,8 @@ export function Track(p: TrackProps): JSX.Element {
   const t = p.times || {}, sk = p.skipped || [];
   return (
     <div class="ow-track">
-      <div class="ow-track-h"><span class="ow-track-w">{p.word || STAGE_WORD[p.stage]}</span><span class="ow-track-s">{p.sub}</span></div>
-      <div role="img" aria-label={`${STAGE_WORD[p.stage]}: step ${at + 1} of 5`} class="ow-rail">
+      <div class={cx('ow-track-h', p.ready && 'under')}><span class="ow-track-w">{p.word || STAGE_WORD[p.stage]}</span><span class="ow-track-s">{p.sub}</span></div>
+      <div role="img" aria-label={`${STAGE_WORD[p.stage]}${p.ready ? ', ready to collect' : ''}: step ${at + 1} of 5`} class="ow-rail">
         <div class="ow-rail-stops">
           <span aria-hidden="true" class="ow-rail-line" />
           {at > 0 && <span aria-hidden="true" class="ow-rail-line on" style={{ width: `${at * 20}%` }} />}
@@ -53,14 +56,14 @@ export function Track(p: TrackProps): JSX.Element {
             : i < at || done
               ? <span key={s} class="ow-stop done"><Icon name="check" size={12} stroke={2.8} /></span>
               : i === at
-                ? <span key={s} class={cx('ow-stop now', p.waits && 'waits')}><Icon name={STAGE_ICON[s]} size={16} stroke={2.2} /></span>
+                ? <span key={s} class={cx('ow-stop now', p.waits && 'waits')}><Icon name={p.ready ? 'store' : STAGE_ICON[s]} size={16} stroke={2.2} /></span>
                 : <span key={s} class="ow-stop next"><Icon name={STAGE_ICON[s]} size={12} stroke={2.2} /></span>)}
         </div>
         <div class="ow-rail-names">
           {STAGES.map((s, i) => (
             <span key={s} class={cx(sk.includes(s) ? '' : i < at || done ? 'done' : i === at ? 'now' : '', i === at && p.waits && 'waits')}>
               <b>{STAGE_WORD[s]}</b>
-              {sk.includes(s) ? <em>skipped</em> : i === at && !done ? <em>now</em> : <em class={t[s] ? 'mono' : undefined}>{t[s] || ''}</em>}
+              {sk.includes(s) ? <em>skipped</em> : i === at && !done ? <em>{p.ready ? 'ready' : 'now'}</em> : <em class={t[s] ? 'mono' : undefined}>{t[s] || ''}</em>}
             </span>
           ))}
         </div>
