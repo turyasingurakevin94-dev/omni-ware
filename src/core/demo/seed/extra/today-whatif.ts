@@ -98,10 +98,7 @@ export function goalHit(s: DemoState, local: TodayLocal): void {
   const b = s.books;
   if (b.orders.some((o) => o.id === 720)) return; // Thu 29 Oct is in already
   s.now = at('2026-10-29', '9:10'); b.at = s.now;
-  // Kyaligonza's #0530 stays, one of the 14 packing (since this morning here), so his rhythm is FACTS': last order Tue 29 Sep, 4 days late.
-  const k530 = b.orders.find((o) => o.id === 530);
   b.orders = b.orders.filter(notMyLive);
-  if (k530) { k530.stageAt = t('11:00'); k530.stageLog = k530.stageLog.map((x) => (x.stage === 'packing' ? { ...x, at: t('11:00') } : x)); b.orders.push(k530); }
   const pvc = (n: number) => [L('pvc-half-6m', n)];
   const day = (dd: string, hm: string) => at(`2026-10-${dd}`, hm);
   // 9 live: 2 checking · 1 buying · 4 packing · 2 on the road; +2,100,000.

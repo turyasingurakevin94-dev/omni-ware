@@ -9,6 +9,7 @@
  */
 import { computed, signal } from '@preact/signals';
 import type { JSX } from 'preact';
+import { useRef } from 'preact/hooks';
 import { lineTotal } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
 import type { Books, Item, Line } from '../../../core/types.ts';
@@ -120,7 +121,11 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   const l = p.l, b = p.b, it = itemOf(b, l.itemId, l.variantIdx), shelf = it && it.onShelf != null ? it.onShelf : null;
   // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does; only a count
   // under 1 waits on the line (SL14: the bin removes it, More brings it back).
-  const q = editQty.value ?? l.qty, set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n); } else editQty.value = n; };
+  // Under 1, the line goes back to the count it had when it opened, struck beside the 0 (SL14), and the bin removes it.
+  const start = useRef({ id: l.lineId, qty: l.qty });
+  if (start.current.id !== l.lineId) start.current = { id: l.lineId, qty: l.qty };
+  const q = editQty.value ?? l.qty;
+  const set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n); } else { editQty.value = n; setQty(l.lineId, start.current.qty); } };
   const asked = askedAs.value.get(l.lineId);
   const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, rest = split != null && q > split ? q - split : 0;
   const shortNow = !rest && l.from === 'shelf' && shelf != null && q > shelf ? q - shelf : 0;
