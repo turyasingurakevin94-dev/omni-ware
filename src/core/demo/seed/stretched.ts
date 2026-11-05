@@ -1,61 +1,100 @@
 /*
- * &state=stretched: the sample shop with more than the boards ever draw, so a screen that holds the
- * seed but not real data shows it (Kevin's phone: 20 faces in "Still to collect" ran off the sheet).
- * Not a board: a test of room. Same day and clock; on top of the default demo:
- *   - 30 customers owe (the first 30 background ones), each a bill of their own; 6 with long names
- *   - 20 payments to Grace today, 9-digit amounts among them
- *   - 20 live orders of Grace's across the stages, long names and 9-digit totals
- *   - 12 chats waiting for a reply, long names
- * Run idempotently (guarded by order #3000).
+ * Two what-ifs that are not boards but tests of room (test/e2e/flows-fit.cjs, test/e2e/sales-room.cjs):
+ *
+ *   &state=stretched  more than any board draws, as a real shop has it: 150 customers (names such as "Hajat
+ *                     @Faluk", "Mama 🌸 Shine Hardware", "😀😀😀 Emoji Only Shop" and 45-character ones), most
+ *                     owing, some 9-digit bills; #2999 with 25 long-named lines; 16 more live orders today; 20
+ *                     payments to Grace today; 40 chats with long messages, a long link and photos; Brian's
+ *                     long display name. (Kevin's phone: 20 faces in "Still to collect" ran off the sheet.)
+ *   &state=one        one of everything: one customer owing, one live order, one chat, one payment ("1 orders").
+ *
+ * Same day and clock; run once (guarded by order #2999, or by the shop holding one customer).
  */
+import { orderTotal } from '../../money.ts';
+import { addDays, dayOf } from '../../time.ts';
+import type { Line, Message } from '../../types.ts';
 import { initials, tintFor } from '../../names.ts';
-import { dayOf } from '../../time.ts';
-import type { Method, Stage } from '../../types.ts';
-import { L, O } from './build.ts';
-import { d, t } from './clock.ts';
+import { C, L, O } from './build.ts';
+import { d, t, TODAY } from './clock.ts';
 import type { DemoState } from './index.ts';
-import { GRACE, MUSA, RUTH, DENIS, SSALI } from './people.ts';
+import { BRIAN, GRACE } from './people.ts';
 
 const LONG = [
-  'Bweyogerere Building and Construction Supplies Limited',
-  'Nakawa Industrial Area Hardware & Steel Fabricators',
-  'Saint Kizito Secondary School Construction Committee',
-  'Kampala Capital City Roads Maintenance Contractors',
-  'Mama Shine Kabalagala Paints and Electricals Ltd',
-  'Namanve Industrial Park Warehouse Builders (U)',
+  'Hajat @Faluk', 'Ambrose FEKO', 'Bright (PAM)', 'Nakawunde Construction & General Supplies Ltd',
+  'Mama 🌸 Shine Hardware', 'Ssekandi-Mukwaya Builders (Mukono Branch Office)', 'Eng. Okello @ Kireka Site 2 🏗️',
+  'Kiwanuka Josephine Nalubega Namuddu', 'St. Mary\'s Kitovu Hospital Works Dept.', 'ABC', 'Wasswa', '😀😀😀 Emoji Only Shop',
+  'Twinomujuni Rwabwogo Bainomugisha Trading Co.',
 ];
-const STAGES: Stage[] = ['checking', 'buying', 'packing', 'road'];
-const HOLDER: Record<string, string> = { checking: RUTH, buying: DENIS, packing: MUSA, road: SSALI };
-const METHODS: Method[] = ['momo', 'bank', 'cash'];
-/** Big and small: a 9-digit amount every few rows. */
-const QTY = (i: number) => (i % 4 === 0 ? 3700 + i : 2 + (i % 9));
+
+function longLine(i: number, item = 'cement-hima-50'): Line {
+  const names = [
+    'Iron sheet G28 · 3m pre-painted maroon (Roofings brand, extra long)',
+    'Wire nails 4" · 25kg carton (galvanised, bright, Steel & Tube)',
+    'PVC pipe 4 inch class B pressure pipe 6 metre length grey',
+    'Emulsion paint 20L Sadolin Super Gloss Brilliant White Interior',
+    'Cement · Hima 50kg',
+  ];
+  return L(item, 3 + i * 7, { name: names[i % names.length] + (i > 4 ? ` #${i}` : '') });
+}
 
 export function stretched(s: DemoState): void {
   const b = s.books;
-  if (b.orders.some((o) => o.id === 3000)) return;
-  const bg = b.customers.filter((c) => /^C1\d\d$/.test(c.id)).slice(0, 30);
-  bg.slice(0, LONG.length).forEach((c, i) => { c.name = LONG[i]; c.initials = initials(LONG[i]); c.tint = tintFor(LONG[i]); });
-  // 30 owe: a bill each, delivered and invoiced, from 5 to 64 days ago.
-  bg.forEach((c, i) => {
-    const day = d('2026-10-12', '12:00') - (i * 2) * 86400000;
-    b.orders.push(O({ id: 3000 + i, customerId: c.id, by: GRACE, placedAt: day, stage: 'delivered', stageAt: day, deliveredAt: day, invoicedAt: day, lines: [L('cement-hima-50', QTY(i))] }));
-  });
-  // 20 payments to Grace today, on those bills.
-  for (let i = 0; i < 20; i++) {
-    const c = bg[i], at = t('8:00') + i * 7 * 60000, method = METHODS[i % 3];
-    const amount = i % 4 === 0 ? 123456789 - i * 1000 : 15000 + i * 1000;
-    b.payments.push({ id: 9500 + i, at, day: dayOf(at), amount, method, customerId: c.id, orderId: 3000 + i, by: GRACE, ref: method === 'momo' ? String(1209000000 + i) : method === 'bank' ? `STB ${90000 + i}` : '', qa: false });
-  }
-  // 20 live orders of Grace's.
-  for (let i = 0; i < 20; i++) {
-    const c = bg[i % LONG.length], stage = STAGES[i % 4], placed = t('9:00') - (i * 5) * 3600000;
-    b.orders.push(O({ id: 3100 + i, customerId: c.id, by: GRACE, placedAt: placed, stage, stageAt: placed, holder: HOLDER[stage], deliverTo: stage === 'road' ? 'Site' : null, lines: [L('iron-g28-3m', QTY(i + 1)), L('cement-hima-50', 3)] }));
-  }
-  b.orders.sort((x, y) => x.id - y.id);
-  // 12 chats waiting, long names.
-  for (let i = 0; i < 12; i++) {
-    const id = 3200 + i, at = t('10:00') + i * 60000, name = LONG[i % LONG.length] + (i >= LONG.length ? ' Site Office' : '');
-    s.chats.push({ id, waId: `2567009${String(10000 + i)}`, phone: `0700 9${String(10 + i)} ${String(100 + i)}`, profileName: name, customerId: i < LONG.length ? bg[i].id : null, ownerId: GRACE, ownerAt: at, lastInAt: at, lastAt: at, lastReadAt: null });
-    s.messages.push({ id: 'm-st-' + i, chatId: id, at, dir: 'in', kind: 'text', body: 'Please send 40 bags of Hima cement and 25 sheets of G28 to the Namanve site before Friday, and the bill', by: null, state: null });
-  }
+  if (b.orders.some((o) => o.id === 2999)) return;
+    // 150 customers: 112 more, most owing, some of 9-digit sums, aged 14-90 days.
+    let oid = 3000;
+    for (let i = 0; i < 112; i++) {
+      const name = i < LONG.length ? LONG[i] : `${LONG[i % LONG.length].split(' ')[0]} ${['Traders', 'Hardware & Paints Wholesale', 'Contractors', '(K) Ltd'][i % 4]} ${i}`;
+      const id = 'X' + String(200 + i);
+      b.customers.push(C({ id, name, initials: initials(name), tint: tintFor(name), phone: '0772 ' + String(100000 + i * 37).slice(-6).replace(/(\d{3})(\d{3})/, '$1 $2'), place: 'Kawempe North Division Mpererwe Zone', everyDays: 10 + (i % 20) }));
+      const age = 14 + (i * 7) % 80, day = addDays(TODAY, -age), at = d(day, '10:00');
+      const big = i % 9 === 0;
+      const lines = big ? [L('cement-hima-50', 1, { price: 123456789 })] : [L('cement-hima-50', 5 + (i % 30)), L('iron-g28-3m', 3 + (i % 11))];
+      b.orders.push(O({ id: ++oid, customerId: id, client: { name, phone: '' }, by: i % 2 ? GRACE : BRIAN, placedAt: at, stage: 'delivered', stageAt: at, deliveredAt: at, invoicedAt: at, lines, paid: i % 3 === 0 ? 1000 : 0 }));
+    }
+    // A live order with 25 lines of long names, 9 digits, today, Grace's.
+    const lines = Array.from({ length: 25 }, (_, i) => longLine(i));
+    lines[0] = L('iron-g28-3m', 3000, { name: 'Iron sheet G28 · 3m pre-painted maroon (Roofings brand, extra long)', price: 38000 });
+    b.orders.push(O({ id: 2999, customerId: 'X203', client: { name: LONG[3], phone: '' }, by: GRACE, placedAt: t('9:30'), stage: 'packing', lines }));
+    // More live orders today for Grace, long names, every stage.
+    const stages = ['checking', 'buying', 'packing', 'road'] as const;
+    for (let i = 0; i < 16; i++) {
+      const cid = 'X' + String(200 + (i % LONG.length));
+      b.orders.push(O({ id: 2900 + i, customerId: cid, client: { name: LONG[i % LONG.length], phone: '' }, by: GRACE, placedAt: t('8:' + String(10 + i * 2)), stage: stages[i % 4], lines: [L('cement-hima-50', 100 + i * 333), L('iron-g28-3m', 50 + i)] }));
+    }
+    // 20 payments today by Grace.
+    for (let i = 0; i < 20; i++) {
+      const cid = 'X' + String(200 + i);
+      b.payments.push({ id: 9500 + i, at: t('9:' + String(10 + i * 2)), day: TODAY, amount: i === 0 ? 123456789 : 15000 + i * 98765, method: (['cash', 'momo', 'bank'] as const)[i % 3], customerId: cid, orderId: null, by: GRACE, ref: i % 3 ? 'TXN' + (1000000000 + i) : '', qa: false });
+    }
+    // 40 chats of Grace's, long messages, photos, most waiting.
+    for (let i = 0; i < 40; i++) {
+      const id = 500 + i, name = i < LONG.length ? LONG[i] : `Customer with a fairly long WhatsApp profile name ${i}`;
+      const lastIn = t('10:' + String(40 - i).padStart(2, '0'));
+      s.chats.push({ id, waId: '2567720' + String(10000 + i), phone: '0772 0' + String(10000 + i).slice(0, 2) + ' ' + String(10000 + i).slice(2), profileName: name, customerId: i < 13 ? 'X' + String(200 + i) : null, ownerId: i % 5 === 4 ? null : GRACE, ownerAt: d('2026-10-12', '9:00'), lastInAt: lastIn, lastAt: lastIn, lastReadAt: i % 2 ? lastIn : null });
+      const msgs: Message[] = [
+        { id: 'sx' + i + 'a', chatId: id, at: lastIn - 600000, dir: 'out', kind: 'text', body: 'Good morning. The price of iron sheets G28 3m is 38,000 each and we can deliver to the site on Friday.', by: GRACE, state: 'read' },
+        { id: 'sx' + i + 'b', chatId: id, at: lastIn - 30000, dir: 'in', kind: 'image', body: '', by: null, state: null, media: 'aisle:Roofing' },
+        { id: 'sx' + i + 'c', chatId: id, at: lastIn, dir: 'in', kind: 'text', body: i % 3 === 0 ? 'Hello please I need 40 iron sheets G28 3 metres, 20 bags of cement Hima, 10 cartons of 4 inch nails, 6 tins of maroon roof paint 20L and 2 wheelbarrows delivered to the Ntinda site behind the church before Friday morning, how much for everything together with transport? https://maps.google.com/?q=0.3476,32.6052&aVeryLongUnbrokenTokenWithoutAnySpacesAtAll1234567890' : 'Ok 👍', by: null, state: null },
+      ];
+      s.messages.push(...msgs);
+    }
+    // Long display names for the team (never email handles).
+    const brian = b.members.find((x) => x.id === BRIAN);
+    if (brian) brian.name = 'Brian Ssekandi-Mukwaya Junior';
+}
+
+export function one(s: DemoState): void {
+  const b = s.books;
+  if (b.customers.length === 1) return;
+    // One of everything: one customer owing, one live order, one chat, one payment.
+    const keepC = b.customers.find((c) => c.name.startsWith('Kato')) || b.customers[0];
+    b.customers = [keepC];
+    const live = b.orders.filter((o) => o.customerId === keepC.id && o.stage !== 'delivered').slice(0, 1);
+    const bill = b.orders.filter((o) => o.customerId === keepC.id && o.invoiced && orderTotal(o) > o.paid).slice(0, 1);
+    b.orders = [...live, ...bill];
+    b.payments = b.payments.filter((p) => p.customerId === keepC.id && p.day === TODAY).slice(0, 1);
+    if (!b.payments.length) b.payments = [{ id: 9999, at: t('9:00'), day: dayOf(t('9:00')), amount: 1000, method: 'cash', customerId: keepC.id, orderId: null, by: GRACE, ref: '', qa: false }];
+    s.chats = s.chats.slice(0, 1);
+    s.messages = s.messages.filter((x) => x.chatId === s.chats[0].id);
+    b.promises = []; b.billAsks = []; b.paymentAsks = []; b.asks = b.asks.slice(0, 1);
 }

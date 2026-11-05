@@ -1,7 +1,7 @@
 'use strict';
 /*
  * Room on a real phone (test/e2e/sales-flows.cjs runs it): 360 × 800, more data than any board draws
- * (&state=stretched: 30 owe, 20 paid today, 20 live, 12 chats waiting, long names, 9-digit amounts),
+ * (&state=stretched, src/core/demo/seed/stretched.ts: 150 customers, long names, 9-digit bills, 40 chats),
  * the phone's large text at 130%, and the clock's bar 24 px tall over the page (edge to edge).
  * On every screen, as well as the guards every flow carries (nothing wider than the phone):
  *   - no tab label leaves its slot, overlaps another, or comes nearer the screen's edge than at 100%
@@ -11,7 +11,7 @@
  *   - no words drawn over other words.
  *
  * The large text, as Android's WebView applies it (textZoom: every font size times the zoom, lengths
- * kept): every font-size in the page's CSS and inline styles is multiplied by 1.3 before it paints.
+ * kept): every font-size (and px line-height) in the page's CSS and inline styles is multiplied by 1.3.
  */
 const ZOOM = 1.3, BAR = 24;
 
@@ -19,7 +19,10 @@ const ZOOM = 1.3, BAR = 24;
 function phoneLike([zoom, bar]) {
   const scale = (v) => (!v || /(%|em|rem)$|^(inherit|initial|unset|larger|smaller)$/.test(v) ? null : `calc((${v}) * ${zoom})`);
   const done = new WeakSet();
-  const rules = (list) => { for (const r of list) { if (r.style) { const n = scale(r.style.fontSize); if (n) r.style.fontSize = n; } if (r.cssRules) rules(r.cssRules); } };
+  const rules = (list) => { for (const r of list) {
+    if (r.style) { const n = scale(r.style.fontSize); if (n) r.style.fontSize = n; if (/^[\d.]+px$/.test(r.style.lineHeight)) r.style.lineHeight = scale(r.style.lineHeight); }
+    if (r.cssRules) rules(r.cssRules);
+  } };
   const sheets = () => { for (const s of document.styleSheets) { if (done.has(s)) continue; try { rules(s.cssRules); done.add(s); } catch (_e) { /* not ours */ } } };
   // An inline size is scaled once: the page writes a new one when it re-renders (data-tz keeps what we wrote).
   const inline = (el) => { if (!el.style || !el.style.fontSize || el.dataset.tz === el.style.fontSize) return; const n = scale(el.style.fontSize); if (!n) return; el.style.fontSize = n; el.dataset.tz = el.style.fontSize; };
@@ -123,7 +126,7 @@ async function fit(open) {
   const faces = await p.evaluate(() => [...document.querySelectorAll('.td-still .ow-face')].length);
   check(faces > 0 && faces <= 4, 'fit: Still to collect draws at most 4 faces, then "+n"', faces);
   const more = await p.evaluate(() => (document.querySelector('.td-still .ow-faces-more') || {}).textContent);
-  check(more === '+30', 'fit: …and "+30" for the other 30 of the 34 who owe', more);
+  check(/^\+\d+$/.test(more || ''), 'fit: …and "+n" for the rest of who owes', more);
   await tap({ text: 'Placed' });
   await look('Your day · Placed');
   await tap('Close');
@@ -135,9 +138,9 @@ async function fit(open) {
   await tap({ sel: '[role=group][aria-label=Show] button:has-text("All")' });
   await look('Customers · All');
   await ph.tab('customers');
-  await ph.type('Bweyogerere', 'Name, phone or place');
+  await ph.type('Nakawunde', 'Name, phone or place');
   await look('Customers · found');
-  await tap({ sel: 'button:has-text("Bweyogerere Building")' });
+  await tap({ sel: 'button:has-text("Nakawunde Construction")' });
   await look('a customer with a long name');
   await tap('Back to Customers');
   await ph.tab('orders');

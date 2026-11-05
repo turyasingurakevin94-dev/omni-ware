@@ -48,8 +48,10 @@ async function open(browser, flags = '') {
   return { ctx, p, errors };
 }
 
-const text = (p) => p.locator('#app').innerText();
-const toastText = async (p) => { await p.waitForTimeout(400); return (await p.locator('[role=status], [role=alert]').allInnerTexts()).join(' | '); };
+// What the screen says, one space between words (a figure kept whole beside its words is its own box: util.tsx Keep).
+const said = (s) => s.replace(/\s+/g, ' ').trim();
+const text = async (p) => said(await p.locator('#app').innerText());
+const toastText = async (p) => { await p.waitForTimeout(400); return (await p.locator('[role=status], [role=alert]').allInnerTexts()).map(said).join(' | '); };
 
 /** The slide from the keyboard: focus its knob, press Enter (as a screen reader or a keyboard does). */
 async function slide(p) {
@@ -64,7 +66,7 @@ async function flows(browser) {
   await p.getByLabel('Take payment from Kato Construction').click();
   await p.waitForTimeout(200);
   t.check((await p.getByLabel('Amount Kato pays now').inputValue()) === '420,000', 'pay: all of it is prefilled (420,000)');
-  t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 420,000', 'pay: the slide says what it records');
+  t.check(said(await p.locator('.ow-slide-l').innerText()) === 'Slide to record 420,000', 'pay: the slide says what it records');
   await slide(p);
   await p.waitForTimeout(500);
   let s = await text(p);
@@ -87,9 +89,9 @@ async function flows(browser) {
   await p.getByRole('radio', { name: 'Cash' }).click();
   await p.getByRole('radio', { name: '430,000' }).click();
   t.check(/10,000 change/.test(await text(p)), 'cash over: 10,000 change');
-  t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 420,000', 'cash over, change: records 420,000');
+  t.check(said(await p.locator('.ow-slide-l').innerText()) === 'Slide to record 420,000', 'cash over, change: records 420,000');
   await p.getByRole('radio', { name: 'Deposit' }).click();
-  t.check((await p.locator('.ow-slide-l').innerText()) === 'Slide to record 430,000', 'cash over, deposit: records 430,000');
+  t.check(said(await p.locator('.ow-slide-l').innerText()) === 'Slide to record 430,000', 'cash over, deposit: records 430,000');
   await slide(p);
   s = await text(p);
   t.check(/Deposit/.test(s) && /Kato said keep 10,000/.test(s), 'deposit: on the slip, and said on Paid');
@@ -245,7 +247,7 @@ async function flows(browser) {
   await p.locator('input[aria-label="Find a customer"]').fill('0772 999 111');
   await p.getByText('Someone new', { exact: true }).click();
   await p.waitForTimeout(300);
-  k = await p.locator('.ow-sheet').innerText();
+  k = said(await p.locator('.ow-sheet').innerText());
   t.check(!/Mama Shine/.test(k) && !/From their chat/.test(k), 'new: a typed number with no chat does not fill from another chat');
   t.check((await p.locator('input[aria-label="Phone number after +256"]').inputValue()).replace(/\D/g, '') === '772999111', 'new: the typed number is the phone');
   await ctx.close();

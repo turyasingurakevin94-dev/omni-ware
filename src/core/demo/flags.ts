@@ -11,8 +11,9 @@
  *   &state=busy              an afternoon with 38 live and 22 needing Grace (TD02)
  *   &state=goal-hit          Thu 29 Oct, the month's goal passed (TD08)
  *   &state=test-record       a TEST order of Grace's at 10:30, in no figure (TD25)
- *   &state=stretched         more than any board draws: 30 owe, 20 paid today, 20 live, 12 chats waiting, long names, 9-digit amounts
- *                            (no board: the e2e check that real data still fits the phone, test/e2e/flows-fit.cjs)
+ *   &state=stretched         more than any board draws: 150 customers, long and emoji names, 9-digit bills, 25 lines on #2999,
+ *                            20 paid today, 40 chats (no board: the e2e checks that real data fits, test/e2e/flows-fit.cjs, sales-room.cjs)
+ *   &state=one               one of everything: one customer owing, one live order, one chat, one payment
  *   &wa=down                 the shop's WhatsApp does not answer: sends are refused (SL29 "Picture not sent yet")
  *   &wa=slow                 the shop's WhatsApp answers slowly: a picture takes 10 s to go (SL35)
  *   &as=ruth                 someone else of the team is signed in (CH32: Ruth, the Manager, moves a chat)
@@ -24,7 +25,7 @@
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
-export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading' | 'busy' | 'goal-hit' | 'test-record' | 'stretched';
+export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading' | 'busy' | 'goal-hit' | 'test-record' | 'stretched' | 'one';
 
 export interface DemoFlags {
   on: boolean;
@@ -49,7 +50,7 @@ export interface DemoFlags {
 /** What the demo's phone hears when it listens (&listen=1): Grace's answer to Kato's 10:29 (CH16). */
 export const HEARD = 'Yes, it can come to the Ntinda site';
 
-const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading', 'busy', 'goal-hit', 'test-record', 'stretched'];
+const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading', 'busy', 'goal-hit', 'test-record', 'stretched', 'one'];
 
 /** Reads ?demo&offline=1&clock=15:40&state=… from a query string. */
 export function readFlags(search: string): DemoFlags {
