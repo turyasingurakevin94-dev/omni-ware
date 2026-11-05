@@ -65,7 +65,7 @@ export function UndoToast(): JSX.Element | null {
   if (!p) return null;
   // The shared P28 toast, its Undo variant; the write itself waits here (sent on time out or on leaving).
   return (
-    <div class={'ch-cv-toast-at' + (p.wide ? ' wide' : '')} style={{ top: `${p.top}px` }}>
+    <div class={'ch-cv-toast-at' + (p.wide ? ' wide' : '')} style={{ top: `calc(${p.top}px + var(--app-top))` }}>
       <ToastView key={p.id} text={p.text} undo={undo} onClose={() => {}} />
     </div>
   );

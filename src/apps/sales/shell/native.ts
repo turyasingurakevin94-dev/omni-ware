@@ -6,7 +6,8 @@
  * Inert in a browser and in the demo. In the app it does four jobs:
  *   1. Back: a sheet, then a screen, then Today, and only then the background (native-back.ts).
  *   2. The strip over the status bar takes the colour of what is under it (native-bars.ts).
- *   3. The bars' size, when Capacitor has not measured this page yet (native-bars.ts).
+ *   3. The bars' size: none when Android lays the page out inside its bars, and a stand-in when
+ *      Capacitor has not measured this page yet (native-bars.ts barsPlan).
  *   4. Staying current: the live sales.html, when it is a build of this app, with its tab files
  *      from beside it; switched to when the app next goes to the background (native-update.ts).
  *
@@ -126,10 +127,13 @@ export function startNative(): void {
   /* 2 and 3. The bars */
   const android = typeof C.getPlatform !== 'function' || C.getPlatform() === 'android';
   const insets = () => { if (android) fixInsets(); };
+  insets();
   setTimeout(insets, 800);
   setTimeout(insets, 2500);
   window.addEventListener('resize', () => setTimeout(insets, 300));
   if (P.App) P.App.addListener('resume', () => setTimeout(insets, 300));
+  // Capacitor writes its measurement onto the root's style whenever it has one: decide again then.
+  new MutationObserver(() => setTimeout(insets, 0)).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
   if (!legacy) startStrip(P.SystemBars || null);
 
   /* 4. Staying current */

@@ -2,25 +2,38 @@
  * The phone's bars inside the Android app (the native layer, shell/native.ts). Moved from sales.html's
  * native layer (its jobs 2 and 3).
  *
- * The app draws edge to edge (capacitor.config.json: SystemBars "css", viewport-fit=cover), and the
- * screens start under the clock: every part that sits at the top is offset by --app-top, the bar's
- * height (src/ui/tokens.css: Capacitor's --safe-area-inset-top, else the WebView's own env()).
- * On the web it is 0, so the boards and the app stay the same.
+ * Where the WebView sits decides everything, and it is one rule (barsPlan below):
+ *   - Under the bars (edge to edge: capacitor.config.json SystemBars "css", viewport-fit=cover): the
+ *     screens start under the clock, so every part that sits at the top is offset by --app-top, the
+ *     bar's height (src/ui/tokens.css: --bar-top, Capacitor's --safe-area-inset-top, else the
+ *     WebView's own env()), and a strip over the status bar takes the colour of what is under it.
+ *   - Inside the bars (some phones, e.g. a Huawei: Android draws its own opaque status bar and lays
+ *     the WebView out below it, while Capacitor still reports the bar's height): --app-top is 0 and
+ *     there is no strip. Told apart by the screen's height less the page's: at least the bar's when
+ *     the page starts below it.
+ * On the web all of it is 0, so the boards and the app stay the same.
  *
  *   - The strip: a band over the status bar takes the colour of the screen just under it (a navy
- *     head, the light body, a sheet's scrim), and the clock's icons stay readable on it.
+ *     head's navy #16203C, the light body, a sheet's scrim), and the clock's icons stay readable on it.
  *   - The bars' size: Capacitor measures them into --safe-area-inset-*; a page it has not measured
  *     yet (some phones, after a reload) would read zero and slide under the clock, so the last good
- *     measurement stands in until it does.
+ *     measurement stands in until it does, but only on a page that fills the whole screen.
  */
 
 export interface Rgba { r: number; g: number; b: number; a: number }
 
 const GROUND: Rgba = { r: 247, g: 245, b: 242, a: 1 };
 
-/** The first colour in a computed CSS value ("rgb(22, 32, 60)", "rgba(12, 19, 38, 0.72)", a gradient's first stop). */
+const RGBA = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)/g;
+
+/**
+ * A colour in a computed CSS value ("rgb(22, 32, 60)", "rgba(12, 19, 38, 0.72)"). For a gradient, its
+ * last stop: the ground it settles into (the navy head's --head-ground glows #243A6B in its corner and
+ * is navy #16203C, so the strip over it is navy, as the old app painted it).
+ */
 export function colourIn(css: string): Rgba | null {
-  const m = String(css || '').match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+%?))?\s*\)/);
+  const all = [...String(css || '').matchAll(RGBA)];
+  const m = all[all.length - 1];
   if (!m) return null;
   const a = m[4] == null ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
   return { r: +m[1], g: +m[2], b: +m[3], a };
@@ -39,7 +52,7 @@ export function isDark(c: Rgba): boolean {
   return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b) < 0.4;
 }
 
-/** What is painted at (x, y): each element's image (a gradient's first stop) over its colour, up to the first solid one. */
+/** What is painted at (x, y): each element's image (a gradient's ground) over its colour, up to the first solid one. */
 function colourAt(x: number, y: number): Rgba {
   const layers: Rgba[] = [];
   for (let el = document.elementFromPoint(x, y); el; el = el.parentElement) {
@@ -82,43 +95,90 @@ export function startStrip(bars: Bars | null): () => void {
 
 export interface Insets { top?: number; bottom?: number }
 
+/** Rounding between the screen's size and the page's (CSS pixels). */
+const SLACK = 2;
+/** A page this close to the screen's height fills it (so it is under the bars). */
+const FILLS = 16;
+
+export interface BarsIn {
+  /** Capacitor has set --safe-area-inset-top on this page. */
+  measured: boolean;
+  /** The bars' size the page reads now (--bar-top, --bar-bottom). */
+  top: number;
+  bottom: number;
+  /** The last good measurement, kept on the phone. */
+  last: Insets;
+  /** The screen's height less the page's (screen.height - innerHeight): the bars the page is not under. */
+  gap: number;
+  /** Someone is typing: the keyboard takes height off the page, so the gap says nothing. */
+  typing: boolean;
+}
+
+export interface BarsPlan {
+  /** The page starts below the status bar (--app-top 0, no strip) or not; null: leave it as it is. */
+  insideTop: boolean | null;
+  /** The page ends above the bottom bar (--app-bottom 0); null: leave it. */
+  insideBottom: boolean | null;
+  /** Keep this measurement on the phone. */
+  remember?: Insets;
+  /** Stand in for Capacitor's measurement until it measures. */
+  stand?: Insets;
+}
+
 /**
- * The bars' size, decided: what to remember, and what to stand in.
- *   measured  Capacitor has set --safe-area-inset-top on this page
- *   top/bottom what the page pads by now (--app-top, --app-bottom)
- *   fills     the page fills the whole screen (so it is under the bars)
+ * The one rule for the bars: where the page sits, what to remember, what to stand in.
+ *   - The page is inside a bar when the screen's height less its own is at least that bar: Android drew
+ *     the bar and laid the page out past it, whatever Capacitor reports.
+ *   - A measurement under the bars is remembered.
+ *   - Nothing measured: the last good measurement (else 32) stands in, only on a page that fills the
+ *     screen. A page that does not fill it is inside the bars and never gets a stand-in.
  */
-export function insetsPlan(o: { measured: boolean; top: number; bottom: number; last: Insets; fills: boolean }): { remember?: Insets; stand?: Insets } {
+export function barsPlan(o: BarsIn): BarsPlan {
+  if (o.typing) return { insideTop: null, insideBottom: null };
+  const insideTop = o.top > 0 && o.gap >= o.top - SLACK;
+  const insideBottom = o.bottom > 0 && o.gap >= o.top + o.bottom - SLACK;
+  const plan: BarsPlan = { insideTop, insideBottom };
   if (o.measured && o.top > 0) {
-    return o.last.top !== o.top || o.last.bottom !== o.bottom ? { remember: { top: o.top, bottom: o.bottom } } : {};
+    if (o.last.top !== o.top || o.last.bottom !== o.bottom) plan.remember = { top: o.top, bottom: o.bottom };
+    return plan;
   }
   // Measured at zero (Android laid the page out inside its bars), or the WebView knows them itself.
-  if (o.measured || o.top > 0) return {};
-  // Not measured, and nothing says the page is under the bars.
-  if (!o.last.top && !o.fills) return {};
-  return { stand: { top: o.last.top || 32, bottom: o.last.bottom || 32 } };
+  if (o.measured || o.top > 0) return plan;
+  // Not measured: a page that does not fill the screen is inside the bars, and nothing stands in.
+  if (o.gap > FILLS) return plan;
+  return { ...plan, stand: { top: o.last.top || 32, bottom: o.last.bottom || 32 } };
 }
 
 const INSETS = 'ow-app-insets';
 
-/** Measure, and stand in for Capacitor when it has not measured this page yet. */
+const editing = (el: Element | null): boolean =>
+  !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (el as HTMLElement).isContentEditable);
+
+/** Measure, decide (barsPlan), and apply: --app-top/--app-bottom 0 inside the bars; a stand-in when not measured. */
 export function fixInsets(): void {
   const root = document.documentElement;
   const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:var(--app-top, 0px);padding-bottom:var(--app-bottom, 0px);';
+  probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;padding-top:var(--bar-top, 0px);padding-bottom:var(--bar-bottom, 0px);';
   document.body.appendChild(probe);
   const cs = getComputedStyle(probe);
   const top = parseFloat(cs.paddingTop) || 0, bottom = parseFloat(cs.paddingBottom) || 0;
   probe.remove();
   let last: Insets = {};
   try { last = JSON.parse(localStorage.getItem(INSETS) || '{}') || {}; } catch (_e) { /* none kept */ }
-  const plan = insetsPlan({
+  const plan = barsPlan({
     measured: root.style.getPropertyValue('--safe-area-inset-top') !== '',
-    top, bottom, last, fills: Math.abs(screen.height - window.innerHeight) <= 16,
+    top, bottom, last, gap: screen.height - window.innerHeight, typing: editing(document.activeElement),
   });
   if (plan.remember) { try { localStorage.setItem(INSETS, JSON.stringify(plan.remember)); } catch (_e) { /* kept next time */ } }
+  // Each property is written only when it changes, so watching the root's style (native.ts) never loops.
+  const put = (name: string, value: string | null) => {
+    if (root.style.getPropertyValue(name) === (value ?? '')) return;
+    if (value == null) root.style.removeProperty(name); else root.style.setProperty(name, value);
+  };
   if (plan.stand) {
-    root.style.setProperty('--safe-area-inset-top', plan.stand.top + 'px');
-    root.style.setProperty('--safe-area-inset-bottom', plan.stand.bottom + 'px');
+    put('--safe-area-inset-top', plan.stand.top + 'px');
+    put('--safe-area-inset-bottom', plan.stand.bottom + 'px');
   }
+  if (plan.insideTop != null) put('--app-top', plan.insideTop ? '0px' : null);
+  if (plan.insideBottom != null) put('--app-bottom', plan.insideBottom ? '0px' : null);
 }
