@@ -24,10 +24,13 @@ const R = require(path.join(ROOT, 'src/apps/sales/chats/read.ts'));
   const mine = Mo.mineList(b, cb, now, []);
   t.check(mine.map((v) => v.title).join(' | ') === '0701 552 904 | Kato Construction | Lubowa Builders | Kyaligonza & Sons | Mukono Roofing | Nansana Hardware',
     'Mine: the new number, Kato and Lubowa waiting, then Kyaligonza, Mukono, Nansana by who is due (CH01)');
-  t.check(Mo.ownedBy(cb, b.me.id).length === 6, 'Grace has 6 chats (Chats 6, Mine 6; Bukoto is older than a week, so not in Mine)');
+  t.check(Mo.mineCount(b, cb, now) === 6 && mine.length === 6, 'Chats 6, Mine 6: the count is what Mine lists (Bukoto is older than a week; Kevin saw "Mine 2" over an empty list)');
   t.check(waitingChats(cb, b.me.id, now, 'mine').length === 3 && waitingChats(cb, b.me.id, now, 'team').length === 4, '3 waiting for Grace, 4 for the team');
   const wl = Mo.waitLine(b, cb, now, 'team');
-  t.check(wl.oldest === 38 && wl.marks.map((m) => `${m.mins}:${m.pct.toFixed(1)}:${m.offset}`).join(' ') === '4:6.7:0 12:20.0:-12 12:20.0:12 38:63.3:0', 'the wait line: 4 m, 12 m twice side by side, 38 m (CH04)');
+  t.check(wl.oldest === 38 && wl.drawn.map((m) => `${m.mins}:${m.pct.toFixed(1)}:${m.offset}`).join(' ') === '4:6.7:0 12:20.0:-12 12:20.0:12 38:63.3:0', 'the wait line: 4 m, 12 m twice side by side, 38 m (CH04)');
+  const many = Mo.placeMarks(Array.from({ length: 17 }, (_x, i) => ({ key: i + 1, face: { initials: 'AB', tint: 't0' }, title: 'x', mins: 3 + i, pct: ((3 + i) / 60) * 100, offset: 0 })));
+  const at = many.map((m) => (m.pct / 100) * 320 + m.offset).sort((x, y) => x - y);
+  t.check(at.every((x, i) => !i || x - at[i - 1] >= 22) && many.some((m) => m.more), '17 waiting a minute apart: no two faces touch, and a place with more than three says "+n"');
   const kato = mine[1];
   t.check(kato.waitMins === 12 && kato.unread === 1 && kato.typing && kato.typing.name === 'Brian Ouma', 'Kato: 12 m, 1 unread, Brian typing');
   const nansana = mine[5];

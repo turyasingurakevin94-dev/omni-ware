@@ -3,6 +3,7 @@
  * pill (who is on) and the New chat pen, then the one picture, the wait line: everyone waiting
  * for a reply, placed by how long, with the late half from 30 m. Then the search.
  */
+import { counted } from '../../../core/names.ts';
 import type { JSX } from 'preact';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -18,7 +19,7 @@ export interface ListHeadProps {
   onTeam: () => void;
   onNew: () => void;
   /** null while the chats load (shimmer), else the wait line. */
-  wait: { marks: WaitMark[]; oldest: number; words: string } | null;
+  wait: { marks: WaitMark[]; drawn: WaitMark[]; oldest: number; words: string } | null;
   q: string;
   onQ: (v: string) => void;
 }
@@ -49,12 +50,12 @@ export function ListHead(p: ListHeadProps): JSX.Element {
           </div>
         )}
         {w && w.marks.length ? (
-          <div role="img" aria-label={'Waiting: ' + w.marks.map((m) => `${m.title} ${m.mins} minutes`).join(', ')} class="ch-wl">
+          <div role="img" aria-label={'Waiting: ' + w.marks.map((m) => `${m.title} ${counted(m.mins, 'minute')}`).join(', ')} class="ch-wl">
             <div class="ch-wl-t">
               <i aria-hidden="true" /><i aria-hidden="true" class="late" />
-              {w.marks.map((m) => (
+              {w.drawn.map((m) => (
                 <span key={m.key} class="ch-wl-m" style={{ left: `calc(${m.pct.toFixed(1)}% + ${m.offset}px)` }}>
-                  {m.face ? <Avatar {...m.face} size={26} font={11} /> : <span class="ch-wl-ph"><Icon name="phone" size={13} stroke={2.2} /></span>}
+                  {m.more ? <span class="ch-wl-ph mono">{`+${m.more}`}</span> : m.face ? <Avatar {...m.face} size={26} font={11} /> : <span class="ch-wl-ph"><Icon name="phone" size={13} stroke={2.2} /></span>}
                 </span>
               ))}
             </div>

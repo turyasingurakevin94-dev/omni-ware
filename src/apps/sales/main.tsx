@@ -6,9 +6,11 @@
 import { render } from 'preact';
 import '../../ui/tokens.css';
 import './app.css';
+import { watchKeyboard } from '../../ui/keyboard.ts';
 import { App } from './shell/App.tsx';
 import { inPhoneApp, startNative } from './shell/native.ts';
 import { listenForPushes } from './shell/open-push.ts';
+import { startPresence } from './shell/presence.ts';
 import { start } from './shell/store.ts';
 import { preloadTabs } from './shell/tabs.ts';
 
@@ -22,7 +24,11 @@ if (parts) {
   render(<App />, document.getElementById('app') as HTMLElement);
   // Inside the phone app: Back, the bars and the live update (shell/native.ts). Nothing in a browser.
   startNative();
+  // The keyboard up for a field above a dock: the dock sits at the end of the page (src/ui/keyboard.ts).
+  watchKeyboard();
   void start();
+  // Who is on now: written as the old app wrote it (shell/presence.ts).
+  startPresence();
   // A tapped push opens its page at once, from the phone's copy (shell/open-push.ts).
   listenForPushes();
   // The other tabs' files, quietly after the first paint, so they are here before the signal goes

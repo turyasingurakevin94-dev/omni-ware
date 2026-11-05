@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { orderOwes } from '../../../core/money.ts';
-import { firstWord, STAGE_WORD, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, shutFor, STAGE_WORD } from '../../../core/names.ts';
 import { money, short } from '../../../core/money.ts';
 import type { Books, ChatNote, Thread as ThreadData } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -18,6 +18,7 @@ import { Duo, Icon, STAGE_ICON, phSparkle } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Typing } from '../../../ui/Chat.tsx';
+import { typingNow } from '../shell/presence.ts';
 import { nav, stack } from '../shell/nav.ts';
 import { act, books, chats, discardKept, drafts, flush, kept, now, online, source } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
@@ -113,7 +114,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
   const people = mention != null ? salesTeam(b).concat(managers(b)).filter((m) => m.id !== me.id).sort((x, y) => rank(x) - rank(y)) : [];
 
   const sub = cust
-    ? <>{cust.owes > 0 ? <>Owes <b>{paid ? money(cust.owes) : short(cust.owes)}</b></> : 'Owes nothing'}{` · ${cust.kind === 'contractor' && cust.everyDays ? `every ${cust.everyDays} days` : cust.place}`}</>
+    ? <>{cust.owes > 0 ? <>Owes <b>{paid ? money(cust.owes) : short(cust.owes)}</b></> : 'Owes nothing'}{` · ${cust.kind === 'contractor' && cust.everyDays ? `every ${counted(cust.everyDays, 'day')}` : cust.place}`}</>
     : `“${v.waName}” · not saved`;
   const chips = (
     <>
@@ -126,8 +127,8 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
       )}
       {(nobody || mine) && !cust && <HeadChip on={() => open('customers/new', { phone: chat.phone, name: v.waName, chat: chat.id })} label="Save this number as a new customer"><Icon name="person-plus" size={15} stroke={2.2} />Save as a customer</HeadChip>}
       {mine && shut ? (
-        <button type="button" class="ow-hchip ch-shut" style={{ border: 'none', background: 'transparent', font: 'inherit', color: 'inherit' }} aria-label={`The chat is shut: they last wrote ${v.window.daysShut} days ago`}>
-          <span><span class="ch-cv-chip-i amber"><Icon name="lock" size={14} stroke={2.2} /></span>shut<b>{`${v.window.daysShut} days`}</b></span>
+        <button type="button" class="ow-hchip ch-shut" style={{ border: 'none', background: 'transparent', font: 'inherit', color: 'inherit' }} aria-label={`The chat is shut: they last wrote ${v.window.daysShut > 0 ? `${counted(v.window.daysShut, 'day')} ago` : 'today'}`}>
+          <span><span class="ch-cv-chip-i amber"><Icon name="lock" size={14} stroke={2.2} /></span>shut<b>{shutFor(v.window.daysShut)}</b></span>
         </button>
       ) : order && (mine || named) && (
         <HeadChip on={() => open('orders/order', { id: order.id })} label={`Order ${orderNo(order.id)}, ${STAGE_WORD[order.stage]}. Open it`}>
@@ -181,7 +182,7 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
             </div></div>
           )}
           {note && <div class="ch-cv-notebar"><Icon name="lock" size={15} stroke={2.2} /><span style={{ flex: 1 }}>{`Team note · ${first} never sees it`}</span></div>}
-          <Composer to={first} toName={v.title} value={text} onInput={setText} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
+          <Composer to={first} toName={v.title} value={text} onInput={(v: string) => { setText(v); if (v.trim() && !note) typingNow(); }} onSend={() => { void send(); }} note={note} onNote={() => setNote(!note)} onListen={setListening}
             shut={shut && !note} onAdd={add} sending={sending} />
         </>
       }>

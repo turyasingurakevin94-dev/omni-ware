@@ -12,7 +12,7 @@ import { FilterChip } from '../../../ui/Pill.tsx';
 import { useState } from 'preact/hooks';
 import { waitingChats } from '../../../core/chats.ts';
 import type { DemoSource } from '../../../core/demo/index.ts';
-import { firstWord } from '../../../core/names.ts';
+import { firstWord, plural } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Message } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -28,7 +28,7 @@ import { seen } from './undo.tsx';
 import type { ScreenProps } from '../shell/types.ts';
 import { Empty, Loading } from './ListEmpty.tsx';
 import { ListHead, type PillFace } from './ListHead.tsx';
-import { chatView, faceOf, firstSentence, listTime, managers, mineList, ownedBy, said, salesTeam, waitLine, whose, type ChatView } from './model.ts';
+import { chatView, faceOf, firstSentence, listTime, managers, mineCount, mineList, ownedBy, said, salesTeam, waitLine, whose, type ChatView } from './model.ts';
 import { Dots, Pic, Ring, open, write } from './parts.tsx';
 import './list.css';
 
@@ -60,7 +60,8 @@ export function ChatsList(p: ScreenProps): JSX.Element {
   const f: Filter = manager ? 'team' : filter;
   const head = (scope: 'mine' | 'team') => {
     const wl = b && cb ? waitLine(b, cb, t, scope) : null;
-    const owned = b && cb ? ownedBy(cb, b.me.id).length : null;
+    // The Manager has no Mine (CH35): the count is the chats that are hers.
+    const owned = b && cb ? (manager ? ownedBy(cb, b.me.id).length : mineCount(b, cb, t)) : null;
     return (
       <ListHead count={owned} team={pill(b)} onTeam={() => setFilter('team')} onNew={() => nav.push('chats/new')} q={q} onQ={setQ}
         wait={wl && { ...wl, words: scope === 'team' ? 'waiting · the team' : wl.marks.length ? 'Waiting for a reply' : 'waiting for a reply' }} />
@@ -69,7 +70,7 @@ export function ChatsList(p: ScreenProps): JSX.Element {
   if (!b || !cb) return <div>{head('mine')}<Loading filter={f} onFilter={setFilter} /></div>;
   // CH06: no chats yet; the team pill still opens the team (CH04).
   if (!cb.chats.length && f !== 'team') return <div>{head('mine')}<Empty connected={cb.connected} /></div>;
-  const mine = mineList(b, cb, t, drafts.value), owned = ownedBy(cb, b.me.id).length;
+  const mine = mineList(b, cb, t, drafts.value), owned = mine.length;
   const waits = waitingChats(cb, b.me.id, t, 'mine');
   const fresh = cb.chats.filter((c) => !c.ownerId && waits.some((w) => w.chat.id === c.id));
   const match = (v: ChatView) => {
@@ -102,6 +103,8 @@ export function ChatsList(p: ScreenProps): JSX.Element {
 /* ---------------- Mine (CH01) ---------------- */
 
 function MineView(p: { rows: ChatView[] }): JSX.Element {
+  // Nothing this week: say so, in CH18's mark; search finds an older chat.
+  if (!p.rows.length) return <div class="ch-list"><div class="ch-none"><NoneMark big /><span>No chats this week</span></div></div>;
   return <div class="ch-list"><GroupCard>{p.rows.map((v) => <MineRow key={v.chat.id} v={v} />)}</GroupCard></div>;
 }
 
@@ -337,7 +340,7 @@ function TeamView(p: { b: Books; cb: ChatBooks; t: number; match: (v: ChatView) 
               <span><span class={m.presence === 'on' ? undefined : 'away-face'} style={{ display: 'flex' }}><Avatar {...faceOf(m)} size={40} /></span><i aria-hidden="true" class={m.presence === 'on' ? undefined : 'away'} /></span>
               <b>{m.id === b.me.id ? 'You' : firstWord(m.name)}</b>
               <Meter pct={Math.round(Math.min(12, n) / 12 * 100)} w={48} h={6} fill={waiting >= 2 ? '#95530C' : '#0F6B43'} />
-              {mgr ? <span>Manager</span> : <span><b class="mono">{n}</b> chats</span>}
+              {mgr ? <span>Manager</span> : <span><b class="mono">{n}</b>{` ${plural(n, 'chat')}`}</span>}
               {mgr ? <span>{m.presence === 'on' ? 'on now' : 'away'}</span>
                 : waiting ? <span class="warn"><b class="mono">{waiting}</b>{' waiting'}</span> : <span>none waiting</span>}
             </div>

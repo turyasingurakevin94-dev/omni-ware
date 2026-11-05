@@ -107,7 +107,15 @@ export function dueDay(b: Books, cust: Customer | null, today: string): string |
 
 const recent = (c: Chat, now: Ms) => !!c.lastAt && daysApart(dayOf(c.lastAt), dayOf(now)) < MINE_DAYS;
 
-/** Mine: the numbers nobody has taken (newest first), yours waiting (longest first), then yours by who is due soonest. */
+/**
+ * Mine's count (the head's "Chats N" and the Mine chip): exactly what Mine lists (CH01: the new number and
+ * Grace's five of this week, 6). Kevin's phone said "Mine 2" over an empty list: two chats older than a week.
+ */
+export function mineCount(b: Books, cb: ChatBooks, now: Ms): number {
+  return mineList(b, cb, now, []).length;
+}
+
+/** Mine: the numbers nobody has taken (newest first), yours waiting (longest first), then yours by who is due soonest; this week's. */
 export function mineList(b: Books, cb: ChatBooks, now: Ms, drafts: Draft[]): ChatView[] {
   const waiting = waitingChats(cb, b.me.id, now, 'team');
   const view = (c: Chat) => chatView(b, cb, c, now, drafts, waiting);
@@ -119,19 +127,41 @@ export function mineList(b: Books, cb: ChatBooks, now: Ms, drafts: Draft[]): Cha
   return [...fresh, ...wait, ...rest];
 }
 
-export interface WaitMark { key: number; face: Face | null; title: string; mins: number; pct: number; offset: number }
+export interface WaitMark { key: number; face: Face | null; title: string; mins: number; pct: number; offset: number; more?: number }
 
-/** The wait line: each chat waiting at its minutes on a 0–60 track; chats at the same minute sit side by side. */
-export function waitLine(b: Books, cb: ChatBooks, now: Ms, scope: 'mine' | 'team'): { marks: WaitMark[]; oldest: number } {
+/** The track's width at 360 (the head's 16 px sides, the track's 4), a face's room on it, the most faces in one place. */
+const TRACK = 320, ROOM = 24, MOST = 3;
+
+/**
+ * Where the faces go: chats whose faces would touch share a place, side by side round the middle of their
+ * minutes (two at 12 m sit either side of 12 m, as CH01 draws); past three in one place, two faces and "+n".
+ */
+export function placeMarks(marks: WaitMark[], track = TRACK): WaitMark[] {
+  let groups = marks.map((m) => ({ ms: [m], at: (m.pct / 100) * track }));
+  for (let merged = true; merged;) {
+    merged = false;
+    for (let i = 0; i + 1 < groups.length; i++) {
+      const a = groups[i], b = groups[i + 1];
+      if (b.at - (b.ms.length * ROOM) / 2 < a.at + (a.ms.length * ROOM) / 2) {
+        const ms = [...a.ms, ...b.ms];
+        groups.splice(i, 2, { ms, at: ms.reduce((s, m) => s + (m.pct / 100) * track, 0) / ms.length });
+        merged = true;
+        break;
+      }
+    }
+  }
+  groups = groups.map((g) => (g.ms.length <= MOST ? g : { ...g, ms: [...g.ms.slice(0, MOST - 1), { ...g.ms[MOST - 1], key: -g.ms[0].key, face: null, more: g.ms.length - (MOST - 1) }] }));
+  return groups.flatMap((g) => g.ms.map((m, i) => ({ ...m, offset: Math.round(g.at + (i - (g.ms.length - 1) / 2) * ROOM - (m.pct / 100) * track) })));
+}
+
+/** The wait line: each chat waiting at its minutes on a 0–60 track (`marks`); `drawn`: where their faces go (placeMarks). */
+export function waitLine(b: Books, cb: ChatBooks, now: Ms, scope: 'mine' | 'team'): { marks: WaitMark[]; drawn: WaitMark[]; oldest: number } {
   const w = waitingChats(cb, b.me.id, now, scope);
   const marks = w.map((x) => {
     const cust = customerOf(b, x.chat), mins = Math.max(0, Math.floor((now - x.since) / 60000));
     return { key: x.chat.id, face: cust ? { initials: cust.initials, tint: cust.tint } : null, title: cust ? cust.name : x.chat.phone, mins, pct: Math.min(60, mins) / 60 * 100, offset: 0 };
   }).sort((x, y) => x.mins - y.mins);
-  const groups = new Map<number, WaitMark[]>();
-  marks.forEach((m) => groups.set(m.mins, [...(groups.get(m.mins) || []), m]));
-  groups.forEach((g) => g.forEach((m, i) => { m.offset = (i - (g.length - 1) / 2) * 24; }));
-  return { marks, oldest: marks.reduce((m, x) => Math.max(m, x.mins), 0) };
+  return { marks, drawn: placeMarks(marks), oldest: marks.reduce((m, x) => Math.max(m, x.mins), 0) };
 }
 
 /** A list's time: "10:29" today, "Thu" this week, else "2 Oct" (as WhatsApp lists chats). */
