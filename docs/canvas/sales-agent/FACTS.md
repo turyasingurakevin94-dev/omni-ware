@@ -178,7 +178,7 @@ Numbers are unique: one number is one order. Times are "today 9:14" or "Fri 8:40
 | **#0557** | Nansana | today **10:03** (Grace) | **Packing** · the copy, Ruth cancels it | Musa / Ruth | 85,500 | 0 | the same (entered twice) |
 | **#0534** | Kato | today **8:05** (Grace) | **On the road** | Ssali | **120,000** | (not shown) | (not shown) |
 | **#0547** | Ggaba | Fri 16 Oct | **On the road** | Ssali | **65,000** | (not shown) | (not shown) |
-| **#0555** | Walk-in | today **9:40** (Grace) | **On the road · ready to collect** at the gate | gate | **36,000** | 0 | (not shown) |
+| **#0555** | Walk-in · **0772 418 905** | today **9:40** (Grace) | **On the road · ready to collect** at the gate | gate | **36,000** | 0 | (not shown) |
 
 **Stage counts and sums** (Today tiles = Orders head = Orders groups):
 
