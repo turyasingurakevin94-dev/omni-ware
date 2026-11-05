@@ -28,8 +28,9 @@ if (parts) {
   // The other tabs' files, quietly after the first paint, so they are here before the signal goes
   // (shell/tabs.ts); the service worker keeps them on the phone for the next open.
   requestAnimationFrame(() => setTimeout(() => { void preloadTabs(); }, 0));
-  // The web keeps itself on the phone with the service worker; the phone app with its live update.
-  if (!/[?&]demo(&|=|$)/.test(location.search) && !inPhoneApp() && 'serviceWorker' in navigator) {
+  // The web keeps itself on the phone with the service worker; the page as the phone app ships it
+  // (apps/sales: transform.js loaded) with its live update.
+  if (!/[?&]demo(&|=|$)/.test(location.search) && !inPhoneApp() && !window.owAppTransform && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register(location.pathname.replace(/[^/]*$/, '') + 'sales-sw.js').catch(() => undefined);
   }
 }

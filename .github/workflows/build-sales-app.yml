@@ -1,14 +1,17 @@
 name: Build sales app (Android)
 
-# The sales app is sales.html inside a native shell (apps/sales). Every
-# change to either is built, and Android hands back an installable debug
-# APK under the run's Artifacts.
+# The sales app is the new Sales app (next/sales.html and its tab files,
+# built from src/apps/sales; docs/spec/07-stack.md §4) inside a native shell
+# (apps/sales). Every change to either is built, and Android hands back an
+# installable debug APK under the run's Artifacts. Installed phones then
+# keep current by the page's own live update (src/apps/sales/shell/native.ts).
 
 on:
   push:
     branches: [main]
     paths:
-      - 'sales.html'
+      - 'next/**'
+      - 'src/**'
       - 'apps/sales/**'
       - '.github/workflows/build-sales-app.yml'
   workflow_dispatch: {}
@@ -29,7 +32,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Build www from sales.html
+      - name: Build www from next/sales.html
         run: npm run build
       - run: npx cap sync android
       - name: Build debug APK

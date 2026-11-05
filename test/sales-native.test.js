@@ -108,7 +108,10 @@ function phone(o = {}) {
     const real = read('next/sales.html');
     const mine = U.builtPage(real);
     t.check(!!mine && mine.files.length === 5 && real.includes(`window.owSalesBuild="${mine.build}"`), `the committed next/sales.html passes it (build ${mine && mine.build}, ${mine && mine.files.length} files)`);
-    t.check(U.builtPage(read('sales.html')) === null, 'and the old root sales.html does not: an APK of the new app stays on what it shipped until the switch');
+    // The live page: the old app until Sales is switched, then this test reads the built sales.html.
+    const live = read('sales.html');
+    if (live.slice(0, 300).includes('GENERATED from src/')) t.check(!!U.builtPage(live), 'the root sales.html is the built page: the phones take it');
+    else t.check(U.builtPage(live) === null, 'and the old root sales.html does not: an APK of the new app stays on what it shipped until the switch');
 
     const ph = phone({ server: { [U.SOURCE]: OLD_PAGE } });
     const r = await U.check(ph.io);
@@ -202,8 +205,8 @@ function phone(o = {}) {
     const m = read('src/apps/sales/main.tsx');
     t.check(/startNative\(\)/.test(m) && /!inPhoneApp\(\)/.test(m), 'main.tsx starts it, and the phone app keeps itself current without the service worker');
     t.check(read('next/sales.html').includes('data-ow-native'), 'the built page carries it (apps/sales/scripts/build-www.js checks the same marker)');
-    t.check(read('sales.html').includes("The phone app's native layer"), 'the old sales.html keeps its own copy until it is retired (docs/rebuild.md, retire list)');
+    t.check(/the old page's native layer/.test(read('docs/rebuild.md')), 'the old page\'s own copy of the layer is on the retire list (docs/rebuild.md)');
   }
 
-  t.done();
+  process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
