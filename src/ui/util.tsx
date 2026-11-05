@@ -17,6 +17,24 @@ export function barW(pct: number, after = 0): string {
   return `${Math.max(0, Math.min(100 - a, pct))}%`;
 }
 
+/**
+ * Words with a figure: the words, and the figure that never shrinks ("Slide to record " · "420,000", "Every 10
+ * days · " · "owes 420k", "Slide to place · " · "3 items"). The figure is the last " · " part when it has one,
+ * else a figure at the end. With large text or a narrow phone the words give way (…) and the figure stays whole.
+ */
+export function figureTail(text: string): [string, string] {
+  const dot = text.lastIndexOf(' · ');
+  if (dot >= 0 && /\d/.test(text.slice(dot + 3))) return [text.slice(0, dot + 3), text.slice(dot + 3)];
+  const m = /^(.*? )([+−#-]?\d[\d,.]*[kMB]?(?: [a-z]+)?)$/.exec(text);
+  return m ? [m[1], m[2]] : [text, ''];
+}
+
+/** figureTail drawn: one line whose words give way before its figure. */
+export function Keep(p: { text: string }): JSX.Element {
+  const [words, fig] = figureTail(p.text);
+  return <span class="ow-fit"><span class="ow-give">{words}</span>{fig && <span class="ow-keep">{fig}</span>}</span>;
+}
+
 export function cx(...a: (string | false | null | undefined)[]): string {
   return a.filter(Boolean).join(' ');
 }

@@ -68,7 +68,7 @@ export function Wait(p: ScreenProps): JSX.Element {
           <WhoPill still face={c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' }} name="Counter sale" sub={`${c ? c.name : 'Walk-in'} · waiting for ${ruth.first}`} dot="var(--warn)" />
         </div>
       </div>
-      <div class="kc-body" style={{ paddingBottom: '380px' }}>
+      <div class="kc-body">
         <div class="kc-lines">
           {o.lines.map((l) => {
             const it = b.items.find((i) => i.id === l.itemId);

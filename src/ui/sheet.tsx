@@ -23,12 +23,19 @@ import './sheet.css';
 interface Open {
   render: () => VNode;
   label: string;
-  /** How far down the sheet starts (a light sheet's top at 300 of 800). null: it sizes to its content. */
+  /**
+   * How far down the sheet starts, as the boards draw it on their 800 (a light sheet's top at 300 of 800); on a
+   * shorter screen (a small phone, the keyboard up) it starts as far down in proportion, never past the bottom.
+   * null: it sizes to its content.
+   */
   top: number | null;
   onClose: (() => void) | null;
 }
 
 const current = signal<Open | null>(null);
+
+/** The boards' screen height: a sheet's `top` is drawn on it. */
+const BOARD_H = 800;
 
 export const sheet = {
   open(render: () => VNode, o: { label: string; top?: number | null; onClose?: () => void } = { label: 'Sheet' }): void {
@@ -120,7 +127,7 @@ export function SheetHost(): JSX.Element | null {
   return (
     <div class="ow-sheet-layer">
       <div ref={scrim} class="ow-scrim" aria-hidden="true" onClick={() => sheet.close()} />
-      <div ref={box} class="ow-sheet" role="dialog" aria-modal="true" aria-label={c.label} style={c.top != null ? { top: `${c.top}px` } : undefined}>
+      <div ref={box} class="ow-sheet" role="dialog" aria-modal="true" aria-label={c.label} style={c.top != null ? { top: `calc(${c.top} / ${BOARD_H} * 100%)` } : undefined}>
         {c.render()}
       </div>
     </div>

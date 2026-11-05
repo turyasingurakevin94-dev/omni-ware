@@ -15,7 +15,7 @@ import { Avatar, type Face } from './Avatar.tsx';
 import { Duo, Icon, phBasket, phGrid, phSparkle, phSwap } from './icons.tsx';
 import { Search, type SearchProps } from './Search.tsx';
 import { sayName } from '../core/names.ts';
-import { Tap } from './util.tsx';
+import { Keep, Tap } from './util.tsx';
 import './topbar.css';
 
 export interface WhoPillProps {
@@ -43,7 +43,7 @@ export function WhoPill(p: WhoPillProps): JSX.Element {
         <Avatar {...p.face} size={38} />
         <span class="ow-who-t">
           <span class="ow-who-n">{p.name}</span>
-          {p.sub && <span class="ow-who-s"><span aria-hidden="true" class="ow-who-dot" style={{ background: p.dot || '#0F6B43' }} />{p.sub}</span>}
+          {p.sub && <span class="ow-who-s"><span aria-hidden="true" class="ow-who-dot" style={{ background: p.dot || '#0F6B43' }} /><Keep text={p.sub} /></span>}
         </span>
       </div>
     );
@@ -62,7 +62,7 @@ export function WhoPill(p: WhoPillProps): JSX.Element {
       <Avatar {...p.face} size={38} />
       <span class="ow-who-t">
         <span class="ow-who-n">{p.name}</span>
-        {p.sub && <span class="ow-who-s">{p.isNew ? <Duo i={phSparkle} size={12} color="#1A5A8A" /> : <span aria-hidden="true" class="ow-who-dot" style={{ background: p.dot || '#0F6B43' }} />}{p.sub}</span>}
+        {p.sub && <span class="ow-who-s">{p.isNew ? <Duo i={phSparkle} size={12} color="#1A5A8A" /> : <span aria-hidden="true" class="ow-who-dot" style={{ background: p.dot || '#0F6B43' }} />}<Keep text={p.sub} /></span>}
       </span>
       <Duo i={phSwap} size={18} color="#5F6980" />
     </Tap>

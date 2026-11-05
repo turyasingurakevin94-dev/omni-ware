@@ -12,7 +12,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { aisleItems } from '../../../core/aisles.ts';
 import { findItems, readAsk } from '../../../core/find.ts';
 import { likelyNotes } from '../../../core/money.ts';
-import { firstWord, sayName } from '../../../core/names.ts';
+import { counted, firstWord, sayName } from '../../../core/names.ts';
 import { howLong } from '../../../core/time.ts';
 import type { Books, Customer, Item, Line } from '../../../core/types.ts';
 import { nav, stack } from '../shell/nav.ts';
@@ -130,7 +130,7 @@ export function Counter(): JSX.Element {
   return (
     <main class="kc">
       {top}
-      <div class="kc-body" style={{ paddingBottom: '380px' }}>{body}</div>
+      <div class="kc-body">{body}</div>
       <CounterDock lines={s.lines} total={total} short={short ? { line: short, shelf: itemOf(short)?.onShelf || 0 } : null} waits={waits} ruth={ruth.first} />
     </main>
   );
@@ -189,7 +189,7 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
   const tight = !off && (sending || change || shortBy > 0 || !cash);
   const onRef = (v: string) => set({ ref: v });
   return (
-    <Dock words={`Counter sale · ${p.lines.length} item${p.lines.length === 1 ? '' : 's'}`} total={p.total} tight={tight}
+    <Dock words={`Counter sale · ${counted(p.lines.length, 'item')}`} total={p.total} tight={tight}
       above={off ? <Notice kind="offline" under>No signal · your lines are kept on this phone</Notice>
         : failed.value ? <FailCard title="Not sold · nothing taken" sub="Slide again to sell" onClose={() => { failed.value = false; }} /> : null}
       slide={{ label: `Slide to sell · ${p.total.toLocaleString('en-US')}`, state: sending ? 'sending' : 'ready', lock: !sending && locked ? locked : undefined,

@@ -12,8 +12,9 @@
  */
 import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { Icon } from './icons.tsx';
-import { cx } from './util.tsx';
+import { Keep, cx } from './util.tsx';
 import './toast.css';
 
 type Kind = 'ok' | 'warn' | 'error';
@@ -52,8 +53,21 @@ export interface ToastViewProps {
   onClose?: () => void;
 }
 
+/** How far inside the screen's edge a toast's last part must end (the boards' toasts reach within 3 px of it). */
+const EDGE = 1;
+
 export function ToastView(p: ToastViewProps): JSX.Element {
   const close = p.onClose || (() => toast.hide());
+  // With large text or long words the toast would run past the screen and take Undo with it: the words give way (…).
+  const words = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const w = words.current, box = w && w.parentElement;
+    if (!w || !box) return;
+    w.style.maxWidth = '';
+    const right = Math.max(...[...box.children].map((c) => c.getBoundingClientRect().right)), left = box.getBoundingClientRect().left;
+    const over = Math.max(right - (window.innerWidth - EDGE), EDGE - left);
+    if (over > 0) w.style.maxWidth = `${Math.max(40, w.getBoundingClientRect().width - over)}px`;
+  });
   if (p.kind === 'error') {
     return (
       <div role="alert" class={cx('ow-toast-error', p.inline && 'inline')} style={p.inline ? undefined : { bottom: `${(p.above || 0) + 12}px` }}>
@@ -67,7 +81,7 @@ export function ToastView(p: ToastViewProps): JSX.Element {
   return (
     <div role="status" class={cx('ow-toast', p.kind === 'warn' && 'warn', p.undo && 'undo', p.inline && 'inline')}>
       <span class="ow-toast-disc" aria-hidden="true">{p.kind === 'warn' ? '!' : <Icon name="check" size={15} stroke={3} />}</span>
-      <span>{p.text}</span>
+      <span ref={words} class="ow-toast-w"><Keep text={p.text} /></span>
       {p.undo && <button type="button" class="ow-toast-undo" onClick={() => { close(); p.undo && p.undo(); }}>Undo</button>}
     </div>
   );

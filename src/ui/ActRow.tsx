@@ -80,7 +80,8 @@ export function ActRow(p: ActRowProps): JSX.Element {
       {p.lead}
       <span class="ow-arow-t">
         <span class="ow-arow-title">{p.title}{p.aside && <span> {p.aside}</span>}</span>
-        {p.sub && <span class="ow-arow-sub">{p.sub}</span>}
+        {/* A line with money in it takes a second line rather than cut the figure (TD01 "#0552 · 1,750,000 → 1,810,000"). */}
+        {p.sub && <span class={cx('ow-arow-sub', typeof p.sub === 'string' && /\d,\d{3}/.test(p.sub) && 'two')}>{p.sub}</span>}
       </span>
     </>
   );

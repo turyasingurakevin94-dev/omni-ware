@@ -95,7 +95,7 @@ export function CheckList(p: { head: CheckHead; lines: CheckLine[] }): JSX.Eleme
         <span class="ow-chk-title">{h.title}</span>
         {(h.bar || h.summary) && (
           <span class="ow-chk-sum">
-            {h.bar && <span aria-hidden="true" class="ow-chk-bar">{h.bar.map((c, i) => <span key={i} style={{ background: c }} />)}</span>}
+            {h.bar && <Dashes bar={h.bar} />}
             {h.summary && <span class={cx('mono', h.summary.startsWith('0 ') && 'none')}>{h.summary}</span>}
           </span>
         )}
@@ -113,4 +113,13 @@ export function CheckList(p: { head: CheckHead; lines: CheckLine[] }): JSX.Eleme
       })}
     </div>
   );
+}
+
+/** One dash a line, as the boards draw it; past eight lines one bar of the same colours, so 25 lines never push the count out. */
+const DASHES = 8;
+function Dashes(p: { bar: string[] }): JSX.Element {
+  if (p.bar.length <= DASHES) return <span aria-hidden="true" class="ow-chk-bar">{p.bar.map((c, i) => <span key={i} style={{ background: c }} />)}</span>;
+  const runs: { c: string; n: number }[] = [];
+  p.bar.forEach((c) => { const r = runs[runs.length - 1]; if (r && r.c === c) r.n++; else runs.push({ c, n: 1 }); });
+  return <span aria-hidden="true" class="ow-chk-bar long">{runs.map((r, i) => <span key={i} style={{ background: r.c, flexGrow: r.n }} />)}</span>;
 }

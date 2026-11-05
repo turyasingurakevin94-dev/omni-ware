@@ -3,7 +3,7 @@
  * under a basket (KC03, KC08, KC18), the best sellers as rows, as many as fit above the dock.
  */
 import type { JSX } from 'preact';
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { AisleChips } from '../../../ui/Aisles.tsx';
 import { AISLE, Duo, Icon, aisleKey, phFlame } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
@@ -75,7 +75,7 @@ function Row(p: { it: Item; onAdd: (it: Item) => void }): JSX.Element {
  */
 export function SoldRows(p: { items: Item[]; onAdd: (it: Item) => void }): JSX.Element | null {
   const box = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
+  const fit = () => {
     const el = box.current;
     if (!el) return;
     el.style.display = 'contents';
@@ -87,7 +87,18 @@ export function SoldRows(p: { items: Item[]; onAdd: (it: Item) => void }): JSX.E
     let shown = 0;
     rows.forEach((r) => { if (r.getBoundingClientRect().bottom <= limit) shown++; else r.style.display = 'none'; });
     el.style.display = shown ? 'contents' : 'none';
-  });
+  };
+  useLayoutEffect(fit);
+  // Again when the screen changes (the keyboard, the dock's own height).
+  useEffect(() => {
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null;
+    const foot = document.querySelector('.ow-dockwrap, .ow-dock');
+    if (ro && foot) ro.observe(foot);
+    const mo = new MutationObserver(() => fit());
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('resize', fit);
+    return () => { if (ro) ro.disconnect(); mo.disconnect(); window.removeEventListener('resize', fit); };
+  }, []);
   if (!p.items.length) return null;
   return (
     <div ref={box} style={{ display: 'contents' }}>

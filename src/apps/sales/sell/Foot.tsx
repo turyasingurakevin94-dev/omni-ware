@@ -8,8 +8,9 @@
  */
 import { isDelivery } from '../../../core/services.ts';
 import type { JSX } from 'preact';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { openCharges, short } from '../../../core/money.ts';
-import { orderNo } from '../../../core/names.ts';
+import { counted, orderNo } from '../../../core/names.ts';
 import type { Books, Customer } from '../../../core/types.ts';
 import { avatarStyle } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
@@ -80,8 +81,8 @@ function Hold(p: { b: Books; c: Customer }): JSX.Element | null {
   const bill = openCharges(c)[0], hold = b.settings.holdDays, weeks = Math.max(1, Math.ceil(h.age / 7)), okW = Math.floor(hold / 7);
   return (
     <div class="sl-hold">
-      <RuthHead m={m} title={`A bill ${h.age} days old · ${m.first} decides`} />
-      <div role="img" aria-label={`Bill ${bill && bill.orderId ? orderNo(bill.orderId) : ''} is ${h.age} days old; credit stops after ${hold} days`} class="sl-hold-bar">
+      <RuthHead m={m} title={`A bill ${counted(h.age, 'day')} old · ${m.first} decides`} />
+      <div role="img" aria-label={`Bill ${bill && bill.orderId ? orderNo(bill.orderId) : ''} is ${counted(h.age, 'day')} old; credit stops after ${counted(hold, 'day')}`} class="sl-hold-bar">
         <div class="sl-hold-wk">{Array.from({ length: weeks }, (_, i) => <span key={i} class={i < okW ? '' : 'bad'} />)}<i aria-hidden="true" style={{ left: `calc(${Math.round((1000 * hold) / h.age) / 10}% - 1px)` }} /></div>
         <div class="sl-hold-l"><span>bill <span class="mono">{bill && bill.orderId ? orderNo(bill.orderId) : ''}</span>{bill ? ` · ${DAY_MONTH(bill.day)}` : ''}</span><span class="bad"><span class="mono">{h.age}</span> days · stop at <span class="mono">{hold}</span></span></div>
       </div>
@@ -89,14 +90,32 @@ function Hold(p: { b: Books; c: Customer }): JSX.Element | null {
   );
 }
 
+/** The Pays row: what they owe may run into the row's 10 px gap (as SL23 draws it), never under the switch. */
+function useStack(ref: { current: HTMLElement | null }): void {
+  useLayoutEffect(() => {
+    const row = ref.current;
+    if (!row) return undefined;
+    const fit = () => {
+      row.classList.remove('stack');
+      const t = row.querySelector('.sl-foot-t > span:last-child') as HTMLElement | null;
+      if (t && t.scrollWidth - t.clientWidth > 10) row.classList.add('stack');
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  });
+}
+
 export function Foot(p: { b: Books; c: Customer | null }): JSX.Element | null {
+  const pays = useRef<HTMLDivElement>(null);
+  useStack(pays);
   const x = cur.value, b = p.b, c = p.c, m = manager(b);
   if (!x) return null;
   const who = c ? first(c.name) : 'them', pct = b.settings.creditPct;
   return (
     <div class="sl-foot">
       {c && pct > 0 && (
-        <div class="sl-foot-r">
+        <div ref={pays} class="sl-foot-r">
           <span aria-hidden="true" class={'sl-foot-ic' + (x.credit ? ' warn' : '')}><Icon name="cash" size={20} stroke={1.8} /></span>
           <span class="sl-foot-t"><span>Pays</span><span>{c.owes > 0 ? `owes ${short(c.owes)}` : 'owes nothing'}</span></span>
           <div role="radiogroup" aria-label={`How ${who} pays`} class="sl-pays">

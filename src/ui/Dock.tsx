@@ -1,7 +1,8 @@
 /*
  * P15 · The dark dock (LANGUAGE.md §3 P15): the order's footing. How it
  * gets there, what it comes to, and the one move (the Slide). Navy, top
- * corners 26, fixed at the bottom; the screen above leaves its height + 16.
+ * corners 26, fixed at the bottom; the screen above leaves its real height (--dock-h) + 24; with the
+ * keyboard up for a field above it, it sits at the end of the page instead (keyboard.ts).
  *
  *   <Dock mode={{ value: 'pickup', onChange: setMode }} total={1750000} sub={{ text: '1 price coming', tone: 'amber' }}
  *     slide={{ label: 'Slide to place · 3 items', onCommit: place }} />
@@ -10,6 +11,7 @@
  *   <Dock words="Ruth decides first" amber tight total={…} above={offline ? <Notice kind="offline" under>…</Notice> : null} slide={{ …, lock: { icon: 'hourglass', label: 'Waiting for Ruth' } }}>…</Dock>
  */
 import type { ComponentChildren, JSX } from 'preact';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 import { Icon } from './icons.tsx';
 import { fig } from './Money.tsx';
 import { Slide, type SlideProps } from './Slide.tsx';
@@ -55,10 +57,27 @@ export interface DockProps {
   children?: ComponentChildren;
 }
 
+/**
+ * The page leaves the dock's real height (--dock-h on the root): a delivery row, a method picker or large
+ * text make it taller than the canvas's 158, and nothing may sit under it. Gone with the dock.
+ */
+export function useDockHeight(ref: { current: HTMLElement | null }, on: boolean): void {
+  useLayoutEffect(() => {
+    const el = ref.current, root = document.documentElement;
+    if (!on || !el) return undefined;
+    const put = () => root.style.setProperty('--dock-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    put();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(put) : null;
+    if (ro) ro.observe(el);
+    return () => { if (ro) ro.disconnect(); root.style.removeProperty('--dock-h'); };
+  }, [on]);
+}
+
 export function Dock(p: DockProps): JSX.Element {
-  const empty = p.total == null;
+  const empty = p.total == null, foot = useRef<HTMLDivElement>(null);
+  useDockHeight(foot, !p.inline);
   const dock = (
-    <div class={cx('ow-dock', p.inline && 'inline', empty && 'empty', p.tight && 'tight')} style={p.style}>
+    <div ref={p.above === undefined ? foot : undefined} class={cx('ow-dock', p.inline && 'inline', empty && 'empty', p.tight && 'tight')} style={p.style}>
       {p.address && p.mode && p.mode.value === 'delivery' && (
         <label class="ow-dock-addr"><Icon name="pin" size={18} style={{ color: '#B3BCD2' }} />
           <input value={p.address.value} placeholder={p.address.placeholder || 'Where to'} aria-label="Delivery address" onInput={(e) => p.address && p.address.onInput((e.target as HTMLInputElement).value)} />
@@ -77,5 +96,5 @@ export function Dock(p: DockProps): JSX.Element {
       {p.slide && <Slide {...p.slide} state={empty ? 'empty' : p.slide.state} />}
     </div>
   );
-  return p.above === undefined ? dock : <div class="ow-dockwrap">{p.above}{dock}</div>;
+  return p.above === undefined ? dock : <div ref={foot} class="ow-dockwrap">{p.above}{dock}</div>;
 }

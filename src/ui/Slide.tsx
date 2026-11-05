@@ -18,7 +18,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Duo, Icon, phBasket, phBox } from './icons.tsx';
-import { cx } from './util.tsx';
+import { Keep, cx } from './util.tsx';
 import './slide.css';
 
 export type SlideState = 'ready' | 'sending' | 'blocked' | 'offline' | 'empty';
@@ -36,19 +36,9 @@ export interface SlideProps {
 
 export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
 
-/**
- * The slide's words and its figure ("Slide to record " · "420,000", "Slide to place · " · "3 items"): with large text
- * or a narrow phone the words give way first and the figure is never cut (the amount is the last thing to go).
- */
-export function slideParts(label: string): [string, string] {
-  const m = /^(.*?(?: · | ))([+−-]?\d[\d,.]*[kMB]?(?: [a-z]+)?)$/.exec(label);
-  return m ? [m[1], m[2]] : [label, ''];
-}
-
 /** The words, then the figure that never shrinks. */
 function Words(p: { label: string; class: string; read?: boolean }): JSX.Element {
-  const [words, fig] = slideParts(p.label);
-  return <span class={p.class} aria-hidden={p.read ? undefined : 'true'}><span class="ow-slide-w">{words}</span>{fig && <span class="ow-slide-f">{fig}</span>}</span>;
+  return <span class={p.class} aria-hidden={p.read ? undefined : 'true'}><Keep text={p.label} /></span>;
 }
 
 /** The slide that cannot go yet (the knob grey, its icon saying why). */

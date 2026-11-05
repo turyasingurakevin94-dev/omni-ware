@@ -6,9 +6,11 @@
  * the slide waits ("Back online to sell", SL27).
  */
 import type { JSX } from 'preact';
+import { useRef } from 'preact/hooks';
+import { counted } from '../../../core/names.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
-import { ModeSwitch } from '../../../ui/Dock.tsx';
+import { ModeSwitch, useDockHeight } from '../../../ui/Dock.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { books, online } from '../shell/store.ts';
@@ -18,22 +20,23 @@ import { openDelivery } from './sheets.tsx';
 import '../../../ui/dock.css';
 
 export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.Element | null {
-  const x = cur.value, s = sums.value, b = books.value;
+  const x = cur.value, s = sums.value, b = books.value, foot = useRef<HTMLDivElement>(null);
+  useDockHeight(foot, !!(x && s && b));
   if (!x || !s || !b) return null;
   const n = x.lines.length, empty = n === 0, m = manager(b);
   const fee = x.charges.find((c) => /^Delivery/.test(c.label));
   let sub: JSX.Element | null = null;
   if (!empty) {
     if (s.coming > 0 && s.forRuth > 0) {
-      sub = <span class="sl-dock-pills"><span>{`${s.coming} price${s.coming === 1 ? '' : 's'} coming`}</span><span>{`${s.forRuth} for ${m.first}`}</span></span>;
-    } else if (s.coming > 0) sub = <>{`${s.coming} price${s.coming === 1 ? '' : 's'} coming`}</>;
+      sub = <span class="sl-dock-pills"><span>{`${counted(s.coming, 'price')} coming`}</span><span>{`${s.forRuth} for ${m.first}`}</span></span>;
+    } else if (s.coming > 0) sub = <>{`${counted(s.coming, 'price')} coming`}</>;
     else if (s.forRuth > 0) sub = <>{`${s.forRuth} for ${m.first}`}</>;
     else if (x.credit && s.hold) sub = <>{`credit · ${m.first} decides`}</>;
     else if (s.allShelf) sub = <span class="sl-dock-mint">all on shelf</span>;
   }
   const state = empty ? 'empty' : !online.value ? 'offline' : p.sending ? 'sending' : 'ready';
   return (
-    <div class="ow-dock sl-dock">
+    <div ref={foot} class="ow-dock sl-dock">
       {x.mode === 'delivery' && x.delivery && (
         <a href="#" class="sl-dock-where" onClick={(e) => { e.preventDefault(); openDelivery(); }}>
           <span class="sl-dock-pin"><Icon name="pin" size={18} /></span>
@@ -47,7 +50,7 @@ export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.
           ? <div class="ow-dock-none" aria-label="Nothing yet"><span aria-hidden="true"><i /><i /><i /></span><span class="mono">0</span></div>
           : <div class="ow-dock-sum"><span class="mono ow-dock-total">{fig(s.total)}</span>{sub && <span class="mono ow-dock-sub amber">{sub}</span>}</div>}
       </div>
-      <Slide label={empty ? 'Add an item to place' : `Slide to place · ${n} item${n === 1 ? '' : 's'}`} state={state}
+      <Slide label={empty ? 'Add an item to place' : `Slide to place · ${counted(n, 'item')}`} state={state}
         onCommit={p.onPlace} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
     </div>
   );
