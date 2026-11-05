@@ -93,8 +93,10 @@ function audit(narrow) {
     const r = seen(el);
     if (!r || r.bottom < 0 || r.top > innerHeight || el.disabled) continue;
     const h = hit(el, r);
-    // At 320 two rows of segments cannot give each 44 across, and keep their full height: Due's seven days
-    // (CU03), a promise's seven days (CU15) and an aisle card's units (SL12). Every other target holds 44 there too.
+    // Named exceptions (the lead's ruling, 5 Nov 2026), at 320 only, where seven or four segments in a row cannot
+    // each be 44 across and keep their full height: Due's seven days (CU03), a promise's seven days (CU15) and an
+    // aisle card's units (SL12). At 360 they are held to 44 like every other target (the z130 walk).
+    // Add none without a ruling.
     if (narrow && h.h >= 43.5 && el.matches('.ow-week-d, .cu-pr-days button, .sl-card2-u button')) continue;
     if (h.w < 43.5 || h.h < 43.5) out.push(`small: "${say(el)}" ${Math.round(h.w)}×${Math.round(h.h)}`);
   }
@@ -180,8 +182,9 @@ async function main() {
     out.sort((a, b) => a.board.localeCompare(b.board));
     const notReached = out.filter((r) => !r.reached);
     // Every board is reached at the canvas's sizes; under the stretched shop some names are not there to tap.
-    // At 320 × 640 the counter's "Sold most today" draws only the rows that fit above the dock (KC01's rule;
-    // search finds every item), so a board reached by tapping a quick row further down is not reached there.
+    // Named exception (the lead's ruling, 5 Nov 2026): at 320 × 640 the counter's "Sold most today" draws only the
+    // rows that fit above the dock (KC01's rule; search finds every item), so a board reached by tapping a quick
+    // row further down is not reached there. At 360 every board is reached.
     const quickRow = (r) => /"tap":"Add one /.test(r.stepError || '');
     const failedSteps = cond.extra ? [] : notReached.filter((r) => !(name === 'small' && quickRow(r)));
     const withProblems = out.filter((r) => r.problems.length);
