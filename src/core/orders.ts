@@ -129,6 +129,11 @@ export function daysInStage(o: Order, now: Ms): number {
  * (the gate hands it back to whoever must take the money first), not billed, not called off, with money still to
  * take. One rule for Today (the Checking tile's mark, a Take with the order) and Customers (waiting on me).
  */
+/** A pickup: the customer collects it at the gate (Order.deliverTo null); it has no drive and no arrival time. */
+export function isPickup(o: Pick<Order, 'deliverTo'>): boolean {
+  return !o.deliverTo;
+}
+
 export function heldFor(o: Order, me: string): boolean {
   return o.stage === 'checking' && o.holderId === me && !o.invoiced && !o.cancelled && !o.voided && !o.qa && orderOwes(o) > 0;
 }

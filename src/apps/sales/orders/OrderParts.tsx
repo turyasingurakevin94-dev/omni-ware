@@ -15,7 +15,7 @@ import { OrderPill } from '../../../ui/StageGroup.tsx';
 import { AskStep } from '../../../ui/Track.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now, source } from '../shell/store.ts';
-import { twinOf } from '../../../core/orders.ts';
+import { isPickup, twinOf } from '../../../core/orders.ts';
 import { askedBy, backLines, byRole, custOf, faceOfMember, member, METHOD, owesOnceFixed, payFixAsks, payFixWant, paysOf, shortItem, shortName } from './data.ts';
 import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
@@ -50,10 +50,11 @@ const receiver = (o: Order, who: string): string => (o.customerId ? `${who}'s si
 /** OR08 · on the road: the drawn route, when it arrives, where to, and the driver to call. */
 export function MapCard(p: { b: Books; o: Order }): JSX.Element {
   const { b, o } = p, d = member(b, o.holderId), who = shortName(b, o), usual = 35;
-  const arrive = clock(o.stageAt + usual * 60000), phone = d && d.id === 'staff:ssali' ? '0772 000 202' : '';
+  // A pickup at the gate (#0555) is collected: no arrival time (core/orders.ts isPickup).
+  const pickup = isPickup(o), arrive = clock(o.stageAt + usual * 60000), phone = d && d.id === 'staff:ssali' ? '0772 000 202' : '';
   return (
     <div class="or-map">
-      <div role="img" aria-label={`${d ? firstWord(d.name) : 'The driver'} left at ${clock(o.stageAt)}; arrives about ${arrive}`} class="or-map-pic">
+      <div role="img" aria-label={pickup ? `Ready at the gate since ${clock(o.stageAt)}` : `${d ? firstWord(d.name) : 'The driver'} left at ${clock(o.stageAt)}; arrives about ${arrive}`} class="or-map-pic">
         <svg width="328" height="124" viewBox="0 0 328 124" aria-hidden="true">
           <path d="M0 96 C80 92 120 70 170 66 S260 40 328 34" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" />
           <path d="M120 0 L150 124" fill="none" stroke="#FFFFFF" stroke-width="8" />
@@ -62,12 +63,12 @@ export function MapCard(p: { b: Books; o: Order }): JSX.Element {
           <path d="M44 96 C90 92 120 72 170 66" fill="none" stroke="#0F6B43" stroke-width="4" stroke-linecap="round" />
           <path d="M170 66 C210 60 250 44 296 36" fill="none" stroke="#0F6B43" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 7" />
         </svg>
-        <span class="or-map-eta">Arrives <b class="mono">{`~${arrive}`}</b></span>
+        {!pickup && <span class="or-map-eta">Arrives <b class="mono">{`~${arrive}`}</b></span>}
         <span aria-hidden="true" class="or-map-shop"><Icon name="store" size={16} stroke={2} /></span>
         <span aria-hidden="true" class="or-map-truck"><Icon name="truck" size={16} stroke={2} /></span>
         <span aria-hidden="true" class="or-map-pin"><Icon name="pin" size={24} stroke={2.2} /></span>
         <span class="mono or-map-l">{`left ${clock(o.stageAt)}`}</span>
-        <span class="or-map-r">{`usually ${usual} min`}</span>
+        {!pickup && <span class="or-map-r">{`usually ${usual} min`}</span>}
       </div>
       <div class="or-map-row">
         <span aria-hidden="true" class="or-map-ic"><Icon name="pin" size={18} stroke={2} /></span>
