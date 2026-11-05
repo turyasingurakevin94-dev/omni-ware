@@ -1,6 +1,6 @@
 /*
- * P16's labels under the phone's large text (src/ui/TabBar.tsx): the bar has no room to grow (the boards
- * already put "Customers" 3 px from the edge at 100%), so the labels are held at their own 12 px.
+ * P16's labels under the phone's large text (src/ui/TabBar.tsx): the bar has no room to grow ("Customers"
+ * fills its 62 px slot at 100%), so the labels are held at their own 12 px, 8 px from the edges.
  */
 import { useLayoutEffect } from 'preact/hooks';
 

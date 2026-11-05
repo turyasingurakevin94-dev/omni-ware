@@ -106,7 +106,7 @@ export function Column4(): JSX.Element {
             <HeadStat amount={1910000} word="owed" pill="4 owe" bar={{
               label: '1,910,000 owed: 585,000 past the 21-day hold, 1,200,000 under 21 days, 125,000 being checked; 474,000 being checked in all',
               parts: [{ value: 585000, color: '#F5B26B' }, { value: 1200000, color: 'rgba(255,255,255,.28)' }, { value: 125000, color: 'hatch' }],
-              legend: [{ dot: '#F5B26B', text: 'Take', b: '585,000' }, { dot: 'rgba(255,255,255,.5)', text: 'Under 21 days' }, { dot: '#9DB7E0', text: 'Being checked' }],
+              legend: [{ dot: '#F5B26B', text: 'Past 21 days', b: '585,000' }, { dot: 'rgba(255,255,255,.5)', text: 'Under 21 days' }, { dot: '#9DB7E0', text: 'Being checked' }],
             }} />
           </PageHead>
         </div>

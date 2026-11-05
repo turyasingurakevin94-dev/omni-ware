@@ -6,10 +6,10 @@
  * yet (navy). The + is hidden on screens with the dock, a full sheet or the
  * chat composer (the shell does that: it shows the bar only on tab roots).
  *
- * The tabs share the bar equally either side of the + (a slot never grows, so the + stays centred).
- * The bar has no room to grow: at 100% the boards already put "Customers" 3 px from the edge. So when
+ * The tabs share the bar equally either side of the + (a slot never grows, so the + stays centred), 8 px
+ * in from each edge (P16; Kevin: "the tabs are so close to the edge"). The bar has no room to grow: when
  * the phone enlarges text (Android's font size, the WebView's textZoom), the labels stay at their own
- * 12 px (tabFontSize): inside their slots, never nearer the edge than the boards, never overlapping.
+ * 12 px (tabFontSize): inside their 62 px slots, 8 px from the edges, never overlapping.
  *
  *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
  *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)

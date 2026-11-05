@@ -22,7 +22,8 @@ export interface OwedBar { take: number; under: number; checkedIn: number; check
 /** The owed bar and its key; a part that is 0 has no key (never "Take 0"). */
 function bar(o: OwedBar) {
   const legend = [
-    o.take > 0 && { dot: '#F5B26B', text: 'Take ', b: money(o.take) },
+    // "Past 21 days" as the group and TD05 say it; "to take" is a row's (Lead, 5 Nov 2026: one word per concept).
+    o.take > 0 && { dot: '#F5B26B', text: `Past ${o.hold} days `, b: money(o.take) },
     o.under > 0 && { dot: 'rgba(255,255,255,.5)', text: `Under ${o.hold} days` },
     o.checkedIn > 0 && { dot: '#9DB7E0', text: 'Being checked' },
   ].filter(Boolean) as { dot: string; text: string; b?: string }[];

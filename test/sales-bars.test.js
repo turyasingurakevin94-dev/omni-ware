@@ -117,7 +117,9 @@ const plan = (o) => N.barsPlan({ measured: true, top: 0, bottom: 0, last: {}, ga
   t.check(Math.round(zoom * 100) === cap, 'the e2e check of room runs at that same zoom');
   const T = require(path.join(ROOT, 'src/ui/tabfit.ts'));
   t.check(T.tabFontSize([33.5, 59.6], [33.5, 59.6]) === null, 'tab labels: at 100% nothing changes (the boards hold)');
-  t.check(T.tabFontSize([43.5, 77.5], [33.5, 59.6]) === '9.23px', 'tab labels: at 130% they are held at 12 px (no room to grow: the boards put Customers 3 px from the edge)');
+  t.check(T.tabFontSize([43.5, 77.5], [33.5, 59.6]) === '9.23px', 'tab labels: at 130% they are held at 12 px (no room to grow: Customers fills its slot)');
+  const css = read('src/ui/tabbar.css');
+  t.check(/padding-left: 8px; padding-right: 8px/.test(css) && /padding: 8px 8px 0/.test(read('docs/canvas/sales-agent/LANGUAGE.md')), 'P16: the tab bar sits 8 px in from each edge, on the canvas and in the app');
 }
 
 process.exit(t.done() ? 1 : 0);

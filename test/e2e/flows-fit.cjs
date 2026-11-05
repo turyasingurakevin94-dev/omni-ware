@@ -4,8 +4,7 @@
  * (&state=stretched, src/core/demo/seed/stretched.ts: 150 customers, long names, 9-digit bills, 40 chats),
  * the phone's large text at 130%, and the clock's bar 24 px tall over the page (edge to edge).
  * On every screen, as well as the guards every flow carries (nothing wider than the phone):
- *   - no tab label leaves its slot, overlaps another, or comes nearer the screen's edge than at 100%
- *     (the boards put "Customers" 3 px from it: the bar has no more room);
+ *   - no tab label leaves its slot, overlaps another, or comes within 8 px of the screen's edge (P16);
  *   - nothing sits under the clock's bar (every part at the top makes room for --app-top);
  *   - no words run off the screen unless they are in a row that slides sideways;
  *   - no words drawn over other words.
@@ -100,8 +99,8 @@ function room({ bar, edge }) {
 async function fit(open) {
   const ph = await open('&state=stretched', { init: [phoneLike, [ZOOM, BAR]], fonts: true });
   const { p, tap, check } = ph;
-  // How near the edge the boards put the outermost labels, at 100% (TD01): the bar's own room.
-  const edge = 3;
+  // P16: the outermost labels clear the screen's edges by 8 px (Kevin, 5 Nov 2026).
+  const edge = 8;
   const look = async (where) => {
     const bad = await p.evaluate(room, { bar: BAR, edge });
     check(bad.length === 0, `fit: ${where} holds at 130% text with real data`, bad.join(' · '));
