@@ -25,8 +25,9 @@ export function countWord(qty: number, unit: string, name: string): string {
   return `${qty} ${qty === 1 ? w : w.endsWith('s') ? w : w + 's'}`;
 }
 
+/** To the next move: the Next move section, or, with none (the goal hit, TD08), Needs you (its head, above its rows). */
 export function scrollToNext(): void {
-  const el = document.getElementById('td-next');
+  const el = document.getElementById('td-next') || document.querySelector('.td-needs')?.previousElementSibling || null;
   if (el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 54);
 }
 
