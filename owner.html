@@ -803,6 +803,8 @@ function toast(msg, ms){
 }
 function isNetworkError(e){ return !!e && /fetch|network|Failed to fetch|NetworkError|Load failed/i.test(String(e.message || e)); }
 function failWord(e){ return isNetworkError(e) ? 'No connection — nothing was changed. Try again with signal.' : 'Nothing was changed: ' + (e && e.message || e); }
+// A server function's refusal: its own words, not supabase-js's "Edge Function returned a non-2xx status code".
+async function failText(e){ let m = (e && e.message) || String(e); try { const b = await e.context.json(); if (b && b.error) m = b.error; } catch (_e) {} return m; }
 
 /* ---------------- sounds and buzz ----------------
    Every answer has its own feel: a click as the knob crosses into a zone,
@@ -3989,7 +3991,9 @@ ACT.hiresave = async () => {
     const roleMoved = was && was.userId && memberRoleOf(was.role) !== memberRoleOf(row.role);
     if (f.email || roleMoved) {
       const inv = await sb.functions.invoke('invite-worker', { body: f.email ? { shopId: S.shopId, staffId: id, email: String(f.email).trim() } : { shopId: S.shopId, staffId: id } });
-      if (inv.error) msg += ' · the invite did not go: ' + (inv.error.message || inv.error);
+      // An address that already has a login (the same person in another shop) gets no email: Supabase will not invite it twice. They sign in as they do and pick this shop.
+      if (inv.error) msg += ' · the invite did not go: ' + (await failText(inv.error));
+      else if (inv.data && inv.data.existing) msg += ' · ' + firstWord(name) + ' already has a login — no email sent; they sign in as usual and pick ' + S.shopName;
       else msg += f.email ? ' · invite sent to ' + f.email.trim() : ' · their login moved to ' + roleOf(row.role).label;
     }
     FEEL.yes(); toast(msg, 6000);

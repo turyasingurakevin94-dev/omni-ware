@@ -86172,16 +86172,29 @@ document.getElementById('st_pay_rate').addEventListener('input', syncStaffPayFie
 // the worker pick & pack view. Runs server-side (service role) because it
 // needs to both create the auth user and write shop_members/staff.user_id,
 // neither of which a plain shop member's RLS-scoped session can do.
+/* A server function's refusal in its own words. supabase-js wraps a non-2xx
+   answer as "Edge Function returned a non-2xx status code" and keeps the
+   body (the real reason) in err.context, so an owner was left with nothing
+   to act on. */
+async function functionErrorText(err){
+  let m = (err && err.message) || String(err);
+  try{ const b = await err.context.json(); if(b && b.error) m = b.error; }catch(_e){}
+  return m;
+}
 async function sendLoginInvite(id){
   const s = data.staff.find(x=>x.id===id); if(!s) return;
   const email = (prompt(`Email to send ${s.name}'s login invite to:`)||'').trim();
   if(!email) return;
   try{
-    const { error } = await sb.functions.invoke('invite-worker', { body: { shopId: currentShopId, staffId: id, email } });
+    const { data: out, error } = await sb.functions.invoke('invite-worker', { body: { shopId: currentShopId, staffId: id, email } });
     if(error) throw error;
-    toast(`Login invite sent to ${email}`);
+    /* An address that already has a login (the same person in another
+       shop) gets no email: Supabase will not invite it twice. They sign in
+       as they do and pick this shop. */
+    if(out && out.existing) toast(`${firstName(s.name)} already has a login — no email sent. They sign in as usual and pick ${currentShopName || 'this shop'}.`, 7000);
+    else toast(`Login invite sent to ${email}`);
   }catch(err){
-    toast(`Could not send invite: ${err.message||err}`);
+    toast(`Could not send invite: ${await functionErrorText(err)}`, 8000);
   }
 }
 function deleteStaff(id){
@@ -86340,7 +86353,7 @@ async function moveStaffLoginToRole(id){
           : `${firstName(s.name)}'s login now opens the worker app`, 4000);
     }
   }catch(err){
-    toast(`${firstName(s.name)}'s login was not moved: ${err.message||err}`, 6000);
+    toast(`${firstName(s.name)}'s login was not moved: ${await functionErrorText(err)}`, 6000);
   }
 }
 document.getElementById('st_cancel').addEventListener('click', ()=>closeModalAndReset('staffModal', resetStaffForm));

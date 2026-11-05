@@ -77,6 +77,17 @@ async function findUserByEmail(admin: any, email: string): Promise<{ user: any; 
   return { user: null, error: null };
 }
 
+// The two invite failures a shop meets that Supabase words for a developer.
+// Its own mail server sends only a few auth emails an hour, and (since 2024)
+// only to the project's own team unless custom SMTP is set up -- the second
+// shop's hires are often the first invites past either limit.
+function plainInviteError(msg: string): string {
+  const m = String(msg || "");
+  if (/rate limit/i.test(m)) return "Supabase sends only a few invite emails an hour — wait an hour and send it again, or set up the shop's own SMTP in Supabase (Authentication → SMTP).";
+  if (/error sending (invite|confirmation|recovery)? ?email|not allowed to send|smtp/i.test(m)) return "The invite email could not be sent — Supabase's own mail only reaches the project's team members; set up the shop's own SMTP in Supabase (Authentication → SMTP), then try again.";
+  return m;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -186,7 +197,14 @@ Deno.serve(async (req) => {
     // inviteUserByEmail creates the auth user (sends the invite email) if the
     // address is new; if it already belongs to an existing user, fall back to
     // looking that user up so this staff row can still be linked to it.
+    //
+    // No invite email goes out in that second case: Supabase refuses to
+    // invite an address that already has a login. That is the everyday case
+    // for a second shop -- the same seller works in both -- so the answer
+    // says `existing: true`, and the apps tell the owner that the person
+    // signs in as usual and picks the shop, instead of "invite sent".
     let userId: string;
+    let existing = false;
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: isSales ? ADMIN_APP_URL : isBuyer ? BUYER_APP_URL : isStore ? STORE_APP_URL : isManager ? MANAGER_APP_URL : isAccounts ? ACCOUNTS_APP_URL : isSourcing ? SOURCING_APP_URL : WORKER_APP_URL,
     });
@@ -195,11 +213,12 @@ Deno.serve(async (req) => {
       inviteErr: inviteErr ? { message: inviteErr.message, status: inviteErr.status, name: inviteErr.name } : null,
     });
     if (inviteErr) {
-      const { user: existing, error: listErr } = await findUserByEmail(admin, email);
-      console.log("invite-worker: existing-user lookup", { found: !!existing, listErr });
+      const { user: existingUser, error: listErr } = await findUserByEmail(admin, email);
+      console.log("invite-worker: existing-user lookup", { found: !!existingUser, listErr });
       if (listErr) return json({ error: inviteErr.message, stage: "invite_and_list_fallback" }, 500);
-      if (!existing) return json({ error: inviteErr.message, stage: "invite_no_existing_match" }, 500);
-      userId = existing.id;
+      if (!existingUser) return json({ error: plainInviteError(inviteErr.message), stage: "invite_no_existing_match" }, 500);
+      userId = existingUser.id;
+      existing = true;
     } else {
       userId = invited.user!.id;
     }
@@ -222,7 +241,7 @@ Deno.serve(async (req) => {
     console.log("invite-worker: staff link update", { linkErr });
     if (linkErr) return json({ error: linkErr.message, stage: "staff_link_update" }, 500);
 
-    return json({ ok: true, userId });
+    return json({ ok: true, userId, existing });
   } catch (err) {
     // Catches anything unexpected (a thrown error, not a {data,error} pair)
     // so the caller always sees our JSON shape instead of a generic runtime

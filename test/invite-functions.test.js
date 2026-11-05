@@ -160,6 +160,36 @@ async function main() {
     worker.split(/\r?\n/).filter(l => /console\.log/.test(l) && !/emailDomain/.test(l)).join('\n')),
     'invite-worker does not log the invitee email address in full');
 
+  /* ---------- 4. an address that already has a login ------------------ */
+  // Supabase will not invite an address that already has a login, so the
+  // fallback links the existing user and NO email goes out. That is the
+  // everyday case for a second shop (the same seller in both), and the
+  // owner was told "invite sent". The answer now says so, and the two
+  // apps that send invites read it.
+  t.check(/userId = existingUser\.id;\s*existing = true;/.test(worker),
+    'invite-worker marks a linked existing login as existing');
+  t.check(/return json\(\{ ok: true, userId, existing \}\)/.test(worker),
+    'and says so in its answer');
+  t.check(/inv\.data\.existing/.test(read('owner.html')) && /already has a login — no email sent/.test(read('owner.html')),
+    'the Owner app tells the owner no email went out, and what the person does instead');
+  t.check(/out\.existing/.test(read('index.html')) && /already has a login — no email sent/.test(read('index.html')),
+    'the admin app (Staff) tells the owner the same');
+  // supabase-js wraps a refusal as "Edge Function returned a non-2xx status
+  // code" and keeps the reason in error.context; both apps read it.
+  t.check(/await failText\(inv\.error\)/.test(read('owner.html')),
+    'the Owner app shows the function\'s own reason when the invite is refused');
+  t.check(/Could not send invite: \$\{await functionErrorText\(err\)\}/.test(read('index.html')),
+    'the admin app shows the function\'s own reason when the invite is refused');
+
+  // The two mail failures a shop meets are worded for the owner, not a developer.
+  let plainInviteError = null;
+  try { ({ plainInviteError } = compileScope([extractFunction(worker, 'plainInviteError', 'invite-worker')], {}, ['plainInviteError'], { typescript: true })); } catch (e) { t.check(false, 'plainInviteError compiles (' + e.message + ')'); }
+  if (plainInviteError) {
+    t.check(/few invite emails an hour/.test(plainInviteError('email rate limit exceeded')), 'the hourly email limit is said in plain words');
+    t.check(/SMTP/.test(plainInviteError('Error sending invite email')), 'a mail server refusal says to set up SMTP');
+    t.check(plainInviteError('Staff member not found') === 'Staff member not found', 'any other reason is passed through as it is');
+  }
+
   process.exit(t.done() ? 1 : 0);
 }
 main();
