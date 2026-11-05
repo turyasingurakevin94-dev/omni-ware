@@ -12,7 +12,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { aisleItems } from '../../../core/aisles.ts';
 import { findItems, readAsk } from '../../../core/find.ts';
 import { likelyNotes } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { firstWord, sayName } from '../../../core/names.ts';
 import { howLong } from '../../../core/time.ts';
 import type { Books, Customer, Item, Line } from '../../../core/types.ts';
 import { nav, stack } from '../shell/nav.ts';
@@ -78,7 +78,7 @@ export function Counter(): JSX.Element {
     <TopBar onClose={close} closeLabel="Close the counter sale"
       who={busy.value
         ? <WhoPill still face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />
-        : <WhoPill on={openWho} face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" />}
+        : <WhoPill on={openWho} face={face} name="Counter sale" sub={`${cust ? cust.name : 'Walk-in'} · pay and go`} dot="var(--good)" label={`Counter sale, ${cust ? sayName(cust.name) : 'Walk-in'} · pay and go. Name the customer`} />}
       search={{ placeholder: 'Add an item', label: 'Add an item: type its name', value: text, onInput: (v) => { q.value = v; aisle.value = null; }, onMic: listen, class: 'kc-search' }}
       onAisles={() => { if (q.value) { q.value = ''; aisle.value = null; } else (document.querySelector('.kc-search input') as HTMLInputElement | null)?.focus(); }} />
   );

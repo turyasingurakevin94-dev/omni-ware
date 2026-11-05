@@ -60,9 +60,9 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
           <div class="sl-card-h"><span aria-hidden="true" class="sl-card-ic good"><Duo i={phSparkle} size={18} color="#0F6B43" /></span><span class="sl-card-t">{`What ${first(c.name)} asked for is in`}</span><span class="sl-card-m">{`listed ${clock(it.listedAt as number)}`}</span></div>
           <div class="sl-card-i">
             <ItemSquare aisle={it.aisle} size={44} />
-            <span class="sl-card-it"><span>{it.name}</span><span><span class="mono">{`${qty} `}<span class="ow-word">{it.unit}</span>{` × ${fig(it.price || 0)}`}</span>{it.onShelf ? <span class="sl-shelf"><b class="mono">{it.onShelf}</b> on shelf</span> : null}</span></span>
+            <span class="sl-card-it"><span>{it.name}</span><span><span class="mono">{`${qty} `}<span class="ow-word">{it.unit}</span>{isPriced(it.price) ? ` × ${fig(it.price)}` : ` · ${PRICE_COMING}`}</span>{it.onShelf ? <span class="sl-shelf"><b class="mono">{it.onShelf}</b> on shelf</span> : null}</span></span>
           </div>
-          <button type="button" class="sl-card-add" onClick={() => add(it, qty)}><Icon name="plus" size={18} stroke={2.4} />{`Add ${qty} · `}<span class="mono">{fig(qty * (it.price || 0))}</span></button>
+          <button type="button" class="sl-card-add" onClick={() => add(it, qty)}><Icon name="plus" size={18} stroke={2.4} />{`Add ${qty} · `}{isPriced(it.price) ? <span class="mono">{fig(qty * it.price)}</span> : PRICE_COMING.toLowerCase()}</button>
         </div>,
       );
     }

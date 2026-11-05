@@ -87,7 +87,7 @@ function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => v
       {/* Not priced yet (Ruth prices it): listed, never sold at the counter. */}
       {it.price == null ? null : onShelf(it)
         ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${it.name}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
-        : <button type="button" class="kc-orderin" aria-label={`Order in ${p.qty} ${it.name.split(' · ')[0]}: the sale becomes an order`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
+        : <button type="button" class="kc-orderin" aria-label={`Order in ${fig(p.qty)}`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
     </div>
   );
 }

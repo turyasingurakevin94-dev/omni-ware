@@ -70,7 +70,7 @@ function Short(p: { line: Line; shelf: number; onMake: () => void; onOrderIn: ()
         <span style={{ width: `${Math.floor((p.shelf / l.qty) * 100)}%` }} /><span />
       </div>
       <div class="kc-pair">
-        <button type="button" onClick={p.onMake}>Make it<span class="mono">{fig(p.shelf)}</span></button>
+        <button type="button" aria-label={`Make it ${fig(p.shelf)}`} onClick={p.onMake}>Make it<span class="mono">{fig(p.shelf)}</span></button>
         <button type="button" onClick={p.onOrderIn}>Order in<span class="mono">{fig(miss)}</span></button>
       </div>
     </div>

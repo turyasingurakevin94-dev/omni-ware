@@ -15,7 +15,7 @@ import { lineWaits } from '../../../core/orders.ts';
 import type { Books, Item, Line } from '../../../core/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig, PRICE_COMING } from '../../../ui/Money.tsx';
+import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { books } from '../shell/store.ts';
@@ -107,8 +107,8 @@ function Shelf(p: { n: number }): JSX.Element {
 function PriceLink(p: { l: Line }): JSX.Element {
   const l = p.l, diff = l.price != null && l.shopPrice != null ? l.price - l.shopPrice : 0;
   return (
-    <a href="#" class="sl-pfield" aria-label={`Their price, each: ${fig(l.price || 0)}. Change it`} onClick={(e) => { e.preventDefault(); openPrice(l.lineId); }}>
-      <span class="sl-pfield-t"><span>Their price, each</span><span class="mono">{fig(l.price || 0)}</span></span>
+    <a href="#" class="sl-pfield" aria-label={`Their price, each: ${isPriced(l.price) ? fig(l.price) : PRICE_COMING}. Change it`} onClick={(e) => { e.preventDefault(); openPrice(l.lineId); }}>
+      <span class="sl-pfield-t"><span>Their price, each</span>{isPriced(l.price) ? <span class="mono">{fig(l.price)}</span> : <span>{PRICE_COMING}</span>}</span>
       {diff < 0
         ? <span class="mono sl-pfield-d"><Icon name="tag" size={12} stroke={2.4} />{fig(diff)}</span>
         : diff === 0 ? <span class="sl-pfield-ok"><Icon name="check" size={13} stroke={3} />shop’s price</span> : null}
@@ -166,7 +166,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
             </button>
             {alt && (
               <button type="button" aria-pressed="false" class="sl-whole-c" onClick={() => { remove(l.lineId); const n = add(alt, asked.qty); askedAs.value = new Map(); openId.value = n.lineId; }}>
-                <span>{`${asked.qty} × 1 ${asked.unit}`}</span><span>{alt.name}</span><span class="mono">{fig(asked.qty * (alt.price || 0))}</span>
+                <span>{`${asked.qty} × 1 ${asked.unit}`}</span><span>{alt.name}</span>{isPriced(alt.price) ? <span class="mono">{fig(asked.qty * alt.price)}</span> : <span>{PRICE_COMING}</span>}
               </button>
             )}
           </div>

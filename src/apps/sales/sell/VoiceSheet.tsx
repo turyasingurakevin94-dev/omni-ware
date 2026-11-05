@@ -74,8 +74,12 @@ export function VoiceSheet(): JSX.Element | null {
       ready={(text) => heardOf(text).length > 0}
       onDone={(text) => heardOf(text).forEach((h) => add(h.it, h.qty))}
       act={(text) => {
-        const heard = heardOf(text), total = heard.reduce((s, h) => s + h.qty * (h.it.price || 0), 0);
-        return heard.length ? <>{`${word(heard.length)} · `}<span class="mono">{fig(total)}</span></> : word(0);
+        const heard = heardOf(text);
+        if (!heard.length) return word(0);
+        // One rule (ui/Money.tsx): a sum with an unpriced line is not a figure yet.
+        const priced = heard.every((h) => isPriced(h.it.price));
+        const total = priced ? heard.reduce((s, h) => s + h.qty * (h.it.price as number), 0) : 0;
+        return <>{`${word(heard.length)} · `}{priced ? <span class="mono">{fig(total)}</span> : PRICE_COMING.toLowerCase()}</>;
       }}
       said={(text) => <Said text={text} heard={heardOf(text)} />}>
       {(text) => {

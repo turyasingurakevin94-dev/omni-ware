@@ -26,6 +26,8 @@ export interface WhoPillProps {
   sub?: string;
   /** The tone dot before the line (#0F6B43 a regular). */
   dot?: string;
+  /** The board's own name for the pill, when it is not "<name>. Change customer" (KC01's counter pill). */
+  label?: string;
   /** A new customer: the spark before the line. */
   isNew?: boolean;
   /** Words in place of "Who is it for?" (a counter sale's pill). */
@@ -56,7 +58,7 @@ export function WhoPill(p: WhoPillProps): JSX.Element {
     );
   }
   return (
-    <Tap on={p.on} label={`${sayName(p.name)}. Change customer`} class="ow-who">
+    <Tap on={p.on} label={p.label || `${sayName(p.name)}. Change customer`} class="ow-who">
       <Avatar {...p.face} size={38} />
       <span class="ow-who-t">
         <span class="ow-who-n">{p.name}</span>
