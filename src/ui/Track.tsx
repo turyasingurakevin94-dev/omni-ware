@@ -59,7 +59,7 @@ export function Track(p: TrackProps): JSX.Element {
         <div class="ow-rail-names">
           {STAGES.map((s, i) => (
             <span key={s} class={cx(sk.includes(s) ? '' : i < at || done ? 'done' : i === at ? 'now' : '', i === at && p.waits && 'waits')}>
-              <b class={s === 'road' ? 'nw' : undefined}>{STAGE_WORD[s]}</b>
+              <b>{STAGE_WORD[s]}</b>
               {sk.includes(s) ? <em>skipped</em> : i === at && !done ? <em>now</em> : <em class={t[s] ? 'mono' : undefined}>{t[s] || ''}</em>}
             </span>
           ))}

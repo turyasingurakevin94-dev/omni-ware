@@ -50,14 +50,27 @@ function newRecord(name) {
   return { name, ok: true, failures: [], checks: [], errors: [], wide: [], small: [], screens: 0, ms: 0, notes: [] };
 }
 
+/** The phone app's own fonts (apps/sales packages them from @fontsource), when installed here: CSS for them, else ''. */
+function localFonts(base) {
+  const dir = (f) => path.join(ROOT, 'apps/sales/node_modules/@fontsource', f, 'files');
+  if (!fs.existsSync(dir('figtree')) || !fs.existsSync(dir('ibm-plex-mono'))) return '';
+  const face = (family, pkg, w) => `@font-face{font-family:'${family}';font-weight:${w};font-display:block;src:url(${base}/apps/sales/node_modules/@fontsource/${pkg}/files/${pkg}-latin-${w}-normal.woff2) format('woff2')}`;
+  return [400, 500, 600, 700, 800].map((w) => face('Figtree', 'figtree', w)).concat([400, 500, 600].map((w) => face('IBM Plex Mono', 'ibm-plex-mono', w))).join('\n');
+}
+
 /**
  * A fresh phone on next/sales.html?demo<flags>, at Today. Returns the flow's toolkit.
+ *   opts.init   [fn, arg] run in the page before it loads (page.addInitScript), e.g. the phone's large text
+ *   opts.fonts  the phone app's own fonts (measuring room needs the real letters), when installed
  */
-async function phone(browser, base, rec, flags = '') {
+async function phone(browser, base, rec, flags = '', opts = {}) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, serviceWorkers: 'block' });
+  if (opts.init) await ctx.addInitScript(opts.init[0], opts.init[1]);
+  const fonts = opts.fonts ? localFonts(base) : '';
+  if (opts.fonts && !fonts) rec.notes.push('the phone app\'s fonts are not installed here (apps/sales: npm ci); measured with the fallback fonts');
   await ctx.route((u) => !u.href.startsWith(base), (r) => {
     const u = r.request().url();
-    if (/fonts\.googleapis\.com/.test(u)) return r.fulfill({ status: 200, contentType: 'text/css', body: '' });
+    if (/fonts\.googleapis\.com/.test(u)) return r.fulfill({ status: 200, contentType: 'text/css', body: fonts });
     if (/\.js(\?|$)/.test(u)) return r.fulfill({ status: 200, contentType: 'text/javascript', body: '' });
     return r.fulfill({ status: 204, body: '' });
   });
@@ -67,6 +80,7 @@ async function phone(browser, base, rec, flags = '') {
   await p.goto(`${base}/next/sales.html?demo${flags}`, { waitUntil: 'load' });
   await p.locator('#app > *').first().waitFor({ timeout: 10000 });
   await p.waitForFunction(() => document.documentElement.dataset.tabs, null, { timeout: 10000 }).catch(() => {});
+  if (fonts) await p.evaluate(() => document.fonts.ready);
   await p.waitForTimeout(300);
   const kit = toolkit(p, rec);
   await kit.look('Today');

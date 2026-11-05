@@ -22,7 +22,7 @@ import { SectionHead } from '../../../ui/SectionHead.tsx';
 import { Shim } from '../../../ui/Skeleton.tsx';
 import { StageTiles } from '../../../ui/StageTiles.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
-import { Tap } from '../../../ui/util.tsx';
+import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, flush, kept, now, online } from '../shell/store.ts';
 import { custOf, doneWeek, faceOf, mine, needs, owing, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
@@ -100,7 +100,7 @@ export function Today(): JSX.Element {
       {bar && (
         <Tap on={toTop} label="Back to the top of Today" class="td-topbar">
           <span>Today</span>
-          {goal && <span><span aria-hidden="true" class="td-topbar-bar"><span style={{ width: `${Math.min(100, goal.pct)}%` }} /><span style={{ width: `${goal.movePct}%` }} /></span>
+          {goal && <span><span aria-hidden="true" class="td-topbar-bar"><span style={{ width: barW(goal.pct) }} /><span style={{ width: barW(goal.movePct, goal.pct) }} /></span>
             <span class="mono"><b>{`${goal.pct}%`}</b>{` ${money(goal.sold)}`}</span></span>}
         </Tap>
       )}

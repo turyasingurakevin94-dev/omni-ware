@@ -17,6 +17,7 @@ import { billAsks, goal, payments, paymentAsks, promises, settings } from './mon
 import { liveOrders } from './orders-live.ts';
 import { pastOrders } from './orders-past.ts';
 import { GRACE, people } from './people.ts';
+import { stretched } from './stretched.ts';
 import { extra as chatsExtra } from './extra/chats.ts';
 import { extra as counterExtra } from './extra/counter.ts';
 import { extra as customersExtra } from './extra/customers.ts';
@@ -82,6 +83,7 @@ export function seed(f: DemoFlags): DemoState {
   if (f.state === 'first-day') firstDay(s);
   // Each tab's own additions, in tab order.
   [todayExtra, chatsExtra, sellExtra, counterExtra, ordersExtra, customersExtra].forEach((x) => x(s, f));
+  if (f.state === 'stretched') stretched(s);
   return s;
 }
 

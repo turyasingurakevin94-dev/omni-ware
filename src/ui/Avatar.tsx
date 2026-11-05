@@ -61,19 +61,19 @@ export interface FaceStackProps {
   size?: number;
   /** The ground behind, for the 2 px ring (P07 tiles: #F7F5F2). */
   ground?: string;
-  /** How many faces before "+n" (3). */
+  /** How many faces at most (3); the rest are "+n". */
   max?: number;
 }
 
-/** P07 · who is in a stage: up to three faces overlapping -6, then "+n". */
+/** P07 · who is in a stage: up to three faces overlapping -6, then "+n" (the rest, unless `more` says). */
 export function FaceStack(p: FaceStackProps): JSX.Element {
-  const size = p.size || 24, n = Math.min(p.max || 3, p.faces.length);
+  const size = p.size || 24, n = Math.min(p.max || 3, p.faces.length), more = p.more ?? p.faces.length - n;
   return (
     <span aria-hidden="true" class="ow-faces">
       {p.faces.slice(0, n).map((f, i) => (
         <span key={i} class="ow-av ow-face" style={{ ...avatarStyle({ ...f, size }), borderColor: p.ground || '#F7F5F2', marginLeft: i ? '-6px' : undefined, position: 'relative', zIndex: n - i }}>{f.initials}</span>
       ))}
-      {!!p.more && <span class="ow-faces-more mono">{`+${p.more}`}</span>}
+      {more > 0 && <span class="ow-faces-more mono">{`+${more}`}</span>}
     </span>
   );
 }

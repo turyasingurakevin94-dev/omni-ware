@@ -11,7 +11,7 @@ import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet, TitleHead } from '../../../ui/FullSheet.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { StatusPill } from '../../../ui/Pill.tsx';
-import { Tap } from '../../../ui/util.tsx';
+import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
 import { due, mine, moves } from './data.ts';
@@ -70,7 +70,7 @@ export function Goal(): JSX.Element {
       <div class="td-goal-card">
         <div class="td-goal-ch"><span>What it takes{sells < need && <StatusPill tone="caution" class="td-goal-pill">Behind pace</StatusPill>}</span></div>
         <div class="td-goal-pace"><span>Needed</span><span aria-hidden="true"><span style={{ width: '100%' }} /></span><b class="mono">{short(need, 2)}<span> a day</span></b></div>
-        <div class="td-goal-pace now"><span>You sell now</span><span aria-hidden="true"><span style={{ width: `${Math.round((sells / need) * 100)}%` }} /></span><b class="mono">{short(sells, 2)}<span> a day</span></b></div>
+        <div class="td-goal-pace now"><span>You sell now</span><span aria-hidden="true"><span style={{ width: barW(Math.round((sells / need) * 100)) }} /></span><b class="mono">{short(sells, 2)}<span> a day</span></b></div>
       </div>
       <div class="td-goal-card who">
         <div class="td-goal-ch"><span>Who gets you there</span><span class="mono">{`${short(reach)} of ${short(toGo)}`}</span></div>

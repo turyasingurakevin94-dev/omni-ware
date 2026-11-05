@@ -18,7 +18,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
 import { Icon, type IconName } from './icons.tsx';
 import { fig } from './Money.tsx';
-import { Tap, cx, type Fig } from './util.tsx';
+import { Tap, barW, cx, type Fig } from './util.tsx';
 import './hero.css';
 
 export interface HeroDoor { tone: 'mint' | 'amber'; icon: IconName; value: string; label: string; on: () => void }
@@ -97,8 +97,8 @@ export function Hero(p: HeroProps): JSX.Element {
       ) : g ? (
         <Tap on={p.onGoal} label={`Goal: ${g.pct} percent of ${g.target.replace('M', ' million')}, ${g.daysLeft} days left`} class="ow-hero-goal">
           <span aria-hidden="true" class="ow-hero-bar">
-            <span style={{ width: `${g.pct}%` }} />
-            {g.movePct > 0 && <span class="move" style={{ width: `${g.movePct}%` }} />}
+            <span style={{ width: barW(g.pct) }} />
+            {g.movePct > 0 && <span class="move" style={{ width: barW(g.movePct, g.pct) }} />}
           </span>
           <span class="ow-hero-goal-l">
             <span><b class="mono">{`${g.pct}%`}</b> of your <span class="mono">{g.target}</span> goal</span>
@@ -130,7 +130,7 @@ export function GoalStrip(p: { pct: number; movePct: number; target: string; day
   return (
     <Tap on={p.on} label={`Goal: ${p.pct} percent of ${p.target.replace('M', ' million')}, ${p.daysLeft} days left`} class="ow-goalstrip">
       <span class="mono">{`${p.pct}%`}</span>
-      <span aria-hidden="true" class="ow-goalstrip-bar"><span style={{ width: `${p.pct}%` }} /><span style={{ width: `${p.movePct}%` }} /></span>
+      <span aria-hidden="true" class="ow-goalstrip-bar"><span style={{ width: barW(p.pct) }} /><span style={{ width: barW(p.movePct, p.pct) }} /></span>
       <span>{`of ${p.target} · ${p.daysLeft} days left`}</span>
     </Tap>
   );

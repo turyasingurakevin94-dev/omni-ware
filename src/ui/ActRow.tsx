@@ -104,7 +104,7 @@ export function ActRow(p: ActRowProps): JSX.Element {
 export function MiniRow(p: { face?: Face; faces?: Face[]; name: string; sub?: string; subMono?: boolean; pill: ComponentChildren; on: () => void; label?: string }): JSX.Element {
   return (
     <Tap on={p.on} label={p.label} class={cx('ow-mini', p.faces && 'faces')}>
-      {p.faces ? <FaceStack faces={p.faces} max={p.faces.length} ground="#FFFFFF" /> : p.face && <Avatar {...p.face} size={32} />}
+      {p.faces ? <FaceStack faces={p.faces} ground="#FFFFFF" /> : p.face && <Avatar {...p.face} size={32} />}
       {p.sub ? <span class="ow-mini-t"><span>{p.name}</span><span class={p.subMono ? 'mono' : undefined}>{p.sub}</span></span> : <span class="ow-mini-n">{p.name}</span>}
       {p.pill}
       <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>

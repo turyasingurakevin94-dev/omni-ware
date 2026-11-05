@@ -11,7 +11,7 @@ import type { SourcingAsk } from '../../../core/types.ts';
 import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Duo, Icon, phStore, type IconName } from '../../../ui/icons.tsx';
-import { Tap } from '../../../ui/util.tsx';
+import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now, signOut } from '../shell/store.ts';
 import { doneWeek, due, mine } from './data.ts';
@@ -67,7 +67,7 @@ export function You(): JSX.Element {
         </div>
         <div class="td-you-stats">
           <Tap on={() => nav.replace('today/day', { view: 'placed' })}><span>{`Sold · ${month.slice(0, 3)}`}</span><span class="mono">{short(g ? g.sold : 0, 2)}</span>
-            <span aria-hidden="true" class="td-you-bar"><i style={{ width: `${g ? g.pct : 0}%` }} /></span><span>{`${g ? g.pct : 0}% of ${short(g ? g.target : 0)}`}</span></Tap>
+            <span aria-hidden="true" class="td-you-bar"><i style={{ width: barW(g ? g.pct : 0) }} /></span><span>{`${g ? g.pct : 0}% of ${short(g ? g.target : 0)}`}</span></Tap>
           <Tap on={() => go('orders')}><span>Orders</span><span class="mono">{live + done}</span>
             <span aria-hidden="true" class="td-you-split"><i style={{ flex: live, background: '#6FDCB0' }} /><i style={{ flex: done }} /></span><span><span class="m">{`${live} live`}</span>{` · ${done} done`}</span></Tap>
           <Tap on={() => go('customers')}><span>Customers</span><span class="mono">{all}</span>

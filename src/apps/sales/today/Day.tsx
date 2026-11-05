@@ -24,6 +24,9 @@ import { faceOf, moneyInToday, owing, placedToday, readyToCollect, soldIn, total
 import { go } from './go.ts';
 import './day.css';
 
+/** The most faces a row of Your day draws (TD16, TD17 draw four); the rest are "+n". */
+const FACES = 4;
+
 const METHOD: Record<Method, { word: string; icon: IconName; color: string }> = {
   momo: { word: 'Mobile', icon: 'mobile', color: '#6FDCB0' }, bank: { word: 'Bank', icon: 'bank', color: '#9DB7E0' }, cash: { word: 'Cash', icon: 'cash', color: '#DDE3F0' },
 };
@@ -85,7 +88,7 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
         {early.length > 0 && (
           <button type="button" class="td-day-row" onClick={() => setOpen(true)}>
             <span class="mono td-day-at">{clock(early[0].placedAt)}</span>
-            <span class="td-day-early"><FaceStack ground="#FFFFFF" max={99} faces={early.map((o) => faceOf(b, o))} />{`${early.length} earlier`}</span>
+            <span class="td-day-early"><FaceStack ground="#FFFFFF" max={FACES} faces={early.map((o) => faceOf(b, o))} />{`${early.length} earlier`}</span>
             <span class="mono td-day-amt">{money(total(early))}</span>
             <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
           </button>
@@ -184,7 +187,7 @@ function MoneyBody(p: { b: Books; now: number }): JSX.Element {
       {oweSum > 0 && (
         <Tap on={() => nav.replace('today/to-collect')} class="td-still">
           <IconTile tone="warn" duo={phCoins} size={38} />
-          <span class="td-still-t"><span>Still to collect</span><span class="td-still-f"><FaceStack ground="#FFFFFF" max={99} faces={owe.slice().sort((x, y) => Number(!!y.held) - Number(!!x.held) || Number(y.checked > 0) - Number(x.checked > 0) || (x.c.id < y.c.id ? -1 : 1)).map((w) => ({ initials: w.c.initials, tint: w.c.tint }))} /></span></span>
+          <span class="td-still-t"><span>Still to collect</span><span class="td-still-f"><FaceStack ground="#FFFFFF" max={FACES} faces={owe.slice().sort((x, y) => Number(!!y.held) - Number(!!x.held) || Number(y.checked > 0) - Number(x.checked > 0) || (x.c.id < y.c.id ? -1 : 1)).map((w) => ({ initials: w.c.initials, tint: w.c.tint }))} /></span></span>
           <b class="mono">{money(oweSum)}</b>
           <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>

@@ -8,6 +8,15 @@
  */
 import type { ComponentChildren, JSX } from 'preact';
 
+/**
+ * A bar's fill, as a width: never below 0 or past the bar (a goal passed seven times over, a debt over
+ * its limit), whatever the figure beside it says. `after`: the part of the bar already filled before it.
+ */
+export function barW(pct: number, after = 0): string {
+  const a = Math.max(0, Math.min(100, after));
+  return `${Math.max(0, Math.min(100 - a, pct))}%`;
+}
+
 export function cx(...a: (string | false | null | undefined)[]): string {
   return a.filter(Boolean).join(' ');
 }

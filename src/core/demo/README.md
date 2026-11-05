@@ -21,6 +21,7 @@ Only what a tap cannot cause is a flag. Everything else is reached by tapping fr
 | `&state=busy` | Sat 17 Oct 14:20, a busy afternoon (its counts are its own, FACTS §1): 38 live, 212 done this week, 22 need Grace, 3 not placed yet | TD02 |
 | `&state=goal-hit` | Thu 29 Oct 9:10: 36,220,000 sold, the 35M goal passed Wed 28 Oct; 9 live, 1 needs her | TD08 |
 | `&state=test-record` | A TEST order of Grace's at 10:30 (TEST Claude QA, 50,000): kept, struck through, in no figure (0167) | TD25 |
+| `&state=stretched` | More than any board draws: 30 owe (6 with long names), 20 payments to Grace today, 20 live orders, 12 chats waiting, 9-digit amounts (`seed/stretched.ts`) | none: the e2e check that real data still fits the phone (`test/e2e/flows-fit.cjs`) |
 | `&wa=down` | The shop's WhatsApp does not answer: every send (a message, the order's picture) is refused | SL29 |
 | `&wa=slow` | The shop's WhatsApp answers slowly: a picture (`sendImage`) takes 10 s to go | SL35 |
 | `&as=ruth` | Another member of the team is signed in on this phone (Ruth, the Manager: her session's role is `manager`) | CH32, CH35 |

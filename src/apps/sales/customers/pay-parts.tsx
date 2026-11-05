@@ -6,7 +6,7 @@
 import { billNo } from '../../../core/owing.ts';
 import type { ComponentChildren, JSX } from 'preact';
 import { Duo, Icon, phSearch } from '../../../ui/icons.tsx';
-import { cx } from '../../../ui/util.tsx';
+import { barW, cx } from '../../../ui/util.tsx';
 import { money } from '../../../core/money.ts';
 import { orderNo, TINTS } from '../../../core/names.ts';
 import type { Tint } from '../../../core/types.ts';
@@ -96,7 +96,7 @@ export function OrderCard(p: { id: number; where: string; status: string | null;
   return (
     <div class="cu-ordc">
       <span class="cu-ordc-h"><span>{`${orderNo(p.id)} `}<span>{p.where}</span></span>{p.status && <span class="cu-chip good">{p.status}</span>}</span>
-      <span class="cu-ordc-b"><span role="img" aria-label={`${money(p.paid)} of ${money(p.total)}`} class="cu-pay-bar"><span style={{ width: `${pct}%`, background: '#95530C' }} /></span><span class="mono">{`${money(p.paid)} of ${money(p.total)}`}</span></span>
+      <span class="cu-ordc-b"><span role="img" aria-label={`${money(p.paid)} of ${money(p.total)}`} class="cu-pay-bar"><span style={{ width: barW(pct), background: '#95530C' }} /></span><span class="mono">{`${money(p.paid)} of ${money(p.total)}`}</span></span>
     </div>
   );
 }

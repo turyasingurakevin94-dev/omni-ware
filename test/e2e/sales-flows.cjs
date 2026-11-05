@@ -19,6 +19,8 @@
  *   give            Kato's chat → Give to Brian with a note → the handover shows
  *   wrong-return    #0548 Fix it (OR20) → items coming back (OR21) → asked Ruth → shows as asked
  *   wrong-pay       #0533 Fix it (OR24) → the cash payment should be Mobile 124,000 (OR25) → asked Esther → shows as asked
+ *   fit             &state=stretched at 130% text under a 24 px clock bar: every tab, Your day, a customer, an order, a chat
+ *                   (flows-fit.cjs: the tab labels, nothing under the bar, no words off the screen)
  *
  * Every flow also fails on any console error or pageerror, and on any screen wider than the
  * phone (scrollWidth > clientWidth). Buttons and links under 44 × 44 are listed, not failed.
@@ -31,6 +33,7 @@ const S = require('./flows-sell.cjs');
 const M = require('./flows-money.cjs');
 const T = require('./flows-talk.cjs');
 const X = require('./flows-wrong.cjs');
+const F = require('./flows-fit.cjs');
 
 const FLOWS = {
   sell: S.sell,
@@ -44,6 +47,7 @@ const FLOWS = {
   give: T.give,
   'wrong-return': X.wrongReturn,
   'wrong-pay': X.wrongPay,
+  fit: F.fit,
 };
 const PARALLEL = 4;
 
@@ -51,7 +55,7 @@ async function runOne(browser, base, name) {
   const rec = L.newRecord(name);
   const t0 = Date.now();
   const opened = [];
-  const open = async (flags) => { const ph = await L.phone(browser, base, rec, flags); opened.push(ph); return ph; };
+  const open = async (flags, opts) => { const ph = await L.phone(browser, base, rec, flags, opts); opened.push(ph); return ph; };
   try {
     await FLOWS[name](open);
   } catch (e) {

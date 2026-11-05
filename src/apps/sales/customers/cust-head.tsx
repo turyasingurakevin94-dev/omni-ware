@@ -10,7 +10,7 @@ import { RingAvatar } from '../../../ui/Avatar.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
-import { Tap } from '../../../ui/util.tsx';
+import { Tap, barW } from '../../../ui/util.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
 import { TINTS } from '../../../core/names.ts';
 import type { Customer, Member } from '../../../core/types.ts';
@@ -50,7 +50,7 @@ export function AgeTrack(p: { owes: number; bills: OpenBill[]; limit: number | n
         {p.limit ? (
           <span class="cu-credit">
             <span><Icon name="lock" size={12} stroke={2.2} />credit <b class="mono">{shortMoney(p.limit)}</b>{` · ${p.manager}`}</span>
-            <span aria-hidden="true" class="cu-credit-bar"><span style={{ width: `${used}%` }} /></span>
+            <span aria-hidden="true" class="cu-credit-bar"><span style={{ width: barW(used) }} /></span>
           </span>
         ) : <span class="cu-credit"><span><Icon name="lock" size={12} stroke={2.2} />No limit set</span></span>}
       </div>
