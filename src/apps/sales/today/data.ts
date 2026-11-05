@@ -12,7 +12,7 @@
 import { soldByAisle } from '../../../core/aisles.ts';
 import { waitingChats } from '../../../core/chats.ts';
 import { dueCustomers } from '../../../core/customers.ts';
-import { daysInStage, heldFor, LATE_DAYS, priceUntold } from '../../../core/orders.ts';
+import { daysInStage, heldFor, isPickup, LATE_DAYS, priceUntold } from '../../../core/orders.ts';
 import { HOLD_DAYS, holdDay, orderTotal, promiseState } from '../../../core/money.ts';
 import { owedBy, takeWithHeld, type Owed } from '../../../core/owing.ts';
 import { addDays, dayOf } from '../../../core/time.ts';
@@ -58,7 +58,7 @@ export const total = (os: Order[]): UGX => sum(os, orderTotal);
 /** Packing for two days or more (the yard is late with it). */
 export const packingLate = (o: Order, now: Ms) => o.stage === 'packing' && daysInStage(o, now) >= LATE_DAYS;
 /** On the road with nowhere to go: ready to collect at the gate. */
-export const readyToCollect = (o: Order) => o.stage === 'road' && !o.deliverTo;
+export const readyToCollect = (o: Order) => o.stage === 'road' && isPickup(o);
 /** In Checking and held for Grace: the money comes first ("Not paid yet"). */
 export const heldForMe = (b: Books, o: Order) => heldFor(o, b.me.id);
 
