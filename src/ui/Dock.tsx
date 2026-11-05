@@ -4,7 +4,7 @@
  * corners 26, fixed at the bottom; the screen above leaves its height + 16.
  *
  *   <Dock mode={{ value: 'pickup', onChange: setMode }} total={1750000} sub={{ text: '1 price coming', tone: 'amber' }}
- *     slide={{ label: 'Slide to place · 3 items', knobLabel: 'Place this order', onCommit: place }} />
+ *     slide={{ label: 'Slide to place · 3 items', onCommit: place }} />
  *   <Dock words="Counter sale · 2 items" total={52000} slide={…}><MethodPicker navy … /><TheyGave … /></Dock>   S02, a counter sale
  *   total={null}: nothing in it (the dashed dots and "0"); mode.value 'delivery' with `address`: the field row on top.
  *   <Dock words="Ruth decides first" amber tight total={…} above={offline ? <Notice kind="offline" under>…</Notice> : null} slide={{ …, lock: { icon: 'hourglass', label: 'Waiting for Ruth' } }}>…</Dock>

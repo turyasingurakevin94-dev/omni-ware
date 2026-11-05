@@ -6,7 +6,7 @@
  * drag asks for the slide (onHint). A keyboard still presses it like any
  * button. While the commit runs the knob waits at the end.
  *
- *   <Slide label="Slide to place · 3 items" knobLabel="Place this order" onCommit={place} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
+ *   <Slide label="Slide to place · 3 items" onCommit={place} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
  *   state: 'ready' · 'sending' (the fill runs the width, "Sending…") · 'blocked' (grey knob: no customer)
  *          · 'offline' (grey knob, "Back online to sell") · 'empty' (glass knob with the basket)
  *   lock: it cannot go yet, and the knob says why (the counter, KC07–KC18): a lock (Type the ID first,
@@ -24,9 +24,8 @@ import './slide.css';
 export type SlideState = 'ready' | 'sending' | 'blocked' | 'offline' | 'empty';
 
 export interface SlideProps {
+  /** The slide's words; they are its name too (P15: one control, named by what it says). */
   label: string;
-  /** The knob's own name for a screen reader ("Place this order"). */
-  knobLabel: string;
   onCommit: () => unknown;
   onHint?: () => void;
   state?: SlideState;
@@ -37,6 +36,21 @@ export interface SlideProps {
 
 export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
 
+/**
+ * The slide's words and its figure ("Slide to record " · "420,000", "Slide to place · " · "3 items"): with large text
+ * or a narrow phone the words give way first and the figure is never cut (the amount is the last thing to go).
+ */
+export function slideParts(label: string): [string, string] {
+  const m = /^(.*?(?: · | ))([+−-]?\d[\d,.]*[kMB]?(?: [a-z]+)?)$/.exec(label);
+  return m ? [m[1], m[2]] : [label, ''];
+}
+
+/** The words, then the figure that never shrinks. */
+function Words(p: { label: string; class: string; read?: boolean }): JSX.Element {
+  const [words, fig] = slideParts(p.label);
+  return <span class={p.class} aria-hidden={p.read ? undefined : 'true'}><span class="ow-slide-w">{words}</span>{fig && <span class="ow-slide-f">{fig}</span>}</span>;
+}
+
 /** The slide that cannot go yet (the knob grey, its icon saying why). */
 function Locked(p: { icon: LockIcon; label: string; amber?: boolean; quiet?: boolean; onTap?: () => void }): JSX.Element {
   const knob = p.icon === 'box' ? <Duo i={phBox} size={22} color="#F5B26B" />
@@ -44,7 +58,7 @@ function Locked(p: { icon: LockIcon; label: string; amber?: boolean; quiet?: boo
   return (
     <button type="button" class={cx('ow-lslide', p.quiet && 'quiet')} disabled={!p.onTap} aria-disabled="true" onClick={p.onTap}>
       <span aria-hidden="true" class="ow-lslide-k">{knob}</span>
-      <span class={cx('ow-lslide-l', p.amber && 'amber')}>{p.label}</span>
+      <Words class={cx('ow-lslide-l', p.amber && 'amber')} label={p.label} read />
     </button>
   );
 }
@@ -114,18 +128,19 @@ export function Slide(p: SlideProps): JSX.Element {
     else { place(0, true); if (!d.moved && p.onHint) p.onHint(); }
   };
 
+  // The slide is one control named by its words (P15): the knob carries them, the drawn words are not read twice.
   const words = state === 'sending' || done ? 'Sending…' : state === 'offline' ? 'Back online to sell' : p.label;
   if (state === 'sending' || done) return <Sending />;
   if (p.lock) return <Locked {...p.lock} />;
   return (
     <div ref={track} class={cx('ow-slide', 's-' + state)}>
       <span ref={fill} aria-hidden="true" class="ow-slide-fill" />
-      <button ref={knob} type="button" class="ow-knob" aria-label={p.knobLabel} disabled={!live}
+      <button ref={knob} type="button" class="ow-knob" aria-label={words} disabled={!live}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
         onClick={(e) => { if ((e as MouseEvent).detail === 0 && live) commit(); }}>
         {state === 'empty' ? <Duo i={phBasket} size={22} color="#5C6788" /> : <Icon name="slide" size={22} stroke={2.4} />}
       </button>
-      <span class="ow-slide-l" aria-hidden="true">{words}</span>
+      <Words class="ow-slide-l" label={words} />
     </div>
   );
 }

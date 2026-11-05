@@ -13,6 +13,7 @@ import { twinOf } from '../../../core/orders.ts';
 import { clock, dayLabel, dayOf, replyWindow } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { PRICE_COMING, isPriced } from '../../../ui/Money.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
@@ -34,7 +35,10 @@ const longDay = (ms: number) => `${dayLabel(ms).split(' ').slice(1).join(' ')} $
 /** The paper's words and figures, from the order alone (the slip draws them; Send writes them). */
 export interface Under { tone: string; key: string; rest: string; at?: string; after?: string }
 export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null } {
-  const at = o.invoicedAt || o.placedAt, total = orderTotal(o), owes = o.voided ? 0 : orderOwes(o), stands = !o.voided && pendingOf(o);
+  const at = o.invoicedAt || o.placedAt, total = orderTotal(o), owes = o.voided ? 0 : orderOwes(o);
+  // A line with no price yet is never 0 (ui/Money.tsx), and the paper is not final while one waits (OR35's words).
+  const unpriced = o.voided ? 0 : o.lines.filter((l) => l.qty > 0 && l.state !== 'dropped' && !isPriced(l.price)).length;
+  const stands = !o.voided && (pendingOf(o) || unpriced > 0);
   const methods = [...new Set(o.payments.map((x) => HOW[x.method]))];
   const pill = o.voided ? { text: 'Void · nothing owed', tone: 'bad' as const }
     : total > 0 && o.paid >= total ? { text: `Paid · ${methods.join(' + ') || 'cash'}`, tone: 'good' as const, tick: true }
@@ -45,8 +49,8 @@ export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null }
     const tw = twinOf(b.orders, o, true), by = firstWord(member(b, o.voidedBy)?.name || rn), t = o.voidedAt;
     under = { tone: 'bad', key: `${by} voided it`, rest: t ? ` ${dayOf(t) === dayOf(now.value) ? 'today' : dayLabel(t)} ` : '', at: t ? clock(t) : undefined, after: tw && tw.orig.id !== o.id ? ` · the copy of ${orderNo(tw.orig.id)}` : '' };
   } else if (stands) {
-    const fr = freshPrice(o), n = o.lines.filter((l) => l.priceReview == null && l.state !== 'dropped' && l.price == null).length;
-    under = { tone: 'info', key: 'As it stands', rest: fr && fr.priceReview ? ` · ${rn} set ${f(fr.priceReview.price)} · not told yet` : ` · ${rn} decides ${n || 1} price${n > 1 ? 's' : ''}` };
+    const fr = freshPrice(o), n = unpriced;
+    under = { tone: 'info', key: 'As it stands', rest: !n && fr && fr.priceReview ? ` · ${rn} set ${f(fr.priceReview.price)} · not told yet` : ` · ${rn} decides ${n || 1} price${n > 1 ? 's' : ''}` };
   } else {
     const l = o.lines.filter((x) => x.priceReview && x.state !== 'dropped').sort((x, y) => (y.priceReview?.at || 0) - (x.priceReview?.at || 0))[0], r = l && l.priceReview;
     if (l && r) under = { tone: 'ink', key: 'Prices final', rest: ` · ${firstWord(member(b, r.by)?.name || rn)} ${r.price === l.shopPrice ? 'kept' : 'set'} ${f(r.price)} at `, at: clock(r.at) };
@@ -54,7 +58,7 @@ export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null }
   return {
     shop: b.shop.name, word: o.invoiced ? 'Bill' : 'Order', no: orderNo(o.id), stands,
     day: longDay(at), at: clock(at), forName: nameOf(b, o),
-    lines: o.lines.filter((l) => l.qty > 0).map((l) => ({ key: l.lineId, qty: f(l.qty), unit: l.unit, name: l.name, rate: l.price == null ? '…' : f(l.price), amount: f(lineTotal(l)), gone: l.state === 'dropped' })),
+    lines: o.lines.filter((l) => l.qty > 0).map((l) => ({ key: l.lineId, qty: f(l.qty), unit: l.unit, name: l.name, rate: isPriced(l.price) ? f(l.price) : '…', amount: isPriced(l.price) ? f(lineTotal(l)) : PRICE_COMING, gone: l.state === 'dropped' })),
     total: f(total), struck: o.voided,
     rows: [['Paid so far', f(o.voided ? 0 : o.paid)], ['Owes on it', f(owes), owes > 0]],
     pill, foot: member(b, o.placedBy) ? `Taken by ${member(b, o.placedBy)?.name}` : undefined, under,

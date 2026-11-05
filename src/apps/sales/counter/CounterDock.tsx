@@ -13,7 +13,7 @@ import { toast } from '../../../ui/toast.tsx';
 import './dock.css';
 
 export function EmptyDock(): JSX.Element {
-  return <Dock above={null} words="Counter sale" total={null} slide={{ label: 'Add an item to sell', knobLabel: 'Sell', onCommit: () => undefined }} />;
+  return <Dock above={null} words="Counter sale" total={null} slide={{ label: 'Add an item to sell', onCommit: () => undefined }} />;
 }
 
 /** Paste: the ID out of the SMS they showed (MTN "ID: 12045889301", or any long number). */

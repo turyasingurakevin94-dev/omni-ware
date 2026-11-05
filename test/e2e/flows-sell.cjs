@@ -36,7 +36,7 @@ async function sell(open) {
   check(flat.some((s) => s.includes('Wire nails 4" · 25kg ctn') && s.includes('1 ctn × 96,000')), 'sell: Wire nails 4" · 25kg ctn 1 ctn × 96,000 (from the aisle)', flat.join(' / '));
   const before = await text();
   check(before.includes(money(total)), `sell: the foot says ${money(total)}`, before.slice(-300));
-  check(/Slide to place · 2 items/.test(before), 'sell: the slide says "Slide to place · 2 items"', before.slice(-200));
+  check(await ph.slideSays() === 'Slide to place · 2 items', 'sell: the slide says "Slide to place · 2 items"', await ph.slideSays());
 
   // More on the open line: the line and the dock follow the count at once (SL06), and the slide places that total.
   await tap({ sel: 'a.sl-line:has-text("Cement")' });
@@ -81,7 +81,7 @@ async function counterCash(open) {
   await tap('60,000');
   s = await text();
   check(/Give change\s*8,000/.test(s), 'counter: 60,000 given shows Give change 8,000 before the slide', s.slice(-300));
-  check(/Slide to sell · 52,000/.test(s), 'counter: the slide says "Slide to sell · 52,000"', s.slice(-200));
+  check(await ph.slideSays() === 'Slide to sell · 52,000', 'counter: the slide says "Slide to sell · 52,000"', await ph.slideSays());
   await slide();
   await ph.wait('Give change');
   s = await text();

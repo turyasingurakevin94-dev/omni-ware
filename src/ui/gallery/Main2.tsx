@@ -66,7 +66,7 @@ export function Main2Board(): JSX.Element {
           </Part>
           <Part k="S02 · They gave / Give change" meta="inside the dock, cash only">
             <Dock inline style={{ borderRadius: '26px', padding: '16px' }} words="Counter sale · 2 items" total={52000}
-              slide={{ label: 'Slide to sell · 52,000', knobLabel: 'Sell this', onCommit: nop }}>
+              slide={{ label: 'Slide to sell · 52,000', onCommit: nop }}>
               <MethodPicker navy value="cash" onChange={nop} />
               <TheyGave total={52000} notes={[55000, 60000]} given={55000} onPick={nop} />
             </Dock>

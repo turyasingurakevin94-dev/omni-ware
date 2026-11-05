@@ -80,8 +80,8 @@ export function PayDock(p: PayDockProps): JSX.Element {
           ) : top}
         </div>
       ) : top}
-      {p.words ? <Slide label="" knobLabel="" onCommit={() => undefined} lock={{ icon: 'lock', label: p.words, quiet: true, onTap: () => toast.show(p.words as string, { kind: 'warn' }) }} />
-        : <Slide label={`Slide to record ${money(p.record)}`} knobLabel={`Record ${money(p.record)}`} state={p.sending ? 'sending' : 'ready'} onCommit={p.onCommit}
+      {p.words ? <Slide label="" onCommit={() => undefined} lock={{ icon: 'lock', label: p.words, quiet: true, onTap: () => toast.show(p.words as string, { kind: 'warn' }) }} />
+        : <Slide label={`Slide to record ${money(p.record)}`} state={p.sending ? 'sending' : 'ready'} onCommit={p.onCommit}
           onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}
     </div>
   );

@@ -13,7 +13,7 @@ import type { Books, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { PRICE_COMING, fig, isPriced } from '../../../ui/Money.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats } from '../shell/store.ts';
@@ -102,7 +102,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
         <div class="sl-placed-ls">
           {o.lines.map((l) => (
             <div key={l.lineId}><ItemSquare aisle={(itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle} size={26} radius={8} icon={16} /><span class="n">{l.name.split(' · ')[0]}</span>
-              <span class="mono q">{`${l.qty} × ${l.price == null ? '…' : fig(l.price)}`}</span><span class="mono a">{fig(lineTotal(l))}</span></div>
+              <span class="mono q">{`${l.qty} × ${isPriced(l.price) ? fig(l.price) : '…'}`}</span><span class="mono a">{isPriced(l.price) ? fig(lineTotal(l)) : PRICE_COMING}</span></div>
           ))}
           <div class="t"><span>{`${allShelf ? 'all on our shelf' : `${n} item${n === 1 ? '' : 's'}`} · ${mode}`}</span><span class="mono">{fig(orderTotal(o))}</span></div>
         </div>

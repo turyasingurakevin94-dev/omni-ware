@@ -52,7 +52,7 @@ export function Column3(): JSX.Element {
       <Part k="P15 · The dock" meta="segment · total · slide">
         <div style={{ position: 'relative', height: '158px', borderRadius: '26px', overflow: 'hidden' }}>
           <Dock inline style={{ position: 'absolute', inset: 0 }} mode={{ value: 'pickup', onChange: nop }} total={1750000} sub={{ text: '1 price coming', tone: 'amber' }}
-            slide={{ label: 'Slide to place · 3 items', knobLabel: 'Place this order', onCommit: nop }} />
+            slide={{ label: 'Slide to place · 3 items', onCommit: nop }} />
         </div>
       </Part>
       <Part k="P20 · What Kato gets" meta="#0552 at 10:41 · OR07">

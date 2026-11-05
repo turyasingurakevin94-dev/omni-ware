@@ -94,6 +94,15 @@ async function tellOrder(open) {
   p2.check(/Sent to Lubowa/.test(await p2.all()), 'OR35: "Sent to Lubowa" shows');
   const after = await p2.text();
   p2.check(!/Told them/.test(after) && /#0559/.test(after), 'OR35: the paper told the new price, so #0559 no longer asks to tell it (Q17)', after.slice(0, 900));
+
+  // OR05's paper: #0552 at 9:30, the hinge has no price yet. Never 0, and never "Prices final" while Ruth decides.
+  const p3 = await open('&clock=9:30');
+  await p3.tab('orders');
+  p3.check(await p3.orderRow('#0552'), 'OR05: #0552 is in Orders at 9:30');
+  await p3.tap({ sel: 'button.ow-orow-main:has-text("#0552")' });
+  await p3.tap({ sel: 'button.ow-act:has-text("Receipt")' });
+  const p05 = await p3.text();
+  p3.check(/Price coming/.test(p05) && !/Prices final/.test(p05) && /As it stands · Ruth decides 1 price/.test(p05), 'OR05: the paper shows Price coming for the hinge, and "As it stands · Ruth decides 1 price"', p05);
   return ph;
 }
 
@@ -121,7 +130,7 @@ async function chats(open) {
   const lines = (await ph.p.locator('a.sl-line').allInnerTexts()).map((x) => x.replace(/\s+/g, ' '));
   check(lines.length === 1, 'CH14: the order has exactly one line', lines.join(' / '));
   check(lines.filter((x) => x.includes('Iron sheet G28 · 3m')).length === 1 && /1 pc × 38,000/.test(lines[0] || ''), 'CH14: the line is Iron sheet G28 · 3m, 1 pc × 38,000, once', lines.join(' / '));
-  check(/Slide to place · 1 item\b/.test(await text()), 'CH14: the slide says 1 item');
+  check(await ph.slideSays() === 'Slide to place · 1 item', 'CH14: the slide says 1 item', await ph.slideSays());
   await slide();
   await ph.wait('Placed');
   s = await text();

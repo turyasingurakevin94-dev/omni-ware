@@ -16,6 +16,7 @@ import { AskStep } from '../../../ui/Track.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { act, chats, now, source } from '../shell/store.ts';
 import { isPickup, twinOf } from '../../../core/orders.ts';
+import { PRICE_COMING, isPriced } from '../../../ui/Money.tsx';
 import { askedBy, backLines, byRole, custOf, faceOfMember, member, METHOD, owesOnceFixed, payFixAsks, payFixWant, paysOf, shortItem, shortName } from './data.ts';
 import { chatFor, sayMoney } from './msg.ts';
 import './sheets.css';
@@ -90,12 +91,12 @@ export function LadderUnder(p: { b: Books; o: Order; l: Line }): JSX.Element {
   const { b, o, l } = p, ruth = byRole(b, 'manager'), rn = firstWord(ruth?.name || 'Manager');
   const price = l.price || 0, cost = l.cost || 0, shop = l.shopPrice || price;
   const pct = shop > cost ? 40 + ((price - cost) / (shop - cost)) * 32 : 56;
-  const up = (l.cost || 0) > price * 0.9;
+  const up = (l.cost || 0) > price * 0.9, pays = isPriced(l.price) ? price.toLocaleString('en-US') : PRICE_COMING;
   return (
     <>
-      <div role="img" aria-label={`The cost went up. They pay ${price.toLocaleString('en-US')}, under the shop's new price of ${shop.toLocaleString('en-US')}`} class="or-lad">
+      <div role="img" aria-label={`The cost went up. They pay ${pays}, under the shop's new price of ${shop.toLocaleString('en-US')}`} class="or-lad">
         <div class="or-lad-t">
-          <span class="mono or-lad-b" style={{ left: `calc(${pct}% - 30px)` }}>{price.toLocaleString('en-US')}</span>
+          <span class="mono or-lad-b" style={{ left: `calc(${pct}% - 30px)` }}>{pays}</span>
           <span class="or-lad-band" />
           <span class="or-lad-cost" />
           <span class="or-lad-shop" />

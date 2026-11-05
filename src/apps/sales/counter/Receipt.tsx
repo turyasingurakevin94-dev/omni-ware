@@ -7,7 +7,7 @@ import { useState } from 'preact/hooks';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Slip, SlipHead } from '../../../ui/Slip.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { PRICE_COMING, fig, isPriced } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { lineTotal, orderTotal } from '../../../core/money.ts';
 import { orderNo, phone9, phoneText } from '../../../core/names.ts';
@@ -30,7 +30,7 @@ export function Receipt(p: ScreenProps): JSX.Element {
   const seller = b.members.find((m) => m.id === o.placedBy), name = o.client.name || 'Walk-in';
   const text = [
     `${b.shop.name} · Counter sale ${orderNo(id)}`, `${longDay(at)} · ${clock(at)} · For: ${name}`,
-    ...o.lines.map((l) => `${l.qty} ${l.unit} ${l.name} × ${fig(l.price || 0)} = ${fig(lineTotal(l))}`),
+    ...o.lines.map((l) => (isPriced(l.price) ? `${l.qty} ${l.unit} ${l.name} × ${fig(l.price)} = ${fig(lineTotal(l))}` : `${l.qty} ${l.unit} ${l.name} · ${PRICE_COMING}`)),
     `Total UGX ${fig(total)}`, ...(change ? [`Cash given ${fig(s.given)} · Change ${fig(change)}`] : []),
     `Paid · ${METHOD[s.method]}${s.ref ? ` · ID ${s.ref}` : ''}`, seller ? `Sold by ${seller.name}` : '',
   ].filter(Boolean).join('\n');
@@ -58,7 +58,7 @@ export function Receipt(p: ScreenProps): JSX.Element {
       )}>
       <div class="kc-paperbox">
         <Slip shop={b.shop.name} word="Counter sale" no={orderNo(id)} day={longDay(at)} at={clock(at)} forName={name}
-          lines={o.lines.map((l) => ({ key: l.lineId, qty: fig(l.qty), unit: l.unit, name: l.name, rate: fig(l.price || 0), amount: fig(lineTotal(l)) }))}
+          lines={o.lines.map((l) => ({ key: l.lineId, qty: fig(l.qty), unit: l.unit, name: l.name, rate: isPriced(l.price) ? fig(l.price) : '…', amount: isPriced(l.price) ? fig(lineTotal(l)) : PRICE_COMING }))}
           total={fig(total)} rows={s.method === 'cash' && s.given > 0 ? [['Cash given', fig(s.given)], ['Change', fig(change)]] : s.method !== 'cash' && s.ref ? [['Transaction ID', s.ref]] : []}
           pill={{ text: `Paid · ${METHOD[s.method]}`, tone: 'good', tick: true }} foot={seller ? `Sold by ${seller.name}` : undefined} />
       </div>

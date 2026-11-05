@@ -169,14 +169,14 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
     const miss = p.short.line.qty - p.short.shelf;
     return (
       <Dock above={null} words={`${p.short.line.qty} asked · ${p.short.shelf} on shelf`} amber total={p.total}
-        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'box', label: `${miss} short` } }} />
+        slide={{ label: '', onCommit: () => undefined, lock: { icon: 'box', label: `${miss} short` } }} />
     );
   }
   if (p.waits.length) {
     const under = p.waits.reduce((a, l) => a + ((l.price || 0) - (l.shopPrice || 0)) * l.qty, 0);
     return (
       <Dock above={null} words={`−${Math.abs(under).toLocaleString('en-US')} · ${p.ruth} decides`} amber total={p.total}
-        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'lock', label: `Ask ${p.ruth} first` } }} />
+        slide={{ label: '', onCommit: () => undefined, lock: { icon: 'lock', label: `Ask ${p.ruth} first` } }} />
     );
   }
   const notes = likelyNotes(p.total), given = s.given === 'exact' ? p.total : s.given;
@@ -192,7 +192,7 @@ function CounterDock(p: { lines: Line[]; total: number; short: { line: Line; she
     <Dock words={`Counter sale · ${p.lines.length} item${p.lines.length === 1 ? '' : 's'}`} total={p.total} tight={tight}
       above={off ? <Notice kind="offline" under>No signal · your lines are kept on this phone</Notice>
         : failed.value ? <FailCard title="Not sold · nothing taken" sub="Slide again to sell" onClose={() => { failed.value = false; }} /> : null}
-      slide={{ label: `Slide to sell · ${p.total.toLocaleString('en-US')}`, knobLabel: 'Sell it', state: sending ? 'sending' : 'ready', lock: !sending && locked ? locked : undefined,
+      slide={{ label: `Slide to sell · ${p.total.toLocaleString('en-US')}`, state: sending ? 'sending' : 'ready', lock: !sending && locked ? locked : undefined,
         onCommit: () => doSell(cash ? given : 0), onHint: () => toast.show('Slide the red button across', { kind: 'warn' }) }}>
       <MethodPicker navy value={s.method} dim={sending} onChange={(m) => set({ method: m })} />
       {cash

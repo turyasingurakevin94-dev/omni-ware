@@ -48,7 +48,7 @@ async function open(browser, q, viewport) {
 const logOf = (p) => p.locator('#log').innerText();
 
 async function drag(p, dx) {
-  const k = await p.getByLabel('Place this order').boundingBox();
+  const k = await p.getByLabel('Slide to place · 3 items').boundingBox();
   await p.mouse.move(k.x + 25, k.y + 25);
   await p.mouse.down();
   for (let i = 1; i <= 8; i++) await p.mouse.move(k.x + 25 + (dx * i) / 8, k.y + 25);
@@ -71,7 +71,7 @@ async function pull(p, sel, dy) {
 async function tryParts(browser) {
   const { ctx, p, errors } = await open(browser, 'try', { width: 360, height: 800 });
   // The slide.
-  await p.getByLabel('Place this order').click({ position: { x: 25, y: 25 }, delay: 30, force: true });
+  await p.getByLabel('Slide to place · 3 items').click({ position: { x: 25, y: 25 }, delay: 30, force: true });
   await p.waitForTimeout(100);
   t.check((await logOf(p)).includes('hint'), 'a tap on the knob without a slide asks for the slide');
   await drag(p, 90);
@@ -89,7 +89,7 @@ async function tryParts(browser) {
   await undo.click();
   t.check((await logOf(p)).includes('undone 0'), "the toast's Undo undoes it");
   await p.waitForTimeout(300);
-  await p.getByLabel('Place this order').focus();
+  await p.getByLabel('Slide to place · 3 items').focus();
   await p.keyboard.press('Enter');
   await p.waitForTimeout(450);
   t.check((await logOf(p)).includes('placed 1'), 'a keyboard press commits the slide too');

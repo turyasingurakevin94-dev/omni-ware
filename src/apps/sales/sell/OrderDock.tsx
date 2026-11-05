@@ -47,7 +47,7 @@ export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.
           ? <div class="ow-dock-none" aria-label="Nothing yet"><span aria-hidden="true"><i /><i /><i /></span><span class="mono">0</span></div>
           : <div class="ow-dock-sum"><span class="mono ow-dock-total">{fig(s.total)}</span>{sub && <span class="mono ow-dock-sub amber">{sub}</span>}</div>}
       </div>
-      <Slide label={empty ? 'Add an item to place' : `Slide to place · ${n} item${n === 1 ? '' : 's'}`} knobLabel="Place this order" state={state}
+      <Slide label={empty ? 'Add an item to place' : `Slide to place · ${n} item${n === 1 ? '' : 's'}`} state={state}
         onCommit={p.onPlace} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
     </div>
   );

@@ -6,7 +6,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { Icon } from '../../../ui/icons.tsx';
 import { PriceLadder, ladderPct } from '../../../ui/Keypad.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { PRICE_COMING, fig, isPriced } from '../../../ui/Money.tsx';
 import { lineTotal } from '../../../core/money.ts';
 import type { Item, Line } from '../../../core/types.ts';
 import { LineLink, OpenLine, type PriceChipKind } from '../../../ui/LineCard.tsx';
@@ -37,14 +37,14 @@ export function chipOf(l: Line): Chip {
 function Price(p: { line: Line; onPrice: (v: number) => void; onShop: () => void }): JSX.Element {
   const l = p.line, shop = l.shopPrice || 0, price = l.price || 0;
   const [typed, setTyped] = useState<string | null>(null);
-  const label = price < shop ? `${fig(price)} is under the shop’s price of ${fig(shop)}` : `${fig(price)} is the shop’s price or more`;
+  const label = !isPriced(l.price) ? `${PRICE_COMING}: the shop’s price is ${fig(shop)}` : price < shop ? `${fig(price)} is under the shop’s price of ${fig(shop)}` : `${fig(price)} is the shop’s price or more`;
   return (
     <div class="kc-price">
       <PriceLadder pct={ladderPct(price, l.cost || 0, shop)} shop={shop} label={label} />
       <label class="kc-pfield">
         <span>
           <span class="k">Their price, each</span>
-          <input type="text" inputmode="numeric" aria-label={`Their price for each ${l.unit}`} value={typed != null ? typed : fig(price)}
+          <input type="text" inputmode="numeric" aria-label={`Their price for each ${l.unit}`} value={typed != null ? typed : isPriced(l.price) ? fig(price) : ''}
             onInput={(e) => {
               const raw = (e.target as HTMLInputElement).value, v = Number(raw.replace(/[^0-9]/g, '')) || 0;
               setTyped(v > 0 ? fig(v) : raw.replace(/[^0-9]/g, ''));

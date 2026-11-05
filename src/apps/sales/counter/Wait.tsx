@@ -83,7 +83,7 @@ export function Wait(p: ScreenProps): JSX.Element {
         </a>
       </div>
       <Dock above={null} words={`${ruth.first} decides first`} amber total={total} tight
-        slide={{ label: '', knobLabel: 'Sell it', onCommit: () => undefined, lock: { icon: 'hourglass', label: `Waiting for ${ruth.first}` } }}>
+        slide={{ label: '', onCommit: () => undefined, lock: { icon: 'hourglass', label: `Waiting for ${ruth.first}` } }}>
         <MethodPicker navy value="cash" dim onChange={() => undefined} />
         <button type="button" class="kc-glassbtn" disabled={busy} onClick={() => void shopPrice()}>Sell at the shop’s price ·<span class="mono">{fig(totalOf(atShop))}</span></button>
       </Dock>

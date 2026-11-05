@@ -60,7 +60,7 @@ export function TryBoard(): JSX.Element {
       <output id="log">{log.value.join('\n')}</output>
       <div style={{ height: '200px' }} />
       <Dock mode={{ value: mode.value, onChange: (m) => { mode.value = m; say('mode ' + m); } }} total={1750000 * (placed.value + 1)} sub={{ text: `${placed.value} placed`, tone: 'mint' }}
-        slide={{ label: 'Slide to place · 3 items', knobLabel: 'Place this order', onCommit: place, onHint: () => { say('hint'); toast.show('Slide the red button across', { kind: 'warn' }); } }} />
+        slide={{ label: 'Slide to place · 3 items', onCommit: place, onHint: () => { say('hint'); toast.show('Slide the red button across', { kind: 'warn' }); } }} />
       {order.value && (
         <FullSheet onBack={() => { order.value = false; say('order closed'); }} backLabel="Back to Orders"
           head={<SheetHead face={{ initials: 'KC', tint: 't0' }} name="Kato Construction" sub="#0552 · today 9:14" subMono phone="0772418220" onClose={() => { order.value = false; say('order closed'); }}>

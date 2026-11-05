@@ -68,7 +68,8 @@ export function Who(): JSX.Element {
   return (
     <div class="sl-who">
       <Under />
-      <div ref={scrim} class="ow-scrim sl-who-scrim" role="button" tabIndex={0} aria-label="Back to Today" onClick={() => nav.back()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav.back(); } }} />
+      {/* The strip above the sheet is the screen behind: a tap there goes back, but Close is the control (as every sheet's scrim). */}
+      <div ref={scrim} class="ow-scrim sl-who-scrim" aria-hidden="true" onClick={() => nav.back()} />
       <div ref={box} class="sl-who-sheet" role="dialog" aria-modal="true" aria-label="Who is it for?">
         <span aria-hidden="true" class="ow-grab" />
         <div class="ow-lsheet-h">

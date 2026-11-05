@@ -227,6 +227,8 @@ function toolkit(p, rec) {
       await p.waitForTimeout(settle);
       await kit.look('after slide');
     },
+    /** What the slide says: its name, which is its words (P15: one control, named by what it says). */
+    slideSays: async () => (await p.locator('.ow-knob').first().getAttribute('aria-label').catch(() => null)) || '',
     /** The app's visible words. */
     text: () => p.locator('#app').innerText(),
     /** The words of what floats over the app (sheets, toasts). */

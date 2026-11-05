@@ -30,7 +30,8 @@ async function takePayment(open) {
   await type(String(PART), 'Amount Kyaligonza pays now');
   await tap({ text: 'Cash' });
   s = await text();
-  check(new RegExp(`Slide to record ${money(PART)}`).test(s), `pay: the slide says "Slide to record ${money(PART)}"`, s.slice(-200));
+  const says = await ph.slideSays();
+  check(says === `Slide to record ${money(PART)}`, `pay: the slide says "Slide to record ${money(PART)}"`, says);
   await slide();
   await ph.wait('Owes now');
   s = await text();
