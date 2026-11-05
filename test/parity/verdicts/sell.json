@@ -1,288 +1,288 @@
 {
  "SL01Who.dc.html": {
   "verdict": "fail",
-  "score": 8.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. Pixels: thr24 0%, thr3 0.01% (AA). Accessible names now match the board, including the scrim \"Back to Today\" (Enter and a tap on it go to Today). FAIL on 44 px: the scrim is now a named control but its only reachable part is the 360 x 40 strip above the sheet (sheet top 40), under 44; the board draws its link at height 40 too, so the canvas needs the fix first (sheet top at 44, or keep the strip decorative and leave Close as the control). Also: the name is fixed, so from the red + on Orders or Customers \"Back to Today\" goes back to that tab (src/apps/sales/sell/Who.tsx scrim, nav.back()). Close, Counter sale, Walk-in order, Resume x2, the new number, Who's due rows and New customer land as the board links.",
+  "score": 8.0,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL, a control does not do what the board says: Who's due \"Kyaligonza & Sons\" and \"Lubowa Builders\" (board: SL25CreditOld and SL04FromChat, their open drafts) start a fresh empty order with their usual instead of resuming the draft listed two rows above (FACTS 4.6: KS 186,000, LB 2,280,000), so a second open order is made for the same customer. Suspect src/apps/sales/sell/Who.tsx, the due rows (~l.138) pick {kind:'customer'}; pick the customer's draft when one is open. Mukono, New customer, Counter sale, Walk-in, Resume x2, the new number and Close land as linked. Pixels 0%.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL02WhoTypo.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%: the under-screen sits on the page ground, the sheet corners match. Clear, New order for Kato, Add as new work.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.002%, AA). New order for Kato -> SL03, Add \"Kato Constrution\" as new -> CU20, Close -> Today. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL03OrderStart.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.03% (AA). Usual tiles and Add all 3 (Cement 40 bag x 33,500 = 1,340,000), Last order Sell again, aisle tiles, All aisles, Browse, Say it, Pickup/Delivery work; the slide is shut with no items.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: the usual tile for the sheets is \"Add Iron sheet G28, usual ×30 pc\"; the board names it \"Add Iron sheet, usual ×30 pc\" (the tile's own words, FACTS 7 cuts tiles to the first words). Suspect src/apps/sales/sell/Start.tsx:88 (it.name.split(' · ')[0] keeps G28). Pixels 0% (thr3 0.018%). Add all 3, Sell again, aisle tiles, All aisles, Browse, Delivery, Close land as linked.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL04FromChat.dc.html": {
-  "verdict": "pass",
-  "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (glyph antialiasing on \"60\", no shift). Often with adds, aisle chips, Delivery, Change customer work.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: Often with \"Add Roofing nails 2.5\\\"\" where the board says \"Add Roofing nails 2.5 inch\". Suspect src/ui/OftenWith.tsx:52 (aria-label `Add ${p.name}`, raw); Start.tsx already has inchLabel and Lines.tsx noInch: one rule, one place (core/names). Pixels 0.01% (thr3 0.069%, AA). Resume shows Lubowa's 60 pc x 38,000 = 2,280,000; Change customer -> SL01.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL05Order.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.07% (slide knob ring frozen: accepted). Lines open (G28 38,000; hinge opens its Price coming sheet with \"Priced so far 2,190,000 + hinge, when priced\", no 0), Often with adds, Delivery, Say it, Browse; the slide places #0558.",
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: Often with \"Add Wire nails 4\\\" · 25kg ctn\" where the board says \"Add Wire nails 4 inch · 25kg ctn\" (src/ui/OftenWith.tsx:52). Also on this board's own path: after the first tap (the hinge alone) the dock reads \"0 · 1 price coming\" (see SL21). Pixels 0% (thr3 0.060%). Lines open (SL06, SL21), Delivery, Browse, Say it, Change customer, Close land as linked; dock 2,190,000 · 1 price coming.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL06Line.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.07% (knob ring, AA). Fewer -> 39 pc x 38,000 = 1,482,000; price field reads \"Their price, each: 38,000\"; last/shop chips, bin with Undo, other lines, Delivery; the slide places.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.065%, AA). Fewer and More tapped at once: 40 -> 42 -> 41 pc, the line 1,558,000 and the dock 2,228,000 follow every tap. Their price -> SL18. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL07OrderFoot.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.05% (knob ring). Delivery foot as drawn; Pickup, charge and place rows, the slide. Phone-layer sample: judged on 34274b29; re-run after the strip/tab bar/overflow fix that is landing.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.051%). Delivery +20,000 -> 2,210,000; Add a charge -> SL16; the where-row -> SL17. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL08Find.dc.html": {
   "verdict": "pass",
   "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.03% (glyph antialiasing, no shift). Fewer -> 1,482,000; Add 1,520,000; +40 G30 = 1,380,000. Fixed: Ask Moses opens the ask card (Ask Moses to stock it · G28 2.5m · for Kato, 40, Send to Moses).",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.03% (thr3 0.121%, glyph AA only). Add · 1,520,000 -> SL05 (40 x 38,000). Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL09FindNone.dc.html": {
   "verdict": "pass",
   "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.03% (face antialiasing). Faces at 11 px on board and app. Add Kato's ask writes askSourcing + logSearchMiss -> SL37; Tile glue adds.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.03% (thr3 0.097%, glyph AA only). Names match; Browse and Delivery land as linked.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL10Voice.dc.html": {
-  "verdict": "pass",
-  "score": 9,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0.06%, thr3 0.15%: glyph antialiasing in the heard sentence and the waveform bars only. Add both · 1,712,000 = 40 x 38,000 + 2 x 96,000, a figure because both are priced; an unpriced word would read \"price coming\" (848c0a73).",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: behind the voice sheet, Often with \"Add Wire nails 4\\\" · 25kg ctn\" vs the board's \"Add Wire nails 4 inch · 25kg ctn\" (src/ui/OftenWith.tsx:52). Pixels 0.06% (thr3 0.151%, glyph AA, cropped). Add both · 1,712,000 (1,520,000 + 192,000) -> SL05.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL11Aisles.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (sheet corners). Scrim, Close, shelves and tiles open as linked; counts sum to 1,153.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: the board draws the strip above the sheet as a link \"Back to the order\" (360 x 84, to SL05); the app's scrim is an unnamed div (a tap does go back). Either name the scrim or make the board's strip decorative as SL01's was (src/apps/sales/sell/AislesSheet.tsx / the shared sheet scrim). Pixels 0.11% (thr3 0.055%, AA). Close, the three shelves and 12 tiles open as linked; counts sum to 1,153.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL12Aisle.dc.html": {
   "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. Fixed kinds rule: Tools \"Wheelbarrow 2\", no comma. Fewer/More 2,286,000 / 2,478,000, Screws, Show 5 more, Done, Back.",
+  "score": 9.0,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.184%, AA). Card stepper tapped at once: 1 + 3 - 1 = 3 ctn. Back to Kato's order and Done -> SL05; Fasteners -> SL11. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL13Short.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.05% (knob ring). Short line as drawn; Make it 12, Order in 8, More/Fewer.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.047%). 20 asked, 12 on shelf; Order in 8 -> SL40. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL14CountZero.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.06% (knob ring). Fewer to 0 refused; the line keeps 40 until the bin.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.056%). 0 refused, the line keeps 40 (1,520,000), the dock 2,190,000. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL15Whole.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. 1 carton 96,000; 20 x 1 kg -> 180,000; More -> 192,000.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.057%). 20 kg of a carton-only item: 1 ctn in. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL16Charge.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (corners) on the quiet re-run. Fixed: Cutting shows SL41's card; Loading Add 10,000 -> one Loading row (2,220,000); Other and Other amount open the keypad; Close.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.033%, sheet corners). Loading 20 bags x 500 = 10,000; Add 10,000 -> SL39 (2,220,000 with delivery); Other amount -> SL32; Close -> the order. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL17Delivery.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (corners). Pens, Today/Tomorrow, fee keypad, Done (2,210,000), Close.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on accessible names: the board makes each whole row the control, named by its content (\"Where saved Ntinda site · Plot 12, Ntinda Rd\", 304 x 67; \"Site phone · Ssali calls it 0772 418 220\", 304 x 66); the app names only the 44 x 44 pens \"Change where it goes\" / \"Change the site phone\" (a tap on the row works but the row has no name). Suspect src/apps/sales/sell/DeliverySheet.tsx. Pixels 0.01% (thr3 0.034%). Today/Tomorrow, the fee keypad, Done (2,210,000) and Close work.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL18Price.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01%. Use 36,500 -> 1,460,000 and Ruth decides; Keep; Delete; Close.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.029%). Keep 38,000 -> SL06; Use 36,500 -> SL22. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL19PriceHigh.dc.html": {
   "verdict": "pass",
   "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.02% (warning glyph antialiasing). Yes 382,000 -> 15,280,000; Make it 38,200 -> 1,528,000.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.02% (thr3 0.055%, AA). Make it 38,200 -> SL06. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL20PriceCost.dc.html": {
   "verdict": "pass",
-  "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (lock glyph antialiasing). 24,000 refused; Keep 38,000.",
+  "score": 9.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.046%). Under the cost refused; Keep 38,000 -> SL06. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL21PriceComing.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0.01%, thr3 0.03% (sheet corners). The hinge reads Price coming, never 0; Add · price coming puts the Order in line.",
+  "verdict": "fail",
+  "score": 7.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on money: an order whose only line has no price shows total \"0\" in the dock (\"0 · 1 price coming\", Kato + the hinge alone), and placed so it shows \"1 item · pickup 0\" on Placed. The rule is Price coming, never 0. Suspect src/apps/sales/sell/OrderDock.tsx:52 fig(s.total) (and SL28 Placed). The drawn state itself: pixels 0.01% (thr3 0.031%), names match, Add · price coming works.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL22LineWaiting.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.06% (knob ring). 36,500 waits for Ruth; the dock counts it.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.059%). 36,500 waits for Ruth; the dock counts it. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL23CreditNoLimit.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. 3% of 2,190,000 = 65,700 -> 2,255,700; Cash -> 2,190,000.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.15% (thr3 0.053%; AA, re-shot 0%). Nansana on credit: Credit charge 3% of 2,190,000 = +65,700 -> 2,255,700; no limit · Ruth decides. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL24CreditOver.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. 675,700 over 2M; Cash -> 2,190,000.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.059%). 420,000 + 2,255,700 = 2,675,700, 675,700 over 2,000,000. With delivery, Loading and Cutting the charge is 3% of 2,230,000 = 66,900 (2,296,900, 716,900 over): exact. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL25CreditOld.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. 191,580; bill #0533 54 days; Cash -> 186,000; Change customer opens Who.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.053%). #0533 54 days, the old bill first. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL26Switch.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0.01%, thr3 0.05% (avatar ring and sheet corner AA). Change · 3 items, Keep for later, Close.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: behind the sheet, Often with \"Add Wire nails 4\\\" · 25kg ctn\" vs the board's \"4 inch\" (src/ui/OftenWith.tsx:52). Pixels 0.01% (thr3 0.372%, AA, cropped). Keep for later and Change · 3 items work.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL27Offline.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0% (board now 3/7, 2/7). Try again retries the outbox; slide shut.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: Often with \"Add Wire nails 4\\\" · 25kg ctn\" vs the board's \"4 inch\" (src/ui/OftenWith.tsx:52). Pixels 0% (thr3 0.051%). Kept on this phone; Try again.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL28Placed.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.01%: the 4 px return bar frozen at another moment (accepted). #0560, 3 items · pickup 2,190,000; Open #0560, Close, Back to Today. (Placed with 2 lines or fewer shows an unpriced line as \"10 x … 0\": no board draws that state, see the report.) Phone-layer sample: judged on 34274b29; re-run after the strip/tab bar/overflow fix that is landing.",
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on money: the drawn state is exact (pixels 0%, the bar is the frozen countdown, accepted; #0560, 2,190,000), but an order placed with only unpriced lines says \"1 item · pickup 0\" with \"Soft close hinge 10 × … Price coming\" (never 0). Suspect src/apps/sales/sell/Placed.tsx:107 and :116 fig(orderTotal(o)). Back to Today, Close, Open #0560 work.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL29PlacedShelf.dc.html": {
   "verdict": "pass",
   "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.04%: the countdown bar frozen at another moment (accepted). 612,000; Try again sendImage; Open #0561.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.04%: only the countdown bar (frozen animation, accepted). 12 x 33,500 = 402,000 + 5 x 42,000 = 210,000 = 612,000, #0561, Packing, Not paid yet. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL30Mukono.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.02% (AA). Add 6 · 1,110,000; Take 1.1M opens customers/pay.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.029%). Roof paint 6 tins 1,110,000; Take 1.1M opens Take payment. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL31WalkIn.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0% (8 px disc antialiasing). Adds, tiles, Change customer.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.023%). Names match; Change customer -> SL01.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL32Amount.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (corners). Add 15,000 -> one Loading +15,000.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.065%). 15,000 typed; Add 15,000 adds it. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL33Usual.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.01% (AA). Usual cards add their count; Done, Back.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.010%). Usual counts on the cards; + adds the usual. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL34Listening.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-judged on 34274b29 after the late changes (pickup ETA, unpriced 0, accessible names, the phone layer): parity re-run, side-by-side crop by crop, own diff at threshold 3, every visible control tapped in a fresh replay at 360x800 with demo writes recorded; 360 px: scrollWidth 360; no control under 44 (pchip hit areas 45 tall via ::after); no text under 11; --app-top/--app-bottom 0 on the web. thr24 0%, thr3 0.07% (placeholder and waveform AA). Listening…, Add waits; Stop shows what was heard.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: behind the sheet, Often with \"Add Wire nails 4\\\" · 25kg ctn\" vs the board's \"4 inch\" (src/ui/OftenWith.tsx:52). Pixels 0% (thr3 0.072%). Listening…, Add waits.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL35PicSending.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0% on the quiet re-run. Open #0560, Close, Back to Today.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.007%; the ring turns, the bar is the frozen countdown). Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL36Where.dc.html": {
-  "verdict": "pass",
-  "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.19%: glyph antialiasing along the typed address, no whole-pixel shift (best match dx=0; was dx=3); the caret is the accepted animation state. Clear, Done, Close.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: the board makes the Site phone row the control (\"Site phone · Ssali calls it 0772 418 220\", 304 x 66); the app names only its 44 px pen \"Change the site phone\" (src/apps/sales/sell/DeliverySheet.tsx). Pixels 0.19%: the caret blink and the input's sub-pixel scroll (cropped, glyph-identical; accepted). Clear, Done, Close work.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL37AskSent.dc.html": {
   "verdict": "pass",
   "score": 9.0,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.03% (face antialiasing). Faces at 11 px. Tile glue adds.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.03% (thr3 0.101%, glyph AA). Sent to Moses · just now, NH and KC. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL38AskNew.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. Send to Moses writes askSourcing; More; Clear the search.",
+  "verdict": "fail",
+  "score": 8.5,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on an accessible name: \"Add PVC pipe ½\\\" · 6m\" where the board says \"Add PVC pipe ½ inch · 6m\". Suspect src/apps/sales/sell/Find.tsx:137 (`Add ${it.name}`). Pixels 0% (thr3 0.057%). Fewer, More, Send to Moses work.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL39Charge.dc.html": {
-  "verdict": "pass",
-  "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. x takes Loading off; Credit 3% of 2,220,000 = 66,600.",
+  "verdict": "fail",
+  "score": 8.0,
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). FAIL on money: Loading added as 20 bags x 500 = 10,000, then the cement taken to 22 bags: the row stays \"+10,000\" (and drops its \"20 bags × 500\" line) while Add a charge now offers 11,000, so the order is 2,267,000, not 2,268,000. A per-bag charge must follow the count (or say it is fixed). Suspect src/apps/sales/sell/model.ts addCharge / ChargeLines.tsx. The drawn state: pixels 0% (thr3 0.058%); Loading 2,200,000 and Cutting 2,230,000 add exactly; adding Loading again replaces it.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL40OrderInRest.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0%. Fixed: Fewer -> \"19 pc x 46,000 · 7 order in 874,000\" with the panel; More -> 966,000. Price, last, bin.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0% (thr3 0.049%). 12 from the shelf + 8 order in, 920,000 kept. Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  },
  "SL41ChargeCutting.dc.html": {
   "verdict": "pass",
   "score": 9.5,
-  "note": "Re-audit on 453f704e (build:sales; parity re-run, glyph-only boards re-run quiet; every drawn control tapped in fresh replays at 360x800; no page overflow, no target under 44, no text under 11). 0.01% (sheet corners). Cutting card as the approved board: the shop's rate · per order, 10,000. Add 10,000 puts \"Cutting +10,000\" on the order; Loading -> SL16's card; Other and Other amount open the keypad; Close.",
+  "note": "Final audit on 1919b242 (build:sales; parity re-run; own diff at threshold 3; replayed at 360x800 with every drawn control tapped and its landing compared with the linked board; 360 px: scrollWidth 360; no target under 44 (inputs sit in labels of 52-68 px that focus them, as drawn); no text under 11; no console or page errors). Pixels 0.01% (thr3 0.032%, sheet corners). Cutting 10,000 per order; Add 10,000 adds its own 10,000 (2,230,000 with Loading and delivery). Names match.",
   "by": "final auditor",
   "at": "2026-11-05"
  }
