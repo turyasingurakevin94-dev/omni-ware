@@ -1064,8 +1064,10 @@ const P = page(fakeDb({}));
   }
   {
     const X = page(fakeDb({ collection_trips: [] }));
-    X.D().handoffs = [{ id: 'old', kind: 'trip_cash', ref: 'round:ab', status: 'done', createdAt: new Date(NOW - 36e5).toISOString(), doneAt: new Date(NOW - 35e5).toISOString(), payload: { supplierIds: ['S1'], amount: 150000 } }];
-    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-OWN-1', shop_id: SH, supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(NOW - 6e5).toISOString(), lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 1000 }] })];
+    // An hour back, but never before today: the check is about today's cash, and after midnight an hour back is yesterday.
+    const DAY0 = new Date(NOW).setHours(0, 0, 0, 0);
+    X.D().handoffs = [{ id: 'old', kind: 'trip_cash', ref: 'round:ab', status: 'done', createdAt: new Date(Math.max(NOW - 36e5, DAY0 + 1000)).toISOString(), doneAt: new Date(Math.max(NOW - 35e5, DAY0 + 2000)).toISOString(), payload: { supplierIds: ['S1'], amount: 150000 } }];
+    X.D().collectionTrips = [X.rowToTrip({ id: 'TRIP-OWN-1', shop_id: SH, supplier_id: 'S1', status: 'collecting', assigned_worker_id: 'W1', created_at: new Date(Math.max(NOW - 6e5, DAY0 + 3000)).toISOString(), lines: [{ orderId: 1, lineId: 1, productId: 'P1', qty: 2, expectedPrice: 1000 }] })];
     t.check(!!X.roundCashH(X.tripById('TRIP-OWN-1')), 'an older handover still reaches a round that paid with it');
     X.setTripPay('round:TRIP-OWN-1', { own: true });
     t.check(!X.roundCashH(X.tripById('TRIP-OWN-1')), 'a round on your own money never shows Accounts\' cash from an earlier ask');
