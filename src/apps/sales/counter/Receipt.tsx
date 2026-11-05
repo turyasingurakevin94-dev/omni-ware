@@ -52,7 +52,7 @@ export function Receipt(p: ScreenProps): JSX.Element {
     try { const r = await c.select(['tel']); if (r[0] && r[0].tel && r[0].tel[0]) setPhone(phoneText(r[0].tel[0])); } catch (_e) { /* none picked */ }
   };
   return (
-    <FullSheet shadow onBack={() => nav.back()} backLabel="Back to Sold" ground="#FFFFFF" pad="16px" gap={12}
+    <FullSheet shadow onBack={() => nav.back()} backLabel={null} ground="#FFFFFF" pad="16px" gap={12}
       head={(
         <SlipHead eyebrow={`Counter sale · ${orderNo(id)}`} title="Receipt" onClose={() => nav.back()} />
       )}>

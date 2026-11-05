@@ -1,7 +1,7 @@
 /*
  * Find, when the words are an item (TD13) or nothing at all (TD14).
  */
-import { counted } from '../../../core/names.ts';
+import { counted, sayItem } from '../../../core/names.ts';
 import { NoneMark } from '../../../ui/Empty.tsx';
 import { nearAisles } from '../../../core/aisles.ts';
 import { oftenWith as often } from '../../../core/often.ts';
@@ -139,7 +139,7 @@ export function Nothing(p: { b: Books; q: string; now: Ms; onSearch: (q: string)
                   <ItemSquare aisle={i.aisle} size={40} />
                   <span class="td-find-t"><span>{i.name}</span><span>{shelf(i)}{i.price != null && <>{' · '}<span class="mono td-ink">{money(i.price)}</span></>}</span></span>
                 </button>
-                <Tap on={() => go('sell', { items: itemsParam(i.id) })} label={`Put ${i.name} on an order`} class="td-find-act"><Icon name="plus" size={17} stroke={2.2} /></Tap>
+                <Tap on={() => go('sell', { items: itemsParam(i.id) })} label={`Put ${sayItem(i.name)} on an order`} class="td-find-act"><Icon name="plus" size={17} stroke={2.2} /></Tap>
               </div>
             ))}
           </div>

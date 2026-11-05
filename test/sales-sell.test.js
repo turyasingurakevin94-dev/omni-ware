@@ -90,5 +90,16 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
   const ab = await after.books();
   t.check(ab.orders.filter((o) => o.id === 559).length === 1 && Math.max(...ab.orders.filter((o) => o.id < 1000).map((o) => o.id)) === 559, 'at 14:05 Lubowa’s #0559 (the Orders tab’s seed) is in, once, so the next is #0560');
 
+  /* ---- SL39: a charge at the shop's rate a bag follows the count; a flat one stays ---- */
+  {
+    const S = require(path.join(ROOT, 'src/core/services.ts'));
+    const sv = b.settings.services, bags = (n) => [{ lineId: 1, qty: n, unit: 'bag', price: 33500, state: null }];
+    const loading = { id: 2, label: 'Loading', type: 'fixed', value: 10000 }, cutting = { id: 3, label: 'Cutting', type: 'fixed', value: 30000 };
+    const out = S.followCount(sv, [loading, cutting], bags(20), bags(22));
+    t.check(out.length === 2 && out[0].value === 11000 && out[1].value === 30000, 'SL39: 20 bags → 22 bags: Loading 10,000 → 11,000 (500 a bag); Cutting stays 30,000', JSON.stringify(out));
+    t.check(S.followCount(sv, [{ ...loading, value: 15000 }], bags(20), bags(22))[0].value === 15000, 'SL39: an amount typed for Loading stays as typed');
+    t.check(S.followCount(sv, [loading], bags(20), bags(0)).length === 0, 'SL39: no bags left, no Loading');
+  }
+
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

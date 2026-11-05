@@ -208,7 +208,12 @@ export function ChatScreen(p: ScreenProps): JSX.Element {
           onRetry={() => { void flush(); }} onChange={(k, s) => { void discardKept(k); setText(s); }}
           tail={<>
             {mine && shut && <span class="ch-cv-shutnote"><Icon name="lock" size={13} stroke={2.4} />shut · goes as the shop</span>}
-            {!!wants.length && lastIn && <WantsCard who={v.waName || v.title} at={lastIn.at} items={wants} onStart={() => open('sell/order', { from: 'chat', chat: id, items: JSON.stringify(wants.map((x) => ({ itemId: x.id, qty: 1 }))) })} />}
+            {!!wants.length && lastIn && <WantsCard who={v.waName || v.title} at={lastIn.at} items={wants} onStart={() => {
+              // A number nobody saved: "Who is it for?" first (SL01), the number and the item carried (CH14, CH17).
+              const items = JSON.stringify(wants.map((x) => ({ itemId: x.id, qty: 1 })));
+              if (cust) open('sell/order', { customer: cust.id, from: 'chat', chat: id, items });
+              else open('sell', { chat: id, items, phone: chat.phone, name: v.waName || '' });
+            }} />}
             {paid && cust && <PaidCard who={cust.name} paid={paid} owes={cust.owes} checked={checking(b, cust.id)} checker={firstWord((b.members.find((m) => m.role === 'accounts') || { name: 'Accounts' }).name)}
               onTake={() => open('customers/customer', { id: cust.id })} />}
           </>} />

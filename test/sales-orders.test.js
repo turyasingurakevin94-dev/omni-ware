@@ -55,6 +55,12 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const v = V.orderView(b, D.orderOf(b, 552), now);
     t.check(v.tiles[0].note === 'hinges not in it' && v.tellSub === 'what was found', 'OR06: hinges not in it · Tell what was found');
   }
+  /* The head's when: placed; a bill billed more than a week ago, the bill's day (OR24). */
+  {
+    const { b, now } = await at('?demo');
+    const w = (id) => D.orderWhen(D.orderOf(b, id), now);
+    t.check(w(540) === 'Sat 10 Oct' && w(533) === 'Mon 24 Aug' && w(552) === 'today 9:14' && w(548) === 'Fri 9:05', `#0540 says when it was placed, not its bill time beside "At the door" (got ${w(540)}, ${w(533)}, ${w(552)}, ${w(548)})`);
+  }
   /* OR38: #0555, the walk-in's pickup at the gate (core/orders.ts readyToCollect). */
   {
     const { b, now } = await at('?demo');

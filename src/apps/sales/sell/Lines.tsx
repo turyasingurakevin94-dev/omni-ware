@@ -24,6 +24,7 @@ import { add, cur, itemOf, openId, orderInRest, remove, restOf, restore, setPric
 import { openPrice, openPriceComing } from './sheets.tsx';
 import { lastPaid } from './insights.ts';
 import './lines.css';
+import { sayItem } from '../../../core/names.ts';
 
 /** What was asked of a line in other words than its own ("20 kg" of a carton-only item: SL15). */
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
@@ -47,7 +48,6 @@ export function openLine(id: number): void {
   openId.value = id;
 }
 
-const noInch = (s: string) => s.replace(/"/g, ' inch');
 
 function Sub(p: { l: Line; it?: Item }): JSX.Element {
   const l = p.l, x = cur.value, rest = x ? restOf(x, l) : 0;
@@ -93,7 +93,7 @@ function binIt(l: Line): void {
 
 function Bin(p: { l: Line; bad?: boolean }): JSX.Element {
   return (
-    <button type="button" class={'sl-bin' + (p.bad ? ' bad' : '')} aria-label={`Remove ${noInch(p.l.name.split(' · ')[0])}`} onClick={() => binIt(p.l)}>
+    <button type="button" class={'sl-bin' + (p.bad ? ' bad' : '')} aria-label={`Remove ${sayItem(p.l.name.split(' · ')[0])}`} onClick={() => binIt(p.l)}>
       <Icon name="trash" size={19} stroke={2} />
     </button>
   );

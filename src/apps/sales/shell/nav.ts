@@ -119,6 +119,15 @@ export const nav = {
   },
 };
 
+/**
+ * "Resume" an order not placed yet: Sell opens that draft, its own lines (ROUTES.md sell/order `draft`). Every
+ * Resume in the app goes through here: the customer's page (CU13, CU17), Today's "Not placed yet" (TD03) and the
+ * red +'s "Still open" (SL01, from its sheet: `replace`). A `customer` alone opens a new order.
+ */
+export function resumeOrder(key: string, o: { replace?: boolean } = {}): void {
+  if (o.replace) nav.replace('sell/order', { draft: key }); else nav.push('sell/order', { draft: key });
+}
+
 if (typeof window !== 'undefined') {
   history.replaceState({ depth: 1 }, '');
   window.addEventListener('popstate', () => {

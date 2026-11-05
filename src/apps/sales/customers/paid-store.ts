@@ -7,7 +7,7 @@
  */
 import { effect, signal } from '@preact/signals';
 import { money } from '../../../core/money.ts';
-import { orderNo } from '../../../core/names.ts';
+import { billNo } from '../../../core/owing.ts';
 import { replyWindow } from '../../../core/time.ts';
 import type { Method } from '../../../core/types.ts';
 import type { PayResult } from '../../../core/datasource.ts';
@@ -45,6 +45,8 @@ export interface Paid {
   discarded: boolean;
   /** waiting: Receipt was on and the payment is not recorded yet; it goes once it records. */
   receipt: { state: 'off' | 'waiting' | 'sending' | 'sent' | 'failed'; at: number | null; chatId: number | null };
+  /** Rebuilt from the books (a payment opened from the day's money, paid-books.ts): Send the receipt, Back. */
+  fromBooks?: boolean;
 }
 
 export const paidResults = signal<Record<string, Paid>>({});
@@ -59,7 +61,7 @@ function patch(key: string, r: Partial<Paid['receipt']>): void {
 }
 
 export function receiptText(p: Paid, shop: string): string {
-  const rows = p.lines.map((l) => `${orderNo(l.id)} · ${dm(l.day)} · ${money(l.amount)}`);
+  const rows = p.lines.map((l) => `${billNo(l.id)} · ${dm(l.day)} · ${money(l.amount)}`);
   return [`${shop} · receipt`, `${p.name} paid ${money(p.amount)}`, ...rows, ...(p.deposit ? [`Deposit · ${money(p.deposit)}`] : []), `Owes now ${money(p.after)}`].join('\n');
 }
 

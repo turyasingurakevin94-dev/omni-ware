@@ -13,7 +13,7 @@ import type { Books, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { PRICE_COMING, fig, isPriced } from '../../../ui/Money.tsx';
+import { PRICE_COMING, fig, isPriced, orderFig } from '../../../ui/Money.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats } from '../shell/store.ts';
@@ -104,7 +104,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
             <div key={l.lineId}><ItemSquare aisle={(itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle} size={26} radius={8} icon={16} /><span class="n">{l.name.split(' · ')[0]}</span>
               <span class="mono q">{`${l.qty} × ${isPriced(l.price) ? fig(l.price) : '…'}`}</span><span class="mono a">{isPriced(l.price) ? fig(lineTotal(l)) : PRICE_COMING}</span></div>
           ))}
-          <div class="t"><span>{`${allShelf ? 'all on our shelf' : `${n} item${n === 1 ? '' : 's'}`} · ${mode}`}</span><span class="mono">{fig(orderTotal(o))}</span></div>
+          <div class="t"><span>{`${allShelf ? 'all on our shelf' : `${n} item${n === 1 ? '' : 's'}`} · ${mode}`}</span><span class="mono">{fig(orderFig(o.lines, orderTotal(o)))}</span></div>
         </div>
       ) : (
         <div class="ow-moment-items">
@@ -112,7 +112,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
             {items.slice().reverse().slice(0, 3).map((l, i) => { const a = (itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle; return i ? <span key={i} class="ow-moment-sq-r"><ItemSquare aisle={a} size={32} radius={10} icon={20} /></span> : <ItemSquare key={i} aisle={a} size={32} radius={10} icon={20} />; })}
           </span>
           <span class="ow-moment-items-t"><span>{`${n} items · ${mode}`}</span>{unpaid && <span>Not paid yet</span>}</span>
-          <span class="mono ow-moment-items-a">{fig(orderTotal(o))}</span>
+          <span class="mono ow-moment-items-a">{fig(orderFig(o.lines, orderTotal(o)))}</span>
         </div>
       )}
       <div class="ow-next-steps">

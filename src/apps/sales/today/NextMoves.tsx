@@ -14,6 +14,7 @@ import { PlayAll, SectionHead, SubHead } from '../../../ui/SectionHead.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { drafts } from '../shell/store.ts';
 import { askValue, due, moves, usualValue, type Move } from './data.ts';
+import { resumeOrder } from '../shell/nav.ts';
 import { go, tel } from './go.ts';
 import { openTell } from './Tell.tsx';
 import { howLong } from '../../../core/time.ts';
@@ -57,7 +58,7 @@ export function NextMoves(p: { b: Books; cb: ChatBooks | null; now: Ms; told: st
               return (
                 <ActRow key={d.key} lead={<RingAvatar face={{ initials: c ? c.initials : 'WI', tint: c ? c.tint : 't4' }} tone="late" fill={1} />} title={name}
                   sub={`${d.lines.length} item${d.lines.length === 1 ? '' : 's'} · ${money(orderTotal({ lines: d.lines, charges: d.charges, discount: 0, credit: d.credit }))}`}
-                  act={{ icon: 'chevron-right', kind: 'tile', label: `Resume ${name.replace('&', 'and')} order`, on: () => go('sell/order', d.chatId != null ? { customer: d.customerId, from: 'chat', chat: d.chatId } : { customer: d.customerId }) }} />
+                  act={{ icon: 'chevron-right', kind: 'tile', label: `Resume ${name.replace('&', 'and')} order`, on: () => resumeOrder(d.key) }} />
               );
             })}
           </GroupCard>

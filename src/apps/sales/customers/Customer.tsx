@@ -19,7 +19,7 @@ import { clock, dayLabel, dayOf, daysApart, howLong, when } from '../../../core/
 import { fig } from '../../../ui/Money.tsx';
 import { isDataError } from '../../../core/datasource.ts';
 import type { Books, ChatBooks, Customer, Member } from '../../../core/types.ts';
-import { nav } from '../shell/nav.ts';
+import { nav, resumeOrder } from '../shell/nav.ts';
 import { act, books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { openBillCheck } from './BillCheck.tsx';
@@ -94,7 +94,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
 
   const draft = drafts.value.find((d) => d.customerId === c.id);
   const sell = draft
-    ? { icon: 'arrow-right' as const, word: `Resume order · ${orderTotal({ lines: draft.lines, charges: draft.charges, discount: 0, credit: draft.credit }).toLocaleString('en-US')}`, on: () => nav.push('sell/order', { customer: c.id }) }
+    ? { icon: 'arrow-right' as const, word: `Resume order · ${orderTotal({ lines: draft.lines, charges: draft.charges, discount: 0, credit: draft.credit }).toLocaleString('en-US')}`, on: () => resumeOrder(draft.key) }
     : c.usual.length ? { icon: 'undo' as const, word: 'Order usual', on: () => nav.push('sell/order', { customer: c.id, from: 'usual' }) }
       : { icon: 'plus' as const, word: 'New order', on: () => nav.push('sell/order', { customer: c.id }) };
 
@@ -118,7 +118,7 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
         { tone: 'tell', icon: 'receipt', word: 'Statement', sub: 'on WhatsApp', on: () => { void sendStatement(b, c, p.cb).then((w) => toast.show(w)); } },
       ]} />}
       {m.apart > 0 && <AsksCard checker={esther} askedAt={ask ? `asked ${dayOf(ask.at) === today ? 'today' : dayLabel(ask.at)} ${clock(ask.at)} · you get a push` : 'you get a push'}
-        chat={asked && chat ? { who: name, ago: howLong(asked.at, t), text: asked.body, on: () => nav.push('chats/chat', { id: chat.id }) } : null}
+        chat={asked && chat ? { who: name, whole: c.name, ago: howLong(asked.at, t), text: asked.body, on: () => nav.push('chats/chat', { id: chat.id }) } : null}
         onEsther={chat ? () => { void noteFor(chat.id, esther, `@${first(esther.name)} ${name} is waiting on the ${fig(m.apart)} being checked`); } : null} />}
       {head}
       {m.bills.length > 0 && (

@@ -12,7 +12,7 @@ import { FilterChip } from '../../../ui/Pill.tsx';
 import { useState } from 'preact/hooks';
 import { waitingChats } from '../../../core/chats.ts';
 import type { DemoSource } from '../../../core/demo/index.ts';
-import { firstWord, plural } from '../../../core/names.ts';
+import { firstWord, plural, possessive } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Message } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -22,21 +22,21 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
 import { GiveSheet } from './GiveSheet.tsx';
-import { nav } from '../shell/nav.ts';
+import { nav, resumeOrder } from '../shell/nav.ts';
 import { books, chats, drafts, isDemo, now, source } from '../shell/store.ts';
 import { seen } from './undo.tsx';
 import type { ScreenProps } from '../shell/types.ts';
 import { Empty, Loading } from './ListEmpty.tsx';
 import { ListHead, type PillFace } from './ListHead.tsx';
 import { chatView, faceOf, firstSentence, listTime, managers, mineCount, mineList, ownedBy, said, salesTeam, waitLine, whose, type ChatView } from './model.ts';
-import { Dots, Pic, Ring, open, write } from './parts.tsx';
+import { Dots, Pic, Ring, write } from './parts.tsx';
 import './list.css';
 
 export type Filter = 'mine' | 'waiting' | 'new' | 'team';
 
 /** Open a row: the order started from this chat when there is one (SL04), else the chat. */
 export function openChat(v: ChatView): void {
-  if (v.draft) open('sell/order', { customer: v.draft.customerId, from: 'chat', chat: v.chat.id });
+  if (v.draft) resumeOrder(v.draft.key);
   else nav.push('chats/chat', { id: v.chat.id });
 }
 
@@ -213,12 +213,12 @@ function GroupHead(p: { title: string; n: number; dot?: 'warn' | 'bad' | null; g
   );
 }
 
-function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element; onRow?: () => void; act?: JSX.Element }): JSX.Element {
+function WaitRow(p: { v: ChatView; sub: string; badge?: boolean; right?: JSX.Element; onRow?: () => void; rowLabel?: string; act?: JSX.Element }): JSX.Element {
   const v = p.v, me = books.value?.me, mine = v.owner?.id === me?.id;
   const fresh = !v.chat.ownerId, late = (v.waitMins || 0) >= 30;
   return (
     <div class="ch-row w">
-      <Tap on={p.onRow || (() => openChat(v))} class="ch-row-m">
+      <Tap on={p.onRow || (() => openChat(v))} label={p.rowLabel} class="ch-row-m">
         <Ring face={v.face} mins={v.waitMins} badge={p.badge && v.owner ? faceOf(v.owner) : null} />
         <span class="ch-row-t">
           <span class="ch-row-1">
@@ -357,7 +357,7 @@ function TeamView(p: { b: Books; cb: ChatBooks; t: number; match: (v: ChatView) 
         // CH35: the row opens the chat; the navy disc moves it to a teammate (CH32).
         const move = () => sheet.open(() => <GiveSheet chatId={v.chat.id} />, { label: `Move ${v.title}`, top: 196 });
         return (
-          <WaitRow key={v.chat.id} v={v} sub={sub} badge onRow={() => nav.push('chats/chat', { id: v.chat.id })}
+          <WaitRow key={v.chat.id} v={v} sub={sub} badge onRow={() => nav.push('chats/chat', { id: v.chat.id })} rowLabel={`Open ${possessive(v.title)} chat`}
             act={v.owner && v.owner.id !== b.me.id ? <button type="button" class="ch-move" aria-label={`Move ${v.title} to a teammate`} onClick={move}><Icon name="hand-over" size={19} stroke={2} /></button> : undefined} />
         );
       })}</GroupCard>

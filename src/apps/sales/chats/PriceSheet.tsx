@@ -7,7 +7,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
-import { counted, firstWord } from '../../../core/names.ts';
+import { counted, firstWord, sayItem } from '../../../core/names.ts';
 import { oftenWith } from '../../../core/often.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -74,8 +74,8 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
   const act = (it: Item) => {
     if (it.price == null) {
       return asked.includes(it.id)
-        ? <button type="button" disabled class="ch-pr-asked" aria-label={`Asked ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`}><Icon name="check" size={14} stroke={2.6} />Asked</button>
-        : <button type="button" class="ch-pr-ask" aria-label={`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${it.name}`} onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
+        ? <button type="button" disabled class="ch-pr-asked" aria-label={`Asked ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${sayItem(it.name)}`}><Icon name="check" size={14} stroke={2.6} />Asked</button>
+        : <button type="button" class="ch-pr-ask" aria-label={`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'} for the price of ${sayItem(it.name)}`} onClick={() => ask(it)}>{`Ask ${ruth ? firstWord(ruth.name) : 'the Manager'}`}</button>;
     }
     const on = picked.includes(it.id);
     return (

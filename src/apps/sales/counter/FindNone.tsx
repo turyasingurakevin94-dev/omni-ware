@@ -4,7 +4,7 @@
  * lead, as sales.html does). KC26 · nobody has asked: "Ask Moses to stock it". KC25 · sent:
  * "Sent to Moses · just now", the button gone.
  */
-import { counted } from '../../../core/names.ts';
+import { counted, sayItem } from '../../../core/names.ts';
 import type { JSX } from 'preact';
 import { NoneMark } from '../../../ui/Empty.tsx';
 import { useState } from 'preact/hooks';
@@ -117,7 +117,7 @@ export function FindNone(p: { b: Books; words: string; qty: number; customer: st
                 <span class="n">{it.name}</span>
                 <span class="s">{isPriced(it.price) ? <><span class="mono">{fig(it.price)}</span><span class="u">{`/${it.unit}`}</span></> : <span class="u">{PRICE_COMING}</span>}<span class="kc-near-sh"><b class="mono">{fig(it.onShelf || 0)}</b>on shelf</span></span>
               </span>
-              <button type="button" class="kc-near-a" aria-label={`Add ${it.name}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
+              <button type="button" class="kc-near-a" aria-label={`Add ${sayItem(it.name)}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}
         </div>

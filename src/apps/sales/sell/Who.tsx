@@ -14,8 +14,9 @@ import { avatarStyle, RingAvatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phArrowR, phBasket, phClock, phSearch, phUserPlus, phWhatsapp } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { useDragClose } from '../../../ui/sheet.tsx';
-import { nav, screen, stack } from '../shell/nav.ts';
+import { nav, resumeOrder, screen, stack } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
+import type { Params, ScreenProps } from '../shell/types.ts';
 import { dueWords } from '../../../core/customers.ts';
 import { dayWord, first, lastOrder, ordersOf, rhythmOf, whosDue } from './insights.ts';
 import { findCustomer } from '../../../core/find.ts';
@@ -33,13 +34,22 @@ export function Under(): JSX.Element | null {
 /** What a tap on the sheet chooses. As the red +, it opens that screen; over an order, the order decides (SL26). */
 export type Pick = { kind: 'customer'; id: string } | { kind: 'walkin' } | { kind: 'draft'; key: string } | { kind: 'counter' } | { kind: 'new'; name?: string; phone?: string };
 
-/** The red +: each choice opens its screen in place of the sheet. */
-function open(x: Pick): void {
-  if (x.kind === 'customer') nav.replace('sell/order', { customer: x.id });
-  else if (x.kind === 'walkin') nav.replace('sell/order', { customer: '' });
-  else if (x.kind === 'draft') nav.replace('sell/order', { draft: x.key });
+/**
+ * The red +: each choice opens its screen in place of the sheet. What it was opened with goes on with the
+ * customer picked (ROUTES `sell`): Today's item or aisle, and a chat's number and item (CH14's Start order:
+ * a saved customer, a new one with the number filled in, or a walk-in).
+ */
+function open(x: Pick, c: Params = {}): void {
+  const chat = typeof c.chat === 'number' ? c.chat : null;
+  const on: Params = { ...(c.items ? { items: c.items } : {}), ...(c.aisle ? { aisle: c.aisle } : {}), ...(chat != null ? { from: 'chat', chat } : {}) };
+  if (x.kind === 'customer') nav.replace('sell/order', { customer: x.id, ...on });
+  else if (x.kind === 'walkin') nav.replace('sell/order', { customer: '', ...on });
+  else if (x.kind === 'draft') resumeOrder(x.key, { replace: true });
   else if (x.kind === 'counter') nav.replace('counter');
-  else nav.replace('customers/new', { ...(x.name ? { name: x.name } : {}), ...(x.phone ? { phone: x.phone } : {}) });
+  else {
+    const name = x.name || (typeof c.name === 'string' ? c.name : ''), phone = x.phone || (typeof c.phone === 'string' ? c.phone : '');
+    nav.replace('customers/new', { ...(name ? { name } : {}), ...(phone ? { phone } : {}), ...(chat != null ? { chat } : {}), ...(c.items ? { items: c.items } : {}) });
+  }
 }
 
 /** The sheet's body: the search and what it finds, or the lists. */
@@ -57,7 +67,7 @@ export function WhoBody(p: { b: Books | null; pick: (x: Pick) => void }): JSX.El
   );
 }
 
-export function Who(): JSX.Element {
+export function Who(p: ScreenProps): JSX.Element {
   const b = books.value, box = useRef<HTMLDivElement>(null), scrim = useRef<HTMLDivElement>(null);
   useDragClose(box, () => nav.back(), scrim);
   useEffect(() => {
@@ -76,7 +86,7 @@ export function Who(): JSX.Element {
           <div class="ow-lsheet-ht"><h2>Who is it for?</h2></div>
           <button type="button" class="ow-x-tile" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
         </div>
-        <WhoBody b={b} pick={open} />
+        <WhoBody b={b} pick={(x) => open(x, p.params)} />
       </div>
     </div>
   );
@@ -136,7 +146,8 @@ function Lists(p: { b: Books; pick: (x: Pick) => void }): JSX.Element {
           <div class="sl-who-gh"><Duo i={phClock} size={18} color="#5F6980" /><span>Who's due</span><span class="mono">{due.length}</span></div>
           <div class="sl-who-due">
             {due.map(({ c, r }) => (
-              <a key={c.id} href="#" class="sl-who-drow" onClick={(e) => { e.preventDefault(); p.pick({ kind: 'customer', id: c.id }); }}>
+              // Due with an order not placed yet: that order, never a second one (resumeOrder; SL25, SL04).
+              <a key={c.id} href="#" class="sl-who-drow" onClick={(e) => { e.preventDefault(); const d = drafts.value.find((x) => x.customerId === c.id); p.pick(d ? { kind: 'draft', key: d.key } : { kind: 'customer', id: c.id }); }}>
                 <RingAvatar face={{ initials: c.initials, tint: c.tint }} tone={r.late === 0 ? 'due' : 'late'} fill={1} />
                 <span class="sl-who-dt"><span>{c.name}</span><span class={r.late === 0 ? 'due' : 'late'}>{dueWords(r)}</span></span>
                 {c.owes > 0 && <span class="sl-who-owes"><span class="mono">{short(c.owes)}</span><span>owes</span></span>}

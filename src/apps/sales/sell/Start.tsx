@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { chipAisles } from '../../../core/aisles.ts';
 import { orderTotal, short } from '../../../core/money.ts';
-import { orderNo } from '../../../core/names.ts';
+import { orderNo, sayItem } from '../../../core/names.ts';
 import { heldFor } from '../../../core/orders.ts';
 import { owingOf, takeWithHeld } from '../../../core/owing.ts';
 import { clock, dayOf } from '../../../core/time.ts';
@@ -24,7 +24,6 @@ import { add, cur, itemOf } from './model.ts';
 import { openAisle, openAisles } from './sheets.tsx';
 import './start.css';
 
-export const inchLabel = (s: string) => s.replace(/"/g, ' inch');
 /** A tile's name: the first words, no grade (FACTS §7: "Iron sheet", "Cement", "Wire nails 4""). */
 export const tileName = (s: string) => s.split(' · ')[0].split(' ').filter((w) => !/^G\d+$/.test(w)).join(' ');
 
@@ -85,7 +84,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
         <UsualCard key="usual" title={`${whose(c.name)} usual`.replace('’', "'")}
           items={items.map(({ u, it }) => ({
             aisle: it.aisle, name: tileName(it.name), qty: `×${u.qty} ${it.unit}`, in: inIt.has(itemKey(u)),
-            note: u.seen === u.of ? 'every order' : `${u.seen} of ${u.of}`, label: `Add ${inchLabel(it.name.split(' · ')[0])}, usual ×${u.qty} ${it.unit}`, on: () => add(it, u.qty),
+            note: u.seen === u.of ? 'every order' : `${u.seen} of ${u.of}`, label: `Add ${sayItem(tileName(it.name))}, usual ×${u.qty} ${it.unit}`, on: () => add(it, u.qty),
           }))}
           onAll={() => items.filter(({ u }) => !inIt.has(itemKey(u))).forEach(({ u, it }) => add(it, u.qty))} />,
       );
@@ -109,7 +108,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
               <span class="sl-most-sq"><ItemSquare aisle={it.aisle} size={44} /><span aria-hidden="true" class={'mono sl-rank' + (i === 0 ? ' top' : '')}>{i + 1}</span></span>
               <span class="sl-most-t"><span>{it.name}</span>{it.onShelf ? <span class="sl-shelf"><b class="mono">{it.onShelf}</b> on shelf</span> : null}</span>
               {isPriced(it.price) ? <span class="ow-often-p"><b class="mono">{fig(it.price)}</b><small>per {it.unit}</small></span> : <span class="ow-often-p"><small>{PRICE_COMING}</small></span>}
-              <button type="button" class="ow-often-add" aria-label={`Add ${inchLabel(it.name)}`} onClick={() => add(it, 1)}><Icon name="plus" size={16} stroke={2.6} /></button>
+              <button type="button" class="ow-often-add" aria-label={`Add ${sayItem(it.name)}`} onClick={() => add(it, 1)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}
         </>

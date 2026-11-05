@@ -10,7 +10,7 @@
  * charges it. Whether presets get `kind` and `per` is with Kevin.
  */
 import { chargeAmount, goodsTotal } from './money.ts';
-import type { Line, ShopSettings, UGX } from './types.ts';
+import type { Charge, Line, ShopSettings, UGX } from './types.ts';
 
 export type Service = ShopSettings['services'][number];
 
@@ -33,4 +33,18 @@ export function perLines(s: Service, lines: Line[]): Line[] {
 export function serviceAmount(s: Service, lines: Line[]): UGX {
   if (s.per) return perLines(s, lines).reduce((n, l) => n + l.qty, 0) * Math.max(0, s.value);
   return chargeAmount({ id: 0, label: s.label, type: s.type, value: s.value }, goodsTotal(lines));
+}
+
+/**
+ * SL39: a charge at the shop's rate for each one ("Loading", 500 a bag) is a rate, so it follows the count:
+ * 20 bags gave 10,000, 22 bags give 11,000. It is the rate's when its amount is what the rate came to on the
+ * lines before the change; a flat charge (Cutting) or an amount typed stays as it is. None left to count: it goes.
+ */
+export function followCount(services: Service[], charges: Charge[], before: Line[], after: Line[]): Charge[] {
+  return charges.flatMap((ch) => {
+    const sv = services.find((s) => s.per && s.label === ch.label);
+    if (!sv || ch.type !== 'fixed' || ch.value !== serviceAmount(sv, before)) return [ch];
+    const v = serviceAmount(sv, after);
+    return v > 0 ? [{ ...ch, value: v }] : [];
+  });
 }

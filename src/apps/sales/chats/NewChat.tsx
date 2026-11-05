@@ -18,7 +18,7 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Duo, Icon, phClock, phSearch, phUserPlus, phWhatsapp } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { Tap } from '../../../ui/util.tsx';
-import { nav, screen } from '../shell/nav.ts';
+import { nav, resumeOrder, screen } from '../shell/nav.ts';
 import { books, chats, drafts, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { ChatsList } from './List.tsx';
@@ -34,7 +34,7 @@ function go(id: string, params: Record<string, string | number | null>): void {
   if (screen(id)) nav.replace(id, params);
   leaving = false;
 }
-const goChat = (v: ChatView) => (v.draft ? go('sell/order', { customer: v.draft.customerId, from: 'chat', chat: v.chat.id }) : go('chats/chat', { id: v.chat.id }));
+const goChat = (v: ChatView) => (v.draft ? resumeOrder(v.draft.key) : go('chats/chat', { id: v.chat.id }));
 
 /** Wrote lately: in the last two days. */
 const LATELY_MS = 48 * 3600 * 1000;

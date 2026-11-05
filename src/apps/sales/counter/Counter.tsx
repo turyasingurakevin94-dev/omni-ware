@@ -92,8 +92,10 @@ export function Counter(): JSX.Element {
     // The words as typed, less the count ("2 paint" → paint; "PPR pipe 25mm" keeps its capitals).
     const a = readAsk(text), typed = text.trim().replace(/^\d+\s*[x×]?\s+/i, '').replace(/\s+[x×]?\d+$/i, '');
     const r = { qty: a.qty || 1, words: a.qty != null ? typed : text.trim(), counted: a.qty != null };
-    // The counter sells only what has a price (an item with none waits for Sourcing).
-    const found = findItems(b, a).filter((i) => i.price != null);
+    // Every item the shop lists, the priced first: one with no price yet says Price coming and goes as an order,
+    // where the Manager prices it (a counter sale is billed at once, and a bill takes no line without a price: OWTPC).
+    // Never "the shop doesn't sell" an item it lists (KC26).
+    const all = findItems(b, a), found = [...all.filter((i) => i.price != null), ...all.filter((i) => i.price == null)];
     body = !found.length ? <FindNone b={b} words={r.words} qty={r.qty} customer={s.customerId} who={cust ? cust.name : 'a walk-in'} onAdd={(it) => pick(it)} onAisle={open} />
       : <Find qty={r.qty} words={r.words} read={r.counted} items={found} onAdd={pick} onOrderIn={(it, n) => orderIn([...asItems(s.lines), { itemId: it.id, qty: n, price: it.price }], s.customerId)} />;
   } else if (!s.lines.length) {

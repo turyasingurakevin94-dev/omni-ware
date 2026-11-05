@@ -12,6 +12,7 @@ import type { Item } from '../../../core/types.ts';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { markOf } from './shop.ts';
 import './find.css';
+import { sayItem } from '../../../core/names.ts';
 
 export interface FindProps {
   qty: number;
@@ -24,6 +25,8 @@ export interface FindProps {
 }
 
 const onShelf = (it: Item) => (it.onShelf || 0) > 0;
+/** Order in, named with what it orders, so two rows' buttons are told apart (KC02, KC29). */
+const orderInLabel = (it: Item, n: number) => `Order in ${fig(n)} ${sayItem(it.name)}: the sale becomes an order`;
 
 function Shelf(p: { it: Item; mono11?: boolean }): JSX.Element {
   return onShelf(p.it)
@@ -56,8 +59,8 @@ export function Find(p: FindProps): JSX.Element {
           </div>
           <div class="kc-best-f">
             <Stepper value={n} unit={top.unit} min={0} onChange={(v) => setN(Math.max(1, v))} />
-            {onShelf(top)
-              ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{isPriced(top.price) ? fig(n * top.price) : PRICE_COMING.toLowerCase()}</span></button>
+            {onShelf(top) && isPriced(top.price)
+              ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{fig(n * top.price)}</span></button>
               : <button type="button" class="kc-add" onClick={() => p.onOrderIn(top, n)}>Order in<span class="mono">{fig(n)}</span></button>}
           </div>
         </div>
@@ -84,10 +87,10 @@ function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => v
         {it.price == null ? <span class="kc-pill coming">Price coming</span> : <span class="mono kc-per">{`${fig(it.price)} /${it.unit}`}</span>}
         <Shelf it={it} />
       </span>
-      {/* Not priced yet (Ruth prices it): listed, never sold at the counter. */}
-      {it.price == null ? null : onShelf(it)
-        ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${it.name}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
-        : <button type="button" class="kc-orderin" aria-label={`Order in ${fig(p.qty)}`} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
+      {/* Not priced yet (Ruth prices it): never sold at the counter; it goes as an order (KC26). */}
+      {onShelf(it) && it.price != null
+        ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${sayItem(it.name)}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
+        : <button type="button" class="kc-orderin" aria-label={orderInLabel(it, p.qty)} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
     </div>
   );
 }

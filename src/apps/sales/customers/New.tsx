@@ -81,7 +81,7 @@ function NewSheet(p: { params: ScreenProps['params'] }): JSX.Element {
       const r = await act<Customer>('addCustomer', { name: name.trim(), phone: '0' + spaced(phone), place: place.trim(), kind: k });
       leave();
       if (r.kept) { nav.back(); toast.show('Not sent yet · saved with signal'); return; }
-      if (then === 'sell') nav.replace('sell/order', { customer: r.value.id, ...(chat ? { from: 'chat', chat: chat.id } : {}) });
+      if (then === 'sell') nav.replace('sell/order', { customer: r.value.id, ...(chat ? { from: 'chat', chat: chat.id } : {}), ...(typeof p.params.items === 'string' ? { items: p.params.items } : {}) });
       else { nav.back(); toast.show(`${r.value.name} added`); }
     } catch (e) {
       toast.show('Not added', { kind: 'error', sub: isDataError(e) ? e.message : '', retry: () => { void add(then); } });

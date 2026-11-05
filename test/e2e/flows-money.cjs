@@ -38,6 +38,9 @@ async function takePayment(open) {
   check(/^Paid$/m.test(s), 'pay: Paid shows', s);
   check(s.includes(money(PART)) && /Cash/.test(s), `pay: Paid shows ${money(PART)} · Cash`, s);
   check(/Owes now\s*420,000\s*270,000/.test(s), 'pay: Paid shows owes now 420,000 → 270,000', s);
+  // CU40: all of Close's 44 is Close's (the picture under it came up over its foot).
+  const closeHit = await ph.p.evaluate(() => { const c = document.querySelector('.cu-paid-x button'); const r = c.getBoundingClientRect(); const at = document.elementFromPoint(r.left + r.width / 2, r.bottom - 2); return !!at && c.contains(at); });
+  check(closeHit, 'CU40: the foot of Close is Close');
   await tap('Back to Today');
 
   // The customer's own screen and Today's To collect, after.
@@ -47,6 +50,15 @@ async function takePayment(open) {
   await tap('to collect');
   s = await text();
   check(s.includes(money(1910000 - PART)), `pay: To collect drops to ${money(1910000 - PART)}`, s.slice(0, 200));
+
+  // TD17: a payment in the day's money opens its Paid, rebuilt from the books (customers/paid { payment }).
+  const d = await open('');
+  await d.tap('Sold in October: 12,480,000. Open your day.');
+  await d.tap('Money in');
+  await d.tap({ text: 'Kyaligonza & Sons' });
+  const pd = await d.text();
+  d.check(/^Paid$/m.test(pd) && /Kyaligonza & Sons/.test(pd) && /388,000/.test(pd) && /Bank/.test(pd) && /#0533/.test(pd), 'TD17: Kyaligonza\'s row opens Paid · 388,000 · Bank · #0533', pd.slice(0, 400));
+  d.check(await d.p.locator('button:has-text("Send the receipt")').count() === 1, 'TD17: Paid from the books offers Send the receipt', pd.slice(0, 400));
   return ph;
 }
 

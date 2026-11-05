@@ -19,6 +19,7 @@
  *   give            Kato's chat → Give to Brian with a note → the handover shows
  *   wrong-return    #0548 Fix it (OR20) → items coming back (OR21) → asked Ruth → shows as asked
  *   wrong-pay       #0533 Fix it (OR24) → the cash payment should be Mobile 124,000 (OR25) → asked Esther → shows as asked
+ *   resume          every Resume (a customer's page, Today's Not placed yet, the red +'s Still open) opens the draft's own lines
  *   fit             &state=stretched at 130% text under a 24 px clock bar: every tab, Your day, a customer, an order, a chat
  *                   (flows-fit.cjs: the tab labels, nothing under the bar, no words off the screen)
  *
@@ -34,6 +35,7 @@ const M = require('./flows-money.cjs');
 const T = require('./flows-talk.cjs');
 const X = require('./flows-wrong.cjs');
 const F = require('./flows-fit.cjs');
+const Z = require('./flows-resume.cjs');
 
 const FLOWS = {
   sell: S.sell,
@@ -48,6 +50,7 @@ const FLOWS = {
   'wrong-return': X.wrongReturn,
   'wrong-pay': X.wrongPay,
   fit: F.fit,
+  resume: Z.resume,
 };
 const PARALLEL = 4;
 

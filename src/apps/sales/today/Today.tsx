@@ -25,7 +25,7 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, flush, kept, now, online } from '../shell/store.ts';
-import { custOf, doneWeek, faceOf, mine, needs, owing, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
+import { custOf, doneWeek, faceOf, mine, needs, owing, readyToCollect, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
 import { First } from './First.tsx';
 import { go } from './go.ts';
 import { useLocal } from './local.ts';
@@ -116,10 +116,14 @@ export function Today(): JSX.Element {
           </Tap>
         )}
         <SectionHead title="On the move" meta={`${live.length} live · ${off ? 'saved ' + clock(b.at) : doneWeek(b, n).length + ' done'}`} after={!!passed} />
-          <StageTiles tiles={ts.map((t) => ({
-            stage: t.stage, count: t.orders.length, faces: t.faces, more: t.more, mark: calm ? undefined : t.mark, need: calm ? undefined : t.need, on: () => go('orders', { stage: t.stage }),
-            label: `${t.orders.length} ${STAGE_LABEL[t.stage as keyof typeof STAGE_LABEL]}${t.need && t.mark === 'money' ? `, ${t.need} needs you` : t.mark === 'late' ? `, ${t.need || 1} late` : t.mark === 'ready' ? ', 1 ready to collect' : ''}`,
-          }))}>
+          <StageTiles tiles={ts.map((t) => {
+            // The label says the mark that is drawn, and only it: a calm day draws none, so none is spoken (TD07).
+            const mark = calm ? undefined : t.mark, need = calm ? undefined : t.need;
+            return {
+              stage: t.stage, count: t.orders.length, faces: t.faces, more: t.more, mark, need, on: () => go('orders', { stage: t.stage }),
+              label: `${t.orders.length} ${STAGE_LABEL[t.stage as keyof typeof STAGE_LABEL]}${need && mark === 'money' ? `, ${need} needs you` : mark === 'late' ? `, ${need || 1} late` : mark === 'ready' ? `, ${t.orders.filter(readyToCollect).length} ready to collect` : ''}`,
+            };
+          })}>
             {!off && held && heldOwing ? (
               <MiniRow face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`${orderNo(held.id)} · Not paid yet`} subMono
                 pill={<ActionPill tone="warn" word="Take" amount={short(takeHeld(heldOwing))} />} on={() => go('customers/pay', takeOf(heldOwing, false))} />

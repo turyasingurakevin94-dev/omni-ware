@@ -44,6 +44,11 @@ export function counted(n: number, word: string): string {
   return `${n} ${plural(n, word)}`;
 }
 
+/** "Lubowa Builders" → "Lubowa Builders’", "Kato Construction" → "Kato Construction’s" (a control's name: "Open Lubowa Builders’ chat"). */
+export function possessive(name: string): string {
+  return /s$/i.test(name.trim()) ? `${name.trim()}’` : `${name.trim()}’s`;
+}
+
 /** The word for n of them, when the number is drawn apart ("<b>1</b> chat", "<b>3</b> chats"). */
 export function plural(n: number, word: string): string {
   return n === 1 ? word : `${word}s`;
@@ -57,6 +62,14 @@ export function shutFor(days: number): string {
 /** A name as a control's label says it: "&" spoken as "and" ("Kyaligonza and Sons. Change customer", SL01, CU01). */
 export function sayName(name: string): string {
   return name.replace(/\s*&\s*/g, ' and ');
+}
+
+/**
+ * An item's name as a control's label says it: inches are the word "inch", never the mark, which cuts a
+ * label short ("Add Wire nails 4 inch · 25kg ctn", "Add PVC pipe ½ inch · 6m"; SL04, SL05, KC01).
+ */
+export function sayItem(name: string): string {
+  return name.replace(/\s*(″|")/g, ' inch');
 }
 
 /** "INV-0552" (sales.html:4600 invoiceLabel). */

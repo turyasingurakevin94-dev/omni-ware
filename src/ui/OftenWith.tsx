@@ -15,6 +15,7 @@ import { ItemSquare } from './ItemSquare.tsx';
 import { fig, PRICE_COMING } from './Money.tsx';
 import type { Fig } from './util.tsx';
 import './oftenwith.css';
+import { sayItem } from '../core/names.ts';
 
 export function OftenWithHead(p: { item: string; whose: string }): JSX.Element {
   return (
@@ -49,7 +50,7 @@ export function OftenWith(p: OftenWithProps): JSX.Element {
       {p.price == null
         ? <span class="ow-often-p"><small>{PRICE_COMING}</small></span>
         : <span class="ow-often-p"><b class="mono">{fig(p.price)}</b><small>per {p.unit}</small></span>}
-      <button type="button" class="ow-often-add" aria-label={`Add ${p.name}`} onClick={p.onAdd}><Icon name="plus" size={16} stroke={2.6} /></button>
+      <button type="button" class="ow-often-add" aria-label={`Add ${sayItem(p.name)}`} onClick={p.onAdd}><Icon name="plus" size={16} stroke={2.6} /></button>
     </div>
   );
 }

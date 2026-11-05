@@ -64,6 +64,16 @@ async function sell(open) {
     const o = await text();
     check(/Cement · Hima 50kg/.test(o) && /Wire nails 4"/.test(o), 'sell: #0558 opens with both lines', o);
   }
+  // SL21: an order whose only line has no price yet totals "Price coming", never 0.
+  const h = await open('');
+  await h.tap({ sel: 'a.ow-plus' });
+  await h.type('Kato', 'Customer name, phone or place');
+  await h.tap('New order for Kato');
+  await h.type('hinge', 'Add an item: type its name');
+  await h.p.keyboard.press('Enter');
+  await h.tap('Add · price coming');
+  const tot = (await h.p.locator('.ow-dock-total').innerText()).trim();
+  h.check(tot === 'Price coming', 'SL21: the hinge alone totals "Price coming", never 0', tot);
   return ph;
 }
 
@@ -93,6 +103,13 @@ async function counterCash(open) {
   s = await text();
   check(/Receipt/.test(s) && /Counter sale · #0558/.test(s), 'counter: the receipt is #0558', s);
   check(/Total\s*UGX 52,000/.test(s) && /Cash given\s*60,000/.test(s) && /Change\s*8,000/.test(s), 'counter: the receipt says Total 52,000, Cash given 60,000, Change 8,000', s);
+  // KC26: the counter's search finds an item the shop lists with no price yet: Price coming, and it goes as an order.
+  const g = await open('');
+  await g.tap({ sel: 'a.ow-plus' });
+  await g.tap('Counter sale');
+  await g.type('gutter bracket', 'Add an item: type its name');
+  const gs = await g.text();
+  g.check(/Gutter bracket/.test(gs) && /Price coming/.test(gs) && !/doesn.t sell/.test(gs), 'KC26: "gutter bracket" finds the Gutter bracket · Price coming, never "the shop doesn\'t sell"', gs.slice(0, 400));
   return ph;
 }
 

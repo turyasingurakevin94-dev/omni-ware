@@ -9,7 +9,7 @@ import type { JSX } from 'preact';
 import { useRef } from 'preact/hooks';
 import { counted } from '../../../core/names.ts';
 import { Icon } from '../../../ui/icons.tsx';
-import { fig } from '../../../ui/Money.tsx';
+import { fig, orderFig } from '../../../ui/Money.tsx';
 import { ModeSwitch, useDockHeight } from '../../../ui/Dock.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
@@ -48,7 +48,7 @@ export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.
         <ModeSwitch value={x.mode} onChange={(v) => (v === 'delivery' ? openDelivery() : setMode('pickup'))} />
         {empty
           ? <div class="ow-dock-none" aria-label="Nothing yet"><span aria-hidden="true"><i /><i /><i /></span><span class="mono">0</span></div>
-          : <div class="ow-dock-sum"><span class="mono ow-dock-total">{fig(s.total)}</span>{sub && <span class="mono ow-dock-sub amber">{sub}</span>}</div>}
+          : <div class="ow-dock-sum"><span class="mono ow-dock-total">{fig(orderFig(x.lines, s.total))}</span>{sub && <span class="mono ow-dock-sub amber">{sub}</span>}</div>}
       </div>
       <Slide label={empty ? 'Add an item to place' : `Slide to place · ${counted(n, 'item')}`} state={state}
         onCommit={p.onPlace} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />

@@ -9,6 +9,7 @@ import { AISLE, Duo, Icon, aisleKey, phFlame } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
 import type { Item } from '../../../core/types.ts';
+import { sayItem } from '../../../core/names.ts';
 
 /** The other aisles, in the canvas's order (KC01); those the tiles show are left out. */
 const AISLES = ['Paint', 'Doors & locks', 'Roofing', 'Electrical', 'Tools', 'Timber', 'Steel', 'Sanitary', 'Cement', 'Fasteners', 'Plumbing', 'Adhesives'];
@@ -39,7 +40,7 @@ export function Tiles(p: { items: Item[]; onAdd: (it: Item) => void }): JSX.Elem
               <span class="kc-shelf"><span class="mono">{fig(it.onShelf || 0)}</span> on shelf</span>
               <span class="kc-tile-f">
                 {isPriced(it.price) ? <span class="kc-each"><span class="mono">{fig(it.price)}</span><small>{`per ${it.unit}`}</small></span> : <span class="kc-each"><small>{PRICE_COMING}</small></span>}
-                <button type="button" class="kc-plus" aria-label={`Add one ${it.name}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={18} stroke={2.6} /></button>
+                <button type="button" class="kc-plus" aria-label={`Add one ${sayItem(it.name)}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={18} stroke={2.6} /></button>
               </span>
             </span>
           </div>
@@ -64,7 +65,7 @@ function Row(p: { it: Item; onAdd: (it: Item) => void }): JSX.Element {
         <span class="kc-pill"><span class="mono">{fig(it.onShelf || 0)}</span>on shelf</span>
       </span>
       {isPriced(it.price) ? <span class="kc-row-p"><b class="mono">{fig(it.price)}</b><small>{`per ${it.unit}`}</small></span> : <span class="kc-row-p"><small>{PRICE_COMING}</small></span>}
-      <button type="button" class="kc-plus navy" aria-label={`Add one ${it.name}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
+      <button type="button" class="kc-plus navy" aria-label={`Add one ${sayItem(it.name)}`} onClick={() => p.onAdd(it)}><Icon name="plus" size={16} stroke={2.6} /></button>
     </div>
   );
 }

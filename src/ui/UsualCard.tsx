@@ -16,6 +16,7 @@ import { AisleIcon, Duo, phAgain, phCheck, phCheckCircle, phPlus } from './icons
 import { ItemSquare } from './ItemSquare.tsx';
 import { cx } from './util.tsx';
 import './usual.css';
+import { sayItem } from '../core/names.ts';
 
 export interface UsualItem {
   aisle: string;
@@ -78,7 +79,7 @@ export function UsualOne(p: { aisle: string; name: string; sub: string; onAdd: (
     <div class="ow-usual-one">
       <span aria-hidden="true" class="ow-usual-one-sq"><AisleIcon aisle={p.aisle} size={30} color="#FFFFFF" /></span>
       <span class="ow-usual-one-t"><span>{p.name}</span><span class="mono">{p.sub}</span></span>
-      <button type="button" aria-label={`Add ${p.name}`} onClick={p.onAdd}><Duo i={phPlus} size={16} color="#16203C" /></button>
+      <button type="button" aria-label={`Add ${sayItem(p.name)}`} onClick={p.onAdd}><Duo i={phPlus} size={16} color="#16203C" /></button>
     </div>
   );
 }

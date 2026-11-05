@@ -60,10 +60,13 @@ export const elsewhere = signal<Member | null>(null);
 export const me = computed(() => (books.value ? books.value.me : null));
 /** Chats waiting for this salesperson (the Chats tab's count). With no signal it shows none: the copy
  * cannot say who wrote since (TD09: "Chats waiting · back online"). */
-export const waitingCount = computed(() => {
+export const waitingCount = computed(() => waitingNow.value.length);
+const waitingNow = computed(() => {
   const cb = chats.value, m = me.value;
-  return cb && m && online.value ? waitingChats(cb, m.id, now.value).length : 0;
+  return cb && m && online.value ? waitingChats(cb, m.id, now.value) : [];
 });
+/** What the Chats tab's count is, said as its badge means it: "new" when every one is a number nobody took (CH35), else "waiting". */
+export const waitingWord = computed(() => (waitingNow.value.length && waitingNow.value.every((w) => !w.chat.ownerId) ? 'new' : 'waiting'));
 
 let outbox: Outbox | null = null;
 

@@ -9,7 +9,8 @@
  *   fig(1810000)  fig(1900000, true)       the same, as text, for a label
  */
 import type { JSX } from 'preact';
-import { NOT_KNOWN, money, short } from '../core/money.ts';
+import { NOT_KNOWN, linePriced, money, short } from '../core/money.ts';
+import type { Line } from '../core/types.ts';
 import type { Fig } from './util.tsx';
 
 /** A figure as text: a number in full (or short), a string as given. */
@@ -26,6 +27,14 @@ export function fig(v: Fig, isShort?: boolean, sign?: boolean): string {
  */
 export const PRICE_COMING = 'Price coming';
 export const isPriced = (price: number | null | undefined): price is number => price != null;
+
+/**
+ * An order's total as people read it: what its priced lines come to (core/money.ts orderTotal; a line with no
+ * price adds nothing). With no line priced it is "Price coming", never 0 (SL21's dock, SL28's Placed).
+ */
+export function orderFig(lines: Line[], total: number): Fig {
+  return lines.some((l) => l.qty > 0 && l.state !== 'dropped' && linePriced(l)) ? total : PRICE_COMING;
+}
 
 export interface MoneyProps {
   n: Fig;

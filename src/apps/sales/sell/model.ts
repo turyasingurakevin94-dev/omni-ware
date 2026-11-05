@@ -12,6 +12,7 @@
 import { computed, signal } from '@preact/signals';
 import { cashTotal, creditCharge, creditHold, orderTotal, pricesComing } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
+import { followCount } from '../../../core/services.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Charge, Customer, Item, Line } from '../../../core/types.ts';
 import { books, chats, drafts, now, saveDrafts, type Draft } from '../shell/store.ts';
@@ -147,7 +148,11 @@ export function chatOf(customerId: string | null): number | null {
 /* ---------------- lines ---------------- */
 
 function edit(fn: (x: Build) => Build): void {
-  if (cur.value) cur.value = fn(cur.value);
+  const x = cur.value, b = books.value;
+  if (!x) return;
+  const y = fn(x);
+  // A charge at the shop's rate a bag follows the count (SL39, services.ts followCount).
+  cur.value = b && y.lines !== x.lines ? { ...y, charges: followCount(b.settings.services, y.charges, x.lines, y.lines) } : y;
 }
 const nextId = (x: Build) => x.lines.reduce((m, l) => Math.max(m, l.lineId), 0) + 1;
 

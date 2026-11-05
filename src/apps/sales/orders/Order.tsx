@@ -17,7 +17,7 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { custOf, faceOf, headWhen, kept, member, nameOf, orderOf, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName } from './data.ts';
+import { custOf, faceOf, kept, member, nameOf, orderOf, orderWhen, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName } from './data.ts';
 import { go, payFor } from './links.ts';
 import { CheckList, CheckPills } from '../../../ui/CheckList.tsx';
 import { ActBar, type Act } from '../../../ui/ActTiles.tsx';
@@ -58,7 +58,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   return (
     <FullSheet onBack={nav.back} backLabel="Back to Orders" gap={v.returnAsk ? 8 : 10}
       head={(
-        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${headWhen(delivered && o.invoicedAt && t - o.placedAt > 7 * 864e5 ? o.invoicedAt : o.placedAt, t)}`} subMono phone={phone9(phone) ? '+256' + phone9(phone) : undefined} callLabel={`Call ${name}`} onClose={nav.back}>
+        <SheetHead face={faceOf(b, o)} name={name} sub={`${orderNo(o.id)} · ${orderWhen(o, t)}`} subMono phone={phone9(phone) ? '+256' + phone9(phone) : undefined} callLabel={`Call ${name}`} onClose={nav.back}>
           <Track stage={o.stage} word={v.word} ready={v.ready} sub={v.sub} waits={v.waits} times={v.times} skipped={v.skipped} />
         </SheetHead>
       )}>

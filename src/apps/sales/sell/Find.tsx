@@ -24,6 +24,7 @@ import { add, cur, lineFor, openId, query } from './model.ts';
 import { sourcing } from './people.ts';
 import { openPriceComing } from './sheets.tsx';
 import './find.css';
+import { sayItem } from '../../../core/names.ts';
 
 /** The count on the first answer (its stepper). */
 const count = signal<number | null>(null);
@@ -134,7 +135,7 @@ function Nothing(p: { b: Books; c: Customer | null; a: Asked }): JSX.Element {
             <div class="sl-near-r" key={itemKey(it)}>
               <ItemSquare aisle={it.aisle} size={40} />
               <span class="sl-more-t"><span>{it.name}</span><span>{isPriced(it.price) ? <><span class="mono b">{fig(it.price)}</span><span>{`/${it.unit}`}</span></> : <span>{PRICE_COMING}</span>}{(it.onShelf || 0) > 0 && <span class="sl-shelf"><b class="mono">{fig(it.onShelf as number)}</b> on shelf</span>}</span></span>
-              <button type="button" class="sl-near-add" aria-label={`Add ${it.name}`} onClick={() => addAsked(b, it, { ...a, qty: 1, unit: null }, c)}><Icon name="plus" size={16} stroke={2.6} /></button>
+              <button type="button" class="sl-near-add" aria-label={`Add ${sayItem(it.name)}`} onClick={() => addAsked(b, it, { ...a, qty: 1, unit: null }, c)}><Icon name="plus" size={16} stroke={2.6} /></button>
             </div>
           ))}
         </div>

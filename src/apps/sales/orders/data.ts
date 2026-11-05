@@ -84,6 +84,16 @@ export function doneWhen(at: Ms, now: Ms): string {
   return (daysApart(dayOf(at), dayOf(now)) < 7 ? weekday(at) : dayLabel(at)) + ' ' + clock(at);
 }
 /** "today 9:14", "Fri 9:05", "Mon 24 Aug": the order's line under its name. */
+/**
+ * When an order's head says it was: when it was placed ("today 9:14", "Fri 9:05", "Sat 10 Oct"); a bill billed
+ * more than a week ago says the bill's day (OR24 "#0533 · Mon 24 Aug"). Never a bill time of this week beside
+ * an older order: #0540, placed Sat 10 Oct, at the door Fri 12:45, billed Fri 13:00, says "Sat 10 Oct".
+ */
+export function orderWhen(o: Order, now: Ms): string {
+  const oldBill = o.stage === 'delivered' && o.invoicedAt != null && daysApart(dayOf(o.invoicedAt), dayOf(now)) >= 7;
+  return headWhen(oldBill ? (o.invoicedAt as Ms) : o.placedAt, now);
+}
+
 export function headWhen(at: Ms, now: Ms): string {
   if (dayOf(at) === dayOf(now)) return 'today ' + clock(at);
   return daysApart(dayOf(at), dayOf(now)) < 7 ? `${weekday(at)} ${clock(at)}` : dayLabel(at);

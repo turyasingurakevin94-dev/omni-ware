@@ -14,7 +14,7 @@ import { GroupHead } from '../../../ui/SectionHead.tsx';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { money, orderTotal } from '../../../core/money.ts';
 import { owingOf } from '../../../core/owing.ts';
-import { counted, firstWord, orderNo, STAGE_WORD } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, sayItem, STAGE_WORD } from '../../../core/names.ts';
 import { dayLabel, dayOf, howLong, when } from '../../../core/time.ts';
 import type { Books, Chat, ChatBooks, Customer, Item, Message, Ms, Order } from '../../../core/types.ts';
 import { lastMessages, waitingChats } from '../../../core/chats.ts';
@@ -276,7 +276,7 @@ function CustomerFound(p: { b: Books; cb: ChatBooks | null; now: Ms; q: string; 
               if (!it) return null;
               const short = it.name.split(/ ·| G\d|,/)[0];
               return (
-                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: itemsParam(it.id, u.qty) })} label={`Start ${first}'s order with ${short}`} class="td-usual-t">
+                <Tap key={u.itemId} on={() => go('sell/order', { customer: c.id, items: itemsParam(it.id, u.qty) })} label={`Start ${first}'s order with ${sayItem(short)}`} class="td-usual-t">
                   <ItemSquare aisle={it.aisle} size={36} icon={22} />
                   <span><span>{short}</span>{isPriced(it.price) ? <span class="mono">{money(it.price)}</span> : <span>{PRICE_COMING}</span>}</span>
                   <span aria-hidden="true" class="td-usual-plus"><Icon name="plus" size={14} stroke={2.6} /></span>

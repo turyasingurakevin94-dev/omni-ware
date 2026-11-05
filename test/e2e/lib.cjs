@@ -50,24 +50,35 @@ function newRecord(name) {
   return { name, ok: true, failures: [], checks: [], errors: [], wide: [], small: [], screens: 0, ms: 0, notes: [] };
 }
 
-/** The phone app's own fonts (apps/sales packages them from @fontsource), when installed here: CSS for them, else ''. */
+/**
+ * The phone app's own fonts: the files apps/sales ships in the installed app (scripts/build-www.js FACES, from
+ * its @fontsource packages), served from this checkout, never the network. CSS for them, or null when a file is
+ * not installed here (apps/sales: npm ci).
+ */
 function localFonts(base) {
-  const dir = (f) => path.join(ROOT, 'apps/sales/node_modules/@fontsource', f, 'files');
-  if (!fs.existsSync(dir('figtree')) || !fs.existsSync(dir('ibm-plex-mono'))) return '';
-  const face = (family, pkg, w) => `@font-face{font-family:'${family}';font-weight:${w};font-display:block;src:url(${base}/apps/sales/node_modules/@fontsource/${pkg}/files/${pkg}-latin-${w}-normal.woff2) format('woff2')}`;
-  return [400, 500, 600, 700, 800].map((w) => face('Figtree', 'figtree', w)).concat([400, 500, 600].map((w) => face('IBM Plex Mono', 'ibm-plex-mono', w))).join('\n');
+  const { FACES } = require(path.join(ROOT, 'apps/sales/scripts/build-www.js'));
+  const css = [];
+  for (const [family, pkg, stem, weights] of FACES) {
+    for (const w of weights) {
+      const rel = `apps/sales/node_modules/${pkg}/files/${stem}-latin-${w}-normal.woff2`;
+      if (!fs.existsSync(path.join(ROOT, rel))) return null;
+      css.push(`@font-face{font-family:'${family}';font-weight:${w};font-display:block;src:url(${base}/${rel}) format('woff2')}`);
+    }
+  }
+  return css.join('\n');
 }
 
 /**
  * A fresh phone on next/sales.html?demo<flags>, at Today. Returns the flow's toolkit.
  *   opts.init   [fn, arg] run in the page before it loads (page.addInitScript), e.g. the phone's large text
- *   opts.fonts  the phone app's own fonts (measuring room needs the real letters), when installed
+ *   opts.fonts  the phone app's own fonts (measuring room needs the real letters): the files apps/sales ships
  */
 async function phone(browser, base, rec, flags = '', opts = {}) {
+  const fonts = opts.fonts ? localFonts(base) : '';
+  // Room measured with other letters is no measure: say why once, rather than a list of false overflows.
+  if (fonts === null) throw new Error('the phone app\'s own fonts are not installed in this checkout: run `npm ci` in apps/sales (the fit flow measures with them, never the network)');
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: true, serviceWorkers: 'block' });
   if (opts.init) await ctx.addInitScript(opts.init[0], opts.init[1]);
-  const fonts = opts.fonts ? localFonts(base) : '';
-  if (opts.fonts && !fonts) rec.notes.push('the phone app\'s fonts are not installed here (apps/sales: npm ci); measured with the fallback fonts');
   await ctx.route((u) => !u.href.startsWith(base), (r) => {
     const u = r.request().url();
     if (/fonts\.googleapis\.com/.test(u)) return r.fulfill({ status: 200, contentType: 'text/css', body: fonts });

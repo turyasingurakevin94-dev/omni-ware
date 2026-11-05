@@ -32,7 +32,7 @@ const ROOT = path.join(APP, '..', '..');
 const PAGES = path.join(ROOT, 'next');
 const NM = path.join(APP, 'node_modules');
 
-// The weights the page asks Google Fonts for (tools/build-app.js FONTS).
+// The weights the page asks Google Fonts for (tools/build-app.js FONTS). The e2e measures with these same files (test/e2e/lib.cjs).
 const FACES = [
   ['Figtree', '@fontsource/figtree', 'figtree', [400, 500, 600, 700, 800]],
   ['IBM Plex Mono', '@fontsource/ibm-plex-mono', 'ibm-plex-mono', [400, 500, 600]],
@@ -100,7 +100,7 @@ function buildWww(out = path.join(APP, 'www')) {
   return { out, files, source, build };
 }
 
-module.exports = { buildWww, PAGES };
+module.exports = { buildWww, PAGES, FACES };
 
 if (require.main === module) {
   const r = buildWww();

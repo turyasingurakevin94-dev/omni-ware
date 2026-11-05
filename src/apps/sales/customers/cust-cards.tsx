@@ -91,7 +91,8 @@ export function Rhythm(p: { every: number; gone: number; late: number; pill: str
 }
 
 /** CU13 · who is on it: Esther checking (since when), and their chat while it waits. */
-export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: string; ago: string; text: string; on: () => void } | null; onEsther: (() => void) | null }): JSX.Element {
+/** chat.who: how the card says it ("Lubowa asked"); chat.whole: the customer's whole name, for Reply's name (CU13). */
+export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: string; whole: string; ago: string; text: string; on: () => void } | null; onEsther: (() => void) | null }): JSX.Element {
   const t = TINTS[p.checker.tint], name = p.checker.name.split(/\s+/)[0];
   return (
     <div class="cu-asks">
@@ -104,7 +105,7 @@ export function AsksCard(p: { checker: Member; askedAt: string; chat: { who: str
         <div class="cu-ask">
           <span aria-hidden="true" class="cu-ask-sq"><Duo i={phWhatsapp} size={20} /></span>
           <span class="cu-ask-t"><span>{`${p.chat.who} asked `}<span>{`· ${p.chat.ago}`}</span></span><span class="q">{`“${p.chat.text}”`}</span></span>
-          <button type="button" class="cu-ask-b" aria-label={`Reply to ${p.chat.who}`} onClick={p.chat.on}><Icon name="send" size={18} stroke={2} /></button>
+          <button type="button" class="cu-ask-b" aria-label={`Reply to ${p.chat.whole}`} onClick={p.chat.on}><Icon name="send" size={18} stroke={2} /></button>
         </div>
       )}
     </div>

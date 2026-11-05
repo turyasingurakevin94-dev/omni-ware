@@ -158,7 +158,7 @@ function MoneyBody(p: { b: Books; now: number }): JSX.Element {
         {ps.map((x) => {
           const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) : null, m = METHOD[x.method];
           return (
-            <button type="button" key={x.id} class="td-day-row" onClick={() => go('customers/paid', { id: x.id })}>
+            <button type="button" key={x.id} class="td-day-row" onClick={() => go('customers/paid', { payment: x.id })}>
               <span class="mono td-day-at">{clock(x.at)}</span>
               <Avatar {...(c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' as const })} size={32} />
               <span class="td-day-t2"><span>{c ? c.name : 'Walk-in order'}</span>

@@ -34,6 +34,8 @@ export interface TabBarProps<T extends string = BarTab> {
   active: T | null;
   /** Chats waiting for a reply (the crimson count on Chats). */
   waiting: number;
+  /** What the count is, as its label says it: "waiting" (the default), or "new" when all are numbers nobody took (CH35). */
+  waitingWord?: string;
   /** Orders not placed yet (the navy count on the +). */
   notPlaced: number;
   onTab: (tab: T) => void;
@@ -52,7 +54,7 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   const tab = (t: BarItem<T>) => {
     const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
-      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} waiting` : undefined}
+      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : undefined}
         onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
         <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} /><span class="ow-tab-w">{t.word}</span>
         {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}

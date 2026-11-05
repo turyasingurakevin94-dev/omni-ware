@@ -9,7 +9,7 @@ import { TabBar } from '../../../ui/TabBar.tsx';
 import { ToastHost } from '../../../ui/toast.tsx';
 import { Login, SignedElsewhere } from './Gate.tsx';
 import { barTab, nav, screen, showTabBar, top } from './nav.ts';
-import { drafts, phase, waitingCount } from './store.ts';
+import { drafts, phase, waitingCount, waitingWord } from './store.ts';
 
 export function App(): JSX.Element {
   if (phase.value === 'starting') return <main class="ow-frame" aria-busy="true" />;
@@ -21,7 +21,7 @@ export function App(): JSX.Element {
     <div class={'ow-frame' + (bar ? ' with-bar' : '')}>
       {View ? <View key={t.key} params={t.params} /> : <main class="ow-missing">No screen “{t.id}”</main>}
       {bar && (
-        <TabBar active={barTab.value} waiting={waitingCount.value} notPlaced={drafts.value.length}
+        <TabBar active={barTab.value} waiting={waitingCount.value} waitingWord={waitingWord.value} notPlaced={drafts.value.length}
           onTab={(x) => nav.tab(x)} onPlus={() => nav.push('sell')} />
       )}
       <SheetHost />

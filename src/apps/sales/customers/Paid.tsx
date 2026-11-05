@@ -10,23 +10,28 @@ import { toast } from '../../../ui/toast.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { money } from '../../../core/money.ts';
-import { orderNo, TINTS } from '../../../core/names.ts';
+import { TINTS } from '../../../core/names.ts';
 import { clock, dayOf } from '../../../core/time.ts';
 import type { Tint } from '../../../core/types.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
-import { owingOf } from '../../../core/owing.ts';
+import { billNo, owingOf } from '../../../core/owing.ts';
 import { short } from './data.ts';
 import { dm } from './pay-parts.tsx';
-import { paidResults, receiptText, sendReceipt, throwAway, type Paid } from './paid-store.ts';
+import { bookKey, paidFromBooks } from './paid-books.ts';
+import { paidResults, putPaid, receiptText, sendReceipt, throwAway, type Paid } from './paid-store.ts';
 import './paid.css';
 
 const HOW = { cash: 'Cash', momo: 'Mobile', bank: 'Bank' } as const;
 const refShort = (r: string) => (r.length > 10 ? `${r.slice(0, 4)}…${r.slice(-4)}` : r);
 
 export function PaidScreen(p: ScreenProps): JSX.Element {
-  const r = paidResults.value[String(p.params.id)];
+  // { payment }: one already in the books (TD17's rows), rebuilt from them; { id }: the one just taken.
+  const pay = p.params.payment != null ? Number(p.params.payment) : null, b = books.value;
+  const key = pay != null ? bookKey(pay) : String(p.params.id);
+  if (pay != null && b && !paidResults.peek()[key]) { const r0 = paidFromBooks(b, pay, now.peek()); if (r0) putPaid(r0); }
+  const r = paidResults.value[key];
   if (!r) return <main class="cu-paid"><EndOfFlow on={nav.home} /></main>;
   return <PaidView p={r} />;
 }
@@ -67,7 +72,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
   };
   return (
     <main class={refused || p.discarded ? 'cu-paid stay' : 'cu-paid'}>
-      <div class="cu-paid-x"><button type="button" aria-label="Close" onClick={nav.home}><Icon name="close" size={16} stroke={2.2} /></button></div>
+      <div class="cu-paid-x"><button type="button" aria-label="Close" onClick={p.fromBooks ? nav.back : nav.home}><Icon name="close" size={16} stroke={2.2} /></button></div>
       <div class="cu-paid-top">
         <span aria-hidden="true" class={refused ? 'cu-paid-tick refused' : p.discarded ? 'cu-paid-tick gone' : p.kept ? 'cu-paid-tick kept' : 'cu-paid-tick'}>
           <Icon name={refused ? 'warning' : p.kept ? 'clock' : p.discarded ? 'close' : 'check'} size={refused ? 32 : p.discarded ? 30 : 34} stroke={p.kept ? 2.4 : p.discarded ? 2.6 : 2.8} /></span>
@@ -88,7 +93,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
           <div class="cu-slip-h"><span>{(b ? b.shop.name : '').toUpperCase()}</span><span class="mono">{stamp}</span></div>
           {p.lines.map((l) => (
             <div key={l.id} class={p.kept || p.discarded ? 'cu-slip-l hollow' : 'cu-slip-l'}><span aria-hidden="true"><Icon name="check" size={11} stroke={3.2} /></span>
-              <span>{`${orderNo(l.id)} `}<span>{dm(l.day)}</span></span><span class="mono">{money(l.amount)}</span></div>
+              <span>{`${billNo(l.id)} `}<span>{dm(l.day)}</span></span><span class="mono">{money(l.amount)}</span></div>
           ))}
           {p.deposit > 0 && (
             <div class="cu-slip-l dep"><span aria-hidden="true" /><span>Deposit <span>next bill uses it</span></span><span class="mono">{money(p.deposit)}</span></div>
@@ -149,7 +154,14 @@ function PaidView(props: { p: Paid }): JSX.Element {
             <button type="button" class="cu-rc-again" onClick={() => { void sendAgain(); }}><Icon name="undo" size={15} stroke={2.2} />Try again on WhatsApp</button>
           </span>
         </div>
-      ) : p.receipt.state !== 'off' && p.receipt.state !== 'waiting' && (
+      ) : p.fromBooks && p.receipt.state === 'off' ? (p.customerId ? (
+        // From the books: the receipt goes when she asks (the old app's "Send the receipt"); a walk-in has no chat to send it to.
+        <div class="cu-rc">
+          <span aria-hidden="true" class="cu-rc-ic"><Icon name="receipt" size={20} stroke={2} /></span>
+          <span class="cu-rc-t"><span>{`Receipt for ${name}`}</span><span>on WhatsApp</span></span>
+          <button type="button" class="cu-rc-again" onClick={() => { void sendAgain(); }}><Icon name="send" size={15} stroke={2.2} />Send the receipt</button>
+        </div>
+      ) : null) : p.receipt.state !== 'off' && p.receipt.state !== 'waiting' && (
         <div class="cu-rc">
           <span aria-hidden="true" class="cu-rc-ic"><Icon name="receipt" size={20} stroke={2} /></span>
           <span class="cu-rc-t"><span>{p.receipt.state === 'sent' ? `Receipt sent to ${name}` : `Sending the receipt to ${name}`}</span>
@@ -158,7 +170,7 @@ function PaidView(props: { p: Paid }): JSX.Element {
         </div>
       )}
       {/* An error never leaves by itself (CU46), and nor does a payment thrown away while the cash is still in hand (CU47). */}
-      <EndOfFlow on={nav.home} ms={refused || p.discarded ? undefined : 8000} />
+      <EndOfFlow on={nav.home} ms={refused || p.discarded || p.fromBooks ? undefined : 8000} />
     </main>
   );
 }

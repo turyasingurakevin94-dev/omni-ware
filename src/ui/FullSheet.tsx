@@ -25,8 +25,11 @@ import './fullsheet.css';
 
 export interface FullSheetProps {
   onBack: () => void;
-  /** The strip's words for a screen reader: "Back to Orders". */
-  backLabel: string;
+  /**
+   * The strip's words for a screen reader: "Back to Orders". null: the strip is only the screen behind, a tap there
+   * still goes back but Close is the control (KC16, as SL01's scrim).
+   */
+  backLabel: string | null;
   head: ComponentChildren;
   /** The body's padding and gap (14px 16px 18px, 10). */
   pad?: string;
@@ -47,7 +50,9 @@ export function FullSheet(p: FullSheetProps): JSX.Element {
   useDragClose(box, p.onBack);
   return (
     <div class={cx('ow-full', p.inline && 'inline')}>
-      <Tap on={p.onBack} label={p.backLabel} class="ow-full-back" />
+      {p.backLabel == null
+        ? <div aria-hidden="true" class="ow-full-back" onClick={p.onBack} />
+        : <Tap on={p.onBack} label={p.backLabel} class="ow-full-back" />}
       <div ref={box} class={cx('ow-full-sheet', p.shadow && 'shadow')} style={p.ground ? { background: p.ground } : undefined}>
         {p.head}
         <div class="ow-full-body" style={{ padding: p.pad, gap: p.gap != null ? `${p.gap}px` : undefined }}>{p.children}</div>

@@ -127,6 +127,9 @@ async function chats(open) {
   check(/Mama Shine wants to buy/.test(s) && /Iron sheet G28 · 3m/.test(s), 'CH14: the chat reads "wants to buy" Iron sheet G28 · 3m', s);
   await tap({ text: 'Take' });
   await tap('Start order', 800);
+  // A number nobody saved: "Who is it for?" first (SL01), the number carried; Grace picks a walk-in here.
+  check(/Who is it for\?/.test(await ph.all()), 'CH14: Start order asks who it is for', (await ph.all()).slice(0, 200));
+  await tap({ sel: '.sl-who-tile:has-text("Walk-in order")' }, 800);
   const lines = (await ph.p.locator('a.sl-line').allInnerTexts()).map((x) => x.replace(/\s+/g, ' '));
   check(lines.length === 1, 'CH14: the order has exactly one line', lines.join(' / '));
   check(lines.filter((x) => x.includes('Iron sheet G28 · 3m')).length === 1 && /1 pc × 38,000/.test(lines[0] || ''), 'CH14: the line is Iron sheet G28 · 3m, 1 pc × 38,000, once', lines.join(' / '));
@@ -170,6 +173,11 @@ async function give(open) {
   check(/Kato is Brian’s now/.test(await ph.all()), 'give: "Kato is Brian’s now" shows');
   await tap('Back to Chats');
   check(/Mine\s*5/.test(await text()), 'give: Mine drops to 5', (await text()).slice(0, 600));
+  // CH35: Ruth's tab says what its badge counts (the new number nobody took), and each team row is named.
+  const ru = await open('&as=ruth');
+  await ru.tab('chats');
+  ru.check(await ru.p.locator('nav a[aria-label="Chats, 1 new"]').count() === 1, 'CH35: Ruth\'s Chats tab is "Chats, 1 new"');
+  ru.check(await ru.p.locator('[aria-label="Open Lubowa Builders’ chat"]').count() === 1, 'CH35: Lubowa\'s row is "Open Lubowa Builders’ chat"');
   return ph;
 }
 
