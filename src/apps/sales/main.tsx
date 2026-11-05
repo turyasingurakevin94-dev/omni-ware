@@ -7,6 +7,7 @@ import { render } from 'preact';
 import '../../ui/tokens.css';
 import './app.css';
 import { App } from './shell/App.tsx';
+import { inPhoneApp, startNative } from './shell/native.ts';
 import { listenForPushes } from './shell/open-push.ts';
 import { start } from './shell/store.ts';
 import { preloadTabs } from './shell/tabs.ts';
@@ -19,13 +20,16 @@ if (parts) {
   document.head.appendChild(el);
 } else {
   render(<App />, document.getElementById('app') as HTMLElement);
+  // Inside the phone app: Back, the bars and the live update (shell/native.ts). Nothing in a browser.
+  startNative();
   void start();
   // A tapped push opens its page at once, from the phone's copy (shell/open-push.ts).
   listenForPushes();
   // The other tabs' files, quietly after the first paint, so they are here before the signal goes
   // (shell/tabs.ts); the service worker keeps them on the phone for the next open.
   requestAnimationFrame(() => setTimeout(() => { void preloadTabs(); }, 0));
-  if (!/[?&]demo(&|=|$)/.test(location.search) && 'serviceWorker' in navigator) {
+  // The web keeps itself on the phone with the service worker; the phone app with its live update.
+  if (!/[?&]demo(&|=|$)/.test(location.search) && !inPhoneApp() && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register(location.pathname.replace(/[^/]*$/, '') + 'sales-sw.js').catch(() => undefined);
   }
 }
