@@ -9,15 +9,15 @@ Status: **screens decided** (the approved canvas). **Questions open** (§3): unt
 ## 1. The screens are the canvas
 
 The approved canvas is "Sales — in the agent app's language" (https://claude.ai/artifact/SwqWmXv4c2KbB1zgErYsWQ). Its source is in [`docs/canvas/sales-agent/`](../canvas/sales-agent/README.md).
-- It has 199 boards: 197 phone screens at 360 × 800, plus the two parts boards.
+- It has 200 boards: 198 phone screens at 360 × 800, plus the two parts boards.
   - 147 screens were drawn first. Every one scored at least 8.5 out of 10 on fidelity, show-don't-tell, fewest steps, polish and Sales rules, in an independent audit on 29 Oct 2026 (`review/`).
-  - 50 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
+  - 51 were drawn while the app was built, for states the first 147 did not draw (a search that finds nothing, a kept payment, a voided order…). Each tab's critic scored them on the same five axes, every axis at least 8.5, before they were built (`review/new-<tab>.json`).
 
 | Tab | Prefix | Boards | Main flows (taps before → after) |
 |---|---|---|---|
 | Today | TD | 27 | 32 → 21 |
 | Chats | CH | 29 | 36 → 26 |
-| Sell (the red +) | SL | 40 | 91 → 40 |
+| Sell (the red +) | SL | 41 | 91 → 40 |
 | Counter | KC | 29 | 66 → 51 |
 | Orders | OR | 36 | 51 → 46 |
 | Customers | CU | 36 | 39 → 31 |
