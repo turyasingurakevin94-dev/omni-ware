@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord } from '../../../core/names.ts';
 import type { Member } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Meter } from '../../../ui/Bar.tsx';
@@ -76,8 +76,8 @@ export function GiveSheet(p: { chatId: number; onDone?: () => void }): JSX.Eleme
       <div class="ch-gv-people">
         {people.map((m) => {
           const n = ownedBy(cb, m.id).length, w = waiting(m.id), self = m.id === me.id && !move, away = m.presence !== 'on';
-          const line = m.role === 'manager' && m.id !== me.id ? `Manager · ${away ? 'away' : 'on now'} · ${n ? `${n} chats` : 'no chats'}`
-            : `${self ? 'You · ' : ''}${n} chats · ${w ? `${w} waiting` : 'none waiting'}${away ? ' · away' : ''}`;
+          const line = m.role === 'manager' && m.id !== me.id ? `Manager · ${away ? 'away' : 'on now'} · ${n ? `${counted(n, 'chat')}` : 'no chats'}`
+            : `${self ? 'You · ' : ''}${counted(n, 'chat')} · ${w ? `${w} waiting` : 'none waiting'}${away ? ' · away' : ''}`;
           const on = pick === m.id;
           return (
             <label key={m.id} class="ch-gv-p">

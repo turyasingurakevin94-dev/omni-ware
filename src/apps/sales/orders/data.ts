@@ -9,7 +9,7 @@
 import { owingOf, takeWithHeld } from '../../../core/owing.ts';
 import { daysInStage, LATE_DAYS, lineWaits, twinOf } from '../../../core/orders.ts';
 import { orderOwes, orderTotal, paidOver } from '../../../core/money.ts';
-import { firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, initials, isGenericName, orderNo } from '../../../core/names.ts';
 import { addDays, clock, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import type { RowStatus as UiStatus } from '../../../ui/StageGroup.tsx';
 import type { BillAsk, Books, Customer, Line, Member, Method, Ms, Order, Payment, PaymentAsk, Role, Stage, Tint } from '../../../core/types.ts';
@@ -122,7 +122,7 @@ export function rowStatus(b: Books, o: Order, now: Ms): RowStatus {
   }
   if (o.stage === 'buying') {
     const gone = dropped(o).length;
-    if (gone) return { text: `${gone} not found`, tone: 'bad', chip: { text: `${Math.floor((now - o.placedAt) / 864e5)} days`, tone: 'warn' }, act: 'tell' };
+    if (gone) return { text: `${gone} not found`, tone: 'bad', chip: { text: `${counted(Math.floor((now - o.placedAt) / 864e5), 'day')}`, tone: 'warn' }, act: 'tell' };
     const came = o.lines.filter((l) => l.state === 'came').length;
     return { text: `${came} of ${o.lines.length} came`, tone: 'good', bar: { done: came, of: o.lines.length } };
   }

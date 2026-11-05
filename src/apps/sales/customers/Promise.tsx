@@ -10,7 +10,7 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { isDataError } from '../../../core/datasource.ts';
 import { money } from '../../../core/money.ts';
-import { TINTS } from '../../../core/names.ts';
+import { counted, TINTS } from '../../../core/names.ts';
 import { addDays, dayLabel, dayOf, daysApart, weekday } from '../../../core/time.ts';
 import { act, books, now } from '../shell/store.ts';
 import { role } from './Customer.tsx';
@@ -68,7 +68,7 @@ function PromiseSheet(p: { customerId: string }): JSX.Element {
         </div>
       </div>
       <div class="cu-pr-when">
-        <span class="cu-pr-when-h"><span>By when</span><b>{`${dayLabel(on)} · ${days === 0 ? 'today' : `in ${days} day${days > 1 ? 's' : ''}`}`}</b></span>
+        <span class="cu-pr-when-h"><span>By when</span><b>{`${dayLabel(on)} · ${days === 0 ? 'today' : `in ${counted(days, 'day')}`}`}</b></span>
         <div role="radiogroup" aria-label="By when" class="cu-pr-days">
           {week.map((d) => {
             const dd = new Date(d + 'T00:00:00Z');

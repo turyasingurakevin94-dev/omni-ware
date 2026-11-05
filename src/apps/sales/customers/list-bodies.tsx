@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { Shim, Loading } from '../../../ui/Skeleton.tsx';
 import { money, short as shortMoney } from '../../../core/money.ts';
-import { orderNo, TINTS } from '../../../core/names.ts';
+import { counted, orderNo, TINTS } from '../../../core/names.ts';
 import { weekday } from '../../../core/time.ts';
 import type { Books, Customer, Day } from '../../../core/types.ts';
 import { dueSub, oweSub, waitingNote, type ListData, type Who } from './list-data.ts';
@@ -49,7 +49,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
           <div class="cu-grp"><Group hatch title="Being checked" count={d.checked.length} sum={shortMoney(d.checkedAll)} word="Esther" />
             <Card>{d.checked.map((w) => {
               const bill = w.m.bills.find((x) => x.checked);
-              const sub = w.m.apart > 0 ? `${w.m.bills.length} bills · ${shortMoney(w.m.apart)} apart · owes ${money(w.m.owes)}` : bill ? `${billNo(bill.id)} · ${shortMoney(bill.left)} · Esther` : '';
+              const sub = w.m.apart > 0 ? `${counted(w.m.bills.length, 'bill')} · ${shortMoney(w.m.apart)} apart · owes ${money(w.m.owes)}` : bill ? `${billNo(bill.id)} · ${shortMoney(bill.left)} · Esther` : '';
               return <CustomerRow key={w.c.id} {...face(w)} name={w.c.name} sub={sub} subTone="info" act="chev" on={() => a.open(w.c)} />;
             })}</Card></div>
         )}
@@ -68,7 +68,7 @@ export function OweBody(p: { b: Books; d: ListData; today: Day; a: Acts; more: b
         {d.owe.length > 0 && (
           <div class="cu-end">
             <span aria-hidden="true"><Icon name="check" size={15} stroke={3} /></span>
-            <span><span>{`That’s all ${d.owe.length} who owe`}</span><span>{`${d.all.length - d.owe.length} more customers owe nothing`}</span></span>
+            <span><span>{`That’s all ${d.owe.length} who owe`}</span>{d.all.length > d.owe.length && <span>{`${counted(d.all.length - d.owe.length, 'more customer')} ${d.all.length - d.owe.length === 1 ? 'owes' : 'owe'} nothing`}</span>}</span>
             <b class="mono">{money(d.owes)}</b>
           </div>
         )}
@@ -197,7 +197,7 @@ function QuietRow(p: CustomerRowProps & { every: number; now: number; scale: num
   return (
     <div class="cu-qrow">
       <CustomerRow {...p} />
-      <span role="img" aria-label={`Usually orders every ${p.every} days; now ${p.now} days without an order`} class="cu-gap">
+      <span role="img" aria-label={`Usually orders every ${counted(p.every, 'day')}; now ${counted(p.now, 'day')} without an order`} class="cu-gap">
         <span>Usually</span><span aria-hidden="true"><i class="good" style={{ width: w(p.every) }} /></span><span class="good">{`${p.every} d`}</span>
         <span>Now</span><span aria-hidden="true"><i class="warn" style={{ width: w(p.now) }} /></span><span class="warn">{`${p.now} d`}</span>
       </span>

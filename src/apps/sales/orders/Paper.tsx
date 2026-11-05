@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { lineTotal, orderOwes, orderTotal } from '../../../core/money.ts';
-import { firstWord, orderNo, phone9, phoneText } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, phone9, phoneText, shutFor } from '../../../core/names.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { clock, dayLabel, dayOf, replyWindow } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
@@ -50,7 +50,7 @@ export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null }
     under = { tone: 'bad', key: `${by} voided it`, rest: t ? ` ${dayOf(t) === dayOf(now.value) ? 'today' : dayLabel(t)} ` : '', at: t ? clock(t) : undefined, after: tw && tw.orig.id !== o.id ? ` · the copy of ${orderNo(tw.orig.id)}` : '' };
   } else if (stands) {
     const fr = freshPrice(o), n = unpriced;
-    under = { tone: 'info', key: 'As it stands', rest: !n && fr && fr.priceReview ? ` · ${rn} set ${f(fr.priceReview.price)} · not told yet` : ` · ${rn} decides ${n || 1} price${n > 1 ? 's' : ''}` };
+    under = { tone: 'info', key: 'As it stands', rest: !n && fr && fr.priceReview ? ` · ${rn} set ${f(fr.priceReview.price)} · not told yet` : ` · ${rn} decides ${counted(n || 1, 'price')}` };
   } else {
     const l = o.lines.filter((x) => x.priceReview && x.state !== 'dropped').sort((x, y) => (y.priceReview?.at || 0) - (x.priceReview?.at || 0))[0], r = l && l.priceReview;
     if (l && r) under = { tone: 'ink', key: 'Prices final', rest: ` · ${firstWord(member(b, r.by)?.name || rn)} ${r.price === l.shopPrice ? 'kept' : 'set'} ${f(r.price)} at `, at: clock(r.at) };
@@ -129,10 +129,10 @@ function PaperBody(p: { b: Books; o: Order }): JSX.Element {
         )}
       </div>
       {chat ? (
-        <div role="group" aria-label={`It goes to ${nameOf(b, o)}${known ? `, ${known}` : ''}: ${win && win.open ? 'on WhatsApp' : `the chat is shut ${win ? win.daysShut : 0} days, so share the picture`}`} class="or-pp-to">
+        <div role="group" aria-label={`It goes to ${nameOf(b, o)}${known ? `, ${known}` : ''}: ${win && win.open ? 'on WhatsApp' : `the chat is shut ${shutFor(win ? win.daysShut : 0)}, so share the picture`}`} class="or-pp-to">
           <Avatar {...face} size={32} font={12} />
           <span class="or-pp-to-t"><span>{nameOf(b, o)}</span>
-            <span class="mono">{known}{win && !win.open && <>{' · '}<span class="or-pp-shut"><Icon name="lock" size={13} stroke={2.4} />{'chat shut · '}<span class="mono">{`${win.daysShut} days`}</span></span></>}</span></span>
+            <span class="mono">{known}{win && !win.open && <>{' · '}<span class="or-pp-shut"><Icon name="lock" size={13} stroke={2.4} />{'chat shut · '}<span class="mono">{shutFor(win.daysShut)}</span></span></>}</span></span>
           {win && win.open && <span class="or-pp-chat">their chat</span>}
         </div>
       ) : (

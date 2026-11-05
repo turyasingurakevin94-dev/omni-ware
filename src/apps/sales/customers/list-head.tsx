@@ -16,13 +16,20 @@ import { money } from '../../../core/money.ts';
 import { cx } from '../../../ui/util.tsx';
 import { ClearButton } from '../../../ui/Search.tsx';
 
-export interface OwedBar { take: number; under: number; checkedIn: number; checkedAll: number; owes: number }
+/** hold: the shop's hold in days (settings.holdDays, 21). */
+export interface OwedBar { take: number; under: number; checkedIn: number; checkedAll: number; owes: number; hold: number }
 
+/** The owed bar and its key; a part that is 0 has no key (never "Take 0"). */
 function bar(o: OwedBar) {
+  const legend = [
+    o.take > 0 && { dot: '#F5B26B', text: 'Take ', b: money(o.take) },
+    o.under > 0 && { dot: 'rgba(255,255,255,.5)', text: `Under ${o.hold} days` },
+    o.checkedIn > 0 && { dot: '#9DB7E0', text: 'Being checked' },
+  ].filter(Boolean) as { dot: string; text: string; b?: string }[];
   return {
     parts: [{ value: o.take, color: '#F5B26B' }, { value: o.under, color: 'rgba(255,255,255,.28)' }, { value: o.checkedIn, color: 'hatch' }],
-    legend: [{ dot: '#F5B26B', text: 'Take ', b: money(o.take) }, { dot: 'rgba(255,255,255,.5)', text: 'Under 21 days' }, { dot: '#9DB7E0', text: 'Being checked' }],
-    label: `${money(o.owes)} owed: ${money(o.take)} past the 21-day hold, ${money(o.under)} under 21 days, ${money(o.checkedIn)} being checked; ${money(o.checkedAll)} being checked in all`,
+    legend,
+    label: `${money(o.owes)} owed: ${money(o.take)} past the ${o.hold}-day hold, ${money(o.under)} under ${o.hold} days, ${money(o.checkedIn)} being checked; ${money(o.checkedAll)} being checked in all`,
   };
 }
 

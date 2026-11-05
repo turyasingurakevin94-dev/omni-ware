@@ -7,7 +7,7 @@ import { fig } from '../../../ui/Money.tsx';
 import { Duo, Icon, phWhatsapp, STAGE_ICON } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { orderTotal, short as shortMoney } from '../../../core/money.ts';
-import { orderNo, STAGE_WORD, TINTS } from '../../../core/names.ts';
+import { counted, orderNo, STAGE_WORD, TINTS } from '../../../core/names.ts';
 import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Member, Order } from '../../../core/types.ts';
 import { billNo, type OpenBill } from '../../../core/owing.ts';
@@ -20,7 +20,7 @@ export function BillRow(p: { b: OpenBill; onTake: () => void; onChecked?: () => 
   const inner = (
     <>
       <span class="cu-bill-d"><span class="mono">{d.getUTCDate()}</span><span>{MONTHS[d.getUTCMonth()]}</span></span>
-      <span class="cu-bill-t"><span class="mono">{fig(b.left)}</span><span class={cx(p.sub && 'info')}>{p.sub || `${billNo(b.id)} · ${b.age} days`}</span></span>
+      <span class="cu-bill-t"><span class="mono">{fig(b.left)}</span><span class={cx(p.sub && 'info')}>{p.sub || `${billNo(b.id)} · ${counted(b.age, 'day')}`}</span></span>
       {b.checked
         ? <span class="cu-bill-act info"><Icon name="clock" size={14} stroke={2.2} />Being checked</span>
         : <span class="cu-bill-act"><Icon name="cash" size={14} stroke={2.2} />{`Take ${shortMoney(b.left)}`}</span>}
@@ -78,7 +78,7 @@ export function Rhythm(p: { every: number; gone: number; late: number; pill: str
   const gone = Math.min(p.every, p.gone), ahead = p.every - gone;
   return (
     <div class="cu-days">
-      <div class="cu-days-h"><span>{`Orders every ${p.every} days`}</span><span class={'cu-days-pill ' + p.tone}>{p.pill}</span></div>
+      <div class="cu-days-h"><span>{`Orders every ${counted(p.every, 'day')}`}</span><span class={'cu-days-pill ' + p.tone}>{p.pill}</span></div>
       <div role="img" aria-label={p.label} class="cu-days-strip">
         {Array.from({ length: gone }, (_, i) => <span key={'g' + i} />)}
         {Array.from({ length: ahead }, (_, i) => <span key={'a' + i} class="ahead" />)}

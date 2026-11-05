@@ -8,7 +8,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { servedThisYear } from '../../../core/chats.ts';
 import { money, orderTotal, short } from '../../../core/money.ts';
-import { TINTS, firstWord, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, TINTS } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf } from '../../../core/time.ts';
 import type { Member, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -59,7 +59,7 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
           <span aria-hidden="true" class="ow-shead-grab" />
           <div class="ch-ck-row">
             <Avatar {...faceOf(cust)} size={44} ring="0 0 0 3px #16203C, 0 0 0 5px rgba(255,255,255,.18)" />
-            <div><span>{cust.name}</span><span>{[cust.place, cust.kind ? KIND[cust.kind] : '', cust.everyDays ? `every ${cust.everyDays} days` : ''].filter(Boolean).join(' · ')}</span></div>
+            <div><span>{cust.name}</span><span>{[cust.place, cust.kind ? KIND[cust.kind] : '', cust.everyDays ? `every ${counted(cust.everyDays, 'day')}` : ''].filter(Boolean).join(' · ')}</span></div>
             <button type="button" class="ow-shead-x" aria-label="Close" onClick={nav.back}><Icon name="close" size={16} stroke={2.2} /></button>
           </div>
           <div class="ow-shead-chips">
@@ -83,7 +83,7 @@ export function ChatCustomer(p: ScreenProps): JSX.Element {
               <span>
                 <span><span>{firstWord(r.m.name)}</span><b class="mono">{short(r.sum)}</b></span>
                 <span aria-hidden="true"><span style={{ width: `${Math.round(r.sum / all * 100)}%`, background: r.m.tint === 'me' ? tint.bg : tint.fg }} /></span>
-                <span class="mono">{`${r.msgs} message${r.msgs === 1 ? '' : 's'} · ${r.n} order${r.n === 1 ? '' : 's'}`}</span>
+                <span class="mono">{`${counted(r.msgs, 'message')} · ${counted(r.n, 'order')}`}</span>
               </span>
             </div>
           );

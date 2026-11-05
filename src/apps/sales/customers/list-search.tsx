@@ -6,7 +6,7 @@
 import type { JSX } from 'preact';
 import { Icon } from '../../../ui/icons.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
-import { phone9 } from '../../../core/names.ts';
+import { counted, phone9 } from '../../../core/names.ts';
 import type { Books, Customer } from '../../../core/types.ts';
 import type { Acts } from './list-bodies.tsx';
 import type { ListData, Who } from './list-data.ts';
@@ -54,7 +54,7 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
   );
   return (
     <>
-      {found.length > 0 && <div class="cu-grp"><Group title="Found" count={found.length} /><Card>{found.map((w) => row(w, [placeKind(w.c), `${orders(w.c)} orders`].filter(Boolean).join(' · ')))}</Card></div>}
+      {found.length > 0 && <div class="cu-grp"><Group title="Found" count={found.length} /><Card>{found.map((w) => row(w, [placeKind(w.c), `${counted(orders(w.c), 'order')}`].filter(Boolean).join(' · ')))}</Card></div>}
       {!found.length && near.length > 0 && (
         <>
           <div class="cu-mean"><h2>Did you mean</h2><span>nobody is called that</span></div>
@@ -63,7 +63,7 @@ export function SearchBody(p: { b: Books; d: ListData; q: string; a: Acts; opene
             const name = <>{n.slice(0, h.at)}<b class="cu-mark">{n[h.at]}</b>{n.slice(h.at + 1)}</>;
             return (
               <div key={h.w.c.id} class="cu-near">
-                {row(h.w, [h.w.c.place, `${orders(h.w.c)} orders`].filter(Boolean).join(' · '), name)}
+                {row(h.w, [h.w.c.place, `${counted(orders(h.w.c), 'order')}`].filter(Boolean).join(' · '), name)}
                 {h.word && <div class="cu-near-fix"><s class="mono">{h.word[0]}</s><span aria-hidden="true"><Icon name="arrow-right" size={14} stroke={2.2} /></span><b>{h.word[1]}</b><span>one letter off</span></div>}
               </div>
             );

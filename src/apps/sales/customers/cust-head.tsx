@@ -12,7 +12,7 @@ import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { short as shortMoney } from '../../../core/money.ts';
-import { TINTS } from '../../../core/names.ts';
+import { counted, plural, TINTS } from '../../../core/names.ts';
 import type { Customer, Member } from '../../../core/types.ts';
 import { billNo, type OpenBill } from '../../../core/owing.ts';
 import type { RingTone } from './data.ts';
@@ -41,8 +41,8 @@ export function AgeTrack(p: { owes: number; bills: OpenBill[]; limit: number | n
   const used = p.limit ? Math.round((p.owes / p.limit) * 100) : 0;
   const n = p.bills.length, ages = p.bills.slice().sort((a, b) => a.age - b.age);
   const left = p.bills.length ? p.hold - p.bills[0].age : 0;
-  const hold = left >= 0 ? `The ${p.hold}-day hold is ${left} days away.` : `Past the ${p.hold}-day hold by ${-left} days.`;
-  const label = `${n === 1 ? 'One bill' : `${['', 'One', 'Two', 'Three', 'Four', 'Five'][n] || n} bills`}: ${ages.map((b) => `${fig(b.left)} is ${b.age} days old`).join(', ')}. ${hold}`;
+  const hold = left >= 0 ? `The ${p.hold}-day hold is ${counted(left, 'day')} away.` : `Past the ${p.hold}-day hold by ${counted(-left, 'day')}.`;
+  const label = `${n === 1 ? 'One bill' : `${['', 'One', 'Two', 'Three', 'Four', 'Five'][n] || n} bills`}: ${ages.map((b) => `${fig(b.left)} is ${counted(b.age, 'day')} old`).join(', ')}. ${hold}`;
   return (
     <>
       <div class="cu-owes">
@@ -81,7 +81,7 @@ export function SplitHead(p: { owes: number; oldest: number; collect: number; ch
     <div class="cu-split">
       <div class="cu-owes">
         <span class="cu-owes-k"><span>Owes</span><span class="mono">{fig(p.owes)}</span></span>
-        <span class="cu-oldest">oldest <b class="mono">{p.oldest}</b> days</span>
+        <span class="cu-oldest">oldest <b class="mono">{p.oldest}</b>{` ${plural(p.oldest, 'day')}`}</span>
       </div>
       <SplitBar h={10} label={`${fig(p.collect)} to collect, ${fig(p.checked)} being checked`}
         parts={[{ value: p.collect, color: '#F5B26B' }, { value: p.checked, color: 'hatch' }]} />

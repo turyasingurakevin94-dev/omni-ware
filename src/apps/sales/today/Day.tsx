@@ -7,7 +7,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money, orderTotal, short } from '../../../core/money.ts';
-import { orderNo, STAGE_WORD } from '../../../core/names.ts';
+import { counted, orderNo, STAGE_WORD } from '../../../core/names.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { addDays, clock, dayLabel, dayOf, monthName, monthOf, weekday } from '../../../core/time.ts';
 import type { Books, Method, Order } from '../../../core/types.ts';
@@ -61,11 +61,11 @@ function PlacedHead(p: { b: Books; now: number }): JSX.Element {
   const sold = soldIn(p.b, monthOf(today)).filter((o) => o.invoicedAt != null && dayOf(o.invoicedAt) === today && o.invoicedAt <= p.now);
   return (
     <div class="td-day-fig">
-      <span><span>{`Placed today · ${os.length} orders`}</span><span><span>UGX</span><span class="mono">{money(total(os))}</span></span></span>
+      <span><span>{`Placed today · ${counted(os.length, 'order')}`}</span><span><span>UGX</span><span class="mono">{money(total(os))}</span></span></span>
       {sold.length > 0 && (
-        <button type="button" class="td-day-sold" aria-label={`Sold today: ${money(total(sold))}${sold.length === 1 ? `, order ${orderNo(sold[0].id)}` : ''}`}
-          onClick={() => go('orders/order', { id: sold[0].id })}>
-          <span>Sold today</span><span class="mono">{money(total(sold))}</span><span class="mono">{sold.length === 1 ? orderNo(sold[0].id) : `${sold.length} bills`}</span>
+        <button type="button" class="td-day-sold" aria-label={`Sold today: ${money(total(sold))}${sold.length === 1 ? `, order ${orderNo(sold[0].id)}` : `, ${counted(sold.length, 'bill')}`}`}
+          onClick={() => (sold.length === 1 ? go('orders/order', { id: sold[0].id }) : go('orders', { stage: 'delivered' }))}>
+          <span>Sold today</span><span class="mono">{money(total(sold))}</span><span class="mono">{sold.length === 1 ? orderNo(sold[0].id) : `${counted(sold.length, 'bill')}`}</span>
         </button>
       )}
     </div>
@@ -104,7 +104,7 @@ function PlacedBody(p: { b: Books; now: number }): JSX.Element {
             </Tap>
           );
         })}
-        <div class="td-day-tot"><span>{`${real.length} orders`}</span><span class="mono">{money(total(real))}</span></div>
+        <div class="td-day-tot"><span>{`${counted(real.length, 'order')}`}</span><span class="mono">{money(total(real))}</span></div>
       </div>
       {qa ? (
         <div class="td-day-test"><Icon name="flag" size={18} stroke={2} /><span>A TEST record stays in the books, in no figure</span></div>

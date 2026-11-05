@@ -183,7 +183,7 @@ function Found(p: { b: Books; q: string; t: number; leave: Leave }): JSX.Element
 function Empty(p: { b: Books }): JSX.Element {
   const n = p.b.customers.filter((c) => !c.qa).length;
   const steps = [
-    { done: n > 0, title: 'Add your customers', sub: `${n} customers · done`, on: () => go('customers/new', {}) },
+    { done: n > 0, title: 'Add your customers', sub: `${counted(n, 'customer')} · done`, on: () => go('customers/new', {}) },
     { icon: 'plus' as const, title: 'Place an order', sub: 'with the red + · it shows here', on: () => go('sell', {}) },
     { icon: 'whatsapp' as const, stroke: 2, title: 'Tell the customer', sub: 'one tap, from the order', on: () => nav.tab('chats') },
   ];

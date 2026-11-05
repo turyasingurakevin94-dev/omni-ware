@@ -5,7 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { money, short } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord } from '../../../core/names.ts';
 import { dayOf, daysApart, monthName } from '../../../core/time.ts';
 import { Avatar, PLAIN } from '../../../ui/Avatar.tsx';
 import { FullSheet, TitleHead } from '../../../ui/FullSheet.tsx';
@@ -58,7 +58,7 @@ export function Goal(): JSX.Element {
   return (
     <FullSheet onBack={close} backLabel="Back to Today" head={
       <TitleHead small title={`Your ${month} goal`} onClose={close}
-        sub={<>{setter && <Avatar initials={setter.initials} tint={setter.tint} size={18} style={PLAIN} />}{`${setter ? firstWord(setter.name) + ' set it · ' : ''}${g.daysLeft} days left`}</>}>
+        sub={<>{setter && <Avatar initials={setter.initials} tint={setter.tint} size={18} style={PLAIN} />}{`${setter ? firstWord(setter.name) + ' set it · ' : ''}${counted(g.daysLeft, 'day')} left`}</>}>
         <Dial sold={g.sold} move={g.move} target={g.target} pace={Math.min(1, gone / days)} pct={g.pct} />
         <div class="td-goal-tiles">
           <span><span>Sold</span><span class="mono">{short(g.sold, 2)}</span></span>
@@ -82,13 +82,13 @@ export function Goal(): JSX.Element {
         <div class="td-goal-rows">
           <Tap on={() => go('orders')} class="td-goal-row">
             <span aria-hidden="true" class="td-goal-av move"><Icon name="trend" size={16} stroke={2.2} /></span>
-            <span class="td-goal-t"><span>On the move</span><span>{`${live.length} orders`}</span></span>
+            <span class="td-goal-t"><span>On the move</span><span>{`${counted(live.length, 'order')}`}</span></span>
             <span class="mono">{'+' + money(g.move)}</span>
             <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
           </Tap>
           {ms.map((m) => {
             const it = m.kind === 'ask' && m.ask.itemId ? b.items.find((i) => i.id === m.ask.itemId) : null;
-            const sub = m.kind === 'due' ? `${m.d.late} days late · their usual` : m.kind === 'chat' ? `asked for ${countWord(m.qty, m.unit, (b.items.find((i) => i.unit === m.unit) || { name: '' }).name)}`
+            const sub = m.kind === 'due' ? `${counted(m.d.late, 'day')} late · their usual` : m.kind === 'chat' ? `asked for ${countWord(m.qty, m.unit, (b.items.find((i) => i.unit === m.unit) || { name: '' }).name)}`
               : m.kind === 'ask' ? `${countWord(m.ask.requests[0].qty, it ? it.unit : '', '')} of ${(it ? it.name : m.ask.name).split(' · ')[0].toLowerCase()}` : '';
             const on = m.kind === 'due' ? () => { nav.home(); setTimeout(scrollToNext, 60); }
               : m.kind === 'chat' ? () => go('sell/order', { customer: m.c.id, from: 'chat', chat: m.chat })

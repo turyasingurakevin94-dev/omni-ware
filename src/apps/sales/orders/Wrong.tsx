@@ -6,7 +6,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { orderOwes, orderTotal } from '../../../core/money.ts';
-import { firstWord, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, weekday, daysApart, when as at } from '../../../core/time.ts';
 import type { Books, Line, Method, Order } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -59,7 +59,7 @@ function WrongSheet(p: { id: number }): JSX.Element | null {
       <Reason tone="info" icon="return" title="Items coming back" sub={<>{rf}{`${rn} gives the credit note`}</>} on={() => openReturn(o.id)} />
       <Reason tone="bad" icon="void" title="Cancel the bill" sub={<><Icon name="lock" size={13} stroke={2.2} />{o.stage === 'delivered' ? 'Delivered · use a return' : `${rn} decides`}</>} off={o.stage === 'delivered'} on={() => openTwice(o.id)} />
       <Reason tone="warn" icon="cash" title="Payment recorded wrong" off={!pays.length}
-        sub={<>{acc && <Avatar {...faceOfMember(acc)} size={18} />}{one ? `${METHOD[one.method].word} ${one.amount.toLocaleString('en-US')} · ${asked ? 'asked' : when(one.at, t).split(' ')[0] === 'today' ? clock(one.at) : weekday(one.at)} · ${an} corrects it` : pays.length ? `${pays.length} payments · ${an} corrects it` : 'Nothing paid yet'}</>}
+        sub={<>{acc && <Avatar {...faceOfMember(acc)} size={18} />}{one ? `${METHOD[one.method].word} ${one.amount.toLocaleString('en-US')} · ${asked ? 'asked' : when(one.at, t).split(' ')[0] === 'today' ? clock(one.at) : weekday(one.at)} · ${an} corrects it` : pays.length ? `${counted(pays.length, 'payment')} · ${an} corrects it` : 'Nothing paid yet'}</>}
         on={() => (one && !asked ? openPayWrong(o.id, one.id, 'wrong') : openPayWhich(o.id))} />
       <Reason tone="" icon="note" title="Something else" sub={<>{rf}{`Tell ${rn} in a few words`}</>} on={() => openElse(o.id)} />
     </LightSheet>

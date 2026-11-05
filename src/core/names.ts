@@ -41,7 +41,17 @@ export function orderNo(id: number): string {
 
 /** A count and its word, one rule for the plural: "1 line", "2 lines", "1 day", "3 days". */
 export function counted(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
+  return `${n} ${plural(n, word)}`;
+}
+
+/** The word for n of them, when the number is drawn apart ("<b>1</b> chat", "<b>3</b> chats"). */
+export function plural(n: number, word: string): string {
+  return n === 1 ? word : `${word}s`;
+}
+
+/** How long a chat has been shut: "today", "1 day", "3 days" (never "0 days"). */
+export function shutFor(days: number): string {
+  return days > 0 ? counted(days, 'day') : 'today';
 }
 
 /** A name as a control's label says it: "&" spoken as "and" ("Kyaligonza and Sons. Change customer", SL01, CU01). */

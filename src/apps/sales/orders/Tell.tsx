@@ -5,7 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
-import { orderNo, phone9 } from '../../../core/names.ts';
+import { orderNo, phone9, shutFor } from '../../../core/names.ts';
 import { replyWindow, weekday, clock } from '../../../core/time.ts';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
@@ -52,7 +52,7 @@ function TellSheet(p: { id: number }): JSX.Element | null {
     <LightSheet class="or-sheet" ground eyebrow={`Order ${orderNo(o.id)} · ${nameOf(b, o)}`} title={`Tell ${who}`} onClose={sheet.close} pad="12px 16px 22px">
       {shut && c && c.lastInAt && (
         <div role="status" class="or-shut">
-          <span class="or-shut-a"><Icon name="lock" size={16} stroke={2.2} />Chat shut · <span class="mono">{`${w ? w.daysShut : 0} days`}</span></span>
+          <span class="or-shut-a"><Icon name="lock" size={16} stroke={2.2} />Chat shut · <span class="mono">{shutFor(w ? w.daysShut : 0)}</span></span>
           <span class="or-shut-b">{`last wrote ${weekday(c.lastInAt)} `}<span class="mono">{clock(c.lastInAt)}</span></span>
         </div>
       )}

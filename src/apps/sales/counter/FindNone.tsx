@@ -4,6 +4,7 @@
  * lead, as sales.html does). KC26 · nobody has asked: "Ask Moses to stock it". KC25 · sent:
  * "Sent to Moses · just now", the button gone.
  */
+import { counted } from '../../../core/names.ts';
 import type { JSX } from 'preact';
 import { NoneMark } from '../../../ui/Empty.tsx';
 import { useState } from 'preact/hooks';
@@ -158,7 +159,7 @@ function OpenAisle(p: { b: Books; near: Item[]; onAisle: (name: string) => void 
         {tiles.map((a) => (
           <a key={a.name} href="#" class="kc-aisle" onClick={(e) => { e.preventDefault(); p.onAisle(a.name); }}>
             <ItemSquare aisle={a.name} size={38} icon={22} />
-            <span><span>{a.name}</span><span class="mono">{`${a.count} items`}</span></span>
+            <span><span>{a.name}</span><span class="mono">{`${counted(a.count, 'item')}`}</span></span>
           </a>
         ))}
       </div>

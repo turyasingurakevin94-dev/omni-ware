@@ -12,7 +12,7 @@ import { MiniRow } from '../../../ui/ActRow.tsx';
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { money, short } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, daysApart, howLong, monthName, monthOf } from '../../../core/time.ts';
 import type { Books } from '../../../core/types.ts';
 import { ActionPill } from '../../../ui/Pill.tsx';
@@ -111,7 +111,7 @@ export function Today(): JSX.Element {
         {passed && (
           <Tap on={scrollToNext} class="td-passed">
             <span aria-hidden="true" class="td-passed-ic"><Icon name="trophy" size={26} stroke={1.9} /></span>
-            <span class="td-passed-t"><span>{`${short(goal ? goal.target : 0)} passed on ${dayLabel(passed.day)}`}</span><span>{`${passed.early} days early · see your next move`}</span></span>
+            <span class="td-passed-t"><span>{`${short(goal ? goal.target : 0)} passed on ${dayLabel(passed.day)}`}</span><span>{`${counted(passed.early, 'day')} early · see your next move`}</span></span>
             <span class="td-passed-go"><Icon name="chevron-right" size={14} stroke={2.4} style={{ opacity: 0.7 }} /></span>
           </Tap>
         )}
@@ -121,7 +121,7 @@ export function Today(): JSX.Element {
             label: `${t.orders.length} ${STAGE_LABEL[t.stage as keyof typeof STAGE_LABEL]}${t.need && t.mark === 'money' ? `, ${t.need} needs you` : t.mark === 'late' ? `, ${t.need || 1} late` : t.mark === 'ready' ? ', 1 ready to collect' : ''}`,
           }))}>
             {!off && held && heldOwing ? (
-              <MiniRow face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`#${String(held.id).padStart(4, '0')} · Not paid yet`} subMono
+              <MiniRow face={faceOf(b, held)} name={(custOf(b, held.customerId) || { name: '' }).name} sub={`${orderNo(held.id)} · Not paid yet`} subMono
                 pill={<ActionPill tone="warn" word="Take" amount={short(takeHeld(heldOwing))} />} on={() => go('customers/pay', takeOf(heldOwing, false))} />
             ) : paid.length > 0 ? (
               <MiniRow faces={paid.map((p) => faceOf(b, p))} name={`${paid.length} paid since morning`} sub={paid.map((p) => firstWord((custOf(b, p.customerId) || { name: '' }).name)).join(' · ')}
@@ -133,7 +133,7 @@ export function Today(): JSX.Element {
             <SectionHead title="Needs you" dot count={off ? kept_ + nd.take.length : nd.total} after />
             <div class="td-needs">
               {off && kept_ > 0 && <NeedsRow kind="notsent" title="Not sent yet" sub="kept on this phone" count={kept_} on={() => { void flush(); }} />}
-              {nd.take.length > 0 && <NeedsRow kind="take" title="Take payment" sub={`${money(take)} · oldest ${nd.take[0].age} days`} count={nd.take.length} on={() => nav.push('today/to-collect')} />}
+              {nd.take.length > 0 && <NeedsRow kind="take" title="Take payment" sub={`${money(take)} · oldest ${counted(nd.take[0].age, 'day')}`} count={nd.take.length} on={() => nav.push('today/to-collect')} />}
               {!off && tellN > 0 && <NeedsRow kind="tell" title="Tell them" sub={tellSub} count={tellN} on={() => openTell(0)} />}
               {!off && nd.waiting.length > 0 && <NeedsRow kind="chats" title="Chats waiting" sub={`oldest ${howLong(nd.waiting[0].since, n)}${newChats ? ` · ${newChats} new` : ''}`} count={nd.waiting.length} on={() => nav.tab('chats')} />}
               {off && (

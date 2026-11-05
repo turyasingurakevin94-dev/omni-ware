@@ -7,7 +7,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord } from '../../../core/names.ts';
 import { oftenWith } from '../../../core/often.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -90,7 +90,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
     const text = lines.map((i) => `${i.name}: ${money(i.price)} a ${i.unit}`).join('\n');
     if (p.onSent) p.onSent();
     sheet.close();
-    await write(replyWindow(chat.lastInAt, now.value).open ? 'send' : 'sendTemplate', [chat.id, text], lines.length === 1 ? 'Price sent' : `${lines.length} prices sent`);
+    await write(replyWindow(chat.lastInAt, now.value).open ? 'send' : 'sendTemplate', [chat.id, text], lines.length === 1 ? 'Price sent' : `${counted(lines.length, 'price')} sent`);
   };
   return (
     <LightSheet pad="12px 16px 22px" ground title="Send a price" onClose={back}>
@@ -110,7 +110,7 @@ export function PriceSheet(p: { chatId: number; picked: string[]; onPut: (s: str
         {!!lines.length && (
           <div class="ch-pr-preview"><span>{lines.map((i, k) => <span key={i.id}>{k > 0 && <br />}{`${i.name}: `}<b class="mono">{money(i.price)}</b>{` a ${i.unit}`}</span>)}</span></div>
         )}
-        <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 0 ? 'Send a price' : lines.length === 1 ? 'Send 1 price' : `Send ${lines.length} prices`}</Button>
+        <Button icon="send" state={lines.length ? 'idle' : 'disabled'} onClick={() => { void send(); }}>{lines.length === 0 ? 'Send a price' : lines.length === 1 ? 'Send 1 price' : `Send ${counted(lines.length, 'price')}`}</Button>
       </div>
     </LightSheet>
   );

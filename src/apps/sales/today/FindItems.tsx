@@ -1,6 +1,7 @@
 /*
  * Find, when the words are an item (TD13) or nothing at all (TD14).
  */
+import { counted } from '../../../core/names.ts';
 import { NoneMark } from '../../../ui/Empty.tsx';
 import { nearAisles } from '../../../core/aisles.ts';
 import { oftenWith as often } from '../../../core/often.ts';
@@ -150,7 +151,7 @@ export function Nothing(p: { b: Books; q: string; now: Ms; onSearch: (q: string)
         {tiles.map((a) => (
           <Tap key={a.name} on={() => go('sell', { aisle: a.name })} class="td-aisle">
             <ItemSquare aisle={a.name} size={38} icon={22} />
-            <span><span>{a.name}</span><span class="mono">{`${a.count} items`}</span></span>
+            <span><span>{a.name}</span><span class="mono">{`${counted(a.count, 'item')}`}</span></span>
           </Tap>
         ))}
       </div>

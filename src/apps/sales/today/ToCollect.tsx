@@ -5,7 +5,7 @@
  */
 import type { JSX } from 'preact';
 import { money, short } from '../../../core/money.ts';
-import { firstWord, orderNo, sayName } from '../../../core/names.ts';
+import { counted, firstWord, orderNo, sayName } from '../../../core/names.ts';
 import { dayLabel, dayOf } from '../../../core/time.ts';
 import type { Books } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
@@ -30,7 +30,7 @@ export function ToCollect(): JSX.Element {
   const pastNotChecked = all.reduce((s, w) => s + w.past - w.checked, 0);
   return (
     <FullSheet onBack={() => nav.back()} backLabel="Back to Today" head={
-      <TitleHead title="To collect" sub={`${all.length} customers owe the shop`} onClose={() => nav.back()}>
+      <TitleHead title="To collect" sub={`${counted(all.length, 'customer')} ${all.length === 1 ? 'owes' : 'owe'} the shop`} onClose={() => nav.back()}>
         <div class="td-col-pic">
           <span class="td-col-fig"><span>UGX</span><span class="mono">{money(sum)}</span></span>
           <span role="img" aria-label={`${money(pastNotChecked)} past 21 days, ${money(underSum)} under 21 days, ${money(checked)} being checked`} class="td-col-bar">
@@ -62,8 +62,8 @@ function OweRow(p: { b: Books; w: Owing; past?: boolean }): JSX.Element {
   const promise = promiseToShow(b, c, today);
   const chat = chats.value ? chats.value.chats.find((x) => x.customerId === c.id) : null;
   const amount = p.past ? w.take : w.held ? takeHeld(w) : 0;
-  const sub = p.past && takeBills.length === 1 && takeBills[0].orderId ? `${orderNo(takeBills[0].orderId)} · ${takeBills[0].age} days`
-    : amount > 0 ? `${w.age} days · ${w.bills.length} bills`
+  const sub = p.past && takeBills.length === 1 && takeBills[0].orderId ? `${orderNo(takeBills[0].orderId)} · ${counted(takeBills[0].age, 'day')}`
+    : amount > 0 ? `${counted(w.age, 'day')} · ${counted(w.bills.length, 'bill')}`
     : <><span class="mono">{money(w.owes)}</span>{` · hold ${dayLabel(holdOf(w, b) || today)}`}</>;
   const pay = () => go('customers/pay', takeOf(w, !!p.past));
   return (

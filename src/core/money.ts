@@ -18,8 +18,12 @@ export function whole(n: number | null | undefined): UGX {
   return v === 0 ? 0 : v;
 }
 
-/** "1,250,000": an amount someone acts on is written in full (BRIEF.md "Money"; sales.html n0). */
+/** A figure the books do not have: said in a word, never drawn as a real 0. */
+export const NOT_KNOWN = 'not known';
+
+/** "1,250,000": an amount someone acts on is written in full (BRIEF.md "Money"; sales.html n0). null is nothing (0); a figure that is missing (undefined, not a number) is NOT_KNOWN. */
 export function money(n: number | null | undefined): string {
+  if (n === undefined || (typeof n === 'number' && !Number.isFinite(n))) return NOT_KNOWN;
   return whole(n).toLocaleString('en-US');
 }
 
@@ -41,7 +45,10 @@ export function ugx(n: number | null | undefined): string {
  */
 export function short(n: number | null | undefined, digits: number = 1): string {
   const v = Number(n) || 0, a = Math.abs(v);
-  if (a >= 1e6) return (v / 1e6).toFixed(digits).replace(/\.?0+$/, '') + 'M';
+  const at = (unit: number, mark: string) => (v / unit).toFixed(digits).replace(/\.?0+$/, '') + mark;
+  // A figure that rounds up to the next unit says it in that unit: 999,500 is "1M", never "1000k"; a billion is "1.4B".
+  if (a >= 1e9 || Math.abs(Number((v / 1e6).toFixed(digits))) >= 1000) return at(1e9, 'B');
+  if (a >= 1e6 || Math.round(a / 1e3) >= 1000) return at(1e6, 'M');
   if (a >= 1e4) return Math.round(v / 1e3) + 'k';
   return money(v);
 }

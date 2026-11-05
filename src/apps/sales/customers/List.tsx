@@ -5,6 +5,7 @@
  * folds to a compact bar as the list scrolls. With no signal it is the
  * copy saved on the phone; on first open, the skeleton.
  */
+import { HOLD_DAYS } from '../../../core/money.ts';
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { ChipRow, FilterChip } from '../../../ui/Pill.tsx';
@@ -91,7 +92,7 @@ export function ListScreen(p: ScreenProps): JSX.Element {
       ))}
     </ChipRow>
   );
-  const bar = { owes: d.owes, take: d.take, under: d.under21, checkedIn: d.checkedIn, checkedAll: d.checkedAll };
+  const bar = { owes: d.owes, take: d.take, under: d.under21, checkedIn: d.checkedIn, checkedAll: d.checkedAll, hold: b.settings.holdDays || HOLD_DAYS };
   const compact = !typing && (off || filter === 'all' || filter === 'quiet');
 
   let headEl: JSX.Element;

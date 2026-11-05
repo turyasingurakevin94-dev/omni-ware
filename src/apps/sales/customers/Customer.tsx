@@ -4,6 +4,7 @@
  * then their acts, their bills (each with its own Take), what is on the
  * move, their rhythm, and one navy button to sell to them.
  */
+import { counted } from '../../../core/names.ts';
 import type { JSX } from 'preact';
 import { ActBar } from '../../../ui/ActTiles.tsx';
 import { useEffect } from 'preact/hooks';
@@ -99,12 +100,12 @@ function Sheet(p: { b: Books; c: Customer; cb: ChatBooks | null }): JSX.Element 
 
   const rh = r.every && r.lastDay && r.due ? (() => {
     const gone = daysApart(r.lastDay, today), late = Math.max(0, -r.toDue);
-    const pill = late ? `${late} day${late > 1 ? 's' : ''} late` : r.toDue === 0 ? 'Due today' : `in ${r.toDue} days`;
+    const pill = late ? `${counted(late, 'day')} late` : r.toDue === 0 ? 'Due today' : `in ${counted(r.toDue, 'day')}`;
     const lastWords = r.lastDay === today && r.last ? `today ${when(r.last.placedAt, t)}` : dayLabel(r.lastDay);
     // Two bills and the move fill the sheet (CU10); with fewer, the dates fit under the blocks.
     const labels = showMove && m.bills.length > 1 ? null : late ? [dayLabel(r.lastDay), `due ${dayLabel(r.due)}`, 'today'] : [`last order ${lastWords}`, `due ${dayLabel(r.due)}`];
     return <Rhythm every={r.every} gone={gone} late={late} pill={pill} tone={late ? 'caution' : r.toDue === 0 ? 'good' : 'neutral'}
-      label={`Last order ${lastWords}, due ${dayLabel(r.due)}, ${late ? `${late} days late` : r.toDue === 0 ? 'due today' : `due in ${r.toDue} days`}`} labels={labels} />;
+      label={`Last order ${lastWords}, due ${dayLabel(r.due)}, ${late ? `${counted(late, 'day')} late` : r.toDue === 0 ? 'due today' : `due in ${counted(r.toDue, 'day')}`}`} labels={labels} />;
   })() : null;
 
   return (

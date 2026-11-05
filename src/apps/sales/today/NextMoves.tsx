@@ -4,7 +4,7 @@
  */
 import type { JSX } from 'preact';
 import { money, orderTotal, short } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import type { Books, ChatBooks, Customer, Ms } from '../../../core/types.ts';
 import { GroupCard, IconTile, ActRow } from '../../../ui/ActRow.tsx';
 import { RingAvatar } from '../../../ui/Avatar.tsx';
@@ -42,7 +42,7 @@ export function NextMoves(p: { b: Books; cb: ChatBooks | null; now: Ms; told: st
       {top && top.kind === 'due' && (
         <NextMove tag={{ tone: 'amber', icon: 'clock', text: 'Due for their usual' }} pos={`1 of ${ms.length}`}
           face={{ initials: top.c.initials, tint: top.c.tint }} rhythm={1} late={Math.min(1, top.d.late / top.d.every)} name={top.c.name}
-          big={`+${top.d.late} days`} bigSub="past their rhythm" legend={[`every ${top.d.every} days`, 'late']}
+          big={`+${counted(top.d.late, 'day')}`} bigSub="past their rhythm" legend={[`every ${counted(top.d.every, 'day')}`, 'late']}
           usual={top.c.usual.map((u) => { const it = b.items.find((i) => i.id === u.itemId); return { aisle: it ? it.aisle : '', text: `${u.qty} ${it ? it.unit : ''}` }; })}
           footLabel="Their usual" footValue={top.value} phone={tel(top.c.phone)} callLabel={`Call ${top.c.name.replace('&', 'and')}`}
           act={{ label: 'Order usual', on: () => go('sell/order', { customer: top.c.id, from: 'usual' }) }} />
@@ -82,10 +82,10 @@ function MoveRow(p: { b: Books; m: Move; now: Ms }): JSX.Element {
   }
   if (m.kind === 'price') {
     return <ActRow lead={<IconTile icon="tag" tone="info" size={42} />} title={`${firstWord(m.c.name)} · a new price`}
-      sub={`#${String(m.order.id).padStart(4, '0')} · ${money(m.order.toldTotal || 0)} → ${money(orderTotal(m.order))}`}
+      sub={`${orderNo(m.order.id)} · ${money(m.order.toldTotal || 0)} → ${money(orderTotal(m.order))}`}
       act={{ icon: 'chevron-right', label: `Tell ${who} the new price`, on: () => openTell(0) }} />;
   }
-  return <ActRow lead={<RingAvatar face={{ initials: m.c.initials, tint: m.c.tint }} tone="late" fill={1} />} title={m.c.name} sub={`${m.d.late} days late`} chip={chip}
+  return <ActRow lead={<RingAvatar face={{ initials: m.c.initials, tint: m.c.tint }} tone="late" fill={1} />} title={m.c.name} sub={`${counted(m.d.late, 'day')} late`} chip={chip}
     act={{ icon: 'chevron-right', label: `Order ${who}'s usual`, on: () => go('sell/order', { customer: m.c.id, from: 'usual' }) }} />;
 }
 
@@ -110,7 +110,7 @@ export function WhoDue(p: { b: Books; cb: ChatBooks | null; now: Ms }): JSX.Elem
           return (
             <Tap key={d.c.id} class="td-due-card" on={() => (usual ? go('sell/order', { customer: d.c.id, from: 'usual' }) : (chat ? go('chats/chat', { id: chat.id }) : go('customers/customer', { id: d.c.id })))}>
               <RingAvatar face={{ initials: d.c.initials, tint: d.c.tint }} tone={d.late > 0 ? 'late' : 'due'} fill={1} />
-              <span class="td-due-t"><span>{firstWord(d.c.name)}</span><span class={d.late > 0 ? 'late' : 'due'}>{d.late > 0 ? `${d.late} days late` : 'Due today'}</span></span>
+              <span class="td-due-t"><span>{firstWord(d.c.name)}</span><span class={d.late > 0 ? 'late' : 'due'}>{d.late > 0 ? `${counted(d.late, 'day')} late` : 'Due today'}</span></span>
               <span class={'td-due-p' + (usual ? '' : ' tile')}>{usual ? 'Order usual' : 'Say hi'}</span>
             </Tap>
           );

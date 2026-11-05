@@ -3,6 +3,7 @@
  * three ticks), where it came from (their chat), the fields, the one already
  * saved when the name or number is theirs, and two buttons.
  */
+import { counted } from '../../../core/names.ts';
 import type { JSX, RefObject } from 'preact';
 import { RingAvatar } from '../../../ui/Avatar.tsx';
 import { useState } from 'preact/hooks';
@@ -38,7 +39,7 @@ export function NewForm(p: {
         <span class="cu-dup-h"><Icon name="person" size={14} stroke={2.2} />{d.kind === 'name' ? 'Already saved · same name' : 'Same number · a number is saved once'}</span>
         <div class="cu-dup-who">
           <RingAvatar face={{ initials: d.c.initials, tint: d.c.tint }} tone={r.tone} fill={r.fill} start />
-          <span><span>{d.c.name}</span><span>{[d.c.place, `${orders.length} orders`, r.every ? `every ${r.every} days` : ''].filter(Boolean).join(' · ')}</span></span>
+          <span><span>{d.c.name}</span><span>{[d.c.place, `${counted(orders.length, 'order')}`, r.every ? `every ${counted(r.every, 'day')}` : ''].filter(Boolean).join(' · ')}</span></span>
           {d.c.owes > 0 && <span class="cu-dup-f"><span class="mono">{shortMoney(d.c.owes)}</span><span>owes</span></span>}
         </div>
         <div class="cu-dup-tags">

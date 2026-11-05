@@ -3,6 +3,7 @@
  * who owes (past and under the 21-day hold), what is being checked, the
  * promises, who is due this week, who has gone quiet, who was opened lately.
  */
+import { counted } from '../../../core/names.ts';
 import { orderOwes } from '../../../core/money.ts';
 import { addDays, clock, dayLabel, dayOf, weekday } from '../../../core/time.ts';
 import type { Books, Customer, Day, Ms, PayPromise } from '../../../core/types.ts';
@@ -60,16 +61,16 @@ export function listData(b: Books, today: Day): ListData {
 
 /** "67 days · 2 bills" past the hold; under it "9 days · promised today" or "15 days · hold Fri 23 Oct". */
 export function oweSub(w: Who, today: Day): string {
-  const n = w.m.bills.length, age = `${w.m.age} days`;
-  if (w.m.pastHold) return `${age} · ${n} bill${n === 1 ? '' : 's'}`;
+  const n = w.m.bills.length, age = `${counted(w.m.age, 'day')}`;
+  if (w.m.pastHold) return `${age} · ${counted(n, 'bill')}`;
   if (w.promise) return `${age} · promised ${w.promise.on === today ? 'today' : weekday(w.promise.on)}`;
   return `${age} · hold ${w.m.hold ? dayLabel(w.m.hold) : ''}`;
 }
 
 /** "4 days late · every 14 days", "Due today · every 7 days", "Due Tue 27 Oct". */
 export function dueSub(w: Who, withEvery: boolean): string {
-  const r = w.r, every = withEvery && r.every ? ` · every ${r.every} days` : '';
-  if (r.tone === 'late' || r.tone === 'quiet') { const n = -r.toDue; return `${n} day${n === 1 ? '' : 's'} late${every}`; }
+  const r = w.r, every = withEvery && r.every ? ` · every ${counted(r.every, 'day')}` : '';
+  if (r.tone === 'late' || r.tone === 'quiet') { const n = -r.toDue; return `${counted(n, 'day')} late${every}`; }
   if (r.tone === 'due') return `Due today${every}`;
   return r.due ? `Due ${dayLabel(r.due)}` : '';
 }

@@ -8,7 +8,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { Duo, Icon, phSearch } from '../../../ui/icons.tsx';
 import { barW, cx } from '../../../ui/util.tsx';
 import { money } from '../../../core/money.ts';
-import { orderNo, TINTS } from '../../../core/names.ts';
+import { counted, orderNo, TINTS } from '../../../core/names.ts';
 import type { Tint } from '../../../core/types.ts';
 
 /** "All 420,000 · #0531 300,000 · Other": 36 visible inside a 44 target (S02). */
@@ -56,7 +56,7 @@ export function PaysCard(p: { rows: PaysRow[]; pick: boolean; onToggle: (id: num
           <button key={r.id} type="button" role="checkbox" aria-checked={r.on} aria-label={`${billNo(r.id)}, ${money(r.left)}`} class="cu-pay-row" onClick={() => p.onToggle(r.id)}>
             <span aria-hidden="true" class={cx('cu-tick', r.on && 'on')}>{r.on && <Icon name="check" size={13} stroke={3.2} />}</span>
             <span class={cx('cu-pay-t', !r.on && 'off')}>
-              <span><span>{`${billNo(r.id)} `}<span>{r.order ? 'the order · not paid yet' : `${dm(r.day)} · ${r.age} days`}</span></span><span class="mono">{money(r.left)}</span></span>
+              <span><span>{`${billNo(r.id)} `}<span>{r.order ? 'the order · not paid yet' : `${dm(r.day)} · ${counted(r.age, 'day')}`}</span></span><span class="mono">{money(r.left)}</span></span>
               <span><span aria-hidden="true" class="cu-pay-bar"><span style={{ width: `${pct}%`, background: full ? '#0F6B43' : '#95530C' }} /></span><span class={'cu-tag ' + tag.c}>{tag.t}</span></span>
             </span>
           </button>

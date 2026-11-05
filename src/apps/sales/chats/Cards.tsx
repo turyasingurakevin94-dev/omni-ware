@@ -6,7 +6,7 @@
  */
 import type { JSX } from 'preact';
 import { money } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Item } from '../../../core/types.ts';
 import { Duo, Icon, phSparkle } from '../../../ui/icons.tsx';
@@ -27,7 +27,7 @@ export function WantsCard(p: { who: string; at: number; items: Item[]; onStart: 
         </div>
       ))}
       <div class="ch-cv-buy-f">
-        <span><b>How many?</b><span>{`${n} line${n === 1 ? '' : 's'} · ask them`}</span></span>
+        <span><b>How many?</b><span>{`${counted(n, 'line')} · ask them`}</span></span>
         <Tap on={p.onStart} class="ch-cv-go">Start order<Icon name="arrow-right" size={16} stroke={2.4} /></Tap>
       </div>
     </div>

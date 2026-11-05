@@ -6,7 +6,7 @@
 import type { JSX } from 'preact';
 import { useRef } from 'preact/hooks';
 import { money, short } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { counted, firstWord } from '../../../core/names.ts';
 import type { Books, Customer, Item } from '../../../core/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Duo, Icon, phSparkle } from '../../../ui/icons.tsx';
@@ -24,7 +24,7 @@ const QUICK = ['We have it', 'Price coming', 'Let me check', 'We are checking it
 /** Their usual, as items with how often they are in their orders. */
 export function usualItems(b: Books, c: Customer | null): { it: Item; sub: string }[] {
   if (!c) return [];
-  return c.usual.map((u) => ({ it: b.items.find((i) => i.id === u.itemId) as Item, sub: u.seen >= u.of ? 'every order' : `${u.seen} of ${u.of} orders` })).filter((x) => x.it);
+  return c.usual.map((u) => ({ it: b.items.find((i) => i.id === u.itemId) as Item, sub: u.seen >= u.of ? 'every order' : `${u.seen} of ${counted(u.of, 'order')}` })).filter((x) => x.it);
 }
 
 export function PriceRow(p: { it: Item; sub: JSX.Element | string; act: JSX.Element }): JSX.Element {

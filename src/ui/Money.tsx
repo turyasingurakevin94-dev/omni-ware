@@ -9,12 +9,13 @@
  *   fig(1810000)  fig(1900000, true)       the same, as text, for a label
  */
 import type { JSX } from 'preact';
-import { money, short } from '../core/money.ts';
+import { NOT_KNOWN, money, short } from '../core/money.ts';
 import type { Fig } from './util.tsx';
 
 /** A figure as text: a number in full (or short), a string as given. */
 export function fig(v: Fig, isShort?: boolean, sign?: boolean): string {
   if (typeof v === 'string') return v;
+  if (typeof v !== 'number' || !Number.isFinite(v)) return NOT_KNOWN;
   const s = isShort ? short(Math.abs(v)) : money(Math.abs(v));
   return (v < 0 ? '−' : sign && v > 0 ? '+' : '') + s;
 }
