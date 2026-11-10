@@ -51,10 +51,12 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or Sales chan
 | 2. Sales ↔ Buyer handover map | done · `handover.md` (12 mismatches, 5 Sales changes) |
 | 3. Buying flow from first principles | done · `flow.md` (26 taps → 6 taps + 2 slides) |
 | 4–5. Pages on the new canvas | done · 7 tab boards (28 pages, all 8 states) + handover board + flow board on the [canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7) |
+| 7. Build | done · `next/buyer.html` (Preact, `src/apps/buyer`, `src/core/buyer`), demo `?demo`, real books; only what is drawn (Gate, Additions, Additions2 boards added for what the build needed); e2e `test/buyer-e2e.test.js`. Not switched: `buyer.html` is still the live app |
 | 6. Scores | done · independent review, 5 rounds (rounds 4–5 from rendered screens, overlap sweep clean): 8.39 → 8.68; 0 of 28 pages below the Agent app (Scores board) |
 
 ## Waiting on Kevin
 
-- Approve the canvas before any code.
+- ~~Approve the canvas before any code.~~ Approved: "now implement" (2026-11-10).
+- Switch: when does `next/buyer.html` replace `buyer.html`?
 - Should a complete order handed in push the salesperson? (handover.md, open question.)
 - The Sales changes (handover.md §5, 11 items) and three new pushes (order.check, supplier.no, sourcing.waits — one migration) go to the Sales session.

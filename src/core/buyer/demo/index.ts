@@ -124,6 +124,12 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
       counts.forEach((c) => { lineOf(order(c.orderId), c.key).got = c.got; });
       s.paid = paid; s.done = true;
     }),
+    undoStop: (sid) => later(() => {
+      const s = b.trip?.stops.find((x) => x.supplierId === sid);
+      if (!b.trip || !s) throw dataError('missing', 'No such stop');
+      if (b.trip.state === 'in') throw dataError('refused', 'Already handed in');
+      s.paid = null; s.done = false;
+    }),
     handIn: () => later(() => {
       if (!b.trip) throw dataError('missing', 'No trip');
       b.trip.state = 'in'; b.trip.handedInAt = clock();

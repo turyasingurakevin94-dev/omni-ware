@@ -57,6 +57,8 @@ export interface BuyerSource {
   askCash(): Promise<void>;
   /** At a stop: what came (each line) and what was paid. */
   stopDone(supplierId: string, counts: StopCount[], paid: UGX): Promise<void>;
+  /** Undo a stop just done (TripOn.dc.html, Success: "Undo 5"): open again, what came kept as a draft. Refused once handed in. */
+  undoStop(supplierId: string): Promise<void>;
   /** Back at the shop: the goods to the Store to count in, the cash back to Accounts. */
   handIn(): Promise<void>;
 

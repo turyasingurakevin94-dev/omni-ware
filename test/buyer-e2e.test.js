@@ -8,7 +8,7 @@
  *
  *   ask        morning: Ask on the row (WhatsApp opens), the no-WhatsApp sheet, Yes · same
  *   trip       midday: the trip in route order, the cash ask slide → On the trip
- *   handin     on the trip: Got it all, Short (36 of 40), Hand in → Handed in · Musa counts it in
+ *   handin     on the trip: Got it all, Undo (5 s), Got it all again, Short (36 of 40), Hand in → Handed in · Musa counts it in
  *   notfound   midday: Kiseka's Not found → Client waits
  *   nomatch    Suppliers: a search nobody sells → Ask Moses to find it
  *
@@ -93,6 +93,13 @@ const small = new Set();
     s = await open(b, '?demo&state=trip');
     await s.tap('The trip, 3 stops to buy');
     await s.tap('Got it all at Nakawa Cement Depot');
+    // The board's Success state: the stop done, its time, Undo for 5 s; Undo opens it again.
+    t.check((await s.text()).includes('Got it all · 11:45'), 'Nakawa done: Got it all · 11:45');
+    await s.p.getByRole('button', { name: /^Undo Nakawa Cement Depot/ }).click(); await s.p.waitForTimeout(700); await s.fit('Undo');
+    t.check(await s.btn('Got it all at Nakawa Cement Depot').isVisible(), 'Undo: Nakawa is the stop now again');
+    await s.tap('Got it all at Nakawa Cement Depot');
+    await s.p.waitForTimeout(5600);
+    t.check(!(await s.p.getByRole('button', { name: /^Undo Nakawa/ }).count()), 'after 5 s the Undo goes and Nakawa stays done');
     await s.tap('Got it all at Owino Plumbing');
     await s.tap('Short at Namanve Sheets');
     for (let i = 0; i < 4; i++) await s.tap('Fewer Iron sheet G28 for #0550');

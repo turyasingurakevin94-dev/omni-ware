@@ -2,9 +2,12 @@
  * Trip · On the trip (TripOn.dc.html): one row per stop. The navy hero is
  * the cash in hand; the route marks the stop now; the stop now opens its
  * lines with Got it all / Short; stops done show what was paid; the dock
- * counts what is paid and the Hand in slide waits for the last stop.
+ * counts what is paid and the Hand in slide waits for the last stop. A stop just
+ * done shows its time and Undo for 5 seconds (the board's Success state).
  */
+import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import type { StopCount } from '../../../core/buyer/source.ts';
 import { shortWord } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
@@ -18,11 +21,15 @@ import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, kept, online } from '../shell/store.ts';
+import { act, kept, now, online } from '../shell/store.ts';
 import { byRole, keptStops, liveStops, sellersOf, stopLines, supplierOf } from './model.ts';
 import { GavePill, NavyHero, RouteStrip, Sees, type RouteNode } from './parts.tsx';
 import { StopCard } from './StopCard.tsx';
 import './on.css';
+
+/** The stop just done, for its Undo (5 s). */
+const justDone = signal<{ sid: string; at: number } | null>(null);
+const UNDO_S = 5;
 
 export function On(p: { b: BuyerBooks }): JSX.Element {
   const b = p.b, t = b.trip;
@@ -43,7 +50,7 @@ export function On(p: { b: BuyerBooks }): JSX.Element {
     const r = await act('stopDone', s.supplierId, counts, amount);
     const name = supplierOf(b, s.supplierId)?.name || 'Stop';
     if (r.kept) toast.show('Saved on this phone', { kind: 'warn', sub: `${name} · sends when online` });
-    else toast.show(counts.some((c) => { const l = stopLines(b, s).find((x) => x.order.id === c.orderId && x.line.key === c.key); return l && c.got < l.line.qty; }) ? `${name} · Short` : `${name} · Got it all`);
+    else justDone.value = { sid: s.supplierId, at: now.value };
   };
 
   const left = stops.length - done.length;
@@ -86,12 +93,13 @@ function StopRow(p: { b: BuyerBooks; n: number; stop: Stop; kept: boolean; next:
   if (s.done) {
     const short = rows.find((r) => r.line.got != null && r.line.got < r.line.qty);
     const diff = (s.paid ?? 0) - s.planned;
-    const sub = short ? shortWord(short.line.got as number, short.line.qty) : ['Got it all', diff ? fig(diff, false, true) : ''].filter(Boolean).join(' · ');
+    const j = justDone.value && justDone.value.sid === s.supplierId ? justDone.value : null;
+    const sub = [short ? shortWord(short.line.got as number, short.line.qty) : 'Got it all', !short && diff ? fig(diff, false, true) : '', j ? clock(j.at) : ''].filter(Boolean).join(' · ');
     return (
       <div class="ow-b-on-row">
         <span class={cx('ow-b-on-n', short ? 'short' : 'done')}><Icon name="check" size={16} stroke={2.4} /></span>
         <span class="ow-b-on-t"><b>{sup?.name}</b><span class={cx('mono', short && 'short')}>{sub}</span></span>
-        <span class="mono ow-b-on-amt good">{fig(s.paid ?? 0)}</span>
+        {j ? <UndoStop sid={s.supplierId} name={sup?.name || 'the stop'} /> : <span class="mono ow-b-on-amt good">{fig(s.paid ?? 0)}</span>}
       </div>
     );
   }
@@ -106,3 +114,24 @@ function StopRow(p: { b: BuyerBooks; n: number; stop: Stop; kept: boolean; next:
   );
 }
 
+
+/** Undo with its seconds left; at 0 it goes and the stop stays done. */
+function UndoStop(p: { sid: string; name: string }): JSX.Element {
+  const [left, setLeft] = useState(UNDO_S), [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (busy) return undefined;
+    if (left <= 0) { justDone.value = null; return undefined; }
+    const t = setTimeout(() => setLeft(left - 1), 1000);
+    return () => clearTimeout(t);
+  }, [left, busy]);
+  const undo = async () => {
+    setBusy(true);
+    try { await act('undoStop', p.sid); justDone.value = null; }
+    catch (e) { setBusy(false); setLeft(0); toast.show('Not undone', { kind: 'error', sub: e instanceof Error ? e.message : '' }); }
+  };
+  return (
+    <button type="button" class="ow-b-on-undo" disabled={busy} onClick={() => void undo()} aria-label={`Undo ${p.name}, ${left} seconds left`}>
+      Undo <span class="mono">{left}</span>
+    </button>
+  );
+}

@@ -155,6 +155,20 @@ export async function stopDone(sb: Sb, s: Session, raw: Raw, sid: string, counts
 }
 
 /**
+ * Undo a stop just done (TripOn.dc.html, Success "Undo 5"). Done-here lives on this phone until the
+ * hand-in (keep.ts), so undo clears it there; what came stays on the lines as a draft. Once the stop is
+ * handed in (collected) there is nothing to undo here.
+ */
+export async function undoStop(sb: Sb, s: Session, raw: Raw, sid: string): Promise<void> {
+  const round = liveRound(raw) || [];
+  const x = round.find((t) => !t.voided && String(t.supplier_id) === String(sid));
+  if (!x) throw dataError('refused', 'That stop is not on the trip');
+  const row = await readRow(sb, s, 'collection_trips', x.id);
+  if (!row || row.voided || row.status !== 'collecting') throw dataError('refused', 'Already handed in');
+  setStopPay(s.userId, String(x.id), { done: null, amount: null });
+}
+
+/**
  * W18 buyer.html:4496 slide:handin: the stops done go in together (one collected_at); stops not reached are
  * off the round first, so the one push counts only what came back; then W19 each stop's prices to the list.
  * Not written here (pages not designed): receipts to Accounts (W20), own money (W18a), restock lines (W21).
