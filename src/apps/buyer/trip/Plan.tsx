@@ -12,7 +12,7 @@ import { counted, firstWord } from '../../../core/names.ts';
 import { clock, dayLabel } from '../../../core/time.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Dock } from '../../../ui/Dock.tsx';
-import { EmptyState } from '../../../ui/Empty.tsx';
+import { Button } from '../../../ui/Button.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { Slide, type SlideProps } from '../../../ui/Slide.tsx';
@@ -83,11 +83,7 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
       <LightHead title="Plan the trip" at={1} text={dayLabel(now.value)} me={me.value} onClose={() => nav.back()} />
       {(!online.value || keptAsk) && <Notice kind="offline" class="ow-b-trip-notice">{keptAsk ? 'Offline · saved · 1 to send' : 'No signal · the ask waits on this phone'}</Notice>}
       {empty ? (
-        <div class="ow-b-trip-body">
-          <EmptyState
-            ghost={<div class="ow-b-plan-none"><span><Icon name="basket" size={24} stroke={1.8} /></span><b>Nothing to buy</b><span class="mono">{`${t.found} Found · ${t.asked} Asked`}</span></div>}
-            way={t.asked > 0 ? { label: `Asked ${t.asked}`, on: () => nav.push('replies') } : { label: 'Back to Today', on: () => nav.home() }} />
-        </div>
+        <NoneYet toAsk={t.toask} asked={t.asked} />
       ) : (
         <>
           <RouteStrip nodes={nodes} />
@@ -102,10 +98,10 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
           </div>
         </>
       )}
-      <Dock words={empty ? en : plan.asking ? `Waiting · ${en}` : `Cash from ${en}`} total={empty ? null : plan.cash} sub={sub}>
+      {!empty && <Dock words={empty ? en : plan.asking ? `Waiting · ${en}` : `Cash from ${en}`} total={empty ? null : plan.cash} sub={sub}>
         <Slide {...slide} />
         {!empty && <Sees who={sees} word="On the trip" then={!plan.asking} navy />}
-      </Dock>
+      </Dock>}
     </main>
   );
 }
@@ -122,6 +118,27 @@ function CashAsk(p: { b: BuyerBooks }): JSX.Element {
         <div class="ow-b-plan-step"><span>{esther ? <Avatar initials={esther.initials} tint={esther.tint} size={30} /> : null}</span><b>{`${en} gives`}</b><span class="mono">—</span></div>
         <div class="ow-b-plan-step"><span><Icon name="pin" size={18} stroke={2} /></span><b>Go</b><span class="mono">—</span></div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Nothing found yet (Additions.dc.html, phone E): the dashed card, then the way to the work: To ask · N
+ * (Orders, to ask), else Asked · N (Replies) while asks are out; with nothing at all, back to Today.
+ */
+function NoneYet(p: { toAsk: number; asked: number }): JSX.Element {
+  const way = p.toAsk > 0 ? { label: `To ask · ${p.toAsk}`, on: () => nav.push('orders', { filter: 'toask' }) }
+    : p.asked > 0 ? { label: `Asked · ${p.asked}`, on: () => nav.push('replies') } : null;
+  return (
+    <div class="ow-b-trip-body ow-b-plan-empty">
+      <div class="ow-b-plan-none">
+        <span><Icon name="basket" size={24} stroke={1.8} /></span>
+        <b>Nothing found yet</b>
+        <span>The trip fills as suppliers say yes</span>
+        <span class="mono">{`0 found · ${p.toAsk} to ask`}</span>
+      </div>
+      {way && <Button onClick={way.on}>{way.label}</Button>}
+      {!way && <button type="button" class="ow-b-plan-home" onClick={() => nav.home()}>Nothing to ask either? Back to Today</button>}
     </div>
   );
 }

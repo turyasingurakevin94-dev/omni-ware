@@ -12,6 +12,7 @@
 import { dataError, isDataError } from '../../datasource.ts';
 import type { Session } from '../../types.ts';
 import { client, isNetwork, type Sb } from '../../supabase/client.ts';
+import { askSourcing as askSourcingShared } from '../../supabase/write.ts';
 import type { BuyerSource } from '../source.ts';
 import { readAppAnswers, readBuyerSession, readRaw } from './read.ts';
 import { booksOf, type Raw } from './rows.ts';
@@ -51,7 +52,6 @@ export function buyerSupabase(): BuyerSource {
     try { await fn(sb(), me(), await last(), Date.now()); } catch (e) { raw = null; classify(e); }
     raw = null;
   };
-  const missing = (what: string) => (): Promise<never> => Promise.reject(dataError('missing', what + ': buyer.html has no way to do this'));
 
   const src: BuyerSource = {
     kind: 'supabase',
@@ -101,9 +101,9 @@ export function buyerSupabase(): BuyerSource {
 
     confirmPrice: (sid, productId, item, price) => write((c, s, r) => W.confirmPrice(c, s, r, sid, productId, item, price)),
     suggestPhone: (sid, phone) => write((c, s, r) => W.suggestPhone(c, s, r, sid, phone)),
-    // buyer.html asks Sourcing only through an order's line (clientWaits, W8a) or a sourcing_fix (W23):
-    // an item with no order has no path to the books.
-    askSourcing: missing('Asking Sourcing for an item with no order'),
+    // An item nobody sells (the canvas's "Ask Moses to find it"): the same Sourcing ask Sales makes
+    // (sourcing_leads, its push to Sourcing), with no customer or chat.
+    askSourcing: (item) => write((c, s, _r, now) => askSourcingShared(c, s, { name: item, qty: 1, customerId: null, chatId: null }, null, now)),
   };
   return src;
 }
