@@ -48,7 +48,7 @@ export interface BuyerSource {
   /** Off the bill, with the reason Sales is told. */
   removeLine(orderId: number, key: string, reason: string): Promise<void>;
   /** Another item in its place (item_switch, Sales is pushed). */
-  switchItem(orderId: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX }): Promise<void>;
+  switchItem(orderId: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX; why?: string }): Promise<void>;
 
   /* the trip */
   /** The planned trip's stops on or off. */

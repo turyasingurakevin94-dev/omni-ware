@@ -179,8 +179,8 @@ export async function removeLine(sb: Sb, s: Session, raw: Raw, id: number, key: 
 }
 
 /** W7 buyer.html:5391 swapgo: another item in its place, then an item_switch hand-off to Sales (pushed by 0134). */
-export async function switchItem(sb: Sb, s: Session, raw: Raw, id: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX }, now: number): Promise<void> {
-  const why = 'Client wants it';   // buyer.html:5320 SWAP_WHY[0]: the interface carries no reason
+export async function switchItem(sb: Sb, s: Session, raw: Raw, id: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX; why?: string }, now: number): Promise<void> {
+  const why = to.why || 'Client wants it';   // buyer.html:5320 SWAP_WHY: the chip tapped, the first by default
   let from = { name: '', price: 0 };
   const row = to.productId ? raw.prices.map(priceRowOf).find((r) => String(r.productId) === String(to.productId) && String(r.supplierId) === String(to.supplierId)) : null;
   const r = await changeOrder(sb, s, id, (q) => {

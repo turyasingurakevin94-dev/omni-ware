@@ -83,7 +83,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
     const k = `${r.price.supplierId}|${r.price.item}`;
     setBusy(k);
     try {
-      const res = await act('switchItem', o.id, l.key, { name: r.price.item, productId: r.price.productId, supplierId: r.price.supplierId, cost: r.price.price });
+      const res = await act('switchItem', o.id, l.key, { name: r.price.item, productId: r.price.productId, supplierId: r.price.supplierId, cost: r.price.price, why });
       toast.show(res.kept ? 'Kept · it sends when back' : `Switched · ${r.price.item}`, { kind: res.kept ? 'warn' : 'ok' });
       nav.back();
     } catch (e) {

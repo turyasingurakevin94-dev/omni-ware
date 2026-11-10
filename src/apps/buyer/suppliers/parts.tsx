@@ -14,7 +14,7 @@ import { cx } from '../../../ui/util.tsx';
 import './parts.css';
 
 /** A supplier's tile: 40 on a row, 52 in the hero, 32 on the sheet's strip. */
-export function SupTile(p: { name: string; size?: 32 | 38 | 40 | 52 }): JSX.Element {
+export function SupTile(p: { name: string; size?: 32 | 38 | 40 | 44 | 52 }): JSX.Element {
   return <span aria-hidden="true" class={cx('ow-b-suppliers-tile', 's' + (p.size || 40))}>{initials(p.name)}</span>;
 }
 
