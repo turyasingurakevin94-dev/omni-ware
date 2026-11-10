@@ -48,6 +48,11 @@ const ROLES = {
     title: 'Sales', theme: '#16203C', manifest: '/manifest-sales.json', demo: 'src/core/demo/entry.ts', parts: 'src/ui/gallery/entry.tsx',
     lazy: ['chats', 'sell', 'counter', 'orders', 'customers'], sw: 'src/apps/sales/sw.ts',
   },
+  // The Buyer app (docs/spec/04-screens-buyer.md): one page, no lazy tabs; the demo on ?demo.
+  buyer: {
+    title: 'Buyer', theme: '#16203C', manifest: '/manifest-buyer.json', demo: 'src/core/buyer/demo/entry.ts', parts: null,
+    lazy: [], sw: null,
+  },
 };
 const OPTS = { bundle: true, write: false, minify: true, format: 'iife', target: ['es2020'], legalComments: 'none', charset: 'utf8', logLevel: 'silent' };
 const JSX = { jsx: 'automatic', jsxImportSource: 'preact' };
@@ -173,25 +178,24 @@ async function build(role) {
   const files = tabs.map((t) => t.file);
   const html = page(role, `window.owSalesBuild=${JSON.stringify(id)};\n${p.js}`, p.css, files);
 
-  // 4. The service worker: this build's page and tab files, kept together.
-  const swRes = await esbuild.build({
+  // 4. The service worker: this build's page and tab files, kept together (a role without one has none yet).
+  const sw = r.sw ? head(r.sw, `'s service worker`) + split(await esbuild.build({
     ...OPTS, entryPoints: [path.join(ROOT, r.sw)], outdir: tmp,
     define: { __OW_BUILD__: JSON.stringify(id), __OW_FILES__: JSON.stringify([`${role}.html`, ...files]) },
-  });
-  const sw = head(r.sw, `'s service worker`) + split(swRes).js + '\n';
+  })).js + '\n' : null;
 
   const demoRes = await esbuild.build({ ...OPTS, entryPoints: [path.join(ROOT, r.demo)] });
-  const demo = head('src/core/demo', '?demo') + demoRes.outputFiles[0].text.trim() + '\n';
-  const parts = split(await esbuild.build({ ...OPTS, ...JSX, entryPoints: [path.join(ROOT, r.parts)], outdir: tmp }));
-  const gallery = head('src/ui/gallery', '?demo&parts=main|main2') + cssInJs(parts.css) + parts.js + '\n';
+  const demo = head(path.dirname(r.demo), '?demo') + demoRes.outputFiles[0].text.trim() + '\n';
+  const parts = r.parts ? split(await esbuild.build({ ...OPTS, ...JSX, entryPoints: [path.join(ROOT, r.parts)], outdir: tmp })) : null;
+  const gallery = parts ? head('src/ui/gallery', '?demo&parts=main|main2') + cssInJs(parts.css) + parts.js + '\n' : null;
 
   const next = (f) => path.join(ROOT, 'next', f);
   const out = [
     { out: next(`${role}.html`), text: html, budget: BUDGET },
     ...tabs.map((t) => ({ out: next(t.file), text: t.text, budget: TAB_BUDGET })),
-    { out: next(`${role}-sw.js`), text: sw },
+    ...(sw ? [{ out: next(`${role}-sw.js`), text: sw }] : []),
     { out: next(`${role}-demo.js`), text: demo },
-    { out: next(`${role}-parts.js`), text: gallery },
+    ...(gallery ? [{ out: next(`${role}-parts.js`), text: gallery }] : []),
   ];
   out.forEach((o) => { o.gz = gz(o.text); });
   // The names earlier callers (tests) read.
