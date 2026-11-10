@@ -100,6 +100,37 @@ phones when this branch is merged to main.
 Everything else decided there is a front-end rule: the shared core builds it
 once, and the old apps are not changed for it (they are frozen).
 
+**Putting 0179–0181 live.** The new Sales app's database changes: `0179`
+(a yard worker keeps out of the books), `0180` (`place_order`) and `0181`
+(Sales asks the Manager to cancel). One script, `docs/live/apply-0179-0181.sql`
+(made by `node tools/build-live-sql.js 0179-0181`; `test/live-apply-0179-0181.test.js`
+runs it on a database made from 0001-0178). In the live project's SQL editor:
+
+0. **First, `docs/live/which-migrations.sql`** (read-only). Kevin's check on
+   10 Nov: 0180 is in already (`place_order` and its index); 0179 and 0181
+   are missing.
+1. **Step 1** alone: read-only. Stops with a plain message if live is missing
+   anything the three are built on (0119 to 0178, the 21 tables 0179 closes),
+   or if `cancel_order` (0177), `saved_quotes_stage_move` (0178) or one of the
+   three's own functions already in differs from its migration (spaces and
+   Windows line ends aside). Says which of the three are in already. The one
+   exception is `place_order`: if live's differs from the repo's (an older
+   draft), step 1 says so ("Not the repo's: place_order") and goes on, and
+   step 3 puts the repo's in its place; one with other arguments stops it.
+2. **Step 2**: read-only. First, where each of the three stands and what
+   step 3 does with it. Then what staff will notice: new Sales app orders are
+   placed through `place_order` (the shop's Credit charge goes on every credit
+   order; who places); Sales can ask the Manager to cancel (`cancel.ask`,
+   `cancel_asks`; who asks, who answers); the yard workers kept out of the
+   books, or already kept out where 0179 is in. Tell the Manager and Sales.
+3. **Step 3**, BEGIN to COMMIT in one go: it runs step 1's checks again
+   first, then the three, all or none. 0179 goes in only where it is not in;
+   where it is, it is left exactly as it is. 0180 goes in again, which
+   changes nothing where it is the repo's. Safe to run twice.
+4. **Step 4**: three rows, each ok (each function as the repo writes it).
+
+No edge function changes.
+
 ## Retire list
 
 Each role's old page goes once its new app has taken over, so the repo never
@@ -185,3 +216,4 @@ Source lines per app file: `index.html` 181,049 · `agent.html` 17,391 ·
 - **2026-11-05** — Sales: the final auditors' fails (Orders/Customers, Today/Chats/parts). **Resume** opened an empty order: every Resume now opens the draft's own lines through one rule, `shell/nav.ts` `resumeOrder` (CU13, CU17, TD03, the red +'s Still open, Chats, Goal); e2e `resume`. **Customers:** CU13's reply is named with the full name ("Reply to Lubowa Builders"); CU34's "Find someone else" and CU40–CU47's Close get their whole 44 × 44 (raised over the head below, app and boards). **Orders:** the head says when the order was placed, or the bill's day once it is a week-old delivered bill (`orders/data.ts` `orderWhen`). **Today:** TD07's calm tiles name only the mark they draw; TD17's money rows open Paid rebuilt from the books (`customers/paid { payment }`, `paid-books.ts`: who, how much, how, which bills, Send the receipt, Back). **Chats:** a new number's Start order asks "Who is it for?" with the number and the chat's item carried (saved customer, new customer with the phone filled, or Walk-in); the Chats tab says what its badge counts ("Chats, 1 new" for Ruth); the Manager's team rows are named ("Open Lubowa Builders’ chat", `core/names.ts` `possessive`). TD12's board attribute fixed (`&quot;`). The e2e measures room with the files `apps/sales` ships (`build-www.js` `FACES`), never the network, and stops with one clear reason when they are not installed. Open for Kevin: "Give Mukono" or "Give Mukono Roofing" (the boards disagree); `sell { then: 'ask' }` (Ask Moses → Change customer) opens an order instead of returning to Ask.
 - **2026-11-05** — Sales: the Sell/Counter final audit's fails. **Money:** an order's total sums its priced lines and reads "Price coming", never 0, when none is priced (one rule, `ui/Money.tsx` `orderFig`: the dock and Placed; SL21, SL28); a charge at a rate a bag follows the count (`core/services.ts` `followCount`, spec 04; SL39). **Counter:** its search finds every item the shop lists, the priced first; one with no price says Price coming and goes as an order, where the Manager prices it (a counter sale is billed at once and a bill takes no unpriced line, OWTPC), never "the shop doesn't sell" (KC26). **Sell:** Who's due for a customer with an order not placed yet resumes it (SL01, `resumeOrder`); the usual tile's name is the board's short one (SL03). **Names:** one rule for inches, `core/names.ts` `sayItem` ("4 inch", never `"`; Start, Lines, OftenWith, Find, UsualCard, the counter's rows, Today's find, the price sheet); Order in is named with what it orders (KC02, KC29); the delivery sheet's Where and Site phone rows are each one control named by what they show, and a tap anywhere on the Where field keeps the caret in it (SL17, SL36); KC16's strip is only the screen behind (`FullSheet backLabel={null}`). **Boards:** inch in every label (KC01, KC03, KC05, KC07–KC09, KC13, KC17–KC19, KC24, KC26–KC28, TD12); Close the counter sale → Today on every Counter board; Back to Today on KC15 and KC22; KC11's line rows are buttons; KC04's New customer → CU20; SL11's strip decorative.
 - **2026-11-10** — Final-audit fixes verified and shipped (Kevin relaxed the bar: no second fresh audit). e36b9f8f's batch plus the delivery row's height (SL17/SL36, a button counts its border); the 61 touched or failed boards re-run at their earlier scores; npm test 503/503, e2e:sales 13/13; behaviour spot-checked. The 36 earlier fails are recorded as "lead re-check" in the verdicts. Still open: the checked live script for 0179–0181, Kevin's questions, the switch of sales.html.
+- **2026-11-10** — The checked live script for 0179–0181 (`docs/live/apply-0179-0181.sql`): prerequisites, preview, one transaction, check, as for 0171–0177. `tools/build-live-sql.js` now takes a run (`0171-0177`, the default and unchanged byte for byte, or `0179-0181`), each run's words in `tools/live-sql/`. Step 1 holds the three to what they lean on by fingerprint (the md5 of a function's body without spaces or line ends): `cancel_order` (0177) and `saved_quotes_stage_move` (0178), and their own functions where in already. Step 3 runs step 1's checks again first, and 0179 only where it is not fully in. Kevin's read-only check found 0180 already live and 0179, 0181 missing: step 1 names 0180 as in and goes on, and a `place_order` that is not the repo's (an older draft) is said plainly and replaced by step 3, not stopped on. Tested on a database from 0001-0178, run twice; on live's state (0001-0178 plus 0180), also with an older-draft `place_order` and with one of other arguments (stops); on one with 0179 in (left exactly as it was: same policies, same function); on one before 0178 (stops); with `cancel_order` or `ow_yard_worker` changed by hand (step 1 stops; step 3 run anyway leaves nothing); and pasted from Windows. `which-migrations.sql` already knew 0179–0181 (regenerated: no change). Not run on live: Kevin runs it.
