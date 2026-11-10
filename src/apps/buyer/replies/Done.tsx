@@ -6,6 +6,7 @@
  * the supplier, when and what it costs, and what Sales sees.
  */
 import type { JSX } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { tiles } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { orderNo } from '../../../core/names.ts';
@@ -16,12 +17,34 @@ import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { firstName, orderWord, seller } from './rules.ts';
-import type { Done } from './state.ts';
+import { act } from '../shell/store.ts';
+import { done, type Done } from './state.ts';
 
-/** Undo is on the board but the source has no write to take an answer back: a stand-in until it does. */
-const undoStandIn = (): void => toast.show('Undo is not ready yet', { kind: 'warn' });
+const UNDO_S = 5;
 
-function Sees(p: { b: BuyerBooks; ids: number[] }): JSX.Element {
+/** "Undo · 5": counts down, then goes; a tap puts the supplier's lines back to Asked (source.undoAnswer). */
+function Undo(p: { sid: string }): JSX.Element | null {
+  const [left, setLeft] = useState(UNDO_S);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (left <= 0 || busy) return undefined;
+    const t = window.setTimeout(() => setLeft(left - 1), 1000);
+    return () => clearTimeout(t);
+  }, [left, busy]);
+  if (left <= 0 && !busy) return null;
+  const undo = async () => {
+    setBusy(true);
+    try { await act('undoAnswer', p.sid); done.value = null; toast.show('Undone · back to Asked'); }
+    catch (e) { setBusy(false); toast.show('Not undone', { kind: 'error', sub: e instanceof Error ? e.message : '' }); }
+  };
+  return (
+    <button type="button" class="ow-b-replies-undo" disabled={busy} aria-busy={busy || undefined} onClick={() => void undo()}>
+      {busy ? <span class="ow-spin" aria-hidden="true" /> : <>Undo · <span class="mono">{left}</span></>}
+    </button>
+  );
+}
+
+function Sees(p: { b: BuyerBooks; ids: number[]; sid: string }): JSX.Element {
   const os = p.b.orders.filter((o) => p.ids.includes(o.id));
   const m = os.length ? seller(p.b, os[0]) : null;
   const word = os.length ? orderWord(os[0], p.b.trip).word : 'Found';
@@ -29,7 +52,7 @@ function Sees(p: { b: BuyerBooks; ids: number[] }): JSX.Element {
     <div class="ow-b-replies-dsees">
       {m && <Avatar initials={m.initials} tint={m.tint} size={26} />}
       <span>{`${firstName(m)} sees: `}<b>{word}</b></span>
-      <button type="button" class="ow-b-replies-undo" onClick={undoStandIn}>Undo</button>
+      <Undo sid={p.sid} />
     </div>
   );
 }
@@ -47,7 +70,7 @@ export function DoneCard(p: { b: BuyerBooks; d: Done; now: number }): JSX.Elemen
             : <span class="ow-b-replies-box t-good"><span class="mono">{d.lines}</span><span>Found</span></span>}
           <span class="ow-b-replies-who"><b>{d.supplier}</b><span class="mono">{`${up ? 'Price up' : 'Found'} · ${clock(d.at)} · ${fig(d.total)}`}</span></span>
         </div>
-        <Sees b={b} ids={d.orderIds} />
+        <Sees b={b} ids={d.orderIds} sid={d.supplierId} />
       </div>
     );
   }
@@ -79,7 +102,7 @@ export function DoneCard(p: { b: BuyerBooks; d: Done; now: number }): JSX.Elemen
         {tile(t.found, 'Found', 'on')}
         {tile(t.ontrip, 'On the trip')}
       </div>
-      <Sees b={b} ids={[o.id]} />
+      <Sees b={b} ids={[o.id]} sid={d.supplierId} />
     </div>
   );
 }

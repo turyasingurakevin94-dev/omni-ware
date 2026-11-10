@@ -12,7 +12,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { answeredRows, replyRows, tiles, type SupplierGroup } from '../../../core/buyer/rules.ts';
-import type { BuyerBooks, LineState } from '../../../core/buyer/types.ts';
+import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { orderNo } from '../../../core/names.ts';
 import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -25,6 +25,7 @@ import type { Kept } from '../../../core/outbox.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
 import { nav, top } from '../shell/nav.ts';
 import { act, books, discard, kept, now, online } from '../shell/store.ts';
+import { Answered } from './Answered.tsx';
 import { DoneCard } from './Done.tsx';
 import { ReplyRow, type Answer } from './ReplyRow.tsx';
 import { firstName, salesSees } from './rules.ts';
@@ -33,7 +34,6 @@ import './replies.css';
 
 const KIND: Record<Exclude<Answer, 'price'>, 'answerYes' | 'answerNo'> = { yes: 'answerYes', no: 'answerNo' };
 const KEPT_WORD: Record<string, string> = { answerYes: 'Yes · same', answerPrice: 'New price', answerNo: 'No' };
-const DOT: Partial<Record<LineState, string>> = { priceup: '#95530C', notfound: '#8E2A22', found: '#0F6B43' };
 
 /** The answer for this supplier kept on the phone or refused, if any. */
 function keptFor(list: Kept[], sid: string): Kept | null {
@@ -61,23 +61,6 @@ function Head(p: { b: BuyerBooks; now: number }): JSX.Element {
         </span>
       </div>
     </header>
-  );
-}
-
-function Answered(p: { b: BuyerBooks; now: number }): JSX.Element | null {
-  const rows = answeredRows(p.b, p.now);
-  if (!rows.length) return null;
-  const words = rows.map((r) => r.state === 'priceup' ? 'Price up' : r.state === 'notfound' ? 'Not found' : 'Found');
-  // The open list is not drawn on the board yet: a stand-in until it is.
-  return (
-    <button type="button" class="ow-b-replies-answered" aria-expanded="false" onClick={() => toast.show('The answered list is not ready yet', { kind: 'warn' })}>
-      <span class="t">Answered</span>
-      <span class="ow-b-replies-dots" role="img" aria-label={words.join(', ')}>
-        {rows.map((r) => <span key={r.supplier.id} style={{ background: DOT[r.state] || '#C9C4BA' }} />)}
-      </span>
-      <span class="mono">{rows.length}</span>
-      <Icon name="chevron-right" size={18} stroke={2} />
-    </button>
   );
 }
 
@@ -160,6 +143,14 @@ export function Replies(): JSX.Element {
     }
   };
 
+  const askAgain = async (g: SupplierGroup): Promise<void> => {
+    if (busy) return;
+    try {
+      const r = await act('ask', g.supplier.id, g.orders.map((o) => o.confirms[g.supplier.id]?.how).find(Boolean) || 'whatsapp');
+      toast.show(r.kept ? 'Kept · sends when back' : `Asked ${g.supplier.name} again`, { kind: r.kept ? 'warn' : 'ok' });
+    } catch (e) { toast.show('Not saved', { kind: 'error', sub: reason(e), retry: () => void askAgain(g) }); }
+  };
+
   const retryKept = async (k: Kept): Promise<void> => {
     await discard(k.id);
     try { await act(k.kind as 'answerYes', ...(k.args as unknown[])); } catch (e) { toast.show('Not saved', { kind: 'error', sub: reason(e) }); }
@@ -187,7 +178,7 @@ export function Replies(): JSX.Element {
               waiting={k && !refused ? { word: KEPT_WORD[k.kind], at: k.at } : null}
               onAnswer={(a) => void answer(g, a)}
               onRetry={() => (refused ? void retryKept(refused) : void answer(g, err ? err.a : 'yes'))}
-              onAskAgain={() => toast.show('Ask again is not ready yet', { kind: 'warn' })} />
+              onAskAgain={() => void askAgain(g)} />
           );
         })}
         {rows.length === 0 && !d && <Empty toask={t.toask} />}
