@@ -44,9 +44,9 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     if (!o) throw dataError('missing', `No order ${id}`);
     return o;
   };
-  const lineOf = (o: BOrder, idx: number): BLine => {
-    const l = o.lines.find((x) => x.idx === idx);
-    if (!l) throw dataError('missing', `No line ${idx} on #0${o.id}`);
+  const lineOf = (o: BOrder, key: string): BLine => {
+    const l = o.lines.find((x) => x.key === key);
+    if (!l) throw dataError('missing', `No line ${key} on #0${o.id}`);
     return l;
   };
   /** The live orders holding lines of this supplier. */
@@ -77,24 +77,24 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     answerYes: (sid) => later(() => { answer(sid, 'found'); settle(); }),
     answerPrice: (sid, ps: PriceAnswer[]) => later(() => {
       ps.forEach((p) => {
-        const l = lineOf(order(p.orderId), p.idx);
+        const l = lineOf(order(p.orderId), p.key);
         if (p.cost !== l.cost) { l.priceWas = l.cost; l.cost = p.cost; l.repricedAt = clock(); l.ruthDecides = p.cost > l.sell; }
       });
       answer(sid, 'found'); settle();
     }),
     answerNo: (sid) => later(() => answer(sid, 'notfound')),
 
-    otherSupplier: (id, idx, sid, cost: UGX) => later(() => {
-      const o = order(id), l = lineOf(o, idx);
+    otherSupplier: (id, key, sid, cost: UGX) => later(() => {
+      const o = order(id), l = lineOf(o, key);
       l.supplierId = sid; l.cost = cost; l.priceWas = null; l.ruthDecides = cost > l.sell;
     }),
-    clientWaits: (id, idx) => later(() => {
-      const l = lineOf(order(id), idx);
+    clientWaits: (id, key) => later(() => {
+      const l = lineOf(order(id), key);
       l.clientWaits = { at: clock(), via: 'sourcing' }; l.supplierId = null;
     }),
-    removeLine: (id, idx, reason) => later(() => { lineOf(order(id), idx).removed = { at: clock(), reason }; settle(); }),
-    switchItem: (id, idx, to) => later(() => {
-      const l = lineOf(order(id), idx);
+    removeLine: (id, key, reason) => later(() => { lineOf(order(id), key).removed = { at: clock(), reason }; settle(); }),
+    switchItem: (id, key, to) => later(() => {
+      const l = lineOf(order(id), key);
       l.switchedFrom = l.name; l.name = to.name; l.productId = to.productId; l.supplierId = to.supplierId; l.cost = to.cost;
       l.priceWas = null; l.ruthDecides = to.cost > l.sell;
     }),
@@ -115,7 +115,7 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     stopDone: (sid, counts: StopCount[], paid: UGX) => later(() => {
       const s = b.trip?.stops.find((x) => x.supplierId === sid);
       if (!b.trip || !s) throw dataError('missing', 'No such stop');
-      counts.forEach((c) => { lineOf(order(c.orderId), c.idx).got = c.got; });
+      counts.forEach((c) => { lineOf(order(c.orderId), c.key).got = c.got; });
       s.paid = paid; s.done = true;
     }),
     handIn: () => later(() => {

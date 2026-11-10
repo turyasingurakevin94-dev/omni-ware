@@ -28,7 +28,7 @@ export const WORD: Record<LineState, string> = {
 
 const onTrip = (trip: Trip | null, o: BOrder, l: BLine): Stop | null => {
   if (!trip || trip.state === 'planned' || trip.state === 'in') return null;
-  return trip.stops.find((s) => !s.off && s.lines.some((x) => x.orderId === o.id && x.idx === l.idx)) || null;
+  return trip.stops.find((s) => !s.off && s.lines.some((x) => x.orderId === o.id && x.key === l.key)) || null;
 };
 
 /** Where a line stands. The order of the checks is the rule: off the bill first, the yard last. */
@@ -147,7 +147,7 @@ export function tripPlan(b: BuyerBooks): TripPlan {
   const stops: Stop[] = [...by.entries()]
     .sort(([a], [c]) => routeIndex(sup(a)?.place || '') - routeIndex(sup(c)?.place || '') || (sup(a)?.name || '').localeCompare(sup(c)?.name || ''))
     .map(([supplierId, rs]) => ({
-      supplierId, lines: rs.map((r) => ({ orderId: r.order.id, idx: r.line.idx })),
+      supplierId, lines: rs.map((r) => ({ orderId: r.order.id, key: r.line.key })),
       planned: rs.reduce((t, r) => t + r.line.cost * r.line.qty, 0), paid: null, done: false, off: false,
     }));
   return { stops, cash: stops.reduce((t, s) => t + s.planned, 0), held: refs.filter((r) => r.state === 'priceup' || r.state === 'asked') };
@@ -172,7 +172,7 @@ export function handIn(trip: Trip, b: BuyerBooks): HandIn {
   const ids = new Set(stops.flatMap((s) => s.lines.map((l) => l.orderId)));
   const orders = b.orders.filter((o) => ids.has(o.id));
   const shorts = stops.flatMap((s) => s.lines).map((x) => {
-    const order = orders.find((o) => o.id === x.orderId), line = order?.lines.find((l) => l.idx === x.idx);
+    const order = orders.find((o) => o.id === x.orderId), line = order?.lines.find((l) => l.key === x.key);
     return order && line && line.got != null && line.got < line.qty ? { order, line, got: line.got } : null;
   }).filter((x): x is { order: BOrder; line: BLine; got: number } => !!x);
   return { paid, back: Math.max(0, trip.cash.amount - paid), shorts, orders };

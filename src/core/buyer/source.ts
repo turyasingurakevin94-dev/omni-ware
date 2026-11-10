@@ -13,8 +13,9 @@
 import type { Session, UGX } from '../types.ts';
 import type { AskWay, BuyerBooks } from './types.ts';
 
-export interface PriceAnswer { orderId: number; idx: number; cost: UGX }
-export interface StopCount { orderId: number; idx: number; got: number }
+/** A line is named by its order and key (BLine.key: items[].lineId). */
+export interface PriceAnswer { orderId: number; key: string; cost: UGX }
+export interface StopCount { orderId: number; key: string; got: number }
 
 export interface BuyerSource {
   readonly kind: 'demo' | 'supabase';
@@ -39,13 +40,13 @@ export interface BuyerSource {
 
   /* a line not found */
   /** Buy it from another supplier: the line goes back to To ask with them. */
-  otherSupplier(orderId: number, idx: number, supplierId: string, cost: UGX): Promise<void>;
+  otherSupplier(orderId: number, key: string, supplierId: string, cost: UGX): Promise<void>;
   /** The client waits while Sourcing finds it (a request to Sourcing). */
-  clientWaits(orderId: number, idx: number): Promise<void>;
+  clientWaits(orderId: number, key: string): Promise<void>;
   /** Off the bill, with the reason Sales is told. */
-  removeLine(orderId: number, idx: number, reason: string): Promise<void>;
+  removeLine(orderId: number, key: string, reason: string): Promise<void>;
   /** Another item in its place (item_switch, Sales is pushed). */
-  switchItem(orderId: number, idx: number, to: { name: string; productId: string | null; supplierId: string; cost: UGX }): Promise<void>;
+  switchItem(orderId: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX }): Promise<void>;
 
   /* the trip */
   /** The planned trip's stops on or off. */

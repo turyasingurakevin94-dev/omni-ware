@@ -28,10 +28,10 @@ export interface Confirm {
 
 /** One line of an order as the Buyer works it (saved_quotes.items[idx]). */
 export interface BLine {
-  /** Its place in items[]: the key every write uses. */
+  /** Its place in items[] when read (for order on screen only: a removed line shifts the rest). */
   idx: number;
-  /** items[].lineId when the line has one. */
-  lineId: string | null;
+  /** The line's name in every write: items[].lineId (buyer.html names lines by it, never by position). */
+  key: string;
   name: string;
   productId: string | null;
   qty: number;
@@ -100,7 +100,7 @@ export interface Supplier {
 /** One line taken on a stop of the trip. */
 export interface StopLine {
   orderId: number;
-  idx: number;
+  key: string;
 }
 
 export interface Stop {

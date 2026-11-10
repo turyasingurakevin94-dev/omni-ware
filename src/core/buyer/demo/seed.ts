@@ -59,7 +59,7 @@ function prices(): ListPrice[] {
 
 function line(idx: number, name: string, qty: number, unit: string, cost: number, sell: number, supplierId: string | null): BLine {
   return {
-    idx, lineId: null, name, productId: 'p-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), qty, unit, cost, sell, supplierId,
+    idx, key: `L${idx}`, name, productId: 'p-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), qty, unit, cost, sell, supplierId,
     priceWas: null, repricedAt: null, ruthDecides: false, clientWaits: null, removed: null, switchedFrom: null, got: null,
   };
 }
@@ -117,9 +117,9 @@ export function seed(state: BuyerDemoState | null): Seeded {
       id: 'trip-1017', state: 'on', handedInAt: null,
       cash: { amount: 3500000, askedAt: tb('11:30'), givenAt: tb('11:45'), by: ESTHER },
       stops: [
-        { supplierId: SUP.nakawa, lines: [{ orderId: 550, idx: 1 }], planned: 680000, paid: null, done: false, off: false },
-        { supplierId: SUP.owino, lines: [{ orderId: 553, idx: 1 }], planned: 540000, paid: null, done: false, off: false },
-        { supplierId: SUP.namanve, lines: [{ orderId: 550, idx: 0 }, { orderId: 552, idx: 0 }], planned: 2280000, paid: null, done: false, off: false },
+        { supplierId: SUP.nakawa, lines: [{ orderId: 550, key: 'L1' }], planned: 680000, paid: null, done: false, off: false },
+        { supplierId: SUP.owino, lines: [{ orderId: 553, key: 'L1' }], planned: 540000, paid: null, done: false, off: false },
+        { supplierId: SUP.namanve, lines: [{ orderId: 550, key: 'L0' }, { orderId: 552, key: 'L0' }], planned: 2280000, paid: null, done: false, off: false },
       ],
     };
   }

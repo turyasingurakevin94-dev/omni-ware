@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scores vs the Agent app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#16203C}a:hover{color:#C93A30}
+</style>
+</helmet>
+<div style="width: 2040px; height: 1720px; box-sizing: border-box; background: #F7F5F2; font-family: Figtree, system-ui, sans-serif; color: #1C2233; display: flex; flex-direction: column">
+
+  <div style="background: #16203C; color: #fff; border-radius: 0 0 28px 28px; padding: 36px 48px 32px; display: flex; align-items: flex-end; justify-content: space-between; gap: 32px">
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #B3BCD2">Independent review · round 5 · scored from the rendered screens</div>
+      <div style="font-size: 40px; font-weight: 800">Every page at or above the Agent app</div>
+    </div>
+    <div style="display: flex; gap: 10px">
+      <div style="background: rgba(255,255,255,.08); border-radius: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 150px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600; color: #6FDCB0">8.68</span><span style="font-size: 13px; font-weight: 600; color: #B3BCD2">new · all pages</span>
+      </div>
+      <div style="background: rgba(255,255,255,.08); border-radius: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 150px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">0 / 28</span><span style="font-size: 13px; font-weight: 600; color: #B3BCD2">below the Agent</span>
+      </div>
+      <div style="background: rgba(255,255,255,.08); border-radius: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 150px">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600">8.39 → 8.68</span><span style="font-size: 13px; font-weight: 600; color: #B3BCD2">round 1 → 5</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 32px 48px 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 16px">
+    <sc-for list="{{boards}}" as="b" hint-placeholder-count="7">
+      <div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 17px; font-weight: 700">{{b.name}}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7480">vs Agent {{b.match}}</span>
+        <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; color: #0F6B43">{{b.avg}}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #5F6980">/ {{b.base}}</span></div>
+        <div style="position: relative; height: 10px; border-radius: 99px; background: #F1EEE8">
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{b.newW}}; border-radius: 99px; background: #0F6B43"></div>
+          <div style="position: absolute; top: -4px; bottom: -4px; left: {{b.baseW}}; width: 3px; border-radius: 2px; background: #16203C"></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="padding: 24px 48px 40px; flex-grow: 1; min-height: 0">
+    <div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden; height: 100%; display: flex; flex-direction: column">
+      <div style="display: grid; grid-template-columns: 200px repeat(5, minmax(0, 1fr)) 120px; gap: 12px; padding: 12px 20px; background: #F1EEE8; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5F6980">
+        <span>Page</span><span>Consistency</span><span>Steps</span><span>Glance</span><span>Polish</span><span>In step with Sales</span><span>Avg / Agent</span>
+      </div>
+      <sc-for list="{{pages}}" as="p" hint-placeholder-count="28">
+        <div style="display: grid; grid-template-columns: 200px repeat(5, minmax(0, 1fr)) 120px; gap: 12px; padding: 0 20px; height: 44px; align-items: center; border-top: 1px solid #E6E3DD">
+          <span style="font-size: 14px; font-weight: 700">{{p.name}}</span>
+          <sc-for list="{{p.cells}}" as="c" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; width: 22px">{{c.v}}</span>
+              <div style="position: relative; flex-grow: 1; height: 8px; border-radius: 99px; background: #F1EEE8">
+                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{c.w}}; border-radius: 99px; background: {{c.fill}}"></div>
+                <div style="position: absolute; top: -3px; bottom: -3px; left: {{c.bw}}; width: 2px; background: #16203C"></div>
+              </div>
+            </div>
+          </sc-for>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; color: #0F6B43">{{p.avg}} <span style="color: #5F6980; font-weight: 500">/ {{p.base}}</span></span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2040,"height":1720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = {
+      Today: [9, 9, 8, 9, 8], Orders: [9, 8, 8, 8, 8], Replies: [9, 9, 8, 8, 8],
+      'Trip · Plan': [9, 9, 8, 9, 8], 'On the trip': [9, 8, 8, 9, 8], 'Hand-in': [9, 9, 9, 9, 8], Suppliers: [9, 8, 8, 8, 8]
+    };
+    const match = { Today: 'Today', Orders: 'Clients', Replies: 'Needs you', 'Trip · Plan': 'basket + dock', 'On the trip': 'basket lines', 'Hand-in': 'send + done', Suppliers: 'Clients' };
+    const raw = {
+      Today: [['Default', 9,9,9,9,9], ['Trip ready', 9,9,9,9,8], ['Ask sheet', 9,9,8,9,8], ['All clear', 9,9,8,9,8]],
+      Orders: [['List', 9,8,8,8,9], ['One order', 9,9,9,9,9], ['Not found', 9,9,8,8,8], ['Switch item', 9,8,8,8,8]],
+      Replies: [['List', 9,9,9,9,8], ['New price', 9,9,8,9,9], ['Not found', 9,9,8,8,8], ['All found', 9,10,8,8,9]],
+      'Trip · Plan': [['Proposed trip', 9,10,9,9,8], ['Waiting for cash', 9,9,8,9,9], ['Held for Ruth', 9,9,8,9,8], ['Nothing to buy', 9,9,8,9,8]],
+      'On the trip': [['At a stop', 9,9,9,9,8], ['Short', 9,8,8,9,9], ['Paid differently', 9,8,8,9,8], ['All stops done', 9,9,9,9,8]],
+      'Hand-in': [['Summary', 9,9,9,9,9], ['Sending', 9,9,9,9,8], ['Done', 9,9,9,9,9], ['Offline', 9,9,9,9,8]],
+      Suppliers: [['List', 9,9,8,8,9], ['One supplier', 9,9,9,9,8], ['Fix a price', 9,8,8,8,8], ['No match', 9,9,8,8,8]]
+    };
+    const avg = a => (a.reduce((s, x) => s + x, 0) / a.length);
+    const pct = v => (v * 10) + '%';
+    const pages = [];
+    const boards = Object.keys(raw).map(board => {
+      const b = base[board];
+      const rows = raw[board];
+      rows.forEach(r => {
+        const vals = r.slice(1);
+        pages.push({
+          name: board + ' · ' + r[0],
+          cells: vals.map((v, i) => ({ v, w: pct(v), bw: pct(b[i]), fill: v >= b[i] ? '#0F6B43' : '#C93A30' })),
+          avg: avg(vals).toFixed(1), base: avg(b).toFixed(1)
+        });
+      });
+      const boardAvg = avg(rows.map(r => avg(r.slice(1))));
+      return { name: board, match: match[board], avg: boardAvg.toFixed(2), base: avg(b).toFixed(1), newW: pct(boardAvg), baseW: pct(avg(b)) };
+    });
+    return { boards, pages };
+  }
+}
+</script>
+</body>
+</html>

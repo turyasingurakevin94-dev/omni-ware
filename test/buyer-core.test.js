@@ -62,9 +62,9 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   t.check(d.shop.trip.state === 'on' && d.shop.trip.cash.amount === 3500000, 'cash asked and given: on the trip with 3,500,000');
 
   /* ---- the trip: Nakawa 30,000 less, Owino as planned, Namanve short ---- */
-  await d.stopDone('s-nakawa', [{ orderId: 550, idx: 1, got: 20 }], 650000);
-  await d.stopDone('s-owino', [{ orderId: 553, idx: 1, got: 12 }], 540000);
-  await d.stopDone('s-namanve', [{ orderId: 550, idx: 0, got: 36 }, { orderId: 552, idx: 0, got: 20 }], 2128000);
+  await d.stopDone('s-nakawa', [{ orderId: 550, key: 'L1', got: 20 }], 650000);
+  await d.stopDone('s-owino', [{ orderId: 553, key: 'L1', got: 12 }], 540000);
+  await d.stopDone('s-namanve', [{ orderId: 550, key: 'L0', got: 36 }, { orderId: 552, key: 'L0', got: 20 }], 2128000);
   b = await d.books();
   const h = R.handIn(b.trip, b);
   t.check(h.paid === 3318000 && h.back === 182000, `paid 3,318,000 · 182,000 back (got ${h.paid} · ${h.back})`);
@@ -75,7 +75,7 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   /* ---- a price over the selling price goes to the Manager ---- */
   d = buyerDemo('?demo', { instant: true });
   await d.ask('s-namanve', 'whatsapp');
-  await d.answerPrice('s-namanve', [{ orderId: 552, idx: 1, cost: 27000 }]);
+  await d.answerPrice('s-namanve', [{ orderId: 552, key: 'L1', cost: 27000 }]);
   const c2 = d.shop.orders.find((o) => o.id === 552).lines[1];
   t.check(c2.ruthDecides && c2.priceWas === 24000, 'a new price over the selling price: Ruth decides, was 24,000');
 
