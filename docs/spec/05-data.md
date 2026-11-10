@@ -278,3 +278,11 @@ Each is one function, one transaction, with the task it checks. The new apps cal
 | Q3 | Any member (not yard) may write an order row directly; 14 triggers keep it sound | **Yes**: the new apps write orders only through server functions; direct writes close for each role when its old app retires | §2 |
 | Q4 | All settings are one JSON blob, read under two names in places (`presetDefaultMarkup` vs `presets.defaultMarkup`, 02 §3) and with no list of who may change each | **Yes**: each setting listed once, with its name, its default and whose it is | `app_settings.presets`; 02 Q-list |
 | Q5 | Everything about an order is in one JSON field: lines, payments, credit notes, history | **Keep it** (no data move on the live books); its shape is fixed in 01 §4 and checked by the triggers | §4 |
+
+## 9. Found while building the shared core (2026-10-29)
+
+| Found | Source | Open question | Built until Kevin answers |
+|---|---|---|---|
+| A salesperson's goal is a `manager_notes` row, kind `target`, `body {who, metric: 'sales', aim, from, to}` | `sales.html:6562`; `0122:977` (`set_person_goal`) | — | read as written (`src/core/supabase/read.ts`) |
+| Sales places an order with a **direct insert** into `saved_quotes` (an id from `next_row_id_blocks('row:saved_quote')`); no server function places an order | `sales.html:8722-8738` | Q6: Q3 above says the new apps write orders only through server functions, but there is none for placing one. Add a `place_order` function (a migration), or keep the insert until the old app retires? | **Built: `0180`** `place_order` (quote.make): numbered and inserted in one write, every guard still firing; the new app places through it (`src/core/supabase/write.ts`) |
+| Sales asking the Manager to **cancel** an order has no table and no function | `0177` header: "Sales' ask for a cancel is not built"; the canvas draws it (OR18, #0550 "Cancel asked") | Q7: a migration for the ask (`invoice_asks` kind `cancel`, or its own table)? | **Built: `0181`**, its own table (`cancel_asks`: `invoice_asks` is read as a void or a credit by the Manager app, `decide_invoice_ask` and the Store's snapshot): `ask_cancel` (`cancel.ask`), `withdraw_cancel_ask`, `answer_cancel_ask` (yes through `cancel_order`); the new app and the demo ask through it |

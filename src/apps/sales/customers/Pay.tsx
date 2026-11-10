@@ -1,0 +1,192 @@
+/*
+ * customers/pay { customer, bills? } or { order } · Take payment (CU30–CU36).
+ * How much (all of it prefilled, a bill, or typed), how (Cash · Mobile ·
+ * Bank; Mobile needs its transaction ID, Q6), what it pays bill by bill,
+ * and for cash what they gave: change, or a deposit they keep. One slide,
+ * one write: receive_payment through act(), so with no signal it is kept on
+ * the phone. A walk-in who pays part names who owes the rest.
+ * Every figure is money.ts's: payPlan, settleOver, changeFor, orderOwes.
+ */
+import type { JSX } from 'preact';
+import { useRef, useState } from 'preact/hooks';
+import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
+import { MethodPicker } from '../../../ui/PayMethod.tsx';
+import { toast } from '../../../ui/toast.tsx';
+import { isDataError, type PayArgs, type PayResult } from '../../../core/datasource.ts';
+import { changeFor, likelyNotes, money, orderOwes, payPlan, settleOver, splitPayment } from '../../../core/money.ts';
+import { orderNo } from '../../../core/names.ts';
+import { dayOf } from '../../../core/time.ts';
+import type { Books, Customer, Method, Order } from '../../../core/types.ts';
+import { nav } from '../shell/nav.ts';
+import { act, books, kept, now, retryKept } from '../shell/store.ts';
+import type { ScreenProps } from '../shell/types.ts';
+import { role } from './Customer.tsx';
+import { first } from './cust-head.tsx';
+import { billNo, owingOf, readBills, type OpenBill } from '../../../core/owing.ts';
+import { short } from './data.ts';
+import { AmountInput } from '../../../ui/PayMethod.tsx';
+import { OrderCard, OverCard, PaysCard, QuickAmounts, RefField, type PaysRow } from './pay-parts.tsx';
+import { PayDock } from './pay-dock.tsx';
+import { paidResults, putPaid, sendReceipt, type Paid } from './paid-store.ts';
+import { heldBills, writesFor } from './pay-held.ts';
+import { shareFor, WalkinWho, whoOptions, whoPicked } from './pay-walkin.tsx';
+import './customers.css';
+import './pay.css';
+
+export function PayScreen(p: ScreenProps): JSX.Element {
+  const b = books.value;
+  const c = b && p.params.customer ? b.customers.find((x) => x.id === p.params.customer) || null : null;
+  const o = b && p.params.order != null ? b.orders.find((x) => x.id === Number(p.params.order)) || null : null;
+  if (!b || (!c && !o)) return <FullSheet onBack={() => nav.back()} backLabel="Back" head={<div class="ow-shead"><span aria-hidden="true" class="ow-shead-grab" /></div>} />;
+  // CU46 Fix it: the refused kept payment, opened again over what the books say now (Give change or Deposit).
+  const k = p.params.fix ? kept.value.find((x) => x.id === String(p.params.fix)) : null;
+  const fixArgs = k && Array.isArray(k.args) ? (k.args[0] as PayArgs) : null;
+  const fix = k && fixArgs ? { keptId: k.id, paidKey: String(p.params.paid || ''), args: fixArgs } : null;
+  // What they hand over again: the refused payment (Fix it), or the one thrown away that she still holds (CU47 Take it again).
+  const held = Number(p.params.hold);
+  const pre: Pre | null = fixArgs ? { amount: fixArgs.amount, method: fixArgs.method, ref: fixArgs.ref || '' }
+    : held > 0 ? { amount: held, method: (['cash', 'momo', 'bank'].includes(String(p.params.method)) ? p.params.method : 'cash') as Method, ref: String(p.params.ref || '') } : null;
+  // From an order (the Orders tab's Take payment): that order's amount, and the write goes for that order: its
+  // bill once invoiced, else the order itself. The customer's other bills stay on the list, not ticked.
+  const bills = readBills(p.params.bills) || (c && o ? [o.id] : null);
+  return <Pay b={b} c={c} o={o} bills={bills} fix={fix} pre={pre} />;
+}
+
+/** What she was handed already: how much, how, and its ID or reference. */
+interface Pre { amount: number; method: Method; ref: string }
+
+function Pay(p: { b: Books; c: Customer | null; o: Order | null; bills: number[] | null; fix: { keptId: string; paidKey: string; args: PayArgs } | null; pre: Pre | null }): JSX.Element {
+  const { b, c, o } = p, today = dayOf(now.value), esther = role(b, 'accounts');
+  const m = c ? owingOf(b, c, today) : null;
+  // The open bills, then any live order the bills param names that is held for the money (SL30's #0551).
+  const held = heldBills(b, c, p.bills);
+  const open: OpenBill[] = [...(m ? m.bills.filter((x) => !x.checked) : []), ...held];
+  const owes = m ? m.owes : o ? orderOwes(o) : 0, take = m ? m.canTake : owes;
+  const name = c ? short(c.name) : o ? o.client.name || 'Walk-in' : '';
+  const initPicks = p.bills ? p.bills.filter((id) => open.some((x) => x.id === id)) : null;
+  const sumOf = (ids: number[]) => open.filter((x) => ids.includes(x.id)).reduce((s, x) => s + x.left, 0);
+
+  const [picks, setPicks] = useState<number[] | null>(initPicks && initPicks.length ? initPicks : null);
+  // Fix it (CU46) and Take it again (CU47): cash opens as CU35 draws it: All of what they owe now, and the
+  // amount in hand as what they gave. Mobile or bank has no notes to hand back: it is what they pay, over what they owe.
+  const pre = p.pre, preCash = !!pre && pre.method === 'cash';
+  const [amount, setAmount] = useState<number>(pre && !preCash ? pre.amount : initPicks && initPicks.length ? sumOf(initPicks) : take);
+  const [other, setOther] = useState(!!pre && !preCash && pre.amount !== take);
+  const [method, setMethod] = useState<Method>(pre ? pre.method : 'cash');
+  const [ref, setRef] = useState(pre ? pre.ref : '');
+  const [given, setGiven] = useState<number | 'exact'>(pre && preCash ? pre.amount : 'exact');
+  const [how, setHow] = useState<'change' | 'deposit'>('change');
+  const [receipt, setReceipt] = useState(true);
+  const [who, setWho] = useState<string | null>(o && whoPicked.value && whoPicked.value.order === o.id ? whoPicked.value.id : null);
+  const [busy, setBusy] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+
+  // The quick amounts: all of it, one bill (the picked one, else the oldest), or typed.
+  const chipBill = picks && picks.length === 1 ? open.find((x) => x.id === picks[0]) : open[0];
+  const opts = [{ word: 'All', amount: take }, ...(c && open.length > 1 && chipBill ? [{ word: billNo(chipBill.id), amount: chipBill.left }] : [])];
+  const chosen = other ? null : !picks && amount === take ? 0 : picks && picks.length === 1 && opts.length > 1 && amount === opts[1].amount ? 1 : null;
+
+  // What it pays: over the ticked bills (or all, oldest first).
+  const payable = picks ? sumOf(picks) : take;
+  const handed = method === 'cash' && given !== 'exact' ? given : amount;
+  const plan = payPlan(payable, handed);
+  const choice = method !== 'cash' ? amount > payable : amount >= payable && handed > payable;
+  // What goes to the debt (money.ts payPlan) and how it spreads over the bills (money.ts splitPayment, as receive_payment).
+  const applied = payPlan(payable, amount).toDebt;
+  const settle = choice ? settleOver(payable, handed, how) : { moneyIn: applied, change: method === 'cash' ? Math.max(0, changeFor(amount, handed)) : 0, deposit: 0, refused: false };
+  const split = splitPayment(open.map((x) => ({ id: x.id, left: x.left })), applied, picks);
+  // What they owe after it: a held order's money is not on their balance, so it does not lower it.
+  const heldIn = split.filter((x) => held.some((h) => h.id === x.id)).reduce((t, x) => t + x.applied, 0), after = Math.max(0, owes - (applied - heldIn));
+  const rows: PaysRow[] = open.map((x) => {
+    const on = !picks || picks.includes(x.id), hit = split.find((y) => y.id === x.id);
+    return { id: x.id, day: x.day, age: x.age, left: x.left, applied: hit ? hit.applied : 0, on, order: held.includes(x) };
+  });
+
+  const toggle = (id: number) => {
+    const cur = picks || open.map((x) => x.id), next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id].sort((x, y) => open.findIndex((z) => z.id === x) - open.findIndex((z) => z.id === y));
+    const all = next.length === open.length;
+    setPicks(all ? null : next); setAmount(all ? take : sumOf(next)); setOther(false); setGiven('exact');
+  };
+  const pick = (i: number) => {
+    setOther(false); setGiven('exact');
+    if (i === 0) { setPicks(null); setAmount(take); } else if (chipBill) { setPicks([chipBill.id]); setAmount(chipBill.left); }
+  };
+
+  // Walk-in: what is left on the order, and who owes it.
+  const walkLeft = o && !c ? Math.max(0, owes - amount) : 0;
+  const whos = o && !c && walkLeft > 0 ? whoOptions(b, o) : [];
+  const whoC = who ? b.customers.find((x) => x.id === who) || null : null;
+
+  const words = !(amount > 0) ? 'Type the amount' : method === 'momo' && !ref.trim() ? 'Type the transaction ID'
+    : walkLeft > 0 && !whoC ? `Name who owes ${money(walkLeft)} first` : null;
+  /** What goes in the books: what clears the debt, or with a deposit all they handed over (settleOver). */
+  const record = settle.moneyIn;
+
+  const commit = async (): Promise<void> => {
+    if (words || busy) return;
+    setBusy(true);
+    const over = choice ? how : null;
+    const args: PayArgs = { customerId: c ? c.id : null, orderId: c ? null : o ? o.id : null, amount: over === 'deposit' ? handed : over === 'change' ? record : amount, method, ref: method === 'cash' ? '' : ref.trim(), picks: c ? picks : null, over };
+    try {
+      if (p.fix) {
+        // The same kept write, fixed, goes again in its place (spec 06 Q5); its Paid screen is under this one.
+        const was = paidResults.value[p.fix.paidKey];
+        // Its Paid entry takes the fix as it is now: how, its ID or reference, the change, what was handed, the bills.
+        if (was) putPaid({ ...was, method, ref: args.ref, amount: args.amount, before: owes, after, change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, refused: null,
+          lines: rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied })) });
+        await retryKept(p.fix.keptId, [args]);
+        nav.back();
+        return;
+      }
+      if (o && !c && whoC) await act('assignOrder', o.id, whoC.id);
+      // One write, or the bills then each held order (pay-held.ts); the last answer stands for them all.
+      const writes = writesFor(args, held, split);
+      let r = await act<PayResult>('receivePayment', writes[0]);
+      for (const w of writes.slice(1)) r = await act<PayResult>('receivePayment', w);
+      // More than one write, or an order's own write (its answer is the order's, not their balance): figures are ours.
+      const many = writes.length > 1 || (!!c && writes.some((w) => w.orderId != null));
+      const key = 'p' + now.value + '-' + Math.random().toString(36).slice(2, 6);
+      const lines = r.kept || many ? rows.filter((x) => x.applied > 0).map((x) => ({ id: x.id, day: x.day, amount: x.applied }))
+        : r.value.payments.filter((x) => x.orderId != null).map((x) => ({ id: x.orderId as number, day: (open.find((z) => z.id === x.orderId) || { day: x.day }).day, amount: x.amount }));
+      const who0 = c || whoC;
+      const paid: Paid = {
+        key, customerId: who0 ? who0.id : null, name: who0 ? who0.name : name, initials: who0 ? who0.initials : 'WI', tint: who0 ? who0.tint : 't4', phone: who0 ? who0.phone : o ? o.client.phone : '',
+        amount: r.kept || many ? args.amount : r.value.amount, method, ref: args.ref, lines: o && !c ? [{ id: o.id, day: dayOf(o.placedAt), amount: args.amount }] : lines,
+        before: owes, after: Math.max(0, r.kept || many ? after : c ? r.value.after : owes - args.amount), change: settle.change, given: method === 'cash' ? handed : amount, deposit: settle.deposit, at: now.value, kept: r.kept, keptId: r.kept ? r.id : null, refused: null, discarded: false,
+        receipt: { state: receipt && c ? (r.kept ? 'waiting' : 'sending') : 'off', at: null, chatId: null },
+      };
+      putPaid(paid);
+      nav.replace('customers/paid', { id: key });
+      if (paid.receipt.state === 'sending') void sendReceipt(key, b.shop.name, now.value);
+    } catch (e) {
+      toast.show('Nothing was recorded', { kind: 'error', sub: isDataError(e) ? e.message : String(e), retry: () => { void commit(); } });
+    } finally { setBusy(false); }
+  };
+
+  // The notes they likely gave; on Fix it, the kept amount is one of them (CU46 → CU35).
+  const notes = pre && preCash ? [likelyNotes(amount)[0], pre.amount].filter((n, i, a) => n > amount && a.indexOf(n) === i).sort((x, y) => x - y) : likelyNotes(amount);
+  const sub = c ? `${c.name} · owes ${money(owes)}` : o ? `${o.client.name || 'Walk-in'} · ${orderNo(o.id)} · ${money(owes)}` : '';
+  const face = c ? { initials: c.initials, tint: c.tint } : { initials: 'WI', tint: 't4' as const };
+  return (
+    <FullSheet onBack={() => nav.back()} backLabel="Back" head={<SheetHead face={face} name="Take payment" sub={sub} onClose={() => nav.back()} />}
+      foot={<PayDock method={method} given={given} notes={notes} onGiven={setGiven} amount={method === 'cash' ? plan.toDebt : amount} owes={owes} after={after} payable={payable}
+        over={choice ? { how, amount: plan.over } : null} change={settle.change} record={choice ? record : amount}
+        receipt={c ? { on: receipt, label: `Send ${name} the receipt on WhatsApp`, toggle: () => setReceipt(!receipt) } : null}
+        walkin={o && !c ? { id: o.id, total: owes, who: whoC ? { name: short(whoC.name), owes: whoC.owes + shareFor(o as Order, amount) } : null, left: walkLeft } : null}
+        words={words} sending={busy} onCommit={commit} />}>
+      <div class="cu-amt-card">
+        <label class="cu-amt-l"><span class="cu-k">{`${name} pays now`}</span>
+          <AmountInput inputRef={field} value={amount} label={`Amount ${name} pays now`} onInput={(v) => { setAmount(v); setOther(true); setGiven('exact'); }} /></label>
+        <QuickAmounts opts={opts} chosen={chosen} onPick={pick} onOther={() => { setOther(true); setPicks(null); if (field.current) { field.current.focus(); field.current.select(); } }} />
+      </div>
+      <MethodPicker value={method} onChange={(x) => { setMethod(x); setGiven('exact'); }} />
+      {method === 'momo' && <RefField label="Transaction ID" value={ref} placeholder="from their SMS" warn={ref.trim() ? null : 'Mobile needs its transaction ID'} onInput={setRef} />}
+      {method === 'bank' && <RefField label="Bank reference" value={ref} placeholder="if there is one" warn={null} onInput={setRef} />}
+      {o && !c && <OrderCard id={o.id} where={o.client.name === 'Walk-in' || !o.client.name ? 'walk-in · at the gate' : 'at the gate'} status={o.stage === 'road' && !o.deliverTo ? 'Ready to collect' : null} paid={Math.min(amount, owes)} total={owes} />}
+      {o && !c && walkLeft > 0 && <WalkinWho b={b} o={o} left={walkLeft} paying={amount} opts={whos} chosen={who} onPick={setWho} />}
+      {c && (choice
+        ? <OverCard pays={payable} over={plan.over} bills={rows.filter((x) => x.on).map((x) => x.id)} how={how} onHow={setHow} name={name} checker={{ initials: esther.initials, tint: esther.tint, name: first(esther.name) }} />
+        : open.length > 0 && <PaysCard rows={rows} pick={!!picks} onToggle={toggle} />)}
+    </FullSheet>
+  );
+}

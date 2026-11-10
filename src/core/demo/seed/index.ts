@@ -1,0 +1,109 @@
+/*
+ * The whole sample shop, fresh each time: FACTS.md as the app's shapes.
+ * Each entity has its own file; each tab adds what only it needs in
+ * extra/<tab>.ts, which only that tab's builder edits.
+ */
+import { orderTotal } from '../../money.ts';
+import { at } from '../../time.ts';
+import type { Books, Chat, ChatEvent, ChatNote, Message, Ms } from '../../types.ts';
+import type { DemoFlags } from '../flags.ts';
+import { sourcingAsks } from './asks.ts';
+import { backgroundCustomers, backgroundOrders } from './background.ts';
+import { chatEvents, chats, messages } from './chats.ts';
+import { NOW, TODAY } from './clock.ts';
+import { castCustomers } from './customers.ts';
+import { AISLES, items } from './items.ts';
+import { billAsks, goal, payments, paymentAsks, promises, settings } from './money.ts';
+import { liveOrders } from './orders-live.ts';
+import { pastOrders } from './orders-past.ts';
+import { GRACE, people } from './people.ts';
+import { one, stretched } from './stretched.ts';
+import { extra as chatsExtra } from './extra/chats.ts';
+import { extra as counterExtra } from './extra/counter.ts';
+import { extra as customersExtra } from './extra/customers.ts';
+import { extra as ordersExtra } from './extra/orders.ts';
+import { extra as sellExtra } from './extra/sell.ts';
+import { extra as todayExtra } from './extra/today.ts';
+
+/** Everything the demo holds. The demo source reads and writes this, and hands out copies. */
+export interface DemoState {
+  now: Ms;
+  books: Books;
+  connected: boolean;
+  chats: Chat[];
+  messages: Message[];
+  notes: ChatNote[];
+  events: ChatEvent[];
+  /**
+   * Messages each member sent in a chat this year before the seeded thread (chat_served counts the
+   * year; the demo seeds only the days the boards draw). By chat id, then member id.
+   */
+  servedBefore: Record<number, Record<string, number>>;
+  /** This phone gets Grace's pushes (push_subscriptions). */
+  push: boolean;
+}
+
+export function seed(f: DemoFlags): DemoState {
+  const members = people();
+  const now = f.clock ? at(TODAY, f.clock) : f.state === 'first-day' ? at(TODAY, '8:00') : NOW;
+  const s: DemoState = {
+    now,
+    books: {
+      at: now,
+      shop: { id: 'demo-shop', name: 'Mukasa Hardware' },
+      settings: settings(),
+      me: members.find((m) => m.id === GRACE) as Books['me'],
+      members,
+      customers: [...castCustomers(), ...backgroundCustomers()],
+      orders: [...liveOrders(), ...pastOrders(), ...backgroundOrders()].sort((a, b) => a.id - b.id),
+      items: items(),
+      // FACTS §6: the whole shop's aisles (the demo seeds only the items the boards name).
+      aisles: AISLES.map((a) => ({ ...a })).sort((x, y) => y.count - x.count),
+      payments: payments(),
+      promises: promises(),
+      asks: sourcingAsks(),
+      billAsks: billAsks(),
+      paymentAsks: paymentAsks(),
+      goal: goal(),
+    },
+    connected: true,
+    chats: chats(),
+    messages: messages(),
+    notes: [],
+    events: chatEvents(),
+    servedBefore: {},
+    push: true,
+  };
+  if (f.waDown) s.connected = false;
+  // &as=ruth: another member of the team is signed in on this phone (CH32).
+  const as = f.as ? members.find((m) => m.name.toLowerCase().split(/\s+/)[0] === f.as) : null;
+  if (as) s.books.me = as;
+  if (f.waOff) s.connected = false;
+  if (f.state === 'empty') emptyShop(s);
+  if (f.state === 'first-day') firstDay(s);
+  // Each tab's own additions, in tab order.
+  [todayExtra, chatsExtra, sellExtra, counterExtra, ordersExtra, customersExtra].forEach((x) => x(s, f));
+  if (f.state === 'stretched') stretched(s);
+  if (f.state === 'one') one(s);
+  return s;
+}
+
+/** &state=empty: nothing live, nobody owes, no chats (CH06, OR04, CU06). */
+function emptyShop(s: DemoState): void {
+  const b = s.books;
+  b.orders = b.orders.filter((o) => o.stage === 'delivered' && o.invoiced);
+  // Nobody owes by the books' own rule (core/owing.ts, ow_customer_balance): every bill kept is paid in full.
+  b.orders.forEach((o) => { o.paid = orderTotal(o); });
+  b.customers.forEach((c) => { c.owes = 0; c.debtLog = []; });
+  b.promises = []; b.billAsks = []; b.paymentAsks = []; b.asks = [];
+  s.chats = []; s.messages = []; s.events = [];
+}
+
+/** &state=first-day: Grace's first day (TD06): nothing of hers yet, nothing waiting on her. */
+function firstDay(s: DemoState): void {
+  const b = s.books;
+  b.orders = b.orders.filter((o) => o.placedBy !== GRACE);
+  b.payments = b.payments.filter((p) => p.by !== GRACE);
+  b.billAsks = []; b.paymentAsks = []; b.promises = [];
+  s.chats.forEach((c) => { if (c.ownerId === GRACE) c.ownerId = null; });
+}

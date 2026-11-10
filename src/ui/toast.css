@@ -1,0 +1,41 @@
+/* P28 · toasts (LANGUAGE.md §3), value for value. */
+.ow-toast {
+  position: fixed; top: calc(14px + var(--app-top)); left: 50%; transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 10px; min-height: 44px; max-width: min(328px, calc(100vw - 8px)); box-sizing: border-box;
+  padding: 8px 18px 8px 8px; border-radius: 24px; background: var(--navy); color: #FFFFFF;
+  font-size: 14px; font-weight: 600; line-height: 1.3; box-shadow: var(--sh-toast); white-space: nowrap;
+  animation: owToastIn .2s ease-out;
+}
+.ow-toast.inline, .ow-toast-error.inline { position: absolute; top: 0; left: 0; transform: none; animation: none; }
+.ow-toast-error.inline { right: 0; }
+.ow-toast.undo { padding-right: 8px; min-height: 60px; }
+/* The words keep their width as the boards draw them (the box may overflow); past the screen's edge they give way (…, toast.tsx) so Undo stays on it. */
+.ow-toast-w { flex: none; display: flex; overflow: hidden; }
+.ow-toast-undo, .ow-toast-disc { flex: none; }
+.ow-toast-disc { width: 28px; height: 28px; flex: none; border-radius: 999px; background: var(--mint); color: var(--navy); display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.ow-toast.warn { background: var(--warn-soft); border: 1px solid var(--warn-line); color: var(--warn-ink); font-weight: 700; }
+.ow-toast.warn .ow-toast-disc { background: var(--warn); color: #FFFFFF; }
+.ow-toast-undo { height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--mint); font-size: 13px; font-weight: 700; }
+.ow-toast-undo:active { background: rgba(255,255,255,.18); }
+.ow-toast-error {
+  position: fixed; left: 16px; right: 16px; z-index: 60; max-width: 448px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px; padding: 10px 6px 10px 12px;
+  background: #FFFFFF; border-radius: 20px; border: 1.5px solid var(--bad-line); box-shadow: var(--sh-toast);
+}
+.ow-toast-err-disc { width: 36px; height: 36px; flex: none; border-radius: 999px; background: var(--bad); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.ow-toast-err-words { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ow-toast-err-words b { font-size: 14px; font-weight: 700; color: var(--bad); }
+.ow-toast-err-words span { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.ow-toast-retry { height: 40px; padding: 0 14px; border: none; border-radius: 999px; background: var(--oxide); color: #FFFFFF; font-size: 14px; font-weight: 700; }
+.ow-toast-retry:active { background: var(--oxide-pressed); }
+.ow-toast-x { width: 44px; height: 44px; flex: none; border: none; padding: 0; border-radius: 999px; background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+@keyframes owToastIn { from { opacity: 0; transform: translate(-50%, -8px) } to { opacity: 1; transform: translateX(-50%) } }
+/* An error in place above the dock (KC19), value for value. */
+.ow-fail { position: fixed; left: 16px; right: 16px; z-index: 25; max-width: 448px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 6px 12px; border-radius: 20px; background: #FFFFFF; border: 1.5px solid var(--bad-line); box-shadow: var(--sh-toast); }
+.ow-fail > div { display: flex; align-items: center; gap: 10px; }
+.ow-fail-i { width: 36px; height: 36px; flex: none; border-radius: 999px; background: var(--bad); color: #FFFFFF; display: flex; align-items: center; justify-content: center; }
+.ow-fail-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ow-fail-t b { font-size: 14px; font-weight: 700; color: var(--bad); }
+.ow-fail-t span { font-size: 13px; font-weight: 500; color: var(--ink-soft); }
+.ow-fail button { width: 44px; height: 44px; flex: none; border: none; background: transparent; padding: 0; border-radius: 999px; color: var(--ink-soft); display: flex; align-items: center; justify-content: center; }
+.ow-dockwrap .ow-fail { position: relative; left: auto; right: auto; margin: 0 16px 9px; max-width: none; }

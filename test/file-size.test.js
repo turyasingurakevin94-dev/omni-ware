@@ -45,7 +45,7 @@ const CEILINGS = {
   'sourcing-console.js': 2755,
 };
 
-const SOURCE = /\.(html|js|css)$/;
+const SOURCE = /\.(html|js|css|ts|tsx)$/;
 const SKIP = new Set(['node_modules', 'www', 'android', 'ios', '.git', 'test', 'vendor']);
 
 function walk(rel, out) {

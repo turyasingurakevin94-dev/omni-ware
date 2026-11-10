@@ -1,0 +1,106 @@
+/*
+ * KC02 · Find: "2 paint" is read as ×2 of paint. The best match opens with the stepper and
+ * "Add · 370,000"; the rest add with one tap, or, when the shelf has none, "Order in" turns
+ * the sale into an order (sell/order).
+ */
+import type { JSX } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
+import { Duo, phSparkle } from '../../../ui/icons.tsx';
+import { ItemSquare } from '../../../ui/ItemSquare.tsx';
+import { fig, isPriced, PRICE_COMING } from '../../../ui/Money.tsx';
+import type { Item } from '../../../core/types.ts';
+import { Stepper } from '../../../ui/Stepper.tsx';
+import { markOf } from './shop.ts';
+import './find.css';
+import { sayItem } from '../../../core/names.ts';
+
+export interface FindProps {
+  qty: number;
+  words: string;
+  /** Read as: shown when a count was read from the words. */
+  read: boolean;
+  items: Item[];
+  onAdd: (it: Item, qty: number) => void;
+  onOrderIn: (it: Item, qty: number) => void;
+}
+
+const onShelf = (it: Item) => (it.onShelf || 0) > 0;
+/** Order in, named with what it orders, so two rows' buttons are told apart (KC02, KC29). */
+const orderInLabel = (it: Item, n: number) => `Order in ${fig(n)} ${sayItem(it.name)}: the sale becomes an order`;
+
+function Shelf(p: { it: Item; mono11?: boolean }): JSX.Element {
+  return onShelf(p.it)
+    ? <span class="kc-pill"><span class={'mono' + (p.mono11 ? '' : ' n')}>{fig(p.it.onShelf || 0)}</span>on shelf</span>
+    : <span class="kc-pill info">{p.it.orderIn ? 'Order in' : 'Out'}</span>;
+}
+
+export function Find(p: FindProps): JSX.Element {
+  const top = p.items[0], rest = p.items.slice(1, 5);
+  const [n, setN] = useState(p.qty);
+  useEffect(() => setN(p.qty), [p.qty, top && top.id]);
+  const mark = top ? markOf(top.name, p.words) : null;
+  return (
+    <>
+      {p.read && (
+        <div class="kc-read">
+          <Duo i={phSparkle} size={14} color="#5F6980" />Read as
+          <span class="kc-read-n mono">{`×${p.qty}`}</span>
+          <span class="kc-read-w">{p.words}</span>
+        </div>
+      )}
+      {top && (
+        <div class="kc-best">
+          <div class="kc-best-h">
+            <ItemSquare aisle={top.aisle} size={44} />
+            <span class="kc-best-t">
+              <span class="kc-best-n">{mark ? <><mark>{mark[0]}</mark>{mark[1]}</> : top.name}</span>
+              <span class="kc-best-s"><span class="mono kc-per">{isPriced(top.price) ? `${fig(top.price)} /${top.unit}` : PRICE_COMING}</span><Shelf it={top} mono11 /></span>
+            </span>
+          </div>
+          <div class="kc-best-f">
+            <Stepper value={n} unit={top.unit} min={0} onChange={(v) => setN(Math.max(1, v))} />
+            {onShelf(top) && isPriced(top.price)
+              ? <button type="button" class="kc-add" onClick={() => p.onAdd(top, n)}>Add ·<span class="mono">{fig(n * top.price)}</span></button>
+              : <button type="button" class="kc-add" onClick={() => p.onOrderIn(top, n)}>Order in<span class="mono">{fig(n)}</span></button>}
+          </div>
+        </div>
+      )}
+      {!!rest.length && (
+        <div class="kc-more">
+          {rest.map((it) => (
+            <MoreRow key={it.id} it={it} qty={p.qty} onAdd={p.onAdd} onOrderIn={p.onOrderIn} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** One item to add (+n) or, with none on the shelf, to order in. */
+function MoreRow(p: { it: Item; qty: number; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
+  const it = p.it;
+  return (
+    <div class="kc-more-r">
+      <ItemSquare aisle={it.aisle} size={44} />
+      <span class="kc-more-t">
+        <span class="kc-row-n">{it.name}</span>
+        {it.price == null ? <span class="kc-pill coming">Price coming</span> : <span class="mono kc-per">{`${fig(it.price)} /${it.unit}`}</span>}
+        <Shelf it={it} />
+      </span>
+      {/* Not priced yet (Ruth prices it): never sold at the counter; it goes as an order (KC26). */}
+      {onShelf(it) && it.price != null
+        ? <button type="button" class="kc-addn mono" aria-label={`Add ${p.qty} ${sayItem(it.name)}`} onClick={() => p.onAdd(it, p.qty)}>{`+${p.qty}`}</button>
+        : <button type="button" class="kc-orderin" aria-label={orderInLabel(it, p.qty)} onClick={() => p.onOrderIn(it, p.qty)}>Order in<span class="mono">{fig(p.qty)}</span></button>}
+    </div>
+  );
+}
+
+/** An aisle open from a tile or chip: every item in it, the most sold first (core/aisles.ts aisleItems); one not priced yet says Price coming. */
+export function AisleList(p: { name: string; items: Item[]; onAdd: (it: Item, qty: number) => void; onOrderIn: (it: Item, qty: number) => void }): JSX.Element {
+  return (
+    <>
+      <div class="kc-aisles-h">{p.name}<span class="mono kc-per">{` · ${p.items.length} item${p.items.length === 1 ? '' : 's'}`}</span></div>
+      {!!p.items.length && <div class="kc-more">{p.items.map((it) => <MoreRow key={it.id} it={it} qty={1} onAdd={p.onAdd} onOrderIn={p.onOrderIn} />)}</div>}
+    </>
+  );
+}

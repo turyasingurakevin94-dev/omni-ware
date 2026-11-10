@@ -533,7 +533,16 @@ with m(no, migration, kind, name, col) as (values
   ('0177', '0177_one_cancel', 'function', 'ow_settle_void_money', ''),
   ('0177', '0177_one_cancel', 'function', 'cancel_order', ''),
   ('0178', '0178_yard_workers_load_and_deliver', 'none', '', ''),
-  ('0179', '0179_yard_workers_keep_out_of_the_books', 'function', 'ow_yard_worker', '')
+  ('0179', '0179_yard_workers_keep_out_of_the_books', 'function', 'ow_yard_worker', ''),
+  ('0180', '0180_place_order', 'function', 'place_order', ''),
+  ('0181', '0181_sales_cancel_ask', 'function', 'ask_cancel', ''),
+  ('0181', '0181_sales_cancel_ask', 'function', 'withdraw_cancel_ask', ''),
+  ('0181', '0181_sales_cancel_ask', 'function', 'answer_cancel_ask', ''),
+  ('0181', '0181_sales_cancel_ask', 'function', 'saved_quotes_ow_cancel_asks', ''),
+  ('0181', '0181_sales_cancel_ask', 'function', 'cancel_asks_ow_push', ''),
+  ('0181', '0181_sales_cancel_ask', 'trigger', 'saved_quotes_ow_cancel_asks', ''),
+  ('0181', '0181_sales_cancel_ask', 'trigger', 'cancel_asks_ow_push', ''),
+  ('0181', '0181_sales_cancel_ask', 'table', 'cancel_asks', '')
 ), found as (
   select no, migration, kind, name, col,
          case kind

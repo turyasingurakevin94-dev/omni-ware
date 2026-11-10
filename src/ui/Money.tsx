@@ -1,0 +1,55 @@
+/*
+ * Money and counts as people read them (LANGUAGE.md §1.6): IBM Plex Mono,
+ * tabular figures. In full where someone acts on it ("1,250,000"), short in
+ * a tile or a summary ("1.2M", "+146k"). The rules are src/core/money.ts's.
+ *
+ *   <Money n={1810000} />                  1,810,000
+ *   <Money n={3240000} short sign />       +3.2M
+ *   <Money n="1.9M" />                     a string is drawn as given
+ *   fig(1810000)  fig(1900000, true)       the same, as text, for a label
+ */
+import type { JSX } from 'preact';
+import { NOT_KNOWN, linePriced, money, short } from '../core/money.ts';
+import type { Line } from '../core/types.ts';
+import type { Fig } from './util.tsx';
+
+/** A figure as text: a number in full (or short), a string as given. */
+export function fig(v: Fig, isShort?: boolean, sign?: boolean): string {
+  if (typeof v === 'string') return v;
+  if (typeof v !== 'number' || !Number.isFinite(v)) return NOT_KNOWN;
+  const s = isShort ? short(Math.abs(v)) : money(Math.abs(v));
+  return (v < 0 ? '−' : sign && v > 0 ? '+' : '') + s;
+}
+
+/**
+ * An unpriced figure: an item or line with no selling price yet is never drawn as 0. It reads "Price coming"
+ * (GLOSSARY; SL21, SL22 and the aisle cards), and "Add · price coming" on its add button (SL21).
+ */
+export const PRICE_COMING = 'Price coming';
+export const isPriced = (price: number | null | undefined): price is number => price != null;
+
+/**
+ * An order's total as people read it: what its priced lines come to (core/money.ts orderTotal; a line with no
+ * price adds nothing). With no line priced it is "Price coming", never 0 (SL21's dock, SL28's Placed).
+ */
+export function orderFig(lines: Line[], total: number): Fig {
+  return lines.some((l) => l.qty > 0 && l.state !== 'dropped' && linePriced(l)) ? total : PRICE_COMING;
+}
+
+export interface MoneyProps {
+  n: Fig;
+  short?: boolean;
+  /** "+" before a positive amount (a minus is always written, as "−"). */
+  sign?: boolean;
+  class?: string;
+  style?: JSX.CSSProperties;
+}
+
+export function Money(p: MoneyProps): JSX.Element {
+  return <span class={'mono' + (p.class ? ' ' + p.class : '')} style={p.style}>{fig(p.n, p.short, p.sign)}</span>;
+}
+
+/** "40 bag × 33,500": the count and price in mono, the unit word in Figtree (P12, P20). */
+export function QtyLine(p: { qty: Fig; unit: string; tail: string; class?: string; style?: JSX.CSSProperties }): JSX.Element {
+  return <span class={'mono' + (p.class ? ' ' + p.class : '')} style={p.style}>{`${fig(p.qty)} `}<span class="ow-word">{p.unit}</span>{` ${p.tail}`}</span>;
+}

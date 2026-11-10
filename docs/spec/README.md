@@ -19,7 +19,7 @@ can be built cleanly without losing a rule the shop depends on.
 | 01 | [The order's journey](01-order-journey.md) | The stages an order goes through, who moves it, what each step writes and who gets a push | decided 2026-10-28 |
 | 02 | [Money](02-money.md) | Every money rule: totals, prices, cost, debt, payments, the treasurer's books | decided 2026-10-28 |
 | 03 | Roles | Who does what. **[`docs/decision-rights.md`](../decision-rights.md) is that chapter** and stays binding; this one only adds each role's daily jobs | to do |
-| 04 | Screens | Every screen per role, from the approved canvases | to do |
+| 04 | Screens | Every screen per role, from the approved canvases. [Sales](04-screens-sales.md) | Sales: screens decided 2026-10-29, 10 questions open |
 | 05 | [Data](05-data.md) | Tables, what is in an order's `payload`, who can read and write what | decided 2026-10-28 |
 | 06 | [Offline, sync and pushes](06-offline-sync-push.md) | Bad signal, the queue, the phone's copy of the books, every push | decided 2026-10-28 |
 | 07 | [The stack](07-stack.md) | Tools for the new front end — **Kevin approves** | decided 2026-10-28 |
