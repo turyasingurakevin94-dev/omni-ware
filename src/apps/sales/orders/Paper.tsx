@@ -26,6 +26,7 @@ import { chatFor, tellsPrice } from './msg.ts';
 import { orderPicture } from './picture.ts';
 import { freshPrice, pendingOf } from './view.ts';
 import './paper.css';
+import { shown } from '../../../core/units.ts';
 
 const f = (n: number) => Math.round(n).toLocaleString('en-US');
 const HOW = { cash: 'cash', momo: 'mobile', bank: 'bank' } as const;
@@ -58,7 +59,7 @@ export function paperOf(b: Books, o: Order): SlipProps & { under: Under | null }
   return {
     shop: b.shop.name, word: o.invoiced ? 'Bill' : 'Order', no: orderNo(o.id), stands,
     day: longDay(at), at: clock(at), forName: nameOf(b, o),
-    lines: o.lines.filter((l) => l.qty > 0).map((l) => ({ key: l.lineId, qty: f(l.qty), unit: l.unit, name: l.name, rate: isPriced(l.price) ? f(l.price) : '…', amount: isPriced(l.price) ? f(lineTotal(l)) : PRICE_COMING, gone: l.state === 'dropped' })),
+    lines: o.lines.filter((l) => l.qty > 0).map((l) => ({ key: l.lineId, qty: f(shown(l).n), unit: shown(l).unit, name: l.name, rate: isPriced(l.price) ? f(shown(l).each as number) : '…', amount: isPriced(l.price) ? f(lineTotal(l)) : PRICE_COMING, gone: l.state === 'dropped' })),
     total: f(total), struck: o.voided,
     rows: [['Paid so far', f(o.voided ? 0 : o.paid)], ['Owes on it', f(owes), owes > 0]],
     pill, foot: member(b, o.placedBy) ? `Taken by ${member(b, o.placedBy)?.name}` : undefined, under,

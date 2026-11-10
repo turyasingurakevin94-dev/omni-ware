@@ -10,6 +10,7 @@ import { dayLabel } from '../../../core/time.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { PRICE_COMING, isPriced } from '../../../ui/Money.tsx';
 import { nameOf } from './data.ts';
+import { shown } from '../../../core/units.ts';
 
 const SANS = 'Figtree, system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, monospace';
 const INK = '#1C2233', MUTE = '#5F6980', RED = '#C93A30', f = (n: number) => Math.round(n).toLocaleString('en-US');
@@ -35,7 +36,7 @@ export function orderPicture(b: Books, o: Order, now: number): Promise<Blob> {
     const gone = l.state === 'dropped', rv = l.priceReview, was = !gone && rv && rv.state === 'changed' && rv.was ? rv.was * l.qty : null;
     const tag = gone ? '' : !isPriced(l.price) ? 'BEING CONFIRMED' : l.state === 'waiting' ? 'ON THE WAY' : was != null ? `NEW PRICE · ${f(rv?.price || 0)} EACH` : '';
     const base = y + (tag ? 10 : 18), ink = gone ? '#8A93A3' : INK;
-    text(`${f(l.qty)} ${l.unit}`, 32, base, `600 13px ${MONO}`, ink);
+    text(`${f(shown(l).n)} ${shown(l).unit}`, 32, base, `600 13px ${MONO}`, ink);
     text(l.name, 120, base, `700 14px ${SANS}`, ink);
     if (gone) { const nw = c.measureText(l.name).width; c.strokeStyle = '#8A93A3'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(120, base - 5); c.lineTo(120 + nw, base - 5); c.stroke(); }
     if (tag) text(tag, 120, base + 16, `700 10px ${SANS}`, was != null ? '#1A5A8A' : l.state === 'waiting' ? '#3A3F9B' : '#95530C');

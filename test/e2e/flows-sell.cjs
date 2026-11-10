@@ -74,6 +74,24 @@ async function sell(open) {
   await h.tap('Add · price coming');
   const tot = (await h.p.locator('.ow-dock-total').innerText()).trim();
   h.check(tot === 'Price coming', 'SL21: the hinge alone totals "Price coming", never 0', tot);
+  // SL42: 60 Zawaina pair counted by the carton rounds up to 2 cartons (160,000); − takes it to 1; placed at 80,000.
+  const u = await open('');
+  await u.tap({ sel: 'a.ow-plus' });
+  await u.type('Kato', 'Customer name, phone or place');
+  await u.tap('New order for Kato');
+  await u.type('60 zawaina', 'Add an item: type its name');
+  await u.tap({ sel: '.sl-top-add' });
+  await u.tap({ text: 'Zawaina hinge, normal 4 inch' });
+  await u.tap('By the carton of 50, 80,000 a carton');
+  let ut = await u.text();
+  u.check(/2 carton × 80,000/.test(ut) && /160,000/.test(ut), 'SL42: 60 pair by the carton is 2 carton × 80,000 = 160,000', ut.slice(0, 500));
+  await u.tap({ label: 'Fewer cartons' });
+  ut = await u.text();
+  u.check(/1 carton × 80,000/.test(ut) && (await u.p.locator('.ow-dock-total').innerText()).trim() === '80,000', 'SL42: − makes it 1 carton, and the dock says 80,000', ut.slice(0, 500));
+  await u.slide();
+  await u.wait('Placed');
+  const up = await u.text();
+  u.check(/80,000/.test(up) && /1 × 80,000/.test(up), 'SL42: Placed says 1 × 80,000, total 80,000', up.slice(0, 600));
   return ph;
 }
 

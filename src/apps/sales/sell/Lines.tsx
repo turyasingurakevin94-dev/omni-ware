@@ -5,6 +5,7 @@
  *   SL14  a count under 1: "use the bin to remove it" (the count is not taken)
  *   SL15  a carton-only item asked by the kg: 1 carton beside 20 × 1 kg
  *   SL22  a price under the shop's: Ruth decides before it is packed
+ *   SL42  an item sold by its pack too: the unit switch (LineUnit.tsx); the count, the price and the amount in that unit
  * The count is taken when the line closes (tap its head, another line, or anything else).
  */
 import { computed, signal } from '@preact/signals';
@@ -25,6 +26,8 @@ import { openPrice, openPriceComing } from './sheets.tsx';
 import { lastPaid } from './insights.ts';
 import './lines.css';
 import { sayItem } from '../../../core/names.ts';
+import { perShown, shown } from '../../../core/units.ts';
+import { UnitSwitch } from './LineUnit.tsx';
 
 /** What was asked of a line in other words than its own ("20 kg" of a carton-only item: SL15). */
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
@@ -50,9 +53,9 @@ export function openLine(id: number): void {
 
 
 function Sub(p: { l: Line; it?: Item }): JSX.Element {
-  const l = p.l, x = cur.value, rest = x ? restOf(x, l) : 0;
-  if (l.price == null) return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{' · '}<span class="ow-word">Order in</span></span>;
-  return <span class="mono sl-line-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` × ${fig(l.price)}${rest > 0 ? ' ' : ''}`}{rest > 0 && <span class="ow-word">{`· ${rest} order in`}</span>}</span>;
+  const l = p.l, x = cur.value, rest = x ? restOf(x, l) : 0, s = shown(l);
+  if (s.each == null) return <span class="mono sl-line-s">{`${fig(s.n)} `}<span class="ow-word">{s.unit}</span>{' · '}<span class="ow-word">Order in</span></span>;
+  return <span class="mono sl-line-s">{`${fig(s.n)} `}<span class="ow-word">{s.unit}</span>{` × ${fig(s.each)}${rest > 0 ? ' ' : ''}`}{rest > 0 && <span class="ow-word">{`· ${rest} order in`}</span>}</span>;
 }
 
 /** SL40 · part from our shelf, the rest ordered in: a split bar and who buys it. */
@@ -99,16 +102,18 @@ function Bin(p: { l: Line; bad?: boolean }): JSX.Element {
   );
 }
 
-function Shelf(p: { n: number }): JSX.Element {
-  return <span class="sl-shelf-c"><b class="mono">{fig(p.n)}</b> on shelf</span>;
+/** How many on the shelf; in the item's own word when the line counts cartons ("200 pair on shelf", SL42). */
+function Shelf(p: { n: number; unit?: string }): JSX.Element {
+  return <span class="sl-shelf-c"><b class="mono">{fig(p.n)}</b>{p.unit ? ` ${p.unit} on shelf` : ' on shelf'}</span>;
 }
 
-/** Their price, each: a tap opens the keypad (SL18). */
+/** Their price, each (or a carton, SL42): a tap opens the keypad (SL18). */
 function PriceLink(p: { l: Line }): JSX.Element {
-  const l = p.l, diff = l.price != null && l.shopPrice != null ? l.price - l.shopPrice : 0;
+  const l = p.l, per = perShown(l), diff = l.price != null && l.shopPrice != null ? (l.price - l.shopPrice) * per : 0;
+  const word = per > 1 ? `Their price, a ${l.packUnit}` : 'Their price, each', each = shown(l).each;
   return (
-    <a href="#" class="sl-pfield" aria-label={`Their price, each: ${isPriced(l.price) ? fig(l.price) : PRICE_COMING}. Change it`} onClick={(e) => { e.preventDefault(); openPrice(l.lineId); }}>
-      <span class="sl-pfield-t"><span>Their price, each</span>{isPriced(l.price) ? <span class="mono">{fig(l.price)}</span> : <span>{PRICE_COMING}</span>}</span>
+    <a href="#" class="sl-pfield" aria-label={`${word}: ${each != null ? fig(each) : PRICE_COMING}. Change it`} onClick={(e) => { e.preventDefault(); openPrice(l.lineId); }}>
+      <span class="sl-pfield-t"><span>{word}</span>{each != null ? <span class="mono">{fig(each)}</span> : <span>{PRICE_COMING}</span>}</span>
       {diff < 0
         ? <span class="mono sl-pfield-d"><Icon name="tag" size={12} stroke={2.4} />{fig(diff)}</span>
         : diff === 0 ? <span class="sl-pfield-ok"><Icon name="check" size={13} stroke={3} />shop’s price</span> : null}
@@ -124,11 +129,12 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   // Under 1, the line goes back to the count it had when it opened, struck beside the 0 (SL14), and the bin removes it.
   const start = useRef({ id: l.lineId, qty: l.qty });
   if (start.current.id !== l.lineId) start.current = { id: l.lineId, qty: l.qty };
-  const q = editQty.value ?? l.qty;
-  const set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n); } else { editQty.value = n; setQty(l.lineId, start.current.qty); } };
+  // In cartons (SL42) the stepper counts cartons; the line keeps pairs (core/units.ts).
+  const per = perShown(l), word = shown(l).unit, q = editQty.value ?? l.qty / per;
+  const set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n * per); } else { editQty.value = n; setQty(l.lineId, start.current.qty); } };
   const asked = askedAs.value.get(l.lineId);
-  const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, rest = split != null && q > split ? q - split : 0;
-  const shortNow = !rest && l.from === 'shelf' && shelf != null && q > shelf ? q - shelf : 0;
+  const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, raw = q * per, rest = split != null && raw > split ? raw - split : 0;
+  const shortNow = !rest && l.from === 'shelf' && shelf != null && raw > shelf ? raw - shelf : 0;
   if (q < 1) {
     return (
       <div class="sl-open g12">
@@ -136,7 +142,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
         <div class="sl-open-r">
           <div class="sl-step bad">
             <button type="button" aria-label="Fewer" disabled><Icon name="minus" size={18} stroke={2.2} /></button>
-            <span class="mono">0<span class="ow-word">{l.unit}</span><s aria-label={`was ${l.qty}`}>{l.qty}</s></span>
+            <span class="mono">0<span class="ow-word">{word}</span><s aria-label={`was ${l.qty / per}`}>{l.qty / per}</s></span>
             <button type="button" aria-label="More" onClick={() => set(1)}><Icon name="plus" size={18} stroke={2.2} /></button>
           </div>
           <span class="sl-flex" /><Bin l={l} bad />
@@ -147,10 +153,13 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
     );
   }
   const stepRow = (
-    <div class="sl-open-r">
-      <Stepper value={q} unit={l.unit} min={0} onChange={set} />
-      <span class="sl-flex" />{shelf != null && <Shelf n={shelf} />}
-    </div>
+    <>
+      <UnitSwitch l={l} it={it} />
+      <div class="sl-open-r">
+        <Stepper value={q} unit={word} what={per > 1 ? `${word}s` : undefined} min={0} onChange={set} />
+        <span class="sl-flex" />{shelf != null && <Shelf n={shelf} unit={per > 1 ? l.unit : undefined} />}
+      </div>
+    </>
   );
   if (asked && asked.unit !== l.unit) {
     const alt = asked.alt;
@@ -180,11 +189,11 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
         <div class="sl-open-h"><Head l={l} b={b} chip={<span class="sl-chip warn">{`${shortNow} short`}</span>} /></div>
         {stepRow}
         <div class="sl-short">
-          <div class="sl-short-h"><span><Icon name="warning" size={16} stroke={2.2} /><b class="mono">{shortNow}</b> short</span><span><b class="mono">{q}</b> asked · <b class="mono">{shelf}</b> on shelf</span></div>
-          <div role="img" aria-label={`${shelf} of ${q} on shelf, ${shortNow} short`} class="sl-short-bar"><span style={{ width: `${(100 * shelf) / q}%` }} /><span /></div>
+          <div class="sl-short-h"><span><Icon name="warning" size={16} stroke={2.2} /><b class="mono">{shortNow}</b> short</span><span><b class="mono">{raw}</b> asked · <b class="mono">{shelf}</b> on shelf</span></div>
+          <div role="img" aria-label={`${shelf} of ${raw} on shelf, ${shortNow} short`} class="sl-short-bar"><span style={{ width: `${(100 * shelf) / raw}%` }} /><span /></div>
           <div class="sl-short-g">
             <button type="button" onClick={() => { editQty.value = null; setQty(l.lineId, shelf); }}>Make it <span class="mono">{shelf}</span></button>
-            <button type="button" onClick={() => { if (editQty.value != null) setQty(l.lineId, q); editQty.value = null; orderInRest(l.lineId, shelf); }}>Order in <span class="mono">{shortNow}</span></button>
+            <button type="button" onClick={() => { if (editQty.value != null) setQty(l.lineId, raw); editQty.value = null; orderInRest(l.lineId, shelf); }}>Order in <span class="mono">{shortNow}</span></button>
           </div>
         </div>
         <PriceLink l={l} />
@@ -215,8 +224,8 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
       <div class="sl-open-p">
         <PriceLink l={l} />
         <div class="sl-open-r g6">
-          {last != null && <button type="button" class={'sl-pchip' + (l.price === last && last !== l.shopPrice ? ' on' : '')} onClick={() => setPrice(l.lineId, last, p.me)}>last <span class="mono">{fig(last)}</span></button>}
-          {l.shopPrice != null && <button type="button" class={'sl-pchip' + (l.price === l.shopPrice ? ' on' : '')} onClick={() => setPrice(l.lineId, l.shopPrice as number, p.me)}>shop <span class="mono">{fig(l.shopPrice)}</span></button>}
+          {last != null && per === 1 && <button type="button" class={'sl-pchip' + (l.price === last && last !== l.shopPrice ? ' on' : '')} onClick={() => setPrice(l.lineId, last, p.me)}>last <span class="mono">{fig(last)}</span></button>}
+          {l.shopPrice != null && <button type="button" class={'sl-pchip' + (l.price === l.shopPrice ? ' on' : '')} aria-label={per > 1 ? `The shop’s price for a ${l.packUnit}: ${fig(l.shopPrice * per)}` : undefined} onClick={() => setPrice(l.lineId, l.shopPrice as number, p.me)}>shop <span class="mono">{fig(l.shopPrice * per)}</span></button>}
           <span class="sl-flex" /><Bin l={l} />
         </div>
       </div>

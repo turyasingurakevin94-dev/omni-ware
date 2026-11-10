@@ -11,6 +11,7 @@ import type { MoneyTile as Tile } from '../../../ui/MoneyTiles.tsx';
 import { priceUntold, readyToCollect, twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
 import type { CheckHead as CHead, CheckLine as CLine, CheckMark as Mark } from '../../../ui/CheckList.tsx';
+import { shown } from '../../../core/units.ts';
 
 const GREEN = '#0F6B43', AMBER = '#F5B26B';
 
@@ -106,7 +107,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
 
   // The check list.
   const lines: CLine[] = o.lines.map((l) => {
-    const base = { aisle: aisleOf(b, l), name: l.name, qty: l.qty, unit: l.unit };
+    const base = { aisle: aisleOf(b, l), name: l.name, qty: shown(l).n, unit: shown(l).unit };
     if (l.state === 'dropped') return { ...base, note: 'not found', gone: true, mark: { k: 'no', label: 'Not found' } as Mark };
     const amount = lineTotal(l), rv = l.priceReview;
     if (ret && o.stage === 'delivered') {

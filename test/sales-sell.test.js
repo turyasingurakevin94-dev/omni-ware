@@ -101,5 +101,21 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
     t.check(S.followCount(sv, [loading], bags(20), bags(0)).length === 0, 'SL39: no bags left, no Loading');
   }
 
+  /* ---- SL42: a line's unit (core/units.ts): whole ones of the new unit, rounding up; the books keep pairs ---- */
+  {
+    const U = require(path.join(ROOT, 'src/core/units.ts'));
+    const O = require(path.join(ROOT, 'src/core/orders.ts'));
+    const hinge = b.items.find((i) => i.id === 'hinge-zawaina-4'), nails = b.items.find((i) => i.id === 'nails-4-25kg');
+    t.check(U.packEach(hinge) === 1600 && U.sellsByPack(hinge) && !U.sellsByPack(nails), 'SL42: the Zawaina hinge sells by the carton too (1,600 a pair by the carton); the 4" nails by one unit only');
+    t.check(U.switchQty(50, 50, 'pack') === 50 && U.switchQty(60, 50, 'pack') === 100 && U.switchQty(1, 50, 'pack') === 50, 'SL42: to cartons rounds up: 50 pair → 1 carton, 60 → 2, 1 → 1');
+    t.check(U.switchQty(100, 50, 'unit') === 100 && U.switchQty(50, 50, 'unit') === 50, 'SL42: to pairs keeps the amount: 2 cartons → 100 pair, 1 → 50');
+    const line = { lineId: 1, itemId: hinge.id, variantIdx: null, name: hinge.name, unit: 'pair', packUnit: 'carton', packQty: 50, qtyIn: 'pack', qty: 50, price: 1600, cost: hinge.cost, shopPrice: 1600, from: 'shelf', supplierId: '__stock__', priceBy: null, priceNote: null, priceReview: null, priceToldAt: null, state: null, stateAt: null };
+    const sh = U.shown(line);
+    t.check(sh.n === 1 && sh.unit === 'carton' && sh.each === 80000, 'SL42: 1 carton × 80,000', JSON.stringify(sh));
+    t.check(M.orderTotal({ lines: [line], charges: [], discount: 0, credit: null }) === 80000, 'SL42: a carton line totals 80,000');
+    const pl = O.linePayload(line, 'me', new Date(0).toISOString());
+    t.check(pl.qtyIn === 'pack' && pl.qty === 50 && pl.sellPrice === 1600 && pl.packQty === 50 && pl.packUnit === 'carton' && !pl.priceBy, 'SL42: place_order gets the carton as sales.html wrote it: qty 50 pair, sellPrice 1,600, qtyIn pack, no price ask', JSON.stringify(pl));
+  }
+
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

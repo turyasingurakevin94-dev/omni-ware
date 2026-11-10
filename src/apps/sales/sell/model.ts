@@ -13,6 +13,7 @@ import { computed, signal } from '@preact/signals';
 import { cashTotal, creditCharge, creditHold, orderTotal, pricesComing } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
 import { followCount } from '../../../core/services.ts';
+import { inPack, packEach, switchQty } from '../../../core/units.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Charge, Customer, Item, Line } from '../../../core/types.ts';
 import { books, chats, drafts, now, saveDrafts, type Draft } from '../shell/store.ts';
@@ -162,7 +163,8 @@ export function add(it: Item, qty: number): Line {
   edit((x) => {
     const had = x.lines.find((l) => l.itemId === it.id && l.variantIdx === it.variantIdx);
     if (had) {
-      out = { ...lineFor(it, had.qty + qty, had.lineId), price: had.price, priceBy: had.priceBy };
+      // Counted in cartons, it stays so: more of it, at its own price (SL42).
+      out = { ...lineFor(it, had.qty + qty, had.lineId), price: had.price, priceBy: had.priceBy, ...(inPack(had) ? { qtyIn: 'pack' as const, shopPrice: had.shopPrice } : {}) };
       return { ...x, lines: x.lines.map((l) => (l === had ? (out as Line) : l)) };
     }
     out = lineFor(it, qty, nextId(x));
@@ -196,6 +198,23 @@ function written(x: Build): Line[] {
     if (!rest) return [l];
     return [{ ...l, qty: l.qty - rest, from: 'shelf' as const, supplierId: '__stock__' }, { ...l, lineId: ++n, qty: rest, from: 'none' as const, supplierId: '' }];
   });
+}
+
+/**
+ * SL42 · count a line in the item's unit or its pack (core/units.ts). The count becomes whole ones of the new unit,
+ * rounding up (60 pair → 2 cartons), at that unit's shop price (80,000 a carton; 1,700 a pair): a price typed for
+ * the other unit does not carry over. The seller takes it down with − (Kevin, 10 Nov: "keep unit simple").
+ */
+export function setUnit(lineId: number, to: 'unit' | 'pack'): void {
+  const b = books.value;
+  if (!b) return;
+  edit((x) => ({ ...x, lines: x.lines.map((l) => {
+    const it = itemOf(b, l.itemId, l.variantIdx), each = it ? packEach(it) : null;
+    if (l.lineId !== lineId || !it || each == null || inPack(l) === (to === 'pack')) return l;
+    const qty = switchQty(l.qty, it.packQty, to), price = to === 'pack' ? each : it.price;
+    const { qtyIn: _was, ...rest } = l;
+    return { ...rest, ...(to === 'pack' ? { qtyIn: 'pack' as const } : {}), packUnit: it.packUnit, packQty: it.packQty, qty, price, shopPrice: price, priceBy: null, priceNote: null };
+  }), split: x.split && x.split[lineId] != null ? Object.fromEntries(Object.entries(x.split).filter(([k]) => Number(k) !== lineId)) : x.split }));
 }
 
 /** A price typed for them (SL18): under the shop's, the Manager decides it (decision-rights "The price decision"). */

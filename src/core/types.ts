@@ -119,6 +119,8 @@ export interface Line {
   unit: string;
   packUnit: string;
   packQty: number;
+  /** Counted in its pack (1 carton): qty and the prices stay of the unit (50 pair at 1,600), as the books keep it (core/units.ts). */
+  qtyIn?: 'pack';
   qty: number;
   /** The selling price each. null = "Price coming" (no shop price yet, spec 02 Q4). */
   price: UGX | null;

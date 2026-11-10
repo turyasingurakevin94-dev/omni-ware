@@ -64,7 +64,7 @@ export function linePayload(l: Line, by: string, atIso: string): Record<string, 
   const note = priceNote(l), tagged = !!l.priceBy || l.price == null || note === 'under';
   return {
     lineId: l.lineId, productId: l.itemId, variantIdx: l.variantIdx, productName: l.name, unit: l.unit, packUnit: l.packUnit, packQty: l.packQty,
-    qtyIn: 'unit', qty: l.qty, supplierId: l.from === 'shelf' ? '__stock__' : l.supplierId, supplierName: l.from === 'shelf' ? 'Our shelf' : '',
+    qtyIn: l.qtyIn === 'pack' ? 'pack' : 'unit', qty: l.qty, supplierId: l.from === 'shelf' ? '__stock__' : l.supplierId, supplierName: l.from === 'shelf' ? 'Our shelf' : '',
     price: l.cost ?? 0, sellPrice: l.price,
     ...(tagged ? { priceBy: l.priceBy || by, priceNote: note, priceShop: l.shopPrice, priceAt: atIso, ...(l.price == null ? { priceAsk: true } : {}) } : {}),
   };

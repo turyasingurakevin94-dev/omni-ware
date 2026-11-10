@@ -151,6 +151,7 @@ export function lineOf(it: Row, pb: PriceBook): Line {
   return {
     lineId: num(it.lineId), itemId: pid, variantIdx: vi, name: String(it.productName || itemName(pb, pid, vi, '')),
     unit: String(it.unit || ''), packUnit: String(it.packUnit || ''), packQty: num(it.packQty), qty: num(it.qty),
+    ...(it.qtyIn === 'pack' && num(it.packQty) > 1 && it.packUnit ? { qtyIn: 'pack' as const } : {}),
     price: given ?? typed ?? shop, cost, shopPrice: shop,
     from: supplierId === '__stock__' ? 'shelf' : supplierId ? 'supplier' : 'none', supplierId,
     priceBy: it.priceBy ? String(it.priceBy) : null, priceNote: ['under', 'nomargin', 'nocost'].includes(it.priceNote) ? it.priceNote : null,

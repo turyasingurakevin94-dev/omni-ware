@@ -25,6 +25,7 @@ import { lastPlaced, pictures, sendPicture } from './picture.ts';
 import '../../../ui/button.css';
 import '../../../ui/moment.css';
 import './placed.css';
+import { shown } from '../../../core/units.ts';
 
 const BACK_MS = 8000;
 
@@ -102,7 +103,7 @@ export function PlacedScreen(p: ScreenProps): JSX.Element | null {
         <div class="sl-placed-ls">
           {o.lines.map((l) => (
             <div key={l.lineId}><ItemSquare aisle={(itemOf(b, l.itemId, l.variantIdx) || { aisle: '' }).aisle} size={26} radius={8} icon={16} /><span class="n">{l.name.split(' · ')[0]}</span>
-              <span class="mono q">{`${l.qty} × ${isPriced(l.price) ? fig(l.price) : '…'}`}</span><span class="mono a">{isPriced(l.price) ? fig(lineTotal(l)) : PRICE_COMING}</span></div>
+              <span class="mono q">{`${shown(l).n} × ${isPriced(l.price) ? fig(shown(l).each as number) : '…'}`}</span><span class="mono a">{isPriced(l.price) ? fig(lineTotal(l)) : PRICE_COMING}</span></div>
           ))}
           <div class="t"><span>{`${allShelf ? 'all on our shelf' : `${n} item${n === 1 ? '' : 's'}`} · ${mode}`}</span><span class="mono">{fig(orderFig(o.lines, orderTotal(o)))}</span></div>
         </div>

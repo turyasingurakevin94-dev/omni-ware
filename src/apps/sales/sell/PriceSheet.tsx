@@ -18,6 +18,7 @@ import { Frame } from './Frame.tsx';
 import { books, me } from '../shell/store.ts';
 import { first, lastPaid } from './insights.ts';
 import { cur, setPrice } from './model.ts';
+import { perShown, shown } from '../../../core/units.ts';
 import { manager } from './people.ts';
 import './price.css';
 
@@ -31,16 +32,19 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
   const x = cur.value, b = books.value, l = x ? x.lines.find((y) => y.lineId === p.lineId) : null;
   const [typed, setTyped] = useState<string | null>(null);
   if (!x || !b || !l || l.shopPrice == null) return null;
-  const shop = l.shopPrice, now = l.price ?? shop, v = typed == null ? now : Number(typed || 0);
-  const low = v > 0 && priceTooLow(l, v), high = v >= shop * 5, under = !low && v > 0 && v < shop;
-  const last = x.customerId ? lastPaid(b, x.customerId, l.itemId, l.variantIdx) : null, m = manager(b);
+  // In cartons (SL42) every figure here is a carton's; the line keeps the price of one pair (core/units.ts).
+  const per = perShown(l), s = shown(l);
+  const shop = l.shopPrice * per, now = (l.price ?? l.shopPrice) * per, v = typed == null ? now : Number(typed || 0);
+  const low = v > 0 && priceTooLow(l, v / per), high = v >= shop * 5, under = !low && v > 0 && v < shop;
+  const paid = x.customerId ? lastPaid(b, x.customerId, l.itemId, l.variantIdx) : null, last = paid != null && per === 1 ? paid : null, m = manager(b);
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) : null;
   const short = l.name.split(' · ')[0];
   const pct = low ? 2.5 : high ? 98 : ladderPct(v, l.cost || 0, shop);
   const tone = low || high ? 'bad' : '', ring = last === shop && !high && !low;
-  const keep = () => { if (now !== shop) setPrice(l.lineId, shop, ''); sheet.close(); };
-  const use = (n: number) => { setPrice(l.lineId, n, me.value ? me.value.id : ''); sheet.close(); };
-  const was = lineTotal(l), will = lineTotal({ ...l, price: v });
+  const keep = () => { if (now !== shop) setPrice(l.lineId, shop / per, ''); sheet.close(); };
+  // The books keep a whole price a pair (rows.ts): a carton's price goes in as the nearest whole price a pair.
+  const use = (n: number) => { setPrice(l.lineId, Math.round(n / per), me.value ? me.value.id : ''); sheet.close(); };
+  const was = lineTotal(l), will = lineTotal({ ...l, price: v / per });
   const label = `${fig(v)} is ${under ? 'under' : low ? 'under the cost, below' : 'at'} the shop's price of ${fig(shop)}${last === shop ? `, which is also what ${c ? first(c.name) : 'they'} paid last` : ''}`;
   return (
     <Frame title={`Price · ${short}`} onClose={sheet.close} pad="10px 16px 20px" gap={10}>
@@ -55,10 +59,10 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
         <div class="sl-ladder-l"><span>cost</span><span class="mono">{`shop${ring ? ' · last' : ''} ${fig(shop)}`}</span></div>
       </div>
       <div class={'sl-pf ' + tone}>
-        <span class="sl-pf-t"><span>Their price, each</span><span class="mono">{fig(v)}<span aria-hidden="true" class="sl-caret" /></span></span>
+        <span class="sl-pf-t"><span>{per > 1 ? `Their price, a ${l.packUnit}` : 'Their price, each'}</span><span class="mono">{fig(v)}<span aria-hidden="true" class="sl-caret" /></span></span>
         {under && <span class="mono sl-pfield-d"><Icon name="tag" size={12} stroke={2.4} />{fig(v - shop)}</span>}
       </div>
-      <div class="sl-outcome"><span>{`${countWord(l.qty, l.name, l.unit)} come to`}</span>{low ? <span class="mono faint">—</span> : <span class="mono">{v !== now && <><s>{fig(was)}</s>{' → '}</>}{fig(will)}</span>}</div>
+      <div class="sl-outcome"><span>{`${countWord(s.n, l.name, s.unit)} come to`}</span>{low ? <span class="mono faint">—</span> : <span class="mono">{v !== now && <><s>{fig(was)}</s>{' → '}</>}{fig(will)}</span>}</div>
       {under && <div class="sl-callout warn"><span aria-hidden="true" class="ow-av" style={avatarStyle({ initials: m.initials, tint: m.tint, size: 28, font: 11 })}>{m.initials}</span><span>{`Under the shop’s price. ${m.first} says yes before it is packed.`}</span></div>}
       {high && <div role="alert" class="sl-callout bad"><Icon name="warning" size={18} stroke={2} /><span>About <span class="mono">{Math.round(v / shop)}</span> times the shop’s <span class="mono">{fig(shop)}</span>. A zero too many?</span></div>}
       {low && <div role="alert" class="sl-callout bad"><Icon name="lock" size={18} stroke={2} /><span>Under what it costs the shop. It can’t go this low.</span></div>}
