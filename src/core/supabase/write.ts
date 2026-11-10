@@ -36,9 +36,17 @@ async function rowId(sb: Sb, s: Session, kind: string, floor: number): Promise<n
   return Number(v);
 }
 
-/** sales.html:3966 ordPatch: an order changes by the keys that change, merged on the server (ow_patch_order, 0165). */
-export async function patchOrder(sb: Sb, s: Session, id: number, patch: Row, name: string | null = null, phone: string | null = null): Promise<void> {
-  await ok(sb.rpc('ow_patch_order', { p_shop_id: s.shopId, p_id: id, p_patch: patch, p_client_name: name, p_client_phone: phone }));
+/**
+ * sales.html:3966 ordPatch: an order changes by the keys that change, merged on the server (ow_patch_order, 0165).
+ * The Buyer also drops keys and moves the stage in the same write (buyer.html:2447 changeOrder: p_drop, p_status);
+ * they are sent only when given. The row comes back as the database kept it (the Checking gate may hold a move).
+ */
+export async function patchOrder(sb: Sb, s: Session, id: number, patch: Row, name: string | null = null, phone: string | null = null,
+  more: { drop?: string[] | null; status?: string | null } = {}): Promise<Row | null> {
+  const args: Row = { p_shop_id: s.shopId, p_id: id, p_patch: patch, p_client_name: name, p_client_phone: phone };
+  if (more.drop && more.drop.length) args.p_drop = more.drop;
+  if (more.status) args.p_status = more.status;
+  return ok<Row | null>(sb.rpc('ow_patch_order', args));
 }
 
 /**
