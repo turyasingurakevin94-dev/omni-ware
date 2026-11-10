@@ -48,3 +48,15 @@ select c.name, c.debt as balance, coalesce(i.due, 0) as open_bills,
 
 -- 6 · SAL-021: the ask to cancel #0586 needs ask_cancel (0181). Kevin's 10 Nov check said 0181 is not applied:
 select proname from pg_proc where proname in ('ask_cancel', 'withdraw_cancel_ask');   -- 2 rows once 0181 is in
+
+-- 7 · SAL-019 (after query 2 showed only 46 orders, #148–#214): were orders made after #0214 and then removed?
+--     Check first that the SQL editor's address names project hgywjaifdmgrcnwxstxg (the live books both apps
+--     use); lmmyzhqdxixjnkkkgnnu is staging.
+--     last_number: the highest order number ever handed out. Over 214 means later orders were made.
+--     the other rows: the highest order each table still names. Over 214 means rows point at orders that are gone.
+select 'last_number' as what, (select last_value from saved_quotes_id_seq)::bigint as highest, null::bigint as rows
+union all select 'invoice_asks', max(quote_id), count(*) filter (where quote_id > 214) from invoice_asks
+union all select 'payment_asks', max(quote_id), count(*) filter (where quote_id > 214) from payment_asks
+union all select 'cash_txns', max(quote_id), count(*) filter (where quote_id > 214) from cash_txns
+union all select 'customer_debt_log', max(quote_id), count(*) filter (where quote_id > 214) from customer_debt_log
+union all select 'cancel_asks', max(quote_id), count(*) filter (where quote_id > 214) from cancel_asks;
