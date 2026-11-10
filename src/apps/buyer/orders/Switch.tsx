@@ -10,6 +10,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { Button } from '../../../ui/Button.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { hasSpeech, ListenSheet } from '../../../ui/Listen.tsx';
@@ -76,6 +77,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
   const ruth = byRole(b, 'manager');
   const rows = switchOptions(b, l, q);
   const off = !online.value || kept.value.length > 0;
+  const none = rows.length === 0, words = q.trim(), moses = byRole(b, 'sourcing'), finder = moses ? firstWord(moses.name) : 'Sourcing';
 
   const pick = async (r: SwitchRow) => {
     const k = `${r.price.supplierId}|${r.price.item}`;
@@ -88,6 +90,15 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
       toast.show('Not saved', { kind: 'error', sub: `Switch to ${r.price.item} · ${fig(r.price.price)}`, retry: () => { void pick(r); } });
     } finally { setBusy(null); }
   };
+  const askMoses = async () => {
+    setBusy('sourcing');
+    try {
+      const res = await act('askSourcing', words);
+      toast.show(res.kept ? 'Kept · it sends when back' : `${finder} is told`, { kind: res.kept ? 'warn' : 'ok', sub: res.kept ? undefined : `${words} · Asked` });
+    } catch (e) {
+      toast.show('Not sent', { kind: 'error', sub: `Ask ${finder} to find ${words}`, retry: () => { void askMoses(); } });
+    } finally { setBusy(null); }
+  };
   const listen = () => sheet.open(() => <ListenSheet act="Find" onDone={(w) => { sheet.close(); setQ(w); }} />, { label: 'Say it' });
 
   const head = (
@@ -98,19 +109,21 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
         <h1>Switch item</h1>
         <FromChip who={seller} no={o.id} />
       </div>
-      <div class="was">
+      {none ? null : <div class="was">
         <Icon name="close" size={18} stroke={2.4} />
         <span class="n">{l.name}</span>
         <span class="mono">{`${l.qty} ${l.unit} × ${fig(l.cost)}`}</span>
-      </div>
+      </div>}
       <div class="find">
         <Search placeholder="Find an item" label="Find an item to switch to" value={q} onInput={setQ} autoFocus onMic={hasSpeech() ? listen : undefined} />
         {/* Browsing the aisles is not drawn for the Buyer yet: off until the canvas has it. */}
         <button type="button" class="grid" aria-label="Browse all aisles (not ready yet)" disabled><Icon name="grid" size={22} stroke={2} /></button>
       </div>
-      <div class="why" role="group" aria-label="Why">
-        {WHY.map((w) => <button key={w} type="button" aria-pressed={why === w} class={cx(why === w && 'on')} onClick={() => setWhy(w)}>{w}</button>)}
-      </div>
+      {!none && (
+        <div class="why" role="group" aria-label="Why">
+          {WHY.map((w) => <button key={w} type="button" aria-pressed={why === w} class={cx(why === w && 'on')} onClick={() => setWhy(w)}>{w}</button>)}
+        </div>
+      )}
     </div>
   );
   const foot = (
@@ -125,12 +138,22 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
   return (
     <FullSheet onBack={() => nav.back()} backLabel={null} head={head} foot={foot} pad="4px 16px 16px" gap={8}>
       {off && <Notice kind="offline">Offline · it sends when back</Notice>}
-      <div class="ow-b-orders-lh"><span>On the price list</span><span class="sells">sells <span class="mono">{fig(l.sell)}</span></span></div>
+      {!none && <div class="ow-b-orders-lh"><span>On the price list</span><span class="sells">sells <span class="mono">{fig(l.sell)}</span></span></div>}
       {rows.map((r, i) => (
         <Option key={`${r.price.supplierId}|${r.price.item}`} r={r} sell={l.sell} qty={l.qty} best={i === 0} ruth={ruth ? firstWord(ruth.name) : 'Ruth'}
           busy={busy === `${r.price.supplierId}|${r.price.item}`} disabled={!!busy} on={() => { void pick(r); }} />
       ))}
-      {!rows.length && <span class="ow-b-orders-gone">{`Nothing on the price list for “${q}”`}</span>}
+      {none && (
+        <>
+          <div class="ow-b-orders-none">
+            <span aria-hidden="true" class="tile"><Icon name="search" size={22} stroke={2} /></span>
+            <b>Nothing on the list</b>
+            <span class="mono">{`"${words}" · 0 of ${b.suppliers.length} suppliers`}</span>
+          </div>
+          {words && <Button icon="send" state={busy === 'sourcing' ? 'sending' : 'idle'} onClick={() => { void askMoses(); }}>{`Ask ${finder} to find it`}</Button>}
+          <button type="button" class="ow-b-orders-clear" onClick={() => setQ('')}>Clear search</button>
+        </>
+      )}
     </FullSheet>
   );
 }

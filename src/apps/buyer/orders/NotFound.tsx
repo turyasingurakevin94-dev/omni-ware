@@ -14,6 +14,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { Button } from '../../../ui/Button.tsx';
 import { Dock } from '../../../ui/Dock.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -49,6 +50,7 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
   const l = x.line, seller = v.seller ? firstWord(v.seller.name) : 'Sales';
   const alt = nextSupplier(b, l, now.value);
   const moses = byRole(b, 'sourcing');
+  const finder = moses ? firstWord(moses.name) : 'Sourcing';
   const only = v.live.length <= 1;
   const left = v.total - (x.state === 'removed' ? 0 : x.total);
 
@@ -61,9 +63,10 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
     const was = { sid: l.supplierId, cost: l.cost };
     setBusy('other');
     try {
-      const r = await act('otherSupplier', o.id, l.key, alt.supplier.id, alt.price.price);
+      const r1 = await act('otherSupplier', o.id, l.key, alt.supplier.id, alt.price.price);
+      const r = r1.kept ? r1 : await act('ask', alt.supplier.id, 'whatsapp');
       sheet.close();
-      told(r, `Switched · ${alt.supplier.name}`, was.sid ? () => { void act('otherSupplier', o.id, l.key, was.sid, was.cost); } : undefined);
+      told(r, `Asked ${alt.supplier.name}`, was.sid ? () => { void act('otherSupplier', o.id, l.key, was.sid, was.cost); } : undefined);
     } catch (e) { fail(`Switch to ${firstWord(alt.supplier.name)} · ${fig(alt.price.price)}`, () => { void other(); })(e); } finally { setBusy(null); }
   };
   const wait = async () => {
@@ -71,7 +74,7 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
     try {
       const r = await act('clientWaits', o.id, l.key);
       sheet.close();
-      told(r, `Client waits · ${moses ? firstWord(moses.name) : 'Sourcing'} is told`);
+      told(r, `Client waits · ${finder} is told`);
     } catch (e) { fail('Client waits', () => { void wait(); })(e); } finally { setBusy(null); }
   };
   const remove = async () => {
@@ -97,40 +100,50 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
         </div>
         <div><FromChip who={v.seller} no={o.id} /></div>
 
-        <div class="ow-b-orders-way best">
-          <div class="r">
-            <span aria-hidden="true" class="tile"><Icon name="store" size={20} stroke={2} /></span>
-            <span class="t">
-              <span class="n">{alt ? alt.supplier.name : 'No other supplier'}</span>
-              {alt && <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{`on the list · ${alt.days} ${alt.days === 1 ? 'day' : 'days'}`}</span></span>}
-            </span>
-            {alt
-              ? <RowAct icon="swap" word="Switch" busyWord="Switching" busy={busy === 'other'} label={`Switch to ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
-              : <button type="button" class="ow-b-orders-act" disabled aria-label="Switch is off: nobody else has it on the list"><Icon name="swap" size={16} stroke={2.2} />Switch</button>}
-          </div>
-          {alt && (
+        {alt ? (
+          <div class="ow-b-orders-way best">
+            <div class="r">
+              <span aria-hidden="true" class="tile"><Icon name="store" size={20} stroke={2} /></span>
+              <span class="t">
+                <span class="n">{alt.supplier.name}</span>
+                <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{`on the list · ${alt.days} ${alt.days === 1 ? 'day' : 'days'}`}</span></span>
+              </span>
+              <RowAct icon="swap" word="Switch" busyWord="Switching" busy={busy === 'other'} label={`Switch to ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
+            </div>
             <div class="pic" role="img" aria-label={`Cost ${fig(alt.price.price)}, ${seller} sells at ${fig(l.sell)}`}>
               <div class="bar"><span style={{ width: barW((alt.price.price / Math.max(1, l.sell)) * 100), background: alt.price.price > l.sell ? '#8E2A22' : '#0F6B43' }} /></div>
               <div class="k"><span>cost <span class="mono">{fig(alt.price.price)}</span></span><span>sells <span class="mono">{fig(l.sell)}</span></span></div>
             </div>
-          )}
-          <div class="f">
-            <Sees who={seller}>Switched</Sees>
-            <button type="button" class="more" onClick={otherItem}>Other item<Icon name="chevron-right" size={16} stroke={2.2} /></button>
+            <div class="f">
+              <Sees who={seller}>Switched</Sees>
+              <button type="button" class="more" onClick={otherItem}>Other item<Icon name="chevron-right" size={16} stroke={2.2} /></button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div class="ow-b-orders-noalt">
+            <span aria-hidden="true" class="tile"><Icon name="search" size={18} stroke={2} /></span>
+            <span class="t"><b>No other supplier on the list</b><span>{`${finder} can find one while ${seller}'s client waits`}</span></span>
+          </div>
+        )}
 
-        <div class="ow-b-orders-way">
-          <div class="r">
-            {moses ? <Avatar initials={moses.initials} tint={moses.tint} size={40} /> : <span aria-hidden="true" class="tile"><Icon name="search" size={20} stroke={2} /></span>}
-            <span class="t">
-              <span class="n">{`${moses ? firstWord(moses.name) : 'Sourcing'} finds it`}</span>
-              <span class="s">billed when it comes in</span>
-            </span>
-            <RowAct kind="line" icon="hourglass" word="Client waits" busyWord="Sending" busy={busy === 'wait'} on={() => { void wait(); }} />
+        {alt ? (
+          <div class="ow-b-orders-way">
+            <div class="r">
+              {moses ? <Avatar initials={moses.initials} tint={moses.tint} size={40} /> : <span aria-hidden="true" class="tile"><Icon name="search" size={20} stroke={2} /></span>}
+              <span class="t">
+                <span class="n">{`${finder} finds it`}</span>
+                <span class="s">billed when it comes in</span>
+              </span>
+              <RowAct kind="line" icon="hourglass" word="Client waits" busyWord="Sending" busy={busy === 'wait'} on={() => { void wait(); }} />
+            </div>
+            <div class="f line"><Sees who={seller}>Client waits</Sees></div>
           </div>
-          <div class="f line"><Sees who={seller}>Client waits</Sees></div>
-        </div>
+        ) : (
+          <>
+            <Button icon="hourglass" state={busy === 'wait' ? 'sending' : 'idle'} onClick={() => { void wait(); }}>{`Client waits · ${finder} finds it`}</Button>
+            <Sees who={seller} class="ow-b-orders-nfsees">Client waits</Sees>
+          </>
+        )}
       </div>
       <Dock inline words={`${seller} sees: Removed`} total={left} sub={{ text: fig(-x.total, false, true), tone: 'rose' }}
         style={{ marginTop: 'auto' }}

@@ -34,16 +34,17 @@ export const PILL: Record<LineState, [string, string]> = {
 };
 /** The ink a state word is written in on white (the list row's word, "Grace sees"). */
 export const INK: Record<LineState, string> = {
-  toask: '#5F6980', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#7A4A02',
+  toask: '#7A4A02', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#7A4A02',
   clientwaits: '#7A4A02', removed: '#5F6980', ontrip: '#16203C', short: '#95530C', in: '#0F6B43',
 };
 
 /** Which word an order's row shows: the one that needs someone most. */
-const RANK: LineState[] = ['notfound', 'priceup', 'asked', 'toask', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
+const RANK: LineState[] = ['notfound', 'priceup', 'toask', 'asked', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
 
-export type Filter = 'all' | 'asked' | 'notfound' | 'ruth';
+export type Filter = 'all' | 'toask' | 'asked' | 'notfound' | 'ruth';
 export const FILTERS: { id: Filter; word: string; state: LineState | null; dot: string | null }[] = [
   { id: 'all', word: 'All', state: null, dot: null },
+  { id: 'toask', word: 'To ask', state: 'toask', dot: null },
   { id: 'asked', word: 'Asked', state: 'asked', dot: '#95530C' },
   { id: 'notfound', word: 'Not found', state: 'notfound', dot: '#8E2A22' },
   { id: 'ruth', word: 'decides', state: 'priceup', dot: null },

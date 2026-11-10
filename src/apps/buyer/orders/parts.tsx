@@ -36,7 +36,7 @@ export function Strip(p: { states: LineState[]; navy?: boolean; gap?: number }):
   const label = p.states.map((s) => WORD[s]).join(', ');
   return (
     <div class="ow-b-orders-strip" role="img" aria-label={label} style={{ gap: `${p.gap ?? 3}px` }}>
-      {p.states.map((s, i) => <span key={i} style={{ background: (p.navy ? STRIP_NAVY : STRIP)[s] }} />)}
+      {p.states.map((s, i) => <span key={i} class={s === 'toask' ? 'dash' : undefined} style={s === 'toask' ? undefined : { background: (p.navy ? STRIP_NAVY : STRIP)[s] }} />)}
     </div>
   );
 }
@@ -62,11 +62,11 @@ export function StateWord(p: { state: LineState; at?: string | null; word?: stri
 }
 
 /** The navy pill on a row (44 tall). Sending: a spinner and the -ing word. */
-export function RowAct(p: { icon: IconName; word: string; busyWord: string; busy: boolean; label?: string; on: () => void; kind?: 'navy' | 'line' }): JSX.Element {
+export function RowAct(p: { icon?: IconName; word: string; busyWord: string; busy: boolean; label?: string; on: () => void; kind?: 'navy' | 'line' }): JSX.Element {
   return (
     <button type="button" class={cx('ow-b-orders-act', p.kind === 'line' && 'line')} aria-label={p.label} aria-busy={p.busy || undefined}
       disabled={p.busy} onClick={(e) => { e.stopPropagation(); p.on(); }}>
-      {p.busy ? <span aria-hidden="true" class="ow-b-orders-spin" /> : <Icon name={p.icon} size={16} stroke={2.2} />}
+      {p.busy ? <span aria-hidden="true" class="ow-b-orders-spin" /> : p.icon && <Icon name={p.icon} size={16} stroke={2.2} />}
       {p.busy ? p.busyWord : p.word}
     </button>
   );

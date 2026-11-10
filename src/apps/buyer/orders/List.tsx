@@ -27,8 +27,9 @@ const isFilter = (x: unknown): x is Filter => FILTERS.some((f) => f.id === x);
 
 function Row(p: { v: OrderView; decider: { name: string; initials: string } | null; busy: boolean; waiting: boolean; onAsk: () => void }): JSX.Element {
   const { v } = p, o = v.order, top = v.top;
-  const word = top ? (top.state === 'priceup' ? `${WORD.priceup} · ` : `${WORD[top.state]}${top.at ? ' · ' : ''}`) : '';
-  const tail = top ? (top.state === 'priceup' ? fig(top.line.cost) : top.at || '') : '';
+  const toAsk = !!top && top.state === 'toask' && !!top.supplier;
+  const word = !top ? '' : top.state === 'priceup' ? `${WORD.priceup} · ` : toAsk ? `${WORD.toask} · ${firstWord(top.supplier ? top.supplier.name : '')}` : `${WORD[top.state]}${top.at ? ' · ' : ''}`;
+  const tail = !top || toAsk ? '' : top.state === 'priceup' ? fig(top.line.cost) : top.at || '';
   const open = () => nav.push('orders/order', { id: o.id });
   return (
     <div class="ow-b-orders-row" role="button" tabIndex={0} aria-label={`${o.client}, ${orderNo(o.id)}: open`} onClick={open}
@@ -46,7 +47,10 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
         {top && top.state === 'priceup' && p.decider && (
           <span class="ow-b-orders-ruth"><span aria-hidden="true">{p.decider.initials}</span>{`${firstWord(p.decider.name)} decides`}</span>
         )}
-        {top && top.state === 'asked' && p.waiting && <Waiting />}
+        {top && (top.state === 'asked' || toAsk) && p.waiting && <Waiting />}
+        {toAsk && !p.waiting && (
+          <RowAct word="Ask" busyWord="Asking" busy={p.busy} label={`Ask ${top && top.supplier ? top.supplier.name : 'the supplier'}`} on={p.onAsk} />
+        )}
         {top && top.state === 'asked' && v.late && !p.waiting && (
           <RowAct icon="send" word="Ask again" busyWord="Asking" busy={p.busy} label={`Ask ${top.supplier ? top.supplier.name : 'the supplier'} again`} on={p.onAsk} />
         )}
@@ -80,7 +84,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
     const top = v.top, sid = top && top.line.supplierId;
     if (!top || !sid) return;
     const name = top.supplier ? top.supplier.name : 'the supplier';
-    const how = v.order.confirms[sid]?.how || 'whatsapp';
+    const how = (top.state === 'asked' && v.order.confirms[sid]?.how) || 'whatsapp';
     setBusy(sid);
     try {
       const r = await act('ask', sid, how);
@@ -113,10 +117,12 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
         <ChipRow label="Show">
           {FILTERS.map((f) => {
             const n = views.filter((v) => matches(v, f.id)).length;
+            if (f.id === 'toask' && !n && filter !== 'toask') return null;
             return (
               <FilterChip key={f.id} on={filter === f.id} dot={f.dot || undefined} count={n} onClick={() => setFilter(f.id)}>
                 {f.id === 'all' && <span aria-hidden="true" class="ow-b-orders-chipic"><Icon name="list" size={16} stroke={2.2} /></span>}
                 {f.id === 'ruth' && <Icon name="lock" size={14} stroke={2.2} />}
+                {f.id === 'toask' && <span aria-hidden="true" class="ow-b-orders-dashdot" />}
                 {f.id === 'ruth' ? `${ruthName} decides` : f.word}
               </FilterChip>
             );
@@ -129,6 +135,9 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
             <Row key={v.order.id} v={v} decider={ruth} busy={!!busy && busy === v.top?.line.supplierId}
               waiting={!!v.top?.line.supplierId && keptAsks.has(v.top.line.supplierId)} onAsk={() => { void ask(v); }} />
           ))}
+          {filter === 'toask' && views.length > shown.length && (
+            <button type="button" class="ow-b-orders-rest" onClick={() => setFilter('all')}>{`The other ${views.length - shown.length} are asked or answered · `}<b>All</b></button>
+          )}
         </div>
       ) : (
         <div class="ow-b-orders-empty">
