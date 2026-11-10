@@ -10,12 +10,12 @@ select m.shop_id, s.name, s.created_at, m.role, m.display_name
 -- 2 · SAL-019: every shop's orders: how many, the lowest and highest number, the newest.
 --     Orders #494–#586 should show in exactly one row; if it is not the shop from query 1's first row, the
 --     new app opened the wrong shop.
-select s.name, count(q.*) as orders, min(q.id) as lowest, max(q.id) as highest, max(q.created_at) as newest
+select s.id as shop_id, s.name, count(q.*) as orders, min(q.id) as lowest, max(q.id) as highest, max(q.date) as newest
   from shops s left join saved_quotes q on q.shop_id = s.id
  group by s.id, s.name order by s.name;
 
 -- 3 · SAL-019: where #0494, #0570 and #0586 are, and the asks that name them.
-select 'order' as what, q.shop_id, q.id, q.created_at from saved_quotes q where q.id in (494, 570, 586)
+select 'order' as what, q.shop_id, q.id, q.date::timestamptz as at from saved_quotes q where q.id in (494, 570, 586)
 union all
 select 'bill ask', a.shop_id, a.quote_id, a.created_at from invoice_asks a where a.quote_id in (494, 570, 586)
 order by id, what;
