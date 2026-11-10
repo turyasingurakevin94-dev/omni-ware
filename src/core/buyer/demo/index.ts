@@ -83,6 +83,12 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
       answer(sid, 'found'); settle();
     }),
     answerNo: (sid) => later(() => answer(sid, 'notfound')),
+    undoAnswer: (sid) => later(() => withSupplier(sid).forEach((o) => {
+      const c = o.confirms[sid];
+      if (c && c.answeredAt) o.confirms[sid] = { ...c, state: 'asked', answeredAt: null };
+      o.lines.forEach((l) => { if (l.supplierId === sid && l.priceWas != null) { l.cost = l.priceWas; l.priceWas = null; l.repricedAt = null; l.ruthDecides = false; } });
+      if (o.status === 'awaiting_goods' && o.lines.some((l) => l.supplierId === sid)) o.status = 'draft';
+    })),
 
     otherSupplier: (id, key, sid, cost: UGX) => later(() => {
       const o = order(id), l = lineOf(o, key);

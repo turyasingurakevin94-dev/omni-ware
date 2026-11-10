@@ -37,6 +37,8 @@ export interface BuyerSource {
   answerPrice(supplierId: string, prices: PriceAnswer[]): Promise<void>;
   /** They do not have it: every asked line of theirs is Not found (Sales is pushed). */
   answerNo(supplierId: string): Promise<void>;
+  /** Undo an answer just recorded (the 5-second Undo): their lines go back to Asked, prices as they were. */
+  undoAnswer(supplierId: string): Promise<void>;
 
   /* a line not found */
   /** Buy it from another supplier: the line goes back to To ask with them. */
