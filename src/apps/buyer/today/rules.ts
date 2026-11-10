@@ -1,0 +1,77 @@
+/*
+ * Today's own small rules (pure). The Buyer's rules live in src/core/buyer/rules.ts;
+ * these only shape them for Today's rows and cards.
+ *
+ *   hm(ms)              "09:05" (the board's times have the leading zero)
+ *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap"
+ *   askText(g, shop)    the WhatsApp message one Ask sends: every line of that supplier, all orders
+ *   waOf(phone, text)   the wa.me link
+ *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
+ *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
+ *   calm(b, now)        nothing waits on Denis
+ */
+import { clock } from '../../../core/time.ts';
+import { phone9 } from '../../../core/names.ts';
+import type { Member, Ms } from '../../../core/types.ts';
+import { askGroups, lineRefs, replyRows, tiles, type SupplierGroup } from '../../../core/buyer/rules.ts';
+import type { BOrder, BuyerBooks } from '../../../core/buyer/types.ts';
+
+export function hm(ms: Ms): string {
+  return clock(ms).padStart(5, '0');
+}
+
+/** The item's name without its size ("Timber 2×4" → "Timber"), for a small chip. */
+export function shortItem(name: string): string {
+  const words = name.split(' '), out: string[] = [];
+  for (const w of words) { if (/\d/.test(w)) break; out.push(w); }
+  return out.length ? out.join(' ') : name;
+}
+
+/** One message per supplier: what we need from them, every order together. */
+export function askText(g: SupplierGroup, shop: string): string {
+  const rows = g.lines.map((r) => `- ${r.line.name}: ${r.line.qty} ${r.line.unit}`);
+  return [`Hello ${g.supplier.name}, ${shop} here. Do you have these today, at the same price?`, ...rows].join('\n');
+}
+
+export function waOf(phone: string, text: string): string {
+  const p = phone9(phone);
+  return `https://wa.me/${p ? '256' + p : ''}?text=${encodeURIComponent(text)}`;
+}
+
+export function sellersOf(b: BuyerBooks, os: BOrder[]): Member[] {
+  const ids = [...new Set(os.map((o) => o.sellerId))];
+  return ids.map((id) => b.team.find((m) => m.id === id)).filter((m): m is Member => !!m);
+}
+
+export function firstName(m: Member): string {
+  return m.name.split(' ')[0];
+}
+
+/** "Grace sees", "Grace · Faith see". */
+export function seeWord(ms: Member[]): string {
+  return ms.length === 1 ? `${firstName(ms[0])} sees` : `${ms.map(firstName).join(' · ')} see`;
+}
+
+export interface Waiter { key: string; initials: string; person: Member | null; name: string }
+
+/** Who the work waits on that is not Denis: the Manager deciding a price, the suppliers asked. */
+export function waitingOn(b: BuyerBooks, now: Ms): Waiter[] {
+  const out: Waiter[] = [];
+  const ruth = b.team.find((m) => m.role === 'manager') || null;
+  if (ruth && lineRefs(b).some((r) => r.state === 'priceup')) out.push({ key: ruth.id, initials: ruth.initials, person: ruth, name: firstName(ruth) });
+  replyRows(b, now).forEach((g) => out.push({
+    key: g.supplier.id, person: null, name: g.supplier.name.split(' ')[0],
+    initials: g.supplier.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase(),
+  }));
+  return out;
+}
+
+/** The trip is on the road or waiting on its cash. */
+export function tripRunning(b: BuyerBooks): boolean {
+  return !!b.trip && (b.trip.state === 'cash' || b.trip.state === 'on');
+}
+
+/** Nothing waits on Denis: nothing to ask, no late reply, nothing found to buy, no trip running. */
+export function calm(b: BuyerBooks, now: Ms): boolean {
+  return askGroups(b, now).length === 0 && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
+}

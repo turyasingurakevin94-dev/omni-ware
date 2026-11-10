@@ -29,7 +29,7 @@ export interface BuyerSource {
   books(): Promise<BuyerBooks>;
 
   /* asking */
-  /** Asked a supplier for every line of theirs still to ask, on every order (one message). */
+  /** Asked a supplier for every line of theirs not found yet, on every order (one message); asked again, the ask is new (no longer late). */
   ask(supplierId: string, way: AskWay): Promise<void>;
   /** They have it all at the same price: every asked line of theirs is Found. */
   answerYes(supplierId: string): Promise<void>;

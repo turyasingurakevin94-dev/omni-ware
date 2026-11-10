@@ -71,7 +71,7 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     ask: (sid: string, way: AskWay) => later(() => {
       withSupplier(sid).forEach((o) => {
         const c = o.confirms[sid];
-        if (!c || !c.askedAt || c.state === 'notfound') o.confirms[sid] = { state: 'asked', askedAt: clock(), answeredAt: null, how: way };
+        if (!c || c.state !== 'found') o.confirms[sid] = { state: 'asked', askedAt: clock(), answeredAt: null, how: way };
       });
     }),
     answerYes: (sid) => later(() => { answer(sid, 'found'); settle(); }),
