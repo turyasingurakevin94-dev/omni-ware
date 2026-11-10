@@ -51,3 +51,8 @@ The shot script opens `next/buyer.html` at 360×780 and prints page errors; to r
 clicks (Playwright). Compare with your board's PNG; fix until it matches. Then drive each action on the demo and see
 the books change. Do not commit; reply (under 200 words) with the files you wrote, what works, any rule/write you
 needed, and anything you could not match.
+
+## Only what is drawn (Kevin, 2026-11-10)
+No page, sheet or state of the old buyer.html comes back unless it is drawn on this canvas. A page the new app
+needs that was never drawn is drawn here first, in the same language, then built. Drawn for the build so far:
+`Gate.dc.html` (sign in: default, signing in, wrong email or password, no signal) → `src/apps/buyer/shell/Gate.tsx`.
