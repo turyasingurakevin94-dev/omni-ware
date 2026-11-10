@@ -97,7 +97,7 @@ function phone(o = {}) {
 (async () => {
   /* ---------- 2. the safety rule ---------- */
   {
-    t.check(U.SOURCE === 'https://omni-ware.vercel.app/sales.html', 'it asks the live sales.html the spec names');
+    t.check(U.SOURCE === 'https://omni-ware.vercel.app/next/sales.html', 'it asks the new app\'s own page, next/sales.html, so a fix reaches an installed APK without a new one');
     t.check(U.builtPage(OLD_PAGE) === null, 'the old sales.html (no build id, no ow-files) is not a build of this app');
     t.check(U.builtPage(pageOf(BUILD, null)) === null, 'nor is a page with the build id but no ow-files');
     t.check(U.builtPage(pageOf(null, TABS)) === null, 'nor one with ow-files but no build id');
@@ -111,11 +111,11 @@ function phone(o = {}) {
     // The live page: the old app until Sales is switched, then this test reads the built sales.html.
     const live = read('sales.html');
     if (live.slice(0, 300).includes('GENERATED from src/')) t.check(!!U.builtPage(live), 'the root sales.html is the built page: the phones take it');
-    else t.check(U.builtPage(live) === null, 'and the old root sales.html does not: an APK of the new app stays on what it shipped until the switch');
+    else t.check(U.builtPage(live) === null, 'and the old root sales.html does not: were it ever asked, it is refused');
 
     const ph = phone({ server: { [U.SOURCE]: OLD_PAGE } });
     const r = await U.check(ph.io);
-    t.check(r === 'refused' && Object.keys(ph.disk).length === 0 && !ph.state.staged, `the live page is the old app: ${r}, nothing written, nothing staged`);
+    t.check(r === 'refused' && Object.keys(ph.disk).length === 0 && !ph.state.staged, `a page that is the old app: ${r}, nothing written, nothing staged`);
     t.check(ph.asked.length === 1, 'and nothing beside it is fetched');
   }
 
@@ -125,7 +125,7 @@ function phone(o = {}) {
     const r = await U.check(ph.io);
     const dir = Object.keys(ph.disk)[0].split('/').slice(0, 2).join('/');
     t.check(r === 'staged' && /^live\/[0-9a-f]{16}$/.test(dir), `a new build is staged in its own folder (${dir})`);
-    t.check(ph.asked.some(([u]) => u === 'https://omni-ware.vercel.app/sales-chats.js') && ph.asked.some(([u]) => u === 'https://omni-ware.vercel.app/sales-sell.js'),
+    t.check(ph.asked.some(([u]) => u === 'https://omni-ware.vercel.app/next/sales-chats.js') && ph.asked.some(([u]) => u === 'https://omni-ware.vercel.app/next/sales-sell.js'),
       'every file the page names is fetched from the server, beside the page');
     t.check(ph.disk[dir + '/sales-chats.js'].data === tab('chats', BUILD) && ph.disk[dir + '/sales-sell.js'].utf8, 'and written as the server sent it');
     t.check(ph.disk[dir + '/index.html'].data.includes('<script src="transform.js"></script>'), 'the page goes through the phone\'s swaps');

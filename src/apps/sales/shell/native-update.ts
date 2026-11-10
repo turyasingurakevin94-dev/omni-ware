@@ -18,7 +18,13 @@
  * app that ships the new page never turns itself back into the old one by fetching an old live page.
  */
 
-export const SOURCE = 'https://omni-ware.vercel.app/sales.html';
+/**
+ * The new app's own page, next/sales.html, not the root sales.html: the root is the old app until Sales is
+ * switched, and the safety rule refuses it, so an installed APK never moved past what it shipped and every fix
+ * needed a new APK (Kevin, 10 Nov 2026: "dont always build the new apk"). next/ is built from src/ on every
+ * change, before and after the switch.
+ */
+export const SOURCE = 'https://omni-ware.vercel.app/next/sales.html';
 /** Kept under the same key as the old native layer, so a phone it updated settles here. */
 export const KEY = 'ow-sales-bundle';
 export const EVERY = 30 * 60 * 1000;
