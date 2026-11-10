@@ -65,7 +65,7 @@ export function Counter(): JSX.Element {
   if (!b) return <main class="kc" aria-busy="true" />;
   const s = sale.value, text = q.value, t = now.value, total = totalOf(s.lines);
   const cust = s.customerId ? b.customers.find((c) => c.id === s.customerId) || null : null;
-  const itemOf = (l: Line) => b.items.find((i) => i.id === l.itemId);
+  const itemOf = (l: Line) => b.items.find((i) => i.id === l.itemId && i.variantIdx === l.variantIdx);
   const short = s.lines.find((l) => { const it = itemOf(l); return !!it && it.onShelf != null && l.qty > it.onShelf; });
   const waits = s.quote == null ? waitingLines(s.lines) : [];
   const ruth = manager(b), face = cust ? { initials: cust.initials, tint: cust.tint } : { initials: 'WI', tint: 't4' as const };

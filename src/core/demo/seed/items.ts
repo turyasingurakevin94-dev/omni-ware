@@ -43,11 +43,10 @@ const ROWS: Row[] = [
 export function items(): Item[] {
   return ROWS.map(([id, name, unit, price, shelf, aisle]) => ({
     id, variantIdx: null, name, aisle, unit,
-    // Wire nails 4" · 25kg ctn is sold by the carton only, 3,840 a kg; Zawaina by the pair or the carton of 50.
+    // Wire nails 4" · 25kg ctn is sold by the carton only, 3,840 a kg; Zawaina by the pair or the carton of 50 (85,000: 50 × 1,700, as the agent app prices a pack).
     packUnit: id === 'hinge-zawaina-4' ? 'carton' : id === 'nails-4-25kg' ? 'kg' : '',
     packQty: id === 'hinge-zawaina-4' ? 50 : id === 'nails-4-25kg' ? 25 : 0,
     price,
-    packPrice: id === 'hinge-zawaina-4' ? 80000 : null,
     cost: price == null ? null : Math.round(price / 1.25),
     onShelf: typeof shelf === 'number' ? shelf : shelf == null ? null : 0,
     orderIn: shelf === 'in',

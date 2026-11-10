@@ -8,6 +8,7 @@ import { oftenWith as often } from '../../../core/often.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../core/money.ts';
+import { capWord as cap, sellsByPack } from '../../../core/units.ts';
 import type { Books, Item, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
@@ -55,7 +56,7 @@ function AskCard(p: { b: Books; title: string; name: string }): JSX.Element {
 export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Element {
   const b = p.b, [openId, setOpen] = useState(p.items[0].id), it = p.items.find((i) => i.id === openId) || p.items[0];
   const rest = p.items.filter((i) => i !== it), often = oftenWith(b, it), d = openDraft(), dc = d && d.customerId ? b.customers.find((c) => c.id === d.customerId) : null;
-  const word = p.q.trim().toLowerCase(), u = unitWord(it.unit);
+  const word = p.q.trim().toLowerCase(), u = unitWord(it.unit), pack = sellsByPack(it);
   return (
     <>
       <div class="td-item-open">
@@ -65,10 +66,9 @@ export function ItemFound(p: { b: Books; q: string; items: Item[] }): JSX.Elemen
             <span>{it.onShelf && it.onShelf > 0 ? <span class="td-spill t"><span class="mono">{it.onShelf}</span> on shelf</span> : shelf(it)}</span></span>
         </div>
         {it.price != null && (
-          <div class={'td-item-prices' + (it.packPrice ? '' : ' one')}>
-            <div><span>{`One ${u}`}</span><span class="mono">{money(it.price)}</span>{it.packPrice && <span>{`under ${it.packQty} ${u}s`}</span>}</div>
-            {it.packPrice && <div class="pack"><span>{`${it.packUnit[0].toUpperCase()}${it.packUnit.slice(1)} of ${it.packQty}`}</span><span class="mono">{money(it.packPrice)}</span>
-              <span><span class="mono">{money(Math.round(it.packPrice / it.packQty))}</span>{` a ${u}`}</span></div>}
+          <div class={'td-item-prices' + (pack ? '' : ' one')}>
+            <div><span>{`One ${u}`}</span><span class="mono">{money(it.price)}</span></div>
+            {pack && <div><span>{`${cap(it.packUnit)} of ${it.packQty}`}</span><span class="mono">{money(it.price * it.packQty)}</span></div>}
           </div>
         )}
         <div class="td-item-acts">

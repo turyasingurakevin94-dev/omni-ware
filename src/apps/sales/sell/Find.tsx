@@ -25,6 +25,7 @@ import { sourcing } from './people.ts';
 import { openPriceComing } from './sheets.tsx';
 import './find.css';
 import { sayItem } from '../../../core/names.ts';
+import { sellsByPack } from '../../../core/units.ts';
 
 /** The count on the first answer (its stepper). */
 const count = signal<number | null>(null);
@@ -39,10 +40,12 @@ function Mark(p: { name: string; words: string[] }): JSX.Element {
 
 /** Add what was found, as it was asked: a whole carton for kg of a carton-only item (SL15). */
 export function addAsked(b: Books, it: Item, a: Asked, c: Customer | null): void {
-  if (it.price == null) { openPriceComing(it.id, null, a.qty || (c ? lastQty(b, c.id, it.id) : null) || 1); return; }
+  if (it.price == null) { openPriceComing(it.id, it.variantIdx, null, a.qty || (c ? lastQty(b, c.id, it.id) : null) || 1); return; }
   closeLine();
   const qty = a.qty || 1;
-  if (a.unit && a.unit !== it.unit && it.packUnit === a.unit && it.packQty > 0) {
+  // "2 bundle" of an item sold by its bundle too: 2 bundles, counted so (SL43, core/units.ts).
+  if (a.unit && a.unit === it.packUnit && sellsByPack(it)) add(it, qty, 'pack');
+  else if (a.unit && a.unit !== it.unit && it.packUnit === a.unit && it.packQty > 0) {
     const whole = Math.max(1, Math.ceil(qty / it.packQty)), l = add(it, whole);
     const alt = b.items.find((x) => x.id !== it.id && x.unit === a.unit && x.name.split(' · ')[0] === it.name.split(' · ')[0]) || null;
     askedAs.value = new Map([[l.lineId, { qty, unit: a.unit, alt }]]);

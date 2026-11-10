@@ -54,6 +54,7 @@ const NUM: Record<string, number> = {
 const UNIT: Record<string, string> = {
   pcs: 'pc', pc: 'pc', pieces: 'pc', piece: 'pc', bags: 'bag', bag: 'bag', cartons: 'ctn', carton: 'ctn', ctn: 'ctn', ctns: 'ctn',
   kg: 'kg', kgs: 'kg', kilos: 'kg', tins: 'tin', tin: 'tin', pairs: 'pair', pair: 'pair', boxes: 'box', box: 'box', sets: 'set',
+  bundles: 'bundle', bundle: 'bundle', dozens: 'dozen', dozen: 'dozen',
 };
 
 /** "forty" → 40, "4" → 4; "four inch" → 4". */

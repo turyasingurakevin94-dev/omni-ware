@@ -74,7 +74,7 @@ async function sell(open) {
   await h.tap('Add · price coming');
   const tot = (await h.p.locator('.ow-dock-total').innerText()).trim();
   h.check(tot === 'Price coming', 'SL21: the hinge alone totals "Price coming", never 0', tot);
-  // SL42: 60 Zawaina pair counted by the carton rounds up to 2 cartons (160,000); − takes it to 1; placed at 80,000.
+  // SL42: 60 Zawaina pair counted by the carton rounds up to 2 cartons (170,000: 50 × 1,700 a carton, as the agent app prices it); − takes it to 1; placed at 85,000.
   const u = await open('');
   await u.tap({ sel: 'a.ow-plus' });
   await u.type('Kato', 'Customer name, phone or place');
@@ -82,16 +82,37 @@ async function sell(open) {
   await u.type('60 zawaina', 'Add an item: type its name');
   await u.tap({ sel: '.sl-top-add' });
   await u.tap({ text: 'Zawaina hinge, normal 4 inch' });
-  await u.tap('By the carton of 50, 80,000 a carton');
+  await u.tap('By the carton of 50, 85,000 a carton');
   let ut = await u.text();
-  u.check(/2 carton × 80,000/.test(ut) && /160,000/.test(ut), 'SL42: 60 pair by the carton is 2 carton × 80,000 = 160,000', ut.slice(0, 500));
+  u.check(/2 carton × 85,000/.test(ut) && /170,000/.test(ut) && /1 carton = 50 pair · 100 pair in all/.test(ut), 'SL42: 60 pair by the carton is 2 carton × 85,000 = 170,000, "1 carton = 50 pair · 100 pair in all"', ut.slice(0, 500));
   await u.tap({ label: 'Fewer cartons' });
   ut = await u.text();
-  u.check(/1 carton × 80,000/.test(ut) && (await u.p.locator('.ow-dock-total').innerText()).trim() === '80,000', 'SL42: − makes it 1 carton, and the dock says 80,000', ut.slice(0, 500));
+  u.check(/1 carton × 85,000/.test(ut) && (await u.p.locator('.ow-dock-total').innerText()).trim() === '85,000', 'SL42: − makes it 1 carton, and the dock says 85,000', ut.slice(0, 500));
   await u.slide();
   await u.wait('Placed');
   const up = await u.text();
-  u.check(/80,000/.test(up) && /1 × 80,000/.test(up), 'SL42: Placed says 1 × 80,000, total 80,000', up.slice(0, 600));
+  u.check(/85,000/.test(up) && /1 × 85,000/.test(up), 'SL42: Placed says 1 × 85,000, total 85,000', up.slice(0, 600));
+  // SL43: the hinge's card in Doors & locks carries the agent app's Pair | Carton, the carton first (85,000/carton);
+  // "+ 1 Carton" puts 1 carton × 85,000 on the order; Pair makes it "+ 1 Pair" at 1,700/pair.
+  const w = await open('');
+  await w.tap({ sel: 'a.ow-plus' });
+  await w.type('Kato', 'Customer name, phone or place');
+  await w.tap('New order for Kato');
+  await w.tap('Browse the aisles');
+  await w.tap({ text: 'Doors & locks' });
+  const card = w.p.locator('.sl-card2:has-text("Zawaina")');
+  let ct = (await card.innerText()).replace(/\s+/g, ' ');
+  w.check(/85,000 ?\/carton/.test(ct) && /1 ?Carton/.test(ct) && (await card.locator('[role=radio][aria-checked=true]').innerText()).trim() === 'Carton', 'SL43: the hinge card starts on Carton, 85,000/carton, "+ 1 Carton"', ct);
+  await w.tap({ sel: '.sl-card2:has-text("Zawaina") [role=radio]:text-is("Pair")' });
+  ct = (await card.innerText()).replace(/\s+/g, ' ');
+  w.check(/1,700 ?\/pair/.test(ct) && /1 ?Pair/.test(ct), 'SL43: Pair makes it 1,700/pair, "+ 1 Pair"', ct);
+  await w.tap({ sel: '.sl-card2:has-text("Zawaina") [role=radio]:text-is("Carton")' });
+  await w.tap({ sel: '.sl-card2:has-text("Zawaina") .sl-card2-add' });
+  ct = (await card.innerText()).replace(/\s+/g, ' ');
+  w.check(/In order/.test(ct) && /1 carton/.test(ct), 'SL43: added, the card says In order, 1 carton', ct);
+  await w.tap('Done');
+  const wl = (await w.p.locator('a.sl-line').allInnerTexts()).map((x) => x.replace(/\s+/g, ' '));
+  w.check(wl.some((x) => x.includes('Zawaina') && x.includes('1 carton × 85,000')), 'SL43: the order line is 1 carton × 85,000', wl.join(' / '));
   return ph;
 }
 

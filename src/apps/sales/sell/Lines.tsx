@@ -244,7 +244,7 @@ export function Lines(p: { me: string; extra?: JSX.Element | null }): JSX.Elemen
       {open && <OpenLine l={open} b={b} me={p.me} customerId={x.customerId} />}
       {(rest.length > 0 || p.extra) && (
         <div class="sl-lines">
-          {rest.map((l) => <LineRow key={l.lineId} l={l} b={b} on={l.price == null ? () => openPriceComing(l.itemId, l.lineId) : undefined} />)}
+          {rest.map((l) => <LineRow key={l.lineId} l={l} b={b} on={l.price == null ? () => openPriceComing(l.itemId, l.variantIdx, l.lineId) : undefined} />)}
           {p.extra}
         </div>
       )}

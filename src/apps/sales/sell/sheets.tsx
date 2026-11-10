@@ -23,8 +23,9 @@ import { VoiceSheet, canListen } from './VoiceSheet.tsx';
 export function openPrice(lineId: number): void {
   sheet.open(() => <PriceSheet lineId={lineId} />, { label: 'Their price', top: 150 });
 }
-export function openPriceComing(itemId: string, lineId: number | null, qty?: number): void {
-  sheet.open(() => <ComingSheet itemId={itemId} lineId={lineId} qty={qty} />, { label: 'No selling price yet', top: 282 });
+/** By the item and its variant: GYPSUM Channels — Wall Angle is a variant, and found by its id alone it was not found (a blank sheet). */
+export function openPriceComing(itemId: string, variantIdx: number | null, lineId: number | null, qty?: number): void {
+  sheet.open(() => <ComingSheet itemId={itemId} variantIdx={variantIdx} lineId={lineId} qty={qty} />, { label: 'No selling price yet', top: 282 });
 }
 export function openCharge(): void {
   sheet.open(() => <ChargeSheet />, { label: 'Add a charge', top: 380 });

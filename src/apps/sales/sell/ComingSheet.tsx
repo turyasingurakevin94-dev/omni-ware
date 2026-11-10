@@ -19,8 +19,8 @@ import { add, cur, itemOf, query, setQty, sums } from './model.ts';
 import { manager, sourcing } from './people.ts';
 import './coming.css';
 
-export function ComingSheet(p: { itemId: string; lineId: number | null; qty?: number }): JSX.Element | null {
-  const b = books.value, x = cur.value, it = b ? itemOf(b, p.itemId) : undefined;
+export function ComingSheet(p: { itemId: string; variantIdx: number | null; lineId: number | null; qty?: number }): JSX.Element | null {
+  const b = books.value, x = cur.value, it = b ? itemOf(b, p.itemId, p.variantIdx) : undefined;
   const line = x && p.lineId != null ? x.lines.find((l) => l.lineId === p.lineId) : null;
   const [n, setN] = useState(() => (line ? line.qty : p.qty || (b && x && x.customerId ? lastQty(b, x.customerId, p.itemId) : null) || 1));
   if (!b || !x || !it) return null;
