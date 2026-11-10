@@ -106,7 +106,7 @@ function NoTrip(p: { b: BuyerBooks }): JSX.Element {
       <div class="ow-b-trip-body">
         <div class="ow-b-plan-none"><span><Icon name="basket" size={24} stroke={1.8} /></span><b>Nothing to hand in</b><span class="mono">0 stops</span></div>
       </div>
-      <Dock words={firstWord(esther?.name || 'Accounts')} total={null}>
+      <Dock face={esther ? <Avatar initials={esther.initials} tint={esther.tint} size={36} /> : null} words={firstWord(esther?.name || 'Accounts')} total={null}>
         <Slide label="No trip out" onCommit={() => undefined} state="empty" />
       </Dock>
     </main>

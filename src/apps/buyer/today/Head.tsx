@@ -12,7 +12,6 @@ import { handIn, tiles, toBuy } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { dayLabel } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
-import { toast } from '../../../ui/toast.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { firstName, hm } from './rules.ts';
@@ -39,9 +38,7 @@ export function Head(p: { b: BuyerBooks; now: number; offline: boolean }): JSX.E
               : <span class="ow-b-today-live"><i aria-hidden="true" />Live</span>}
           </span>
         </div>
-        {/* Stand-in: the Buyer's own page is not on the canvas yet. */}
-        <button type="button" class="ow-b-today-me" aria-label={`${firstName(b.me)}, your page`}
-          onClick={() => toast.show('Your page comes later', { kind: 'warn' })}>{b.me.initials}</button>
+        <span class="ow-b-today-me" aria-label={firstName(b.me)} role="img">{b.me.initials}</span>
       </div>
       <div class="ow-b-today-buy">
         <Tap on={() => nav.push('trip')} label={`To buy today: ${fig(buy)} UGX. Open the trip.`} class="ow-b-today-buy-fig">

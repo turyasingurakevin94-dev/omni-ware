@@ -98,7 +98,7 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
           </div>
         </>
       )}
-      {!empty && <Dock words={empty ? en : plan.asking ? `Waiting · ${en}` : `Cash from ${en}`} total={empty ? null : plan.cash} sub={sub}>
+      {!empty && <Dock face={esther ? <Avatar initials={esther.initials} tint={esther.tint} size={36} /> : null} words={empty ? en : plan.asking ? `Waiting · ${en}` : `Cash from ${en}`} total={empty ? null : plan.cash} sub={sub}>
         <Slide {...slide} />
         {!empty && <Sees who={sees} word="On the trip" then={!plan.asking} navy />}
       </Dock>}
