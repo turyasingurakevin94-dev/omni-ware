@@ -41,7 +41,7 @@ const RINGS: Record<string, string> = {
 export function avatarStyle(p: AvatarProps): JSX.CSSProperties {
   const size = p.size || 40, t = TINTS[p.tint] || TINTS.t4;
   return {
-    width: `${size}px`, height: `${size}px`, fontSize: `${p.font || FONT[size] || Math.round(size / 3)}px`,
+    width: `${size}px`, height: `${size}px`, fontSize: `${p.font || FONT[size] || Math.max(11, Math.round(size / 3))}px`,
     background: p.tint === 'me' && p.onNavy ? '#243052' : t.bg, color: t.fg,
     letterSpacing: size <= 24 ? '-.04em' : undefined,
     boxShadow: p.ring ? RINGS[p.ring] || p.ring : undefined,

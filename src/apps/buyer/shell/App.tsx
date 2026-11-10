@@ -23,7 +23,7 @@ export function App(): JSX.Element {
       {View ? <View key={t.key} params={t.params} /> : <main class="ow-missing">No screen “{t.id}”</main>}
       {bar && (
         <TabBar<Tab> items={ITEMS} active={barTab.value} waiting={0} notPlaced={tripBadge.value}
-          plusLabel="The trip" onTab={(x) => nav.tab(x)} onPlus={() => nav.push('trip')} />
+          plusLabel="The trip" plusCountWord="stops to buy" onTab={(x) => nav.tab(x)} onPlus={() => nav.push('trip')} />
       )}
       <SheetHost />
       <ToastHost above={bar ? 84 : 0} />

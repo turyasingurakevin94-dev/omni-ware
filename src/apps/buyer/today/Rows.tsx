@@ -13,7 +13,7 @@
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import type { SupplierGroup } from '../../../core/buyer/rules.ts';
+import type { LineRef, SupplierGroup } from '../../../core/buyer/rules.ts';
 import type { BOrder, BuyerBooks } from '../../../core/buyer/types.ts';
 import { orderNo } from '../../../core/names.ts';
 import { TINTS } from '../../../core/names.ts';
@@ -24,6 +24,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { act, session } from '../shell/store.ts';
 import { openAskSheet } from './AskSheet.tsx';
+import { openNotFound } from '../orders/NotFound.tsx';
 import { askText, firstName, hm, sellersOf, seeWord, waOf } from './rules.ts';
 
 /** The board's eye ("… sees"): not in src/ui/icons.tsx yet. */
@@ -153,5 +154,25 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
         ? <Pill st={st} word="Ask again" on={again} label={`Ask ${s.name} again`} />
         : <Pill st={st} word="Yes · same" icon="check" on={yes} label={`${s.name} said yes, same price`} />}
     </div>
+  );
+}
+
+/** Needs you (board Additions2, phone I): a line a supplier said no to; the pill opens the Not found sheet. */
+export function NotFoundRow(p: { b: BuyerBooks; r: LineRef }): JSX.Element {
+  const { order, line } = p.r, sup = p.b.suppliers.find((s) => s.id === line.supplierId);
+  const seller = p.b.team.find((m) => m.id === order.sellerId), who = sup ? sup.name.split(' ')[0] : 'They';
+  return (
+    <>
+      <div class="ow-b-today-row nf">
+        <IconTile tone="bad" icon="close" />
+        <div class="ow-b-today-row-t">
+          <span class="ow-b-today-row-name">{line.name}</span>
+          <span class="mono ow-b-today-row-at">{`${who} said no · ${orderNo(order.id)}`}</span>
+        </div>
+        <button type="button" class="ow-b-today-pill" aria-label={`${line.name} not found for order ${orderNo(order.id).slice(1)}: choose what next`}
+          onClick={() => openNotFound(order.id, line.key)}>Not found ›</button>
+      </div>
+      {seller && <div class="ow-b-today-sees"><Icon name="bell" size={14} stroke={2} />{`${firstName(seller)} sees: `}<b class="ow-b-today-nf-w">Not found</b></div>}
+    </>
   );
 }

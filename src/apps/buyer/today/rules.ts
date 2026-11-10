@@ -8,7 +8,7 @@
  *   waOf(phone, text)   the wa.me link
  *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
  *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
- *   calm(b, now)        nothing waits on Denis
+ *   calm(b, now)        nothing waits on Denis (nothing to ask, no Not found line, no late reply, no trip to start or running)
  */
 import { clock } from '../../../core/time.ts';
 import { phone9 } from '../../../core/names.ts';
@@ -73,5 +73,5 @@ export function tripRunning(b: BuyerBooks): boolean {
 
 /** Nothing waits on Denis: nothing to ask, no late reply, nothing found to buy, no trip running. */
 export function calm(b: BuyerBooks, now: Ms): boolean {
-  return askGroups(b, now).length === 0 && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
+  return askGroups(b, now).length === 0 && !lineRefs(b).some((r) => r.state === 'notfound') && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
 }

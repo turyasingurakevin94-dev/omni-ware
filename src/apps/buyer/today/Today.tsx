@@ -11,7 +11,7 @@
  * ("Grace sees  Found · 09:25") are on the screen.
  */
 import type { JSX } from 'preact';
-import { answeredRows, askGroups, liveOrders, replyRows, tiles } from '../../../core/buyer/rules.ts';
+import { answeredRows, askGroups, lineRefs, liveOrders, replyRows, tiles } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -20,7 +20,7 @@ import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { AllClear, NextTrip, WaitingOn } from './Cards.tsx';
 import { Head } from './Head.tsx';
-import { AskRow, Chip, ReplyRow, Sees } from './Rows.tsx';
+import { AskRow, Chip, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
 import { calm, hm, sellersOf, tripRunning, waitingOn } from './rules.ts';
 import { MoveTiles } from './Tiles.tsx';
 import './today.css';
@@ -58,6 +58,7 @@ export function Today(): JSX.Element {
   const b = books.value, n = now.value, off = !online.value, k = kept.value.length;
   if (!b) return <main class="ow-b-today-wait-main" aria-busy="true" />;
 
+  const nf = lineRefs(b).filter((r) => r.state === 'notfound');
   const asks = askGroups(b, n), reps = replyRows(b, n), t = tiles(b, n);
   const ready = t.found > 0 && !tripRunning(b), quiet = calm(b, n);
   const waits = quiet ? waitingOn(b, n) : [];
@@ -82,9 +83,10 @@ export function Today(): JSX.Element {
           </>
         ) : (
           <>
-            {asks.length > 0 ? (
+            {asks.length + nf.length > 0 ? (
               <>
-                <Sec title="Needs you" dot="on" meta={String(asks.length)} />
+                <Sec title="Needs you" dot="on" meta={String(asks.length + nf.length)} />
+                {nf.map((r) => <NotFoundRow key={`${r.order.id}-${r.line.key}`} b={b} r={r} />)}
                 {asks.map((g) => <AskRow key={g.supplier.id} b={b} g={g} />)}
               </>
             ) : !ready && (

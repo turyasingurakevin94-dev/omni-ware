@@ -44,6 +44,8 @@ export interface TabBarProps<T extends string = BarTab> {
   items?: BarItem<T>[];
   /** The +'s name ("New sale"). */
   plusLabel?: string;
+  /** What the +'s count is, as its label says it: "not placed yet" (the default), or another bar's word ("stops to buy"). */
+  plusCountWord?: string;
   inline?: boolean;
 }
 
@@ -65,7 +67,7 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   return (
     <nav ref={ref} aria-label="Main" class={cx('ow-tabbar', p.inline && 'inline')} style={{ gridTemplateColumns: [...items.slice(0, half).map(() => 'minmax(0, 1fr)'), '96px', ...items.slice(half).map(() => 'minmax(0, 1fr)')].join(' ') }}>
       {items.slice(0, half).map(tab)}
-      <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} not placed yet` : plus}
+      <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} ${p.plusCountWord || 'not placed yet'}` : plus}
         onClick={(e) => { e.preventDefault(); p.onPlus(); }}>
         <Icon name="plus" size={28} stroke={2.4} />
         {p.notPlaced > 0 && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}

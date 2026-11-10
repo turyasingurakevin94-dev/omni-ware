@@ -9,7 +9,7 @@ import { useState } from 'preact/hooks';
 import type { StopCount } from '../../../core/buyer/source.ts';
 import { shortWord } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
-import { firstWord } from '../../../core/names.ts';
+import { firstWord, orderNo } from '../../../core/names.ts';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -84,7 +84,7 @@ export function StopCard(p: StopCardProps): JSX.Element {
             <div class="ow-b-on-lrow">
               <span class="ow-b-on-lt"><span>{r.line.name}</span><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /></span>
               {mode === 'short'
-                ? <Stepper value={g} unit={`of ${r.line.qty}`} min={0} max={r.line.qty} what={r.line.name} onChange={(v) => setGot({ ...got, [k]: v })} />
+                ? <Stepper value={g} unit={`of ${r.line.qty}`} min={0} max={r.line.qty} what={`${r.line.name} for ${orderNo(r.order.id)}`} onChange={(v) => setGot({ ...got, [k]: v })} />
                 : <span class="mono ow-b-on-qty">{r.line.qty} <small>{r.line.unit}</small></span>}
             </div>
             {mode === 'short' && <span class="ow-b-on-lbar" aria-hidden="true"><i class={cx(g < r.line.qty && 'short')} style={{ width: `${r.line.qty ? (g / r.line.qty) * 100 : 0}%` }} /></span>}
