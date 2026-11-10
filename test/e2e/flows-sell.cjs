@@ -84,7 +84,7 @@ async function sell(open) {
   await u.tap({ text: 'Zawaina hinge, normal 4 inch' });
   await u.tap('By the carton of 50, 85,000 a carton');
   let ut = await u.text();
-  u.check(/2 carton × 85,000/.test(ut) && /170,000/.test(ut) && /1 carton = 50 pair · 100 pair in all/.test(ut), 'SL42: 60 pair by the carton is 2 carton × 85,000 = 170,000, "1 carton = 50 pair · 100 pair in all"', ut.slice(0, 500));
+  u.check(/2 carton × 85,000/.test(ut) && /170,000/.test(ut) && /1 carton = 50 pair · 100 pair in all/.test(ut.replace(/\s+/g, " ")), 'SL42: 60 pair by the carton is 2 carton × 85,000 = 170,000, "1 carton = 50 pair · 100 pair in all"', ut.slice(0, 500));
   await u.tap({ label: 'Fewer cartons' });
   ut = await u.text();
   u.check(/1 carton × 85,000/.test(ut) && (await u.p.locator('.ow-dock-total').innerText()).trim() === '85,000', 'SL42: − makes it 1 carton, and the dock says 85,000', ut.slice(0, 500));
