@@ -14,6 +14,7 @@ import type { Session, UGX } from '../../types.ts';
 import type { Row, Sb } from '../../supabase/client.ts';
 import { selectAll } from '../../supabase/read.ts';
 import { ok } from '../../supabase/write.ts';
+import { paidShares } from '../rules.ts';
 import type { StopCount } from '../source.ts';
 import { gotOf, priceRowOf, roundOrder, runsToGo, stem, tripPlanFor, type Run } from './buy.ts';
 import { setOff, setStopPay } from './keep.ts';
@@ -124,8 +125,10 @@ async function startRound(sb: Sb, s: Session, raw: Raw, now: number): Promise<Ro
 }
 
 /**
- * W15 + W17 buyer.html:4013 flushTrip, 4433 markStopDone: what came is written to the stop's lines (the price
- * paid is the plan's), then the stop is done on this phone with what was paid. The first stop starts the round (W13).
+ * W15 + W17 buyer.html:4013 flushTrip, 4433 markStopDone: what came is written to the stop's lines, then the stop
+ * is done on this phone with what was paid. Each line's price paid (gotPrice) is its share of that payment
+ * (rules.paidShares, the rule the Hand in screen shows), so got × gotPrice adds up to what was really paid
+ * and the order's cost in the books is the screen's. The first stop starts the round (W13).
  * The designed page takes no receipt photo: the stop is kept as "no receipt" (spec §7).
  */
 export async function stopDone(sb: Sb, s: Session, raw: Raw, sid: string, counts: StopCount[], paid: UGX, now: number): Promise<void> {
@@ -150,8 +153,20 @@ export async function stopDone(sb: Sb, s: Session, raw: Raw, sid: string, counts
     if (!(paid > 0)) throw dataError('refused', 'Enter what you paid first', 'nopay');
     const plan = tripPlanFor({ lines });
     if (plan > 0 && Math.abs(paid - plan) > plan * 0.3) throw dataError('refused', `Check the amount paid: ${Math.round(Math.abs(paid - plan) / plan * 100)}% off the plan`, 'odd');
+    const priced = pricedLines(lines, paid);
+    if (priced.some((l, i) => l.gotPrice !== lines[i].gotPrice)) await ok(sb.from('collection_trips').update({ lines: priced }).eq('shop_id', s.shopId).eq('id', x.id));
   }
   setStopPay(s.userId, String(x.id), { amount: none ? 0 : Math.round(paid), noReceipt: true, done: new Date(now).toISOString(), skip: false });
+}
+
+/** The stop's lines with each line's price paid: its share of the payment over what came (rules.paidShares). */
+export function pricedLines(lines: Row[], paid: UGX): Row[] {
+  const came = lines.map((l) => (gotOf(l) ?? 0) * (Number(l.expectedPrice) || 0));
+  const shares = paidShares(paid, came);
+  return lines.map((l, i) => {
+    const g = gotOf(l);
+    return g && g > 0 ? { ...l, gotPrice: shares[i] / g } : l;
+  });
 }
 
 /**

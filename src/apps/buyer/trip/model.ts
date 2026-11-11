@@ -3,7 +3,9 @@
  * No rule is worked out here that rules.ts already has (tripPlan, tripCash,
  * handIn, lineState); these only look things up and put words together.
  */
-import { handIn, tripCash, tripPlan, type LineRef } from '../../../core/buyer/rules.ts';
+import { handIn, tripCash, tripPlan, withStopDone, type LineRef } from '../../../core/buyer/rules.ts';
+import type { StopCount } from '../../../core/buyer/source.ts';
+import type { Kept } from '../../../core/outbox.ts';
 import type { BLine, BOrder, BuyerBooks, Stop, Supplier, Trip } from '../../../core/buyer/types.ts';
 import { firstWord } from '../../../core/names.ts';
 import type { Member, Role } from '../../../core/types.ts';
@@ -63,22 +65,23 @@ export function planNow(b: BuyerBooks): PlanNow {
   };
 }
 
-/** What a line came to: what came at its cost. */
-export const gotCost = (l: BLine): number => (l.got ?? 0) * l.cost;
-
-/** Per order on the trip: planned and what came, and its lines. */
+/** Per order on the trip: planned, its share of what was really paid (rules.handIn), and its lines. */
 export interface OrderCame { order: BOrder; rows: StopRow[]; planned: number; came: number }
 
 export function ordersCame(b: BuyerBooks, t: Trip): OrderCame[] {
   const rows = liveStops(t).flatMap((s) => stopLines(b, s));
-  return handIn(t, b).orders.map((order) => {
-    const mine = rows.filter((r) => r.order.id === order.id);
-    return {
-      order, rows: mine,
-      planned: mine.reduce((x, r) => x + r.line.qty * r.line.cost, 0),
-      came: mine.reduce((x, r) => x + gotCost(r.line), 0),
-    };
-  });
+  return handIn(t, b).byOrder.map((o) => ({ ...o, rows: rows.filter((r) => r.order.id === o.order.id) }));
+}
+
+/**
+ * The books as the trip screens show them: a stop done with no signal waits on this phone (kept), and
+ * reads as done, with what came and what was paid, until it is sent (rules.withStopDone, the demo's write too).
+ */
+export function tripBooks(b: BuyerBooks, kept: Kept[]): BuyerBooks {
+  return kept.filter((k) => k.kind === 'stopDone' && k.state !== 'refused' && Array.isArray(k.args)).reduce((x, k) => {
+    const [sid, counts, paid] = k.args as [string, StopCount[], number];
+    return withStopDone(x, String(sid), counts, Number(paid) || 0, k.at);
+  }, b);
 }
 
 /** The supplier ids whose stop is saved on this phone, waiting for signal. */

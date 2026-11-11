@@ -2,7 +2,7 @@
  * One stop of the planned trip (TripPlan.dc.html): a collapsed one-row card
  * (number · supplier · lines and orders · cost · chevron) that opens to its
  * lines and "Take off this trip"; off the trip it is dashed with "Put back".
- * Held lines sit dashed: a new price waits on Ruth, or the supplier has not answered.
+ * Held lines sit dashed, open or closed (phone 3): a new price waits on Ruth, or the supplier has not answered.
  */
 import type { JSX } from 'preact';
 import type { LineRef } from '../../../core/buyer/rules.ts';
@@ -60,7 +60,7 @@ export function PlanStop(p: PlanStopProps): JSX.Element {
           <span class="mono ow-b-plan-lamt">{fig(r.line.qty * r.line.cost)}</span>
         </div>
       ))}
-      {p.open && p.held.length > 0 && <HeldPrice b={p.b} held={p.held} />}
+      {p.held.length > 0 && <HeldPrice b={p.b} held={p.held} />}
       {p.open && !p.locked && (
         <div class="ow-b-plan-foot">
           <button type="button" class="ow-b-plan-link" disabled={p.busy} onClick={() => p.onOff(true)} aria-label={`Take ${name} off this trip`}>{p.busy ? 'Saving…' : 'Take off this trip'}</button>

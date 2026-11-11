@@ -8,7 +8,9 @@
  *   replyRows(b, now)       Replies: one row per supplier asked and not answered yet, late after 30 min
  *   tiles(b)                On the move: To ask · Asked · Found · On the trip
  *   tripPlan(b)             the trip the app proposes: found lines by supplier, in route order, and the cash
- *   handIn(trip, b)         what was paid, the cash back, what came short
+ *                           (a stop taken off the planned trip is left out: it is not bought today)
+ *   handIn(trip, b)         what was paid, the cash back, what came short, and each order's share of what was paid
+ *   paidShares(paid, came)  a stop's payment shared over its lines by what came at cost (the books' gotPrice too)
  *   readyForBuying(o)       every line found or off the bill: the order moves to Buying by itself
  *   askMessage(s, lines, shop) the WhatsApp message one Ask sends: every line of that supplier, all orders
  *   waLink(phone, text)     the wa.me link; intlPhone(p) a Ugandan number for wa.me and tel:
@@ -118,7 +120,10 @@ export interface Tiles { toask: number; asked: number; found: number; ontrip: nu
 /** On the move: suppliers to ask, asked, found; lines on the trip; and of all suppliers in play, how many found. */
 export function tiles(b: BuyerBooks, now: Ms): Tiles {
   const refs = lineRefs(b), sup = (st: LineState) => new Set(refs.filter((r) => r.state === st).map((r) => r.line.supplierId)).size;
-  const inPlay = new Set(refs.filter((r) => r.line.supplierId && r.state !== 'removed').map((r) => r.line.supplierId));
+  // A supplier asked for a live order stays in play after its line moves on (Client waits, another supplier):
+  // the count of suppliers never drops because one said no.
+  const inPlay = new Set<string>(refs.filter((r) => r.line.supplierId && r.state !== 'removed').map((r) => r.line.supplierId as string));
+  liveOrders(b).forEach((o) => Object.entries(o.confirms).forEach(([sid, c]) => { if (c && c.askedAt && o.lines.some((l) => !l.removed)) inPlay.add(sid); }));
   void now;
   return {
     toask: sup('toask'), asked: sup('asked'), found: sup('found'), ontrip: refs.filter((r) => r.state === 'ontrip').length,
@@ -126,21 +131,25 @@ export function tiles(b: BuyerBooks, now: Ms): Tiles {
   };
 }
 
-/** "To buy today": what the found lines cost. */
+/** "To buy today": what the trip as planned costs (the found lines, less any stop taken off this trip). */
 export function toBuy(b: BuyerBooks): UGX {
-  return lineRefs(b).filter((r) => r.state === 'found').reduce((t, r) => t + r.line.cost * r.line.qty, 0);
+  return tripPlan(b).cash;
 }
 
 const routeIndex = (place: string): number => { const i = ROUTE.indexOf(place); return i < 0 ? ROUTE.length : i; };
 
 export interface TripPlan {
+  /** The stops to make, in route order (without those taken off this trip). */
   stops: Stop[];
   cash: UGX;
   /** Lines held off the trip and why: the Manager decides a price, or the supplier has not answered. */
   held: LineRef[];
 }
 
-/** The trip the app proposes: every found line, one stop per supplier, in route order; the cash is their cost. */
+/**
+ * The trip the app proposes: every found line, one stop per supplier, in route order; the cash is their cost.
+ * A stop the Buyer took off the planned trip is not in it: Today, the + and the Plan read one figure.
+ */
 export function tripPlan(b: BuyerBooks): TripPlan {
   const refs = lineRefs(b);
   const found = refs.filter((r) => r.state === 'found');
@@ -153,7 +162,10 @@ export function tripPlan(b: BuyerBooks): TripPlan {
       supplierId, lines: rs.map((r) => ({ orderId: r.order.id, key: r.line.key })),
       planned: rs.reduce((t, r) => t + r.line.cost * r.line.qty, 0), paid: null, done: false, off: false,
     }));
-  return { stops, cash: stops.reduce((t, s) => t + s.planned, 0), held: refs.filter((r) => r.state === 'priceup' || r.state === 'asked') };
+  const planned = b.trip && (b.trip.state === 'planned' || b.trip.state === 'cash') ? b.trip : null;
+  const off = new Set(planned ? planned.stops.filter((s) => s.off).map((s) => s.supplierId) : []);
+  const go = stops.filter((s) => !off.has(s.supplierId));
+  return { stops: go, cash: tripCash(go), held: refs.filter((r) => r.state === 'priceup' || r.state === 'asked') };
 }
 
 /** A stop's cash: what is planned on it, unless it is off the trip. */
@@ -161,24 +173,72 @@ export function tripCash(stops: Stop[]): UGX {
   return stops.filter((s) => !s.off).reduce((t, s) => t + s.planned, 0);
 }
 
+/**
+ * A stop's payment shared over its lines in proportion to what came at cost (got × cost), in whole
+ * shillings that add up to the payment exactly (the largest remainders take the odd shilling). Paid
+ * 650,000 for 20 bags planned at 34,000: the line carries 650,000. With nothing to weigh by, evenly.
+ * The books keep the same share as the line's price paid (supabase/trip.ts gotPrice).
+ */
+export function paidShares(paid: UGX, came: number[]): UGX[] {
+  if (!came.length) return [];
+  const w = came.map((x) => (x > 0 ? x : 0)), sum = w.reduce((t, x) => t + x, 0);
+  const ws = sum > 0 ? w : came.map(() => 1), total = sum > 0 ? sum : came.length;
+  const whole = Math.round(paid);
+  const raw = ws.map((x) => (whole * x) / total), out = raw.map(Math.floor);
+  let left = whole - out.reduce((t, x) => t + x, 0);
+  raw.map((x, i) => ({ i, r: x - Math.floor(x) })).sort((a, c) => c.r - a.r || a.i - c.i)
+    .forEach(({ i }) => { if (left > 0) { out[i] += 1; left -= 1; } });
+  return out;
+}
+
+/** One order on the trip: what its lines were planned at, and what was really paid for them. */
+export interface OrderPaid { order: BOrder; planned: UGX; came: UGX }
+
 export interface HandIn {
   paid: UGX;
   back: UGX;
   shorts: { order: BOrder; line: BLine; got: number }[];
   orders: BOrder[];
+  /** Per order, in the orders' order: planned and its share of what was paid. They add up to `paid`. */
+  byOrder: OrderPaid[];
 }
 
-/** What the trip paid, the cash it brings back, and the lines that came short. */
+/** What the trip paid, the cash it brings back, the lines that came short, and each order's share of the payment. */
 export function handIn(trip: Trip, b: BuyerBooks): HandIn {
   const stops = trip.stops.filter((s) => !s.off);
   const paid = stops.reduce((t, s) => t + (s.paid ?? 0), 0);
   const ids = new Set(stops.flatMap((s) => s.lines.map((l) => l.orderId)));
   const orders = b.orders.filter((o) => ids.has(o.id));
-  const shorts = stops.flatMap((s) => s.lines).map((x) => {
+  const find = (x: { orderId: number; key: string }) => {
     const order = orders.find((o) => o.id === x.orderId), line = order?.lines.find((l) => l.key === x.key);
-    return order && line && line.got != null && line.got < line.qty ? { order, line, got: line.got } : null;
+    return order && line ? { order, line } : null;
+  };
+  const shorts = stops.flatMap((s) => s.lines).map((x) => {
+    const r = find(x);
+    return r && r.line.got != null && r.line.got < r.line.qty ? { ...r, got: r.line.got } : null;
   }).filter((x): x is { order: BOrder; line: BLine; got: number } => !!x);
-  return { paid, back: Math.max(0, trip.cash.amount - paid), shorts, orders };
+  const planned = new Map<number, UGX>(), came = new Map<number, UGX>();
+  stops.forEach((s) => {
+    const rows = s.lines.map(find).filter((r): r is { order: BOrder; line: BLine } => !!r);
+    const atCost = rows.map((r) => (r.line.got ?? 0) * r.line.cost);
+    const shares = s.done && s.paid != null ? paidShares(s.paid, atCost) : atCost;
+    rows.forEach((r, i) => {
+      planned.set(r.order.id, (planned.get(r.order.id) || 0) + r.line.qty * r.line.cost);
+      came.set(r.order.id, (came.get(r.order.id) || 0) + shares[i]);
+    });
+  });
+  const byOrder = orders.map((order) => ({ order, planned: planned.get(order.id) || 0, came: came.get(order.id) || 0 }));
+  return { paid, back: Math.max(0, trip.cash.amount - paid), shorts, orders, byOrder };
+}
+
+/** A stop just done, as the books will hold it: what came on each line, what was paid, done. Pure: a new copy. */
+export function withStopDone(b: BuyerBooks, sid: string, counts: { orderId: number; key: string; got: number }[], paid: UGX, at: Ms | null = null): BuyerBooks {
+  if (!b.trip) return b;
+  const orders = b.orders.map((o) => (counts.some((c) => c.orderId === o.id)
+    ? { ...o, lines: o.lines.map((l) => { const c = counts.find((k) => k.orderId === o.id && k.key === l.key); return c ? { ...l, got: c.got } : l; }) }
+    : o));
+  const stops = b.trip.stops.map((s) => (s.supplierId === sid ? { ...s, paid, done: true, doneAt: at } : s));
+  return { ...b, orders, trip: { ...b.trip, stops } };
 }
 
 /** Every line found or off the bill (none to ask, asked, not found, price up or waiting): the order moves to Buying. */

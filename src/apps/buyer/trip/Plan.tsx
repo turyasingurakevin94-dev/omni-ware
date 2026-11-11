@@ -132,7 +132,7 @@ function NoneYet(p: { toAsk: number; asked: number }): JSX.Element {
   return (
     <div class="ow-b-trip-body ow-b-plan-empty">
       <div class="ow-b-plan-none">
-        <span><Icon name="basket" size={24} stroke={1.8} /></span>
+        <span><Icon name="truck" size={24} stroke={1.8} /></span>
         <b>Nothing found yet</b>
         <span>The trip fills as suppliers say yes</span>
         <span class="mono">{`0 found · ${p.toAsk} to ask`}</span>

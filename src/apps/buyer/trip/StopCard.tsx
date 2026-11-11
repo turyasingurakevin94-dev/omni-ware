@@ -9,7 +9,7 @@ import { useState } from 'preact/hooks';
 import type { StopCount } from '../../../core/buyer/source.ts';
 import { shortWord } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
-import { firstWord, orderNo } from '../../../core/names.ts';
+import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -46,6 +46,8 @@ export function StopCard(p: StopCardProps): JSX.Element {
   const auto = rows.reduce((t, r) => t + got[r.order.id + r.line.key] * r.line.cost, 0);
   const paid = typed != null ? digits(typed) : mode === 'short' ? auto : p.stop.planned;
   const shorts = rows.filter((r) => got[r.order.id + r.line.key] < r.line.qty);
+  // Paid differently hides the lines: the head says what the payment is for (phone 3, "20 bag · #0550").
+  const what = [rows.length === 1 ? `${rows[0].line.qty} ${rows[0].line.unit}` : counted(rows.length, 'line'), ...[...new Set(rows.map((r) => r.order.id))].map(orderNo)].join(' · ');
 
   const go = async (c: StopCount[], amount: number) => {
     setState('sending'); setWhy('');
@@ -69,7 +71,7 @@ export function StopCard(p: StopCardProps): JSX.Element {
     <div class="ow-b-on-card">
       <div class="ow-b-on-head">
         <span class="mono ow-b-on-n now">{p.n}</span>
-        <span class="ow-b-on-t"><b>{name}</b><span class="mono">{`${sup ? sup.place : ''} · now`}</span></span>
+        <span class="ow-b-on-t"><b>{name}</b><span class="mono">{mode === 'paid' ? what : `${sup ? sup.place : ''} · now`}</span></span>
         {mode === 'short' ? <span class="ow-b-on-short">Short</span>
           : mode === 'plain' && (
             <button type="button" class="mono ow-b-on-pay" onClick={() => setMode('paid')} aria-label={`Pay ${fig(p.stop.planned)}. Tap if you paid a different amount`}>

@@ -28,7 +28,7 @@ import { act, books, discard, kept, now, online } from '../shell/store.ts';
 import { Answered } from './Answered.tsx';
 import { DoneCard } from './Done.tsx';
 import { ReplyRow, type Answer } from './ReplyRow.tsx';
-import { firstName, salesSees } from './rules.ts';
+import { firstName, salesSees, seenOrders } from './rules.ts';
 import { buyingNow, done, notFoundQueue } from './state.ts';
 import './replies.css';
 
@@ -158,7 +158,7 @@ export function Replies(): JSX.Element {
 
   const waiting = keptList.filter((k) => k.kind in KEPT_WORD && k.state !== 'refused');
   const offline = !online.value || waiting.length > 0;
-  const ids = [...new Set([...answeredRows(b, n).flatMap((g) => g.orders.map((o) => o.id)), ...(d ? d.moved : [])])];
+  const ids = seenOrders(b, [...answeredRows(b, n).flatMap((g) => g.orders.map((o) => o.id)), ...(d ? d.moved : [])]);
   const t = tiles(b, n);
 
   return (

@@ -9,7 +9,7 @@
  */
 import { dataError } from '../../datasource.ts';
 import type { Session, UGX } from '../../types.ts';
-import { readyForBuying, tripPlan } from '../rules.ts';
+import { readyForBuying, tripPlan, withStopDone } from '../rules.ts';
 import type { BuyerSource, PriceAnswer, StopCount } from '../source.ts';
 import type { AskWay, BLine, BOrder, BuyerBooks, Confirm } from '../types.ts';
 import { seed, type BuyerDemoState } from './seed.ts';
@@ -121,14 +121,15 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     stopDone: (sid, counts: StopCount[], paid: UGX) => later(() => {
       const s = b.trip?.stops.find((x) => x.supplierId === sid);
       if (!b.trip || !s) throw dataError('missing', 'No such stop');
-      counts.forEach((c) => { lineOf(order(c.orderId), c.key).got = c.got; });
-      s.paid = paid; s.done = true;
+      counts.forEach((c) => lineOf(order(c.orderId), c.key));
+      const n = withStopDone(b, sid, counts, paid, clock());
+      b.orders = n.orders; b.trip = n.trip;
     }),
     undoStop: (sid) => later(() => {
       const s = b.trip?.stops.find((x) => x.supplierId === sid);
       if (!b.trip || !s) throw dataError('missing', 'No such stop');
       if (b.trip.state === 'in') throw dataError('refused', 'Already handed in');
-      s.paid = null; s.done = false;
+      s.paid = null; s.done = false; s.doneAt = null;
     }),
     handIn: () => later(() => {
       if (!b.trip) throw dataError('missing', 'No trip');

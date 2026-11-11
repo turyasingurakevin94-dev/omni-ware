@@ -52,11 +52,20 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   t.check(plan.stops.map((s) => s.planned).join() === '680000,540000,2280000' && plan.cash === 3500000, 'stops 680,000 · 540,000 · 2,280,000 = 3,500,000');
   t.check(plan.held.length === 2, 'two lines held: the ridge cap (Ruth) and the timber (asked)');
   const notFound = R.lineRefs(b).filter((r) => r.state === 'notfound');
+  {
+    const d2 = buyerDemo('?demo&state=midday', { instant: true });
+    await d2.answerNo('s-ndeeba');
+    await d2.clientWaits(554, d2.shop.orders.find((o) => o.id === 554).lines[0].key);
+    const t2 = R.tiles(await d2.books(), now);
+    t.check(t2.suppliers === 5, `No → Client waits: still "of 5" suppliers (got ${t2.suppliers})`);
+  }
   t.check(notFound.length === 1 && notFound[0].line.name === 'Y12 rebar 12 m', 'the Y12 rebar is Not found');
 
   // Take a stop off and back; ask the cash.
   await d.setStopOff('s-owino', true);
   t.check(d.shop.trip.cash.amount === 2960000, 'Owino off: the cash ask drops to 2,960,000');
+  b = await d.books();
+  t.check(R.toBuy(b) === 2960000 && R.tripPlan(b).stops.length === 2, `Owino off: Today's "To buy today" and the + read the Plan's 2,960,000 and 2 stops (got ${R.toBuy(b)})`);
   await d.setStopOff('s-owino', false);
   await d.askCash();
   t.check(d.shop.trip.state === 'on' && d.shop.trip.cash.amount === 3500000, 'cash asked and given: on the trip with 3,500,000');
@@ -69,6 +78,18 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   const h = R.handIn(b.trip, b);
   t.check(h.paid === 3318000 && h.back === 182000, `paid 3,318,000 · 182,000 back (got ${h.paid} · ${h.back})`);
   t.check(h.shorts.length === 1 && R.shortWord(h.shorts[0].got, h.shorts[0].line.qty) === 'Short · got 36 of 40', 'Short · got 36 of 40');
+  // Every figure on Hand in from one rule: #0550 carries Nakawa's 650,000 (30,000 under plan) + 36 × 38,000.
+  const by = Object.fromEntries(h.byOrder.map((o) => [o.order.id, o]));
+  t.check(by[550].came === 2018000 && by[550].planned === 2200000, `#0550 2,018,000 of 2,200,000 (got ${by[550].came} of ${by[550].planned})`);
+  t.check(by[552].came === 760000 && by[553].came === 540000, '#0552 760,000 · #0553 540,000 as planned');
+  t.check(h.byOrder.reduce((x, o) => x + o.came, 0) === h.paid, 'the orders add up to what was paid (3,318,000)');
+  t.check(R.paidShares(100, [1, 1, 1]).join() === '34,33,33' && R.paidShares(0, [5, 5]).join() === '0,0', 'a payment shares out in whole shillings that add up');
+  // The real books keep the same share as each line's price paid.
+  const { pricedLines } = require(path.join(ROOT, 'src/core/buyer/supabase/trip.ts'));
+  const pl = pricedLines([{ qty: 40, gotQty: 36, expectedPrice: 38000 }, { qty: 20, gotQty: 20, expectedPrice: 38000 }], 2100000);
+  t.check(pl.reduce((x, l) => x + l.gotQty * l.gotPrice, 0) === 2100000, 'books: got × gotPrice adds up to what the stop paid');
+  const nk = pricedLines([{ qty: 20, gotQty: 20, expectedPrice: 34000 }], 650000);
+  t.check(nk[0].gotPrice === 32500, 'books: Nakawa paid 650,000 for 20 bags: 32,500 a bag');
   await d.handIn();
   t.check(d.shop.trip.state === 'in', 'handed in');
 

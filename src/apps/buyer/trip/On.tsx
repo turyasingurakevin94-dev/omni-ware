@@ -3,13 +3,14 @@
  * the cash in hand; the route marks the stop now; the stop now opens its
  * lines with Got it all / Short; stops done show what was paid; the dock
  * counts what is paid and the Hand in slide waits for the last stop. A stop just
- * done shows its time and Undo for 5 seconds (the board's Success state).
+ * done shows its time and Undo for 5 seconds (the board's Success state). With
+ * every stop done (phone 4) the hero is the cash back and the slide hands in;
+ * once the last Undo goes, Hand in comes up (Trip.tsx).
  */
-import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { StopCount } from '../../../core/buyer/source.ts';
-import { shortWord } from '../../../core/buyer/rules.ts';
+import { handIn, shortWord } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
 import { counted, orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
@@ -19,31 +20,33 @@ import { fig } from '../../../ui/Money.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { Avatar } from '../../../ui/Avatar.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, kept, now, online } from '../shell/store.ts';
+import { handInNow, justDone, UNDO_S } from './after.ts';
 import { byRole, keptStops, liveStops, sellersOf, stopLines, supplierOf } from './model.ts';
 import { GavePill, NavyHero, RouteStrip, Sees, type RouteNode } from './parts.tsx';
 import { StopCard } from './StopCard.tsx';
 import './on.css';
 
-/** The stop just done, for its Undo (5 s). */
-const justDone = signal<{ sid: string; at: number } | null>(null);
-const UNDO_S = 5;
-
 export function On(p: { b: BuyerBooks }): JSX.Element {
   const b = p.b, t = b.trip;
+  const card = useRef<HTMLDivElement>(null);
+  const stops = t ? liveStops(t) : [], waiting = keptStops(kept.value);
+  const nowAt = stops.findIndex((s) => !s.done);
+  // The stop now in full above the dock: a new stop now scrolls into view (scroll-margin leaves the dock's room).
+  useEffect(() => { if (nowAt > 0 && card.current) card.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, [nowAt]);
   if (!t) return <main class="ow-b-trip" />;
-  const stops = liveStops(t), waiting = keptStops(kept.value);
-  const isDone = (s: Stop) => s.done || waiting.has(s.supplierId);
-  const done = stops.filter(isDone), paid = stops.reduce((x, s) => x + (s.paid ?? 0), 0);
-  const nowAt = stops.findIndex((s) => !isDone(s));
+  const done = stops.filter((s) => s.done), h = handIn(t, b), paid = h.paid;
+  const all = stops.length > 0 && done.length === stops.length;
   const inHand = t.cash.amount - paid;
-  const esther = byRole(b, 'accounts');
+  const esther = byRole(b, 'accounts'), en = (esther?.name || 'Accounts').split(' ')[0];
   const orders = [...new Set(stops.flatMap((s) => s.lines.map((l) => l.orderId)))].map((id) => b.orders.find((o) => o.id === id)).filter((o): o is NonNullable<typeof o> => !!o);
+  const lines = stops.reduce((x, s) => x + s.lines.length, 0);
 
-  const nodes: RouteNode[] = [{ kind: 'home', label: 'Shop' }, ...stops.map((s, i): RouteNode => ({
-    kind: isDone(s) ? 'done' : i === nowAt ? 'now' : 'todo', n: i + 1, label: supplierOf(b, s.supplierId)?.place || '',
+  const nodes: RouteNode[] = [all ? { kind: 'homeNow', label: 'Back' } : { kind: 'home', label: 'Shop' }, ...stops.map((s, i): RouteNode => ({
+    kind: s.done ? 'done' : i === nowAt ? 'now' : 'todo', n: i + 1, label: supplierOf(b, s.supplierId)?.place || '',
   }))];
 
   const stopDone = async (s: Stop, counts: StopCount[], amount: number) => {
@@ -53,27 +56,34 @@ export function On(p: { b: BuyerBooks }): JSX.Element {
     else justDone.value = { sid: s.supplierId, at: now.value };
   };
 
-  const left = stops.length - done.length;
+  const left = stops.length - done.length, pct = stops.length ? (done.length / stops.length) * 100 : 0;
   return (
     <main class="ow-b-trip">
-      <NavyHero title="On the trip" at={2} text={`Out · ${t.cash.givenAt ? clock(t.cash.givenAt) : '—'}`} onClose={() => nav.back()}
-        pill={t.cash.givenAt ? <GavePill who={esther} at={clock(t.cash.givenAt)} /> : undefined}
-        eyebrow="Cash in hand" amount={inHand} pct={stops.length ? (done.length / stops.length) * 100 : 0}
-        foot={`${done.length} of ${counted(stops.length, 'stop')} · ${fig(paid)} paid`} />
-      <RouteStrip nodes={nodes} donePct={stops.length ? (done.length / stops.length) * 100 : 0} />
+      {all
+        ? <NavyHero title="On the trip" at={2} text={`Back · ${clock(now.value)}`} onClose={() => nav.back()}
+            pill={b.me && <Avatar initials={b.me.initials} tint="me" onNavy size={40} />}
+            eyebrow={`Cash back to ${en}`} amount={h.back} pct={100} mint foot={`${done.length} of ${counted(stops.length, 'stop')} · ${fig(paid)} paid`} />
+        : <NavyHero title="On the trip" at={2} text={`Out · ${t.cash.givenAt ? clock(t.cash.givenAt) : '—'}`} onClose={() => nav.back()}
+            pill={t.cash.givenAt ? <GavePill who={esther} at={clock(t.cash.givenAt)} /> : undefined}
+            eyebrow="Cash in hand" amount={inHand} pct={pct} foot={`${done.length} of ${counted(stops.length, 'stop')} · ${fig(paid)} paid`} />}
+      <RouteStrip nodes={nodes} donePct={pct} />
       <div class="ow-b-trip-body">
         {(!online.value || waiting.size > 0) && <Notice kind="offline">{waiting.size ? `Offline · saved · ${waiting.size} to send` : 'No signal · stops save on this phone'}</Notice>}
         {stops.map((s, i) => {
           if (i === nowAt) {
-            return <StopCard key={s.supplierId} b={b} n={i + 1} stop={s} inHand={inHand} onDone={(c, a) => stopDone(s, c, a)} />;
+            return <div key={s.supplierId} ref={card} class="ow-b-on-now"><StopCard b={b} n={i + 1} stop={s} inHand={inHand} onDone={(c, a) => stopDone(s, c, a)} /></div>;
           }
           return <StopRow key={s.supplierId} b={b} n={i + 1} stop={s} kept={waiting.has(s.supplierId)} next={i === nowAt + 1} />;
         })}
-        <Sees who={sellersOf(b, orders)} word="On the trip" />
+        {!all && <Sees who={sellersOf(b, orders)} word="On the trip" />}
       </div>
-      <Dock words="Paid" total={paid} sub={{ text: `${done.length} of ${counted(stops.length, 'stop')}`, tone: 'mint' }}>
-        <Slide label={`Hand in · ${counted(left, 'stop')} to go`} onCommit={() => undefined} lock={{ icon: 'lock', label: `Hand in · ${counted(left, 'stop')} to go` }} />
-      </Dock>
+      {all
+        ? <Dock words="Paid" total={paid} sub={{ text: `${counted(lines, 'line')} · ${h.shorts.length} short`, tone: 'mint' }}>
+            <Slide label="Hand in" onCommit={() => handInNow()} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
+          </Dock>
+        : <Dock words="Paid" total={paid} sub={{ text: `${done.length} of ${counted(stops.length, 'stop')}`, tone: 'mint' }}>
+            <Slide label={`Hand in · ${counted(left, 'stop')} to go`} onCommit={() => undefined} lock={{ icon: 'lock', label: `Hand in · ${counted(left, 'stop')} to go` }} />
+          </Dock>}
     </main>
   );
 }
@@ -81,20 +91,22 @@ export function On(p: { b: BuyerBooks }): JSX.Element {
 /** A stop that is not the one now: done (what came, what was paid), saved on this phone, or still to come. */
 function StopRow(p: { b: BuyerBooks; n: number; stop: Stop; kept: boolean; next: boolean }): JSX.Element {
   const s = p.stop, sup = supplierOf(p.b, s.supplierId), rows = stopLines(p.b, s);
+  const short = rows.find((r) => r.line.got != null && r.line.got < r.line.qty);
+  const word = short ? shortWord(short.line.got as number, short.line.qty) : 'Got it all';
   if (p.kept) {
     return (
       <div class="ow-b-on-row kept">
         <span class="ow-b-on-n kept"><Icon name="check" size={16} stroke={2.4} /></span>
-        <span class="ow-b-on-t"><b>{sup?.name}</b><span class="mono">sends when back</span></span>
-        <span class="mono ow-b-on-amt">{fig(s.planned)}</span>
+        <span class="ow-b-on-t"><b>{sup?.name}</b><span class={cx('mono', short && 'short')}>{`${word} · sends when back`}</span></span>
+        <span class="mono ow-b-on-amt">{fig(s.paid ?? s.planned)}</span>
       </div>
     );
   }
   if (s.done) {
-    const short = rows.find((r) => r.line.got != null && r.line.got < r.line.qty);
     const diff = (s.paid ?? 0) - s.planned;
     const j = justDone.value && justDone.value.sid === s.supplierId ? justDone.value : null;
-    const sub = [short ? shortWord(short.line.got as number, short.line.qty) : 'Got it all', !short && diff ? fig(diff, false, true) : '', j ? clock(j.at) : ''].filter(Boolean).join(' · ');
+    const at = s.doneAt ?? (j ? j.at : null);
+    const sub = [word, at != null ? clock(at) : '', !short && diff ? fig(diff, false, true) : ''].filter(Boolean).join(' · ');
     return (
       <div class="ow-b-on-row">
         <span class={cx('ow-b-on-n', short ? 'short' : 'done')}><Icon name="check" size={16} stroke={2.4} /></span>
@@ -104,7 +116,7 @@ function StopRow(p: { b: BuyerBooks; n: number; stop: Stop; kept: boolean; next:
     );
   }
   const ids = [...new Set(s.lines.map((l) => l.orderId))];
-  const sub = p.next ? `Next · ${counted(s.lines.length, 'line')}` : [counted(s.lines.length, 'line'), ...ids.map(orderNo)].join(' · ');
+  const sub = [p.next ? `Next · ${counted(s.lines.length, 'line')}` : counted(s.lines.length, 'line'), ...ids.map(orderNo)].join(' · ');
   return (
     <div class="ow-b-on-row" aria-label={`Stop ${p.n}, ${sup?.name}, ${sub}`}>
       <span class="mono ow-b-on-n">{p.n}</span>

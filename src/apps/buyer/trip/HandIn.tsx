@@ -19,8 +19,9 @@ import { Slide, type SlideProps } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, now, online } from '../shell/store.ts';
-import { byRole, liveStops, memberOf, ordersCame } from './model.ts';
+import { books, kept, now, online } from '../shell/store.ts';
+import { handInNow } from './after.ts';
+import { byRole, liveStops, memberOf, ordersCame, tripBooks } from './model.ts';
 import { NavyHero, OrderChip } from './parts.tsx';
 import { Told } from './Told.tsx';
 import './handin.css';
@@ -36,16 +37,7 @@ export function HandIn(p: { b: BuyerBooks }): JSX.Element {
   const h = handIn(t, b), stops = liveStops(t), left = stops.filter((s) => !s.done).length;
   const came = ordersCame(b, t), lines = came.reduce((x, o) => x + o.rows.length, 0);
 
-  const go = async () => {
-    setSending(true);
-    try {
-      const r = await act('handIn');
-      nav.replace('trip/done', { kept: r.kept });
-    } catch (e) {
-      setSending(false);
-      toast.show('Not handed in', { kind: 'error', sub: String((e as Error).message || e), retry: () => { void go(); } });
-    }
-  };
+  const go = async () => { setSending(true); await handInNow(() => setSending(false)); };
   const slide: SlideProps = left > 0
     ? { label: `${counted(left, 'stop')} to go`, onCommit: () => undefined, lock: { icon: 'lock', label: `${counted(left, 'stop')} to go` } }
     : { label: 'Hand in', onCommit: go, onHint: hint };
@@ -116,5 +108,5 @@ function NoTrip(p: { b: BuyerBooks }): JSX.Element {
 /** trip/handin: the same screen, opened by its id. */
 export function HandInScreen(): JSX.Element {
   const b = books.value;
-  return b ? <HandIn b={b} /> : <main class="ow-b-trip" aria-busy="true" />;
+  return b ? <HandIn b={tripBooks(b, kept.value)} /> : <main class="ow-b-trip" aria-busy="true" />;
 }
