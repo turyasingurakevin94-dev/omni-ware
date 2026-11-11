@@ -200,6 +200,21 @@ The independent reviewer scored each Store board and its matching Agent screen (
 
 </details>
 
+## Added while building
+
+Screens the build found that no board drew, drawn under the AD rule (`docs/spec/04-screens-store.md` §2: one critic round, one revision). Page "Added while building" on the canvas; review `docs/canvas/store-agent/review/AD.json`, manifest `manifest/AD.json`, routes `04-screens-store-routes.md` §2 and §4. Scores are the critic's last (round 2), mean of the five axes, against the reference board.
+
+| Board | What | Score | Ref | Every axis ≥ 8.5 |
+|---|---|---|---|---|
+| AD01SomeoneNew | a hired driver we've never used: name, plate, phone (OU03's sheet) | 8.3 | OU03 8.8 | no: steps 8, in step 8 |
+| AD03SomeoneNewFilled | filled, phone checked → Robert drives | 8.7 | OU03 8.8 | yes |
+| AD04SomeoneNewPhone | phone not a mobile → Fix the phone first | 8.4 | OU03 8.8 | no: steps 8 |
+| AD02Unpack | unpack #0530 on bay 2: bay → To pack, ticks stay, Keep it packed / Unpack | 8.5 | PK06 8.7 | no: steps 8 |
+| AD05Unpacked | done, Undo 9s, Back to Today | 8.8 | PK06 8.7 | yes |
+| AD06UnpackFailed | not saved, Try again | 8.4 | PK06 8.7 | no: polish 8 |
+
+The round-2 fixes were applied once after the last scoring (no third round).
+
 ## Waiting on Kevin
 
 1. **Approve the canvas** — then the build starts in the Store's session (one migration for the new pushes, the next free number after 0181, recorded in `docs/decision-rights.md`).
@@ -211,3 +226,4 @@ The independent reviewer scored each Store board and its matching Agent screen (
 7. **Aisle C has 132 items**: split an aisle count by shelf (C1–C4)?
 8. **The new shared words** in the glossary (Ready to collect, Back at the yard, Coming back, Cancelled · put it back / bring it back, Counter sale, Delivered today) take effect when the canvas is approved.
 9. Sample-day gaps filled on the boards, to confirm or replace: #0534's three lines (OU27), Okello's count (SH25), a few "just now" states after 10:41 (SH13, SH16, SH22, SH24, SH25, SH32), the hired drivers Abudu and Juma (OU03).
+10. **Added while building**: Robert Kasozi (AD01–AD04) is an invented new hired driver (FACTS has none); a landline blocks a hired driver (spec §4.4); after Unpack the yard list says To pack while spec §4.2 says "back to Packing now" — one word to pick.
