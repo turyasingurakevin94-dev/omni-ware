@@ -15,7 +15,7 @@ import { dataError } from '../../datasource.ts';
 import type { StoreSource, WriteName } from '../source.ts';
 import type { StoreSession, YardBooks } from '../types.ts';
 import { FAIL_CODE, readStoreFlags, type StoreDemoFlags } from './flags.ts';
-import { dayAt } from './moments.ts';
+import { dayAt, okelloTakes0556 } from './moments.ts';
 import { t } from './shop.ts';
 import { demoWrites } from './writes.ts';
 import { shelfClash } from './shelf.ts';
@@ -110,14 +110,20 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     waitingCount: async (place) => copy(b.counts.find((c) => c.status === 'sent' && c.place === place) || null),
     countArrived: async (aisle, since) => b.counts.some((c) => c.aisle === aisle && c.countedBy === b.me.userId && c.createdAt >= since),
 
-    claim: (id) => later('claim', () => W.claim(id)),
+    // &state=okello-0556: Musa's first Packed on #0556 finds Okello took it (the clash, PK13).
+    claim: (id) => {
+      if (f.state === 'okello-0556' && id === 556 && !b.orders.some((o) => o.id === 556 && o.assignedWorkerId === 'st-op')) {
+        return wait(() => { okelloTakes0556(b); b.at = now; throw dataError('clash', 'Someone else is packing it'); });
+      }
+      return later('claim', () => W.claim(id));
+    },
     pick: (id, a, cursor) => later('pick', () => W.pick(id, a, cursor)),
     finishPack: (id, bay) => later('finishPack', () => W.finishPack(id, bay)),
     setBay: (id, bay) => later('setBay', () => W.setBay(id, bay)),
     unpack: (id) => later('unpack', () => W.unpack(id)),
     release: (id, putBack) => later('release', () => W.release(id, putBack)),
-    // Phone only (screens Q11): no signal does not stop it.
-    putBack: async (id) => { W.putBack(id); },
+    // Phone only (screens Q11): no signal does not stop it; &fail=putBack fails it once (PK22).
+    putBack: (id) => (f.fail === 'putBack' && !failed ? later('putBack', () => W.putBack(id)) : Promise.resolve(W.putBack(id))),
     load: (ids, c) => later('load', () => W.load(ids, c)),
     handOver: (id, name, agent) => later('handOver', () => W.handOver(id, name, agent)),
     deliver: (id, p) => later('deliver', () => W.deliver(id, p)),

@@ -6,6 +6,7 @@
  *   whoIs(b, idOrUser)  the person by staff id or login id
  *   orderFace(o, b)     the customer's (Kato KC, Kyaligonza KS, …); a walk-in is "WI"
  *   supplierFace(name)  a supplier's, slate ("HC" Hima Cement)
+ *   customerFace(o, b)  who the order is for, with the name: the customer's face, or an agent's for an agent pickup (PK07)
  */
 import { initials, tintFor } from '../names.ts';
 import type { Tint } from '../types.ts';
@@ -32,4 +33,12 @@ export const supplierFace = (name: string): YardFace => ({ initials: initials(na
 /** The customer's short name, as the yard says it ("Kyaligonza" for Kyaligonza & Sons, "Kato" for Kato Construction). */
 export function shortName(o: Pick<YardOrder, 'client'>): string {
   return (o.client.name || 'Walk-in').split(/\s+/)[0];
+}
+
+/** Who the order is for, with the name (the Pack screens' heads and rows): an agent pickup is the agent's (PK07), else orderFace. */
+export function customerFace(o: YardOrder, b: Pick<YardBooks, 'customers' | 'agents'>): YardFace & { name: string } {
+  const ag = o.originAgentId ? b.agents.find((a) => a.id === o.originAgentId) : null;
+  if (ag) return { name: ag.name, initials: initials(ag.name), tint: ag.tint || tintFor(ag.name) };
+  const c = b.customers.find((x) => x.id === o.customerId);
+  return { name: (c && c.name) || o.client.name || 'Walk-in', ...orderFace(o, b) };
 }

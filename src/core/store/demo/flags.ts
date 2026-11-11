@@ -17,6 +17,8 @@
  *   &state=ggaba-closed     #0547 coming back · Ggaba closed (after OU24)
  *   &state=agent            #0554 Peter Sserwadda's pickup, ready at the gate, code 0554 (OU11, OU09)
  *   &state=empty            nothing in the yard (PK14, IN40, OU14, OU15, OU30, TD29, TD30)
+ *   &state=for-you          Ruth gave #0556 to Musa at 10:40 (PK08)
+ *   &state=okello-0556      Okello takes #0556 at 10:43 the moment Musa first packs it: the claim clashes (PK13, PK17)
  *   &state=first-day        Joy's first day (TD05)
  *   &state=nobody           nobody else with a yard login is on (TD24)
  *   &state=someone-checkin  Okello checks Denis's trip in at 11:32 while this phone counts it (IN09)
@@ -40,11 +42,11 @@
  *   &big=1                  Big text on (You, TD12)
  */
 export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'agent' | 'empty' | 'first-day' | 'nobody' | 'signed-out' | 'loading' | 'no-reach'
-  | ShelfState | 'someone-checkin' | 'extra-answered' | 'return-decided';
+  | 'for-you' | 'okello-0556' | ShelfState | 'someone-checkin' | 'extra-answered' | 'return-decided';
 /** The shelf's what-ifs (demo/shelf.ts; SH13, SH16, SH25, SH22, SH24, SH32, SH06). */
 export type ShelfState = 'recount' | 'count-accepted' | 'okello-counts' | 'written-off' | 'kept-on-shelf' | 'restock-listed' | 'shelf-calm';
 
-export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach',
+export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach', 'for-you', 'okello-0556',
   'recount', 'count-accepted', 'okello-counts', 'written-off', 'kept-on-shelf', 'restock-listed', 'shelf-calm',
   'someone-checkin', 'extra-answered', 'return-decided'];
 /** The named moments, HHMM. */

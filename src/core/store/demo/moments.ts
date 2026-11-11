@@ -147,10 +147,24 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
         reason: 'Damaged', note: g ? g.note : '', by: 'u-mk', byName: 'Musa Kiggundu', status: 'accepted', decidedAt: t('11:20'), createdAt: t('11:03') });
       break;
     }
+    case 'for-you': {
+      const o = byId(b, 556); o.assignedWorkerId = 'st-mk'; o.pickingAssignedAt = t('10:40');
+      b.alerts.unshift({ id: 'al-fy', kind: 'order.pick', at: t('10:40'), fromId: 'u-rn', text: 'Ruth gave you #0556 to pack', data: { orderId: 556 }, forYou: true });
+      break;
+    }
     // Nobody else with a yard login is on: Joy is off, and Okello has no login on this day (TD24 lists only Joy and Hassan).
     case 'nobody': b.people = b.people.filter((p) => p.id !== 'st-op'); b.people.filter((p) => p.id === 'st-jn').forEach((p) => { p.away = true; }); break;
     default: break;
   }
+}
+
+/** &state=okello-0556: Okello took #0556 at 10:43 and packed the cement at 10:44 (PK13, PK17). */
+export function okelloTakes0556(b: YardBooks): void {
+  const o = byId(b, 556);
+  o.assignedWorkerId = 'st-op'; o.pickingAssignedAt = t('10:43'); o.workerAcceptedAt = t('10:43'); o.pickingStatus = 'in_progress'; o.pickCursor = 1;
+  o.lines[0] = { ...o.lines[0], pickStatus: 'done', pickedQty: o.lines[0].qty };
+  o.lines[1] = { ...o.lines[1], pickStatus: 'pending' };
+  o.stageLog = [...o.stageLog, { status: 'preparing', at: t('10:44') }];
 }
 
 /** The day at the flags' moment, from the phone of the flags' person. */

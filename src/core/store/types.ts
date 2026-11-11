@@ -343,7 +343,7 @@ export interface YardBooks {
   /** tint: the customer's face, as the canvas casts it (the demo's; absent on the books: tintFor the name). */
   customers: { id: string; name: string; phone: string; location: string; tint?: Tint }[];
   suppliers: { id: string; name: string; location: string }[];
-  agents: { id: string; name: string; terms: 'before' | 'on_delivery' }[];
+  agents: { id: string; name: string; terms: 'before' | 'on_delivery'; tint?: Tint }[];
   alerts: YardAlert[];
   /** Damage seen and not reported yet (YardFound): the demo's; the books give none (undefined). */
   found?: YardFound[];

@@ -111,5 +111,5 @@ export function suppliers(): YardBooks['suppliers'] {
 }
 
 export function agents(): YardBooks['agents'] {
-  return [{ id: 'a-ps', name: 'Peter Sserwadda', terms: 'on_delivery' }];
+  return [{ id: 'a-ps', name: 'Peter Sserwadda', terms: 'on_delivery', tint: 't1' }];
 }
