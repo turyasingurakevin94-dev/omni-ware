@@ -26,6 +26,7 @@
  *   {"tap": "Orders"}                      by aria-label, else visible text (exact, then contained)
  *   {"tap": {"label": "Close"}} · {"tap": {"text": "Kato"}} · {"tap": {"sel": "nav a:nth-child(2)"}}
  *   {"type": "Kato", "into": "Name, phone or what they said"}   into a field by its label or placeholder (or "sel")
+ *   {"drag": {"sel": ".ow-knob", "dx": 300, "hold": false}} (a slide; hold: shot while pressed)
  *   {"press": "Enter"} · {"wait": 400} · {"wait": "Placed"} (until that text shows) · {"scroll": 300} or {"scroll": "Show 34 more"}
  * A spec may also name a "region": [x, y, w, h] in board pixels, measured on its own as well
  * (TD01's tab bar: [0, 716, 360, 84]).
@@ -168,7 +169,13 @@ async function step(p, s) {
   } else if (s.press) await p.keyboard.press(s.press);
   else if (typeof s.wait === 'number') await p.waitForTimeout(s.wait);
   else if (typeof s.wait === 'string') await p.getByText(s.wait).first().waitFor({ timeout: 8000 });
-  else if (typeof s.scroll === 'number') await p.mouse.wheel(0, s.scroll);
+  else if (s.drag) {
+    // A slide dragged by the finger: {"drag": {"sel": ".ow-knob", "dx": 300}}; "hold": true keeps it pressed for the shot (a pressed board).
+    const el = await find(p, s.drag.sel ? { sel: s.drag.sel } : s.drag.target), box = await el.boundingBox();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + (s.drag.dx || 300), y, { steps: 10 });
+    if (!s.drag.hold) await p.mouse.up();
+  } else if (typeof s.scroll === 'number') await p.mouse.wheel(0, s.scroll);
   else if (typeof s.scroll === 'string') await (await find(p, s.scroll)).scrollIntoViewIfNeeded();
   else throw new Error('Unknown step ' + JSON.stringify(s));
   await p.waitForTimeout(s.settle ?? 350);

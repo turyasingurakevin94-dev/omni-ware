@@ -44,12 +44,12 @@ const ggaba = { client: { name: 'Ggaba Stores', phone: '0782 330 917' }, custome
 const nansana = { client: { name: 'Nansana Hardware', phone: '0752 610 044' }, customerId: 'c-nans' };
 
 export function orders(): YardOrder[] {
-  const ssali = carrier('staff', 'Ssali', t('9:55'), 'st-ss');
+  const ssali = carrier('staff', 'Ssali', t('9:55'), 'st-ss', { dueBack: t('12:10') });
   return [
     // Packing · Musa since 10:05: 40 pc packed 10:30, the wheelbarrows came on Denis's trip 10:05, the hinge dropped.
     order(552, 'preparing', t('9:14'), {
       ...kato, assignedWorkerId: 'st-mk', pickingAssignedAt: t('10:05'), workerAcceptedAt: t('10:05'), pickingStatus: 'in_progress', pickCursor: 1, bay: 1,
-      stageEnteredAt: t('9:14'), moneyHold: true, deliverTo: 'Ntinda site, Plot 12, Ntinda Rd', deliverWhen: 'today afternoon', deliverPhone: '0772 418 220', runDriver: 'st-ss',
+      stageEnteredAt: t('9:14'), stageLog: [{ status: 'draft', at: t('9:14') }, { status: 'awaiting_goods', at: t('9:31') }, { status: 'preparing', at: t('10:05') }], moneyHold: true, deliverTo: 'Ntinda site, Plot 12, Ntinda Rd', deliverWhen: 'today afternoon', deliverPhone: '0772 418 220', runDriver: 'st-ss', leavesAt: t('13:20'),
       lines: [
         done(line(0, 'p-is28', 40)),
         line(1, 'p-wb', 2, { supplierId: 's-owino', receivedAt: t('10:05'), receivedQty: 2, pickStatus: 'pending' }),
@@ -87,6 +87,17 @@ export function orders(): YardOrder[] {
       invoiced: true, invoicedAt: t('8:50'), carrier: carrier('client', 'Walk-in', t('8:50')), assignedDeliveryId: '__client__', pickingStatus: 'done',
       pickingDoneAt: t('8:45'), stageEnteredAt: t('8:50'), deliveredTo: 'Walk-in', deliveredAt: t('8:50'), handoverCheckedAt: t('8:50'),
       lines: [done(line(0, 'p-wn4', 1))],
+    }),
+    // Hired drivers used before (OU03): Abudu to Ntinda Tue, Juma Ssekitto to Ggaba Sat 3 Oct; invoiced, off the board.
+    order(521, 'completed', t('9:00', '2026-10-13'), {
+      ...kato, date: '2026-10-13', invoiced: true, invoicedAt: t('15:00', '2026-10-13'), pickingStatus: 'done', deliverTo: 'Ntinda site, Plot 12, Ntinda Rd',
+      carrier: carrier('hired', 'Abudu', t('11:30', '2026-10-13'), null, { what: 'UAX 318K', phone: '0701 552 310' }), assignedDeliveryId: '__carrier__',
+      deliveredTo: 'Kato Construction', deliveredAt: t('12:40', '2026-10-13'), deliveredPhoto: 'demo/0521.jpg', lines: [done(line(0, 'p-cem', 20))],
+    }),
+    order(498, 'completed', t('9:00', '2026-10-03'), {
+      ...ggaba, date: '2026-10-03', invoiced: true, invoicedAt: t('15:00', '2026-10-03'), pickingStatus: 'done', deliverTo: 'Ggaba',
+      carrier: carrier('hired', 'Juma Ssekitto', t('11:00', '2026-10-03'), null, { what: 'UBF 902C', phone: '0759 902 114' }), assignedDeliveryId: '__carrier__',
+      deliveredTo: 'Ggaba Stores', deliveredAt: t('12:10', '2026-10-03'), deliveredPhoto: 'demo/0498.jpg', lines: [done(line(0, 'p-rn', 10))],
     }),
     // Waiting on goods: both in Buying, their lines on Denis's trip.
     order(549, 'awaiting_goods', t('8:15'), {

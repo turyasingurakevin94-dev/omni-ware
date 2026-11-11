@@ -8,6 +8,7 @@
  *                             1047  #0555 paid (Grace 10:45), at the gate (OU10, OU12)
  *                             1130  Denis's trip back at the yard, 3 lines; #0555 collected (TD02, IN02–IN09)
  *                             1200  Hima Cement at the gate, 100 bag; Denis's trip checked in 11:34 (IN10–IN15)
+ *                             1315  #0552 paid (Grace 13:12), Ssali back: load the run (OU02–OU07, OU17)
  *                             1405  #0552 at the Ntinda site with Ssali (OU21–OU28)
  *                             1510  Denis sends Musa to Katwe Timber, Hassan drives (TD03, IN30–IN35)
  *                             1730  the yard is clear; Close the yard (TD04, TD16–TD19, TD27, TD28)
@@ -25,6 +26,7 @@
  *   &offline (or =1)        no signal: reads give the copy saved 7:52, writes are kept (amber bar)
  *   &fail=<write>           that write (a StoreSource method: checkIn, load, sendCount …, or snapshot)
  *                           fails once with its board code (red bar); Try again then goes
+ *   &push=<kind>[:<order id>]  a push tapped as the app opens (routes §5, shell/pushes.ts): &push=job.given opens To load
  *   &update=1               a new build is ready (TD08)
  *   &big=1                  Big text on (You, TD12)
  */
@@ -32,7 +34,7 @@ export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'a
 
 export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach'];
 /** The named moments, HHMM. */
-export const MOMENTS = [1041, 1047, 1130, 1200, 1405, 1510, 1730];
+export const MOMENTS = [1041, 1047, 1052, 1130, 1200, 1315, 1405, 1510, 1730];
 
 export interface StoreDemoFlags {
   on: boolean;

@@ -91,10 +91,10 @@ export function item(id: string): { name: string; unit: string; packUnit: string
 
 export function customers(): YardBooks['customers'] {
   return [
-    { id: 'c-kato', name: 'Kato Construction', phone: '0772 418 220', location: 'Ntinda' },
-    { id: 'c-kyal', name: 'Kyaligonza & Sons', phone: '0701 552 310', location: 'Bweyogerere' },
-    { id: 'c-nans', name: 'Nansana Hardware', phone: '0752 610 044', location: '' },
-    { id: 'c-ggaba', name: 'Ggaba Stores', phone: '0782 330 917', location: 'Ggaba' },
+    { id: 'c-kato', name: 'Kato Construction', phone: '0772 418 220', location: 'Ntinda', tint: 't0' },
+    { id: 'c-kyal', name: 'Kyaligonza & Sons', phone: '0701 552 310', location: 'Bweyogerere', tint: 't1' },
+    { id: 'c-nans', name: 'Nansana Hardware', phone: '0752 610 044', location: '', tint: 't5' },
+    { id: 'c-ggaba', name: 'Ggaba Stores', phone: '0782 330 917', location: 'Ggaba', tint: 't4' },
     { id: 'c-lub', name: 'Lubowa Builders', phone: '0774 120 556', location: 'Lubowa' },
   ];
 }

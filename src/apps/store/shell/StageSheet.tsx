@@ -25,13 +25,27 @@ export interface StageSheetProps {
   sub?: ComponentChildren;
   /** Under the rail: the sheet's filter chips. */
   chips?: ComponentChildren;
+  /** The rail stop to light when not this sheet's own (out/gate lights On the road, OU10). */
+  lit?: string;
+  /** On the road's mint (OU10, OU20) in place of the rail's blue. */
+  mint?: boolean;
+  /** The Out boards' head (OU01, OU10, OU20): square foot, 18 px under the rail, the rail's pill 34 tall. */
+  flat?: boolean;
+  /** No signal (OU25): the count in amber. */
+  amber?: boolean;
+  /** Under the head, full width: a flow's own No signal or "That did not save" bar (OU16). */
+  bar?: ComponentChildren;
+  /** The body's gap when not 10 (OU20's 8). */
+  gap?: number;
+  /** Below the body, outside its scroll (OU01's dock). */
+  foot?: ComponentChildren;
   children?: ComponentChildren;
 }
 
 export function StageSheet(p: StageSheetProps): JSX.Element {
-  const at = RAIL.findIndex((r) => r.id === p.id);
+  const at = RAIL.findIndex((r) => r.id === (p.lit || p.id));
   const head = (
-    <div class="st-stage-head">
+    <div class={cx('st-stage-head', p.mint && 'mint', p.amber && 'amber', p.flat && 'flat')}>
       <span aria-hidden="true" class="ow-shead-grab" />
       <div class="st-stage-row">
         <span class="st-stage-t">
@@ -54,5 +68,5 @@ export function StageSheet(p: StageSheetProps): JSX.Element {
       {p.chips && <div class="st-stage-chips">{p.chips}</div>}
     </div>
   );
-  return <FullSheet onBack={() => nav.back()} backLabel="Back to Today" head={head}>{p.children}</FullSheet>;
+  return <FullSheet onBack={() => nav.back()} backLabel="Back to Today" head={<>{head}{p.bar}</>} foot={p.foot} gap={p.gap}>{p.children}</FullSheet>;
 }

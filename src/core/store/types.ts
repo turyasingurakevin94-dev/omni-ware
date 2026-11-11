@@ -63,6 +63,8 @@ export interface Carrier {
   /** The login that loaded it. */
   by: string | null;
   staffId: string | null;
+  /** When he is expected back at the yard ("out · back ~12:10"): the demo's; the books have none (absent). */
+  dueBack?: Ms | null;
 }
 
 /** payload.comingBack (0182, W27): can't deliver · bring it back. */
@@ -135,6 +137,10 @@ export interface YardOrder {
    * order.copy "not in 0182"): the demo draws it, the real books give null.
    */
   copyOf: number | null;
+  /** When the run leaves ("leaves 13:20"), and who took the money and when ("Paid · Grace 13:12"): the demo's; the books have none (absent). */
+  leavesAt?: Ms | null;
+  paidAt?: Ms | null;
+  paidBy?: string | null;
 }
 
 /** A collection_trips line (ow_strip_money(t.lines)). */
@@ -318,7 +324,8 @@ export interface YardBooks {
   aisles: string[];
   /** presets.bays: 1–12, default 4. */
   bays: number;
-  customers: { id: string; name: string; phone: string; location: string }[];
+  /** tint: the customer's face, as the canvas casts it (the demo's; absent on the books: tintFor the name). */
+  customers: { id: string; name: string; phone: string; location: string; tint?: Tint }[];
   suppliers: { id: string; name: string; location: string }[];
   agents: { id: string; name: string; terms: 'before' | 'on_delivery' }[];
   alerts: YardAlert[];

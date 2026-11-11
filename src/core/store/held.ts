@@ -24,9 +24,11 @@ export interface HeldWrite {
   send: () => unknown;
   /** Put the screen back as it was. */
   undo?: () => void;
+  /** The screen draws its own Undo (the Out area's end screens, OU05, OU12, OU22): no toast. */
+  quiet?: boolean;
 }
 
-export interface HeldNow { label: string; until: Ms }
+export interface HeldNow { label: string; until: Ms; quiet?: boolean }
 
 type Timer = { set: (fn: () => void, ms: number) => unknown; clear: (t: unknown) => void; now: () => Ms };
 const REAL: Timer = { set: (fn, ms) => setTimeout(fn, ms), clear: (t) => clearTimeout(t as ReturnType<typeof setTimeout>), now: () => Date.now() };
@@ -46,7 +48,7 @@ export class Held {
 
   /** What waits now, or null. */
   get current(): HeldNow | null {
-    return this.w ? { label: this.w.label, until: this.until } : null;
+    return this.w ? { label: this.w.label, until: this.until, quiet: this.w.quiet } : null;
   }
 
   onChange(fn: (h: HeldNow | null) => void): () => void {

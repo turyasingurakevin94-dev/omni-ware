@@ -78,7 +78,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 | Id | Params | Kind | Boards |
 |---|---|---|---|
 | `out/load` | — | stage sheet | OU01 (default), OU30 empty; OU31 name a direction is its sheet (§4) |
-| `out/run` | `{ dir }` (the direction's key: its farthest place, `store.html:4444`) | pushed | OU02 (default), OU03 hired, OU17 slide pressed, OU04 sending, OU05 loaded, OU06 not sent, OU07 failed |
+| `out/run` | `{ dir, driver?, go?, hired? }` (the direction's key: its farthest place, `store.html:4444`; To load's slide passes its driver and `go`; `hired` opens OU03) | pushed | OU02 (default), OU03 hired, OU17 slide pressed, OU04 sending, OU05 loaded, OU06 not sent, OU07 failed |
 | `out/gate` | `{ id? }` (none: everything ready to collect) | pushed | OU10 (default, 10:47), OU08 sending, OU12 handed over, OU13 not paid yet, OU15 empty, OU16 offline |
 | `out/gate-code` | `{ id? }` | pushed | OU11 the agent's code, OU09 wrong code |
 | `out/road` | — | stage sheet | OU20 (default), OU14 empty, OU25 offline, OU27 cancelled on the truck |
@@ -98,9 +98,10 @@ Not routes: the summary boards `IB01Handovers`, `IB02StateWords`, `FL01Taps` (th
 
 | Function | Owner | Boards |
 |---|---|---|
-| `openNameDirection(dir)` | out | OU31 (from OU01's "Name it") |
+| `openNameDirection(dir)` | out | OU31 (from OU01's "Name it"; `dir` is load.ts's Direction) |
 | `openNotOnList(trip)` | in | IN04 (from the check-in; also from the scanner, SH40, when the label is not on the trip) |
-| `openNoPhoto(id)` | out | OU23's reason tiles over OU21 |
+| `openNoPhoto(books, order, onGo)` | out | OU23's reason tiles over OU21 (`onGo(why)` delivers with no photo) |
+| `openHired(dir, books, chosen, onPick)` | out | OU03, over the run (`out/run { dir, hired: true }` opens it too) |
 | _(add as built)_ | | |
 
 ## 5. A tapped push opens a route

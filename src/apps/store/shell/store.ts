@@ -19,8 +19,9 @@ import { Held, type HeldNow, type HeldWrite } from '../../../core/store/held.ts'
 import type { StoreSource, WriteName } from '../../../core/store/source.ts';
 import { storeSupabase } from '../../../core/store/supabase.ts';
 import { toast } from '../../../ui/toast.tsx';
-import { top } from './nav.ts';
-import type { StoreSession, YardBooks } from '../../../core/store/types.ts';
+import { nav, top } from './nav.ts';
+import { pushRoute } from './pushes.ts';
+import type { StoreSession, YardBooks, YardSide } from '../../../core/store/types.ts';
 
 declare global {
   interface Window { owStoreDemo?: { storeDemo: (search: string) => StoreSource } }
@@ -40,6 +41,8 @@ export const kept = signal<Kept[]>([]);
 export const now = signal<number>(Date.now());
 export const notDone = signal<(NotDone & { retry: (() => void) | null }) | null>(null);
 export const held = signal<HeldNow | null>(null);
+/** The places, roads and named directions (data §1a #6), read once after the first paint; null until then. */
+export const side = signal<YardSide | null>(null);
 /** A new build is waiting (TD08 "Update ready · Reload"): set by the service worker, or the demo's &update. */
 export const updateReady = signal(isDemo && typeof location !== 'undefined' && /[?&]update(=1)?(&|$)/.test(location.search));
 
@@ -101,6 +104,14 @@ export async function refresh(whole = false): Promise<void> {
 }
 const reread = (): void => { void refresh(true); };
 
+/** The demo's &push=<kind>[:<order id>]: a push tapped as the app opens (routes §5), so a parity spec can start where a push lands. */
+function openDemoPush(): void {
+  const m = /[?&]push=([a-z_.]+)(?::(\d+))?/.exec(location.search);
+  if (!m) return;
+  const r = pushRoute(m[1], m[2] ? { orderId: Number(m[2]) } : {}, books.value, me.value);
+  if (r.id !== 'today') nav.push(r.id, r.params);
+}
+
 let timers = false;
 async function ready(s: StoreSession): Promise<void> {
   session.value = s;
@@ -110,6 +121,8 @@ async function ready(s: StoreSession): Promise<void> {
   if (books.value && session.value && !session.value.staffId && isDemo) session.value = { ...session.value, staffId: books.value.me.id };
   // No yard and no signal: "Could not reach the shop" (TD22). A refused read: Today says so (TD07).
   phase.value = books.value || online.value ? 'ready' : 'no-reach';
+  src().side().then((x) => { side.value = x; }, () => undefined);
+  if (isDemo) openDemoPush();
   if (isDemo || timers) return;
   timers = true;
   setInterval(() => { now.value = src().now(); }, 30000);
@@ -172,8 +185,10 @@ export async function act(kind: WriteName, ...args: unknown[]): Promise<{ kept: 
 }
 
 /** A write that waits 10 s with Undo (store.html:991 heldWrite): `label` is what the toast says. */
-export function hold(label: string, kind: WriteName, args: unknown[], undo?: () => void): void {
-  const w: HeldWrite = { label, send: () => act(kind, ...args).catch(() => undefined), undo };
+export function hold(label: string, kind: WriteName, args: unknown[], undo?: () => void,
+  o: { quiet?: boolean; then?: (r: { kept: boolean } | null, e?: unknown) => void } = {}): void {
+  // quiet: the screen draws its own Undo (no toast); then: told how the write went once it goes (kept, or refused with the error).
+  const w: HeldWrite = { label, quiet: o.quiet, send: () => act(kind, ...args).then((r) => { if (o.then) o.then(r); }, (e) => { if (o.then) o.then(null, e); }), undo };
   holder.hold(w);
   heldOn = top.peek().key;
 }

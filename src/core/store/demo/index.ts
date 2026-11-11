@@ -82,9 +82,11 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     side: async () => ({
       places: [
         { name: 'Mukasa Hardware', lat: 0.3136, lng: 32.5811 }, { name: 'Ntinda', lat: 0.3540, lng: 32.6150 },
-        { name: 'Bweyogerere', lat: 0.3560, lng: 32.6720 }, { name: 'Ggaba', lat: 0.2630, lng: 32.6300 }, { name: 'Lubowa', lat: 0.2440, lng: 32.5700 },
+        // East of the yard (OU31: Bweyogerere, Kireka and Jinja Rd are "that way", one sector apart from Ntinda).
+        { name: 'Bweyogerere', lat: 0.3300, lng: 32.6720 }, { name: 'Kireka', lat: 0.3330, lng: 32.6420 }, { name: 'Jinja Rd', lat: 0.3180, lng: 32.6100 },
+        { name: 'Ggaba', lat: 0.2630, lng: 32.6300 }, { name: 'Lubowa', lat: 0.2440, lng: 32.5700 },
       ],
-      routes: [], roadNames: { ntinda: 'Ntinda' },
+      routes: [], roadNames: { ntinda: 'Ntinda', ggaba: 'Ggaba' },
     }),
     waitingCount: async (place) => copy(b.counts.find((c) => c.status === 'sent' && c.place === place) || null),
     countArrived: async (aisle, since) => b.counts.some((c) => c.aisle === aisle && c.countedBy === b.me.userId && c.createdAt >= since),

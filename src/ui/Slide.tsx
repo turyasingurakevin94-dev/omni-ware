@@ -32,6 +32,11 @@ export interface SlideProps {
   /** It cannot go yet: the knob says why, the label in #B3BCD2 (amber when short). */
   /** Why it cannot go yet; quiet: the paler track that says it when tapped (CU33, Take payment). */
   lock?: { icon: LockIcon; label: string; amber?: boolean; quiet?: boolean; onTap?: () => void };
+  /** The sending words, when not "Sending…" (the Store's gate: "Handing over…"). */
+  sendWord?: string;
+  /** While the knob is held: its words ("Keep going", the Store's OU17), and the screen told (its hint line). */
+  pressWord?: string;
+  onPress?: (on: boolean) => void;
 }
 
 export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
@@ -54,11 +59,11 @@ function Locked(p: { icon: LockIcon; label: string; amber?: boolean; quiet?: boo
 }
 
 /** Sending (KC13): the fill the whole width, "Sending…", the knob at the end with a spinner. */
-function Sending(): JSX.Element {
+function Sending(p: { word?: string }): JSX.Element {
   return (
     <div role="status" class="ow-sslide">
       <span aria-hidden="true" class="ow-sslide-f" />
-      <span class="ow-sslide-l">Sending…</span>
+      <span class="ow-sslide-l">{p.word || 'Sending…'}</span>
       <span aria-hidden="true" class="ow-sslide-k">
         <svg width="22" height="22" viewBox="0 0 24 24" class="ow-sslide-spin"><circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.6" /><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" /></svg>
       </span>
@@ -70,6 +75,8 @@ export function Slide(p: SlideProps): JSX.Element {
   const state = p.state || 'ready';
   const track = useRef<HTMLDivElement>(null), knob = useRef<HTMLButtonElement>(null), fill = useRef<HTMLSpanElement>(null);
   const [done, setDone] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  const press = (on: boolean) => { if (!p.pressWord && !p.onPress) return; setPressed(on); if (p.onPress) p.onPress(on); };
   const live = state === 'ready' && !done;
   const drag = useRef({ x0: 0, dx: 0, max: 0, on: false, moved: false });
 
@@ -100,6 +107,7 @@ export function Slide(p: SlideProps): JSX.Element {
     const d = drag.current;
     d.on = true; d.moved = false; d.dx = 0; d.x0 = e.clientX; d.max = maxX();
     if (knob.current) knob.current.style.animation = 'none';
+    press(true);
     try { (e.currentTarget as Element).setPointerCapture(e.pointerId); } catch (_e) { /* capture is a nicety */ }
   };
   const move = (e: PointerEvent) => {
@@ -113,6 +121,7 @@ export function Slide(p: SlideProps): JSX.Element {
     const d = drag.current;
     if (!d.on) return;
     d.on = false;
+    press(false);
     if (knob.current) knob.current.style.animation = '';
     if (d.max > 0 && d.dx >= d.max * 0.85) commit();
     else { place(0, true); if (!d.moved && p.onHint) p.onHint(); }
@@ -120,7 +129,8 @@ export function Slide(p: SlideProps): JSX.Element {
 
   // The slide is one control named by its words (P15): the knob carries them, the drawn words are not read twice.
   const words = state === 'sending' || done ? 'Sending…' : state === 'offline' ? 'Back online to sell' : p.label;
-  if (state === 'sending' || done) return <Sending />;
+  const shown = pressed && p.pressWord ? p.pressWord : words;
+  if (state === 'sending' || done) return <Sending word={p.sendWord} />;
   if (p.lock) return <Locked {...p.lock} />;
   return (
     <div ref={track} class={cx('ow-slide', 's-' + state)}>
@@ -130,7 +140,7 @@ export function Slide(p: SlideProps): JSX.Element {
         onClick={(e) => { if ((e as MouseEvent).detail === 0 && live) commit(); }}>
         {state === 'empty' ? <Duo i={phBasket} size={22} color="#5C6788" /> : <Icon name="slide" size={22} stroke={2.4} />}
       </button>
-      <Words class="ow-slide-l" label={words} />
+      <Words class={cx('ow-slide-l', pressed && p.pressWord && 'pressed')} label={shown} />
     </div>
   );
 }

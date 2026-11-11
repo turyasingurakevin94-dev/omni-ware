@@ -22,7 +22,7 @@ import './prefs.ts';
 const ITEMS: BarItem<Tab>[] = [{ id: 'today', word: 'Today', icon: 'today' }, { id: 'shelf', word: 'Shelf', icon: 'shelf' }];
 
 // A write waiting its 10 s shows as the P28 toast with Undo.
-effect(() => { const h = held.value; if (h) toast.show(h.label, { undo: undoHeld, ms: Math.max(0, h.until - Date.now()) }); });
+effect(() => { const h = held.value; if (h && !h.quiet) toast.show(h.label, { undo: undoHeld, ms: Math.max(0, h.until - Date.now()) }); });
 
 function startNext(): void {
   const j = nextJob.value;

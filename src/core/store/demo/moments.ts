@@ -51,7 +51,13 @@ export function baseDay(): YardBooks {
 
 /** The later moments, in order: each one includes the ones before it. */
 const STEPS: [number, (b: YardBooks) => void][] = [
-  [1047, (b) => { byId(b, 555).moneyHold = false; }],
+  [1047, (b) => { const o = byId(b, 555); o.moneyHold = false; o.paidAt = t('10:45'); o.paidBy = 'u-ga'; }],
+  // #0552 packed 10:52 (the wheelbarrows on), still not paid: To load (OU01).
+  [1052, (b) => {
+    const o = byId(b, 552);
+    o.lines[1] = { ...o.lines[1], pickStatus: 'done', pickedQty: 2 };
+    o.pickingStatus = 'done'; o.pickingDoneAt = t('10:52');
+  }],
   [1130, (b) => {
     deliver(byId(b, 555), 'Walk-in', t('10:47'), true);
     deliver(byId(b, 534), 'Kato Construction', t('10:58'), false);
@@ -66,6 +72,8 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     const h = b.trips.find((x) => x.id === 'TRIP-HIMA-1');
     if (h) { h.status = 'collected'; h.collectedAt = t('12:00'); }
   }],
+  // Grace takes Kato's money 13:12; Ssali is back; the run waits to load (OU02–OU07, OU17).
+  [1315, (b) => { const o = byId(b, 552); o.moneyHold = false; o.paidAt = t('13:12'); o.paidBy = 'u-ga'; }],
   [1405, (b) => {
     checkIn(b, ['TRIP-HIMA-1'], t('12:10'));
     const o = byId(b, 552);
