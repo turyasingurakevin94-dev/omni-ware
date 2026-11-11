@@ -90,7 +90,7 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
           <div class="ow-b-trip-body">
             {plan.stops.map((s, i) => (
               <PlanStop key={s.supplierId} b={b} n={i + 1} stop={s} open={open === s.supplierId} held={heldPrice(s.supplierId)}
-                busy={busy === s.supplierId} locked={plan.asking}
+                busy={busy === s.supplierId} locked={plan.asking || keptAsk}
                 onToggle={() => setOpen(open === s.supplierId ? null : s.supplierId)} onOff={(off) => { void setOff(s.supplierId, off); }} />
             ))}
             {[...heldElse.entries()].map(([sid, refs]) => <HeldRow key={sid} b={b} supplierId={sid} refs={refs} />)}

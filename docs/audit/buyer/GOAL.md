@@ -60,3 +60,23 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or Sales chan
 - ~~Switch~~ Done 2026-11-11 on the branch; live when merged to main.
 - Should a complete order handed in push the salesperson? (handover.md, open question.)
 - The Sales changes (handover.md §5, 11 items) and three new pushes (order.check, supplier.no, sourcing.waits — one migration) go to the Sales session.
+
+## Decided after the review (Kevin asked Claude to choose, 2026-11-11)
+
+Each the smallest safe choice; change any by saying so.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Remove an order's only line? | No: it stays locked ("use Client waits"), as Orders draws. An order is never emptied from the Buyer app. |
+| 2 | "To ask" counts suppliers or orders? | Suppliers: one Ask goes to one supplier (as now, `rules.ts` tiles). |
+| 3 | Orders' head: Orders phone 1 or Additions C? | Orders phone 1 (the main board). |
+| 4 | Switch item's aisles button | Left off: it was drawn but has nothing to open. |
+| 5 | Katwe 43,500 (board) vs 41,000 (the list) | The books win: the app shows the list price and its age. |
+| 6 | Plan with nothing found: dock or not | Additions E (no dock), the later board. |
+| 7 | Correct a stop after the 5 s Undo | No correction in the Buyer app: what came is counted in by Musa at hand-in. |
+| 8 | Take off a stop while the cash ask waits to send | Locked once the cash ask is sent or kept, as after it is sent: the amount asked never changes under Esther. |
+| 9 | 09:50 or 9:50 | 9:50: the shared clock, the same in every new app. |
+| 10 | Disabled button colour | The shared Button's, the same in every new app. |
+| 11 | "Today 3/6" on a supplier row | Left out. |
+| 12 | Suppliers search on a second tap of the tab | Kept: the search survives Back and tab switches. |
+
