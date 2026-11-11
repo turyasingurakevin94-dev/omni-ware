@@ -24,7 +24,6 @@ import { books, held, me, now } from '../shell/store.ts';
 import { StateHead } from './head.tsx';
 import { WhereCard, toSheet } from './parts.tsx';
 import './moment.css';
-import { Glyph } from './glyphs.tsx';
 
 /** The Undo ring's seconds left, while the pack waits. */
 function useLeft(): number {
@@ -95,7 +94,7 @@ export function Packed(p: { o: YardOrder; bay: number | null; held: boolean; onU
     rows.push({ icon: <Icon name="store" size={18} stroke={2} />, tone: 'glass', title: agent ? `At the gate · code ${String(o.id).padStart(4, '0')}` : 'At the gate · they collect',
       sub: agent ? `${firstWord(agent.name)} shows it · Hand over · one slide` : `${notPaid ? 'leaves when paid · ' : ''}Hand over · one slide`, on: () => nav.push('out/gate', { id: o.id }) });
   } else {
-    rows.push({ icon: <Glyph name="layers" size={18} stroke={2} />, tone: 'glass', title: `To load → ${w.to.split(/[ ,]/)[0]}${w.when ? ' · ' + w.when : ''}`,
+    rows.push({ icon: <Icon name="layers" size={18} stroke={2} />, tone: 'glass', title: `To load → ${w.to.split(/[ ,]/)[0]}${w.when ? ' · ' + w.when : ''}`,
       sub: `${driver ? firstWord(driver.name) + ' · ' : ''}${notPaid ? 'leaves when paid' : 'goes on the next run'}`, on: () => nav.replace('out/load') });
   }
   const ls = packLines(o), one = ls.length === 1 ? ls[0] : null, drops = dropped(o).length;

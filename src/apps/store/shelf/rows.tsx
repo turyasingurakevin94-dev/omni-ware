@@ -6,8 +6,9 @@
  *   ItemRow                the square, the name (the typed words marked), the chips and a line, a chevron
  *   OrderRow               a face, the customer, "#0530 · 1 ctn", where it is ("Packed · 2 days", "Buying")
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import type { ComponentChildren, JSX } from 'preact';
-import { initials, orderNo, tintFor } from '../../../core/names.ts';
+import { orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import { countDue, daysSince, recountOf, spotPlace, waitingFor } from '../../../core/store/counts.ts';
 import { letterOf, lookOf, onShelf, orderIn } from '../../../core/store/shelf.ts';
@@ -59,7 +60,7 @@ export function Marked(p: { text: string; q: string }): JSX.Element {
 }
 
 export function ItemRow(p: { b: YardBooks; it: ShelfItem; s: ItemState; q?: string; line?: string; on: () => void; label?: string }): JSX.Element {
-  const ruth = p.b.people.find((x) => x.role === 'manager') || { initials: 'RN', tint: 't2' };
+  const ruth = personFace(p.b.people.find((x) => x.role === 'manager'));
   return (
     <Tap on={p.on} class="sh-irow" label={p.label}>
       <ItemPic it={p.it} size={40} radius={12} />
@@ -92,7 +93,7 @@ export function OrderRow(p: { b: YardBooks; o: YardOrder; what: string; me: stri
   const name = p.o.client.name || 'Walk-in';
   return (
     <Tap on={p.on} class="sh-orow" label={`${name}, ${orderNo(p.o.id)}`}>
-      <Avatar initials={initials(name)} tint={tintFor(name)} size={36} font={12} />
+      <Avatar {...orderFace(p.o, p.b)} size={36} font={12} />
       <span class="sh-orow-t"><span>{name}</span><span class="mono">{`${orderNo(p.o.id)}${p.what ? ' · ' + p.what : ''}`}</span></span>
       <OrderChip b={p.b} o={p.o} me={p.me} now={p.now} />
     </Tap>

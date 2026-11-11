@@ -3,12 +3,13 @@
  * stop by stop, what is back at the yard, a supplier's delivery, a return on its way, and what
  * was checked in today; each row opens its own screen (routes §3). Rules: core/store/arrivals.ts.
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import { Fragment, type JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { arrivals, backNow, coming, nextDue, stopsOf, tripName, type Arrival } from '../../../core/store/arrivals.ts';
 import type { CheckTrip } from '../../../core/store/checkin.ts';
 import type { YardBooks } from '../../../core/store/types.ts';
-import { counted, orderNo } from '../../../core/names.ts';
+import { counted, orderNo, firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -17,7 +18,7 @@ import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { StageSheet } from '../shell/StageSheet.tsx';
 import { books, now } from '../shell/store.ts';
-import { byLogin, byRole, customerFace, faceOf, first, GroupHead } from './parts.tsx';
+import { byLogin, byRole, GroupHead } from './parts.tsx';
 import './comingin.css';
 
 type Show = 'all' | 'back' | 'coming';
@@ -29,7 +30,7 @@ function orderFaces(b: YardBooks, t: CheckTrip): JSX.Element {
   const ids = [...new Set(t.lines.map((l) => l.orderId).filter((x): x is number => x != null))];
   return (
     <span aria-hidden="true" class="ci-faces">
-      {ids.map((id) => { const o = b.orders.find((x) => x.id === id); return o ? <Avatar key={id} {...customerFace(b, o.client.name)} size={26} /> : null; })}
+      {ids.map((id) => { const o = b.orders.find((x) => x.id === id); return o ? <Avatar key={id} {...orderFace(o, b)} size={26} /> : null; })}
     </span>
   );
 }
@@ -37,7 +38,7 @@ function orderFaces(b: YardBooks, t: CheckTrip): JSX.Element {
 /** A Buyer's trip: who, how much, then its stops on a little rail (Owino 9:50 · Kiseka · now · Yard ~11:30). */
 function TripCard(p: { b: YardBooks; a: Arrival; all: Arrival[] }): JSX.Element {
   const t = p.a.trip as CheckTrip, runner = p.b.people.find((x) => x.id === t.runnerId) || null;
-  const name = tripName(first(runner ? runner.name : 'The'), t, p.all), stops = stopsOf(t);
+  const name = tripName(firstWord(runner ? runner.name : 'The'), t, p.all), stops = stopsOf(t);
   const lines = t.lines.filter((l) => !l.notFound).length, at = stops.find((s) => s.state === 'now');
   const yard = p.a.kind === 'back' ? 'now' : p.a.due ? `~${clock(p.a.due)}` : '';
   const said = `${name}: ${counted(lines, 'line')} from ${counted(t.stops.length, 'supplier')}, ${p.a.kind === 'back' ? 'back at the yard' : `buying at ${at ? at.name : 'the last stop'} now`}`
@@ -48,7 +49,7 @@ function TripCard(p: { b: YardBooks; a: Arrival; all: Arrival[] }): JSX.Element 
   return (
     <button type="button" class="ci-trip" aria-label={said} onClick={() => nav.push('in/checkin', { trip: t.id })}>
       <span class="ci-trip-h">
-        {runner && <Avatar {...faceOf(runner)} size={40} />}
+        {runner && <Avatar {...personFace(runner)} size={40} />}
         <span class="ci-t"><span>{name}</span><span class="mono">{`${counted(lines, 'line')} · ${counted(t.stops.length, 'supplier')}`}</span></span>
         {orderFaces(p.b, t)}
         <Chev />
@@ -101,7 +102,7 @@ function Empty(p: { b: YardBooks; checked: number }): JSX.Element {
   return (
     <div class="ci-empty">
       <div class="ci-ghost" aria-hidden="true">
-        <div class="ci-ghost-h"><span>Coming in</span><span>{`fills as ${first(denis ? denis.name : 'the Buyer')} buys`}</span></div>
+        <div class="ci-ghost-h"><span>Coming in</span><span>{`fills as ${firstWord(denis ? denis.name : 'the Buyer')} buys`}</span></div>
         {[1, 0.7, 0.4].map((o) => (
           <div key={o} class="ci-ghost-r" style={{ opacity: o }}><span class="c" /><span class="t"><i /><i /></span><span class="p" /></div>
         ))}
@@ -111,7 +112,7 @@ function Empty(p: { b: YardBooks; checked: number }): JSX.Element {
         <div><h2>Nothing coming in</h2><p>Trips, deliveries and returns land here</p></div>
       </div>
       <div class="ci-empty-end">
-        <button type="button" class="ci-ask" onClick={() => nav.push('shelf/find')}><span><Icon name="plus" size={18} stroke={2.4} /></span>{`Ask ${first(denis ? denis.name : 'the Buyer')} for more`}</button>
+        <button type="button" class="ci-ask" onClick={() => nav.push('shelf/find')}><span><Icon name="plus" size={18} stroke={2.4} /></span>{`Ask ${firstWord(denis ? denis.name : 'the Buyer')} for more`}</button>
         {p.checked > 0 && (
           <button type="button" class="ci-checked" onClick={() => nav.home()}>
             <Icon name="delivered" size={18} stroke={2} /><span>{`${p.checked} checked in today · all in`}</span><Icon name="chevron-right" size={14} stroke={2.4} />
@@ -165,7 +166,7 @@ export function ComingIn(): JSX.Element {
               const t = a.trip as CheckTrip, l = t.lines[0], qty = t.lines.reduce((s, x) => s + x.expected, 0);
               return (
                 <Row key={t.id} lead={<ItemArt name={l ? l.name : ''} size={32} radius={10} />} title={`${t.stops[0].supplierName} · delivery`}
-                  sub={`${qty} ${l ? l.unit : ''} · shelf${moses ? ` · ${first(moses.name)}` : ''}`}
+                  sub={`${qty} ${l ? l.unit : ''} · shelf${moses ? ` · ${firstWord(moses.name)}` : ''}`}
                   pill={a.due ? <span class="ci-time mono">{clock(a.due)}</span> : undefined} on={() => nav.push('in/delivery', { trip: t.id })} />
               );
             })}
@@ -178,8 +179,8 @@ export function ComingIn(): JSX.Element {
               const bags = r.lines.reduce((s, l) => s + l.qty, 0), unit = r.lines[0] ? r.lines[0].unit : '';
               const bringer = o && o.carrier && o.carrier.kind === 'staff' ? o.carrier.name : null;
               return (
-                <Row key={r.id} lead={<Avatar {...customerFace(b, name)} size={32} />} title={`${name} · return`}
-                  sub={`${orderNo(r.orderId)} · ${bags} ${unit}${bringer ? ` · with ${first(bringer)}` : ''}`}
+                <Row key={r.id} lead={<Avatar {...orderFace(o || { client: { name, phone: '' }, customerId: null }, b)} size={32} />} title={`${name} · return`}
+                  sub={`${orderNo(r.orderId)} · ${bags} ${unit}${bringer ? ` · with ${firstWord(bringer)}` : ''}`}
                   pill={a.due ? <span class="ci-time mono amber">{`~${clock(a.due)}`}</span> : undefined} on={() => nav.push('in/return', { order: r.orderId })} />
               );
             })}
@@ -189,7 +190,7 @@ export function ComingIn(): JSX.Element {
           <Section dot="#C9C4BA" title="Checked in today" count={checked.length}>
             {checked.map((a) => {
               const t = a.trip as CheckTrip, runner = b.people.find((x) => x.id === t.runnerId);
-              const name = t.delivery ? `${t.stops[0].supplierName} · delivery` : tripName(first(runner ? runner.name : 'The'), t, all);
+              const name = t.delivery ? `${t.stops[0].supplierName} · delivery` : tripName(firstWord(runner ? runner.name : 'The'), t, all);
               const lines = t.lines.filter((l) => !l.notFound), allIn = lines.every((l) => (l.yard ?? l.expected) >= l.expected);
               const packing = [...new Set(lines.map((l) => l.orderId).filter((x): x is number => x != null))]
                 .map((id) => b.orders.find((o) => o.id === id)).find((o) => o && o.status === 'preparing');
@@ -197,7 +198,7 @@ export function ComingIn(): JSX.Element {
               return (
                 <Row key={t.id} lead={<span aria-hidden="true" class="ci-ok"><Icon name="check" size={16} stroke={2.8} /></span>} title={name}
                   sub={`${clock(a.due as number)} · ${counted(lines.length, 'line')} · ${allIn ? 'all in' : 'some differ'}`}
-                  label={`${name}, checked in ${clock(a.due as number)}${who && who.id !== b.me.id ? ` by ${first(who.name)}` : ''}, ${counted(lines.length, 'line')}, ${allIn ? 'all came' : 'some differ'}.${packing ? ` ${orderNo(packing.id)} is packing` : ''}`}
+                  label={`${name}, checked in ${clock(a.due as number)}${who && who.id !== b.me.id ? ` by ${firstWord(who.name)}` : ''}, ${counted(lines.length, 'line')}, ${allIn ? 'all came' : 'some differ'}.${packing ? ` ${orderNo(packing.id)} is packing` : ''}`}
                   pill={packing ? <span class="in-pill t-info"><Icon name="orders" size={12} stroke={2.2} />{orderNo(packing.id)}</span> : undefined}
                   on={() => (packing ? nav.push('pack/order', { id: packing.id }) : nav.push('in/checkin', { trip: t.id }))} />
               );

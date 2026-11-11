@@ -8,6 +8,7 @@ import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo, plural } from '../../../core/names.ts';
 import { aisleLetter, aisleOf, CANT_WHY, lineQty, offTheTruck } from '../../../core/store/door.ts';
+import { orderFace, yardFace, shortName } from '../../../core/store/faces.ts';
 import { trackTimes } from '../../../core/store/load.ts';
 import { clock, weekday, dayOf } from '../../../core/time.ts';
 import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
@@ -20,7 +21,7 @@ import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
 import { OIcon, type OIconName } from './icons.tsx';
-import { AfterSlide, FlowBar, SheetDock, custFace, manager, seller, shortName, faceOf } from './parts.tsx';
+import { AfterSlide, FlowBar, SheetDock, manager, seller } from './parts.tsx';
 import { notDone as wordIt } from '../../../core/store/errors.ts';
 
 const ICON: (OIconName | 'pin')[] = ['door', 'person-x', 'x-circle', 'pin'];
@@ -48,7 +49,7 @@ export function CantDeliver(p: { id: number }): JSX.Element {
   const place = (o.deliverTo || '').split(',')[0].trim();
   const head = (
     <>
-      <SheetHead face={custFace(b, o)} name={o.client.name} sub={`${orderNo(o.id)} · ${g ? `${firstWord(g.name)}’s order` : 'the order'}`} subMono phone={o.client.phone}
+      <SheetHead face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · ${g ? `${firstWord(g.name)}’s order` : 'the order'}`} subMono phone={o.client.phone}
         onClose={() => nav.back()} style={{ padding: '10px 20px 18px', gap: '14px' }}>
         <Track stage="road" word="Coming back" sub={`${driver} · at ${place}`} waits
           times={{ checking: day(t.checking), road: o.carrier && o.carrier.at != null ? clock(o.carrier.at) : undefined }} />
@@ -90,8 +91,8 @@ export function CantDeliver(p: { id: number }): JSX.Element {
           </div>
         ))}
       </div>
-      <AfterSlide faces={sees.map((x) => faceOf(x))}
-        who={sees.map((x) => firstWord(x!.name)).join(' and ')} what={`Coming back · ${shortName(o.client.name)} ${why ? why.toLowerCase() : '…'}`} />
+      <AfterSlide faces={sees.map((x) => yardFace(b, x))}
+        who={sees.map((x) => firstWord(x!.name)).join(' and ')} what={`Coming back · ${shortName(o)} ${why ? why.toLowerCase() : '…'}`} />
     </FullSheet>
   );
 }

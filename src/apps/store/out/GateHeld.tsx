@@ -9,6 +9,7 @@ import { trackTimes } from '../../../core/store/load.ts';
 import type { YardBooks, YardOrder } from '../../../core/store/types.ts';
 import { clock } from '../../../core/time.ts';
 import { ActBar } from '../../../ui/ActTiles.tsx';
+import { orderFace, yardFace } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
@@ -17,7 +18,7 @@ import { Track } from '../../../ui/Track.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, now } from '../shell/store.ts';
 import { GateLine, GatePic } from './Gate.tsx';
-import { custFace, faceOf, manager, NotPaid, seller, SheetDock } from './parts.tsx';
+import { manager, NotPaid, seller, SheetDock } from './parts.tsx';
 
 const tel = (p: string) => 'tel:+256' + p.replace(/[^0-9]/g, '').replace(/^0/, '').replace(/^256/, '');
 
@@ -28,7 +29,7 @@ export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
     try { await act('askLetGo', o.id, null); toast.show(`Sent to ${r ? firstWord(r.name) : 'Ruth'}`, { kind: 'ok' }); } catch (_e) { /* the bar says it */ }
   };
   const head = (
-    <SheetHead face={custFace(b, o)} name={o.client.name} sub={`${orderNo(o.id)} · today ${clock(o.createdAt ?? n)}`} subMono phone={o.client.phone}
+    <SheetHead face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · today ${clock(o.createdAt ?? n)}`} subMono phone={o.client.phone}
       onClose={() => nav.back()} style={{ padding: '10px 20px 18px', gap: '14px' }}>
       <Track stage="road" word="Ready to collect" sub="Not paid yet · leaves when paid" waits ready
         times={{ checking: t.checking != null ? clock(t.checking) : undefined }} />
@@ -49,7 +50,7 @@ export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
       </div>
       <div class="gt-told">
         {g && <div><Avatar initials={g.initials} tint="me" size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(g.name)}</b> takes the money · <i>told {told}</i></span></div>}
-        {r && <div><Avatar {...faceOf(r)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(r.name)}</b> may let it go · <i>told {told}</i></span></div>}
+        {r && <div><Avatar {...yardFace(b, r)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(r.name)}</b> may let it go · <i>told {told}</i></span></div>}
       </div>
       <div class="gt-acts">
         <ActBar acts={[

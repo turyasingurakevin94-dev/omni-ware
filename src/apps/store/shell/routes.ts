@@ -1,6 +1,6 @@
 /*
  * The Store's routes: one id per board family of the approved canvas
- * (docs/spec/04-screens-store-routes.md §2, 33 ids for 142 boards). The table is
+ * (docs/spec/04-screens-store-routes.md §2, 33 ids for 148 boards: 142 approved, AD01–AD06 added while building). The table is
  * the one place an id, its area, its kind, its params and its boards are written:
  * the shell draws a placeholder for every id an area has not built yet, the push
  * map (pushes.ts) opens only ids that are here, and test/store-shell.test.js checks
@@ -40,7 +40,7 @@ export const ROUTES: Route[] = [
   r('today/close-yard', 'today', 'pushed', '', 'TD16 TD19 TD17 TD27 TD28'),
 
   r('pack', 'pack', 'stage', '{ first? }', 'PK01 PK20 PK08 PK13 PK14 PK21'),
-  r('pack/order', 'pack', 'pushed', '{ id, line? }', 'PK02 PK03 PK18 PK11 PK12 PK04 PK16 PK19 PK05 PK06 PK07 PK15'),
+  r('pack/order', 'pack', 'pushed', '{ id, line? }', 'PK02 PK03 PK18 PK11 PK12 PK04 PK16 PK19 PK05 PK06 PK07 PK15 AD02 AD05 AD06'),
   r('pack/look', 'pack', 'pushed', '{ id }', 'PK09 PK17'),
   r('pack/put-back', 'pack', 'pushed', '{ id }', 'PK10 PK22'),
 
@@ -60,7 +60,7 @@ export const ROUTES: Route[] = [
   r('shelf/ask', 'shelf', 'pushed', '{ key }', 'SH30 SH31'),
 
   r('out/load', 'out', 'stage', '', 'OU01 OU30'),
-  r('out/run', 'out', 'pushed', '{ dir }', 'OU02 OU03 OU17 OU04 OU05 OU06 OU07'),
+  r('out/run', 'out', 'pushed', '{ dir }', 'OU02 OU03 OU17 OU04 OU05 OU06 OU07 AD01 AD03 AD04'),
   r('out/gate', 'out', 'pushed', '{ id? }', 'OU10 OU08 OU12 OU13 OU15 OU16'),
   r('out/gate-code', 'out', 'pushed', '{ id? }', 'OU11 OU09'),
   r('out/road', 'out', 'stage', '', 'OU20 OU14 OU25 OU27'),
@@ -71,11 +71,15 @@ export const ROUTES: Route[] = [
 export const route = (id: string): Route | undefined => ROUTES.find((x) => x.id === id);
 export const isTab = (id: string): boolean => route(id)?.kind === 'tab';
 
-/** The stage sheets in the rail's order (PK01's rail: Coming in · To pack · To load · On the road · Delivered). */
-export const RAIL: { word: string; id: string | null; icon: 'arrive' | 'orders' | 'truck' | 'delivered' | 'hand-over' }[] = [
+/**
+ * The stage sheets in the rail's order (PK01's rail: Coming in · To pack · To load · On the road · Delivered), and
+ * their icons: the one place every stage sheet takes them from. To load is the stack PK01, OU01 and OU20 draw (IN01
+ * draws a shelf); Coming in the shared arrow into a tray (IN01's; PK01 and OU01 draw it a little taller).
+ */
+export const RAIL: { word: string; id: string | null; icon: 'arrive' | 'orders' | 'layers' | 'truck' | 'delivered' }[] = [
   { word: 'Coming in', id: 'in', icon: 'arrive' },
   { word: 'To pack', id: 'pack', icon: 'orders' },
-  { word: 'To load', id: 'out/load', icon: 'hand-over' },
+  { word: 'To load', id: 'out/load', icon: 'layers' },
   { word: 'On the road', id: 'out/road', icon: 'truck' },
   // Delivered has no sheet of its own: On the road's "Done today" lists it (OU20).
   { word: 'Delivered', id: null, icon: 'delivered' },

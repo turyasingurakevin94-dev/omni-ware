@@ -12,6 +12,7 @@ import { packWords, placeOf, yardPin } from '../../../core/store/load.ts';
 import type { YardBooks, YardOrder } from '../../../core/store/types.ts';
 import { counts, destinationOf, isCancelled, moneyHeld, ordersAt } from '../../../core/store/yard.ts';
 import { clock, howLong } from '../../../core/time.ts';
+import { orderFace, whoIs } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
@@ -20,8 +21,7 @@ import { nav } from '../shell/nav.ts';
 import { StageSheet } from '../shell/StageSheet.tsx';
 import { books, flush, me, now, online, side, status } from '../shell/store.ts';
 import { keptFor } from './commit.ts';
-import { OIcon } from './icons.tsx';
-import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, NotPaid, SideTiles, SoftPill, WayIn, custFace, person } from './parts.tsx';
+import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, NotPaid, SideTiles, SoftPill, WayIn } from './parts.tsx';
 import './road.css';
 
 const tel = (p: string) => 'tel:+256' + p.replace(/[^0-9]/g, '').replace(/^0/, '');
@@ -52,7 +52,7 @@ function RouteMap(p: { r: Run; b: YardBooks }): JSX.Element {
 function Driver(p: { b: YardBooks; r: Run }): JSX.Element {
   const b = p.b, n = now.value, waiting = p.r.stops.filter((o) => keptFor('deliver', o.id)), back = p.r.stops.filter(bringBack);
   const done = waiting.length, left = p.r.stops.length - back.length;
-  const dr = person(b, p.r.staffId);
+  const dr = whoIs(b, p.r.staffId);
   const line = back.length ? `${left} ${plural(left, 'stop')} left · ${back.length} coming back`
     : waiting.length ? `${done} of ${p.r.stops.length} · not sent yet` : `${done} of ${p.r.stops.length} ${plural(p.r.stops.length, 'stop')}`;
   return (
@@ -73,7 +73,7 @@ function Driver(p: { b: YardBooks; r: Run }): JSX.Element {
         return (
           <div key={o.id} class="rd-stop">
             <span aria-hidden="true" class="rd-no mono">{i + 1}</span>
-            <Avatar {...custFace(b, o)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
+            <Avatar {...orderFace(o, b)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
             <span class="rd-stop-t"><span>{o.client.name}</span><span class="mono">{`${orderNo(o.id)} · ${cancel ? 'skip ' : ''}${placeName(b, o)}`}</span></span>
             {cancel ? <span class="rd-back"><Icon name="return" size={13} stroke={2.2} />Bring back</span>
               : kept ? <span class="rd-wait" role="img" aria-label="Delivered, not sent yet"><Icon name="clock" size={16} stroke={2.2} /></span>
@@ -123,7 +123,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
       {next.length > 0 && (
         <div class="ou-list">
           <span class="ou-list-k">Next out</span>
-          <Card>{next.map((o) => <MiniOrder key={o.id} h={52} face={custFace(b, o)} name={o.client.name} sub={`${orderNo(o.id)} · ${placeName(b, o)}`} pill={<SoftPill tone="info" icon={<OIcon name="layers" size={12} stroke={2.4} />}>To load</SoftPill>} />)}</Card>
+          <Card>{next.map((o) => <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · ${placeName(b, o)}`} pill={<SoftPill tone="info" icon={<Icon name="layers" size={12} stroke={2.4} />}>To load</SoftPill>} />)}</Card>
         </div>
       )}
       <WayIn icon="layers" word="To load" count={c.packed} on={() => nav.replace('out/load')} />
@@ -150,7 +150,6 @@ export function Road(): JSX.Element {
     <>
       <Tap on={() => undefined} current class="rd-chip on"><span class="rd-chip-d" style={{ background: '#6FDCB0' }} />Out now<b class="mono">{out}</b></Tap>
       <Tap on={() => nav.push('out/gate')} class="rd-chip"><span class="rd-chip-d" style={{ background: '#F5B26B' }} />Ready<b class="mono">{ready.length}</b></Tap>
-      <Tap on={() => undefined} class="rd-chip"><span class="rd-chip-d" style={{ background: '#8D99B5' }} />Done<b class="mono">{c.deliveredToday}</b></Tap>
     </>
   );
   return (
@@ -168,7 +167,7 @@ export function Road(): JSX.Element {
           {ready.length > 0 && !back.length && (
             <Card>{ready.map((o) => (
               <Tap key={o.id} on={() => nav.push('out/gate', { id: o.id })} class="rd-ready">
-                <Avatar {...custFace(b, o)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
+                <Avatar {...orderFace(o, b)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
                 <span class="rd-stop-t"><span>{o.client.name}</span><span class="mono">{`${orderNo(o.id)} · since ${clock(o.stageEnteredAt ?? n)}`}</span></span>
                 {moneyHeld(o) ? <NotPaid /> : <SoftPill tone="good">Paid</SoftPill>}
                 <span aria-hidden="true" class="ld-chev"><Icon name="chevron-right" size={14} stroke={2.4} /></span>

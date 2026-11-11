@@ -19,7 +19,6 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import { StateHead } from './head.tsx';
 import { toSheet } from './parts.tsx';
-import { Glyph } from './glyphs.tsx';
 
 /** The trip a line rides on, and whether it is bought yet. */
 function tripOf(b: YardBooks, o: YardOrder, l: YardLine): { t: Trip; got: boolean } | null {
@@ -73,7 +72,7 @@ export function Waits(p: { o: YardOrder }): JSX.Element {
         );
       })}
       <Tap on={() => (firstTrip ? nav.push('in/checkin', { trip: firstTrip.t.id }) : nav.push('in'))} class="pk-card pk-where pk-go">
-        <span aria-hidden="true" class="pk-where-i pickup"><Glyph name="came-in" size={20} stroke={1.9} /></span>
+        <span aria-hidden="true" class="pk-where-i pickup"><Icon name="came-in" size={20} stroke={1.9} /></span>
         <span class="pk-where-t"><b>Check-in opens it</b><span>then it moves to To pack by itself</span></span>
         <span class="pk-chev"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
       </Tap>

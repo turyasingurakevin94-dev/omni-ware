@@ -6,6 +6,7 @@
  * write it off or keep it. Nothing on the shelf: no report, "Count it now" (DATA-03). Found while packing: the strip
  * goes back to that order, and so does the end ("Back to packing #0552").
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { orderNo } from '../../../core/names.ts';
@@ -52,7 +53,7 @@ function Empty(p: { b: YardBooks; it: ShelfItem; at: number }): JSX.Element {
       {aisle && aisle.days != null && <div class="sh-rp-note"><Icon name="tally" size={16} stroke={2} /><span>{`Aisle ${aisle.letter} last counted `}<span class="mono">{aisle.days}</span>{` ${aisle.days === 1 ? 'day' : 'days'} ago`}</span></div>}
       {came && (
         <Tap on={() => nav.push('pack/order', { id: came.id })} class="sh-rp-alt" label={`Pack ${orderNo(came.id)} short`}>
-          <Avatar initials={came.client.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()} tint="t0" size={34} font={12} />
+          <Avatar {...orderFace(came, b)} size={34} font={12} />
           <span><span>{`One of ${orderNo(came.id)}'s ${(came.lines.find((l) => l.key === it.key) || { receivedQty: 0 }).receivedQty} damaged?`}</span><span>pack it short · Ruth settles</span></span>
           <span aria-hidden="true" class="sh-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>
@@ -60,7 +61,7 @@ function Empty(p: { b: YardBooks; it: ShelfItem; at: number }): JSX.Element {
       {sib && (
         <Tap on={() => nav.replace('shelf/report', { key: sib.key })} class="sh-rp-alt" label={`Report ${sib.name} instead`}>
           <ItemPic it={sib} size={36} radius={10} />
-          <span><span>{`${sib.name}?`}</span><span class="sh-rp-alt-s"><StateChips b={b} it={sib} s={itemState(b, sib, at)} ruth={{ initials: 'RN', tint: 't2' }} /><span>report this one</span></span></span>
+          <span><span>{`${sib.name}?`}</span><span class="sh-rp-alt-s"><StateChips b={b} it={sib} s={itemState(b, sib, at)} ruth={personFace(b.people.find((x) => x.role === 'manager'))} /><span>report this one</span></span></span>
           <span aria-hidden="true" class="sh-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>
       )}
@@ -145,18 +146,19 @@ export function Report(p: { params: Params }): JSX.Element {
   const [first0] = useState(() => foundFor(String(p.params.key)));
   if (!b || !it) return <main class="sh-wait" aria-busy="true" />;
   const at = now.value, shelf = onShelf(b, it.key), found = first0, letter = letterOf(b, it.category) || '?';
+  const foundO = found && found.orderId ? b.orders.find((x) => x.id === found.orderId) : undefined;
   const came = b.orders.find((o) => o.status === 'preparing' && o.lines.some((l) => l.key === it.key && l.receivedQty));
   const rest = nameRest(it.name);
   const head = (
     <ItemHead it={it} title={`Report · ${shortName(it.name)}`} sub={canReport(shelf) ? `${letter} · ${it.category} · ${shelf} on shelf` : `${rest ? rest + ' · ' : ''}${letter} · ${it.category}`} onClose={() => nav.back()}>
       {canReport(shelf) ? (found && found.orderId ? (
         <Tap on={() => nav.push('pack/order', { id: found.orderId as number })} class="sh-rp-from" label={`Found while packing ${orderNo(found.orderId)}`}>
-          <Avatar initials="KC" tint="t0" size={30} font={11} /><span>Found <span class="mono">{clock(found.at)}</span>{` · packing ${orderNo(found.orderId)}`}</span><span aria-hidden="true"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
+          {foundO && <Avatar {...orderFace(foundO, b)} size={30} font={11} />}<span>Found <span class="mono">{clock(found.at)}</span>{` · packing ${orderNo(found.orderId)}`}</span><span aria-hidden="true"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
         </Tap>
       ) : null) : (
         <div class="sh-rp-zero">
           <span><span class="mono">0</span><span>{`${it.unit} on shelf`}</span></span>
-          {came && <span class="sh-rp-in"><Avatar initials={came.client.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()} tint="t0" size={24} font={11} />Order in · <span class="mono">{(came.lines.find((l) => l.key === it.key) || { receivedQty: 0 }).receivedQty}</span>{` came for ${orderNo(came.id)}`}</span>}
+          {came && <span class="sh-rp-in"><Avatar {...orderFace(came, b)} size={24} font={11} />Order in · <span class="mono">{(came.lines.find((l) => l.key === it.key) || { receivedQty: 0 }).receivedQty}</span>{` came for ${orderNo(came.id)}`}</span>}
         </div>
       )}
     </ItemHead>

@@ -8,6 +8,9 @@
  *
  * Rules: core/store/checkin.ts (one check-in rule); the write: W14 checkIn.
  */
+import { letterOf, onShelf } from '../../../core/store/shelf.ts';
+import { firstWord } from '../../../core/names.ts';
+import { personFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { isDataError } from '../../../core/datasource.ts';
@@ -22,7 +25,7 @@ import { nav } from '../shell/nav.ts';
 import { act, books, notDone, now } from '../shell/store.ts';
 import { LineRow, OpenLine } from './CheckLines.tsx';
 import { openNotOnList } from './NotOnList.tsx';
-import { byRole, Card, Done, DoneWho, faceOf, first, FlowCard, GroupHead, HeadPill, InBar, InDock, NavyChip, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
+import { byRole, Card, Done, DoneWho, FlowCard, GroupHead, HeadPill, InBar, InDock, NavyChip, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
 import { takePhoto, type Photo } from './photo.ts';
 
 type Phase = 'count' | 'sending' | 'kept' | 'failed' | 'done';
@@ -36,7 +39,6 @@ const NOTE = (
 );
 
 /** The aisle's letter: its place in the yard's aisle order (A Roofing … L Sanitary). */
-export const letterOf = (b: YardBooks, aisle: string | null): string => (aisle && b.aisles.includes(aisle) ? String.fromCharCode(65 + b.aisles.indexOf(aisle)) : '?');
 
 export function Delivery(p: { trip: string }): JSX.Element {
   const b = books.value as YardBooks, t = b ? tripOf(b, p.trip) : null;
@@ -46,7 +48,9 @@ export function Delivery(p: { trip: string }): JSX.Element {
   if (!b || !t) return <Screen head={<TripHead lead={null} name="Delivery" sub="" onClose={() => nav.home()} />}><p class="in-gone-p">That delivery is gone.</p></Screen>;
   const moses = byRole(b, 'sourcing'), esther = byRole(b, 'accounts'), ruth = byRole(b, 'manager');
   const supplier = t.stops[0].supplierName, short = supplier.split(' ')[0], lines = toCount(t), l = lines[0] as CheckLine | undefined;
-  const item = l ? b.items.find((i) => i.key === l.key) : undefined, aisle = item ? item.category : null, letter = letterOf(b, aisle);
+  const item = l ? b.items.find((i) => i.key === l.key) : undefined, aisle = item ? item.category : null, letter = letterOf(b, aisle) || '?';
+  // The shelf, not the books: what has left for orders not invoiced is off it (shelf.ts onShelf, FACTS 120).
+  const was = item ? onShelf(b, item.key) : 0;
   const n = l ? draft.counts[l.id] : undefined, tornN = torn || 0, good = n != null ? n - tornN : 0;
   const counted = lines.every((x) => draft.counts[x.id] != null);
   const done = lines.every((x) => lineDone(x, draft)) || (counted && tornN > 0);
@@ -56,14 +60,14 @@ export function Delivery(p: { trip: string }): JSX.Element {
     return (
       <Done title="Checked in"
         who={<DoneWho lead={<span aria-hidden="true" class="in-truck sm"><Icon name="truck" size={18} stroke={2} /></span>} name={supplier} sub={`${sees} · ${clock(sentAt)}`} />}
-        chips={<><NavyChip tone="mint" face={faceOf(moses)}>{`${first(moses ? moses.name : 'Sourcing')} told`}</NavyChip>{photo && <NavyChip tone="glass" face={faceOf(esther)}>{`${first(esther ? esther.name : 'Accounts')} has the note`}</NavyChip>}</>}>
+        chips={<><NavyChip tone="mint" face={personFace(moses)}>{`${firstWord(moses ? moses.name : 'Sourcing')} told`}</NavyChip>{photo && <NavyChip tone="glass" face={personFace(esther)}>{`${firstWord(esther ? esther.name : 'Accounts')} has the note`}</NavyChip>}</>}>
         <FlowCard head="Where it went" pics={Array.from({ length: 5 }, (_, i) => <span key={i} class="in-bagpic"><BagArt size={26} /></span>)} n={`+${good}`} mint
           to={<span class="in-to white"><span>{letter}</span>{aisle}</span>} label={`${good} ${l.unit}s to the shelf, aisle ${letter}`}
-          note={`On the shelf now · ${b.people.filter((x) => x.role === 'sales').slice(0, 2).map((x) => first(x.name)).join(' and ')} can sell it`} />
+          note={`On the shelf now · ${b.people.filter((x) => x.role === 'sales').slice(0, 2).map((x) => firstWord(x.name)).join(' and ')} can sell it`} />
         <Steps steps={[
-          { lead: 'check', state: 'done', title: 'On the shelf', sub: `${clock(sentAt)} · aisle ${letter} · ${first(moses ? moses.name : 'Sourcing')} told` },
-          ...(tornN ? [{ lead: ruth ? ruth.initials : 'RN', state: 'now' as const, title: `${first(ruth ? ruth.name : 'Ruth')} decides the ${tornN} torn`, sub: 'set aside · never on the shelf' }] : []),
-          { lead: esther ? esther.initials : 'EA', state: tornN ? 'next' : 'now', title: `${first(esther ? esther.name : 'Accounts')} checks the note`, sub: `against ${short}'s bill · no money here` },
+          { lead: 'check', state: 'done', title: 'On the shelf', sub: `${clock(sentAt)} · aisle ${letter} · ${firstWord(moses ? moses.name : 'Sourcing')} told` },
+          ...(tornN ? [{ lead: ruth ? ruth.initials : 'RN', state: 'now' as const, title: `${firstWord(ruth ? ruth.name : 'Ruth')} decides the ${tornN} torn`, sub: 'set aside · never on the shelf' }] : []),
+          { lead: esther ? esther.initials : 'EA', state: tornN ? 'next' : 'now', title: `${firstWord(esther ? esther.name : 'Accounts')} checks the note`, sub: `against ${short}'s bill · no money here` },
         ]} />
       </Done>
     );
@@ -84,8 +88,8 @@ export function Delivery(p: { trip: string }): JSX.Element {
   const locked = phase === 'sending' || phase === 'kept';
   const came = l && n != null ? `Came in · ${n} ${l.unit}${tornN ? ` · ${tornN} torn` : ''}` : 'Came in';
   const second = phase === 'kept' ? <Updating at={clock(b.at)} />
-    : tornN ? <Sees face={faceOf(ruth)} who={first(ruth ? ruth.name : 'Ruth')} what={`${tornN} torn`} />
-      : <Sees face={faceOf(esther)} who={first(esther ? esther.name : 'Accounts')} what="the delivery note" />;
+    : tornN ? <Sees face={personFace(ruth)} who={firstWord(ruth ? ruth.name : 'Ruth')} what={`${tornN} torn`} />
+      : <Sees face={personFace(esther)} who={firstWord(esther ? esther.name : 'Accounts')} what="the delivery note" />;
   const due = t.stops[0].dueAt;
   const move = phase === 'sending' ? { kind: 'slide' as const, props: { label: 'Sending…', onCommit: () => undefined, state: 'sending' as const } }
     : phase === 'kept' ? { kind: 'wait' as const, label: 'Waiting to send' }
@@ -96,7 +100,7 @@ export function Delivery(p: { trip: string }): JSX.Element {
       sub={`at the yard ${clock(t.stops[0].collectedAt ?? now.value)} · ${lines.length} ${lines.length === 1 ? 'line' : 'lines'}`}
       onScan={() => { if (!locked) nav.push('shelf/scan', { then: 'checkin' }); }} onClose={() => nav.back()} closeLabel="Close: back to Coming in"
       chips={<>
-        <HeadPill face={faceOf(moses)}>{`From ${first(moses ? moses.name : 'Sourcing')} · Sourcing`}</HeadPill><span class="in-flex" />
+        <HeadPill face={personFace(moses)}>{`From ${firstWord(moses ? moses.name : 'Sourcing')} · Sourcing`}</HeadPill><span class="in-flex" />
         <button type="button" class="in-extra" disabled={locked} onClick={() => openNotOnList(t.id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
       </>} />
   );
@@ -104,7 +108,7 @@ export function Delivery(p: { trip: string }): JSX.Element {
     <div class="in-foot">
       <InBar kept={phase === 'kept'} what="counts" retry={phase === 'failed' ? () => { void send(); } : undefined} />
       <InDock ring={{ done: lines.filter((x) => draft.counts[x.id] != null).length, of: lines.length, amber: tornN ? 1 : 0 }}
-        lines={<><Sees face={faceOf(moses)} who={first(moses ? moses.name : 'Sourcing')} what={phase === 'kept' ? `Coming${due ? ` · ${clock(due)}` : ''}` : came} />{second}</>} move={move} />
+        lines={<><Sees face={personFace(moses)} who={firstWord(moses ? moses.name : 'Sourcing')} what={phase === 'kept' ? `Coming${due ? ` · ${clock(due)}` : ''}` : came} />{second}</>} move={move} />
     </div>
   );
   const counting = phase === 'count' || phase === 'failed';
@@ -113,7 +117,7 @@ export function Delivery(p: { trip: string }): JSX.Element {
       <GroupHead icon="rack" title="The shelf" right={<span class="mono">{`${lines.length} ${lines.length === 1 ? 'line' : 'lines'} · refill`}</span>} />
       {l && !counting && <Card><LineRow l={l} count={n} sub={`${n} ${l.unit} counted`} /></Card>}
       {l && counting && torn == null && (
-        <OpenLine l={l} nth={1} of={1} count={n} why={draft.whys[l.id]} ruth={faceOf(ruth)} ruthName={first(ruth ? ruth.name : 'Ruth')} denisName={short}
+        <OpenLine l={l} nth={1} of={1} count={n} why={draft.whys[l.id]} ruth={personFace(ruth)} ruthName={firstWord(ruth ? ruth.name : 'Ruth')} denisName={short}
           onCount={(v) => setDraft({ counts: { [l.id]: v }, whys: {} })} onWhy={(w) => setDraft({ counts: { ...draft.counts }, whys: { [l.id]: w } })}
           aside={n != null ? <button type="button" class="in-anytorn" aria-label="Some torn? Set them apart" onClick={() => setTorn(1)}><Icon name="damaged" size={16} stroke={2} />Torn?</button> : null} />
       )}
@@ -133,12 +137,12 @@ export function Delivery(p: { trip: string }): JSX.Element {
             <span class="in-flex in-torn-l">{`Torn ${l.unit}s`}</span>
             <Stepper value={tornN} unit="" what={`torn ${l.unit}s`} max={n} onChange={setTorn} />
           </div>
-          <span class="in-by"><Avatar {...faceOf(ruth)} size={20} />{`${first(ruth ? ruth.name : 'Ruth')} decides the ${tornN} torn · never on the shelf`}</span>
+          <span class="in-by"><Avatar {...personFace(ruth)} size={20} />{`${firstWord(ruth ? ruth.name : 'Ruth')} decides the ${tornN} torn · never on the shelf`}</span>
         </div>
       )}
       <button type="button" class="in-note" disabled={locked} onClick={async () => setPhoto(await takePhoto(now.value))}>
         <span aria-hidden="true" class="in-note-pic">{photo && photo.url ? <img src={photo.url} alt="" width={48} height={48} /> : NOTE}</span>
-        <span class="in-line-t"><span>Their delivery note</span><span>{photo ? `photo taken ${clock(photo.at)} · ${first(esther ? esther.name : 'Accounts')} gets it` : `take a photo · ${first(esther ? esther.name : 'Accounts')} gets it`}</span></span>
+        <span class="in-line-t"><span>Their delivery note</span><span>{photo ? `photo taken ${clock(photo.at)} · ${firstWord(esther ? esther.name : 'Accounts')} gets it` : `take a photo · ${firstWord(esther ? esther.name : 'Accounts')} gets it`}</span></span>
         {photo ? <span role="img" aria-label="Photo taken" class="in-mark ok"><Icon name="check" size={12} stroke={3.2} /></span> : <span class="nl-cam"><Icon name="camera" size={18} stroke={2} /></span>}
       </button>
       {counting ? (
@@ -148,12 +152,12 @@ export function Delivery(p: { trip: string }): JSX.Element {
           <span aria-hidden="true" class="ci-chev"><Icon name="chevron-right" size={14} stroke={2.2} /></span>
         </button>
       ) : item && l && (
-        <div class="in-card in-card16 in-shelfbar" role="img" aria-label={`Aisle ${letter}, ${(aisle || '').toLowerCase()}: the shelf goes from ${item.books} to ${item.books + good} ${l.unit}s`}>
+        <div class="in-card in-card16 in-shelfbar" role="img" aria-label={`Aisle ${letter}, ${(aisle || '').toLowerCase()}: the shelf goes from ${was} to ${was + good} ${l.unit}s`}>
           <div class="in-shelfbar-h">
             <span aria-hidden="true" class="in-letter s">{letter}</span><span class="t">{`Aisle ${letter} · ${aisle}`}</span>
-            <span class="mono was">{item.books}</span><Icon name="arrow-right" size={14} stroke={2.2} /><span class="mono now">{item.books + good}</span><span class="u">{l.unit}</span>
+            <span class="mono was">{was}</span><Icon name="arrow-right" size={14} stroke={2.2} /><span class="mono now">{was + good}</span><span class="u">{l.unit}</span>
           </div>
-          <span class="in-torn-bar"><i class="g" style={{ flex: item.books }} /><i style={{ flex: good }} /></span>
+          <span class="in-torn-bar"><i class="g" style={{ flex: was }} /><i style={{ flex: good }} /></span>
           <span class="in-shelfbar-w"><span>on the shelf</span><span>{`+${good} from ${short}`}</span></span>
         </div>
       )}

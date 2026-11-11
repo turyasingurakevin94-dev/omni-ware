@@ -7,6 +7,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo, phoneText } from '../../../core/names.ts';
+import { orderFace, yardFace, shortName } from '../../../core/store/faces.ts';
 import { hiredPhoneOk, pastHired, type Direction, type Hired } from '../../../core/store/load.ts';
 import type { YardBooks } from '../../../core/store/types.ts';
 import { dayLabel, daysApart, dayOf, weekday } from '../../../core/time.ts';
@@ -14,7 +15,7 @@ import { Icon } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { now, side } from '../shell/store.ts';
-import { AfterSlide, custFace, seller, shortName } from './parts.tsx';
+import { AfterSlide, seller } from './parts.tsx';
 
 export interface HiredPick { name: string; phone: string; what: string }
 
@@ -62,8 +63,8 @@ function HiredSheet(p: { d: Direction; b: YardBooks; chosen: HiredPick | null; o
       </div>
       <button type="button" class="hd-new" onClick={() => toast.show('Someone new: not drawn yet', { kind: 'warn' })}><Icon name="plus" size={16} stroke={2.4} />Someone new · name, plate, phone</button>
       {sel && <div class="hd-wa"><Icon name="whatsapp" size={18} stroke={1.9} /><span>{firstWord(sel.name)} gets the drop on WhatsApp</span></div>}
-      <AfterSlide ground="#FFFFFF" faces={[...(from ? [{ initials: from.initials, tint: 'me' as const }] : []), ...p.d.drops.map((x) => custFace(p.b, x.o))]}
-        who={[from ? firstWord(from.name) : null, ...p.d.drops.map((x) => shortName(x.o.client.name))].filter(Boolean).join(' and ')} what={`On the road · ${sel ? firstWord(sel.name) : 'him'} (hired)`} />
+      <AfterSlide ground="#FFFFFF" faces={[...(from ? [yardFace(p.b, from)] : []), ...p.d.drops.map((x) => orderFace(x.o, p.b))]}
+        who={[from ? firstWord(from.name) : null, ...p.d.drops.map((x) => shortName(x.o))].filter(Boolean).join(' and ')} what={`On the road · ${sel ? firstWord(sel.name) : 'him'} (hired)`} />
     </LightSheet>
   );
 }

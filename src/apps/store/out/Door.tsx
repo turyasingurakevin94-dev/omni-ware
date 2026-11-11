@@ -15,6 +15,7 @@ import { billAt, lineQty, noPhotoWhy, offTheTruck, receiver } from '../../../cor
 import type { DoorProof } from '../../../core/store/source.ts';
 import type { YardBooks, YardOrder } from '../../../core/store/types.ts';
 import { clock, weekday } from '../../../core/time.ts';
+import { orderFace, yardFace, shortName } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
@@ -26,7 +27,7 @@ import { books, isDemo, now } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
 import { OIcon, type OIconName } from './icons.tsx';
-import { AfterSlide, FlowBar, SheetDock, custFace, manager, seller, shortName } from './parts.tsx';
+import { AfterSlide, FlowBar, SheetDock, manager, seller } from './parts.tsx';
 import './door.css';
 
 /** The drawn scene: the goods at the door (the demo's camera). */
@@ -46,7 +47,7 @@ const Corners = (p: { top: boolean }) => (
 );
 
 /** The words "Kato · Ntinda site" for an order at its door. */
-const whereWords = (o: YardOrder) => `${shortName(o.client.name)} · ${(o.deliverTo || '').split(',')[0].trim()}`;
+const whereWords = (o: YardOrder) => `${shortName(o)} · ${(o.deliverTo || '').split(',')[0].trim()}`;
 
 const NO_ICON: (OIconName | 'person')[] = ['person', 'camera-off', 'moon', 'battery'];
 
@@ -68,7 +69,7 @@ function NoPhoto(p: { b: YardBooks; o: YardOrder; onGo: (why: string) => void })
           );
         })}
       </div>
-      <AfterSlide faces={[...(g ? [{ initials: g.initials, tint: 'me' as const }] : []), ...(r ? [{ initials: r.initials, tint: r.tint === 'me' ? 't4' as const : r.tint }] : [])]}
+      <AfterSlide faces={[...(g ? [yardFace(p.b, g)] : []), ...(r ? [yardFace(p.b, r)] : [])]}
         who={[g, r].filter(Boolean).map((x) => firstWord(x!.name)).join(' and ')} what={why ? `No photo · ${short}` : 'No photo · pick why'} />
       <button type="button" class="np-after" onClick={sheet.close}><Icon name="camera" size={17} stroke={2} />Take the photo after all</button>
       <div class="np-dock">
@@ -112,9 +113,9 @@ export function Door(p: { id: number }): JSX.Element {
   if (c.phase === 'done') {
     const at = shot ? shot.at : n, bill = billAt({ ...o, deliveredAt: at });
     return (
-      <Done mark="check" title="Delivered" chip={{ photo: !(shot && shot.why), face: custFace(b, o), name: whereWords(o), sub: `${orderNo(o.id)} · ${shot && shot.why ? 'no photo' : `photo ${clock(at)}`}` }}
-        sees={[...(g ? [{ face: { initials: g.initials, tint: 'me' as const }, who: firstWord(g.name), what: 'Delivered · at the door' }] : []),
-          ...(r ? [{ face: { initials: r.initials, tint: r.tint === 'me' ? 't4' as const : r.tint }, who: firstWord(r.name), what: shot && shot.why ? `Delivered · ${shot.why}` : 'Delivered · photo' }] : [])]}
+      <Done mark="check" title="Delivered" chip={{ photo: !(shot && shot.why), face: orderFace(o, b), name: whereWords(o), sub: `${orderNo(o.id)} · ${shot && shot.why ? 'no photo' : `photo ${clock(at)}`}` }}
+        sees={[...(g ? [{ face: yardFace(b, g), who: firstWord(g.name), what: 'Delivered · at the door' }] : []),
+          ...(r ? [{ face: yardFace(b, r), who: firstWord(r.name), what: shot && shot.why ? `Delivered · ${shot.why}` : 'Delivered · photo' }] : [])]}
         next={[
           { icon: 'delivered', title: 'Delivered', sub: `at the door ${clock(at)}${shot && shot.why ? '' : ' · photo kept'}` },
           { icon: 'receipt', title: 'The bill', sub: `goes by itself after 24 h${bill ? ` · ${weekday(bill)} ${clock(bill)}` : ''}` },
@@ -134,7 +135,7 @@ export function Door(p: { id: number }): JSX.Element {
       </div>
       <div class="dr-top">
         <span class="dr-who">
-          <Avatar {...custFace(b, o)} size={34} font={12} style={{ letterSpacing: '-.02em' }} />
+          <Avatar {...orderFace(o, b)} size={34} font={12} style={{ letterSpacing: '-.02em' }} />
           <span class="dr-who-t"><span>{`At the door · ${(o.deliverTo || '').split(',')[0].trim()}`}</span><span class="mono">{`${orderNo(o.id)} · arrived ${arrived}`}</span></span>
         </span>
         <button type="button" aria-label="Close the camera" class="dr-x" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
@@ -149,7 +150,7 @@ export function Door(p: { id: number }): JSX.Element {
             </button>
           ))}
         </div>
-        <div class="dr-to"><Avatar {...custFace(b, o)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span>{`${to} receives it`}</span></div>
+        <div class="dr-to"><Avatar {...orderFace(o, b)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span>{`${to} receives it`}</span></div>
         {c.phase === 'kept' || c.phase === 'failed' ? (
           <div class="dr-end">
             <span class={cx('dr-hint', c.phase === 'kept' && 'amber')}><Icon name={c.phase === 'kept' ? 'clock' : 'check'} size={13} stroke={2.2} />{c.phase === 'kept' ? 'Delivered sends by itself when the signal is back' : 'The photo is kept'}</span>

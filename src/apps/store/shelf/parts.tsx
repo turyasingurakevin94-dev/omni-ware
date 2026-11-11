@@ -16,6 +16,7 @@
  */
 import { Fragment, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { firstWord } from '../../../core/names.ts';
 import { clock, dayLabel, dayOf, weekday } from '../../../core/time.ts';
 import type { Ms } from '../../../core/types.ts';
 import type { Moved as Row } from '../../../core/store/shelf.ts';
@@ -93,7 +94,6 @@ const ROW: Record<Row['kind'], [IconName, string, string]> = {
 };
 const ago = (at: Ms, now: Ms): string => (now - at < 3600e3 ? 'just now' : whenSaid(at, now));
 const minus = (n: number): string => (n < 0 ? `−${-n}` : n > 0 ? `+${n}` : '0');
-const first = (name: string): string => name.split(' ')[0];
 
 /** One row's words: what, and when (WORD-09: "Order #0552 · Kato"). */
 function words(r: Row, now: Ms, ruth: string): [string, string] {
@@ -105,8 +105,8 @@ function words(r: Row, now: Ms, ruth: string): [string, string] {
     case 'count': {
       const aisle = /^Aisle (\w)/.exec(r.note);
       const asked = r.asked != null ? `blind · ${clock(r.asked)} · ` : '';
-      return aisle ? [`Counted · aisle ${aisle[1]} · ${first(r.who)}`, `${ruth} accepted · ${whenSaid(r.at, now)}`]
-        : [`Counted · ${first(r.who)} · ${ruth} accepted`, `${asked}${ago(r.at, now)}`];
+      return aisle ? [`Counted · aisle ${aisle[1]} · ${firstWord(r.who)}`, `${ruth} accepted · ${whenSaid(r.at, now)}`]
+        : [`Counted · ${firstWord(r.who)} · ${ruth} accepted`, `${asked}${ago(r.at, now)}`];
     }
     case 'writeoff': return [`Written off · ${r.note} · ${ruth}`, `${ago(r.at, now)} · you reported ${r.asked != null ? clock(r.asked) : ''}`];
     case 'kept': return [`Report · kept on the shelf · ${ruth}`, `${ago(r.at, now)} · you reported ${r.asked != null ? clock(r.asked) : ''}`];

@@ -62,6 +62,12 @@ const S = {
   checking: "<path d='M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 14l2 2 4-4'/>",
   cart: "<path d='M3 4h2.5l2.2 11h10.6l2-8H6.3'/><circle cx='9' cy='19' r='1.5'/><circle cx='17' cy='19' r='1.5'/>",
   delivered: "<path d='M3.5 7.5 12 3l8.5 4.5V12M3.5 7.5 12 12l8.5-4.5M12 12v9l-8.5-4.5v-9M15 18l2 2 4-4'/>",
+  /** Two sheets: a copy of another order (the Store's PK09). */
+  copy: "<rect x='8' y='8' width='12' height='12' rx='2'/><path d='M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3'/>",
+  /** An arrow into a tray: came in at the gate (the Store's PK01 rail, PK02, PK13). */
+  'came-in': "<path d='M12 3v11M7.5 9.5 12 14l4.5-4.5M4 14v6h16v-6'/>",
+  /** A stack: the Store's To load (its rail, PK01 · OU01 · OU20). */
+  layers: "<path d='M12 3 3 7.5 12 12l9-4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5'/>",
   clock: "<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>",
   hourglass: "<path d='M7 3h10M7 21h10M8 3v3.5a4 4 0 0 0 1.6 3.2L12 11.5l2.4-1.8A4 4 0 0 0 16 6.5V3M8 21v-3.5a4 4 0 0 1 1.6-3.2L12 12.5l2.4 1.8a4 4 0 0 1 1.6 3.2V21'/>",
   warning: "<path d='M12 4 2.8 19.5h18.4zM12 10v4M12 17h.01'/>",

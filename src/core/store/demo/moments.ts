@@ -91,6 +91,14 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     stamp(o, 'pending_delivery', t('13:20'));
   }],
   [1510, (b) => {
+    // By 15:10 (TD03: 3 ready) the three jobs TD01 still lists are done, and stay done at 17:30: the bent sheets reported
+    // 10:50 (Ruth wrote them off 12:30), #0548's return taken back 11:40, and aisle C counted, with Ruth since 14:40.
+    b.reports.unshift({ id: 'rep-bent', key: 'p-is28', productId: 'p-is28', variantIdx: null, name: 'Iron sheet G28 · 3m', qty: 3, why: 'damaged', photo: 'demo/report.jpg',
+      by: 'u-mk', byName: 'Musa Kiggundu', status: 'written_off', decidedAt: t('12:30'), createdAt: t('10:50') });
+    b.counts.unshift({ id: 'cnt-c', aisle: 'Aisle C · Fasteners', place: 'aisle:fasteners', countedBy: 'u-mk', countedByName: 'Musa Kiggundu', lines: [], missing: [],
+      status: 'sent', decidedAt: null, createdAt: t('14:40') });
+    const r = b.returns.find((x) => x.id === 'ret-0548');
+    if (r) { r.status = 'accepted'; r.decidedAt = t('11:40'); }
     deliver(byId(b, 552), 'Kato Construction', t('14:05'), false);
     b.orders.push(order(559, 'awaiting_goods', t('13:50'), {
       client: { name: 'Lubowa Builders', phone: '0774 120 556' }, customerId: 'c-lub', deliverTo: 'Lubowa', lines: [line(0, 'p-tim', 10, { supplierId: 's-katwe' })],
@@ -100,13 +108,6 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     }));
   }],
   [1730, (b) => {
-    // By 17:30 the bent sheets are reported (Ruth wrote them off) and aisle C's count is with Ruth, sent 16:40 (TD16).
-    b.reports.unshift({ id: 'rep-bent', key: 'p-is28', productId: 'p-is28', variantIdx: null, name: 'Iron sheet G28 · 3m', qty: 3, why: 'damaged', photo: 'demo/report.jpg',
-      by: 'u-mk', byName: 'Musa Kiggundu', status: 'written_off', decidedAt: t('12:30'), createdAt: t('10:50') });
-    b.counts.unshift({ id: 'cnt-c', aisle: 'Aisle C · Fasteners', place: 'aisle:fasteners', countedBy: 'u-mk', countedByName: 'Musa Kiggundu', lines: [], missing: [],
-      status: 'sent', decidedAt: null, createdAt: t('16:40') });
-    const r = b.returns.find((x) => x.id === 'ret-0548');
-    if (r) { r.status = 'accepted'; r.decidedAt = t('11:40'); }
     checkIn(b, ['TRIP-1017C-1'], t('16:10'));
     [549, 546, 559].forEach((id, i) => {
       const o = byId(b, id);

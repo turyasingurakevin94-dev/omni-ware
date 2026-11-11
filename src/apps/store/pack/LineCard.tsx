@@ -18,7 +18,6 @@ import { now } from '../shell/store.ts';
 import type { Busy } from './Pack.tsx';
 import { NotDoneCard, TopNotice, WhereCard } from './parts.tsx';
 import { Boxes } from './pics.tsx';
-import { Glyph } from './glyphs.tsx';
 
 const no = (b: YardBooks, l: YardLine, o: YardOrder) => `Line ${o.lines.indexOf(l) + 1} of ${o.lines.length}`;
 
@@ -89,7 +88,7 @@ export function LineView(p: LineViewProps): JSX.Element {
       <div class="pk-card pk-line">
         <div class="pk-line-h">
           <AisleTile b={b} l={l} />
-          <span class="pk-line-e"><span>{`${no(b, l, o)}${a ? ` · aisle ${a.letter}` : ''}`}</span>{came && <span class="pk-came"><Glyph name="came-in" size={14} stroke={2.2} />{came}</span>}</span>
+          <span class="pk-line-e"><span>{`${no(b, l, o)}${a ? ` · aisle ${a.letter}` : ''}`}</span>{came && <span class="pk-came"><Icon name="came-in" size={14} stroke={2.2} />{came}</span>}</span>
         </div>
         <Tap on={() => nav.push('shelf/item', { key: l.key })} label={`${l.name}: open the item`} class={cx('pk-pic', stamp && 'stamped')}>
           {it && it.image ? <img src={it.image} alt="" /> : <Duo i={c.i} size={84} color={c.ink} />}

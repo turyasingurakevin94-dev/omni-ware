@@ -12,6 +12,7 @@
  *   billAt(o)              the bill goes by itself 24 h after it was delivered
  *   receiver(o)            who takes it at the door ("Kato's site manager")
  */
+import { aisleLetter as letterOfAisle } from './counts.ts';
 import { firstWord } from '../names.ts';
 import type { Ms } from '../types.ts';
 import type { YardBooks, YardLine, YardOrder } from './types.ts';
@@ -25,16 +26,13 @@ export function noPhotoWhy(o: YardOrder): string[] {
 
 export const CANT_WHY = ['Closed', 'Nobody there', 'Refused', 'Wrong place'] as const;
 
-export function aisleLetter(b: YardBooks, key: string): string | null {
-  const it = b.items.find((x) => x.key === key);
-  const i = it && it.category ? b.aisles.indexOf(it.category) : -1;
-  return i >= 0 ? String.fromCharCode(65 + i) : null;
-}
-
 export const aisleOf = (b: YardBooks, key: string): string | null => {
   const it = b.items.find((x) => x.key === key);
   return it ? it.category : null;
 };
+
+/** An item's aisle letter, by its key (counts.ts aisleLetter); null: no aisle yet. */
+export const aisleLetter = (b: YardBooks, key: string): string | null => letterOfAisle(b, aisleOf(b, key)) || null;
 
 export const offTheTruck = (o: YardOrder): YardLine[] => o.lines.filter((l) => !l.dropped);
 

@@ -99,6 +99,23 @@ t.check(specKinds.every((k) => PUSH_KINDS.includes(k)), `every push kind of rout
   const gz = zlib.gzipSync(Buffer.from(html), { level: 9 }).length;
   t.check(gz <= 200 * 1024, `next/store.html within the 200 KB budget: ${(gz / 1024).toFixed(1)} KB compressed`);
   t.check(fs.existsSync(path.join(ROOT, 'next/store-demo.js')), 'next/store-demo.js is committed');
+  // Per-area loading (shell/areas.ts, spec 07 §4): Pack, Goods in, Shelf and Out each a file beside the page,
+  // named by it, of its build, within the 60 KB budget; the page keeps the shell and Today, the demo stays apart.
+  const tool = require(path.join(ROOT, 'tools/build-app.js'));
+  const lazy = tool.ROLES.store.lazy, named = ((html.match(/<meta name="ow-files" content="([^"]*)">/) || [])[1] || '').split(/\s+/).filter(Boolean);
+  t.check(['pack', 'in', 'shelf', 'out'].every((a) => lazy.includes(a)) && !lazy.includes('today'), `Pack, Goods in, Shelf and Out are lazy, Today is in the page (${lazy.join(', ')})`);
+  t.check(lazy.every((a) => named.includes(`store-${a}.js`)) && !named.includes('store-demo.js'), `the page names each area's file, never the demo (${named.join(', ')})`);
+  const storeBuild = (html.match(/window\.owStoreBuild="(\w+)"/) || [])[1];
+  for (const f of named) {
+    const text = fs.existsSync(path.join(ROOT, 'next', f)) ? fs.readFileSync(path.join(ROOT, 'next', f), 'utf8') : '';
+    const g = zlib.gzipSync(Buffer.from(text), { level: 9 }).length;
+    t.check(text.startsWith('// GENERATED from src/apps/store/'), `next/${f} is committed, built from its area`);
+    t.check(g <= tool.TAB_BUDGET, `next/${f} within the 60 KB budget: ${(g / 1024).toFixed(1)} KB compressed`);
+    t.check(!!storeBuild && text.includes(`"${storeBuild}")`), `next/${f} is of the page's build (${storeBuild})`);
+    t.check(!text.includes('Mukasa Hardware'), `next/${f} carries no sample day`);
+  }
+  const areaSrc = fs.readFileSync(path.join(ROOT, 'src/apps/store/shell/screens.ts'), 'utf8');
+  t.check(!/from '\.\.\/(pack|in|shelf|out)\//.test(areaSrc), 'the shell imports no lazy area (they load by route id, shell/areas.ts)');
   t.check(fs.readFileSync(path.join(ROOT, 'store.html'), 'utf8').split('\n')[0].indexOf('GENERATED') < 0, 'store.html, the live app, is untouched (not a built page)');
   let esb = null;
   try { esb = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { esb = null; }

@@ -6,6 +6,7 @@
  * Labels carry "OW1:<item key>" (store.html:5806 shelf labels). The phone reads them with the browser's
  * BarcodeDetector where it has one; the demo reads FACTS' label A-014, Iron sheet G28.
  */
+import { personFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { clock } from '../../../core/time.ts';
@@ -84,7 +85,7 @@ export function Scan(_p: { params: Params }): JSX.Element {
           <span aria-hidden="true" class="sh-sc-grab" />
           <div class="sh-sc-it">
             <span class="sh-sc-pic"><ItemPic it={it} size={48} radius={14} /><span aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span></span>
-            <span><span>{it.name}</span><span><StateChips b={b} it={it} s={itemState(b, it, at)} ruth={{ initials: 'RN', tint: 't2' }} /><span>{`${letterOf(b, it.category) || '?'} · ${it.category || 'No aisle yet'}`}</span></span></span>
+            <span><span>{it.name}</span><span><StateChips b={b} it={it} s={itemState(b, it, at)} ruth={personFace(b.people.find((x) => x.role === 'manager'))} /><span>{`${letterOf(b, it.category) || '?'} · ${it.category || 'No aisle yet'}`}</span></span></span>
           </div>
           {found && (
             <button type="button" class="sh-sc-found" onClick={() => nav.push('shelf/report', { key: it.key })}>

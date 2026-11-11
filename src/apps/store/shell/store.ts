@@ -19,6 +19,7 @@ import { Held, type HeldNow, type HeldWrite } from '../../../core/store/held.ts'
 import type { StoreSource, WriteName } from '../../../core/store/source.ts';
 import { storeSupabase } from '../../../core/store/supabase.ts';
 import { toast } from '../../../ui/toast.tsx';
+import { areaOf, loadArea } from './areas.ts';
 import { nav, top } from './nav.ts';
 import { pushRoute } from './pushes.ts';
 import type { StoreSession, YardBooks, YardSide } from '../../../core/store/types.ts';
@@ -126,7 +127,9 @@ async function ready(s: StoreSession): Promise<void> {
   now.value = src().now();
   phase.value = 'checking';
   await openOutbox(s.userId);
-  await refresh(true);
+  // A reload that reopens a screen of a lazy area (shell/areas.ts): its file with the books, so it draws at once.
+  const a = areaOf(top.peek().id);
+  await Promise.all([refresh(true), a ? loadArea(a).catch(() => undefined) : undefined]);
   if (books.value && session.value && !session.value.staffId && isDemo) session.value = { ...session.value, staffId: books.value.me.id };
   // No yard and no signal: "Could not reach the shop" (TD22). A refused read: Today says so (TD07).
   phase.value = books.value || online.value ? 'ready' : 'no-reach';

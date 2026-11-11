@@ -4,6 +4,8 @@
  * "Ask Ruth": she keeps it on the shelf or sends it back (IM-17). Not one of ours: a new item for
  * Sourcing, with a photo. The write: W15 notOnList.
  */
+import { firstWord } from '../../../core/names.ts';
+import { personFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { EXTRA_WHY } from '../../../core/store/checkin.ts';
@@ -16,7 +18,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
-import { byRole, faceOf, first } from './parts.tsx';
+import { byRole } from './parts.tsx';
 import { takePhoto, type Photo } from './photo.ts';
 import './notonlist.css';
 
@@ -46,14 +48,14 @@ function Sheet(p: { tripId: string }): JSX.Element {
         name: pick ? pick.name : q.trim(), qty, unit, why, newItem: !pick, photo: photo ? photo.blob : null,
       });
       sheet.close();
-      toast.show(`Asked ${first(ruth ? ruth.name : 'Ruth')} · ${(pick ? pick.name : q).split(' ').slice(0, 2).join(' ').toLowerCase()}`, { kind: 'ok' });
+      toast.show(`Asked ${firstWord(ruth ? ruth.name : 'Ruth')} · ${(pick ? pick.name : q).split(' ').slice(0, 2).join(' ').toLowerCase()}`, { kind: 'ok' });
     } catch (_e) { setBusy(false); }
   };
   return (
-    <LightSheet eyebrow={`${first(runner ? runner.name : 'The')}'s trip · back at the yard`} title="Not on the list" titleSize={21} onClose={() => sheet.close()} pad="12px 16px 20px" gap={10}
+    <LightSheet eyebrow={`${firstWord(runner ? runner.name : 'The')}'s trip · back at the yard`} title="Not on the list" titleSize={21} onClose={() => sheet.close()} pad="12px 16px 20px" gap={10}
       foot={
         <button type="button" class={cx('in-navybtn', busy && 'sending')} disabled={!ok && !busy} aria-busy={busy} onClick={() => { void ask(); }}>
-          {busy ? <><span aria-hidden="true" class="in-spin" />Sending…</> : <><Icon name="send" size={18} stroke={2} />{`Ask ${first(ruth ? ruth.name : 'Ruth')}`}</>}
+          {busy ? <><span aria-hidden="true" class="in-spin" />Sending…</> : <><Icon name="send" size={18} stroke={2} />{`Ask ${firstWord(ruth ? ruth.name : 'Ruth')}`}</>}
         </button>
       }>
       <fieldset class="nl" disabled={busy}>
@@ -70,13 +72,13 @@ function Sheet(p: { tripId: string }): JSX.Element {
               <ItemArt name={i.name} aisle={i.category} size={52} radius={14} />
               <span class="nl-item-t"><span>{i.name}</span><span>{`${i.category || 'No aisle yet'}${i.category ? ` · aisle ${letter(i.category)}` : ''} · one of ours`}</span></span>
             </button>
-            {pick && <button type="button" class="nl-cam" aria-label={`Add a photo for ${first(ruth ? ruth.name : 'Ruth')}`} onClick={async () => setPhoto(await takePhoto(now.value))}><Icon name={photo ? 'check' : 'camera'} size={18} stroke={2} /></button>}
+            {pick && <button type="button" class="nl-cam" aria-label={`Add a photo for ${firstWord(ruth ? ruth.name : 'Ruth')}`} onClick={async () => setPhoto(await takePhoto(now.value))}><Icon name={photo ? 'check' : 'camera'} size={18} stroke={2} /></button>}
           </div>
         ))}
         {(q.trim() || fresh) && (
           <button type="button" class={cx('nl-new', fresh && 'on')} onClick={async () => { setFresh(true); setPick(null); if (!photo) setPhoto(await takePhoto(now.value)); }}>
             <span aria-hidden="true"><Icon name="spark" size={15} stroke={2} /></span>
-            <span class="t">Not one of ours? <span>{fresh ? `${q.trim()} · new item${photo ? ' · photo' : ''}` : `New item · ${first(moses ? moses.name : 'Sourcing')}`}</span></span>
+            <span class="t">Not one of ours? <span>{fresh ? `${q.trim()} · new item${photo ? ' · photo' : ''}` : `New item · ${firstWord(moses ? moses.name : 'Sourcing')}`}</span></span>
             <Icon name="chevron-right" size={14} stroke={2.4} />
           </button>
         )}
@@ -95,8 +97,8 @@ function Sheet(p: { tripId: string }): JSX.Element {
           {EXTRA_WHY.map((w) => <button key={w} type="button" class="in-chip" aria-pressed={why === w} onClick={() => setWhy(w)}>{w}</button>)}
         </div>
         <div class="nl-gap" />
-        <div class="nl-fork" role="img" aria-label={`${first(ruth ? ruth.name : 'Ruth')} decides: keep it on the shelf, or send it back to ${tr ? tr.supplierName : 'the supplier'}`}>
-          <span class="nl-fork-who"><Avatar {...faceOf(ruth)} size={32} /><span>{first(ruth ? ruth.name : 'Ruth')}</span></span>
+        <div class="nl-fork" role="img" aria-label={`${firstWord(ruth ? ruth.name : 'Ruth')} decides: keep it on the shelf, or send it back to ${tr ? tr.supplierName : 'the supplier'}`}>
+          <span class="nl-fork-who"><Avatar {...personFace(ruth)} size={32} /><span>{firstWord(ruth ? ruth.name : 'Ruth')}</span></span>
           <svg width="22" height="44" viewBox="0 0 22 44" fill="none" stroke="#C9C4BA" stroke-width="1.6" aria-hidden="true"><path d="M2 22h6c4 0 6-3 6-8V8h6M8 22c4 0 6 3 6 8v6h6" /></svg>
           <span class="nl-fork-ways">
             <span><span class="k"><Icon name="rack" size={13} stroke={2} /></span>Keep it · the shelf</span>

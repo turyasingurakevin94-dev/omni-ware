@@ -14,6 +14,7 @@
  * index.tsx; reach another tab only by a ROUTES.md id or callTab.
  */
 import { signal } from '@preact/signals';
+import { fetchChunk, reloadOnce } from '../../../core/chunks.ts';
 import { tab as today } from '../today/index.tsx';
 import type { TabId, TabModule } from './types.ts';
 
@@ -27,25 +28,12 @@ export const failed = signal<TabId | null>(null);
 
 const exportsOf: Partial<Record<TabId, Record<string, unknown>>> = {};
 const pending: Partial<Record<TabId, Promise<TabModule>>> = {};
-const waiting: Partial<Record<TabId, { ok: (m: Record<string, unknown>) => void; fail: (e: Error) => void }>> = {};
 
 declare global {
   interface Window {
-    /** Set by the build (tools/build-app.js): which build this page is; a tab file of another build is refused. */
+    /** Set by the build (tools/build-app.js): which build this page is; a tab file of another build is refused (src/core/chunks.ts). */
     owSalesBuild?: string;
-    /** Each tab file calls this when it runs. */
-    owSalesTab?: (id: TabId, mod: Record<string, unknown>, build: string) => void;
   }
-}
-
-if (typeof window !== 'undefined') {
-  window.owSalesTab = (id, mod, build) => {
-    const w = waiting[id];
-    if (!w) return;
-    delete waiting[id];
-    if (window.owSalesBuild && build !== window.owSalesBuild) w.fail(new Error(`The ${id} file is from another build`));
-    else w.ok(mod);
-  };
 }
 
 /** The tab a screen id belongs to: ids are "<tab>" or "<tab>/…" (ROUTES.md). */
@@ -58,22 +46,12 @@ export function isLoaded(id: TabId): boolean {
   return TABS.value.some((m) => m.id === id);
 }
 
-function fetchTab(id: TabId): Promise<Record<string, unknown>> {
-  return new Promise((ok, fail) => {
-    waiting[id] = { ok, fail };
-    const el = document.createElement('script');
-    el.src = location.pathname.replace(/[^/]*$/, '') + `sales-${id}.js`;
-    el.onerror = () => { delete waiting[id]; el.remove(); fail(new Error(`The ${id} tab did not load`)); };
-    document.head.appendChild(el);
-  });
-}
-
 /** The tab's module: from memory, else its file (once; a failed load can be tried again). */
 export function loadTab(id: TabId): Promise<TabModule> {
   const here = TABS.value.find((m) => m.id === id);
   if (here) return Promise.resolve(here);
   if (!pending[id]) {
-    pending[id] = fetchTab(id).then((mod) => {
+    pending[id] = fetchChunk('sales', id).then((mod) => {
       const m = mod.tab as TabModule;
       exportsOf[id] = mod;
       TABS.value = [...TABS.value, m];
@@ -82,11 +60,7 @@ export function loadTab(id: TabId): Promise<TabModule> {
     }, (e: Error) => {
       delete pending[id];
       failed.value = id;
-      // Another build is on the server (or in the phone's copy): this page is out of date.
-      if (/another build/.test(e.message) && !sessionStorage.getItem('ow-sales-reloaded')) {
-        sessionStorage.setItem('ow-sales-reloaded', '1');
-        location.reload();
-      }
+      reloadOnce('sales', e);
       throw e;
     });
   }

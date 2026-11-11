@@ -9,13 +9,12 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { clock, weekday } from '../../../core/time.ts';
-import { AISLE_FRESH_DAYS, countDue, daysSince } from '../../../core/store/counts.ts';
+import { COUNT_DUE_DAYS, countDue, daysSince } from '../../../core/store/counts.ts';
 import { aisleItems, aislesOf, letterOf, noAisle, onShelf, orderIn, packedFor } from '../../../core/store/shelf.ts';
 import type { ShelfItem, YardBooks } from '../../../core/store/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { AISLE, AisleIcon, aisleKey, Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
-import { toast } from '../../../ui/toast.tsx';
 import { cx, Tap } from '../../../ui/util.tsx';
 import { nav, type Params } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
@@ -65,7 +64,7 @@ function OneAisle(p: { b: YardBooks; name: string }): JSX.Element {
   const all = aisleItems(b, a.name), ink = AISLE[aisleKey(a.name)];
   const packed = all.filter((it) => packedFor(b, it.key).length), report = all.filter((it) => foundFor(it.key));
   const list = show === 'packed' ? packed : show === 'report' ? report : all, page = 4 + more * 30;
-  const days = a.days ?? 0, left = Math.max(0, AISLE_FRESH_DAYS - days);
+  const days = a.days ?? 0, left = Math.max(0, COUNT_DUE_DAYS - days);
   const last = b.counts.filter((c) => c.place === `aisle:${a.name.toLowerCase()}` && c.status === 'accepted').sort((x, y) => (y.decidedAt || 0) - (x.decidedAt || 0))[0];
   const who = last ? b.people.find((x) => x.userId === last.countedBy) : null, ruth = person(b, 'manager', 'Ruth Nakato');
   const head = (
@@ -78,7 +77,7 @@ function OneAisle(p: { b: YardBooks; name: string }): JSX.Element {
       </div>
       <div class="sh-al-fresh">
         <span class="sh-al-n"><span class="mono">{days}</span><span>{`${days === 1 ? 'day' : 'days'} since counted · `}{a.due ? 'due now' : <>due in <span class="mono">{left}</span></>}</span></span>
-        <span role="img" aria-label={`Counted ${days} days ago, due every ${AISLE_FRESH_DAYS} days`} class="sh-al-dash">{Array.from({ length: AISLE_FRESH_DAYS }, (_, i) => <span key={i} class={cx(i < days && (a.due ? 'over' : 'on'))} />)}</span>
+        <span role="img" aria-label={`Counted ${days} days ago, due every ${COUNT_DUE_DAYS} days`} class="sh-al-dash">{Array.from({ length: COUNT_DUE_DAYS }, (_, i) => <span key={i} class={cx(i < days && (a.due ? 'over' : 'on'))} />)}</span>
         {last && who && (
           <div class="sh-al-who">
             <span><Avatar initials={who.initials} tint={who.tint} size={26} font={11} /><Avatar initials={ruth.initials} tint={ruth.tint} size={26} font={11} /></span>
@@ -102,7 +101,6 @@ function OneAisle(p: { b: YardBooks; name: string }): JSX.Element {
       <div class="sh-al-labels">
         <span aria-hidden="true"><Icon name="scan" size={20} stroke={2} /></span>
         <span><span>Shelf labels</span><span><span class="mono">{a.items.length}</span> of <span class="mono">{a.items.length}</span> have one</span></span>
-        <button type="button" onClick={() => toast.show('Shelf labels print from the office for now', { kind: 'warn' })}>Print again</button>
       </div>
       <div class="sh-al-foot">
         <Tap on={() => nav.push('shelf/scan')} class="sh-al-scan" label={`Scan a label in aisle ${a.letter}`}><Icon name="scan" size={22} stroke={2} /></Tap>

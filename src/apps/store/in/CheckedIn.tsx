@@ -3,8 +3,9 @@
  * went, what waits on Ruth), IN09 someone else checked it in first (Refreshed; yours not sent), and
  * IN13 Ruth's answer to a line not on the list (keep it on the shelf, or send it back).
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import { Fragment, type JSX } from 'preact';
-import { orderNo } from '../../../core/names.ts';
+import { orderNo, firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import { draftOf, groupsOf, toCount, type CheckTrip, type Draft, type outcome } from '../../../core/store/checkin.ts';
 import type { StoreAsk, YardBooks, YardPerson } from '../../../core/store/types.ts';
@@ -15,22 +16,20 @@ import { nav } from '../shell/nav.ts';
 import { books } from '../shell/store.ts';
 import { GoneRow, LineRow } from './CheckLines.tsx';
 import { sellerOf, tellsOf } from './Checkin.tsx';
-import {
-  BackToToday, byLogin, byRole, Card, customerFace, Done, DoneWho, faceOf, first, GroupHead, HeadPill, NavyChip, Pill, Screen, Sees, TripHead,
-} from './parts.tsx';
+import { BackToToday, byLogin, byRole, Card, Done, DoneWho, GroupHead, HeadPill, NavyChip, Pill, Screen, Sees, TripHead } from './parts.tsx';
 
 export interface Sent { t: CheckTrip; draft: Draft; out: ReturnType<typeof outcome>; at: number; denis: YardPerson | null; ruth: YardPerson | null }
 
 /** IN06: Checked in, where it went. */
 export function CheckedIn(p: { sent: Sent }): JSX.Element {
-  const b = books.value as YardBooks, { t, out } = p.sent, denis = first(p.sent.denis ? p.sent.denis.name : 'The Buyer');
-  const ruthName = first(p.sent.ruth ? p.sent.ruth.name : 'Ruth'), n = toCount(t).length;
+  const b = books.value as YardBooks, { t, out } = p.sent, denis = firstWord(p.sent.denis ? p.sent.denis.name : 'The Buyer');
+  const ruthName = firstWord(p.sent.ruth ? p.sent.ruth.name : 'Ruth'), n = toCount(t).length;
   return (
     <Done title="Checked in"
-      who={<DoneWho lead={<Avatar {...faceOf(p.sent.denis)} size={30} />} name={`${denis}'s trip`} sub={`${n} ${n === 1 ? 'line' : 'lines'} · ${clock(p.sent.at)}`} />}
+      who={<DoneWho lead={<Avatar {...personFace(p.sent.denis)} size={30} />} name={`${denis}'s trip`} sub={`${n} ${n === 1 ? 'line' : 'lines'} · ${clock(p.sent.at)}`} />}
       chips={<>
-        {out.differs.length > 0 && <NavyChip tone="amber" face={faceOf(p.sent.ruth)}>{`Sent to ${ruthName} · ${out.differs.length} differs`}</NavyChip>}
-        <NavyChip tone="mint" face={faceOf(p.sent.denis)}>{`${denis} told`}</NavyChip>
+        {out.differs.length > 0 && <NavyChip tone="amber" face={personFace(p.sent.ruth)}>{`Sent to ${ruthName} · ${out.differs.length} differs`}</NavyChip>}
+        <NavyChip tone="mint" face={personFace(p.sent.denis)}>{`${denis} told`}</NavyChip>
       </>}>
       <div class="in-dcard">
         <span class="in-dcard-h">Where it went</span>
@@ -38,7 +37,7 @@ export function CheckedIn(p: { sent: Sent }): JSX.Element {
           const seller = sellerOf(b, [o.orderId]);
           return (
             <button key={o.orderId} type="button" class="in-drow" onClick={() => (o.allIn ? nav.push('pack/order', { id: o.orderId }) : nav.push('pack'))}>
-              <Avatar {...customerFace(b, o.order ? o.order.client.name : '')} size={32} />
+              <Avatar {...orderFace(o.order || { client: { name: '', phone: '' }, customerId: null }, b)} size={32} />
               <span class="in-line-t">
                 <span>{o.allIn ? `${orderNo(o.orderId)} · pack it now` : `${orderNo(o.orderId)} ${o.order ? o.order.client.name : ''}`}</span>
                 <span class={o.allIn ? 'mint' : 'amber'}>{o.allIn ? `all in · ${seller} told` : `pack ${o.got} of ${o.want} · ${seller} told`}</span>
@@ -55,7 +54,7 @@ export function CheckedIn(p: { sent: Sent }): JSX.Element {
         ))}
         {out.differs.map((d) => (
           <button key={d.line.id} type="button" class="in-drow" onClick={() => nav.push('today/with-ruth')}>
-            <Avatar {...faceOf(p.sent.ruth)} size={32} />
+            <Avatar {...personFace(p.sent.ruth)} size={32} />
             <span class="in-line-t"><span>{`${ruthName} decides the ${Math.abs(d.diff)} ${d.line.unit}`}</span><span>you get a push when she does</span></span>
             <span class="in-dpill amber"><Icon name="hourglass" size={12} stroke={2.2} />Waiting</span>
           </button>
@@ -67,35 +66,35 @@ export function CheckedIn(p: { sent: Sent }): JSX.Element {
 
 /** IN09: someone else checked it in; the books are on screen now, this phone's count was not sent. */
 export function SomeoneDid(p: { t: CheckTrip; mine: boolean }): JSX.Element {
-  const b = books.value as YardBooks, { t } = p, runner = b.people.find((x) => x.id === t.runnerId) || null, denis = first(runner ? runner.name : 'The Buyer');
+  const b = books.value as YardBooks, { t } = p, runner = b.people.find((x) => x.id === t.runnerId) || null, denis = firstWord(runner ? runner.name : 'The Buyer');
   const who = byLogin(b, t.checkedBy), byMe = !!who && who.id === b.me.id, d = draftOf(t), n = toCount(t).length;
   const moved = [...new Set(t.lines.map((l) => l.orderId).filter((x): x is number => x != null))].filter((id) => { const o = b.orders.find((x) => x.id === id); return o && o.status === 'preparing'; });
-  const seller = sellerOf(b, moved), sellerP = b.people.find((x) => x.role === 'sales' && first(x.name) === seller) || null;
+  const seller = sellerOf(b, moved), sellerP = b.people.find((x) => x.role === 'sales' && firstWord(x.name) === seller) || null;
   return (
     <Screen back="Back to Coming in" pad="14px 16px 20px" head={
-      <TripHead lead={<Avatar {...faceOf(runner)} size={44} />} name={`${denis}'s trip`} sub={`checked in ${clock(t.checkedAt as number)} · ${n} ${n === 1 ? 'line' : 'lines'}`}
-        onClose={() => nav.back()} closeLabel="Close: back to Coming in" chips={<HeadPill face={faceOf(runner)}>{`From ${denis} · Buyer`}</HeadPill>} />}>
+      <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip`} sub={`checked in ${clock(t.checkedAt as number)} · ${n} ${n === 1 ? 'line' : 'lines'}`}
+        onClose={() => nav.back()} closeLabel="Close: back to Coming in" chips={<HeadPill face={personFace(runner)}>{`From ${denis} · Buyer`}</HeadPill>} />}>
       {p.mine && !byMe && <div role="status" class="in-someone"><Icon name="undo" size={18} stroke={2} /><span class="in-flex">Someone else just did this · Refreshed</span></div>}
       <div class="in-who">
-        <Avatar {...faceOf(who)} size={40} />
-        <span class="in-who-t"><span>{byMe ? 'You checked it in' : `${first(who ? who.name : 'Someone')} checked it in`}</span><span class="mono">{`${clock(t.checkedAt as number)}${p.mine && !byMe ? ' · yours not sent' : ''}`}</span></span>
+        <Avatar {...personFace(who)} size={40} />
+        <span class="in-who-t"><span>{byMe ? 'You checked it in' : `${firstWord(who ? who.name : 'Someone')} checked it in`}</span><span class="mono">{`${clock(t.checkedAt as number)}${p.mine && !byMe ? ' · yours not sent' : ''}`}</span></span>
         <Pill tone="good" icon="check" size={11} stroke={3.2}>Checked in</Pill>
       </div>
       {groupsOf(t, b.orders).map((g) => (
         <Fragment key={String(g.orderId)}>
-          <GroupHead face={g.order ? customerFace(b, g.order.client.name) : undefined} icon={g.order ? undefined : 'rack'} title={g.order ? `${orderNo(g.order.id)} ${g.order.client.name}` : 'The shelf'}
+          <GroupHead face={g.order ? orderFace(g.order, b) : undefined} icon={g.order ? undefined : 'rack'} title={g.order ? `${orderNo(g.order.id)} ${g.order.client.name}` : 'The shelf'}
             right={g.order && g.order.status === 'preparing' ? <Pill tone="info" icon="orders">Packing</Pill> : undefined} />
           <Card>
             {g.lines.map((l) => (l.notFound ? <GoneRow key={l.id} l={l} tells={tellsOf(b, l)} />
-              : <LineRow key={l.id} l={l} count={d.counts[l.id]} who={faceOf(who)} label={`Checked in by ${first(who ? who.name : 'someone')}`}
-                sub={`${d.counts[l.id]} ${l.unit}${(l.yard ?? l.expected) !== l.expected && !t.stops.some((s) => s.differenceAcceptedAt) ? ` · with ${first((byRole(b, 'manager') || { name: 'Ruth' }).name)}` : ''}`} />))}
+              : <LineRow key={l.id} l={l} count={d.counts[l.id]} who={personFace(who)} label={`Checked in by ${firstWord(who ? who.name : 'someone')}`}
+                sub={`${d.counts[l.id]} ${l.unit}${(l.yard ?? l.expected) !== l.expected && !t.stops.some((s) => s.differenceAcceptedAt) ? ` · with ${firstWord((byRole(b, 'manager') || { name: 'Ruth' }).name)}` : ''}`} />))}
           </Card>
         </Fragment>
       ))}
       {moved.length > 0 && (
         <div class="in-card in-card16 in-told">
           <span class="in-told-h">Already told</span>
-          <Sees light face={faceOf(sellerP)} who={seller} what={`${moved.map(orderNo).join(' · ')} → Packing`} />
+          <Sees light face={personFace(sellerP)} who={seller} what={`${moved.map(orderNo).join(' · ')} → Packing`} />
         </div>
       )}
       <BackToToday />
@@ -106,16 +105,16 @@ export function SomeoneDid(p: { t: CheckTrip; mine: boolean }): JSX.Element {
 /** IN13: Ruth answered a line not on the list. */
 export function Answered(p: { t: CheckTrip; ask: StoreAsk }): JSX.Element {
   const b = books.value as YardBooks, a = p.ask, x = a.payload as Record<string, unknown>;
-  const runner = b.people.find((q) => q.id === p.t.runnerId) || null, denis = first(runner ? runner.name : 'The Buyer');
-  const ruth = byRole(b, 'manager'), ruthName = first(ruth ? ruth.name : 'Ruth'), esther = byRole(b, 'accounts');
+  const runner = b.people.find((q) => q.id === p.t.runnerId) || null, denis = firstWord(runner ? runner.name : 'The Buyer');
+  const ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth'), esther = byRole(b, 'accounts');
   const name = String(x.name || ''), qty = Number(x.qty || 0), unit = String(x.unit || ''), keep = a.status === 'accepted';
   const it = b.items.find((i) => i.key === x.key), aisle = it && it.category ? it.category : '', letter = aisle ? String.fromCharCode(65 + Math.max(0, b.aisles.indexOf(aisle))) : '';
   const stop = p.t.stops.find((s) => s.id === a.ref) || p.t.stops[p.t.stops.length - 1], supplier = stop.supplierName.split(' ')[0];
   const at = a.decidedAt ? clock(a.decidedAt) : '';
   return (
     <Screen back="Back to Today" pad="14px 16px 20px" gap={12} head={
-      <TripHead lead={<Avatar {...faceOf(runner)} size={44} />} name={`${denis}'s trip · not on the list`} sub={`${ruthName} answered ${at}`} onClose={() => nav.home()}
-        chips={<HeadPill face={faceOf(ruth)}>{`From ${ruthName} · Manager`}</HeadPill>} />}>
+      <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip · not on the list`} sub={`${ruthName} answered ${at}`} onClose={() => nav.home()}
+        chips={<HeadPill face={personFace(ruth)}>{`From ${ruthName} · Manager`}</HeadPill>} />}>
       <Card>
         <div class="in-line">
           <ItemArt name={name} size={40} />
@@ -124,7 +123,7 @@ export function Answered(p: { t: CheckTrip; ask: StoreAsk }): JSX.Element {
       </Card>
       <div class="in-card in-card16 in-ans">
         <div class="in-ans-h">
-          <Avatar {...faceOf(ruth)} size={40} />
+          <Avatar {...personFace(ruth)} size={40} />
           <span class="in-who-t"><span>{`${ruthName}: ${keep ? 'keep it' : 'send it back'}`}</span><span class="mono">{`${at} · ${denis} told`}</span></span>
           <Pill tone="good" icon="check" size={11} stroke={3.2}>Decided</Pill>
         </div>
@@ -148,8 +147,8 @@ export function Answered(p: { t: CheckTrip; ask: StoreAsk }): JSX.Element {
       )}
       <div class="in-card in-card16 in-told">
         <span class="in-told-h">Told</span>
-        <Sees light face={faceOf(runner)} who={denis} what={keep ? 'Kept · on the shelf' : 'Sent back'} />
-        {keep && <Sees light face={faceOf(esther)} who={first(esther ? esther.name : 'Accounts')} what={`pays ${supplier} for it`} />}
+        <Sees light face={personFace(runner)} who={denis} what={keep ? 'Kept · on the shelf' : 'Sent back'} />
+        {keep && <Sees light face={personFace(esther)} who={firstWord(esther ? esther.name : 'Accounts')} what={`pays ${supplier} for it`} />}
       </div>
       <BackToToday />
     </Screen>

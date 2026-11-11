@@ -9,6 +9,7 @@
  *   What moved    four weeks (shelf.ts moved)
  *   the acts      Count · Report · We need more
  */
+import { orderFace } from '../../../core/store/faces.ts';
 import type { ComponentChildren, JSX } from 'preact';
 import { orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
@@ -128,7 +129,7 @@ export function ItemView(p: { it: ShelfItem; bare?: boolean }): JSX.Element {
               const when = log ? clock(log.at) : x.order.pickingDoneAt ? clock(x.order.pickingDoneAt) : '';
               return (
                 <Tap key={x.order.id} on={() => nav.push(x.order.pickingStatus === 'done' ? 'out/load' : 'pack/order', x.order.pickingStatus === 'done' ? {} : { id: x.order.id })} class="sh-pk" label={`${x.order.client.name}, ${orderNo(x.order.id)}`}>
-                  <Avatar initials={x.order.client.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()} tint="t0" size={34} font={12} />
+                  <Avatar {...orderFace(x.order, b)} size={34} font={12} />
                   <span class="sh-pk-t"><span>{x.order.client.name}</span><span class="mono">{[orderNo(x.order.id), when, x.bay ? `bay ${x.bay}` : ''].filter(Boolean).join(' · ')}</span></span>
                   <span class="sh-pk-q mono">{`${x.qty} ${it.unit}`}</span>
                   <span aria-hidden="true" class="sh-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>

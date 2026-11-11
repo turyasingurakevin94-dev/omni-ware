@@ -19,7 +19,6 @@ import { books, me, now } from '../shell/store.ts';
 import { FaceBadge, PushCard, Section, TopNotice, savedLine } from './parts.tsx';
 import { ToPackEmpty } from './ToPackEmpty.tsx';
 import { CHIPS, chipPicked, moved, sheetOf, type Chip, type Row, type Sheet } from './sheet-data.ts';
-import { Glyph } from './glyphs.tsx';
 
 const MARK: Record<string, string> = { done: '#0F6B43', short: '#95530C', now: '#F5B26B', open: '#F5B26B', dropped: '#8E2A22' };
 
@@ -45,7 +44,7 @@ export function PackRow(p: { r: Row; first?: boolean }): JSX.Element {
         <FaceBadge face={r.face} badge={r.kind === 'theirs' ? r.badge : null} dim={r.kind === 'copy'} />
         <span class={cx('pk-row-t', r.kind === 'copy' && 'soft', r.kind === 'theirs' && 'gap')}><b>{r.name}</b><Sub r={r} /></span>
         {r.kind === 'copy' && <StatusPill tone="bad" icon="lock" style={{ height: '26px' }}>Don’t pack</StatusPill>}
-        {r.kind === 'theirs' && <StatusPill tone="info" style={{ height: '26px' }}><Glyph name="eye" size={14} stroke={2.4} />{r.whose}</StatusPill>}
+        {r.kind === 'theirs' && <StatusPill tone="info" style={{ height: '26px' }}><Icon name="eye" size={14} stroke={2.4} />{r.whose}</StatusPill>}
         {r.kind === 'cancelled' && <StatusPill tone="bad" style={{ height: '26px' }}>Cancelled · put it back</StatusPill>}
         <span class="pk-chev"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
       </Tap>

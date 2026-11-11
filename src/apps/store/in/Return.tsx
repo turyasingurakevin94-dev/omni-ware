@@ -8,9 +8,10 @@
  *
  * Rules: core/store/returns.ts. Writes: W18 returnAsk, W18a withdrawReturn (Undo).
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { orderNo } from '../../../core/names.ts';
+import { orderNo, firstWord } from '../../../core/names.ts';
 import { askOf, backLines, canSend, clampBack, returnAt, startDraft, type Condition, type ReturnDraft, type ReturnLine } from '../../../core/store/returns.ts';
 import type { StoreReturn, YardBooks } from '../../../core/store/types.ts';
 import { clock, weekday } from '../../../core/time.ts';
@@ -21,9 +22,7 @@ import { Stepper } from '../../../ui/Stepper.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, notDone, now } from '../shell/store.ts';
-import {
-  BackToToday, byLogin, byRole, Card, customerFace, Done, DoneWho, faceOf, first, FlowCard, HeadPill, HeadRail, InBar, NavyChip, Pill, Screen, Steps, TripHead,
-} from './parts.tsx';
+import { BackToToday, byLogin, byRole, Card, Done, DoneWho, FlowCard, HeadPill, HeadRail, InBar, NavyChip, Pill, Screen, Steps, TripHead } from './parts.tsx';
 import { takePhoto, type Photo } from './photo.ts';
 import './return.css';
 
@@ -93,8 +92,8 @@ export function Return(p: { order: number }): JSX.Element {
   const [photo, setPhoto] = useState<Photo | null>(null), [phase, setPhase] = useState<Phase>('form'), [open, setOpen] = useState<number[]>([]);
   const [gateAt] = useState(() => now.value);
   if (!b || !r || !d) return <Screen head={<TripHead lead={null} name="Return" sub="" onClose={() => nav.home()} />}><p class="in-gone-p">That order is gone.</p></Screen>;
-  const o = r.order, name = o.client.name, ruth = byRole(b, 'manager'), ruthName = first(ruth ? ruth.name : 'Ruth');
-  const asker = r.asked ? byLogin(b, r.asked.by) : null, seller = first(asker ? asker.name : (byLogin(b, o.takenBy) || { name: 'Sales' }).name);
+  const o = r.order, name = o.client.name, ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth');
+  const asker = r.asked ? byLogin(b, r.asked.by) : null, seller = firstWord(asker ? asker.name : (byLogin(b, o.takenBy) || { name: 'Sales' }).name);
   const sellerP = asker || byLogin(b, o.takenBy), bringer = o.carrier && o.carrier.kind === 'staff' ? b.people.find((x) => x.id === o.carrier!.staffId) || null : null;
 
   if (r.mine && r.mine.status !== 'sent' && phase !== 'sent') return <Decided b={b} mine={r.mine} />;
@@ -103,15 +102,15 @@ export function Return(p: { order: number }): JSX.Element {
     const undo = async () => { try { await act('withdrawReturn', r.mine!.id); setPhase('form'); } catch (_e) { /* the bar says it */ } };
     return (
       <Done title={`Sent to ${ruthName}`} icon="send" tick={88} undo={phase === 'sent' ? () => { void undo(); } : undefined}
-        who={<DoneWho lead={<Avatar {...customerFace(b, name)} size={30} />} name={name} sub={`${orderNo(o.id)} · ${qty} ${unit}`} />}
-        chips={<NavyChip tone="glass" face={faceOf(sellerP)}>{`${seller} sees Return asked`}</NavyChip>}>
+        who={<DoneWho lead={<Avatar {...orderFace(o, b)} size={30} />} name={name} sub={`${orderNo(o.id)} · ${qty} ${unit}`} />}
+        chips={<NavyChip tone="glass" face={personFace(sellerP)}>{`${seller} sees Return asked`}</NavyChip>}>
         <FlowCard pics={Array.from({ length: Math.min(qty, 3) }, (_, i) => <Unit key={i} name={ls[0].name} size={30} torn={dmg} />)} n={String(qty)} unit={unit}
           to={<span class={cx('in-to', dmg ? 'amber' : 'mint')}><Icon name={dmg ? 'damaged' : 'rack'} size={15} stroke={2.2} />{dmg ? 'Damaged' : 'Good'}</span>}
           label={`${qty} ${dmg ? 'torn ' : ''}${unit}s put aside in ${dmg ? 'Damaged' : 'Good'}${dmg ? ', not for sale' : ''}`} />
         <Steps steps={[
           { lead: 'check', state: 'done', title: 'Checked at the gate', sub: `${clock(r.mine.createdAt)} · photo and ${qty} ${unit} ${dmg ? 'damaged' : 'good'}` },
           { lead: ruth ? ruth.initials : 'RN', state: 'now', title: `${ruthName} checks it`, sub: 'now · you get a push with her answer' },
-          { lead: 'send', state: 'next', title: `${seller} tells ${first(name)}`, sub: `when ${ruthName} has decided` },
+          { lead: 'send', state: 'next', title: `${seller} tells ${firstWord(name)}`, sub: `when ${ruthName} has decided` },
         ]} />
       </Done>
     );
@@ -131,10 +130,10 @@ export function Return(p: { order: number }): JSX.Element {
   const locked = phase === 'sending' || phase === 'kept', ready = canSend(r, d, !!photo);
   const shown = r.lines.filter((l) => l.asked > 0 || open.includes(l.line.idx) || (d.qty[l.line.idx] || 0) > 0);
   const head = (
-    <TripHead lead={<Avatar {...customerFace(b, name)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · at the gate ${clock(gateAt)}`} onClose={() => nav.back()}
+    <TripHead lead={<Avatar {...orderFace(o, b)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · at the gate ${clock(gateAt)}`} onClose={() => nav.back()}
       chips={<>
-        {r.asked && <HeadPill face={faceOf(sellerP)}>{`From ${seller} · asked ${weekday(r.asked.createdAt)} ${clock(r.asked.createdAt)}`}</HeadPill>}
-        {bringer && <HeadPill face={faceOf(bringer)}>{`${first(bringer.name)} brought it`}</HeadPill>}
+        {r.asked && <HeadPill face={personFace(sellerP)}>{`From ${seller} · asked ${weekday(r.asked.createdAt)} ${clock(r.asked.createdAt)}`}</HeadPill>}
+        {bringer && <HeadPill face={personFace(bringer)}>{`${firstWord(bringer.name)} brought it`}</HeadPill>}
         <span class="in-flex" />
       </>} />
   );
@@ -174,8 +173,8 @@ export function Return(p: { order: number }): JSX.Element {
           <button type="button" class="nl-cam" aria-label={photo ? 'Take another photo' : 'Take a photo'} onClick={async () => { const x = await takePhoto(now.value); if (x) setPhoto(x); }}><Icon name="camera" size={18} stroke={2} /></button>
         </div>
         <div class="rt-who">
-          <span><Avatar {...faceOf(ruth)} size={22} /><b>{`${ruthName} checks it`}</b>· she gets a push</span>
-          <span><Avatar {...faceOf(sellerP)} size={22} />{`${seller} sees`}<b>Return asked</b></span>
+          <span><Avatar {...personFace(ruth)} size={22} /><b>{`${ruthName} checks it`}</b>· she gets a push</span>
+          <span><Avatar {...personFace(sellerP)} size={22} />{`${seller} sees`}<b>Return asked</b></span>
         </div>
       </fieldset>
     </Screen>
@@ -184,12 +183,12 @@ export function Return(p: { order: number }): JSX.Element {
 
 /** IN22: Ruth decided; the damaged ones go to the damaged place, not for sale. */
 function Decided(p: { b: YardBooks; mine: StoreReturn }): JSX.Element {
-  const { b, mine } = p, o = b.orders.find((x) => x.id === mine.orderId)!, name = o.client.name, ruth = byRole(b, 'manager'), ruthName = first(ruth ? ruth.name : 'Ruth');
-  const took = mine.status === 'accepted', at = mine.decidedAt ? clock(mine.decidedAt) : '', seller = first((byLogin(b, o.takenBy) || { name: 'Sales' }).name);
+  const { b, mine } = p, o = b.orders.find((x) => x.id === mine.orderId)!, name = o.client.name, ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth');
+  const took = mine.status === 'accepted', at = mine.decidedAt ? clock(mine.decidedAt) : '', seller = firstWord((byLogin(b, o.takenBy) || { name: 'Sales' }).name);
   const qty = mine.lines.reduce((s, l) => s + l.qty, 0), unit = mine.lines[0] ? mine.lines[0].unit : '', dmg = mine.lines.some((l) => l.condition === 'damaged');
   const stayed = o.lines.filter((l) => !l.dropped && !mine.lines.some((m) => m.idx === l.idx));
   const head = (
-    <TripHead lead={<Avatar {...customerFace(b, name)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · ${o.invoicedAt ? `${weekday(o.invoicedAt)} ${clock(o.invoicedAt)}` : ''}`} onClose={() => nav.home()}>
+    <TripHead lead={<Avatar {...orderFace(o, b)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · ${o.invoicedAt ? `${weekday(o.invoicedAt)} ${clock(o.invoicedAt)}` : ''}`} onClose={() => nav.home()}>
       <div class="rt-dhead">
         <div class="rt-dtitle"><span>{took ? 'Taken back' : 'Not taken back'}</span><span>{`${ruthName} · ${at}`}</span></div>
         <HeadRail tone="amber" label={`Return: at the gate ${clock(mine.createdAt)}, sent to ${ruthName} ${clock(mine.createdAt)}, ${ruthName} ${took ? 'took it back' : 'said no'} ${at}${dmg ? ', put aside now' : ''}`} stops={[
@@ -203,7 +202,7 @@ function Decided(p: { b: YardBooks; mine: StoreReturn }): JSX.Element {
     <Screen head={head} back="Back" pad="14px 16px 20px" gap={10}>
       <div class="in-card in-card16 in-ans">
         <div class="in-ans-h">
-          <Avatar {...faceOf(ruth)} size={40} />
+          <Avatar {...personFace(ruth)} size={40} />
           <span class="in-who-t"><span>{took ? `${ruthName} took it back` : `${ruthName} did not take it back`}</span><span class="mono">{`${at} · ${seller} told`}</span></span>
           <Pill tone="good" icon="check" size={11} stroke={3.2}>Decided</Pill>
         </div>
@@ -227,13 +226,13 @@ function Decided(p: { b: YardBooks; mine: StoreReturn }): JSX.Element {
           {stayed.map((l) => (
             <div key={l.idx} class="in-line">
               <ItemArt name={l.name} size={40} />
-              <span class="in-line-t"><span>{l.name}</span><span class="mono">{`${l.qty} ${l.unit} · stayed with ${first(name)}`}</span></span>
+              <span class="in-line-t"><span>{l.name}</span><span class="mono">{`${l.qty} ${l.unit} · stayed with ${firstWord(name)}`}</span></span>
               <Pill tone="plain">stayed</Pill>
             </div>
           ))}
         </Card>
       )}
-      <div class="rt-who one"><span><Avatar {...faceOf(byLogin(b, o.takenBy))} size={22} />{`${seller} sees`}<b>{took ? `Taken back · ${qty} ${unit}` : 'Not taken back'}</b></span></div>
+      <div class="rt-who one"><span><Avatar {...personFace(byLogin(b, o.takenBy))} size={22} />{`${seller} sees`}<b>{took ? `Taken back · ${qty} ${unit}` : 'Not taken back'}</b></span></div>
       <BackToToday />
     </Screen>
   );

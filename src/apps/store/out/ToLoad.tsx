@@ -13,6 +13,7 @@ import { directions, driverOf, driversOf, runHeld, trucks, type Direction } from
 import { onTheRoad } from '../../../core/store/door.ts';
 import { counts, moneyHeld, ordersAt, destinationOf } from '../../../core/store/yard.ts';
 import type { YardBooks } from '../../../core/store/types.ts';
+import { orderFace, whoIs, yardFace } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
@@ -20,9 +21,8 @@ import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { StageSheet } from '../shell/StageSheet.tsx';
 import { books, me, now, side } from '../shell/store.ts';
-import { OIcon } from './icons.tsx';
 import { openNameDirection } from './NameSheet.tsx';
-import { Card, custFace, DotHead, DriverChips, DropPlace, EmptyWords, Ghost, GhostRow, MiniOrder, NotPaid, SheetDock, SideTiles, SoftPill, WayIn, person, seller, type DriverPick } from './parts.tsx';
+import { Card, DotHead, DriverChips, DropPlace, EmptyWords, Ghost, GhostRow, MiniOrder, NotPaid, SheetDock, SideTiles, SoftPill, WayIn, seller, type DriverPick } from './parts.tsx';
 import './load.css';
 
 /** One drop's row: the face, "#0552 · bay 1" (with how long on the bay once it is a day), Not paid yet. */
@@ -33,7 +33,7 @@ function DropRow(p: { b: YardBooks; d: Direction; i: number; full: boolean }): J
   const label = `${o.client.name.replace('&', 'and')}, order ${orderNo(o.id).slice(1)}${o.bay != null ? `, bay ${o.bay}` : ''}${age ? `, ${age}` : ''}${moneyHeld(o) ? ', not paid yet' : ''}`;
   return (
     <Tap on={() => nav.push('out/run', { dir: p.d.key })} label={p.full ? undefined : label} class={'ld-drop' + (p.full ? '' : ' tall')}>
-      <Avatar {...custFace(p.b, o)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
+      <Avatar {...orderFace(o, p.b)} size={32} font={12} style={{ letterSpacing: '-.02em' }} />
       <span class="ld-drop-t">
         <span>{o.client.name}</span>
         <span class="mono">{orderNo(o.id)}{o.bay != null && ` · bay ${o.bay}`}{age && <> · <b>{age}</b></>}</span>
@@ -56,7 +56,7 @@ function NextRun(p: { b: YardBooks; d: Direction; pick: DriverPick | null; onPic
       <Card>
         <div class="ld-run">
           {p.d.drops.map((_, i) => <DropRow key={i} b={p.b} d={p.d} i={i} full />)}
-          <DropPlace place={where} phone={first.deliverPhone || first.client.phone} from={from ? { initials: from.initials, tint: 'me' } : null} />
+          <DropPlace place={where} phone={first.deliverPhone || first.client.phone} from={from ? yardFace(p.b, from) : null} />
         </div>
       </Card>
     </>
@@ -106,7 +106,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
   const out = onTheRoad(b).reduce((s, r) => s + r.stops.length, 0), drivers = onTheRoad(b).map((r) => r.driver);
   return (
     <>
-      <Ghost tile={<OIcon name="layers" size={34} stroke={1.8} />}>
+      <Ghost tile={<Icon name="layers" size={34} stroke={1.8} />}>
         <div class="ou-ghost-head"><span class="ou-dot" /><b>→ a direction</b><span class="ou-flex" /><i><Icon name="clock" size={13} stroke={2.2} />leaves</i></div>
         <GhostRow /><GhostRow op={0.7} /><GhostRow op={0.4} />
       </Ghost>
@@ -115,7 +115,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
         <div class="ou-list">
           <span class="ou-list-k">Being packed · goes to load</span>
           <Card>{packing.map((o) => (
-            <MiniOrder key={o.id} face={custFace(b, o)} name={o.client.name} sub={`${orderNo(o.id)} · → ${destinationOf(o, b.customers)?.split(/[ ,]/)[0]}`} on={() => nav.replace('pack')}
+            <MiniOrder key={o.id} face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · → ${destinationOf(o, b.customers)?.split(/[ ,]/)[0]}`} on={() => nav.replace('pack')}
               pill={<SoftPill tone="info" icon={<Icon name="orders" size={12} stroke={2.6} />}>{o.pickingStatus === 'in_progress' ? 'Packing now' : 'To pack'}</SoftPill>} />
           ))}</Card>
         </div>
@@ -137,7 +137,7 @@ export function ToLoad(): JSX.Element {
   const n = ds.reduce((s, d) => s + d.drops.length, 0), first = ds[0] || null;
   const driverId = first ? driverOf(b, first) : null;
   const chosen: DriverPick | null = pick || (driverId ? { kind: 'staff', id: driverId } : null);
-  const driver = chosen && chosen.kind === 'staff' ? person(b, chosen.id) : chosen && chosen.kind === 'me' ? b.me : null;
+  const driver = chosen && chosen.kind === 'staff' ? whoIs(b, chosen.id) : chosen && chosen.kind === 'me' ? b.me : null;
   const held = first ? runHeld(first) : true;
   const sub = n ? `${n} packed · ${ds.length} ${plural(ds.length, 'direction')}` : 'nothing packed to go out';
   const foot = first && (

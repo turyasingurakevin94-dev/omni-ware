@@ -10,9 +10,10 @@
  *
  * Rules: core/store/checkin.ts. The write: W14 checkIn, through the shell's act().
  */
+import { orderFace, personFace } from '../../../core/store/faces.ts';
 import { Fragment, type JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { orderNo } from '../../../core/names.ts';
+import { orderNo, firstWord } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import {
   differs, groupsOf, lineDone, MISCOUNTED, outcome, payload, progress, ready, toCount, tripOf, countedWords,
@@ -27,7 +28,7 @@ import { act, books, notDone, now } from '../shell/store.ts';
 import { GoneRow, GroupRow, LineRow, OpenLine } from './CheckLines.tsx';
 import { CheckedIn, Answered, SomeoneDid, type Sent } from './CheckedIn.tsx';
 import { openNotOnList } from './NotOnList.tsx';
-import { byLogin, byRole, Card, customerFace, faceOf, first, GroupHead, HeadPill, InBar, InDock, Pill, Screen, Sees, TripHead, Updating } from './parts.tsx';
+import { byLogin, byRole, Card, GroupHead, HeadPill, InBar, InDock, Pill, Screen, Sees, TripHead, Updating } from './parts.tsx';
 
 type Phase = 'count' | 'sending' | 'kept' | 'failed' | 'done';
 
@@ -44,11 +45,11 @@ function saveDraft(id: string, d: Draft | null): void {
 export function sellerOf(b: YardBooks, ids: (number | null)[]): string {
   const o = ids.map((id) => b.orders.find((x) => x.id === id)).find(Boolean);
   const p = o ? byLogin(b, o.takenBy) : null;
-  return first(p ? p.name : 'Sales');
+  return firstWord(p ? p.name : 'Sales');
 }
 export const tellsOf = (b: YardBooks, l: CheckLine): string => {
   const o = b.orders.find((x) => x.id === l.orderId);
-  return `${sellerOf(b, [l.orderId])} tells ${o ? first(o.client.name) : 'the customer'}`;
+  return `${sellerOf(b, [l.orderId])} tells ${o ? firstWord(o.client.name) : 'the customer'}`;
 };
 
 /** A group gathered into one row (IN03's #0549, IN05's #0546). */
@@ -58,7 +59,7 @@ function Gathered(p: { b: YardBooks; g: Group; d: Draft; on?: () => void }): JSX
   const words = diff.length
     ? `${countedWords(ls, d)} · ${diff.map((l) => `${Math.abs((d.counts[l.id] as number) - l.expected)} ${(d.whys[l.id] || 'differ').toLowerCase()}`).join(' · ')}`
     : countedWords(ls, d);
-  const face = g.order ? customerFace(b, g.order.client.name) : { initials: 'SH', tint: 't4' as const };
+  const face = g.order ? orderFace(g.order, b) : { initials: 'SH', tint: 't4' as const };
   return (
     <Card>
       <GroupRow title={name} lines={g.lines} words={words} face={face} kind={diff.length ? 'diff' : 'ok'}
@@ -84,8 +85,8 @@ export function Checkin(p: { trip: string }): JSX.Element {
     return <SomeoneDid t={t} mine={Object.keys(draft.counts).length > 0} />;
   }
 
-  const runner = b.people.find((x) => x.id === t.runnerId) || null, denis = first(runner ? runner.name : 'The Buyer');
-  const ruth = byRole(b, 'manager'), ruthName = first(ruth ? ruth.name : 'Ruth');
+  const runner = b.people.find((x) => x.id === t.runnerId) || null, denis = firstWord(runner ? runner.name : 'The Buyer');
+  const ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth');
   const groups = groupsOf(t, b.orders), lines = toCount(t), pr = progress(t, draft), out = outcome(t, draft, b.orders);
   const locked = phase === 'sending' || phase === 'kept';
   const setCount = (l: CheckLine, n: number, close: boolean) => {
@@ -118,13 +119,13 @@ export function Checkin(p: { trip: string }): JSX.Element {
   };
 
   const moving = out.orders.map((o) => orderNo(o.orderId));
-  const seller = sellerOf(b, out.orders.map((o) => o.orderId)), sellerP = b.people.find((x) => first(x.name) === seller && x.role === 'sales') || null;
-  const lineDenis = <Sees face={faceOf(runner)} who={denis} what={phase === 'kept' || phase === 'failed' ? 'Back at the yard' : 'Checked in'} />;
+  const seller = sellerOf(b, out.orders.map((o) => o.orderId)), sellerP = b.people.find((x) => firstWord(x.name) === seller && x.role === 'sales') || null;
+  const lineDenis = <Sees face={personFace(runner)} who={denis} what={phase === 'kept' || phase === 'failed' ? 'Back at the yard' : 'Checked in'} />;
   const second = phase === 'kept'
     ? <Updating at={clock(b.at)} />
     : phase === 'sending' && out.differs.length
-      ? <Sees face={faceOf(ruth)} who={ruthName} what={`${out.differs.length} differs`} />
-      : <Sees face={faceOf(sellerP)} who={seller} what={phase === 'failed' || !moving.length ? 'Buying' : `${moving.join(' · ')} → Packing`} />;
+      ? <Sees face={personFace(ruth)} who={ruthName} what={`${out.differs.length} differs`} />
+      : <Sees face={personFace(sellerP)} who={seller} what={phase === 'failed' || !moving.length ? 'Buying' : `${moving.join(' · ')} → Packing`} />;
   const left = lines.length - pr.done, isReady = ready(t, draft);
   const move = phase === 'sending' ? { kind: 'slide' as const, props: { label: 'Sending…', onCommit: () => undefined, state: 'sending' as const } }
     : phase === 'kept' ? { kind: 'wait' as const, label: 'Waiting to send' }
@@ -132,10 +133,10 @@ export function Checkin(p: { trip: string }): JSX.Element {
         : { kind: 'wait' as const, label: left > 0 ? `Count ${left} more first` : 'Say why first' };
 
   const head = (
-    <TripHead lead={<Avatar {...faceOf(runner)} size={44} />} name={`${denis}'s trip`} sub="back at the yard" onScan={() => { if (!locked) nav.push('shelf/scan', { then: 'checkin' }); }}
+    <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip`} sub="back at the yard" onScan={() => { if (!locked) nav.push('shelf/scan', { then: 'checkin' }); }}
       onClose={() => nav.back()} closeLabel="Close: back to Coming in"
       chips={<>
-        <HeadPill face={faceOf(runner)}>{`From ${denis} · Buyer`}</HeadPill><span class="in-flex" />
+        <HeadPill face={personFace(runner)}>{`From ${denis} · Buyer`}</HeadPill><span class="in-flex" />
         <button type="button" class="in-extra" disabled={locked} onClick={() => openNotOnList(t.stops[t.stops.length - 1].id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
       </>} />
   );
@@ -160,7 +161,7 @@ export function Checkin(p: { trip: string }): JSX.Element {
           if (l.notFound) { run.push(<GoneRow key={l.id} l={l} tells={tellsOf(b, l)} />); return; }
           if (l.id === open) {
             flushRun();
-            parts.push(<OpenLine key={l.id} l={l} nth={lines.indexOf(l) + 1} of={lines.length} count={draft.counts[l.id]} why={draft.whys[l.id]} ruth={faceOf(ruth)} ruthName={ruthName}
+            parts.push(<OpenLine key={l.id} l={l} nth={lines.indexOf(l) + 1} of={lines.length} count={draft.counts[l.id]} why={draft.whys[l.id]} ruth={personFace(ruth)} ruthName={ruthName}
               denisName={denis} onCount={(n, c) => setCount(l, n, c)} onWhy={(w) => setWhy(l, w)} />);
             return;
           }
@@ -169,7 +170,7 @@ export function Checkin(p: { trip: string }): JSX.Element {
         flushRun();
         return (
           <Fragment key={String(g.orderId)}>
-            <GroupHead face={g.order ? customerFace(b, g.order.client.name) : undefined} icon={g.order ? undefined : 'rack'} title={g.order ? `${orderNo(g.order.id)} ${g.order.client.name}` : 'The shelf'}
+            <GroupHead face={g.order ? orderFace(g.order, b) : undefined} icon={g.order ? undefined : 'rack'} title={g.order ? `${orderNo(g.order.id)} ${g.order.client.name}` : 'The shelf'}
               right={gone ? <Pill tone="bad" icon="close" size={10} stroke={3.4}>{`${gone} not found`}</Pill> : <span class="mono">{`${g.lines.length} ${g.lines.length === 1 ? 'line' : 'lines'}`}</span>} />
             {parts}
           </Fragment>
@@ -188,7 +189,7 @@ function WaitOn(p: { b: YardBooks; t: CheckTrip }): JSX.Element | null {
   if (!ids.length) return null;
   return (
     <div class="in-wait-on">
-      <span aria-hidden="true" class="in-faces2 tight">{ids.map((o) => <Avatar key={o!.id} {...customerFace(p.b, o!.client.name)} size={28} />)}</span>
+      <span aria-hidden="true" class="in-faces2 tight">{ids.map((o) => <Avatar key={o!.id} {...orderFace(o!, p.b)} size={28} />)}</span>
       <span class="t">{`${ids.length} ${ids.length === 1 ? 'order waits' : 'orders wait'} on it`}</span>
       <Icon name="orders" size={16} stroke={2.2} /><span class="p">→ Packing</span>
     </div>
@@ -203,14 +204,14 @@ function Moving(p: { b: YardBooks; t: CheckTrip; draft: Draft; ruthName: string 
       <div class="in-moving-h"><span>Stages moving</span><span class="in-pill t-plain"><span aria-hidden="true" class="in-spin dark" />Sending…</span></div>
       {out.orders.map((o) => (
         <div key={o.orderId} class="in-moving-r">
-          <Avatar {...customerFace(p.b, o.order ? o.order.client.name : '')} size={32} />
-          <span class="in-line-t"><span class="mono">{orderNo(o.orderId)}</span><span>{o.allIn ? `${first(o.order ? o.order.client.name : '')} · all in` : `${o.got} of ${o.want} came`}</span></span>
+          <Avatar {...orderFace(o.order || { client: { name: '', phone: '' }, customerId: null }, p.b)} size={32} />
+          <span class="in-line-t"><span class="mono">{orderNo(o.orderId)}</span><span>{o.allIn ? `${firstWord(o.order ? o.order.client.name : '')} · all in` : `${o.got} of ${o.want} came`}</span></span>
           <Pill tone="info" icon="cart">Buying</Pill><span aria-hidden="true" class="ci-chev"><Icon name="arrow-right" size={14} stroke={2.2} /></span><Pill tone="navy" icon="orders">Packing</Pill>
         </div>
       ))}
       {out.differs.map((d) => (
         <div key={d.line.id} class="in-moving-r">
-          <Avatar {...faceOf(ruth)} size={32} />
+          <Avatar {...personFace(ruth)} size={32} />
           <span class="in-line-t"><span class="mono">{`${Math.abs(d.diff)} ${d.line.unit} ${d.line.name.split(' · ')[0].split(' ').pop()}`}</span><span>{`${d.why.toLowerCase()} · she decides`}</span></span>
           <Pill tone="warn" icon="hourglass">{`With ${p.ruthName}`}</Pill>
         </div>
@@ -229,14 +230,14 @@ function WhereItGoes(p: { b: YardBooks; t: CheckTrip; draft: Draft; ruthName: st
       <div class="in-goes-g">
         {out.orders.map((o) => (
           <div key={o.orderId} class="in-goes-t">
-            <Avatar {...customerFace(p.b, o.order ? o.order.client.name : '')} size={32} />
+            <Avatar {...orderFace(o.order || { client: { name: '', phone: '' }, customerId: null }, p.b)} size={32} />
             <span class="mono">{orderNo(o.orderId)}</span><span class="i"><Icon name="orders" size={11} stroke={2.4} />Packing</span>
             <span class="s">{o.allIn ? `${lines(o.orderId)} ${lines(o.orderId) === 1 ? 'line' : 'lines'}` : `pack ${o.got} of ${o.want}`}</span>
           </div>
         ))}
         {out.differs.map((d) => (
           <div key={d.line.id} class="in-goes-t">
-            <Avatar {...faceOf(ruth)} size={32} /><span class="mono">{`${Math.abs(d.diff)} ${d.line.unit}`}</span><span class="i r">{p.ruthName}</span><span class="s">decides</span>
+            <Avatar {...personFace(ruth)} size={32} /><span class="mono">{`${Math.abs(d.diff)} ${d.line.unit}`}</span><span class="i r">{p.ruthName}</span><span class="s">decides</span>
           </div>
         ))}
       </div>

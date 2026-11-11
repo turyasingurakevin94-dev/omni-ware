@@ -5,7 +5,7 @@
  */
 import { signal } from '@preact/signals';
 import { firstWord, orderNo } from '../../../core/names.ts';
-import { customerFace, personFace, whoIs, type YardFace } from '../../../core/store/faces.ts';
+import { customerFace, personFace, whoIs, type YardFace, yardFace } from '../../../core/store/faces.ts';
 import { lineMark, packLines, progress, whereOf, type LineMark } from '../../../core/store/pack.ts';
 import { counts, moneyHeld, onATruck, ordersAt, waitingSince, isMine, NOT_PAID } from '../../../core/store/yard.ts';
 import type { YardBooks, YardOrder } from '../../../core/store/types.ts';
@@ -62,7 +62,7 @@ export function rowFor(kind: Row['kind'], o: YardOrder, b: YardBooks, me: string
   return {
     kind, o, face: c, name: c.name,
     // A packer's small face keeps their own tint (FACTS §1: MK slate), not the phone holder's navy.
-    badge: kind === 'mine' || kind === 'theirs' ? (packer ? { ...personFace(packer), tint: packer.tint === 'me' ? 't4' : packer.tint } : null) : giver ? personFace(giver) : null,
+    badge: kind === 'mine' || kind === 'theirs' ? (packer ? yardFace(b, packer) : null) : giver ? personFace(giver) : null,
     sub: '', pill: kind === 'pack' ? tight(waitingSince(o), now) : kind === 'packed' && days >= 1 ? `${days}d on the bay` : null,
     pillBad: kind === 'packed',
     marks: o.lines.map((l) => lineMark(o, l, cur)), done: `${p.done} of ${p.of}`, to: w.pickup ? 'they collect' : w.to.split(' ')[0], pickup: w.pickup,

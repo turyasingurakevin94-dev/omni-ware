@@ -11,8 +11,11 @@ import './shell/store.css';
 import { watchKeyboard } from '../../ui/keyboard.ts';
 import { App } from './shell/App.tsx';
 import './shell/screens.ts';
+import { preloadAreas } from './shell/areas.ts';
 import { start } from './shell/store.ts';
 
 render(<App />, document.getElementById('app') as HTMLElement);
 watchKeyboard();
 void start();
+// Pack, Goods in, Shelf and Out, quietly after the first paint (shell/areas.ts).
+requestAnimationFrame(() => setTimeout(() => { void preloadAreas(); }, 0));

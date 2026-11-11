@@ -1,44 +1,26 @@
 /*
- * The Out area's small parts, drawn the same on several of its boards (OU01–OU31): faces, the
+ * The Out area's small parts, drawn the same on several of its boards (OU01–OU31): who sold and who decides, the
  * driver chips, "After the slide · X sees", the dock at the foot of a sheet with its hint line,
  * the drop's place row, and the bar a flow draws under its head (No signal · That did not save).
  * Everything here is composed from src/ui; the words come in as props.
  */
 import type { ComponentChildren, JSX } from 'preact';
-import { firstWord, initials, tintFor } from '../../../core/names.ts';
+import { firstWord } from '../../../core/names.ts';
+import { whoIs, yardFace } from '../../../core/store/faces.ts';
 import type { YardBooks, YardOrder, YardPerson } from '../../../core/store/types.ts';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { StatusPill } from '../../../ui/Pill.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
-import { OIcon } from './icons.tsx';
 import './out.css';
 
-/* ---- faces ---- */
-
-/** The customer's face: as the shop casts it, a walk-in in slate, else a tint from the name. */
-export function custFace(b: YardBooks, o: YardOrder): Face {
-  const c = b.customers.find((x) => x.id === o.customerId);
-  const walkIn = /^walk-?in$/i.test(o.client.name.trim());
-  return { initials: walkIn ? 'WI' : initials(o.client.name), tint: c && c.tint ? c.tint : walkIn ? 't4' : tintFor(o.client.name) };
-}
-
-/** A person by staff id or login id. */
-export function person(b: YardBooks, id: string | null | undefined): YardPerson | null {
-  if (!id) return null;
-  return b.people.find((p) => p.id === id || p.userId === id) || null;
-}
+/* ---- who (faces: src/core/store/faces.ts) ---- */
 
 /** The salesperson who took the order (Grace), and the manager (Ruth). */
-export const seller = (b: YardBooks, o: YardOrder): YardPerson | null => person(b, o.takenBy);
+export const seller = (b: YardBooks, o: YardOrder): YardPerson | null => whoIs(b, o.takenBy);
 export const manager = (b: YardBooks): YardPerson | null => b.people.find((p) => p.role === 'manager') || null;
 
-/** A person's face; on a light ground the holder is slate ("Me" is a chip, not a badge). */
-export const faceOf = (p: YardPerson | null): Face => (p ? { initials: p.initials, tint: p.tint === 'me' ? 't4' : p.tint } : { initials: '?', tint: 't4' });
-
-/** "Kato" from "Kato Construction", "Walk-in" kept whole. */
-export const shortName = (name: string): string => (/^walk-?in$/i.test(name.trim()) ? 'Walk-in' : firstWord(name));
 
 /* ---- pills and rows ---- */
 
@@ -88,7 +70,7 @@ export function DriverChips(p: { drivers: YardPerson[]; me: YardPerson; chosen: 
     <div role="group" aria-label="Who drives" class={cx('ou-chips', p.dim && 'dim')}>
       {p.drivers.map((x) => chip(x.id, { kind: 'staff', id: x.id }, <Avatar initials={x.initials} tint="t4" size={24} font={11} style={{ letterSpacing: '-.02em' }} />, firstWord(x.name), () => p.onPick({ kind: 'staff', id: x.id })))}
       {chip('hired', { kind: 'hired' }, <span aria-hidden="true" class="ou-chip-hired"><Icon name="truck" size={13} stroke={2} /></span>, p.hiredName || 'Hired', p.onHired, null)}
-      {chip('me', { kind: 'me' }, <Avatar initials={p.me.initials} tint="t4" size={24} font={11} style={{ letterSpacing: '-.02em' }} />, 'Me', () => p.onPick({ kind: 'me' }))}
+      {chip('me', { kind: 'me' }, <Avatar {...yardFace({ me: p.me }, p.me)} size={24} font={11} style={{ letterSpacing: '-.02em' }} />, 'Me', () => p.onPick({ kind: 'me' }))}
     </div>
   );
 }
@@ -169,7 +151,7 @@ export function EmptyWords(p: { title: string; sub: string }): JSX.Element {
 export function WayIn(p: { icon: 'layers' | 'orders'; word: string; count: number; on: () => void }): JSX.Element {
   return (
     <Tap on={p.on} class="ou-way">
-      <span class="ou-way-ic">{p.icon === 'layers' ? <OIcon name="layers" size={18} stroke={2} /> : <Icon name="orders" size={18} stroke={2} />}</span>{p.word}{p.count > 0 && <> <span class="mono">{p.count}</span></>}
+      <span class="ou-way-ic"><Icon name={p.icon} size={18} stroke={2} /></span>{p.word}{p.count > 0 && <> <span class="mono">{p.count}</span></>}
     </Tap>
   );
 }

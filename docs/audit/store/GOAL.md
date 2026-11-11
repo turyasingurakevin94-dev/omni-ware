@@ -227,3 +227,7 @@ The round-2 fixes were applied once after the last scoring (no third round).
 8. **The new shared words** in the glossary (Ready to collect, Back at the yard, Coming back, Cancelled · put it back / bring it back, Counter sale, Delivered today) take effect when the canvas is approved.
 9. Sample-day gaps filled on the boards, to confirm or replace: #0534's three lines (OU27), Okello's count (SH25), a few "just now" states after 10:41 (SH13, SH16, SH22, SH24, SH25, SH32), the hired drivers Abudu and Juma (OU03).
 10. **Added while building**: Robert Kasozi (AD01–AD04) is an invented new hired driver (FACTS has none); a landline blocks a hired driver (spec §4.4); after Unpack the yard list says To pack while spec §4.2 says "back to Packing now" — one word to pick.
+11. ~~**When a count is due** (screens Q10)~~ — answered 2026-11-11, Kevin: after **21 days**, one rule (`countDue`), the Shelf's aisle ring included.
+12. ~~**Next job after taking over the yard** (screens Q20)~~ — answered 2026-11-11, Kevin: the packer's own half-packed order comes first (TD32 passes).
+13. ~~**Forgot password and label printing** (screens Q21)~~ — answered 2026-11-11, Kevin: drop both; Forgot password keeps "Ask your manager for a new invite link".
+14. ~~**On the road's "Done" chip** (screens Q22)~~ — answered 2026-11-11, Kevin: remove it; Today's "Delivered today" is the one place.

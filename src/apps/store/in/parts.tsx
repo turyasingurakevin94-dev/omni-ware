@@ -5,7 +5,6 @@
  * group heading, a card). Composed from src/ui; the words come from the screens.
  */
 import { Fragment, type ComponentChildren, type JSX } from 'preact';
-import { initials, tintFor } from '../../../core/names.ts';
 import type { YardBooks, YardPerson } from '../../../core/store/types.ts';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
@@ -18,17 +17,9 @@ import { nav } from '../shell/nav.ts';
 import { flush, notDone } from '../shell/store.ts';
 import './in.css';
 
-/** A person's face as the yard draws them (their tint; the phone's holder navy). */
-export const faceOf = (p: Pick<YardPerson, 'initials' | 'tint'> | null | undefined): Face => (p ? { initials: p.initials, tint: p.tint } : { initials: '?', tint: 't4' });
 export const personOf = (b: YardBooks, pred: (p: YardPerson) => boolean): YardPerson | null => b.people.find(pred) || null;
 export const byRole = (b: YardBooks, role: string): YardPerson | null => personOf(b, (p) => p.role === role);
 export const byLogin = (b: YardBooks, userId: string | null): YardPerson | null => personOf(b, (p) => !!userId && p.userId === userId);
-/** A customer's face: their tint on the books, else one from their name. */
-export function customerFace(b: YardBooks, name: string): Face {
-  const c = b.customers.find((x) => x.name === name);
-  return { initials: initials(name), tint: (c && c.tint) || tintFor(name) };
-}
-export const first = (name: string): string => String(name || '').trim().split(/\s+/)[0] || '';
 
 /** The board's small pill: soft ground, its ink, an optional icon. */
 export function Pill(p: { tone: 'info' | 'good' | 'warn' | 'bad' | 'plain' | 'navy'; icon?: IconName; stroke?: number; size?: number; class?: string; children: ComponentChildren }): JSX.Element {

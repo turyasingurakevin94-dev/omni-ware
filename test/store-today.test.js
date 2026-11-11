@@ -40,7 +40,7 @@ const day = async (q) => { const d = storeDemo(q, { instant: true }); const b = 
   t.check(!j.some((x) => x.orderId === 530), 'Not paid yet is never a job (IM-07)');
 
   /* ---- counts: countDue (screens Q10) ---- */
-  t.check(C.COUNT_DUE_DAYS === 21 && C.FRESH_DAYS === 14, 'due after 21 days; the ring is fresh within 14 (open, Q10)');
+  t.check(C.COUNT_DUE_DAYS === 21 && C.FRESH_DAYS === undefined, 'due after 21 days, the one number (Q10, Kevin 2026-11-11): no second freshness figure');
   const it = (x) => b.items.find((i) => i.key === x);
   t.check(C.countAge(it('p-wn3').countedAt, now) === 30, 'aisle C was counted 30 days ago (by the calendar)');
   t.check(C.countDue(it('p-wn3'), b, now) && !C.countDue(it('p-is28'), b, now), 'Wire nails 3" is due; Iron sheet G28 (counted Thu) is not');

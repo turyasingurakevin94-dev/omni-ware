@@ -6,9 +6,8 @@
 import type { JSX } from 'preact';
 import { nav, stack, type Params, type ScreenDef } from './nav.ts';
 import { ROUTES, type Route } from './routes.ts';
+import { STAGE_TITLE as TITLE } from './Loading.tsx';
 import { StageSheet } from './StageSheet.tsx';
-
-const TITLE: Record<string, string> = { pack: 'To pack', in: 'Coming in', 'out/load': 'To load', 'out/road': 'On the road' };
 
 function Body(p: { r: Route; params: Params }): JSX.Element {
   const shown = Object.entries(p.params).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${v}`).join(' · ');

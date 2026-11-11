@@ -17,6 +17,7 @@ import type { CarrierPick } from '../../../core/store/source.ts';
 import type { YardBooks } from '../../../core/store/types.ts';
 import { destinationOf, moneyHeld } from '../../../core/store/yard.ts';
 import { clock } from '../../../core/time.ts';
+import { orderFace, whoIs, yardFace, shortName } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { FullSheet, SheetHead } from '../../../ui/FullSheet.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -29,7 +30,7 @@ import { books, me, now, side } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
 import { openHired, type HiredPick } from './Hired.tsx';
-import { AfterSlide, DriverChips, DropPlace, FlowBar, SheetDock, custFace, faceOf, person, seller, shortName, type DriverPick } from './parts.tsx';
+import { AfterSlide, DriverChips, DropPlace, FlowBar, SheetDock, seller, type DriverPick } from './parts.tsx';
 import './run.css';
 
 const hint = (t: string) => toast.show(t, { kind: 'warn' });
@@ -38,7 +39,7 @@ const hint = (t: string) => toast.show(t, { kind: 'warn' });
 function carrierOf(b: YardBooks, pick: DriverPick | null, hired: HiredPick | null): CarrierPick | null {
   if (!pick) return null;
   if (pick.kind === 'hired') return hired ? { kind: 'hired', name: hired.name, what: hired.what, phone: hired.phone, staffId: null } : null;
-  const p = pick.kind === 'me' ? b.me : person(b, pick.id);
+  const p = pick.kind === 'me' ? b.me : whoIs(b, pick.id);
   return p ? { kind: 'staff', name: p.name, what: '', phone: p.phone, staffId: p.id } : null;
 }
 
@@ -97,15 +98,15 @@ export function Run(p: { params: Params }): JSX.Element {
   useEffect(() => { if (p.params.hired) openHired(d, b, hired, (h) => { setHired(h); setPick({ kind: 'hired' }); }); }, []);
 
   if (!b || !d) return <main class="st-ph" />;
-  const o = d.drops[0].o, from = seller(b, o), cust = custFace(b, o), n = now.value;
+  const o = d.drops[0].o, from = seller(b, o), cust = orderFace(o, b), n = now.value;
 
   if (phase === 'done') {
     const eta = etaMins(side.value, b.shopName, d.drops[0].place), leave = o.leavesAt ?? n;
     const at = clock(Math.max(leave, n));
     const bays = d.drops.map((x) => x.o.bay).filter((x) => x != null);
     return (
-      <Done mark="check" title="On the road" chip={{ face: faceOf(carrier && carrier.staffId ? person(b, carrier.staffId) : null), name: who, sub: `${ids.map(orderNo).join(' ')} · ${d.name}` }}
-        sees={[...(from ? [{ face: { initials: from.initials, tint: 'me' as const }, who: firstWord(from.name), what: `On the road · ${who}`, at }] : []), ...d.drops.map((x) => ({ face: custFace(b, x.o), who: shortName(x.o.client.name), what: `On the road · ${who}`, at }))]}
+      <Done mark="check" title="On the road" chip={{ face: yardFace(b, carrier && carrier.staffId ? whoIs(b, carrier.staffId) : null), name: who, sub: `${ids.map(orderNo).join(' ')} · ${d.name}` }}
+        sees={[...(from ? [{ face: yardFace(b, from), who: firstWord(from.name), what: `On the road · ${who}`, at }] : []), ...d.drops.map((x) => ({ face: orderFace(x.o, b), who: shortName(x.o), what: `On the road · ${who}`, at }))]}
         next={[
           { icon: 'truck', title: 'On the road', sub: `${firstWord(who)}${eta != null ? ` · arrives ~${clock(Math.max(leave, n) + eta * 60000)}` : ''}` },
           { icon: 'camera', title: 'At the door', sub: 'his photo = Delivered' },
@@ -117,7 +118,7 @@ export function Run(p: { params: Params }): JSX.Element {
 
   const t = trackTimes(o), held = runHeld(d), busy = phase === 'sending';
   const dim = phase !== 'ready';
-  const paidBy = person(b, o.paidBy);
+  const paidBy = whoIs(b, o.paidBy);
   const last = droveLast(b, d.drops[0].place);
   const where = [destinationOf(o, b.customers)?.split(',')[0], o.deliverWhen].filter(Boolean).join(' · ');
   const head = (
@@ -151,15 +152,15 @@ export function Run(p: { params: Params }): JSX.Element {
         ? <div class="rn-paid held"><Icon name="clock" size={16} stroke={2.2} /><span>Not paid yet · it leaves when paid</span></div>
         : <div class="rn-paid"><Icon name="check" size={16} stroke={2.6} /><span>Paid · it can leave</span>
           {paidBy && <><Avatar initials={paidBy.initials} tint="me" size={24} font={11} style={{ letterSpacing: '-.02em' }} /><span class="rn-paid-w">{firstWord(paidBy.name)} {o.paidAt != null ? clock(o.paidAt) : ''}</span></>}</div>)}
-      <DropPlace place={where} phone={o.deliverPhone || o.client.phone} from={from ? { initials: from.initials, tint: 'me' } : null} />
+      <DropPlace place={where} phone={o.deliverPhone || o.client.phone} from={from ? yardFace(b, from) : null} />
       {phase === 'ready' && (
         <div class="rn-who"><span>Who drives</span>{last && <span>{`${firstWord(last.name)} drove ${d.drops[0].place} last`}</span>}</div>
       )}
       <DriverChips drivers={driversOf(b, d)} me={b.me} chosen={chosen} dim={dim || held} hiredName={hired && chosen && chosen.kind === 'hired' ? hired.name : null}
         onPick={setPick} onHired={() => openHired(d, b, hired, (h) => { setHired(h); setPick({ kind: 'hired' }); })} />
       <Lines b={b} d={d} off={off} dim={dim} onAll={() => setOff(new Set())} onTick={(k) => setOff((s) => { const x = new Set(s); if (x.has(k)) x.delete(k); else x.add(k); return x; })} />
-      <AfterSlide faces={[...(from ? [{ initials: from.initials, tint: 'me' as const }] : []), ...d.drops.map((x) => custFace(b, x.o))]}
-        who={[from ? firstWord(from.name) : null, ...d.drops.map((x) => shortName(x.o.client.name))].filter(Boolean).join(' and ')} what={`On the road · ${who}`} />
+      <AfterSlide faces={[...(from ? [yardFace(b, from)] : []), ...d.drops.map((x) => orderFace(x.o, b))]}
+        who={[from ? firstWord(from.name) : null, ...d.drops.map((x) => shortName(x.o))].filter(Boolean).join(' and ')} what={`On the road · ${who}`} />
     </FullSheet>
   );
 }

@@ -14,6 +14,7 @@ import { atTheGate, collectedToday, collector, comingToTheGate, isAgent } from '
 import type { YardBooks, YardOrder } from '../../../core/store/types.ts';
 import { counts, moneyHeld } from '../../../core/store/yard.ts';
 import { clock, howLong } from '../../../core/time.ts';
+import { orderFace, whoIs, yardFace } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
@@ -26,8 +27,7 @@ import { books, me, now } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
 import { NotPaidGate } from './GateHeld.tsx';
-import { OIcon } from './icons.tsx';
-import { Card, custFace, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, SheetDock, SideTiles, SoftPill, WayIn, seller, person } from './parts.tsx';
+import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, SheetDock, SideTiles, SoftPill, WayIn, seller } from './parts.tsx';
 import './gate.css';
 
 /** The gate's picture: the yard's front, the gate open in mint (or locked in amber), since when. */
@@ -77,7 +77,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
         <div class="ou-list">
           <span class="ou-list-k">Coming to the gate</span>
           <Card>{coming.map((o) => (
-            <MiniOrder key={o.id} h={52} face={custFace(b, o)} name={isAgent(o) ? `${o.client.name} · agent` : o.client.name}
+            <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={isAgent(o) ? `${o.client.name} · agent` : o.client.name}
               sub={`${orderNo(o.id)} · ${isAgent(o) ? 'by his code' : 'they collect'}`}
               pill={o.pickingStatus === 'in_progress' ? <SoftPill tone="warn" icon={<Icon name="clock" size={12} stroke={2.4} />}>Coming</SoftPill> : <SoftPill tone="info" icon={<Icon name="orders" size={12} stroke={2.6} />}>To pack</SoftPill>} />
           ))}</Card>
@@ -85,7 +85,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
       )}
       <WayIn icon="orders" word="To pack" count={c.toPack} on={() => nav.replace('pack')} />
       <SideTiles tiles={[
-        { label: 'To load, the trucks’ list', icon: <OIcon name="layers" size={20} stroke={1.9} />, title: 'To load', sub: 'the trucks’ list', on: () => nav.replace('out/load') },
+        { label: 'To load, the trucks’ list', icon: <Icon name="layers" size={20} stroke={1.9} />, title: 'To load', sub: 'the trucks’ list', on: () => nav.replace('out/load') },
         { label: `Delivered ${c.deliveredToday}`, good: true, icon: <Icon name="delivered" size={20} stroke={1.9} />, title: <>Delivered <span class="mono">{c.deliveredToday}</span></>, sub: done[0] ? `collected ${clock(done[0].deliveredAt as number)}` : 'today', on: () => nav.replace('out/road') },
       ]} />
     </>
@@ -110,8 +110,8 @@ export function Gate(p: { params: Params }): JSX.Element {
   if (o && c.phase === 'done') {
     const nextUp = list.filter((x) => x.id !== o.id)[0];
     return (
-      <Done mark="hand-over" title="Handed over" chip={{ face: custFace(b, o), name: o.client.name, sub: `${orderNo(o.id)}${o.client.phone ? ` · ${who.split(' · ')[1] || ''}` : ''}` }}
-        sees={from ? [{ face: { initials: from.initials, tint: 'me' }, who: firstWord(from.name), what: 'Delivered · collected' }] : []}
+      <Done mark="hand-over" title="Handed over" chip={{ face: orderFace(o, b), name: o.client.name, sub: `${orderNo(o.id)}${o.client.phone ? ` · ${who.split(' · ')[1] || ''}` : ''}` }}
+        sees={from ? [{ face: yardFace(b, from), who: firstWord(from.name), what: 'Delivered · collected' }] : []}
         next={[
           { icon: 'delivered', title: 'Delivered · collected', sub: `${clock(n)} · off the shelf` },
           { icon: 'receipt', title: 'The bill', sub: 'goes by itself after 24 h' },
@@ -139,7 +139,7 @@ export function Gate(p: { params: Params }): JSX.Element {
               : <Slide label={`Slide to hand over ${orderNo(o.id)}`} onCommit={() => c.commit(`Handed over ${orderNo(o.id)}`, args())} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}
     </SheetDock>
   );
-  const paidBy = o ? person(b, o.paidBy) : null;
+  const paidBy = o ? whoIs(b, o.paidBy) : null;
   return (
     <StageSheet flat gap={8} id="out/gate" lit="out/road" mint title="Ready to collect" count={list.length} sub={sub} foot={foot}
       bar={kept ? <FlowBar kind="offline" onRetry={() => { void c.again(args()); }} /> : c.phase === 'failed' ? <FlowBar kind="failed" code={c.code} onRetry={() => { void c.again(args()); }} /> : null}>
@@ -149,7 +149,7 @@ export function Gate(p: { params: Params }): JSX.Element {
             <GatePic since={o.stageEnteredAt ?? n} />
             <div class="gt-body">
               <div class="gt-who">
-                <Avatar {...custFace(b, o)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
+                <Avatar {...orderFace(o, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
                 <span class="gt-who-t"><span>{o.client.name}</span><span class="mono">{orderNo(o.id)} · {clock(o.createdAt ?? n)}</span></span>
                 {kept ? <SoftPill tone="warn" icon={<Icon name="clock" size={12} stroke={2.4} />}>Not sent yet</SoftPill>
                   : <SoftPill tone="good" icon={<Icon name="check" size={12} stroke={2.6} />}>{paidBy && o.paidAt != null ? `Paid · ${firstWord(paidBy.name)} ${clock(o.paidAt)}` : 'Paid'}</SoftPill>}
@@ -171,7 +171,7 @@ export function Gate(p: { params: Params }): JSX.Element {
               <DotHead dot="#C9C4BA" title="Next at the gate" count={rest.length} right={rest.every(isAgent) && !dim ? <span class="gt-by">by his code</span> : null} />
               <Card>{rest.map((x) => (
                 <div key={x.id} class="gt-next">
-                  <Avatar {...custFace(b, x)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
+                  <Avatar {...orderFace(x, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
                   <span class="gt-next-t"><span>{isAgent(x) ? `${x.client.name} · agent` : x.client.name}</span>
                     <span class="mono">{`${orderNo(x.id)} · packed ${clock(x.pickingDoneAt ?? n)} · ${x.lines.filter((l) => !l.dropped).length} ${plural(x.lines.filter((l) => !l.dropped).length, 'line')}`}</span></span>
                   <Tap on={() => (isAgent(x) ? nav.push('out/gate-code', { id: x.id }) : nav.push('out/gate', { id: x.id }))} class={cx('gt-code', dim && 'dim')}>

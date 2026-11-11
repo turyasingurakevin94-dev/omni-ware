@@ -2,7 +2,7 @@
  * shelf (the tab) · SH01, SH41 no signal, SH06 nothing needs a look.
  *
  *   the head      "Shelf 1,153", Scan, how long since each aisle was counted (a bar per aisle, the dashed
- *                 line at 14 days, over it red), Find
+ *                 line at 21 days, over it red), Find
  *   Needs a look  Running low (Ask) · Count due (Count) · Found damaged (Report) · With Ruth (Open), each
  *                 with how many; nothing: "The shelf is in order", the next aisle to count, spot-check
  *   Aisles        A–L with their names; a badge for what to look at, a dot for a count due
@@ -13,7 +13,7 @@ import type { JSX } from 'preact';
 import { counted, plural } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import { aislesOf, lookOf, onShelf, openReports, type Aisle } from '../../../core/store/shelf.ts';
-import { AISLE_FRESH_DAYS, countDue, recountOf } from '../../../core/store/counts.ts';
+import { COUNT_DUE_DAYS, countDue, recountOf } from '../../../core/store/counts.ts';
 import type { ShelfItem, YardBooks } from '../../../core/store/types.ts';
 import { Duo, Icon, phBox, phClock, phHourglass } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
@@ -66,7 +66,7 @@ const LOOK: Record<Look['kind'], [string, string, string, () => JSX.Element]> = 
 
 /** How fresh each aisle's count is: one bar a day, the dashed line at 14, red over it. */
 function Bars(p: { aisles: Aisle[]; dim: boolean; onTap: () => void }): JSX.Element {
-  const label = `Days since each aisle was counted: ${p.aisles.map((a) => `${a.letter} ${a.days ?? 'never'}`).join(', ')}. Due every ${AISLE_FRESH_DAYS} days.${p.aisles.filter((a) => a.due).map((a) => ` Aisle ${a.letter} is over.`).join('')}`;
+  const label = `Days since each aisle was counted: ${p.aisles.map((a) => `${a.letter} ${a.days ?? 'never'}`).join(', ')}. Due every ${COUNT_DUE_DAYS} days.${p.aisles.filter((a) => a.due).map((a) => ` Aisle ${a.letter} is over.`).join('')}`;
   return (
     <Tap on={p.onTap} label={label} class="sh-bars-a">
       <span aria-hidden="true" class={cx('sh-bars', p.dim && 'dim')}>
@@ -141,7 +141,7 @@ export function Shelf(): JSX.Element {
             {next && (
               <Tap on={() => nav.push('shelf/aisle', { aisle: next.name })} class="sh-calm-r">
                 <span aria-hidden="true" class="sh-calm-g"><Icon name="tally" size={18} stroke={2} /></span>
-                <span class="sh-calm-t"><span>{`Next count: aisle ${next.letter}`}</span><span>due in <span class="mono">{Math.max(1, AISLE_FRESH_DAYS - (next.days as number))}</span> {plural(Math.max(1, AISLE_FRESH_DAYS - (next.days as number)), 'day')} · {next.name}</span></span>
+                <span class="sh-calm-t"><span>{`Next count: aisle ${next.letter}`}</span><span>due in <span class="mono">{Math.max(1, COUNT_DUE_DAYS - (next.days as number))}</span> {plural(Math.max(1, COUNT_DUE_DAYS - (next.days as number)), 'day')} · {next.name}</span></span>
                 <span class="sh-look-b">Count</span>
               </Tap>
             )}

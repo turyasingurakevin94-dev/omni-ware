@@ -21,7 +21,6 @@ import { PushCard, WhereCard, toSheet } from './parts.tsx';
 import { rowFor } from './sheet-data.ts';
 import { PackRow } from './ToPack.tsx';
 import { bayFor } from '../../../core/store/bays.ts';
-import { Glyph } from './glyphs.tsx';
 
 const placed = (o: YardOrder, n: number) => {
   const t = o.createdAt ?? o.savedAt ?? n;
@@ -45,7 +44,7 @@ function Copy(p: { b: YardBooks; o: YardOrder }): JSX.Element {
         <span class="pk-same-eq">=</span>
         <span class="bad"><b class="mono">{orderNo(o.id)}</b><span>the copy · don’t</span></span>
       </div>
-      <LinesCard b={b} title={`What ${orderNo(o.id)} asks`} chip={<span class="pk-list-c"><Glyph name="copy" size={13} stroke={2.2} />{`same as ${orderNo(o.copyOf as number)}`}</span>}
+      <LinesCard b={b} title={`What ${orderNo(o.id)} asks`} chip={<span class="pk-list-c"><Icon name="copy" size={13} stroke={2.2} />{`same as ${orderNo(o.copyOf as number)}`}</span>}
         rows={o.lines.map((l) => ({ l, end: <span role="img" aria-label="Look only" class="pk-lock"><Icon name="lock" size={14} stroke={2.2} /></span> }))} />
       {of && (
         <div class="pk-instead">
@@ -73,7 +72,7 @@ function Theirs(p: { b: YardBooks; o: YardOrder }): JSX.Element {
       <div class="pk-card pk-whose">
         {who && <Avatar {...personFace(who)} size={40} />}
         <span><b>{`${wn}’s`}</b><span>{`${who && who.role === 'store' ? 'he' : 'they'} took it at `}<span class="mono">{took != null ? clock(took) : ''}</span></span></span>
-        <span class="pk-tag" style={{ height: '26px', fontSize: '12px' }}><Glyph name="eye" size={14} stroke={2.4} />Look only</span>
+        <span class="pk-tag" style={{ height: '26px', fontSize: '12px' }}><Icon name="eye" size={14} stroke={2.4} />Look only</span>
       </div>
       <LinesCard b={b} title={`What ${firstWord(c.name)} gets`} bar={ls.map((l) => (l.pickStatus === 'done' ? 'on' : 'amber'))} count={`${pr.done} of ${pr.of}`}
         rows={ls.map((l) => ({

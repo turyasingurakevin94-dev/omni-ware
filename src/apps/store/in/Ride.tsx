@@ -7,9 +7,10 @@
  *
  * Rules: core/store/ride.ts. Writes: W19 rideTick (Done at the stop), W19a rideHandIn (the slide).
  */
+import { orderFace, personFace, yardFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { orderNo } from '../../../core/names.ts';
+import { orderNo, firstWord } from '../../../core/names.ts';
 import { allOn, rideOf, rideStops, ticksFor, type Ticks } from '../../../core/store/ride.ts';
 import type { YardBooks } from '../../../core/store/types.ts';
 import { clock } from '../../../core/time.ts';
@@ -20,7 +21,7 @@ import { Stepper } from '../../../ui/Stepper.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, me, notDone, now } from '../shell/store.ts';
-import { byLogin, byRole, customerFace, Done, DoneWho, faceOf, first, HeadPill, HeadRail, InBar, InDock, Pill, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
+import { byLogin, byRole, Done, DoneWho, HeadPill, HeadRail, InBar, InDock, Pill, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
 import './ride.css';
 
 type Phase = 'load' | 'back' | 'sending' | 'kept' | 'failed' | 'done';
@@ -35,7 +36,7 @@ export function Ride(p: { trip?: string }): JSX.Element {
   const [edit, setEdit] = useState<string | null>(null), [doneAt, setDoneAt] = useState<number | null>(null);
   const [local, setLocal] = useState<Phase | null>(null), [kept, setKept] = useState(false), [handedAt, setHandedAt] = useState(0);
   if (!b || !r) return <Screen head={<TripHead lead={null} name="Ride a trip" sub="" onClose={() => nav.home()} />}><p class="in-gone-p">No trip for you now.</p></Screen>;
-  const t = r.trip, stop = t.stops[0], short = stop.supplierName.split(' ')[0], denis = first(r.from ? r.from.name : 'The Buyer');
+  const t = r.trip, stop = t.stops[0], short = stop.supplierName.split(' ')[0], denis = firstWord(r.from ? r.from.name : 'The Buyer');
   const okello = b.people.find((x) => x.role === 'store' && x.id !== b.me.id && !x.away) || null, esther = byRole(b, 'accounts');
   const phase: Phase = local || (r.phase === 'load' ? 'load' : 'back');
   const nLines = t.lines.length, lineWord = `${nLines} ${nLines === 1 ? 'line' : 'lines'}`;
@@ -47,7 +48,7 @@ export function Ride(p: { trip?: string }): JSX.Element {
     const l = t.lines[0];
     return (
       <Done title="Handed in"
-        who={<DoneWho lead={<span class="in-faces2 ri-two"><Avatar initials={b.me.initials} tint="t4" size={30} />{r.driver && <Avatar {...faceOf(r.driver)} size={30} />}</span>} name={stop.supplierName} sub={`${lineWord} · ${clock(handedAt)}`} />}>
+        who={<DoneWho lead={<span class="in-faces2 ri-two"><Avatar {...yardFace(b, b.me)} size={30} />{r.driver && <Avatar {...personFace(r.driver)} size={30} />}</span>} name={stop.supplierName} sub={`${lineWord} · ${clock(handedAt)}`} />}>
         {l && (
           <div class="in-flow ri-flow" role="img" aria-label={`${ticks[l.id] ?? l.expected} ${l.unit} back at the yard`}>
             <div class="in-flow-r">
@@ -60,9 +61,9 @@ export function Ride(p: { trip?: string }): JSX.Element {
         )}
         <Steps steps={[
           { lead: 'check', state: 'done', title: 'Handed in', sub: `${clock(handedAt)} · ${denis} told` },
-          { lead: okello ? okello.initials : 'OP', state: 'now', title: `${first(okello ? okello.name : 'The yard')} checks it in`, sub: 'now · blind, at the yard' },
-          { lead: 'note', state: 'next', title: `${first(esther ? esther.name : 'Accounts')} checks the receipt`, sub: `${denis} paid ${short}` },
-          ...orderIds.map((id) => ({ lead: 'orders', state: 'next' as const, title: `${orderNo(id)} to Packing`, sub: `${first(seller ? seller.name : 'Sales')} sees it after the check-in` })),
+          { lead: okello ? okello.initials : 'OP', state: 'now', title: `${firstWord(okello ? okello.name : 'The yard')} checks it in`, sub: 'now · blind, at the yard' },
+          { lead: 'note', state: 'next', title: `${firstWord(esther ? esther.name : 'Accounts')} checks the receipt`, sub: `${denis} paid ${short}` },
+          ...orderIds.map((id) => ({ lead: 'orders', state: 'next' as const, title: `${orderNo(id)} to Packing`, sub: `${firstWord(seller ? seller.name : 'Sales')} sees it after the check-in` })),
         ]} />
       </Done>
     );
@@ -90,10 +91,10 @@ export function Ride(p: { trip?: string }): JSX.Element {
   };
   const stops = rideStops({ ...r, phase: at ? 'load' : 'back' }, doneAt ? Object.fromEntries(t.stops.map((s) => [s.id, doneAt])) : {});
   const head = (
-    <TripHead lead={<span aria-hidden="true" class="ri-faces"><Avatar initials={b.me.initials} tint="t4" size={34} />{r.driver && <Avatar {...faceOf(r.driver)} size={32} />}</span>}
+    <TripHead lead={<span aria-hidden="true" class="ri-faces"><Avatar {...yardFace(b, b.me)} size={34} />{r.driver && <Avatar {...personFace(r.driver)} size={32} />}</span>}
       name={`Trip to ${stop.supplierName}`} sub={at ? `you ride · ${lineWord}` : `at the yard ${clock(now.value)}`} onClose={() => nav.back()}>
       <div class="ri-head">
-        <div class="in-head-chips"><HeadPill face={faceOf(r.from)}>{`From ${denis} · Buyer`}</HeadPill>{r.driver && <HeadPill face={faceOf(r.driver)}>{`${first(r.driver.name)} drives`}</HeadPill>}<span class="in-flex" /></div>
+        <div class="in-head-chips"><HeadPill face={personFace(r.from)}>{`From ${denis} · Buyer`}</HeadPill>{r.driver && <HeadPill face={personFace(r.driver)}>{`${firstWord(r.driver.name)} drives`}</HeadPill>}<span class="in-flex" /></div>
         <HeadRail label={stops.map((s) => `${s.word} ${s.state === 'now' ? 'now' : s.at ? clock(s.at) : ''}`).join(', ')}
           stops={stops.map((s, i) => ({ word: s.word, at: s.state === 'now' ? 'now' : s.at ? `${i === stops.length - 1 && s.state === 'next' ? '~' : ''}${clock(s.at)}` : '', state: s.state, icon: i === stops.length - 1 ? 'store' : 'cart' }))} />
       </div>
@@ -122,7 +123,7 @@ export function Ride(p: { trip?: string }): JSX.Element {
                     ? <Stepper value={n} unit={l.unit} onChange={(v) => setTicks({ ...ticks, [l.id]: v })} />
                     : <span class="ri-line-s">
                       <button type="button" class="ri-n" aria-label={`${n} ${l.unit === 'pc' ? 'pieces' : l.unit}: tap to change`} onClick={() => setEdit(l.id)}><b class="mono">{n}</b><span>{l.unit}</span><Icon name="pen" size={12} stroke={2.2} /></button>
-                      {o && <span class="ri-for"><Avatar {...customerFace(b, o.client.name)} size={18} /><span class="mono">{orderNo(o.id)}</span></span>}
+                      {o && <span class="ri-for"><Avatar {...orderFace(o, b)} size={18} /><span class="mono">{orderNo(o.id)}</span></span>}
                     </span>}
                 </span>
                 <button type="button" class={cx('ri-tick', on && 'on')} aria-label={`${l.name.split(' ')[0]}: ${on ? 'on the truck' : 'not on yet'}`} aria-pressed={on}
@@ -136,14 +137,14 @@ export function Ride(p: { trip?: string }): JSX.Element {
         <div class="ri-money"><span aria-hidden="true"><Icon name="lock" size={18} stroke={2} /></span><span><b>{`${denis} pays ${short} from his phone`}</b><span>you load it · no money on this phone</span></span></div>
         {order && (
           <div class="in-who ri-order">
-            <Avatar {...customerFace(b, order.client.name)} size={36} />
-            <span class="in-who-t"><span>{`${orderNo(order.id)} ${first(order.client.name)} waits on it`}</span><span class="mono">{`${first(seller ? seller.name : 'Sales')} placed it ${clock(order.createdAt ?? 0)}`}</span></span>
+            <Avatar {...orderFace(order, b)} size={36} />
+            <span class="in-who-t"><span>{`${orderNo(order.id)} ${firstWord(order.client.name)} waits on it`}</span><span class="mono">{`${firstWord(seller ? seller.name : 'Sales')} placed it ${clock(order.createdAt ?? 0)}`}</span></span>
             <Pill tone="info" icon="cart">Buying</Pill>
           </div>
         )}
         <div class="rt-who">
-          <span><Avatar {...faceOf(r.from)} size={22} />{`${denis} sees`}<b>{onTruck ? `Loaded at ${short} · ${clock(now.value)}` : `Buying · at ${short}`}</b></span>
-          {order && <span><Avatar {...faceOf(seller)} size={22} />{`${first(seller ? seller.name : 'Sales')} sees`}<b>{`${orderNo(order.id)} · Buying`}</b></span>}
+          <span><Avatar {...personFace(r.from)} size={22} />{`${denis} sees`}<b>{onTruck ? `Loaded at ${short} · ${clock(now.value)}` : `Buying · at ${short}`}</b></span>
+          {order && <span><Avatar {...personFace(seller)} size={22} />{`${firstWord(seller ? seller.name : 'Sales')} sees`}<b>{`${orderNo(order.id)} · Buying`}</b></span>}
         </div>
         <div class="in-foot-end"><button type="button" class="in-navybtn" disabled={!onTruck} onClick={() => { void done(); }}><span class="ri-mint"><Icon name="check" size={18} stroke={2.6} /></span>{`Done at ${short} · back to the yard`}</button></div>
       </Screen>
@@ -153,8 +154,8 @@ export function Ride(p: { trip?: string }): JSX.Element {
   const gone =phase === 'sending', stuck = phase === 'kept' || kept, failed = phase === 'failed';
   const move = gone ? { kind: 'slide' as const, props: { label: 'Sending…', onCommit: () => undefined, state: 'sending' as const } }
     : stuck ? { kind: 'wait' as const, label: 'Waiting to send' } : { kind: 'slide' as const, props: { label: 'Slide to hand in the trip', onCommit: handIn } };
-  const first2 = <Sees face={faceOf(r.from)} who={denis} what={stuck || failed ? `Buying · at ${short}` : 'Handed in'} />;
-  const second = stuck ? <Updating at={clock(b.at)} /> : <Sees face={faceOf(okello)} who={first(okello ? okello.name : 'The yard')} what={failed ? 'nothing yet' : `Check it in · ${lineWord}`} />;
+  const first2 = <Sees face={personFace(r.from)} who={denis} what={stuck || failed ? `Buying · at ${short}` : 'Handed in'} />;
+  const second = stuck ? <Updating at={clock(b.at)} /> : <Sees face={personFace(okello)} who={firstWord(okello ? okello.name : 'The yard')} what={failed ? 'nothing yet' : `Check it in · ${lineWord}`} />;
   const foot = (
     <div class="in-foot">
       <InBar kept={stuck} what="ticks" retry={failed ? () => { void handIn(); } : undefined} />
@@ -170,14 +171,14 @@ export function Ride(p: { trip?: string }): JSX.Element {
           return (
             <div key={l.id} class="ri-truck-l">
               <ItemArt name={l.name} size={64} radius={14} />
-              <span class="ri-line-t"><span>{l.name}</span><span class="ri-line-s"><b class="mono">{ticks[l.id] ?? l.expected}</b><span class="u">{`${l.unit}${o ? ' · for' : ''}`}</span>{o && <><Avatar {...customerFace(b, o.client.name)} size={20} /><span class="mono o">{orderNo(o.id)}</span></>}</span></span>
+              <span class="ri-line-t"><span>{l.name}</span><span class="ri-line-s"><b class="mono">{ticks[l.id] ?? l.expected}</b><span class="u">{`${l.unit}${o ? ' · for' : ''}`}</span>{o && <><Avatar {...orderFace(o, b)} size={20} /><span class="mono o">{orderNo(o.id)}</span></>}</span></span>
               <span role="img" aria-label="Loaded" class="in-mark ok"><Icon name="check" size={12} stroke={3.2} /></span>
             </div>
           );
         })}
       </div>
-      <div class="in-who"><Avatar {...faceOf(okello)} size={36} /><span class="in-who-t"><span class="sm">{`${first(okello ? okello.name : 'The yard')} checks it in`}</span><span class="w">blind · you loaded it, so he counts</span></span><Pill tone="info">next</Pill></div>
-      <div class="ri-money"><span aria-hidden="true"><Icon name="lock" size={18} stroke={2} /></span><span><b>{`${denis} paid ${short}`}</b><span>{`${first(esther ? esther.name : 'Accounts')} checks his receipt · no money here`}</span></span></div>
+      <div class="in-who"><Avatar {...personFace(okello)} size={36} /><span class="in-who-t"><span class="sm">{`${firstWord(okello ? okello.name : 'The yard')} checks it in`}</span><span class="w">blind · you loaded it, so he counts</span></span><Pill tone="info">next</Pill></div>
+      <div class="ri-money"><span aria-hidden="true"><Icon name="lock" size={18} stroke={2} /></span><span><b>{`${denis} paid ${short}`}</b><span>{`${firstWord(esther ? esther.name : 'Accounts')} checks his receipt · no money here`}</span></span></div>
     </Screen>
   );
 }

@@ -9,12 +9,13 @@ import { useState } from 'preact/hooks';
 import { orderNo } from '../../../core/names.ts';
 import { roadsThatWay, type Direction } from '../../../core/store/load.ts';
 import { moneyHeld } from '../../../core/store/yard.ts';
+import { orderFace } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { act, books, side } from '../shell/store.ts';
 import { OIcon } from './icons.tsx';
-import { Card, custFace, MiniOrder, NotPaid } from './parts.tsx';
+import { Card, MiniOrder, NotPaid } from './parts.tsx';
 
 const CX = 164, CY = 88, W = 328, H = 176;
 
@@ -57,7 +58,7 @@ function Map(p: { d: Direction }): JSX.Element {
       </svg>
       <span class="nd-yard"><Icon name="store" size={14} stroke={2} /></span>
       <span class="nd-drop" style={{ left: `${left}px`, top: `${top}px` }}>
-        <Avatar {...custFace(b, o)} size={28} font={11} style={{ letterSpacing: '-.02em', boxShadow: '0 0 0 2px #FFFFFF' }} />
+        <Avatar {...orderFace(o, b)} size={28} font={11} style={{ letterSpacing: '-.02em', boxShadow: '0 0 0 2px #FFFFFF' }} />
         <span class="mono">{orderNo(o.id)}</span>
       </span>
       <span class="nd-way"><OIcon name="nav" size={13} stroke={2.2} />{way}</span>
@@ -94,7 +95,7 @@ function NameDirection(p: { d: Direction }): JSX.Element {
       <label class="nd-field"><span>→</span><input type="text" value={name} aria-label="Name of the direction" onInput={(e) => setName((e.target as HTMLInputElement).value)} /></label>
       <div class="ou-list">
         <span class="ou-list-k">Drops this way</span>
-        <Card>{p.d.drops.map(({ o }) => <MiniOrder key={o.id} h={52} face={custFace(b, o)} name={o.client.name} sub={`${orderNo(o.id)}${o.bay != null ? ` · bay ${o.bay}` : ''}`} pill={moneyHeld(o) ? <NotPaid /> : null} />)}</Card>
+        <Card>{p.d.drops.map(({ o }) => <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)}${o.bay != null ? ` · bay ${o.bay}` : ''}`} pill={moneyHeld(o) ? <NotPaid /> : null} />)}</Card>
       </div>
       {named.length > 0 && <div class="nd-named">Named already{named.map((n) => <span key={n}>→ {n}</span>)}</div>}
     </LightSheet>

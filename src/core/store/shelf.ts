@@ -12,19 +12,15 @@
  * No money: no price, no cost, no value of the shelf. "Shelf", never "books", beside a figure (DATA-04).
  */
 import type { Ms } from '../types.ts';
-import { countDue, daysSince } from './counts.ts';
+import { aisleLetter, countDue, daysSince } from './counts.ts';
 import type { ShelfItem, StockReport, StoreAsk, YardBooks, YardOrder } from './types.ts';
 import { isCancelled } from './yard.ts';
 
 const DAY_MS = 864e5;
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-/** An aisle's letter by its place in the shop's list ("Roofing" → A); null: no aisle yet (DATA-05). */
-export function letterOf(b: Pick<YardBooks, 'aisles'>, category: string | null): string | null {
-  const i = category ? b.aisles.indexOf(category) : -1;
-  return i >= 0 ? LETTERS[i] || null : null;
-}
-export const aisleOfLetter = (b: Pick<YardBooks, 'aisles'>, letter: string): string | null => b.aisles[LETTERS.indexOf(letter.toUpperCase())] || null;
+/** An aisle's letter by its place in the shop's list ("Roofing" → A); null: no aisle yet (DATA-05). The rule is counts.ts aisleLetter. */
+export const letterOf = (b: Pick<YardBooks, 'aisles'>, category: string | null): string | null => aisleLetter(b, category) || null;
+export const aisleOfLetter = (b: Pick<YardBooks, 'aisles'>, letter: string): string | null => b.aisles[letter.toUpperCase().charCodeAt(0) - 65] || null;
 
 /** A line has left the shelf: packed (or short at what was picked) on an order not invoiced and not called off. */
 function leftFor(o: YardOrder): boolean {
@@ -91,13 +87,13 @@ export function lookOf(b: YardBooks, it: ShelfItem, now: Ms): Look | null {
 
 export interface Aisle { name: string; letter: string; items: ShelfItem[]; days: number | null; due: boolean }
 
-/** The aisles A–L. An aisle is as fresh as its oldest count; over 14 days it is due (the Shelf's bars). */
+/** The aisles A–L. An aisle is as fresh as its oldest count; due when an item in it is (counts.ts countDue: over 21 days, or a recount asked). */
 export function aislesOf(b: YardBooks, now: Ms): Aisle[] {
-  return b.aisles.map((name, i) => {
+  return b.aisles.map((name) => {
     const items = b.items.filter((x) => x.category === name);
     const oldest = items.reduce<Ms | null>((m, x) => (x.countedAt == null ? m : m == null ? x.countedAt : Math.min(m, x.countedAt)), null);
     const days = oldest == null ? null : daysSince(oldest, now);
-    return { name, letter: LETTERS[i], items, days, due: days != null && days > 14 };
+    return { name, letter: aisleLetter(b, name), items, days, due: items.some((x) => countDue(x, b, now, onShelf(b, x.key))) };
   });
 }
 

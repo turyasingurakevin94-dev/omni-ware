@@ -9,6 +9,7 @@ import { useState } from 'preact/hooks';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { atTheGate, codeOf, codeSays, isAgent } from '../../../core/store/gate.ts';
 import { clock } from '../../../core/time.ts';
+import { orderFace, yardFace } from '../../../core/store/faces.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
@@ -20,7 +21,7 @@ import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
 import { GateLine } from './Gate.tsx';
 import { OIcon } from './icons.tsx';
-import { custFace, seller, SheetDock } from './parts.tsx';
+import { seller, SheetDock } from './parts.tsx';
 
 export function GateCode(p: { params: Params }): JSX.Element {
   const b = books.value, n = now.value;
@@ -33,8 +34,8 @@ export function GateCode(p: { params: Params }): JSX.Element {
   const key = (d: string) => { if (typed.length < 4) setTyped(typed + d); };
   if (c.phase === 'done') {
     return (
-      <Done mark="hand-over" title="Handed over" chip={{ face: custFace(b, o), name: o.client.name, sub: `${orderNo(o.id)} · code ${codeOf(o)}` }}
-        sees={[...(from ? [{ face: { initials: from.initials, tint: 'me' as const }, who: firstWord(from.name), what: 'Delivered · collected' }] : []), { face: custFace(b, o), who: name, what: 'Delivered · collected' }]}
+      <Done mark="hand-over" title="Handed over" chip={{ face: orderFace(o, b), name: o.client.name, sub: `${orderNo(o.id)} · code ${codeOf(o)}` }}
+        sees={[...(from ? [{ face: yardFace(b, from), who: firstWord(from.name), what: 'Delivered · collected' }] : []), { face: orderFace(o, b), who: name, what: 'Delivered · collected' }]}
         next={[{ icon: 'delivered', title: 'Delivered · collected', sub: `${clock(n)} · by his code` }, { icon: 'receipt', title: 'The bill', sub: 'goes by itself after 24 h' }]}
         undo={`Collected ${clock(n)} · ${name}`} />
     );
@@ -48,7 +49,7 @@ export function GateCode(p: { params: Params }): JSX.Element {
       <div role="dialog" aria-label={`${name}'s code`} class="gc-sh">
         <span aria-hidden="true" class="gc-grab" />
         <div class="gc-top">
-          <Avatar {...custFace(b, o)} size={44} font={15} style={{ letterSpacing: '-.02em' }} />
+          <Avatar {...orderFace(o, b)} size={44} font={15} style={{ letterSpacing: '-.02em' }} />
           <div class="gc-top-t"><span>{`${orderNo(o.id)} · agent pickup`}</span><h2>{`${name}'s code`}</h2></div>
           <button type="button" class="gc-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
         </div>

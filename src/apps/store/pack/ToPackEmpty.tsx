@@ -15,7 +15,6 @@ import { Tap } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, me, now } from '../shell/store.ts';
 import type { Sheet } from './sheet-data.ts';
-import { Glyph } from './glyphs.tsx';
 
 export function ToPackEmpty(p: { s: Sheet }): JSX.Element {
   const b = books.value, s = p.s;
@@ -36,14 +35,14 @@ export function ToPackEmpty(p: { s: Sheet }): JSX.Element {
       <div class="pk-empty-t"><b>Nothing to pack</b><span>New orders from Sales land here, with a push</span></div>
       {round && runner && (
         <Tap on={() => nav.push('in/checkin', { trip: round[0].id })} class="pk-navy-go">
-          <Glyph name="came-in" size={18} stroke={2} style={{ color: '#6FDCB0' }} />{`Check in ${firstWord(runner.name)}’s trip${due != null ? ' · ' : ''}`}{due != null && <span class="mono">{`~${clock(due)}`}</span>}
+          <Icon name="came-in" size={18} stroke={2} style={{ color: '#6FDCB0' }} />{`Check in ${firstWord(runner.name)}’s trip${due != null ? ' · ' : ''}`}{due != null && <span class="mono">{`~${clock(due)}`}</span>}
         </Tap>
       )}
       {(packed.length > 0 || ready.length > 0) && (
         <div class="pk-two">
           {packed.length > 0 && (
             <Tap on={() => nav.replace('out/load')} class="pk-two-t">
-              <Glyph name="layers" size={20} stroke={1.9} style={{ color: '#1A5A8A' }} />
+              <Icon name="layers" size={20} stroke={1.9} style={{ color: '#1A5A8A' }} />
               <span><b>To load <span class="mono">{packed.length}</span></b><span>{`→ ${String(firstTo || '').split(/[ ,]/)[0]}`}</span></span>
             </Tap>
           )}

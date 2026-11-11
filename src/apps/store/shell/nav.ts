@@ -23,10 +23,19 @@ export type Tab = 'today' | 'shelf';
 /** bars: false: the screen draws the Not done bars itself (over its dock, IN08). */
 export interface ScreenDef { view: (p: { params: Params }) => JSX.Element; tabBar?: boolean; bars?: boolean }
 
-let REG: Record<string, ScreenDef> = {};
-/** The screens, given once by screens.ts (an area's own, over the placeholders). */
-export function register(r: Record<string, ScreenDef>): void { REG = r; }
-export function screen(id: string): ScreenDef | undefined { return REG[id]; }
+const REG = signal<Record<string, ScreenDef>>({});
+let missing: (id: string) => ScreenDef | undefined = () => undefined;
+/**
+ * The screens, given by screens.ts: the shell's and Today's at once, with what stands in for
+ * an id not here (a lazy area's loading state, shell/areas.ts; else its placeholder).
+ */
+export function register(r: Record<string, ScreenDef>, fallback?: (id: string) => ScreenDef | undefined): void {
+  REG.value = r;
+  if (fallback) missing = fallback;
+}
+/** A lazy area's screens, when its file arrives (shell/areas.ts): they take their ids' places. */
+export function addScreens(r: Record<string, ScreenDef>): void { REG.value = { ...REG.value, ...r }; }
+export function screen(id: string): ScreenDef | undefined { return REG.value[id] || missing(id); }
 
 export interface Entry { id: string; params: Params; key: number }
 let keys = 0;

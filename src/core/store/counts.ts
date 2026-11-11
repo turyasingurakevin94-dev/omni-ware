@@ -10,21 +10,17 @@
  *   countAge(at, now)        whole days since a count, by the calendar ("30 days")
  *   aisleLetter(b, aisle)    A–L in the shop's aisle order (FACTS §5); '' for no aisle
  *
- * OPEN (screens Q10, for Kevin): a count is due after 21 days here (store.html:5148), but the
- * Shelf's "counted every 14 days" and an aisle's freshness ring use 14 (COUNT_DUE_DAYS in
- * store.html:5120). The boards agree with either: FACTS' only due aisle (C, 30 days) is past
- * both, and every other aisle was counted 8 days ago or less. Until Kevin picks one number,
- * due is 21 and the ring's freshness is FRESH_DAYS, 14.
+ * Kevin, 2026-11-11 (screens Q10): a count is due after 21 days, one number for everything: the
+ * item's "Count due", Today's count job, and the Shelf's aisle ring and its "every 21 days" all read
+ * COUNT_DUE_DAYS through countDue.
  */
 import { dayOf, daysApart } from '../time.ts';
 import type { Ms } from '../types.ts';
 import { countPlace } from './keys.ts';
 import type { ShelfItem, StockCount, YardBooks } from './types.ts';
 
-/** Due after this many days without a count (store.html:5148; screens Q10). */
+/** Due after this many days without a count (store.html:5148; screens Q10, Kevin 2026-11-11: the one number). */
 export const COUNT_DUE_DAYS = 21;
-/** The aisle ring is fresh within this many days (store.html:5120 COUNT_DUE_DAYS = 14; screens Q10, open). */
-export const FRESH_DAYS = 14;
 
 /** Whole days since `at`, by the calendar (Thu 17 Sep → Sat 17 Oct is 30). */
 export function countAge(at: Ms | null, now: Ms): number | null {
@@ -80,9 +76,6 @@ export function aislesDue(b: Pick<YardBooks, 'items' | 'counts' | 'aisles'>, now
 }
 
 /* ---- the Shelf's counting (blind spot and aisle counts, SH10–SH25; FLOW-01, DATA-01) ---- */
-
-/** The aisle ring's freshness, by the Shelf's name for it (= FRESH_DAYS). */
-export const AISLE_FRESH_DAYS = FRESH_DAYS;
 
 /** Whole days between two moments, by the Kampala calendar (Thu 16:10 → Sat 10:41 is 2). */
 export function daysSince(at: Ms, now: Ms): number {
