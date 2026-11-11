@@ -214,6 +214,8 @@ export async function withdraw(sb: Sb, s: Session, id: string): Promise<void> {
 
 /** W22 buyer.html:3419 commitConfirm: the price they said, on their list row (null = still the price). */
 export async function confirmPrice(sb: Sb, s: Session, raw: Raw, sid: string, productId: string | null, item: string, price: UGX): Promise<void> {
+  // A price of 0 is a slip, never a price (the database only refuses below 0).
+  if (!(price > 0)) throw dataError('refused', 'Type their price first', 'noprice');
   const theirs = raw.prices.map(priceRowOf).filter((r) => String(r.supplierId) === String(sid) && (productId == null || String(r.productId) === String(productId)));
   const row = theirs.find((r) => itemName(raw.products, r.productId, r.variantIdx, '') === item) || (productId != null ? theirs[0] : null);
   if (!row) throw dataError('refused', 'Not on their price list: Sourcing adds it', 'noprice');

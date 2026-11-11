@@ -26,7 +26,8 @@ type Tab = 'price' | 'phone';
 type Send = 'idle' | 'save' | 'still';
 
 const STEP = 500;
-const digits = (v: string): number | null => { const d = v.replace(/[^0-9]/g, ''); return d ? Math.min(99999999, Number(d)) : null; };
+// 0 is no price: the field is empty until a price above 0 is typed.
+const digits = (v: string): number | null => { const d = v.replace(/[^0-9]/g, ''); return d && Number(d) > 0 ? Math.min(99999999, Number(d)) : null; };
 
 export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
   const b = books.value, sid = String(p.params.id || ''), item = String(p.params.item || '');
@@ -66,7 +67,7 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
       toast.show('Not sent', { kind: 'error', sub: String((e as Error).message || e), retry: () => { void sendPhone(); } });
     } finally { setSend('idle'); }
   };
-  const step = (d: number) => setVal(Math.max(0, (val ?? list) + d));
+  const step = (d: number) => { const n = (val ?? list) + d; setVal(n > 0 ? n : null); };
   const telOk = phoneOk(tel) && phoneText(tel) !== phoneText(s.phone), price = tab === 'price' && !!x;
 
   return (

@@ -10,6 +10,7 @@
 import { computed, signal } from '@preact/signals';
 import { buyerSupabase } from '../../../core/buyer/supabase.ts';
 import type { BuyerSource } from '../../../core/buyer/source.ts';
+import { isDataError } from '../../../core/datasource.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { idbStore, memoryStore, Outbox, isOffline, type Kept } from '../../../core/outbox.ts';
 import type { Session } from '../../../core/types.ts';
@@ -79,28 +80,58 @@ export async function refresh(): Promise<void> {
   now.value = src().now();
 }
 
-/** Start: the demo or the real books; signed in or the login. */
-export async function start(): Promise<void> {
-  if (isDemo) source = await loadDemo();
-  const s = await src().session();
-  if (!s) { phase.value = 'login'; return; }
+/** Signed in: the outbox, the books, then the timers that keep them fresh (once, however the app got here). */
+let timers = false;
+async function ready(s: Session): Promise<void> {
   session.value = s;
   await openOutbox(s.userId);
   await refresh();
   phase.value = 'ready';
-  if (!isDemo) {
-    setInterval(() => { now.value = src().now(); }, 30000);
-    setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 60000);
-    window.addEventListener('online', () => { void flush(); });
+  if (isDemo || timers) return;
+  timers = true;
+  setInterval(() => { now.value = src().now(); }, 30000);
+  setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 60000);
+  window.addEventListener('online', () => { void flush(); void refresh(); });
+  void flush();
+}
+
+/** A login that is not the Buyer's (the server said so): signed out, so the next open is the login, never a dead page. */
+async function notMine(e: unknown): Promise<boolean> {
+  if (!(isDataError(e) && e.kind === 'refused')) return false;
+  try { await src().signOut(); } catch (_x) { /* signed out on this phone either way */ }
+  session.value = null; books.value = null;
+  return true;
+}
+
+/**
+ * Start: the demo or the real books; signed in or the login. With no signal it never hangs on a blank
+ * page: the login shows "No signal", and the app starts again by itself when the signal comes back.
+ */
+export async function start(): Promise<void> {
+  try {
+    if (isDemo) source = await loadDemo();
+    const s = await src().session();
+    if (!s) { phase.value = 'login'; return; }
+    await ready(s);
+  } catch (e) {
+    if (isOffline(e)) {
+      readError.value = 'No signal';
+      phase.value = 'login';
+      const again = () => { window.removeEventListener('online', again); void start(); };
+      window.addEventListener('online', again);
+      return;
+    }
+    await notMine(e);
+    readError.value = null;
+    phase.value = 'login';
   }
 }
 
 export async function signIn(email: string, password: string): Promise<void> {
-  const s = await src().signIn(email, password);
-  session.value = s;
-  await openOutbox(s.userId);
-  await refresh();
-  phase.value = 'ready';
+  let s: Session;
+  try { s = await src().signIn(email, password); } catch (e) { await notMine(e); throw e; }
+  readError.value = null;
+  await ready(s);
 }
 
 /** This phone gets the Buyer's pushes (the real books in the phone app; nothing in the demo). A failure is quiet: it asks again next start. */

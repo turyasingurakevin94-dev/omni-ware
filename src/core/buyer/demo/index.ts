@@ -136,6 +136,7 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
     }),
 
     confirmPrice: (sid, productId, item, price) => later(() => {
+      if (!(price > 0)) throw dataError('refused', 'Type their price first', 'noprice');
       const p = b.prices.find((x) => x.supplierId === sid && x.item === item);
       if (p) { p.price = price; p.at = clock(); } else b.prices.push({ item, productId, supplierId: sid, price, unit: 'pcs', at: clock() });
     }),

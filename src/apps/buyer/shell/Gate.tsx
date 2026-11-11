@@ -13,7 +13,7 @@ export function Login(): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<{ text: string; offline: boolean } | null>(readError.value ? { text: readError.value, offline: false } : null);
+  const [err, setErr] = useState<{ text: string; offline: boolean } | null>(readError.value ? { text: 'No signal · try when you have signal', offline: true } : null);
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   const go = async (e: Event) => {
     e.preventDefault();
@@ -24,7 +24,8 @@ export function Login(): JSX.Element {
       setErr(off ? { text: 'No signal · try when you have signal', offline: true } : { text: 'Wrong email or password', offline: false });
     } finally { setBusy(false); }
   };
-  const blocked = offline || err?.offline;
+  // Only no signal now holds the button: once the signal is back, Sign in works again.
+  const blocked = offline;
   return (
     <main class="ow-b-gate">
       <header class="ow-b-gate-head">
@@ -40,7 +41,7 @@ export function Login(): JSX.Element {
         <label>Email<input type="email" autocomplete="username" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} required /></label>
         <label>Password<input class={err && !err.offline ? 'bad' : ''} type="password" autocomplete="current-password" value={password} onInput={(e) => setPassword((e.target as HTMLInputElement).value)} required /></label>
         {(err || offline) && (
-          <p role="alert" class={'ow-b-gate-err' + (blocked ? ' off' : '')}>
+          <p role="alert" class={'ow-b-gate-err' + (blocked || err?.offline ? ' off' : '')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
             {err ? err.text : 'No signal · try when you have signal'}
           </p>
