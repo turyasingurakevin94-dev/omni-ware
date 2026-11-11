@@ -43,7 +43,7 @@ t.check(/function mergeRequests\(server, local\)\{/.test(sourcing) && /const cur
   const out = merge(server, local);
   t.check(out.length === 2 && out[0].withdrawn === true && out[1].customerId === 'C2', "an ask Sales appended meanwhile is kept, and this phone's withdrawal of its own entry lands");
 }
-t.check(/else if \(d\.kind === 'supplier\.answered'\) \{ const q = quoteById\(id\); if \(q\) at\('order', \{ id: Number\(q\.id\) \}\); else at\('plan', \{\}\); \}/.test(read('buyer.html')), "buyer: a supplier's answer opens the order");
+t.check(/else if \(d\.kind === 'supplier\.answered'\) \{ const q = quoteById\(id\); if \(q\) at\('order', \{ id: Number\(q\.id\) \}\); else at\('plan', \{\}\); \}/.test(read('old/buyer.html')), "buyer: a supplier's answer opens the order");
 t.check(/sales:\s*\{ label: 'Sales',[^\n]*app: 'sales\.html' \}/.test(read('owner.html')), 'owner: the Sales app is sales.html');
 t.check(/\| 0143 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0143 for it');
 

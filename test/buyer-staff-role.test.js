@@ -20,7 +20,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('buyer staff role');
 const src = read('index.html');
 const worker = read('shared-worker.js');
-const buyer = read('buyer.html');
+const buyer = read('old/buyer.html');
 
 /* ---------------- 1. the floor ---------------- */
 {

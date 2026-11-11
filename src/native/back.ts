@@ -1,6 +1,6 @@
 /*
- * The phone's Back button inside the Android app (the native layer, shell/native.ts; spec 07 §4).
- * Moved from sales.html's native layer (its job 1), on this app's own stack (shell/nav.ts).
+ * The phone's Back button inside an Android app (the native layer, src/native/start.ts; spec 07 §4).
+ * Moved from sales.html's native layer (its job 1); shared by every new app, on its own stack (shell/nav.ts).
  *
  * One press undoes one thing, in this order, and never closes the app:
  *   1. a sheet is open        -> it closes

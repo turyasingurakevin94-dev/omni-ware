@@ -34,7 +34,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/to_regclass\('public\.sourcing_leads'\) is null/.test(sql) && /to_regclass\('public\.collection_trips'\) is null/.test(sql), 'a database without the tables is skipped and named, not an error');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0144 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0144 for this build');
-  const buyer = read('buyer.html');
+  const buyer = read('old/buyer.html');
   t.check(/it\.clientWaits = \{ at: Date\.now\(\), \.\.\.\(S\.user \? \{ by: S\.user\.id \} : \{\}\) \}/.test(buyer), 'the Buyer app still marks client waits with who did it (0139 reads it as droppedBy)');
   t.check(/d\.kind === 'sourcing\.found'/.test(buyer), 'a tap on the found push opens the order in the Buyer app');
 }

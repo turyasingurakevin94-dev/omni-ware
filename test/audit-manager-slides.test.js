@@ -23,7 +23,8 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('sliders with an id in the key reach their handler');
 for (const app of ['manager', 'sales', 'buyer', 'store', 'accounts']) {
-  const src = read(app + '.html');
+  // The Buyer is switched: these are the old page's sliders, in old/buyer.html.
+  const src = read(app === 'buyer' ? 'old/buyer.html' : app + '.html');
   t.check(/const k = String\(el\.dataset\.slide \|\| ''\), f = ACT\['slide:' \+ k\] \|\| ACT\['slide:' \+ k\.split\(':'\)\[0\]\]; if \(f\) f\(el\); \};/.test(src), `${app}: the dispatcher falls back to the key's first part`);
   // every slider built as slideHTML('<name>:' + id ...) has ACT['slide:<name>']
   const built = [...src.matchAll(/slideHTML\('([a-z]+):' \+ /g)].map(m => m[1]);

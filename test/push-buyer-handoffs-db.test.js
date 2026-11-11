@@ -41,7 +41,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   for (const k of ["'supplierId'", "'orderId'", "'tripId'"]) t.check(sql.includes(k), `the push carries ${k} so the tap can open it`);
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0134 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0134 for this build');
-  const buyer = read('buyer.html');
+  const buyer = read('old/buyer.html');
   for (const k of ['paper_bill', 'sourcing_fix', 'item_switch', 'yard_note']) {
     t.check(new RegExp(`passOn\\('${k}'`).test(buyer), `the Buyer app still passes on ${k}`);
   }

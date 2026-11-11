@@ -32,7 +32,7 @@ const { read, createReporter } = require('./_extract');
 const t = createReporter('the audit fixes of 0136');
 const sql = read('supabase/migrations/0136_counter_sale_one_write.sql');
 const sales = read('sales.html');
-const buyer = read('buyer.html');
+const buyer = read('old/buyer.html');
 const manager = read('manager.html');
 const doc = read('docs/decision-rights.md');
 const fn = name => { const at = sql.indexOf('create or replace function ' + name + '('); if (at < 0) throw new Error('0136 has no ' + name); const open = sql.indexOf('$$', at); const end = sql.indexOf('$$;', open + 2); return sql.slice(at, end + 3); };

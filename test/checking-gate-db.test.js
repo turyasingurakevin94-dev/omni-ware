@@ -37,7 +37,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/a\.payment_term = 'prepay'/.test(g) && /agentPaymentStatus', ''\) <> 'paid'/.test(g), 'an agent who pays first has paid');
   t.check(/when coalesce\(ow_num\(p_presets -> 'creditHold' ->> 'days'\), 0\) > 0/.test(sql) && /else 21 end/.test(sql), 'hold days: presets.creditHold.days, 21 when unset');
   // The Buyer app's rules it copies, as they stand.
-  const buyer = read('buyer.html'), sales = read('sales.html');
+  const buyer = read('old/buyer.html'), sales = read('sales.html');
   t.check(/function orderSupplierTerms\(q, supplierId\)[\s\S]{0,260}\[it\.productId, it\.variantIdx == null \? '' : it\.variantIdx, Number\(it\.qty\) \|\| 0, Math\.round\(Number\(it\.price\) \|\| 0\)\]\.join\(':'\)\)\.join\('\|'\)/.test(buyer), 'buyer.html orderSupplierTerms is the shape ow_supplier_terms writes');
   t.check(/function noneOpen\(q\)\{ return \(q\.items \|\| \[\]\)\.filter\(it => it && !it\.supplierId && !it\.clientWaits\); \}/.test(buyer), 'buyer.html noneOpen is the unsourced rule');
   t.check(/agent\.paymentTerm === 'prepay' && q\.agentPaymentStatus !== 'paid'/.test(buyer), 'buyer.html agentPaymentBlocksPreparing is the prepay rule');

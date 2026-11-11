@@ -36,7 +36,6 @@ const CEILINGS = {
   'accounts.html': 7539,
   'manager.html': 6898,
   'store.html': 6796,
-  'buyer.html': 6668,
   'owner.html': 4833,
   'client.html': 2551,
   'supplier.html': 2163,

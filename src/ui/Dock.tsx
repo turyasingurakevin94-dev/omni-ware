@@ -37,6 +37,8 @@ export interface DockProps {
   mode?: { value: Mode; onChange: (m: Mode) => void };
   /** In place of the switch: "Counter sale · 2 items". */
   words?: string;
+  /** Before the words: the face of the person the dock waits on (the Buyer's cash ask: Esther). */
+  face?: ComponentChildren;
   /** null: nothing in it yet. */
   total: Fig | null;
   sub?: { text: string; tone: 'mint' | 'amber' | 'rose' };
@@ -84,7 +86,7 @@ export function Dock(p: DockProps): JSX.Element {
         </label>
       )}
       <div class={cx('ow-dock-top', p.words && 'words')}>
-        {p.words ? <span class={cx('ow-dock-words', p.amber && 'amber')}>{p.words}</span> : p.mode && <ModeSwitch {...p.mode} />}
+        {p.words ? <span class={cx('ow-dock-words', p.amber && 'amber', p.face != null && 'face')}>{p.face}{p.words}</span> : p.mode && <ModeSwitch {...p.mode} />}
         <div class="ow-dock-sum">
           {empty
             ? <span class="ow-dock-none"><span aria-hidden="true"><i /><i /><i /></span><span class="mono">0</span></span>
