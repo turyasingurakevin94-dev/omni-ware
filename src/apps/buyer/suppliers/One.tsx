@@ -15,7 +15,7 @@ import { fig } from '../../../ui/Money.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
-import { chipTone, Face, byRole, first, member, SupTile } from './parts.tsx';
+import { chipTone, Face, byRole, first, keptFor, member, OffBand, SeesWhenBack, SendsLater, SupTile } from './parts.tsx';
 import { ageWord, boughtFrom, intlPhone, isFast, withThem } from './rules.ts';
 import './one.css';
 
@@ -27,7 +27,8 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
   if (!b || !s) return <main class="ow-b-suppliers-one"><p class="ow-b-suppliers-gone">This supplier is not on the list</p></main>;
   const t = now.value, lines = withThem(b, s.id), bought = boughtFrom(b, s.id, t);
   const ruth = first(byRole(b, 'manager'), 'Ruth'), old = bought.filter((x) => !x.fresh).length;
-  const short = s.name.split(' ')[0];
+  const short = s.name.split(' ')[0], moses = first(byRole(b, 'sourcing'), 'Sourcing');
+  const later = bought.some((x) => keptFor('confirmPrice', s.id, x.price.item));
   const wa = `https://wa.me/${intlPhone(s.phone)}`;
 
   return (
@@ -61,6 +62,7 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
           </a>
         </div>
       </header>
+      <OffBand />
 
       <div class="ow-b-suppliers-one-body">
         {lines.length > 0 && (
@@ -93,21 +95,24 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
             <GroupCard pad={12}>
               {bought.map((x) => (
                 <button key={x.price.item} type="button" class="ow-b-suppliers-pr" onClick={() => nav.push('suppliers/fix', { id: s.id, item: x.price.item })}
-                  aria-label={`${x.price.item}: ${fig(x.now)} a ${x.price.unit}, ${x.days ? `${x.days} days old` : 'today'}. Fix the price`}>
+                  aria-label={`${x.price.item}: ${fig(x.now)} a ${x.price.unit}, ${x.days ? `${x.days} ${x.days === 1 ? 'day' : 'days'} old` : 'today'}. Fix the price`}>
                   <span class="ow-b-suppliers-pr-ic"><AisleIcon aisle={x.price.item} size={22} color="#1C2233" /></span>
                   <span class="ow-b-suppliers-pr-t">
                     <span>{x.price.item}</span>
                     <span class="mono">{fig(x.now)} <small>UGX</small> / {x.price.unit}</span>
                     {x.was != null && <span class="mono was">{`was ${fig(x.was)}`}</span>}
                   </span>
-                  <span class={cx('ow-b-suppliers-age', !x.fresh && 'old')}>
-                    <span>{ageWord(x.days)}</span>
-                    <span class="track"><i style={{ width: `${Math.max(6, Math.min(100, (x.days / 30) * 100))}%` }} /></span>
-                  </span>
+                  {keptFor('confirmPrice', s.id, x.price.item) ? <SendsLater /> : (
+                    <span class={cx('ow-b-suppliers-age', !x.fresh && 'old')}>
+                      <span>{ageWord(x.days)}</span>
+                      <span class="track"><i style={{ width: `${Math.max(6, Math.min(100, (x.days / 30) * 100))}%` }} /></span>
+                    </span>
+                  )}
                   <span aria-hidden="true" class="ow-chev"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
                 </button>
               ))}
             </GroupCard>
+            {later && <SeesWhenBack who={moses} />}
           </section>
         )}
       </div>

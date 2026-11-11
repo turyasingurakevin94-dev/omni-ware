@@ -10,7 +10,6 @@ import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
-import { NoneMark } from '../../../ui/Empty.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { SectionHead } from '../../../ui/SectionHead.tsx';
@@ -33,15 +32,17 @@ export function NoMatch(p: { b: BuyerBooks; q: string; onClear: () => void }): J
       if (r.kept) toast.show('No signal · saved on this phone', { kind: 'warn', sub: `${who} sees it when back` });
       else toast.show(`${who} is told`, { sub: `${words} · Asked` });
       p.onClear();
-    } catch (e) {
-      toast.show('Not sent', { kind: 'error', sub: String((e as Error).message || e), retry: () => { void ask(); } });
+    } catch (_e) {
+      toast.show('Not sent', { kind: 'error', sub: `Ask ${who} to find ${words}`, retry: () => { void ask(); } });
     } finally { setSending(false); }
   };
 
   return (
     <div class="ow-b-suppliers-none">
       <div class="ow-b-suppliers-none-card">
-        <NoneMark />
+        <span aria-hidden="true" class="ow-b-suppliers-none-mark">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.2-4.2M9 9l4 4M13 9l-4 4" /></svg>
+        </span>
         <span class="ow-b-suppliers-none-t">Nobody sells it</span>
         <span class="ow-b-suppliers-none-bars" role="img" aria-label={`0 of ${n} suppliers`}>
           {Array.from({ length: n }, (_, i) => <i key={i} />)}
