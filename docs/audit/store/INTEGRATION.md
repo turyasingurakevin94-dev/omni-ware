@@ -38,7 +38,7 @@ Line refs are `file:line` on this commit. Migrations are cited as `NNNN:line`.
 | Cancel | →Store | Sales `ask_cancel` → Manager `cancel_order` (status `cancelled`, voided) | `order.cancelled` "Called off · stop packing" → order.pick, only when it was packing or out; Sales gets its own `order.cancelled` | "Cancel asked" / "Order cancelled" | "#0550 is called off", put-back screen for the packer only | 0177:208-219; 0181; store.html:4065, 4322-4349, 2666-2700 |
 | Return asked by Sales | →Manager (Store never in it) | `invoice_asks` kind credit (old sales.html; new orders/Wrong) | `invoice.ask` → Manager; decided → asker | "Return asked", "Credit note … Goes on their account" | nothing; the shelf rises if the Manager restocks | sales.html:6277; manager.html:5379-5400 |
 
-### 1.2 Buyer (`buyer.html`; there is no `src/apps/buyer`)
+### 1.2 Buyer (`buyer.html`; mapped on the old app. The new app in `src/apps/buyer`, merged to main 11 Nov, hands in the same way — `collection_trips.status='collected'` → `trip.back` — and shows "{Musa} counts it in" / "Packing, once Musa counts it in" on Handed in, `src/apps/buyer/trip/Done.tsx:62, 69`: listed in OTHER-APPS.md)
 
 | Handover | Dir | Trigger | Push kind → recipient | Buyer's words | Store's words | Refs |
 |---|---|---|---|---|---|---|

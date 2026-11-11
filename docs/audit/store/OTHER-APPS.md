@@ -56,7 +56,8 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 - IM-33: `counter_sale` writes `deliveredAt` as ISO, and `counter: true` reaches the yard so a counter sale is never a yard collection (IM-31).
 - A return asked raises `return.coming` to the yard (IM-15).
 
-## Buyer (`buyer.html`)
+## Buyer (`buyer.html` is now the new app in `src/apps/buyer`; the old copy is `old/buyer.html` until 11 Dec)
+- The new app's Handed in (`src/apps/buyer/trip/Done.tsx:62, 69`) says "{Musa} counts it in" and "Packing, once Musa counts it in". Change to "Musa checks it in" and "Buying · back at the yard, Musa checks it in": the order stays Buying until the yard's check-in moves it to Packing (IB02, the Buying row). Its board `TripHandIn.dc.html` on the Buyer canvas changes the same way.
 - IM-25/26: "Back at the yard · Musa checks it in" / "Checked in" (buyer.html:3238, 3690, 4697, 4705); the hand-in push says "Denis's trip is back at the yard · 3 lines", never "round", "count it in" or "at the gate" ("at the gate" is only for orders waiting to be collected and returns). "Checked in" comes from `trip.checked`.
 - IM-36: a short trip line tells Sales and the yard the line's new quantity, so the yard packs what came.
 - The restock answer reads "On the restock list · next trip".
