@@ -87,8 +87,11 @@ From a fresh open of the app; a tap is a press or a slide; typed text listed apa
 | Ride a trip (1 stop, 1 line) | 4 | **4** | IN30/IN31: start 1 · All on 1 · Done 1 · slide 1. Today: start · 1 tick · Done · slide |
 | Pass the yard | 4 | **3** | TD13 |
 | Close the yard (1 return to shelve) | 3 | **2** | TD16 |
-| Count again after Ruth asks | 7 | **2** | SH13, from her push |
-| **Across these 15 jobs** | **83** | **61** | |
+| Count again after Ruth asks | 7 + typed | **2 + typed** | SH13: open from her push · Send to Ruth (blind keypad) |
+| Ask for more | 6 | **2** | SH30: We need more · Send to Denis |
+| Deliver, no photo | 5 | **3** | OU23: At the door · reason chip · slide |
+| Not on the list | 6 | **5** | IN04: Not on the list · pick the item · tile · why · Ask Ruth |
+| **Across these 18 jobs** | **100** | **71** | |
 | Can't deliver, bring it back | no way today | **3** | OU24 (new job) |
 | Put back a cancelled order (2 lines) | no way today | **3** | PK10 (new job) |
 | **#0552 end to end** (pack 2 lines, the hinge dropped; load our driver; deliver) | **4 + 4 + 3 = 11** | **3 + 3 + 2 = 8** | today: Pack tile · Order · Packed ×2 · Load tile · Tick ×2 · Slide · At the door · Shutter · Slide |

@@ -23,6 +23,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 | `order.all_in` | Store → the salesperson | "Ggaba's #0549 is all in · Packing" (with `order.pick` "New to pack · #0549 Ggaba" → the yard) |
 | `trip.short` from the check-in | Store → the salesperson | "#0546 Lubowa · 18 of 20 came · pack 18" (IM-36) |
 | `delivery.checked` | Store → Sourcing; the delivery note → Accounts | "Hima Cement · 100 bag came in" (torn bags go as `stock.report` "Hima Cement · 4 torn" → Ruth) |
+| `store.ask.decided` on an extra | Manager → the checker, the Buyer, Accounts | "Ruth: keep it" (IM-17; Esther pays the supplier for it) |
 | `store.restock` (new title) | Store → Buyer | "We need more · Gloss paint · about 10 tin"; answer `store.ask.decided` "On the restock list · next trip" |
 | `pick.short` to the salesperson too | Store → Manager and the salesperson | "#0552 · 1 short · Ruth settles" |
 | `pick.settled` | Manager → packer, salesperson | "Ruth settled #0552's short" (IM-37) |
@@ -49,6 +50,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 - IM-06: a gate hand-over reads **"Delivered · collected"**, never "At the door"; a door delivery stays "Delivered · At the door 14:05" (OR09).
 - IM-30: name the deliverer from `carrier`, drop `deliveredBy`; show **"No photo · Kato said no"**.
 - IM-36: a short trip line reads **"Short · 18 of 20"**.
+- A copy order Ruth is cancelling reads **"Packing · copy"** (PK09), and the yard gets `order.copy`.
 - A short pick reads **"1 short · Ruth settles"**; a return the yard checked reads **"Taken back · 2 bag"**; a delivery that comes back reads **"Coming back · Ggaba closed"**.
 - IM-32: `heldOf` converts to shelf units like the Store, so both show "412 on shelf".
 - IM-33: `counter_sale` writes `deliveredAt` as ISO, and `counter: true` reaches the yard so a counter sale is never a yard collection (IM-31).
@@ -58,15 +60,16 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 - IM-25/26: "Back at the yard · Musa checks it in" / "Checked in" (buyer.html:3238, 3690, 4697, 4705); the hand-in push says "Denis's trip is back at the yard · 3 lines", never "round", "count it in" or "at the gate" ("at the gate" is only for orders waiting to be collected and returns). "Checked in" comes from `trip.checked`.
 - IM-36: a short trip line tells Sales and the yard the line's new quantity, so the yard packs what came.
 - The restock answer reads "On the restock list · next trip".
+- A trip a storekeeper rides reads **"Buying · Musa rides it"**, then "Handed in" (never "On the way", which the glossary keeps off goods coming in).
 
 ## Manager (`manager.html`)
 - IM-08: a packer given an order reads **"With Musa"**; agree with the worker app that an order given to a packer is that packer's until they release it.
 - IM-23: the difference card reads **"Musa's check-in of Denis's trip · decide the 2 pc"**, and deciding pushes `trip.difference.decided` (no bare "Seen").
-- IM-12: a return asked before the invoice is settled as an order change, not refused.
+- IM-12: a return asked before the bill is not refused: it reads **"Not billed yet · Ruth gives it once the bill is out"** (as Sales OR21 says), keeps the yard's Good / Damaged per line, and becomes the credit note when the automatic bill goes out.
 - IM-13: "Back on the shelf" per line defaults from the yard's Good / Damaged ("Credit note · per line Good or Damaged").
 - IM-14: record `restocked` per line on the credit note; push the decision to the yard.
 - IM-15/16: one-write credit note; restock waits for the yard's check-in.
-- IM-17: a "Not on the list · keep it?" card answering `store.extra`: "Keep it · the shelf" / "Send it back · Kiseka".
+- IM-17: a "Not on the list · keep it?" card answering `store.extra`: "Keep it · the shelf" / "Send it back · Kiseka"; the answer (`store.ask.decided`) also reaches Denis and Esther, who pays Kiseka for a kept extra.
 - IM-18: show the yard's close (`store.closed`) as a log line, "The yard is closed".
 - IM-20/21: the count push opens the count, "shelf 18 → counted 17"; **Accept the count / Count it again** are the Manager's only (the Store app stops showing them to manager logins); the decision pushes back.
 - IM-22: "the shelf", not "books", on the stock take.
@@ -77,10 +80,12 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 - IM-35: the credit ask reads "Not paid yet · let it go on credit?", never "cash customer".
 - IM-37: settling a short pick ("Bill what went / Bill the full quantity") pushes `pick.settled`.
 - New states: **"Ready to collect"**, **"Coming back · Ggaba closed"**, **"Counter sale"** (not "Delivered").
+- Cancel: her button stays **"Cancel"**; `order.cancelled` reaches whoever holds the order (packer, bay, driver) and the salesperson, on a truck too.
 
 ## Accounts (`accounts.html`)
 - Nothing new from the yard (the yard takes no money). `order.invoiced` 24 h after delivery already reaches Esther ("Invoice to send"); keep it.
-- The supplier's delivery note arrives with `delivery.checked`; a counter sale is "Counter sale · income".
+- The supplier's delivery note arrives with `delivery.checked`; a counter sale is **"Counter sale · income"** (was "income").
+- A kept extra (`store.ask.decided` "Ruth: keep it") tells Esther to pay the supplier for it (IN13: "pays Kiseka for it").
 
 ## Sourcing (`sourcing.html`)
 - IM-19: a list of new items checked in at the yard (`store_asks` with `newItem`), and a push case for `store.new_item` ("A new item at the yard · list it").
@@ -89,7 +94,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 ## Owner (`owner.html`)
 - IM-25: task label "Check in a trip at the yard".
 - IM-27: "On the road", never "On road"; "Ready to collect" for a packed pickup; "Packed", "Not paid yet" and "Coming back" where it showed "Packing" or "On road".
-- **"Delivered today"**, not "Done today" (the glossary's stage word, as the yard's "1 delivered today").
+- **"Delivered today"**, not "Done today" (the glossary's stage word, as the yard's "1 delivered today"); a counter sale is **"Counter sale"**, never "Delivered today" (IM-31).
 - IM-28: stuck Packing stops at `pickingDoneAt`.
 - IM-20: the owner gets counts in the log, never the count push.
 
@@ -100,7 +105,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 
 ## Agent (`agent.html`) and client (`client.html`)
 - IM-27: Buying is "Buying · getting your goods", not "Packing" (agent.html:7834); "On the road · Ssali", not "On the way".
-- Agent: "Being packed now" / "Musa is packing it" / "Packed" / "Not paid yet" / **"Ready to collect"** (PK07: "Peter sees: Ready to collect") / "Coming back to the shop" / "Delivered" / **"Delivered · collected"** (OU11), never "Done · Delivered" or "Done · Collected".
+- Agent: "Being packed now" / "Musa is packing it" / "Packed" / "Not paid yet" / **"Ready to collect"** (PK07: "Peter sees: Ready to collect") / "Coming back to the shop" / "Delivered" / **"Delivered · collected"** (OU11), never "Done · Delivered" or "Done · Collected"; an invoiced order reads **"Delivered · settle up"**, not "Done · Settle up".
 - Client: a pickup in `pending_delivery` reads **"Ready to collect at the shop"**, never "It has left the shop"; a delivery that comes back reads "Coming back to the shop".
 
 ## Worker app (`worker.html`)
