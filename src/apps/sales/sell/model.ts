@@ -13,7 +13,7 @@ import { computed, signal } from '@preact/signals';
 import { cashTotal, creditCharge, creditHold, orderTotal, pricesComing } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
 import { followCount } from '../../../core/services.ts';
-import { inPack, packEach, switchQty } from '../../../core/units.ts';
+import { inPack, packEach, sellsByPack, switchQty } from '../../../core/units.ts';
 import { dayOf } from '../../../core/time.ts';
 import type { Books, Charge, Customer, Item, Line } from '../../../core/types.ts';
 import { books, chats, drafts, now, saveDrafts, type Draft } from '../shell/store.ts';
@@ -157,17 +157,21 @@ function edit(fn: (x: Build) => Build): void {
 }
 const nextId = (x: Build) => x.lines.reduce((m, l) => Math.max(m, l.lineId), 0) + 1;
 
-/** Add an item (or more of a line already in). Returns the line. */
-export function add(it: Item, qty: number): Line {
+/**
+ * Add an item (or more of a line already in). Returns the line. `by: 'pack'` adds that many of its pack (SL43, the
+ * card's Pcs | Bundle): 1 bundle of 10 is 10 pcs at 10,500, counted in bundles (core/units.ts).
+ */
+export function add(it: Item, qty: number, by: 'unit' | 'pack' = 'unit'): Line {
+  const pack = by === 'pack' && sellsByPack(it), n = pack ? qty * it.packQty : qty;
   let out: Line | null = null;
   edit((x) => {
     const had = x.lines.find((l) => l.itemId === it.id && l.variantIdx === it.variantIdx);
     if (had) {
-      // Counted in cartons, it stays so: more of it, at its own price (SL42).
-      out = { ...lineFor(it, had.qty + qty, had.lineId), price: had.price, priceBy: had.priceBy, ...(inPack(had) ? { qtyIn: 'pack' as const, shopPrice: had.shopPrice } : {}) };
+      // Counted in bundles, it stays so: more of it, at its own price (SL42).
+      out = { ...lineFor(it, had.qty + n, had.lineId), price: had.price, priceBy: had.priceBy, ...(inPack(had) ? { qtyIn: 'pack' as const, shopPrice: had.shopPrice } : {}) };
       return { ...x, lines: x.lines.map((l) => (l === had ? (out as Line) : l)) };
     }
-    out = lineFor(it, qty, nextId(x));
+    out = { ...lineFor(it, n, nextId(x)), ...(pack ? { qtyIn: 'pack' as const } : {}) };
     return { ...x, lines: [...x.lines, out] };
   });
   return out as unknown as Line;
@@ -202,7 +206,7 @@ function written(x: Build): Line[] {
 
 /**
  * SL42 · count a line in the item's unit or its pack (core/units.ts). The count becomes whole ones of the new unit,
- * rounding up (60 pair → 2 cartons), at that unit's shop price (80,000 a carton; 1,700 a pair): a price typed for
+ * rounding up (12 pcs → 2 bundles), at the shop's price (10,500 a pcs; 105,000 a bundle of 10): a price typed for
  * the other unit does not carry over. The seller takes it down with − (Kevin, 10 Nov: "keep unit simple").
  */
 export function setUnit(lineId: number, to: 'unit' | 'pack'): void {

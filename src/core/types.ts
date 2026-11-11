@@ -228,12 +228,11 @@ export interface Item {
   name: string;
   aisle: string;
   unit: string;
+  /** The pack it also sells by, and how many of the unit are in it (G-MAN Bow Saw: a bundle of 10); priced as that many of the unit (core/units.ts). */
   packUnit: string;
   packQty: number;
   /** The shop's price each. null = "Price coming". */
   price: UGX | null;
-  /** The pack's price, when it sells by the pack too (Zawaina hinge: 80,000 a carton of 50). */
-  packPrice: UGX | null;
   /** The cost each, the floor a typed price may not go under (0171). Never drawn. null = not known. */
   cost: UGX | null;
   /** On the shelf to sell. null = not shown. */

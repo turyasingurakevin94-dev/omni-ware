@@ -1,26 +1,30 @@
 /*
- * A line's unit (spec 04 §4.3 "A line's unit", SL42): an item sold by the pair may also sell by its pack (the
- * Zawaina hinge, 1,700 a pair or 80,000 a carton of 50). The books keep a line as sales.html wrote it (SAL-02/06):
- * `qty` and the price are always of the item's own unit (pairs, at 1,600 a pair by the carton), and `qtyIn: 'pack'`
- * says it is counted in cartons, as the Store and the Buyer read it (store.html 1146, 1708). So place_order,
- * the money rules and the other apps see the same figures whichever unit the seller picks.
+ * A line's unit (spec 04 §4.3 "A line's unit", SL42/SL43), as the agent app sells it (agent.html findTileHTML,
+ * packOf): an item whose price-list row names a pack (G-MAN Bow Saw: pcs, a bundle of 10) sells by the unit or the
+ * pack, and the pack is the unit's price times how many are in it (10,500 a pcs → 105,000 a bundle). There is no
+ * separate pack price. The books keep a line as sales.html wrote it (SAL-02/06): `qty` and the price are always
+ * of the item's own unit (20 pcs at 10,500), and `qtyIn: 'pack'` says it is counted in bundles, as the Store and the
+ * Buyer read it (store.html 1146, 1708). So place_order, the money rules and the other apps see the same figures
+ * whichever unit the seller picks.
  *
- *   sellsByPack(it)        whether the line may switch at all (its pack has its own price, a whole price a unit)
- *   shown(l)               how a line reads: 1 carton × 80,000, or 60 pair × 1,700
- *   switchQty(q, per, to)  the count in the other unit, whole ones rounding up: 60 pair → 2 cartons (100 pair)
+ *   sellsByPack(it)        whether it may switch at all (it names a pack of more than one, and the pack is not a weight)
+ *   shown(l)               how a line reads: 2 bundle × 105,000, or 3 pcs × 10,500
+ *   switchQty(q, per, to)  the count in the other unit, whole ones rounding up: 12 pcs → 2 bundles (20 pcs)
  */
 import type { Item, Line } from './types.ts';
 
-/** The pack's price for one of the item's unit (80,000 a carton of 50 → 1,600 a pair); null when it sells by the unit only. */
-export function packEach(it: Pick<Item, 'packPrice' | 'packQty' | 'packUnit'>): number | null {
-  if (it.packPrice == null || !(it.packQty > 1) || !it.packUnit) return null;
-  const each = it.packPrice / it.packQty;
-  // The books keep a whole price a unit (rows.ts reads sellPrice whole): a pack that does not divide is not offered.
-  return Number.isInteger(each) ? each : null;
+/** A weight or a length says what is inside, not a pack it sells by (agent.html LOOSE_UNITS): "25kg ctn" nails. */
+const LOOSE = ['kg', 'g', 'm', 'ft', 'l', 'litre', 'liter', 'metre', 'meter'];
+
+/** The price of one of the item's unit when it is sold by its pack (the unit's own price); null when it sells by the unit only. */
+export function packEach(it: Pick<Item, 'price' | 'packQty' | 'packUnit' | 'unit'>): number | null {
+  const pu = (it.packUnit || '').trim().toLowerCase();
+  if (it.price == null || !(it.packQty > 1) || !pu || pu === (it.unit || '').trim().toLowerCase() || LOOSE.includes(pu)) return null;
+  return it.price;
 }
 
-/** The units an item sells in: its own, and its pack when the pack has its own price. One unit: no switch. */
-export const sellsByPack = (it: Pick<Item, 'packPrice' | 'packQty' | 'packUnit'>): boolean => packEach(it) != null;
+/** The units an item sells in: its own, and its pack. One unit: no switch. */
+export const sellsByPack = (it: Pick<Item, 'price' | 'packQty' | 'packUnit' | 'unit'>): boolean => packEach(it) != null;
 
 /** The line is counted in its pack. */
 export const inPack = (l: Pick<Line, 'qtyIn' | 'packQty' | 'packUnit'>): boolean => l.qtyIn === 'pack' && l.packQty > 1 && !!l.packUnit;
@@ -36,10 +40,13 @@ export function shown(l: Pick<Line, 'qty' | 'unit' | 'packUnit' | 'packQty' | 'q
 
 /**
  * Switch a count to the other unit (Kevin, 10 Nov: "keep unit simple"): whole ones of it, rounding up, as many of
- * the item's unit as that is. 50 pair → 1 carton (50); 60 pair → 2 cartons (100); 1 pair → 1 carton (50); 1 carton →
- * 50 pair. The seller takes it down with − when they want fewer. Returns the line's new qty, of the item's unit.
+ * the item's unit as that is. 10 pcs → 1 bundle (10); 12 pcs → 2 bundles (20); 1 pcs → 1 bundle (10); 1 bundle →
+ * 10 pcs. The seller takes it down with − when they want fewer. Returns the line's new qty, of the item's unit.
  */
 export function switchQty(qty: number, per: number, to: 'unit' | 'pack'): number {
   if (to === 'unit' || !(per > 1)) return qty;
   return Math.max(1, Math.ceil(qty / per - 1e-9)) * per;
 }
+
+/** A unit's word as the switch says it, first letter up (agent.html's "Pcs | Bundle"). */
+export const capWord = (u: string): string => (u ? u[0].toUpperCase() + u.slice(1) : u);

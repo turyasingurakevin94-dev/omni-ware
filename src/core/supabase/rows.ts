@@ -213,7 +213,7 @@ export function itemsOf(pb: PriceBook, held: Map<string, number>): Item[] {
       out.push({
         id: p.id, variantIdx: vi, name: itemName(pb, p.id, vi, p.name), aisle: p.category,
         unit: best ? best.unit : '', packUnit: best ? best.packUnit : '', packQty: best ? best.packQty : 0,
-        price, packPrice: null, cost: cost && cost > 0 ? whole(cost) : null,
+        price, cost: cost && cost > 0 ? whole(cost) : null,
         onShelf: Math.max(0, onHand - (held.get(k) || 0)), orderIn: !!best, listedAt: null,
         image: (vi != null && p.variantsRaw[vi] && typeof (p.variantsRaw[vi] as Row).image === 'string' && (p.variantsRaw[vi] as Row).image) || p.image,
       });

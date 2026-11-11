@@ -61,7 +61,7 @@ const FASTENER_COUNT = [5, 23, 18, 16, 14, 12, 10, 9, 8, 8];
 function made(id: string, name: string, aisle: string, n: number, unit = 'pc'): Item {
   const price = 1000 * (3 + ((n * 7) % 40)), out = n % 9 === 4, orderIn = n % 5 === 2;
   return {
-    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, packPrice: null, cost: Math.round(price / 1.25),
+    id, variantIdx: null, name, aisle, unit, packUnit: '', packQty: 0, price, cost: Math.round(price / 1.25),
     onShelf: orderIn || out ? 0 : 6 + ((n * 13) % 90), orderIn, listedAt: null,
   };
 }
@@ -70,7 +70,7 @@ function catalogue(s: DemoState): void {
   if (s.books.items.some((i) => i.id === 'g-1')) return; // added already
   const b = s.books, by = (id: string) => b.items.find((i) => i.id === id) as Item;
   const sib = (from: string, id: string, name: string, unit: string, price: number, extra: Partial<Item>): Item =>
-    ({ ...by(from), id, name, unit, price, cost: Math.round(price / 1.25), packPrice: null, listedAt: null, ...extra });
+    ({ ...by(from), id, name, unit, price, cost: Math.round(price / 1.25), listedAt: null, ...extra });
   // The other sizes of sale the shelf cards switch between (SL12: kg | ctn, pc | box).
   const added: Item[] = [
     sib('roofing-nails-2-5', 'roofing-nails-2-5-ctn', 'Roofing nails 2.5" · 25kg ctn', 'ctn', 100000, { packUnit: 'kg', packQty: 25, onShelf: 6 }),

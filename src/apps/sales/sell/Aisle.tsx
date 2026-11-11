@@ -88,7 +88,7 @@ export function AisleScreen(p: ScreenProps): JSX.Element | null {
           {shown.map((cd) => {
             const l = cd.items.map((i) => inOrder.get(itemKey(i))).find(Boolean) || null;
             const u = shelf === 'usual' && c ? c.usual.find((y) => cd.items.some((i) => itemKey(i) === itemKey(y))) : null;
-            return <ShelfCard key={cd.name} card={cd} kind={kind} line={l} usual={u && c ? { qty: u.qty, who: whose(c.name) } : undefined} onAdd={(it, k) => add(it, k)} onQty={(id, v) => setQty(id, v)} />;
+            return <ShelfCard key={cd.name} card={cd} kind={kind} line={l} usual={u && c ? { qty: u.qty, who: whose(c.name) } : undefined} onAdd={(it, k, by) => add(it, k, by)} onQty={(id, v) => setQty(id, v)} />;
           })}
         </div>
         {shelf === 'usual' && c && <LastOrder b={b} c={c} />}
