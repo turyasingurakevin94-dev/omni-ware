@@ -243,3 +243,28 @@ Patterns that keep the counts low:
 14. Commit packing, loading or handing over with **a slide (85 %)** or one button, then a success moment. Prefer **Undo 10 s** to confirm sheets.
 15. Count the taps for each Store job (pack an order, report a short pick, load a trip, receive a trip, count a shelf) and aim for the agent's numbers: find in 2, act in 2–4.
 16. Keep the staging strip off the tab labels at 360 px.
+
+---
+
+## E. Relation to the Buyer's reference (`docs/audit/buyer/agent-design-language.md`)
+
+The goal asks the Store to reuse the Buyer's write-up of the agent language and add only what it lacks. It was read on 11 Nov 2026 (it reached main after this work began). What the Store takes from it, unchanged:
+
+| Buyer §  | Taken as is |
+|---|---|
+| §2 Tokens | every hex and token (identical to LANGUAGE.md §1); avatar tints by id |
+| §3 Type | the whole ramp (hero 24–26/700, section 17/700, row 14–15/700, mono 11 subs, mono 18 counts, pill 13/700, slide 16/700) |
+| §4 Parts | hero, section head, On the move tiles (dashed "not started", red need badge, face dots), Needs you rows with the action on the row, tab bar with the red + (the Store's red centre opens the Next job), dock with the slide (the knob greys and the label says what is missing), pills, offline banner |
+| §5 Status | a tile count with a badge plus a Needs-you row; colour always with a word or number |
+| §6 How few taps | the action on the row; one slide for the one irreversible move; nothing is a page if a row can carry it |
+
+What the Store adds (sections A–D above): the stage sheet (the agent's "Packing 7"), the eight states at 360 px, motion and haptics, the stage words as the live app says them, taps per agent job, and the Store-only parts (the blind count, check-in by drop, the gate code, the put-back list).
+
+Where the two differ, and what the Store does:
+
+| Buyer says | Live `agent.html` | Store |
+|---|---|---|
+| "Don't: radial hero glows" | `.ax-gk-top`, `.ax-me-top`, `.ax-tour`, `.ax-first` and the Next move card `.ax-play` all use a navy radial (lines 1410, 2287, 2401, 2441, 2562) | Today's hero is flat navy as the Buyer says; pushed-screen heads and the Next job card keep the agent's radial, as the approved Sales canvas does (LANGUAGE P03, P04, P09) |
+| "Don't: rings" | the goal ring is a live part (LANGUAGE P02b) | rings only where the agent has one (the Next job card's progress); counts are tiles, as the Buyer says |
+| "Don't: stamps, torn-paper slips" | none in the live app | none on the Store boards |
+| Tab bar: Today · + · Clients | — | Today · red Next job · Shelf |
