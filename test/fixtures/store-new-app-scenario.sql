@@ -150,6 +150,28 @@ select _try('check: "Cancelled · put it back · #0530" to the yard, "Cancelled 
 select _try('ruth: cancels #0534, on Ssali''s truck', 'ok', $q$select cancel_order('11111111-1111-1111-1111-111111111111',534,'wrong order')$q$);
 select _try('check: "#0534 cancelled · bring it back" to the yard (Ssali among it) and Grace', 'ok', $q$select _is($c$_to('order.cancelled', '#0534 cancelled · bring it back') = '0e,0f,10' and _to('order.cancelled', 'Cancelled · #0534') = '0d'$c$)$q$);
 
+-- ---------------- put back (W7): recorded on the order, once, no stock, no push
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
+select _try('musa: a plain write to cancelled #0530 does nothing (as before)', 'ok', $q$select _is($c$store_patch_order('11111111-1111-1111-1111-111111111111',530,'{"bay":"4"}',null,null) is null and (select payload->>'bay' from saved_quotes where id = 530) = '2'$c$)$q$);
+select _try('musa: puts back #0530 (PK10''s red slide)', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',530,'{"putBack":{"lines":[{"idx":0,"qty":2},{"idx":"x","qty":1},{"idx":1,"qty":0}],"at":1,"by":"someone"}}',null,null)$q$);
+select _try('check: #0530 carries putBack: the server''s time and Musa, the good line only; no stock line; no push; still cancelled', 'ok', $q$select _is($c$(select payload->'putBack'->>'byName' = 'Musa' and payload->'putBack'->>'by' = '00000000-0000-0000-0000-00000000000e' and (payload->'putBack'->>'at')::bigint > 1760000000000 and payload->'putBack'->'lines' = '[{"idx":0,"qty":2}]' and status = 'cancelled' from saved_quotes where id = 530) and not exists(select 1 from stock_log where note like '%0530%') and (select count(*) from push_outbox where ref->>'id' = '530') = 2$c$)$q$);
+select _try('check: every phone reads it put back (store_snapshot, store_live, store_order)', 'ok', $q$select _is($c$(select o->'payload'->'putBack'->>'byName' from jsonb_array_elements(store_snapshot('11111111-1111-1111-1111-111111111111')->'orders') o where (o->>'id')::int = 530) = 'Musa' and (select o->'payload' ? 'putBack' from jsonb_array_elements(store_live('11111111-1111-1111-1111-111111111111')->'orders') o where (o->>'id')::int = 530) and (store_order('11111111-1111-1111-1111-111111111111',530)->'payload'->'putBack'->'lines'->0->>'qty') = '2'$c$)$q$);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000f';
+select _try('okello: puts back #0530 again (another phone): the first stamp stays', 'ok', $q$select _is($c$(store_patch_order('11111111-1111-1111-1111-111111111111',530,'{"putBack":{"lines":[]}}',null,null)->'payload'->'putBack'->>'byName') = 'Musa'$c$)$q$);
+select _try('okello: brings #0534 back off Ssali''s truck (OU27)', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',534,'{"putBack":{"lines":[{"idx":0,"qty":2}]}}',null,null)$q$);
+select _try('check: #0534 put back by Okello, still on its stage', 'ok', $q$select _is($c$(select payload->'putBack'->>'byName' = 'Okello' and status = 'cancelled' from saved_quotes where id = 534)$c$)$q$);
+select _try('okello: a put-back on a live order is not a key the yard has', 'ok', $q$select _is($c$(store_patch_order('11111111-1111-1111-1111-111111111111',553,'{"putBack":{"lines":[]}}',null,null)->'payload') ? 'putBack' = false and not ((select payload from saved_quotes where id = 553) ? 'putBack')$c$)$q$);
+
+-- ---------------- a dropped line reaches the yard, without its price
+reset role;
+set session_replication_role = replica;
+update saved_quotes set payload = payload || '{"droppedLines":[{"productId":"P9","productName":"Soft close hinge","variantIdx":null,"unit":"pc","qty":10,"sellPrice":9000,"agentSellPrice":8500,"at":1,"reason":"Nobody has it","droppedAt":1760000000020,"by":"00000000-0000-0000-0000-00000000000b"}]}' where id = 549;
+set session_replication_role = origin;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
+select _try('check: the yard reads #0549''s dropped hinge (name, qty, unit, reason, when), never its price', 'ok', $q$select _is($c$(store_order('11111111-1111-1111-1111-111111111111',549)->'payload'->'droppedLines') = '[{"qty":10,"unit":"pc","reason":"Nobody has it","droppedAt":1760000000020,"productId":"P9","productName":"Soft close hinge"}]' and (select (o->'payload'->'droppedLines'->0->>'productName') = 'Soft close hinge' from jsonb_array_elements(store_snapshot('11111111-1111-1111-1111-111111111111')->'orders') o where (o->>'id')::int = 549)$c$)$q$);
+select _try('musa: the yard cannot write droppedLines', 'ok', $q$select _is($c$(select jsonb_array_length(payload->'droppedLines') from (select store_patch_order('11111111-1111-1111-1111-111111111111',552,'{"droppedLines":[{"productName":"x"}]}',null,null)) z, saved_quotes where id = 552) is null$c$)$q$);
+
 -- ---------------- can't deliver; the Manager marks a stage
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000010';
 select _try('ssali: can''t deliver #0547, Ggaba closed', 'ok', $q$select store_patch_order('11111111-1111-1111-1111-111111111111',547,'{"comingBack":{"at":1760000000015,"why":"closed","byName":"Ssali John"}}',null,null)$q$);

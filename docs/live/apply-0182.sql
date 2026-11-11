@@ -57,9 +57,9 @@ begin
 
   -- What 0182 replaces, changes or leans on must be as its migration left it (or as 0182 left it,
   -- where 0182 is in). Read without spaces and line ends, so a paste from Windows still matches.
-  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '295753f9a96dcf83760f31e3300489c6' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '1806c7b5313a059e457a443f1d9a7b1b' then
+  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '295753f9a96dcf83760f31e3300489c6' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from 'e7d6814cc1f4c7f83fdc6993967d6062' then
     shape := shape || 'store_patch_order (0164)'::text; end if;
-  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '6b7ec8b0150dcf313972bf268ef2fae8' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from 'a43b196cd0bd23fd9d69f0f5023da113' then
+  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '6b7ec8b0150dcf313972bf268ef2fae8' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '068cecf1007549ebea1e552e5a8d2546' then
     shape := shape || 'ow_store_payload (0164)'::text; end if;
   if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_money_gate()')) is distinct from 'a96dafbbe2c4dfec7845bf9b91e62d04' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_money_gate()')) is distinct from 'b789ceb18a11052c76e314ce9ef87560' then
     shape := shape || 'saved_quotes_ow_money_gate (0164)'::text; end if;
@@ -156,9 +156,9 @@ begin
 
   -- What 0182 replaces, changes or leans on must be as its migration left it (or as 0182 left it,
   -- where 0182 is in). Read without spaces and line ends, so a paste from Windows still matches.
-  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '295753f9a96dcf83760f31e3300489c6' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '1806c7b5313a059e457a443f1d9a7b1b' then
+  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from '295753f9a96dcf83760f31e3300489c6' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) is distinct from 'e7d6814cc1f4c7f83fdc6993967d6062' then
     shape := shape || 'store_patch_order (0164)'::text; end if;
-  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '6b7ec8b0150dcf313972bf268ef2fae8' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from 'a43b196cd0bd23fd9d69f0f5023da113' then
+  if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '6b7ec8b0150dcf313972bf268ef2fae8' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) is distinct from '068cecf1007549ebea1e552e5a8d2546' then
     shape := shape || 'ow_store_payload (0164)'::text; end if;
   if (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_money_gate()')) is distinct from 'a96dafbbe2c4dfec7845bf9b91e62d04' and (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_money_gate()')) is distinct from 'b789ceb18a11052c76e314ce9ef87560' then
     shape := shape || 'saved_quotes_ow_money_gate (0164)'::text; end if;
@@ -219,7 +219,22 @@ end $pre$;
 --      deliverTo, deliverWhen, deliverPhone (Sales writes them apart,
 --      IM-01/02), counter (a counter sale, IM-31), comingBack (below), and
 --      on each takenBack entry whether the goods went back on the shelf
---      (restocked, IM-14). store_patch_order takes comingBack.
+--      (restocked, IM-14). store_patch_order takes comingBack. It also
+--      passes droppedLines (a line Sales, the Manager or the Buyer took off
+--      the order leaves items[] for it; the yard draws it struck through),
+--      without its price, and putBack (below). The yard never writes
+--      droppedLines.
+--
+--   2b. PUT BACK (W7; PK10's red slide, OU27's bring it back). A cancelled
+--      or voided order takes one write through store_patch_order, the
+--      yard's put-back: payload.putBack {at, by, byName, lines [{idx,
+--      qty}]}, stamped once, the time and the person the server's. Every
+--      phone, Ruth and Grace then read it as put back, and it stops asking
+--      the yard. No stock moves: an order's goods come off the books at
+--      the invoice (0119), so a cancelled order's never left them (0177),
+--      and a voided invoice's come back by the Manager's restock (0176);
+--      the put-back is the shelf catching up with the books, so counting
+--      it again would count it twice. No push: IB01 draws none for it.
 --
 --   3. THE PUSHES (IB01; "the yard" is order.pick, which the Store and a
 --      yard worker hold; "Ruth" is the task the Manager holds; the owner
@@ -300,7 +315,7 @@ end $pre$;
 -- their old pushes while their Database Webhooks are on: turn those two
 -- webhooks off when the new app replaces store.html.
 --
--- Touches no money: no cash line, payment, invoice or price. No role, task
+-- Touches no money and no stock: no cash line, payment, invoice, price or stock line. No role, task
 -- or decision right changes. Every guard stays: store_patch_order's
 -- p_expect, its stage rule and allow-list; 0173/0178's stage rule; the
 -- money gate (now where the goods leave). Every push is AFTER the write and
@@ -314,6 +329,8 @@ end $pre$;
 --   -- 3 rows
 --   select position('ow_ready_to_collect' in pg_get_functiondef('store_live(uuid)'::regprocedure)) > 0;   -- true
 --   select ow_store_payload('{"deliverTo":"Ntinda","deliverWhen":"today-pm","deliverPhone":"0772","counter":true}');
+--   select ow_store_payload('{"droppedLines":[{"productName":"Hinge","qty":10,"sellPrice":9000}],"putBack":{"at":1,"lines":[]}}');
+--   -- droppedLines without sellPrice, and putBack
 --
 -- ROLLBACK:
 --   drop trigger if exists saved_quotes_ow_a_yard_push on saved_quotes;
@@ -420,7 +437,7 @@ begin
 end $$;
 
 -- 1b. store_patch_order (0164's, with 0162's p_expect): the same, plus comingBack among
--- the keys (can't deliver: {at, why, byName}).
+-- the keys (can't deliver: {at, why, byName}), and a called-off order's put-back (2b).
 create or replace function store_patch_order(p_shop uuid, p_id bigint, p_patch jsonb, p_status text, p_items jsonb, p_expect jsonb default null)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -443,7 +460,23 @@ begin
   end if;
   select * into q from saved_quotes where shop_id = p_shop and id = p_id for update;
   if not found then raise exception 'That order is no longer on the books.'; end if;
-  if coalesce(q.voided, false) then return null; end if;
+  -- W7: a called-off order takes one write only, the yard's put-back: stamped once
+  -- ({at, by, byName, lines [{idx, qty}]}, the time and the person the server's), no
+  -- stock moved (it comes off at the invoice, 0119; a void's restock is the Manager's,
+  -- 0176), no stage moved, no push (IB01 draws none). Anything else: nothing, as before.
+  if coalesce(q.voided, false) or q.status = 'cancelled' then
+    if coalesce(jsonb_typeof(p_patch -> 'putBack'), '') <> 'object' then return null; end if;
+    if not (coalesce(q.payload, '{}'::jsonb) ? 'putBack') then
+      update saved_quotes set payload = coalesce(payload, '{}'::jsonb) || jsonb_build_object('putBack', jsonb_build_object(
+          'at', (extract(epoch from now()) * 1000)::bigint, 'by', auth.uid(), 'byName', ow_who(p_shop, auth.uid()),
+          'lines', coalesce((select jsonb_agg(jsonb_build_object('idx', (e ->> 'idx')::int, 'qty', ow_num(e ->> 'qty')) order by o)
+              from jsonb_array_elements(case when jsonb_typeof(p_patch -> 'putBack' -> 'lines') = 'array' then p_patch -> 'putBack' -> 'lines' else '[]'::jsonb end)
+                   with ordinality x(e, o)
+             where (e ->> 'idx') ~ '^\d+$' and coalesce(ow_num(e ->> 'qty'), 0) > 0), '[]'::jsonb)))
+       where shop_id = p_shop and id = p_id;
+    end if;
+    return store_order(p_shop, p_id);
+  end if;
   -- 0162: what the phone saw when the person tapped. If the order has moved since (another phone handed
   -- it over, packed or unpacked it), nothing is written: the phone refreshes and says so.
   if jsonb_typeof(p_expect) = 'object' and (
@@ -516,7 +549,7 @@ declare
     'client', 'comingBack', 'counter', 'createdAt', 'customerId', 'date', 'deliverPhone', 'deliverTo', 'deliverWhen',
     'deliveredAt', 'deliveredNote', 'deliveredPhoto', 'deliveredPhotoKind',
     'deliveredTo', 'deliveryAddress', 'deliveryMode', 'handoverCheckedAt', 'originAgentId', 'pickCursor', 'pickShortfallAckAt', 'pickingAssignedAt',
-    'pickingDoneAt', 'pickingStatus', 'runDriver', 'savedAt', 'stageEnteredAt', 'stageLog', 'takenBy', 'voidedAt', 'workerAcceptedAt'];
+    'pickingDoneAt', 'pickingStatus', 'putBack', 'runDriver', 'savedAt', 'stageEnteredAt', 'stageLog', 'takenBy', 'voidedAt', 'workerAcceptedAt'];
   line_keys text[] := array['lineId', 'productId', 'productName', 'variantIdx', 'qty', 'unit', 'packQty', 'packUnit', 'supplierId', 'clientWaits',
     'pickStatus', 'pickedQty', 'receivedAt', 'receivedQty', 'qtyIn'];
   out jsonb := '{}'::jsonb;
@@ -553,6 +586,14 @@ begin
               'restocked', case when e ? 'restock' then to_jsonb(coalesce(e ->> 'restock', '') = 'true') end)))
             from jsonb_array_elements(case when jsonb_typeof(cn -> 'lines') = 'array' then cn -> 'lines' else '[]'::jsonb end) e), '[]'::jsonb)))
       from jsonb_array_elements(p -> 'creditNotes') cn where jsonb_typeof(cn) = 'object'), '[]'::jsonb));
+  end if;
+  -- A line taken off the order (payload.droppedLines: it leaves items[] when it is
+  -- dropped), so the yard sees it struck through; never its price.
+  if jsonb_typeof(p -> 'droppedLines') = 'array' then
+    out := out || jsonb_build_object('droppedLines', coalesce((select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('productId', d -> 'productId',
+        'productName', d -> 'productName', 'variantIdx', d -> 'variantIdx', 'qty', d -> 'qty', 'unit', d -> 'unit', 'reason', d -> 'reason',
+        'droppedAt', d -> 'droppedAt')) order by o)
+      from jsonb_array_elements(p -> 'droppedLines') with ordinality y(d, o) where jsonb_typeof(d) = 'object'), '[]'::jsonb));
   end if;
   if jsonb_typeof(p -> 'pickSettle') = 'object' then
     out := out || jsonb_build_object('pickSettle', jsonb_build_object('pick', p -> 'pickSettle' -> 'pick', 'at', p -> 'pickSettle' -> 'at',
@@ -1070,8 +1111,8 @@ select m, case when ok then 'ok' else 'MISSING' end from (values
          and exists (select 1 from pg_trigger where tgname = 'saved_quotes_ow_a_yard_push')
          and exists (select 1 from pg_trigger where tgname = 'stock_counts_ow_push')
          and exists (select 1 from pg_trigger where tgname = 'invoice_asks_ow_a_yard_push'))),
-  ('0182 store_patch_order', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) = '1806c7b5313a059e457a443f1d9a7b1b'),
-  ('0182 ow_store_payload', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) = 'a43b196cd0bd23fd9d69f0f5023da113'),
+  ('0182 store_patch_order', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('store_patch_order(uuid, bigint, jsonb, text, jsonb, jsonb)')) = 'e7d6814cc1f4c7f83fdc6993967d6062'),
+  ('0182 ow_store_payload', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('ow_store_payload(jsonb)')) = '068cecf1007549ebea1e552e5a8d2546'),
   ('0182 saved_quotes_ow_money_gate', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_money_gate()')) = 'b789ceb18a11052c76e314ce9ef87560'),
   ('0182 saved_quotes_ow_push_money', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('saved_quotes_ow_push_money()')) = '6f1e1f2e29b222a6aedee2ea009452c4'),
   ('0182 collection_trips_ow_push', (select md5(translate(p.prosrc, chr(32) || chr(9) || chr(13) || chr(10), '')) from pg_proc p where p.oid = to_regprocedure('collection_trips_ow_push()')) = 'b565e28ebac281fcec82de09bdee7456'),

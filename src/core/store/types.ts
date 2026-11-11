@@ -45,11 +45,13 @@ export interface YardLine {
   receivedAt: Ms | null;
   receivedQty: number | null;
   /**
-   * Taken off the order before the yard ("not found → dropped", FACTS #0552's hinge). The demo draws it;
-   * the books keep it as items[].removed, which 0182's allow-list does NOT pass yet: on the real books
-   * this is always false (README "Gaps").
+   * Taken off the order before the yard ("not found → dropped", FACTS #0552's hinge). The books move it
+   * out of items[] into payload.droppedLines, which 0182's allow-list passes without its price; rows.ts
+   * puts it after the order's own lines (idx past items[], so no write ever names it).
    */
   dropped: boolean;
+  /** Why it was taken off ("Nobody has it"), when dropped: the books' droppedLines[].reason. */
+  droppedWhy?: string | null;
 }
 
 /** payload.carrier: who takes it (W8, W9). */
@@ -69,6 +71,9 @@ export interface Carrier {
 
 /** payload.comingBack (0182, W27): can't deliver · bring it back. */
 export interface ComingBack { why: string; at: Ms; by: string | null; byName: string }
+
+/** payload.putBack (0182, W7): who put a cancelled order's goods back, when, and how many of each line. */
+export interface PutBack { at: Ms; by: string | null; byName: string; lines: { idx: number; qty: number }[] }
 
 /** A credit note the Manager raised (payload.takenBack, the books' creditNotes; 0182 adds restocked). */
 export interface TakenBack { askId: string | null; voided: boolean; restocked: boolean; lines: { idx: number; qty: number; restocked: boolean | null }[] }
@@ -130,6 +135,8 @@ export interface YardOrder {
   /** A counter sale: never a yard collection (0182, IM-31). */
   counter: boolean;
   comingBack: ComingBack | null;
+  /** payload.putBack (0182, W7): a called-off order's goods back on the shelf, stamped once by the server. Absent in the demo. */
+  putBack?: PutBack | null;
   /** store_money_holds lists it: "Not paid yet", a label only. */
   moneyHold: boolean;
   /**

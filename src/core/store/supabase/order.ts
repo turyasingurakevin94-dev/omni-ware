@@ -12,6 +12,7 @@ import { ok } from '../../supabase/write.ts';
 import type { Row, Sb } from '../../supabase/client.ts';
 import type { CarrierPick, DoorProof, PickAnswer } from '../source.ts';
 import type { StoreSession, YardBooks } from '../types.ts';
+import { putBack as putBackLines } from '../pack.ts';
 import { isPickup } from '../yard.ts';
 import { readOrderRow } from './read.ts';
 
@@ -171,6 +172,16 @@ export function orderWrites(sb: Sb, s: StoreSession, seen: (id: number) => Row |
       q.letGoAsk = { at: Date.now(), by: s.userId, byName: s.name, carrier: c ? carrierOf(c, Date.now()) : q.carrier || null };
       return true;
     }),
+    /**
+     * W7 (0182): a cancelled order's goods back on the shelf. Not changeOrder (that leaves a called-off
+     * order alone): the one key store_patch_order takes on one, stamped once with the server's time and
+     * person. No stock moves (it never left the books, 0177) and no push.
+     */
+    putBack: async (id: number) => {
+      const o = books()?.orders.find((x) => x.id === id);
+      const lines = o ? putBackLines(o).map((x) => ({ idx: x.line.idx, qty: x.qty })) : [];
+      await ok(sb.rpc('store_patch_order', { p_shop: s.shopId, p_id: Number(id), p_patch: { putBack: { lines } }, p_status: null, p_items: null }));
+    },
     /** W11a. */
     withdrawLetGo: (id: number) => change(id, (q) => { if (!q.letGoAsk || q.letGoAsk.answer) return false; q.letGoAsk = undefined; return true; }),
   };

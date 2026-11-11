@@ -2,13 +2,15 @@
  * The one place a Store snapshot row becomes the app's shape (store.html:1106–1167
  * rowToTrip, rowToQuote, rowToReport, rowToReturn, rowToCount, rowToAsk; data §1b, §2).
  * Every key is the server's (store_snapshot / store_live, 0164 0166 0168, the allow-list
- * of 0182); no money key reaches here, and none is read.
+ * of 0182); no money key reaches here, and none is read. A dropped line (droppedLines)
+ * follows the order's own lines; a cancelled order put back (putBack) leaves the day.
  */
 import { initials, personName, tintFor } from '../../names.ts';
 import { roleName } from '../../supabase/rows.ts';
 import type { Row } from '../../supabase/client.ts';
 import type { Role } from '../../types.ts';
 import { countPlace, msOf, stockKey } from '../keys.ts';
+import { isCancelled } from '../yard.ts';
 import type { Carrier, ShelfItem, StockCount, StockReport, StoreAsk, StoreReturn, StoreSession, Trip, TripLine, YardBooks, YardLine, YardOrder, YardPerson } from '../types.ts';
 
 /** The snapshot as read: the raw keys, kept so a write can send what the phone saw (p_expect). */
@@ -28,9 +30,13 @@ function lineOf(it: Row, idx: number): YardLine {
     supplierId: strOrNull(it.supplierId), clientWaits: !!it.clientWaits,
     pickStatus: it.pickStatus === 'pending' || it.pickStatus === 'done' || it.pickStatus === 'short' ? it.pickStatus : null,
     pickedQty: it.pickedQty == null ? null : num(it.pickedQty), receivedAt: msOf(it.receivedAt), receivedQty: it.receivedQty == null ? null : num(it.receivedQty),
-    // items[].removed is not in 0182's allow-list: a dropped line cannot be seen on the real books yet.
     dropped: false,
   };
+}
+
+/** A line taken off the order (payload.droppedLines, 0182): after the order's own lines, struck through. */
+function droppedOf(d: Row, idx: number): YardLine {
+  return { ...lineOf({ ...d, lineId: null }, idx), dropped: true, droppedWhy: strOrNull(d.reason) };
 }
 
 function carrierOf(c: Row | null | undefined): Carrier | null {
@@ -47,7 +53,8 @@ export function orderOf(q: Row, holds: Row): YardOrder {
   return {
     id: num(q.id), status: q.status || 'draft', invoiced: !!q.invoiced, invoicedAt: msOf(q.invoiced_ts), voided: !!q.voided, date: str(q.date),
     client: { name: str(q.client_name) || 'Walk-in', phone: str(q.client_phone) }, customerId: strOrNull(p.customerId),
-    lines: (Array.isArray(p.items) ? p.items : []).map((it: Row, i: number) => lineOf(it || {}, i)),
+    lines: (Array.isArray(p.items) ? p.items : []).map((it: Row, i: number) => lineOf(it || {}, i))
+      .concat((Array.isArray(p.droppedLines) ? p.droppedLines : []).map((d: Row, i: number) => droppedOf(d || {}, (Array.isArray(p.items) ? p.items.length : 0) + i))),
     assignedWorkerId: strOrNull(p.assignedWorkerId), pickingAssignedAt: msOf(p.pickingAssignedAt), workerAcceptedAt: msOf(p.workerAcceptedAt),
     pickingStatus: p.pickingStatus === 'in_progress' || p.pickingStatus === 'done' ? p.pickingStatus : null, pickCursor: num(p.pickCursor),
     pickingDoneAt: msOf(p.pickingDoneAt), bay: p.bay == null || p.bay === '' ? null : num(p.bay), carrier: carrierOf(p.carrier),
@@ -67,6 +74,8 @@ export function orderOf(q: Row, holds: Row): YardOrder {
     runDriver: strOrNull(p.runDriver), takenBy: strOrNull(p.takenBy), createdAt: msOf(p.createdAt), savedAt: msOf(p.savedAt),
     deliverTo: p.deliverTo == null ? null : str(p.deliverTo), deliverWhen: strOrNull(p.deliverWhen), deliverPhone: strOrNull(p.deliverPhone),
     counter: !!p.counter, comingBack: back && back.at ? { why: str(back.why), at: msOf(back.at) || 0, by: strOrNull(back.by), byName: str(back.byName) } : null,
+    putBack: p.putBack && typeof p.putBack === 'object' ? { at: msOf(p.putBack.at) || 0, by: strOrNull(p.putBack.by), byName: str(p.putBack.byName),
+      lines: (Array.isArray(p.putBack.lines) ? p.putBack.lines : []).map((l: Row) => ({ idx: num(l.idx), qty: num(l.qty) })) } : null,
     moneyHold: !!(holds && holds[String(q.id)]), copyOf: null,
   };
 }
@@ -156,7 +165,8 @@ export function booksOf(d: Snap, s: StoreSession, at: number): YardBooks {
   const { me, people } = peopleOf(d, s);
   return {
     shopName: s.shopName, at, me, onSince: null, people,
-    orders: ((d.orders || []) as Row[]).map((q) => orderOf(q, holds)),
+    // A called-off order once put back (W7, any phone) asks the yard nothing more: it leaves the day.
+    orders: ((d.orders || []) as Row[]).map((q) => orderOf(q, holds)).filter((o) => !(o.putBack && isCancelled(o))),
     trips: ((d.trips || []) as Row[]).map((t) => tripOf(t, suppliers)),
     returns: ((d.returns || []) as Row[]).map(returnOf), counts,
     reports: ((d.reports || []) as Row[]).map(reportOf), asks: ((d.asks || []) as Row[]).map(askOf),

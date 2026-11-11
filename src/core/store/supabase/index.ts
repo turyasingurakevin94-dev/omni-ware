@@ -6,7 +6,7 @@
  *
  * The source keeps the snapshot as last read: a live read lays store_live over
  * it, and an order write sends what the phone saw of that order (p_expect).
- * W7 (put back) is kept on this phone only, as store.html does (screens Q11).
+ * W7 (put back) is stamped on the order (0182 payload.putBack), so every phone sees it.
  */
 import { dataError, isDataError } from '../../datasource.ts';
 import { client, isNetwork, type Row, type Sb } from '../../supabase/client.ts';
@@ -25,16 +25,6 @@ function classify(e: unknown): never {
   if (isDataError(e)) throw e;
   if (isNetwork(e)) throw dataError('offline', 'No signal');
   throw dataError('refused', String((e as Error)?.message || e));
-}
-
-/** W7: the put-backs this phone did (ow-store-putback:<uid>:<shop>, store.html:4342). */
-function putBackKeep(s: StoreSession) {
-  const key = `ow-store-putback:${s.userId}:${s.shopId}`;
-  return {
-    add(id: number): void {
-      try { const m = JSON.parse(localStorage.getItem(key) || '{}'); m[id] = Date.now(); localStorage.setItem(key, JSON.stringify(m)); } catch (_e) { /* private mode */ }
-    },
-  };
 }
 
 export function storeSupabase(): StoreSource {
@@ -113,7 +103,7 @@ export function storeSupabase(): StoreSource {
     setBay: w((id, bay) => O().setBay(id, bay)),
     unpack: w((id: number) => O().unpack(id)),
     release: w((id, putBack) => O().release(id, putBack)),
-    putBack: async (id) => { putBackKeep(me()).add(id); },
+    putBack: w((id: number) => O().putBack(id)),
     load: w((ids, c) => O().load(ids, c)),
     handOver: w((id, name, agent) => O().handOver(id, name, agent)),
     deliver: w((id, proof) => O().deliver(id, proof)),

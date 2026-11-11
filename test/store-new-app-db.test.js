@@ -6,7 +6,8 @@
  * docs/audit/store/OTHER-APPS.md "The database"): every handover the yard
  * takes part in pushes the people IB01 names, in its words; a packed pickup
  * waits at the gate as Ready to collect (held there while not paid); the
- * yard's allow-list passes the new keys.
+ * yard's allow-list passes the new keys, a dropped line (no price) among
+ * them; a cancelled order's put-back is stamped on it once (W7), no stock.
  *
  *   1. The SQL text, the decision-rights row, and IB01's words.
  *   2. A REAL database, when OW_PG names one: every migration in order, 0182
@@ -42,6 +43,10 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(said.every((w) => board.includes(w)), 'IB01 draws them');
   t.check(/'deliverTo', 'deliverWhen'/.test(sql) && /'deliverPhone'/.test(sql) && /'counter'/.test(sql) && /'restocked'/.test(sql) && /'comingBack'/.test(sql),
     'the allow-list passes deliverTo, deliverWhen, deliverPhone, counter, comingBack and takenBack[].restocked');
+  t.check(/'droppedLines', coalesce/.test(sql) && !/'sellPrice'/.test(sql.slice(sql.indexOf("'droppedLines', coalesce"), sql.indexOf("'droppedLines', coalesce") + 600)),
+    'the yard reads a dropped line (payload.droppedLines), never its price');
+  t.check(/'putBack'/.test(sql) && /p_patch -> 'putBack'/.test(sql) && !/allowed text\[\][^;]*'droppedLines'/.test(sql),
+    'W7: a called-off order takes the yard\'s put-back stamp; the yard never writes droppedLines');
   t.check(/hint = 'OWCSH'/.test(sql) && /hint = 'OWSTALE'/.test(sql), 'the money gate and the stale-order guard stay');
   t.check(!/cash customer\./.test(sql.replace(/raise exception 'Not paid · cash customer\./, '')), 'no push says "cash customer" (IM-35)');
 }
