@@ -24,11 +24,13 @@
  *              (test/live-apply-0171-0177.test.js)
  *   0179-0181  the yard worker, place_order, Sales' cancel ask
  *              -> docs/live/apply-0179-0181.sql (test/live-apply-0179-0181.test.js)
+ *   0182       the new Store app's pushes and Ready to collect
+ *              -> docs/live/apply-0182.sql (test/live-apply-0182.test.js)
  *
  * Each script is this tool's output, committed; its test holds the two to
  * each other and runs it on a database made from the migrations.
  *
- * Run: node tools/build-live-sql.js [0171-0177 | 0179-0181] [out.sql]
+ * Run: node tools/build-live-sql.js [0171-0177 | 0179-0181 | 0182] [out.sql]
  *      (no run named: 0171-0177)
  */
 const fs = require('fs');
@@ -37,7 +39,7 @@ const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, 'supabase/migrations');
-const RUNS = ['0171-0177', '0179-0181'];
+const RUNS = ['0171-0177', '0179-0181', '0182'];
 
 const args = process.argv.slice(2);
 const name = RUNS.includes(args[0]) ? args.shift() : '0171-0177';

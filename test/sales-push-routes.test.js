@@ -34,6 +34,13 @@ const ELSEWHERE = [
   'trip.cash.ready', 'trip.sent', 'trip.taken', 'trip.cancelled',
   // Store
   'trip.back', 'job.given', 'credit.ask.decided', 'store.ask.decided', 'stock.report.decided', 'store.handover',
+  'order.pick', 'order.moved', 'return.coming', 'stock.count.decided', 'stock.recount', 'trip.difference.decided',
+  // Manager (0182)
+  'stock.count.sent', 'order.back',
+  // Buyer, Sourcing (0182)
+  'trip.checked', 'delivery.checked',
+  // 0182's pushes to the salesperson, until Sales' map opens them (docs/audit/store/OTHER-APPS.md, Sales; spec 04-screens-store-data §6d)
+  'order.all_in', 'order.packed', 'order.unpaid_at_gate', 'order.ready', 'order.out', 'pick.settled',
   // Accounts
   'trip.cash', 'trip.cash.ask', 'trip.own_money', 'bill.due', 'bill.paper', 'payment.ask',
   // Sourcing

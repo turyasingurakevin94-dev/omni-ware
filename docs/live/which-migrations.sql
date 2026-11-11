@@ -542,7 +542,21 @@ with m(no, migration, kind, name, col) as (values
   ('0181', '0181_sales_cancel_ask', 'function', 'cancel_asks_ow_push', ''),
   ('0181', '0181_sales_cancel_ask', 'trigger', 'saved_quotes_ow_cancel_asks', ''),
   ('0181', '0181_sales_cancel_ask', 'trigger', 'cancel_asks_ow_push', ''),
-  ('0181', '0181_sales_cancel_ask', 'table', 'cancel_asks', '')
+  ('0181', '0181_sales_cancel_ask', 'table', 'cancel_asks', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_order_label', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_short_name', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_who', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_staff_user', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_task_holder', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_ready_to_collect', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_clock', ''),
+  ('0182', '0182_store_new_app', 'function', 'ow_qty_words', ''),
+  ('0182', '0182_store_new_app', 'function', 'saved_quotes_ow_a_yard_push', ''),
+  ('0182', '0182_store_new_app', 'function', 'stock_counts_ow_push', ''),
+  ('0182', '0182_store_new_app', 'function', 'invoice_asks_ow_a_yard_push', ''),
+  ('0182', '0182_store_new_app', 'trigger', 'saved_quotes_ow_a_yard_push', ''),
+  ('0182', '0182_store_new_app', 'trigger', 'stock_counts_ow_push', ''),
+  ('0182', '0182_store_new_app', 'trigger', 'invoice_asks_ow_a_yard_push', '')
 ), found as (
   select no, migration, kind, name, col,
          case kind

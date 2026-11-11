@@ -249,7 +249,7 @@ The database change is **one migration, 0182** (`supabase/migrations/0182_store_
 
 ### 6a. One decision: a packed pickup is Ready to collect
 
-A packed pickup moves **Packing → On the road** (`pending_delivery`) with no carrier the moment it is packed (W3 sends `p_status: 'pending_delivery'` with `pickingStatus: 'done'` for a pickup), and the gate's hand-over (carrier client or agent) moves it on to Delivered (W9 from `pending_delivery`, already allowed). Sales (`src/core/orders.ts` `readyToCollect`) and the agent app already read that state. `store_patch_order` lets an order go to On the road with no carrier only once it is packed.
+A packed pickup moves **Packing → On the road** (`pending_delivery`) with no carrier the moment it is packed (W3 sends `p_status: 'pending_delivery'` with `pickingStatus: 'done'` for a pickup), and the gate's hand-over (carrier client or agent) moves it on to Delivered (W9 from `pending_delivery`, already allowed). Sales (`src/core/orders.ts` `readyToCollect`) and the agent app already read that state. An order On the road with no carrier is Ready to collect only once it is packed (`ow_ready_to_collect`: `pending_delivery`, no carrier, `pickingStatus` done); one moved there unpacked is judged as loaded, money gate and all.
 
 **The money gate moves to where the goods leave**: a delivery when it is loaded (as before), a pickup when it is handed over (or given a carrier). So "Ready to collect · Not paid yet · leaves when paid" (OU13) waits at the gate, and `store_money_holds` / `store_live` list a ready-to-collect order too. On the phone, `moneyHold` (1502) is no longer only `preparing`: it holds a ready-to-collect order as well (Q12).
 
