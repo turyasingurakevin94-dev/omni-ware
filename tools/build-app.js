@@ -9,6 +9,7 @@
  *                                            next/sales-demo.js         the demo (src/core/demo), loaded only on ?demo
  *                                            next/sales-parts.js        the parts gallery, only on ?demo&parts=…
  *   node tools/build-app.js buyer            buyer.html, buyer-demo.js  at the root: the Buyer is switched (docs/rebuild.md)
+ *   node tools/build-app.js store            next/store.html, next/store-demo.js   the new Store (store.html stays the live one)
  *   node tools/build-app.js sales --check    builds in memory; fails if any file differs or is over its budget
  *
  * The page is one self-contained file, like the old apps: the script and the
@@ -54,6 +55,12 @@ const ROLES = {
   buyer: {
     title: 'Buyer', theme: '#16203C', manifest: '/manifest-buyer.json', demo: 'src/core/buyer/demo/entry.ts', parts: null,
     lazy: [], sw: null, dir: '',
+  },
+  // The new Store app (docs/spec/04-screens-store.md): one page, no lazy tabs yet; the demo on ?demo.
+  // Tried at /next/store.html first (spec 07 §5); the root store.html is the old app until the switch.
+  store: {
+    title: 'Store', theme: '#16203C', manifest: '/manifest-store.json', demo: 'src/core/store/demo/entry.ts', parts: null,
+    lazy: [], sw: null,
   },
 };
 const OPTS = { bundle: true, write: false, minify: true, format: 'iife', target: ['es2020'], legalComments: 'none', charset: 'utf8', logLevel: 'silent' };

@@ -1,0 +1,140 @@
+/*
+ * The sample day, built: 10:41 from FACTS, then the later moments and the what-ifs
+ * the boards draw (FACTS §8; flags.ts lists them). A moment is what the yard would
+ * hold by then if each job before it had been done as the boards draw it; a what-if
+ * changes only what it names. Gaps FACTS leaves (when #0534 was delivered, what was
+ * left by 17:30) are filled as plainly as the boards allow and named here.
+ */
+import type { YardBooks, YardOrder } from '../types.ts';
+import { alerts, counts, returns, trip, tripLine, trips } from './coming.ts';
+import type { StoreDemoFlags } from './flags.ts';
+import { carrier, line, order, orders } from './orders.ts';
+import { AISLES, NOW, agents, customers, items, people, suppliers, t } from './shop.ts';
+
+const byId = (b: YardBooks, id: number): YardOrder => {
+  const o = b.orders.find((x) => x.id === id);
+  if (!o) throw new Error('No sample order ' + id);
+  return o;
+};
+const stamp = (o: YardOrder, status: YardOrder['status'], at: number) => { o.status = status; o.stageEnteredAt = at; o.stageLog = [...o.stageLog, { status, at }]; };
+const deliver = (o: YardOrder, to: string, at: number, collected: boolean) => {
+  if (collected && !o.carrier) { o.carrier = carrier('client', to, at); o.assignedDeliveryId = '__client__'; o.handoverCheckedAt = at; }
+  o.deliveredTo = to; o.deliveredAt = at; o.moneyHold = false; o.pickingStatus = 'done'; o.pickingDoneAt = o.pickingDoneAt ?? at;
+  if (!collected) o.deliveredPhoto = `demo/${o.id}.jpg`;
+  stamp(o, 'completed', at);
+};
+/** A trip's lines all in at the yard (receive_trip): on the shelf, the orders' lines received, an order all in to Packing. */
+function checkIn(b: YardBooks, ids: string[], at: number): void {
+  b.trips.filter((x) => ids.includes(x.id)).forEach((tr) => {
+    tr.status = 'collected'; tr.collectedAt = tr.collectedAt ?? at; tr.yardCheckedAt = at; tr.yardCheckedBy = b.me.userId; tr.yardReceivedAt = at;
+    tr.lines.forEach((l) => {
+      const got = l.gotQty ?? l.qty;
+      const it = b.items.find((x) => x.key === l.key);
+      if (it) it.books += got;
+      const o = l.orderId != null ? b.orders.find((x) => x.id === l.orderId) : null;
+      const ol = o && o.lines.find((x) => x.productId === l.productId && !x.dropped);
+      if (ol && got > 0) { ol.receivedAt = at; ol.receivedQty = got; }
+    });
+  });
+  b.orders.filter((o) => o.status === 'awaiting_goods' && !o.lines.some((l) => l.supplierId !== '__stock__' && !l.dropped && !l.receivedAt)).forEach((o) => stamp(o, 'preparing', at));
+}
+
+/** 10:41 exactly as FACTS draws it. */
+export function baseDay(): YardBooks {
+  const ps = people();
+  return {
+    shopName: 'Mukasa Hardware', at: t('7:52'), me: ps[0], onSince: t('7:30'), people: ps, orders: orders(), trips: trips(), returns: returns(),
+    counts: counts(), reports: [], asks: [], items: items(), log: [], aisles: AISLES.slice(), bays: 4, customers: customers(), suppliers: suppliers(),
+    agents: agents(), alerts: alerts(),
+  };
+}
+
+/** The later moments, in order: each one includes the ones before it. */
+const STEPS: [number, (b: YardBooks) => void][] = [
+  [1047, (b) => { byId(b, 555).moneyHold = false; }],
+  [1130, (b) => {
+    deliver(byId(b, 555), 'Walk-in', t('10:47'), true);
+    deliver(byId(b, 534), 'Kato Construction', t('10:58'), false);
+    b.trips.filter((x) => x.id.startsWith('TRIP-1017B-')).forEach((x) => { x.status = 'collected'; x.collectedAt = t('11:30'); x.lines.forEach((l) => { if (l.gotQty == null) l.gotQty = l.qty; }); });
+  }],
+  [1200, (b) => {
+    checkIn(b, ['TRIP-1017B-1', 'TRIP-1017B-2'], t('11:34'));
+    deliver(byId(b, 547), 'Ggaba Stores', t('11:20'), false);
+    const n = byId(b, 556);
+    n.lines.forEach((l) => { l.pickStatus = 'done'; l.pickedQty = l.qty; });
+    deliver(n, 'Nansana Hardware', t('11:10'), true);
+    const h = b.trips.find((x) => x.id === 'TRIP-HIMA-1');
+    if (h) { h.status = 'collected'; h.collectedAt = t('12:00'); }
+  }],
+  [1405, (b) => {
+    checkIn(b, ['TRIP-HIMA-1'], t('12:10'));
+    const o = byId(b, 552);
+    o.lines[1] = { ...o.lines[1], pickStatus: 'done', pickedQty: 2 };
+    o.pickingStatus = 'done'; o.pickingDoneAt = t('10:52'); o.moneyHold = false;
+    o.carrier = carrier('staff', 'Ssali', t('13:20'), 'st-ss'); o.assignedDeliveryId = 'st-ss';
+    stamp(o, 'pending_delivery', t('13:20'));
+  }],
+  [1510, (b) => {
+    deliver(byId(b, 552), 'Kato Construction', t('14:05'), false);
+    b.orders.push(order(559, 'awaiting_goods', t('13:50'), {
+      client: { name: 'Lubowa Builders', phone: '0774 120 556' }, customerId: 'c-lub', deliverTo: 'Lubowa', lines: [line(0, 'p-tim', 10, { supplierId: 's-katwe' })],
+    }));
+    b.trips.push(trip('TRIP-1017C-1', 's-katwe', 'Katwe Timber', 'st-mk', 'assigned', [tripLine(0, 'p-tim', 10, 559)], {
+      createdAt: t('15:10'), assignedAt: t('15:10'), acceptedAt: null, note: 'Hassan drives',
+    }));
+  }],
+  [1730, (b) => {
+    const r = b.returns.find((x) => x.id === 'ret-0548');
+    if (r) { r.status = 'accepted'; r.decidedAt = t('11:40'); }
+    checkIn(b, ['TRIP-1017C-1'], t('16:10'));
+    [549, 546, 559].forEach((id, i) => {
+      const o = byId(b, id);
+      o.lines.forEach((l) => { if (!l.dropped) { l.pickStatus = 'done'; l.pickedQty = l.receivedQty ?? l.qty; } });
+      o.carrier = carrier('staff', 'Ssali', t('16:20'), 'st-ss'); o.assignedDeliveryId = 'st-ss';
+      deliver(o, o.client.name, t(['16:40', '16:55', '17:10'][i]), false);
+    });
+  }],
+];
+
+/** The what-ifs, each changing only what it names. */
+function whatIf(b: YardBooks, f: StoreDemoFlags): void {
+  switch (f.state) {
+    case 'cancel-0530': { const o = byId(b, 530); o.cancelledAt = t('10:38'); o.cancelledByName = 'Ruth Nakato'; stamp(o, 'cancelled', t('10:38')); break; }
+    case 'cancel-0534': { const o = byId(b, 534); o.cancelledAt = t('10:39'); o.cancelledByName = 'Ruth Nakato'; stamp(o, 'cancelled', t('10:39')); break; }
+    case 'ggaba-closed': byId(b, 547).comingBack = { why: 'Closed', at: t('10:40'), by: 'u-mk', byName: 'Musa Kiggundu' }; break;
+    case 'agent':
+      b.orders.push(order(554, 'pending_delivery', t('9:50'), {
+        client: { name: 'Peter Sserwadda', phone: '0772 554 554' }, deliveryMode: 'agent_pickup', originAgentId: 'a-ps', agentSettled: true, takenBy: 'u-ga',
+        assignedWorkerId: 'st-op', pickingStatus: 'done', pickingDoneAt: t('10:20'), stageEnteredAt: t('10:20'), deliverTo: '',
+        lines: [{ ...line(0, 'p-wg', 4), pickStatus: 'done', pickedQty: 4 }],
+      }));
+      break;
+    case 'empty': case 'first-day':
+      b.orders = []; b.trips = []; b.returns = []; b.counts = []; b.alerts = [];
+      break;
+    case 'nobody': b.people.filter((p) => p.id === 'st-op' || p.id === 'st-jn').forEach((p) => { p.away = true; }); break;
+    default: break;
+  }
+}
+
+/** The day at the flags' moment, from the phone of the flags' person. */
+export function dayAt(f: StoreDemoFlags): { books: YardBooks; now: number } {
+  const b = baseDay();
+  STEPS.filter(([at]) => at <= f.at).forEach(([, fn]) => fn(b));
+  whatIf(b, f);
+  if (f.state === 'first-day') {
+    const joy = b.people.find((p) => p.id === 'st-jn') as YardBooks['me'];
+    joy.away = false; b.me = joy; b.onSince = t('7:55');
+  }
+  if (f.as === 'okello') {
+    const op = b.people.find((p) => p.id === 'st-op') as YardBooks['me'];
+    b.me = op; b.onSince = t('7:45');
+    b.asks.push({ id: 'ask-ho', kind: 'handover', ref: 'u-op', payload: { toStaffId: 'st-op', toUserId: 'u-op', toName: 'Okello Peter', orders: [552], waiting: 4, bays: [1] },
+      by: 'u-mk', byName: 'Musa Kiggundu', status: 'sent', createdAt: t('10:42'), decidedAt: null, decidedBy: null });
+  }
+  // Whoever holds the phone is 'me' (navy); the rest keep their tints.
+  b.people.forEach((p) => { if (p !== b.me && p.tint === 'me') p.tint = 't4'; });
+  b.me.tint = 'me';
+  const hm = String(f.at).padStart(4, '0');
+  return { books: b, now: f.at === 1041 ? NOW : t(`${hm.slice(0, 2)}:${hm.slice(2)}`) };
+}

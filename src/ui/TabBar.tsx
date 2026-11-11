@@ -13,6 +13,7 @@
  *
  *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
  *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)
+ *   <TabBar items={[today, shelf]} plusIcon="play" plusLabel="Start the next job" plusCountWord="ready now" … />   the Store's
  */
 import type { JSX } from 'preact';
 import { useRef } from 'preact/hooks';
@@ -46,6 +47,8 @@ export interface TabBarProps<T extends string = BarTab> {
   plusLabel?: string;
   /** What the +'s count is, as its label says it: "not placed yet" (the default), or another bar's word ("stops to buy"). */
   plusCountWord?: string;
+  /** The centre's icon: the + by default; the Store's filled play (store-agent TD01, "Start the next job"). */
+  plusIcon?: 'plus' | 'play';
   inline?: boolean;
 }
 
@@ -69,7 +72,9 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
       {items.slice(0, half).map(tab)}
       <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} ${p.plusCountWord || 'not placed yet'}` : plus}
         onClick={(e) => { e.preventDefault(); p.onPlus(); }}>
-        <Icon name="plus" size={28} stroke={2.4} />
+        {p.plusIcon === 'play'
+          ? <Icon name="play" size={26} stroke={2} on style={{ marginLeft: '3px' }} />
+          : <Icon name="plus" size={28} stroke={2.4} />}
         {p.notPlaced > 0 && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}
       </a>
       {items.slice(half).map(tab)}

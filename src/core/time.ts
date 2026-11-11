@@ -106,3 +106,13 @@ export function replyWindow(lastInAt: Ms | null, now: Ms): { open: boolean; hour
   if (left > 0) return { open: true, hoursLeft: Math.floor(left / 3600000), daysShut: 0 };
   return { open: false, hoursLeft: 0, daysShut: daysApart(dayOf(lastInAt), dayOf(now)) };
 }
+
+/**
+ * "Good morning" before 12, "Good afternoon" before 17, else "Good evening" (Kampala time). One rule for
+ * every Today: the Store uses it; Sales (src/apps/sales/today/Today.tsx) and the Buyer
+ * (src/apps/buyer/today/Head.tsx) still carry their own copies, to move here.
+ */
+export function greeting(ms: Ms): string {
+  const h = Number(clock(ms).split(':')[0]);
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}

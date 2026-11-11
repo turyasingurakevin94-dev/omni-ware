@@ -1,0 +1,124 @@
+/*
+ * The Store demo: the sample day of docs/canvas/store-agent/FACTS.md in memory, behind
+ * StoreSource. Every read hands out a copy; every write changes the day as its server
+ * function would (writes.ts), after a short wait so "Sending…" is seen. The switches
+ * (?demo&at=1130&state=…&offline&fail=checkIn) are in flags.ts.
+ *
+ *   storeDemo('?demo')                          10:41, Musa's phone
+ *   storeDemo('?demo&at=1130', { instant: true })  for tests: writes land at once
+ *
+ * Offline: reads give the copy saved 7:52 (YardBooks.at), writes are refused as
+ * 'offline' (the outbox keeps them: "Not sent yet"). &fail=<write> refuses that write
+ * once with its board code (the red bar); the next try goes.
+ */
+import { dataError } from '../../datasource.ts';
+import type { StoreSource, WriteName } from '../source.ts';
+import type { StoreSession, YardBooks } from '../types.ts';
+import { FAIL_CODE, readStoreFlags, type StoreDemoFlags } from './flags.ts';
+import { dayAt } from './moments.ts';
+import { t } from './shop.ts';
+import { demoWrites } from './writes.ts';
+import { WRITE_CODE } from '../errors.ts';
+
+const WRITE_MS = 250;
+const copy = <T>(x: T): T => structuredClone(x);
+
+export interface StoreDemo extends StoreSource {
+  /** The day itself, for tests. */
+  readonly day: YardBooks;
+  readonly flags: StoreDemoFlags;
+  /** The orders this phone put back (W7, phone only). */
+  readonly putBacks: Set<number>;
+}
+
+export function storeDemo(search: string = '?demo', opts: { instant?: boolean } = {}): StoreDemo {
+  const f = readStoreFlags(search);
+  const { books: b, now } = dayAt(f);
+  const putBacks = new Set<number>();
+  let signedIn = f.state !== 'signed-out', failed = false;
+  const session = (): StoreSession => ({ userId: b.me.userId || 'u-mk', shopId: 'shop-mukasa', shopName: b.shopName, role: b.me.role, name: b.me.name, staffId: b.me.id });
+  const clock = () => now;
+  const W = demoWrites(() => b, clock, putBacks);
+
+  const wait = <T>(fn: () => T): Promise<T> => new Promise((resolve, reject) => {
+    const run = () => { try { resolve(fn()); } catch (e) { reject(e); } };
+    if (opts.instant) run(); else setTimeout(run, WRITE_MS);
+  });
+  /** A write: offline is kept; &fail=<name> fails once with its board code; else it lands. */
+  const later = (name: WriteName, fn: () => void): Promise<void> => {
+    if (f.offline) return Promise.reject(dataError('offline', 'No signal'));
+    if (f.fail === name && !failed) { failed = true; return wait(() => { throw dataError('refused', 'That did not save', FAIL_CODE[name] || `${WRITE_CODE[name] || 'ST'}-502`); }); }
+    return wait(() => { fn(); b.at = now; });
+  };
+  const read = (): Promise<YardBooks> => {
+    if (f.state === 'loading') return new Promise(() => { /* never answers: "Checking your shop…" */ });
+    if (f.state === 'no-reach') return Promise.reject(dataError('offline', 'No signal'));
+    if (f.fail === 'snapshot' && !failed) { failed = true; return wait(() => { throw dataError('refused', 'Could not load the yard', FAIL_CODE.snapshot); }); }
+    // No signal: the copy this phone saved at 7:52.
+    return wait(() => ({ ...copy(b), at: f.offline ? t('7:52') : now }));
+  };
+
+  const src: StoreDemo = {
+    kind: 'demo',
+    get day() { return b; },
+    flags: f,
+    putBacks,
+    now: clock,
+    online: () => !f.offline && f.state !== 'no-reach',
+
+    session: async () => (signedIn ? session() : null),
+    signIn: async (email, password) => {
+      if (!email.trim() || !password) throw dataError('refused', 'Wrong email or password', 'auth');
+      if (f.offline) throw dataError('offline', 'No signal');
+      signedIn = true;
+      return session();
+    },
+    signOut: async () => { signedIn = false; },
+    resetPassword: async () => undefined,
+
+    snapshot: read,
+    live: read,
+    order: async (id) => { const o = b.orders.find((x) => x.id === id); return o ? copy(o) : null; },
+    side: async () => ({
+      places: [
+        { name: 'Mukasa Hardware', lat: 0.3136, lng: 32.5811 }, { name: 'Ntinda', lat: 0.3540, lng: 32.6150 },
+        { name: 'Bweyogerere', lat: 0.3560, lng: 32.6720 }, { name: 'Ggaba', lat: 0.2630, lng: 32.6300 }, { name: 'Lubowa', lat: 0.2440, lng: 32.5700 },
+      ],
+      routes: [], roadNames: { ntinda: 'Ntinda' },
+    }),
+    waitingCount: async (place) => copy(b.counts.find((c) => c.status === 'sent' && c.place === place) || null),
+    countArrived: async (aisle, since) => b.counts.some((c) => c.aisle === aisle && c.countedBy === b.me.userId && c.createdAt >= since),
+
+    claim: (id) => later('claim', () => W.claim(id)),
+    pick: (id, a, cursor) => later('pick', () => W.pick(id, a, cursor)),
+    finishPack: (id, bay) => later('finishPack', () => W.finishPack(id, bay)),
+    setBay: (id, bay) => later('setBay', () => W.setBay(id, bay)),
+    unpack: (id) => later('unpack', () => W.unpack(id)),
+    release: (id, putBack) => later('release', () => W.release(id, putBack)),
+    // Phone only (screens Q11): no signal does not stop it.
+    putBack: async (id) => { W.putBack(id); },
+    load: (ids, c) => later('load', () => W.load(ids, c)),
+    handOver: (id, name, agent) => later('handOver', () => W.handOver(id, name, agent)),
+    deliver: (id, p) => later('deliver', () => W.deliver(id, p)),
+    cantDeliver: (id, why) => later('cantDeliver', () => W.cantDeliver(id, why)),
+    askLetGo: (id, c) => later('askLetGo', () => W.askLetGo(id, c)),
+    withdrawLetGo: (id) => later('withdrawLetGo', () => W.withdrawLetGo(id)),
+    nameDirection: (k, n) => later('nameDirection', () => W.nameDirection(k, n)),
+    lockRoute: () => later('lockRoute', () => W.lockRoute()),
+    checkIn: (lines) => later('checkIn', () => W.checkIn(lines)),
+    notOnList: (x) => later('notOnList', () => W.notOnList(x)),
+    returnAsk: (r) => later('returnAsk', () => W.returnAsk(r)),
+    withdrawReturn: (id) => later('withdrawReturn', () => W.withdrawReturn(id)),
+    rideTick: (id, got) => later('rideTick', () => W.rideTick(id, got)),
+    rideHandIn: (ids) => later('rideHandIn', () => W.rideHandIn(ids)),
+    restock: (r) => later('restock', () => W.restock(r)),
+    reportLoss: (r) => later('reportLoss', () => W.reportLoss(r)),
+    sendCount: (c) => later('sendCount', () => W.sendCount(c)),
+    replaceCount: (id, c) => later('replaceCount', () => W.replaceCount(id, c)),
+    passYard: (p) => later('passYard', () => W.passYard(p)),
+    gotYard: (id) => later('gotYard', () => W.gotYard(id)),
+    closeYard: (c) => later('closeYard', () => W.closeYard(c)),
+    setMyName: (n) => later('setMyName', () => W.setMyName(n)),
+  };
+  return src;
+}

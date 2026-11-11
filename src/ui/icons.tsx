@@ -26,6 +26,10 @@ const S = {
   'orders-tab': "<path d='M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z'/><path d='M3.5 7.5 12 12l8.5-4.5M12 12v9' fill='none' style='stroke:var(--ic-in,currentColor)'/>",
   customers: "<circle cx='9' cy='8' r='3.5'/><path d='M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6z'/><path d='M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .9 3.2 2.9 3.5 5.7' fill='none'/>",
   plus: "<path d='M12 5v14M5 12h14'/>",
+  /** The Store's red centre: start the next job (store-agent TD01), drawn filled. */
+  play: "<path d='M8 5.5v13l10.5-6.5z'/>",
+  /** The Store's Shelf tab: shelving with boxes (store-agent SH01; screens Q18). */
+  shelf: "<path d='M3.5 3v18M20.5 3v18M3.5 11h17M3.5 19h17'/><path d='M6.5 11V6.5h4.5V11M13 11V8h4.5v3M7 19v-4.5h6V19' fill='none'/>",
   minus: "<path d='M5 12h14'/>",
   /** A stage the order skipped, on a rail's 12 px disc (OR11, OR19, OR31): shorter than minus. */
   skip: "<path d='M6 12h12'/>",
