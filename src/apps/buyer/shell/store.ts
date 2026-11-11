@@ -103,6 +103,13 @@ export async function signIn(email: string, password: string): Promise<void> {
   phase.value = 'ready';
 }
 
+/** This phone gets the Buyer's pushes (the real books in the phone app; nothing in the demo). A failure is quiet: it asks again next start. */
+export async function registerPush(): Promise<void> {
+  const s = source;
+  if (!s || !s.pushOn) return;
+  try { await s.pushOn(); } catch (_e) { /* no Play services, permission off, no signal */ }
+}
+
 export async function signOut(): Promise<void> {
   await src().signOut();
   books.value = null; session.value = null; phase.value = 'login';

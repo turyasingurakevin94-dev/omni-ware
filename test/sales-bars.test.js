@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The phone's bars in the Sales app (src/apps/sales/shell/native-bars.ts, one rule: barsPlan).
+ * The phone's bars in the Sales app (src/native/bars.ts, one rule: barsPlan).
  *
  *   1. Inside the bars (a Huawei: Android draws an opaque status bar and lays the WebView out below
  *      it, while Capacitor still reports the bar): --app-top is 0 and there is no strip.
@@ -20,7 +20,7 @@ const path = require('path');
 const { ROOT, createReporter } = require('./_extract');
 
 const t = createReporter('sales phone bars');
-const N = require(path.join(ROOT, 'src/apps/sales/shell/native-bars.ts'));
+const N = require(path.join(ROOT, 'src/native/bars.ts'));
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const plan = (o) => N.barsPlan({ measured: true, top: 0, bottom: 0, last: {}, gap: 0, typing: false, ...o });
 
@@ -65,7 +65,7 @@ const plan = (o) => N.barsPlan({ measured: true, top: 0, bottom: 0, last: {}, ga
 {
   const p = plan({ top: 24, gap: 300, typing: true });
   t.check(p.insideTop === null && p.insideBottom === null && !p.stand && !p.remember, 'with the keyboard up nothing is decided (the gap is the keyboard)');
-  const src = read('src/apps/sales/shell/native-bars.ts');
+  const src = read('src/native/bars.ts');
   t.check(/typing: editing\(document\.activeElement\)/.test(src), 'fixInsets passes whether a field has the focus');
   t.check(/gap: screen\.height - window\.innerHeight/.test(src), 'the gap is the screen\'s height less the page\'s');
 }
@@ -85,7 +85,7 @@ const plan = (o) => N.barsPlan({ measured: true, top: 0, bottom: 0, last: {}, ga
 /* ---------- 6. every part fixed to the top makes room ---------- */
 {
   const tokens = read('src/ui/tokens.css');
-  t.check(/--app-top: var\(--bar-top\)/.test(tokens) && /--bar-top: var\(--safe-area-inset-top/.test(tokens), 'tokens: --app-top is the bar unless native-bars.ts says 0');
+  t.check(/--app-top: var\(--bar-top\)/.test(tokens) && /--bar-top: var\(--safe-area-inset-top/.test(tokens), 'tokens: --app-top is the bar unless bars.ts says 0');
   const css = [];
   const walk = (d) => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).forEach((e) => {
     const rel = d + '/' + e.name;

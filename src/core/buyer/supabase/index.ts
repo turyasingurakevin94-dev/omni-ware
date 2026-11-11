@@ -12,6 +12,7 @@
 import { dataError, isDataError } from '../../datasource.ts';
 import type { Session } from '../../types.ts';
 import { client, isNetwork, type Sb } from '../../supabase/client.ts';
+import { pushOn as pushOnShared } from '../../supabase/push.ts';
 import { askSourcing as askSourcingShared } from '../../supabase/write.ts';
 import type { BuyerSource } from '../source.ts';
 import { readAppAnswers, readBuyerSession, readRaw } from './read.ts';
@@ -82,6 +83,8 @@ export function buyerSupabase(): BuyerSource {
       if (answers.length && await W.foldAnswers(sb(), s, r, answers, Date.now())) r = await read();
       return booksOf(r);
     },
+
+    async pushOn() { await pushOnShared(sb(), me()); },
 
     ask: (sid, way) => write((c, s, r, now) => W.ask(c, s, r, sid, way, now)),
     answerYes: (sid) => write((c, s, r, now) => W.answer(c, s, r, sid, 'confirmed', now)),

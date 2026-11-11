@@ -50,6 +50,12 @@ export interface BuyerSource {
   /** Another item in its place (item_switch, Sales is pushed). */
   switchItem(orderId: number, key: string, to: { name: string; productId: string | null; supplierId: string; cost: UGX; why?: string }): Promise<void>;
 
+  /**
+   * This phone gets the Buyer's pushes: its token kept in push_subscriptions (as buyer.html:1664 phonePush
+   * does on start). Only the real books, inside the phone app; the demo has none.
+   */
+  pushOn?(): Promise<void>;
+
   /* the trip */
   /** The planned trip's stops on or off. */
   setStopOff(supplierId: string, off: boolean): Promise<void>;

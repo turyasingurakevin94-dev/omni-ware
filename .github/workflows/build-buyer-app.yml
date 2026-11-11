@@ -1,14 +1,18 @@
 name: Build buyer app (Android)
 
-# The buyer app is buyer.html inside a native shell (apps/buyer). Every
-# change to either is built, and Android hands back an installable debug
-# APK under the run's Artifacts.
+# The buyer app is the new Buyer app (buyer.html at the root, built from
+# src/apps/buyer; switched 2026-11-11, docs/rebuild.md) inside a native shell
+# (apps/buyer). Every change to either is built, and Android hands back an
+# installable debug APK under the run's Artifacts. Installed phones then keep
+# current by the page's own live update (src/native/update.ts).
 
 on:
   push:
     branches: [main]
     paths:
       - 'buyer.html'
+      - 'buyer-demo.js'
+      - 'src/**'
       - 'apps/buyer/**'
       - '.github/workflows/build-buyer-app.yml'
   workflow_dispatch: {}
@@ -29,7 +33,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Build www from buyer.html
+      - name: Build www from the built buyer.html
         run: npm run build
       - run: npx cap sync android
       - name: Build debug APK

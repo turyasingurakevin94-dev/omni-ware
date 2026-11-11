@@ -29,7 +29,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/perform ow_push\(/.test(sql) && !/insert into push_outbox/.test(sql) && /exception when others then/.test(sql), 'through ow_push, and a push that fails never stops the write');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0150 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0150 for this build');
-  const buyer = read('buyer.html');
+  const buyer = read('old/buyer.html');
   t.check(/note: 'Cancelled/.test(buyer) || /'Cancelled: /.test(buyer), 'the Buyer\'s cancel writes the note the push reads');
 }
 

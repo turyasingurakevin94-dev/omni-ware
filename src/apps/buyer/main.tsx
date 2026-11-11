@@ -9,8 +9,11 @@ import '../sales/app.css';
 import { watchKeyboard } from '../../ui/keyboard.ts';
 import { App } from './shell/App.tsx';
 import './shell/screens.ts';
+import { startNative } from './shell/native.ts';
 import { start } from './shell/store.ts';
 
 render(<App />, document.getElementById('app') as HTMLElement);
+// Inside the phone app: Back, the bars, the live update and the pushes (shell/native.ts). Nothing in a browser.
+startNative();
 watchKeyboard();
 void start();

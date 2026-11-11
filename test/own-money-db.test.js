@@ -30,7 +30,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/'carton\.ask'/.test(sql) && /'restock\.hold'/.test(sql), 'a carton is asked of the Manager by task');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0151 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0151 for this build');
-  const buyer = read('buyer.html');
+  const buyer = read('old/buyer.html');
   t.check(/passOn\('own_money', 'accounts', 'round:' \+ stem/.test(buyer) && /round: tripRoundStem\(trips\[0\]\.id\), v: 2/.test(buyer) && /status: 'held', for_line: c\.key/.test(buyer), 'the Buyer app writes all three');
 }
 

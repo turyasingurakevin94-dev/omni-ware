@@ -36,7 +36,7 @@ const vm = require('vm');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('buyer app');
-const html = read('buyer.html');
+const html = read('old/buyer.html');
 const adminSrc = read('index.html');
 const workerSrc = read('shared-worker.js');
 

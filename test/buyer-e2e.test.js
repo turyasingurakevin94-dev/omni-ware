@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The Buyer app end to end, on the demo (next/buyer.html?demo): the canvas's
+ * The Buyer app end to end, on the demo (buyer.html?demo; this test reads the built buyer.html): the canvas's
  * day driven by taps and slides, and every screen it passes through checked
  * at 360 px (no page error, no sideways scroll, every control at least 44 px,
  * no text under 11 px).
@@ -21,7 +21,7 @@ let chromium;
 try { ({ chromium } = require('playwright')); } catch (_e) { console.log('skip: playwright is not installed'); process.exit(0); }
 
 const t = createReporter('buyer e2e');
-const PAGE = 'file://' + path.join(ROOT, 'next/buyer.html');
+const PAGE = 'file://' + path.join(ROOT, 'buyer.html');
 
 async function open(b, q) {
   const ctx = await b.newContext({ viewport: { width: 360, height: 780 } });

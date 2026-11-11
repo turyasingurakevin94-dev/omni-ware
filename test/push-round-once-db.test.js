@@ -31,7 +31,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/perform ow_push\(/.test(sql) && !/insert into push_outbox/.test(sql), 'through 0120\'s ow_push, never straight into the outbox');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   t.check(/\| 0147 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0147 for this build');
-  const buyer = read('buyer.html');
+  const buyer = read('old/buyer.html');
   t.check(/'TRIP-' \+ stamp \+ \(runs\.length > 1 \? '-' \+ \(i \+ 1\) : ''\)/.test(buyer), 'the Buyer app still names a round\'s stops TRIP-<stamp>-<n>');
   t.check(/Stops not reached are off the round first/.test(buyer), 'the Buyer app takes the stops not reached off before handing in, so the count is what came back');
 }
