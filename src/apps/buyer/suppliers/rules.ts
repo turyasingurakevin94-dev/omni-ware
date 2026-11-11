@@ -10,7 +10,6 @@
  *   closeTo(b, q)            when nobody sells it: the list's items nearest the words
  *   boughtFrom(b, sid, now)  what we buy from one supplier, its price and how old it is
  *   withThem(b, sid)         the live lines with one supplier now
- *   askText(b, sid)          the WhatsApp message for asking a supplier again
  */
 import type { Ms, UGX } from '../../../core/types.ts';
 import { LATE_MS, ROUTE, lineRefs, type LineRef } from '../../../core/buyer/rules.ts';
@@ -145,16 +144,5 @@ export function withThem(b: BuyerBooks, sid: string): LineRef[] {
 }
 
 /** The ask, written for WhatsApp: every live line of theirs still asked or to ask. */
-export function askText(b: BuyerBooks, sid: string): string {
-  const s = b.suppliers.find((x) => x.id === sid);
-  const ls = withThem(b, sid).filter((r) => r.state === 'asked' || r.state === 'toask' || r.state === 'notfound');
-  const items = ls.map((r) => `- ${r.line.name} × ${r.line.qty} ${r.line.unit}`).join('\n');
-  return `Hello ${s ? s.name : ''}, do you have:\n${items}\nPlease tell me today. ${b.me.name.split(' ')[0]}`;
-}
-
-/** A Ugandan number for wa.me / tel: links. */
-export function intlPhone(p: string): string {
-  const d = String(p || '').replace(/[^0-9]/g, '');
-  if (d.startsWith('256')) return d;
-  return d.length >= 9 ? '256' + d.slice(-9) : d;
-}
+/** A Ugandan number for wa.me / tel: links: the one rule, in src/core/buyer/rules.ts. */
+export { intlPhone } from '../../../core/buyer/rules.ts';

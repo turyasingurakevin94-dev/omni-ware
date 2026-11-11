@@ -15,9 +15,10 @@ import { Notice } from '../../../ui/Notice.tsx';
 import { ChipRow, FilterChip } from '../../../ui/Pill.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { askSupplier } from '../shell/ask.ts';
 import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
-import { act, books, flush, kept, now, online } from '../shell/store.ts';
+import { books, flush, kept, now, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
 import { FromChip, Initials, RowAct, Strip, Waiting } from './parts.tsx';
 import { buying, byNeed, byRole, byState, checking, FILTERS, INK, matches, orderView, type Filter, type OrderView } from './rules.ts';
@@ -84,10 +85,11 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
     const top = v.top, sid = top && top.line.supplierId;
     if (!top || !sid) return;
     const name = top.supplier ? top.supplier.name : 'the supplier';
-    const how = (top.state === 'asked' && v.order.confirms[sid]?.how) || 'whatsapp';
     setBusy(sid);
     try {
-      const r = await act('ask', sid, how);
+      // The one Ask (shell/ask.ts): WhatsApp with the message, or the call sheet when they have none.
+      const r = await askSupplier(b, sid);
+      if (!r) return;
       toast.show(r.kept ? 'Kept · it sends when back' : `Asked ${name}`, { kind: r.kept ? 'warn' : 'ok' });
     } catch (e) {
       toast.show('Not saved', { kind: 'error', sub: `Ask ${name} again`, retry: () => { void ask(v); } });

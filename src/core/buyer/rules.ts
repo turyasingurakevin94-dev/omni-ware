@@ -10,7 +10,10 @@
  *   tripPlan(b)             the trip the app proposes: found lines by supplier, in route order, and the cash
  *   handIn(trip, b)         what was paid, the cash back, what came short
  *   readyForBuying(o)       every line found or off the bill: the order moves to Buying by itself
+ *   askMessage(s, lines, shop) the WhatsApp message one Ask sends: every line of that supplier, all orders
+ *   waLink(phone, text)     the wa.me link; intlPhone(p) a Ugandan number for wa.me and tel:
  */
+import { phone9 } from '../names.ts';
 import type { Ms, UGX } from '../types.ts';
 import type { BLine, BOrder, BuyerBooks, LineState, Stop, Supplier, Trip } from './types.ts';
 
@@ -188,4 +191,21 @@ export function readyForBuying(o: BOrder): boolean {
 /** "Short · got 36 of 40". */
 export function shortWord(got: number, qty: number): string {
   return `Short · got ${got} of ${qty}`;
+}
+
+/** A Ugandan number for wa.me and tel: links (256 and the last 9 digits). */
+export function intlPhone(p: string): string {
+  const n = phone9(p);
+  return n ? '256' + n : String(p || '').replace(/[^0-9]/g, '');
+}
+
+/** The WhatsApp message one Ask sends: every line of that supplier, all orders together. */
+export function askMessage(supplier: Supplier, lines: BLine[], shop: string): string {
+  const rows = lines.map((l) => `- ${l.name}: ${l.qty} ${l.unit}`);
+  return [`Hello ${supplier.name}, ${shop} here. Do you have these today, at the same price?`, ...rows].join('\n');
+}
+
+/** The wa.me link, with the message written when there is one. */
+export function waLink(phone: string, text?: string): string {
+  return `https://wa.me/${intlPhone(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 }

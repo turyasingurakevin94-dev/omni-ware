@@ -22,10 +22,10 @@ import { IconTile } from '../../../ui/ActRow.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { act, session } from '../shell/store.ts';
-import { openAskSheet } from './AskSheet.tsx';
+import { act } from '../shell/store.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
-import { askText, firstName, hm, sellersOf, seeWord, waOf } from './rules.ts';
+import { askSupplier } from '../shell/ask.ts';
+import { firstName, hm, sellersOf, seeWord } from './rules.ts';
 
 /** The board's eye ("… sees"): not in src/ui/icons.tsx yet. */
 export function Eye(): JSX.Element {
@@ -65,13 +65,15 @@ export function Sees(p: { who: Member[]; children: ComponentChildren; class?: st
 type RowState = 'idle' | 'sending' | 'error';
 
 /** One write from a row: sending, then a toast, or the refused reason on the row. */
-function useWrite(): [RowState, string, (run: () => Promise<{ kept: boolean }>, ok: string, sub?: string) => void] {
+function useWrite(): [RowState, string, (run: () => Promise<{ kept: boolean } | null>, ok: string, sub?: string) => void] {
   const [st, setSt] = useState<RowState>('idle');
   const [why, setWhy] = useState('');
-  const go = (run: () => Promise<{ kept: boolean }>, ok: string, sub?: string) => {
+  // null: nothing was written here (the Ask sheet opened instead), so nothing to say.
+  const go = (run: () => Promise<{ kept: boolean } | null>, ok: string, sub?: string) => {
     setSt('sending');
     run().then((r) => {
       setSt('idle');
+      if (!r) return;
       toast.show(r.kept ? 'Kept on this phone' : ok, r.kept ? { kind: 'warn', sub: 'It sends when the signal comes back' } : { sub });
     }).catch((e: unknown) => { setWhy(String((e as Error).message || e)); setSt('error'); });
   };
@@ -97,20 +99,10 @@ function linesWord(g: SupplierGroup): string {
   return `${g.lines.length} lines`;
 }
 
-/** Open WhatsApp with the message now (inside the tap, so the phone allows it), then mark it asked. */
-function whatsapp(g: SupplierGroup): void {
-  const shop = session.value ? session.value.shopName : 'the shop';
-  window.open(waOf(g.supplier.phone, askText(g, shop)), '_blank', 'noopener');
-}
-
 export function AskRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const { g } = p, s = g.supplier;
   const [st, why, go] = useWrite();
-  const ask = () => {
-    if (!s.whatsapp) { openAskSheet(p.b, g); return; }
-    whatsapp(g);
-    go(() => act('ask', s.id, 'whatsapp'), `Asked ${s.name}`);
-  };
+  const ask = () => go(() => askSupplier(p.b, s.id), `Asked ${s.name}`);
   return (
     <div class={cx('ow-b-today-row', st === 'error' && 'error')}>
       <IconTile tone={st === 'error' ? 'bad' : 'warn'} icon={st === 'error' ? 'warning' : 'message'} />
@@ -133,11 +125,7 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const { g } = p, s = g.supplier, who = sellersOf(p.b, g.orders);
   const [st, why, go] = useWrite();
   const yes = () => go(() => act('answerYes', s.id), `${s.name} · Found`, who.length ? `${seeWord(who)} it` : undefined);
-  const again = () => {
-    if (!s.whatsapp) { openAskSheet(p.b, g); return; }
-    whatsapp(g);
-    go(() => act('ask', s.id, 'whatsapp'), `Asked ${s.name} again`);
-  };
+  const again = () => go(() => askSupplier(p.b, s.id), `Asked ${s.name} again`);
   return (
     <div class={cx('ow-b-today-row', 'reply', st === 'error' && 'error')}>
       <IconTile tone={st === 'error' ? 'bad' : g.late ? 'warn' : 'neutral'} icon={st === 'error' ? 'warning' : 'clock'} />

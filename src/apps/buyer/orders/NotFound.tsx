@@ -20,6 +20,8 @@ import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
+import { askMessage } from '../../../core/buyer/rules.ts';
+import { askSupplier, openWhatsApp, shopName } from '../shell/ask.ts';
 import { barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
@@ -60,11 +62,14 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
   };
   const other = async () => {
     if (!alt) return;
-    const was = { sid: l.supplierId, cost: l.cost };
+    const was = { sid: l.supplierId, cost: l.cost }, to = alt.supplier;
+    // The one Ask's rule (shell/ask.ts): WhatsApp opens inside the tap, before the writes; no WhatsApp: the call sheet after.
+    if (to.whatsapp) openWhatsApp(to.phone, askMessage(to, [l], shopName()));
     setBusy('other');
     try {
-      const r1 = await act('otherSupplier', o.id, l.key, alt.supplier.id, alt.price.price);
-      const r = r1.kept ? r1 : await act('ask', alt.supplier.id, 'whatsapp');
+      const r1 = await act('otherSupplier', o.id, l.key, to.id, alt.price.price);
+      if (!to.whatsapp && !r1.kept) { sheet.close(); await askSupplier(books.value || b, to.id); return; }
+      const r = r1.kept ? r1 : await act('ask', to.id, 'whatsapp');
       sheet.close();
       told(r, `Asked ${alt.supplier.name}`, was.sid ? () => { void act('otherSupplier', o.id, l.key, was.sid, was.cost); } : undefined);
     } catch (e) { fail(`Switch to ${firstWord(alt.supplier.name)} · ${fig(alt.price.price)}`, () => { void other(); })(e); } finally { setBusy(null); }

@@ -4,16 +4,13 @@
  *
  *   hm(ms)              "09:05" (the board's times have the leading zero)
  *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap"
- *   askText(g, shop)    the WhatsApp message one Ask sends: every line of that supplier, all orders
- *   waOf(phone, text)   the wa.me link
  *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
  *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
  *   calm(b, now)        nothing waits on Denis (nothing to ask, no Not found line, no late reply, no trip to start or running)
  */
 import { clock } from '../../../core/time.ts';
-import { phone9 } from '../../../core/names.ts';
 import type { Member, Ms } from '../../../core/types.ts';
-import { askGroups, lineRefs, replyRows, tiles, type SupplierGroup } from '../../../core/buyer/rules.ts';
+import { askGroups, lineRefs, replyRows, tiles } from '../../../core/buyer/rules.ts';
 import type { BOrder, BuyerBooks } from '../../../core/buyer/types.ts';
 
 export function hm(ms: Ms): string {
@@ -28,16 +25,6 @@ export function shortItem(name: string): string {
 }
 
 /** One message per supplier: what we need from them, every order together. */
-export function askText(g: SupplierGroup, shop: string): string {
-  const rows = g.lines.map((r) => `- ${r.line.name}: ${r.line.qty} ${r.line.unit}`);
-  return [`Hello ${g.supplier.name}, ${shop} here. Do you have these today, at the same price?`, ...rows].join('\n');
-}
-
-export function waOf(phone: string, text: string): string {
-  const p = phone9(phone);
-  return `https://wa.me/${p ? '256' + p : ''}?text=${encodeURIComponent(text)}`;
-}
-
 export function sellersOf(b: BuyerBooks, os: BOrder[]): Member[] {
   const ids = [...new Set(os.map((o) => o.sellerId))];
   return ids.map((id) => b.team.find((m) => m.id === id)).filter((m): m is Member => !!m);
