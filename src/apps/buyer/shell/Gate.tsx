@@ -18,6 +18,9 @@ export function Login(): JSX.Element {
   const go = async (e: Event) => {
     e.preventDefault();
     if (busy) return;
+    // An empty field: the cursor goes to it (no browser bubble; it is not drawn).
+    const empty = (e.currentTarget as HTMLFormElement).querySelector<HTMLInputElement>(email.trim() ? 'input[type=password]' : 'input[type=email]');
+    if (!email.trim() || !password) { if (empty) empty.focus(); return; }
     setBusy(true); setErr(null);
     try { await signIn(email, password); } catch (x) {
       const off = isDataError(x) && x.kind === 'offline';
@@ -37,7 +40,7 @@ export function Login(): JSX.Element {
         </div>
         <p>Ask suppliers · plan the trip · hand in</p>
       </header>
-      <form class="ow-b-gate-card" onSubmit={go}>
+      <form class="ow-b-gate-card" noValidate onSubmit={go}>
         <label>Email<input type="email" autocomplete="username" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} required /></label>
         <label>Password<input class={err && !err.offline ? 'bad' : ''} type="password" autocomplete="current-password" value={password} onInput={(e) => setPassword((e.target as HTMLInputElement).value)} required /></label>
         {(err || offline) && (

@@ -111,7 +111,7 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
               <span aria-hidden="true" class="tile"><Icon name="store" size={20} stroke={2} /></span>
               <span class="t">
                 <span class="n">{alt.supplier.name}</span>
-                <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{`on the list · ${alt.days} ${alt.days === 1 ? 'day' : 'days'}`}</span></span>
+                <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{alt.days === 0 ? "on the list · today" : `on the list · ${alt.days} ${alt.days === 1 ? "day" : "days"}`}</span></span>
               </span>
               <RowAct icon="swap" word="Switch" busyWord="Switching" busy={busy === 'other'} label={`Switch to ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
             </div>

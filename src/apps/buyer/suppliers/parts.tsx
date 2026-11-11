@@ -10,7 +10,10 @@ import { initials } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import type { Member, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
+import { Icon } from '../../../ui/icons.tsx';
+import { Notice } from '../../../ui/Notice.tsx';
 import { cx } from '../../../ui/util.tsx';
+import { kept, online } from '../shell/store.ts';
 import './parts.css';
 
 /** A supplier's tile: 40 on a row, 52 in the hero, 32 on the sheet's strip. */
@@ -56,3 +59,22 @@ export function Face(p: { m: Member | null; size?: number }): JSX.Element | null
 export function byRole(b: BuyerBooks, role: Member['role']): Member | null {
   return b.team.find((m) => m.role === role) || null;
 }
+
+/** A write of this kind for this supplier (and item) is kept on this phone, waiting for signal. */
+export function keptFor(kind: 'ask' | 'confirmPrice' | 'suggestPhone', sid: string, item?: string): boolean {
+  return kept.value.some((k) => k.kind === kind && Array.isArray(k.args) && String(k.args[0]) === sid && (item == null || String(k.args[2]) === item));
+}
+
+/** No signal, or writes kept (Suppliers OFFLINE): the thin band, no button (they send when the signal is back). */
+export function OffBand(): JSX.Element | null {
+  if (online.value && !kept.value.length) return null;
+  return <Notice kind="offline">{kept.value.length ? 'No signal · saved on this phone' : 'No signal'}</Notice>;
+}
+
+/** "Sends later": a row's write kept on this phone. */
+export const SendsLater = (): JSX.Element => <span class="ow-b-suppliers-later-chip">Sends later</span>;
+
+/** "Moses sees it when back" (the bell line under a kept write). */
+export const SeesWhenBack = (p: { who: string }): JSX.Element => (
+  <span class="ow-b-suppliers-later"><Icon name="bell" size={14} stroke={2} />{`${p.who} sees it when back`}</span>
+);

@@ -17,7 +17,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now, online } from '../shell/store.ts';
-import { byRole, first, SupTile } from './parts.tsx';
+import { byRole, first, SeesWhenBack, SendsLater, SupTile } from './parts.tsx';
 import { FRESH_DAYS, ageDays, ageWord, boughtFrom } from './rules.ts';
 import '../../../ui/sheet.css';
 import './fix.css';
@@ -37,8 +37,10 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
   const [val, setVal] = useState<number | null>(null);
   const [tel, setTel] = useState('');
   const [send, setSend] = useState<Send>('idle');
-  const [sent, setSent] = useState(false);
+  /** The number went to Moses, or (no signal) waits on this phone to go. */
+  const [sent, setSent] = useState<'sent' | 'kept' | null>(null);
   const [failed, setFailed] = useState<{ price: number } | null>(null);
+  const [telFailed, setTelFailed] = useState(false);
   if (!b || !s) return <main class="ow-b-suppliers-fix"><p class="ow-b-suppliers-gone">This supplier is not on the list</p></main>;
 
   const mosesM = byRole(b, 'sourcing'), moses = first(mosesM, 'Sourcing');
@@ -58,15 +60,15 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
     }
   };
   const sendPhone = async () => {
-    setSend('save');
+    setSend('save'); setTelFailed(false);
     try {
       const r = await act('suggestPhone', sid, tel.trim());
-      if (r.kept) toast.show('No signal · saved on this phone', { kind: 'warn', sub: `${moses} sees it when back` });
-      setSent(true);
-    } catch (e) {
-      toast.show('Not sent', { kind: 'error', sub: String((e as Error).message || e), retry: () => { void sendPhone(); } });
+      setSent(r.kept ? 'kept' : 'sent');
+    } catch (_e) {
+      setTelFailed(true);
     } finally { setSend('idle'); }
   };
+  const toTab = (t: Tab) => { setTab(t); setFailed(null); setTelFailed(false); };
   const step = (d: number) => { const n = (val ?? list) + d; setVal(n > 0 ? n : null); };
   const telOk = phoneOk(tel) && phoneText(tel) !== phoneText(s.phone), price = tab === 'price' && !!x;
 
@@ -85,8 +87,8 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
         </div>
 
         <div role="tablist" aria-label="Fix" class="ow-b-suppliers-seg">
-          <button type="button" role="tab" aria-selected={tab === 'price'} disabled={!x} class={cx(tab === 'price' && 'on')} onClick={() => setTab('price')}><Icon name="tag" size={17} stroke={2} />Price</button>
-          <button type="button" role="tab" aria-selected={tab === 'phone'} class={cx(tab === 'phone' && 'on')} onClick={() => setTab('phone')}><Icon name="phone" size={17} stroke={2} />Phone</button>
+          <button type="button" role="tab" aria-selected={tab === 'price'} disabled={!x} class={cx(tab === 'price' && 'on')} onClick={() => toTab('price')}><Icon name="tag" size={17} stroke={2} />Price</button>
+          <button type="button" role="tab" aria-selected={tab === 'phone'} class={cx(tab === 'phone' && 'on')} onClick={() => toTab('phone')}><Icon name="phone" size={17} stroke={2} />Phone</button>
         </div>
 
         {price && x && (
@@ -129,23 +131,38 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
             </div>
             <label class="ow-b-suppliers-tel">
               <span class="ow-b-suppliers-cap">New number</span>
-              <input class={cx('mono', 'ow-b-suppliers-tel-f')} type="tel" inputMode="tel" aria-label={`New number for ${s.name}`} readOnly={sent}
+              <input class={cx('mono', 'ow-b-suppliers-tel-f')} type="tel" inputMode="tel" aria-label={`New number for ${s.name}`} readOnly={!!sent}
                 value={tel} onInput={(e) => setTel((e.target as HTMLInputElement).value)} />
             </label>
-            {sent && <div role="status" class="ow-b-suppliers-sent">{`Sent · ${moses} checks it, then the list changes`}</div>}
+            {sent === 'sent' && <div role="status" class="ow-b-suppliers-sent">{`Sent · ${moses} checks it, then the list changes`}</div>}
+            {sent === 'kept' && (
+              <div role="status" class="ow-b-suppliers-kept">
+                <span class="ow-b-suppliers-kept-ic"><Icon name="phone" size={20} stroke={2} /></span>
+                <span class="ow-b-suppliers-kept-t"><span>{s.name}</span><span class="mono">{phoneText(tel)}</span></span>
+                <SendsLater />
+              </div>
+            )}
           </>
         )}
 
         <span class="ow-b-suppliers-fill" />
-        {failed && x && (
+        {price && failed && x && (
           <div role="alert" class="ow-b-suppliers-err">
             <Icon name="warning" size={20} stroke={2} />
             <span><b>Not saved</b><span class="mono">{`${fig(failed.price)} · ${x.price.item}`}</span></span>
             <button type="button" onClick={() => { void save(failed.price, failed.price === list ? 'still' : 'save'); }}>Try again</button>
           </div>
         )}
-        {failed && x && <span class="ow-b-suppliers-err-u">On the list: <b>still <span class="mono">{fig(list)}</span></b></span>}
-        {!online.value && <span class="ow-b-suppliers-later"><Icon name="bell" size={14} stroke={2} />{`${moses} sees it when back`}</span>}
+        {price && failed && x && <span class="ow-b-suppliers-err-u">On the list: <b>still <span class="mono">{fig(list)}</span></b></span>}
+        {tab === 'phone' && telFailed && (
+          <div role="alert" class="ow-b-suppliers-err">
+            <Icon name="warning" size={20} stroke={2} />
+            <span><b>Not saved</b><span class="mono">{`${phoneText(tel)} · ${s.name}`}</span></span>
+            <button type="button" onClick={() => { void sendPhone(); }}>Try again</button>
+          </div>
+        )}
+        {tab === 'phone' && telFailed && <span class="ow-b-suppliers-err-u">On the list: <b>still <span class="mono">{phoneText(s.phone) || '—'}</span></b></span>}
+        {(!online.value || sent === 'kept') && <SeesWhenBack who={moses} />}
         {price ? (
           <div class="ow-b-suppliers-flow" role="img" aria-label={`Saved straight to the price list; ${moses} sees it, nothing waits`}>
             <Avatar initials={b.me.initials} tint="me" size={32} />

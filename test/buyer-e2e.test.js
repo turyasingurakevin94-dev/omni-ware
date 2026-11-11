@@ -14,6 +14,7 @@
  *   off        a stop off the plan: Today's figure follows
  *   notfound   midday: Kiseka's Not found → Client waits
  *   nomatch    Suppliers: a search nobody sells → Ask Moses to find it
+ *   suppliers  Back keeps the search, Ask again on the row, a double × pops one screen; offline: Sends later
  *
  * Needs Playwright with Chromium (the container has it). Run: node test/buyer-e2e.test.js
  */
@@ -215,6 +216,40 @@ const small = new Set();
     t.check(txt.includes('Nobody sells it'), 'a search nobody sells: Nobody sells it');
     await s.tap('Ask Moses to find it');
     t.check(!s.errors.length, `no page errors (no match) ${s.errors.join('; ')}`);
+
+    /* ---- Suppliers: Back keeps the search; Ask again shows on the row; a double × pops one screen ---- */
+    s = await open(b, '?demo&state=midday');
+    await s.tap('Suppliers');
+    const find = () => s.p.getByRole('searchbox').or(s.p.getByRole('textbox')).first();
+    await find().fill('PVC pipe 6 in'); await s.p.waitForTimeout(400);
+    await s.p.getByRole('button', { name: /^PVC pipe 4 in from/ }).first().click(); await s.p.waitForTimeout(400);
+    await s.p.goBack(); await s.p.waitForTimeout(500);
+    t.check((await find().inputValue()) === 'PVC pipe 6 in' && (await s.text()).includes('Nobody sells it'), 'Back from a close match keeps the search');
+    await find().fill(''); await s.p.waitForTimeout(300);
+    await s.tap('Ask Ndeeba Timber Works again on WhatsApp');
+    txt = await s.text();
+    t.check(/found 5 of 10/.test(txt) && /Brian sees: Asked · \d\d:\d\d/.test(txt) && !(await s.p.locator('.ow-toast').count()), 'Ask again: the row says Asked and Brian sees it, no toast over the title');
+    await s.p.getByRole('button', { name: /^Katwe Fabricators/ }).first().click(); await s.p.waitForTimeout(400);
+    await s.p.getByRole('button', { name: /Fix the price/ }).first().click(); await s.p.waitForTimeout(400);
+    await s.p.getByRole('button', { name: 'Close', exact: true }).dblclick(); await s.p.waitForTimeout(700);
+    t.check((await s.text()).includes('WhatsApp Katwe'), 'a double tap on the fix sheet × goes back one screen');
+    t.check(!s.errors.length, `no page errors (suppliers) ${s.errors.join('; ')}`);
+
+    /* ---- Suppliers offline: a kept ask says Sends later and cannot be sent twice; a kept number is not "Sent" ---- */
+    s = await open(b, '?demo&state=midday&offline=1');
+    await s.tap('Suppliers');
+    await s.tap('Ask Ndeeba Timber Works again on WhatsApp');
+    txt = await s.text();
+    t.check(txt.includes('Sends later') && !(await s.p.getByRole('button', { name: /again on WhatsApp/ }).count()), 'offline Ask again: the row says Sends later, no second ask');
+    t.check(txt.includes('No signal · saved on this phone') && !(await s.p.getByRole('button', { name: 'Try again' }).count()), 'the band, with no Try again');
+    await s.p.getByRole('button', { name: /^Katwe Fabricators/ }).first().click(); await s.p.waitForTimeout(400);
+    await s.p.getByRole('button', { name: /Fix the price/ }).first().click(); await s.p.waitForTimeout(400);
+    await s.p.getByRole('tab', { name: 'Phone' }).click();
+    await s.p.getByLabel(/New number/).fill('0782 554 019');
+    await s.tap('Send to Moses');
+    txt = await s.text();
+    t.check(txt.includes('Sends later') && txt.includes('Moses sees it when back') && !txt.includes('Sent ·'), 'offline phone: Sends later, Moses sees it when back, never "Sent"');
+    t.check(!s.errors.length, `no page errors (suppliers offline) ${s.errors.join('; ')}`);
   } finally { await b.close(); }
   if (small.size) console.log('\nUnder 44 px tall (recorded):\n  ' + [...small].join('\n  '));
   process.exit(t.done() ? 1 : 0);

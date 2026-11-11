@@ -9,6 +9,11 @@
  *   toast.show('No signal', { kind: 'warn' })
  *   toast.show('Not sent', { kind: 'error', sub: 'The server said …', retry: () => … })
  *   <ToastView text="Added 40 bags" undo={…} inline />      the toast drawn in place (the parts gallery)
+ *
+ * The host's options (an app opts in; without them it is the toast above):
+ *   below=".head"   the toast sits just under that element (the screen's navy head), never over it
+ *   twoLine         a success or warning toast also shows its sub ("Brian sees: Asked · 11:15")
+ *   hide={(t) => …} a toast that would only repeat what the screen already says is not drawn
  */
 import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
@@ -50,6 +55,10 @@ export interface ToastViewProps {
   inline?: boolean;
   /** How far above the bottom an error sits (the tab bar 84, the dock, or 0). */
   above?: number;
+  /** A success or warning toast's top, in px from the screen's top (default: 14 down). */
+  top?: number;
+  /** A success or warning toast shows its sub as a second line. */
+  twoLine?: boolean;
   onClose?: () => void;
 }
 
@@ -78,19 +87,32 @@ export function ToastView(p: ToastViewProps): JSX.Element {
       </div>
     );
   }
+  const two = !!(p.twoLine && p.sub);
+  const at = p.top != null && !p.inline ? { top: `max(calc(14px + var(--app-top)), ${Math.round(p.top)}px)` } : undefined;
   return (
-    <div role="status" class={cx('ow-toast', p.kind === 'warn' && 'warn', p.undo && 'undo', p.inline && 'inline')}>
+    <div role="status" style={at} class={cx('ow-toast', p.kind === 'warn' && 'warn', p.undo && 'undo', p.inline && 'inline', two && 'two')}>
       <span class="ow-toast-disc" aria-hidden="true">{p.kind === 'warn' ? '!' : <Icon name="check" size={15} stroke={3} />}</span>
-      <span ref={words} class="ow-toast-w"><Keep text={p.text} /></span>
+      <span ref={words} class="ow-toast-w">{two ? <span class="ow-toast-2"><Keep text={p.text} /><span class="ow-toast-sub"><Keep text={p.sub as string} /></span></span> : <Keep text={p.text} />}</span>
       {p.undo && <button type="button" class="ow-toast-undo" onClick={() => { close(); p.undo && p.undo(); }}>Undo</button>}
     </div>
   );
 }
 
-export function ToastHost(p: { above: number }): JSX.Element | null {
+export interface ToastHostProps {
+  above: number;
+  /** A selector: a success or warning toast sits just under the first element it finds (the navy head). */
+  below?: string;
+  twoLine?: boolean;
+  /** True for a toast that is not drawn (it would repeat what the screen says). */
+  hide?: (t: { text: string; kind: Kind }) => boolean;
+}
+
+export function ToastHost(p: ToastHostProps): JSX.Element | null {
   const t = current.value;
-  if (!t) return null;
-  return <ToastView key={t.id} text={t.text} kind={t.kind} sub={t.sub} undo={t.undo} retry={t.retry} above={p.above} />;
+  if (!t || (p.hide && p.hide(t))) return null;
+  const el = p.below && t.kind !== 'error' && typeof document !== 'undefined' ? document.querySelector(p.below) : null;
+  const top = el ? el.getBoundingClientRect().bottom + 8 : undefined;
+  return <ToastView key={t.id} text={t.text} kind={t.kind} sub={t.sub} undo={t.undo} retry={t.retry} above={p.above} top={top} twoLine={p.twoLine} />;
 }
 
 /**
