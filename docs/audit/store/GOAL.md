@@ -4,21 +4,33 @@ Kevin's goal (set 11 Nov 2026): redesign the Store app (`store.html`) in the Age
 
 **The canvas: "Store — in the agent app's language", https://claude.ai/artifact/8oCrpUTjvjLGqQT4V8rESr** (source: `docs/canvas/store-agent/`). Page "Integration & flow" opens first; then one page per area. Each board's title carries its independent score beside its Agent screen's.
 
+## Why
+
+Someone who knows the Agent app picks up the Store app with no training: it shows rather than tells, takes the fewest steps and looks polished. The Store sits in the middle of the order's journey, so every handover uses the same words, states and signals on both sides.
+
+## How
+
+1. The agent's language, written down (reusing the Buyer's reference). 2. The Store as it is. 3. Every app ↔ Store handover and its mismatches. 4. The job rethought before the screens. 5. One design agent per area, every screen at 360 px in all its states. 6. One canvas with an integration board and a flow board. 7. An independent reviewer scores every page against its Agent screen until each matches or beats it.
+
+## Focus
+
+The order's path from Sales' handover to delivered and paid, plus goods in from the Buyer: the fewest steps, nothing lost or worded differently between apps.
+
 ## Done when
 
-| Condition | State | Evidence |
-|---|---|---|
-| Every Store page is on the new canvas and scores at or above the Agent app's matching screen | **Met** | 142 boards in 5 areas, every one passed by an independent reviewer: every axis ≥ 8.5 and a total ≥ its Agent screen's (table below) |
-| The integration board shows every handover with every app, each with a push and the same words on both sides | **Met** | `IB01Handovers`: 36 handovers (34 with a push and who gets it; the counter sale and the shared shelf figure are read live, nobody waits on them) plus an "out of the yard's scope" panel for the 12 handovers the yard is not part of; `IB02StateWords`: 17 order states, one word per app. Independent review round 4: all three summary boards pass, no missing handover, no word mismatch (`review/integration.json`) |
-| The end-to-end flow needs fewer steps than today | **Met** | `FL01Taps`: 99 → 72 taps across the 18 jobs that exist today; #0552 (pack, load, deliver) 11 → 8; #0556 (pack, they collect) 8 + a typed name → 5; check-in, gate hand-over and the return need no typing |
-| Changes other apps need are listed separately, not built here | **Met** | `OTHER-APPS.md` (per app, plus the pushes the Store's migration adds) |
-| GOAL.md has a Progress table | **Met** | below |
+- [x] every Store page is on the canvas and the independent reviewer scores it at or above its Agent screen (142 pages in 5 areas, 3–4 rounds each; area means 8.93–9.14 against the Agent screens' 8.83–9.03; 0 below);
+- [x] the integration board covers every handover with a push and the same words on both sides (`IB01`: 36 handovers, 34 with a push, 2 read live; 12 out of the yard's scope listed; `IB02`: 17 states, one word each; review round 4: no missing handover, no word mismatch);
+- [x] the end-to-end flow takes fewer steps than today (99 → 72 taps across 18 jobs; #0552 11 → 8; #0556 8 + a typed name → 5);
+- [x] changes other apps need are listed for their sessions, not built here (`OTHER-APPS.md`, plus the pushes for one migration after approval);
+- [x] this progress table is up to date.
+
+Then stop and ask Kevin to approve the canvas. No code, migrations or other-app changes until then.
 
 ## Progress
 
 | # | Step | State | Evidence |
 |---|---|---|---|
-| 1 | Write down the agent app's design language | Done | `agent-design-language.md` (an addendum to `docs/canvas/sales-agent/LANGUAGE.md` P01–P29: the stage sheet, states at 360 px, motion, status words, taps per agent job) |
+| 1 | Write down the agent app's design language | Done | `agent-design-language.md`: reuses the Buyer's `docs/audit/buyer/agent-design-language.md` (§E) and the Sales `LANGUAGE.md` parts P01–P29, and adds only what they lack (the stage sheet, states at 360 px, motion, status words, taps per agent job) |
 | 2 | The Store app as it is: pages, taps, every audit fix | Done | `STORE-TODAY.md` (33 pages, 12 sheets; taps measured in the real app; every fix of rounds 1–10 marked keep, or not needed and why) |
 | 3 | Map every app ↔ Store handover and its mismatches | Done | `INTEGRATION.md` (39 mismatches IM-01..39, every one closed on a board or listed in `OTHER-APPS.md`; IM-26 closed late: a trip that has come back is "Back at the yard", "at the gate" is only for orders waiting to be collected) |
 | 4 | Rethink the job before the screens | Done | `FLOW.md` (each step: needed, merged or automated; taps before and after) |
@@ -188,7 +200,7 @@ The independent reviewer scored each Store board and its matching Agent screen (
 
 </details>
 
-## Kevin's decisions waiting
+## Waiting on Kevin
 
 1. **Approve the canvas** — then the build starts in the Store's session (one migration for the new pushes, the next free number after 0181, recorded in `docs/decision-rights.md`).
 2. **The blind rule in Find**: on the yard's phone an item due for a count shows "Count due" in place of its figure (an audit fix), where Sales shows "96 on shelf" (SH02). Keep it?
