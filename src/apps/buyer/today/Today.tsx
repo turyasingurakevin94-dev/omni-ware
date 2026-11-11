@@ -3,7 +3,8 @@
  *
  *   to ask        Needs you: one row per supplier, every order together, the navy Ask pill
  *   asks out      Replies due: "Yes · same" on the row; late (30 min) → "Ask again"
- *   trip ready    Next move: the trip card (the red + starts it); Found's tile waits on Denis
+ *   trip ready    every supplier asked and one said yes: Next move, the trip card (the red + starts it);
+ *                 Found's tile waits on Denis (tripReady; while one is still to ask, the ask comes first)
  *   all clear     Nothing waits on you (after the hand-in: what the Store counts in), Waiting on others
  *   no signal     the hero says Offline; the band under it counts the taps kept on the phone
  *
@@ -11,7 +12,7 @@
  * ("Grace sees  Found · 09:25") are on the screen.
  */
 import type { JSX } from 'preact';
-import { answeredRows, askGroups, lineRefs, liveOrders, replyRows, tiles } from '../../../core/buyer/rules.ts';
+import { answeredRows, askGroups, lineRefs, liveOrders, replyRows } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -21,12 +22,12 @@ import { books, flush, kept, now, online } from '../shell/store.ts';
 import { AllClear, NextTrip, WaitingOn } from './Cards.tsx';
 import { Head } from './Head.tsx';
 import { AskRow, Chip, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
-import { calm, hm, sellersOf, tripRunning, waitingOn } from './rules.ts';
+import { calm, hm, sellersOf, tripReady, waitingOn } from './rules.ts';
 import { MoveTiles } from './Tiles.tsx';
 import './today.css';
 
 /** Replies due rows drawn on Today; the rest are behind "N ›" (Replies). */
-const REPLY_ROWS = 2;
+const REPLY_ROWS = 1;
 
 function Sec(p: { title: string; dot?: 'on' | 'off'; meta?: string; go?: { n: number; on: () => void; label: string } }): JSX.Element {
   return (
@@ -39,11 +40,14 @@ function Sec(p: { title: string; dot?: 'on' | 'off'; meta?: string; go?: { n: nu
   );
 }
 
-/** "Grace · Faith see  Found · 09:25  Asked · 09:05": the newest answer and the oldest ask Sales sees. */
+/**
+ * "Grace · Faith see  Found · 09:25  Asked · 09:05": the newest answer and the oldest ask Sales sees,
+ * named for the sellers whose orders they are about (an order still to ask is not named: nothing went yet).
+ */
 function SalesSees(p: { b: BuyerBooks; now: number }): JSX.Element | null {
-  const { b, now: n } = p, asks = askGroups(b, n), reps = replyRows(b, n);
+  const { b, now: n } = p, reps = replyRows(b, n);
   const found = answeredRows(b, n).find((g) => g.state === 'found');
-  const who = sellersOf(b, [...new Set([...asks, ...reps].flatMap((g) => g.orders))]);
+  const who = sellersOf(b, [...new Set([...(found ? [found] : []), ...reps].flatMap((g) => g.orders))]);
   const asked = reps.reduce<number | null>((m, g) => (g.askedAt != null && (m == null || g.askedAt < m) ? g.askedAt : m), null);
   if (!who.length || (!found && asked == null)) return null;
   return (
@@ -59,8 +63,8 @@ export function Today(): JSX.Element {
   if (!b) return <main class="ow-b-today-wait-main" aria-busy="true" />;
 
   const nf = lineRefs(b).filter((r) => r.state === 'notfound');
-  const asks = askGroups(b, n), reps = replyRows(b, n), t = tiles(b, n);
-  const ready = t.found > 0 && !tripRunning(b), quiet = calm(b, n);
+  const asks = askGroups(b, n), reps = replyRows(b, n);
+  const ready = tripReady(b, n), quiet = calm(b, n);
   const waits = quiet ? waitingOn(b, n) : [];
   const late = reps.some((g) => g.late);
 
@@ -68,8 +72,9 @@ export function Today(): JSX.Element {
     <>
       <Head b={b} now={n} offline={off} />
       {(off || k > 0) && (
-        <Notice kind="offline" action={{ label: 'Try again', on: () => { void flush(); } }}>
-          {off ? 'No signal · ' : ''}<b class="mono">{k}</b>{` ${k === 1 ? 'tap waits' : 'taps wait'} to send`}
+        <Notice kind="offline" action={k > 0 && !off ? { label: 'Try again', on: () => { void flush(); } } : undefined}>
+          {off ? 'No signal' : ''}{off && k > 0 ? ' · ' : ''}
+          {k > 0 && <><b class="mono">{k}</b>{` ${k === 1 ? 'tap waits' : 'taps wait'} to send`}</>}
         </Notice>
       )}
       <main class="ow-b-today-main">

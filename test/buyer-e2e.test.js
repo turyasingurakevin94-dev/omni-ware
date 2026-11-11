@@ -78,6 +78,38 @@ const small = new Set();
     await s.tap('Namanve Sheets said yes, same price');
     t.check((await s.text()).includes('2 of 5 suppliers found'), '2 of 5 suppliers found after two answers');
     t.check(!s.errors.length, `no page errors (ask) ${s.errors.join('; ')}`);
+    // Board Today phone 1: while a supplier is still to ask, the ask comes first: no trip card, no badge on Found.
+    let txt = await s.text();
+    t.check(!txt.includes('NEXT MOVE'), 'one still to ask: no Next move trip card yet');
+    t.check(!(await s.p.getByRole('button', { name: /^Found: .*waits on you/ }).count()), 'one still to ask: Found waits on nobody');
+    t.check(/Grace · Faith see Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
+
+    /* ---- Today: who sees an ask, a kept ask, the Ask sheet's Not found ---- */
+    s = await open(b, '?demo');
+    await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
+    txt = await s.text();
+    t.check(txt.includes('Grace · Faith see Asked') && !/Brian[^.]*see Asked/.test(txt), 'asked Namanve: Grace and Faith see Asked, not Brian (his order is still to ask)');
+    s = await open(b, '?demo&offline=1');
+    await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
+    t.check(!(await s.btn('Ask Namanve Sheets on WhatsApp, 3 lines').count()) && (await s.text()).includes('Waiting'), 'no signal: the asked row waits, no second Ask');
+    t.check((await s.text()).includes('No signal · 1 tap waits to send') && !(await s.btn('Try again').count()), 'no signal: 1 tap waits, no Try again');
+    s = await open(b, '?demo');
+    await s.tap('Ask Nakawa Cement Depot, 1 line');
+    await s.p.getByRole('button', { name: /^Not found: / }).click();
+    await s.p.waitForTimeout(700);
+    t.check(/Cement 50 kg 20 bag × 34,000.*Client waits/.test(await s.text()), 'Ask sheet Not found: the Not found sheet opens, as Replies "No" does');
+
+    /* ---- Orders: the way in and the chip ---- */
+    s = await open(b, '?demo&state=midday');
+    await s.tap('To ask: none');
+    txt = await s.text();
+    t.check(/All 3 Asked/.test(txt) && !txt.includes('Nothing to ask'), 'nothing to ask: the tile opens Orders on All (no To ask chip)');
+    await s.p.getByRole('button', { name: /^Not found 1/ }).first().click(); await s.p.waitForTimeout(500);
+    await s.tap('Ggaba Stores, #0553: open');
+    await s.p.goBack(); await s.p.waitForTimeout(600);
+    txt = await s.text();
+    t.check(txt.includes('Ggaba Stores') && !txt.includes('Lubowa Builders'), 'back from an order: the Not found chip is still chosen');
+    t.check(!s.errors.length, `no page errors (orders) ${s.errors.join('; ')}`);
 
     /* ---- trip: route order and the cash ask ---- */
     s = await open(b, '?demo&state=midday');
@@ -104,7 +136,7 @@ const small = new Set();
     await s.tap('Short at Namanve Sheets');
     for (let i = 0; i < 4; i++) await s.tap('Fewer Iron sheet G28 for #0550');
     await s.tap('Done');
-    let txt = await s.text();
+    txt = await s.text();
     t.check(txt.includes('Short · got 36 of 40'), 'Grace sees: Short · got 36 of 40');
     t.check(txt.includes('3,348,000 paid of 3,500,000') && txt.includes('152,000'), 'paid 3,348,000 of 3,500,000 · 152,000 back');
     await s.slide('Hand in');

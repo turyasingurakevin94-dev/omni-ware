@@ -1,10 +1,11 @@
 /*
  * 'orders/switch' (id, key) · Switch item (docs/canvas/buyer/Orders.dc.html
  * phone 4): another item in the place of one not found. The line not found
- * in red, the Agent's search row (field, mic, aisles), why, then the price
+ * in red, the Agent's search row (field, mic), why, then the price
  * list: the same item from another supplier first, each with its price
  * against what it cost and a bar against what the salesperson sells it at;
  * over the selling price, Ruth decides. + switches: act('switchItem').
+ * Nothing on the list (board Additions B): the search, Ask Moses to find it, Clear search; no footer.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -24,7 +25,7 @@ import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
 import { act, books, kept, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
-import { FromChip } from './parts.tsx';
+import { FromChip, KEPT, KEPT_TOAST } from './parts.tsx';
 import { byRole, firstQuery, switchOptions, type SwitchRow } from './rules.ts';
 import './sheets.css';
 
@@ -84,7 +85,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
     setBusy(k);
     try {
       const res = await act('switchItem', o.id, l.key, { name: r.price.item, productId: r.price.productId, supplierId: r.price.supplierId, cost: r.price.price, why });
-      toast.show(res.kept ? 'Kept · it sends when back' : `Switched · ${r.price.item}`, { kind: res.kept ? 'warn' : 'ok' });
+      toast.show(res.kept ? KEPT : `Switched · ${r.price.item}`, res.kept ? KEPT_TOAST : { kind: 'ok' });
       nav.back();
     } catch (e) {
       toast.show('Not saved', { kind: 'error', sub: `Switch to ${r.price.item} · ${fig(r.price.price)}`, retry: () => { void pick(r); } });
@@ -94,7 +95,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
     setBusy('sourcing');
     try {
       const res = await act('askSourcing', words);
-      toast.show(res.kept ? 'Kept · it sends when back' : `${finder} is told`, { kind: res.kept ? 'warn' : 'ok', sub: res.kept ? undefined : `${words} · Asked` });
+      toast.show(res.kept ? KEPT : `${finder} is told`, res.kept ? KEPT_TOAST : { kind: 'ok', sub: `${words} · Asked` });
     } catch (e) {
       toast.show('Not sent', { kind: 'error', sub: `Ask ${finder} to find ${words}`, retry: () => { void askMoses(); } });
     } finally { setBusy(null); }
@@ -116,8 +117,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
       </div>}
       <div class="find">
         <Search placeholder="Find an item" label="Find an item to switch to" value={q} onInput={setQ} autoFocus onMic={hasSpeech() ? listen : undefined} />
-        {/* Browsing the aisles is not drawn for the Buyer yet: off until the canvas has it. */}
-        <button type="button" class="grid" aria-label="Browse all aisles (not ready yet)" disabled><Icon name="grid" size={22} stroke={2} /></button>
+        {/* The board's aisles button (phone 4) is left out: where it goes is not drawn yet, and a button that does nothing is not shown. */}
       </div>
       {!none && (
         <div class="why" role="group" aria-label="Why">
@@ -136,7 +136,7 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
     </div>
   );
   return (
-    <FullSheet onBack={() => nav.back()} backLabel={null} head={head} foot={foot} pad="4px 16px 16px" gap={8}>
+    <FullSheet onBack={() => nav.back()} backLabel={null} head={head} foot={none ? undefined : foot} pad="4px 16px 16px" gap={8}>
       {off && <Notice kind="offline">Offline · it sends when back</Notice>}
       {!none && <div class="ow-b-orders-lh"><span>On the price list</span><span class="sells">sells <span class="mono">{fig(l.sell)}</span></span></div>}
       {rows.map((r, i) => (

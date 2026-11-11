@@ -78,6 +78,10 @@ export function Initials(p: { name: string; ini: string; size?: number }): JSX.E
   return <span aria-hidden="true" class="ow-b-orders-ini" style={{ width: `${s}px`, height: `${s}px`, fontSize: s >= 44 ? '15px' : '14px' }}>{p.ini}</span>;
 }
 
+/** A write kept on the phone (no signal), as a toast: the shared word (GLOSSARY "Kept on this phone"), as Today says it. */
+export const KEPT = 'Kept on this phone';
+export const KEPT_TOAST = { kind: 'warn' as const, sub: 'It sends when the signal comes back' };
+
 /** The round grey "Waiting" chip of a write kept on the phone (no signal). */
 export function Waiting(): JSX.Element {
   return <span class="ow-b-orders-word" style={{ background: '#F1EEE8', color: '#5F6980', height: '32px' }}><Icon name="clock" size={14} stroke={2.2} />Waiting</span>;

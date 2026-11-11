@@ -3,9 +3,11 @@
  * these only shape them for Today's rows and cards.
  *
  *   hm(ms)              "09:05" (the board's times have the leading zero)
- *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap"
+ *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap", "Y12 rebar 12 m" → "Y12 rebar"
+ *   unitWord(n, unit)   "20 bags" (a word unit takes an s; "sht", "pcs", "m" stay as they are)
  *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
  *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
+ *   tripReady(b, now)   the trip is Denis's next move: something found, nothing left to ask, no trip running
  *   calm(b, now)        nothing waits on Denis (nothing to ask, no Not found line, no late reply, no trip to start or running)
  */
 import { clock } from '../../../core/time.ts';
@@ -17,11 +19,16 @@ export function hm(ms: Ms): string {
   return clock(ms).padStart(5, '0');
 }
 
-/** The item's name without its size ("Timber 2×4" → "Timber"), for a small chip. */
+/** The item's name without its size ("Timber 2×4" → "Timber"; "Y12 rebar 12 m" → "Y12 rebar"), for a small chip. */
 export function shortItem(name: string): string {
   const words = name.split(' '), out: string[] = [];
-  for (const w of words) { if (/\d/.test(w)) break; out.push(w); }
-  return out.length ? out.join(' ') : name;
+  for (const w of words) { if (out.length && /\d/.test(w)) break; out.push(w); }
+  return out.join(' ') || name;
+}
+
+/** "20 bags", "1 bag", "40 sht": a unit that is a word (it has a vowel) takes an s; a short form does not. */
+export function unitWord(n: number, unit: string): string {
+  return n === 1 || /s$/i.test(unit) || !/[aeiou]/i.test(unit) ? unit : `${unit}s`;
 }
 
 /** One message per supplier: what we need from them, every order together. */
@@ -56,6 +63,15 @@ export function waitingOn(b: BuyerBooks, now: Ms): Waiter[] {
 /** The trip is on the road or waiting on its cash. */
 export function tripRunning(b: BuyerBooks): boolean {
   return !!b.trip && (b.trip.state === 'cash' || b.trip.state === 'on');
+}
+
+/**
+ * The trip is the next move (board Today phone 2, not phone 1): a supplier said yes, every supplier is
+ * asked, and no trip is running. While one is still to ask, the ask comes first and the trip waits.
+ */
+export function tripReady(b: BuyerBooks, now: Ms): boolean {
+  const t = tiles(b, now);
+  return t.found > 0 && t.toask === 0 && !tripRunning(b);
 }
 
 /** Nothing waits on Denis: nothing to ask, no late reply, nothing found to buy, no trip running. */

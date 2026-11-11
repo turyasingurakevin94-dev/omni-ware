@@ -24,7 +24,8 @@ import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { act } from '../shell/store.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
-import { askSupplier } from '../shell/ask.ts';
+import { askKept, askSupplier } from '../shell/ask.ts';
+import { KEPT, KEPT_TOAST, Waiting } from '../orders/parts.tsx';
 import { firstName, hm, sellersOf, seeWord } from './rules.ts';
 
 /** The board's eye ("… sees"): not in src/ui/icons.tsx yet. */
@@ -74,7 +75,7 @@ function useWrite(): [RowState, string, (run: () => Promise<{ kept: boolean } | 
     run().then((r) => {
       setSt('idle');
       if (!r) return;
-      toast.show(r.kept ? 'Kept on this phone' : ok, r.kept ? { kind: 'warn', sub: 'It sends when the signal comes back' } : { sub });
+      toast.show(r.kept ? KEPT : ok, r.kept ? KEPT_TOAST : { sub });
     }).catch((e: unknown) => { setWhy(String((e as Error).message || e)); setSt('error'); });
   };
   return [st, why, go];
@@ -94,15 +95,18 @@ function Pill(p: { st: RowState; word: ComponentChildren; sending?: string; labe
   );
 }
 
+/** The row's sub-line (board Today: "Timber 2×4 · 50" for one line; "3 lines · 2 orders" for several orders). */
 function linesWord(g: SupplierGroup): string {
   if (g.lines.length === 1) { const l = g.lines[0].line; return `${l.name} · ${l.qty}`; }
-  return `${g.lines.length} lines`;
+  const n = g.lines.length, o = g.orders.length;
+  return o > 1 ? `${n} lines · ${o} orders` : `${n} lines`;
 }
 
 export function AskRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const { g } = p, s = g.supplier;
   const [st, why, go] = useWrite();
   const ask = () => go(() => askSupplier(p.b, s.id), `Asked ${s.name}`);
+  const waiting = askKept(s.id);
   return (
     <div class={cx('ow-b-today-row', st === 'error' && 'error')}>
       <IconTile tone={st === 'error' ? 'bad' : 'warn'} icon={st === 'error' ? 'warning' : 'message'} />
@@ -110,13 +114,16 @@ export function AskRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
         <span class="ow-b-today-row-name">{s.name}</span>
         {st === 'error' ? <span class="mono ow-b-today-row-why">{`Not saved · ${why}`}</span> : (
           <span class="ow-b-today-row-sub">
-            {g.orders.slice(0, 2).map((o) => <FromChip key={o.id} b={p.b} o={o} />)}
+            {g.orders.length === 1 && <FromChip b={p.b} o={g.orders[0]} />}
             <span class="mono">{linesWord(g)}</span>
           </span>
         )}
       </div>
-      <Pill st={st} word="Ask" sending={s.whatsapp ? 'WhatsApp' : undefined} on={ask}
-        label={`Ask ${s.name}${s.whatsapp ? ' on WhatsApp' : ''}, ${g.lines.length} line${g.lines.length === 1 ? '' : 's'}`} />
+      {/* An ask kept on this phone (no signal): it sends when back; the row waits (board offline: "the mark waits"). */}
+      {waiting ? <Waiting /> : (
+        <Pill st={st} word="Ask" sending={s.whatsapp ? 'WhatsApp' : undefined} on={ask}
+          label={`Ask ${s.name}${s.whatsapp ? ' on WhatsApp' : ''}, ${g.lines.length} line${g.lines.length === 1 ? '' : 's'}`} />
+      )}
     </div>
   );
 }

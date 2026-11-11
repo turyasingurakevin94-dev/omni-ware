@@ -25,7 +25,7 @@ import { askSupplier, openWhatsApp, shopName } from '../shell/ask.ts';
 import { barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
-import { FromChip, RowAct, Sees, StateWord } from './parts.tsx';
+import { FromChip, KEPT, KEPT_TOAST, RowAct, Sees, StateWord } from './parts.tsx';
 import { byRole, nextSupplier, orderView } from './rules.ts';
 import './sheets.css';
 
@@ -36,7 +36,7 @@ type Busy = 'other' | 'wait' | null;
 
 /** What happened, as a toast: kept on the phone (no signal) or done. */
 function told(r: { kept: boolean }, done: string, undo?: () => void): void {
-  if (r.kept) toast.show('Kept · it sends when back', { kind: 'warn' });
+  if (r.kept) toast.show(KEPT, KEPT_TOAST);
   else toast.show(done, undo ? { undo } : {});
 }
 
@@ -150,7 +150,7 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
           </>
         )}
       </div>
-      <Dock inline words={`${seller} sees: Removed`} total={left} sub={{ text: fig(-x.total, false, true), tone: 'rose' }}
+      <Dock inline face={<Icon name="bell" size={16} stroke={2} />} words={`${seller} sees: Removed`} total={left} sub={{ text: fig(-x.total, false, true), tone: 'rose' }}
         style={{ marginTop: 'auto' }}
         slide={{
           label: 'Slide to remove', onCommit: remove,

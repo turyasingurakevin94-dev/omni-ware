@@ -20,7 +20,7 @@ import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
-import { FromChip, Initials, RowAct, Strip, Waiting } from './parts.tsx';
+import { FromChip, Initials, KEPT, KEPT_TOAST, RowAct, Strip, Waiting } from './parts.tsx';
 import { buying, byNeed, byRole, byState, checking, FILTERS, INK, matches, orderView, type Filter, type OrderView } from './rules.ts';
 import { WORD } from '../../../core/buyer/rules.ts';
 
@@ -33,13 +33,13 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
   const tail = !top || toAsk ? '' : top.state === 'priceup' ? fig(top.line.cost) : top.at || '';
   const open = () => nav.push('orders/order', { id: o.id });
   return (
-    <div class="ow-b-orders-row" role="button" tabIndex={0} aria-label={`${o.client}, ${orderNo(o.id)}: open`} onClick={open}
-      onKeyDown={(e) => { if (e.key === 'Enter') open(); }}>
-      <div class="top">
+    // The whole card opens the order for a finger; for a screen reader the name is the one button (no button inside a button).
+    <div class="ow-b-orders-row" onClick={open}>
+      <button type="button" class="top" aria-label={`${o.client}, ${orderNo(o.id)}: open`}>
         <Initials name={o.client} ini={initials(o.client)} />
         <span class="who"><span class="n">{o.client}</span><FromChip who={v.seller} no={o.id} /></span>
         <span class="mono sum">{fig(v.total)}</span>
-      </div>
+      </button>
       <div class="foot">
         <div class="state">
           <Strip states={v.live.map((x) => x.state)} />
@@ -66,12 +66,16 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
 }
 
 export function OrdersList({ params }: { params: Params }): JSX.Element {
-  const [filter, setFilter] = useState<Filter>(isFilter(params.filter) ? params.filter : 'all');
+  const [chosen, choose] = useState<Filter>(isFilter(params.filter) ? params.filter : 'all');
+  // The chip stays chosen when an order is opened and closed: this screen's stack entry keeps it.
+  const setFilter = (f: Filter) => { params.filter = f; choose(f); };
   const [busy, setBusy] = useState<string | null>(null);
   const b = books.value;
   if (!b) return <main class="ow-b-orders" aria-busy="true" />;
   const t = now.value;
   const views = byNeed(checking(b).map((o) => orderView(o, b, t)));
+  // Nothing left to ask: the To ask chip goes (board Orders, empty) and the list shows All (no undrawn "Nothing to ask").
+  const filter: Filter = chosen === 'toask' && !views.some((v) => matches(v, 'toask')) ? 'all' : chosen;
   const shown = views.filter((v) => matches(v, filter));
   const lines = views.flatMap((v) => v.live);
   const total = views.reduce((s, v) => s + v.total, 0);
@@ -90,7 +94,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
       // The one Ask (shell/ask.ts): WhatsApp with the message, or the call sheet when they have none.
       const r = await askSupplier(b, sid);
       if (!r) return;
-      toast.show(r.kept ? 'Kept · it sends when back' : `Asked ${name}`, { kind: r.kept ? 'warn' : 'ok' });
+      toast.show(r.kept ? KEPT : `Asked ${name}`, r.kept ? KEPT_TOAST : { kind: 'ok' });
     } catch (e) {
       toast.show('Not saved', { kind: 'error', sub: `Ask ${name} again`, retry: () => { void ask(v); } });
     } finally { setBusy(null); }
@@ -119,7 +123,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
         <ChipRow label="Show">
           {FILTERS.map((f) => {
             const n = views.filter((v) => matches(v, f.id)).length;
-            if (f.id === 'toask' && !n && filter !== 'toask') return null;
+            if (f.id === 'toask' && !n) return null;
             return (
               <FilterChip key={f.id} on={filter === f.id} dot={f.dot || undefined} count={n} onClick={() => setFilter(f.id)}>
                 {f.id === 'all' && <span aria-hidden="true" class="ow-b-orders-chipic"><Icon name="list" size={16} stroke={2.2} /></span>}
@@ -138,7 +142,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
               waiting={!!v.top?.line.supplierId && keptAsks.has(v.top.line.supplierId)} onAsk={() => { void ask(v); }} />
           ))}
           {filter === 'toask' && views.length > shown.length && (
-            <button type="button" class="ow-b-orders-rest" onClick={() => setFilter('all')}>{`The other ${views.length - shown.length} are asked or answered · `}<b>All</b></button>
+            <button type="button" class="ow-b-orders-rest" onClick={() => setFilter('all')}>{`The other ${views.length - shown.length} ${views.length - shown.length === 1 ? 'is' : 'are'} asked or answered · `}<b>All</b></button>
           )}
         </div>
       ) : (

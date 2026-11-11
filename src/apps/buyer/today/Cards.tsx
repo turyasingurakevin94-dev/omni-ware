@@ -2,7 +2,7 @@
  * Today's cards (board Today, phones 2 and 4).
  *
  *   <NextTrip/>     Next move: the trip the app proposes, its stops in route order with their cash, what is
- *                   held off it (Ruth decides · Asked), and who in Sales sees Found. No button: the red + is the way in.
+ *                   held off it (Ruth decides · Asked; one chip per item and state), and who in Sales sees Found. No button: the red + is the way in.
  *   <AllClear/>     Nothing waits on you. After the hand-in: the orders the Store counts in (Packing shows
  *                   only after the count), and the shorts Sales was told of.
  *   <WaitingOn/>    Waiting on others: Ruth and the suppliers asked, faces and names (opens Replies).
@@ -26,6 +26,8 @@ export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
   const found = lineRefs(b).filter((r) => r.state === 'found').map((r) => r.order);
   const who = sellersOf(b, [...new Set(found)]);
   const n = plan.stops.length;
+  // One chip per item and state: "Iron sheet · Asked" once, though two orders wait on it.
+  const held = plan.held.filter((r, i, all) => all.findIndex((x) => shortItem(x.line.name) === shortItem(r.line.name) && x.state === r.state) === i);
   return (
     <div class="ow-b-today-next" role="group" aria-label={`Next move: trip, ${n} stop${n === 1 ? '' : 's'}, cash ${fig(plan.cash)}. The red plus starts it.`}>
       <div class="ow-b-today-next-h">
@@ -42,10 +44,10 @@ export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
           </div>
         ))}
       </div>
-      {plan.held.length > 0 && (
+      {held.length > 0 && (
         <div class="ow-b-today-next-held">
           <span>Held</span>
-          {plan.held.map((r) => r.state === 'priceup'
+          {held.map((r) => r.state === 'priceup'
             ? <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip warn face"><Dot m={ruth} />{`${shortItem(r.line.name)} · ${ruth ? firstName(ruth) : 'Manager'} decides`}</span>
             : <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip neutral">{`${shortItem(r.line.name)} · ${WORD[r.state]}`}</span>)}
         </div>

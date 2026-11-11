@@ -5,7 +5,7 @@
  *
  *   Yes · same    every line Found at the same price (the ask is marked first, as a call)
  *   New price     the Replies price screen for this supplier (Ruth decides a price over the selling price)
- *   Not found     every line Not found; the salesperson is told (the bell)
+ *   Not found     every line Not found; the salesperson is told (the bell); the first line's Not found sheet opens
  *
  * Sending shows on the button tapped; the others wait. A refusal shows as a toast with Try again.
  */
@@ -22,7 +22,9 @@ import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act } from '../shell/store.ts';
 import { Chip, FromChip, Sees } from './Rows.tsx';
-import { hm, sellersOf, seeWord } from './rules.ts';
+import { hm, sellersOf, seeWord, unitWord } from './rules.ts';
+import { openNotFound } from '../orders/NotFound.tsx';
+import { KEPT, KEPT_TOAST } from '../orders/parts.tsx';
 import './asksheet.css';
 
 type Pick = 'yes' | 'price' | 'no';
@@ -45,8 +47,11 @@ function AskSheet(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
       if (pick === 'price') { sheet.close(); nav.push('replies/price', { supplier: s.id }); return; }
       const r = await act(pick === 'yes' ? 'answerYes' : 'answerNo', s.id);
       sheet.close();
-      if (r.kept) toast.show('Kept on this phone', { kind: 'warn', sub: 'It sends when the signal comes back' });
-      else toast.show(`${s.name} · ${pick === 'yes' ? 'Found' : 'Not found'}`, { sub: who.length ? `${seeWord(who)} it` : undefined });
+      if (r.kept) toast.show(KEPT, KEPT_TOAST);
+      // Not found: the line's Not found sheet next, as Replies' "No" does (other supplier · client waits · remove);
+      // any other line waits on Today's Needs you.
+      else if (pick === 'no') openNotFound(g.lines[0].order.id, g.lines[0].line.key);
+      else toast.show(`${s.name} · Found`, { sub: who.length ? `${seeWord(who)} it` : undefined });
     } catch (e) {
       setBusy(null);
       toast.show('Not saved', { kind: 'error', sub: String((e as Error).message || e), retry: () => { void run(pick); } });
@@ -66,7 +71,7 @@ function AskSheet(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
           {g.lines.map((r) => (
             <div key={`${r.order.id}-${r.line.key}`} class="ow-b-today-ask-line">
               <div class="ow-b-today-ask-line-t">
-                <span>{`${r.line.name} · `}<span class="mono">{r.line.qty}</span>{` ${r.line.unit}`}</span>
+                <span>{`${r.line.name} · `}<span class="mono">{r.line.qty}</span>{` ${unitWord(r.line.qty, r.line.unit)}`}</span>
                 <span class="ow-b-today-ask-from">From<FromChip b={b} o={r.order} name navy /></span>
               </div>
               <div class="ow-b-today-ask-line-m">
