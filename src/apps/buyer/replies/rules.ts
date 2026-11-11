@@ -52,10 +52,27 @@ export function salesSees(b: BuyerBooks, ids: number[]): SeesGroup[] {
   const by = new Map<string, SeesGroup>();
   os.forEach((o) => {
     const g = by.get(o.sellerId) || { who: seller(b, o), orders: [] };
-    g.orders.push(orderWord(o, b.trip));
+    g.orders.push(withWho(b, orderWord(o, b.trip)));
     by.set(o.sellerId, g);
   });
   return [...by.values()];
+}
+
+/**
+ * The word as Sales gets it (BRIEF "What Sales gets"): who acts next on it, by display name.
+ * Price up · Ruth decides; Client waits · Moses finds it.
+ */
+function withWho(b: BuyerBooks, s: OrderSees): OrderSees {
+  const by = (role: Member['role']) => b.team.find((m) => m.role === role) || null;
+  if (s.word === WORD.priceup) return { ...s, word: `${WORD.priceup} · ${firstName(decider(b))} decides` };
+  if (s.word === WORD.clientwaits) { const m = by('sourcing'); return m ? { ...s, word: `${WORD.clientwaits} · ${firstName(m)} finds it` } : s; }
+  return s;
+}
+
+/** The orders Sales sees move on Replies: those with an answer in, and those whose line now waits on Sourcing. */
+export function seenOrders(b: BuyerBooks, answered: number[]): number[] {
+  const waits = b.orders.filter((o) => (o.status === 'draft' || o.status === 'awaiting_goods') && o.lines.some((l) => lineState(o, l, b.trip) === 'clientwaits')).map((o) => o.id);
+  return [...new Set([...answered, ...waits])];
 }
 
 /** The Manager who decides a price over the selling price (decision-rights: the Manager decides prices). */

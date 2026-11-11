@@ -8,7 +8,10 @@
  *
  *   ask        morning: Ask on the row (WhatsApp opens), the no-WhatsApp sheet, Yes · same
  *   trip       midday: the trip in route order, the cash ask slide → On the trip
- *   handin     on the trip: Got it all, Undo (5 s), Got it all again, Short (36 of 40), Hand in → Handed in · Musa counts it in
+ *   handin     on the trip: Got it all, Undo (5 s), Got it all again, Short (36 of 40), all done (Undo, cash back), Hand in → Handed in
+ *   paid       paid 650,000 at Nakawa: #0550 2,018,000, the orders add up to what was paid
+ *   offline    stops saved on the phone count as done; Hand in saves on the phone
+ *   off        a stop off the plan: Today's figure follows
  *   notfound   midday: Kiseka's Not found → Client waits
  *   nomatch    Suppliers: a search nobody sells → Ask Moses to find it
  *
@@ -101,16 +104,66 @@ const small = new Set();
     await s.p.waitForTimeout(5600);
     t.check(!(await s.p.getByRole('button', { name: /^Undo Nakawa/ }).count()), 'after 5 s the Undo goes and Nakawa stays done');
     await s.tap('Got it all at Owino Plumbing');
+    // Stop 3 in full above the dock (nothing under it).
+    const room = await s.p.evaluate(() => {
+      const btn = [...document.querySelectorAll('button')].find((e) => e.getAttribute('aria-label') === 'Short at Namanve Sheets');
+      const dock = document.querySelector('.ow-dock, [class*=dock]');
+      return btn && dock ? btn.getBoundingClientRect().bottom <= dock.getBoundingClientRect().top + 1 : false;
+    });
+    t.check(room, 'stop 3: Got it all and Short sit above the dock');
     await s.tap('Short at Namanve Sheets');
     for (let i = 0; i < 4; i++) await s.tap('Fewer Iron sheet G28 for #0550');
     await s.tap('Done');
     let txt = await s.text();
+    // TripOn phone 4: every stop done, the last one's Undo, the cash back, the Hand in slide.
+    t.check(txt.includes('CASH BACK TO ESTHER UGX 152,000') && /Undo \d/.test(txt), 'all stops done: cash back 152,000 and Undo on the last stop');
+    await s.p.waitForTimeout(5600);
+    txt = await s.text();
     t.check(txt.includes('Short · got 36 of 40'), 'Grace sees: Short · got 36 of 40');
     t.check(txt.includes('3,348,000 paid of 3,500,000') && txt.includes('152,000'), 'paid 3,348,000 of 3,500,000 · 152,000 back');
     await s.slide('Hand in');
     txt = await s.text();
-    t.check(txt.includes('Handed in · Musa counts it in') && txt.includes('Back to Today'), 'Handed in · Musa counts it in, then Back to Today');
+    t.check(txt.includes('Musa counts it in') && txt.includes('Cash back') && txt.includes('Back to Today') && !txt.includes('Told'), 'Handed in: Musa counts it in, Esther\'s cash back, then Back to Today');
+    const end = await s.btn('Back to Today').boundingBox();
+    t.check(end && end.y + end.height <= 780, 'Back to Today in view without scrolling');
     t.check(!s.errors.length, `no page errors (hand in) ${s.errors.join('; ')}`);
+
+    /* ---- paid differently: every order's figure from what was really paid ---- */
+    s = await open(b, '?demo&state=trip');
+    await s.tap('The trip, 3 stops to buy');
+    await s.p.getByRole('button', { name: /^Pay 680,000/ }).click(); await s.p.waitForTimeout(400);
+    await s.p.getByRole('textbox', { name: /^Paid at Nakawa/ }).fill('650000'); await s.p.waitForTimeout(300);
+    await s.tap('Done');
+    await s.tap('Got it all at Owino Plumbing');
+    await s.tap('Short at Namanve Sheets');
+    for (let i = 0; i < 4; i++) await s.tap('Fewer Iron sheet G28 for #0550');
+    await s.tap('Done');
+    await s.p.waitForTimeout(5600);
+    txt = await s.text();
+    t.check(txt.includes('Kato Construction 2,018,000 of 2,200,000') && txt.includes('3,318,000 paid of 3,500,000'), 'Hand in: #0550 2,018,000 of 2,200,000, the orders add up to 3,318,000 paid');
+
+    /* ---- offline: stops save on the phone, the money still adds up, Hand in still goes ---- */
+    s = await open(b, '?demo&state=trip&offline=1');
+    await s.tap('The trip, 3 stops to buy');
+    await s.tap('Got it all at Nakawa Cement Depot');
+    await s.tap('Got it all at Owino Plumbing');
+    txt = await s.text();
+    t.check(txt.includes('CASH IN HAND UGX 2,280,000') && txt.includes('Got it all · sends when back'), 'offline: in hand 2,280,000, Got it all · sends when back');
+    await s.tap('Got it all at Namanve Sheets');
+    await s.slide('Hand in');
+    txt = await s.text();
+    t.check(txt.includes('Saved on this phone') && txt.includes('Waiting to send 3,500,000'), 'offline hand in: Saved on this phone · Waiting to send 3,500,000');
+    t.check(!s.errors.length, `no page errors (offline trip) ${s.errors.join('; ')}`);
+
+    /* ---- a stop off: Today reads the Plan's figure ---- */
+    s = await open(b, '?demo&state=midday');
+    await s.tap('The trip, 3 stops to buy');
+    t.check((await s.text()).includes('Faith sees: Price up · Ruth decides'), 'Plan: the held Ridge cap shows on the closed Namanve stop');
+    await s.tap('Stop 2, Owino Plumbing, 1 line, 540,000');
+    await s.tap('Take Owino Plumbing off this trip');
+    await s.tap('Close the trip');
+    txt = await s.text();
+    t.check(txt.includes('TO BUY TODAY › 2,960,000') && await s.btn('The trip, 2 stops to buy').isVisible(), 'Owino off: Today says 2,960,000 and 2 stops');
 
     /* ---- not found: the client waits, Moses finds it ---- */
     s = await open(b, '?demo&state=midday');

@@ -242,6 +242,7 @@ Every order write goes through `changeOrder` → `rpc('ow_patch_order', {p_shop_
 | `roundCash` | 4096 | Cash in hand at this stop = handed over − what the stops done so far paid. |
 | `tripShortLines` (**the short rule**) | 1321 | A line is short when `gotQty` is answered and `< qty`. 0 is an answer. |
 | `tripLinePaid` / `tripPlanFor` | 1382 / 4063 | Paid = got × (gotPrice, else expectedPrice). A stop's plan counts an unanswered line in full. |
+| `paidShares` (new app, `src/core/buyer/rules.ts`) | — | The new page takes one amount per stop, not a price per line. A stop's payment is shared over its lines by what came at cost (got × expectedPrice), in whole shillings adding up exactly; each line's `gotPrice` = its share ÷ got, written at Done here (`supabase/trip.ts pricedLines`). So got × gotPrice adds up to what was paid, and Hand in's per-order figure (`handIn().byOrder`) is the books' order cost. Review 2026-11-11 F1: #0550 2,018,000, not 2,048,000. |
 | `stopReadyWhy` | 4419 | A stop can be left when every line is answered, cash was handed over or the round is on own money, an amount is typed, there is a photo or "no receipt", and the amount is within 30 % of the plan unless confirmed with a photo (`payOdd` 4405). Nothing came = done as it is. |
 | `tripPaidAt` | 4075 | The receipt's total, else the typed amount, else the lines. |
 | Hand-in totals (`PAGE.done`) | 4644–4652 | Paid = Σ `tripPaidAt`; planned = Σ `tripPlanned`; **cash back = handover amount − paid** (none on own money). |

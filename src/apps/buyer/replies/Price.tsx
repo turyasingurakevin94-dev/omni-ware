@@ -9,7 +9,7 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { replyRows, tiles, type LineRef } from '../../../core/buyer/rules.ts';
+import { replyRows, tiles, WORD, type LineRef } from '../../../core/buyer/rules.ts';
 import type { PriceAnswer } from '../../../core/buyer/source.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { counted, orderNo } from '../../../core/names.ts';
@@ -44,7 +44,7 @@ function Line(p: { b: BuyerBooks; r: LineRef; value: string; ruth: string; onInp
         <span class={cx('mono', 'ow-b-replies-old', changed && 'struck')}>{fig(l.cost)}</span>
       </div>
       <div class="ow-b-replies-prow">
-        <label class={cx('ow-b-replies-field', !p.value && 'empty')}>
+        <label class={cx('ow-b-replies-field', !p.value && 'empty', p.value.length > 6 && 'long')}>
           <input class="mono" type="text" inputMode="numeric" autocomplete="off" placeholder="—" disabled={p.off}
             aria-label={`New price for ${l.name}, ${orderNo(o.id)}`} value={p.value ? fig(Number(p.value)) : ''}
             onInput={(e) => p.onInput(digits((e.target as HTMLInputElement).value))} />
@@ -84,6 +84,10 @@ export function Price(p: { params: Params }): JSX.Element {
   const total = lines.reduce((t, r) => t + costOf(r) * r.line.qty, 0);
   const sellers = [...new Map(g.orders.map((o) => [o.sellerId, o])).values()];
   const sending = state === 'sending';
+  // What the answer makes the lines (BRIEF "What Sales gets"): over the selling price is Price up, under it Found.
+  const word = over.length ? WORD.priceup : changed.length ? WORD.found : WORD.asked;
+  const count = over.length || changed.length || lines.length;
+  const tone = over.length ? 't-late' : changed.length ? 't-good' : 't-asked';
 
   const save = async (): Promise<void> => {
     if (sending || !changed.length) return;
@@ -108,10 +112,10 @@ export function Price(p: { params: Params }): JSX.Element {
     <div class="ow-b-replies-phead">
       <span aria-hidden="true" class="ow-grab ow-b-replies-grab" />
       <div class="ow-b-replies-top">
-        <span class={'ow-b-replies-box ' + (changed.length ? 't-late' : 't-asked')}>
-          <span class="mono">{changed.length || lines.length}</span><span>{changed.length ? 'Price up' : 'Asked'}</span>
+        <span class={'ow-b-replies-box ' + tone}>
+          <span class="mono">{count}</span><span>{word}</span>
         </span>
-        <span class="ow-b-replies-who big"><b>{g.supplier.name}</b><span class="mono">{`Asked · ${g.askedAt ? clock(g.askedAt) : '—'} · ${counted(lines.length, 'line')}`}</span></span>
+        <span class="ow-b-replies-who big"><b>{g.supplier.name}</b><span class="mono">{`${word} · ${g.askedAt ? clock(g.askedAt) : '—'} · ${counted(lines.length, 'line')}`}</span></span>
         <button type="button" class="ow-b-replies-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={18} stroke={2} /></button>
       </div>
     </div>

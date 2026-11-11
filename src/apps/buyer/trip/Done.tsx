@@ -1,7 +1,7 @@
 /*
  * Trip · Handed in (TripHandIn.dc.html phones 3 and 4): the end of the
  * trip. Each order goes to the Store (Packing, dashed: Musa counts it in
- * first); who was told; one button, "Back to Today". With no signal the
+ * first); the cash back to Esther; one button, "Back to Today". With no signal the
  * hand-in waits on this phone: "Saved on this phone · Sends when online".
  */
 import type { JSX } from 'preact';
@@ -14,17 +14,17 @@ import { fig } from '../../../ui/Money.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { nav, type Params } from '../shell/nav.ts';
-import { books, flush, now } from '../shell/store.ts';
-import { byRole, liveStops, memberOf, ordersCame } from './model.ts';
+import { books, flush, kept as keptW, now } from '../shell/store.ts';
+import { byRole, liveStops, memberOf, ordersCame, tripBooks } from './model.ts';
 import { OrderChip } from './parts.tsx';
 import { Told } from './Told.tsx';
 import './handin.css';
 
 export function Done(p: { params: Params }): JSX.Element {
-  const b = books.value, t = b ? b.trip : null;
+  const b = books.value ? tripBooks(books.value, keptW.value) : null, t = b ? b.trip : null;
   if (!b || !t) return <main class="ow-b-trip" aria-busy="true" />;
   const kept = !!p.params.kept;
-  const h = handIn(t, b), came = ordersCame(b, t), musa = byRole(b, 'store');
+  const h = handIn(t, b), came = ordersCame(b, t), musa = byRole(b, 'store'), esther = byRole(b, 'accounts');
   const mn = firstWord(musa?.name || 'The store');
   const end = <div class="ow-b-hi-end"><EndOfFlow on={() => nav.home()} bar={false} /></div>;
 
@@ -66,16 +66,20 @@ export function Done(p: { params: Params }): JSX.Element {
         {came.map((o) => {
           const short = h.shorts.find((s) => s.order.id === o.order.id), seller = memberOf(b, o.order.sellerId);
           return (
-            <div key={o.order.id} class="ow-b-hi-card" aria-label={`${o.order.client}: Handed in · ${mn} counts it in`}>
+            <div key={o.order.id} class="ow-b-hi-card" aria-label={`${o.order.client}: Packing, once ${mn} counts it in`}>
               <div class="ow-b-hi-top"><OrderChip who={seller} id={o.order.id} /><b>{o.order.client}</b><span class="ow-b-hi-next">Packing</span></div>
               <span class="ow-b-hi-stage" aria-hidden="true"><i class="on" /><i class="on" /><i class="next" /><i /><i /></span>
-              <span class="ow-b-hi-note">{`Handed in · ${mn} counts it in`}</span>
               {short && <span class="ow-b-hi-short">{seller && <Avatar initials={seller.initials} tint={seller.tint} size={28} />}<Icon name="bell" size={14} stroke={2} />{`Short · got ${short.got} of ${short.line.qty}`}</span>}
             </div>
           );
         })}
-        <h2 class="ow-b-hi-h">Told</h2>
-        <Told b={b} back={h.back} orders={came.length} shorts={h.shorts} />
+        {esther && (
+          <div class="ow-b-hi-cash">
+            <Avatar initials={esther.initials} tint={esther.tint} size={36} />
+            <span class="ow-b-hi-tt"><b>{firstWord(esther.name)}</b><span><Icon name="bell" size={12} stroke={2} />Cash back</span></span>
+            <span class="mono ow-b-hi-cashamt">{fig(h.back)}</span>
+          </div>
+        )}
         {end}
       </div>
     </main>

@@ -9,7 +9,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { tiles } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
-import { orderNo } from '../../../core/names.ts';
+import { counted, orderNo } from '../../../core/names.ts';
 import { clock } from '../../../core/time.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { SplitBar } from '../../../ui/Bar.tsx';
@@ -93,8 +93,8 @@ export function DoneCard(p: { b: BuyerBooks; d: Done; now: number }): JSX.Elemen
         </span>
       </div>
       <div class="ow-b-replies-dbar">
-        <SplitBar parts={live.map(() => ({ value: 1, color: '#0F6B43' }))} h={6} label={`${live.length} of ${live.length} lines Found`} />
-        <span class="mono"><span>{`${live.length} of ${live.length} lines Found`}</span><b>{fig(cost)} <span>UGX</span></b></span>
+        <SplitBar parts={live.map(() => ({ value: 1, color: '#0F6B43' }))} h={6} label={`${live.length} of ${counted(live.length, 'line')} Found`} />
+        <span class="mono"><span>{`${live.length} of ${counted(live.length, 'line')} Found`}</span><b>{fig(cost)} <span>UGX</span></b></span>
       </div>
       <div class="ow-b-replies-tiles">
         {tile(t.toask, 'To ask', 'dash')}

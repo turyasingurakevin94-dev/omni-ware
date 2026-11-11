@@ -111,6 +111,8 @@ export interface Stop {
   /** What was paid there; null until the stop is done. */
   paid: UGX | null;
   done: boolean;
+  /** When it was done (the done row's time); absent where the books do not say. */
+  doneAt?: Ms | null;
   /** Taken off this trip before the cash ask. */
   off: boolean;
 }

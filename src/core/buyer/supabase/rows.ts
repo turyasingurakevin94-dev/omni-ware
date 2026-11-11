@@ -151,7 +151,7 @@ const stopOfTrip = (t: Row, keep: Keep): Stop => {
     .map((l: Row) => ({ orderId: Number(l.orderId), key: String(l.lineId) }));
   const fromLines = (t.lines || []).reduce((s: number, l: Row) => s + linePaid(l), 0);
   const paid = collected ? Math.round(t.pay && t.pay.amount != null ? Number(t.pay.amount) : fromLines) : k.done ? Math.round(Number(k.amount) || 0) : null;
-  return { supplierId: String(t.supplier_id), lines, planned: Math.round(tripPlanned(t)), paid, done: collected || !!k.done, off: !!t.voided };
+  return { supplierId: String(t.supplier_id), lines, planned: Math.round(tripPlanned(t)), paid, done: collected || !!k.done, doneAt: k.done ? ms(k.done) : collected ? ms(t.collected_at) : null, off: !!t.voided };
 };
 const stopOfRun = (r: Run, off: boolean): Stop => ({
   supplierId: r.supplierId, lines: r.lines.map((l) => ({ orderId: Number(l.q.id), key: String(l.it.lineId) })), planned: Math.round(r.total), paid: null, done: false, off,
