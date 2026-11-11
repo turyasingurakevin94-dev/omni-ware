@@ -31,7 +31,8 @@
  *   &state=recount · count-accepted · okello-counts · written-off · kept-on-shelf · restock-listed · shelf-calm
  *                           the shelf's what-ifs after 10:41 (SH13, SH16, SH25, SH22, SH24, SH32, SH06; demo/shelf.ts)
  *   &as=okello              Okello's phone: Musa passed him the yard 10:42 (TD15, TD25, TD32)
- *   &offline (or =1)        no signal: reads give the copy saved 7:52, writes are kept (amber bar)
+ *   &offline (or =1)        no signal: reads give the copy saved 7:52, writes are kept (amber bar);
+ *                           the browser's 'online' event brings the signal back (the e2e's setOffline)
  *   &fail=<write>           that write (a StoreSource method: checkIn, load, sendCount …, or snapshot)
  *                           fails once with its board code (red bar); Try again then goes
  *   &push=<kind>[:<order id>]  a push tapped as the app opens (routes §5, shell/pushes.ts): &push=job.given opens To load

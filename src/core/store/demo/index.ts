@@ -48,6 +48,9 @@ export interface StoreDemo extends StoreSource {
 
 export function storeDemo(search: string = '?demo', opts: { instant?: boolean } = {}): StoreDemo {
   const f = readStoreFlags(search);
+  // &offline: the browser's own 'online' event brings the signal back (the e2e turns it with
+  // context.setOffline), so a kept write can then be sent. Nothing else fires it on the demo.
+  if (f.offline && typeof window !== 'undefined') window.addEventListener('online', () => { f.offline = false; });
   const { books: b, now } = dayAt(f);
   const putBacks = new Set<number>();
   let signedIn = f.state !== 'signed-out', failed = false, beaten = false;

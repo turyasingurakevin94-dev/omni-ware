@@ -1,7 +1,7 @@
 'use strict';
 /*
- * The plumbing of the Sales end-to-end run (test/e2e/sales-flows.cjs):
- *   - a tiny static server for this checkout (next/sales.html and its files);
+ * The plumbing of the end-to-end runs (test/e2e/sales-flows.cjs, test/e2e/store-flows.cjs):
+ *   - a tiny static server for this checkout (next/<app>.html and its files);
  *   - one fresh phone per flow: 360 × 800, touch, ?demo plus only the flags a tap cannot cause;
  *   - the guards every flow carries: no console error and no pageerror; on every screen
  *     visited, nothing wider than the phone (scrollWidth ≤ clientWidth), and every visible
@@ -69,7 +69,8 @@ function localFonts(base) {
 }
 
 /**
- * A fresh phone on next/sales.html?demo<flags>, at Today. Returns the flow's toolkit.
+ * A fresh phone on next/<app>.html?demo<flags>, at Today. Returns the flow's toolkit.
+ *   opts.app    the app's page under next/ ('sales' by default; 'store')
  *   opts.init   [fn, arg] run in the page before it loads (page.addInitScript), e.g. the phone's large text
  *   opts.fonts  the phone app's own fonts (measuring room needs the real letters): the files apps/sales ships
  */
@@ -88,7 +89,7 @@ async function phone(browser, base, rec, flags = '', opts = {}) {
   const p = await ctx.newPage();
   p.on('console', (m) => { if (m.type() === 'error') rec.errors.push('console: ' + m.text()); });
   p.on('pageerror', (e) => rec.errors.push('pageerror: ' + (e.message || String(e)).split('\n')[0]));
-  await p.goto(`${base}/next/sales.html?demo${flags}`, { waitUntil: 'load' });
+  await p.goto(`${base}/next/${opts.app || 'sales'}.html?demo${flags}`, { waitUntil: 'load' });
   await p.locator('#app > *').first().waitFor({ timeout: 10000 });
   await p.waitForFunction(() => document.documentElement.dataset.tabs, null, { timeout: 10000 }).catch(() => {});
   if (fonts) await p.evaluate(() => document.fonts.ready);
@@ -172,12 +173,15 @@ function toolkit(p, rec) {
       if (await exact.count()) return exact.first();
       return p.getByText(t.any).first();
     },
-    /** A real tap (touch), then a settle, then the screen is measured. */
-    async tap(target, settle = 350) {
+    /**
+     * A real tap (touch), then a settle, then the screen is measured. o.force: tap a control that says
+     * aria-disabled yet answers a tap (a locked slide that opens what unlocks it), as a finger would.
+     */
+    async tap(target, settle = 350, o = {}) {
       const el = await kit.find(target);
       await el.waitFor({ state: 'visible', timeout: 6000 });
       await el.scrollIntoViewIfNeeded();
-      await el.tap();
+      await el.tap(o.force ? { force: true } : undefined);
       await p.waitForTimeout(settle);
       await kit.look('after tap ' + JSON.stringify(target).slice(0, 80));
     },
