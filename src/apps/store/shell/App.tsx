@@ -15,8 +15,8 @@ import { SheetHost } from '../../../ui/sheet.tsx';
 import { TabBar, type BarItem } from '../../../ui/TabBar.tsx';
 import { toast, ToastHost } from '../../../ui/toast.tsx';
 import { barTab, isStage, nav, screen, showTabBar, top, under, type Tab } from './nav.ts';
-import { jobs, nextJob } from './next-job.ts';
-import { flush, held, kept, notDone, online, phase, undoHeld } from './store.ts';
+import { nextJob, ready } from './next-job.ts';
+import { books, flush, held, kept, notDone, online, phase, undoHeld } from './store.ts';
 import './prefs.ts';
 
 const ITEMS: BarItem<Tab>[] = [{ id: 'today', word: 'Today', icon: 'today' }, { id: 'shelf', word: 'Shelf', icon: 'shelf' }];
@@ -26,7 +26,7 @@ effect(() => { const h = held.value; if (h && !h.quiet) toast.show(h.label, { un
 
 function startNext(): void {
   const j = nextJob.value;
-  if (j) nav.push(j.id, j.params);
+  if (j) nav.push(j.route, j.params);
   else toast.show('Nothing to do now', { kind: 'ok' });
 }
 
@@ -70,7 +70,7 @@ export function App(): JSX.Element {
       <View id={t.id} params={t.params} k={t.key} />
       {(!s || s.bars !== false) && <div class={'st-bars' + (bar ? ' above-bar' : '')}><Bars /></div>}
       {bar && (
-        <TabBar<Tab> items={ITEMS} active={barTab.value} waiting={0} notPlaced={jobs.value.length} plusIcon="play"
+        <TabBar<Tab> items={ITEMS} active={barTab.value} waiting={0} notPlaced={ready.value} plusIcon="play" plusOff={books.value ? undefined : 'not loaded yet'}
           plusLabel="Start the next job" plusCountWord="ready now" onTab={(x) => nav.tab(x)} onPlus={startNext} />
       )}
       <SheetHost />

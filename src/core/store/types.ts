@@ -197,6 +197,8 @@ export interface StoreReturn {
   status: 'sent' | 'accepted' | 'declined' | 'withdrawn' | string;
   decidedAt: Ms | null;
   createdAt: Ms;
+  /** When it reaches the gate ("~11:00 with Ssali", TD01, TD11): the demo's; the books have none (undefined). */
+  dueAt?: Ms | null;
 }
 
 /** stock_counts (W20). */
@@ -291,6 +293,12 @@ export interface YardAlert {
   data: Record<string, unknown>;
 }
 
+/**
+ * Damage seen in the yard and not reported yet (TD01 "Bent · Iron sheet G28 · found 10:20 · 3"): a
+ * phone draft (found while packing). The demo's; the books have none until it is reported (README "Gaps").
+ */
+export interface YardFound { key: string; name: string; qty: number; unit: string; why: 'damaged' | 'lost' | 'stolen'; word: string; at: Ms; by: string | null }
+
 /** Who the phone holder is, and the shop. */
 export interface StoreSession {
   userId: string;
@@ -329,6 +337,8 @@ export interface YardBooks {
   suppliers: { id: string; name: string; location: string }[];
   agents: { id: string; name: string; terms: 'before' | 'on_delivery' }[];
   alerts: YardAlert[];
+  /** Damage seen and not reported yet (YardFound): the demo's; the books give none (undefined). */
+  found?: YardFound[];
 }
 
 /** Read after the first paint, at most every 10 minutes (data §1a #6). */

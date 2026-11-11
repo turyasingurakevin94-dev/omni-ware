@@ -27,6 +27,8 @@
  *   &fail=<write>           that write (a StoreSource method: checkIn, load, sendCount …, or snapshot)
  *                           fails once with its board code (red bar); Try again then goes
  *   &push=<kind>[:<order id>]  a push tapped as the app opens (routes §5, shell/pushes.ts): &push=job.given opens To load
+ *   &kept=1                 two writes already kept on this phone, with &offline (TD06's Waiting to send:
+ *                           #0552's 40 pc packed 10:30, the bent sheets' report 10:24)
  *   &update=1               a new build is ready (TD08)
  *   &big=1                  Big text on (You, TD12)
  */
@@ -47,6 +49,8 @@ export interface StoreDemoFlags {
   fail: string | null;
   update: boolean;
   big: boolean;
+  /** Seed the outbox with TD06's two kept writes. */
+  kept: boolean;
 }
 
 const on = (q: URLSearchParams, k: string): boolean => q.has(k) && q.get(k) !== '0';
@@ -66,6 +70,7 @@ export function readStoreFlags(search: string): StoreDemoFlags {
     fail: /^[a-zA-Z]+$/.test(fail) ? fail : null,
     update: on(q, 'update'),
     big: on(q, 'big'),
+    kept: on(q, 'kept'),
   };
 }
 
@@ -74,5 +79,5 @@ export const hhmm = (n: number): string => `${Math.floor(n / 100)}:${String(n % 
 
 /** The board codes the red bar shows for a failed write (the boards' samples; the rest are <area>-502). */
 export const FAIL_CODE: Record<string, string> = {
-  snapshot: 'ST-104', checkIn: 'CI-502', returnAsk: 'RT-417', rideHandIn: 'TR-233', sendCount: 'SC-502', replaceCount: 'SC-502', reportLoss: 'SR-502', load: 'LD-412',
+  snapshot: 'ST-104', passYard: 'ST-301', checkIn: 'CI-502', returnAsk: 'RT-417', rideHandIn: 'TR-233', sendCount: 'SC-502', replaceCount: 'SC-502', reportLoss: 'SR-502', load: 'LD-412',
 };

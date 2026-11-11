@@ -46,7 +46,7 @@ export function trips(): Trip[] {
 export function returns(): StoreReturn[] {
   return [{
     id: 'ret-0548', orderId: 548, lines: [{ idx: 0, name: 'Cement · Hima 50kg', unit: 'bag', qty: 2, shown: '2 bag', condition: 'damaged' }],
-    reason: 'Torn bags', note: 'Grace: 2 of 3 bags came back torn', by: 'u-ga', byName: 'Grace Akello', status: 'sent', decidedAt: null, createdAt: t('15:40', '2026-10-16'),
+    reason: 'Torn bags', note: 'Grace: 2 of 3 bags came back torn', by: 'u-ga', byName: 'Grace Akello', status: 'sent', decidedAt: null, createdAt: t('15:40', '2026-10-16'), dueAt: t('11:00'),
   }];
 }
 
@@ -72,6 +72,6 @@ export function alerts(): YardAlert[] {
     alert('al-3', 'order.copy', t('10:16'), 'u-rn', '#0557 is a copy · don’t pack it', { orderId: 557 }, true),
     alert('al-4', 'product.new', t('10:34'), 'u-ml', 'New item · Roof paint · maroon 20L · aisle F', { key: 'p-rp' }),
     alert('al-5', 'stock.count.sent', t('9:22'), 'u-rn', 'Your count of Wire nails 4" · Ruth is looking', { key: 'p-wn4' }, true),
-    alert('al-6', 'order.moved', t('15:10', '2026-10-16'), 'u-rn', 'Ruth marked #0538 delivered', { orderId: 538 }),
+    alert('al-6', 'order.moved', t('15:10', '2026-10-16'), 'u-rn', 'Ruth marked #0538 delivered', { orderId: 538, place: 'Nansana' }),
   ];
 }

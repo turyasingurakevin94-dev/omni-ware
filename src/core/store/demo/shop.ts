@@ -30,10 +30,10 @@ export function people(): YardPerson[] {
     { ...person('st-jn', 'u-jn', 'Joy Namata', 'JN', 't1', 'store'), away: true },
     person('st-ss', null, 'Ssali', 'SS', 't4', 'driver', '0772 300 103'),
     person('st-hs', null, 'Hassan', 'HS', 't4', 'driver', '0772 300 104'),
-    person('st-ga', 'u-ga', 'Grace Akello', 'GA', 't0', 'sales'),
+    person('st-ga', 'u-ga', 'Grace Akello', 'GA', 'me', 'sales'),
     person('st-bo', 'u-bo', 'Brian Ouma', 'BO', 't3', 'sales'),
     person('st-fn', 'u-fn', 'Faith', 'FN', 't1', 'sales'),
-    person('st-rn', 'u-rn', 'Ruth Nakato', 'RN', 't2', 'manager'),
+    person('st-rn', 'u-rn', 'Ruth Nakato', 'RN', 't2', 'manager', '0772 300 110'),
     person('st-ea', 'u-ea', 'Esther Auma', 'EA', 't5', 'accounts'),
     person('st-do', 'u-do', 'Denis Okello', 'DO', 't3', 'buyer'),
     person('st-ml', 'u-ml', 'Moses Lubega', 'ML', 't4', 'sourcing'),
@@ -95,7 +95,7 @@ export function customers(): YardBooks['customers'] {
     { id: 'c-kyal', name: 'Kyaligonza & Sons', phone: '0701 552 310', location: 'Bweyogerere', tint: 't1' },
     { id: 'c-nans', name: 'Nansana Hardware', phone: '0752 610 044', location: '', tint: 't5' },
     { id: 'c-ggaba', name: 'Ggaba Stores', phone: '0782 330 917', location: 'Ggaba', tint: 't4' },
-    { id: 'c-lub', name: 'Lubowa Builders', phone: '0774 120 556', location: 'Lubowa' },
+    { id: 'c-lub', name: 'Lubowa Builders', phone: '0774 120 556', location: 'Lubowa', tint: 't2' },
   ];
 }
 

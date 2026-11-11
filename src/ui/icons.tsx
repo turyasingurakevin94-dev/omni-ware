@@ -96,6 +96,23 @@ const S = {
   void: "<path d='M6 3h12v18l-3-2-3 2-3-2-3 2z'/><path d='M9.5 9.5l5 5M14.5 9.5l-5 5'/>",
   // The chat head's "whose chat" chip (S01): two arrows that swap.
   swap: "<path d='M7 7h12l-3.5-3.5M17 17H5l3.5 3.5'/>",
+  /* The Store's (store-agent TD boards): */
+  /** Coming in: goods down into the tray. */
+  'tray-in': "<path d='M12 3v9M8.5 8.5 12 12l3.5-3.5'/><path d='M4 13v6.5h16V13M4 13h4.5l1.2 2.2h4.6L15.5 13H20'/>",
+  /** To load: the yard's trolley with a box on it. */
+  trolley: "<path d='M3.5 4h2.5l3 12.5H20'/><circle cx='9.5' cy='19' r='1.8'/><path d='M10.5 6.5h8v7h-8z'/>",
+  /** A count: the clipboard with lines. */
+  count: "<path d='M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2'/><path d='M9 12h6M9 16h4'/>",
+  /** Close the yard: the evening. */
+  moon: "<path d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/>",
+  /** Try again, Reload. */
+  retry: "<path d='M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4'/>",
+  /** The gate. */
+  gate: "<path d='M3 21V5M21 21V5M3 8h18M7 8v13M11 8v13M15 8v13M19 8v13'/>",
+  eye: "<path d='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z'/><circle cx='12' cy='12' r='3'/>",
+  /** Big text. */
+  'text-size': "<path d='M3 19 8 6l5 13M4.8 14.5h6.4M15 19l3-8 3 8M15.9 16.6h4.2'/>",
+  mail: "<rect x='3' y='5' width='18' height='14' rx='2'/><path d='m4 7 8 6 8-6'/>",
 };
 
 export type IconName = keyof typeof S;

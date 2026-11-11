@@ -33,8 +33,10 @@ export interface HeroProps {
   greeting: string;
   /** "Sat 17 Oct", "Your first day". */
   line: string;
-  status: 'live' | 'updating';
+  status: 'live' | 'updating' | 'off' | 'checking';
   savedAt?: string;
+  /** The words for 'off' (a rose dot: the Store's TD07 "Not loaded", TD22 "Could not reach the shop") and 'checking' (an amber spinner: TD21 "Checking your shop…"). */
+  statusText?: string;
   me: Face;
   onMe: () => void;
   /** The glass Find button beside the avatar. */
@@ -74,7 +76,9 @@ export function Hero(p: HeroProps): JSX.Element {
           <span class="ow-hero-date">{p.line}<span aria-hidden="true" class="ow-hero-sep" />
             {p.status === 'updating'
               ? <span class="ow-hero-live upd"><span aria-hidden="true" />{`Updating · saved ${p.savedAt}`}</span>
-              : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
+              : p.status === 'off' ? <span class="ow-hero-live off"><span aria-hidden="true" />{p.statusText}</span>
+                : p.status === 'checking' ? <span class="ow-hero-live chk"><span aria-hidden="true" />{p.statusText}</span>
+                  : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
           </span>
         )}
       </div>

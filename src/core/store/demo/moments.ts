@@ -46,6 +46,8 @@ export function baseDay(): YardBooks {
     shopName: 'Mukasa Hardware', at: t('7:52'), me: ps[0], onSince: t('7:30'), people: ps, orders: orders(), trips: trips(), returns: returns(),
     counts: counts(), reports: [], asks: [], items: items(), log: [], aisles: AISLES.slice(), bays: 4, customers: customers(), suppliers: suppliers(),
     agents: agents(), alerts: alerts(),
+    // FACTS §4: 3 pc bent found at 10:20 while packing #0552, not reported yet (TD01's "Bent · Iron sheet G28").
+    found: [{ key: 'p-is28', name: 'Iron sheet G28 · 3m', qty: 3, unit: 'pc', why: 'damaged', word: 'Bent', at: t('10:20'), by: 'u-mk' }],
   };
 }
 
@@ -61,6 +63,10 @@ const STEPS: [number, (b: YardBooks) => void][] = [
   [1130, (b) => {
     deliver(byId(b, 555), 'Walk-in', t('10:47'), true);
     deliver(byId(b, 534), 'Kato Construction', t('10:58'), false);
+    // #0552's wheelbarrows packed at 10:52 (its pickingDoneAt below): on bay 1, Not paid yet until 13:20 (TD02's To load 2).
+    const k = byId(b, 552);
+    k.lines[1] = { ...k.lines[1], pickStatus: 'done', pickedQty: 2 };
+    k.pickingStatus = 'done'; k.pickingDoneAt = t('10:52');
     b.trips.filter((x) => x.id.startsWith('TRIP-1017B-')).forEach((x) => { x.status = 'collected'; x.collectedAt = t('11:30'); x.lines.forEach((l) => { if (l.gotQty == null) l.gotQty = l.qty; }); });
   }],
   [1200, (b) => {
@@ -92,6 +98,11 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     }));
   }],
   [1730, (b) => {
+    // By 17:30 the bent sheets are reported (Ruth wrote them off) and aisle C's count is with Ruth, sent 16:40 (TD16).
+    b.reports.unshift({ id: 'rep-bent', key: 'p-is28', productId: 'p-is28', variantIdx: null, name: 'Iron sheet G28 · 3m', qty: 3, why: 'damaged', photo: 'demo/report.jpg',
+      by: 'u-mk', byName: 'Musa Kiggundu', status: 'written_off', decidedAt: t('12:30'), createdAt: t('10:50') });
+    b.counts.unshift({ id: 'cnt-c', aisle: 'Aisle C · Fasteners', place: 'aisle:fasteners', countedBy: 'u-mk', countedByName: 'Musa Kiggundu', lines: [], missing: [],
+      status: 'sent', decidedAt: null, createdAt: t('16:40') });
     const r = b.returns.find((x) => x.id === 'ret-0548');
     if (r) { r.status = 'accepted'; r.decidedAt = t('11:40'); }
     checkIn(b, ['TRIP-1017C-1'], t('16:10'));
@@ -118,9 +129,12 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
       }));
       break;
     case 'empty': case 'first-day':
-      b.orders = []; b.trips = []; b.returns = []; b.counts = []; b.alerts = [];
+      b.orders = []; b.trips = []; b.returns = []; b.counts = b.counts.filter((c) => c.status === 'accepted'); b.alerts = []; b.found = [];
+      // Nothing waits: every aisle counted yesterday (no count due either).
+      b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });
       break;
-    case 'nobody': b.people.filter((p) => p.id === 'st-op' || p.id === 'st-jn').forEach((p) => { p.away = true; }); break;
+    // Nobody else with a yard login is on: Joy is off, and Okello has no login on this day (TD24 lists only Joy and Hassan).
+    case 'nobody': b.people = b.people.filter((p) => p.id !== 'st-op'); b.people.filter((p) => p.id === 'st-jn').forEach((p) => { p.away = true; }); break;
     default: break;
   }
 }
@@ -139,9 +153,11 @@ export function dayAt(f: StoreDemoFlags): { books: YardBooks; now: number } {
     b.me = op; b.onSince = t('7:45');
     b.asks.push({ id: 'ask-ho', kind: 'handover', ref: 'u-op', payload: { toStaffId: 'st-op', toUserId: 'u-op', toName: 'Okello Peter', orders: [552], waiting: 4, bays: [1] },
       by: 'u-mk', byName: 'Musa Kiggundu', status: 'sent', createdAt: t('10:42'), decidedAt: null, decidedBy: null });
+    // W22 moved Musa's half-packed #0552 to Okello (his name on it, the picks kept; screens Q19).
+    b.orders.filter((o) => o.id === 552).forEach((o) => { o.assignedWorkerId = 'st-op'; });
   }
-  // Whoever holds the phone is 'me' (navy); the rest keep their tints.
-  b.people.forEach((p) => { if (p !== b.me && p.tint === 'me') p.tint = 't4'; });
+  // Whoever holds the phone is 'me' (navy); the rest keep their tints (Grace is navy on every canvas, FACTS §1; Musa slate off his phone).
+  b.people.forEach((p) => { if (p !== b.me && p.id === 'st-mk') p.tint = 't4'; });
   b.me.tint = 'me';
   const hm = String(f.at).padStart(4, '0');
   return { books: b, now: f.at === 1041 ? NOW : t(`${hm.slice(0, 2)}:${hm.slice(2)}`) };

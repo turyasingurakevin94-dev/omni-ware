@@ -33,7 +33,8 @@ The bars (`shell/App.tsx` `Bars`) sit above the tab bar: amber "No signal · N w
 
 - `yard.ts`: `stageOf`, `stageWord` (IB02's Store words), `counts`, `ordersAt(b, stage, me, now)`, `isPickup`, `destinationOf` (deliverTo first), `moneyHeld`, `NOT_PAID`, `onATruck`, `isCancelled`, `awaitsGoods`.
 - `keys.ts`: `stockKey`, `countPlace`, `tripRoundKey`, `roundsOf`, `lineKey`, `msOf`. `errors.ts`: `notDone`, `notDoneLine`. `held.ts`: `Held`.
-- Still to write, by the area that needs it (spec §4 names the file): `pack.ts`, `bays.ts`, `checkin.ts`, `returns.ts`, `ride.ts`, `load.ts`, `gate.ts`, `door.ts`, `shelf.ts` (the shelf figure), `counts.ts` (`countDue`), `report.ts`, `restock.ts`, `find.ts`, `shift.ts`, and `jobs.ts` (Today's job list; the red button's provisional one is `shell/next-job.ts`).
+- Written by Today: `jobs.ts` (the day's jobs: `yardJobs`, `nextJobs`, `needsYou`, `badge` — the red button, through `shell/next-job.ts` — `doneToday`, `waitingOnOthers`), `counts.ts` (`countDue` at 21 days, `aislesDue`, `aisleLetter`, `FRESH_DAYS` 14 for the ring: screens Q10 open), `shift.ts` (`mates`, `passPlan`, `closeChecks`, `baysTonight`), `ruth.ts` (`withRuth`), `outbox.ts` (`keptLine`, Waiting to send's words), `faces.ts` (`personFace`, `orderFace`, `whoIs`).
+- Still to write, by the area that needs it (spec §4 names the file): `pack.ts`, `bays.ts`, `checkin.ts`, `returns.ts`, `ride.ts`, `load.ts`, `gate.ts`, `door.ts`, `shelf.ts` (the shelf figure), `report.ts`, `restock.ts`, `find.ts`.
 
 ## The source (`src/core/store/source.ts`)
 
@@ -54,6 +55,7 @@ Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4
 | `&offline` | no signal: the copy saved 7:52, writes kept (amber) |
 | `&fail=<write>` (or `snapshot`) | that write fails once with its board code, then Try again goes (red) |
 | `&update=1` · `&big=1` | Update ready (TD08) · Big text |
+| `&kept=1` (with `&offline`) | two writes already kept on this phone: TD06's Waiting to send |
 
 A reload reopens the same screen (the stack is in sessionStorage `ow-store-view`).
 
@@ -73,6 +75,6 @@ Shots and `results.json` go to `docs/audit/store/parity/`. `test/store-shell.tes
 ## Gaps to know
 
 - **The demo draws, the books cannot yet**: a dropped line (`items[].removed` is not in 0182's allow-list: `YardLine.dropped` is always false on the real books), a copy (`copyOf`: no app marks one, data §6d), when a trip is due (`Trip.dueAt`), "on since" (`onSince`), and Alerts (`YardBooks.alerts`: the pushes this phone got are not in the books; the supabase source gives none until the push listener keeps them).
-- **The bent sheets on TD01** ("Bent · Iron sheet G28 · found 10:20") have no record until reported: TD01's "5 ready" counts it; `shell/next-job.ts` gives 3 ready at 10:41 (no bent sheets, no aisle-C count yet).
+- **The bent sheets on TD01** ("Bent · Iron sheet G28 · found 10:20") have no record until reported: the demo keeps them as `YardBooks.found` (a phone draft, "found while packing"); the real books give none, so the job shows only on the demo until Pack keeps such a draft. With it and aisle C's count, the badge is TD01's 5. A return's "~11:00 at the gate" is `StoreReturn.dueAt`, the demo's only.
 - `shell/nav.ts` is the Buyer's stack with the stage sheet and the reload added; moving both apps onto one `src/ui` stack is open work. The greeting is now `core/time.ts` `greeting`; Sales and the Buyer still carry their own copies.
 - Not wired yet: the native layer (`src/native`, Back on the phone, the bars, the live update) and a service worker (`sw.ts`, Update ready). The Store has no `shell/native.ts` until its phone app builds the new page.

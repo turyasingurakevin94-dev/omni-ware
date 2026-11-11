@@ -77,7 +77,9 @@ function send(kind: string, args: unknown): Promise<unknown> {
 }
 
 async function openOutbox(userId: string): Promise<void> {
-  const store = isDemo || typeof indexedDB === 'undefined' ? memoryStore() : idbStore('store', userId);
+  // The demo may open with writes already kept (&kept, TD06).
+  const seed = isDemo ? ((source as unknown as { kept?: Kept[] }).kept || []) : [];
+  const store = isDemo || typeof indexedDB === 'undefined' ? memoryStore(seed) : idbStore('store', userId);
   outbox = new Outbox(store, send, () => src().now());
   outbox.onChange((l) => { kept.value = l; });
   kept.value = await outbox.items();
@@ -115,6 +117,7 @@ function openDemoPush(): void {
 let timers = false;
 async function ready(s: StoreSession): Promise<void> {
   session.value = s;
+  now.value = src().now();
   phase.value = 'checking';
   await openOutbox(s.userId);
   await refresh(true);

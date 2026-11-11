@@ -37,6 +37,8 @@ export interface SlideProps {
   /** While the knob is held: its words ("Keep going", the Store's OU17), and the screen told (its hint line). */
   pressWord?: string;
   onPress?: (on: boolean) => void;
+  /** The words with no signal ("Back online to sell" by default; the Store's TD27 "Back online to close"). */
+  offlineLabel?: string;
 }
 
 export type LockIcon = 'lock' | 'hourglass' | 'offline' | 'box';
@@ -128,7 +130,7 @@ export function Slide(p: SlideProps): JSX.Element {
   };
 
   // The slide is one control named by its words (P15): the knob carries them, the drawn words are not read twice.
-  const words = state === 'sending' || done ? 'Sending…' : state === 'offline' ? 'Back online to sell' : p.label;
+  const words = state === 'sending' || done ? 'Sending…' : state === 'offline' ? (p.offlineLabel || 'Back online to sell') : p.label;
   const shown = pressed && p.pressWord ? p.pressWord : words;
   if (state === 'sending' || done) return <Sending word={p.sendWord} />;
   if (p.lock) return <Locked {...p.lock} />;

@@ -19,6 +19,16 @@ import { dayAt } from './moments.ts';
 import { t } from './shop.ts';
 import { demoWrites } from './writes.ts';
 import { WRITE_CODE } from '../errors.ts';
+import type { Kept } from '../../outbox.ts';
+
+/** TD06: #0552's iron sheets packed at 10:30 and the bent sheets reported at 10:24, both kept (no signal). */
+function keptSeed(): Kept[] {
+  const k = (id: string, kind: string, args: unknown, hm: string): Kept => ({ id, kind, args, at: t(hm), tries: 1, state: 'kept', reason: '' });
+  return [
+    k('kept-pick', 'pick', [552, [{ idx: 0, status: 'done', qty: 40 }], 1], '10:30'),
+    k('kept-rep', 'reportLoss', [{ key: 'p-is28', productId: 'p-is28', variantIdx: null, name: 'Iron sheet G28 · 3m', qty: 3, why: 'damaged', photo: null, note: 'Bent' }], '10:24'),
+  ];
+}
 
 const WRITE_MS = 250;
 const copy = <T>(x: T): T => structuredClone(x);
@@ -29,6 +39,8 @@ export interface StoreDemo extends StoreSource {
   readonly flags: StoreDemoFlags;
   /** The orders this phone put back (W7, phone only). */
   readonly putBacks: Set<number>;
+  /** Writes already kept on this phone when the app opens (&kept: TD06's Waiting to send). */
+  readonly kept: Kept[];
 }
 
 export function storeDemo(search: string = '?demo', opts: { instant?: boolean } = {}): StoreDemo {
@@ -63,6 +75,7 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     get day() { return b; },
     flags: f,
     putBacks,
+    kept: f.kept ? keptSeed() : [],
     now: clock,
     online: () => !f.offline && f.state !== 'no-reach',
 
