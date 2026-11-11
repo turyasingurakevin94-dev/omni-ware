@@ -86,7 +86,7 @@ const small = new Set();
     let txt = await s.text();
     t.check(!txt.includes('NEXT MOVE'), 'one still to ask: no Next move trip card yet');
     t.check(!(await s.p.getByRole('button', { name: /^Found: .*waits on you/ }).count()), 'one still to ask: Found waits on nobody');
-    t.check(/Grace · Faith see Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
+    t.check(/Grace · Faith see Found · \d{1,2}:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
 
     /* ---- Today: who sees an ask, a kept ask, the Ask sheet's Not found ---- */
     s = await open(b, '?demo');
@@ -105,9 +105,9 @@ const small = new Set();
 
     /* ---- Orders: the way in and the chip ---- */
     s = await open(b, '?demo&state=midday');
-    await s.tap('To ask: none');
+    await s.tap('Checking: 3 orders. Open Orders.');
     txt = await s.text();
-    t.check(/All 3 Asked/.test(txt) && !txt.includes('Nothing to ask'), 'nothing to ask: the tile opens Orders on All (no To ask chip)');
+    t.check(/All 3 Asked/.test(txt) && !txt.includes('Nothing to ask'), 'nothing to ask: the Checking door opens Orders on All, its 3 the list\'s 3 (no To ask chip)');
     await s.p.getByRole('button', { name: /^Not found 1/ }).first().click(); await s.p.waitForTimeout(500);
     await s.tap('Ggaba Stores, #0553: open');
     await s.p.goBack(); await s.p.waitForTimeout(600);

@@ -8,7 +8,8 @@
  *   <WaitingOn/>    Waiting on others: Ruth and the suppliers asked, faces and names (opens Replies).
  */
 import type { JSX } from 'preact';
-import { WORD, handIn, lineRefs, tripPlan } from '../../../core/buyer/rules.ts';
+import { clock } from '../../../core/time.ts';
+import { WORD, handIn, heldWord, lineRefs, tripPlan } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { orderNo } from '../../../core/names.ts';
 import { TINTS } from '../../../core/names.ts';
@@ -16,7 +17,7 @@ import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { nav } from '../shell/nav.ts';
 import { Chip, Dot, Sees } from './Rows.tsx';
-import { firstName, hm, sellersOf, shortItem, type Waiter } from './rules.ts';
+import { firstName, sellersOf, shortItem, type Waiter } from './rules.ts';
 import './cards.css';
 
 export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
@@ -49,7 +50,9 @@ export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
           <span>Held</span>
           {held.map((r) => r.state === 'priceup'
             ? <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip warn face"><Dot m={ruth} />{`${shortItem(r.line.name)} · ${ruth ? firstName(ruth) : 'Manager'} decides`}</span>
-            : <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip neutral">{`${shortItem(r.line.name)} · ${WORD[r.state]}`}</span>)}
+            : r.line.priceTag && r.state === 'found'
+              ? <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip warn">{`${shortItem(r.line.name)} · ${heldWord(r, ruth ? firstName(ruth) : 'Manager')}`}</span>
+              : <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip neutral">{`${shortItem(r.line.name)} · ${WORD[r.state]}`}</span>)}
         </div>
       )}
       <Sees who={who} class="ow-b-today-next-sees"><Chip tone="good">{WORD.found}</Chip></Sees>
@@ -71,7 +74,7 @@ export function AllClear(p: { b: BuyerBooks }): JSX.Element {
         <span aria-hidden="true" class="ow-b-today-clear-ic"><Icon name="check" size={20} stroke={2.4} /></span>
         <div class="ow-b-today-clear-t">
           <span class="ow-b-today-clear-big">Nothing waits on you</span>
-          {t && t.handedInAt != null && <span class="ow-b-today-clear-sub">Handed in · <span class="mono">{hm(t.handedInAt)}</span>{store ? ` · ${firstName(store)} counts it in` : ''}</span>}
+          {t && t.handedInAt != null && <span class="ow-b-today-clear-sub">Handed in · <span class="mono">{clock(t.handedInAt)}</span>{store ? ` · ${firstName(store)} counts it in` : ''}</span>}
         </div>
       </div>
       {counting.map((o) => (

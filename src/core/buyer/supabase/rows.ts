@@ -9,22 +9,28 @@
  *   - a removed line comes from payload.droppedLines (it has no lineId: its key is 'dropped:<n>', read only);
  *   - a "yes" whose terms no longer match (stale, buyer.html "again") reads To ask;
  *   - a round is the trips of one runner sharing an id stem (§7 #4); "done here" and what was
- *     paid come from the phone's keep until the hand-in (keep.ts).
+ *     paid come from the phone's keep until the hand-in (keep.ts);
+ *   - an order with an open ask to cancel it (cancel_asks 'sent', 0181) is on hold, and stays off every
+ *     trip (runsToGo never sees it; 0182 refuses it on the server too): cross-app round 1, BUY-1;
+ *   - a price wait is the Manager's "Price up" only when the cost went over the selling price; any other
+ *     (no selling price, under the shop's) is a tag on a line the Buyer still asks (BUY-3, question 2).
  */
 import type { Row } from '../../supabase/client.ts';
 import { membersOf } from '../../supabase/rows.ts';
 import { dayOf } from '../../time.ts';
 import type { Member, Ms, Session } from '../../types.ts';
-import type { AskWay, BLine, BOrder, BStatus, BuyerBooks, Confirm, ListPrice, Stop, Supplier, Trip } from '../types.ts';
+import type { AskWay, BLine, BOrder, BStatus, BuyerBooks, Confirm, Hold, ListPrice, PriceTag, Stop, Supplier, Trip } from '../types.ts';
 import { gotOf, linePaid, locParts, priceRowOf, roundOrder, runsToGo, stem, tripPlanned, tripsCovering, type PriceRow, type Run } from './buy.ts';
 import type { Keep } from './keep.ts';
-import { agedOff, confirmState, createdMs, priceWaits, quoteOf, received, SHELF, type Q } from './order.ts';
+import { agedOff, confirmState, costsOverSell, createdMs, priceWaits, quoteOf, received, SHELF, type Q } from './order.ts';
 
 export interface Raw {
   session: Session;
   members: Row[]; staff: Row[]; agents: Row[];
   suppliers: Row[]; products: Row[]; prices: Row[];
   quotes: Row[]; trips: Row[]; handoffs: Row[]; restock: Row[];
+  /** Open asks to cancel an order (cancel_asks status 'sent', 0181); none before 0181. */
+  cancelAsks?: Row[];
   /** A supplier phone the Buyer saved on this phone (ow-buyer-phones:<shop>). */
   phones: Record<string, string>;
   keep: Keep;
@@ -74,6 +80,12 @@ function gotFor(q: Q, it: Row, trips: Row[]): number | null {
   return null;
 }
 
+/** A price wait that is not a cost over the selling price: 'coming' with no selling price, else 'decides'. */
+export function priceTagOf(it: Row): PriceTag | null {
+  if (!priceWaits(it) || costsOverSell(it)) return null;
+  return it.priceAsk || !(Number(it.sellPrice) > 0) ? 'coming' : 'decides';
+}
+
 function lineOf(q: Q, it: Row, idx: number, products: Row[], trips: Row[]): BLine {
   const cw = it.clientWaits && typeof it.clientWaits === 'object' ? it.clientWaits : it.clientWaits ? {} : null;
   return {
@@ -82,19 +94,30 @@ function lineOf(q: Q, it: Row, idx: number, products: Row[], trips: Row[]): BLin
     cost: Math.round(Number(it.price) || 0), sell: Math.round(Number(it.sellPrice) || 0),
     supplierId: it.supplierId ? String(it.supplierId) : null,
     priceWas: it.priceWas != null ? Math.round(Number(it.priceWas)) : null, repricedAt: ms(it.repricedAt),
-    ruthDecides: priceWaits(it), clientWaits: cw ? { at: ms(cw.at) || 0, via: cw.via === 'sourcing' ? 'sourcing' : null } : null,
+    ruthDecides: priceWaits(it) && costsOverSell(it), priceTag: priceTagOf(it), clientWaits: cw ? { at: ms(cw.at) || 0, via: cw.via === 'sourcing' ? 'sourcing' : null } : null,
     removed: null, switchedFrom: it.switchedFrom && it.switchedFrom.name ? String(it.switchedFrom.name) : null,
     got: gotFor(q, it, trips),
   };
 }
 
-export function orderOf(q: Q, products: Row[], trips: Row[]): BOrder {
+/** The open cancel asks by order id (the newest, if two). */
+export function holdsOf(asks: Row[] | undefined, members: Row[]): Map<string, Hold> {
+  const m = new Map<string, Hold>();
+  (asks || []).filter((a) => a && a.status === 'sent').sort((a, b) => (ms(a.created_at) || 0) - (ms(b.created_at) || 0)).forEach((a) => {
+    const mem = members.find((x) => String(x.user_id) === String(a.asked_by));
+    const name = String((mem && mem.display_name) || a.asked_by_name || 'Sales').trim().split(' ')[0];
+    m.set(String(a.quote_id), { at: ms(a.created_at) || 0, by: name, why: String(a.why || '') });
+  });
+  return m;
+}
+
+export function orderOf(q: Q, products: Row[], trips: Row[], hold: Hold | null = null): BOrder {
   const items: Row[] = (q.items || []).filter(Boolean);
   const lines = items.map((it, i) => (it.supplierId === SHELF ? null : lineOf(q, it, i, products, trips))).filter((l): l is BLine => !!l);
   (Array.isArray(q.droppedLines) ? q.droppedLines : []).forEach((d: Row, i: number) => lines.push({
     idx: items.length + i, key: 'dropped:' + i, name: itemName(products, d.productId, d.variantIdx, String(d.productName || 'Item')),
     productId: d.productId != null ? String(d.productId) : null, qty: Number(d.qty) || 0, unit: String(d.unit || ''), cost: 0, sell: Math.round(Number(d.sellPrice) || 0),
-    supplierId: null, priceWas: null, repricedAt: null, ruthDecides: false, clientWaits: null,
+    supplierId: null, priceWas: null, repricedAt: null, ruthDecides: false, priceTag: null, clientWaits: null,
     removed: { at: ms(d.droppedAt) || 0, reason: String(d.reason || '') }, switchedFrom: null, got: null,
   }));
   const confirms: Record<string, Confirm> = {};
@@ -102,7 +125,7 @@ export function orderOf(q: Q, products: Row[], trips: Row[]): BOrder {
   return {
     id: Number(q.id), client: String((q.client && q.client.name) || 'Unnamed client'), customerId: q.customerId ? String(q.customerId) : null,
     sellerId: String(q.takenBy || q.user_id || ''), status: (q.cancelledAt ? 'cancelled' : q.status) as BStatus,
-    placedAt: createdMs(q), lines, confirms,
+    placedAt: createdMs(q), lines, confirms, hold,
   };
 }
 
@@ -199,9 +222,10 @@ export function booksOf(raw: Raw): BuyerBooks {
   const team = membersOf(raw.members, raw.staff, [], s.userId);
   const me: Member = team.find((m) => m.id === s.userId) || { id: s.userId, name: s.name, initials: s.name.slice(0, 2).toUpperCase(), role: s.role, tint: 'me', presence: null, presenceSince: null, inChat: null, typingIn: null };
   const prices = raw.prices.map(priceRowOf);
-  const runs = runsToGo(quotes, raw.trips, prices, raw.restock, raw.now);
+  const holds = holdsOf(raw.cancelAsks, raw.members);
+  const runs = runsToGo(quotes.filter((q) => !holds.has(String(q.id))), raw.trips, prices, raw.restock, raw.now);
   const orders = quotes.filter((q) => !q.voided && !q.cancelledAt && !agedOff(q, raw.now) && LIVE.includes(q.status))
-    .map((q) => orderOf(q, raw.products, raw.trips));
+    .map((q) => orderOf(q, raw.products, raw.trips, holds.get(String(q.id)) || null));
   return {
     me, team, orders,
     suppliers: raw.suppliers.map((x) => supplierOf(x, quotes, raw.phones)),

@@ -8,6 +8,8 @@
  * Where a field comes from in the database is written beside it.
  */
 
+import type { LineState as BuyerLineState } from './buyer/types.ts';
+
 /** Whole Uganda shillings (docs/spec/02-money.md §1: every money figure is whole). */
 export type UGX = number;
 /** A moment, in milliseconds since 1970. */
@@ -139,6 +141,11 @@ export interface Line {
   priceToldAt: Ms | null;
   state: LineState | null;
   stateAt: Ms | null;
+  /**
+   * The Buyer's word on the line while the order is in Checking or Buying (To ask, Asked, Found, Not found …),
+   * read through the Buyer's own rule (core/buyer/sales.ts). Absent for a shelf line, or where the books give none.
+   */
+  buy?: { state: BuyerLineState; at: Ms | null } | null;
 }
 
 export interface Charge {

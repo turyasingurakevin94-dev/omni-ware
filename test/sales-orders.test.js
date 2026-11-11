@@ -147,5 +147,21 @@ const at = async (q) => { const s = demoSource(q); return { s, b: await s.books(
     const { b, now } = await at('?demo&state=empty');
     t.check(D.stageCounts(b, now).delivered === 0 && D.liveOrders(b).length === 0, '&state=empty: Orders 0 (OR04)');
   }
+  /* Cross-app round 1, SAL-1 (board XR1SalesLines): a supplier line in Checking carries the Buyer's word, never a false yes. */
+  {
+    const { b, now } = await at('?demo');
+    const o = D.orderOf(b, 551), v = V.orderView(b, o, now);
+    t.check(v.lines[0].pill && v.lines[0].pill.text === 'Asked · 9:40' && v.lines[0].pill.tone === 'warn' && v.lines[0].mark.k === 'spin', `#0551: "Asked · 9:40", amber, the ring (got ${JSON.stringify(v.lines[0].pill)})`);
+    t.check(v.head.summary === '0 of 1', `the check list counts Found lines only (got ${v.head.summary})`);
+    const set = (state, atMs) => { o.lines[0].buy = { state, at: atMs }; return V.orderView(b, o, now).lines[0]; };
+    const f = set('found', now - 5 * 60000);
+    t.check(f.pill.text.startsWith('Found · ') && f.pill.tone === 'good' && f.mark.k === 'ok', 'Found: green, the tick');
+    const nf = set('notfound', null), ns = set('nosupplier', null);
+    t.check(nf.pill.text === 'Not found' && nf.pill.tone === 'bad' && nf.mark.k === 'no' && ns.pill.text === 'No supplier' && ns.mark.k === 'no', 'Not found and No supplier: red, the cross');
+    t.check(set('priceup', null).pill.text === 'Price up · Ruth decides' && set('clientwaits', null).pill.text === 'Client waits · Moses', 'Price up names Ruth; Client waits names Moses');
+    o.lines[0].buy = null;
+    const none = V.orderView(b, o, now).lines[0];
+    t.check(none.mark.k !== 'ok' && !/said yes/.test(none.mark.label), `with no Buyer word, no tick and no "said yes" (got ${none.mark.label})`);
+  }
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

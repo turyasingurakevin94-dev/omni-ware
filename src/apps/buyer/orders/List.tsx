@@ -19,10 +19,11 @@ import { askSupplier } from '../shell/ask.ts';
 import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
+import { HeldGroup } from './Held.tsx';
 import { openNotFound } from './NotFound.tsx';
 import { FromChip, Initials, KEPT, KEPT_TOAST, RowAct, Strip, Waiting } from './parts.tsx';
 import { buying, byNeed, byRole, byState, checking, FILTERS, INK, matches, orderView, type Filter, type OrderView } from './rules.ts';
-import { WORD } from '../../../core/buyer/rules.ts';
+import { heldOrders, priceTagWord, WORD } from '../../../core/buyer/rules.ts';
 
 const isFilter = (x: unknown): x is Filter => FILTERS.some((f) => f.id === x);
 
@@ -32,6 +33,8 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
   const word = !top ? '' : top.state === 'priceup' ? `${WORD.priceup} · ` : toAsk ? `${WORD.toask} · ${firstWord(top.supplier ? top.supplier.name : '')}` : `${WORD[top.state]}${top.at ? ' · ' : ''}`;
   const tail = !top || toAsk ? '' : top.state === 'priceup' ? fig(top.line.cost) : top.at || '';
   const open = () => nav.push('orders/order', { id: o.id });
+  // A line the Manager prices before it is bought (BUY-3, question 2): the tag under the word.
+  const tag = v.live.map((x) => x.line.priceTag).find((x) => !!x) || null;
   return (
     // The whole card opens the order for a finger; for a screen reader the name is the one button (no button inside a button).
     <div class="ow-b-orders-row" onClick={open}>
@@ -44,6 +47,7 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
         <div class="state">
           <Strip states={v.live.map((x) => x.state)} />
           {top && <span class="w" style={{ color: INK[top.state] }}>{word}<span class="mono">{tail}</span></span>}
+          {tag && <span class="ow-b-orders-tag"><Icon name="bell" size={13} stroke={2.2} />{priceTagWord(tag, p.decider ? firstWord(p.decider.name) : 'Ruth')}</span>}
         </div>
         {top && top.state === 'priceup' && p.decider && (
           <span class="ow-b-orders-ruth"><span aria-hidden="true">{p.decider.initials}</span>{`${firstWord(p.decider.name)} decides`}</span>
@@ -55,9 +59,9 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
         {top && top.state === 'asked' && v.late && !p.waiting && (
           <RowAct icon="send" word="Ask again" busyWord="Asking" busy={p.busy} label={`Ask ${top.supplier ? top.supplier.name : 'the supplier'} again`} on={p.onAsk} />
         )}
-        {top && top.state === 'notfound' && (
+        {top && (top.state === 'notfound' || top.state === 'nosupplier') && (
           <button type="button" class="ow-b-orders-nf" onClick={(e) => { e.stopPropagation(); openNotFound(o.id, top.line.key); }}>
-            Not found<Icon name="chevron-right" size={16} stroke={2.2} />
+            {top.state === 'nosupplier' ? 'Pick' : 'Not found'}<Icon name="chevron-right" size={16} stroke={2.2} />
           </button>
         )}
       </div>
@@ -79,7 +83,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
   const shown = views.filter((v) => matches(v, filter));
   const lines = views.flatMap((v) => v.live);
   const total = views.reduce((s, v) => s + v.total, 0);
-  const moved = buying(b);
+  const moved = buying(b), held = heldOrders(b).length;   // the On hold group under the rows counts them
   const ruth = byRole(b, 'manager');
   const ruthName = ruth ? firstWord(ruth.name) : 'Ruth';
   const off = !online.value || kept.value.length > 0;
@@ -144,6 +148,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
           {filter === 'toask' && views.length > shown.length && (
             <button type="button" class="ow-b-orders-rest" onClick={() => setFilter('all')}>{`The other ${views.length - shown.length} ${views.length - shown.length === 1 ? 'is' : 'are'} asked or answered · `}<b>All</b></button>
           )}
+          {filter === 'all' && <HeldGroup b={b} />}
         </div>
       ) : (
         <div class="ow-b-orders-empty">
@@ -152,6 +157,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
           {!views.length && <span aria-hidden="true" class="bars"><span /><span /><span /><span /></span>}
         </div>
       )}
+      {!shown.length && filter === 'all' && held > 0 && <div class="ow-b-orders-rows"><HeldGroup b={b} /></div>}
     </main>
   );
 }

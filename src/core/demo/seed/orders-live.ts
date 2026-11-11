@@ -24,7 +24,8 @@ export function liveOrders(): Order[] {
       lines: [L('ridge-g28', 10, { price: 17000, priceBy: GRACE, priceNote: 'under', from: 'shelf', supplierId: '__stock__' })] }),
     // #0551 · Mukono · Sat 10 Oct · Checking · Not paid yet: Take 1.1M = 780,000 owed + this 320,000.
     O({ id: 551, customerId: MUKONO, placedAt: d('2026-10-10', '11:20'), by: GRACE, stage: 'checking', holder: GRACE,
-      lines: [L('emulsion-cream-20', 2)] }),
+      // The Buyer's word on its order-in line (cross-app round 1, SAL-1): Denis asked the supplier at 9:40.
+      lines: [L('emulsion-cream-20', 2, { buy: { state: 'asked', at: t('9:40') } })] }),
     // #0550 · Walk-in · today 9:02 · Checking · Cancel asked (billAsks).
     O({ id: 550, customerId: null, client: walkIn(), placedAt: t('9:02'), by: GRACE, stage: 'checking', holder: RUTH,
       lines: [L('cement-hima-50', 1), L('wood-glue-1l', 1)] }),

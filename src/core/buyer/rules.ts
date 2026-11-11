@@ -3,7 +3,10 @@
  * books in, words and figures out. Every screen reads these; none works a
  * rule out again for itself.
  *
- *   lineState(o, l, trip)   where a line stands, in the shared words
+ *   lineState(o, l, trip)   where a line stands, in the shared words (WORD; its colour in TONE, both apps)
+ *   priceTagWord(tag, who)  "Price coming · Ruth" · "Ruth decides the price": a line the Manager prices before it is bought
+ *   heldWord(r, who)        why a line is held off the trip, in the shared words
+ *   liveOrders(b)           the orders the Buyer works (a held order is not one: heldOrders(b))
  *   askGroups(b)            Today's "Needs you": one row per supplier to ask, all orders together
  *   replyRows(b, now)       Replies: one row per supplier asked and not answered yet, late after 30 min
  *   tiles(b)                On the move: To ask · Asked · Found · On the trip
@@ -17,7 +20,7 @@
  */
 import { phone9 } from '../names.ts';
 import type { Ms, UGX } from '../types.ts';
-import type { BLine, BOrder, BuyerBooks, LineState, Stop, Supplier, Trip } from './types.ts';
+import type { BLine, BOrder, BuyerBooks, LineState, PriceTag, Stop, Supplier, Trip } from './types.ts';
 
 /** An ask with no answer is late after this long (buyer.html's chase after 30 minutes). */
 export const LATE_MS = 30 * 60 * 1000;
@@ -27,9 +30,21 @@ export const ROUTE = ['Nakawa', 'Owino', 'Kiseka', 'Katwe', 'Ndeeba', 'Namanve']
 
 /** The word Sales and the Buyer both show for a line state (handover.md §6). */
 export const WORD: Record<LineState, string> = {
-  toask: 'To ask', asked: 'Asked', found: 'Found', notfound: 'Not found', priceup: 'Price up',
+  toask: 'To ask', asked: 'Asked', found: 'Found', notfound: 'Not found', nosupplier: 'No supplier', priceup: 'Price up',
   clientwaits: 'Client waits', removed: 'Removed', ontrip: 'On the trip', short: 'Short', in: 'In',
 };
+
+/** A line state's colour, the same pill in the Buyer and in Sales (cross-app round 1, SAL-1). */
+export type Tone = 'neutral' | 'warn' | 'good' | 'bad' | 'navy';
+export const TONE: Record<LineState, Tone> = {
+  toask: 'neutral', asked: 'warn', found: 'good', notfound: 'bad', nosupplier: 'bad', priceup: 'warn',
+  clientwaits: 'warn', removed: 'neutral', ontrip: 'navy', short: 'warn', in: 'good',
+};
+
+/** "Price coming · Ruth" (sold with no price) · "Ruth decides the price" (under the shop's, or no shop price). */
+export function priceTagWord(tag: PriceTag, decider: string): string {
+  return tag === 'coming' ? `Price coming · ${decider}` : `${decider} decides the price`;
+}
 
 const onTrip = (trip: Trip | null, o: BOrder, l: BLine): Stop | null => {
   if (!trip || trip.state === 'planned' || trip.state === 'in') return null;
@@ -41,7 +56,7 @@ export function lineState(o: BOrder, l: BLine, trip: Trip | null = null): LineSt
   if (l.removed) return 'removed';
   if (l.got != null) return l.got < l.qty ? 'short' : 'in';
   if (l.clientWaits && !l.supplierId) return 'clientwaits';
-  if (!l.supplierId) return 'toask';
+  if (!l.supplierId) return 'nosupplier';
   if (onTrip(trip, o, l)) return 'ontrip';
   if (l.ruthDecides) return 'priceup';
   const c = o.confirms[l.supplierId];
@@ -51,9 +66,14 @@ export function lineState(o: BOrder, l: BLine, trip: Trip | null = null): LineSt
   return 'asked';
 }
 
-/** The live orders the Buyer works: still checking or buying. */
+/** The live orders the Buyer works: still checking or buying, and not on hold (a cancel asked: BUY-1). */
 export function liveOrders(b: BuyerBooks): BOrder[] {
-  return b.orders.filter((o) => o.status === 'draft' || o.status === 'awaiting_goods');
+  return b.orders.filter((o) => (o.status === 'draft' || o.status === 'awaiting_goods') && !o.hold);
+}
+
+/** Orders on hold: Sales asked the Manager to cancel; out of every count, ask and trip until she decides. Oldest first. */
+export function heldOrders(b: BuyerBooks): BOrder[] {
+  return b.orders.filter((o) => (o.status === 'draft' || o.status === 'awaiting_goods') && !!o.hold).sort((x, y) => x.placedAt - y.placedAt);
 }
 
 export interface LineRef { order: BOrder; line: BLine; state: LineState }
@@ -117,7 +137,10 @@ export function answeredRows(b: BuyerBooks, now: Ms): (SupplierGroup & { state: 
 
 export interface Tiles { toask: number; asked: number; found: number; ontrip: number; suppliers: number; foundSuppliers: number }
 
-/** On the move: suppliers to ask, asked, found; lines on the trip; and of all suppliers in play, how many found. */
+/**
+ * On the move, every figure in suppliers (BUY-2: one unit on Today): to ask, asked, found, the stops on the
+ * trip; and of all suppliers in play, how many found. A line with no supplier is one supplier still to find.
+ */
 export function tiles(b: BuyerBooks, now: Ms): Tiles {
   const refs = lineRefs(b), sup = (st: LineState) => new Set(refs.filter((r) => r.state === st).map((r) => r.line.supplierId)).size;
   // A supplier asked for a live order stays in play after its line moves on (Client waits, another supplier):
@@ -126,8 +149,8 @@ export function tiles(b: BuyerBooks, now: Ms): Tiles {
   liveOrders(b).forEach((o) => Object.entries(o.confirms).forEach(([sid, c]) => { if (c && c.askedAt && o.lines.some((l) => !l.removed)) inPlay.add(sid); }));
   void now;
   return {
-    toask: sup('toask'), asked: sup('asked'), found: sup('found'), ontrip: refs.filter((r) => r.state === 'ontrip').length,
-    suppliers: inPlay.size, foundSuppliers: sup('found'),
+    toask: sup('toask'), asked: sup('asked'), found: sup('found'), ontrip: sup('ontrip'),
+    suppliers: inPlay.size + refs.filter((r) => r.state === 'nosupplier').length, foundSuppliers: sup('found'),
   };
 }
 
@@ -142,7 +165,7 @@ export interface TripPlan {
   /** The stops to make, in route order (without those taken off this trip). */
   stops: Stop[];
   cash: UGX;
-  /** Lines held off the trip and why: the Manager decides a price, or the supplier has not answered. */
+  /** Lines held off the trip and why: the Manager decides or sets a price, or the supplier has not answered. */
   held: LineRef[];
 }
 
@@ -152,7 +175,8 @@ export interface TripPlan {
  */
 export function tripPlan(b: BuyerBooks): TripPlan {
   const refs = lineRefs(b);
-  const found = refs.filter((r) => r.state === 'found');
+  // A Found line the Manager still prices (priceTag) waits off the trip: the order stays in Checking until she does.
+  const found = refs.filter((r) => r.state === 'found' && !r.line.priceTag);
   const by = new Map<string, LineRef[]>();
   found.forEach((r) => { const k = r.line.supplierId as string; by.set(k, [...(by.get(k) || []), r]); });
   const sup = (id: string) => b.suppliers.find((s) => s.id === id);
@@ -165,7 +189,13 @@ export function tripPlan(b: BuyerBooks): TripPlan {
   const planned = b.trip && (b.trip.state === 'planned' || b.trip.state === 'cash') ? b.trip : null;
   const off = new Set(planned ? planned.stops.filter((s) => s.off).map((s) => s.supplierId) : []);
   const go = stops.filter((s) => !off.has(s.supplierId));
-  return { stops: go, cash: tripCash(go), held: refs.filter((r) => r.state === 'priceup' || r.state === 'asked') };
+  return { stops: go, cash: tripCash(go), held: refs.filter((r) => r.state === 'priceup' || r.state === 'asked' || (r.state === 'found' && !!r.line.priceTag)) };
+}
+
+/** Why a line is held off the trip: "Ruth decides" (price up), "Asked", "Price coming · Ruth", "Ruth decides the price". */
+export function heldWord(r: LineRef, decider: string): string {
+  if (r.state === 'found' && r.line.priceTag) return priceTagWord(r.line.priceTag, decider);
+  return r.state === 'priceup' ? `${decider} decides` : WORD[r.state];
 }
 
 /** A stop's cash: what is planned on it, unless it is off the trip. */
@@ -245,7 +275,7 @@ export function withStopDone(b: BuyerBooks, sid: string, counts: { orderId: numb
 export function readyForBuying(o: BOrder): boolean {
   if (o.status !== 'draft') return false;
   const live = o.lines.filter((l) => !l.removed);
-  return live.length > 0 && live.every((l) => lineState(o, l) === 'found');
+  return !o.hold && live.length > 0 && live.every((l) => lineState(o, l) === 'found' && !l.priceTag);
 }
 
 /** "Short · got 36 of 40". */

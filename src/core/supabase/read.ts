@@ -8,6 +8,7 @@
  * buyer_handoffs (item switches: the Orders tab adds them when it needs "Tell them").
  */
 import { withUsuals } from '../customers.ts';
+import { buyerWords } from '../buyer/sales.ts';
 import { dataError } from '../datasource.ts';
 import { dayOf } from '../time.ts';
 import type { Books, ChatBooks, Customer, Goal, Order, Role, Session, Thread } from '../types.ts';
@@ -97,7 +98,13 @@ export async function readBooks(sb: Sb, s: Session, now: number): Promise<Books>
   const logBy = new Map<string, Row[]>();
   debtLog.forEach((l) => { const k = String(l.customer_id); if (!logBy.has(k)) logBy.set(k, []); (logBy.get(k) as Row[]).push(l); });
   const custs: Customer[] = customers.map((c) => customerOf(c, logBy.get(String(c.id)) || []));
-  const orders = quotes.map((q) => orderOf(q, pb));
+  const orders = quotes.map((q) => {
+    const o = orderOf(q, pb);
+    // The Buyer's word on each line, by its place in items[] (cross-app round 1, SAL-1).
+    const words = buyerWords(q);
+    o.lines.forEach((l, i) => { if (words[i]) l.buy = words[i]; });
+    return o;
+  });
   const txnCustomer = new Map<number, string>();
   debtLog.forEach((l) => { if (l.cash_txn_id != null) txnCustomer.set(Number(l.cash_txn_id), String(l.customer_id)); });
   const orderCustomer = new Map(orders.map((o) => [o.id, o.customerId]));

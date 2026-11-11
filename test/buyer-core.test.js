@@ -100,6 +100,34 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   const c2 = d.shop.orders.find((o) => o.id === 552).lines[1];
   t.check(c2.ruthDecides && c2.priceWas === 24000, 'a new price over the selling price: Ruth decides, was 24,000');
 
+  {
+/* ---- cross-app round 1 (docs/audit/cross-app/ROUND-1.md): the handoff cases ---- */
+  d = buyerDemo('?demo&state=handoff', { instant: true });
+  b = await d.books(); now = d.now();
+  const o560 = b.orders.find((o) => o.id === 560), o561 = b.orders.find((o) => o.id === 561), o562 = b.orders.find((o) => o.id === 562);
+  // BUY-1: a cancel asked holds the order out of every count, ask and trip.
+  t.check(o560.hold && o560.hold.by === 'Grace' && !R.liveOrders(b).includes(o560) && R.heldOrders(b)[0] === o560, 'BUY-1: #0560 is on hold, not live');
+  t.check(!R.lineRefs(b).some((r) => r.order.id === 560), 'BUY-1: none of its lines is to ask, asked or found');
+  t.check(!R.tripPlan(b).stops.some((st) => st.lines.some((x) => x.orderId === 560)) && R.toBuy(b) === 3500000, `BUY-1: off the trip; To buy today stays 3,500,000 (got ${R.toBuy(b)})`);
+  t.check(!R.readyForBuying(o560), 'BUY-1: a held order never moves to Buying by itself');
+  // BUY-2: a line with no supplier is No supplier, never To ask; Today counts suppliers only.
+  t.check(R.lineState(o562, o562.lines[0]) === 'nosupplier' && R.WORD.nosupplier === 'No supplier' && R.TONE.nosupplier === 'bad', 'BUY-2: #0562\'s hinge reads No supplier (red)');
+  const tl1 = R.tiles(b, now), ag1 = R.askGroups(b, now);
+  t.check(tl1.toask === ag1.length, `BUY-2: the To ask tile counts the Ask rows (tile ${tl1.toask}, rows ${ag1.length})`);
+  t.check(tl1.suppliers === 7 && tl1.foundSuppliers === 3, `BUY-2: 3 of 7 suppliers found (5 + Katwe + the hinge's one to find; got ${tl1.foundSuppliers} of ${tl1.suppliers})`);
+  // BUY-3: a line sold with no price is asked like any other, tagged; Found waits off the trip.
+  const lip = o561.lines[0];
+  t.check(lip.priceTag === 'coming' && !lip.ruthDecides && R.lineState(o561, lip) === 'toask', 'BUY-3: #0561\'s edging lipping is To ask, tagged Price coming');
+  t.check(ag1.some((g) => g.supplier.id === 's-katwe' && g.orders.includes(o561)), 'BUY-3: Katwe is in Needs you for it');
+  t.check(R.priceTagWord('coming', 'Ruth') === 'Price coming · Ruth' && R.priceTagWord('decides', 'Ruth') === 'Ruth decides the price', 'BUY-3 + Q2: the tags\' words');
+  await d.ask('s-katwe', 'whatsapp');
+  await d.answerYes('s-katwe');
+  b = await d.books();
+  const lip2 = b.orders.find((o) => o.id === 561).lines[0], plan1 = R.tripPlan(b);
+  t.check(R.lineState(b.orders.find((o) => o.id === 561), lip2) === 'found' && plan1.held.some((r) => r.line === lip2) && !plan1.stops.some((st) => st.supplierId === 's-katwe'), 'BUY-3: Found, held off the trip until Ruth prices it');
+  t.check(R.heldWord(plan1.held.find((r) => r.line === lip2), 'Ruth') === 'Price coming · Ruth' && !R.readyForBuying(b.orders.find((o) => o.id === 561)), 'BUY-3: held as "Price coming · Ruth"; the order stays in Checking');
+  }
+
   /* ---- offline writes are refused as offline (the outbox keeps them) ---- */
   d = buyerDemo('?demo&offline=1', { instant: true });
   try { await d.ask('s-namanve', 'whatsapp'); t.check(false, 'offline ask should fail'); }

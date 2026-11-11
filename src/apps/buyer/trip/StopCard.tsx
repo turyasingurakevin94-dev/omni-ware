@@ -36,8 +36,11 @@ const digits = (s: string): number | null => { const d = s.replace(/[^0-9]/g, ''
 export function StopCard(p: StopCardProps): JSX.Element {
   const rows = stopLines(p.b, p.stop), sup = supplierOf(p.b, p.stop.supplierId);
   const name = sup ? sup.name : 'Supplier';
-  const [mode, setMode] = useState<Mode>('plain');
-  const [got, setGot] = useState<Record<string, number>>(() => Object.fromEntries(rows.map((r) => [r.order.id + r.line.key, r.line.qty])));
+  // A cancel asked after the cash (BUY-1, board XR1Hold "Already on the trip"): its lines start at 0, don't buy them;
+  // Ruth cancels after the hand-in (0177 refuses a cancel on a live trip).
+  const anyHeld = rows.some((r) => !!r.order.hold);
+  const [mode, setMode] = useState<Mode>(anyHeld ? 'short' : 'plain');
+  const [got, setGot] = useState<Record<string, number>>(() => Object.fromEntries(rows.map((r) => [r.order.id + r.line.key, r.order.hold ? 0 : r.line.qty])));
   const [typed, setTyped] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle');
   const [why, setWhy] = useState('');
@@ -84,7 +87,8 @@ export function StopCard(p: StopCardProps): JSX.Element {
         return (
           <div key={k} class="ow-b-on-line">
             <div class="ow-b-on-lrow">
-              <span class="ow-b-on-lt"><span>{r.line.name}</span><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /></span>
+              <span class="ow-b-on-lt"><span>{r.line.name}</span><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} />
+                {r.order.hold && <span class="ow-b-on-hold"><Icon name="pause" size={13} stroke={2.2} />Cancel asked · don't buy</span>}</span>
               {mode === 'short'
                 ? <Stepper value={g} unit={`of ${r.line.qty}`} min={0} max={r.line.qty} what={`${r.line.name} for ${orderNo(r.order.id)}`} onChange={(v) => setGot({ ...got, [k]: v })} />
                 : <span class="mono ow-b-on-qty">{r.line.qty} <small>{r.line.unit}</small></span>}

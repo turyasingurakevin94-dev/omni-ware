@@ -4,7 +4,7 @@
  * stands in for would, after a short wait so "Sending…" is seen.
  *
  *   ?demo                 09:00, every line to ask
- *   &state=midday|trip|empty
+ *   &state=midday|handoff|trip|empty
  *   &offline=1            no signal: writes are refused as offline (the outbox keeps them)
  */
 import { dataError } from '../../datasource.ts';
@@ -25,7 +25,7 @@ export interface BuyerDemo extends BuyerSource {
 export function readState(search: string): { state: BuyerDemoState | null; offline: boolean } {
   const q = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const s = q.get('state');
-  return { state: s === 'midday' || s === 'trip' || s === 'empty' || s === 'morning' ? s : null, offline: q.get('offline') === '1' };
+  return { state: s === 'midday' || s === 'handoff' || s === 'trip' || s === 'empty' || s === 'morning' ? s : null, offline: q.get('offline') === '1' };
 }
 
 export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } = {}): BuyerDemo {
@@ -92,7 +92,7 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
 
     otherSupplier: (id, key, sid, cost: UGX) => later(() => {
       const o = order(id), l = lineOf(o, key);
-      l.supplierId = sid; l.cost = cost; l.priceWas = null; l.ruthDecides = cost > l.sell;
+      l.supplierId = sid; l.cost = cost; l.priceWas = null; l.ruthDecides = l.sell > 0 && cost > l.sell;
     }),
     clientWaits: (id, key) => later(() => {
       const l = lineOf(order(id), key);

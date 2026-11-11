@@ -38,15 +38,18 @@ function phonesOf(shopId: string): Record<string, string> {
 export async function readRaw(sb: Sb, s: Session, now: number): Promise<Raw> {
   const id = s.shopId;
   try {
-    const [suppliers, products, prices, quotes, trips, staff, agents, handoffs, restock, membersR] = await Promise.all([
+    const [suppliers, products, prices, quotes, trips, staff, agents, handoffs, restock, membersR, cancelAsks] = await Promise.all([
       selectAll(sb, id, 'suppliers'), selectAll(sb, id, 'products'), selectAll(sb, id, 'prices'), selectAll(sb, id, 'saved_quotes'),
       // buyer.html reads these as empty when the table is missing (.catch(() => [])).
       quiet(selectAll(sb, id, 'collection_trips')), quiet(selectAll(sb, id, 'staff')), quiet(selectAll(sb, id, 'agents')),
       quiet(selectAll(sb, id, 'buyer_handoffs')), quiet(selectAll(sb, id, 'restock_buys')),
       // The team's names (display_name since 0164), as Sales reads them.
       sb.from('shop_members').select('user_id, role, display_name').eq('shop_id', id).then((r: Row) => (r && !r.error && r.data) || [], () => []),
+      // Open asks to cancel an order (0181): such an order is on hold. None on a database before 0181.
+      sb.from('cancel_asks').select('id, quote_id, why, asked_by, asked_by_name, status, created_at').eq('shop_id', id).eq('status', 'sent')
+        .then((r: Row) => (r && !r.error && r.data) || [], () => []),
     ]);
-    return { session: s, members: membersR, staff, agents, suppliers, products, prices, quotes, trips, handoffs, restock, phones: phonesOf(id), keep: loadKeep(s.userId, id), now };
+    return { session: s, members: membersR, staff, agents, suppliers, products, prices, quotes, trips, handoffs, restock, cancelAsks, phones: phonesOf(id), keep: loadKeep(s.userId, id), now };
   } catch (e) { return readFail(e); }
 }
 

@@ -294,6 +294,14 @@ Every order write goes through `changeOrder` → `rpc('ow_patch_order', {p_shop_
 - `askSourcing(item)` has no order; buyer.html only asks Sourcing through a line (`clientWaits`, W8a) or a `sourcing_fix` (W23).
 - Sales' `patchOrder` (`src/core/supabase/write.ts:40`) sends neither `p_drop` nor `p_status`; the Buyer needs both (W9, a dropped key).
 
+### 6a. Decided after buyer.html (Sales+Buyer cross-app round 1, 11 Nov 2026; `docs/audit/cross-app/ROUND-1.md`)
+
+- **A cancel asked holds the order.** An order with an open `cancel_asks` row (0181, status `sent`) is on hold: out of every count, ask, money and trip (`rules.ts liveOrders`; `rows.ts booksOf` keeps it out of `runsToGo`), listed apart under "On hold". On a running trip its lines are counted 0 ("don't buy"). The server refuses a new trip line for it (0182, OWHLD) and pushes the Buyer the hold and the Manager's no (`order.hold`, `order.hold.kept`). buyer.html read no `cancel_asks`.
+- **No supplier is its own state.** A line with no `supplierId` and no `clientWaits` is `nosupplier` ("No supplier"), not To ask: nobody can be asked. It is a red row to fix (Pick → the Not found sheet), on no tile, and counts as one supplier still to find.
+- **Only a cost over the selling price is the Manager's "Price up".** Any other price wait (`priceNote` `nocost`, `nomargin` or `under` with no `priceReview`) is a tag on a line the Buyer still asks (`rows.ts priceTagOf`: `coming` with no selling price or `priceAsk`, else `decides`). A Found tagged line waits off the trip until the Manager prices it (`tripPlan().held`). buyer.html read every price wait as "Ruth must also say yes" and never read `priceAsk`.
+- **Today counts suppliers** (tiles, the hero's "N of M suppliers found", On the trip in stops); the door to Orders is labelled with its own count ("Checking 3 ›").
+- **Sales reads the Buyer's word** on each line through this code (`src/core/buyer/sales.ts buyerWords`): the state and its time, never the cost or the supplier.
+
 ## 7. Open questions and places buyer.html disagrees with itself
 
 | # | What | Where | Default until Kevin answers |

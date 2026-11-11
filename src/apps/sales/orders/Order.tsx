@@ -19,7 +19,7 @@ import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
 import { custOf, faceOf, kept, member, nameOf, orderOf, orderWhen, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName } from './data.ts';
 import { go, payFor } from './links.ts';
-import { CheckList, CheckPills } from '../../../ui/CheckList.tsx';
+import { CheckList, CheckPills, type CheckLine as CheckLineT } from '../../../ui/CheckList.tsx';
 import { ActBar, type Act } from '../../../ui/ActTiles.tsx';
 import { MoneyTiles } from '../../../ui/MoneyTiles.tsx';
 import { Track } from '../../../ui/Track.tsx';
@@ -29,6 +29,20 @@ import { openTell } from './Tell.tsx';
 import { openPayFix, openWrong } from './Wrong.tsx';
 import { freshPrice, orderView, pendingOf } from './view.ts';
 import './order.css';
+
+
+/**
+ * The Buyer's word as last drawn, per order line: a line whose word changed since flashes green once
+ * (cross-app round 1, SAL-1: "Found" arrives with the next read, no reload, no jump).
+ */
+const lastWord = new Map<string, string>();
+function flashed(id: number, lines: CheckLineT[]): CheckLineT[] {
+  return lines.map((l, i) => {
+    const k = `${id}:${i}`, was = lastWord.get(k), now = l.pill ? l.pill.text : '';
+    lastWord.set(k, now);
+    return was != null && now && was !== now ? { ...l, flash: true } : l;
+  });
+}
 
 export function OrderScreen(p: ScreenProps): JSX.Element {
   const b = books.value, o = b && orderOf(b, Number(p.params.id));
@@ -74,7 +88,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
           <button type="button" class="or-fold-b" aria-label="Show the items" onClick={() => setOpen(true)}><Icon name="chevron-down" size={16} stroke={2.4} /></button>
         </div>
       ) : (
-        <CheckList tight={v.ready} head={v.head} lines={v.lines.map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
+        <CheckList tight={v.ready} head={v.head} lines={flashed(o.id, v.lines).map((l, i) => (o.stage === 'checking' && l.mark.k === 'face' && o.lines[i].price != null ? { ...l, under: <LadderUnder b={b} o={o} l={o.lines[i]} /> } : l))} />
       )}
       {o.voided && twinOf(b.orders, o, true) && <TwinCard b={b} o={o} />}
       {fresh && <PriceTell b={b} o={o} l={fresh} />}

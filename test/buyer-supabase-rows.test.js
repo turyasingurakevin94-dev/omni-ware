@@ -157,4 +157,47 @@ t.check(q3.items.length === 2 && q3.droppedLines[0].reason === 'Nobody has it' &
 O.setConfirm(q3, 's2', 'pending', '', {}, ctx);
 t.check(q3.supplierConfirms.s2.state === 'pending' && q3.supplierConfirms.s2.askedAt === NOW - 40 * MIN, 'undo to pending keeps askedAt');
 
+/* ---- cross-app round 1 (docs/audit/cross-app/ROUND-1.md) ---- */
+{
+  const { priceTagOf, holdsOf } = require(path.join(ROOT, 'src/core/buyer/supabase/rows.ts'));
+  // BUY-3 and question 2: only a cost over the selling price is the Manager's "Price up"; any other wait is a tag.
+  t.check(priceTagOf({ priceNote: 'nomargin', priceAsk: true, sellPrice: null, price: 2000, qty: 10 }) === 'coming', 'priceAsk (no selling price): Price coming');
+  t.check(priceTagOf({ priceNote: 'nocost', sellPrice: 0, price: 0, qty: 10 }) === 'coming', 'no cost, no price: Price coming');
+  t.check(priceTagOf({ priceNote: 'under', sellPrice: 2300, price: 2000, qty: 10 }) === 'decides', 'under the shop\'s price: Ruth decides the price');
+  t.check(priceTagOf({ priceNote: 'nomargin', sellPrice: 2500, price: 2700, qty: 10 }) === null, 'a cost over the selling price: no tag (it is Price up)');
+  t.check(priceTagOf({ priceNote: 'under', sellPrice: 2300, price: 2000, qty: 10, priceReview: { state: 'approved' } }) === null, 'the Manager decided: no tag');
+  const r1 = base();
+  r1.quotes[1].payload.items[0] = { ...r1.quotes[1].payload.items[0], sellPrice: null, priceNote: 'nomargin', priceAsk: true };
+  const b1 = booksOf(r1), o551 = b1.orders.find((o) => o.id === 551);
+  t.check(o551.lines[0].priceTag === 'coming' && !o551.lines[0].ruthDecides && R.lineState(o551, o551.lines[0]) === 'toask', 'a priceAsk line reads To ask, tagged (was Price up and never asked)');
+  // BUY-1: an open cancel ask holds the order; a decided one does not.
+  const hs = holdsOf([{ quote_id: 552, status: 'sent', why: 'Changed their mind', asked_by: 'u-sales', created_at: iso(NOW - 10 * MIN) }, { quote_id: 550, status: 'declined', why: 'x' }],
+    [{ user_id: 'u-sales', display_name: 'Daphine Nakku' }]);
+  t.check(hs.size === 1 && hs.get('552').by === 'Daphine' && hs.get('552').why === 'Changed their mind', 'an open ask holds its order, named by the asker\'s display name');
+  const r2 = base();
+  r2.cancelAsks = [{ quote_id: 552, status: 'sent', why: 'Changed their mind', asked_by: 'u-sales', created_at: iso(NOW - 10 * MIN) }];
+  const b2 = booksOf(r2), o552 = b2.orders.find((o) => o.id === 552);
+  t.check(!!o552.hold && !R.liveOrders(b2).includes(o552), '#0552 in Buying, a cancel asked: on hold');
+  const before = booksOf(base());
+  t.check(before.trip && before.trip.stops.some((st) => st.lines.some((x) => x.orderId === 552)) && !(b2.trip && b2.trip.stops.some((st) => st.lines.some((x) => x.orderId === 552))),
+    'the books\' planned trip drops a held order (runsToGo never sees it)');
+}
+
+/* ---- SAL-1: Sales reads the Buyer's word through the Buyer's own rule (core/buyer/sales.ts) ---- */
+{
+  const { buyerWords } = require(path.join(ROOT, 'src/core/buyer/sales.ts'));
+  const rows = base().quotes;
+  const w550 = buyerWords(rows[0]);
+  t.check(w550.length === 3 && w550[0].state === 'toask' && w550[0].at === null, '#0550 iron sheet: To ask, no time');
+  t.check(w550[1].state === 'asked' && w550[1].at === NOW - 40 * MIN, '#0550 nails: Asked, at the ask');
+  t.check(w550[2] === null, 'a shelf line has no Buyer word');
+  const w553 = buyerWords(rows[3]);
+  t.check(w553[0].state === 'toask', 'a yes on old terms reads To ask again in Sales too');
+  const found = { ...rows[2], payload: { ...rows[2].payload, droppedLines: [] } };
+  const w552 = buyerWords(found);
+  t.check(w552[0].state === 'found' && w552[0].at === NOW - 200 * MIN, '#0552 cement: Found, at the answer');
+  t.check(buyerWords({ ...rows[0], status: 'preparing' }).every((x) => x === null), 'past Buying: no Buyer words');
+  t.check(JSON.stringify(w550).indexOf('cost') < 0 && JSON.stringify(w550).indexOf('s1') < 0, 'no cost and no supplier leave it');
+}
+
 process.exit(t.done() ? 1 : 0);

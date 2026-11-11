@@ -429,6 +429,11 @@ asked (`store.ask.decided`).
 invoice that came first back to the salesperson who asked
 (`order.cancel.ask.decided`). A yes is told by 0177's `order.cancelled`.
 
+0182 tells the Buyer (`trip.plan`) of a cancel asked on an order they are
+still checking or buying (`order.hold`: hold it, nobody waits on the Buyer)
+and of the Manager's no (`order.hold.kept`: the Buyer waits on it to ask
+and buy again).
+
 A tap on a push opens the screen it is about: each app's `pushOpen` reads the
 push's kind and the ids it carries (push-send copies the ref into the data).
 
@@ -613,6 +618,7 @@ Several sessions build at once, so each one has its number. Use yours; never
 | 0179 | Yard workers keep out of the books (docs/spec/05-data.md §8 Q1, Q2, 28 Oct 2026): a `staff` (yard worker) login is refused the 21 money and customer tables the worker app never reads ("not a yard worker", `ow_yard_worker`); `staff` holds the yard's tasks `order.pick`, `order.load`, `order.deliver` |
 | 0180 | Sales places an order through a server function (docs/spec/05-data.md §8 Q3, §9 Q6, 29 Oct 2026): `place_order` (quote.make) numbers the order from `row:saved_quote` and inserts it in one write, as sales.html inserts it, so every guard and trigger still judges it as the caller (0119's gate, 0165, 0167, 0171, 0173, 0174, 0175, the pushes); the phone sends only what Sales decides (client, lines, charges, on credit and the days, the customer, deliverTo, waConvId, Checking or Packing), the server writes the rest (number, date, times, takenBy, nothing paid, the shop's Credit charge pct); the draft's key places it once (`payload.placeKey`). The direct insert stays open for the old apps until each retires. No role, task or push changes |
 | 0181 | Sales asks the Manager to cancel (docs/spec/01-order-journey.md §5 Q7, docs/spec/05-data.md §9 Q7, 29 Oct 2026; the canvas's OR18, OR19): `cancel_asks`, one open ask per order; `ask_cancel` (new task `cancel.ask`, Sales; your own order, before it is invoiced or delivered), `withdraw_cancel_ask` (the asker), `answer_cancel_ask` (order.cancel: yes through 0177's `cancel_order`, no logged and pushed back); an order called off another way or invoiced first closes its open ask; pushes `order.cancel.ask` (to order.cancel) and `order.cancel.ask.decided` (to the asker) |
+| 0182 | Sales+Buyer cross-app round 1 (docs/audit/cross-app/ROUND-1.md, BUY-1, 11 Nov 2026): the Buyer holds an order while Sales' ask to cancel it waits — a new trip line for an order with an open `cancel_asks` row is refused (`collection_trips_ow_hold`, OWHLD; lines already on a running trip stay; no login is not judged), and the Buyer (`trip.plan`) is pushed the hold (`order.hold`) and the Manager's no (`order.hold.kept`) while the order is in Checking or Buying. No role or task changes |
 
 A session that needs a second migration takes the next number after 0127 and
 adds it to this table in the same commit.

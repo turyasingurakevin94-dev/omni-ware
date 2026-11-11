@@ -97,12 +97,26 @@ Migration **0182** (the next free number; reserved in `docs/decision-rights.md` 
 | Tests | 1 new db test; additions to `buyer-core`, `buyer-supabase-rows`, `buyer-e2e`, `sales-app`/sales e2e |
 | Makes harder later | A fifth line word for both apps to keep in step (`nosupplier`). The single `TONE` table makes that one edit |
 
-## Phase B result (filled after implementing)
+## Kevin's answers (11 Nov 2026)
+
+"go ahead, with the hold pushes, and fix question 2 too":
+1. **Hold pushes: yes** (Option B). 0182 pushes the Buyer `order.hold` on the ask and `order.hold.kept` on the Manager's no; drawn on `XR1Hold` (two push states) before it was built.
+2. **A line Sales priced under the shop's price: fixed the same way as BUY-3.** It is asked like any line, with the tag "Ruth decides the price"; a Found one waits off the trip until Ruth decides. One rule covers both (`rows.ts priceTagOf`): the Manager's "Price up" is now only a cost over the selling price. Drawn on `XR1PriceComing` (a second row of states) before it was built.
+3. #0550 on the two older canvases: not touched (no answer given; still open).
+
+## Changed while building (drawn again on the canvas, v52)
+
+- **BUY-2, the way into Orders.** The To ask tile was Today's main door to the Checking list, so making it scroll left Orders with no door from Today. "On the move" now has a labelled door, **"Checking 3 ›"**, that opens Orders; its number is the list's number (orders), and the word on it keeps it from reading as a supplier count. The bare "3 orders" is gone. `XR1Today` phones 2, 3 and 5 redrawn.
+- **BUY-1, where the hold count sits.** A "1 on hold" chip in the Orders head clipped the "#0550 Buying" chip at 360 px, so the count moved onto the "On hold 1" divider. A held line's tile shows the pause mark. On a supplier's page a held line is left out (it is never in an ask) rather than drawn locked. `XR1Hold` redrawn (phone 2, Disabled, Empty: "Nothing in Checking", the tab's own words).
+- **The padded clock.** There were three copies of "09:40" (`orders/rules.ts`, `today/rules.ts`, `suppliers/parts.tsx`), not two. All three are gone and every Buyer time uses the shared `clock` ("9:40", decision #9).
+- **The demo.** The three cases are their own demo state, `?demo&state=handoff`, so `midday` keeps the figures the older boards pin ("3 of 5 suppliers found").
+
+## Phase B result
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
-| BUY-1 | | | |
-| BUY-2 | | | |
-| BUY-3 | | | |
-| SAL-1 | | | |
-| SAL-2 | | | |
+| BUY-1 | yes | The Buyer reads open `cancel_asks` (`read.ts`). `BOrder.hold` (`rows.ts holdsOf`, the asker's display name). `liveOrders` leaves a held order out, so To ask, the tiles, To buy, the Plan and Checking's money all leave it out (one filter), and `runsToGo` never sees it (`booksOf`). Orders lists it last under "On hold N" (`orders/Held.tsx`: grey row, "Cancel asked · hold", Ruth's face, no act). The order opens on the amber hold card, with its lines without acts and "Grace sees: Cancel asked". Today puts Ruth in "Waiting on others" with "#0560 cancel". Plan shows a held row. On a running trip its lines start at 0, "Cancel asked · don't buy" (`StopCard`). A tapped push opens the order (`native.ts`). New icon `pause`. **0182**: `collection_trips_ow_hold` (OWHLD) and `cancel_asks_ow_push_buyer` (`order.hold`, `order.hold.kept`, to `trip.plan`, only in Checking or Buying) | `test/cancel-hold-db.test.js` on Postgres 16 (OW_PG): 23 cases as the buyer, Grace, Ruth and no login, plus 0182 run twice. `buyer-core` (handoff demo: held, out of To buy 3,500,000, not ready for Buying). `buyer-supabase-rows` (an open ask holds, a decided one doesn't; the books' planned trip drops it). At 360: Orders, the held order |
+| BUY-2 | yes | New line state `nosupplier` "No supplier" (red) in `lineState`, `WORD`, `TONE` and the Orders strip and rank. `tiles()` counts suppliers only: On the trip counts stops, and a line with no supplier is one supplier still to find. Today: a red "No supplier · Pick ›" row (the Not found row), Pick opens the Not found sheet ("Use" the list's supplier, or Client waits). Needs you has no number. "Every supplier asked" shows only with nothing to ask, pick or fix. The To ask tile scrolls to Needs you and rings the first Ask row. The "Checking N ›" door opens Orders | `buyer-core`: the tile's To ask equals the Ask rows, "3 of 7" with the hinge. `buyer-e2e`: the Checking door opens Orders on All 3. At 360: Today, the Pick sheet |
+| BUY-3 | yes | `BLine.priceTag` (`'coming'` for priceAsk or no selling price, `'decides'` for under the shop's price or no shop price; `rows.ts priceTagOf`). `ruthDecides` (Price up) only when the cost is over the selling price. A tagged line is asked as usual; Found waits in `tripPlan().held` and `readyForBuying` stays false. The tag "Price coming · Ruth" / "Ruth decides the price" shows on the Orders row, the order's line, the Plan's held lines and the Today trip card (`heldWord`, `priceTagWord`) | `buyer-supabase-rows`: priceAsk → coming, under → decides, cost over sell → none, decided → none; a priceAsk line reads To ask. `buyer-core`: #0561 To ask, Katwe in Needs you, Found → held "Price coming · Ruth", order stays in Checking. At 360: the order |
+| SAL-1 | yes | `core/buyer/sales.ts buyerWords(row)`: the Buyer's own `orderOf` + `lineState`, state and time only (no cost, no supplier). Sales' `readBooks` puts it on `Line.buy`. `orders/view.ts buyPill`: in Checking a supplier line shows the Buyer's word as a pill in the Buyer's colours (one `TONE` table in `core/buyer/rules.ts`, which the Buyer's `PILL` now reads too) and the mark it means. The false "the supplier said yes" tick is gone. The bar is red for Not found and the summary counts Found. A changed word flashes the row green once (`Order.tsx flashed`; off with reduced motion). `CheckList` takes `pill` and `flash`. Demo #0551: "Asked · 9:40" | `buyer-supabase-rows`: buyerWords for To ask / Asked / Found / shelf / stale terms / past Buying, no cost or supplier. `sales-orders`: #0551's pill and ring, every word and colour, no tick without a word. `e2e:sales` 13/13. At 360: #0551 |
+| SAL-2 | yes | New `ui/GoalBar.tsx` (P02c): sold solid (none at 0, at least 4 px above), a 2 px gap, the move hatched. Used by the hero, `GoalStrip` and the scrolled top bar, so the three copies are gone. The "on the move" door carries the hatch swatch as its key (`HeroDoor.swatch`) | At 360: Today 36% + hatch, first day 0% (nothing white), busy-day strip. `ui-parts`, `e2e:sales` |

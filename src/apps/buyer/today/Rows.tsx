@@ -12,6 +12,7 @@
  * the offline band says it waits to send.
  */
 import type { ComponentChildren, JSX } from 'preact';
+import { clock } from '../../../core/time.ts';
 import { useState } from 'preact/hooks';
 import type { LineRef, SupplierGroup } from '../../../core/buyer/rules.ts';
 import type { BOrder, BuyerBooks } from '../../../core/buyer/types.ts';
@@ -26,7 +27,7 @@ import { act } from '../shell/store.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
 import { askKept, askSupplier } from '../shell/ask.ts';
 import { KEPT, KEPT_TOAST, Waiting } from '../orders/parts.tsx';
-import { firstName, hm, sellersOf, seeWord } from './rules.ts';
+import { firstName, sellersOf, seeWord } from './rules.ts';
 
 /** The board's eye ("… sees"): not in src/ui/icons.tsx yet. */
 export function Eye(): JSX.Element {
@@ -108,7 +109,7 @@ export function AskRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const ask = () => go(() => askSupplier(p.b, s.id), `Asked ${s.name}`);
   const waiting = askKept(s.id);
   return (
-    <div class={cx('ow-b-today-row', st === 'error' && 'error')}>
+    <div class={cx('ow-b-today-row', 'ask', st === 'error' && 'error')}>
       <IconTile tone={st === 'error' ? 'bad' : 'warn'} icon={st === 'error' ? 'warning' : 'message'} />
       <div class="ow-b-today-row-t">
         <span class="ow-b-today-row-name">{s.name}</span>
@@ -140,7 +141,7 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
         <span class="ow-b-today-row-name">{s.name}</span>
         {st === 'error' ? <span class="mono ow-b-today-row-why">{`Not saved · ${why}`}</span> : (
           <>
-            {g.askedAt != null && <span class={cx('mono ow-b-today-row-at', g.late && 'late')}>{`Asked · ${hm(g.askedAt)}`}</span>}
+            {g.askedAt != null && <span class={cx('mono ow-b-today-row-at', g.late && 'late')}>{`Asked · ${clock(g.askedAt)}`}</span>}
             <span class="ow-b-today-row-sub">{g.orders.slice(0, 3).map((o) => <FromChip key={o.id} b={p.b} o={o} />)}</span>
           </>
         )}
@@ -153,21 +154,26 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
 }
 
 /** Needs you (board Additions2, phone I): a line a supplier said no to; the pill opens the Not found sheet. */
+/**
+ * A line to fix, red: Not found (the supplier said no), or No supplier (nobody sells it to us yet:
+ * cross-app round 1, BUY-2, board XR1Today). Both open the Not found sheet; neither is on a tile.
+ */
 export function NotFoundRow(p: { b: BuyerBooks; r: LineRef }): JSX.Element {
   const { order, line } = p.r, sup = p.b.suppliers.find((s) => s.id === line.supplierId);
   const seller = p.b.team.find((m) => m.id === order.sellerId), who = sup ? sup.name.split(' ')[0] : 'They';
+  const none = p.r.state === 'nosupplier';
   return (
     <>
       <div class="ow-b-today-row nf">
-        <IconTile tone="bad" icon="close" />
+        <IconTile tone="bad" icon={none ? 'warning' : 'close'} />
         <div class="ow-b-today-row-t">
           <span class="ow-b-today-row-name">{line.name}</span>
-          <span class="mono ow-b-today-row-at">{`${who} said no · ${orderNo(order.id)}`}</span>
+          <span class="mono ow-b-today-row-at">{none ? `No supplier · ${line.qty} ${line.unit} · ${orderNo(order.id)}` : `${who} said no · ${orderNo(order.id)}`}</span>
         </div>
-        <button type="button" class="ow-b-today-pill" aria-label={`${line.name} not found for order ${orderNo(order.id).slice(1)}: choose what next`}
-          onClick={() => openNotFound(order.id, line.key)}>Not found ›</button>
+        <button type="button" class="ow-b-today-pill" aria-label={`${line.name} ${none ? 'has no supplier' : 'not found'} for order ${orderNo(order.id).slice(1)}: ${none ? 'pick one' : 'choose what next'}`}
+          onClick={() => openNotFound(order.id, line.key)}>{none ? 'Pick ›' : 'Not found ›'}</button>
       </div>
-      {seller && <div class="ow-b-today-sees"><Icon name="bell" size={14} stroke={2} />{`${firstName(seller)} sees: `}<b class="ow-b-today-nf-w">Not found</b></div>}
+      {seller && <div class="ow-b-today-sees"><Icon name="bell" size={14} stroke={2} />{`${firstName(seller)} sees: `}<b class="ow-b-today-nf-w">{none ? 'No supplier' : 'Not found'}</b></div>}
     </>
   );
 }

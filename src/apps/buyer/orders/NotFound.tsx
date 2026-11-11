@@ -9,6 +9,9 @@
  *   Remove           a slide in the navy dock → act('removeLine', …, reason)                           Grace sees: Removed
  *
  *   openNotFound(553, 'L0')     the Replies "No" path opens it too
+ *
+ * A line with no supplier (cross-app round 1, BUY-2; board XR1Today phone 4) opens the same sheet from
+ * its Pick: the list's supplier is "Use" (not Switch: nothing to switch from), and Sales then sees To ask.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -55,6 +58,7 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
   const finder = moses ? firstWord(moses.name) : 'Sourcing';
   const only = v.live.length <= 1;
   const left = v.total - (x.state === 'removed' ? 0 : x.total);
+  const none = x.state === 'nosupplier';
 
   const fail = (what: string, again: () => void) => (e: unknown) => {
     toast.show('Not saved', { kind: 'error', sub: what, retry: again });
@@ -96,10 +100,10 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
       <span class="ow-grab" aria-hidden="true" />
       <div class="b">
         <div class="h">
-          <span aria-hidden="true" class="x"><Icon name="close" size={22} stroke={2.2} /></span>
+          <span aria-hidden="true" class="x"><Icon name={none ? 'warning' : 'close'} size={22} stroke={2.2} /></span>
           <span class="t">
             <span class="n">{l.name}</span>
-            <span class="mono q">{`${l.qty} ${l.unit} × ${fig(l.cost)}${x.supplier ? ` · ${x.supplier.name}` : ''}`}</span>
+            <span class="mono q">{none ? `${l.qty} ${l.unit} · nobody asked yet` : `${l.qty} ${l.unit} × ${fig(l.cost)}${x.supplier ? ` · ${x.supplier.name}` : ''}`}</span>
           </span>
           <StateWord state={x.state} at={x.at} h={30} />
         </div>
@@ -113,14 +117,14 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
                 <span class="n">{alt.supplier.name}</span>
                 <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{alt.days === 0 ? "on the list · today" : `on the list · ${alt.days} ${alt.days === 1 ? "day" : "days"}`}</span></span>
               </span>
-              <RowAct icon="swap" word="Switch" busyWord="Switching" busy={busy === 'other'} label={`Switch to ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
+              <RowAct icon="swap" word={none ? 'Use' : 'Switch'} busyWord={none ? 'Asking' : 'Switching'} busy={busy === 'other'} label={`${none ? 'Use' : 'Switch to'} ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
             </div>
             <div class="pic" role="img" aria-label={`Cost ${fig(alt.price.price)}, ${seller} sells at ${fig(l.sell)}`}>
               <div class="bar"><span style={{ width: barW((alt.price.price / Math.max(1, l.sell)) * 100), background: alt.price.price > l.sell ? '#8E2A22' : '#0F6B43' }} /></div>
               <div class="k"><span>cost <span class="mono">{fig(alt.price.price)}</span></span><span>sells <span class="mono">{fig(l.sell)}</span></span></div>
             </div>
             <div class="f">
-              <Sees who={seller}>Switched</Sees>
+              <Sees who={seller}>{none ? 'To ask' : 'Switched'}</Sees>
               <button type="button" class="more" onClick={otherItem}>Other item<Icon name="chevron-right" size={16} stroke={2.2} /></button>
             </div>
           </div>
@@ -163,5 +167,6 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
 
 /** Open the Not found sheet for one line of an order (Orders and the Replies "No" path). */
 export function openNotFound(orderId: number, key: string): void {
-  sheet.open(() => <NotFoundSheet orderId={orderId} lineKey={key} />, { label: `Not found · ${orderNo(orderId)}`, top: 84 });
+  const b = books.value, o = b && b.orders.find((x) => x.id === orderId), l = o && o.lines.find((x) => x.key === key);
+  sheet.open(() => <NotFoundSheet orderId={orderId} lineKey={key} />, { label: `${l && !l.supplierId ? 'No supplier' : 'Not found'} · ${orderNo(orderId)}`, top: 84 });
 }

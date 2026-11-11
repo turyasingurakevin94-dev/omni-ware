@@ -34,6 +34,8 @@ export function pushRoute(d: PushData, b: BuyerBooks | null): { id: string; para
   const order = id && b && b.orders.some((o) => o.id === id) ? { id: 'orders/order', params: { id } } : null;
   if (k === 'supplier.answered') return { id: 'replies' };
   if (k === 'order.buying' || k === 'carton.refused' || k === 'sourcing.found') return order || { id: 'orders' };
+  // A cancel asked, or the Manager kept it (0182; cross-app round 1, BUY-1): the order, its hold card or its Ask back.
+  if (k === 'order.hold' || k === 'order.hold.kept') return order || { id: 'orders' };
   if (/^trip\./.test(k)) return { id: 'trip' };
   return { id: 'today' };
 }

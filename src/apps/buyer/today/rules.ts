@@ -2,22 +2,17 @@
  * Today's own small rules (pure). The Buyer's rules live in src/core/buyer/rules.ts;
  * these only shape them for Today's rows and cards.
  *
- *   hm(ms)              "09:05" (the board's times have the leading zero)
  *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap", "Y12 rebar 12 m" → "Y12 rebar"
  *   unitWord(n, unit)   "20 bags" (a word unit takes an s; "sht", "pcs", "m" stay as they are)
  *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
- *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
+ *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price, a cancel asked), the suppliers asked
  *   tripReady(b, now)   the trip is Denis's next move: something found, nothing left to ask, no trip running
  *   calm(b, now)        nothing waits on Denis (nothing to ask, no Not found line, no late reply, no trip to start or running)
  */
-import { clock } from '../../../core/time.ts';
 import type { Member, Ms } from '../../../core/types.ts';
-import { askGroups, lineRefs, replyRows, tiles } from '../../../core/buyer/rules.ts';
+import { askGroups, heldOrders, lineRefs, replyRows, tiles } from '../../../core/buyer/rules.ts';
 import type { BOrder, BuyerBooks } from '../../../core/buyer/types.ts';
-
-export function hm(ms: Ms): string {
-  return clock(ms).padStart(5, '0');
-}
+import { orderNo } from '../../../core/names.ts';
 
 /** The item's name without its size ("Timber 2×4" → "Timber"; "Y12 rebar 12 m" → "Y12 rebar"), for a small chip. */
 export function shortItem(name: string): string {
@@ -52,7 +47,10 @@ export interface Waiter { key: string; initials: string; person: Member | null; 
 export function waitingOn(b: BuyerBooks, now: Ms): Waiter[] {
   const out: Waiter[] = [];
   const ruth = b.team.find((m) => m.role === 'manager') || null;
-  if (ruth && lineRefs(b).some((r) => r.state === 'priceup')) out.push({ key: ruth.id, initials: ruth.initials, person: ruth, name: firstName(ruth) });
+  // Ruth: a price she decides or sets (price up, a price tag), or an order on hold (a cancel asked: BUY-1).
+  const ruthWaits = lineRefs(b).some((r) => r.state === 'priceup' || (r.state === 'found' && !!r.line.priceTag)) || heldOrders(b).length > 0;
+  const held = heldOrders(b).map((o) => orderNo(o.id));
+  if (ruth && ruthWaits) out.push({ key: ruth.id, initials: ruth.initials, person: ruth, name: firstName(ruth) + (held.length ? ` · ${held.join(' ')} cancel` : '') });
   replyRows(b, now).forEach((g) => out.push({
     key: g.supplier.id, person: null, name: g.supplier.name.split(' ')[0],
     initials: g.supplier.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase(),
@@ -76,5 +74,5 @@ export function tripReady(b: BuyerBooks, now: Ms): boolean {
 
 /** Nothing waits on Denis: nothing to ask, no late reply, nothing found to buy, no trip running. */
 export function calm(b: BuyerBooks, now: Ms): boolean {
-  return askGroups(b, now).length === 0 && !lineRefs(b).some((r) => r.state === 'notfound') && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
+  return askGroups(b, now).length === 0 && !lineRefs(b).some((r) => r.state === 'notfound' || r.state === 'nosupplier') && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
 }

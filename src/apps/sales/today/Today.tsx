@@ -22,7 +22,8 @@ import { SectionHead } from '../../../ui/SectionHead.tsx';
 import { Shim } from '../../../ui/Skeleton.tsx';
 import { StageTiles } from '../../../ui/StageTiles.tsx';
 import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
-import { Tap, barW } from '../../../ui/util.tsx';
+import { Tap } from '../../../ui/util.tsx';
+import { GoalBar } from '../../../ui/GoalBar.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, flush, kept, now, online } from '../shell/store.ts';
 import { custOf, doneWeek, faceOf, mine, needs, owing, readyToCollect, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
@@ -78,7 +79,7 @@ export function Today(): JSX.Element {
       soldLabel={`Sold in ${monthName(today)}: ${money(goal ? goal.sold : 0)}. Open your day.`} onSold={() => nav.push('today/day', { view: 'placed' })}
       goal={heroGoal} onGoal={() => nav.push('today/goal')}
       doors={first || off ? undefined : [
-        { tone: 'mint', icon: 'trend', value: '+' + short(total(live)), label: 'on the move', on: () => go('orders') },
+        { tone: 'mint', icon: 'trend', value: '+' + short(total(live)), label: 'on the move', on: () => go('orders'), swatch: !!goal && !goal.hit },
         { tone: 'amber', icon: 'cash', value: short(owe.reduce((s, w) => s + w.owes, 0)), label: 'to collect', on: () => nav.push('today/to-collect') },
       ]} />
   );
@@ -100,7 +101,7 @@ export function Today(): JSX.Element {
       {bar && (
         <Tap on={toTop} label="Back to the top of Today" class="td-topbar">
           <span>Today</span>
-          {goal && <span><span aria-hidden="true" class="td-topbar-bar"><span style={{ width: barW(goal.pct) }} /><span style={{ width: barW(goal.movePct, goal.pct) }} /></span>
+          {goal && <span><span class="td-topbar-bar"><GoalBar pct={goal.pct} movePct={goal.movePct} h={4} /></span>
             <span class="mono"><b>{`${goal.pct}%`}</b>{` ${money(goal.sold)}`}</span></span>}
         </Tap>
       )}

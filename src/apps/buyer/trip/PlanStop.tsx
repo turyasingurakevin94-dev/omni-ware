@@ -5,8 +5,8 @@
  * Held lines sit dashed, open or closed (phone 3): a new price waits on Ruth, or the supplier has not answered.
  */
 import type { JSX } from 'preact';
-import type { LineRef } from '../../../core/buyer/rules.ts';
-import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
+import { heldWord, priceTagWord, type LineRef } from '../../../core/buyer/rules.ts';
+import type { BOrder, BuyerBooks, Stop } from '../../../core/buyer/types.ts';
 import { clock } from '../../../core/time.ts';
 import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -84,15 +84,23 @@ export function HeldPrice(p: { b: BuyerBooks; held: LineRef[] }): JSX.Element {
             </span>
             <span class="ow-b-plan-was">{r.line.priceWas != null && <s class="mono">{fig(r.line.priceWas)}</s>}<b class="mono">{fig(r.line.cost)}</b></span>
           </div>
-          <div class="ow-b-plan-hrow">
-            <span class="ow-b-plan-up">Price up</span>
-            <span class="mono ow-b-plan-sells">{`sells ${fig(r.line.sell)}`}</span>
-            {ruth && <Avatar initials={ruth.initials} tint={ruth.tint} size={28} />}
-            <span class="ow-b-plan-ruth"><Icon name="bell" size={14} stroke={2} />{`${firstWord(ruth?.name || 'Ruth')} decides`}</span>
-          </div>
+          {r.line.priceTag ? (
+            // Found, but the Manager prices it before it is bought (BUY-3, question 2): the tag, no picture of a rise.
+            <div class="ow-b-plan-hrow">
+              {ruth && <Avatar initials={ruth.initials} tint={ruth.tint} size={28} />}
+              <span class="ow-b-plan-ruth"><Icon name="bell" size={14} stroke={2} />{priceTagWord(r.line.priceTag, firstWord(ruth?.name || 'Ruth'))}</span>
+            </div>
+          ) : (
+            <div class="ow-b-plan-hrow">
+              <span class="ow-b-plan-up">Price up</span>
+              <span class="mono ow-b-plan-sells">{`sells ${fig(r.line.sell)}`}</span>
+              {ruth && <Avatar initials={ruth.initials} tint={ruth.tint} size={28} />}
+              <span class="ow-b-plan-ruth"><Icon name="bell" size={14} stroke={2} />{`${firstWord(ruth?.name || 'Ruth')} decides`}</span>
+            </div>
+          )}
         </div>
       ))}
-      {sellers && <div class="ow-b-plan-sees">{`${sellers} ${sellers.includes('·') ? 'see' : 'sees'}:`} <b>{`Price up · ${firstWord(ruth?.name || 'Ruth')} decides`}</b></div>}
+      {sellers && <div class="ow-b-plan-sees">{`${sellers} ${sellers.includes('·') ? 'see' : 'sees'}:`} <b>{p.held.every((r) => r.line.priceTag) ? 'Found' : `Price up · ${firstWord(ruth?.name || 'Ruth')} decides`}</b></div>}
     </div>
   );
 }
@@ -103,11 +111,23 @@ export function HeldRow(p: { b: BuyerBooks; supplierId: string; refs: LineRef[] 
   const ids = [...new Set(p.refs.map((r) => r.order.id))];
   const asked = p.refs.find((r) => r.state === 'asked');
   const c = asked ? asked.order.confirms[p.supplierId] : null;
-  const why = asked ? `Asked${c && c.askedAt ? ' · ' + clock(c.askedAt) : ''}` : 'Price up';
+  const ruth = firstWord(byRole(p.b, 'manager')?.name || 'Ruth');
+  const why = asked ? `Asked${c && c.askedAt ? ' · ' + clock(c.askedAt) : ''}` : heldWord(p.refs[0], ruth);
   return (
     <div class="ow-b-plan-off held">
       <span class="ow-b-plan-n off"><Icon name="clock" size={16} stroke={2} /></span>
       <span class="ow-b-plan-t"><b>{sup ? sup.name : 'Supplier'}</b><span class="mono">{[why, ...ids.map(orderNo)].join(' · ')}</span></span>
+      <span class="mono ow-b-plan-heldw">held</span>
+    </div>
+  );
+}
+
+/** An order on hold (a cancel asked, BUY-1; board XR1Hold phone 5): off the trip until the Manager decides. */
+export function HeldOrderRow(p: { o: BOrder }): JSX.Element {
+  return (
+    <div class="ow-b-plan-off held">
+      <span class="ow-b-plan-n off"><Icon name="pause" size={16} stroke={2} /></span>
+      <span class="ow-b-plan-t"><b>{p.o.client}</b><span class="mono">{`Cancel asked · ${orderNo(p.o.id)}`}</span></span>
       <span class="mono ow-b-plan-heldw">held</span>
     </div>
   );

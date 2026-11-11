@@ -9,37 +9,35 @@
  *   nextSupplier(b, line)    the next best supplier for a line from the price list
  *   switchOptions(b, l, q)   the price list rows a line can switch to
  */
-import { LATE_MS, lineState, readyForBuying, WORD } from '../../../core/buyer/rules.ts';
+import { LATE_MS, lineState, readyForBuying, TONE, WORD, type Tone } from '../../../core/buyer/rules.ts';
 import type { BLine, BOrder, BuyerBooks, LineState, ListPrice, Supplier } from '../../../core/buyer/types.ts';
 import { clock } from '../../../core/time.ts';
 import type { Member, Ms, UGX } from '../../../core/types.ts';
 
-/** "09:31": the shared words write times with two hour digits (BRIEF "Asked · 09:05"). */
-export const hm = (ms: Ms): string => clock(ms).padStart(5, '0');
 
 /** A line's colour in a strip, on light and on navy. */
 export const STRIP: Record<LineState, string> = {
-  toask: '#C9C4BA', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#3A3F9B',
+  toask: '#C9C4BA', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', nosupplier: '#8E2A22', priceup: '#3A3F9B',
   clientwaits: '#7A4A02', removed: '#E6E3DD', ontrip: '#16203C', short: '#95530C', in: '#0F6B43',
 };
 export const STRIP_NAVY: Record<LineState, string> = {
-  toask: 'rgba(255,255,255,.22)', asked: '#F5B26B', found: '#6FDCB0', notfound: '#F7A196', priceup: '#E4E6FA',
+  toask: 'rgba(255,255,255,.22)', asked: '#F5B26B', found: '#6FDCB0', notfound: '#F7A196', nosupplier: '#F7A196', priceup: '#E4E6FA',
   clientwaits: '#F5B26B', removed: 'rgba(255,255,255,.12)', ontrip: '#B3BCD2', short: '#F5B26B', in: '#6FDCB0',
 };
-/** A state word's soft pill: background, ink. */
-export const PILL: Record<LineState, [string, string]> = {
-  toask: ['#F1EEE8', '#5F6980'], asked: ['#FDEEE1', '#7A4A02'], found: ['#E4F4EA', '#0F6B43'], notfound: ['#FBE5E2', '#8E2A22'],
-  priceup: ['#FDEEE1', '#7A4A02'], clientwaits: ['#FDEEE1', '#7A4A02'], removed: ['#F1EEE8', '#5F6980'],
-  ontrip: ['#E8EBF0', '#16203C'], short: ['#FDEEE1', '#7A4A02'], in: ['#E4F4EA', '#0F6B43'],
+/** A tone's soft pill: background, ink (tokens tile/ink-soft, warn-soft/warn-ink, good-soft/good, bad-soft/bad). */
+export const TONE_PILL: Record<Tone, [string, string]> = {
+  neutral: ['#F1EEE8', '#5F6980'], warn: ['#FDEEE1', '#7A4A02'], good: ['#E4F4EA', '#0F6B43'], bad: ['#FBE5E2', '#8E2A22'], navy: ['#E8EBF0', '#16203C'],
 };
+/** A state word's soft pill, from the one table both apps read (core/buyer/rules.ts TONE). */
+export const PILL = Object.fromEntries(Object.entries(TONE).map(([k, t]) => [k, TONE_PILL[t]])) as Record<LineState, [string, string]>;
 /** The ink a state word is written in on white (the list row's word, "Grace sees"). */
 export const INK: Record<LineState, string> = {
-  toask: '#7A4A02', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#7A4A02',
+  toask: '#7A4A02', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', nosupplier: '#8E2A22', priceup: '#7A4A02',
   clientwaits: '#7A4A02', removed: '#5F6980', ontrip: '#16203C', short: '#95530C', in: '#0F6B43',
 };
 
 /** Which word an order's row shows: the one that needs someone most. */
-const RANK: LineState[] = ['notfound', 'priceup', 'toask', 'asked', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
+const RANK: LineState[] = ['notfound', 'nosupplier', 'priceup', 'toask', 'asked', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
 
 export type Filter = 'all' | 'toask' | 'asked' | 'notfound' | 'ruth';
 export const FILTERS: { id: Filter; word: string; state: LineState | null; dot: string | null }[] = [
@@ -74,12 +72,12 @@ export interface OrderView {
 }
 
 function lineAt(o: BOrder, l: BLine, st: LineState): string | null {
-  if (st === 'priceup' && l.repricedAt) return hm(l.repricedAt);
+  if (st === 'priceup' && l.repricedAt) return clock(l.repricedAt);
   const c = l.supplierId ? o.confirms[l.supplierId] : null;
   if (!c) return null;
-  if (st === 'asked') return c.askedAt ? hm(c.askedAt) : null;
-  if (c.answeredAt) return hm(c.answeredAt);
-  return c.askedAt ? hm(c.askedAt) : null;
+  if (st === 'asked') return c.askedAt ? clock(c.askedAt) : null;
+  if (c.answeredAt) return clock(c.answeredAt);
+  return c.askedAt ? clock(c.askedAt) : null;
 }
 
 export function orderView(o: BOrder, b: BuyerBooks, now: Ms): OrderView {
@@ -99,14 +97,14 @@ export function orderView(o: BOrder, b: BuyerBooks, now: Ms): OrderView {
   };
 }
 
-/** Still in Checking: a draft with a line not found yet. Oldest first. */
+/** Still in Checking: a draft with a line not found yet, not on hold (a held order is listed apart, Held.tsx). Oldest first. */
 export function checking(b: BuyerBooks): BOrder[] {
-  return b.orders.filter((o) => o.status === 'draft' && !readyForBuying(o)).sort((x, y) => x.placedAt - y.placedAt);
+  return b.orders.filter((o) => o.status === 'draft' && !o.hold && !readyForBuying(o)).sort((x, y) => x.placedAt - y.placedAt);
 }
 
 /** Left Checking: every line found (the server moves it to Buying), not yet on a trip. */
 export function buying(b: BuyerBooks): BOrder[] {
-  return b.orders.filter((o) => readyForBuying(o) || (o.status === 'awaiting_goods' && o.lines.every((l) => l.got == null)));
+  return b.orders.filter((o) => !o.hold && (readyForBuying(o) || (o.status === 'awaiting_goods' && o.lines.every((l) => l.got == null))));
 }
 
 /** Rows by what needs someone most (Not found, then Ruth decides, then Asked …), then the oldest order. */
@@ -116,7 +114,7 @@ export function byNeed(vs: OrderView[]): OrderView[] {
 }
 
 /** Every line, grouped by state so the strip reads as a count: Asked, Found, Not found, Ruth decides, the rest. */
-const STRIP_ORDER: LineState[] = ['toask', 'asked', 'found', 'notfound', 'priceup', 'clientwaits', 'ontrip', 'short', 'in', 'removed'];
+const STRIP_ORDER: LineState[] = ['toask', 'asked', 'found', 'notfound', 'nosupplier', 'priceup', 'clientwaits', 'ontrip', 'short', 'in', 'removed'];
 export function byState(states: LineState[]): LineState[] {
   return [...states].sort((x, y) => STRIP_ORDER.indexOf(x) - STRIP_ORDER.indexOf(y));
 }

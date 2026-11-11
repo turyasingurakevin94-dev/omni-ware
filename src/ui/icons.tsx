@@ -77,6 +77,8 @@ const S = {
   trash: "<path d='M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'/>",
   share: "<path d='M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6'/>",
   lock: "<rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7.5a4 4 0 0 1 8 0v3'/>",
+  // On hold (cross-app round 1, board XR1Hold): a cancel asked, nothing moves until the Manager decides.
+  pause: "<circle cx='12' cy='12' r='8.5'/><path d='M10 9v6M14 9v6'/>",
   note: "<path d='M5 4h14v11l-5 5H5z'/><path d='M14 20v-5h5'/>",
   attach: "<path d='M20 11.5l-8.2 8.2a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3'/>",
   backspace: "<path d='M8 5h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8l-6-7z'/><path d='M12 9.5l5 5M17 9.5l-5 5'/>",

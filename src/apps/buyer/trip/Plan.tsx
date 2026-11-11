@@ -6,7 +6,7 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { tiles, type LineRef } from '../../../core/buyer/rules.ts';
+import { heldOrders, tiles, type LineRef } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { counted, firstWord } from '../../../core/names.ts';
 import { clock, dayLabel } from '../../../core/time.ts';
@@ -21,7 +21,7 @@ import { nav } from '../shell/nav.ts';
 import { act, kept, me, now, online } from '../shell/store.ts';
 import { byRole, memberOf, planNow, sellersOf, supplierOf } from './model.ts';
 import { LightHead, RouteStrip, Sees, type RouteNode } from './parts.tsx';
-import { HeldRow, PlanStop } from './PlanStop.tsx';
+import { HeldOrderRow, HeldRow, PlanStop } from './PlanStop.tsx';
 import './plan.css';
 
 const hint = () => toast.show('Slide the red button across', { kind: 'warn' });
@@ -32,7 +32,9 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
   const [busy, setBusy] = useState<string | null>(null);
   const esther = byRole(b, 'accounts'), en = firstWord(esther?.name || 'Accounts');
   const on = plan.stops.filter((s) => !s.off);
-  const heldPrice = (sid: string): LineRef[] => plan.held.filter((r) => r.state === 'priceup' && r.line.supplierId === sid);
+  // Held on a stop's supplier: a price up, or a Found line the Manager still prices (a price tag).
+  const heldPrice = (sid: string): LineRef[] => plan.held.filter((r) => (r.state === 'priceup' || (r.state === 'found' && !!r.line.priceTag)) && r.line.supplierId === sid);
+  const onHold = heldOrders(b);
   const stopIds = new Set(plan.stops.map((s) => s.supplierId));
   const heldElse = new Map<string, LineRef[]>();
   plan.held.filter((r) => r.line.supplierId && !stopIds.has(r.line.supplierId))
@@ -94,6 +96,7 @@ export function Plan(p: { b: BuyerBooks }): JSX.Element {
                 onToggle={() => setOpen(open === s.supplierId ? null : s.supplierId)} onOff={(off) => { void setOff(s.supplierId, off); }} />
             ))}
             {[...heldElse.entries()].map(([sid, refs]) => <HeldRow key={sid} b={b} supplierId={sid} refs={refs} />)}
+            {onHold.map((o) => <HeldOrderRow key={o.id} o={o} />)}
             {plan.asking && b.trip && <CashAsk b={b} />}
           </div>
         </>

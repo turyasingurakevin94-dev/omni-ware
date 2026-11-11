@@ -542,7 +542,11 @@ with m(no, migration, kind, name, col) as (values
   ('0181', '0181_sales_cancel_ask', 'function', 'cancel_asks_ow_push', ''),
   ('0181', '0181_sales_cancel_ask', 'trigger', 'saved_quotes_ow_cancel_asks', ''),
   ('0181', '0181_sales_cancel_ask', 'trigger', 'cancel_asks_ow_push', ''),
-  ('0181', '0181_sales_cancel_ask', 'table', 'cancel_asks', '')
+  ('0181', '0181_sales_cancel_ask', 'table', 'cancel_asks', ''),
+  ('0182', '0182_buyer_holds_on_a_cancel_ask', 'function', 'collection_trips_ow_hold', ''),
+  ('0182', '0182_buyer_holds_on_a_cancel_ask', 'function', 'cancel_asks_ow_push_buyer', ''),
+  ('0182', '0182_buyer_holds_on_a_cancel_ask', 'trigger', 'collection_trips_ow_hold', ''),
+  ('0182', '0182_buyer_holds_on_a_cancel_ask', 'trigger', 'cancel_asks_ow_push_buyer', '')
 ), found as (
   select no, migration, kind, name, col,
          case kind

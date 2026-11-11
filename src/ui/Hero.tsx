@@ -3,7 +3,7 @@
  * "Your first day") and Live; the glass Find button and your avatar (opens You); what was sold
  * this month (opens Your day), with a mint note beside it; the goal bar (opens Goal); the glass
  * row of two doors. Sales shows what was sold, never earnings; the mint part of the bar is what
- * is on the move (placed, not delivered).
+ * is on the move (placed, not delivered), drawn hatched by the shared GoalBar (SAL-2).
  *
  *   <Hero greeting="Good morning, Grace" line="Sat 17 Oct" status="live" me={{ initials: 'GA', tint: 'me' }} onMe={…} onFind={…}
  *     month="October" sold="12,480,000" onSold={…} goal={{ pct: 36, movePct: 9, target: '35M', daysLeft: 14 }} onGoal={…}
@@ -17,11 +17,12 @@
 import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
 import { Icon, type IconName } from './icons.tsx';
+import { GoalBar, MoveSwatch } from './GoalBar.tsx';
 import { fig } from './Money.tsx';
-import { Tap, barW, cx, type Fig } from './util.tsx';
+import { Tap, cx, type Fig } from './util.tsx';
 import './hero.css';
 
-export interface HeroDoor { tone: 'mint' | 'amber'; icon: IconName; value: string; label: string; on: () => void }
+export interface HeroDoor { tone: 'mint' | 'amber'; icon: IconName; value: string; label: string; on: () => void; /** The goal bar's hatch before the value: this door is its key (SAL-2). */ swatch?: boolean }
 export type HeroGoal =
   | { pct: number; movePct: number; target: string; daysLeft: number }
   | { hit: true; target: number; sold: number; over: string; daysLeft: number; label: string };
@@ -96,10 +97,7 @@ export function Hero(p: HeroProps): JSX.Element {
         </Tap>
       ) : g ? (
         <Tap on={p.onGoal} label={`Goal: ${g.pct} percent of ${g.target.replace('M', ' million')}, ${g.daysLeft} days left`} class="ow-hero-goal">
-          <span aria-hidden="true" class="ow-hero-bar">
-            <span style={{ width: barW(g.pct) }} />
-            {g.movePct > 0 && <span class="move" style={{ width: barW(g.movePct, g.pct) }} />}
-          </span>
+          <GoalBar pct={g.pct} movePct={g.movePct} />
           <span class="ow-hero-goal-l">
             <span><b class="mono">{`${g.pct}%`}</b> of your <span class="mono">{g.target}</span> goal</span>
             <span class="ow-hero-days">{`${g.daysLeft} days left`}{chev}</span>
@@ -115,7 +113,7 @@ export function Hero(p: HeroProps): JSX.Element {
           {p.doors.map((d) => (
             <Tap key={d.label} on={d.on} class={cx('ow-hero-door', d.tone)}>
               <span class="ow-hero-door-ic"><Icon name={d.icon} size={18} stroke={2.2} /></span>
-              <span class="ow-hero-door-t"><span class="mono">{d.value}</span><span>{d.label}</span></span>
+              <span class="ow-hero-door-t"><span class="mono">{d.swatch && <MoveSwatch />}{d.value}</span><span>{d.label}</span></span>
               <span class="ow-hero-door-go"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
             </Tap>
           ))}
@@ -130,7 +128,7 @@ export function GoalStrip(p: { pct: number; movePct: number; target: string; day
   return (
     <Tap on={p.on} label={`Goal: ${p.pct} percent of ${p.target.replace('M', ' million')}, ${p.daysLeft} days left`} class="ow-goalstrip">
       <span class="mono">{`${p.pct}%`}</span>
-      <span aria-hidden="true" class="ow-goalstrip-bar"><span style={{ width: barW(p.pct) }} /><span style={{ width: barW(p.movePct, p.pct) }} /></span>
+      <span class="ow-goalstrip-bar"><GoalBar pct={p.pct} movePct={p.movePct} light h={6} /></span>
       <span>{`of ${p.target} · ${p.daysLeft} days left`}</span>
     </Tap>
   );

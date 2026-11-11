@@ -10,15 +10,15 @@
 import type { JSX } from 'preact';
 import { handIn, tiles, toBuy } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
-import { dayLabel } from '../../../core/time.ts';
+import { clock, dayLabel } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { firstName, hm } from './rules.ts';
+import { firstName } from './rules.ts';
 import './head.css';
 
 export function greeting(now: number): string {
-  const h = Number(hm(now).slice(0, 2));
+  const h = Number(clock(now).split(':')[0]);
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 

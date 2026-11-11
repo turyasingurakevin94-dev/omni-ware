@@ -12,8 +12,9 @@ import { priceUntold, readyToCollect, twinOf } from '../../../core/orders.ts';
 import { backLines, byRole, dropped, faceOfMember, kept, member, openAsk, shortItem, shortName, waitsRuth } from './data.ts';
 import type { CheckHead as CHead, CheckLine as CLine, CheckMark as Mark } from '../../../ui/CheckList.tsx';
 import { shown } from '../../../core/units.ts';
+import { TONE as BUY_TONE, WORD as BUY_WORD } from '../../../core/buyer/rules.ts';
 
-const GREEN = '#0F6B43', AMBER = '#F5B26B';
+const GREEN = '#0F6B43', AMBER = '#F5B26B', RED = '#8E2A22';
 
 /** When a stage happened, as the rail says it: "9:14" today, "Fri" this week, "Aug" before. */
 export function railTime(at: Ms, now: Ms): string {
@@ -37,6 +38,27 @@ export function pendingOf(o: Order): boolean {
 }
 
 const aisleOf = (b: Books, l: Line): string => b.items.find((i) => i.id === l.itemId)?.aisle || '';
+
+/**
+ * The Buyer's word on a line, as Sales shows it (cross-app round 1, SAL-1; board XR1SalesLines): the Buyer's
+ * own word and colour (core/buyer/rules.ts WORD, TONE), the time on the shared clock, and the mark it means.
+ * Never the cost or the supplier.
+ */
+export function buyPill(b: Books, l: Line): { pill: NonNullable<CLine['pill']>; mark: Mark } | null {
+  const w = l.buy;
+  if (!w) return null;
+  const rn = ruthName(b), moses = firstWord(byRole(b, 'sourcing')?.name || 'Sourcing');
+  const at = w.at ? ` · ${clock(w.at)}` : '';
+  const text = w.state === 'asked' || w.state === 'found' ? `${BUY_WORD[w.state]}${at}`
+    : w.state === 'priceup' ? `${BUY_WORD.priceup} · ${rn} decides` : w.state === 'clientwaits' ? `${BUY_WORD.clientwaits} · ${moses}` : BUY_WORD[w.state];
+  const icon: NonNullable<CLine['pill']>['icon'] = ({ toask: 'message', asked: 'clock', found: 'check', notfound: 'close', nosupplier: 'warning', priceup: 'bell', clientwaits: 'hourglass', removed: 'close', ontrip: 'truck', short: 'warning', in: 'check' } as const)[w.state];
+  const label = `The buyer: ${text}`;
+  const mark: Mark = w.state === 'found' || w.state === 'in' ? { k: 'ok', label }
+    : w.state === 'asked' ? { k: 'spin', label }
+    : w.state === 'notfound' || w.state === 'nosupplier' || w.state === 'removed' ? { k: 'no', label }
+    : { k: 'wait', label };
+  return { pill: { text, tone: BUY_TONE[w.state], icon }, mark };
+}
 const ruthName = (b: Books): string => firstWord(byRole(b, 'manager')?.name || 'Manager');
 
 export interface OrderView {
@@ -115,12 +137,13 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
       return { ...base, amount, mark: n ? { k: 'back', n, label: `${n} coming back` } : { k: 'ok', label: 'Delivered' } };
     }
     if (o.stage === 'checking') {
-      if (waitsRuth(l)) return { ...base, amount: l.price == null ? undefined : amount, word: l.price == null ? { text: 'Price coming', tone: 'warn' } : undefined,
+      const bp = l.from === 'shelf' ? null : buyPill(b, l);
+      if (waitsRuth(l)) return { ...base, amount: l.price == null ? undefined : amount, word: l.price == null ? { text: 'Price coming', tone: 'warn' } : undefined, pill: bp?.pill,
         mark: { k: 'face', face: faceOfMember(ruth || (b.me)), label: l.price == null ? `Price coming: ${rn} decides` : `${rn} decides the price` } };
-      if (rv) return { ...base, amount, was: rv.was != null ? Math.round(rv.was * l.qty) : undefined, mark: { k: 'ok', at: clock(rv.at), label: `On the shelf; ${rn} ${rv.price === l.shopPrice ? 'kept' : 'set'} ${rv.price.toLocaleString('en-US')} at ${clock(rv.at)}` } };
-      if (l.from === 'supplier') return l.state === 'waiting'
-        ? { ...base, amount, mark: { k: 'spin', word: 'Order in', wordTone: 'info', label: 'Order in: the supplier is being asked' } }
-        : { ...base, amount, word: { text: 'Order in', tone: 'info' }, mark: { k: 'ok', label: 'Order in: the supplier said yes' } };
+      if (rv) return { ...base, amount, was: rv.was != null ? Math.round(rv.was * l.qty) : undefined, pill: bp?.pill, mark: { k: 'ok', at: clock(rv.at), label: `On the shelf; ${rn} ${rv.price === l.shopPrice ? 'kept' : 'set'} ${rv.price.toLocaleString('en-US')} at ${clock(rv.at)}` } };
+      // A supplier line: the Buyer's word and its mark (SAL-1). Never a tick before the Buyer has a yes.
+      if (bp) return { ...base, amount, pill: bp.pill, mark: bp.mark, gone: l.buy?.state === 'removed' };
+      if (l.from !== 'shelf') return { ...base, amount, word: { text: 'Order in', tone: 'info' }, mark: { k: 'wait', label: 'Order in: the buyer is checking it' } };
       return { ...base, amount, mark: { k: 'ok', label: 'On the shelf' } };
     }
     if (o.stage === 'buying') {
@@ -136,7 +159,7 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
   const live = lines.filter((l) => !l.gone);
   const okN = live.filter((l) => l.mark.k === 'ok').length;
   const head: CHead = { title: `What ${who} ${o.stage === 'delivered' ? 'got' : 'gets'}` };
-  if (o.stage === 'checking') { head.bar = lines.map((l) => (l.mark.k === 'ok' ? GREEN : AMBER)); head.summary = `${lines.filter((l) => l.mark.k === 'ok').length} of ${lines.length}`; }
+  if (o.stage === 'checking') { head.bar = lines.map((l) => (l.mark.k === 'ok' ? GREEN : l.mark.k === 'no' ? RED : AMBER)); head.summary = `${lines.filter((l) => l.mark.k === 'ok').length} of ${lines.length}`; }
   else if (o.stage === 'packing') { head.bar = live.map((l) => (l.mark.k === 'ok' ? GREEN : AMBER)); head.summary = `${okN} of ${live.length} packed`; }
   else {
     head.pills = [{ k: 'ok', n: okN }];

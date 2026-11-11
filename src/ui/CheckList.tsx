@@ -12,11 +12,13 @@
  *     { aisle: 'Tools', name: 'Wheelbarrow, heavy duty', qty: 2, unit: 'pc', amount: 290000, mark: { k: 'spin', word: 'packing', label: 'Packing now' } },
  *     { aisle: 'Doors & locks', name: 'Soft close hinge · flat', qty: 10, unit: 'pair', note: 'not found', gone: true, mark: { k: 'no', label: 'Not found' } }]} />
  *   was: the old figure struck before the new; word: a word after the figure ("Order in", "Price coming");
+ *   pill: another app's word on the line, as a soft pill in that app's colours ("Asked · 9:40": the Buyer's,
+ *   cross-app round 1 SAL-1); flash: the row turns green once (its pill just changed);
  *   under: a picture under the row (OR12's price ladder).
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
-import { Icon } from './icons.tsx';
+import { Icon, type IconName } from './icons.tsx';
 import { ItemSquare } from './ItemSquare.tsx';
 import { fig } from './Money.tsx';
 import { cx, type Fig } from './util.tsx';
@@ -41,6 +43,10 @@ export interface CheckLine {
   was?: number;
   /** A word after the figure, or instead of it. */
   word?: { text: string; tone: 'info' | 'warn' };
+  /** Another app's word on the line, as a soft pill: "Asked · 9:40", "Found · 10:52" (the Buyer's). */
+  pill?: { text: string; tone: 'neutral' | 'warn' | 'good' | 'bad' | 'navy'; icon?: IconName };
+  /** The row flashes green once (its pill just changed). */
+  flash?: boolean;
   /** Words instead of the figure ("not found"). */
   note?: string;
   /** Dropped: the line struck through. */
@@ -76,13 +82,14 @@ export function CheckPills(p: { pills: NonNullable<CheckHead['pills']> }): JSX.E
 }
 
 function Sub(l: CheckLine): JSX.Element {
-  const rich = l.was != null || !!l.word || !!l.under || l.mark.k === 'face';
+  const rich = l.was != null || !!l.word || !!l.under || !!l.pill || l.mark.k === 'face';
   if (!rich) return <span class="mono ow-chk-s">{`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{` · ${l.note || (l.amount != null ? fig(l.amount) : '')}`}</span>;
   return (
     <span class="mono ow-chk-s rich">
       {`${fig(l.qty)} `}<span class="ow-word">{l.unit}</span>{' · '}
       {l.note ? l.note : <>{l.was != null && <><s>{fig(l.was)}</s>{' '}</>}{l.amount != null && fig(l.amount)}</>}
       {l.word && <>{l.amount != null ? ' · ' : ''}<span class={cx('ow-chk-after', l.word.tone)}>{l.word.text}</span></>}
+      {l.pill && <>{' '}<span class={cx('ow-chk-state', l.pill.tone, l.pill.tone === 'neutral' && 'dash')}>{l.pill.icon && <Icon name={l.pill.icon} size={12} stroke={2.4} />}{l.pill.text}</span></>}
     </span>
   );
 }
@@ -104,7 +111,7 @@ export function CheckList(p: { head: CheckHead; lines: CheckLine[]; tight?: bool
       </div>
       {p.lines.map((l, i) => {
         const row = (
-          <div key={i} class={cx('ow-chk-row', l.gone && 'gone')}>
+          <div key={i} class={cx('ow-chk-row', l.gone && 'gone', l.flash && 'flash')}>
             <ItemSquare aisle={l.aisle} size={34} radius={9} icon={20} dropped={l.gone} />
             <span class="ow-chk-t"><span class="ow-chk-n">{l.name}</span>{Sub(l)}</span>
             <Mark m={l.mark} />

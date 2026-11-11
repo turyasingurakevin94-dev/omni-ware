@@ -141,6 +141,8 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | `customer.changed` | the salesperson who last sold to them | the Manager edited the customer (0158) | ✓ (new Sales: `customers/customer`) |
 | `trip.short` | the salesperson (or `quote.make`) | a trip came back short for an order | ✓ (new Sales: `orders/order`) |
 | `order.buying` | Buyer (`trip.plan`) | an order entered Buying (0131) | ✓ |
+| `order.hold` | Buyer (`trip.plan`) | a salesperson asked to cancel an order the Buyer is still checking or buying: hold it (0182) | ✓ (new Buyer: `orders/order`, by `orderId`) |
+| `order.hold.kept` | Buyer (`trip.plan`) | the Manager kept an order the Buyer held: back to To ask (0182) | ✓ (new Buyer: `orders/order`, by `orderId`) |
 | `supplier.answered` | Buyer (`supplier.confirm`) | a supplier answered in its app (0133) | ✓ |
 | `restock.held`, `restock.released` | Buyer (`buy.restock`) | the Manager held or let go a restock line (0136) | ✓ |
 | `store.restock` | Buyer (`buy.restock`) | the yard asks for more stock (0157) | ✓ |

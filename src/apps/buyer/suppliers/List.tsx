@@ -6,6 +6,7 @@
  * A search nobody matches turns the page into "Nobody sells it" (NoMatch).
  */
 import { signal } from '@preact/signals';
+import { clock } from '../../../core/time.ts';
 import type { JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
@@ -23,7 +24,7 @@ import { nav } from '../shell/nav.ts';
 import { books, isDemo, now } from '../shell/store.ts';
 import { NoMatch } from './NoMatch.tsx';
 import { askAgain, justAsked } from './ask.ts';
-import { Face, OffBand, SendsLater, StateChip, SupTile, first, hm, keptFor, member } from './parts.tsx';
+import { Face, OffBand, SendsLater, StateChip, SupTile, first, keptFor, member } from './parts.tsx';
 import { findSuppliers, heroStats, places, replyWord, supplierRows, type SupRow } from './rules.ts';
 import './list.css';
 
@@ -132,7 +133,7 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
             <span class="ow-b-suppliers-rec mono">{`found ${r.s.found} of ${r.s.asked}${r.s.replyMins != null ? ` · ${replyWord(r.s.replyMins)}` : ''}`}</span>
           </span>
         </div>
-        <div class="ow-b-suppliers-asked"><span><Icon name="check" size={14} stroke={2.4} />Asked · <span class="mono">{hm(done.at)}</span></span></div>
+        <div class="ow-b-suppliers-asked"><span><Icon name="check" size={14} stroke={2.4} />Asked · <span class="mono">{clock(done.at)}</span></span></div>
       </div>
     );
   }
@@ -174,5 +175,5 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
 function SalesSees(p: { b: BuyerBooks; rows: SupRow[] }): JSX.Element | null {
   const j = justAsked.value, r = j ? p.rows.find((x) => x.s.id === j.id) : null;
   if (!j || !r) return null;
-  return <span class="ow-b-suppliers-sees">{`${first(member(p.b, r.sellerId), 'Sales')} sees: `}<b>Asked · <span class="mono">{hm(j.at)}</span></b></span>;
+  return <span class="ow-b-suppliers-sees">{`${first(member(p.b, r.sellerId), 'Sales')} sees: `}<b>Asked · <span class="mono">{clock(j.at)}</span></b></span>;
 }

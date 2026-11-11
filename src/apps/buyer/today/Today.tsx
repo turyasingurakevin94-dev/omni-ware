@@ -12,7 +12,9 @@
  * ("Grace sees  Found · 09:25") are on the screen.
  */
 import type { JSX } from 'preact';
-import { answeredRows, askGroups, lineRefs, liveOrders, replyRows } from '../../../core/buyer/rules.ts';
+import { clock } from '../../../core/time.ts';
+import { answeredRows, askGroups, lineRefs, replyRows } from '../../../core/buyer/rules.ts';
+import { checking } from '../orders/rules.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -22,19 +24,19 @@ import { books, flush, kept, now, online } from '../shell/store.ts';
 import { AllClear, NextTrip, WaitingOn } from './Cards.tsx';
 import { Head } from './Head.tsx';
 import { AskRow, Chip, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
-import { calm, hm, sellersOf, tripReady, waitingOn } from './rules.ts';
+import { calm, sellersOf, tripReady, waitingOn } from './rules.ts';
 import { MoveTiles } from './Tiles.tsx';
 import './today.css';
 
 /** Replies due rows drawn on Today; the rest are behind "N ›" (Replies). */
 const REPLY_ROWS = 1;
 
-function Sec(p: { title: string; dot?: 'on' | 'off'; meta?: string; go?: { n: number; on: () => void; label: string } }): JSX.Element {
+function Sec(p: { title: string; dot?: 'on' | 'off'; meta?: string; go?: { n: number; on: () => void; label: string; word?: string } }): JSX.Element {
   return (
     <div class={cx('ow-b-today-sec', p.dot && 'dot')}>
       {p.dot && <i aria-hidden="true" class={cx('ow-b-today-sec-dot', p.dot === 'off' && 'off')} />}
       <h2>{p.title}</h2>
-      {p.go ? <Tap on={p.go.on} label={p.go.label} class="mono ow-b-today-sec-go">{`${p.go.n} ›`}</Tap>
+      {p.go ? <Tap on={p.go.on} label={p.go.label} class="mono ow-b-today-sec-go">{p.go.word && <span class="w">{`${p.go.word} `}</span>}{`${p.go.n} ›`}</Tap>
         : p.meta != null && <span class="mono">{p.meta}</span>}
     </div>
   );
@@ -52,8 +54,8 @@ function SalesSees(p: { b: BuyerBooks; now: number }): JSX.Element | null {
   if (!who.length || (!found && asked == null)) return null;
   return (
     <Sees who={who}>
-      {found && found.answeredAt != null && <Chip tone="good">Found · <span class="mono">{hm(found.answeredAt)}</span></Chip>}
-      {asked != null && <Chip tone="warn">Asked · <span class="mono">{hm(asked)}</span></Chip>}
+      {found && found.answeredAt != null && <Chip tone="good">Found · <span class="mono">{clock(found.answeredAt)}</span></Chip>}
+      {asked != null && <Chip tone="warn">Asked · <span class="mono">{clock(asked)}</span></Chip>}
     </Sees>
   );
 }
@@ -62,7 +64,9 @@ export function Today(): JSX.Element {
   const b = books.value, n = now.value, off = !online.value, k = kept.value.length;
   if (!b) return <main class="ow-b-today-wait-main" aria-busy="true" />;
 
-  const nf = lineRefs(b).filter((r) => r.state === 'notfound');
+  // Lines to fix, red, on no tile: Not found, and No supplier (BUY-2). Today counts suppliers only.
+  const nf = lineRefs(b).filter((r) => r.state === 'notfound' || r.state === 'nosupplier');
+  const inChecking = checking(b).length;
   const asks = askGroups(b, n), reps = replyRows(b, n);
   const ready = tripReady(b, n), quiet = calm(b, n);
   const waits = quiet ? waitingOn(b, n) : [];
@@ -78,7 +82,9 @@ export function Today(): JSX.Element {
         </Notice>
       )}
       <main class="ow-b-today-main">
-        <Sec title="On the move" meta={quiet && waits.length ? `${waits.length} waiting` : `${liveOrders(b).length} orders`} />
+        {/* The tiles count suppliers (BUY-2); the way into Orders is this labelled door, its number the list's (orders). */}
+        {quiet && waits.length ? <Sec title="On the move" meta={`${waits.length} waiting`} />
+          : <Sec title="On the move" go={{ n: inChecking, word: 'Checking', on: () => nav.push('orders'), label: `Checking: ${inChecking} ${inChecking === 1 ? 'order' : 'orders'}. Open Orders.` }} />}
         <MoveTiles b={b} now={n} />
 
         {quiet ? (
@@ -90,13 +96,15 @@ export function Today(): JSX.Element {
           <>
             {asks.length + nf.length > 0 ? (
               <>
-                <Sec title="Needs you" dot="on" meta={String(asks.length + nf.length)} />
+                <span id="ow-b-needs" />
+                <Sec title="Needs you" dot="on" />
                 {nf.map((r) => <NotFoundRow key={`${r.order.id}-${r.line.key}`} b={b} r={r} />)}
                 {asks.map((g) => <AskRow key={g.supplier.id} b={b} g={g} />)}
               </>
             ) : !ready && (
               <>
-                <Sec title="Needs you" dot="off" meta="0" />
+                <span id="ow-b-needs" />
+                <Sec title="Needs you" dot="off" />
                 <div class="ow-b-today-none"><Icon name="check" size={18} stroke={2.4} />Every supplier asked</div>
               </>
             )}

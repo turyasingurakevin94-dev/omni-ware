@@ -4,7 +4,8 @@
  * how many lines are found; then each line with its supplier and state word;
  * the Ruth fold under a line whose new price is over the selling price (the
  * Manager decides, nothing for the Buyer to do); and what the salesperson
- * sees. A Not found line opens the Not found sheet.
+ * sees. A Not found or No supplier line opens the Not found sheet. A held order (a cancel asked,
+ * cross-app round 1 BUY-1) shows its hold card first and its lines with no act.
  */
 import type { JSX } from 'preact';
 import { firstWord, initials, orderNo } from '../../../core/names.ts';
@@ -15,34 +16,37 @@ import { fig } from '../../../ui/Money.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { barW } from '../../../ui/util.tsx';
 import type { LineState } from '../../../core/buyer/types.ts';
+import { priceTagWord, WORD } from '../../../core/buyer/rules.ts';
 import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
+import { HoldCard, HoldPill } from './Held.tsx';
 import { openNotFound } from './NotFound.tsx';
 import { FromChip, Initials, StateWord, Strip } from './parts.tsx';
 import { byRole, INK, orderView, PILL, seesWords, type LineView } from './rules.ts';
 
 const TILE: Partial<Record<LineState, IconName>> = {
-  found: 'check', in: 'check', notfound: 'close', priceup: 'warning', asked: 'clock', toask: 'send',
+  found: 'check', in: 'check', notfound: 'close', nosupplier: 'warning', priceup: 'warning', asked: 'clock', toask: 'send',
   clientwaits: 'hourglass', removed: 'trash', ontrip: 'truck', short: 'warning',
 };
 
-function LineRow(p: { x: LineView; onNotFound: () => void }): JSX.Element {
-  const { x } = p, l = x.line, [bg, ink] = PILL[x.state];
+function LineRow(p: { x: LineView; onNotFound: () => void; held: boolean; tag: string | null }): JSX.Element {
+  const { x } = p, l = x.line, [bg, ink] = p.held ? PILL.toask : PILL[x.state];
   const body = (
     <>
-      <span aria-hidden="true" class="tile" style={{ background: bg, color: ink }}><Icon name={TILE[x.state] || 'clock'} size={20} stroke={2.2} /></span>
+      <span aria-hidden="true" class="tile" style={{ background: bg, color: ink }}><Icon name={p.held ? 'pause' : TILE[x.state] || 'clock'} size={20} stroke={2.2} /></span>
       <span class="t">
         <span class="n">{l.name}</span>
         <span class="mono q">{`${l.qty} ${l.unit} × ${fig(l.cost)}`}<br />{`= ${fig(x.total)}`}</span>
         {x.supplier && <span class="s">{x.supplier.name}</span>}
+        {p.tag && <span class="ow-b-orders-tag"><Icon name="bell" size={13} stroke={2.2} />{p.tag}</span>}
       </span>
-      <StateWord state={x.state} at={x.state === 'removed' ? null : x.at} />
+      {p.held ? <HoldPill short /> : <StateWord state={x.state} at={x.state === 'removed' ? null : x.at} />}
     </>
   );
-  return x.state === 'notfound'
-    ? <button type="button" class="ow-b-orders-line tap" aria-label={`${l.name}: not found. Choose what to do`} onClick={p.onNotFound}>{body}</button>
-    : <div class={'ow-b-orders-line' + (x.state === 'removed' ? ' off' : '')}>{body}</div>;
+  return !p.held && (x.state === 'notfound' || x.state === 'nosupplier')
+    ? <button type="button" class="ow-b-orders-line tap" aria-label={`${l.name}: ${WORD[x.state].toLowerCase()}. Choose what to do`} onClick={p.onNotFound}>{body}</button>
+    : <div class={'ow-b-orders-line' + (x.state === 'removed' ? ' off' : p.held ? ' hold' : '')}>{body}</div>;
 }
 
 /** Ruth decides: the new cost over the selling price, as a picture (was · sells · cost). */
@@ -86,7 +90,8 @@ export function OrderScreen({ params }: { params: Params }): JSX.Element {
   const v = orderView(o, b, now.value);
   const ruth = byRole(b, 'manager');
   const seller = v.seller ? firstWord(v.seller.name) : 'Sales';
-  const sees = seesWords(v, ruth ? firstWord(ruth.name) : 'Ruth');
+  const rn = ruth ? firstWord(ruth.name) : 'Ruth', held = !!o.hold;
+  const sees = held ? [{ word: 'Cancel asked', state: 'priceup' as const }] : seesWords(v, rn);
   const off = !online.value || kept.value.length > 0;
   const head = (
     <TitleHead small class="ow-b-orders-ohead" lead={<Initials name={o.client} ini={initials(o.client)} size={44} />}
@@ -101,11 +106,12 @@ export function OrderScreen({ params }: { params: Params }): JSX.Element {
   return (
     <FullSheet onBack={() => nav.back()} backLabel="Back to Checking" head={head} pad="14px 16px 24px" gap={8}>
       {off && <Notice kind="offline" action={kept.value.length ? { label: 'Try again', on: () => { void flush(); } } : undefined}>Offline · it sends when back</Notice>}
+      <HoldCard b={b} o={o} />
       <div class="ow-b-orders-lh"><span>Lines</span><span class="mono">{v.live.length}</span></div>
       {v.lines.map((x) => (
         <div key={x.line.key} class="ow-b-orders-lwrap">
-          <LineRow x={x} onNotFound={() => openNotFound(o.id, x.line.key)} />
-          {x.state === 'priceup' && ruth && <RuthFold x={x} who={ruth} />}
+          <LineRow x={x} held={held} tag={x.line.priceTag && x.state !== 'removed' ? priceTagWord(x.line.priceTag, rn) : null} onNotFound={() => openNotFound(o.id, x.line.key)} />
+          {!held && x.state === 'priceup' && ruth && <RuthFold x={x} who={ruth} />}
         </div>
       ))}
       <div class="ow-b-orders-seecard">

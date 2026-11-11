@@ -53,6 +53,7 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or Sales chan
 | 4–5. Pages on the new canvas | done · 7 tab boards (28 pages, all 8 states) + handover board + flow board on the [canvas](https://claude.ai/artifact/YDydRwAjmK6U3YsQhnjFz7) |
 | 7. Build | done · `next/buyer.html` (Preact, `src/apps/buyer`, `src/core/buyer`), demo `?demo`, real books; only what is drawn (Gate, Additions, Additions2 boards added for what the build needed); e2e `test/buyer-e2e.test.js`. Switched 2026-11-11: `buyer.html` is the new app (old copy `old/buyer.html` until 2026-12-11); APK from `build-buyer-app.yml` |
 | 6. Scores | done · independent review, 5 rounds (rounds 4–5 from rendered screens, overlap sweep clean): 8.39 → 8.68; 0 of 28 pages below the Agent app (Scores board) |
+| Cross-app round 1 (Sales ↔ Buyer) | done 11 Nov · `docs/audit/cross-app/ROUND-1.md`: holds on a cancel ask (0182), No supplier, price tags, the Buyer's words in Sales (handover.md M2, M3 closed; §5 items 2 and 8 built) |
 
 ## Waiting on Kevin
 

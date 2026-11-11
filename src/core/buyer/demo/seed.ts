@@ -6,6 +6,9 @@
  *   morning   09:00 · every line to ask (the default)
  *   midday    11:15 · the answers in: Nakawa, Namanve, Owino found, Kiseka not found,
  *             the ridge cap's price up, Ndeeba late · the trip ready to plan
+ *   handoff   midday and the cross-app round 1 cases (boards XR1Hold, XR1PriceComing, XR1Today):
+ *             #0560 on hold (Grace asked Ruth to cancel, 9:40), #0561's edging lipping sold with no
+ *             price (Price coming), #0562's hinge with no supplier
  *   trip      11:45 · the cash given, on the trip, no stop done yet
  *   empty     nothing to buy
  */
@@ -14,7 +17,7 @@ import type { Member, Ms } from '../../types.ts';
 import { BRIAN, DENIS, ESTHER, FAITH, GRACE, MOSES, MUSA, RUTH, people } from '../../demo/seed/people.ts';
 import type { BLine, BOrder, BuyerBooks, Confirm, ListPrice, Supplier } from '../types.ts';
 
-export type BuyerDemoState = 'morning' | 'midday' | 'trip' | 'empty';
+export type BuyerDemoState = 'morning' | 'midday' | 'handoff' | 'trip' | 'empty';
 
 const DAY = '2026-10-17';
 export const tb = (hm: string): Ms => at(DAY, hm);
@@ -60,13 +63,13 @@ function prices(): ListPrice[] {
 function line(idx: number, name: string, qty: number, unit: string, cost: number, sell: number, supplierId: string | null): BLine {
   return {
     idx, key: `L${idx}`, name, productId: 'p-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), qty, unit, cost, sell, supplierId,
-    priceWas: null, repricedAt: null, ruthDecides: false, clientWaits: null, removed: null, switchedFrom: null, got: null,
+    priceWas: null, repricedAt: null, ruthDecides: false, priceTag: null, clientWaits: null, removed: null, switchedFrom: null, got: null,
   };
 }
 
 function orders(): BOrder[] {
   const o = (id: number, client: string, sellerId: string, hm: string, lines: BLine[], status: BOrder['status'] = 'draft'): BOrder =>
-    ({ id, client, customerId: 'c-' + id, sellerId, status, placedAt: tb(hm), lines, confirms: {} });
+    ({ id, client, customerId: 'c-' + id, sellerId, status, placedAt: tb(hm), lines, confirms: {}, hold: null });
   return [
     o(550, 'Kato Construction', GRACE, '8:20', [
       line(0, 'Iron sheet G28', 40, 'sht', 38000, 47500, SUP.namanve),
@@ -102,6 +105,21 @@ function midday(os: BOrder[]): void {
   o554.confirms[SUP.ndeeba] = asked('10:40');
 }
 
+/** Cross-app round 1 (boards XR1Hold, XR1PriceComing, XR1Today): a held order, a line with no price, one with no supplier. */
+function handoff(os: BOrder[]): void {
+  const o = (id: number, client: string, sellerId: string, hm: string, lines: BLine[]): BOrder =>
+    ({ id, client, customerId: 'c-' + id, sellerId, status: 'draft', placedAt: tb(hm), lines, confirms: {}, hold: null });
+  const held = o(560, 'Nansana Hardware', GRACE, '9:30', [
+    line(0, 'Cement · Hima 50kg', 10, 'bag', 34000, 42500, SUP.owino),
+    line(1, 'Wood glue · 1L', 8, 'tin', 20000, 25000, SUP.owino),
+  ]);
+  held.hold = { at: tb('9:40'), by: 'Grace', why: 'Changed their mind' };
+  const lipping = line(0, 'Edging lipping · 22 mm', 10, 'm', 2000, 0, SUP.katwe);
+  lipping.priceTag = 'coming';
+  os.push(held, o(561, 'Kyaligonza & Sons', GRACE, '10:20', [lipping]),
+    o(562, 'Mukono Roofing', FAITH, '10:30', [line(0, 'Soft close hinge', 50, 'pcs', 0, 1800, null)]));
+}
+
 export interface Seeded { books: BuyerBooks; now: Ms }
 
 export function seed(state: BuyerDemoState | null): Seeded {
@@ -110,7 +128,8 @@ export function seed(state: BuyerDemoState | null): Seeded {
   const me = team().find((m) => m.id === DENIS) as Member;
   const books: BuyerBooks = { me, team: team(), orders: os, suppliers: suppliers(), prices: prices(), trip: null, savedAt: 0 };
   let now = tb('9:00');
-  if (st === 'midday' || st === 'trip') { midday(os); now = tb('11:15'); }
+  if (st === 'midday' || st === 'handoff' || st === 'trip') { midday(os); now = tb('11:15'); }
+  if (st === 'handoff') handoff(os);
   if (st === 'trip') {
     now = tb('11:45');
     books.trip = {

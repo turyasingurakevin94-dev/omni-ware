@@ -33,15 +33,9 @@ export function chipTone(st: LineState, late = false): 'good' | 'bad' | 'warn' |
 export function StateChip(p: { state: LineState; at: Ms | null; late?: boolean }): JSX.Element {
   return (
     <span class={cx('ow-b-suppliers-chip', 't-' + chipTone(p.state, p.late))}>
-      {p.at != null ? <>{WORD[p.state]} · <span class="mono">{hm(p.at)}</span></> : WORD[p.state]}
+      {p.at != null ? <>{WORD[p.state]} · <span class="mono">{clock(p.at)}</span></> : WORD[p.state]}
     </span>
   );
-}
-
-/** "09:25": two-digit hours, as the shared words write times. */
-export function hm(ms: Ms): string {
-  const t = clock(ms);
-  return /^\d:/.test(t) ? '0' + t : t;
 }
 
 export function member(b: BuyerBooks, id: string | null): Member | null {

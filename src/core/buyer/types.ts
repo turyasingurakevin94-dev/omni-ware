@@ -10,9 +10,26 @@ import type { Member, Ms, UGX } from '../types.ts';
 
 /**
  * Where one line stands, in the words both apps use (docs/audit/buyer/handover.md §6):
- * To ask · Asked · Found · Not found · Price up · Client waits · Removed · On the trip · Short · In.
+ * To ask · Asked · Found · Not found · No supplier · Price up · Client waits · Removed · On the trip · Short · In.
+ * No supplier: nobody sells it to us yet and the client is not waiting for Sourcing (cross-app round 1, BUY-2).
  */
-export type LineState = 'toask' | 'asked' | 'found' | 'notfound' | 'priceup' | 'clientwaits' | 'removed' | 'ontrip' | 'short' | 'in';
+export type LineState = 'toask' | 'asked' | 'found' | 'notfound' | 'nosupplier' | 'priceup' | 'clientwaits' | 'removed' | 'ontrip' | 'short' | 'in';
+
+/**
+ * The Manager prices the line before it is bought, though its cost did not go over the selling price
+ * (cross-app round 1, BUY-3 and question 2): 'coming' — Sales sold it with no price (priceAsk);
+ * 'decides' — Sales priced it under the shop's price, or the shop has no price for it. The Buyer still
+ * asks the supplier; a Found line waits off the trip until the Manager prices it.
+ */
+export type PriceTag = 'coming' | 'decides';
+
+/** Sales asked the Manager to cancel the order (cancel_asks, 0181): the Buyer neither asks nor buys until she decides. */
+export interface Hold {
+  at: Ms;
+  /** The asker's display name. */
+  by: string;
+  why: string;
+}
 
 /** How the Buyer asked a supplier (supplierConfirms[sid].how). */
 export type AskWay = 'whatsapp' | 'call' | 'visit';
@@ -47,6 +64,8 @@ export interface BLine {
   repricedAt: Ms | null;
   /** The new cost is over the selling price: the Manager decides (items[].priceNote 'nomargin'). */
   ruthDecides: boolean;
+  /** Another price wait (no selling price yet, or under the shop's): asked as any line, bought once priced. */
+  priceTag: PriceTag | null;
   /** The client waits while Sourcing finds it (items[].clientWaits). */
   clientWaits: { at: Ms; via: 'sourcing' | null } | null;
   /** Taken off the bill (saved_quotes.droppedLines). */
@@ -71,6 +90,8 @@ export interface BOrder {
   lines: BLine[];
   /** Per supplier id. */
   confirms: Record<string, Confirm>;
+  /** An open ask to cancel it: on hold until the Manager decides. */
+  hold: Hold | null;
 }
 
 /** A price on the shop's list (product prices by supplier). */

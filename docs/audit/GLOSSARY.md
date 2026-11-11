@@ -49,6 +49,10 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Counter sale | Pay and go, from our own shelf | — | Sales |
 | Walk-in order | An order with no customer name; the shop packs it | — | Sales |
 | Sell again | Start a new order from an old one | — | Sales UX audit |
+| To ask · Asked · Found · Not found · No supplier · Price up · Client waits · Removed | A supplier line's state, the same word and colour in the Buyer and in Sales (`core/buyer/rules.ts` WORD, TONE). Sales shows it as a pill on the order's check list, with the time on the shared clock ("Asked · 9:40"), never the cost or the supplier | Sales' "Order in" with a tick in Checking; "the supplier said yes" before any yes | Cross-app R1 · SAL-1 |
+| No supplier | A line nobody sells us yet, the customer not waiting for Sourcing. The Buyer picks one (a red row, Pick); it is one supplier still to find | counting it as To ask | Cross-app R1 · BUY-2 |
+| Cancel asked · hold | Sales asked the Manager to cancel; the Buyer neither asks nor buys until she decides ("On hold"). On a trip already: "Cancel asked · don't buy", counted 0 | buying it anyway | Cross-app R1 · BUY-1 |
+| Price coming · Ruth / Ruth decides the price | On the Buyer's side, a line the Manager prices before it is bought: sold with no price, or under the shop's price. The Buyer still asks; a Found one waits off the trip | "Price up" for a line whose cost did not go over its price | Cross-app R1 · BUY-3, Q2 |
 
 ## Stock
 
@@ -84,6 +88,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Refund | Money given back to a customer out of the cash book (a void with money) | — | Manager R1 · DATA-07 |
 | No seller | Sales on invoices that name no salesperson (old records) | "not linked" | Manager R1 · DATA-06 |
 | Sales invoiced | The one sales figure: invoiced goods in the period, no delivery fees, no test records; Today and Margins show the same | "sold" for a different sum | Manager R1 · DATA-08 |
+| On the move (the goal bar) | Placed, not delivered: hatched on the goal bar, never solid; the "on the move" door carries the same hatch as its key | a solid mint fill that reads as sold | Cross-app R1 · SAL-2 |
 | Money on a phone | Shown only to the roles allowed to see it, enforced in SQL by role. The yard's phone gets no money at all. | hidden in the browser only | Store, before the loop (0159, 0160) |
 
 ## Time
@@ -93,6 +98,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | How long | A duration: "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
 | When | A moment: "15:20" today, "Thu 23:28" otherwise (`whenAt()`) | a clock time with no day when it isn't today | Store R6 · WORD-07 |
 | Undo | 10 seconds, or until the screen changes, everywhere | 5 s in one place, 10 s in another | Store R2 · FLOW-02 |
+| A clock time | "9:40": the shared clock (`clock()`), one hour digit before 10, in every new app | "09:40" | Buyer decision #9; Cross-app R1 |
 
 ## Sending and loading
 
@@ -129,6 +135,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Signed in as someone else | Another login is under this app; nothing is saved until the app's own person signs in again | carrying on as the other login | Sales R1 · SAL-002 |
 | Big text | You → Big text: every size one step up, at least 1.2×; controls 52 px; nothing clipped at 360 | a zoom that squeezes the layout | Store R8 · A11Y-01 |
 | Asked of Sourcing | Requests for items the shop doesn't sell: Asked → Looking → Found → Priced → Listed | — | Sales |
+| Checking 3 › | Today's door into the Buyer's Orders list; its number is the list's (orders), the word says so | a bare "3 orders" beside supplier counts | Cross-app R1 · BUY-2 |
 
 ## Not the same across apps yet
 

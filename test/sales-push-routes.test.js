@@ -31,7 +31,7 @@ const ELSEWHERE = [
   'agent.change', 'agent.cancel', 'carton.ask', 'trip.difference', 'trip.yard_note', 'stock.report', 'store.extra', 'store.closed',
   // Buyer
   'order.buying', 'supplier.answered', 'restock.held', 'restock.released', 'store.restock', 'carton.refused', 'sourcing.found',
-  'trip.cash.ready', 'trip.sent', 'trip.taken', 'trip.cancelled',
+  'trip.cash.ready', 'trip.sent', 'trip.taken', 'trip.cancelled', 'order.hold', 'order.hold.kept',
   // Store
   'trip.back', 'job.given', 'credit.ask.decided', 'store.ask.decided', 'stock.report.decided', 'store.handover',
   // Accounts
