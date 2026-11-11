@@ -30,6 +30,7 @@ function checkIn(b: YardBooks, ids: string[], at: number): void {
     tr.status = 'collected'; tr.collectedAt = tr.collectedAt ?? at; tr.yardCheckedAt = at; tr.yardCheckedBy = b.me.userId; tr.yardReceivedAt = at;
     tr.lines.forEach((l) => {
       const got = l.gotQty ?? l.qty;
+      l.yardQty = got;
       const it = b.items.find((x) => x.key === l.key);
       if (it) it.books += got;
       const o = l.orderId != null ? b.orders.find((x) => x.id === l.orderId) : null;
@@ -95,7 +96,7 @@ const STEPS: [number, (b: YardBooks) => void][] = [
       client: { name: 'Lubowa Builders', phone: '0774 120 556' }, customerId: 'c-lub', deliverTo: 'Lubowa', lines: [line(0, 'p-tim', 10, { supplierId: 's-katwe' })],
     }));
     b.trips.push(trip('TRIP-1017C-1', 's-katwe', 'Katwe Timber', 'st-mk', 'assigned', [tripLine(0, 'p-tim', 10, 559)], {
-      createdAt: t('15:10'), assignedAt: t('15:10'), acceptedAt: null, note: 'Hassan drives',
+      createdAt: t('15:10'), assignedAt: t('15:10'), acceptedAt: null, note: 'Hassan drives', dueAt: t('16:00'),
     }));
   }],
   [1730, (b) => {
@@ -134,6 +135,18 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
       // Nothing waits: every aisle counted yesterday (no count due either).
       b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });
       break;
+    case 'extra-answered':
+      // Musa asked about a roll of binding wire not on Denis's list at 11:33; Ruth kept it at 11:48 (IN13).
+      b.asks.unshift({ id: 'ask-bw', kind: 'extra', ref: 'TRIP-1017B-2', by: 'u-mk', byName: 'Musa Kiggundu', status: 'accepted', createdAt: t('11:33'), decidedAt: t('11:48'), decidedBy: 'u-rn',
+        payload: { tripId: 'TRIP-1017B-2', supplierId: 's-kiseka', key: 'p-bw', productId: 'p-bw', variantIdx: null, name: 'Binding wire 20kg', qty: 1, unit: 'roll', why: 'Sent by mistake' } });
+      break;
+    case 'return-decided': {
+      // Musa checked #0548's bags at the gate 11:02, sent 11:03; Ruth took them back 11:20 (IN22).
+      const g = b.returns.find((x) => x.id === 'ret-0548');
+      b.returns.unshift({ id: 'ret-0548-mk', orderId: 548, lines: [{ idx: 0, name: 'Cement · Hima 50kg', unit: 'bag', qty: 2, shown: '2 bag', condition: 'damaged' }],
+        reason: 'Damaged', note: g ? g.note : '', by: 'u-mk', byName: 'Musa Kiggundu', status: 'accepted', decidedAt: t('11:20'), createdAt: t('11:03') });
+      break;
+    }
     // Nobody else with a yard login is on: Joy is off, and Okello has no login on this day (TD24 lists only Joy and Hassan).
     case 'nobody': b.people = b.people.filter((p) => p.id !== 'st-op'); b.people.filter((p) => p.id === 'st-jn').forEach((p) => { p.away = true; }); break;
     default: break;

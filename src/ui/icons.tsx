@@ -119,6 +119,12 @@ const S = {
   blind: "<path d='M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.4.8-1.3 2-2.5 3.2M6.3 7.6C4.4 8.9 3 10.8 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1M9.9 9.9a3 3 0 0 0 4.2 4.2'/>",
   'arrow-up': "<path d='M12 19V5M6 11l6-6 6 6'/>",
   'arrow-down': "<path d='M12 5v14M6 13l6 6 6-6'/>",
+  /** The Store's goods in (store-agent IN): scan a label, count blind, the shelf rack, a damaged box, coming in. */
+  'scan-line': "<path d='M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10'/>",
+  'eye-off': "<path d='M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.5.9-1.6 2.4-3.1 3.7M6.6 7.6C4.6 8.9 3.1 10.8 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1M9.9 10a3 3 0 0 0 4.2 4.2'/>",
+  rack: "<path d='M4 3.5v17M20 3.5v17M4 9h16M4 15h16'/><path d='M7 9V6.5h4V9M13 15v-3h4v3'/>",
+  damaged: "<path d='M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5'/><path d='M12 12l-1.5 3 2 1.5-1 3.5'/>",
+  arrive: "<path d='M12 3v9M8.5 8.5 12 12l3.5-3.5'/><path d='M4 13v6h16v-6'/>",
 };
 
 export type IconName = keyof typeof S;

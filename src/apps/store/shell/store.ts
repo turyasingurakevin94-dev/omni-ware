@@ -106,11 +106,17 @@ export async function refresh(whole = false): Promise<void> {
 }
 const reread = (): void => { void refresh(true); };
 
-/** The demo's &push=<kind>[:<order id>]: a push tapped as the app opens (routes §5), so a parity spec can start where a push lands. */
+/**
+ * The demo's &push=<kind>[:<order id>] or &push=<kind>:<k>=<v>,… (the push's data: askKind=extra,tripId=TRIP-1017B-2):
+ * a push tapped as the app opens (routes §5), so a parity spec can start where a push lands.
+ */
 function openDemoPush(): void {
-  const m = /[?&]push=([a-z_.]+)(?::(\d+))?/.exec(location.search);
+  const m = /[?&]push=([a-z_.]+)(?::([^&]+))?/.exec(location.search);
   if (!m) return;
-  const r = pushRoute(m[1], m[2] ? { orderId: Number(m[2]) } : {}, books.value, me.value);
+  const data: Record<string, string | number> = {};
+  if (m[2] && /^\d+$/.test(m[2])) data.orderId = Number(m[2]);
+  else if (m[2]) decodeURIComponent(m[2]).split(',').forEach((kv) => { const i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
+  const r = pushRoute(m[1], data, books.value, me.value);
   if (r.id !== 'today') nav.push(r.id, r.params);
 }
 

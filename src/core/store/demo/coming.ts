@@ -31,7 +31,7 @@ export function trips(): Trip[] {
       createdAt: t('7:50'), collectedAt: t('9:58'), yardCheckedAt: t('10:05'), yardCheckedBy: 'u-mk', yardReceivedAt: t('10:05'),
     }),
     // Denis's trip, stop 1 of 2: bought at Owino Hardware 9:50.
-    trip('TRIP-1017B-1', 's-owino', 'Owino Hardware', 'st-do', 'collecting', [tripLine(0, 'p-cn2', 4, 549, { gotQty: 4 })], { createdAt: t('9:20'), dueAt: t('11:30') }),
+    trip('TRIP-1017B-1', 's-owino', 'Owino Hardware', 'st-do', 'collecting', [tripLine(0, 'p-cn2', 4, 549, { gotQty: 4 })], { createdAt: t('9:20'), collectedAt: t('9:50'), dueAt: t('11:30') }),
     // Stop 2 of 2: at Kiseka Steel since 10:20, looking. The gutter bracket is not found (Grace tells Lubowa).
     trip('TRIP-1017B-2', 's-kiseka', 'Kiseka Steel', 'st-do', 'collecting', [
       tripLine(0, 'p-em', 1, 549), tripLine(1, 'p-is30', 20, 546), tripLine(2, 'p-gb', 6, 546, { notFound: true, gotQty: 0 }),

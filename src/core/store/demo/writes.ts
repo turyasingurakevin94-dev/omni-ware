@@ -6,7 +6,7 @@
  */
 import { dataError } from '../../datasource.ts';
 import type { CheckInLine, CloseYard, CountSend, DoorProof, Extra, Loss, PassYard, PickAnswer, Restock, ReturnAsk, CarrierPick } from '../source.ts';
-import type { Carrier, StoreAsk, YardBooks, YardOrder } from '../types.ts';
+import type { Carrier, StoreAsk, YardBooks, YardOrder, YardPerson } from '../types.ts';
 import { isPickup } from '../yard.ts';
 
 const MOVES: Record<string, string[]> = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
@@ -102,20 +102,22 @@ export function demoWrites(b: () => YardBooks, now: () => number, putBacks: Set<
     withdrawLetGo(oid: number) { order(oid).letGoAsk = null; },
     nameDirection(_key: string, name: string) { if (!name.trim()) throw dataError('refused', 'Give it a name', 'P0001'); },
     lockRoute() { /* the demo has no map server: the road is kept as drawn */ },
-    checkIn(lines: CheckInLine[]) {
-      const at = now(), ids = [...new Set(lines.map((l) => l.trip))];
+    /** `by`/`when`: someone else's check-in (the demo's &state=someone-checkin), else this phone's, now. */
+    checkIn(lines: CheckInLine[], by: YardPerson | null = null, when: number | null = null) {
+      const at = when ?? now(), who = by ? by.userId : me().userId, ids = [...new Set(lines.map((l) => l.trip))];
       ids.forEach((tid) => {
         const tr = b().trips.find((x) => x.id === tid);
         if (!tr) throw dataError('refused', 'That trip is gone', 'P0002');
         if (tr.yardCheckedAt) throw dataError('clash', 'Someone else checked it in');
         tr.lines.forEach((l) => {
           const c = lines.find((x) => x.trip === tid && x.idx === l.idx), got = c ? c.counted : l.gotQty ?? l.qty;
+          l.yardQty = got;
           const it = b().items.find((x) => x.key === l.key);
           if (it) it.books += got;
           const o = l.orderId != null ? b().orders.find((x) => x.id === l.orderId) : null, ol = o && o.lines.find((x) => x.productId === l.productId && !x.dropped);
           if (ol && got > 0) { ol.receivedAt = at; ol.receivedQty = got; }
         });
-        tr.status = 'collected'; tr.yardCheckedAt = at; tr.yardCheckedBy = me().userId; tr.yardReceivedAt = at;
+        tr.status = 'collected'; tr.yardCheckedAt = at; tr.yardCheckedBy = who; tr.yardReceivedAt = at;
       });
       b().orders.filter((o) => o.status === 'awaiting_goods' && !o.lines.some((l) => l.supplierId !== '__stock__' && !l.dropped && !l.receivedAt))
         .forEach((o) => { o.status = 'preparing'; o.stageEnteredAt = at; o.stageLog = [...o.stageLog, { status: 'preparing', at }]; });

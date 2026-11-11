@@ -72,8 +72,8 @@ export const route = (id: string): Route | undefined => ROUTES.find((x) => x.id 
 export const isTab = (id: string): boolean => route(id)?.kind === 'tab';
 
 /** The stage sheets in the rail's order (PK01's rail: Coming in · To pack · To load · On the road · Delivered). */
-export const RAIL: { word: string; id: string | null; icon: 'cart' | 'orders' | 'truck' | 'delivered' | 'hand-over' }[] = [
-  { word: 'Coming in', id: 'in', icon: 'cart' },
+export const RAIL: { word: string; id: string | null; icon: 'arrive' | 'orders' | 'truck' | 'delivered' | 'hand-over' }[] = [
+  { word: 'Coming in', id: 'in', icon: 'arrive' },
   { word: 'To pack', id: 'pack', icon: 'orders' },
   { word: 'To load', id: 'out/load', icon: 'hand-over' },
   { word: 'On the road', id: 'out/road', icon: 'truck' },

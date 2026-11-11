@@ -159,6 +159,8 @@ export interface TripLine {
   gotQty: number | null;
   /** The Buyer could not find it ("Gutter bracket · not found"). */
   notFound: boolean;
+  /** The yard's own count once checked in (receive_trip's p_lines shop): the demo's; the books do not pass it yet (null). */
+  yardQty?: number | null;
 }
 
 /** collection_trips: a Buyer's stop, a supplier's delivery, or a ride. */

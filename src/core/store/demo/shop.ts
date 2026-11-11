@@ -67,6 +67,8 @@ const ITEMS: [string, string, string, string, string, number, number][] = [
   ['p-wb', 'Wheelbarrow, heavy duty', 'Tools', 'pc', '', 1, 0],
   ['p-pvc', 'PVC pipe ½" · 6m', 'Plumbing', 'pc', '', 1, 64],
   ['p-tim', 'Timber 4x2 · 12ft', 'Timber', 'pc', '', 1, 0],
+  // Not on Denis's list: one came off the truck by mistake (IN04, IN13).
+  ['p-bw', 'Binding wire 20kg', 'Steel', 'roll', '', 1, 8],
 ];
 
 /** Aisle A Roofing was counted Thu (Okello, accepted 16:10); aisle C Fasteners 30 days ago (due); the rest in between. */

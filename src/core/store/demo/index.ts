@@ -32,6 +32,8 @@ function keptSeed(): Kept[] {
 }
 
 const WRITE_MS = 250;
+/** &slow=1: long enough for a board's "Sending…" to be seen and shot. */
+const SLOW_MS = 60000;
 const copy = <T>(x: T): T => structuredClone(x);
 
 export interface StoreDemo extends StoreSource {
@@ -48,14 +50,14 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
   const f = readStoreFlags(search);
   const { books: b, now } = dayAt(f);
   const putBacks = new Set<number>();
-  let signedIn = f.state !== 'signed-out', failed = false;
+  let signedIn = f.state !== 'signed-out', failed = false, beaten = false;
   const session = (): StoreSession => ({ userId: b.me.userId || 'u-mk', shopId: 'shop-mukasa', shopName: b.shopName, role: b.me.role, name: b.me.name, staffId: b.me.id });
   const clock = () => now;
   const W = demoWrites(() => b, clock, putBacks);
 
-  const wait = <T>(fn: () => T): Promise<T> => new Promise((resolve, reject) => {
+  const wait = <T>(fn: () => T, write = false): Promise<T> => new Promise((resolve, reject) => {
     const run = () => { try { resolve(fn()); } catch (e) { reject(e); } };
-    if (opts.instant) run(); else setTimeout(run, WRITE_MS);
+    if (opts.instant) run(); else setTimeout(run, f.slow && write ? SLOW_MS : WRITE_MS);
   });
   /** A write: offline is kept; &fail=<name> fails once with its board code; else it lands. */
   const clashed = { v: false };
@@ -64,7 +66,7 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     if (f.offline) return Promise.reject(dataError('offline', 'No signal'));
     if (f.fail === name && !failed) { failed = true; return wait(() => { throw dataError('refused', 'That did not save', FAIL_CODE[name] || `${WRITE_CODE[name] || 'ST'}-502`); }); }
     if (clashArgs && shelfClash(b, f, name, clashArgs, now, clashed)) return wait(() => { throw dataError('clash', 'Someone else just did this'); });
-    return wait(() => { fn(); b.at = now; });
+    return wait(() => { fn(); b.at = now; }, true);
   };
   const read = (): Promise<YardBooks> => {
     if (f.state === 'loading') return new Promise(() => { /* never answers: "Checking your shop…" */ });
@@ -124,7 +126,15 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     withdrawLetGo: (id) => later('withdrawLetGo', () => W.withdrawLetGo(id)),
     nameDirection: (k, n) => later('nameDirection', () => W.nameDirection(k, n)),
     lockRoute: () => later('lockRoute', () => W.lockRoute()),
-    checkIn: (lines) => later('checkIn', () => W.checkIn(lines)),
+    checkIn: (lines) => later('checkIn', () => {
+      // &state=someone-checkin: Okello checked the same trip in at 11:32, with the same counts (IN09).
+      if (f.state === 'someone-checkin' && !beaten) {
+        beaten = true;
+        W.checkIn(lines, b.people.find((p) => p.id === 'st-op') || null, t('11:32'));
+        throw dataError('clash', 'Someone else checked it in');
+      }
+      W.checkIn(lines);
+    }),
     notOnList: (x) => later('notOnList', () => W.notOnList(x)),
     returnAsk: (r) => later('returnAsk', () => W.returnAsk(r)),
     withdrawReturn: (id) => later('withdrawReturn', () => W.withdrawReturn(id)),

@@ -19,6 +19,7 @@ Every part on the canvas's two parts boards (`docs/canvas/sales-agent/boards/Mai
 | `Avatar.tsx` | `Avatar`, `FaceStack`, `RingAvatar`, `avatarStyle`, `RING_TONE`, `Face` | P11 avatars (`size` 18–52, tint, `onNavy`, `ring="me"|"basket"|box-shadow`), P07 face stack, P10 due ring. | `<Avatar initials="KC" tint="t0" size={40} />` · `<FaceStack faces={f} more={2} />` · `<RingAvatar … tone="late" fill={1} />` |
 | `Bar.tsx` | `SplitBar`, `Meter` | Split bar (parts by value, `'hatch'` for being checked); meter on a track. | `<SplitBar parts={[{ value: 165000, color: '#F5B26B' }, { value: 125000, color: 'hatch' }]} h={10} label="…" />` |
 | `ItemSquare.tsx` | `ItemSquare` | §2.4: the aisle's icon on its soft gradient (or a photo; `dropped`: crimson). | `<ItemSquare aisle="Roofing" size={40} />` |
+| `ItemArt.tsx` | `ItemArt`, `BagArt`, `artOf` | The Store canvas's drawn items (bag, box, tin, glue, sheets, coil, timber; a torn bag) on their soft square; any other item falls back to `ItemSquare`. Icons `scan`, `eye-off`, `rack`, `damaged`, `arrive` were added for the Store's goods in. | `<ItemArt name="Cement · Hima 50kg" size={56} torn />` |
 
 ## P parts (Main.dc.html)
 
