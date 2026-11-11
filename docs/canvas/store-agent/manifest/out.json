@@ -166,31 +166,35 @@
  "flows": [
   {
    "name": "Load, our driver (1 drop)",
-   "taps_before": 5,
+   "taps_before": 4,
    "taps_after": 3,
    "steps_before": 4,
-   "steps_after": 3
+   "steps_after": 3,
+   "note": "1 drop, 2 lines as OU02 draws it: today tile + 2 ticks + slide = 4; new To load + All on + slide = 3"
   },
   {
-   "name": "Load, hired driver used before",
-   "taps_before": 7,
-   "taps_after": 4,
+   "name": "Load, hired driver used before (1 drop, 2 lines)",
+   "taps_before": 6,
+   "taps_after": 5,
    "steps_before": 5,
-   "steps_after": 3
+   "steps_after": 3,
+   "note": "today tile + Change + his card + 2 ticks + slide = 6; new To load + Hired + his card (OU03) + All on + slide = 5"
   },
   {
    "name": "Client collects at the gate",
-   "taps_before": 5,
+   "taps_before": 4,
    "taps_after": 2,
    "steps_before": 4,
-   "steps_after": 2
+   "steps_after": 2,
+   "note": "today 4 + a typed name; new Ready card + slide = 2, name from the order"
   },
   {
    "name": "Agent collects",
-   "taps_before": 8,
+   "taps_before": 7,
    "taps_after": 6,
    "steps_before": 4,
-   "steps_after": 2
+   "steps_after": 2,
+   "note": "#0554 has 1 line: today card + 4 digits + 1 tick + slide = 7; new card + 4 digits + slide = 6"
   },
   {
    "name": "Deliver with photo",
@@ -201,8 +205,8 @@
   },
   {
    "name": "Deliver, no photo",
-   "taps_before": 5,
-   "taps_after": 3,
+   "taps_before": 4,
+   "taps_after": 4,
    "steps_before": 4,
    "steps_after": 2
   },
@@ -460,7 +464,7 @@
    "from_or_to": "Sales/Grace (#0552), Sales/Brian (#0530), Manager/Ruth",
    "words_here": "Not paid yet (the label only; the reason is on the order)",
    "words_there": "Not paid yet · Take payment (Grace); let it go on credit? (Ruth)",
-   "push": "order.unpaid \"Kato's #0552 is packed · take the money\" → Grace; credit.ask → Ruth"
+   "push": "order.unpaid_at_gate \"Kato's #0552 is packed · take the money\" → Grace; credit.ask → Ruth"
   },
   {
    "board": "OU02Load.dc.html",
@@ -502,7 +506,7 @@
    "from_or_to": "Sales/Grace, Manager/Ruth",
    "words_here": "Not paid yet · leaves when paid; Grace takes the money · told 10:15; Ruth may let it go · told 10:15",
    "words_there": "Not paid yet · Take payment (OR38)",
-   "push": "order.unpaid → Grace; credit.ask → Ruth (already sent when it reached the gate)"
+   "push": "order.unpaid_at_gate → Grace; credit.ask → Ruth (already sent when it reached the gate)"
   },
   {
    "board": "OU22Delivered.dc.html",
@@ -551,12 +555,12 @@
  ],
  "other_apps": [
   "Sales: IM-01/02 write deliverTo, deliverWhen, deliverPhone as separate keys (the yard shows 'Ntinda site · today afternoon · 0772 418 220 · From Grace')",
-  "Sales: IM-03/04 readyToCollect = Packing + packed + pickup + no money hold; IM-06 'Collected 10:44 by {name}' never 'At the door'; IM-07 'Not paid yet · Take payment' in Packing and on the open order.unpaid push",
+  "Sales: IM-03/04 readyToCollect = Packing + packed + pickup + no money hold; IM-06 'Delivered · collected' (10:47) never 'At the door'; IM-07 'Not paid yet · Take payment' in Packing and on the open order.unpaid push",
   "Sales and Manager: IM-30 show 'No photo · Kato said no' from deliveredPhotoKind/deliveredNote; name the deliverer from carrier",
   "Manager: IM-29 no forward move round the yard without order.moved to the yard; Delivered asks who",
   "Agent app: IM-03 'Ready · waiting at the shop for you' from Packing + packed + agent pickup; the 4-digit code shown to the agent",
   "Store migration (with Sales): IM-31 pass `counter` in the allow-list so counter sales stay out of 'Delivered · collected'; IM-33 counter_sale writes deliveredAt as ISO",
-  "Store migration: new pushes order.ready, order.unpaid, order.out, order.back (record in docs/decision-rights.md with the reserved number)"
+  "Store migration: new pushes order.ready, order.unpaid_at_gate, order.out, order.back (record in docs/decision-rights.md with the reserved number)"
  ],
  "open_questions": [
   "#0534's three lines are not in FACTS; OU27 draws Kato's usual (Cement · Hima 50kg 10 bag, Iron sheet G28 · 3m 20 pc, Wire nails 4\" 1 ctn)."

@@ -208,11 +208,11 @@
   },
   {
    "name": "Ride a trip (1 stop, 1 line)",
-   "taps_before": 5,
+   "taps_before": 4,
    "taps_after": 4,
    "steps_before": 3,
    "steps_after": 2,
-   "note": "start 1, All on 1, Done 1, slide 1"
+   "note": "1 line as IN30/IN31 draw it: today start + 1 tick + Done + slide = 4; new start + All on + Done + slide = 4"
   }
  ],
  "scores": [
@@ -455,7 +455,7 @@
    "from_or_to": "Buyer/Denis",
    "words_here": "From Denis \u00b7 Buyer; Denis sees Checked in",
    "words_there": "Buyer: Collected \u2192 Checked in (IM-25: replace 'count it in')",
-   "push": "trip.back 'Denis's trip is at the gate \u00b7 3 lines' \u2192 Store; trip.checked 'Checked in' \u2192 Denis"
+   "push": "trip.back 'Denis's trip is back at the yard \u00b7 3 lines' \u2192 Store; trip.checked 'Checked in' \u2192 Denis"
   },
   {
    "board": "IN02Checkin / IN06CheckedIn",
@@ -469,7 +469,7 @@
    "from_or_to": "Manager/Ruth",
    "words_here": "Ruth decides the difference; Sent to Ruth \u00b7 1 differs; Waiting",
    "words_there": "Manager: 'Your check-in of Denis's trip' difference card",
-   "push": "trip.difference \u2192 Ruth; trip.difference.seen \u2192 Musa (IM-23)"
+   "push": "trip.difference \u2192 Ruth; trip.difference.decided \u2192 Musa (IM-23)"
   },
   {
    "board": "IN04CheckinExtra",
@@ -483,7 +483,7 @@
    "from_or_to": "Sourcing/Moses; Accounts/Esther",
    "words_here": "From Moses \u00b7 Sourcing; Moses sees Came in \u00b7 100 bag; Esther sees the delivery note",
    "words_there": "Sourcing: delivery came in; Accounts: supplier bill with note",
-   "push": "stock.receive \u2192 Moses; delivery note \u2192 Esther"
+   "push": "delivery.checked \"Hima Cement \u00b7 100 bag came in\" \u2192 Moses, the delivery note \u2192 Esther"
   },
   {
    "board": "IN20Return / IN21 / IN22",
@@ -511,7 +511,7 @@
    "from_or_to": "Manager/Ruth; Sourcing/Moses",
    "words_here": "Moses sees Came in \u00b7 100 bag \u00b7 4 torn; Ruth sees 4 torn",
    "words_there": "Manager difference card",
-   "push": "stock.report (4 torn, from a delivery) \u2192 Ruth; stock.receive \u2192 Moses"
+   "push": "stock.report (4 torn, from a delivery) \u2192 Ruth; delivery.checked \u2192 Moses"
   }
  ],
  "kept_fixes": [
@@ -525,13 +525,14 @@
   "WORD-06/08: Check-in, trip, never round / count-in",
   "STO-UI-04: 44 px controls; text \u2265 11 px",
   "Blind count: no expected figure before counting (IN02, IN10); Denis's figure only after a line differs (IN03)",
-  "IM-23 (Sent to Ruth, not accepted), IM-17 (extra \u2192 Ruth), IM-36 (pack 18 of 20 carried to Packing), IM-14 (Ruth's answer per line comes back, IN22), IM-24/25 (only the yard checks in; Check-in words)"
+  "IM-23 (Sent to Ruth, not accepted), IM-17 (extra \u2192 Ruth), IM-36 (pack 18 of 20 carried to Packing), IM-14 (Ruth's answer per line comes back, IN22), IM-24/25 (only the yard checks in; Check-in words)",
+  "IM-26: a trip that has come back reads 'Back at the yard' (push 'Denis's trip is back at the yard \u00b7 3 lines'); 'at the gate' kept only for returns and pickups"
  ],
  "other_apps": [
   "Buyer: 'Collected \u2192 Checked in' and 'waiting for Musa/Okello to check it in' (IM-25)",
   "Console: trips read-only once collected, 'At the yard \u00b7 Musa checks it in' (IM-24)",
   "Manager: 'Not on the list' Decide card answering store_asks extra (IM-17); return_in before restock (IM-15); per-line restocked on the answer (IM-14)",
-  "Migration (Store's number): trip.back title 'Denis's trip is at the gate \u00b7 N lines'; push trip.difference.seen to the checker; push trip.checked to the Buyer",
+  "Migration (Store's number): trip.back title 'Denis's trip is back at the yard \u00b7 N lines'; push trip.difference.decided to the checker; push trip.checked to the Buyer",
   "Sales: pack line on #0546 shows '18 of 20 came' (IM-36)",
   "Sales: OR22 keeps 'Return asked \u00b7 Ruth checks it'; the yard uses the same words"
  ],

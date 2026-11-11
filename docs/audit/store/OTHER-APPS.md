@@ -65,7 +65,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 ## Manager (`manager.html`)
 - IM-08: a packer given an order reads **"With Musa"**; agree with the worker app that an order given to a packer is that packer's until they release it.
 - IM-23: the difference card reads **"Musa's check-in of Denis's trip · decide the 2 pc"**, and deciding pushes `trip.difference.decided` (no bare "Seen").
-- IM-12: a return asked before the bill is not refused: it reads **"Not billed yet · Ruth gives it once the bill is out"** (as Sales OR21 says), keeps the yard's Good / Damaged per line, and becomes the credit note when the automatic bill goes out.
+- IM-12: a return asked before the bill is not refused: it reads **"Not billed yet · settle it once the bill is out"** in Ruth's own app (Sales OR21 says "Ruth gives it once the bill is out"), keeps the yard's Good / Damaged per line, and becomes the credit note when the automatic bill goes out.
 - IM-13: "Back on the shelf" per line defaults from the yard's Good / Damaged ("Credit note · per line Good or Damaged").
 - IM-14: record `restocked` per line on the credit note; push the decision to the yard.
 - IM-15/16: one-write credit note; restock waits for the yard's check-in.
