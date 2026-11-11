@@ -20,7 +20,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 
 ## 2. The routes
 
-33 ids for the 142 screen boards. The default board is first; the rest are its states.
+33 ids for the 148 screen boards (142 approved, 6 added while building: AD01–AD06). The default board is first; the rest are its states.
 
 ### Shell (sign-in and boot, owned by `shell`)
 
@@ -46,7 +46,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 | Id | Params | Kind | Boards |
 |---|---|---|---|
 | `pack` | `{ first? }` (an order id to put at the top, from a push) | stage sheet | PK01 (default), PK20 offline, PK08 For you, PK13 someone else just did this, PK14 empty, PK21 waits for the goods |
-| `pack/order` | `{ id, line? }` | pushed | PK02 (default, line 2 of 3), PK03 pressed, PK18 sending, PK11 offline, PK12 failed, PK04 short, PK16 short sending, PK19 short failed, PK05 short sent, PK06 packed, PK07 packed pickup (Ready to collect), PK15 unpack |
+| `pack/order` | `{ id, line? }` | pushed | PK02 (default, line 2 of 3), PK03 pressed, PK18 sending, PK11 offline, PK12 failed, PK04 short, PK16 short sending, PK19 short failed, PK05 short sent, PK06 packed, PK07 packed pickup (Ready to collect), PK15 unpack; added while building: AD02 the unpack sheet (from the order on its bay once the 10 s Undo has passed: Keep it packed / Unpack), AD05 unpacked (Undo), AD06 unpack not saved |
 | `pack/look` | `{ id }` | pushed | PK09 the copy (#0557), PK17 Okello's (#0556) |
 | `pack/put-back` | `{ id }` | pushed | PK10 cancelled · put it back, PK22 put back failed |
 
@@ -78,7 +78,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 | Id | Params | Kind | Boards |
 |---|---|---|---|
 | `out/load` | — | stage sheet | OU01 (default), OU30 empty; OU31 name a direction is its sheet (§4) |
-| `out/run` | `{ dir, driver?, go?, hired? }` (the direction's key: its farthest place, `store.html:4444`; To load's slide passes its driver and `go`; `hired` opens OU03) | pushed | OU02 (default), OU03 hired, OU17 slide pressed, OU04 sending, OU05 loaded, OU06 not sent, OU07 failed |
+| `out/run` | `{ dir, driver?, go?, hired? }` (the direction's key: its farthest place, `store.html:4444`; To load's slide passes its driver and `go`; `hired` opens OU03) | pushed | OU02 (default), OU03 hired, OU17 slide pressed, OU04 sending, OU05 loaded, OU06 not sent, OU07 failed; added while building: AD01 Someone new (the hired sheet's name, plate, phone), AD03 filled, AD04 phone not a mobile |
 | `out/gate` | `{ id? }` (none: everything ready to collect) | pushed | OU10 (default, 10:47), OU08 sending, OU12 handed over, OU13 not paid yet, OU15 empty, OU16 offline |
 | `out/gate-code` | `{ id? }` | pushed | OU11 the agent's code, OU09 wrong code |
 | `out/road` | — | stage sheet | OU20 (default), OU14 empty, OU25 offline, OU27 cancelled on the truck |
@@ -101,7 +101,8 @@ Not routes: the summary boards `IB01Handovers`, `IB02StateWords`, `FL01Taps` (th
 | `openNameDirection(dir)` | out | OU31 (from OU01's "Name it"; `dir` is load.ts's Direction) |
 | `openNotOnList(trip)` | in | IN04 (from the check-in; also from the scanner, SH40, when the label is not on the trip) |
 | `openNoPhoto(books, order, onGo)` | out | OU23's reason tiles over OU21 (`onGo(why)` delivers with no photo) |
-| `openHired(dir, books, chosen, onPick)` | out | OU03, over the run (`out/run { dir, hired: true }` opens it too) |
+| `openHired(dir, books, chosen, onPick)` | out | OU03, over the run (`out/run { dir, hired: true }` opens it too); its "Someone new" step is AD01, AD03, AD04 (name, plate, phone; writes nothing, the load's slide keeps him) |
+| `openUnpack(order)` | pack | AD02 over the packed order on its bay (PK06's bay, To load's Packed row); AD05 done, AD06 not saved |
 | _(add as built)_ | | |
 
 ## 5. A tapped push opens a route
