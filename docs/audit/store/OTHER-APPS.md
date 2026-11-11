@@ -16,7 +16,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 | `order.pick` (given) | Manager → that packer only | "Ruth gave you #0556 to pack" (IM-08) |
 | `order.copy` | Manager → the yard | "#0557 is a copy · don't pack it" |
 | `order.cancelled` to whoever holds it | Manager → packer, bay, driver, the salesperson | "Cancelled · put it back · #0530"; on a truck "#0534 cancelled · bring it back" (IM-11, IM-39) |
-| `trip.back` (new title) | Buyer → the yard | "Denis's trip is at the gate · 3 lines" (IM-25) |
+| `trip.back` (new title) | Buyer → the yard | "Denis's trip is back at the yard · 3 lines" (IM-25, IM-26) |
 | `trip.checked` | Store → the Buyer | "Checked in · Denis's trip · 3 lines" |
 | `trip.difference` (new title) | Store → Manager | "Musa's check-in of Denis's trip · 2 pc differ" |
 | `trip.difference.decided` | Manager → the checker | "Ruth decided the 2 pc" (IM-23) |
@@ -55,7 +55,7 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 - A return asked raises `return.coming` to the yard (IM-15).
 
 ## Buyer (`buyer.html`)
-- IM-25: "At the gate · Musa checks it in" / "Checked in" (buyer.html:3238, 3690, 4697, 4705); the hand-in push says "Denis's trip is at the gate · 3 lines", never "round" or "count it in". "Checked in" comes from `trip.checked`.
+- IM-25/26: "Back at the yard · Musa checks it in" / "Checked in" (buyer.html:3238, 3690, 4697, 4705); the hand-in push says "Denis's trip is back at the yard · 3 lines", never "round", "count it in" or "at the gate" ("at the gate" is only for orders waiting to be collected and returns). "Checked in" comes from `trip.checked`.
 - IM-36: a short trip line tells Sales and the yard the line's new quantity, so the yard packs what came.
 - The restock answer reads "On the restock list · next trip".
 
@@ -105,6 +105,3 @@ The next free number after 0181, added to the reserved-number table in `docs/dec
 
 ## Worker app (`worker.html`)
 - IM-08: the same rule as the Store for an order given to a packer (`awaiting_accept`). The Store app replaces the worker app for the yard; once the new Store is built, retire the worker app's packing screens.
-
-## Still open in the Store's own boards
-- IM-26: "At the gate" still names both a trip back (IN01 "At the gate" pill, TD02, TD10 "Trip at the gate", IN32) and a packed pickup (PK07, OU10). Trips should read "Back at the yard"; the push title follows.

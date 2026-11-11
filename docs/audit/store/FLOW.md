@@ -41,7 +41,7 @@ Stock and books agree: every step writes the shelf (packed lines leave the shelf
 
 | Step today | Now | Closes |
 |---|---|---|
-| Trip back: push "A round is back — count it in" | Push `trip.back` "Denis's trip is at the gate · 3 lines" (the word is **Check-in**; never round, never count-in) | IM-25, §4.4 |
+| Trip back: push "A round is back — count it in" | Push `trip.back` "Denis's trip is back at the yard · 3 lines"; the trip reads **Back at the yard** ("at the gate" is only for orders waiting to be collected and returns, IM-26) (the word is **Check-in**; never round, never count-in) | IM-25, IM-26, §4.4 |
 | Check in: tap each line's circle, type a count (blind), pick a reason | **Still blind** (the books never show; audit DATA rules). Each line is a big picture with **quick tiles in the unit you can see** ("1 bundle · 20", "2 ctn", "+1"), so most lines are one tap and no typing. Lines are grouped **by where they go** (the order's drop, or the shelf); a cancelled order's line goes to the shelf by itself. A count unlike Denis's asks why on that line only | IM-36 |
 | After the slide: "Ruth accepted your check-in" at once | "**Sent to Ruth** · 1 differs" and "Ruth decides the 2 pc" until she decides; her answer comes back as `trip.difference.decided` | IM-23 |
 | Console can check in at the Buyer's count | (other app) only the yard checks in | IM-24 |
