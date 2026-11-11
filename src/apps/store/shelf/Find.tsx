@@ -14,7 +14,8 @@ import { closestTo, findShelf, nearWord, PAGE } from '../../../core/store/find.t
 import { aislesOf, letterOf, noAisle } from '../../../core/store/shelf.ts';
 import type { ShelfItem, YardBooks } from '../../../core/store/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
-import { Icon } from '../../../ui/icons.tsx';
+import { AisleIcon, Icon } from '../../../ui/icons.tsx';
+import { stageOf } from '../../../core/store/yard.ts';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx, Tap } from '../../../ui/util.tsx';
@@ -43,7 +44,9 @@ export function Find(p: { params: Params }): JSX.Element {
   if (!b) return <main class="sh-wait" aria-busy="true" />;
   const set = (v: string) => { setQ(v); setKind('all'); setMore(1); top.peek().params.q = v; };
   const typed = q.trim().length > 0;
-  const f = findShelf(b, q, (it) => stateRank(itemState(b, it, at)));
+  const found = findShelf(b, q, (it) => stateRank(itemState(b, it, at)));
+  // An order off the board (invoiced a day ago, never the yard's) is not the yard's to open.
+  const f = { ...found, orders: found.orders.filter((o) => stageOf(o, b, me.value, at) !== 'gone') };
   const total = f.items.length + f.orders.length;
   return (
     <div class="sh-find">
@@ -70,7 +73,7 @@ export function Find(p: { params: Params }): JSX.Element {
               {f.narrower.length > 0 && (
                 <div class="sh-dym">
                   <span>Did you mean</span>
-                  {f.narrower.map((w) => <Tap key={w} on={() => set(w)} class="sh-dym-c"><span><Icon name="search" size={14} stroke={2.2} />{w}</span></Tap>)}
+                  {f.narrower.map((w) => { const it = f.items.find((x) => x.name.toLowerCase().includes(w)); return <Tap key={w} on={() => set(w)} class="sh-dym-c"><span><AisleIcon aisle={it && it.category ? it.category : ''} size={16} />{w}</span></Tap>; })}
                 </div>
               )}
               {kind !== 'orders' && f.items.length > 0 && (
