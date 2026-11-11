@@ -149,8 +149,8 @@ export async function withdrawBillAsk(sb: Sb, id: string): Promise<void> {
 }
 
 /** ask_cancel (0181): ask the Manager to cancel your own order before its invoice; asked again, the same ask comes back. */
-export async function askCancel(sb: Sb, s: Session, o: Order, why: string): Promise<BillAsk> {
-  const r = await ok<Row>(sb.rpc('ask_cancel', { p_shop_id: s.shopId, p_order: o.id, p_why: why, p_note: null }));
+export async function askCancel(sb: Sb, s: Session, o: Order, why: string, note?: string): Promise<BillAsk> {
+  const r = await ok<Row>(sb.rpc('ask_cancel', { p_shop_id: s.shopId, p_order: o.id, p_why: why, p_note: note && note.trim() ? note.trim() : null }));
   if (!r || !r.ok || !r.id) throw dataError('refused', 'The ask did not go through');
   return cancelAskOf({ id: r.id, quote_id: o.id, customer_id: o.customerId, why, amount: r.amount, status: r.status || 'sent', asked_by: s.userId, created_at: r.at });
 }

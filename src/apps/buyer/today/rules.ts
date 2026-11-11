@@ -76,5 +76,5 @@ export function tripReady(b: BuyerBooks, now: Ms): boolean {
 
 /** Nothing waits on Denis: nothing to ask, no late reply, nothing found to buy, no trip running. */
 export function calm(b: BuyerBooks, now: Ms): boolean {
-  return askGroups(b, now).length === 0 && !lineRefs(b).some((r) => r.state === 'notfound') && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
+  return askGroups(b, now).length === 0 && !lineRefs(b).some((r) => r.state === 'notfound' || r.state === 'nosupplier') && !replyRows(b, now).some((g) => g.late) && tiles(b, now).found === 0 && !tripRunning(b);
 }

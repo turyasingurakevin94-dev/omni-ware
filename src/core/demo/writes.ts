@@ -62,7 +62,7 @@ export function placeOrder(s: DemoState, d: OrderDraft): Order {
  * ask_cancel (0181): your own order, before it is invoiced or delivered, with why; asked again while
  * it waits, the same ask. The Manager answers in her app (answer_cancel_ask).
  */
-export function askCancel(s: DemoState, orderId: number, why: string): BillAsk {
+export function askCancel(s: DemoState, orderId: number, why: string, note?: string): BillAsk {
   const b = s.books, o = b.orders.find((x) => x.id === orderId);
   if (!o) throw dataError('refused', 'This order is no longer in the books', 'P0002');
   const no = '#' + String(o.id).padStart(4, '0');

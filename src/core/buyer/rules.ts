@@ -15,6 +15,7 @@
  *   askMessage(s, lines, shop) the WhatsApp message one Ask sends: every line of that supplier, all orders
  *   waLink(phone, text)     the wa.me link; intlPhone(p) a Ugandan number for wa.me and tel:
  */
+import { LINE_WORD, lineWord } from '../lineword.ts';
 import { phone9 } from '../names.ts';
 import type { Ms, UGX } from '../types.ts';
 import type { BLine, BOrder, BuyerBooks, LineState, Stop, Supplier, Trip } from './types.ts';
@@ -25,35 +26,27 @@ export const LATE_MS = 30 * 60 * 1000;
 /** The order the trip drives the markets in. A place not here goes last, by name. */
 export const ROUTE = ['Nakawa', 'Owino', 'Kiseka', 'Katwe', 'Ndeeba', 'Namanve'];
 
-/** The word Sales and the Buyer both show for a line state (handover.md §6). */
-export const WORD: Record<LineState, string> = {
-  toask: 'To ask', asked: 'Asked', found: 'Found', notfound: 'Not found', priceup: 'Price up',
-  clientwaits: 'Client waits', removed: 'Removed', ontrip: 'On the trip', short: 'Short', in: 'In',
-};
+/** The word Sales and the Buyer both show for a line state (handover.md §6; the one list in core/lineword.ts). */
+export const WORD: Record<LineState, string> = LINE_WORD;
 
 const onTrip = (trip: Trip | null, o: BOrder, l: BLine): Stop | null => {
   if (!trip || trip.state === 'planned' || trip.state === 'in') return null;
   return trip.stops.find((s) => !s.off && s.lines.some((x) => x.orderId === o.id && x.key === l.key)) || null;
 };
 
-/** Where a line stands. The order of the checks is the rule: off the bill first, the yard last. */
+/** Where a line stands: the shared rule (core/lineword.ts), from the Buyer's books. */
 export function lineState(o: BOrder, l: BLine, trip: Trip | null = null): LineState {
-  if (l.removed) return 'removed';
-  if (l.got != null) return l.got < l.qty ? 'short' : 'in';
-  if (l.clientWaits && !l.supplierId) return 'clientwaits';
-  if (!l.supplierId) return 'toask';
-  if (onTrip(trip, o, l)) return 'ontrip';
-  if (l.ruthDecides) return 'priceup';
-  const c = o.confirms[l.supplierId];
-  if (!c || !c.askedAt) return 'toask';
-  if (c.state === 'found') return 'found';
-  if (c.state === 'notfound') return 'notfound';
-  return 'asked';
+  const c = l.supplierId ? o.confirms[l.supplierId] : undefined;
+  return lineWord({
+    removed: !!l.removed, got: l.got, qty: l.qty, supplierId: l.supplierId, clientWaits: !!l.clientWaits,
+    onTrip: !!l.supplierId && !!onTrip(trip, o, l), priceWaits: l.ruthDecides, priceComing: !!l.priceComing,
+    asked: !!(c && c.askedAt), answer: c && (c.state === 'found' || c.state === 'notfound') ? c.state : null,
+  });
 }
 
-/** The live orders the Buyer works: still checking or buying. */
+/** The live orders the Buyer works: still checking or buying, not held (a cancel asked, X-1) and not a test record. */
 export function liveOrders(b: BuyerBooks): BOrder[] {
-  return b.orders.filter((o) => o.status === 'draft' || o.status === 'awaiting_goods');
+  return b.orders.filter((o) => (o.status === 'draft' || o.status === 'awaiting_goods') && !o.hold && !o.test);
 }
 
 export interface LineRef { order: BOrder; line: BLine; state: LineState }
@@ -124,9 +117,9 @@ export function tiles(b: BuyerBooks, now: Ms): Tiles {
   // the count of suppliers never drops because one said no.
   const inPlay = new Set<string>(refs.filter((r) => r.line.supplierId && r.state !== 'removed').map((r) => r.line.supplierId as string));
   liveOrders(b).forEach((o) => Object.entries(o.confirms).forEach(([sid, c]) => { if (c && c.askedAt && o.lines.some((l) => !l.removed)) inPlay.add(sid); }));
-  void now;
   return {
-    toask: sup('toask'), asked: sup('asked'), found: sup('found'), ontrip: refs.filter((r) => r.state === 'ontrip').length,
+    // To ask counts the suppliers one Ask goes to (Kevin, 11 Nov: suppliers), the very rows Today lists (BUY-2).
+    toask: askGroups(b, now).length, asked: sup('asked'), found: sup('found'), ontrip: refs.filter((r) => r.state === 'ontrip').length,
     suppliers: inPlay.size, foundSuppliers: sup('found'),
   };
 }

@@ -106,8 +106,11 @@ export function runsToGo(quotes: Q[], trips: Row[], rows: PriceRow[], restock: R
       const best = confirmedBest(q, it, need, rows) || rankedAtQty(rows, it.productId, it.variantIdx, need).find((r) => r.purchasePrice != null) || null;
       if (!best || best.purchasePrice == null) return;
       const unitCost = Math.round(best.purchasePrice), out = outlay(best, need), got = received(it);
-      const qty = got ? Number(it.receivedQty) : out ? out.units : need;
-      const outstanding = got ? Math.max(0, need - Number(it.receivedQty)) : qty;
+      // BUY-4 (cross-app round 1, #0212): a stop and the cash asked are what the order's lines show — the
+      // order's own count in its own unit. A pack the price list rounds up to (outlay) is never folded in
+      // silently: the shelf part of a carton is the Manager's carton ask (0151), not this order's cost.
+      const qty = got ? Number(it.receivedQty) : need;
+      const outstanding = got ? Math.max(0, need - Number(it.receivedQty)) : need;
       const lineCost = unitCost * outstanding;
       if (!(lineCost > 0) || cartonWaits(q, it, need, got ? null : out, restock)) return;
       if (tripsCovering(trips, q, q.id, it.lineId).length) return;

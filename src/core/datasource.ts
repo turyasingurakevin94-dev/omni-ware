@@ -157,7 +157,7 @@ export interface DataSource {
    * Ask the Manager to cancel your own order before its invoice (ask_cancel, cancel_asks, 0181).
    * Asked again while it waits, the same ask comes back. The Manager's yes is the one Cancel (0177).
    */
-  askCancel(orderId: number, why: string): Promise<BillAsk>;
+  askCancel(orderId: number, why: string, note?: string): Promise<BillAsk>;
 
   /* money */
   receivePayment(a: PayArgs): Promise<PayResult>;

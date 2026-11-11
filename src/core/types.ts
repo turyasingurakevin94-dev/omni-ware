@@ -99,7 +99,12 @@ export interface StageStep {
 }
 
 /** What happened to a line on its way (Buying, Packing). */
-export type LineState = 'waiting' | 'came' | 'packed' | 'short' | 'dropped';
+/**
+ * Where a Sales line stands. Packing and goods first (packed, short, came); before them, the Buyer's word from the
+ * order (cross-app round 1, SAL-1 · X-2; core/lineword.ts): waiting (asked, no answer yet), notfound (the supplier
+ * said no), nosupplier (nothing on the shelf and nobody sells it yet), clientwaits (Sourcing looks); dropped: taken off.
+ */
+export type LineState = 'waiting' | 'came' | 'packed' | 'short' | 'dropped' | 'notfound' | 'nosupplier' | 'clientwaits';
 
 /** The Manager's answer on a line's price (items[].priceReview, written only with price.approve). */
 export interface PriceReview {

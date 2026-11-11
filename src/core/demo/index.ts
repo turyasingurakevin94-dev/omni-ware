@@ -120,7 +120,7 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       return copy(ask);
     }),
     withdrawBillAsk: (id) => write(() => W.withdrawAsk(s, id)),
-    askCancel: (orderId, why) => write(() => copy(W.askCancel(s, orderId, why))),
+    askCancel: (orderId, why, note) => write(() => copy(W.askCancel(s, orderId, why, note))),
 
     receivePayment: (a) => {
       // &fail=pay (CU46): the first payment finds no signal and is kept; before it goes again, Brian takes 120,000

@@ -7,7 +7,7 @@
  *   MGR-WORD-01  one order number, #0543, everywhere the Manager reads it.
  *   MGR-DATA-04  an invoiced line sold under its cost says so, with the loss;
  *                Margins groups them, all months, newest first.
- *   MGR-DATA-05  Sold today never puts a count beside a bare 0.
+ *   MGR-DATA-05  Taken today (was "Sold today", renamed in cross-app round 1, X-4) never puts a count beside a bare 0.
  *   MGR-DATA-06  the goal legend: chips, "No seller · amount", "no login".
  *   MGR-DATA-08  one sales figure (salesIn) on Today and Margins, split.
  *   MGR-DATA-09  a line at 0 is answered "Free · given away" or "To price".
@@ -133,7 +133,7 @@ const strip = s => String(s).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').rep
     const d3 = base(); d3.savedQuotes.push(today(2579, [L('P1', 'Iron sheet G28 · 3 m', 10, 98000, 142500)]));
     X = page(fakeDb({}), d3); h = X.soldTodayHTML(X.todayMoney());
     t.check(/1,425,000/.test(h) && !/to price/.test(h), 'all priced: the value, as before');
-    t.check(/Sold today · <span class="m">1<\/span> order/.test(X.viewToday()), 'the day card draws it');
+    t.check(/Taken today · <span class="m">1<\/span> order/.test(X.viewToday()), 'the day card draws it');
   }
 
   /* ---------------- MGR-DATA-06 · the goal legend ---------------- */

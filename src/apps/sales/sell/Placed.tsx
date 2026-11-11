@@ -16,7 +16,8 @@ import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { PRICE_COMING, fig, isPriced, orderFig } from '../../../ui/Money.tsx';
 import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { nav } from '../shell/nav.ts';
-import { books, chats } from '../shell/store.ts';
+import { wentAs } from '../shell/placing.ts';
+import { books, chats, drafts } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { first } from './insights.ts';
 import { itemOf } from './model.ts';
@@ -58,14 +59,50 @@ function steps(b: Books, o: Order, who: string | null): Step[] {
       ...(o.paid < orderTotal(o) ? [{ icon: 'cash' as IconName, title: 'Not paid yet', sub: `${who ? `${who} leaves` : 'They leave'} when paid · Take payment` }] : []),
     ];
   }
-  const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit` : `${m.first} checks it`;
+  // Checking is the suppliers being asked (spec 01 §1); the Manager only when a price or credit waits (X-3).
+  const none = buy.filter((l) => l.from === 'none'), asked = buy.filter((l) => l.from !== 'none');
+  const why = coming ? `${s.first} finds the cost · ${m.first} prices it` : under ? `${m.first} decides the price` : o.credit ? `${m.first} decides the credit`
+    : none.length && !asked.length ? `${d.first} finds a supplier` : `${d.first} asks the suppliers`;
   const out: Step[] = [{ icon: 'checking', title: 'Checking', sub: `now · ${why}`, now: true }];
-  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length <= 2 ? buy.map(bought).join(' and ') : `${buy.length} items`}` });
+  if (buy.length) out.push({ icon: 'cart', title: 'Buying', sub: `${d.first} buys ${buy.length <= 2 ? buy.map(bought).join(' and ') : `${buy.length} items`}${none.length && asked.length ? ` · finds a supplier for ${none.length === 1 ? bought(none[0]) : `${none.length} items`}` : ''}` });
   out.push({ icon: 'orders', title: 'Packing', sub: `${st.first} packs it` });
   return out;
 }
 
+/**
+ * SAL-4 (board SalesPlaceOnce): the place was kept on this phone. "Waiting to send": what it is and what it comes
+ * to, locked, placed once only; when it goes this screen becomes the order itself (shell/placing.ts).
+ */
+function Waiting(p: { draftKey: string }): JSX.Element {
+  const d = drafts.value.find((x) => x.key === p.draftKey), went = wentAs.value[p.draftKey];
+  useEffect(() => { if (went != null) nav.replace('sell/placed', { id: went }); }, [went]);
+  const total = d ? orderTotal({ lines: d.lines, charges: d.charges, credit: d.credit } as unknown as Order) : 0;
+  return (
+    <div class="ow-moment sl-placed">
+      <div class="ow-moment-x"><button type="button" aria-label="Close" onClick={() => nav.home()}><Icon name="close" size={16} stroke={2.2} /></button></div>
+      <div class="ow-moment-top">
+        <span aria-hidden="true" class="ow-moment-tick sl-wait-tick"><Icon name="clock" size={44} stroke={2.4} /></span>
+        <h1>{d ? 'Waiting to send' : 'Not placed'}</h1>
+        <span class="ow-moment-note sl-pic-wait">{d ? 'Kept on this phone · it sends itself when there is signal' : 'It went back to the order to fix'}</span>
+      </div>
+      {d && (
+        <div class="ow-moment-items">
+          <span class="ow-moment-items-t"><span>{d.client.name}</span><span>{`${d.lines.length} line${d.lines.length === 1 ? '' : 's'} · locked while it waits`}</span></span>
+          <span class="mono ow-moment-items-a">{fig(total)}</span>
+        </div>
+      )}
+      {d && <div class="sl-wait-once"><Icon name="lock" size={16} stroke={2.2} />Placed once only: sending again is never a second order</div>}
+      <EndOfFlow on={() => nav.home()} pct={0} />
+    </div>
+  );
+}
+
 export function PlacedScreen(p: ScreenProps): JSX.Element | null {
+  if (typeof p.params.draft === 'string' && p.params.id == null) return <Waiting draftKey={p.params.draft} />;
+  return <PlacedOrder {...p} />;
+}
+
+function PlacedOrder(p: ScreenProps): JSX.Element | null {
   const b = books.value, id = Number(p.params.id);
   const o = (b && b.orders.find((x) => x.id === id)) || (lastPlaced.value && lastPlaced.value.id === id ? lastPlaced.value : null);
   const [pct, setPct] = useState(0);

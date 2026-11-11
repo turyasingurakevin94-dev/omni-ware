@@ -22,6 +22,27 @@ const WORD: Partial<Record<TabId, [string, string]>> = {
   customers: ['Customers', 'Getting your customers'],
 };
 
+/**
+ * The first open, before the books are read (SAL-6, board SalesCopy): Today's head and rows as shimmer from the first
+ * frame, "Updating…", never a blank page and never Live.
+ */
+export function FirstLoad(): JSX.Element {
+  return (
+    <main class="ow-loadtab" aria-busy="true" aria-label="Updating: getting your day">
+      <header class="ow-loadtab-head">
+        <span class="ow-loadtab-upd"><span aria-hidden="true" />Updating…</span>
+        <Shim w={150} h={26} navy />
+        <Shim w="70%" h={38} navy r={10} />
+        <Shim w="100%" h={8} navy r={999} />
+      </header>
+      <div class="ow-loadtab-body">
+        <LoadingHead text="Getting your day" />
+        <SkeletonRows rows={3} />
+      </div>
+    </main>
+  );
+}
+
 export function Loading(_p: ScreenProps): JSX.Element {
   const t = tabOfId(top.value.id) as TabId, w = WORD[t] || ['', 'Getting it'];
   return (

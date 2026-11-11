@@ -18,6 +18,7 @@ import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { TopBar, WhoPill } from '../../../ui/TopBar.tsx';
 import { nav, stack } from '../shell/nav.ts';
+import { endPlacing, isLocked, lock, startPlacing } from '../shell/placing.ts';
 import { act, books, flush, me, now, online } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { askMatch, ChatAsk, fromChat } from './ChatAsk.tsx';
@@ -79,14 +80,22 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
   // What was typed is found, unless a sheet took it up (SL21: the hinge's sheet over the order).
   const typing = query.value.trim().length > 0 && !sheet.isOpen;
 
+  // SAL-4: one place per draft — a second slide or Enter while one is out does nothing; a kept place locks
+  // the draft and shows Placed in its waiting state (shell/placing.ts).
   const place = async (): Promise<void> => {
     closeLine();
     const now = cur.value;
-    if (!now) return;
+    if (!now || !startPlacing(now.key)) return;
     setSending(true);
     try {
-      const r = await act<Order>('placeOrder', toDraft(now));
-      if (r.kept) { toast.show('Kept on this phone', { kind: 'warn', sub: 'It places when the signal is back' }); return; }
+      const d = toDraft(now);
+      const r = await act<Order>('placeOrder', d);
+      if (r.kept) {
+        lock(d, r.id);
+        cur.value = null;
+        nav.replace('sell/placed', { draft: now.key });
+        return;
+      }
       const o = r.value;
       forget(now.key);
       cur.value = null;
@@ -96,6 +105,7 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
       const why = isDataError(e) && e.code === 'OWCST' ? 'A price is under what it costs the shop' : (e as Error).message;
       toast.show('Not placed', { kind: 'error', sub: why, retry: () => void place() });
     } finally {
+      endPlacing(now.key);
       setSending(false);
     }
   };
@@ -124,7 +134,7 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
       {!online.value && (
         <Notice kind="offline" class="sl-notice" action={{ label: 'Try again', on: () => { void flush(); } }}>No signal · kept on this phone</Notice>
       )}
-      <OrderDock onPlace={place} sending={sending} />
+      <OrderDock onPlace={place} sending={sending} locked={isLocked(x.key)} />
     </div>
   );
 }

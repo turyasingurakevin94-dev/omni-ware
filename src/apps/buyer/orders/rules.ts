@@ -19,35 +19,38 @@ export const hm = (ms: Ms): string => clock(ms).padStart(5, '0');
 
 /** A line's colour in a strip, on light and on navy. */
 export const STRIP: Record<LineState, string> = {
-  toask: '#C9C4BA', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#3A3F9B',
+  toask: '#C9C4BA', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#3A3F9B', nosupplier: '#F5B26B',
   clientwaits: '#7A4A02', removed: '#E6E3DD', ontrip: '#16203C', short: '#95530C', in: '#0F6B43',
 };
 export const STRIP_NAVY: Record<LineState, string> = {
-  toask: 'rgba(255,255,255,.22)', asked: '#F5B26B', found: '#6FDCB0', notfound: '#F7A196', priceup: '#E4E6FA',
+  toask: 'rgba(255,255,255,.22)', asked: '#F5B26B', found: '#6FDCB0', notfound: '#F7A196', priceup: '#E4E6FA', nosupplier: '#F5B26B',
   clientwaits: '#F5B26B', removed: 'rgba(255,255,255,.12)', ontrip: '#B3BCD2', short: '#F5B26B', in: '#6FDCB0',
 };
 /** A state word's soft pill: background, ink. */
 export const PILL: Record<LineState, [string, string]> = {
   toask: ['#F1EEE8', '#5F6980'], asked: ['#FDEEE1', '#7A4A02'], found: ['#E4F4EA', '#0F6B43'], notfound: ['#FBE5E2', '#8E2A22'],
-  priceup: ['#FDEEE1', '#7A4A02'], clientwaits: ['#FDEEE1', '#7A4A02'], removed: ['#F1EEE8', '#5F6980'],
+  priceup: ['#FDEEE1', '#7A4A02'], nosupplier: ['#FDEEE1', '#7A4A02'], clientwaits: ['#FDEEE1', '#7A4A02'], removed: ['#F1EEE8', '#5F6980'],
   ontrip: ['#E8EBF0', '#16203C'], short: ['#FDEEE1', '#7A4A02'], in: ['#E4F4EA', '#0F6B43'],
 };
 /** The ink a state word is written in on white (the list row's word, "Grace sees"). */
 export const INK: Record<LineState, string> = {
-  toask: '#7A4A02', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#7A4A02',
+  toask: '#7A4A02', asked: '#95530C', found: '#0F6B43', notfound: '#8E2A22', priceup: '#7A4A02', nosupplier: '#7A4A02',
   clientwaits: '#7A4A02', removed: '#5F6980', ontrip: '#16203C', short: '#95530C', in: '#0F6B43',
 };
 
 /** Which word an order's row shows: the one that needs someone most. */
-const RANK: LineState[] = ['notfound', 'priceup', 'toask', 'asked', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
+const RANK: LineState[] = ['notfound', 'nosupplier', 'priceup', 'toask', 'asked', 'clientwaits', 'short', 'ontrip', 'found', 'in', 'removed'];
 
-export type Filter = 'all' | 'toask' | 'asked' | 'notfound' | 'ruth';
+export type Filter = 'all' | 'toask' | 'asked' | 'notfound' | 'needs' | 'ruth' | 'hold';
 export const FILTERS: { id: Filter; word: string; state: LineState | null; dot: string | null }[] = [
   { id: 'all', word: 'All', state: null, dot: null },
   { id: 'toask', word: 'To ask', state: 'toask', dot: null },
   { id: 'asked', word: 'Asked', state: 'asked', dot: '#95530C' },
   { id: 'notfound', word: 'Not found', state: 'notfound', dot: '#8E2A22' },
+  { id: 'needs', word: 'Needs a supplier', state: 'nosupplier', dot: '#F5B26B' },
   { id: 'ruth', word: 'decides', state: 'priceup', dot: null },
+  // X-1: Sales asked the Manager to cancel; nothing is asked or bought for it until the answer.
+  { id: 'hold', word: 'On hold', state: null, dot: null },
 ];
 
 export interface LineView {
@@ -116,12 +119,15 @@ export function byNeed(vs: OrderView[]): OrderView[] {
 }
 
 /** Every line, grouped by state so the strip reads as a count: Asked, Found, Not found, Ruth decides, the rest. */
-const STRIP_ORDER: LineState[] = ['toask', 'asked', 'found', 'notfound', 'priceup', 'clientwaits', 'ontrip', 'short', 'in', 'removed'];
+const STRIP_ORDER: LineState[] = ['toask', 'nosupplier', 'asked', 'found', 'notfound', 'priceup', 'clientwaits', 'ontrip', 'short', 'in', 'removed'];
 export function byState(states: LineState[]): LineState[] {
   return [...states].sort((x, y) => STRIP_ORDER.indexOf(x) - STRIP_ORDER.indexOf(y));
 }
 
 export function matches(v: OrderView, f: Filter): boolean {
+  if (f === 'all') return true;
+  if (f === 'hold') return !!v.order.hold;
+  if (v.order.hold) return false;
   const st = FILTERS.find((x) => x.id === f)?.state;
   return !st || v.live.some((x) => x.state === st);
 }

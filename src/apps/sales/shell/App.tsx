@@ -9,12 +9,15 @@ import { TabBar } from '../../../ui/TabBar.tsx';
 import { ToastHost } from '../../../ui/toast.tsx';
 import { Login, SignedElsewhere } from './Gate.tsx';
 import { barTab, nav, screen, showTabBar, top } from './nav.ts';
+import { FirstLoad } from './Loading.tsx';
+import { wirePlacing } from './placing.ts';
 import { drafts, phase, waitingCount, waitingWord } from './store.ts';
 
 export function App(): JSX.Element {
-  if (phase.value === 'starting') return <main class="ow-frame" aria-busy="true" />;
+  if (phase.value === 'starting') return <div class="ow-frame"><FirstLoad /></div>;
   if (phase.value === 'login') return <Login />;
   if (phase.value === 'signed-elsewhere') return <SignedElsewhere />;
+  wirePlacing();
   const t = top.value, s = screen(t.id), bar = showTabBar.value;
   const View = s ? s.view : null;
   return (

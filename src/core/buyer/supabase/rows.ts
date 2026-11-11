@@ -18,7 +18,7 @@ import type { Member, Ms, Session } from '../../types.ts';
 import type { AskWay, BLine, BOrder, BStatus, BuyerBooks, Confirm, ListPrice, Stop, Supplier, Trip } from '../types.ts';
 import { gotOf, linePaid, locParts, priceRowOf, roundOrder, runsToGo, stem, tripPlanned, tripsCovering, type PriceRow, type Run } from './buy.ts';
 import type { Keep } from './keep.ts';
-import { agedOff, confirmState, createdMs, priceWaits, quoteOf, received, SHELF, type Q } from './order.ts';
+import { agedOff, buyable, confirmState, createdMs, priceWaits, quoteOf, received, SHELF, type Q } from './order.ts';
 
 export interface Raw {
   session: Session;
@@ -29,6 +29,8 @@ export interface Raw {
   phones: Record<string, string>;
   keep: Keep;
   now: Ms;
+  /** Orders with an open ask to cancel (cancel_asks, X-1): held. */
+  cancelAsked?: number[];
 }
 
 const ms = (v: unknown): Ms | null => {
@@ -82,7 +84,7 @@ function lineOf(q: Q, it: Row, idx: number, products: Row[], trips: Row[]): BLin
     cost: Math.round(Number(it.price) || 0), sell: Math.round(Number(it.sellPrice) || 0),
     supplierId: it.supplierId ? String(it.supplierId) : null,
     priceWas: it.priceWas != null ? Math.round(Number(it.priceWas)) : null, repricedAt: ms(it.repricedAt),
-    ruthDecides: priceWaits(it), clientWaits: cw ? { at: ms(cw.at) || 0, via: cw.via === 'sourcing' ? 'sourcing' : null } : null,
+    ruthDecides: priceWaits(it), priceComing: !!it.priceAsk, clientWaits: cw ? { at: ms(cw.at) || 0, via: cw.via === 'sourcing' ? 'sourcing' : null } : null,
     removed: null, switchedFrom: it.switchedFrom && it.switchedFrom.name ? String(it.switchedFrom.name) : null,
     got: gotFor(q, it, trips),
   };
@@ -106,15 +108,22 @@ export function orderOf(q: Q, products: Row[], trips: Row[]): BOrder {
   };
 }
 
-/** A supplier's record from the asks on every order: asked, found, and the median minutes to answer. */
-function supplierOf(s: Row, quotes: Q[], phones: Record<string, string>): Supplier {
-  const id = String(s.id), recs = quotes.map((q) => (q.supplierConfirms || {})[id]).filter(Boolean) as Row[];
+/**
+ * A supplier's record from the asks: asked, found (said yes), and the median minutes to answer — over the last
+ * 30 days on orders not voided (BUY-2). A yes, or a no, always counts as asked (a supplier-app answer carries no
+ * askedAt), so found is never more than asked ("31 of 3" before).
+ */
+const RECORD_DAYS = 30;
+function supplierOf(s: Row, quotes: Q[], phones: Record<string, string>, now: Ms): Supplier {
+  const id = String(s.id), from = now - RECORD_DAYS * 864e5;
+  const recs = quotes.filter((q) => !q.voided && !q.cancelledAt).map((q) => (q.supplierConfirms || {})[id])
+    .filter((r: Row | undefined) => !!r && Math.max(ms(r.askedAt) || 0, ms(r.at) || 0) >= from) as Row[];
   const mins = recs.filter((r) => r.askedAt && r.at && r.at > r.askedAt && r.state !== 'pending').map((r) => (r.at - r.askedAt) / 60000).sort((a, b) => a - b);
   const phone = String(s.phone || s.phone2 || phones[id] || '');
   const parts = locParts(s.location);
   return {
     id, name: String(s.name || ''), place: parts[parts.length - 1] || '', phone, whatsapp: !!phone,
-    found: recs.filter((r) => r.state === 'confirmed').length, asked: recs.filter((r) => r.askedAt).length,
+    found: recs.filter((r) => r.state === 'confirmed').length, asked: recs.filter((r) => r.askedAt || r.state === 'confirmed' || r.state === 'problem').length,
     replyMins: mins.length ? Math.round(mins[Math.floor(mins.length / 2)]) : null,
   };
 }
@@ -199,12 +208,13 @@ export function booksOf(raw: Raw): BuyerBooks {
   const team = membersOf(raw.members, raw.staff, [], s.userId);
   const me: Member = team.find((m) => m.id === s.userId) || { id: s.userId, name: s.name, initials: s.name.slice(0, 2).toUpperCase(), role: s.role, tint: 'me', presence: null, presenceSince: null, inChat: null, typingIn: null };
   const prices = raw.prices.map(priceRowOf);
-  const runs = runsToGo(quotes, raw.trips, prices, raw.restock, raw.now);
+  const runs = runsToGo(quotes.filter(buyable(raw.cancelAsked)), raw.trips, prices, raw.restock, raw.now);
+  const held = raw.cancelAsked || [];
   const orders = quotes.filter((q) => !q.voided && !q.cancelledAt && !agedOff(q, raw.now) && LIVE.includes(q.status))
-    .map((q) => orderOf(q, raw.products, raw.trips));
+    .map((q) => ({ ...orderOf(q, raw.products, raw.trips), hold: held.includes(Number(q.id)) ? 'cancel' as const : null, test: !!q.qa }));
   return {
     me, team, orders,
-    suppliers: raw.suppliers.map((x) => supplierOf(x, quotes, raw.phones)),
+    suppliers: raw.suppliers.map((x) => supplierOf(x, quotes, raw.phones, raw.now)),
     prices: prices.map((r) => listPriceOf(r, raw.products)).filter((p): p is ListPrice => !!p),
     trip: tripOf(raw, runs),
     savedAt: raw.now,

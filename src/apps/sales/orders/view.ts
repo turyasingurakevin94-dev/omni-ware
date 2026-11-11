@@ -59,6 +59,14 @@ export interface OrderView {
 
 export function orderView(b: Books, o: Order, now: Ms): OrderView {
   const who = shortName(b, o), ruth = byRole(b, 'manager'), rn = ruthName(b);
+  // The Buyer's words on a line (SAL-1 · X-2, core/lineword.ts): never a tick for a line nobody has found.
+  const dn = firstWord(byRole(b, 'buyer')?.name || 'The buyer'), sn = firstWord(byRole(b, 'sourcing')?.name || 'Sourcing');
+  const buyMark = (l: Order['lines'][number], base: object, amount: number): CLine | null => {
+    if (l.state === 'nosupplier') return { ...base, amount, word: { text: 'Needs a supplier', tone: 'warn' }, mark: { k: 'wait', label: `Needs a supplier: ${dn} picks one` } } as CLine;
+    if (l.state === 'notfound') return { ...base, amount, word: { text: 'Not found', tone: 'warn' }, mark: { k: 'wait', label: `Not found: ${dn} looks for another` } } as CLine;
+    if (l.state === 'clientwaits') return { ...base, amount, word: { text: 'Client waits', tone: 'info' }, mark: { k: 'wait', label: `Client waits: ${sn} looks for it` } } as CLine;
+    return null;
+  };
   const holder = member(b, o.holderId), hn = holder ? firstWord(holder.name) : '';
   const waiting = o.lines.filter(waitsRuth), fresh = freshPrice(o), ret = openAsk(b, o, 'credit');
   const vn = firstWord(member(b, o.voidedBy)?.name || rn), vAt = o.voidedAt ? (dayOf(o.voidedAt) === dayOf(now) ? `today ${clock(o.voidedAt)}` : when(o.voidedAt, now)) : '';
@@ -118,6 +126,8 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
       if (waitsRuth(l)) return { ...base, amount: l.price == null ? undefined : amount, word: l.price == null ? { text: 'Price coming', tone: 'warn' } : undefined,
         mark: { k: 'face', face: faceOfMember(ruth || (b.me)), label: l.price == null ? `Price coming: ${rn} decides` : `${rn} decides the price` } };
       if (rv) return { ...base, amount, was: rv.was != null ? Math.round(rv.was * l.qty) : undefined, mark: { k: 'ok', at: clock(rv.at), label: `On the shelf; ${rn} ${rv.price === l.shopPrice ? 'kept' : 'set'} ${rv.price.toLocaleString('en-US')} at ${clock(rv.at)}` } };
+      const bw = buyMark(l, base, amount);
+      if (bw) return bw;
       if (l.from === 'supplier') return l.state === 'waiting'
         ? { ...base, amount, mark: { k: 'spin', word: 'Order in', wordTone: 'info', label: 'Order in: the supplier is being asked' } }
         : { ...base, amount, word: { text: 'Order in', tone: 'info' }, mark: { k: 'ok', label: 'Order in: the supplier said yes' } };
@@ -125,6 +135,8 @@ export function orderView(b: Books, o: Order, now: Ms): OrderView {
     }
     if (o.stage === 'buying') {
       if (l === fresh && rv) return { ...base, amount, was: rv.was != null ? Math.round(rv.was * l.qty) : undefined, mark: { k: 'ok', at: clock(rv.at), label: `${rn} set ${rv.price.toLocaleString('en-US')} a ${l.unit} at ${clock(rv.at)}` } };
+      const bw = buyMark(l, base, amount);
+      if (bw) return bw;
       if (l.state === 'waiting') return { ...base, amount, word: { text: `on the way${l.stateAt ? ' · ' + clock(l.stateAt) : ''}`, tone: 'info' }, mark: { k: 'wait', label: 'On the way' } };
       return { ...base, amount, mark: { k: 'ok', label: l.from === 'shelf' ? 'On the shelf' : 'The supplier said yes' } };
     }

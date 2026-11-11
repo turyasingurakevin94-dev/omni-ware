@@ -153,6 +153,25 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
 }
 
 /** Needs you (board Additions2, phone I): a line a supplier said no to; the pill opens the Not found sheet. */
+/** X-2 (board NeedsSupplier): a line with nothing on the shelf and no supplier — the Buyer picks one (the Not found sheet). */
+export function NeedsSupplierRow(p: { b: BuyerBooks; r: LineRef }): JSX.Element {
+  const { order, line } = p.r, seller = p.b.team.find((m) => m.id === order.sellerId);
+  return (
+    <>
+      <div class="ow-b-today-row nf">
+        <IconTile tone="warn" icon="search" />
+        <div class="ow-b-today-row-t">
+          <span class="ow-b-today-row-name">{line.name}</span>
+          <span class="mono ow-b-today-row-at">{`${line.qty} ${line.unit} · ${orderNo(order.id)} · ${order.client}`}</span>
+        </div>
+        <button type="button" class="ow-b-today-pill" aria-label={`${line.name} for order ${orderNo(order.id).slice(1)} needs a supplier: pick one`}
+          onClick={() => openNotFound(order.id, line.key)}>Pick ›</button>
+      </div>
+      {seller && <div class="ow-b-today-sees"><Icon name="bell" size={14} stroke={2} />{`${firstName(seller)} sees: `}<b class="ow-b-today-nf-w">Needs a supplier</b></div>}
+    </>
+  );
+}
+
 export function NotFoundRow(p: { b: BuyerBooks; r: LineRef }): JSX.Element {
   const { order, line } = p.r, sup = p.b.suppliers.find((s) => s.id === line.supplierId);
   const seller = p.b.team.find((m) => m.id === order.sellerId), who = sup ? sup.name.split(' ')[0] : 'They';

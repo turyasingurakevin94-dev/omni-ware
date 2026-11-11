@@ -9,7 +9,7 @@
  *     month="October" sold="12,480,000" onSold={…} goal={{ pct: 36, movePct: 9, target: '35M', daysLeft: 14 }} onGoal={…}
  *     doors={[{ tone: 'mint', icon: 'trend', value: '+3.2M', label: 'on the move', on: … }, …]} />
  *
- * States: status="updating" (amber dot, "Updating · saved 7:52"); goal hit (TD08: the bar in
+ * States: status="updating" (amber dot, "Updating · saved 7:52"); status="waiting" (amber, "2 waiting to send", SAL-3); goal hit (TD08: the bar in
  * proportion, "Goal hit · +1.2M over"); goal={null} with manager ("Ruth sets your goal");
  * compact (TD02, a busy day): the head row only, its line under the greeting, the goal under it
  * as a white GoalStrip. No onFind: no Find button (the parts board).
@@ -30,8 +30,14 @@ export interface HeroProps {
   greeting: string;
   /** "Sat 17 Oct", "Your first day". */
   line: string;
-  status: 'live' | 'updating';
+  /**
+   * live: fresh and nothing waits · updating: an old copy ("Updating · saved 7:52") · waiting: writes not on the
+   * books yet ("2 waiting to send", SAL-3) — never Live while anything waits.
+   */
+  status: 'live' | 'updating' | 'waiting';
   savedAt?: string;
+  /** With status "waiting": how many writes wait. */
+  waiting?: number;
   me: Face;
   onMe: () => void;
   /** The glass Find button beside the avatar. */
@@ -67,7 +73,9 @@ export function Hero(p: HeroProps): JSX.Element {
           <span class="ow-hero-date">{p.line}<span aria-hidden="true" class="ow-hero-sep" />
             {p.status === 'updating'
               ? <span class="ow-hero-live upd"><span aria-hidden="true" />{`Updating · saved ${p.savedAt}`}</span>
-              : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
+              : p.status === 'waiting'
+                ? <span class="ow-hero-live upd"><span aria-hidden="true" />{`${p.waiting || 0} waiting to send`}</span>
+                : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
           </span>
         )}
       </div>
@@ -98,7 +106,7 @@ export function Hero(p: HeroProps): JSX.Element {
         <Tap on={p.onGoal} label={`Goal: ${g.pct} percent of ${g.target.replace('M', ' million')}, ${g.daysLeft} days left`} class="ow-hero-goal">
           <span aria-hidden="true" class="ow-hero-bar">
             <span style={{ width: barW(g.pct) }} />
-            {g.movePct > 0 && <span class="move" style={{ width: barW(g.movePct, g.pct) }} />}
+            {g.movePct > 0 && <span class={'move' + (g.pct === 0 ? ' ghost' : '')} style={{ width: barW(g.movePct, g.pct) }} />}
           </span>
           <span class="ow-hero-goal-l">
             <span><b class="mono">{`${g.pct}%`}</b> of your <span class="mono">{g.target}</span> goal</span>

@@ -271,3 +271,22 @@ export function TwinCard(p: { b: Books; o: Order }): JSX.Element | null {
 export function MonoText(p: { text: string }): JSX.Element {
   return <>{p.text.split(/(#\d{4}|\d[\d,]*\d|\d)/).map((x, i) => (i % 2 ? <span key={i} class="mono or-m5">{x}</span> : x))}</>;
 }
+
+/**
+ * X-1 (board CancelSalesBuyer): the cancel Sales asked for, on the order. Waiting: "Cancel asked · Ruth decides",
+ * the why and when, and payment and changes wait (Take payment is not offered). Ruth's no: "Ruth kept the order"
+ * with her words, once, until the order moves on.
+ */
+export function CancelCard(p: { ask: BillAsk; ruth: string }): JSX.Element {
+  const { ask } = p, waiting = ask.status === 'sent';
+  return (
+    <div class={'or-cx' + (waiting ? ' wait' : '')} role="status">
+      <span aria-hidden="true" class="or-cx-ic"><Icon name={waiting ? 'clock' : 'return'} size={20} stroke={2} /></span>
+      <span class="or-cx-t">
+        <b>{waiting ? `Cancel asked · ${p.ruth} decides` : `${p.ruth} kept the order`}</b>
+        <span>{waiting ? `“${ask.reason}” · asked ${clock(ask.at)}` : ask.note ? `“${ask.note}”` : 'Carry on with it'}</span>
+        {waiting && <span class="or-cx-lock"><Icon name="lock" size={13} stroke={2.2} />Payment and changes wait for {p.ruth}’s answer</span>}
+      </span>
+    </div>
+  );
+}

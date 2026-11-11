@@ -13,7 +13,10 @@ export function initials(name: string): string {
 
 /** "Ruth Nakato" → "Ruth". */
 export function firstWord(name: string): string {
-  return String(name || '').trim().split(/\s+/)[0] || '';
+  const n = String(name || '').trim();
+  // A role standing in for a name ("The store", "The manager") is kept whole: never "The packs it" (SAL-6).
+  if (/^the\s/i.test(n)) return n;
+  return n.split(/\s+/)[0] || '';
 }
 
 /** A tint for someone the canvas did not cast: the same name always gets the same tint (t0–t5). */

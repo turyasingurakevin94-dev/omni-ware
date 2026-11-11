@@ -179,3 +179,17 @@ To a task means every login whose role holds it (`role_tasks`). "Opens" = the re
 | Q12 | Sign-out keeps the copy in Store, Buyer and Accounts | **Sign-out clears the copy** (a shared phone in the yard) |
 | Q13 | The app checks for a new page every 3 min (Manager) or 30 min (the rest) | **30 min**, and on resume |
 | Q14 | Only Store's web version opens with no signal | **A service worker for every app**, as Store's |
+
+### 7a. The outbox's order and its jam (cross-app round 1, SAL-3, 11 Nov 2026; `docs/audit/cross-app/ROUND-1.md`)
+
+Found live: one kept ask to cancel #0586 (an order not in the books) failed eight times as "no signal" and held every later write, #0608's place among them, while the head said Live. Q4's "sent in order" now means:
+
+| Rule | Where |
+|---|---|
+| Writes are in order **per thing** (an order, a draft, a customer, a chat): a write waits only behind a kept write on the same thing; a write on anything else goes. A write that says nothing of what it is about keeps the one line (`'*'`). | `src/core/outbox.ts` (`scope`), `src/core/scope.ts` (`salesScope`); the Buyer keeps `'*'` (a trip is written stop by stop) |
+| "No signal" is only a write that never reached the server (a fetch failure, a `DataError` of kind `offline`). Every answer from the server — a missing order, a 4xx, RLS, a Postgres code — is refused at once, with its reason (Q5). | `isOffline`, `flush` |
+| A kept write still "no signal" after 5 tries **while the books read fine** is not a signal problem: it is marked refused, "Not sent · tried N times", and never dropped. | `STUCK_TRIES`, `readsOk` |
+| A write left "sending" when the app shut waits again when it opens. | `Outbox.ready` |
+| The outbox is sent on open, when the app comes back (visible, focus), every 30 s while something waits, and on `online` — not only on `online`. | `src/apps/sales/shell/store.ts`, `src/apps/buyer/shell/store.ts` |
+| The head never says Live while anything waits: "N waiting to send" (amber). Sales' Today lists it first in Needs you; its sheet shows each write, a refused one with why, Remove (asked first) and Try again. | `src/ui/Hero.tsx`, `src/apps/sales/today/NotSent.tsx`, `src/apps/buyer/today/Head.tsx` |
+| A draft is placed once (SAL-4): the same `placeOrder` on a draft key already kept is that one; a kept place locks the draft ("Waiting to send") until it goes or is refused. The server already places a key once (0180). | `Outbox.run`, `src/apps/sales/shell/placing.ts` |

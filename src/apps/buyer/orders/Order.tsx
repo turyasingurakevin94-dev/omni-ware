@@ -23,7 +23,7 @@ import { FromChip, Initials, StateWord, Strip } from './parts.tsx';
 import { byRole, INK, orderView, PILL, seesWords, type LineView } from './rules.ts';
 
 const TILE: Partial<Record<LineState, IconName>> = {
-  found: 'check', in: 'check', notfound: 'close', priceup: 'warning', asked: 'clock', toask: 'send',
+  found: 'check', in: 'check', notfound: 'close', priceup: 'warning', asked: 'clock', toask: 'send', nosupplier: 'search',
   clientwaits: 'hourglass', removed: 'trash', ontrip: 'truck', short: 'warning',
 };
 
@@ -40,8 +40,8 @@ function LineRow(p: { x: LineView; onNotFound: () => void }): JSX.Element {
       <StateWord state={x.state} at={x.state === 'removed' ? null : x.at} />
     </>
   );
-  return x.state === 'notfound'
-    ? <button type="button" class="ow-b-orders-line tap" aria-label={`${l.name}: not found. Choose what to do`} onClick={p.onNotFound}>{body}</button>
+  return x.state === 'notfound' || x.state === 'nosupplier'
+    ? <button type="button" class="ow-b-orders-line tap" aria-label={`${l.name}: ${x.state === 'notfound' ? 'not found' : 'needs a supplier'}. Choose what to do`} onClick={p.onNotFound}>{body}</button>
     : <div class={'ow-b-orders-line' + (x.state === 'removed' ? ' off' : '')}>{body}</div>;
 }
 
@@ -101,6 +101,7 @@ export function OrderScreen({ params }: { params: Params }): JSX.Element {
   return (
     <FullSheet onBack={() => nav.back()} backLabel="Back to Checking" head={head} pad="14px 16px 24px" gap={8}>
       {off && <Notice kind="offline" action={kept.value.length ? { label: 'Try again', on: () => { void flush(); } } : undefined}>Offline · it sends when back</Notice>}
+      {o.hold && <Notice kind="paused">{`Cancel asked · ${ruth ? firstWord(ruth.name) : 'the Manager'} decides · nothing is asked or bought for it`}</Notice>}
       <div class="ow-b-orders-lh"><span>Lines</span><span class="mono">{v.live.length}</span></div>
       {v.lines.map((x) => (
         <div key={x.line.key} class="ow-b-orders-lwrap">

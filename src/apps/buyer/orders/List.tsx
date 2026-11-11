@@ -27,14 +27,14 @@ import { WORD } from '../../../core/buyer/rules.ts';
 const isFilter = (x: unknown): x is Filter => FILTERS.some((f) => f.id === x);
 
 function Row(p: { v: OrderView; decider: { name: string; initials: string } | null; busy: boolean; waiting: boolean; onAsk: () => void }): JSX.Element {
-  const { v } = p, o = v.order, top = v.top;
+  const { v } = p, o = v.order, top = o.hold || o.test ? null : v.top;
   const toAsk = !!top && top.state === 'toask' && !!top.supplier;
   const word = !top ? '' : top.state === 'priceup' ? `${WORD.priceup} · ` : toAsk ? `${WORD.toask} · ${firstWord(top.supplier ? top.supplier.name : '')}` : `${WORD[top.state]}${top.at ? ' · ' : ''}`;
   const tail = !top || toAsk ? '' : top.state === 'priceup' ? fig(top.line.cost) : top.at || '';
   const open = () => nav.push('orders/order', { id: o.id });
   return (
     // The whole card opens the order for a finger; for a screen reader the name is the one button (no button inside a button).
-    <div class="ow-b-orders-row" onClick={open}>
+    <div class={'ow-b-orders-row' + (o.hold ? ' held' : '')} onClick={open}>
       <button type="button" class="top" aria-label={`${o.client}, ${orderNo(o.id)}: open`}>
         <Initials name={o.client} ini={initials(o.client)} />
         <span class="who"><span class="n">{o.client}</span><FromChip who={v.seller} no={o.id} /></span>
@@ -60,6 +60,11 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
             Not found<Icon name="chevron-right" size={16} stroke={2.2} />
           </button>
         )}
+        {top && top.state === 'nosupplier' && (
+          <RowAct word="Pick" busyWord="Picking" busy={false} label={`Pick a supplier for ${top.line.name}`} on={() => openNotFound(o.id, top.line.key)} />
+        )}
+        {o.hold && <span class="ow-b-orders-hold"><Icon name="lock" size={14} stroke={2.2} />Cancel asked · hold</span>}
+        {o.test && !o.hold && <span class="ow-b-orders-hold test">Test · not counted</span>}
       </div>
     </div>
   );
@@ -123,7 +128,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
         <ChipRow label="Show">
           {FILTERS.map((f) => {
             const n = views.filter((v) => matches(v, f.id)).length;
-            if (f.id === 'toask' && !n) return null;
+            if ((f.id === 'toask' || f.id === 'needs' || f.id === 'hold') && !n) return null;
             return (
               <FilterChip key={f.id} on={filter === f.id} dot={f.dot || undefined} count={n} onClick={() => setFilter(f.id)}>
                 {f.id === 'all' && <span aria-hidden="true" class="ow-b-orders-chipic"><Icon name="list" size={16} stroke={2.2} /></span>}

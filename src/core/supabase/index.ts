@@ -99,8 +99,8 @@ export function supabaseSource(): DataSource {
       if (cancelAsks.has(id) || (ask && ask.kind === 'cancel')) await W.withdrawCancelAsk(sb(), id);
       else await W.withdrawBillAsk(sb(), id);
     },
-    async askCancel(orderId, why) {
-      const ask = await W.askCancel(sb(), me(), await order(orderId), why);
+    async askCancel(orderId, why, note) {
+      const ask = await W.askCancel(sb(), me(), await order(orderId), why, note);
       cancelAsks.add(ask.id);
       return ask;
     },

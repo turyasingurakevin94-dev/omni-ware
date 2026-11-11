@@ -24,7 +24,7 @@ export const SHELF = '__stock__';
 /** buyer.html:782 rowToQuote + 794 withLineIds: a line with no lineId gets 'L<orderId>-<index>', kept once written back. */
 export function quoteOf(r: Row): Q {
   const q: Q = {
-    id: r.id, status: r.status || 'draft', invoiced: !!r.invoiced, invoicedAt: r.invoiced_at, invoicedTs: r.invoiced_ts ? new Date(r.invoiced_ts).getTime() : null,
+    id: r.id, qa: !!r.qa, status: r.status || 'draft', invoiced: !!r.invoiced, invoicedAt: r.invoiced_at, invoicedTs: r.invoiced_ts ? new Date(r.invoiced_ts).getTime() : null,
     amountPaid: Number(r.amount_paid) || 0, voided: !!r.voided, date: r.date, user_id: r.user_id,
     client: { name: r.client_name || '', phone: r.client_phone || '' }, items: [], savedAt: null, payments: [], customerId: null, debtCharged: 0, charges: [], credit: null,
     ...(r.payload || {}),
@@ -37,10 +37,21 @@ export function quoteOf(r: Row): Q {
 export function createdMs(q: Q): number {
   return Date.parse(q.createdAt || q.savedAt || '') || (q.date ? Date.parse(q.date + 'T08:00:00') : 0);
 }
-/** buyer.html:1018 quoteAgedOffBoard: invoiced 24 h ago leaves the board. */
+/**
+ * buyer.html:1018 quoteAgedOffBoard: invoiced 24 h ago leaves the board — but never while its goods are still
+ * to come (BUY-5, cross-app round 1: #0148, invoiced and still in Buying 94 days, was gone from the Buyer).
+ */
 export function agedOff(q: Q, now: number): boolean {
+  if (q.status === 'draft' || q.status === 'awaiting_goods' || awaitsGoods(q)) return false;
   return !!(q.invoiced && q.invoicedTs && now - q.invoicedTs >= 24 * 3600 * 1000);
 }
+
+/**
+ * What the Buyer may ask for or buy (cross-app round 1): not an order Sales asked the Manager to cancel
+ * (X-1, an open cancel_asks row: held until the answer), and not a test record (BUY-5, saved_quotes.qa:
+ * listed, marked, never on a trip or in the cash).
+ */
+export const buyable = (held: number[] | undefined) => (q: Q): boolean => !q.qa && !(held || []).includes(Number(q.id));
 
 export const boughtIn = (it: Row | null): boolean => !!(it && it.supplierId && it.supplierId !== SHELF);
 export const received = (it: Row | null): boolean => !!(it && it.receivedAt && Number(it.receivedQty) > 0);
