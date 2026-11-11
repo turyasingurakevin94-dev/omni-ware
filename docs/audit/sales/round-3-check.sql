@@ -58,5 +58,5 @@ select 'last_number' as what, (select last_value from saved_quotes_id_seq)::bigi
 union all select 'invoice_asks', max(quote_id), count(*) filter (where quote_id > 214) from invoice_asks
 union all select 'payment_asks', max(quote_id), count(*) filter (where quote_id > 214) from payment_asks
 union all select 'cash_txns', max(quote_id), count(*) filter (where quote_id > 214) from cash_txns
-union all select 'customer_debt_log', max(quote_id), count(*) filter (where quote_id > 214) from customer_debt_log
-union all select 'cancel_asks', max(quote_id), count(*) filter (where quote_id > 214) from cancel_asks;
+union all select 'customer_debt_log', max(quote_id), count(*) filter (where quote_id > 214) from customer_debt_log;
+--     (cancel_asks is left out: it exists only once 0181 is applied.)
