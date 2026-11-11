@@ -78,3 +78,60 @@ export function aislesDue(b: Pick<YardBooks, 'items' | 'counts' | 'aisles'>, now
   });
   return out.sort((x, y) => (y.days ?? 1e9) - (x.days ?? 1e9) || x.letter.localeCompare(y.letter));
 }
+
+/* ---- the Shelf's counting (blind spot and aisle counts, SH10–SH25; FLOW-01, DATA-01) ---- */
+
+/** The aisle ring's freshness, by the Shelf's name for it (= FRESH_DAYS). */
+export const AISLE_FRESH_DAYS = FRESH_DAYS;
+
+/** Whole days between two moments, by the Kampala calendar (Thu 16:10 → Sat 10:41 is 2). */
+export function daysSince(at: Ms, now: Ms): number {
+  return countAge(at, now) as number;
+}
+
+/** The count Ruth sent back for this item ("count it again"), the newest, or null: when, and which count it replaces. */
+export function recountOf(b: Pick<YardBooks, 'counts'>, key: string): StockCount | null {
+  return b.counts.filter((c) => c.status === 'recount' && c.lines.some((l) => l.key === key))
+    .sort((x, y) => (y.decidedAt || 0) - (x.decidedAt || 0))[0] || null;
+}
+
+/** The count waiting with Ruth for a place, or null (one per place, 0161). */
+export function waitingFor(b: Pick<YardBooks, 'counts'>, place: string | null): StockCount | null {
+  if (!place) return null;
+  return b.counts.find((c) => c.status === 'sent' && placeOf(c) === place) || null;
+}
+
+/** stock_counts.aisle: "Spot count · Wire nails 4\" · 25kg ctn", "Aisle C · Fasteners"; and their places (keys.ts countPlace). */
+export const spotName = (it: Pick<ShelfItem, 'name'>): string => `Spot count · ${it.name}`;
+export const aisleName = (letter: string, aisle: string): string => `Aisle ${letter} · ${aisle}`;
+export const spotPlace = (it: Pick<ShelfItem, 'key' | 'name'>): string => countPlace(spotName(it), [it.key]) as string;
+export const aislePlace = (letter: string, aisle: string): string => countPlace(aisleName(letter, aisle)) as string;
+
+/** One level the yard counts in: its unit, and how many of the books' unit one of it is. */
+export interface Level { unit: string; per: number }
+
+/** Bundles of 20 then pieces; cartons then loose kg (store.html:5299 levelsFor). */
+export function levelsOf(it: Pick<ShelfItem, 'unit' | 'packUnit' | 'packQty' | 'loose'>): Level[] {
+  const unit = (it.unit || 'pc').toLowerCase(), pack = (it.packUnit || '').toLowerCase();
+  const L: Level[] = [];
+  if (it.packQty > 1 && pack && pack !== unit) L.push({ unit: pack, per: it.packQty });
+  L.push({ unit, per: 1 });
+  if (it.loose && it.loose.per > 1 && it.loose.unit.toLowerCase() !== unit) L.push({ unit: it.loose.unit.toLowerCase(), per: 1 / it.loose.per });
+  return L;
+}
+
+/** What was counted, in the books' unit, rounded to two places ("17 ctn + 12 kg" → 17.48 ctn). */
+export function inLineUnit(levels: Level[], values: (number | null)[]): number {
+  const n = levels.reduce((s, l, i) => s + (values[i] || 0) * l.per, 0);
+  return Math.round(n * 100) / 100;
+}
+
+/** One line of a count. `shelf` (shelf.ts onShelf) goes as `system`, what has left for orders as `held`: Ruth sees them, the yard never does. */
+export function countLine(it: ShelfItem, counted: number, shelf: number): StockCount['lines'][number] {
+  return { key: it.key, productId: it.productId, variantIdx: it.variantIdx, name: it.name, counted, system: shelf, held: Math.max(0, it.books - shelf) };
+}
+
+/** The item's counts, newest first (SH25 "Counts of this item"). */
+export function countsOf(b: Pick<YardBooks, 'counts'>, key: string): StockCount[] {
+  return b.counts.filter((c) => c.lines.some((l) => l.key === key) || c.missing.some((l) => l.key === key)).sort((x, y) => y.createdAt - x.createdAt);
+}

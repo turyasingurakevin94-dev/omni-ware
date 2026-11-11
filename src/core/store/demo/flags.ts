@@ -22,6 +22,9 @@
  *   &state=signed-out       the sign-in (TD20, TD23, TD31)
  *   &state=loading          the shop never answers: "Checking your shop…" (TD21)
  *   &state=no-reach         no signal and no copy on the phone (TD22)
+ *   &at=921                 before Musa's spot count of Wire nails 4" was sent (SH10–SH12, SH17–SH19; demo/shelf.ts)
+ *   &state=recount · count-accepted · okello-counts · written-off · kept-on-shelf · restock-listed · shelf-calm
+ *                           the shelf's what-ifs after 10:41 (SH13, SH16, SH25, SH22, SH24, SH32, SH06; demo/shelf.ts)
  *   &as=okello              Okello's phone: Musa passed him the yard 10:42 (TD15, TD25, TD32)
  *   &offline (or =1)        no signal: reads give the copy saved 7:52, writes are kept (amber bar)
  *   &fail=<write>           that write (a StoreSource method: checkIn, load, sendCount …, or snapshot)
@@ -32,9 +35,13 @@
  *   &update=1               a new build is ready (TD08)
  *   &big=1                  Big text on (You, TD12)
  */
-export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'agent' | 'empty' | 'first-day' | 'nobody' | 'signed-out' | 'loading' | 'no-reach';
+export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'agent' | 'empty' | 'first-day' | 'nobody' | 'signed-out' | 'loading' | 'no-reach'
+  | ShelfState;
+/** The shelf's what-ifs (demo/shelf.ts; SH13, SH16, SH25, SH22, SH24, SH32, SH06). */
+export type ShelfState = 'recount' | 'count-accepted' | 'okello-counts' | 'written-off' | 'kept-on-shelf' | 'restock-listed' | 'shelf-calm';
 
-export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach'];
+export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach',
+  'recount', 'count-accepted', 'okello-counts', 'written-off', 'kept-on-shelf', 'restock-listed', 'shelf-calm'];
 /** The named moments, HHMM. */
 export const MOMENTS = [1041, 1047, 1052, 1130, 1200, 1315, 1405, 1510, 1730];
 

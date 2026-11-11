@@ -113,6 +113,12 @@ const S = {
   /** Big text. */
   'text-size': "<path d='M3 19 8 6l5 13M4.8 14.5h6.4M15 19l3-8 3 8M15.9 16.6h4.2'/>",
   mail: "<rect x='3' y='5' width='18' height='14' rx='2'/><path d='m4 7 8 6 8-6'/>",
+  /** The Store's Shelf (store-agent SH01–SH42; screens Q18): scan a shelf label, a count (tally), blind (no figures), in and out. */
+  scan: "<path d='M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 8.5v7M11 8.5v7M14 8.5v7M17 8.5v7'/>",
+  tally: "<path d='M6 5v14M10 5v14M14 5v14M3.5 15.5 17 8.5M19 5v14'/>",
+  blind: "<path d='M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.4.8-1.3 2-2.5 3.2M6.3 7.6C4.4 8.9 3 10.8 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1M9.9 9.9a3 3 0 0 0 4.2 4.2'/>",
+  'arrow-up': "<path d='M12 19V5M6 11l6-6 6 6'/>",
+  'arrow-down': "<path d='M12 5v14M6 13l6 6 6-6'/>",
 };
 
 export type IconName = keyof typeof S;

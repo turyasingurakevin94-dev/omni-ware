@@ -226,6 +226,8 @@ export interface StockReport {
   name: string;
   qty: number;
   why: 'damaged' | 'lost' | 'stolen';
+  /** The word for Ruth ("bent"): stock_reports.note. Optional: older rows have none. */
+  note?: string;
   photo: string | null;
   by: string | null;
   byName: string;
@@ -264,6 +266,10 @@ export interface ShelfItem {
   /** When it was last counted (snapshot counted + accepted counts). */
   countedAt: Ms | null;
   image: string | null;
+  /** A loose level counted in another unit ("Loose, open carton · kg", 25 kg a carton): units.pieces_per_unit. Optional: the books give none yet. */
+  loose?: { unit: string; per: number } | null;
+  /** When Sourcing listed it ("new today", SH42): optional, the books give none yet. */
+  listedAt?: Ms | null;
 }
 
 /** A person of the shop the yard names (staff ∪ members, never an email handle). */

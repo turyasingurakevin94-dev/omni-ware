@@ -10,6 +10,7 @@ import { alerts, counts, returns, trip, tripLine, trips } from './coming.ts';
 import type { StoreDemoFlags } from './flags.ts';
 import { carrier, line, order, orders } from './orders.ts';
 import { AISLES, NOW, agents, customers, items, people, suppliers, t } from './shop.ts';
+import { shelfAt } from './shelf.ts';
 
 const byId = (b: YardBooks, id: number): YardOrder => {
   const o = b.orders.find((x) => x.id === id);
@@ -160,5 +161,7 @@ export function dayAt(f: StoreDemoFlags): { books: YardBooks; now: number } {
   b.people.forEach((p) => { if (p !== b.me && p.id === 'st-mk') p.tint = 't4'; });
   b.me.tint = 'me';
   const hm = String(f.at).padStart(4, '0');
-  return { books: b, now: f.at === 1041 ? NOW : t(`${hm.slice(0, 2)}:${hm.slice(2)}`) };
+  const now = f.at === 1041 ? NOW : t(`${hm.slice(0, 2)}:${hm.slice(2)}`);
+  shelfAt(b, f, now);
+  return { books: b, now };
 }

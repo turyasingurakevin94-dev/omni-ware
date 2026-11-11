@@ -142,7 +142,7 @@ export function demoWrites(b: () => YardBooks, now: () => number, putBacks: Set<
     },
     restock(r: Restock) { asked('restock', r.key, { ...r }); },
     reportLoss(r: Loss) {
-      b().reports.unshift({ id: id('rep'), key: r.key, productId: r.productId, variantIdx: r.variantIdx, name: r.name, qty: r.qty, why: r.why, photo: r.photo ? 'demo/report.jpg' : null,
+      b().reports.unshift({ id: id('rep'), key: r.key, productId: r.productId, variantIdx: r.variantIdx, name: r.name, qty: r.qty, why: r.why, note: r.note, photo: r.photo ? 'demo/report.jpg' : null,
         by: me().userId, byName: me().name, status: 'sent', decidedAt: null, createdAt: now() });
     },
     sendCount(c: CountSend) {

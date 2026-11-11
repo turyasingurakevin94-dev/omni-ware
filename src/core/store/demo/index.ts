@@ -18,6 +18,7 @@ import { FAIL_CODE, readStoreFlags, type StoreDemoFlags } from './flags.ts';
 import { dayAt } from './moments.ts';
 import { t } from './shop.ts';
 import { demoWrites } from './writes.ts';
+import { shelfClash } from './shelf.ts';
 import { WRITE_CODE } from '../errors.ts';
 import type { Kept } from '../../outbox.ts';
 
@@ -57,9 +58,12 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     if (opts.instant) run(); else setTimeout(run, WRITE_MS);
   });
   /** A write: offline is kept; &fail=<name> fails once with its board code; else it lands. */
+  const clashed = { v: false };
+  let clashArgs: unknown[] | null = null;
   const later = (name: WriteName, fn: () => void): Promise<void> => {
     if (f.offline) return Promise.reject(dataError('offline', 'No signal'));
     if (f.fail === name && !failed) { failed = true; return wait(() => { throw dataError('refused', 'That did not save', FAIL_CODE[name] || `${WRITE_CODE[name] || 'ST'}-502`); }); }
+    if (clashArgs && shelfClash(b, f, name, clashArgs, now, clashed)) return wait(() => { throw dataError('clash', 'Someone else just did this'); });
     return wait(() => { fn(); b.at = now; });
   };
   const read = (): Promise<YardBooks> => {
@@ -128,8 +132,8 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     rideHandIn: (ids) => later('rideHandIn', () => W.rideHandIn(ids)),
     restock: (r) => later('restock', () => W.restock(r)),
     reportLoss: (r) => later('reportLoss', () => W.reportLoss(r)),
-    sendCount: (c) => later('sendCount', () => W.sendCount(c)),
-    replaceCount: (id, c) => later('replaceCount', () => W.replaceCount(id, c)),
+    sendCount: (c) => { clashArgs = [c]; const p = later('sendCount', () => W.sendCount(c)); clashArgs = null; return p; },
+    replaceCount: (id, c) => { clashArgs = [id, c]; const p = later('replaceCount', () => W.replaceCount(id, c)); clashArgs = null; return p; },
     passYard: (p) => later('passYard', () => W.passYard(p)),
     gotYard: (id) => later('gotYard', () => W.gotYard(id)),
     closeYard: (c) => later('closeYard', () => W.closeYard(c)),
