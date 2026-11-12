@@ -79,7 +79,7 @@ The two notes left on the canvas last run (SH15's "Shelf" step label and SH41's 
 
 ## Pack
 
-**Re-check 2026-11-12 on `bacd5c32`** (origin/claude/store-build, after the fixes to F1–F9). This re-check covers 25 boards: the 22 Pack boards plus AD02, AD05 and AD06 (Unpack, "Added while building"). `test/parity/store-pack.json` is unchanged and every tap reached its board. I looked at every board/app pair, measured each board, and tapped each control again. The first run, on `6a95aa53`, had 7 pass and 18 fail. **Now: 24 pass, 1 fails.**
+**Re-check 2026-11-12 on `bacd5c32`** (origin/claude/store-build, after the fixes to F1–F9). This re-check covers 25 boards: the 22 Pack boards plus AD02, AD05 and AD06 (Unpack, "Added while building"). `test/parity/store-pack.json` is unchanged and every tap reached its board. I looked at every board/app pair, measured each board, and tapped each control again. The first run, on `6a95aa53`, had 7 pass and 18 fail. **Now: 25 pass of 25** (PK07's F10 fixed in `9a05bfac` and re-run alone: "just now" whole, fits its tile, no clip).
 
 | Fix | What it was | What the re-check found |
 |---|---|---|
@@ -131,7 +131,7 @@ Accepted across the area (not failures):
 | PK19 Short not saved | `pack/order` | 3 | 3.6 | ok | ok | ok | ok | ok | ok | pass | |
 | PK05 Short sent | `pack/order` | 3 | 2.42 | ok | ok | ok | ok | ok | ok | pass | F5 fixed |
 | PK06 Packed | `pack/order` | 2 | 1.81 | ok | ok | ok | ok | ok | ok | pass | F6 fixed |
-| PK07 Ready to collect | `pack/order` | 5 | 5.54 | **"justnow"** | ok | ok | ok | ok | ok | fail | F10 |
+| PK07 Ready to collect | `pack/order` | 5 | 5.54 | ok (data) | ok | ok | ok | ok | ok | pass | F10 fixed (`9a05bfac`) |
 | PK15 Unpack | `pack/order` | 3 | 1.24 | ok | ok | ok | ok | ok | ok | pass | |
 | PK08 For you | `pack` | 2 | 6.78 | ok | ok | ok | ok | ok | ok | pass | |
 | PK09 Look only | `pack/look` | 3 | 0.08 | ok | ok | ok | ok | ok | ok | pass | |
@@ -148,7 +148,7 @@ Accepted across the area (not failures):
 
 ### Pack failures and fixes
 
-- **F10 · "justnow" on the Packed moment** (PK07, new since the first run, which read "0m"). The first figure reads **justnow** over "to pack", one word with no space. The figure is `howLong(0, took).replace(/ /g, '')` (`Packed.tsx:106`). The `replace` closes "36 m" up to "36m", but it also turns `howLong`'s "just now" into "justnow". The board draws the figure as a number and a unit ("37 m"). Fix: strip the space only from a number-and-unit result, or show "0 m" (or "<1 m") under a minute. Do not show "just now" in a figure tile.
+None open. F10 (PK07: "justnow" because `Packed.tsx:106` stripped every space) is fixed in `9a05bfac`; the figure now reads "just now".
 
 ## Today
 
