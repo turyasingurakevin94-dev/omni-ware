@@ -23,6 +23,9 @@ import { KINDS } from './kinds/index.ts';
 import type { Ctx, KindView } from './kit.ts';
 import './decide.css';
 
+/** How long the dock ignores taps after an answer, while the next card comes (a double tap answers once). */
+export const COOL_MS = 700;
+
 interface Last { key: string; word: string; sub: string; told: string; slide: boolean }
 
 function useTick(on: boolean): number {
@@ -40,6 +43,7 @@ export function Decide(p: { params: Params }): JSX.Element | null {
   const [busy, setBusy] = useState(false);
   const [, bump] = useState(0);
   const local = useRef<Record<string, unknown>>({});
+  const cool = useRef(0);
   const tick = useTick(!!last);
 
   // The card on screen: the one asked for while it waits, else the head of the queue.
@@ -52,7 +56,8 @@ export function Decide(p: { params: Params }): JSX.Element | null {
   const n = q.indexOf(a) + 1;
   const after = q[n] || null;
   const order = a.orderId != null ? b.orders.find((o) => o.id === a.orderId) || null : null;
-  const moveOn = () => { local.current = {}; setKey(after ? after.key : null); };
+  // The next card slides in under the same thumb: a second tap within COOL_MS is not an answer to it.
+  const moveOn = () => { local.current = {}; cool.current = Date.now(); setKey(after ? after.key : null); setTimeout(() => bump((i) => i + 1), COOL_MS); };
 
   const named = (told: string[]) => told.map((id) => { const x = b.team.find((pp) => pp.id === id || pp.name === id); return x ? firstWord(x.name) : firstWord(id); }).filter(Boolean);
   // eslint-disable-next-line prefer-const -- the answers read the view drawn from them
@@ -85,7 +90,7 @@ export function Decide(p: { params: Params }): JSX.Element | null {
 
   const h = held.value, left = h && last && !last.slide ? Math.max(0, Math.ceil((h.until - tick) / 1000)) : 0;
   return (
-    <div class="mg-d" role="dialog" aria-label={`${view.title || a.kind}, ${n} of ${q.length}`}>
+    <div class="mg-d" role="dialog" aria-label={`${view.title || titleOf(a)}, ${n} of ${q.length}`}>
       <Head a={a} asker={asker} order={order} n={n} of={q.length} title={view.title} chip={view.chip || null} now={now.value}
         onClose={() => nav.back()} onNext={after ? () => { local.current = {}; setKey(after.key); } : null} />
       <div class="mg-d-body">
@@ -106,7 +111,7 @@ export function Decide(p: { params: Params }): JSX.Element | null {
           </button>
         )}
       </div>
-      <DockView d={view.dock} busy={busy} />
+      <DockView d={view.dock} busy={busy} cooling={Date.now() - cool.current < COOL_MS} />
     </div>
   );
 }

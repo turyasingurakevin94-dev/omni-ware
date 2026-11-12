@@ -11,8 +11,8 @@ import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import type { Dock } from './kit.ts';
 
-export function DockView(p: { d: Dock; busy?: boolean }): JSX.Element {
-  const d = p.d, pr = d.primary;
+export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean }): JSX.Element {
+  const d = p.d, pr = d.primary, wait = p.busy || p.cooling;
   return (
     <footer class="mg-dock">
       {d.above}
@@ -22,7 +22,7 @@ export function DockView(p: { d: Dock; busy?: boolean }): JSX.Element {
       </div>
       {'tap' in pr ? (
         <button type="button" class="mg-ans" aria-disabled={pr.tap.disabled ? 'true' : undefined}
-          onClick={() => { if (pr.tap.disabled) toast.show(pr.tap.disabled, { kind: 'warn' }); else if (!p.busy) pr.tap.on(); }}>
+          onClick={() => { if (pr.tap.disabled) toast.show(pr.tap.disabled, { kind: 'warn' }); else if (!wait) pr.tap.on(); }}>
           {!pr.tap.disabled && <Icon name="check" size={18} stroke={2.4} />}
           <span>{pr.tap.disabled || pr.tap.label}</span>
         </button>
@@ -33,7 +33,7 @@ export function DockView(p: { d: Dock; busy?: boolean }): JSX.Element {
       )}
       {d.secondary && (
         <button type="button" class="mg-out" aria-disabled={d.secondary.disabled ? 'true' : undefined}
-          onClick={() => { if (!d.secondary!.disabled && !p.busy) d.secondary!.on(); }}>{d.secondary.label}</button>
+          onClick={() => { if (!d.secondary!.disabled && !wait) d.secondary!.on(); }}>{d.secondary.label}</button>
       )}
     </footer>
   );
