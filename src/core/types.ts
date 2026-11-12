@@ -16,7 +16,7 @@ export type Ms = number;
 export type Day = string;
 
 /** Avatar tint: identity, never state (LANGUAGE.md §1.1). 'me' is the phone's owner. */
-export type Tint = 't0' | 't1' | 't2' | 't3' | 't4' | 't5' | 'me';
+export type Tint = 't0' | 't1' | 't2' | 't3' | 't4' | 't5' | 't6' | 'n' | 'me';
 
 /** shop_members.role (spec 05 §1), plus 'driver' for a staff row with no login. */
 export type Role = 'owner' | 'admin' | 'manager' | 'sales' | 'buyer' | 'store' | 'accounts' | 'sourcing' | 'staff' | 'driver';

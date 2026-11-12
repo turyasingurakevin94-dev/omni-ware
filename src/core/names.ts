@@ -34,6 +34,9 @@ export const TINTS: Record<Tint, { bg: string; fg: string }> = {
   t3: { bg: '#E4E6FA', fg: '#3A3F9B' },
   t4: { bg: '#E8EBF0', fg: '#3D4A5C' },
   t5: { bg: '#FDEEE1', fg: '#7A4A02' },
+  // The Manager canvas's cast (docs/canvas/manager/BRIEF.md): Musa's mint, and the neutral tile of customers, suppliers, Moses and Peter.
+  t6: { bg: '#E4F4EA', fg: '#0F6B43' },
+  n: { bg: '#F1EEE8', fg: '#1C2233' },
   me: { bg: '#16203C', fg: '#FFFFFF' },
 };
 
