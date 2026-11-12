@@ -12,7 +12,7 @@ Each area critic checks per board: **shows** (content, words, figures, states as
 
 ## Shelf
 
-**Second critic run, 2026-11-12, on `6a95aa53` (the F1–F14 fixes). 30 boards, 30 pass, 0 fail.** The first run (on `a9af4308`) found 5 pass and 25 fail; its 14 failures are re-checked below.
+**Third critic run, 2026-11-12, on `bacd5c32` (the shared fixes from the other areas: `src/ui/pill.css`, `src/ui/sheet.css`, StageSheet's back strip, the demo states, howLong's "just now"; SH15 and SH41 redrawn). 30 boards, 30 pass, 0 fail.** I re-ran the spec and re-measured all 30. Three boards moved: SH32 (0.83 → 0.69), SH11 (0.26 → 0.12) and SH15 (0.51 → 0.39). All three are now closer to their boards, and nothing new differs. The strip names, links and measures are as on `6a95aa53`. Earlier runs: `a9af4308` found 5 pass and 25 fail; `6a95aa53` found 30 pass.
 
 Method: `npm run build:store`, then `tools/parity/run.cjs --tab store-shelf`, then every pair of images read by eye. Next, a Playwright replay of `test/parity/store-shelf.json` that measures computed styles: text size, contrast composited up the tree, every visible control's box, and `scrollWidth`. Last, every control each board draws is tapped in a fresh replay, and the landing is read from `sessionStorage['ow-store-view']`. The spec's taps are unchanged except SH41's last tap, which the fixer renamed "Back to Shelf" (the strip's new name). The redrawn boards (`docs/canvas/store-agent/review/SH-fixes.md`) were also measured.
 
@@ -39,7 +39,7 @@ The way-back strip is judged by the rule now in spec §4.9 ("Close goes to the b
 | Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | SH01 Shelf | `shelf` | 1 | 0.76 | ok | ok | ok | ok | ok | ok | pass | F1 fixed: `#B3BCD2` on the hero (5.83:1, field 4.60:1) |
-| SH41 Shelf offline | `shelf` | 4 | 0.58 | ok | ok | ok | ok | ok | ok | pass | F1 fixed. Board only: its aisle names (11px `#5F6980` on the tiles) measure 4.43:1; the app's pass |
+| SH41 Shelf offline | `shelf` | 4 | 0.58 | ok | ok | ok | ok | ok | ok | pass | F1 fixed. |
 | SH06 Nothing needs a look | `shelf` | 1 | 0.28 | ok | ok | ok | ok | ok | ok | pass | F1 fixed; "due in 8 days" is Q10 |
 | SH02 Find "nails" | `shelf/find` | 2 | 2.17 | ok | ok | ok | ok | ok | ok | pass | F2: Open → `shelf/count` with the waiting sheet (spec §4.5). F3: "Did you mean" scrolls (overflow-x auto, 489/360). #0549 → `in`. Orders 5 / All 9 accepted (#0534 and #0547 carry nails) |
 | SH42 Find nothing | `shelf/find` | 2 | 0.41 | ok | ok | ok | ok | ok | ok | pass | |
@@ -50,15 +50,15 @@ The way-back strip is judged by the rule now in spec §4.9 ("Close goes to the b
 | SH22 Ruth wrote off | `shelf/item` | 3 | 7.14 | ok | ok | ok | ok | ok | ok | pass | F6: the written-off part is tinted red |
 | SH24 Ruth kept it | `shelf/item` | 3 | 6.82 | ok | ok | ok | ok | ok | ok | pass | |
 | SH16 Count accepted | `shelf/item` | 3 | 0.24 | ok | ok | ok | ok | ok | ok | pass | F7: JM 11px. F8: 131 items |
-| SH32 Denis answered | `shelf/item` | 3 | 0.83 | ok | ok | ok | ok | ok | ok | pass | F7: GA 11px. F9: "On the restock list · just now", head as drawn |
+| SH32 Denis answered | `shelf/item` | 3 | 0.69 | ok | ok | ok | ok | ok | ok | pass | F7: GA 11px. F9: "On the restock list · just now", head as drawn |
 | SH10 Count | `shelf/count` | 5 | 0.05 | ok | ok | ok | ok | ok | ok | pass | Close → Shelf; "Back to Find" |
 | SH19 Key pressed | `shelf/count` | 5 | 0.05 | ok | ok | ok | ok | ok | ok | pass | |
-| SH11 Sending | `shelf/count` | 6 | 0.26 | ok | ok | ok | ok | ok | ok | pass | F10: no ring. F11: Undo 44px |
+| SH11 Sending | `shelf/count` | 6 | 0.12 | ok | ok | ok | ok | ok | ok | pass | F10: no ring. F11: Undo 44px |
 | SH12 Sent to Ruth | `shelf/count` | 6 | 0.2 | ok | ok | ok | ok | ok | ok | pass | |
 | SH17 Not done | `shelf/count` | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | F10: pad dimmed, no ring. F11: Try again 44px |
 | SH18 Kept | `shelf/count` | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | F10 |
 | SH13 Count it again | `shelf/count` | 2 | 0.48 | ok | ok | ok | ok | ok | ok | pass | "Back to Shelf" (reached from Shelf) |
-| SH15 A count is waiting | `shelf/count` | 3 | 0.51 | ok | ok | ok | ok | ok | ok | pass | F5: Close and Leave it with Ruth → the item. F12: `#5F6980`. Board only: its "Shelf" step label is still `#6B7480` (4.35:1); the app's passes |
+| SH15 A count is waiting | `shelf/count` | 3 | 0.39 | ok | ok | ok | ok | ok | ok | pass | F5: Close and Leave it with Ruth → the item. F12: `#5F6980`. |
 | SH25 Someone else | `shelf/count` | 7 | 0.09 | ok | ok | ok | ok | ok | ok | pass | F5: Keep Okello's → the item. F10 |
 | SH14 Aisle count | `shelf/count {aisle}` | 5 | 5.45 | ok | ok | ok | ok | ok | ok | pass | F13: the number field is 44px tall |
 | SH20 Report | `shelf/report` | 2 | 1.31 | ok | ok | ok | ok | ok | ok | pass | F5: Close → the item. F11: pc/bundle 44px |
@@ -75,9 +75,7 @@ The way-back strip is judged by the rule now in spec §4.9 ("Close goes to the b
 
 None in the app. The first run's F1–F14 are all fixed and verified (above).
 
-Two leftovers on the canvas, both board-only. The app already passes on both, so neither is a parity failure:
-- **SH15 board:** the waiting track's "Shelf" step label is 11px `#6B7480` on `#F7F5F2` (4.35:1). Make it `#5F6980`, as its "9:21" and "now" now are.
-- **SH41 board:** the aisle tiles' category names (11px `#5F6980`, under the tile's offline wash) measure 4.43:1. Drop the wash on the names, or darken them to `#4F5970`.
+The two notes left on the canvas last run (SH15's "Shelf" step label and SH41's aisle names) are fixed on the redrawn boards. Both boards now measure clean.
 
 ## Pack
 
