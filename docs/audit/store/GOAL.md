@@ -212,6 +212,7 @@ Screens the build found that no board drew, drawn under the AD rule (`docs/spec/
 | AD02Unpack | unpack #0530 on bay 2: bay → To pack, ticks stay, Keep it packed / Unpack | 8.5 | PK06 8.7 | no: steps 8 |
 | AD05Unpacked | done, Undo 9s, Back to Today | 8.8 | PK06 8.7 | yes |
 | AD06UnpackFailed | not saved, Try again | 8.4 | PK06 8.7 | no: polish 8 |
+| AD07GateAllHeld | Ready to collect when the money holds every order (10:41, #0555): the gate locked, Not paid yet, Grace and Ruth told, Stays until paid → OU13 (Out critic G11) | to score | OU10 / OU13 | — |
 
 The round-2 fixes were applied once after the last scoring (no third round).
 

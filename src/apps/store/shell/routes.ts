@@ -61,7 +61,7 @@ export const ROUTES: Route[] = [
 
   r('out/load', 'out', 'stage', '', 'OU01 OU30'),
   r('out/run', 'out', 'pushed', '{ dir }', 'OU02 OU03 OU17 OU04 OU05 OU06 OU07 AD01 AD03 AD04'),
-  r('out/gate', 'out', 'pushed', '{ id? }', 'OU10 OU08 OU12 OU13 OU15 OU16'),
+  r('out/gate', 'out', 'pushed', '{ id? }', 'OU10 OU08 OU12 OU13 OU15 OU16 AD07'),
   r('out/gate-code', 'out', 'pushed', '{ id? }', 'OU11 OU09'),
   r('out/road', 'out', 'stage', '', 'OU20 OU14 OU25 OU27'),
   r('out/door', 'out', 'pushed', '{ id }', 'OU21 OU26 OU22 OU23 OU28'),

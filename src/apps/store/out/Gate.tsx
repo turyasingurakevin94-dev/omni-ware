@@ -26,8 +26,8 @@ import { StageSheet } from '../shell/StageSheet.tsx';
 import { books, me, now } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
-import { NotPaidGate } from './GateHeld.tsx';
-import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, SheetDock, SideTiles, SoftPill, WayIn, seller } from './parts.tsx';
+import { NotPaidGate, Told } from './GateHeld.tsx';
+import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, NotPaid, SheetDock, SideTiles, SoftPill, WayIn, seller } from './parts.tsx';
 import './gate.css';
 
 /** The gate's picture: the yard's front, the gate open in mint (or locked in amber), since when. */
@@ -97,14 +97,15 @@ export function Gate(p: { params: Params }): JSX.Element {
   const b = books.value, n = now.value;
   const list = b ? atTheGate(b, me.value, n) : [];
   const want = p.params.id != null ? Number(p.params.id) : null;
-  // Asked by id (a row, OU13): that order, a Not paid yet one as its own sheet. Else the first that can go: one the money
-  // holds is not handed over, so it waits in Next at the gate (Not paid yet's Close lands here, OU13 → the gate).
-  const o = want != null ? (b ? b.orders.find((x) => x.id === want) || null : null) : list.find((x) => !moneyHeld(x)) || null;
+  // Asked by id (a row, OU13): that order, a Not paid yet one as its own sheet. Else the first that can go; when the money
+  // holds every one, the first, held (AD07: the lock, "Not paid yet", the slide locked "Stays until paid").
+  const o = want != null ? (b ? b.orders.find((x) => x.id === want) || null : null) : list.find((x) => !moneyHeld(x)) || list[0] || null;
   const [name, setName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const c = useCommit('handOver', o ? o.id : 0);
   if (!b) return <main class="st-ph" />;
-  if (o && moneyHeld(o) && c.phase === 'ready') return <NotPaidGate b={b} o={o} />;
+  if (o && want != null && moneyHeld(o) && c.phase === 'ready') return <NotPaidGate b={b} o={o} />;
+  const held = !!o && moneyHeld(o);
   const who = name ?? (o ? collector(o) : '');
   const from = o ? seller(b, o) : null;
   const sees = from ? `${firstWord(from.name)} sees: Delivered · collected` : 'Delivered · collected';
@@ -130,7 +131,11 @@ export function Gate(p: { params: Params }): JSX.Element {
   const busy = c.phase === 'sending', kept = c.phase === 'kept', dim = c.phase !== 'ready';
   const done = collectedToday(b, n);
   const agentNow = o ? isAgent(o) : false;
-  const foot = o && (
+  const foot = o && (held ? (
+    <SheetDock hint={{ icon: 'bell', text: 'Opens when paid', iconTone: 'mint' }}>
+      <Slide label="Stays until paid" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Stays until paid', onTap: () => nav.push('out/gate', { id: o.id }) }} />
+    </SheetDock>
+  ) : (
     <SheetDock hint={busy ? { icon: 'lock', text: 'Held on this phone until the shop says yes' }
       : kept ? { icon: 'clock', text: 'Sends when the signal is back', tone: 'amber' }
         : c.phase === 'failed' ? { icon: 'check', text: 'The name is kept', iconTone: 'mint' }
@@ -141,7 +146,7 @@ export function Gate(p: { params: Params }): JSX.Element {
             : agentNow ? <Slide label="Code first" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Code first', onTap: () => nav.push('out/gate-code', { id: o.id }) }} />
               : <Slide label={`Slide to hand over ${orderNo(o.id)}`} onCommit={() => c.commit(`Handed over ${orderNo(o.id)}`, args())} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}
     </SheetDock>
-  );
+  ));
   const paidBy = o ? whoIs(b, o.paidBy) : null;
   const next = rest.length > 0 && (
     <>
@@ -151,6 +156,7 @@ export function Gate(p: { params: Params }): JSX.Element {
           <Avatar {...orderFace(x, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
           <span class="gt-next-t"><span>{isAgent(x) ? `${x.client.name} · agent` : x.client.name}</span>
             <span class="mono">{`${orderNo(x.id)} · packed ${clock(x.pickingDoneAt ?? n)} · ${x.lines.filter((l) => !l.dropped).length} ${plural(x.lines.filter((l) => !l.dropped).length, 'line')}`}</span></span>
+          {moneyHeld(x) && <NotPaid />}
           {dim ? <span role="link" aria-disabled="true" class="gt-code dim"><span>{isAgent(x) ? 'Code' : 'Open'}</span></span>
             : <Tap on={() => (isAgent(x) ? nav.push('out/gate-code', { id: x.id }) : nav.push('out/gate', { id: x.id }))} class="gt-code">
               <span>{isAgent(x) ? 'Code' : 'Open'}</span>
@@ -165,16 +171,16 @@ export function Gate(p: { params: Params }): JSX.Element {
       {!o ? <Empty b={b}>{next}</Empty> : (
         <>
           <div class="gt-card">
-            <GatePic since={o.stageEnteredAt ?? n} />
+            <GatePic since={o.stageEnteredAt ?? n} held={held} />
             <div class="gt-body">
               <div class="gt-who">
                 <Avatar {...orderFace(o, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
                 <span class="gt-who-t"><span>{o.client.name}</span><span class="mono">{orderNo(o.id)} · {clock(o.createdAt ?? n)}</span></span>
-                {kept ? <SoftPill tone="warn" icon={<Icon name="clock" size={12} stroke={2.4} />}>Not sent yet</SoftPill>
+                {held ? <NotPaid /> : kept ? <SoftPill tone="warn" icon={<Icon name="clock" size={12} stroke={2.4} />}>Not sent yet</SoftPill>
                   : <SoftPill tone="good" icon={<Icon name="check" size={12} stroke={2.6} />}>{paidBy && o.paidAt != null ? `Paid · ${firstWord(paidBy.name)} ${clock(o.paidAt)}` : 'Paid'}</SoftPill>}
               </div>
-              <div class="gt-lines">{o.lines.filter((l) => !l.dropped).map((_, i, all) => <GateLine key={i} b={b} o={o} i={i} tail={`${all.length} ${plural(all.length, 'line')}, read it out`} />)}</div>
-              <label class={cx('gt-field', dim && 'dim')}>
+              <div class="gt-lines">{o.lines.filter((l) => !l.dropped).map((_, i, all) => <GateLine key={i} b={b} o={o} i={i} tail={held ? 'leaves when paid' : `${all.length} ${plural(all.length, 'line')}, read it out`} />)}</div>
+              {!held && <label class={cx('gt-field', dim && 'dim')}>
                 <span class="gt-field-k">Who collects · from the order</span>
                 <span class="gt-field-v">
                   <Icon name="person" size={18} stroke={2} />
@@ -182,9 +188,10 @@ export function Gate(p: { params: Params }): JSX.Element {
                     : <span class="gt-field-n">{who}</span>}
                   <button type="button" class="gt-pen" aria-label="Change who collects" disabled={dim} onClick={() => setEditing(true)}><Icon name="pen" size={15} stroke={2} /></button>
                 </span>
-              </label>
+              </label>}
             </div>
           </div>
+          {held && <Told b={b} o={o} />}
           {next}
           {!kept && done[0] && (
             <div class="gt-done"><Icon name="check" size={16} stroke={2.8} /><span>Done today</span><span class="mono">{done.map((x) => `${orderNo(x.id)} · collected ${clock(x.deliveredAt as number)}`)[0]}</span></div>

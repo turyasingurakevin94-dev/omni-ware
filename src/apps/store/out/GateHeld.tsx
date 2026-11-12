@@ -22,9 +22,19 @@ import { manager, NotPaid, seller, SheetDock } from './parts.tsx';
 
 const tel = (p: string) => 'tel:+256' + p.replace(/[^0-9]/g, '').replace(/^0/, '').replace(/^256/, '');
 
+/** Who the money waits on, told when it reached the gate (OU13, AD07): Grace takes it, Ruth may let it go. */
+export function Told(p: { b: YardBooks; o: YardOrder }): JSX.Element {
+  const { b, o } = p, g = seller(b, o), r = manager(b), told = clock(o.stageEnteredAt ?? now.value);
+  return (
+    <div class="gt-told">
+      {g && <div><Avatar initials={g.initials} tint="me" size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(g.name)}</b> takes the money · <i>told {told}</i></span></div>}
+      {r && <div><Avatar {...yardFace(b, r)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(r.name)}</b> may let it go · <i>told {told}</i></span></div>}
+    </div>
+  );
+}
+
 export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
   const { b, o } = p, n = now.value, g = seller(b, o), r = manager(b), t = trackTimes(o);
-  const told = clock(o.stageEnteredAt ?? n);
   const ask = async () => {
     try { await act('askLetGo', o.id, null); toast.show(`Sent to ${r ? firstWord(r.name) : 'Ruth'}`, { kind: 'ok' }); } catch (_e) { /* the bar says it */ }
   };
@@ -48,10 +58,7 @@ export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
           {o.lines.filter((l) => !l.dropped).map((_, i) => <GateLine key={i} b={b} o={o} i={i} tail="leaves when paid" pill={<NotPaid />} />)}
         </div>
       </div>
-      <div class="gt-told">
-        {g && <div><Avatar initials={g.initials} tint="me" size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(g.name)}</b> takes the money · <i>told {told}</i></span></div>}
-        {r && <div><Avatar {...yardFace(b, r)} size={28} font={11} style={{ letterSpacing: '-.02em' }} /><span><b>{firstWord(r.name)}</b> may let it go · <i>told {told}</i></span></div>}
-      </div>
+      <Told b={b} o={o} />
       <div class="gt-acts">
         <ActBar acts={[
           ...(g ? [{ tone: 'call' as const, icon: 'phone' as const, word: `Call ${firstWord(g.name)}`, sub: 'she takes it', href: tel(g.phone || '0772000101'), label: `Call ${g.name}` }] : []),

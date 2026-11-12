@@ -20,7 +20,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 
 ## 2. The routes
 
-33 ids for the 148 screen boards (142 approved, 6 added while building: AD01–AD06). The default board is first; the rest are its states.
+33 ids for the 149 screen boards (142 approved, 7 added while building: AD01–AD07). The default board is first; the rest are its states.
 
 ### Shell (sign-in and boot, owned by `shell`)
 
@@ -79,7 +79,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 |---|---|---|---|
 | `out/load` | — | stage sheet | OU01 (default), OU30 empty; OU31 name a direction is its sheet (§4) |
 | `out/run` | `{ dir, driver?, go?, hired? }` (the direction's key: its farthest place, `store.html:4444`; To load's slide passes its driver and `go`; `hired` opens OU03) | pushed | OU02 (default), OU03 hired, OU17 slide pressed, OU04 sending, OU05 loaded, OU06 not sent, OU07 failed; added while building: AD01 Someone new (the hired sheet's name, plate, phone), AD03 filled, AD04 phone not a mobile |
-| `out/gate` | `{ id? }` (none: everything ready to collect) | pushed | OU10 (default, 10:47), OU08 sending, OU12 handed over, OU13 not paid yet, OU15 empty, OU16 offline |
+| `out/gate` | `{ id? }` (none: everything ready to collect) | pushed | OU10 (default, 10:47), OU08 sending, OU12 handed over, OU13 not paid yet, OU15 empty, OU16 offline; added while building: AD07 every order there held by money (the first as the top card, locked: "Stays until paid", a tap opens OU13; OU13's Close lands here) |
 | `out/gate-code` | `{ id? }` | pushed | OU11 the agent's code, OU09 wrong code |
 | `out/road` | — | stage sheet | OU20 (default), OU14 empty, OU25 offline, OU27 cancelled on the truck |
 | `out/door` | `{ id }` | pushed | OU21 (default), OU26 sending, OU22 delivered, OU23 no photo, OU28 not sent |
