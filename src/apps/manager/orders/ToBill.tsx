@@ -9,9 +9,10 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { buyer, safePrice, toBill } from '../../../core/manager/orders.ts';
+import type { WriteName } from '../../../core/manager/source.ts';
 import type { Ask, ManagerBooks, MOrder } from '../../../core/manager/types.ts';
 import { BILL_AFTER_MS, billsIn, inWords } from '../../../core/manager/watch.ts';
-import { ANSWER, askWord, heldWord, hm } from '../../../core/manager/words.ts';
+import { AFTER_WORDS, ANSWER, askWord, heldWord, hm } from '../../../core/manager/words.ts';
 import { money } from '../../../core/money.ts';
 import { dayOf, weekday } from '../../../core/time.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
@@ -23,12 +24,16 @@ import { PageHead } from '../../../ui/PageHead.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, answer, books, now, online, waiting } from '../shell/store.ts';
-import { Empty, H2, Ring } from './Bits.tsx';
+import { act, books, now, online, waiting } from '../shell/store.ts';
+import { Strip } from './Strip.tsx';
+import { useInPlace, useKept } from './useAnswer.ts';
+import { Empty, H2, Ring, Spinner, Told } from './Bits.tsx';
 import './orders.css';
 
-function CantRow(p: { a: Ask; o: MOrder; b: ManagerBooks }): JSX.Element {
+function CantRow(p: { a: Ask; o: MOrder; b: ManagerBooks; keep: () => void }): JSX.Element {
   const { a, o, b } = p;
+  const spot = useInPlace(true);
+  const say = (label: string, kind: WriteName, args: unknown[]) => { p.keep(); spot.go(`${label} · ${orderNo(o.id)}`, kind, args, a.key); };
   const seller = b.team.find((x) => x.id === o.sellerId) || null;
   const safe = safePrice(b, a);
   const open = () => nav.push('decide', { id: a.key });
@@ -38,14 +43,27 @@ function CantRow(p: { a: Ask; o: MOrder; b: ManagerBooks }): JSX.Element {
   const by = buyer(b);
   let btn: JSX.Element;
   if (a.kind === 'bill' && a.code === 'OWSML') {
-    btn = <button type="button" class="mg-orders-btn navy" onClick={() => answer(a.key, `${ANSWER.billIt} · ${money(o.total)} · ${orderNo(o.id)}`, 'billSmall', [o.id])}>{ANSWER.billIt}</button>;
+    btn = <button type="button" class="mg-orders-btn navy" onClick={() => say(`${AFTER_WORDS.invoiced} · ${money(o.total)}`, 'billSmall', [o.id])}>{ANSWER.billIt}</button>;
   } else if (safe && safe.price != null && (a.kind === 'price' || a.kind === 'counter')) {
     const price = safe.price;
-    btn = <button type="button" class="mg-orders-btn navy" onClick={() => answer(a.key, `${safe.say} · ${money(price)} · ${orderNo(o.id)}`, 'price', [o.id, a.idx, price, safe.word])}>{`${safe.say} · ${money(price)}`}</button>;
+    btn = <button type="button" class="mg-orders-btn navy" onClick={() => say(`${safe.say} · ${money(price)}`, 'price', [o.id, a.idx, price, safe.word])}>{`${safe.say} · ${money(price)}`}</button>;
   } else if (noCost) {
     btn = <button type="button" class="mg-orders-btn off" aria-disabled="true" onClick={open}><Icon name="lock" size={16} stroke={2} />Set price</button>;
   } else {
     btn = <button type="button" class="mg-orders-btn navy" onClick={open}><Icon name="chevron-right" size={16} stroke={2.2} />Open</button>;
+  }
+  const told = a.kind === 'bill' ? AFTER_WORDS.invoiced : safe ? safe.say : '';
+  if (spot.st !== 'idle') {
+    return (
+      <div class="mg-orders-done">
+        <div class="mg-orders-row">
+          {seller && <Avatar initials={seller.initials} tint={seller.tint} size={36} font={13} />}
+          <div class="mid"><span class="cu">{o.customerName}</span><span class="mono s">{[orderNo(o.id), who].filter(Boolean).join(' · ')}</span></div>
+        </div>
+        {spot.st === 'sending' ? <span class="mg-orders-waits"><Spinner dark />Sending…</span> : <Strip spot={spot} what={`${told} · ${orderNo(o.id)}`} />}
+        {seller && told && (spot.st === 'held' || spot.st === 'done') && <Told card face={seller} who={`${who} sees`} word={told} />}
+      </div>
+    );
   }
   return (
     <div class="mg-orders-row">
@@ -60,8 +78,9 @@ function CantRow(p: { a: Ask; o: MOrder; b: ManagerBooks }): JSX.Element {
   );
 }
 
-function TwinCard(p: { keep: MOrder; drop: MOrder; hide: () => void; unhide: () => void }): JSX.Element {
+function TwinCard(p: { keep: MOrder; drop: MOrder; hold: () => void }): JSX.Element {
   const { keep, drop } = p;
+  const spot = useInPlace(true);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const who = firstWord(drop.customerName);
@@ -73,7 +92,7 @@ function TwinCard(p: { keep: MOrder; drop: MOrder; hide: () => void; unhide: () 
           <IconTile tone="neutral" icon="copy" size={36} iconSize={18} />
           <div class="mid"><span class="t">{`Taken twice? · ${who}`}</span><span class="mono s">{`${orderNo(drop.id)} is invoiced · a void now`}</span></div>
         </div>
-        <NavyCard><Slide label="Billed first · ask for a void" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Billed first · ask for a void' }} /></NavyCard>
+        <div class="mg-orders-locked"><Slide label="Billed first · ask for a void" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Billed first · ask for a void', quiet: true }} /></div>
       </div>
     );
   }
@@ -84,10 +103,15 @@ function TwinCard(p: { keep: MOrder; drop: MOrder; hide: () => void; unhide: () 
       toast.show(r.kept ? `${ANSWER.cancelled} · ${orderNo(drop.id)} · Waits` : `${ANSWER.cancelled} · ${orderNo(drop.id)} · keep ${orderNo(keep.id)}`, { kind: 'ok' });
     } catch (_e) { /* the bar or a toast says it; the card stays */ } finally { setBusy(false); }
   };
-  const both = () => {
-    p.hide();
-    answer(null, `${ANSWER.bothReal} · ${orderNo(keep.id)} & ${orderNo(drop.id)}`, 'bothReal', [keep.id, drop.id], { undo: p.unhide, then: (_r, e) => { if (e) p.unhide(); } });
-  };
+  const both = () => { p.hold(); spot.go(`${ANSWER.bothReal} · ${orderNo(keep.id)} & ${orderNo(drop.id)}`, 'bothReal', [keep.id, drop.id]); };
+  if (spot.st !== 'idle' && spot.st !== 'sending') {
+    return (
+      <div class="mg-orders-twin">
+        <div class="h"><IconTile tone="neutral" icon="copy" size={36} iconSize={18} /><div class="mid"><span class="t">{`${who} · ${money(drop.total)}`}</span><span class="mono s">{pair}</span></div></div>
+        <Strip spot={spot} what={`${ANSWER.bothReal} · ${pair}`} />
+      </div>
+    );
+  }
   return (
     <div class="mg-orders-twin">
       <div class="h">
@@ -101,7 +125,7 @@ function TwinCard(p: { keep: MOrder; drop: MOrder; hide: () => void; unhide: () 
           <button type="button" class="mg-orders-btn navy h44" aria-expanded={open} aria-label={`Open: cancel ${orderNo(drop.id)}, keep ${orderNo(keep.id)} (a slide)`} onClick={() => setOpen(!open)}>
             <Icon name={open ? 'chevron-down' : 'chevron-right'} size={16} stroke={2.2} />Open
           </button>
-          <button type="button" class="mg-orders-btn out h44" onClick={both}>{ANSWER.bothReal}</button>
+          <button type="button" class="mg-orders-btn out h44" aria-disabled={spot.st === 'sending' ? 'true' : undefined} onClick={() => { if (spot.st === 'idle') both(); }}>{ANSWER.bothReal}</button>
         </div>
       </div>
       {open && (
@@ -132,31 +156,28 @@ function ItselfRow(p: { o: MOrder; t: number }): JSX.Element {
 
 export function ToBill(): JSX.Element | null {
   const b = books.value;
-  const [hidden, setHidden] = useState<string[]>([]);
-  if (!b) return null;
-  const t = now.value, x = toBill(b, waiting.value);
-  const tw = x.twins.filter((w) => !hidden.includes(`${w.keep.id}:${w.drop.id}`));
-  const count = x.cant.length + tw.length + x.itself.length;
-  const wait = x.waitSum - x.twins.filter((w) => !tw.includes(w)).reduce((s, w) => s + w.drop.total, 0);
-  const sum = x.itselfSum + wait;
+  const x = b ? toBill(b, waiting.value) : null;
+  const cant = useKept(x ? x.cant.map((c) => ({ key: c.a.key, v: c })) : []);
+  const tw = useKept(x ? x.twins.map((w) => ({ key: `${w.keep.id}:${w.drop.id}`, v: w })) : []);
+  if (!b || !x) return null;
+  const t = now.value;
+  const count = x.cant.length + x.twins.length + x.itself.length;
+  const sum = x.itselfSum + x.waitSum;
   return (
     <main class="mg-orders">
       <PageHead title="To bill" count={count} onBack={() => nav.back()}>
         <div class="mg-orders-billhead">
           <span class="fig"><span class="mono">{money(sum)}</span><span class="u">UGX</span></span>
           <div class="split" aria-hidden="true"><i class="a" style={{ width: `${sum ? (x.itselfSum / sum) * 100 : 0}%` }} /><i class="b" /></div>
-          <div class="leg"><span class="a">Bills itself · <span class="mono">{money(x.itselfSum)}</span></span><span>Wait on you · <span class="mono">{money(wait)}</span></span></div>
+          <div class="leg"><span class="a">Bills itself · <span class="mono">{money(x.itselfSum)}</span></span><span>Wait on you · <span class="mono">{money(x.waitSum)}</span></span></div>
         </div>
       </PageHead>
       <div class="mg-orders-body">
-        {!count && <Empty />}
-        {x.cant.length > 0 && <H2 title="Can't bill itself" count={x.cant.length} />}
-        {x.cant.map((c) => <CantRow key={c.a.key} a={c.a} o={c.o} b={b} />)}
-        {tw.length > 0 && <H2 title="Taken twice?" count={tw.length} />}
-        {tw.map((w) => {
-          const k = `${w.keep.id}:${w.drop.id}`;
-          return <TwinCard key={k} keep={w.keep} drop={w.drop} hide={() => setHidden((h) => [...h, k])} unhide={() => setHidden((h) => h.filter((y) => y !== k))} />;
-        })}
+        {!count && !cant.rows.length && !tw.rows.length && <Empty />}
+        {cant.rows.length > 0 && <H2 title="Can't bill itself" count={x.cant.length} />}
+        {cant.rows.map((r) => <CantRow key={r.key} a={r.v.a} o={r.v.o} b={b} keep={() => cant.keep(r.key, r.v)} />)}
+        {tw.rows.length > 0 && <H2 title="Taken twice?" count={x.twins.length} />}
+        {tw.rows.map((r) => <TwinCard key={r.key} keep={r.v.keep} drop={r.v.drop} hold={() => tw.keep(r.key, r.v)} />)}
         {x.itself.length > 0 && <H2 title="Bills itself" count={x.itself.length} right="24 h after delivery" />}
         {x.itself.map((o) => <ItselfRow key={o.id} o={o} t={t} />)}
       </div>

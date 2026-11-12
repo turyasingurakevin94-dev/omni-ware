@@ -57,7 +57,7 @@ export function PromiseSheet(p: { params: Params }): JSX.Element | null {
     </button>
   );
   return (
-    <MoneySheet label="Promise" top={40}
+    <MoneySheet label="Promise" top={40} noBars={error}
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-pr-who"><b>{c.name}</b><span class="mono">{`owes ${money(c.owes)} · oldest ${oldestDays(c, today)} d`}</span></span></div>}
       dock={sent
         ? <MoneyDock strip={<HeldStrip word={sent} sub={seller ? `${firstWord(seller.name)} sees it` : ''} />} />

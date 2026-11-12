@@ -21,7 +21,8 @@
 .mg-orders-col.lit .dots i { box-shadow: 0 0 0 2px #fff; }
 .mg-orders-col:active .box { transform: scale(.97); }
 .mg-orders-line { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: #B3BCD2; }
-.mg-orders-line .w { border: none; background: none; padding: 0; min-height: 24px; font: inherit; color: #fff; cursor: pointer; }
+.mg-orders-line .w { position: relative; border: none; background: none; padding: 0; min-height: 24px; font: inherit; color: #fff; cursor: pointer; }
+.mg-orders-line .w::after { content: ''; position: absolute; left: -10px; right: -10px; top: -10px; bottom: -10px; }
 .mg-orders-line .w:disabled { color: #B3BCD2; cursor: default; }
 .mg-orders-line .mono { font-weight: 600; }
 
@@ -40,8 +41,9 @@
 .mg-orders-card .top, .mg-orders-stuck .h, .mg-orders-wait .h { display: flex; align-items: center; gap: 10px; }
 .mg-orders-card .mid, .mg-orders-stuck .mid, .mg-orders-wait .mid, .mg-orders-row .mid, .mg-orders-twin .mid, .mg-orders-itself .mid, .mg-orders-line-card .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .mg-orders .nm { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.mg-orders .nm .cu { min-width: 0; }
 .mg-orders .nm .no { font-size: 12px; font-weight: 600; color: #5F6980; flex: none; }
-.mg-orders .cu { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mg-orders .cu { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; line-height: 1.25; }
 .mg-orders-card .sub, .mg-orders .s { font-size: 11px; font-weight: 500; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mg-orders-card .sub.warn { color: #7A4A02; }
 .mg-orders-card .end { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none; }
@@ -82,7 +84,7 @@
 @keyframes mg-orders-turn { to { transform: rotate(360deg); } }
 .mg-orders-strip { flex: 1; min-height: 44px; border-radius: 999px; background: #16203C; color: #fff; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; box-sizing: border-box; color: #fff; }
 .mg-orders-strip > svg { color: #6FDCB0; }
-.mg-orders-strip > span { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mg-orders-strip > span { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; line-height: 1.25; padding: 6px 0; }
 .mg-orders-strip button { height: 34px; padding: 0 12px; border: none; border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; display: flex; align-items: center; gap: 4px; font: 700 13px var(--sans, Figtree, sans-serif); cursor: pointer; position: relative; }
 .mg-orders-strip button::after { content: ''; position: absolute; inset: -5px 0; }
 .mg-orders-waits { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; background: #F1EEE8; color: #5F6980; font-size: 13px; font-weight: 700; }
@@ -90,7 +92,7 @@
 .mg-orders-err .ic { width: 36px; height: 36px; border-radius: 12px; background: #FBE5E2; color: #8E2A22; display: flex; align-items: center; justify-content: center; flex: none; }
 .mg-orders-err .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .mg-orders-err .t b { font-size: 14px; }
-.mg-orders-err .t .mono { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 500; color: #6B7480; }
+.mg-orders-err .t .mono { overflow-wrap: anywhere; font-size: 11px; font-weight: 500; color: #6B7480; }
 
 /* who is told */
 .mg-orders-told { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #5F6980; }
@@ -182,7 +184,7 @@
 .mg-orders-twin { background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .mg-orders-twin .h { display: flex; align-items: center; gap: 10px; }
 .mg-orders-twin .ow-itile { border-radius: 12px; }
-.mg-orders-twin .t { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.mg-orders-twin .t { font-size: 14px; font-weight: 700; }
 .mg-orders-twin .paid { font-size: 11px; font-weight: 600; color: #7A4A02; }
 .mg-orders-twin .btns { display: flex; flex-direction: column; gap: 6px; flex: none; }
 .mg-orders-twin .ow-navycard { padding: 0; border-radius: 999px; }
@@ -202,3 +204,16 @@
 .mg-orders-empty .bars { display: flex; gap: 4px; }
 .mg-orders-empty .bars i { width: 40px; height: 6px; border-radius: 999px; background: #0F6B43; }
 .mg-orders-empty .s { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #5F6980; }
+
+/* an answered row kept in place, and the locked slide on a light card */
+.mg-orders-done { display: flex; flex-direction: column; gap: 6px; }
+.mg-orders-locked .ow-lslide { height: 44px; background: #F1EEE8; }
+.mg-orders-locked .ow-lslide-k { width: 36px; height: 36px; background: #C9C4BA; }
+.mg-orders-locked .ow-lslide-l { color: #5F6980; font-size: 13px; padding: 0 12px 0 44px; }
+/* the way into Denis's list (Added: the way in) */
+.mg-orders-stockrow { box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 10px 12px; min-height: 56px; font: inherit; color: #1C2233; text-align: left; cursor: pointer; }
+.mg-orders-stockrow:active { background: #F1EEE8; transform: scale(.99); }
+.mg-orders-stockrow .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mg-orders-stockrow b { font-size: 14px; }
+.mg-orders-stockrow .s { white-space: normal; }
+.mg-orders-stockrow > svg { color: #5F6980; }

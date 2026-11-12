@@ -63,7 +63,7 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
     }
   };
   return (
-    <MoneySheet label={`Change the limit for ${c.name}`} top={206}
+    <MoneySheet label={`Change the limit for ${c.name}`} top={206} noBars={error}
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-sh-t"><b>{c.name}</b><span>{now ? `Limit now ${money(now.limit)} · ${now.days} days` : `Limit now · ${ANSWER.cashOnly}`}</span></span></div>}
       dock={error ? <MoneyDock strip={<ErrStrip word={pickWord(pick)} why={online.value ? 'Not saved' : 'Not saved · no signal'} retry={() => { void save(); }} />} />
         : <MoneyDock told={same || !seller ? [] : [seller]} word={same ? undefined : pickWord(pick)} mint

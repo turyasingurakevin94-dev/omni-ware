@@ -18,9 +18,9 @@ import { SectionHead } from '../../../ui/SectionHead.tsx';
 import type { Params } from '../../../ui/stack.ts';
 import { toast } from '../../../ui/toast.tsx';
 import { nav } from '../shell/nav.ts';
-import { books, now } from '../shell/store.ts';
+import { books, kept, now } from '../shell/store.ts';
 import { nudge, sellerOf } from './Money.tsx';
-import { CustHead, MoneyDock, PageDock, sellersOf, Track } from './parts.tsx';
+import { CustHead, MoneyDock, PageDock, sellersOf, Track, Waits, waitsRows } from './parts.tsx';
 import './debtor.css';
 
 const ink = { kept: '#0F6B43', broken: '#8E2A22', open: '#16203C' } as const;
@@ -29,19 +29,23 @@ function Dots(p: { ps: Promise_[]; today: string }): JSX.Element {
   const W = 300, x = (f: number) => 10 + f * (W - 20);
   const { dots: line, today: tx } = promiseLine(p.ps, p.today);
   return (
-    <svg width="100%" height="44" viewBox={`0 0 ${W} 44`} preserveAspectRatio="xMidYMid meet" role="img"
+    <svg width="100%" height="52" viewBox={`0 0 ${W} 52`} preserveAspectRatio="xMidYMid meet" role="img"
       aria-label={line.map((d) => `${dayLabel(d.p.on)} ${d.p.state}`).join(', ')}>
-      <line x1="10" y1="14" x2={W - 10} y2="14" stroke="#E6E3DD" stroke-width="2" />
-      {line.map((d) => (
-        <g key={d.p.id}>
-          {d.p.state === 'kept'
-            ? <><circle cx={x(d.x)} cy="14" r="7" fill={ink.kept} /><path d={`M${x(d.x) - 3} 14l2 2 4-4`} stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" /></>
-            : <circle cx={x(d.x)} cy="14" r="6" fill="#fff" stroke={ink[d.p.state]} stroke-width="2.5" />}
-          <text x={d.x > 0.93 ? W - 4 : x(d.x)} y="38" text-anchor={d.x > 0.93 ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#6B7480">{dayLabel(d.p.on).split(' ').slice(1).join(' ')}</text>
-        </g>
-      ))}
-      <rect x={x(tx) - 1} y="4" width="2" height="20" fill="#1C2233" />
-      <text x={tx >= 1 ? x(tx) - 3 : x(tx)} y="38" text-anchor={tx >= 1 ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#1C2233">today</text>
+      <line x1="10" y1="22" x2={W - 10} y2="22" stroke="#E6E3DD" stroke-width="2" />
+      {line.map((d) => {
+        // A promise still to come is named above the line, so it never sits on "today" below it.
+        const ahead = d.x > tx, end = d.x > 0.93, lx = end ? W - 4 : x(d.x);
+        return (
+          <g key={d.p.id}>
+            {d.p.state === 'kept'
+              ? <><circle cx={x(d.x)} cy="22" r="7" fill={ink.kept} /><path d={`M${x(d.x) - 3} 22l2 2 4-4`} stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" /></>
+              : <circle cx={x(d.x)} cy="22" r="6" fill="#fff" stroke={ink[d.p.state]} stroke-width="2.5" />}
+            <text x={lx} y={ahead ? 9 : 46} text-anchor={end ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill={ahead ? '#16203C' : '#6B7480'}>{dayLabel(d.p.on).split(' ').slice(1).join(' ')}</text>
+          </g>
+        );
+      })}
+      <rect x={x(tx) - 1} y="12" width="2" height="20" fill="#1C2233" />
+      <text x={tx >= 1 ? x(tx) - 3 : x(tx)} y="46" text-anchor={tx >= 1 ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#1C2233">today</text>
     </svg>
   );
 }
@@ -67,6 +71,7 @@ export function Debtor(p: { params: Params }): JSX.Element | null {
         </div>
       </CustHead>
       <div class="mg-mo-body">
+        <Waits rows={waitsRows(b, kept.value)} />
         <SectionHead title="Bills" meta={String(open.length)} />
         {open.length > 0 && (
           <div class="mg-mo-list">

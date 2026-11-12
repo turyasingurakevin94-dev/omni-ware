@@ -17,8 +17,10 @@ import { IconTile, type TileTone } from '../../../ui/ActRow.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import type { Params } from '../../../ui/stack.ts';
 import { nav } from '../shell/nav.ts';
-import { answer, books, now, waiting } from '../shell/store.ts';
-import { H2, Told } from './Bits.tsx';
+import { books, now, waiting } from '../shell/store.ts';
+import { Strip } from './Strip.tsx';
+import { useInPlace, useKept } from './useAnswer.ts';
+import { H2, Spinner, Told } from './Bits.tsx';
 import './orders.css';
 
 function Head(p: { o: MOrder; b: ManagerBooks }): JSX.Element {
@@ -68,8 +70,9 @@ function PriceScale(p: { l: MLine; sells: number | null; shop: number | null }):
   );
 }
 
-function WaitCard(p: { a: Ask; o: MOrder; b: ManagerBooks; q: Ask[]; t: number }): JSX.Element {
+function WaitCard(p: { a: Ask; o: MOrder; b: ManagerBooks; q: Ask[]; t: number; keep: () => void }): JSX.Element {
   const { a, o, b } = p;
+  const spot = useInPlace(true);
   const asker = askerOf(b, a), place = placeOf(p.q, a.key);
   const safe = safePrice(b, a);
   const l = 'idx' in a && typeof a.idx === 'number' ? o.lines[a.idx] : null;
@@ -81,10 +84,24 @@ function WaitCard(p: { a: Ask; o: MOrder; b: ManagerBooks; q: Ask[]; t: number }
   const open = () => nav.push('decide', { id: a.key });
   const go = () => {
     if (!safe || safe.price == null) return;
-    const label = `${safe.say} · ${money(safe.price)}`;
-    answer(a.key, `${label} · ${orderNo(o.id)}`, 'price', [o.id, a.kind === 'price' || a.kind === 'counter' ? a.idx : 0, safe.price, safe.word]);
+    p.keep();
+    spot.go(`${safe.say} · ${money(safe.price)} · ${orderNo(o.id)}`, 'price', [o.id, a.kind === 'price' || a.kind === 'counter' ? a.idx : 0, safe.price, safe.word], a.key);
   };
   const under = sells != null && l && l.cost != null && sells < l.cost ? l.cost - sells : null;
+  if (spot.st !== 'idle' && safe) {
+    return (
+      <>
+        <div class="mg-orders-wait">
+          <div class="h">
+            {asker && <Avatar initials={asker.initials} tint={asker.tint} size={36} font={13} />}
+            <div class="mid"><span class="t">{asker ? `From ${firstWord(asker.name)} · ${word}` : word}</span><span class="mono s">{`Asked ${hm(a.at)}`}</span></div>
+          </div>
+          {spot.st === 'sending' ? <span class="mg-orders-waits"><Spinner dark />Sending…</span> : <Strip spot={spot} what={`${safe.say} · ${orderNo(o.id)}`} />}
+        </div>
+        {told.length > 0 && (spot.st === 'held' || spot.st === 'done') && <Told card face={seller || asker} who={whoSee(told)} word={safe.say} />}
+      </>
+    );
+  }
   return (
     <>
       <div class="mg-orders-wait">
@@ -146,16 +163,17 @@ function LineRow(p: { l: MLine; a: Ask | null }): JSX.Element {
 
 export function Order(p: { params: Params }): JSX.Element | null {
   const b = books.value;
+  const o = b ? b.orders.find((x) => x.id === Number(p.params.id)) : undefined;
+  const q = waiting.value, kept = useKept(o ? asksOn(q, o.id).map((a) => ({ key: a.key, v: a })) : []);
   if (!b) return null;
-  const o = b.orders.find((x) => x.id === Number(p.params.id));
   if (!o) return <main class="mg-orders"><div class="mg-orders-body"><button type="button" class="mg-orders-btn out h44" onClick={() => nav.back()}>Back</button></div></main>;
-  const q = waiting.value, asks = asksOn(q, o.id);
+  const asks = asksOn(q, o.id);
   return (
     <main class="mg-orders">
       <Head o={o} b={b} />
       <div class="mg-orders-body">
-        {asks.length > 0 && <H2 dot title={`Waits on ${firstWord(b.me.name)}`} count={asks.length} />}
-        {asks.map((a) => <WaitCard key={a.key} a={a} o={o} b={b} q={q} t={now.value} />)}
+        {kept.rows.length > 0 && <H2 dot title={`Waits on ${firstWord(b.me.name)}`} count={asks.length} />}
+        {kept.rows.map((r) => <WaitCard key={r.key} a={r.v} o={o} b={b} q={q} t={now.value} keep={() => kept.keep(r.key, r.v)} />)}
         <H2 title="Lines" count={o.lines.length} />
         {o.lines.map((l) => <LineRow key={l.idx} l={l} a={asks.find((a) => a.kind === 'price' && a.idx === l.idx) || null} />)}
       </div>

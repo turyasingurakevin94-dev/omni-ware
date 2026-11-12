@@ -5,12 +5,15 @@
  * row; then the rest by stage. A column scrolls to its stage (Delivered opens To bill).
  */
 import type { JSX } from 'preact';
-import { columns, headLine, listed } from '../../../core/manager/orders.ts';
+import { buyer, columns, headLine, listed } from '../../../core/manager/orders.ts';
 import { stuck as stuckOf } from '../../../core/manager/watch.ts';
 import type { MOrder, Stage } from '../../../core/manager/types.ts';
 import { STAGE, STAGES } from '../../../core/manager/words.ts';
 import { money } from '../../../core/money.ts';
-import { firstWord } from '../../../core/names.ts';
+import { firstWord, TINTS } from '../../../core/names.ts';
+import { restockPlan } from '../../../core/manager/decide-stock.ts';
+import { Avatar } from '../../../ui/Avatar.tsx';
+import { Icon } from '../../../ui/icons.tsx';
 import { PageHead } from '../../../ui/PageHead.tsx';
 import { ChipRow, FilterChip } from '../../../ui/Pill.tsx';
 import type { Params } from '../../../ui/stack.ts';
@@ -20,16 +23,17 @@ import { Empty, H2, StageCols, tintBg } from './Bits.tsx';
 import { OrderCard } from './OrderCard.tsx';
 import './orders.css';
 
-export type Filter = 'all' | 'stuck' | 'ruth';
+export type Filter = 'all' | 'stuck' | 'ruth' | 'stock';
 
 export function Orders(p: { params: Params }): JSX.Element | null {
   const b = books.value;
   if (!b) return null;
   const q = waiting.value, t = now.value;
-  const f = (['all', 'stuck', 'ruth'].includes(p.params.filter as string) ? p.params.filter : 'all') as Filter;
+  const f = (['all', 'stuck', 'ruth', 'stock'].includes(p.params.filter as string) ? p.params.filter : 'all') as Filter;
   const all = listed(b), st = stuckOf(b, t).map((x) => x.o), line = headLine(b, q, t);
   const waits = (o: MOrder) => q.some((a) => a.orderId === o.id);
-  const shown = f === 'stuck' ? st : f === 'ruth' ? all.filter(waits) : all;
+  const shown = f === 'stuck' ? st : f === 'ruth' ? all.filter(waits) : f === 'stock' ? [] : all;
+  const plan = restockPlan(b.restock), by = buyer(b), lines = b.restock.length;
   const top = shown.filter((o) => st.includes(o));
   const rest = shown.filter((o) => !st.includes(o));
   const seller = (o: MOrder) => tintBg(b.team.find((x) => x.id === o.sellerId));
@@ -54,8 +58,19 @@ export function Orders(p: { params: Params }): JSX.Element | null {
           <FilterChip on={f === 'all'} count={all.length} onClick={() => setF('all')}>All</FilterChip>
           <FilterChip on={f === 'stuck'} dot="#8E2A22" count={st.length} onClick={() => setF('stuck')}>Stuck</FilterChip>
           <FilterChip on={f === 'ruth'} count={all.filter(waits).length} onClick={() => setF('ruth')}>{`${firstWord(b.me.name)} decides`}</FilterChip>
+          {lines > 0 && <FilterChip on={f === 'stock'} dot={by ? TINTS[by.tint].fg : undefined} count={lines} onClick={() => setF('stock')}>{by ? `${firstWord(by.name)}'s list` : 'Restock list'}</FilterChip>}
         </ChipRow>
-        {!shown.length && <Empty />}
+        {f === 'stock' && lines > 0 && (
+          <button type="button" class="mg-orders-stockrow" onClick={() => nav.push('orders/stock', {})}>
+            {by && <Avatar initials={by.initials} tint={by.tint} size={32} />}
+            <span class="mid">
+              <b>{by ? `${firstWord(by.name)}'s restock list` : 'Restock list'}</b>
+              <span class="mono s">{[`this trip · ${lines} ${lines === 1 ? 'line' : 'lines'} · ${money(plan.total)}`, plan.held.length ? `${plan.held.length} not yet` : ''].filter(Boolean).join(' · ')}</span>
+            </span>
+            <Icon name="chevron-right" size={18} stroke={2.2} />
+          </button>
+        )}
+        {!shown.length && f !== 'stock' && <Empty />}
         {top.map((o) => <OrderCard key={o.id} o={o} b={b} q={q} now={t} stuck />)}
         {STAGES.map((s) => {
           const os = rest.filter((o) => o.stage === s);

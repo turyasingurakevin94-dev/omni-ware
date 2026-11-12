@@ -68,9 +68,13 @@ export function billsIn(o: Pick<MOrder, 'deliveredAt'>, now: Ms): number {
   return o.deliveredAt == null ? 0 : Math.max(0, o.deliveredAt + BILL_AFTER_MS - now);
 }
 
-/** Delivered, not yet billed, not held: they bill themselves (Orders → To bill). */
+/**
+ * Delivered, not yet billed, not held: they bill themselves (Orders → To bill). An order that may be
+ * a twin waits on Ruth instead (Taken twice?), so it is never counted twice.
+ */
 export function toBillThemselves(b: Pick<ManagerBooks, 'orders'>): MOrder[] {
-  return b.orders.filter((o) => o.stage === 'completed' && !o.invoiced && !o.heldCode).sort((x, y) => (x.deliveredAt || 0) - (y.deliveredAt || 0));
+  const twin = new Set(twins(b).map((x) => x.drop.id));
+  return b.orders.filter((o) => o.stage === 'completed' && !o.invoiced && !o.heldCode && !twin.has(o.id)).sort((x, y) => (x.deliveredAt || 0) - (y.deliveredAt || 0));
 }
 
 /** "in 6 h 05 m". */

@@ -80,7 +80,7 @@ export function CustHead(p: { c: Cust; people: Person[]; children: ComponentChil
 }
 
 /** The light sheet over a page (Money p3, Added2 p1–p3): the grabber, the head, the body, the dock. `top` is where the board draws it, of 780. */
-export function MoneySheet(p: { label: string; top: number; head: ComponentChildren; dock: ComponentChildren; children: ComponentChildren }): JSX.Element {
+export function MoneySheet(p: { label: string; top: number; head: ComponentChildren; dock: ComponentChildren; children: ComponentChildren; noBars?: boolean }): JSX.Element {
   const box = useRef<HTMLDivElement>(null), scrim = useRef<HTMLDivElement>(null);
   useDragClose(box, () => nav.back(), scrim);
   useEffect(() => {
@@ -97,7 +97,7 @@ export function MoneySheet(p: { label: string; top: number; head: ComponentChild
           <div class="mg-mo-sheet-h">{p.head}<button type="button" class="mg-mo-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={18} stroke={2.2} /></button></div>
           {p.children}
         </div>
-        <div class="mg-mo-bars"><Bars /></div>
+        {!p.noBars && <div class="mg-mo-bars"><Bars /></div>}
         {p.dock}
       </div>
     </div>
