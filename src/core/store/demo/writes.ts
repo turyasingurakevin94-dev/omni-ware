@@ -131,7 +131,7 @@ export function demoWrites(b: () => YardBooks, now: () => number) {
     notOnList(x: Extra) { asked('extra', x.tripId, { ...x, photo: x.photo ? 'demo/extra.jpg' : null }); },
     returnAsk(r: ReturnAsk) {
       order(r.orderId);
-      b().returns.unshift({ id: id('ret'), orderId: r.orderId, lines: r.lines, reason: r.reason, note: r.note, by: me().userId, byName: me().name, status: 'sent', decidedAt: null, createdAt: now() });
+      b().returns.unshift({ id: id('ret'), orderId: r.orderId, lines: r.lines, reason: r.reason, note: r.note, by: me().userId, byName: me().name, status: 'sent', decidedAt: null, createdAt: now(), gateAt: r.gateAt ?? null });
     },
     withdrawReturn(rid: string) { const r = b().returns.find((x) => x.id === rid && x.by === me().userId); if (!r) throw dataError('refused', 'Not your return', 'P0001'); r.status = 'withdrawn'; },
     rideTick(tid: string, got: Record<number, number | null>) {

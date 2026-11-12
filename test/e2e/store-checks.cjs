@@ -27,12 +27,12 @@ async function sendKept(ph, sent) {
 async function offline(open) {
   const ph = await open('&at=1130&offline');
   await checkinTo(ph);
-  await ph.p.waitForTimeout(700);
+  await ph.p.waitForTimeout(10700); // the slide holds it 10 s with Undo (IN06), then it is kept
   const s = await ph.text();
   ph.check(/Not sent yet/.test(s) && /No signal · kept on this phone/.test(s), 'offline: the check-in says Not sent yet · No signal · kept on this phone (IN07)', s.slice(0, 1200));
   const tone = await barTone(ph, /^No signal/);
   ph.check(tone === 'amber', 'offline: the No signal bar is amber', tone);
-  ph.check(/saved 7:52/.test(s), 'offline: the copy says saved 7:52', s.slice(-400));
+  ph.check(/saved 11:30/.test(s), 'offline: it says when it was kept: saved 11:30 (the outbox entry, not the copy\'s 7:52)', s.slice(-400));
   const checked = async () => (await trips(ph)).filter((x) => /^TRIP-1017B/.test(x.id)).every((x) => x.yardCheckedAt);
   ph.check(!(await checked()), 'offline: nothing reached the books while there was no signal');
   await signalBack(ph);
@@ -71,7 +71,7 @@ async function offlinePack(open) {
 async function failed(open) {
   const ph = await open('&at=1130&fail=checkIn');
   await checkinTo(ph);
-  await ph.p.waitForTimeout(800);
+  await ph.p.waitForTimeout(10800); // held 10 s with Undo, then refused once
   let s = await ph.text();
   ph.check(/That did not save · tell Kevin/.test(s) && /code CI-502/.test(s) && /your counts are kept/.test(s), 'failed: That did not save · tell Kevin · code CI-502 · your counts are kept', s.slice(0, 1200));
   const tone = await barTone(ph, /That did not save/);

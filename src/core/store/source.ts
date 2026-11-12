@@ -72,6 +72,11 @@ export interface ReturnAsk {
   reason: string;
   note: string;
   photo: Blob | null;
+  /**
+   * When the yard looked at it at the gate (IN20's head, IN22's "At the gate 11:02"). The demo keeps it; the real
+   * store_return_ask has no field for it (p_lines, p_reason, p_note only), so the books' answer shows the sent time.
+   */
+  gateAt?: Ms;
 }
 
 /** W20: a count (spot or aisle). */

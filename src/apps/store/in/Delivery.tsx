@@ -4,9 +4,10 @@
  * a photo of their delivery note for Esther, then one slide.
  *
  *   count    IN10 (stacks of 10, the loose ones on a stepper) · IN11 some torn
- *   sending  IN14 the shelf going from 120 to 220 · kept IN15 · done IN12
+ *   done     IN12 at once, Undo while the write waits its 10 s (store.ts hold, quiet) · then kept IN15 or not done
+ *   sending  IN14 (Try again) the shelf going from 120 to 220
  *
- * Rules: core/store/checkin.ts (one check-in rule); the write: W14 checkIn.
+ * Rules: core/store/checkin.ts (one check-in rule); the write: W14 checkIn, held 10 s (spec §4.9).
  */
 import { letterOf, onShelf } from '../../../core/store/shelf.ts';
 import { firstWord } from '../../../core/names.ts';
@@ -22,10 +23,10 @@ import { Icon } from '../../../ui/icons.tsx';
 import { BagArt, ItemArt } from '../../../ui/ItemArt.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, notDone, now } from '../shell/store.ts';
+import { act, books, held, hold, notDone, now, undoHeld } from '../shell/store.ts';
 import { LineRow, OpenLine } from './CheckLines.tsx';
 import { openNotOnList } from './NotOnList.tsx';
-import { byRole, Card, Done, DoneWho, FlowCard, GroupHead, HeadPill, InBar, InDock, NavyChip, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
+import { byRole, Card, Done, DoneWho, FlowCard, forStops, GroupHead, HeadPill, InBar, InDock, keptAt, NavyChip, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
 import { takePhoto, type Photo } from './photo.ts';
 
 type Phase = 'count' | 'sending' | 'kept' | 'failed' | 'done';
@@ -58,7 +59,7 @@ export function Delivery(p: { trip: string }): JSX.Element {
   if (phase === 'done' && l) {
     const sees = `${n} ${l.unit}`;
     return (
-      <Done title="Checked in"
+      <Done title="Checked in" undo={held.value ? undoHeld : undefined}
         who={<DoneWho lead={<span aria-hidden="true" class="in-truck sm"><Icon name="truck" size={18} stroke={2} /></span>} name={supplier} sub={`${sees} · ${clock(sentAt)}`} />}
         chips={<><NavyChip tone="mint" face={personFace(moses)}>{`${firstWord(moses ? moses.name : 'Sourcing')} told`}</NavyChip>{photo && <NavyChip tone="glass" face={personFace(esther)}>{`${firstWord(esther ? esther.name : 'Accounts')} has the note`}</NavyChip>}</>}>
         <FlowCard head="Where it went" pics={Array.from({ length: 5 }, (_, i) => <span key={i} class="in-bagpic"><BagArt size={26} /></span>)} n={`+${good}`} mint
@@ -73,21 +74,33 @@ export function Delivery(p: { trip: string }): JSX.Element {
     );
   }
 
-  const send = async () => {
+  const args = (): unknown[] => [payload(t, l && tornN ? { counts: { [l.id]: good }, whys: { [l.id]: 'Torn · set aside' } } : draft)];
+  const lost = (e: unknown) => setPhase(isDataError(e) && e.kind === 'clash' ? 'count' : 'failed');
+  /** The slide: Checked in at once, the write held 10 s with Undo (nothing is sent until then), then it goes. */
+  const send = () => {
     if (!l) return;
-    const d: Draft = tornN ? { counts: { [l.id]: good }, whys: { [l.id]: 'Torn · set aside' } } : draft;
+    setSentAt(now.value);
+    setPhase('done');
+    notDone.value = null;
+    hold(`Checked in · ${supplier}`, 'checkIn', args(), () => setPhase('count'), {
+      quiet: true,
+      then: (r, e) => { if (r && r.kept) setPhase('kept'); else if (!r) lost(e); },
+    });
+  };
+  /** Try again: it goes now, "Sending…" while it does (IN14). */
+  const again = async () => {
     setPhase('sending');
     notDone.value = null;
     try {
-      const r = await act('checkIn', payload(t, d));
+      const r = await act('checkIn', ...args());
       if (r.kept) { setPhase('kept'); return; }
       setSentAt(now.value);
       setPhase('done');
-    } catch (e) { setPhase(isDataError(e) && e.kind === 'clash' ? 'count' : 'failed'); }
+    } catch (e) { lost(e); }
   };
   const locked = phase === 'sending' || phase === 'kept';
   const came = l && n != null ? `Came in · ${n} ${l.unit}${tornN ? ` · ${tornN} torn` : ''}` : 'Came in';
-  const second = phase === 'kept' ? <Updating at={clock(b.at)} />
+  const second = phase === 'kept' ? <Updating at={clock(keptAt('checkIn', forStops(t.stops.map((s) => s.id))) ?? now.value)} />
     : tornN ? <Sees face={personFace(ruth)} who={firstWord(ruth ? ruth.name : 'Ruth')} what={`${tornN} torn`} />
       : <Sees face={personFace(esther)} who={firstWord(esther ? esther.name : 'Accounts')} what="the delivery note" />;
   const due = t.stops[0].dueAt;
@@ -97,23 +110,23 @@ export function Delivery(p: { trip: string }): JSX.Element {
         : { kind: 'wait' as const, label: 'Count it first' };
   const head = (
     <TripHead lead={<span aria-hidden="true" class="in-truck"><Icon name="truck" size={22} stroke={2} /></span>} name={supplier}
-      sub={`at the yard ${clock(t.stops[0].collectedAt ?? now.value)} · ${lines.length} ${lines.length === 1 ? 'line' : 'lines'}`}
-      onScan={() => { if (!locked) nav.push('shelf/scan', { then: 'checkin' }); }} onClose={() => nav.back()} closeLabel="Close: back to Coming in"
+      sub={`at the yard ${clock(t.stops[0].collectedAt ?? now.value)}`}
+      onScan={() => nav.push('shelf/scan', { then: 'checkin' })} scanOff={phase === 'sending'} onClose={() => nav.to('in')} closeLabel="Close: back to Coming in"
       chips={<>
         <HeadPill face={personFace(moses)}>{`From ${firstWord(moses ? moses.name : 'Sourcing')} · Sourcing`}</HeadPill><span class="in-flex" />
-        <button type="button" class="in-extra" disabled={locked} onClick={() => openNotOnList(t.id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
+        <button type="button" class="in-extra" disabled={phase === 'sending'} onClick={() => openNotOnList(t.id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
       </>} />
   );
   const foot = (
     <div class="in-foot">
-      <InBar kept={phase === 'kept'} what="counts" retry={phase === 'failed' ? () => { void send(); } : undefined} />
+      <InBar kept={phase === 'kept'} what="counts" retry={phase === 'failed' ? () => { void again(); } : undefined} />
       <InDock ring={{ done: lines.filter((x) => draft.counts[x.id] != null).length, of: lines.length, amber: tornN ? 1 : 0 }}
         lines={<><Sees face={personFace(moses)} who={firstWord(moses ? moses.name : 'Sourcing')} what={phase === 'kept' ? `Coming${due ? ` · ${clock(due)}` : ''}` : came} />{second}</>} move={move} />
     </div>
   );
   const counting = phase === 'count' || phase === 'failed';
   return (
-    <Screen head={head} foot={foot} back="Back to Coming in">
+    <Screen head={head} foot={foot}>
       <GroupHead icon="rack" title="The shelf" right={<span class="mono">{`${lines.length} ${lines.length === 1 ? 'line' : 'lines'} · refill`}</span>} />
       {l && !counting && <Card><LineRow l={l} count={n} sub={`${n} ${l.unit} counted`} /></Card>}
       {l && counting && torn == null && (

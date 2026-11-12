@@ -3,9 +3,10 @@
  * goods. At the stop: tick each line onto the truck (All on), then Done; at the yard: slide to hand it
  * in. Someone else checks it in, so the count stays blind (screens Q4). No money on this phone.
  *
- *   IN30 at the stop · IN31 at the yard · IN34 sending · IN33 no signal · IN35 not done · IN32 handed in
+ *   IN30 at the stop · IN31 at the yard · IN32 handed in at once, Undo while the hand-in waits its 10 s
+ *   · then IN33 no signal or IN35 not done · IN34 sending (Try again)
  *
- * Rules: core/store/ride.ts. Writes: W19 rideTick (Done at the stop), W19a rideHandIn (the slide).
+ * Rules: core/store/ride.ts. Writes: W19 rideTick (Done at the stop), W19a rideHandIn (the slide, held 10 s, spec §4.9).
  */
 import { orderFace, personFace, yardFace } from '../../../core/store/faces.ts';
 import type { JSX } from 'preact';
@@ -20,8 +21,8 @@ import { ItemArt } from '../../../ui/ItemArt.tsx';
 import { Stepper } from '../../../ui/Stepper.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, me, notDone, now } from '../shell/store.ts';
-import { byLogin, byRole, Done, DoneWho, HeadPill, HeadRail, InBar, InDock, Pill, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
+import { act, books, held, hold, me, notDone, now, undoHeld } from '../shell/store.ts';
+import { byLogin, byRole, Done, DoneWho, HeadPill, HeadRail, InBar, InDock, keptAt, Pill, Screen, Sees, Steps, TripHead, Updating } from './parts.tsx';
 import './ride.css';
 
 type Phase = 'load' | 'back' | 'sending' | 'kept' | 'failed' | 'done';
@@ -47,7 +48,7 @@ export function Ride(p: { trip?: string }): JSX.Element {
   if (phase === 'done') {
     const l = t.lines[0];
     return (
-      <Done title="Handed in"
+      <Done title="Handed in" undo={held.value ? undoHeld : undefined}
         who={<DoneWho lead={<span class="in-faces2 ri-two"><Avatar {...yardFace(b, b.me)} size={30} />{r.driver && <Avatar {...personFace(r.driver)} size={30} />}</span>} name={stop.supplierName} sub={`${lineWord} · ${clock(handedAt)}`} />}>
         {l && (
           <div class="in-flow ri-flow" role="img" aria-label={`${ticks[l.id] ?? l.expected} ${l.unit} back at the yard`}>
@@ -79,20 +80,34 @@ export function Ride(p: { trip?: string }): JSX.Element {
       for (const s of t.stops) { const x = await act('rideTick', s.id, ticksFor(t, s.id, ticks)); if (x.kept) setKept(true); }
     } catch (_e) { setLocal('load'); }
   };
-  const handIn = async () => {
+  const ids = t.stops.map((s) => s.id);
+  /** The slide: Handed in at once, the write held 10 s with Undo (nothing is sent until then), then it goes. */
+  const handIn = () => {
+    setHandedAt(now.value);
+    setLocal('done');
+    notDone.value = null;
+    hold(`Handed in · ${stop.supplierName}`, 'rideHandIn', [ids], () => setLocal(null), {
+      quiet: true,
+      then: (x) => { if (x && x.kept) { setKept(true); setLocal('kept'); } else if (!x) setLocal('failed'); },
+    });
+  };
+  /** Try again: it goes now, "Sending…" while it does (IN34). */
+  const again = async () => {
     setLocal('sending');
     notDone.value = null;
     try {
-      const x = await act('rideHandIn', t.stops.map((s) => s.id));
+      const x = await act('rideHandIn', ids);
       if (x.kept) { setKept(true); setLocal('kept'); return; }
       setHandedAt(now.value);
       setLocal('done');
     } catch (_e) { setLocal('failed'); }
   };
+  /** When this phone kept the ride's work (the ticks, or the hand-in): IN33 "saved 15:52". */
+  const keptWhen = keptAt('rideTick', (a) => ids.includes(String(a[0]))) ?? keptAt('rideHandIn', (a) => Array.isArray(a[0]) && (a[0] as string[]).some((x) => ids.includes(x)));
   const stops = rideStops({ ...r, phase: at ? 'load' : 'back' }, doneAt ? Object.fromEntries(t.stops.map((s) => [s.id, doneAt])) : {});
   const head = (
     <TripHead lead={<span aria-hidden="true" class="ri-faces"><Avatar {...yardFace(b, b.me)} size={34} />{r.driver && <Avatar {...personFace(r.driver)} size={32} />}</span>}
-      name={`Trip to ${stop.supplierName}`} sub={at ? `you ride · ${lineWord}` : `at the yard ${clock(now.value)}`} onClose={() => nav.back()}>
+      name={`Trip to ${stop.supplierName}`} sub={at ? `you ride · ${lineWord}` : `at the yard ${clock(now.value)}`} onClose={() => nav.to('today')} closeLabel="Close: back to Today">
       <div class="ri-head">
         <div class="in-head-chips"><HeadPill face={personFace(r.from)}>{`From ${denis} · Buyer`}</HeadPill>{r.driver && <HeadPill face={personFace(r.driver)}>{`${firstWord(r.driver.name)} drives`}</HeadPill>}<span class="in-flex" /></div>
         <HeadRail label={stops.map((s) => `${s.word} ${s.state === 'now' ? 'now' : s.at ? clock(s.at) : ''}`).join(', ')}
@@ -103,7 +118,7 @@ export function Ride(p: { trip?: string }): JSX.Element {
 
   if (at) {
     return (
-      <Screen head={head} back="Back" pad="14px 16px 20px" gap={10}>
+      <Screen head={head} pad="14px 16px 20px" gap={10}>
         <div class="in-ghead">
           <span aria-hidden="true" class="ri-sup">{stop.supplierName.split(' ').map((w) => w[0]).join('').slice(0, 2)}</span>
           <h2>{`${stop.supplierName} · tick it on`}</h2><span class="in-flex" />
@@ -155,15 +170,15 @@ export function Ride(p: { trip?: string }): JSX.Element {
   const move = gone ? { kind: 'slide' as const, props: { label: 'Sending…', onCommit: () => undefined, state: 'sending' as const } }
     : stuck ? { kind: 'wait' as const, label: 'Waiting to send' } : { kind: 'slide' as const, props: { label: 'Slide to hand in the trip', onCommit: handIn } };
   const first2 = <Sees face={personFace(r.from)} who={denis} what={stuck || failed ? `Buying · at ${short}` : 'Handed in'} />;
-  const second = stuck ? <Updating at={clock(b.at)} /> : <Sees face={personFace(okello)} who={firstWord(okello ? okello.name : 'The yard')} what={failed ? 'nothing yet' : `Check it in · ${lineWord}`} />;
+  const second = stuck ? <Updating at={clock(keptWhen ?? now.value)} /> : <Sees face={personFace(okello)} who={firstWord(okello ? okello.name : 'The yard')} what={failed ? 'nothing yet' : `Check it in · ${lineWord}`} />;
   const foot = (
     <div class="in-foot">
-      <InBar kept={stuck} what="ticks" retry={failed ? () => { void handIn(); } : undefined} />
+      <InBar kept={stuck} what="ticks" retry={failed ? () => { void again(); } : undefined} />
       <InDock ring={{ done: t.lines.filter((l) => ticks[l.id] != null).length, of: nLines }} lines={<>{first2}{second}</>} move={move} />
     </div>
   );
   return (
-    <Screen head={head} foot={foot} back="Back" gap={10}>
+    <Screen head={head} foot={foot} gap={10}>
       <div class="in-card in-card16 ri-truck">
         <div class="ri-truck-h"><Icon name="truck" size={20} stroke={2} /><h2>On the truck</h2><Pill tone="good" icon="check" size={11} stroke={3.2}>{`${t.lines.filter((l) => ticks[l.id] != null).length} of ${lineWord}`}</Pill></div>
         {t.lines.map((l) => {

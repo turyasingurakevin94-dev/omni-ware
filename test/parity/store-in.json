@@ -3,13 +3,13 @@
     "board": "IN01ComingIn.dc.html",
     "demo": "",
     "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }],
-    "note": "Today's Coming in tile (TD01 '2 coming in: …') opens the sheet. The head is the shared stage sheet (shell/StageSheet.tsx, PK01's 40 px strip and rail), not IN01's own 24 px strip and taller rail: one head for the five rail stops. Until the Today area lands its tiles, the app is reached with the stack [today, in]."
+    "note": "Today's Coming in tile (TD01 '2 coming in: …') opens the sheet. The head is the one stage-sheet head (PK01's; spec §2a), and IN01 is drawn with it."
   },
   {
     "board": "IN40ComingInEmpty.dc.html",
     "demo": "&at=1730",
     "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }],
-    "note": "17:30: nothing coming. The pill counts what the demo checked in by then (4 · all in); the board draws 3. Ask Denis for more opens shelf/find (pick the item, then Ask): SH30 needs an item. Head as IN01."
+    "note": "17:30: nothing coming. The pill counts what the demo checked in by then (4 · all in); the board draws 3. Ask Denis for more opens shelf/find (SH02): an ask needs an item (spec §2a ruling). Head as IN01."
   },
   {
     "board": "IN02Checkin.dc.html",
@@ -37,33 +37,33 @@
   },
   {
     "board": "IN05CheckinSending.dc.html",
-    "demo": "&at=1130&slow=1",
-    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }],
-    "note": "The slide is pressed from the keyboard (Tab to the knob, Enter): a drag cannot be a step."
+    "demo": "&at=1130&fail=checkIn",
+    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }, { "tap": "Try again", "settle": 40 }],
+    "note": "The slide holds the check-in 10 s (IN06); &fail=checkIn refuses it once (IN08), then Try again shows Sending… while it goes (shot inside the demo's 250 ms). The slide is pressed from the keyboard (Tab to the knob, Enter): a drag cannot be a step."
   },
   {
     "board": "IN06CheckedIn.dc.html",
     "demo": "&at=1130",
     "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 600 }],
-    "note": "No Undo chip: the check-in has no write that takes it back (W14 sends at once; see the report). The clock is the demo's 11:30 (board 11:34)."
+    "note": "Checked in at once; the check-in waits its 10 s with Undo (store.ts hold, quiet), then goes. The clock is the demo's 11:30 (board 11:34)."
   },
   {
     "board": "IN07CheckinOffline.dc.html",
     "demo": "&at=1130&offline=1",
-    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 400 }],
-    "note": "The phone's copy says 'saved 7:52' (the demo's offline copy); the board says 11:33."
+    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }],
+    "note": "No signal: after its 10 s the held check-in is kept on the phone; 'saved 11:30' is when it was kept (the outbox entry; board 11:33)."
   },
   {
     "board": "IN08CheckinFailed.dc.html",
     "demo": "&at=1130&fail=checkIn",
-    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 600 }],
-    "note": ""
+    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }],
+    "note": "&fail=checkIn: after its 10 s the held check-in is refused once (CI-502)."
   },
   {
     "board": "IN09CheckinSomeoneElse.dc.html",
     "demo": "&at=1130&state=someone-checkin",
-    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 800 }],
-    "note": "&state=someone-checkin: Okello checks it in at 11:32 while this phone counts; the slide comes back 'Someone else just did this'."
+    "steps": [{ "tap": { "sel": "[aria-label*='coming in' i]" } }, { "tap": { "sel": "button[aria-label^=\"Denis's trip:\"]" } }, { "tap": "4 box" }, { "tap": "1 tin" }, { "tap": "18 pcs" }, { "tap": "Never came" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 11000 }],
+    "note": "&state=someone-checkin: Okello checks it in at 11:32 while this phone counts; after its 10 s the held check-in comes back 'Someone else just did this'."
   },
   {
     "board": "IN13ExtraAnswered.dc.html",
@@ -85,21 +85,21 @@
   },
   {
     "board": "IN14DeliverySending.dc.html",
-    "demo": "&at=1200&slow=1",
-    "steps": [{ "tap": "Check in Hima Cement, 1 line" }, { "tap": "100 bags" }, { "tap": { "text": "Their delivery note" } }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }],
-    "note": "The aisle bar shows the books' figure (130 → 230): the shelf figure (FACTS' 120) is shelf.ts onShelf, the Shelf area's rule, not written yet."
+    "demo": "&at=1200&fail=checkIn",
+    "steps": [{ "tap": "Check in Hima Cement, 1 line" }, { "tap": "100 bags" }, { "tap": { "text": "Their delivery note" } }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }, { "tap": "Try again", "settle": 40 }],
+    "note": "As IN05: the held check-in refused once, then Try again shows Sending…. Scan and Not on the list are dimmed while it sends."
   },
   {
     "board": "IN15DeliveryOffline.dc.html",
     "demo": "&at=1200&offline=1",
-    "steps": [{ "tap": "Check in Hima Cement, 1 line" }, { "tap": "100 bags" }, { "tap": { "text": "Their delivery note" } }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 400 }],
-    "note": "As IN14 for the figure; 'saved 7:52' as IN07."
+    "steps": [{ "tap": "Check in Hima Cement, 1 line" }, { "tap": "100 bags" }, { "tap": { "text": "Their delivery note" } }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }],
+    "note": "No signal: after its 10 s the held check-in is kept; 'saved 12:00' is when it was kept (board 12:04)."
   },
   {
     "board": "IN12DeliveryDone.dc.html",
     "demo": "&at=1200",
     "steps": [{ "tap": "Check in Hima Cement, 1 line" }, { "tap": "100 bags" }, { "tap": { "text": "Their delivery note" } }, { "press": "Tab" }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 600 }],
-    "note": "No Undo chip (as IN06). The demo's clock is 12:00 (board 12:05)."
+    "note": "Checked in at once, Undo while it waits its 10 s (as IN06). The demo's clock is 12:00 (board 12:05)."
   },
   {
     "board": "IN20Return.dc.html",
@@ -151,26 +151,26 @@
   },
   {
     "board": "IN34RideHandInSending.dc.html",
-    "demo": "&at=1552&slow=1",
-    "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "tap": { "text": "On the truck" } }, { "press": "Tab" }, { "press": "Enter" }],
-    "note": ""
+    "demo": "&at=1552&fail=rideHandIn",
+    "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "wait": 500 }, { "tap": { "text": "On the truck" } }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }, { "tap": "Try again", "settle": 40 }],
+    "note": "The held hand-in refused once (IN35), then Try again shows Sending… while it goes."
   },
   {
     "board": "IN33RideOffline.dc.html",
     "demo": "&at=1552&offline=1",
     "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "wait": 500 }],
-    "note": "The ticks wait on the phone, so the hand-in waits too."
+    "note": "The ticks wait on the phone, so the hand-in waits too. 'saved 15:52' is when the ticks were kept (the outbox entry)."
   },
   {
     "board": "IN35RideHandInFailed.dc.html",
     "demo": "&at=1552&fail=rideHandIn",
-    "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "wait": 500 }, { "tap": { "text": "On the truck" } }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 600 }],
-    "note": ""
+    "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "wait": 500 }, { "tap": { "text": "On the truck" } }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 10700 }],
+    "note": "&fail=rideHandIn: after its 10 s the held hand-in is refused once (TR-233)."
   },
   {
     "board": "IN32RideDone.dc.html",
     "demo": "&at=1552",
     "steps": [{ "tap": { "sel": "[aria-label*='trip to Katwe' i]" } }, { "tap": { "text": "All on" } }, { "tap": { "text": "Done at Katwe · back to the yard" } }, { "wait": 500 }, { "tap": { "text": "On the truck" } }, { "press": "Tab" }, { "press": "Enter" }, { "wait": 600 }],
-    "note": "No Undo chip (as IN06)."
+    "note": "Handed in at once, Undo while the hand-in waits its 10 s (store.ts hold, quiet)."
   }
 ]

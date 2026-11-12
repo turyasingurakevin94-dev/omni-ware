@@ -58,6 +58,8 @@ The sample day is [`FACTS.md`](../canvas/store-agent/FACTS.md): **Sat 17 Oct 202
 | The counts on Today and the stage sheets: To pack 1 (#0556) · Packing now 1 (#0552) · Packed 1 (#0530, not paid yet) · On the road 3 (2 with Ssali, 1 ready to collect) · Delivered today 1 (#0543) · Waiting on goods +2 (#0549, #0546) | FACTS §2 |
 | Bays: #0552 bay 1, #0530 bay 2, #0556 bay 3, #0555 at the gate. One order per bay | FACTS §2; manifest `pack.json` |
 | No money anywhere: no price, total or amount owed on any board or in the demo seed the phone reads | FACTS (head); GLOSSARY "Money on a phone" |
+| A stage sheet has **one head**: PK01's (the shared `shell/StageSheet.tsx`: the 40 px strip, the rounded foot, the rail). IN01 and IN40 were redrawn to it (2026-11-12); a new stage board draws it, not a head of its own | Goods-in critic G1; `docs/canvas/store-agent/review/IN-fixes.md` |
+| **Ruling: IN40's "Ask Denis for more" opens Find** (`shelf/find`, SH02), not SH30 (`shelf/ask`) as the board linked: an ask is for one item (SH30 draws the item, its shelf figure and how many), and an empty Coming in names none, so the person picks the item first and asks from it. IN40 is relinked to SH02 | Goods-in critic G2; `in/ComingIn.tsx` |
 | Sample gaps the designers filled, to confirm or replace (Q9): #0534's three lines (OU27: Kato's usual), Okello's count (SH25), the "just now" states after 10:41 (SH13, SH16, SH22, SH24, SH25, SH32), the hired drivers Abudu and Juma (OU03), sample error codes (ST-301, CI-502, RT-417, TR-233, SC-502, SR-502, LD-412) | GOAL.md "Waiting on Kevin" 9; manifests `shelf.json`, `out.json` |
 
 ## 3. Open questions (Kevin)

@@ -3,12 +3,13 @@
  * by where the goods go, then one slide. The count is kept on this phone until it goes (FLOW-05).
  *
  *   count     IN02 one line open (quick tiles) · IN03 a line differs (why) · IN04/IN16 Not on the list
- *   sending   IN05 the stages moving, "Sending…"
- *   kept      IN07 no signal: where it goes, "Not sent yet", Waiting to send
- *   failed    IN08 the red bar, the counts kept, the slide again
- *   done      IN06 Checked in (CheckedIn.tsx); someone else did it IN09; Ruth answered the extra IN13
+ *   done      IN06 Checked in (CheckedIn.tsx) at once, with Undo while the write waits its 10 s (store.ts hold, quiet)
+ *   kept      IN07 its 10 s up with no signal: where it goes, "Not sent yet", Waiting to send
+ *   failed    IN08 the red bar, the counts kept; Try again →
+ *   sending   IN05 the stages moving, "Sending…" → done | kept | failed
+ *   someone else did it IN09; Ruth answered the extra IN13
  *
- * Rules: core/store/checkin.ts. The write: W14 checkIn, through the shell's act().
+ * Rules: core/store/checkin.ts. The write: W14 checkIn, held 10 s (spec §4.9), then through the shell's act().
  */
 import { orderFace, personFace } from '../../../core/store/faces.ts';
 import { Fragment, type JSX } from 'preact';
@@ -24,11 +25,11 @@ import type { YardBooks } from '../../../core/store/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, notDone, now } from '../shell/store.ts';
+import { act, books, held, hold, notDone, now, undoHeld } from '../shell/store.ts';
 import { GoneRow, GroupRow, LineRow, OpenLine } from './CheckLines.tsx';
 import { CheckedIn, Answered, SomeoneDid, type Sent } from './CheckedIn.tsx';
 import { openNotOnList } from './NotOnList.tsx';
-import { byLogin, byRole, Card, GroupHead, HeadPill, InBar, InDock, Pill, Screen, Sees, TripHead, Updating } from './parts.tsx';
+import { byLogin, byRole, Card, forStops, GroupHead, HeadPill, InBar, InDock, keptAt, Pill, Screen, Sees, TripHead, Updating } from './parts.tsx';
 
 type Phase = 'count' | 'sending' | 'kept' | 'failed' | 'done';
 
@@ -73,12 +74,13 @@ export function Checkin(p: { trip: string }): JSX.Element {
   const b = books.value as YardBooks, t = b ? tripOf(b, p.trip) : null;
   const [draft, setDraft] = useState<Draft>(() => loadDraft(p.trip));
   const [open, setOpen] = useState<string | null>(() => (t ? (toCount(t).find((l) => !lineDone(l, loadDraft(p.trip))) || { id: null }).id : null));
-  const [phase, setPhase] = useState<Phase>('count');
+  // A check-in of this trip still kept on the phone opens as kept (after a reload too): it is not sent twice.
+  const [phase, setPhase] = useState<Phase>(() => (t && keptAt('checkIn', forStops(t.stops.map((s) => s.id))) != null ? 'kept' : 'count'));
   const [sent, setSent] = useState<Sent | null>(null);
   useEffect(() => { if (phase === 'count' || phase === 'failed') saveDraft(p.trip, draft); }, [draft, phase]);
 
   if (!b || !t) return <Screen head={<TripHead lead={null} name="Check in" sub="" onClose={() => nav.home()} />}><p class="in-gone-p">That trip is gone.</p></Screen>;
-  if (phase === 'done' && sent) return <CheckedIn sent={sent} />;
+  if (phase === 'done' && sent) return <CheckedIn sent={sent} undo={held.value ? undoHeld : undefined} />;
   if (t.checkedAt != null && phase !== 'sending') {
     const answered = b.asks.find((a) => a.kind === 'extra' && a.by === b.me.userId && a.status !== 'sent' && t.stops.some((s) => s.id === a.ref));
     if (answered && t.checkedBy === b.me.userId) return <Answered t={t} ask={answered} />;
@@ -88,7 +90,6 @@ export function Checkin(p: { trip: string }): JSX.Element {
   const runner = b.people.find((x) => x.id === t.runnerId) || null, denis = firstWord(runner ? runner.name : 'The Buyer');
   const ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth');
   const groups = groupsOf(t, b.orders), lines = toCount(t), pr = progress(t, draft), out = outcome(t, draft, b.orders);
-  const locked = phase === 'sending' || phase === 'kept';
   const setCount = (l: CheckLine, n: number, close: boolean) => {
     const d: Draft = { counts: { ...draft.counts, [l.id]: n }, whys: { ...draft.whys } };
     if (!differs(l, n)) delete d.whys[l.id];
@@ -103,26 +104,35 @@ export function Checkin(p: { trip: string }): JSX.Element {
     if (w !== MISCOUNTED) { const next = lines.find((x) => x.id !== l.id && !lineDone(x, d)); if (next) setOpen(next.id); }
   };
 
-  const send = async () => {
-    const snap: Sent = { t, draft, out, at: now.value, denis: runner, ruth };
+  const lost = (e: unknown) => { setSent(null); setPhase(isDataError(e) && e.kind === 'clash' ? 'count' : 'failed'); };
+  /** The slide: Checked in at once, the write held 10 s with Undo (nothing is sent until then), then it goes. */
+  const send = () => {
+    setSent({ t, draft, out, at: now.value, denis: runner, ruth });
+    setPhase('done');
+    notDone.value = null;
+    hold(`Checked in · ${denis}'s trip`, 'checkIn', [payload(t, draft)], () => { setSent(null); setPhase('count'); }, {
+      quiet: true,
+      then: (r, e) => { if (r && r.kept) setPhase('kept'); else if (r) saveDraft(p.trip, null); else lost(e); },
+    });
+  };
+  /** Try again (IN08 → IN05): it goes now, "Sending…" while it does. */
+  const again = async () => {
     setPhase('sending');
     notDone.value = null;
     try {
       const r = await act('checkIn', payload(t, draft));
       if (r.kept) { setPhase('kept'); return; }
       saveDraft(p.trip, null);
-      setSent({ ...snap, at: now.value });
+      setSent({ t, draft, out, at: now.value, denis: runner, ruth });
       setPhase('done');
-    } catch (e) {
-      setPhase(isDataError(e) && e.kind === 'clash' ? 'count' : 'failed');
-    }
+    } catch (e) { lost(e); }
   };
 
   const moving = out.orders.map((o) => orderNo(o.orderId));
   const seller = sellerOf(b, out.orders.map((o) => o.orderId)), sellerP = b.people.find((x) => firstWord(x.name) === seller && x.role === 'sales') || null;
   const lineDenis = <Sees face={personFace(runner)} who={denis} what={phase === 'kept' || phase === 'failed' ? 'Back at the yard' : 'Checked in'} />;
   const second = phase === 'kept'
-    ? <Updating at={clock(b.at)} />
+    ? <Updating at={clock(keptAt('checkIn', forStops(t.stops.map((s) => s.id))) ?? now.value)} />
     : phase === 'sending' && out.differs.length
       ? <Sees face={personFace(ruth)} who={ruthName} what={`${out.differs.length} differs`} />
       : <Sees face={personFace(sellerP)} who={seller} what={phase === 'failed' || !moving.length ? 'Buying' : `${moving.join(' · ')} → Packing`} />;
@@ -133,23 +143,23 @@ export function Checkin(p: { trip: string }): JSX.Element {
         : { kind: 'wait' as const, label: left > 0 ? `Count ${left} more first` : 'Say why first' };
 
   const head = (
-    <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip`} sub="back at the yard" onScan={() => { if (!locked) nav.push('shelf/scan', { then: 'checkin' }); }}
-      onClose={() => nav.back()} closeLabel="Close: back to Coming in"
+    <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip`} sub="back at the yard" onScan={() => nav.push('shelf/scan', { then: 'checkin' })} scanOff={phase === 'sending'}
+      onClose={() => nav.to('in')} closeLabel="Close: back to Coming in"
       chips={<>
         <HeadPill face={personFace(runner)}>{`From ${denis} · Buyer`}</HeadPill><span class="in-flex" />
-        <button type="button" class="in-extra" disabled={locked} onClick={() => openNotOnList(t.stops[t.stops.length - 1].id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
+        <button type="button" class="in-extra" disabled={phase === 'sending'} onClick={() => openNotOnList(t.stops[t.stops.length - 1].id)}><span><Icon name="plus" size={13} stroke={2.6} />Not on the list</span></button>
       </>} />
   );
   const foot = (
     <div class="in-foot">
-      <InBar kept={phase === 'kept'} what="counts" retry={phase === 'failed' ? () => { void send(); } : undefined} />
+      <InBar kept={phase === 'kept'} what="counts" retry={phase === 'failed' ? () => { void again(); } : undefined} />
       <InDock ring={{ done: pr.done, of: pr.of, amber: out.differs.length }} lines={<>{lineDenis}{second}</>} move={move} />
     </div>
   );
 
   const counting = phase === 'count';
   return (
-    <Screen head={head} foot={foot} back="Back to Coming in">
+    <Screen head={head} foot={foot}>
       {groups.map((g) => {
         const ls = g.lines.filter((l) => !l.notFound), allDone = ls.length > 0 && ls.every((l) => lineDone(l, draft)) && !ls.some((l) => l.id === open);
         if (!counting || allDone) return <Gathered key={String(g.orderId)} b={b} g={g} d={draft} on={counting ? () => setOpen(ls[0].id) : undefined} />;

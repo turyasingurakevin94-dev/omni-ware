@@ -173,7 +173,9 @@ async function checkin(open) {
   const s = await ph.text();
   ph.check(/^Checked in$/m.test(s) && /Sent to Ruth · 1 differs/.test(s) && /Denis told/.test(s), 'check-in: Checked in · Sent to Ruth · 1 differs · Denis told (IN06)', s.slice(0, 500));
   ph.check(/#0549 · pack it now/.test(s) && /pack 18 of 20/.test(s) && /Ruth decides the 2 pc/.test(s), 'check-in: #0549 pack it now, #0546 pack 18 of 20, Ruth decides the 2 pc', s.slice(0, 900));
+  ph.check(/Undo/.test(s), 'check-in: Undo shows while it waits its 10 s (IN06)', s.slice(0, 200));
   await ph.tap('Back to Today');
+  await ph.p.waitForTimeout(600);
   const t = (await trips(ph)).filter((x) => /^TRIP-1017B/.test(x.id));
   ph.check(t.length === 2 && t.every((x) => x.yardCheckedAt), 'check-in: the demo has both stops of Denis\'s trip checked in', JSON.stringify(t.map((x) => [x.id, x.yardCheckedAt])));
   const sheet = t.flatMap((x) => x.lines).find((l) => /Iron sheet G30/.test(l.name));

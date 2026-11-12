@@ -208,6 +208,8 @@ export interface StoreReturn {
   createdAt: Ms;
   /** When it reaches the gate ("~11:00 with Ssali", TD01, TD11): the demo's; the books have none (undefined). */
   dueAt?: Ms | null;
+  /** When the yard looked at it at the gate (ReturnAsk.gateAt, IN22): the demo's; the books have none (undefined). */
+  gateAt?: Ms | null;
 }
 
 /** stock_counts (W20). */

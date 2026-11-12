@@ -5,6 +5,7 @@
  * group heading, a card). Composed from src/ui; the words come from the screens.
  */
 import { Fragment, type ComponentChildren, type JSX } from 'preact';
+import { useState } from 'preact/hooks';
 import type { YardBooks, YardPerson } from '../../../core/store/types.ts';
 import { Avatar, type Face } from '../../../ui/Avatar.tsx';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
@@ -13,8 +14,8 @@ import { EndOfFlow } from '../../../ui/Moment.tsx';
 import { Slide, type SlideProps } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { nav } from '../shell/nav.ts';
-import { flush, notDone } from '../shell/store.ts';
+import { backTo, nav } from '../shell/nav.ts';
+import { flush, kept, notDone } from '../shell/store.ts';
 import './in.css';
 
 export const personOf = (b: YardBooks, pred: (p: YardPerson) => boolean): YardPerson | null => b.people.find(pred) || null;
@@ -51,14 +52,23 @@ export function GroupHead(p: { face?: Face; dot?: string; icon?: IconName; title
 }
 
 /** The trip's navy head (IN02): the face, the name and its line, Scan and Close, then the chips. */
-export function TripHead(p: { lead: ComponentChildren; name: string; sub: string; onScan?: () => void; onClose: () => void; closeLabel?: string; chips?: ComponentChildren; children?: ComponentChildren }): JSX.Element {
+/** When this phone kept a write of this kind that `test` matches (the outbox entry's time, IN07 "saved 11:33"), or null. */
+export function keptAt(kind: string, test: (args: unknown[]) => boolean): number | null {
+  const k = kept.value.find((x) => x.kind === kind && x.state !== 'refused' && Array.isArray(x.args) && test(x.args as unknown[]));
+  return k ? k.at : null;
+}
+/** A check-in's args ([lines]) are for this trip: a line names one of its stops. */
+export const forStops = (ids: string[]) => (a: unknown[]): boolean => Array.isArray(a[0]) && (a[0] as { trip?: string }[]).some((l) => !!l && ids.includes(String(l.trip)));
+
+/** scanOff: Scan is drawn dimmed and does nothing while the work is sending (IN05, IN14). */
+export function TripHead(p: { lead: ComponentChildren; name: string; sub: string; onScan?: () => void; scanOff?: boolean; onClose: () => void; closeLabel?: string; chips?: ComponentChildren; children?: ComponentChildren }): JSX.Element {
   return (
     <div class="in-head">
       <span aria-hidden="true" class="ow-shead-grab" />
       <div class="in-head-row">
         {p.lead}
         <div class="in-head-t"><span>{p.name}</span><span class="mono">{p.sub}</span></div>
-        {p.onScan && <button type="button" class="in-head-b" aria-label="Scan a label" onClick={p.onScan}><Icon name="scan-line" size={20} stroke={2} /></button>}
+        {p.onScan && <button type="button" class="in-head-b" aria-label="Scan a label" disabled={p.scanOff} onClick={p.onScan}><Icon name="scan-line" size={20} stroke={2} /></button>}
         <button type="button" class="in-head-b" aria-label={p.closeLabel || 'Close'} onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button>
       </div>
       {p.chips && <div class="in-head-chips">{p.chips}</div>}
@@ -72,10 +82,13 @@ export function HeadPill(p: { face?: Face; children: ComponentChildren }): JSX.E
   return <span class="in-hpill">{p.face && <Avatar {...p.face} size={20} />}{p.children}</span>;
 }
 
-/** The screen: a full sheet over Today (40 px strip = back), its head, the body, and the foot (bars + dock). */
-export function Screen(p: { head: ComponentChildren; foot?: ComponentChildren; back?: string; gap?: number; pad?: string; children: ComponentChildren }): JSX.Element {
+/**
+ * The screen: a full sheet over Today (40 px strip = back), its head, the body, and the foot (bars + dock).
+ * The strip goes back one, and its label names the screen really below (nav.ts backTo: "Back to Coming in", "Back to Today").
+ */
+export function Screen(p: { head: ComponentChildren; foot?: ComponentChildren; gap?: number; pad?: string; children: ComponentChildren }): JSX.Element {
   return (
-    <FullSheet onBack={() => nav.back()} backLabel={p.back || 'Back'} head={p.head} pad={p.pad || '14px 16px 16px'} gap={p.gap ?? 8} foot={p.foot}>
+    <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={p.head} pad={p.pad || '14px 16px 16px'} gap={p.gap ?? 8} foot={p.foot}>
       {p.children}
     </FullSheet>
   );
@@ -152,8 +165,12 @@ export function InBar(p: { kept: boolean; what: string; offlineWords?: string; r
   return null;
 }
 
-/** The navy end of a flow (IN06, IN12, IN21, IN32): Undo and Close, the tick, the title, who, chips; cards; Back to Today. */
+/**
+ * The navy end of a flow (IN06, IN12, IN21, IN32): Undo and Close, the tick, the title, who, chips; cards; Back to Today.
+ * Undo shows while the write waits its 10 s; with it, the bar runs 12 s, so it goes home after the write went.
+ */
 export function Done(p: { title: string; icon?: IconName; tick?: number; undo?: () => void; who: ComponentChildren; chips?: ComponentChildren; children?: ComponentChildren }): JSX.Element {
+  const [ms] = useState(p.undo ? 12000 : 8000);
   return (
     <div class="in-done">
       <div class="in-done-top">
@@ -167,7 +184,7 @@ export function Done(p: { title: string; icon?: IconName; tick?: number; undo?: 
         {p.chips && <span class="in-done-chips">{p.chips}</span>}
       </div>
       {p.children}
-      <EndOfFlow on={() => nav.home()} ms={8000} />
+      <EndOfFlow on={() => nav.home()} ms={ms} />
     </div>
   );
 }

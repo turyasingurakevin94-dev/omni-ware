@@ -95,7 +95,10 @@ export function yardWrites(sb: Sb, s: StoreSession, snap: () => Snap | null) {
       await ok(sb.from('stock_reports').insert({ shop_id: s.shopId, key: r.key, product_id: r.productId, variant_idx: r.variantIdx == null ? null : String(r.variantIdx),
         name: r.name, qty: r.qty, why: r.why, photo_path: photo, note: r.note || null, reported_by: s.userId, reported_by_name: s.name }));
     },
-    /** W18 store.html:2528 sendReturn: the database prices it; the photo path rides in the note (data D11). */
+    /**
+     * W18 store.html:2528 sendReturn: the database prices it; the photo path rides in the note (data D11).
+     * r.gateAt is not sent: store_return_ask has no field for it, so the books show the sent time as at the gate.
+     */
     returnAsk: async (r: ReturnAsk) => {
       const photo = r.photo ? await upload(r.photo, 'returns') : null;
       const note = [r.note.trim() || 'Brought back at the gate', photo ? 'photo: ' + photo : ''].filter(Boolean).join(' · ');

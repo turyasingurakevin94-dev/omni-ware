@@ -153,7 +153,7 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
       // Musa checked #0548's bags at the gate 11:02, sent 11:03; Ruth took them back 11:20 (IN22).
       const g = b.returns.find((x) => x.id === 'ret-0548');
       b.returns.unshift({ id: 'ret-0548-mk', orderId: 548, lines: [{ idx: 0, name: 'Cement · Hima 50kg', unit: 'bag', qty: 2, shown: '2 bag', condition: 'damaged' }],
-        reason: 'Damaged', note: g ? g.note : '', by: 'u-mk', byName: 'Musa Kiggundu', status: 'accepted', decidedAt: t('11:20'), createdAt: t('11:03') });
+        reason: 'Damaged', note: g ? g.note : '', by: 'u-mk', byName: 'Musa Kiggundu', status: 'accepted', decidedAt: t('11:20'), createdAt: t('11:03'), gateAt: t('11:02') });
       break;
     }
     case 'for-you': {

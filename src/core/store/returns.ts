@@ -73,13 +73,13 @@ export const clampBack = (l: ReturnLine, n: number): number => Math.max(0, Math.
 export const backLines = (r: ReturnAt, d: ReturnDraft): ReturnLine[] => r.lines.filter((l) => (d.qty[l.line.idx] || 0) > 0);
 
 /** W18, in the order line's unit; a damaged line marks the reason. */
-export function askOf(r: ReturnAt, d: ReturnDraft, photo: Blob | null): ReturnAsk {
+export function askOf(r: ReturnAt, d: ReturnDraft, photo: Blob | null, gateAt?: number): ReturnAsk {
   const lines = backLines(r, d).map((l) => {
     const qty = d.qty[l.line.idx] || 0, condition = d.condition[l.line.idx] || 'good';
     return { idx: l.line.idx, name: l.line.name, unit: l.line.unit, qty, shown: `${qty} ${l.line.unit}`, condition };
   });
   const damaged = lines.some((l) => l.condition === 'damaged');
-  return { orderId: r.order.id, lines, reason: damaged ? 'Damaged' : 'Good', note: r.asked ? r.asked.note : '', photo };
+  return { orderId: r.order.id, lines, reason: damaged ? 'Damaged' : 'Good', note: r.asked ? r.asked.note : '', photo, ...(gateAt != null ? { gateAt } : {}) };
 }
 
 /** Ready to send: at least one line back, and a photo (Ruth sees it). */

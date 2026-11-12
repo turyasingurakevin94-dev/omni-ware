@@ -121,7 +121,7 @@ export function Return(p: { order: number }): JSX.Element {
     setPhase('sending');
     notDone.value = null;
     try {
-      const x = await act('returnAsk', askOf(r, d, photo ? photo.blob : null));
+      const x = await act('returnAsk', askOf(r, d, photo ? photo.blob : null, gateAt));
       setPhase(x.kept ? 'kept' : 'sent');
       // Undo 10 s (FLOW-02): after that the return stays sent.
       if (!x.kept) window.setTimeout(() => setPhase((ph) => (ph === 'sent' ? 'form' : ph)), 10000);
@@ -130,9 +130,9 @@ export function Return(p: { order: number }): JSX.Element {
   const locked = phase === 'sending' || phase === 'kept', ready = canSend(r, d, !!photo);
   const shown = r.lines.filter((l) => l.asked > 0 || open.includes(l.line.idx) || (d.qty[l.line.idx] || 0) > 0);
   const head = (
-    <TripHead lead={<Avatar {...orderFace(o, b)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · at the gate ${clock(gateAt)}`} onClose={() => nav.back()}
+    <TripHead lead={<Avatar {...orderFace(o, b)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · at the gate ${clock(gateAt)}`} onClose={() => nav.to('in')} closeLabel="Close: back to Coming in"
       chips={<>
-        {r.asked && <HeadPill face={personFace(sellerP)}>{`From ${seller} · asked ${weekday(r.asked.createdAt)} ${clock(r.asked.createdAt)}`}</HeadPill>}
+        {r.asked && <HeadPill face={personFace(sellerP)}>{`From ${seller} · ${weekday(r.asked.createdAt)} ${clock(r.asked.createdAt)}`}</HeadPill>}
         {bringer && <HeadPill face={personFace(bringer)}>{`${firstWord(bringer.name)} brought it`}</HeadPill>}
         <span class="in-flex" />
       </>} />
@@ -150,7 +150,7 @@ export function Return(p: { order: number }): JSX.Element {
     </div>
   );
   return (
-    <Screen head={head} foot={foot} back="Back" pad="14px 16px 12px" gap={10}>
+    <Screen head={head} foot={foot} pad="14px 16px 12px" gap={10}>
       <fieldset class={cx('rt-form', phase === 'sending' && 'locked')} disabled={locked}>
         {shown.map((l) => <BackCard key={l.line.idx} r={l} seller={seller} d={d} set={setD} />)}
         {r.lines.filter((l) => !shown.includes(l)).length > 0 && (
@@ -184,22 +184,22 @@ export function Return(p: { order: number }): JSX.Element {
 /** IN22: Ruth decided; the damaged ones go to the damaged place, not for sale. */
 function Decided(p: { b: YardBooks; mine: StoreReturn }): JSX.Element {
   const { b, mine } = p, o = b.orders.find((x) => x.id === mine.orderId)!, name = o.client.name, ruth = byRole(b, 'manager'), ruthName = firstWord(ruth ? ruth.name : 'Ruth');
-  const took = mine.status === 'accepted', at = mine.decidedAt ? clock(mine.decidedAt) : '', seller = firstWord((byLogin(b, o.takenBy) || { name: 'Sales' }).name);
+  const took = mine.status === 'accepted', at = mine.decidedAt ? clock(mine.decidedAt) : '', gate = clock(mine.gateAt ?? mine.createdAt), seller = firstWord((byLogin(b, o.takenBy) || { name: 'Sales' }).name);
   const qty = mine.lines.reduce((s, l) => s + l.qty, 0), unit = mine.lines[0] ? mine.lines[0].unit : '', dmg = mine.lines.some((l) => l.condition === 'damaged');
   const stayed = o.lines.filter((l) => !l.dropped && !mine.lines.some((m) => m.idx === l.idx));
   const head = (
     <TripHead lead={<Avatar {...orderFace(o, b)} size={44} />} name={`${name} · return`} sub={`${orderNo(o.id)} · ${o.invoicedAt ? `${weekday(o.invoicedAt)} ${clock(o.invoicedAt)}` : ''}`} onClose={() => nav.home()}>
       <div class="rt-dhead">
         <div class="rt-dtitle"><span>{took ? 'Taken back' : 'Not taken back'}</span><span>{`${ruthName} · ${at}`}</span></div>
-        <HeadRail tone="amber" label={`Return: at the gate ${clock(mine.createdAt)}, sent to ${ruthName} ${clock(mine.createdAt)}, ${ruthName} ${took ? 'took it back' : 'said no'} ${at}${dmg ? ', put aside now' : ''}`} stops={[
-          { word: 'At the gate', at: clock(mine.createdAt), state: 'done' }, { word: 'Sent', at: clock(mine.createdAt), state: 'done' },
+        <HeadRail tone="amber" label={`Return: at the gate ${gate}, sent to ${ruthName} ${clock(mine.createdAt)}, ${ruthName} ${took ? 'took it back' : 'said no'} ${at}${dmg ? ', put aside now' : ''}`} stops={[
+          { word: 'At the gate', at: gate, state: 'done' }, { word: 'Sent', at: clock(mine.createdAt), state: 'done' },
           { word: ruthName, at, state: 'done' }, { word: dmg ? 'Put aside' : 'On the shelf', at: 'now', state: 'now', icon: dmg ? 'damaged' : 'rack' },
         ]} />
       </div>
     </TripHead>
   );
   return (
-    <Screen head={head} back="Back" pad="14px 16px 20px" gap={10}>
+    <Screen head={head} pad="14px 16px 20px" gap={10}>
       <div class="in-card in-card16 in-ans">
         <div class="in-ans-h">
           <Avatar {...personFace(ruth)} size={40} />

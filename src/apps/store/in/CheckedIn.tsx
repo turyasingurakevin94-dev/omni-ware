@@ -20,12 +20,12 @@ import { BackToToday, byLogin, byRole, Card, Done, DoneWho, GroupHead, HeadPill,
 
 export interface Sent { t: CheckTrip; draft: Draft; out: ReturnType<typeof outcome>; at: number; denis: YardPerson | null; ruth: YardPerson | null }
 
-/** IN06: Checked in, where it went. */
-export function CheckedIn(p: { sent: Sent }): JSX.Element {
+/** IN06: Checked in, where it went; Undo while the check-in waits its 10 s. */
+export function CheckedIn(p: { sent: Sent; undo?: () => void }): JSX.Element {
   const b = books.value as YardBooks, { t, out } = p.sent, denis = firstWord(p.sent.denis ? p.sent.denis.name : 'The Buyer');
   const ruthName = firstWord(p.sent.ruth ? p.sent.ruth.name : 'Ruth'), n = toCount(t).length;
   return (
-    <Done title="Checked in"
+    <Done title="Checked in" undo={p.undo}
       who={<DoneWho lead={<Avatar {...personFace(p.sent.denis)} size={30} />} name={`${denis}'s trip`} sub={`${n} ${n === 1 ? 'line' : 'lines'} · ${clock(p.sent.at)}`} />}
       chips={<>
         {out.differs.length > 0 && <NavyChip tone="amber" face={personFace(p.sent.ruth)}>{`Sent to ${ruthName} · ${out.differs.length} differs`}</NavyChip>}
@@ -71,9 +71,9 @@ export function SomeoneDid(p: { t: CheckTrip; mine: boolean }): JSX.Element {
   const moved = [...new Set(t.lines.map((l) => l.orderId).filter((x): x is number => x != null))].filter((id) => { const o = b.orders.find((x) => x.id === id); return o && o.status === 'preparing'; });
   const seller = sellerOf(b, moved), sellerP = b.people.find((x) => x.role === 'sales' && firstWord(x.name) === seller) || null;
   return (
-    <Screen back="Back to Coming in" pad="14px 16px 20px" head={
+    <Screen pad="14px 16px 20px" head={
       <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip`} sub={`checked in ${clock(t.checkedAt as number)} · ${n} ${n === 1 ? 'line' : 'lines'}`}
-        onClose={() => nav.back()} closeLabel="Close: back to Coming in" chips={<HeadPill face={personFace(runner)}>{`From ${denis} · Buyer`}</HeadPill>} />}>
+        onClose={() => nav.to('today')} closeLabel="Close: back to Today" chips={<HeadPill face={personFace(runner)}>{`From ${denis} · Buyer`}</HeadPill>} />}>
       {p.mine && !byMe && <div role="status" class="in-someone"><Icon name="undo" size={18} stroke={2} /><span class="in-flex">Someone else just did this · Refreshed</span></div>}
       <div class="in-who">
         <Avatar {...personFace(who)} size={40} />
@@ -112,7 +112,7 @@ export function Answered(p: { t: CheckTrip; ask: StoreAsk }): JSX.Element {
   const stop = p.t.stops.find((s) => s.id === a.ref) || p.t.stops[p.t.stops.length - 1], supplier = stop.supplierName.split(' ')[0];
   const at = a.decidedAt ? clock(a.decidedAt) : '';
   return (
-    <Screen back="Back to Today" pad="14px 16px 20px" gap={12} head={
+    <Screen pad="14px 16px 20px" gap={12} head={
       <TripHead lead={<Avatar {...personFace(runner)} size={44} />} name={`${denis}'s trip · not on the list`} sub={`${ruthName} answered ${at}`} onClose={() => nav.home()}
         chips={<HeadPill face={personFace(ruth)}>{`From ${ruthName} · Manager`}</HeadPill>} />}>
       <Card>
