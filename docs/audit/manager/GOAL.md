@@ -35,7 +35,7 @@ Decisions, from the ask arriving to the answer reaching the person who asked: th
 ## Done when
 
 - [x] every Manager page is on the canvas, and an independent reviewer scores it at or above the Agent app, from the rendered screens (round 4: 36 pages, 8.66 vs 8.37, 0 below on average or on any measure);
-- [x] the decisions board names a push and one agreed word for every hand-off (33 of 33, `Main`), and the Manager pages use only those words (handover.md §3, checked by the reviewer);
+- [x] the decisions board names a push and one agreed word for every hand-off (33 of 33, `Main`), and the Manager pages use only those words (handover.md §3, checked by the reviewer and by script: `docs/canvas/manager/review/words-check.md`);
 - [x] every push that doesn't exist yet is listed, ready for one migration after approval (handover.md §4: 14 kinds + push actions; **0184**, reserved);
 - [x] every change the other apps need to reach the same words is listed for their sessions (handover.md §5: Sales 10 · Buyer 5 · Store 3 · Accounts 3; §6 the Android shell);
 - [x] each decision takes fewer taps than it does today (counted before and after, day.md): from the app all 30 drop, 145 → 68; from the push 59 → 24 (write-off, credit note and void stay a 2-tap slide from the push, as money moves that can't be undone; they drop from the app); the next decision 2 → 1; the 3 not possible today become possible;
