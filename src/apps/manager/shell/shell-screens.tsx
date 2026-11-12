@@ -72,13 +72,13 @@ function You(): JSX.Element | null {
         <i class="mg-you-grab" aria-hidden="true" />
         <div class="mg-you-head">
           <Avatar initials={me.initials} tint="me" size={52} />
-          <span><b>{me.name}</b><span>{`Manager · ${b.shop.name}`}</span></span>
+          <span class="who"><b>{me.name}</b><span>{`Manager · ${b.shop.name}`}</span></span>
           <button type="button" class="mg-you-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={18} stroke={2.2} /></button>
         </div>
         <div class="mg-you-card">
           <div class="mg-you-row"><span class="ic"><Icon name="store" size={18} stroke={2} /></span><span class="k">Shop</span><b>{b.shop.name}</b></div>
           <div class="mg-you-row"><span class="ic bell"><Icon name="bell" size={18} stroke={2} /></span><span class="k strong">Pushes on this phone</span>
-            <button type="button" role="switch" aria-checked={on} aria-label="Pushes on this phone" class={'mg-switch' + (on ? ' on' : '')} disabled={isDemo} onClick={flip}><i /></button>
+            <button type="button" role="switch" aria-checked={on} aria-label="Pushes on this phone" class={'mg-switch' + (on ? ' on' : '')} disabled={isDemo} onClick={flip}><span class="tr"><i /></span></button>
           </div>
         </div>
         <button type="button" class="mg-you-out" onClick={() => { void signOut(); }}><Icon name="sign-out" size={18} stroke={2} />Sign out</button>
