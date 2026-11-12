@@ -308,9 +308,9 @@ Accepted across the area (not failures):
 
 ## Out
 
-Critic re-run 2026-11-12 on `bacd5c32` (origin/claude/store-build), after the builder fixed G1–G10. Boards: the 28 OU boards plus AD01, AD03 and AD04 (Someone new, "Added while building"), 31 in all. `test/parity/store-out.json` now reaches OU14 at `&at=930` and OU15 at `&at=1010` (by On the road's Ready chip), and every tap reaches its board. Each board's links were replayed by tapping the board's controls. The back strips, Close and the OU24 slide were also tapped one by one, and the landing was read from `sessionStorage['ow-store-view']`.
+Critic third run 2026-11-12 on `b1a8d1ac` (origin/claude/store-build), after the builder fixed G11. This run re-checked OU13 and the new AD07 in full (its taps, links, measures and image) and re-ran the parity spec for all the others: every diff is within 0.4 points of the second run (`bacd5c32`), and the images were looked at again. Boards: the 28 OU boards plus AD01, AD03, AD04 (Someone new) and AD07 (the gate when money holds every order), all from "Added while building": 32 in all. `test/parity/store-out.json` now reaches OU14 at `&at=930` and OU15 at `&at=1010` (by On the road's Ready chip), and every tap reaches its board. Each board's links were replayed by tapping the board's controls. The back strips, Close and the OU24 slide were also tapped one by one, and the landing was read from `sessionStorage['ow-store-view']`.
 
-**30 of 31 pass. One fails: OU13 (G11, an undrawn gate state behind its Close).**
+**32 of 32 pass.** G11 is fixed. A new board, AD07, draws the gate when every order there is held by money: OU10's head and gate picture with the amber lock, the order card with "Not paid yet", Grace and Ruth told, Done today, and the locked "Stays until paid" slide. `Gate.tsx` draws it at 3.73%, and "Ready to collect 1" now agrees with the body. OU13's Close lands on AD07 (`out/gate`). On AD07, the strip reads "Back to On the road" and goes there, Close goes to Today, and a tap on the locked knob opens #0555's own sheet (OU13).
 
 All ten round-1 failures are fixed:
 
@@ -338,14 +338,14 @@ Still accepted across the area:
 - AD03's focus ring;
 - OU20's #0547 Delivered, which the board links to OU24 as a storyboard shortcut;
 - OU30's Packed tile, which goes to To pack (`pack/order` needs an order);
-- rows that sit a few px lower under 44 px hit areas. Examples: OU01 is 6–10 px lower below "Name it". OU27 is 8–14 px lower below the 45 px put-back row; the board still draws that row at 40, so redraw it to 44.
+- rows that sit a few px lower under 44 px hit areas. Examples: OU01 is 6–10 px lower below "Name it". OU27's board now draws its put-back row at 44 px.
 
 Some measurements are not counted:
 - Text covered by a sheet or a scrim (Today under a stage sheet, the gate under the code sheet).
 - 36 px pens: they have a 44 px `::after` hit area.
 - Inputs: they sit inside 52–80 px `<label>` cards.
 
-The money check flags only "3m", "32 m", "46 m", "50 m" and "318K". These are a length, minutes and a plate, so there is **no money on any Out board**. `scrollWidth` is 360 on all 31.
+The money check flags only "3m", "26 m", "32 m", "46 m", "50 m" and "318K". These are a length, minutes and a plate, so there is **no money on any Out board**. `scrollWidth` is 360 on all 32.
 
 | Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -366,14 +366,15 @@ The money check flags only "3m", "32 m", "46 m", "50 m" and "318K". These are a 
 | OU08 Handing over | `out/gate` | 5 | 4.49 | ok | ok | ok | ok | ok | ok | pass | G1, G3 fixed |
 | OU16 Gate offline | `out/gate` | 4 | 7.75 | ok | ok | ok | ok | ok | ok | pass | G1, G3 fixed |
 | OU12 Handed over | `out/gate` | 3 | 0.58 | ok | ok | ok | ok | ok | ok | pass | |
-| OU13 Not paid yet | `out/gate {id}` | 2 | 7.21 | ok | **Close → undrawn gate** | ok | ok | ok | ok | fail | G4, G5 fixed; G11 |
+| OU13 Not paid yet | `out/gate {id}` | 2 | 7.21 | ok | ok | ok | ok | ok | ok | pass | G4, G5, G11 fixed: Close → AD07; strip "Back to On the road" → On the road |
+| AD07 All held at the gate | `out/gate` | 2 | 3.73 | ok | ok | ok | ok | ok | ok | pass | reached by On the road's Ready chip at 10:41; the locked knob opens OU13 |
 | OU15 Nobody to hand over | `out/gate` | 2 | 10.24 | ok | ok | ok | ok | ok | ok | pass | G1, G6 fixed (10:10; board redrawn "they collect", "To pack 2") |
 | OU11 Peter's code | `out/gate-code` | 7 | 0.38 | ok | ok | ok | ok | ok | ok | pass | G2, G7 fixed |
 | OU09 Wrong code | `out/gate-code` | 7 | 0.39 | ok | ok | ok | ok | ok | ok | pass | G2, G7 fixed |
 | OU20 On the road | `out/road` | 1 | 7.35 | ok | ok | ok | ok | ok | ok | pass | |
 | OU14 Nobody on the road | `out/road` | 1 | 11.19 | ok | ok | ok | ok | ok | ok | pass | G6 fixed (9:30; board redrawn "Next out", "To load 3"); the lower half sits 6–18 px low |
 | OU25 Road offline | `out/road` | 5 | 7.02 | ok | ok | ok | ok | ok | ok | pass | |
-| OU27 Cancelled on the truck | `out/road` | 1 | 9.66 | ok | ok | ok | ok | ok | ok | pass | G8 fixed; board's put-back row still 40 px (redraw) |
+| OU27 Cancelled on the truck | `out/road` | 1 | 9.30 | ok | ok | ok | ok | ok | ok | pass | G8 fixed; board redrawn with the row at 44 px |
 | OU21 At the door | `out/door` | 2 | 0.33 | ok | ok | ok | ok | ok | ok | pass | |
 | OU26 Delivering | `out/door` | 5 | 0.59 | ok | ok | ok | ok | ok | ok | pass | |
 | OU22 Delivered | `out/door` | 3 | 0.43 | ok | ok | ok | ok | ok | ok | pass | |
@@ -383,15 +384,4 @@ The money check flags only "3m", "32 m", "46 m", "50 m" and "318K". These are a 
 
 ### Out failures and fixes
 
-- **G11 · OU13's Close lands on a gate state the canvas never drew, and it reads wrong** (the open point the builder flagged in `parity/out.md`). This is the one remaining fault.
-
-  **What happens.** At 10:41 the walk-in #0555 is the only order at the gate, and it is Not paid yet. OU13's Close goes to `out/gate`, as the board links (OU10). The gate then shows:
-  - the head "Ready to collect **1** · oldest 26 m" over the ghost and "**Nobody to hand over**". The count and the words contradict each other on one screen;
-  - #0555 under "Next at the gate", with "packed 10:15 · 1 line" and a navy **Open**, but no "Not paid yet" pill. On the road's Ready row (OU20) shows that pill for the same order;
-  - "Open" goes straight back to OU13.
-
-  The link is right by nav's rule, but it is the board's Close assuming OU10's 10:47 state, where #0555 is paid. No board draws a gate where everything waiting is held by money.
-
-  **Fix: canvas first.** Draw that state, OU10's layout with the held order as the top card (the GatePic lock, "Not paid yet" pill and the locked "Stays until paid" slide, as OU13's dock). The head's count then matches what is shown. Then build it in `Gate.tsx`: when every order at the gate is `moneyHeld`, render that card in place of the "Nobody to hand over" empty state. If the gate's Next row also stays, it needs the `NotPaid` pill, like `Road.tsx`'s Ready row.
-
-  The smaller alternative is a lead ruling recorded in spec §2a. OU13's Close then stays on the screen below (On the road) and the board's link is changed to OU20. That avoids the undrawn state, but the gate still contradicts itself whenever someone opens it by the Ready chip at 10:41. So the gate state needs drawing either way.
+None open. G1–G11 are fixed and re-tapped. Design review of AD07 and the other AD boards (not a parity failure): `docs/canvas/store-agent/review/AD.json` round 3.
