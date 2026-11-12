@@ -148,3 +148,4 @@ Any total adds up from the lines it shows; the same figure is the same on every 
 - D-33 new item: PVC pipe 4 in, cost 28,000, rivals 34,000–36,000 → 35,000 at 25%.
 - D-3 rungs: shop's price, "Same gain 29,000" (the old 2,000 gain a piece on the new cost).
 - New parts (to add to agent-design-language.md): the price scale (cost · asker · shop's on one track, hatched "never under cost"), the rung row, the decision sheet head ("From Grace · #0555 · 2 of 8"), the dock with a tap (reversible) instead of a slide, the lock-screen notification card.
+- From DecideOrders: D-19 (14:20) Esther asks to void #0545 Kato 320,000 (entered twice with #0544), 200,000 paid → Kato owes 878,000 → 758,000; D-10 (16:10) Brian's #0549 2 packs wall plugs at 0, cost 3,000; D-22 (11:25) Peter's #0557 Mukono Roofing cement 20 → 12 (288,000 less, 36,000 a bag), 300,000 paid.
