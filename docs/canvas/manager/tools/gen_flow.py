@@ -153,7 +153,7 @@ D = [ # id, name, push b, push a, app b, app a, flag
  ('D-7','Not paid yet · on credit?',5,1,6,2,''),('D-8','Delivered · bills itself at 24 h',2,0,3,0,''),('D-9','Only 567 · check it',3,1,4,2,''),
  ('D-10','A line at 0',5,2,6,2,''),('D-11','Can’t bill itself',None,None,None,None,'under'),('D-12','Packed short',2,1,4,2,''),
  ('D-13','Check-in differs',2,1,4,2,''),('D-14','Denis’s note alone',2,0,4,0,''),('D-15','Not on the list',None,1,None,2,'np'),
- ('D-16','Damaged · write off',2,2,4,2,'slide'),('D-17','A count to check',4,2,4,2,''),
+ ('D-16','Damaged · write off',2,2,4,2,'slide'),('D-17','A count to check',4,2,4,2,'oldpush'),
  ('D-18','Return asked',2,2,4,2,'slide'),('D-19','Void asked',2,2,4,2,'slide'),('D-20','Cancel asked',4,2,4,2,''),
  ('D-21','Taken twice?',None,None,4,2,''),('D-22','Peter asks: fewer',2,1,4,2,''),('D-23','Restock: not yet',None,None,4,3,''),
  ('D-24','A carton for the shelf?',2,1,4,2,''),('D-25','Limit and terms',None,None,8,5,''),('D-26','Look alike',None,None,6,4,''),
@@ -196,6 +196,7 @@ def drow(d):
     extra = ''
     if flag == 'np': extra = f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: {WARNB}; color: {WARNI}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">not today</span>'
     if flag == 'slide': extra = f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: #E8EDFB; color: {NAVY}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">slide · keep → 1</span>'
+    if flag == 'oldpush': extra = f'<span style="font-family: {MONO}; font-size: 11px; color: {FAINT}; white-space: nowrap">was an FCM</span>'
     if flag == 'under': extra = f'<span style="font-family: {MONO}; font-size: 12px; color: {FAINT}">as D-1 · D-2 · D-12</span>'
     return (f'<div style="display: grid; grid-template-columns: {DCOLS}; gap: 14px; align-items: center; min-height: 29px; border-top: 1px solid {LINE}">'
             f'<span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: #fff; background: {chip_bg}; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-flex; align-items: center; justify-self: start">{id}</span>'

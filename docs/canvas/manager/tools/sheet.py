@@ -76,7 +76,7 @@ def sheet_head(pos, total, ini, who, role, asked, ref, age, title, tags=None, ag
     off = ""
     if offline:
         off = (f'<div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(245,178,107,.16); '
-               f'color: {S_AMBER}; font-size: 12px; font-weight: 700">No signal · your answer waits to send</div>')
+               f'color: {S_AMBER}; font-size: 12px; font-weight: 700">No signal · it sends when back</div>')
     tg = ""
     if tags:
         tg = f'<div style="display: flex; gap: 6px; flex-wrap: wrap">{"".join(tags)}</div>'
@@ -163,8 +163,16 @@ def sheet_dock(sees_html, main_html, second_html="", top_html=""):
             f'{top_html}{sees_html}{main_html}{sec}</div>')
 
 
-def s_next(ini, text, age):
-    return (f'<div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px dashed #C9C4BA; '
+def s_next(ini, text, age, sub=None):
+    if sub:
+        # the next decision with its evidence: fills the band above the dock (round 2, fix 7)
+        return (f'<div style="flex: none; display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px; box-sizing: border-box; border-radius: 12px; border: 1px dashed #C9C4BA; '
+                f'color: #5F6980; font-size: 12px; font-weight: 700">{s_av(ini, 32)}'
+                f'<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="display: flex; gap: 6px; white-space: nowrap; overflow: hidden"><span style="letter-spacing: .06em">NEXT</span>'
+                f'<span style="color: #1C2233; overflow: hidden; text-overflow: ellipsis">{text}</span></span>'
+                f'<span style="{S_MONO}; font-size: 11px; font-weight: 500; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{sub}</span></span>'
+                f'<span style="{S_MONO}; font-weight: 600">{age}</span></div>')
+    return (f'<div style="flex: none; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px dashed #C9C4BA; '
             f'color: #5F6980; font-size: 12px; font-weight: 700"><span style="letter-spacing: .06em">NEXT</span>{s_av(ini, 24)}'
             f'<span style="flex: 1; min-width: 0; color: #1C2233; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{text}</span>'
             f'<span style="{S_MONO}; font-weight: 600">{age}</span></div>')

@@ -78,7 +78,7 @@ def sheet_head(pos, total, label="Decide next", offline=False):
     off = ""
     if offline:
         off = (f'<div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 12px; background: {WARNBG}; '
-               f'color: {WARNINK}; font-size: 13px; font-weight: 700">{ic("nosig", 16)}No signal · <span style="{M}">1</span>&#160;answer waits to send</div>')
+               f'color: {WARNINK}; font-size: 13px; font-weight: 700">{ic("nosig", 16)}No signal · it sends when back</div>')
     return f'''<div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px">
           <div style="display: flex; align-items: center; gap: 10px">
             <button aria-label="Close" style="width: 44px; height: 44px; flex: none; border-radius: 999px; border: none; background: #fff; box-shadow: inset 0 0 0 1px {LINE}; color: {INK}; display: flex; align-items: center; justify-content: center; padding: 0">{ic("x", 20)}</button>
@@ -227,7 +227,7 @@ def d12_body():
                       SH.s_primary("Bill what went", "1,710,000", "Bill what went: 36 sheets, 1,710,000. Musa and Grace see it"),
                       SH.s_second("Bill it all · 1,900,000", "Bill it all: 40 sheets, 1,900,000"))
     return SH.decision_sheet(pos=7, total=8, ini="MK", who="Musa", role="Store", asked="09:00", ref="#0550 Kato Construction", age="40 m",
-                             title="Packed short", body=ev, dock=d, next_=("DO", "Denis · A carton for the shelf?", "15 m"),
+                             title="Packed short", body=ev, dock=d, next_=("DO", "Denis · A carton for the shelf?", "15 m", "Wall plugs · 199 packs · 298,500"),
                              aria="Packed short, from Musa, order 0550")
 
 
@@ -248,14 +248,14 @@ def stages(cur):
 
 
 def fact(num, label, col=INK, bg=BG):
-    return (f'<div style="flex: 1; height: 62px; border-radius: 12px; background: {bg}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">'
+    return (f'<div style="flex: 1; height: 52px; border-radius: 12px; background: {bg}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px">'
             f'<b style="{M}; font-size: 18px; font-weight: 600; color: {col}">{num}</b><span style="font-size: 11px; font-weight: 600; color: {SOFT}">{label}</span></div>')
 
 
 def faces_row(items):
     out = []
     for ini, name, what in items:
-        out.append(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 40px">{av(ini, 32, 12)}<span style="flex: 1; font-size: 14px; font-weight: 700">{name}</span>'
+        out.append(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 32px">{av(ini, 28, 11)}<span style="flex: 1; font-size: 14px; font-weight: 700">{name}</span>'
                    f'<span style="{M}; font-size: 11px; color: {FAINT}">{what}</span></div>')
     return "".join(out)
 
@@ -276,7 +276,8 @@ def d20_body():
                       SH.s_second("Kept", "Kept: the order goes on. Grace sees Kept"))
     return SH.decision_sheet(pos=6, total=8, ini="GA", who="Grace", role="Sales", asked="08:50", ref="#0556 Ggaba Stores", age="50 m",
                              title="Cancel asked", tags=[SH.s_tag("Nothing paid", "mint")],
-                             body=SH.s_quote("changed their mind") + ev + stop, dock=d, aria="Cancel asked, from Grace, order 0556")
+                             body=SH.s_quote("changed their mind") + ev + stop, dock=d, aria="Cancel asked, from Grace, order 0556",
+                             next_=("MK", "Musa · Packed short · #0550", "40 m"))
 
 
 # ------------------------------------------------------------ D-18 return
@@ -295,13 +296,13 @@ def stepper(v):
 
 def d18_body():
     # D-18 is drawn once, in tools/sheet.py: Today p3 shows the same sheet
-    return SH.d18_sheet(pos=2, total=8, next_=("DO", "Denis · Price up · #0552", "2 h 10"))
+    return SH.d18_sheet(pos=2, total=8, next_=("DO", "Denis · Price up · #0552", "2 h 10", "Ridge cap · sells 26,000 · cost 27,000"))
 
 
 # ------------------------------------------------------------ D-19 void
 def bill_tile(no, tag, tagbg, tagcol, dashed=False):
-    border = f"border: 1.5px dashed {BAD}" if dashed else f"border: 1px solid {LINE}"
-    return (f'<div style="flex: 1; box-sizing: border-box; border-radius: 12px; {border}; background: {"#fff" if not dashed else "#FFF7F6"}; padding: 10px; display: flex; flex-direction: column; gap: 4px">'
+    border = f"border: 1.5px dashed {NAVY}" if dashed else f"border: 1px solid {LINE}"
+    return (f'<div style="flex: 1; box-sizing: border-box; border-radius: 12px; {border}; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 4px">'
             f'<span style="display: flex; justify-content: space-between; align-items: center"><b style="{M}; font-size: 14px; font-weight: 600">{no}</b>'
             f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: {tagbg}; color: {tagcol}; font-size: 11px; font-weight: 700; display: flex; align-items: center">{tag}</span></span>'
             f'<span style="{M}; font-size: 16px; font-weight: 600">320,000</span>'
@@ -311,17 +312,18 @@ def bill_tile(no, tag, tagbg, tagcol, dashed=False):
 def d19_body(state="default"):
     twin = card(
         f'<div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 13px; font-weight: 700">Entered twice</span><span style="{M}; font-size: 11px; color: {FAINT}">same total · same day</span></div>'
-        f'<div style="display: flex; align-items: center; gap: 6px">{bill_tile("#0544", "Stays", GOODBG, GOOD)}<span style="{M}; font-size: 18px; font-weight: 600; color: {SOFT}">=</span>{bill_tile("#0545", "Void", BADBG, BAD, True)}</div>',
+        f'<div style="display: flex; align-items: center; gap: 6px">{bill_tile("#0544", "Stays", GOODBG, GOOD)}<span style="{M}; font-size: 18px; font-weight: 600; color: {SOFT}">=</span>{bill_tile("#0545", "Void", "#E3E6EE", NAVY, True)}</div>',
         12, 10)
     money = card(
         f'<div style="display: flex; align-items: center; justify-content: space-between"><span style="font-size: 13px; font-weight: 700">Paid on #0545</span><span style="{M}; font-size: 15px; font-weight: 600">200,000</span></div>'
-        + owes_bars("878,000", "758,000", 86, "Kato Construction owes"),
+        + owes_bars("878,000", "558,000", 63.6, "Kato Construction owes")
+        + f'<span style="{M}; font-size: 11px; color: {FAINT}">with Refund instead: 758,000</span>',
         12, 10)
     d = SH.sheet_dock(SH.s_sees("Esther · Grace", "Voided"),
                       SH.s_slide("Voided", "320,000", "Slide: Voided, bill 0545 of 320,000; 200,000 kept as a deposit. Esther and Grace see it"),
                       SH.s_second("Kept as billed", "Kept as billed: 0545 stays. Esther sees it"),
                       SH.s_seg(["Refund 200,000", "Deposit 200,000"], 1, "The 200,000 paid"))
-    return SH.decision_sheet(pos=1, total=1, ini="EA", who="Esther", role="Sales", asked="14:05", ref="#0545 Kato Construction", age="15 m",
+    return SH.decision_sheet(pos=1, total=1, ini="EA", who="Esther", role="Accounts", asked="14:05", ref="#0545 Kato Construction", age="15 m",
                              title="Void asked", body=twin + money, dock=d, aria="Void asked, from Esther, bill 0545")
 
 
@@ -343,14 +345,19 @@ def chip(word, on):
 def d10_body():
     ev = card(
         item_head("gift", "Wall plugs · 2 at 0", "#0563", GOODBG, GOOD)
-        + f'<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 13px; font-weight: 600; color: {SOFT}">At cost</span><span style="{M}; font-size: 14px; font-weight: 600">2 × 3,000 = 6,000</span></div>'
+        + f'<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 13px; font-weight: 600; color: {SOFT}">At cost</span><span style="{M}; font-size: 14px; font-weight: 600">2 × 1,500 = 3,000</span></div>'
         + f'<div role="radiogroup" aria-label="Why it was free" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px">{chip("Sample", False)}{chip("Goodwill", True)}{chip("Replacement", False)}{chip("Other", False)}</div>',
         12, 10)
+    gain = card(
+        f'<div style="display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px"><span style="font-size: 13px; font-weight: 700">On the books</span>'
+        f'<span style="{M}; font-size: 13px; font-weight: 600">sells 0 · given away 3,000</span>'
+        f'<span style="grid-column: 1 / -1; display: flex; gap: 2px; height: 8px"><i style="flex: 1; border-radius: 999px; background: #8D99B5"></i></span></div>',
+        10, 0)
     d = SH.sheet_dock(SH.s_sees("Brian", "Given away · Goodwill"),
-                      SH.s_primary("Given away · Goodwill", None, "Given away, goodwill: 2 Wall plugs, 6,000 at cost. Brian sees it"),
+                      SH.s_primary("Given away · Goodwill", None, "Given away, goodwill: 2 Wall plugs, 3,000 at cost. Brian sees it"),
                       SH.s_second("Bill it", "Bill it: Brian puts the price on the line"))
     return SH.decision_sheet(pos=1, total=1, ini="BO", who="Brian", role="Sales", asked="15:40", ref="#0563 Kyaligonza &amp; Sons", age="30 m",
-                             title="Can't bill itself · a line at 0", body=ev, dock=d, aria="Can't bill itself, a line at 0, from Brian, order 0563")
+                             title="Can't bill itself · a line at 0", body=ev + gain, dock=d, aria="Can't bill itself, a line at 0, from Brian, order 0563")
 
 
 def line_change(name, a, b, diff, on=True, same=False):
@@ -370,13 +377,19 @@ def d22_body():
         line_change("Cement 50 kg", "20", "12", "−340,000")
         + f'<div style="height: 1px; background: {TILE}"></div>'
         + line_change("PVC pipe 4 in", "6", "6", "", same=True)
-        + f'<div style="display: flex; gap: 6px">{fact("340,000", "Less", GOOD, GOODBG)}{fact("300,000", "Paid")}</div>',
+        ,
         12, 8)
+    gets = card(
+        owes_bars("850,000", "510,000", 60, "Cement on #0560")
+        + f'<div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 12px; background: {BG}">'
+          f'<span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 13px; font-weight: 700">Peter gets back 0</span>'
+          f'<span style="{M}; font-size: 11px; color: {FAINT}">300,000 paid stays on it · 510,000 is more</span></span></div>',
+        10, 6)
     d = SH.sheet_dock(SH.s_sees("Peter · Denis", "Agreed"),
                       SH.s_primary("Agreed", "−340,000", "Agreed: Cement 20 to 12, 340,000 less. Peter and Denis see it"),
                       SH.s_second("Kept", "Kept: the order stays as it was. Peter sees it"))
     return SH.decision_sheet(pos=1, total=1, ini="PS", who="Peter", role="Agent", asked="11:05", ref="#0560 Mukono Roofing", age="20 m",
-                             title="Peter asks: fewer", body=ev, dock=d, aria="Peter asks for fewer, order 0560")
+                             title="Peter asks: fewer", body=ev + gets, dock=d, aria="Peter asks for fewer, order 0560")
 
 
 # ------------------------------------------------------------ states
@@ -451,7 +464,7 @@ def states():
         12, 10, f"box-shadow: inset 0 0 0 1.5px {BAD}")
     s.append(state_slot("Error", err, "nothing sent · the ask stays open"))
     off = frag(SH.sheet_dock(D12_SEES, SH.s_primary("Bill what went", "1,710,000"), "",
-                             f'<div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(245,178,107,.16); color: #F5B26B; font-size: 12px; font-weight: 700">{ic("nosig", 15)}No signal · your answer waits to send</div>'))
+                             f'<div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(245,178,107,.16); color: #F5B26B; font-size: 12px; font-weight: 700">{ic("nosig", 15)}No signal · it sends when back</div>'))
     s.append(state_slot("Offline", off, "the tap still answers · it sends on signal"))
     empty = card(
         f'<div style="display: flex; align-items: center; gap: 12px"><span style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: {GOODBG}; color: {GOOD}; display: flex; align-items: center; justify-content: center">{ic("tick", 22, 2.6)}</span>'
@@ -497,8 +510,8 @@ def score_panel():
         ("1 · Packed short · D-12", [(3, 9, 9), (5, 9, 9), (4, 8, 9), (5, 8, 8), (3, 8, 9)]),
         ("2 · Cancel asked · D-20", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 9)]),
         ("3 · Return asked · D-18", [(4, 9, 9), (5, 9, 9), (4, 8, 8), (5, 8, 8), (3, 8, 9)]),
-        ("4 · Void asked · D-19", [(4, 9, 9), (4, 9, 8), (4, 8, 9), (5, 8, 8), (3, 8, 9)]),
-        ("5 · A line at 0 · Peter asks", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 9)]),
+        ("4 · Void asked · D-19", [(4, 9, 9), (4, 9, 9), (4, 8, 8), (5, 8, 8), (3, 8, 9)]),
+        ("5 · A line at 0 · Peter asks", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 8)]),
     ]
     blocks, to, ta, tn = [], 0, 0, 0
     for n, r in pages:

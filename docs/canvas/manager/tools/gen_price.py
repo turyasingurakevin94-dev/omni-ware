@@ -218,6 +218,7 @@ p1 = pphone("1 · D-1 · UNDER THE SHOP'S PRICE · 5 OF 8 · " + m("09:40"),
         dock=pdock("Grace", "Approved", "1,380,000", "gain 240,000",
                    SH.s_primary("Approved", "46,000", "Approved: 46,000 a sheet. Grace sees Approved"),
                    SH.s_second("Shop's price · 47,500", "Shop's price: 47,500 a sheet. Grace sees Shop's price")),
+        next_=("GA", "Grace · Cancel asked · #0556", "50 m", "430,000 · Nothing paid"),
         aria="Under the shop's price, from Grace, order 0555"),
     "Approved · app 4 → 2 taps · push 2 → 1<br>Shop's price · app 4 → 2 · Price set · app 6 → 3")
 
@@ -267,26 +268,21 @@ p4_scale = scale(29000, 42000, 31000, [
     dict(v=38750, kind="shop", label="+25%", txt="38,750", pos="up", fill=True),
     dict(v=40300, kind="tick"),
 ])
-chips = "".join(
-    f'<button aria-label="{a}" style="flex: 1; height: 52px; border: none; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 {"2px " + NAVY if on else "1px #E6E3DD"}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: {INK}">'
-    f'<span style="font-size: 12px; font-weight: 700; color: {INK if on else SOFT}">{p}</span>{m(v, 13, 600)}</button>'
-    for p, v, a, on in [("+20%", "37,200", "20 percent, 37,200", False), ("+25%", "38,750", "25 percent, the shop's markup, 38,750", True), ("+30%", "40,300", "30 percent, 40,300", False)])
 p4 = pphone("4 · D-2 · PRICE COMING · 1 OF 2 · " + m("10:15"),
     SH.decision_sheet(pos=1, total=2, ini="BO", who="Brian", role="Sales", asked="10:05", ref="#0553 Ggaba Stores", age="10 m",
         title="Price coming", tags=[SH.s_tag(f'Cost from Denis · Katwe {m("31,000")}')],
         body=item_card("Y12 rebar 12 m", "20 pcs", "Ggaba Stores", "775,000", "38,750 a pcs")
             + scale_card(m("UGX a pcs", 11, None, FAINT), p4_scale,
                          gap_line(kv("Gain a pcs", "7,750", "#0F6B43") + kv("Markup", "25%") + kv("On 20 pcs", "+155,000", "#0F6B43"))).replace(">A sheet<", ">A piece<")
-            + f'<div style="display: flex; gap: 8px">{chips}</div>',
+            + rung("Price set", "", "another price · 31,000 or more", "Price set: type another price, 31,000 or more", icon=PEN),
         dock=pdock("Brian", "Price set", "775,000", "gain 155,000",
-                   SH.s_primary("Price set", "38,750", "Price set: 38,750 a piece. Brian sees Price set"),
-                   SH.s_second("Another price", "Price set: type another price, 31,000 or more")),
-        next_=None, aria="Price coming, from Brian, order 0553"),
+                   SH.s_primary("Price set", "38,750", "Price set: 38,750 a piece, cost 31,000 and the shop's 25%. Brian sees Price set")),
+        next_=("MK", "Musa · Check-in differs", "5 m", "PVC pipe 4 in · 11 of 12"), aria="Price coming, from Brian, order 0553"),
     "Price set · app 6 → 2 taps · push 4 → 1<br>2 of 2 at 10:15: Musa's check-in differs")
 
 # =================== SCORE PANEL ===================
 scores = [
-    ("D-1 · Under the shop's price", [5, 4, 5, 6, 4], [9, 9, 9, 9, 9]),
+    ("D-1 · Under the shop's price", [5, 4, 5, 6, 4], [9, 9, 9, 8, 9]),
     ("D-4 · At the counter", [5, 6, 4, 6, 5], [9, 9, 9, 8, 9]),
     ("D-3 · Price up", [4, 3, 4, 6, 4], [9, 9, 8, 8, 9]),
     ("D-2 · Price coming", [4, 4, 4, 5, 4], [9, 9, 8, 8, 9]),
@@ -416,7 +412,7 @@ s6 = card("ERROR",
     f'<span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #FBE5E2; color: #8E2A22; display: flex; align-items: center; justify-content: center">{ico("<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 8v5\"/><path d=\"M12 16h.01\"/>", 20)}</span>'
     f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">Not saved</span>'
     f'<span style="{MONO}; font-size: 11px; color: {FAINT}">Grace still sees Ruth decides</span></div></div>'
-    + frag(pdock("Grace", "Ruth decides", "1,380,000", "gain 240,000", SH.s_primary("Approved", "46,000", state="retry"), "")),
+    + frag(SH.sheet_dock(SH.s_sees("Grace", "Ruth decides"), SH.s_primary("Approved", "46,000", state="retry"), "")),
     "the answer is kept · one tap sends it")
 
 # 7 OFFLINE

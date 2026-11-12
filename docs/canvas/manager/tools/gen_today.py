@@ -117,7 +117,7 @@ def hero(offline=False):
             '<i style="width: 7px; height: 7px; border-radius: 999px; background: #6FDCB0; box-shadow: 0 0 0 4px rgba(111,220,176,.25)"></i>Live</span>')
     if offline:
         live = ('<span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; color: #F5C58A">'
-                '<i style="width: 7px; height: 7px; border-radius: 999px; background: #F5A54A"></i>Offline</span>')
+                '<i style="width: 7px; height: 7px; border-radius: 999px; background: #F5A54A"></i>1 waiting to send</span>')
     return f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 28px; padding: 10px 20px 14px; display: flex; flex-direction: column; gap: 8px">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
             <div style="display: flex; flex-direction: column; gap: 2px">
@@ -173,9 +173,9 @@ QUEUE = [
 ]
 
 
-def nk_row(ini, title, sub, ctrl, first=False, extra_style=""):
+def nk_row(ini, title, sub, ctrl, first=False, extra_style="", h=46):
     bt = "" if first else "border-top: 1px solid #F1EEE8; "
-    return (f'<div style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 6px 0 8px; {bt}{extra_style}">{av(ini, 30)}'
+    return (f'<div style="display: flex; align-items: center; gap: 8px; height: {h}px; padding: 0 6px 0 8px; {bt}{extra_style}">{av(ini, 30)}'
             f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">'
             f'<span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{title}</span>'
             f'<span style="{MONO}; font-size: 11px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{sub}</span></div>{ctrl}</div>')
@@ -183,7 +183,7 @@ def nk_row(ini, title, sub, ctrl, first=False, extra_style=""):
 
 def needs_you():
     rows = "".join(nk_row(*q, first=(i == 0)) for i, q in enumerate(QUEUE))
-    return ('<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 17px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: {NAVY}"></i>'
+    return (f'<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 17px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: {NAVY}"></i>'
             f'<span style="flex: 1">Needs you</span><span style="{MONO}; font-size: 11px; font-weight: 500; color: #5F6980">standing first · then oldest</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">8</b></div>'
             f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 0 0; overflow: hidden">{rows}</div>')
 
@@ -197,8 +197,56 @@ def column(lbl, ph, nt):
     return f'<div style="display: flex; flex-direction: column; gap: 8px">{label(lbl)}{ph}{note(nt)}</div>'
 
 
-# ---------------------------------------------------------------- page 1 · Today
-P1 = phone(hero() + '<div style="padding: 10px 12px 0; display: flex; flex-direction: column; gap: 5px">' + onmove() + needs_you() + '</div>' + tabbar())
+# ---------------------------------------------------------------- page 1 · Today (compact: Needs you 8 + the watch 3 above the FAB)
+def hero_compact():
+    live = ('<span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600">'
+            '<i style="width: 7px; height: 7px; border-radius: 999px; background: #6FDCB0; box-shadow: 0 0 0 4px rgba(111,220,176,.25)"></i>Live</span>')
+    return f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 28px; padding: 8px 16px 12px 20px; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="flex: 1; min-width: 0; font-size: 21px; font-weight: 700; line-height: 1.1; white-space: nowrap">Good morning, Ruth</span>{live}
+            <button aria-label="Ruth, your page" style="flex: none; width: 44px; height: 44px; border-radius: 999px; border: none; background: {NAVY}; box-shadow: inset 0 0 0 2px rgba(255,255,255,.3); color: #fff; font-size: 14px; font-weight: 700">RN</button>
+          </div>
+          <span style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: .06em; color: #B3BCD2"><span>SALES INVOICED · OCTOBER ›</span><span style="letter-spacing: 0">Sat 17 Oct</span></span>
+          <span style="{MONO}; font-size: 30px; font-weight: 600; letter-spacing: -.03em; line-height: 1">61,110,000 <small style="font-size: 15px; color: #B3BCD2; letter-spacing: 0">UGX</small></span>
+          <div aria-label="58% of the 105,000,000 goal; pace 57%" style="position: relative; height: 6px; margin-top: 3px; border-radius: 999px; background: rgba(255,255,255,.12)"><i style="display: block; height: 100%; width: 58.2%; background: #fff; border-radius: 999px"></i><i style="position: absolute; left: 56.7%; top: -3px; width: 2px; height: 12px; border-radius: 2px; background: #6FDCB0"></i></div>
+          <span style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #B3BCD2"><span><b style="{MONO}; color: #fff">58%</b> of <b style="{MONO}; color: #fff">105M</b> · <b style="{MONO}; color: #fff">14</b> days left ›</span><span style="{MONO}; color: #6FDCB0">+1.61M ahead</span></span>
+        </div>'''
+
+
+def onmove_compact():
+    t = onmove()
+    t = t[t.index('<div style="background: #fff'):]
+    return t.replace("height: 56px; border-radius: 12px", "height: 48px; border-radius: 12px").replace("padding: 6px; display: grid", "padding: 4px; display: grid")
+
+
+WATCH = [
+    ("DO", "#0554", "+40 m", "Nudge Denis", "Nudge Denis: 0554 Lubowa Builders, 2 h 40 m in Checking, 40 m over. Denis sees Ruth nudged you"),
+    ("FN", "Faith", "−2.09M", "Nudge Faith", "Nudge Faith: 14,910,000 of 30M, behind pace by 2,090,000. Faith sees Ruth nudged you"),
+    ("GA", "Kyaligonza", "38 d", "Nudge Grace", "Nudge Grace: Kyaligonza and Sons owes 2,310,000, oldest bill 38 days, over 30. Grace sees Ruth nudged you"),
+]
+
+
+def watch_rows():
+    out = ""
+    for ini, t, ev, act, aria in WATCH:
+        out += (f'<button aria-label="{aria}" style="min-width: 0; height: 52px; border: none; border-radius: 12px; background: #F7F5F2; padding: 0 8px; display: flex; flex-direction: column; justify-content: center; gap: 3px; text-align: left; color: #1C2233">'
+                f'<span style="display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap">{av(ini, 18, 11)}<b style="font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis">{t}</b></span>'
+                f'<span style="display: flex; align-items: center; justify-content: space-between; gap: 4px; white-space: nowrap">{mono(ev, 11, "#1C2233", 600)}<span style="font-size: 11px; font-weight: 700; color: {NAVY}; text-decoration: underline">{act.split()[0]}</span></span></button>')
+    return ('<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; height: 20px; font-size: 15px; font-weight: 700">' + ic("eye", 15) +
+            f'<span style="flex: 1">Watch</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">stuck · behind · over 30 d</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">3</b></div>'
+            f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">{out}</div>')
+
+
+def needs_compact():
+    rows = "".join(nk_row(*q, first=(i == 0), h=40) for i, q in enumerate(QUEUE))
+    rows = rows.replace("height: 44px; padding: 0 ", "height: 36px; padding: 0 ")
+    return (f'<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; height: 20px; font-size: 15px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: {NAVY}"></i>'
+            f'<span style="flex: 1">Needs you</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">the pill = what they see</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">8</b></div>'
+            f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">{rows}</div>')
+
+
+P1 = phone(hero_compact() + '<div style="padding: 8px 12px 0; display: flex; flex-direction: column; gap: 4px">' + onmove_compact()
+           + '<div style="height: 2px"></div>' + needs_compact() + '<div style="height: 2px"></div>' + watch_rows() + '</div>' + tabbar())
 
 
 # ---------------------------------------------------------------- Decide card parts
@@ -360,7 +408,7 @@ DONE = [
     # time, answer, sub, sees-initials, kind
     ("09:59", "Shelf part OK", "Wall plugs · 298,500", ["DO"], "tap"),
     ("09:57", "Bill what went", "#0550 · 1,710,000", ["MK", "GA"], "tap"),
-    ("09:55", "Cancelled", "#0556 · 430,000 · nothing paid", ["GA", "DO", "MK"], "tap"),
+    ("09:55", "Cancelled", "#0556 · Nothing paid", ["GA", "DO", "MK"], "tap"),
     ("09:52", "Approved", "#0555 · 46,000", ["GA"], "tap"),
     ("09:49", "Written off", "3 Cement 50 kg · 102,000", ["MK"], "slide"),
     ("09:46", "Shop's price", "#0552 · 33,750", ["DO", "FN"], "tap"),
@@ -421,10 +469,10 @@ P4 = phone(f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 2
 
 # ---------------------------------------------------------------- score panel
 PAGES = [
-    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 8, 8, 9]),
+    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 9, 8, 9]),
     ("2 · Decide next", "Decision sheet", [4, 3, 5, 6, 4], [9, 9, 8, 8, 8], [9, 9, 9, 8, 9]),
     ("3 · Answered · next", "Decision sheet", [4, 4, 4, 6, 4], [9, 9, 8, 8, 8], [9, 9, 8, 8, 9]),
-    ("4 · All decided", "Agent Today", [4, 5, 4, 5, 3], [9, 9, 8, 9, 8], [9, 9, 9, 9, 9]),
+    ("4 · All decided", "Agent Today", [4, 5, 4, 5, 3], [9, 9, 8, 9, 8], [9, 9, 9, 9, 8]),
 ]
 MEAS = ["Agent consistency", "Taps per decision", "Glanceability", "Polish", "In step with askers"]
 
@@ -510,8 +558,8 @@ S_ERROR = state("ERROR", card(white_row(nk_row("GA", "Under the shop's price", "
 S_OFFLINE = state("OFFLINE", card(
     f'<div style="border-radius: 16px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD">'
     f'<div style="background: {NAVY}; color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between"><span style="font-size: 16px; font-weight: 700">Good morning, Ruth</span>'
-    f'<span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600; color: #F5C58A"><i style="width: 7px; height: 7px; border-radius: 999px; background: #F5A54A"></i>Offline</span></div>'
-    f'<div style="background: #FDEEE1; color: #7A4A02; padding: 8px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700">{ic("nosig", 16)}No signal · <span style="{MONO}">1</span> answer waits to send</div>'
+    f'<span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600; color: #F5C58A"><i style="width: 7px; height: 7px; border-radius: 999px; background: #F5A54A"></i>1 waiting to send</span></div>'
+    f'<div style="background: #FDEEE1; color: #7A4A02; padding: 8px 14px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700">{ic("nosig", 16)}No signal · it sends when back</div>'
     + nk_row("GA", "Approved · 46,000", "#0555 · sends when back", chip("Waits", "#FDEEE1", "#7A4A02", "clock"), first=True) + '</div>'),
     "last sync 09:38 · slides wait for signal")
 S_EMPTY = state("EMPTY", card(

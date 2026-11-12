@@ -167,12 +167,12 @@ p1_body = f'''<div style="{CARD}; padding: 12px; display: flex; gap: 12px">
 <span style="font-size: 11px; font-weight: 700; color: #5F6980">On the shelf</span>
 <span style="display: flex; align-items: baseline; gap: 6px">{mono("26", 18)}<span style="color: #5F6980">→</span>{mono("23", 18)}<span style="font-size: 11px; font-weight: 600; color: #5F6980">bags</span></span>
 <div role="img" aria-label="26 bags on the shelf, 3 come off" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px">{cells}</div>
-<span style="display: flex; gap: 10px; font-size: 11px; font-weight: 600; color: #5F6980"><span style="display: flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 2px; background: #16203C"></i>{mono("23")} stay</span><span style="display: flex; align-items: center; gap: 4px; color: #8E2A22"><i style="width: 8px; height: 8px; border-radius: 2px; background: #FBE5E2; box-shadow: inset 0 0 0 1.5px #8E2A22"></i>{mono("3")} off</span></span>
+<span style="display: flex; gap: 10px; font-size: 11px; font-weight: 600; color: #5F6980"><span style="display: flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 2px; background: #16203C"></i>{mono("23")} stay</span><span style="display: flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 2px; background: #FBE5E2; box-shadow: inset 0 0 0 1.5px #8E2A22"></i>{mono("3")} off</span></span>
 </div></div>
 <div style="display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 6px 4px 6px 10px; box-sizing: border-box; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD">
-<span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #FBE5E2; color: #8E2A22; display: flex; align-items: center; justify-content: center">{svg(I["bag"], 20)}</span>
+<span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #F1EEE8; color: #1C2233; display: flex; align-items: center; justify-content: center">{svg(I["bag"], 20)}</span>
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Cement 50 kg · {mono("3")}</span><span style="{M}; font-size: 11px; color: #6B7480; white-space: nowrap">Damaged · 3 × 34,000</span></div>
-{mono("−102,000", 13, 600, "#8E2A22")}
+{mono("−102,000", 13, 600, "#1C2233")}
 {switch(True, "Write off Cement 50 kg, 3 bags")}
 </div>
 <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["doc"], 14)}In the owner's log · at cost</div>'''
@@ -224,7 +224,7 @@ p3_body = f'''<div style="{CARD}; padding: 12px 14px; display: flex; flex-direct
 <span style="padding: 8px 10px; border-radius: 12px; background: #F7F5F2; font-size: 13px; font-weight: 600">“12 went on the truck at Owino.”</span>
 <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #5F6980">{svg(I["tick"], 13)}Closes with the check-in</span>
 </div>'''
-P3 = SH.decision_sheet(pos=1, total=1, ini="MK", who="Musa", role="Store", asked="10:10", ref="Denis's trip · Owino", age="6 m",
+P3 = SH.decision_sheet(pos=2, total=2, ini="MK", who="Musa", role="Store", asked="10:10", ref="Denis's trip · Owino", age="6 m",
     title="Musa's check-in differs", tags=[SH.s_tag(f'{mono("1")} of {mono("3")} lines differs', "amber")], body=p3_body,
     dock=SH.sheet_dock(SH.s_sees("Musa · Denis", "Ruth took Musa's check-in"), SH.s_primary("Take the check-in", "−28,000", "Take the check-in: the shelf takes Musa's count, 28,000 at cost. Musa and Denis see it"),
                        SH.s_second("Nudge Denis", "Nudge Denis about the difference")),
@@ -243,7 +243,7 @@ p4_body = f'''<div style="{CARD}; padding: 12px 14px; display: flex; flex-direct
 {outcome("Keep it", "+2 · 68,000", "on the shelf, at cost", "shelf", "good")}
 {outcome("It goes back", "2 · back", "to Nakawa, next trip", "back", "soft")}
 </div>'''
-P4 = SH.decision_sheet(pos=2, total=2, ini="MK", who="Musa", role="Store", asked="10:17", ref="Denis's trip · Nakawa", age="3 m",
+P4 = SH.decision_sheet(pos=1, total=1, ini="MK", who="Musa", role="Store", asked="10:17", ref="Denis's trip · Nakawa", age="3 m",
     title="Not on the list · keep it?", tags=[SH.s_tag(f'{mono("2")} bags more than the list', "amber")], body=p4_body,
     dock=SH.sheet_dock(SH.s_sees("Musa", "Keep it"), SH.s_primary("Keep it", "68,000", "Keep it: 2 bags go on the shelf, 68,000 at cost. Musa sees it"),
                        SH.s_second("It goes back", "It goes back: the 2 bags go back to Nakawa. Musa sees it")),
@@ -256,8 +256,8 @@ def phone_col(lab, ph, taps):
 ROW1 = ''.join([
   phone_col(f'1 · D-16 · DAMAGED · 4 OF 8 · {mono("09:40")}', P1, 'Written off · app 4 → 2 · push 2 → 2 (a slide)<br>Kept on the shelf · app — → 2 · push — → 1'),
   phone_col(f'2 · D-24 · A CARTON FOR THE SHELF · 8 OF 8 · {mono("09:40")}', P2, 'Shelf part OK · app 4 → 2 · push 2 → 1<br>Order only · app 4 → 2'),
-  phone_col(f"3 · D-13 + D-14 · CHECK-IN DIFFERS · 1 OF 1 · {mono('10:16')}", P3, "Take the check-in · app 4 → 2 · push 2 → 1<br>with Denis's note 3 → 1 · the note alone 2 → 0"),
-  phone_col(f'4 · D-15 · NOT ON THE LIST · 2 OF 2 · {mono("10:20")}', P4, 'Keep it · app — → 2 · push — → 1<br>no screen today · It goes back — → 2'),
+  phone_col(f"3 · D-13 + D-14 · CHECK-IN DIFFERS · 2 OF 2 · {mono('10:16')}", P3, "Take the check-in · app 4 → 2 · push 2 → 1<br>with Denis's note 3 → 1 · the note alone 2 → 0"),
+  phone_col(f'4 · D-15 · NOT ON THE LIST · 1 OF 1 · {mono("10:20")}', P4, 'Keep it · app — → 2 · push — → 1<br>no screen today · It goes back — → 2'),
 ])
 
 # ======================= SCORE PANEL =======================
@@ -265,8 +265,8 @@ AG = [9, 9, 8, 8, 8]
 LABELS = ['Agent consistency', 'Taps per decision', 'Glanceability', 'Polish', 'In step with asker']
 PAGES = [('D-16 · Written off', [5, 5, 5, 6, 4], [9, 9, 9, 8, 9]),
          ('D-24 · A carton for the shelf', [5, 6, 5, 6, 5], [9, 9, 9, 9, 9]),
-         ('D-13 + D-14 · Check-in differs', [5, 5, 6, 6, 4], [9, 9, 8, 8, 9]),
-         ('D-15 · Not on the list', [1, 1, 1, 1, 1], [9, 9, 9, 9, 9])]
+         ('D-13 + D-14 · Check-in differs', [5, 5, 6, 6, 4], [9, 9, 9, 8, 9]),
+         ('D-15 · Not on the list', [1, 1, 1, 1, 1], [9, 9, 9, 8, 8])]
 avg = lambda xs: f'{sum(xs) / len(xs):.1f}'
 GOOD, BAD = '#0F6B43', '#C93A30'
 sp = ''
@@ -347,7 +347,7 @@ S5 = state('SUCCESS · UNDO 10 S · D-14 CLOSES', f'''<div style="{NAVYBOX}; gap
 <button aria-label="Undo, 6 seconds left" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{svg(I["undo"], 15)}Undo · {mono("6 s")}</button></div>
 {undo_bar}</div>
 <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["doc"], 14)}Denis's note → the trip's history</div>
-<button aria-label="Next: Musa, not on the list" style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px 6px 8px; border: none; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD; text-align: left; color: #1C2233">{av("MK", 36, 12)}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 700; color: #5F6980">NEXT · 2 of 2</span><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Not on the list · keep it?</span></span>{svg(I["chev"], 18)}</button>''',
+<button aria-label="Next: Musa, not on the list" style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px 6px 8px; border: none; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD; text-align: left; color: #1C2233">{av("MK", 36, 12)}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 700; color: #5F6980">THEN · 10:20 · 1 of 1</span><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Not on the list · keep it?</span></span>{svg(I["chev"], 18)}</button>''',
  'Undo 10 s, then the next card slides in by itself')
 
 # 6 ERROR · D-15
@@ -359,9 +359,9 @@ S6 = state('ERROR · D-15 KEEP IT', f'''<div style="display: flex; align-items: 
  'the answer is kept · one tap sends it')
 
 # 7 OFFLINE
-S7 = state('OFFLINE · NO SIGNAL', f'''<div style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 12px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 700">{svg(I["wifioff"], 16)}No signal · taps wait on this phone</div>
+S7 = state('OFFLINE · NO SIGNAL', f'''<div style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 12px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 700">{svg(I["wifioff"], 16)}No signal · it sends when back</div>
 <div style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 10px; box-sizing: border-box; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD">{av("DO", 36, 12)}
-<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Shelf part OK · Wall plugs</span><span style="{M}; font-size: 11px; color: #6B7480">298,500 · 199 packs</span></div>{chip("Not sent yet", "warn")}</div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Shelf part OK · Wall plugs</span><span style="{M}; font-size: 11px; color: #6B7480">298,500 · 199 packs</span></div>{chip("Waits", "warn")}</div>
 <div style="background: #16203C; border-radius: 16px; padding: 8px">{slide("Write off needs signal", "Write off waits for signal", "off")}</div>''',
  'taps wait in the outbox · a slide waits for signal')
 
@@ -412,7 +412,7 @@ TOP = f'''<div style="height: 64px; display: flex; align-items: center; gap: 20p
 <div style="display: flex; flex-direction: column; gap: 2px; flex: none"><span style="font-size: 28px; font-weight: 800; letter-spacing: -.01em">Decide · stock</span><span style="{M}; font-size: 12px; color: #5F6980">manager.html · the red + · Sat 17 Oct · mirrors Agent Needs you + dock</span></div>
 <div style="flex: 1"></div>
 <div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #16203C; color: #fff"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Asks in</span>{ask_chip("D-16", "Damaged")}{ask_chip("D-24", "A carton")}{ask_chip("D-13", "Check-in differs")}{ask_chip("D-15", "Not on the list")}{ask_chip("D-17", "A count to check")}</div>
-<div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #FDE8E4; color: #A82D24"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Answers out</span>{ans_chip("Written off")}{ans_chip("Shelf part OK")}{ans_chip("Ruth took Musa&#39;s check-in")}{ans_chip("Keep it")}{ans_chip("Count taken")}{ans_chip("Not yet")}</div>
+<div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #FDE8E4; color: #A82D24"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Answers out</span>{ans_chip("Written off")}{ans_chip("Shelf part OK")}{ans_chip("Take the check-in")}{ans_chip("Keep it")}{ans_chip("Count taken")}{ans_chip("Not yet")}</div>
 </div>'''
 
 HTML = f'''<!doctype html>

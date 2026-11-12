@@ -96,9 +96,14 @@ def agebar(pct, over=False, limit_pct=None, h=4):
     span = 150.0
     w = min(pct, span) / span * 100
     lim = 100 / span * 100
-    col = BAD if over else (WARN if pct >= 75 else GOOD)
+    col = WARN if pct >= 75 else GOOD
+    if over:
+        part = (f'<span style="position: absolute; left: 0; top: 0; bottom: 0; width: {lim:.1f}%; border-radius: 999px 0 0 999px; background: {SOFT}"></span>'
+                f'<span style="position: absolute; left: {lim:.1f}%; top: 0; bottom: 0; width: {w - lim:.1f}%; border-radius: 0 999px 999px 0; background: {BAD}"></span>')
+    else:
+        part = f'<span style="position: absolute; left: 0; top: 0; bottom: 0; width: {w:.1f}%; border-radius: 999px; background: {col}"></span>'
     return (f'<span style="position: relative; display: block; height: {h}px; border-radius: 999px; background: {TILE}">'
-            f'<span style="position: absolute; left: 0; top: 0; bottom: 0; width: {w:.1f}%; border-radius: 999px; background: {col}"></span>'
+            f'{part}'
             f'<span style="position: absolute; left: {lim:.1f}%; top: -3px; width: 2px; height: {h+6}px; border-radius: 2px; background: {INK}"></span></span>')
 
 # ---------------------------------------------------------------- shells
@@ -133,7 +138,7 @@ def sec(title, count, dot=None, right=""):
 def orow(asker, num, customer, amount, sub, age, pct, holder, holder_name, over=False, action="", subcol=FAINT, border=LINE, bg="#fff", seeline=""):
     act = f'<div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px">{action}</div>' if action else ""
     if seeline: act += f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {SOFT}">{ic("bell", 13, SOFT)}{seeline}</div>'
-    agecol = BAD if over else SOFT
+    agecol = INK if over else SOFT
     return (f'<div style="background: {bg}; border: 1px solid {border}; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">'
             f'<div style="display: flex; align-items: center; gap: 10px">'
             f'{av(asker, 36)}'
@@ -157,7 +162,7 @@ def stagecols(active=None):
     out = []
     for name, n, dots, kind, need in cols:
         if kind == "late":
-            box = "background: rgba(240,138,126,.16); box-shadow: inset 0 0 0 1px rgba(240,138,126,.45);"; ncol = "#F7A196"; lcol = "#F7A196"
+            box = "background: rgba(255,255,255,.06);"; ncol = "#fff"; lcol = "#8D99B5"
         elif kind == "done":
             box = "background: rgba(111,220,176,.12);"; ncol = MINT; lcol = MINT
         else:
@@ -186,12 +191,12 @@ def page1():
             f'<div style="display: flex; align-items: center; gap: 10px"><span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Orders {m("10", 16, MINT, 600)}</span>'
             f'<button aria-label="Search orders" style="all: unset; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center">{ic("search", 20, "#fff")}</button></div>'
             f'{stagecols()}'
-            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: {ONNAVY}"><span style="color: #F7A196">1 stuck</span><span>5 wait on you</span><span>{m("8,810,000", 11, ONNAVY, 600)} on the move</span></div></div>')
+            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: {ONNAVY}"><span style="color: #fff">1 stuck</span><span>5 wait on you</span><span>{m("8,810,000", 11, ONNAVY, 600)} on the move</span></div></div>')
     rows = (
       
       orow("BO", "#0554", "Lubowa Builders", "450,000", "Timber 2×4 · asked Ndeeba", "2 h 40 m / 2 h", 133, "DO", "Denis", over=True,
            action=f'<button aria-label="Give it to Moses" style="all: unset; box-sizing: border-box; height: 36px; padding: 0 12px 0 4px; border-radius: 999px; box-shadow: inset 0 0 0 1px {LINE}; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700">{av("ML", 28, fs=11)}Give it to Moses</button>' + pill("Nudge Denis", "send"),
-           border="#E9B8B2", seeline=f'Denis sees: <b style="color: {INK}">Ruth nudged you</b>') +
+           seeline=f'Denis sees: <b style="color: {INK}">Ruth nudged you</b>') +
       sec("Checking", "2") +
       orow("GA", "#0555", "Kyaligonza &amp; Sons", "1,380,000", "Under the shop's price", "1 h 05 m / 2 h", 54, "RN", "Ruth", subcol=WARNI, seeline=f'Grace sees: <b style="color: {INK}">Approved · 46,000</b><span style="flex: 1"></span>{chip("5 of 8", "soft")}') +
       orow("GA", "#0556", "Ggaba Stores", "430,000", "Cancel asked", "0 h 50 m / 2 h", 42, "RN", "Ruth", subcol=WARNI, seeline=f'Grace sees: <b style="color: {INK}">Cancelled</b><span style="flex: 1"></span>{chip("6 of 8", "soft")}')
@@ -255,16 +260,16 @@ def page2():
 # ================================================================ PAGE 3 · stuck order, answered in place
 def page3():
     hero = (f'<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 28px; padding: 16px 16px 16px; display: flex; flex-direction: column; gap: 14px">'
-            f'<div style="display: flex; align-items: center; gap: 10px"><span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Stuck {m("1", 16, "#F7A196", 600)}</span>'
+            f'<div style="display: flex; align-items: center; gap: 10px"><span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Stuck {m("1", 16, MINT, 600)}</span>'
             f'<button aria-label="Search orders" style="all: unset; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center">{ic("search", 20, "#fff")}</button></div>'
             f'{stagecols("Checking")}</div>')
-    gauge = (f'<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: {BADB}">'
-             f'<div style="display: flex; align-items: baseline; justify-content: space-between">{m("2 h 40 m", 18, BAD, 600)}{m("in Checking · limit 2 h", 11, BAD, 600)}</div>'
+    gauge = (f'<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px; background: {TILE}">'
+             f'<div style="display: flex; align-items: baseline; justify-content: space-between">{m("2 h 40 m", 18, INK, 600)}{m("in Checking · limit 2 h", 11, SOFT, 600)}</div>'
              f'<span style="position: relative; display: block; height: 8px; border-radius: 999px; background: #fff">'
-             f'<span style="position: absolute; left: 0; top: 0; bottom: 0; width: 75%; border-radius: 999px 0 0 999px; background: {WARN}"></span>'
+             f'<span style="position: absolute; left: 0; top: 0; bottom: 0; width: 75%; border-radius: 999px 0 0 999px; background: {SOFT}"></span>'
              f'<span style="position: absolute; left: 75%; top: 0; bottom: 0; width: 25%; border-radius: 0 999px 999px 0; background: {BAD}"></span>'
              f'<span style="position: absolute; left: 75%; top: -3px; width: 2px; height: 14px; background: {INK}"></span></span>'
-             f'<div style="display: flex; justify-content: space-between">{m("07:00 placed", 11, SOFT, 600)}{m("09:00 limit", 11, INK, 600)}{m("40 m over", 11, BAD, 600)}</div></div>')
+             f'<div style="display: flex; justify-content: space-between">{m("07:00 placed", 11, SOFT, 600)}{m("09:00 limit", 11, INK, 600)}{m("40 m over", 11, INK, 600)}</div></div>')
     waits = (f'<div style="display: flex; align-items: center; gap: 10px">'
              f'<span style="width: 38px; height: 38px; border-radius: 12px; background: {WARNB}; color: {WARN}; display: flex; align-items: center; justify-content: center; flex: none">{ic("clock", 18)}</span>'
              f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Timber 2×4 · 40 pcs</span>{m("asked Ndeeba · 07:00 · no reply", 11, FAINT)}</div></div>')
@@ -273,11 +278,11 @@ def page3():
               f'{pill("Nudge Denis", "send", h=44)}</div>')
     words = (f'<div style="display: flex; gap: 8px; padding: 10px 12px; border-radius: 12px; background: {TILE}">{ic("bell", 14, SOFT)}'
              f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; line-height: 1.4">Denis sees: <b style="color: {INK}">Ruth nudged you</b> · #0554 has waited 2 h 40 m in Checking. Can you sort it now?</span></div>')
-    give = (f'<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 12px; font-weight: 700; color: {SOFT}">Or</span>'
+    give = (f'<div style="display: flex; flex-direction: column; gap: 8px">'
             f'<div style="display: flex; gap: 8px">'
             f'<button style="all: unset; box-sizing: border-box; flex: 1; height: 52px; padding: 0 12px; border-radius: 14px; box-shadow: inset 0 0 0 1px {LINE}; display: flex; align-items: center; gap: 10px">{av("ML", 32)}<span style="flex: 1; display: flex; flex-direction: column"><b style="font-size: 14px">Give it to Moses</b>{m("Sourcing · finds items", 11, FAINT)}</span>{ic("chev", 18, SOFT)}</button>'
             f'</div></div>')
-    big = (f'<div style="background: #fff; border: 1.5px solid #E9B8B2; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px">'
+    big = (f'<div style="background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 12px">'
            f'<div style="display: flex; align-items: center; gap: 10px">{av("BO", 36)}<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">'
            f'<div style="display: flex; align-items: baseline; gap: 6px">{m("#0554", 12, SOFT, 600)}<span style="font-size: 15px; font-weight: 700">Lubowa Builders</span></div>{m("From Brian · 1 line", 11, FAINT)}</div>{m("450,000", 14, INK, 600)}</div>'
            f'{gauge}{waits}<div style="height: 1px; background: {TILE}"></div>{holder}{words}{give}</div>')
@@ -290,11 +295,11 @@ def page4():
     hero = (f'<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 28px; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px">'
             f'<div style="display: flex; align-items: center; gap: 10px">'
             f'<button aria-label="Back to Orders" style="all: unset; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center; flex: none">{ic("back", 20, "#fff")}</button>'
-            f'<span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 22px; font-weight: 800">To bill {m("4", 15, MINT, 600)}</span>'
+            f'<span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 22px; font-weight: 800">To bill {m("5", 15, MINT, 600)}</span>'
             f'</div>'
-                        f'<span style="display: flex; align-items: baseline; gap: 6px">{m("1,173,567", 32, "#fff", 600, "letter-spacing: -.02em; line-height: 1")}<span style="font-size: 14px; font-weight: 700; color: {ONNAVY}">UGX</span></span>'
-            f'<div style="display: flex; gap: 3px; height: 8px"><i style="width: 63.7%; border-radius: 999px; background: {MINT}"></i><i style="flex: 1; border-radius: 999px; background: #F7A196"></i></div>'
-            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700"><span style="color: {MINT}">Bills itself · {m("748,000", 11, MINT, 600)}</span><span style="color: #F7A196">Can\'t bill itself · {m("425,567", 11, "#F7A196", 600)}</span></div>'
+                        f'<span style="display: flex; align-items: baseline; gap: 6px">{m("1,493,567", 32, "#fff", 600, "letter-spacing: -.02em; line-height: 1")}<span style="font-size: 14px; font-weight: 700; color: {ONNAVY}">UGX</span></span>'
+            f'<div style="display: flex; gap: 3px; height: 8px"><i style="width: 50.1%; border-radius: 999px; background: {MINT}"></i><i style="flex: 1; border-radius: 999px; background: #8D99B5"></i></div>'
+            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700"><span style="color: {MINT}">Bills itself · {m("748,000", 11, MINT, 600)}</span><span style="color: {ONNAVY}">Wait on you · {m("745,567", 11, ONNAVY, 600)}</span></div>'
             f'</div>')
     def cant(asker, num, cust_, amount, why, ev, btn):
         return (f'<div style="background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px">'
@@ -305,11 +310,8 @@ def page4():
              f'<div style="display: flex; align-items: center; gap: 10px">'
              f'<span style="width: 36px; height: 36px; border-radius: 12px; background: {WARNB}; color: {WARN}; display: flex; align-items: center; justify-content: center; flex: none">{ic("copy", 18)}</span>'
              f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Kato · 320,000</span>'
-             f'{m("#0544 = #0545", 11, FAINT, 500, "white-space: nowrap")}{m("200,000 paid", 11, WARNI, 600)}</div>{pill("Both are real", kind="ghost", h=44)}</div>'
-             f'<div style="display: flex; align-items: center; gap: 8px">'
-             f'<div style="flex: 1; position: relative; height: 44px; border-radius: 999px; background: {NAVY}; display: flex; align-items: center">'
-             f'<span style="position: absolute; left: 4px; top: 4px; width: 36px; height: 36px; border-radius: 999px; background: {RED}; color: #fff; display: flex; align-items: center; justify-content: center">{ic("dbl", 18)}</span>'
-             f'<span style="flex: 1; text-align: center; padding-left: 36px; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap">Cancel #0545 · keep #0544</span></div></div></div>')
+             f'{m("#0544 = #0545", 11, FAINT, 500, "white-space: nowrap")}{m("200,000 paid", 11, WARNI, 600)}</div>'
+             f'<div style="display: flex; flex-direction: column; gap: 6px; flex: none">{pill("Open", "chev", h=44, aria="Open: cancel #0545, keep #0544 (a slide)")}{pill("Both are real", kind="ghost", h=44)}</div></div></div>')
     def selfrow(num, cust_, amount, when, left_pct, left):
         circ = 2 * 3.14159 * 15
         dash = circ * left_pct
@@ -346,7 +348,7 @@ def lock(title, body, action, app="Manager · now"):
             f'<div style="display: flex; gap: 16px; margin-top: 4px">{action}</div></div></div>')
 
 def stuckmini(btn, extra_border=None, bg="#fff", sub="Timber 2×4 · asked Ndeeba"):
-    b = extra_border or "#E9B8B2"
+    b = extra_border or LINE
     return orow("BO", "#0554", "Lubowa Builders", "450,000", sub, "2 h 40 m / 2 h", 133, "DO", "Denis", over=True, action=btn, border=b, bg=bg)
 
 def states():
@@ -367,7 +369,7 @@ def states():
         f'<button disabled style="all: unset; box-sizing: border-box; height: 36px; padding: 0 12px; border-radius: 999px; background: {TILE}; color: {SOFT}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{ic("lock", 14)}Set price</button></div>'
         f'<div style="background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px">'
         f'<span style="width: 36px; height: 36px; border-radius: 12px; background: {TILE}; color: {SOFT}; display: flex; align-items: center; justify-content: center; flex: none">{ic("copy", 18)}</span>'
-        f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Taken twice? · Kato</span>{m("#0545 is billed · a void now", 11, FAINT)}</div></div>'
+        f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Taken twice? · Kato</span>{m("#0545 is invoiced · a void now", 11, FAINT)}</div></div>'
         f'<div style="position: relative; height: 44px; border-radius: 999px; background: {TILE}; display: flex; align-items: center">'
         f'<span style="position: absolute; left: 4px; top: 4px; width: 36px; height: 36px; border-radius: 999px; background: #C9C4BA; color: #fff; display: flex; align-items: center; justify-content: center">{ic("lock", 16)}</span>'
         f'<span style="flex: 1; text-align: center; padding-left: 36px; font-size: 13px; font-weight: 700; color: {SOFT}">Billed first · ask for a void</span></div>'))
@@ -377,18 +379,18 @@ def states():
     # SUCCESS: in-app undo + the notification turned Undo
     s.append(scard("SUCCESS", stuckmini(f'<div style="flex: 1; height: 44px; border-radius: 999px; background: {NAVY}; color: #fff; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; box-sizing: border-box">{ic("check", 16, MINT)}<span style="flex: 1; font-size: 13px; font-weight: 700">Nudged Denis · 09:40</span>'
         f'<button style="all: unset; box-sizing: border-box; height: 34px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,.12); display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700">{ic("undo", 14)}Undo</button></div>', sub="Denis is told · 10 s to undo")
-        + lock("Billed · 567 · #0561", "",
+        + lock("Invoiced · 567 · #0561", "",
                f'<span style="font-size: 13px; font-weight: 700; color: {MINT}; height: 32px; display: flex; align-items: center; gap: 4px">{ic("undo", 14)}Undo · 10 s</span>')))
     # ERROR
     s.append(scard("ERROR", f'<div style="background: #fff; border: 1.5px solid {BAD}; border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px">'
         f'<span style="width: 36px; height: 36px; border-radius: 12px; background: {BADB}; color: {BAD}; display: flex; align-items: center; justify-content: center; flex: none">{ic("alert", 18)}</span>'
         f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Not sent</span>{m("Nudge Denis · #0554", 11, FAINT)}</div>'
         f'{pill("Try again", "undo")}</div>'
-        + lock("Someone else just did this", m("#0561 · Esther billed it · 10:04", 12, ONNAVY),
+        + lock("Someone else just did this", m("#0561 · invoiced on another phone · 10:04", 12, ONNAVY),
                f'<span style="font-size: 13px; font-weight: 700; color: {ONNAVY}; height: 32px; display: flex; align-items: center">Open</span>')))
     # OFFLINE
-    s.append(scard("OFFLINE", f'<div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: {WARNB}; color: {WARNI}; font-size: 13px; font-weight: 700">{ic("wifioff", 16)}Offline · it sends when back</div>'
-        + stuckmini(f'<span style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; background: {TILE}; color: {SOFT}; font-size: 13px; font-weight: 700">{ic("clock", 14)}Waiting · Nudge Denis</span>')))
+    s.append(scard("OFFLINE", f'<div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: {WARNB}; color: {WARNI}; font-size: 13px; font-weight: 700">{ic("wifioff", 16)}No signal · it sends when back</div>'
+        + stuckmini(f'<span style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; background: {TILE}; color: {SOFT}; font-size: 13px; font-weight: 700">{ic("clock", 14)}Waits</span>')))
     # EMPTY
     s.append(scard("EMPTY", f'<div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px">'
         f'<span style="width: 60px; height: 60px; border-radius: 18px; background: {GOODB}; color: {GOOD}; display: flex; align-items: center; justify-content: center">{ic("check", 26)}</span>'
@@ -400,10 +402,10 @@ def states():
 # ================================================================ SCORE PANEL
 def score_panel():
     pages = [
-      ("1 · Orders list", [("Consistency", 5, 9, 8), ("Taps per decision", 4, 8, 8), ("Glanceability", 5, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 4, 8, 8)]),
-      ("2 · One order", [("Consistency", 5, 9, 8), ("Taps per decision", 3, 8, 8), ("Glanceability", 5, 8, 8), ("Polish", 6, 8, 8), ("In step with asker", 4, 8, 8)]),
-      ("3 · Stuck order", [("Consistency", 4, 9, 8), ("Taps per decision", 3, 8, 8), ("Glanceability", 5, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 3, 8, 8)]),
-      ("4 · To bill", [("Consistency", 5, 9, 8), ("Taps per decision", 5, 8, 8), ("Glanceability", 4, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 4, 8, 8)]),
+      ("1 · Orders list", [("Consistency", 5, 9, 9), ("Taps per decision", 4, 8, 8), ("Glanceability", 5, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 4, 8, 9)]),
+      ("2 · One order", [("Consistency", 5, 9, 9), ("Taps per decision", 3, 8, 9), ("Glanceability", 5, 8, 8), ("Polish", 6, 8, 8), ("In step with asker", 4, 8, 9)]),
+      ("3 · Stuck order", [("Consistency", 4, 9, 9), ("Taps per decision", 3, 8, 8), ("Glanceability", 5, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 3, 8, 9)]),
+      ("4 · To bill", [("Consistency", 5, 9, 9), ("Taps per decision", 5, 8, 8), ("Glanceability", 4, 8, 8), ("Polish", 5, 8, 8), ("In step with asker", 4, 8, 8)]),
     ]
     def bar(v, col):
         return f'<span style="flex: 1; height: 4px; border-radius: 999px; background: {TILE}"><span style="display: block; height: 4px; border-radius: 999px; background: {col}; width: {v*10}%"></span></span>'
@@ -428,7 +430,7 @@ def score_panel():
             f'<span style="display: flex; align-items: center; gap: 4px"><i style="width: 8px; height: 8px; border-radius: 999px; background: {GOOD}"></i>New</span></div>')
     match = (f'<div style="margin-top: auto; padding: 10px 12px; border-radius: 12px; background: {TILE}; display: flex; flex-direction: column; gap: 2px">'
              f'<span style="font-size: 12px; font-weight: 700">Agent match: Clients</span>'
-             f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; line-height: 1.4">Clients hero + week columns = stage columns with face dots and the late tint (1, 3) · filter chips (1, 3) · client rows with the answer on the row (1, 4) · client sheet head (2) · order + the Today Needs-you card (2).</span></div>')
+             f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; line-height: 1.4">Clients hero + week columns = stage columns with face dots and navy need badges (1, 3) · filter chips (1, 3) · client rows with the answer on the row (1, 4) · client sheet head (2) · order + the Today Needs-you card (2).</span></div>')
     return (f'<div style="width: 360px; height: 830px; flex: none; box-sizing: border-box; background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; margin-top: 22px">'
             f'{head}{"".join(out)}{match}</div>')
 
@@ -454,7 +456,7 @@ phones = [
   phone("3 · STUCK · ANSWERED IN PLACE", "09:40", page3(),
         "Nudge Denis: 5 → 2 · Give it to Moses: 4 → 2<br>the nudge is a push, not WhatsApp"),
   phone("4 · TO BILL", "10:05", page4(),
-        "Bills itself: push 2 → 0 · app 3 → 0<br>Bill it: push 3 → 1 · app 4 → 2<br>Price set: push 4 → 1 · app 6 → 2<br>Taken twice?: 4 → 2"),
+        "Bills itself: push 2 → 0 · app 3 → 0<br>Bill it: push 3 → 1 · app 4 → 2<br>Price set: push 4 → 1 · app 6 → 2<br>Taken twice?: 4 → 2 (Open · slide)"),
 ]
 st = states()
 html = f'''<!doctype html>

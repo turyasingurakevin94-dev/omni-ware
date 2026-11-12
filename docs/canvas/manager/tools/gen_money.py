@@ -254,7 +254,7 @@ class Component extends DCLogic {{ renderVals() {{ return {{}}; }} }}
 # ===================================================================== MONEY BOARD
 def money_hero(offline=False):
     live = (f'<span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px">'
-            f'<i style="width: 7px; height: 7px; border-radius: 999px; background: {"#F5B26B" if offline else MINT}; box-shadow: 0 0 0 4px {"rgba(245,178,107,.2)" if offline else "rgba(111,220,176,.25)"}"></i>{"Offline" if offline else "Live"}</span>')
+            f'<i style="width: 7px; height: 7px; border-radius: 999px; background: {"#F5B26B" if offline else MINT}; box-shadow: 0 0 0 4px {"rgba(245,178,107,.2)" if offline else "rgba(111,220,176,.25)"}"></i>{"1 waiting to send" if offline else "Live"}</span>')
     return (f'<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 28px; padding: 14px 20px 16px; display: flex; flex-direction: column; gap: 10px">'
             f'<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><div style="display: flex; flex-direction: column; gap: 4px">'
             f'<span style="font-size: 24px; font-weight: 700">Money</span>'
@@ -327,7 +327,7 @@ def money_p2():
     br = []
     for i, (n, dte, d, a) in enumerate(bills):
         bb = f"border-bottom: 1px solid {TILE};" if i == 0 else ""
-        br.append(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; {bb}"><span style="width: 36px; height: 36px; border-radius: 12px; background: {BADBG}; color: {BAD}; display: flex; align-items: center; justify-content: center; flex: none">{ic(P["doc"], 17)}</span>'
+        br.append(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; {bb}"><span style="width: 36px; height: 36px; border-radius: 12px; background: {TILE}; color: {INK}; display: flex; align-items: center; justify-content: center; flex: none">{ic(P["doc"], 17)}</span>'
                   f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px">{mono(n, 14)}<span style="{MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}">{dte} · {d} d</span></span>{mono(a, 14)}</div>')
     # promises timeline: 21 Sep kept, 2 Oct broken, 9 Oct broken, today 17 Oct; scale 14 Sep..17 Oct = 33 days over 280px
     def px(day_from_14sep): return 10 + day_from_14sep / 33 * 280
@@ -388,7 +388,7 @@ def money_p3():
              f'<span style="font-size: 24px; font-weight: 800; letter-spacing: -.01em; padding: 0 2px">Promise</span>'
              f'{sec("How much", "")}{seg_amt}'
              f'{sec("Which day", "")}{promise_days("19")}'
-             f'<button aria-label="A later day" style="height: 44px; border-radius: 999px; border: 1.5px dashed {DASH}; background: transparent; color: {SOFT}; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px">{ic(P["cal"], 16)}Later</button>'
+             f'<button aria-label="Pick a day later than Fri 23" style="height: 44px; border-radius: 999px; border: none; background: transparent; color: {NAVY}; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: underline">{ic(P["cal"], 16)}Pick a day later</button>'
              f'{sec("Their promises", "1 kept · 2 broken", extra="; margin-top: 2px")}'
              + card(
                  "".join(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 30px">{mk}<span style="flex: 1; {MONO}; letter-spacing: 0; font-size: 12px; font-weight: 600">{d}</span>{mono(a, 12, 600, SOFT)}{chip(w, k)}</div>'
@@ -397,6 +397,10 @@ def money_p3():
                              (f'<i style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 999px; border: 2.5px solid {BAD}"></i>', "Fri 2 Oct", "1,000,000", "Broken", "bad"),
                              (f'<i style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 999px; border: 2.5px solid {BAD}"></i>', "Fri 9 Oct", "1,000,000", "Broken", "bad")]),
                  pad="6px 14px", gap=0)
+             + card(f'<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px"><span style="font-size: 13px; font-weight: 700">If kept · Mon 19</span>'
+                    f'<span style="{MONO}; letter-spacing: 0; font-size: 13px; font-weight: 600; white-space: nowrap"><span style="color: {FAINT}; text-decoration: line-through">2,310,000</span> → 0</span></div>'
+                    f'<div style="display: flex; gap: 3px; height: 8px"><i style="width: 62.8%; border-radius: 999px 0 0 999px; background: {NAVY}"></i><i style="flex: 1; border-radius: 0 999px 999px 0; background: #8D99B5"></i></div>'
+                    f'<div style="display: flex; justify-content: space-between; {MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}"><span>Wed 9 Sep · 1,450,000</span><span>Mon 14 Sep · 860,000</span></div>', pad="10px 14px", gap=6)
              + '</div>')
     dk = dock(f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {ONNAVY}">{ic(P["bell"], 14)}{dot("GA")}Grace sees{chip("Promised · Mon 19", "onnavy")}</div>'
               f'{pill("Promised · 2,310,000 · Mon 19", "white", 56, "check", extra="; width: 100%", size=15)}', pad="14px 16px 20px")
@@ -439,15 +443,14 @@ def money_p4():
                 f'<span style="display: flex; align-items: center; gap: 6px; width: 100%">{mark}<span style="font-size: 13px; font-weight: 700; white-space: nowrap">{name}</span></span>'
                 f'{mono(phone_, 11, 600, FAINT)}<span style="display: flex; justify-content: space-between; width: 100%">{mono(orders, 11, 600, FAINT)}{mono(owes, 12, 600, INK)}</span></button>')
     look = card(
-        f'<div style="display: flex; align-items: center; gap: 8px"><span style="color: {WARN}">{ic(P["merge"], 18)}</span><span style="flex: 1; font-size: 14px; font-weight: 700">Look alike</span>{chip("Same phone", "warn")}</div>'
+        f'<div style="display: flex; align-items: center; gap: 8px"><span style="color: {WARN}">{ic(P["merge"], 18)}</span><span style="flex: 1; font-size: 14px; font-weight: 700">Look alike</span>{chip("Same phone", "warn")}{pill("Open", "line", 44, "chev", aria="Open: merge Gaba Stores into Ggaba Stores (a slide)", extra="; padding: 0 14px 0 10px")}</div>'
         f'<div style="display: flex; gap: 8px">{rec("Ggaba Stores", "0772 418 330", "6 orders", True, "1,615,000")}{rec("Gaba Stores", "0772 418 330", "1 order", False, "0")}</div>', pad="12px 14px", gap=10)
     books = card(
         f'<div style="display: flex; align-items: center; gap: 10px"><span style="width: 36px; height: 36px; border-radius: 12px; background: {TILE}; display: flex; align-items: center; justify-content: center; flex: none">{ic(P["book"], 18)}</span>'
-        f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Old books</span><span style="{MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}">since Thu 1 Oct</span></span>'
-        f'{mono("290,000", 14)}{chip("Next", "soft")}</div>', pad="10px 14px", gap=0)
+        f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Old books</span><span style="{MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}">since 1 Oct</span></span>'
+        f'{mono("290,000", 14)}{pill("Open", "line", 44, "chev", aria="Open: opening balance 290,000 (a slide)", extra="; padding: 0 14px 0 10px")}</div>', pad="10px 14px", gap=0)
     body = f'<div style="padding: 12px 16px 0; display: flex; flex-direction: column; gap: 8px">{ask}{limit}{look}{books}</div>'
-    dk = dock(slide("Merge into Ggaba Stores"))
-    return hero + body + dk
+    return hero + body
 
 def money_states():
     st = []
@@ -472,11 +475,15 @@ def money_states():
            f'<span style="width: 36px; height: 36px; border-radius: 12px; background: {BADBG}; color: {BAD}; display: flex; align-items: center; justify-content: center">{ic(P["alert"], 18)}</span>'
            f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Promised · Mon 19</span>{mono("Not saved · no signal", 11, 600, BAD)}</span>'
            f'{pill("Try again", "navy", 44, "retry")}</div>'
-           + promise_days("19"))
-    st.append(state("ERROR", err, "the day stays picked · Try again sends the same promise"))
+           + f'<div style="background: {NAVY}; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px">'
+             f'<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #FFB4AB">{ic(P["alert"], 15)}Not merged · Try again</span>'
+             f'{slide("Merge into Ggaba Stores")}</div>')
+    st.append(state("ERROR", err, "a promise: the day stays picked · a merge: the knob goes back, slide again"))
     off = (f'<div style="background: {NAVY}; color: #fff; border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between">'
-           f'<span style="font-size: 18px; font-weight: 700">Money</span><span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600; color: {ONNAVY}"><i style="width: 7px; height: 7px; border-radius: 999px; background: #F5B26B"></i>Offline</span></div>'
-           f'<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: {WARNBG}; color: {WARNINK}; font-size: 13px; font-weight: 700">{ic(P["wifioff"], 16)}No signal · {mono("1", 13, 600)} nudge waits to send</div>'
+           f'<span style="font-size: 18px; font-weight: 700">Money</span><span style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 600; color: {ONNAVY}"><i style="width: 7px; height: 7px; border-radius: 999px; background: #F5B26B"></i>1 waiting to send</span></div>'
+           f'<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: {WARNBG}; color: {WARNINK}; font-size: 13px; font-weight: 700">{ic(P["wifioff"], 16)}No signal · it sends when back</div>'
+           f'<div style="display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 8px 12px">{av("GA", 28)}<span style="flex: 1; font-size: 14px; font-weight: 700">Nudge Grace</span>'
+           f'<span style="display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 999px; background: {TILE}; color: {SOFT}; font-size: 13px; font-weight: 700">{ic(P["clock"], 14)}Waits</span></div>'
            f'<span style="padding: 0 4px; {MONO}; letter-spacing: 0; font-size: 12px; color: {SOFT}">In today as of 09:02 · 2,836,000</span>')
     st.append(state("OFFLINE", off, "figures keep their time · taps queue and send later"))
     emp = (f'{sec("Who owes", "0", dotc=DASH)}'
@@ -497,14 +504,14 @@ def money_board():
         phone("3 · A PROMISE · D-28", money_p3(),
               "Promised (D-28): 6 → 4 · app, Money, debtor, Promised (Undo 10 s)"),
         phone("4 · CUSTOMER · GGABA STORES · <span style=\"font-family: 'IBM Plex Mono', monospace\">11:40</span>", money_p4(),
-              "Credit asked (D-32): 1 tap on the card · Change (D-25) 8 → 5 · Merge (D-26) 6 → 4 · Opening balance (D-27) 6 → 4"),
+              "Credit asked (D-32): 1 tap on the card · Change (D-25) 8 → 5 · Merge (D-26) 6 → 4 · Opening balance (D-27) 6 → 4 (Open · slide)"),
     ]
     AG = (9, 8, 8, 9, 8)
     panel = score_panel("Scores · Money tab", "Manager today", [
-        ("1 · Money", (5, 4, 4, 5, 5), AG, (9, 8, 9, 8, 8)),
-        ("2 · One debtor", (5, 4, 4, 5, 4), AG, (9, 8, 8, 8, 8)),
-        ("3 · A promise", (4, 4, 4, 5, 4), AG, (8, 8, 8, 8, 8)),
-        ("4 · Customer", (4, 3, 4, 4, 4), AG, (8, 8, 8, 8, 8)),
+        ("1 · Money", (5, 4, 4, 5, 5), AG, (9, 9, 9, 9, 9)),
+        ("2 · One debtor", (5, 4, 4, 5, 4), AG, (9, 9, 8, 9, 9)),
+        ("3 · A promise", (4, 4, 4, 5, 4), AG, (9, 8, 8, 8, 9)),
+        ("4 · Customer", (4, 3, 4, 4, 4), AG, (9, 8, 8, 8, 9)),
     ], "Agent Money / Money Pro",
         "Flat navy hero with one figure and a split bar · white cards · row tracks · navy pill on the lead card · navy dock with total + one move")
     panel = panel.replace(ACC, BAD)
@@ -623,17 +630,22 @@ def cr_p3():
 
 
 def cr_p4():
-    ev = cr_owe_card("Owes", "1,615,000", [(1615000/3500000*100, NAVY, "")], marks=[(2/3.5*100, INK), (3/3.5*100, GOOD)],
+    ev = cr_owe_card("Would owe with #0553", "2,390,000", [(1615000/3500000*100, NAVY, ""), (775000/3500000*100, "#8D99B5", HATCH)], marks=[(2/3.5*100, INK), (3/3.5*100, GOOD)],
                      mark_labels=f'<div style="position: relative; height: 16px; font-size: 11px; font-weight: 700"><span style="position: absolute; left: 57.1%; transform: translateX(-50%); white-space: nowrap; color: {INK}">now {mono("2M", 11, 700)}</span>'
-                                 f'<span style="position: absolute; left: 85.7%; transform: translateX(-50%); white-space: nowrap; color: {GOOD}">asked {mono("3M", 11, 700, GOOD)}</span></div>')
-    facts = cr_facts([("clock", "Oldest bill", "16 d"), ("cal", "Terms asked", "14 days"), ("orders", "On the move", "#0553")])
+                                 f'<span style="position: absolute; left: 85.7%; transform: translateX(-50%); white-space: nowrap; color: {GOOD}">asked {mono("3M", 11, 700, GOOD)}</span></div>',
+                     legend_items=[("Owes · 6 orders", "1,615,000", NAVY, ""), ("#0553 Buying", "775,000", "#8D99B5", HATCH)])
+    room = card(
+        f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">'
+        f'<span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: {TILE}"><span style="font-size: 12px; font-weight: 700; color: {SOFT}">At 2M · now</span>{mono("390,000 over", 14, 600, INK)}<span style="font-size: 11px; font-weight: 600; color: {SOFT}">#0553 waits</span></span>'
+        f'<span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: {GOODBG}"><span style="font-size: 12px; font-weight: 700; color: {GOOD}">At 3M · asked</span>{mono("610,000 left", 14, 600, INK)}<span style="font-size: 11px; font-weight: 600; color: {GOOD}">#0553 goes</span></span></div>', pad="10px", gap=0)
+    facts = cr_facts([("clock", "Oldest bill", "16 d"), ("cal", "Terms", "14 → 14 days")])
     quote = (f'<div style="display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid {LINE}">{av("EA", 24)}'
              f'<span style="font-size: 13px; font-weight: 600; color: {INK}; line-height: 1.35">“Pays every 2 weeks”</span></div>')
     dock_ = SH.sheet_dock(SH.s_sees("Esther · Grace", "Limit 3,000,000 · 14 days"),
                           SH.s_primary("Limit 3,000,000 · 14 days", None, "Limit 3,000,000, 14 days for Ggaba Stores. Esther and Grace see it"),
                           SH.s_second("Cash only", "Cash only: Ggaba Stores buys for cash. Esther and Grace see it"))
-    return SH.decision_sheet(pos=1, total=1, ini="EA", who="Esther", role="Sales", asked="11:30", ref="Ggaba Stores · limit now 2M",
-                             age="10 m", title="Credit asked · Ggaba Stores", body=ev + facts + quote, dock=dock_,
+    return SH.decision_sheet(pos=1, total=1, ini="EA", who="Esther", role="Accounts", asked="11:30", ref="Ggaba Stores · limit now 2M",
+                             age="10 m", title="Credit asked · Ggaba Stores", body=ev + room + facts + quote, dock=dock_,
                              aria="Credit asked, Ggaba Stores, from Esther")
 
 
@@ -658,13 +670,14 @@ def notif(undo=False):
     return (f'<div style="background: #0B0F1A; border-radius: 14px; padding: 12px; margin: -2px">'
             f'<div style="background: #1C2130; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px">{head}{body}</div></div>')
 
-def needs_row(pressed=False):
+def needs_row(pressed=False, waits=False):
     btn_style = (f"background: #0B1226; transform: scale(.95); box-shadow: 0 0 0 3px rgba(22,32,60,.18)" if pressed else f"background: {NAVY}")
     return (f'<div style="background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px">'
             f'<div style="display: flex; align-items: center; gap: 10px">{av("MK", 38)}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Not paid yet · on credit?</span>'
             f'<span style="{MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}">Musa · #0551 · 1,240,000 · 25 m</span></span></div>'
             f'<div style="display: flex; align-items: center; gap: 8px"><span style="display: flex; align-items: center; gap: 5px; {MONO}; letter-spacing: 0; font-size: 11px; font-weight: 600; color: {WARNINK}">{ic(P["truck"], 14)}truck waits · 25 m</span><span style="flex: 1"></span>'
-            f'<button aria-label="On credit, load it" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; {btn_style}; color: #fff; font-size: 13px; font-weight: 700">On credit · load it</button></div></div>')
+            + (f'<span style="flex: none; display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 12px; border-radius: 999px; background: {TILE}; color: {SOFT}; font-size: 13px; font-weight: 700">{ic(P["clock"], 14)}Waits</span></div></div>' if waits else
+               f'<button aria-label="On credit, load it" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; {btn_style}; color: #fff; font-size: 13px; font-weight: 700">On credit · load it</button></div></div>'))
 
 def credit_states():
     st = []
@@ -684,8 +697,8 @@ def credit_states():
            f'<div style="display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 10px 12px">'
            f'<span style="width: 36px; height: 36px; border-radius: 12px; background: {TILE}; display: flex; align-items: center; justify-content: center">{ic(P["check"], 18, 2.4)}</span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Someone else just did this</span>{mono("#0551 · On credit · load it · 09:40", 11, 600, FAINT)}</span></div>')
     st.append(state("ERROR", err, "no signal → Try again · already answered → shows who and the answer"))
-    off = (f'<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: {WARNBG}; color: {WARNINK}; font-size: 13px; font-weight: 700">{ic(P["wifioff"], 16)}No signal · your answer waits to send</div>'
-           + needs_row(False))
+    off = (f'<div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: {WARNBG}; color: {WARNINK}; font-size: 13px; font-weight: 700">{ic(P["wifioff"], 16)}No signal · it sends when back</div>'
+           + needs_row(False, waits=True))
     st.append(state("OFFLINE", off, "answers queue · Musa is told when it sends"))
     emp = (f'{sec("On credit?", "0", dotc=DASH)}'
            f'<div style="height: 56px; border-radius: 16px; border: 1.5px dashed {DASH}; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: {SOFT}"><span style="color: {GOOD}">{ic(P["check"], 18, 2.4)}</span>Nothing waits on credit</div>'
