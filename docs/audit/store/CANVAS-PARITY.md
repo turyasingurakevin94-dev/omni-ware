@@ -152,9 +152,9 @@ None open. F10 (PK07: "justnow" because `Packed.tsx:106` stripped every space) i
 
 ## Today
 
-Critic re-run 2026-11-12 on `bacd5c32` (origin/claude/store-build, after the builders' T1–T27 fixes and `docs/canvas/store-agent/review/TD-fixes.md`). 33 boards. `test/parity/store-today.json` now has TD04's taps (set the return aside, Close) and reaches every board, TD18 and TD23 included. Every board link was replayed in Playwright, and the rest was measured in computed styles.
+Critic third run 2026-11-12 on `444adb85` (origin/claude/store-build), after the T1–T27 fixes (`bacd5c32`) and the G-T fixes (`444adb85`, `docs/canvas/store-agent/review/TD-fixes.md`). It re-checks the 8 boards that failed on `bacd5c32` and spot-checks the other 25 for regressions: the diffs are unchanged (±0.3 %), and contrast, targets, text size, clipping and money were re-measured on all 33. 33 boards. `test/parity/store-today.json` now has TD04's taps (set the return aside, Close) and reaches every board, TD18 and TD23 included. Every board link was replayed in Playwright, and the rest was measured in computed styles.
 
-**25 pass, 8 fail.**
+**33 pass, 0 fail.**
 
 Measured on all 33:
 - contrast ≥ 4.5:1 on every text;
@@ -180,28 +180,28 @@ Accepted (not failures):
   - #0530's faces BO RN and "Brian takes it" follow FACTS (§2a).
   - TD32's #0552 first is Q20.
 - **Choices with a correct written reason.**
-  - "tried 3 times" is left out on TD07 and TD22 (§4.8). Redraw.
-  - "Your manager sends you an invite link" on TD20, TD23 and TD31: nobody is known before sign-in. Redraw.
+  - "tried 3 times" is left out on TD07 and TD22 (§4.8); both boards are now redrawn.
+  - "Your manager sends you an invite link" on TD20, TD23 and TD31: nobody is known before sign-in. The boards are redrawn.
 - **Demo figures.**
   - TD02's 8 done: the board's own To load 2 counts #0552.
   - Bay 4 (PK06).
-  - Aisle C "sent 14:40" on TD16, TD19, TD27 and TD28 (FACTS §8 now says 14:40). The boards still say 16:40; correct them.
+  - Aisle C "sent 14:40" on TD16, TD19, TD27 and TD28, now drawn on the boards too.
   - TD10/TD29's "1 · read" (FACTS lists one alert from Fri 16 Oct).
   - The demo clock's 10:41/17:30, where boards draw 10:42/17:42.
   - TD31's empty password.
 - **Layout noise.** TD09's scroll offset, and TD11's cards 5–8 px taller.
 
-**T7: is the new FACTS §8 sound? Mostly, with one contradiction.** Writing the demo's later moments into FACTS fills gaps FACTS left open, and TD03, TD04 and the close boards now agree with it. But the new 11:10 (#0556 collected) and 11:20 (#0547 delivered) rows are earlier than TD02's 11:32. At 11:32 the board **and** the app still show #0556 to pack ("then #0556", To pack 1 NH) and #0547 on the road (GS, "3 delivered today"). The reason is in `demo/moments.ts:80–85`: both are applied only in the 12:00 step. So FACTS now disagrees with TD02 and with the demo it was written from (G-T7 below). §2a says FACTS is the source the boards follow. Filling it from the demo is acceptable only where FACTS was silent, so these deliveries should also be listed as sample gaps in Q9, as Ruth's 17:30 answers were.
+**T7, now sound.** FACTS §8 now puts #0556's collection at 11:45 and #0547's delivery at 11:50, after TD02's 11:32. `demo/moments.ts` stamps the same times, and the board, the app and FACTS agree. Writing the demo's later moments into FACTS is acceptable here because FACTS was silent on them.
 
 | Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | TD01 Today | `today` | 0 | 1.94 | ok (Q25) | ok | ok | ok | ok | ok | pass | board redraw: no 13:20 |
 | TD09 Today scrolled | `today` | 1 | 13.69 | ok | ok | ok | ok | ok | ok | pass | scroll offset |
 | TD33 Next job pressed | `today` | 0 | 2.81 | ok | ok | ok | ok | ok | ok | pass | press measured |
-| TD02 Next is a check-in | `today` &at=1132 | 0 | 0.39 | **#0556 to pack, #0547 on the road after FACTS' 11:10/11:20** | ok | ok | ok | ok | ok | fail | G-T7 |
+| TD02 Next is a check-in | `today` &at=1132 | 0 | 0.39 | ok | ok | ok | ok | ok | ok | pass | FACTS 11:45/11:50 now after 11:32 |
 | TD03 Next is a ride | `today` &at=1510 | 0 | 0.83 | ok | ok | ok | ok | ok | ok | pass | |
 | TD04 Calm | `today` &at=1730 | 3 | 1.04 | ok | ok | ok | ok | ok | ok | pass | |
-| TD05 First day | `today` &state=first-day | 0 | 0.31 | ok | **red button: toast** | ok | ok | ok | ok | fail | G-T5 |
+| TD05 First day | `today` &state=first-day | 0 | 0.31 | ok | ok | ok | ok | ok | ok | pass | red button → `pack` |
 | TD06 Offline | `today` &offline&kept=1 | 0 | 7.11 | ok | ok | ok | ok | ok | ok | pass | |
 | TD07 Load failed | `today` &fail=snapshot | 0 | 2.97 | ok | ok | ok | ok | ok | ok | pass | |
 | TD08 Update ready | `today` &update=1 | 0 | 0.27 | ok (Q25) | ok | ok | ok | ok | ok | pass | |
@@ -212,35 +212,37 @@ Accepted (not failures):
 | TD12 You | `today/you` | 1 | 15.61 | ok (Q25) | ok | ok | ok | ok | ok | pass | |
 | TD13 Pass the yard | `today/pass-yard` | 2 | 4.66 | ok | ok | ok | ok | ok | ok | pass | |
 | TD18 Sending | `today/pass-yard` | 3 | 4.88 | ok | ok | ok | ok | ok | ok | pass | |
-| TD14 Passing (held) | `today/pass-yard` | 3 | 9.13 | **MK face** | ok | ok | ok | ok | ok | fail | G-T14 |
-| TD24 Nobody else | `today/pass-yard` &state=nobody | 2 | 4.03 | **knob icon** | ok | ok | ok | ok | ok | fail | G-T20 |
+| TD14 Passing (held) | `today/pass-yard` | 3 | 9.18 | ok | ok | ok | ok | ok | ok | pass | `yardFace` slate |
+| TD24 Nobody else | `today/pass-yard` &state=nobody | 2 | 4.02 | ok | ok | ok | ok | ok | ok | pass | lock knob, board redrawn |
 | TD26 Pass failed | `today/pass-yard` &fail=passYard | 3 | 5.04 | ok | ok | ok | ok | ok | ok | pass | |
 | TD15 Musa passed you | `today` &as=okello&at=1043 | 0 | 0.61 | ok | ok | ok | ok | ok | ok | pass | |
 | TD25 I've got it sending | `today` &as=okello&at=1043 | 1 | 0.9 | ok | ok | ok | ok | ok | ok | pass | |
 | TD32 The yard is yours | `today` &as=okello&at=1043 | 1 | 3.55 | ok (Q20) | ok | ok | ok | ok | ok | pass | |
-| TD28 Close, 3 of 4 | `today/close-yard` &at=1730 | 1 | 9.64 | **knob icon** | ok | ok | ok | ok | ok | fail | G-T20 |
+| TD28 Close, 3 of 4 | `today/close-yard` &at=1730 | 1 | 9.64 | ok | ok | ok | ok | ok | ok | pass | lock knob, 14:40 |
 | TD16 Close the yard | `today/close-yard` &at=1730 | 2 | 9.51 | ok | ok | ok | ok | ok | ok | pass | board: 14:40 |
-| TD27 Close offline | `today/close-yard` &offline | 2 | 10.04 | **knob icon** | ok | ok | ok | ok | ok | fail | G-T20 |
+| TD27 Close offline | `today/close-yard` &offline | 2 | 10.05 | ok | ok | ok | ok | ok | ok | pass | no-signal knob, 14:40 |
 | TD19 Close sending | `today/close-yard` &at=1730 | 3 | 9.68 | ok | ok | ok | ok | ok | ok | pass | |
 | TD17 Closed | `today/close-yard` &at=1730 | 3 | 6.08 | ok | ok | ok | ok | ok | ok | pass | |
 | TD20 Sign in | `shell/sign-in` &state=signed-out | 0 | 1.49 | ok | ok | ok | ok | ok | ok | pass | |
 | TD31 Wrong password | `shell/sign-in` | 1 | 3.87 | ok | ok | ok | ok | ok | ok | pass | |
-| TD23 Signing in | `shell/sign-in` | 1 | 7.59 | **busy button dark red** | ok | ok | ok | ok | ok | fail | G-T23 |
+| TD23 Signing in | `shell/sign-in` | 1 | 1.35 | ok | ok | ok | ok | ok | ok | pass | board's RN face still beside "Your manager" |
 | TD21 Checking | `shell/checking` &state=loading | 0 | 7.7 | ok | ok | ok | ok | ok | ok | pass | |
-| TD22 No reach | `shell/no-reach` &state=no-reach | 0 | 10.69 | **"saved 7:52"** | ok | ok | ok | ok | ok | fail | G-T22 |
+| TD22 No reach | `shell/no-reach` &state=no-reach | 0 | 10.71 | ok | ok | ok | ok | ok | ok | pass | "7:52" wraps to a 2nd line |
 
-### Today failures and fixes (re-run)
+### Today: notes, no failures
 
-- **G-T7 · FACTS §8's 11:10 and 11:20 come before TD02's 11:32** (TD02). FACTS says #0556 was collected at 11:10 and #0547 delivered at 11:20. Both TD02 and the app at `&at=1132` still show #0556 To pack (NH, "then #0556") and #0547 on the road (GS, 3 delivered). That is because `src/core/store/demo/moments.ts:80–85` applies both only in the 1200 step. Fix one way or the other:
-  - **(a) keep the board and the demo.** Move the two rows' times in FACTS §8 after 11:34 (for example #0556 collected 11:45, #0547 delivered 11:50), and give `deliver(...)` the same stamps in the 1200 step. TD03 and TD04 do not change.
-  - **(b) keep the times.** Apply both in the 1130 step, and redraw TD02 (To pack 0, On the road 0, 5 delivered today, "then #0549").
+All of G-T5, G-T7, G-T14, G-T20, G-T22 and G-T23 were checked as fixed:
+- the first day's red button opens `pack`;
+- FACTS and the demo agree at 11:32;
+- the slate "you see" face;
+- the lock and no-signal knobs, as redrawn;
+- "saved on this phone 7:52";
+- the busy Sign in keeps `--oxide`.
 
-  Either way, add the two deliveries and #0534's 10:58 to the §2a sample-gaps row (Q9) for Kevin.
-- **G-T5 · the red button on the first day** (TD05). The board links it to `pack` (PK01, or the empty PK14). The app shows the toast "Nothing to do now" (`shell/App.tsx:30 startNext`). Fix: with no job, `startNext` opens `nav.push('pack')`, whose empty state says the same thing as a screen. Or, if the toast is the rule, write it in spec §4.9 and relink TD05's button (and any other board with no next job) to itself.
-- **G-T14 · "you see" face** (TD14). `PassYard.tsx:94` draws Musa with `personFace(b.me)`: navy, white letters, ringed. The board draws the holder's slate face (`#E8EBF0`, `#3D4A5C` letters, 2 px navy ring), which is `yardFace` ("the holder slate, everywhere off Today's hero", `src/apps/store/README.md`). Fix: `avatarStyle({ ...yardFace(b, b.me), size: 24 })`.
-- **G-T20 · the knob of a slide that cannot go** (TD24, TD27, TD28). The app now uses the shared locked slide, as asked (track, words and colour as drawn), but its knob shows the lock (TD24, TD28) and the no-signal icon (TD27). The board draws the grey knob with the slide's double chevron. This is the board's flaw: the shared part (Sales' KC07–KC18) draws the lock, and a lock says "cannot go" more plainly than the arrows. Fix: redraw the three boards' knobs with the lock and the no-signal icon, and record the rule in spec §4.8 (a slide that cannot go shows why on its knob). Do not add a chevron variant to `Slide.tsx`.
-- **G-T22 · "saved 7:52"** (TD22). The board says "saved on this phone **7:52**", and it fits in the 160 px tile. `Boot.tsx:67` dropped "on this phone". Fix: `saved on this phone <span class="mono">{time}</span>`, as drawn.
-- **G-T23 · the busy Sign in button turns dark red** (TD23). While signing in, `.st-si-go.busy` is `#A82D24`, the pressed red. The board keeps `#C93A30` with the spinner. Fix in `signin.css`: `.st-si-go.busy { background: var(--oxide) }` (the dim spinner already shows that it is busy).
+Small things left, none of them a failure:
+- **TD22.** At 360 px the app wraps "7:52" onto a second line of the copy tile; the board keeps it on one. Fix: `white-space: nowrap` on the tile's sub-line in `signin.css`, or shorten the tile's padding.
+- **TD20, TD23, TD31.** The boards' words now say "Your manager", but they still draw Ruth's RN face where the app draws the person icon. Redraw the face.
+- **TD01, TD08, TD33 and TD12.** The boards still draw "Ssali 13:20", and Kampala Road with the shop's call button. Both are left out by the default of open question Q25 until Kevin answers.
 
 ## Goods in
 
