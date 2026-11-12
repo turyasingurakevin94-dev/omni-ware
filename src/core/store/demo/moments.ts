@@ -122,7 +122,7 @@ const STEPS: [number, (b: YardBooks) => void][] = [
 function whatIf(b: YardBooks, f: StoreDemoFlags): void {
   switch (f.state) {
     case 'cancel-0530': { const o = byId(b, 530); o.cancelledAt = t('10:38'); o.cancelledByName = 'Ruth Nakato'; stamp(o, 'cancelled', t('10:38')); break; }
-    case 'cancel-0534': { const o = byId(b, 534); o.cancelledAt = t('10:39'); o.cancelledByName = 'Ruth Nakato'; stamp(o, 'cancelled', t('10:39')); break; }
+    case 'cancel-0534': { const o = byId(b, 534); o.cancelledAt = t('10:38'); o.cancelledByName = 'Ruth Nakato'; stamp(o, 'cancelled', t('10:38')); break; }
     case 'ggaba-closed': byId(b, 547).comingBack = { why: 'Closed', at: t('10:40'), by: 'u-mk', byName: 'Musa Kiggundu' }; break;
     case 'agent':
       b.orders.push(order(554, 'pending_delivery', t('9:50'), {

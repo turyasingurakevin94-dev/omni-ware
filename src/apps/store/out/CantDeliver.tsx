@@ -18,7 +18,7 @@ import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { Track } from '../../../ui/Track.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { nav } from '../shell/nav.ts';
+import { backTo, nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
 import { OIcon, type OIconName } from './icons.tsx';
 import { AfterSlide, FlowBar, SheetDock, manager, seller } from './parts.tsx';
@@ -42,7 +42,7 @@ export function CantDeliver(p: { id: number }): JSX.Element {
       const res = await act('cantDeliver', o.id, why);
       if (res.kept) { setState('kept'); return; }
       toast.show(`Coming back · ${orderNo(o.id)}`, { kind: 'ok' });
-      nav.back();
+      nav.to('out/road');
     } catch (e) { setCode(wordIt(e, 'cantDeliver').code); setState('failed'); }
   };
   const driver = o.carrier ? o.carrier.name : '';
@@ -50,8 +50,8 @@ export function CantDeliver(p: { id: number }): JSX.Element {
   const head = (
     <>
       <SheetHead face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · ${g ? `${firstWord(g.name)}’s order` : 'the order'}`} subMono phone={o.client.phone}
-        onClose={() => nav.back()} style={{ padding: '10px 20px 18px', gap: '14px' }}>
-        <Track stage="road" word="Coming back" sub={`${driver} · at ${place}`} waits
+        onClose={() => nav.to('out/road')} style={{ padding: '10px 20px 18px', gap: '14px' }}>
+        <Track stage="road" word="Coming back" sub={`${driver} · at ${place}`} waits nowIcon="return" nowTime={o.carrier && o.carrier.at != null ? clock(o.carrier.at) : undefined}
           times={{ checking: day(t.checking), road: o.carrier && o.carrier.at != null ? clock(o.carrier.at) : undefined }} />
       </SheetHead>
       {state === 'kept' && <FlowBar kind="offline" onRetry={() => { void send(); }} />}
@@ -68,7 +68,7 @@ export function CantDeliver(p: { id: number }): JSX.Element {
   );
   const sees = [r, g].filter(Boolean);
   return (
-    <FullSheet onBack={() => nav.back()} backLabel="Back to the door" head={head} foot={foot} pad="12px 16px 14px" gap={8}>
+    <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={head} foot={foot} pad="12px 16px 14px" gap={8}>
       <div role="radiogroup" aria-label="Why" class="cd-tiles">
         {CANT_WHY.map((w, i) => {
           const ic = ICON[i];

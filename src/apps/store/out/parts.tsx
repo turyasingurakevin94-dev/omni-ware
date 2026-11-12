@@ -157,15 +157,15 @@ export function WayIn(p: { icon: 'layers' | 'orders'; word: string; count: numbe
 }
 
 /** The two tiles under an empty board: where else to look. */
-export function SideTiles(p: { tiles: { icon: ComponentChildren; title: ComponentChildren; sub: string; good?: boolean; on: () => void; label: string }[] }): JSX.Element {
+/** A tile with no on is a figure, not a link (OU14, OU15: Delivered today is Today's, Q22). */
+export function SideTiles(p: { tiles: { icon: ComponentChildren; title: ComponentChildren; sub: string; good?: boolean; on?: () => void; label: string }[] }): JSX.Element {
   return (
     <div class="ou-tiles">
-      {p.tiles.map((t) => (
-        <Tap key={t.label} on={t.on} label={t.label} class={cx('ou-tile', t.good && 'good')}>
-          <span class="ou-tile-ic">{t.icon}</span>
-          <span class="ou-tile-t"><span>{t.title}</span><span>{t.sub}</span></span>
-        </Tap>
-      ))}
+      {p.tiles.map((t) => {
+        const body = <><span class="ou-tile-ic">{t.icon}</span><span class="ou-tile-t"><span>{t.title}</span><span>{t.sub}</span></span></>;
+        return t.on ? <Tap key={t.label} on={t.on} label={t.label} class={cx('ou-tile', t.good && 'good')}>{body}</Tap>
+          : <div key={t.label} role="group" aria-label={t.label} class={cx('ou-tile', t.good && 'good')}>{body}</div>;
+      })}
     </div>
   );
 }

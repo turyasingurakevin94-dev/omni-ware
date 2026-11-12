@@ -74,6 +74,7 @@ const NAME: Record<string, (p: Params) => string> = {
   today: () => 'Today', shelf: () => 'Shelf', 'shelf/find': () => 'Find', 'shelf/aisle': (p) => (p.aisle ? String(p.aisle) : 'No aisle yet'),
   'shelf/item': () => 'the item', 'shelf/count': (p) => (p.key ? 'the count' : 'the aisle count'), 'shelf/report': () => 'the report',
   'shelf/scan': () => 'the scanner', 'shelf/ask': () => 'the ask', 'pack/order': () => 'the order',
+  'out/door': () => 'the door', 'out/gate': () => 'the gate',
 };
 const nameOf = (e: Entry): string | null => (NAME[e.id] ? NAME[e.id](e.params) : RAIL.find((x) => x.id === e.id)?.word ?? null);
 /** "Back to Find": the entry below the top, by name ("Back" when it has none). */

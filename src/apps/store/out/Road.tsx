@@ -123,13 +123,13 @@ function Empty(p: { b: YardBooks }): JSX.Element {
       {next.length > 0 && (
         <div class="ou-list">
           <span class="ou-list-k">Next out</span>
-          <Card>{next.map((o) => <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · ${placeName(b, o)}`} pill={<SoftPill tone="info" icon={<Icon name="layers" size={12} stroke={2.4} />}>To load</SoftPill>} />)}</Card>
+          <Card>{next.map((o) => <MiniOrder key={o.id} h={52} on={() => nav.replace('out/load')} face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · ${placeName(b, o)}`} pill={<SoftPill tone="info" icon={<Icon name="layers" size={12} stroke={2.4} />}>To load</SoftPill>} />)}</Card>
         </div>
       )}
       <WayIn icon="layers" word="To load" count={c.packed} on={() => nav.replace('out/load')} />
       <SideTiles tiles={[
         { label: `At the gate ${gate}`, icon: <Icon name="store" size={20} stroke={1.9} />, title: <>At the gate <span class="mono">{gate}</span></>, sub: 'ready to collect', on: () => nav.push('out/gate') },
-        { label: `Delivered ${c.deliveredToday}`, good: true, icon: <Icon name="delivered" size={20} stroke={1.9} />, title: <>Delivered <span class="mono">{c.deliveredToday}</span></>, sub: done[0] ? `collected ${clock(done[0].deliveredAt as number)}` : 'today', on: () => undefined },
+        { label: `Delivered ${c.deliveredToday}`, good: true, icon: <Icon name="delivered" size={20} stroke={1.9} />, title: <>Delivered <span class="mono">{c.deliveredToday}</span></>, sub: done[0] ? `collected ${clock(done[0].deliveredAt as number)}` : 'today' },
       ]} />
     </>
   );

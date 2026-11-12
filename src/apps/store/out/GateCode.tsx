@@ -15,11 +15,11 @@ import { Icon } from '../../../ui/icons.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { nav, type Params } from '../shell/nav.ts';
+import { nav, stack, type Params } from '../shell/nav.ts';
 import { books, me, now } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
-import { GateLine } from './Gate.tsx';
+import { Gate, GateLine } from './Gate.tsx';
 import { OIcon } from './icons.tsx';
 import { seller, SheetDock } from './parts.tsx';
 
@@ -45,7 +45,11 @@ export function GateCode(p: { params: Params }): JSX.Element {
   const lines = o.lines.filter((l) => !l.dropped);
   const hint = says === 'wrong' || says === 'short' ? { icon: 'lock' as const, text: 'His code = his order number' }
     : { icon: 'bell' as const, text: `${[from ? firstWord(from.name) : null, name].filter(Boolean).join(' and ')} see: Delivered · collected`, iconTone: 'mint' as const };
+  // Under the scrim, the gate it was opened from (OU11 draws Ready to collect dimmed under the code), inert; after
+  // the code in the page so the code is read first, under it by .gc's z-index.
+  const below = stack.value[stack.value.length - 2];
   return (
+    <>
     <div class="gc">
       <button type="button" aria-label="Back to the gate" class="gc-scrim" style={{ border: 'none', padding: 0 }} onClick={() => nav.back()} />
       <div role="dialog" aria-label={`${name}'s code`} class="gc-sh">
@@ -81,5 +85,7 @@ export function GateCode(p: { params: Params }): JSX.Element {
         </SheetDock>
       </div>
     </div>
+    <div inert aria-hidden="true"><Gate params={below && below.id === 'out/gate' ? below.params : {}} /></div>
+    </>
   );
 }

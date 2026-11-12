@@ -1,7 +1,7 @@
 /*
  * The Store's stage sheet (store-agent PK01, IN01, OU01, OU20; routes §1): the agent's
  * "Packing 7" sheet over Today. A full sheet (P04: the 40 px strip above is Today under the
- * scrim, and is the way back) whose navy head holds the grabber, the title and its count,
+ * scrim, and is the way back, named by the entry really below: "Back to On the road" over the gate, OU10) whose navy head holds the grabber, the title and its count,
  * one line under it, Close, and the rail Coming in · To pack · To load · On the road ·
  * Delivered with this sheet's stage lit. A rail stop opens its own sheet in this one's place.
  *
@@ -13,7 +13,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { nav } from './nav.ts';
+import { backTo, nav } from './nav.ts';
 import { RAIL } from './routes.ts';
 import './stagesheet.css';
 
@@ -68,5 +68,5 @@ export function StageSheet(p: StageSheetProps): JSX.Element {
       {p.chips && <div class="st-stage-chips">{p.chips}</div>}
     </div>
   );
-  return <FullSheet onBack={() => nav.back()} backLabel="Back to Today" head={<>{head}{p.bar}</>} foot={p.foot} gap={p.gap}>{p.children}</FullSheet>;
+  return <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={<>{head}{p.bar}</>} foot={p.foot} gap={p.gap}>{p.children}</FullSheet>;
 }

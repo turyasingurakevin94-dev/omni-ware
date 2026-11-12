@@ -6,7 +6,7 @@
  * (W9): Delivered · collected, 10 s with Undo on the end screen. An order Not paid yet opens as its
  * own sheet (OU13): it stays; Grace takes the money, Ruth may let it go; the slide is locked.
  */
-import type { JSX } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo, plural } from '../../../core/names.ts';
 import { aisleLetter, aisleOf } from '../../../core/store/door.ts';
@@ -63,7 +63,7 @@ export function GateLine(p: { b: YardBooks; o: YardOrder; i: number; tail: strin
   );
 }
 
-function Empty(p: { b: YardBooks }): JSX.Element {
+function Empty(p: { b: YardBooks; children?: ComponentChildren }): JSX.Element {
   const b = p.b, n = now.value, c = counts(b, me.value, n), done = collectedToday(b, n);
   const coming = comingToTheGate(b, me.value, n).slice(0, 3);
   return (
@@ -73,11 +73,12 @@ function Empty(p: { b: YardBooks }): JSX.Element {
         <GhostRow h={56} word="Hand over" />
       </Ghost>
       <EmptyWords title="Nobody to hand over" sub="Packed pickups wait here for their name or code" />
+      {p.children}
       {coming.length > 0 && (
         <div class="ou-list">
           <span class="ou-list-k">Coming to the gate</span>
           <Card>{coming.map((o) => (
-            <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={isAgent(o) ? `${o.client.name} · agent` : o.client.name}
+            <MiniOrder key={o.id} h={52} face={orderFace(o, b)} name={isAgent(o) ? `${o.client.name} · agent` : o.client.name} on={() => nav.replace('pack')}
               sub={`${orderNo(o.id)} · ${isAgent(o) ? 'by his code' : 'they collect'}`}
               pill={o.pickingStatus === 'in_progress' ? <SoftPill tone="warn" icon={<Icon name="clock" size={12} stroke={2.4} />}>Coming</SoftPill> : <SoftPill tone="info" icon={<Icon name="orders" size={12} stroke={2.6} />}>To pack</SoftPill>} />
           ))}</Card>
@@ -86,7 +87,7 @@ function Empty(p: { b: YardBooks }): JSX.Element {
       <WayIn icon="orders" word="To pack" count={c.toPack} on={() => nav.replace('pack')} />
       <SideTiles tiles={[
         { label: 'To load, the trucks’ list', icon: <Icon name="layers" size={20} stroke={1.9} />, title: 'To load', sub: 'the trucks’ list', on: () => nav.replace('out/load') },
-        { label: `Delivered ${c.deliveredToday}`, good: true, icon: <Icon name="delivered" size={20} stroke={1.9} />, title: <>Delivered <span class="mono">{c.deliveredToday}</span></>, sub: done[0] ? `collected ${clock(done[0].deliveredAt as number)}` : 'today', on: () => nav.replace('out/road') },
+        { label: `Delivered ${c.deliveredToday}`, good: true, icon: <Icon name="delivered" size={20} stroke={1.9} />, title: <>Delivered <span class="mono">{c.deliveredToday}</span></>, sub: done[0] ? `collected ${clock(done[0].deliveredAt as number)}` : 'today' },
       ]} />
     </>
   );
@@ -96,7 +97,9 @@ export function Gate(p: { params: Params }): JSX.Element {
   const b = books.value, n = now.value;
   const list = b ? atTheGate(b, me.value, n) : [];
   const want = p.params.id != null ? Number(p.params.id) : null;
-  const o = (want != null && b ? b.orders.find((x) => x.id === want) : null) || list.find((x) => !moneyHeld(x)) || list[0] || null;
+  // Asked by id (a row, OU13): that order, a Not paid yet one as its own sheet. Else the first that can go: one the money
+  // holds is not handed over, so it waits in Next at the gate (Not paid yet's Close lands here, OU13 → the gate).
+  const o = want != null ? (b ? b.orders.find((x) => x.id === want) || null : null) : list.find((x) => !moneyHeld(x)) || null;
   const [name, setName] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const c = useCommit('handOver', o ? o.id : 0);
@@ -140,10 +143,26 @@ export function Gate(p: { params: Params }): JSX.Element {
     </SheetDock>
   );
   const paidBy = o ? whoIs(b, o.paidBy) : null;
+  const next = rest.length > 0 && (
+    <>
+      <DotHead dot="#C9C4BA" title="Next at the gate" count={rest.length} right={rest.every(isAgent) && !dim ? <span class="gt-by">by his code</span> : null} />
+      <Card>{rest.map((x) => (
+        <div key={x.id} class="gt-next">
+          <Avatar {...orderFace(x, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
+          <span class="gt-next-t"><span>{isAgent(x) ? `${x.client.name} · agent` : x.client.name}</span>
+            <span class="mono">{`${orderNo(x.id)} · packed ${clock(x.pickingDoneAt ?? n)} · ${x.lines.filter((l) => !l.dropped).length} ${plural(x.lines.filter((l) => !l.dropped).length, 'line')}`}</span></span>
+          {dim ? <span role="link" aria-disabled="true" class="gt-code dim"><span>{isAgent(x) ? 'Code' : 'Open'}</span></span>
+            : <Tap on={() => (isAgent(x) ? nav.push('out/gate-code', { id: x.id }) : nav.push('out/gate', { id: x.id }))} class="gt-code">
+              <span>{isAgent(x) ? 'Code' : 'Open'}</span>
+            </Tap>}
+        </div>
+      ))}</Card>
+    </>
+  );
   return (
     <StageSheet flat gap={8} id="out/gate" lit="out/road" mint title="Ready to collect" count={list.length} sub={sub} foot={foot}
       bar={kept ? <FlowBar kind="offline" onRetry={() => { void c.again(args()); }} /> : c.phase === 'failed' ? <FlowBar kind="failed" code={c.code} onRetry={() => { void c.again(args()); }} /> : null}>
-      {!o ? <Empty b={b} /> : (
+      {!o ? <Empty b={b}>{next}</Empty> : (
         <>
           <div class="gt-card">
             <GatePic since={o.stageEnteredAt ?? n} />
@@ -166,21 +185,7 @@ export function Gate(p: { params: Params }): JSX.Element {
               </label>
             </div>
           </div>
-          {rest.length > 0 && (
-            <>
-              <DotHead dot="#C9C4BA" title="Next at the gate" count={rest.length} right={rest.every(isAgent) && !dim ? <span class="gt-by">by his code</span> : null} />
-              <Card>{rest.map((x) => (
-                <div key={x.id} class="gt-next">
-                  <Avatar {...orderFace(x, b)} size={36} font={13} style={{ letterSpacing: '-.02em' }} />
-                  <span class="gt-next-t"><span>{isAgent(x) ? `${x.client.name} · agent` : x.client.name}</span>
-                    <span class="mono">{`${orderNo(x.id)} · packed ${clock(x.pickingDoneAt ?? n)} · ${x.lines.filter((l) => !l.dropped).length} ${plural(x.lines.filter((l) => !l.dropped).length, 'line')}`}</span></span>
-                  <Tap on={() => (isAgent(x) ? nav.push('out/gate-code', { id: x.id }) : nav.push('out/gate', { id: x.id }))} class={cx('gt-code', dim && 'dim')}>
-                    <span>{isAgent(x) ? 'Code' : 'Open'}</span>
-                  </Tap>
-                </div>
-              ))}</Card>
-            </>
-          )}
+          {next}
           {!kept && done[0] && (
             <div class="gt-done"><Icon name="check" size={16} stroke={2.8} /><span>Done today</span><span class="mono">{done.map((x) => `${orderNo(x.id)} · collected ${clock(x.deliveredAt as number)}`)[0]}</span></div>
           )}

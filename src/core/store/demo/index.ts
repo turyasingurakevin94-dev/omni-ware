@@ -16,6 +16,7 @@ import type { StoreSource, WriteName } from '../source.ts';
 import type { StoreSession, YardBooks } from '../types.ts';
 import { FAIL_CODE, readStoreFlags, type StoreDemoFlags } from './flags.ts';
 import { dayAt, okelloTakes0556 } from './moments.ts';
+import { earlier } from './moments-out.ts';
 import { t } from './shop.ts';
 import { demoWrites } from './writes.ts';
 import { shelfClash } from './shelf.ts';
@@ -51,6 +52,7 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
   // context.setOffline), so a kept write can then be sent. Nothing else fires it on the demo.
   if (f.offline && typeof window !== 'undefined') window.addEventListener('online', () => { f.offline = false; });
   const { books: b, now } = dayAt(f);
+  earlier(b, f.at); // &at=930 · 1010: the Out area's empty boards (OU14, OU15)
   let signedIn = f.state !== 'signed-out', failed = false, beaten = false;
   const session = (): StoreSession => ({ userId: b.me.userId || 'u-mk', shopId: 'shop-mukasa', shopName: b.shopName, role: b.me.role, name: b.me.name, staffId: b.me.id });
   const clock = () => now;
