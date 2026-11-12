@@ -10,6 +10,20 @@ The independent critics' check of the new Store app (`next/store.html`) against 
 
 Each area critic checks per board: **shows** (content, words, figures, states as drawn), **links** (every control tapped in Playwright, landing route read from `sessionStorage['ow-store-view']`), **44px** targets, **11px** text, **contrast** ≥ 4.5:1 (computed styles, background composited up the tree), **clip** (`scrollWidth` ≤ 360, no clipped or unreachable text), and **no money**. A difference passes only as font/antialias noise, a demo figure that differs with a written reason, or one of Kevin's rulings. Each area owns its own section below; a critic adds or replaces only its own.
 
+
+## Result (12 Nov 2026)
+
+| Area | Boards | Passed by its critic | Critic runs |
+|---|---|---|---|
+| Today | TD01–TD33 | **33 / 33** | 3 |
+| Pack | PK01–PK22 + AD02, AD05, AD06 | **25 / 25** | 3 |
+| Goods in | IN01–IN40 (29) | **29 / 29** | 2 |
+| Shelf | SH01–SH42 (30) | **30 / 30** | 3 |
+| Out | OU01–OU31 (28) + AD01, AD03, AD04, AD07 | **32 / 32** | 3 |
+| **All** | **149** | **149** | |
+
+Boards that shared a flaw with the app were redrawn with the same minimal change, never the app bent to a flawed board: `docs/canvas/store-agent/review/{SH,PK,TD,IN,OU}-fixes.md`. The AD boards' design scores (the AD rule's one review round and one revision) are in `docs/canvas/store-agent/review/AD.json` and `docs/audit/store/GOAL.md` "Added while building".
+
 ## Shelf
 
 **Third critic run, 2026-11-12, on `bacd5c32` (the shared fixes from the other areas: `src/ui/pill.css`, `src/ui/sheet.css`, StageSheet's back strip, the demo states, howLong's "just now"; SH15 and SH41 redrawn). 30 boards, 30 pass, 0 fail.** I re-ran the spec and re-measured all 30. Three boards moved: SH32 (0.83 → 0.69), SH11 (0.26 → 0.12) and SH15 (0.51 → 0.39). All three are now closer to their boards, and nothing new differs. The strip names, links and measures are as on `6a95aa53`. Earlier runs: `a9af4308` found 5 pass and 25 fail; `6a95aa53` found 30 pass.

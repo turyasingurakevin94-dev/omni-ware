@@ -48,7 +48,7 @@ The build goal (set 11 Nov 2026): build the new Store app from the approved canv
 | B1 | Spec first | Done | `docs/spec/04-screens-store.md`, `04-screens-store-routes.md`, `04-screens-store-data.md` (every `store.html` read and write with its line; open questions in §3 and data §9) |
 | B2 | One migration | Done | `0183_store_new_app.sql`, reserved in `docs/decision-rights.md`: every IB01 push, a packed pickup → Ready to collect (money held at the hand-over), the allow-list fields, dropped lines to the yard, put-back recorded on the order; 86 real-database cases; live script `docs/live/apply-0183.sql` (not yet applied to the live books) |
 | B3 | The app | Done | 5 areas + shell, the page 106 KB of 200 KB gzip with each area a lazy file (23–34 KB of 60); no file over 400 lines; no money on the phone |
-| B4 | Canvas parity, independent critic per area | Done (see `CANVAS-PARITY.md`) | Today 33/33 · Pack 25/25 (with AD02, AD05, AD06) · Goods in 29/29 · Shelf 30/30 · Out with AD01, AD03, AD04, AD07; boards that shared an app flaw were redrawn, listed in `docs/canvas/store-agent/review/*-fixes.md` |
+| B4 | Canvas parity, independent critic per area | Done (see `CANVAS-PARITY.md`) | Today 33/33 · Pack 25/25 (with AD02, AD05, AD06) · Goods in 29/29 · Shelf 30/30 · Out 32/32 (with AD01, AD03, AD04, AD07) — 149 of 149; boards that shared an app flaw were redrawn, listed in `docs/canvas/store-agent/review/*-fixes.md` |
 | B5 | Tests | Done | unit tests per rule (`test/store-*.test.js`), `npm run e2e:store` 8 of 8 flows (pack → load → deliver, ready to collect → hand over, agent code, not paid yet, check-in, return, offline, failed save), taps measured against FLOW.md §5; `npm test` exit 0 |
 | B6 | Switch | **Waiting on Kevin** | try `next/store.html?demo` and then on the real books (after `apply-0183.sql`); then `store.html` becomes the new app and the old one is kept as `old/store.html` for 30 days |
 
@@ -217,17 +217,17 @@ The independent reviewer scored each Store board and its matching Agent screen (
 
 Screens the build found that no board drew, drawn under the AD rule (`docs/spec/04-screens-store.md` §2: one critic round, one revision). Page "Added while building" on the canvas; review `docs/canvas/store-agent/review/AD.json`, manifest `manifest/AD.json`, routes `04-screens-store-routes.md` §2 and §4. Scores are the critic's last (round 2), mean of the five axes, against the reference board.
 
-| Board | What | Score | Ref | Every axis ≥ 8.5 |
+| Board | What | Score (final, round 3) | Ref | Every axis ≥ 8.5 · total ≥ ref |
 |---|---|---|---|---|
-| AD01SomeoneNew | a hired driver we've never used: name, plate, phone (OU03's sheet) | 8.3 | OU03 8.8 | no: steps 8, in step 8 |
-| AD03SomeoneNewFilled | filled, phone checked → Robert drives | 8.7 | OU03 8.8 | yes |
-| AD04SomeoneNewPhone | phone not a mobile → Fix the phone first | 8.4 | OU03 8.8 | no: steps 8 |
-| AD02Unpack | unpack #0530 on bay 2: bay → To pack, ticks stay, Keep it packed / Unpack | 8.5 | PK06 8.7 | no: steps 8 |
-| AD05Unpacked | done, Undo 9s, Back to Today | 8.8 | PK06 8.7 | yes |
-| AD06UnpackFailed | not saved, Try again | 8.4 | PK06 8.7 | no: polish 8 |
-| AD07GateAllHeld | Ready to collect when the money holds every order (10:41, #0555): the gate locked, Not paid yet, Grace and Ruth told, Stays until paid → OU13 (Out critic G11) | to score | OU10 / OU13 | — |
+| AD01SomeoneNew | a hired driver we've never used: name, plate, phone (OU03's sheet) | 8.5 (42.5) | OU03 8.8 (44) | axes yes · total under |
+| AD03SomeoneNewFilled | filled, phone checked → Robert drives | 8.7 (43.5) | OU03 8.8 (44) | axes yes · total under |
+| AD04SomeoneNewPhone | phone not a mobile → Fix the phone first | 8.4 (42.0) | OU03 8.8 (44) | no: steps 8 (the app now selects the whole number on tap) |
+| AD02Unpack | unpack #0530 on bay 2: bay → To pack, ticks stay, Keep it packed / Unpack | 8.5 (42.5) | PK06 8.7 (43.5) | no: steps 8 (dropping "Keep it packed" needs Kevin: the old app's brief asks for it) |
+| AD05Unpacked | done, Undo 10 s, Back to Today | 8.8 (44.0) | PK06 8.7 (43.5) | **yes** |
+| AD06UnpackFailed | not saved, Try again | 8.5 (42.5) | PK06 8.7 (43.5) | axes yes · total under |
+| AD07GateAllHeld | the gate when money holds every order (10:41, #0555) | 8.8 (44.0) before its one fix (OU13's three calls into the empty band) | OU10 8.9 (44.5) | axes yes · total under (fix applied, not re-scored) |
 
-The round-2 fixes were applied once after the last scoring (no third round).
+Each AD board had its one review round and one revision, as the AD rule allows; every one passes canvas parity (CANVAS-PARITY.md).
 
 ## Waiting on Kevin
 
