@@ -398,6 +398,7 @@ Each is kept as a rule (with its line) so nothing is lost; before any is built i
 | D11 | The return's photo path rides inside `note` ("photo: <path>"), not a column | 2532 | as today (the Manager app reads it there) |
 | D12 | `myDrops` on a login with no staff row shows every drop to manager logins (`canCorrect`) | 2783 | a Store login with no staff row sees none; tell the person to ask for a staff row |
 | D14 | No planned run time on an order (FACTS "Ssali 13:20", before the run is loaded) and no shop address or phone in the books (`store_snapshot` gives `shopName` only; FACTS "Kampala Road") | — | left out until Kevin says (screens Q25) |
+| D15 | A return's time at the gate: `store_return_ask` (0164) has no field for it, so on the real books IN22's "At the gate" shows the sent time (`core/store/supabase/yard.ts:100`); the demo carries `gateAt` | IN22 | a field for it waits on the next Store migration, or Kevin accepts the sent time |
 | D13 | Roles let in include `owner`, `admin`, `manager` (and `staff`) | 2007 | they get in, look only (screens Q15) |
 
 Dead code, do not port: the `needs0115` fallbacks (2293 and every caller); `S.noLive` (1179); the legacy snapshot key (1336); `whenSaid` (2768, the same as `whenAt`).

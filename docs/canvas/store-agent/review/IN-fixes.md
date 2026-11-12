@@ -17,3 +17,4 @@ The Goods-in critic (`docs/audit/store/CANVAS-PARITY.md` "## Goods in") found fa
 | IN25 Return not done | The same chip and "kept" | G10, G11 |
 
 `manifest/in.json` IN20's `words_here` reads the shorter chip too.
+| IN40 | "3 checked in today" → 4 | FACTS gives 4 check-ins by 17:30 (Goods in critic re-check) |
