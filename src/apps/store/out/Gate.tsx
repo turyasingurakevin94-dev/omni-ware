@@ -26,7 +26,7 @@ import { StageSheet } from '../shell/StageSheet.tsx';
 import { books, me, now } from '../shell/store.ts';
 import { useCommit } from './commit.ts';
 import { Done } from './Done.tsx';
-import { NotPaidGate, Told } from './GateHeld.tsx';
+import { Calls, NotPaidGate, Told } from './GateHeld.tsx';
 import { Card, DotHead, EmptyWords, FlowBar, Ghost, GhostRow, MiniOrder, NotPaid, SheetDock, SideTiles, SoftPill, WayIn, seller } from './parts.tsx';
 import './gate.css';
 
@@ -191,7 +191,7 @@ export function Gate(p: { params: Params }): JSX.Element {
               </label>}
             </div>
           </div>
-          {held && <Told b={b} o={o} />}
+          {held && <><Told b={b} o={o} /><Calls b={b} o={o} /></>}
           {next}
           {!kept && done[0] && (
             <div class="gt-done"><Icon name="check" size={16} stroke={2.8} /><span>Done today</span><span class="mono">{done.map((x) => `${orderNo(x.id)} · collected ${clock(x.deliveredAt as number)}`)[0]}</span></div>

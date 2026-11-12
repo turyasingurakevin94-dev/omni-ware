@@ -24,6 +24,8 @@ const digits = (s: string): string => s.replace(/[^0-9]/g, '');
 /** One field: the icon tile, its label (or what is wrong with it), the input, a mark at the end. */
 function Field(p: { id: string; icon: IconName; tone: 'slate' | 'warm' | 'good' | 'bad'; label: string; value: string; ph: string; mono?: boolean;
   tel?: boolean; focus?: boolean; mark?: 'ok' | 'bad'; onInput: (v: string) => void }): JSX.Element {
+  // A wrong number is picked whole on a tap (AD04), so what is typed next replaces it.
+  const pick = (e: Event) => { if (p.mark === 'bad') (e.currentTarget as HTMLInputElement).select(); };
   return (
     <label class={cx('sn-f', p.mark === 'bad' && 'bad')}>
       <span aria-hidden="true" class={cx('sn-i', p.tone)}><Icon name={p.icon} size={20} stroke={2} /></span>
@@ -31,7 +33,7 @@ function Field(p: { id: string; icon: IconName; tone: 'slate' | 'warm' | 'good' 
         <span class={cx('sn-l', p.mark)}>{p.label}</span>
         <input id={p.id} class={cx(p.mono && 'mono')} value={p.value} placeholder={p.ph} autoFocus={p.focus} autoComplete="off"
           inputMode={p.tel ? 'tel' : 'text'} type={p.tel ? 'tel' : 'text'} autoCapitalize={p.mono ? 'characters' : 'words'}
-          onInput={(e) => p.onInput((e.currentTarget as HTMLInputElement).value)} />
+          onInput={(e) => p.onInput((e.currentTarget as HTMLInputElement).value)} onFocus={pick} onClick={pick} />
       </span>
       {p.mark && <span role="img" aria-label={p.label} class={cx('sn-m', p.mark)}><Icon name={p.mark === 'ok' ? 'check' : 'warning'} size={13} stroke={p.mark === 'ok' ? 3.2 : 2.6} /></span>}
     </label>
@@ -44,7 +46,7 @@ function SomeoneNewSheet(p: { d: Direction; b: YardBooks; onBack: () => void; on
   const n = digits(phone), ok = hiredPhoneOk(phone), landline = !ok && n.length >= 10;
   const missing = !first ? 'name' : !ok ? 'phone' : null;
   const go = () => {
-    if (missing) { const el = document.getElementById(missing === 'name' ? 'sn-name' : 'sn-phone'); if (el) el.focus(); return; }
+    if (missing) { const el = document.getElementById(missing === 'name' ? 'sn-name' : 'sn-phone'); if (el) { el.focus(); if (missing === 'phone') (el as HTMLInputElement).select(); } return; }
     p.onPick({ name: name.trim(), phone: n, what: plate.trim().toUpperCase() });
     sheet.close();
   };

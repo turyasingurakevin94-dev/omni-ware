@@ -33,11 +33,25 @@ export function Told(p: { b: YardBooks; o: YardOrder }): JSX.Element {
   );
 }
 
-export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
-  const { b, o } = p, n = now.value, g = seller(b, o), r = manager(b), t = trackTimes(o);
+/** The three calls while the money holds it (OU13, AD07): Call Grace · Call them · Ask Ruth (her teal, W11). */
+export function Calls(p: { b: YardBooks; o: YardOrder }): JSX.Element {
+  const { b, o } = p, g = seller(b, o), r = manager(b);
   const ask = async () => {
     try { await act('askLetGo', o.id, null); toast.show(`Sent to ${r ? firstWord(r.name) : 'Ruth'}`, { kind: 'ok' }); } catch (_e) { /* the bar says it */ }
   };
+  return (
+    <div class="gt-acts">
+      <ActBar acts={[
+        ...(g ? [{ tone: 'call' as const, icon: 'phone' as const, word: `Call ${firstWord(g.name)}`, sub: 'she takes it', href: tel(g.phone || '0772000101'), label: `Call ${g.name}` }] : []),
+        { tone: 'tell', icon: 'phone', word: 'Call them', sub: /walk-?in/i.test(o.client.name) ? 'the walk-in' : o.client.name, href: tel(o.client.phone), label: `Call ${o.client.name}, ${phoneText(o.client.phone)}` },
+        ...(r ? [{ tone: 'teal' as const, icon: 'hand-over' as const, word: `Ask ${firstWord(r.name)}`, sub: 'to let it go', on: () => { void ask(); }, label: `Ask ${r.name} to let it go on credit` }] : []),
+      ]} />
+    </div>
+  );
+}
+
+export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
+  const { b, o } = p, n = now.value, t = trackTimes(o);
   const head = (
     <SheetHead face={orderFace(o, b)} name={o.client.name} sub={`${orderNo(o.id)} · today ${clock(o.createdAt ?? n)}`} subMono phone={o.client.phone}
       onClose={() => nav.to('out/gate')} style={{ padding: '10px 20px 18px', gap: '14px' }}>
@@ -59,13 +73,7 @@ export function NotPaidGate(p: { b: YardBooks; o: YardOrder }): JSX.Element {
         </div>
       </div>
       <Told b={b} o={o} />
-      <div class="gt-acts">
-        <ActBar acts={[
-          ...(g ? [{ tone: 'call' as const, icon: 'phone' as const, word: `Call ${firstWord(g.name)}`, sub: 'she takes it', href: tel(g.phone || '0772000101'), label: `Call ${g.name}` }] : []),
-          { tone: 'tell', icon: 'phone', word: 'Call them', sub: /walk-?in/i.test(o.client.name) ? 'the walk-in' : o.client.name, href: tel(o.client.phone), label: `Call ${o.client.name}, ${phoneText(o.client.phone)}` },
-          ...(r ? [{ tone: 'teal' as const, icon: 'hand-over' as const, word: `Ask ${firstWord(r.name)}`, sub: 'to let it go', on: () => { void ask(); }, label: `Ask ${r.name} to let it go on credit` }] : []),
-        ]} />
-      </div>
+      <Calls b={b} o={o} />
     </FullSheet>
   );
 }
