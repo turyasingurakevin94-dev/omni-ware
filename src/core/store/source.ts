@@ -121,7 +121,7 @@ export interface StoreSource {
   claim(id: number): Promise<void>;
   /** W2 lines packed or short (the pick draft sent), and where the cursor is. */
   pick(id: number, answers: PickAnswer[], cursor: number): Promise<void>;
-  /** W3 / W3' the last line: packed onto its bay; a pickup moves to Ready to collect (0182). */
+  /** W3 / W3' the last line: packed onto its bay; a pickup moves to Ready to collect (0183). */
   finishPack(id: number, bay: number | null): Promise<void>;
   /** W4 change the bay. */
   setBay(id: number, bay: number): Promise<void>;
@@ -129,7 +129,7 @@ export interface StoreSource {
   unpack(id: number): Promise<void>;
   /** W6 let go of an order you started; `putBack` also clears its ticks. */
   release(id: number, putBack: boolean): Promise<void>;
-  /** W7 a cancelled order put back: stamped once on the order by the server (0182 `{putBack:{lines}}`), so every phone sees it and it leaves the yard's lists. */
+  /** W7 a cancelled order put back: stamped once on the order by the server (0183 `{putBack:{lines}}`), so every phone sees it and it leaves the yard's lists. */
   putBack(id: number): Promise<void>;
 
   /* ---- Out (order.load, order.deliver, route.lock) ---- */
@@ -139,7 +139,7 @@ export interface StoreSource {
   handOver(id: number, name: string, agent: boolean): Promise<void>;
   /** W10 deliver at the door, with its proof (the photo uploaded first). */
   deliver(id: number, proof: DoorProof): Promise<void>;
-  /** W27 can't deliver · bring it back (0182 comingBack): stays On the road. */
+  /** W27 can't deliver · bring it back (0183 comingBack): stays On the road. */
   cantDeliver(id: number, why: string): Promise<void>;
   /** W11 ask Ruth to let it go on credit (a customer with a record only). */
   askLetGo(id: number, carrier: CarrierPick | null): Promise<void>;

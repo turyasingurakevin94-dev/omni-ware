@@ -6,7 +6,7 @@
  *
  * The source keeps the snapshot as last read: a live read lays store_live over
  * it, and an order write sends what the phone saw of that order (p_expect).
- * W7 (put back) is stamped on the order (0182 payload.putBack), so every phone sees it.
+ * W7 (put back) is stamped on the order (0183 payload.putBack), so every phone sees it.
  */
 import { dataError, isDataError } from '../../datasource.ts';
 import { client, isNetwork, type Row, type Sb } from '../../supabase/client.ts';

@@ -49,7 +49,7 @@ const no = (id) => '#' + String(id).padStart(4, '0');
   t.check(Y.stageWord(o(543), 'delivered', me) === 'Delivered · collected', '#0543: "Delivered · collected"');
   t.check(Y.destinationOf(o(552), b.customers) === 'Ntinda site, Plot 12, Ntinda Rd' && o(552).deliverWhen === 'today afternoon' && o(552).deliverPhone === '0772 418 220', '#0552 reads its own place, time and phone');
   t.check(Y.isPickup(o(556), b.customers) && !Y.isPickup(o(530), b.customers), '#0556 they collect; #0530 we deliver');
-  t.check(Y.moneyHeld(o(552)) && Y.moneyHeld(o(530)) && Y.moneyHeld(o(555)) && !Y.moneyHeld(o(556)), 'held for the money: #0552, #0530, #0555 (ready to collect too, 0182)');
+  t.check(Y.moneyHeld(o(552)) && Y.moneyHeld(o(530)) && Y.moneyHeld(o(555)) && !Y.moneyHeld(o(556)), 'held for the money: #0552, #0530, #0555 (ready to collect too, 0183)');
   t.check(o(552).lines[2].dropped && !Y.awaitsGoods(o(552)), '#0552\'s hinge is dropped and waits for nothing');
   t.check(b.bays === 4 && o(552).bay === 1 && o(530).bay === 2, 'bays: #0552 on 1, #0530 on 2, 4 bays');
 
@@ -137,7 +137,7 @@ const no = (id) => '#' + String(id).padStart(4, '0');
   t.check(b.counts.filter((x) => x.place === 'item:p-wn4' && x.status === 'sent').length === 1, 'W20: one waiting count per place (counting it again replaces it)');
   await d.putBack(530);
   const pb = b.orders.find((x) => x.id === 530);
-  t.check(!pb.putBack, 'W7: a put-back on an order not called off writes nothing (0182)');
+  t.check(!pb.putBack, 'W7: a put-back on an order not called off writes nothing (0183)');
 
   /* ---- offline and &fail ---- */
   const off = demo('?demo&offline');

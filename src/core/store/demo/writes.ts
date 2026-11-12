@@ -73,7 +73,7 @@ export function demoWrites(b: () => YardBooks, now: () => number) {
       o.assignedWorkerId = null; o.workerAcceptedAt = null; o.pickingAssignedAt = null; o.pickingStatus = null;
       if (putBack) { o.lines.forEach((l) => { l.pickStatus = null; l.pickedQty = null; }); o.pickCursor = 0; }
     },
-    /** W7 as 0182: on a called-off order only, stamped once (the time and the person the server's); no stock, no stage moved. */
+    /** W7 as 0183: on a called-off order only, stamped once (the time and the person the server's); no stock, no stage moved. */
     putBack(oid: number) {
       const o = order(oid);
       if (!isCancelled(o) || o.putBack) return;

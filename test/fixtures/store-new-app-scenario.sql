@@ -1,4 +1,4 @@
--- 0182 asked of a real database: the new Store app's pushes go to the people
+-- 0183 asked of a real database: the new Store app's pushes go to the people
 -- IB01 names, in its words, and a packed pickup waits at the gate as Ready
 -- to collect until the hand-over (held there while not paid).
 grant all on all tables in schema public to authenticated;

@@ -130,7 +130,7 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     setBay: (id, bay) => later('setBay', () => W.setBay(id, bay)),
     unpack: (id) => later('unpack', () => W.unpack(id)),
     release: (id, putBack) => later('release', () => W.release(id, putBack)),
-    // Recorded on the order (0182): no signal keeps it; &fail=putBack fails it once (PK22).
+    // Recorded on the order (0183): no signal keeps it; &fail=putBack fails it once (PK22).
     putBack: (id) => later('putBack', () => W.putBack(id)),
     load: (ids, c) => later('load', () => W.load(ids, c)),
     handOver: (id, name, agent) => later('handOver', () => W.handOver(id, name, agent)),

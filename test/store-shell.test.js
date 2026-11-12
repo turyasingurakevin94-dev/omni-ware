@@ -70,7 +70,7 @@ t.check(specKinds.every((k) => PUSH_KINDS.includes(k)), `every push kind of rout
   };
   const yb = booksOf(snap, { userId: 'u1', shopId: 'sh', shopName: 'Mukasa', role: 'store', name: 'musa2', staffId: 's1' }, 0);
   const yo = yb.orders[0], ln = yo.lines[0];
-  t.check(yo.moneyHold && yo.deliverTo === 'Ntinda site' && yo.deliverWhen === 'today afternoon' && yo.comingBack.why === 'Closed' && yo.takenBack[0].restocked && yo.takenBack[0].lines[0].restocked === false, 'rows: 0182\'s keys read (deliverTo, deliverWhen, comingBack, takenBack[].restocked), the hold a label');
+  t.check(yo.moneyHold && yo.deliverTo === 'Ntinda site' && yo.deliverWhen === 'today afternoon' && yo.comingBack.why === 'Closed' && yo.takenBack[0].restocked && yo.takenBack[0].lines[0].restocked === false, 'rows: 0183\'s keys read (deliverTo, deliverWhen, comingBack, takenBack[].restocked), the hold a label');
   t.check(ln.key === 'p1::2' && ln.unit === 'pc' && ln.pickStatus === 'done' && yo.carrier.kind === 'hired' && yo.letGoAsk.byName === 'Musa', 'rows: a line\'s stock key, unit lower case, its pick; the carrier and the ask');
   t.check(yb.trips[0].supplierName === 'Hima Cement' && yb.trips[0].lines[0].gotQty === 0 && yb.trips[0].lines[0].orderId === 552, 'rows: a supplier\'s delivery, a line answered 0');
   t.check(yb.items.length === 3 && yb.items[2].books === 52 && yb.items[2].packUnit === 'bundle' && yb.items[2].name === 'Iron sheet · G30', 'rows: products × variants with their units and stock');

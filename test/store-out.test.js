@@ -80,7 +80,7 @@ const o = (b, id) => b.orders.find((x) => x.id === id);
   t.check(D.receiver(o(b, 534)) === 'Kato’s site manager', 'at a site, the site manager receives it');
   await d.cantDeliver(547, 'Closed');
   b = await d.snapshot();
-  t.check(o(b, 547).comingBack && o(b, 547).comingBack.why === 'Closed' && Y.stageOf(o(b, 547), b, me, d.now()) === 'coming-back', 'W27: #0547 Coming back, Closed (0182 comingBack)');
+  t.check(o(b, 547).comingBack && o(b, 547).comingBack.why === 'Closed' && Y.stageOf(o(b, 547), b, me, d.now()) === 'coming-back', 'W27: #0547 Coming back, Closed (0183 comingBack)');
   d = demo('?demo&at=1405'); b = await d.snapshot();
   await d.deliver(552, { to: 'Kato’s site manager', photo: new Blob(['x']), kind: 'door' });
   b = await d.snapshot();

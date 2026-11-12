@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The new Store app's database (0182; the approved canvas
+ * The new Store app's database (0183; the approved canvas
  * docs/canvas/store-agent/, its integration board IB01Handovers and
  * docs/audit/store/OTHER-APPS.md "The database"): every handover the yard
  * takes part in pushes the people IB01 names, in its words; a packed pickup
@@ -10,7 +10,7 @@
  * them; a cancelled order's put-back is stamped on it once (W7), no stock.
  *
  *   1. The SQL text, the decision-rights row, and IB01's words.
- *   2. A REAL database, when OW_PG names one: every migration in order, 0182
+ *   2. A REAL database, when OW_PG names one: every migration in order, 0183
  *      run twice, then test/fixtures/store-new-app-scenario.sql.
  *
  * Run: node test/store-new-app-db.test.js
@@ -21,14 +21,14 @@ const fs = require('fs');
 const path = require('path');
 const { read, createReporter } = require('./_extract');
 
-const t = createReporter('The new Store app\'s database (0182)');
-const raw = read('supabase/migrations/0182_store_new_app.sql');
+const t = createReporter('The new Store app\'s database (0183)');
+const raw = read('supabase/migrations/0183_store_new_app.sql');
 const sql = raw.replace(/--[^\n]*/g, '');
 
 /* ---------------- 1. the SQL text ---------------- */
 {
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
-  t.check(/\| 0182 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0182');
+  t.check(/\| 0183 \| /.test(read('docs/decision-rights.md')), 'docs/decision-rights.md reserves 0183');
   t.check(!/insert into role_tasks|delete from role_tasks/i.test(sql), 'no role or task changes');
   t.check(!/insert into (cash_txns|customer_debt_log|stock_log|stock_lots)|update customers|update stock\b/i.test(sql), 'touches no money and no stock');
   // Every push IB01 draws as new (or with new words) that has a write behind it.
@@ -74,8 +74,8 @@ fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort().forEach((f) => {
   if (r.status !== 0) failed.push(`${f}: ${(r.stderr || '').trim().split('\n')[0]}`);
 });
 t.check(failed.length === 0, `every migration applied, in order (${JSON.stringify(failed)})`);
-const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0182_store_new_app.sql')]);
-t.check(again.status === 0, `0182 runs a second time without error (${errs(again)[0] || 'ok'})`);
+const again = onDb(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, '0183_store_new_app.sql')]);
+t.check(again.status === 0, `0183 runs a second time without error (${errs(again)[0] || 'ok'})`);
 
 const r = onDb(['-qAt', '-F', '\t'], fs.readFileSync(path.join(__dirname, 'fixtures', 'store-new-app-scenario.sql'), 'utf8'));
 const rows = (r.stdout || '').split('\n').filter((l) => /^(PASS|FAIL)\t/.test(l));

@@ -36,7 +36,7 @@ Read with: [`04-screens-store.md`](04-screens-store.md), [`04-screens-store-rout
 | `ow-store-picks:<uid>:<shop>` | localStorage | pick drafts `{orderId: {lineKey: {s, n, cur}}}`, sent 900 ms after the last tap and on `online` | 2341–2366, 5936 | `lineKey` = `L<lineId>`, else `I<index>` (1535) |
 | `ow-store-seen:<uid>:<shop>` | localStorage | when Alerts was last opened (the bell's count) | 3248–3249, 3361 | WORD-10 |
 | `ow-store-rc:<uid>:<shop>` | localStorage | the check-in draft `{id, ids, got, why, extras, at}` | 3717–3721 | one draft per trip |
-| `ow-store-putback:<uid>:<shop>` | localStorage | `{orderId: ms}`: a cancelled order put back | 4342–4347 | store.html's only record of a put-back; the new app writes `putBack` on the order instead (0182, Q11, W28) |
+| `ow-store-putback:<uid>:<shop>` | localStorage | `{orderId: ms}`: a cancelled order put back | 4342–4347 | store.html's only record of a put-back; the new app writes `putBack` on the order instead (0183, Q11, W28) |
 | `ow-store-sl:<id>:<shop>` | localStorage | the gate's name and ticks `{name, ticks}` | 4595–4597 | REL-02 |
 | `ow-store-count:<uid>:<shop>` | localStorage | the count draft (keys, counts, system, held, missing, sent, sendErr) | 5293–5294 | resent on `online` (5432) |
 | `ow-store-labels:<shop>` | localStorage | which shelf labels were printed | 5821–5854 | |
@@ -128,8 +128,8 @@ Every key is the server's (`store_snapshot`, 0164 / 0166 / 0168); `store_live` i
 | `cancelledAt`, `cancelledByName`, `voidedAt` | R | called off | 4065, 4326 |
 | `pickSettle` `{pick, at, lines[{idx, picked, ordered}]}`, `pickShortfallAckAt` | R | Ruth settled a short | 1540, 1549 |
 | `takenBack[]` `{askId, voided, lines[{idx, qty}]}` | R | credit notes (the books' `creditNotes`) | 1128–1136 |
-| `droppedLines[]` `{productId, productName, variantIdx, qty, unit, reason, droppedAt}` | R (0182) | a line Sales, the Manager or the Buyer took off: it leaves `items[]` for here (`dropLine`, `src/core/buyer/supabase/order.ts`); never its price. The yard draws it struck through after the order's own lines; it never writes it | — |
-| `putBack` `{at, by, byName, lines[{idx, qty}]}` | R / W once (0182) | a called-off order's goods back on the shelf (W28) | — |
+| `droppedLines[]` `{productId, productName, variantIdx, qty, unit, reason, droppedAt}` | R (0183) | a line Sales, the Manager or the Buyer took off: it leaves `items[]` for here (`dropLine`, `src/core/buyer/supabase/order.ts`); never its price. The yard draws it struck through after the order's own lines; it never writes it | — |
+| `putBack` `{at, by, byName, lines[{idx, qty}]}` | R / W once (0183) | a called-off order's goods back on the shelf (W28) | — |
 | `runDriver` | R | a driver planned for the run | 2852 |
 | `takenBy`, `createdAt`, `savedAt`, `date` | R | age, backdated | 1477–1485 |
 
@@ -139,7 +139,7 @@ Every key is the server's (`store_snapshot`, 0164 / 0166 / 0168); `store_live` i
 
 ## 3. Writes, in the yard's flow order
 
-"Patch" = `changeOrder` → `rpc('store_patch_order', {p_shop, p_id, p_patch, p_status, p_items, p_expect})`; `p_status` only when the status changed, `p_items` = every line as `{idx, lineId, pickStatus, pickedQty}`. "Held" = `heldWrite` (991): 10 s with Undo, at once when the app is hidden. The push column is what the database raises today (0120 onward); §6 lists what 0182 adds.
+"Patch" = `changeOrder` → `rpc('store_patch_order', {p_shop, p_id, p_patch, p_status, p_items, p_expect})`; `p_status` only when the status changed, `p_items` = every line as `{idx, lineId, pickStatus, pickedQty}`. "Held" = `heldWrite` (991): 10 s with Undo, at once when the app is hidden. The push column is what the database raises today (0120 onward); §6 lists what 0183 adds.
 
 | # | Action | Call and what changes | Push today | Line |
 |---|---|---|---|---|
@@ -247,7 +247,7 @@ The new app's map, kind by kind, is `04-screens-store-routes.md` §5.
 
 ## 6. What the new app changes
 
-The database change is **one migration, 0182** (`supabase/migrations/0182_store_new_app.sql`, being written in the Store's build session; its row goes in `docs/decision-rights.md`'s reserved numbers in the same commit). It is the list in `docs/audit/store/OTHER-APPS.md` "The database", in the kinds and words of `IB01Handovers.dc.html`, plus two gaps the area builders found (11 Nov 2026): a dropped line reaches the yard (`droppedLines`) and a put-back is recorded on the order (W28). Every push is after the write and never stops it. Touches no money and no stock; no role, task or decision right changes.
+The database change is **one migration, 0183** (`supabase/migrations/0183_store_new_app.sql`, being written in the Store's build session; its row goes in `docs/decision-rights.md`'s reserved numbers in the same commit). It is the list in `docs/audit/store/OTHER-APPS.md` "The database", in the kinds and words of `IB01Handovers.dc.html`, plus two gaps the area builders found (11 Nov 2026): a dropped line reaches the yard (`droppedLines`) and a put-back is recorded on the order (W28). Every push is after the write and never stops it. Touches no money and no stock; no role, task or decision right changes.
 
 ### 6a. One decision: a packed pickup is Ready to collect
 
@@ -269,7 +269,7 @@ A packed pickup moves **Packing → On the road** (`pending_delivery`) with no c
 
 ### 6c. New writes in the new app
 
-| # | Action | Call | Push (0182) | Board |
+| # | Action | Call | Push (0183) | Board |
 |---|---|---|---|---|
 | W3' | Finish the pack of a pickup | W3 with `p_status: 'pending_delivery'` | `order.ready` | PK07 |
 | W27 | **Can't deliver · bring it back** | patch `comingBack {why, at, by, byName}` (stays On the road) | `order.back` | OU24 |
@@ -281,18 +281,18 @@ A packed pickup moves **Packing → On the road** (`pending_delivery`) with no c
 
 "New" = the kind did not exist; "words" = the kind existed, its words change. To whom: "the yard" is whoever holds `order.pick` (the Store and a yard worker); "Ruth" is the task the Manager holds; the owner holds no `role_tasks` row, so he gets none (his is the log).
 
-| Kind | When | To | Words | IB01 board | 0182 |
+| Kind | When | To | Words | IB01 board | 0183 |
 |---|---|---|---|---|---|
 | `order.pick` | an order enters Packing (placed there, all in, or moved on), **on insert too** | the yard | "New to pack · #0556 Nansana · they collect" | PK01 (IM-09, IM-10) | new |
 | `order.pick` | given to a packer (`awaiting_accept`) | that packer only | "Ruth gave you #0556 to pack" | PK08 (IM-08) | new |
-| `order.copy` | an order marked a copy | the yard | "#0557 is a copy · don't pack it" | PK09 | **not in 0182**: no app marks an order a copy yet |
+| `order.copy` | an order marked a copy | the yard | "#0557 is a copy · don't pack it" | PK09 | **not in 0183**: no app marks an order a copy yet |
 | `order.cancelled` | to whoever holds it | packer, bay, driver, the salesperson | "Cancelled · put it back · #0530"; on a truck "#0534 cancelled · bring it back" | PK10, OU27 (IM-11, IM-39) | widened |
 | `trip.back` | a trip handed in | the yard | "Denis's trip is back at the yard · 3 lines" (never "round", "count it in", "at the gate") | IN02, TD02 (IM-25, IM-26) | words |
 | `trip.checked` | checked in | the Buyer (`trip.plan`) | "Checked in · Denis's trip · 3 lines" | IN06 | new |
 | `trip.difference` | the check-in differs | Ruth | "Musa's check-in of Denis's trip · 2 pc differ" | IN03, IN06 (IM-23) | words |
 | `trip.difference.decided` | Ruth decides | the checker | "Ruth decided the 2 pc" | IN06, TD11 | new |
 | `order.all_in` | Buying → Packing from the check-in | the salesperson (with `order.pick` "New to pack · #0549 Ggaba" to the yard) | "Ggaba's #0549 is all in · Packing" | IN06 | new |
-| `trip.short` | a trip line came short | the salesperson | "#0546 Lubowa · 18 of 20 came · pack 18" | IN06 (IM-36) | **not in 0182** (the check-in's words; the Buyer's 0144 kind stays) |
+| `trip.short` | a trip line came short | the salesperson | "#0546 Lubowa · 18 of 20 came · pack 18" | IN06 (IM-36) | **not in 0183** (the check-in's words; the Buyer's 0144 kind stays) |
 | `store.extra` / `store.ask.decided` | not on the list; Ruth answers | Ruth; then the checker, the Buyer, and Accounts when kept | "Not on the list · Binding wire 20kg · keep it?" → "Ruth: keep it" (Esther pays Kiseka for it) | IN04, IN13 (IM-17) | words |
 | `store.new_item` | a new item checked in | Sourcing | "A new item at the yard · with a photo" | IN04, SH42 (IM-19) | kept |
 | `delivery.checked` (+ `stock.report`) | a supplier's delivery checked in | Sourcing (`supplier.edit`); Accounts (`bill.record`, the delivery note); torn ones as `stock.report` to Ruth | "Hima Cement · 100 bag came in"; "Hima Cement · 4 torn" | IN10–IN12 | new |
@@ -308,7 +308,7 @@ A packed pickup moves **Packing → On the road** (`pending_delivery`) with no c
 | `order.invoiced` | 24 h after delivery | Accounts, the salesperson | "the bill by itself after 24 h" | OU22 | kept |
 | `order.back` | can't deliver (W27) | Ruth (`order.assign`) and the salesperson | "#0547 coming back · Ggaba closed" | OU24 | new |
 | `order.moved` | a stage the yard holds moved by someone outside the yard | the yard | "Ruth marked #0538 delivered" | TD10 (IM-29) | new |
-| `stock.count.sent` | a count sent | **Ruth only** (`stock.correct`); the owner gets the log | "Your count of Wire nails 4" · 17 ctn" (0182 writes "Musa's count of …" for Ruth) | SH10, SH12 (IM-20) | new (replaces `notify-stock-count`) |
+| `stock.count.sent` | a count sent | **Ruth only** (`stock.correct`); the owner gets the log | "Your count of Wire nails 4" · 17 ctn" (0183 writes "Musa's count of …" for Ruth) | SH10, SH12 (IM-20) | new (replaces `notify-stock-count`) |
 | `stock.count.decided` / `stock.recount` | Ruth decides | the counter | "Ruth accepted your count" / "Ruth asked: count it again" | SH13, SH16 (IM-20) | new |
 | `stock.report` / `stock.report.decided` | a loss; Ruth decides | Ruth; then the reporter | "Iron sheet G28 · 3 pc bent · photo" → "Ruth wrote off 3 pc · bent" | SH20–SH22 | kept |
 | `return.coming` | Sales asks a return | the yard | "#0548 coming back · 2 bag" | IN01, TD11 (IM-15) | new |
@@ -318,7 +318,7 @@ A packed pickup moves **Packing → On the road** (`pending_delivery`) with no c
 
 No push, on purpose (nobody waits): a counter sale (read live, "Counter sale · out") and the shelf figure (both apps read "412 on shelf").
 
-**Not reached by 0182** (IB01 draws them; no channel yet): a push to the agent (Peter) or the customer (Kato) — `push_outbox` reaches shop members only, agents have their own phones' table. The boards' "Peter sees", "Kato sees" lines stay as drawn (what they see in their own app), not as a push the Store sends.
+**Not reached by 0183** (IB01 draws them; no channel yet): a push to the agent (Peter) or the customer (Kato) — `push_outbox` reaches shop members only, agents have their own phones' table. The boards' "Peter sees", "Kato sees" lines stay as drawn (what they see in their own app), not as a push the Store sends.
 
 **Turn off with the switch**: the Database Webhooks for `notify-worker` and `notify-stock-count` still send their old pushes; they go off when the new app replaces `store.html` (the owner would otherwise still get counts).
 
@@ -386,13 +386,13 @@ Each is kept as a rule (with its line) so nothing is lost; before any is built i
 | # | What | Line | Default |
 |---|---|---|---|
 | D1 | Count due after **21** days (`countDue`) but the aisle's freshness and "counted every **14** days" use 14 (`COUNT_DUE_DAYS`) | 5120, 5148 | one `countDue` at 21; the ring at 14 until Kevin (screens Q10) |
-| D2 | A put-back is phone-only (`ow-store-putback`); another phone, Ruth and Grace never learn it was done | 4342–4347 | recorded on the order, `putBack` (0182, W28; screens Q11) |
-| D3 | The money gate stops an unpaid pickup leaving Packing, so it can never be Ready to collect while unpaid; FACTS draws #0555 so | 0156; `moneyHold` 1502 | 0182 moves the gate to the hand-over (screens Q12) |
-| D4 | "Can't deliver" has no write, only a toast | STORE-TODAY §4.4 | `comingBack` + `order.back` (0182; screens Q13) |
+| D2 | A put-back is phone-only (`ow-store-putback`); another phone, Ruth and Grace never learn it was done | 4342–4347 | recorded on the order, `putBack` (0183, W28; screens Q11) |
+| D3 | The money gate stops an unpaid pickup leaving Packing, so it can never be Ready to collect while unpaid; FACTS draws #0555 so | 0156; `moneyHold` 1502 | 0183 moves the gate to the hand-over (screens Q12) |
+| D4 | "Can't deliver" has no write, only a toast | STORE-TODAY §4.4 | `comingBack` + `order.back` (0183; screens Q13) |
 | D5 | The `notify-stock-count` push goes to the owner too | edge function | `stock.count.sent` to Ruth only; the webhook off at the switch |
 | D6 | The `order.cancelled` push has no handler: the tap opens nothing special | 2666–2704 | `pack/put-back` or `out/road` (routes §5) |
 | D7 | Pass the yard writes at once, no Undo | 6223 | held 10 s (screens Q17) |
-| D8 | `orderDestination` reads the customer's `location` (or `deliveryAddress` for a shop delivery), not the order's own place | 1521–1526 | `deliverTo` when the order has it (0182 allow-list) |
+| D8 | `orderDestination` reads the customer's `location` (or `deliveryAddress` for a shop delivery), not the order's own place | 1521–1526 | `deliverTo` when the order has it (0183 allow-list) |
 | D9 | A hired driver's WhatsApp list is the only record of what he took; `carrier.phone` is stored but not the list | 4564 | as today |
 | D10 | `loadSide` reads `places`, `place_routes`, `road_names` directly, outside the snapshot (no money, but a fourth way in) | 1205–1218 | as today |
 | D11 | The return's photo path rides inside `note` ("photo: <path>"), not a column | 2532 | as today (the Manager app reads it there) |

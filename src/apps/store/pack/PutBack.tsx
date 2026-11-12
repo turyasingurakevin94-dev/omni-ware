@@ -3,7 +3,7 @@
  * The order was cancelled while still in the yard: what was picked goes back to the shelf, line
  * by line (tick each), from its bay to its aisles; then the red slide. Only lines already picked go
  * back; with none, "Stop packing · nothing was picked yet". The put-back is stamped once on
- * the order by the server (W7, 0182 `{putBack:{lines}}`); then the order leaves the yard's lists.
+ * the order by the server (W7, 0183 `{putBack:{lines}}`); then the order leaves the yard's lists.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';

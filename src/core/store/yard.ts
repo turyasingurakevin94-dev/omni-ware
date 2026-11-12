@@ -40,7 +40,7 @@ const DAY_MS = 864e5;
 
 export const isCancelled = (o: YardOrder): boolean => o.voided || o.cancelledAt != null || o.status === 'cancelled';
 
-/** A called-off order once put back (W7, 0182 payload.putBack, any phone) asks the yard nothing more: it leaves the day. */
+/** A called-off order once put back (W7, 0183 payload.putBack, any phone) asks the yard nothing more: it leaves the day. */
 export const putAway = (o: YardOrder): boolean => !!o.putBack && isCancelled(o);
 
 /** An invoiced order leaves the board 24 h after its invoice (store.html:1751 quoteAgedOffBoard). */
@@ -49,7 +49,7 @@ export function onBoard(o: YardOrder, now: Ms): boolean {
 }
 
 /**
- * Where it goes: the order's own deliverTo (0182), else, for an old order with none, as store.html:1521
+ * Where it goes: the order's own deliverTo (0183), else, for an old order with none, as store.html:1521
  * orderDestination did (an agent's address; the customer's location; a shop delivery's address).
  * An agent pickup goes nowhere.
  */
@@ -88,7 +88,7 @@ export function isBackdated(o: YardOrder): boolean {
 export const isMine = (o: YardOrder, me: string | null): boolean => !!me && o.assignedWorkerId === me;
 export const waitingSince = (o: YardOrder): Ms => o.stageEnteredAt ?? o.savedAt ?? o.createdAt ?? 0;
 
-/** Held for the money (store.html:1502 moneyHold), widened by 0182 to a ready-to-collect order (§6a). */
+/** Held for the money (store.html:1502 moneyHold), widened by 0183 to a ready-to-collect order (§6a). */
 export function moneyHeld(o: YardOrder): boolean {
   return o.moneyHold && (o.status === 'preparing' || o.status === 'pending_delivery') && !o.deliveredAt;
 }

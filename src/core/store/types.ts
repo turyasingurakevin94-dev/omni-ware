@@ -4,7 +4,7 @@
  *
  * NO MONEY. Not a price, a total, an amount owed or paid: the database strips
  * every money key before a Store phone sees an order (ow_store_payload, 0164,
- * 0182), and these types have no field to hold one. "Not paid yet" is a label
+ * 0183), and these types have no field to hold one. "Not paid yet" is a label
  * (YardOrder.moneyHold), never a figure (FACTS head; GLOSSARY "Money on a phone").
  *
  * These are the app's words. src/core/store/supabase/rows.ts is the one place a
@@ -46,7 +46,7 @@ export interface YardLine {
   receivedQty: number | null;
   /**
    * Taken off the order before the yard ("not found → dropped", FACTS #0552's hinge). The books move it
-   * out of items[] into payload.droppedLines, which 0182's allow-list passes without its price; rows.ts
+   * out of items[] into payload.droppedLines, which 0183's allow-list passes without its price; rows.ts
    * puts it after the order's own lines (idx past items[], so no write ever names it).
    */
   dropped: boolean;
@@ -69,13 +69,13 @@ export interface Carrier {
   dueBack?: Ms | null;
 }
 
-/** payload.comingBack (0182, W27): can't deliver · bring it back. */
+/** payload.comingBack (0183, W27): can't deliver · bring it back. */
 export interface ComingBack { why: string; at: Ms; by: string | null; byName: string }
 
-/** payload.putBack (0182, W7): who put a cancelled order's goods back, when, and how many of each line. */
+/** payload.putBack (0183, W7): who put a cancelled order's goods back, when, and how many of each line. */
 export interface PutBack { at: Ms; by: string | null; byName: string; lines: { idx: number; qty: number }[] }
 
-/** A credit note the Manager raised (payload.takenBack, the books' creditNotes; 0182 adds restocked). */
+/** A credit note the Manager raised (payload.takenBack, the books' creditNotes; 0183 adds restocked). */
 export interface TakenBack { askId: string | null; voided: boolean; restocked: boolean; lines: { idx: number; qty: number; restocked: boolean | null }[] }
 
 /** An order in the yard: its stage, its lines and who holds it. No money (head of file). */
@@ -128,20 +128,20 @@ export interface YardOrder {
   takenBy: string | null;
   createdAt: Ms | null;
   savedAt: Ms | null;
-  /** Where · when · phone, the order's own (Sales writes them; 0182 passes them). Null on an old order: yard.ts destinationOf falls back. */
+  /** Where · when · phone, the order's own (Sales writes them; 0183 passes them). Null on an old order: yard.ts destinationOf falls back. */
   deliverTo: string | null;
   deliverWhen: string | null;
   deliverPhone: string | null;
-  /** A counter sale: never a yard collection (0182, IM-31). */
+  /** A counter sale: never a yard collection (0183, IM-31). */
   counter: boolean;
   comingBack: ComingBack | null;
-  /** payload.putBack (0182, W7): a called-off order's goods back on the shelf, stamped once by the server (the demo stamps it the same way). */
+  /** payload.putBack (0183, W7): a called-off order's goods back on the shelf, stamped once by the server (the demo stamps it the same way). */
   putBack?: PutBack | null;
   /** store_money_holds lists it: "Not paid yet", a label only. */
   moneyHold: boolean;
   /**
    * The order this one is a copy of (#0557 → 556): Look only. No app marks a copy yet (data §6d
-   * order.copy "not in 0182"): the demo draws it, the real books give null.
+   * order.copy "not in 0183"): the demo draws it, the real books give null.
    */
   copyOf: number | null;
   /** When the run leaves ("leaves 13:20"), and who took the money and when ("Paid · Grace 13:12"): the demo's; the books have none (absent). */

@@ -5,7 +5,7 @@
  * the keys this tap changed and each line's pick answer through store_patch_order.
  * The stage moves the Store may make: Packing → On the road | Delivered, On the road →
  * Delivered (STORE_STATUS_MOVES; the database checks them too, 0164 0173 0178).
- * The pushes are the server's (0120, 0182), after the write; none is sent from here.
+ * The pushes are the server's (0120, 0183), after the write; none is sent from here.
  */
 import { dataError, isDataError } from '../../datasource.ts';
 import { ok } from '../../supabase/write.ts';
@@ -16,7 +16,7 @@ import { putBack as putBackLines } from '../pack.ts';
 import { isPickup } from '../yard.ts';
 import { readOrderRow } from './read.ts';
 
-/** store.html:2289 ORDER_KEYS, plus 0182's comingBack: the only payload keys compared and sent. */
+/** store.html:2289 ORDER_KEYS, plus 0183's comingBack: the only payload keys compared and sent. */
 export const ORDER_KEYS = ['items', 'assignedWorkerId', 'assignedDeliveryId', 'pickingStatus', 'pickCursor', 'pickingAssignedAt', 'workerAcceptedAt',
   'pickingDoneAt', 'bay', 'carrier', 'stageEnteredAt', 'stageLog', 'deliveredTo', 'deliveredAt', 'deliveredPhoto', 'deliveredPhotoKind', 'deliveredNote',
   'handoverCheckedAt', 'letGoAsk', 'comingBack'];
@@ -104,7 +104,7 @@ export function orderWrites(sb: Sb, s: StoreSession, seen: (id: number) => Row |
       q.pickCursor = cursor;
       return true;
     }),
-    /** W3 store.html:2384 finishPack; W3' a pickup moves to Ready to collect (0182). */
+    /** W3 store.html:2384 finishPack; W3' a pickup moves to Ready to collect (0183). */
     finishPack: (id: number, bay: number | null) => change(id, (q) => {
       if (q.status !== 'preparing') return false;
       if (!(q.items || []).every((it: Row) => notPicked(q, it) || ANSWERED.includes(it.pickStatus))) throw dataError('refused', 'Answer every line first', 'P0001');
@@ -160,7 +160,7 @@ export function orderWrites(sb: Sb, s: StoreSession, seen: (id: number) => Row |
         return true;
       });
     },
-    /** W27 (0182): can't deliver · bring it back; it stays On the road. */
+    /** W27 (0183): can't deliver · bring it back; it stays On the road. */
     cantDeliver: (id: number, why: string) => change(id, (q) => {
       if (q.status !== 'pending_delivery') return false;
       q.comingBack = { why: why.slice(0, 120), at: Date.now(), by: s.userId, byName: s.name };
@@ -173,7 +173,7 @@ export function orderWrites(sb: Sb, s: StoreSession, seen: (id: number) => Row |
       return true;
     }),
     /**
-     * W7 (0182): a cancelled order's goods back on the shelf. Not changeOrder (that leaves a called-off
+     * W7 (0183): a cancelled order's goods back on the shelf. Not changeOrder (that leaves a called-off
      * order alone): the one key store_patch_order takes on one, stamped once with the server's time and
      * person. No stock moves (it never left the books, 0177) and no push.
      */

@@ -2,7 +2,7 @@
  * The one place a Store snapshot row becomes the app's shape (store.html:1106–1167
  * rowToTrip, rowToQuote, rowToReport, rowToReturn, rowToCount, rowToAsk; data §1b, §2).
  * Every key is the server's (store_snapshot / store_live, 0164 0166 0168, the allow-list
- * of 0182); no money key reaches here, and none is read. A dropped line (droppedLines)
+ * of 0183); no money key reaches here, and none is read. A dropped line (droppedLines)
  * follows the order's own lines; a cancelled order put back (putBack) leaves the day.
  */
 import { initials, personName, tintFor } from '../../names.ts';
@@ -34,7 +34,7 @@ function lineOf(it: Row, idx: number): YardLine {
   };
 }
 
-/** A line taken off the order (payload.droppedLines, 0182): after the order's own lines, struck through. */
+/** A line taken off the order (payload.droppedLines, 0183): after the order's own lines, struck through. */
 function droppedOf(d: Row, idx: number): YardLine {
   return { ...lineOf({ ...d, lineId: null }, idx), dropped: true, droppedWhy: strOrNull(d.reason) };
 }
