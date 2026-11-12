@@ -11,6 +11,7 @@
  *   node tools/build-app.js buyer            buyer.html, buyer-demo.js  at the root: the Buyer is switched (docs/rebuild.md)
  *   node tools/build-app.js store            store.html, store-<area>.js (pack, in, shelf, out), store-demo.js
  *                                            at the root: the Store is switched (docs/rebuild.md)
+ *   node tools/build-app.js manager          next/manager.html, next/manager-demo.js (tried there until it replaces manager.html)
  *   node tools/build-app.js sales --check    builds in memory; fails if any file differs or is over its budget
  *
  * The page is one self-contained file, like the old apps: the script and the
@@ -61,6 +62,12 @@ const ROLES = {
   // Shelf and Out each a lazy file (src/apps/store/shell/areas.ts); the demo on ?demo.
   // Switched (docs/rebuild.md, 2026-11-12): built to the root, store.html, store-<area>.js and store-demo.js;
   // the old page is old/store.html.
+  // The new Manager app (docs/spec/04-screens-manager.md): one page, no lazy tabs yet; the demo on ?demo.
+  // Tried at next/manager.html until it replaces manager.html (docs/rebuild.md).
+  manager: {
+    title: 'Manager', theme: '#16203C', manifest: '/manifest-manager.json', demo: 'src/core/manager/demo/entry.ts', parts: null,
+    lazy: [], sw: null,
+  },
   store: {
     title: 'Store', theme: '#16203C', manifest: '/manifest-store.json', demo: 'src/core/store/demo/entry.ts', parts: null,
     lazy: ['pack', 'in', 'shelf', 'out'], sw: null, dir: '',

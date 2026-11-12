@@ -49,8 +49,8 @@ export interface TabBarProps<T extends string = BarTab> {
   plusLabel?: string;
   /** What the +'s count is, as its label says it: "not placed yet" (the default), or another bar's word ("stops to buy"). */
   plusCountWord?: string;
-  /** The centre's icon: the + by default; the Store's filled play (store-agent TD01, "Start the next job"). */
-  plusIcon?: 'plus' | 'play';
+  /** The centre's icon: the + by default; the Store's filled play (store-agent TD01, "Start the next job"); the Manager's tick when nothing waits (Today empty). */
+  plusIcon?: 'plus' | 'play' | 'check';
   /** The centre greyed and off, with why in its name (the Store's TD07 "Start the next job: not loaded yet"). */
   plusOff?: string;
   /** The tabs shown but off (the Store's TD21 "Checking your shop…": nothing to open yet). */
@@ -81,6 +81,7 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
         onClick={(e) => { e.preventDefault(); if (!p.plusOff) p.onPlus(); }}>
         {p.plusIcon === 'play'
           ? <Icon name="play" size={26} stroke={2} on style={{ marginLeft: '3px' }} />
+          : p.plusIcon === 'check' ? <Icon name="check" size={28} stroke={2.4} />
           : <Icon name="plus" size={28} stroke={2.4} />}
         {p.notPlaced > 0 && !p.plusOff && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}
       </a>

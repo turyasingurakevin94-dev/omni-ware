@@ -43,6 +43,7 @@ export function askWord(kind: AskKind, mode?: PriceMode | 'limit' | 'age' | 'nol
     case 'cancel': return 'Cancel asked';
     case 'twins': return 'Taken twice?';
     case 'agent': return 'asks: fewer';
+    case 'carton': return 'A carton for the shelf?';
   }
   return '';
 }
@@ -141,4 +142,10 @@ export function limitWord(mins: number): string {
   if (mins % 1440 === 0) return `${mins / 1440} d`;
   if (mins % 60 === 0) return `${mins / 60} h`;
   return `${mins} m`;
+}
+
+/** "09:15": the Manager's boards write every time with two digits. */
+export function hm(ms: number): string {
+  const d = new Date(ms + 3 * 3600e3);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
