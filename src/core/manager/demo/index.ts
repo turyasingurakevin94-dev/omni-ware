@@ -6,6 +6,7 @@
  *   ?demo                 Sat 17 Oct 2026 09:40, Ruth's phone: the eight asks
  *   &at=1005 … 1620       a later card's moment (asks.ts MOMENTS); after 09:59 the eight are answered
  *   &state=markup         + D-33, Moses's new item
+ *   &state=nocost         (with &at=1015) #0553's line has no known cost: Cost ? · Ask Denis
  *   &state=twins          #0545 not billed yet: Taken twice? can be cancelled (Orders p4)
  *   &state=empty          nothing waits (the + a tick, All decided)
  *   &state=signed-out     the sign-in
@@ -64,6 +65,8 @@ export function dayAt(f: ManagerDemoFlags): ManagerBooks {
   }
   if (moment && moment.at === 1015) os.filter((o) => o.id === 553).forEach((o) => { o.lines[0].cost = 31_000; o.lines[0].price = null; o.lines[0].buying = 'found'; o.lines[0].supplierName = 'Katwe'; });
   if (f.state === 'markup') asks.push(markupAsk(hm(f.at)));
+  // &state=nocost (with &at=1015): #0553's Y12 has no known cost yet (DecidePrice disabled · no known cost).
+  if (f.state === 'nocost') os.filter((o) => o.id === 553).forEach((o) => { o.lines[0].cost = null; o.lines[0].shopPrice = null; });
   return {
     at: t(hm(f.at)),
     me: ppl[0],

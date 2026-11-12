@@ -8,6 +8,7 @@ import { money } from '../../../../core/money.ts';
 import { firstWord } from '../../../../core/names.ts';
 import { lineAt, markupTicks, oneUnit } from '../../../../core/manager/decide-money.ts';
 import { lineShopPrice, markupOf, pct, priceOutcome, sameGain, shopPriceOf, underCost } from '../../../../core/manager/price.ts';
+import { units } from '../../../../core/manager/decide-stock.ts';
 import type { CounterAsk, MLine, MOrder, Person, PriceAsk, UGX } from '../../../../core/manager/types.ts';
 import { ANSWER } from '../../../../core/manager/words.ts';
 import { TINTS } from '../../../../core/names.ts';
@@ -53,7 +54,7 @@ export function under(c: Ctx<PriceAsk | CounterAsk>, o: MOrder, l: MLine, shop: 
   const facts: Fact[] = [
     { k: `Gain a ${l.unit}`, v: out.gain != null ? money(out.gain) : '?', tone: 'good' },
     { k: 'Under the shop\'s', v: out.underShop != null ? signed(out.underShop) : '?', tone: 'warn' },
-    { k: `On ${l.qty} ${l.unit}`, v: out.underShopTotal != null ? signed(out.underShopTotal) : '?', tone: 'warn' },
+    { k: `On ${l.qty} ${units(l.qty, l.unit)}`, v: out.underShopTotal != null ? signed(out.underShopTotal) : '?', tone: 'warn' },
   ];
   const bad = underCost(asked, cost);
   return {
@@ -171,7 +172,7 @@ function coming(c: C, o: MOrder, l: MLine): KindView {
   const facts: Fact[] = [
     { k: `Gain a ${l.unit}`, v: money(out.gain), tone: 'good' },
     { k: 'Markup', v: pct(markup) },
-    { k: `On ${l.qty} ${l.unit}`, v: signed(out.gainTotal || 0), tone: 'good' },
+    { k: `On ${l.qty} ${units(l.qty, l.unit)}`, v: signed(out.gainTotal || 0), tone: 'good' },
   ];
   const typedCost = l.cost == null ? cost : null;
   const args = typedCost != null ? [o.id, l.idx, typedCost, price] : [o.id, l.idx, price, 'set'];

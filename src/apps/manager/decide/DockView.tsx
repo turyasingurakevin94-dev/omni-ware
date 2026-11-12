@@ -17,7 +17,7 @@ export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean; online
     <footer class="mg-dock" aria-busy={wait ? 'true' : undefined}>
       {d.above}
       <div class="mg-dock-top">
-        <span class="mg-sees"><Icon name="bell" size={14} stroke={2} />{whoSee(d.told)}{d.word && <span class="w">{d.word}</span>}</span>
+        <span class="mg-sees"><Icon name="bell" size={14} stroke={2} />{whoSee(d.told)}{d.word && <span class={'w' + (d.wordTone ? ' ' + d.wordTone : '')}>{d.word}</span>}</span>
         {d.total && <span class="mg-dock-tot"><b>{money(d.total.v)}</b>{d.total.sub && <span>{d.total.sub}</span>}</span>}
       </div>
       {'tap' in pr ? (
@@ -30,7 +30,7 @@ export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean; online
         <Slide label={pr.slide.label} onCommit={pr.slide.on} state={p.busy ? 'sending' : 'ready'}
           lock={pr.slide.disabled ? { icon: 'lock', label: pr.slide.disabled }
             // A slide moves money or books and is never kept on the phone: it waits for signal (DecideStock offline).
-            : p.online === false ? { icon: 'offline', label: `${pr.slide.label.split(' · ')[0]} needs signal` } : undefined}
+            : p.online === false ? { icon: 'offline', label: pr.slide.offline || 'Needs signal' } : undefined}
           onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
       )}
       {d.secondary && (

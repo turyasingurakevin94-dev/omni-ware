@@ -43,6 +43,7 @@ export function MoneyChips(p: { paid: number; how: How; onPick: (h: How) => void
 }
 
 /** The write's Money from a picked chip (a refund goes back in cash). */
-export function moneyOf(how: How): Money {
-  return how === 'refund' ? { how: 'refund', account: 'cash' } : how === 'deposit' ? { how: 'deposit' } : null;
+/** The answer's money: a refund goes back the way it was paid (the order's paidBy; cash when not known). */
+export function moneyOf(how: How, paidBy: 'cash' | 'momo' | 'bank' | null = null): Money {
+  return how === 'refund' ? { how: 'refund', account: paidBy || 'cash' } : how === 'deposit' ? { how: 'deposit' } : null;
 }

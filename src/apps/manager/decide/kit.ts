@@ -26,13 +26,14 @@ export interface Ctx<A extends Ask = Ask> {
 }
 
 export interface DockAnswer { label: string; on: () => void; disabled?: string }
-export interface DockSlide { label: string; on: () => Promise<void>; disabled?: string }
+export interface DockSlide { label: string; on: () => Promise<void>; disabled?: string; /** With no signal ("Write off needs signal"); else "Needs signal". */ offline?: string }
 
 export interface Dock {
   /** Who is told (display names): "Musa · Grace see". */
   told: string[];
-  /** The answer word they see (the green pill). */
+  /** The answer word they see (the green pill; amber while it waits: "Ruth decides"). */
   word: string;
+  wordTone?: 'amber';
   /** The figure the answer moves, and its line under it ("gain 240,000", "3 bags at cost"). */
   total?: { v: number; sub?: string } | null;
   /** Above the answers: a chip row (limit chips, refund or deposit). */

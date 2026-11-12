@@ -81,7 +81,7 @@ const demo = (q = '?demo') => managerDemo(q, { instant: true });
   t.check(e1 && e1.kind === 'offline' && E.notDone(e1, 'settlePick').tone === 'offline', 'no signal: the write is kept (offline)');
   const f = demo('?demo&fail=settlePick');
   let e2 = null; try { await f.settlePick(550, false); } catch (e) { e2 = e; }
-  t.check(e2 && E.notDoneLine(E.notDone(e2, 'settlePick')) === 'Not sent · tell Kevin · code MG-502', 'a failed write: "Not sent · tell Kevin · code MG-502"');
+  t.check(e2 && E.notDoneLine(E.notDone(e2, 'settlePick')) === 'Not sent · code MG-502', 'a failed write: "Not sent" (its code kept apart, never on the face)');
   await f.settlePick(550, false);
   t.check(!(await f.snapshot()).asks.some((a) => a.key === 'short:550'), 'Try again sends it');
   const c2 = demo('?demo&clash=carton');

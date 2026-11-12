@@ -58,7 +58,7 @@ export const kind: Kind<VoidAsk> = (c) => {
       told: [c.asker ? c.asker.id : '', o.sellerId || ''],
       word: ANSWER.voided,
       above: paid ? <MoneyChips paid={o.paid} how={how} onPick={setHow} /> : null,
-      primary: { slide: { label, disabled: paid && !how ? AFTER_WORDS.pickMoney : undefined, on: () => c.slide(label, 'voidBill', [c.a.askId, o.id, c.a.reason, paid ? moneyOf(how) : null]) } },
+      primary: { slide: { label, disabled: paid && !how ? AFTER_WORDS.pickMoney : undefined, on: () => c.slide(label, 'voidBill', [c.a.askId, o.id, c.a.reason, paid ? moneyOf(how, o.paidBy) : null]) } },
       secondary: { label: ANSWER.keptBilled, on: () => c.tap(ANSWER.keptBilled, 'keepBilled', [c.a.askId]) },
     },
   };

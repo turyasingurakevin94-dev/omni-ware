@@ -111,3 +111,73 @@ I did not mark down the decided differences: the pace figures (+3.53M ahead, Fai
 25. **Offline and error:** the message is a bottom toast with Try again, where the board has a band under the hero. On Today it covers the Watch tiles, and on the sheets the NEXT card.
 26. **Pictures:** the Orders tab icon is a box, where the board draws a clipboard. The D-10 icon is a tag, where the board draws a gift.
 27. **Not checked:** the lock-screen push cards cannot be driven in a browser.
+
+---
+
+# Round 2 (12 Nov 2026)
+
+I rebuilt at `f05efd3a` (`node tools/build-app.js manager`) and drove every page and state again, the same way as in round 1. The screenshots are in the session scratchpad under `review-decide/r2/`. Every screen still passes the checks for tap size, one red, text under 11 px and width.
+
+## Fixed (checked on screen)
+
+| Gap | Now |
+|---|---|
+| 1 | The next card keeps the round's count (`2 of 8`, `5 of 8`, `6 of 8`). The strip wraps (`On credit · load it · 1,240,000`) and spins while it sends (Approved · 46,000). |
+| 2 | Fixed with gap 1. |
+| 3 | All decided reads `8 ANSWERED · 09:41–09:59 · Denis 2 · Musa 3 · Grace 2 · Brian 1`. |
+| 4 | It reads `14 told`, which is the true sum of the people told for the eight. I accept 14; the board's 15 is the board's own arithmetic slip. |
+| 5 | `#0556 · Nothing paid` wraps in full. |
+| 6 | The offline greeting wraps to two lines and is no longer clipped. |
+| 7 (partly) | The item line reads `10 bags`. |
+| 8 | D-3 shows both chips: `Cost 24,000 → 27,000` and `−1,000 under cost`. |
+| 9 | The sending state shows as a spinner on the strip. |
+| 10 (partly) | A failed answer brings its card back as a red card: `Not sent · Grace still sees Under the shop's price · Ruth decides · Try again`. Checked on D-1, and on D-15 with `&fail=extra`. |
+| 12 | D-20 shows `Denis · off To ask` and `Musa`, and the dock reads `Grace · Denis · Musa see`. |
+| 13 | D-10's `Bill it` works. It leaves the strip `To price · #0563 · Brian sees it`. |
+| 14 | D-22 reads `510,000 is more`. |
+| 15 (partly) | Slides wait for signal: `Voided needs signal`, `Write off needs signal`. |
+| 16 | D-16's NEXT card wraps to two lines. |
+| 17 (partly) | The asked line now names the item and trip: D-16 `Cement 50 kg · 3 bags`, D-24 `Wall plugs · 200 packs`, D-15 `Nakawa Cement Depot`. |
+| 18 | The ask stays open after a failure. |
+
+## Scores, round 2 (only the rows that changed)
+
+| Board · page | Board | Built r1 | Built r2 | At or above? |
+|---|---|---|---|---|
+| Today 3 · Answered, next slides in | 9 · 9 · 8 · 8 · 9 | 9 · 9 · 7 · 7 · 9 | 9 · 9 · 8 · 8 · 9 | yes |
+| Today 4 · All decided | 9 · 9 · 9 · 9 · 8 | 9 · 9 · 7 · 7 · 8 | 9 · 9 · 9 · **8** · 8 | **no** (R2-5, minor) |
+| DecidePrice 2 · D-4 | 9 · 9 · 9 · 8 · 9 | 8 · 9 · 9 · 8 · 9 | **8** · 9 · 9 · 8 · 9 | **no** (R2-1) |
+| DecidePrice 3 · D-3 | 9 · 9 · 8 · 8 · 9 | 9 · 9 · 7 · 8 · 9 | 9 · 9 · 8 · 8 · 9 | yes |
+| DecideOrders 2 · D-20 | 9 · 9 · 8 · 8 · 9 | 9 · 9 · 8 · 8 · 7 | 9 · 9 · 8 · 8 · 9 | yes |
+| DecideOrders 5 · D-10 | 9 · 9 · 8 · 8 · 9 | 9 · 6 · 8 · 8 · 7 | 9 · 9 · 8 · 8 · 9 | yes |
+| DecideOrders 6 · D-22 | 9 · 9 · 8 · 8 · 9 | 9 · 9 · 7 · 8 · 9 | 9 · 9 · 8 · 8 · 9 | yes |
+| DecideStock 1 · D-16 | 9 · 9 · 9 · 8 · 9 | 9 · 9 · 9 · 7 · 9 | 9 · 9 · 9 · 8 · 9 | yes |
+| DecideStock 2 · D-24 | 9 · 9 · 9 · 9 · 9 | 9 · 9 · 8 · 9 · 9 | 9 · 9 · 9 · 9 · 9 | yes |
+| DecideStock 3 · D-13 + D-14 | 9 · 9 · 9 · 8 · 9 | 9 · 9 · 9 · 8 · 9 | 9 · 9 · 9 · **7** · 9 | **no** (R2-2, new) |
+
+**Pages: 19 of 22 are at or above their board on every measure.** The 3 below are Today p4 (minor gap only), D-4 and D-13.
+
+**State sets:** none of the five is clean yet. The failure toast (R2-4) shows on every board's error state. Leave that toast aside and Today, DecideStock and MoneyCredit meet their state sets. DecidePrice still has R2-1 and R2-6 open, and DecideOrders has R2-3.
+
+## Gaps left
+
+### Blocking
+
+- **R2-1 (from gap 7): wrong word.** The facts row still reads `On 10 bag`, on D-4 (#0570) and on D-2 at 10:05 (#0562). The board has `On 10 bags`.
+- **R2-2 (new): clipped text.** D-13's asked line reads `Asked 10:10 · Denis's trip · Owino Plumbi…`. The board has `Denis's trip · Owino`. Use the place's short name, or wrap the line.
+- **R2-3 (from gap 15): clipped text.** The Return slide's offline label reads `Credit note raised needs sig…`. `DockView.tsx:33` builds the label from the first part of the answer, so a long answer overflows. `Voided needs signal` fits. Use a short fixed label, such as `Needs signal`, or the board's verb.
+- **R2-4 (from gap 10): wrong word, twice over.** On a failed answer, a bottom toast `Not sent · tell Kevin code MG-502 · Try again` still shows on top of the new red card. This happens on the sheets and on Today's row.
+  - It is a second Try again for the same answer.
+  - "tell Kevin code MG-502" is not in the shop's words.
+  - The dock under the red card still reads `Grace sees · Approved`; the board's dock reads `Ruth decides`.
+
+### Still not reachable in the demo (for the board's states)
+
+- **R2-6 (gap 11):** DecidePrice "no known cost" (`Cost ?` · Ask Denis). Every demo price ask has a cost.
+- **R2-7 (gap 19):** DecideStock success, where D-14 closes and then D-15 follows. `&at=1020` replaces the 10:15 cards.
+
+### Minor
+
+- **R2-5:** Today p4's rows are still about 65 px tall, against about 42 px on the board, so only 7 of the 10 answers show.
+- **Round-1 minors not re-checked:** gaps 20 and 22–27 are listed under round 1's Minor; I did not change their status this round.
+- **The header after later cards:** All decided at 16:10, after D-10, still reads `8 ANSWERED · 09:41–09:59`, the morning round. The board only draws 09:59, so check that this is the intended reading.

@@ -3,7 +3,7 @@
  * (src/core/notdone.ts): the three bars, and the refusals the screens say in place.
  * "Someone else just did this" for every answer someone else gave first (§4a).
  */
-import { notDoneOf, TELL, type NotDone } from '../notdone.ts';
+import { notDoneOf, type NotDone } from '../notdone.ts';
 
 export { notDoneLine, type NotDone } from '../notdone.ts';
 
@@ -15,11 +15,12 @@ const REFUSALS: Record<string, string> = {
   OWRST: 'Someone else just did this',
   OWWLK: 'A walk-in can\'t owe · take the money first',
   OWCRN: 'More than the bill',
-  OWLOT: 'The shelf and its lots differ · tell ' + TELL,
+  OWLOT: 'The shelf and its lots differ · tell Kevin',
 };
 
 /** What went wrong with a write (or 'snapshot', the read), in the Manager's words. */
 export function notDone(e: unknown, write: string): NotDone {
-  const failed = write === 'snapshot' ? 'Could not load the shop' : `Not sent · tell ${TELL}`;
+  // The boards' words: "Not sent · Try again"; the code stays out of sight (the bar's title), never on the phone's face.
+  const failed = write === 'snapshot' ? 'Could not load the shop' : 'Not sent';
   return notDoneOf(e, 'MG', failed, REFUSALS);
 }

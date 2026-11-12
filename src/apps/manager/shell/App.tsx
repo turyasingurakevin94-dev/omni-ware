@@ -39,7 +39,7 @@ export function Bars(): JSX.Element | null {
   if (n && n.tone === 'failed') {
     return (
       <Notice kind="failed" action={n.retry ? { label: 'Try again', on: n.retry } : undefined}>
-        <b>{n.text}</b>{n.code && <><br /><span>code <b class="mono">{n.code}</b></span></>}
+        <b title={n.code ? `code ${n.code}` : undefined}>{n.text}</b>
       </Notice>
     );
   }
@@ -78,7 +78,8 @@ export function App(): JSX.Element {
           onTab={(x) => nav.tab(x)} onPlus={decideNext} />
       )}
       <SheetHost />
-      <ToastHost above={bar ? 84 : 0} />
+      {/* On a page with no bar, a toast sits under its head, never over the back button and title. */}
+      <ToastHost above={bar ? 84 : 0} below={bar ? undefined : 'main > header, main > .ow-fs-head, header'} />
     </div>
   );
 }

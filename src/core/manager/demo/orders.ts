@@ -14,7 +14,7 @@ const l = (idx: number, name: string, unit: string, qty: number, cost: number | 
 const o = (id: number, customerId: string, customerName: string, sellerId: string, stage: Stage, stageAt: string, lines: MLine[], x: Partial<MOrder> = {}): MOrder => {
   const total = lines.reduce((s, ln) => s + (ln.price != null ? Math.round(ln.price * ln.qty) : 0), 0);
   return {
-    id, customerId, customerName, sellerId, stage, stageAt: t(stageAt), createdAt: t(stageAt), lines, total, paid: 0, holderId: null,
+    id, customerId, customerName, sellerId, stage, stageAt: t(stageAt), createdAt: t(stageAt), lines, total, paid: 0, paidBy: null, holderId: null,
     deliveredAt: null, invoiced: false, invoiceNo: null, credit: false, driver: null, heldCode: null, twinOk: [], counter: false, ...x,
   };
 };
@@ -43,9 +43,9 @@ export function orders(): MOrder[] {
     o(557, 'lubowa', 'Lubowa Builders', 'brian', 'completed', '08:50', [l(0, 'PVC pipe 4 in', 'pcs', 9, 28_000, 35_000), l(1, 'Wall plugs', 'pack', 2, 1_500, 1_500)], { deliveredAt: t('08:50'), createdAt: t('07:15'), driver: 'Ssali', credit: true }),
     // The Kato twins (D-21): both billed on 16 Oct; #0545 paid 200,000 (void asked at 14:20, D-19)
     o(544, 'kato', 'Kato Construction', 'grace', 'completed', '15:00', twin(), { stageAt: t('15:00', '2026-10-16'), createdAt: t('10:02', '2026-10-16'), deliveredAt: t('15:00', '2026-10-16'), invoiced: true, invoiceNo: 'INV-0544', credit: true }),
-    o(545, 'kato', 'Kato Construction', 'grace', 'completed', '15:05', twin(), { stageAt: t('15:05', '2026-10-16'), createdAt: t('10:20', '2026-10-16'), deliveredAt: t('15:05', '2026-10-16'), invoiced: true, invoiceNo: 'INV-0545', paid: 200_000, credit: true }),
+    o(545, 'kato', 'Kato Construction', 'grace', 'completed', '15:05', twin(), { stageAt: t('15:05', '2026-10-16'), createdAt: t('10:20', '2026-10-16'), deliveredAt: t('15:05', '2026-10-16'), invoiced: true, invoiceNo: 'INV-0545', paid: 200_000, paidBy: 'momo', credit: true }),
     // Billed: the return's order (D-18), Lubowa's 22 Sep bill
-    o(547, 'lubowa', 'Lubowa Builders', 'brian', 'completed', '10:00', [l(0, 'Timber 2×4', 'pcs', 60, 9_000, 11_250)], { stageAt: t('10:00', '2026-09-22'), createdAt: t('08:00', '2026-09-22'), deliveredAt: t('10:00', '2026-09-22'), invoiced: true, invoiceNo: 'INV-0547', paid: 13_000, credit: true }),
+    o(547, 'lubowa', 'Lubowa Builders', 'brian', 'completed', '10:00', [l(0, 'Timber 2×4', 'pcs', 60, 9_000, 11_250)], { stageAt: t('10:00', '2026-09-22'), createdAt: t('08:00', '2026-09-22'), deliveredAt: t('10:00', '2026-09-22'), invoiced: true, invoiceNo: 'INV-0547', paid: 13_000, paidBy: 'cash', credit: true }),
   ];
 }
 
@@ -56,7 +56,7 @@ function twin(): MLine[] {
 /** The later cards' orders (named only on a card with its time; BRIEF "Reconciled"). */
 export function laterOrders(): MOrder[] {
   return [
-    o(560, 'mukono', 'Mukono Roofing', 'peter', 'awaiting_goods', '10:30', [l(0, 'Cement 50 kg', 'bag', 20, 34_000, 42_500)], { holderId: 'denis', paid: 300_000 }),
+    o(560, 'mukono', 'Mukono Roofing', 'peter', 'awaiting_goods', '10:30', [l(0, 'Cement 50 kg', 'bag', 20, 34_000, 42_500)], { holderId: 'denis', paid: 300_000, paidBy: 'cash' }),
     o(561, 'walkin', 'Walk-in', 'grace', 'completed', '09:20', [l(0, 'Wall plugs', 'pack', 1, 450, 567)], { deliveredAt: t('09:20'), counter: true, heldCode: 'OWSML' }),
     o(562, 'mukono', 'Mukono Roofing', 'faith', 'completed', '08:00', [l(0, 'Cement 50 kg', 'bag', 10, 34_000, null)], { deliveredAt: t('08:00'), heldCode: 'OWTPC', credit: true }),
     o(563, 'kyaligonza', 'Kyaligonza & Sons', 'brian', 'completed', '15:00', [l(0, 'Wall plugs', 'pack', 2, 1_500, 0)], { deliveredAt: t('15:00'), heldCode: 'OWGIV', credit: true }),

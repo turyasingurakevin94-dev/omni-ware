@@ -122,6 +122,8 @@ export interface MOrder {
   lines: MLine[];
   total: UGX;
   paid: UGX;
+  /** How the most was paid on it (payload.payments[].method): a refund goes back the same way. */
+  paidBy: 'cash' | 'momo' | 'bank' | null;
   /** Who holds it now (the packer, the driver, the buyer): a staff id. */
   holderId: string | null;
   deliveredAt: Ms | null;

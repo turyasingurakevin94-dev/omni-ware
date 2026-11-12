@@ -104,6 +104,8 @@ export function Decide(p: { params: Params }): JSX.Element | null {
   const kind = KINDS[a.kind];
   view = kind ? kind(ctx) : { evidence: <div class="mg-card">{a.kind}</div>, dock: { told: [], word: '', primary: { tap: { label: 'Open', on: () => undefined, disabled: 'not built yet' } } } };
   view = { ...view, dock: { ...view.dock, told: named(view.dock.told) } };
+  // Not sent: the asker still sees the ask, so the dock says that, not the answer.
+  if (failed.value && failed.value.key === a.key) view = { ...view, dock: { ...view.dock, word: `${firstWord(b.me.name)} decides`, wordTone: 'amber' } };
 
   const h = held.value, left = h && last && !last.slide ? Math.max(0, Math.ceil((h.until - tick) / 1000)) : 0;
   return (
@@ -115,7 +117,7 @@ export function Decide(p: { params: Params }): JSX.Element | null {
         {failed.value && failed.value.key === a.key && (
           <div class="mg-fail" role="alert">
             <span class="ic"><Icon name="warning" size={18} stroke={2.2} /></span>
-            <span class="t"><b>Not sent</b><span>{`${asker ? firstWord(asker.name) : 'They'} still sees ${titleOf(a)} · ${firstWord(b.me.name)} decides`}</span></span>
+            <span class="t"><b>Not sent</b><span>{`${asker ? firstWord(asker.name) : 'They'} still sees ${titleOf(a)} · ${firstWord(b.me.name)} decides`}{failed.value.why && <><br />{failed.value.why}</>}</span></span>
             <button type="button" class="mg-undo" onClick={() => { const f = failed.value; failed.value = null; if (f) { setLast(null); f.retry(); moveOn(); } }}><Icon name="retry" size={16} stroke={2.2} />Try again</button>
           </div>
         )}

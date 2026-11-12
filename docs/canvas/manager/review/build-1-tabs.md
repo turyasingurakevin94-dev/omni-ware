@@ -101,3 +101,85 @@ What matched well:
 The page and state with nothing to report:
 - Sign in;
 - every Team p3 state: default, Sending…, "November · set" with Undo 10 s, and Nothing to save.
+
+## Round 2 (12 Nov 2026, after the fixes)
+
+I rebuilt the app (`node tools/build-app.js manager`) and drove every page and state again at 360 px on `?demo`, by taps. Screenshots are in the scratchpad (`review-tabs/r2/`). The restock list is now reached from Orders → "Denis's list" chip → Denis's restock list card. That is the new "THE WAY IN" card on the Added board.
+
+**Result: 11 of 19 pages are at or above their board on every measure (round 1: 6). 8 are below. 7 blocking gaps are left.**
+
+### Round 1 gaps now fixed (checked in the app)
+
+| Round 1 gap | Fixed |
+|---|---|
+| 1 | Restock list reached |
+| 3 | "1 stuck" has a 44 px pad |
+| 4 | "Nansana Hardware" wraps instead of being clipped |
+| 5 | Error line wraps to "Nudge Denis · #0554" |
+| 6 | "Invoiced · 567 · #0561" inline, with "Grace sees: Invoiced" |
+| 8 | Twins: 5 · 1,493,567 · Bills itself 748,000, as on the board |
+| 9 | Locked void slide is grey |
+| 10 | Debtor offline banner shows above the dock, with a "Waits" row |
+| 11 | "OWES ›" is padded |
+| 12 | The promise mark sits right of today, labelled "19 Oct" |
+| 13 | Day chips are 44 px |
+| 14 | Saving the limit answers Esther's ask, and the card goes |
+| 16 | Old books: owes 1,905,000, 95% of 2M |
+| 17 | Team "Try again" is full size |
+| 18 | You: round avatar, toggle 44 px |
+
+On Orders p1, the inline Undo strip in the row also no longer covers anything.
+
+### Scores, round 2 (board → built)
+
+| # | Page | Board | Built | At or above? |
+|---|---|---|---|---|
+| 1 | Orders p1 | 9·8·8·8·9 | 9·8·8·**7**·**8** | no |
+| 2 | Orders p2 #0552 | 9·9·8·8·9 | 9·9·8·8·9 | yes |
+| 3 | Orders p3 Stuck | 9·8·8·8·9 | 9·8·**7**·8·9 | no (minor only) |
+| 4 | Orders p4 To bill | 9·8·8·8·9 | 9·8·8·8·9 | yes |
+| 5 | Money p1 | 9·9·9·9·9 | 9·9·9·**8**·9 | no (minor only) |
+| 6 | Money p2 Kyaligonza | 9·9·8·9·9 | 9·9·8·**8**·9 | no |
+| 7 | Money p3 Promise | 9·8·8·9·9 | 9·8·8·9·9 | yes |
+| 8 | Money p4 Ggaba | 9·8·8·9·9 | 9·8·8·**8**·9 | no |
+| 9 | Team p1 | 9·8·9·8·9 | 9·8·9·8·9 | yes |
+| 10 | Team p2 Faith | 9·9·8·8·9 | 9·9·8·8·9 | yes |
+| 11 | Team p3 Goals | 9·8·8·8·9 | 9·8·8·8·9 | yes |
+| 12 | Team p4 Nudge Denis | 9·8·8·8·9 | 9·8·8·8·9 | yes |
+| 13 | AD01 Sign in | 9·9·9·9·9 | 9·9·9·9·9 | yes |
+| 14 | AD01 Could not reach | 9·9·8·9·8 | 9·9·8·9·8 | yes |
+| 15 | AD02 You | 9·9·8·9·9 | 9·9·8·9·9 | yes |
+| 16 | AD05 Restock list | 9·8·8·8·9 | 9·8·8·**7**·**8** | no |
+| 17 | AD03 Change the limit | 9·9·9·8·9 | 9·9·9·8·9 | yes |
+| 18 | AD04 Look alike | 9·9·8·8·8 | 9·9·8·8·**7** | no |
+| 19 | AD04 Old books | 9·9·8·8·8 | 9·9·8·**7**·8 | no |
+
+### Gaps left
+
+#### Blocking
+
+R2-1. **The success toast still covers the head on pushed pages.** "Nudged Grace · Undo", "Limit set · 3,000,000 · Undo", "Merged · Ggaba Stores", "Opening balance · 290,000" and "Not yet · Cement 50 kg · Undo" each sit over the back button and the page title for 10 s. The places are the debtor, the customer and the restock list. The inline strips on Orders and To bill are fixed; this toast is not. (Pages 6, 8, 16, 17, 19.)
+
+R2-2. **AD04 Look alike, success has no Undo.** The toast reads only "Merged · Ggaba Stores". The board reads "Merged · Ggaba Stores · 7 orders · 1,615,000 · Undo 10".
+
+R2-3. **AD05 restock list has two reds.** The weeks-left bar on Iron sheet uses `--accent` #C93A30 (`.mg-stk-weeks.bad i.on`, `src/apps/manager/orders/stock.css:33`), on top of the +. The board uses `--bad` #8E2A22.
+
+R2-4. **AD05 error words.** `&fail=restock` shows "Not sent · tell Kevin · code MG-502". The added-1 review already ruled codes off the phone (NET-TIMEOUT). The house error is "Not sent · Try again".
+
+R2-5. **Orders p1, the Denis's list chip is clipped.** Once selected, the chip stays cut to "Den…" at the right edge, because the chip row does not scroll to it. The board draws the row swiped, with "Denis's list 3" in full.
+
+R2-6. **Orders p1, Ggaba #0556 age is still wrong.** The app says "1 h 20 m / 2 h"; the board says "0 h 50 m / 2 h" (demo `stageAt 08:20`, ask at 08:50). This was not in the fix list.
+
+R2-7. **AD04 Old books, the finished card reads "Old books · 0 left".** That is a new phrase, it is not in the glossary, and nothing on the board matches it. The board's success state moves the dock on to the next thing.
+
+#### Minor
+
+R2-8. Orders p3 and Team p4 say "Denis holds it · 3 orders" and "Buyer · 3 orders". The board says "trip at 11:30" and "trip from 11:30". The restock head also lacks "next trip 11:30".
+
+R2-9. The restock card on Orders wraps to "…4,450,000 · 1 / not yet". The board has one line, "this trip · 3 lines · 4,450,000".
+
+R2-10. The restock rows use product photo tiles. The board uses line icons in a neutral tile.
+
+R2-11. The active Money tab icon is still a solid navy block.
+
+R2-12. Round 1 minors 19–29 that are not listed above are unchanged.

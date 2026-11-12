@@ -103,7 +103,7 @@ export function mOrderOf(x: Ctx, q: Q): MOrder {
     id: Number(q.id), customerId: o.customerId, customerName: o.client.name, sellerId: x.staffOf(q.takenBy),
     stage, stageAt: o.stageAt, createdAt: o.placedAt,
     lines: items.map((it, i) => lineOfQ(x, q, o, it, i)),
-    total: orderTotal(o), paid: whole(q.amountPaid), holderId: holder ? String(holder) : null,
+    total: orderTotal(o), paid: whole(q.amountPaid), paidBy: mostPaidBy(o), holderId: holder ? String(holder) : null,
     deliveredAt: o.deliveredAt, invoiced: !!q.invoiced, invoiceNo: q.invoiced ? invoiceNo(Number(q.id)) : null,
     credit: !!(q.credit && num(q.credit.pct) > 0),
     driver: q.carrier && q.carrier.name ? String(q.carrier.name) : null,
@@ -271,4 +271,12 @@ export function booksOf(raw: Raw, s: MSession, now: Ms): ManagerBooks {
     at: now, me, shop: shopOf(x, team), team, customers: customersOf(x), orders: ordersOf(x, keep), asks,
     restock: restockOf(x), inToday: inTodayOf(x), done: doneOf(x),
   };
+}
+
+/** The account most of an order's money came in by (a refund goes back the same way); null with none paid. */
+function mostPaidBy(o: Order): 'cash' | 'momo' | 'bank' | null {
+  const by = new Map<string, number>();
+  (o.payments || []).forEach((p) => by.set(p.method, (by.get(p.method) || 0) + p.amount));
+  const best = [...by.entries()].sort((x, y) => y[1] - x[1])[0];
+  return best ? (best[0] as 'cash' | 'momo' | 'bank') : null;
 }

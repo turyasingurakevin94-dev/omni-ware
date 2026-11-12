@@ -10,6 +10,7 @@
  *   <CodeChip>K7Q2</CodeChip>   <EarnChip>+40,000</EarnChip>
  */
 import type { ComponentChildren, JSX } from 'preact';
+import { useEffect, useRef } from 'preact/hooks';
 import { Duo, Icon, phCoins, type IconName } from './icons.tsx';
 import { fig } from './Money.tsx';
 import { cx, type Fig } from './util.tsx';
@@ -64,8 +65,17 @@ export interface FilterChipProps {
 
 /** A filter chip: 44 tall, white with a hairline; navy when chosen. */
 export function FilterChip(p: FilterChipProps): JSX.Element {
+  const ref = useRef<HTMLButtonElement>(null);
+  // In a row that slides sideways, the chip picked is always shown whole (the row scrolls; never the page).
+  useEffect(() => {
+    const el = ref.current, row = el && el.parentElement;
+    if (!p.on || !el || !row || row.scrollWidth <= row.clientWidth) return;
+    const l = el.offsetLeft - row.offsetLeft, r = l + el.offsetWidth;
+    if (l < row.scrollLeft) row.scrollLeft = l - 8;
+    else if (r > row.scrollLeft + row.clientWidth) row.scrollLeft = r - row.clientWidth + 8;
+  }, [p.on]);
   return (
-    <button type="button" class={cx('ow-fchip', p.on && 'on', p.dim && 'dim', p.snug && 'snug')} aria-pressed={!!p.on} onClick={p.onClick}>
+    <button ref={ref} type="button" class={cx('ow-fchip', p.on && 'on', p.dim && 'dim', p.snug && 'snug')} aria-pressed={!!p.on} onClick={p.onClick}>
       {p.dot && <span aria-hidden="true" class="ow-fchip-dot" style={{ background: p.dot }} />}
       {p.children}
       {p.count != null && <b class="mono">{fig(p.count)}</b>}

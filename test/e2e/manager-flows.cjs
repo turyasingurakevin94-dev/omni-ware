@@ -124,7 +124,9 @@ async function failed(open) {
   const k = await open('&fail=settlePick&push=x:short:550');
   await k.tap({ sel: '.mg-dock .mg-ans' }, 400);
   await k.p.waitForTimeout(11000);
-  k.check(/Not sent · tell Kevin/.test(await k.all()) && /MG-502/.test(await k.all()), 'the red bar: Not sent · tell Kevin · code MG-502');
+  const all = await k.all();
+  k.check(/Not sent/.test(all) && /still sees/.test(all) && !/MG-502/.test(all) && /Try again/.test(all), 'the card comes back: Not sent · Musa still sees … · Try again (no code on the face)', all.slice(0, 300));
+  k.check((all.match(/Try again/g) || []).length === 1, 'one Try again, not a bar as well');
 }
 
 async function clash(open) {

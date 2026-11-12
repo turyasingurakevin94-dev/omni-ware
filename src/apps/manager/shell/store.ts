@@ -48,7 +48,7 @@ let outbox: Outbox | null = null;
 /** Answers being sent now (after their 10 s): All decided waits for them. */
 export const sending = signal<string[]>([]);
 /** The last answer the books refused or that did not send: its decision is back, with Try again. */
-export const failed = signal<{ key: string; label: string; retry: () => void } | null>(null);
+export const failed = signal<{ key: string; label: string; why: string; retry: () => void } | null>(null);
 /** Keys answered on this phone and not yet read back: they leave the queue at once. */
 export const answered = signal<string[]>([]);
 /** The queue, in order, less what this phone just answered: the + badge, Needs you, the sheet's "n of N". */
@@ -106,9 +106,12 @@ const reread = (): void => { void refresh(true); };
 function openDemoPush(): void {
   const m = /[?&]push=([a-z_.]+)(?::([^&]+))?/.exec(location.search);
   if (!m) return;
-  // The demo's push opens the decision it names (shell/pushes.ts does the same for the phone's).
-  const key = m[2] ? decodeURIComponent(m[2]) : null;
-  nav.push('decide', key ? { id: key } : {});
+  // &push=x:<ask key> opens that decision; &push=<kind>:<k>=<v>,… goes through the phone's own map (shell/pushes.ts).
+  const v = m[2] ? decodeURIComponent(m[2]) : null;
+  if (m[1] === 'x' || !v || !v.includes('=')) { nav.push('decide', v ? { id: v } : {}); return; }
+  const data: Record<string, string> = { kind: m[1] };
+  v.split(',').forEach((kv) => { const i = kv.indexOf('='); if (i > 0) data[kv.slice(0, i)] = kv.slice(i + 1); });
+  void import('./native.ts').then((n) => n.openPush(data));
 }
 
 let timers = false;
@@ -166,6 +169,11 @@ export function openCopy(): void {
  * it rejects so the screen keeps its work.
  */
 export async function act(kind: WriteName, ...args: unknown[]): Promise<{ kept: boolean }> {
+  return send1(false, kind, args);
+}
+
+/** quiet: a tap answer's failure is said on its own card (Decide's "Not sent · … · Try again"), not the bar too. */
+async function send1(quiet: boolean, kind: WriteName, args: unknown[]): Promise<{ kept: boolean }> {
   if (!outbox) throw new Error('Not signed in');
   try {
     const r = await outbox.run(kind, args);
@@ -175,6 +183,7 @@ export async function act(kind: WriteName, ...args: unknown[]): Promise<{ kept: 
     return { kept: r.kept };
   } catch (e) {
     const n = wordIt(e, kind);
+    if (quiet && n.tone !== 'someone') { if (isDataError(e) && e.kind === 'clash') await refresh(); throw e; }
     if (n.tone === 'refused') toast.show(n.text, { kind: 'error' });
     else notDone.value = { ...n, retry: n.tone === 'failed' ? () => { notDone.value = null; void act(kind, ...args).catch(() => undefined); } : null };
     if (isDataError(e) && e.kind === 'clash') await refresh();
@@ -197,10 +206,10 @@ export function answer(key: string | null, label: string, kind: WriteName, args:
     send: () => {
       if (key) sending.value = [...sending.value, key];
       const done = () => { if (key) sending.value = sending.value.filter((k) => k !== key); };
-      return act(kind, ...args).then((r) => { done(); if (o.then) o.then(r); }, (e) => {
+      return send1(!!key, kind, args).then((r) => { done(); if (o.then) o.then(r); }, (e) => {
         done();
         // Refused or failed: the decision comes back with why, and Try again sends the same answer (the work is kept).
-        if (key && !isOffline(e)) failed.value = { key, label, retry: () => answer(key, label, kind, args, o) };
+        if (key && !isOffline(e)) { const n = wordIt(e, kind); failed.value = { key, label, why: n.tone === 'refused' ? n.text : '', retry: () => answer(key, label, kind, args, o) }; }
         back(); if (o.then) o.then(null, e);
       });
     },

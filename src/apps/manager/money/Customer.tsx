@@ -111,13 +111,7 @@ export function Customer(p: { params: Params }): JSX.Element | null {
             <b class="mono f">{money(c.oldBooks.amount)}</b>
             <button type="button" class="mg-mo-pill" aria-label={`Open: opening balance ${money(c.oldBooks.amount)} (a slide)`} onClick={() => nav.push('money/opening', { customer: c.id })}><Icon name="chevron-right" size={16} stroke={2.2} />Open</button>
           </div>
-        ) : booksDone.value.includes(c.id) && (
-          <div class="mg-mo-card mg-mo-old done">
-            <span class="i"><Icon name="note" size={18} stroke={2} /></span>
-            <span class="n"><b>Old books</b></span>
-            <b class="mono f">0 left</b>
-          </div>
-        )}
+        ) : null}
       </div>
     </main>
   );

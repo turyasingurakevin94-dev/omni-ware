@@ -205,6 +205,9 @@ Each rule lives once in `src/core/manager/` (the file named). A board figure tha
 | **Pace**: the day of the month (17.57 of 31 at 09:40) over the month; ahead / behind = invoiced − goal × pace; "a day" = what is left ÷ the days left. One pace for everyone | `team.ts` | BRIEF "Team" |
 | **Age bands** of what is owed: under 7 d · 8–21 d · 22–30 d · over 30 d, by the oldest unpaid bill; "held at 21 d" marked | `owing.ts` (shared, `src/core/owing.ts`) | Money p1 |
 | **Money In today** is cash + mobile money + bank received today, test payments left out | `money.ts` | `manager.html` cashTxns (0167 SAL-018) |
+| **A stage's clock runs from the stage's own time**: #0556 has been in Checking since 08:20, so its row reads 1 h 20 m at 09:40 (Orders p1 drew 0 h 50 m, the time since its cancel ask; the board is corrected) | `watch.ts stageMins` | build review round 2 |
+| **A slide has no Undo** (§3.3), the merge too: Money's merge success drew "Undo 10", but no write can unmerge two customers, so the result shows without Undo | `money/Merge.tsx` | build review round 2 |
+| **A refund goes back the way it was paid** (the order's payments: the account most of it came in by; cash when not known) | `decide/kinds/after.tsx moneyOf`; `supabase/rows.ts mostPaidBy` | OLD-APP-COVERAGE L6 |
 | **People by display name** (`staff.name`, tidied), never the email; Ruth's own name in every answer; order numbers #0550 (`orderNo`) | `src/core/names.ts` | GLOSSARY People |
 
 ## 7. Open questions (Kevin)

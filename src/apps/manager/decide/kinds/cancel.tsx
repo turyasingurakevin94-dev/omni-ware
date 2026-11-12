@@ -57,7 +57,7 @@ export const kind: Kind<CancelAsk> = (c) => {
       ? {
         told, word: ANSWER.cancelled,
         above: <MoneyChips paid={o.paid} how={how} onPick={setHow} />,
-        primary: { slide: { label, disabled: how ? undefined : AFTER_WORDS.pickMoney, on: () => c.slide(label, 'cancel', [c.a.askId, o.id, moneyOf(how)]) } },
+        primary: { slide: { label, disabled: how ? undefined : AFTER_WORDS.pickMoney, on: () => c.slide(label, 'cancel', [c.a.askId, o.id, moneyOf(how, o.paidBy)]) } },
         secondary: keep,
       }
       : {
