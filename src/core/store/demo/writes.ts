@@ -7,13 +7,14 @@
 import { dataError } from '../../datasource.ts';
 import type { CheckInLine, CloseYard, CountSend, DoorProof, Extra, Loss, PassYard, PickAnswer, Restock, ReturnAsk, CarrierPick } from '../source.ts';
 import type { Carrier, StoreAsk, YardBooks, YardOrder, YardPerson } from '../types.ts';
-import { isPickup } from '../yard.ts';
+import { canUnpack, putBack as putBackLines } from '../pack.ts';
+import { isCancelled, isPickup } from '../yard.ts';
 
 const MOVES: Record<string, string[]> = { preparing: ['pending_delivery', 'completed'], pending_delivery: ['completed'] };
 let seq = 0;
 const id = (p: string) => `${p}-${(++seq).toString(36)}`;
 
-export function demoWrites(b: () => YardBooks, now: () => number, putBacks: Set<number>) {
+export function demoWrites(b: () => YardBooks, now: () => number) {
   const me = () => b().me;
   const order = (oid: number): YardOrder => {
     const o = b().orders.find((x) => x.id === oid);
@@ -64,7 +65,7 @@ export function demoWrites(b: () => YardBooks, now: () => number, putBacks: Set<
     setBay(oid: number, bay: number) { order(oid).bay = bay; },
     unpack(oid: number) {
       const o = order(oid);
-      if (o.voided || o.status !== 'preparing' || o.pickingStatus !== 'done' || o.carrier) throw dataError('refused', 'It has left the yard', 'P0001');
+      if (!canUnpack(o)) throw dataError('refused', 'It has left the yard', 'P0001');
       o.pickingStatus = 'in_progress'; o.pickingDoneAt = null; o.bay = null;
     },
     release(oid: number, putBack: boolean) {
@@ -72,7 +73,12 @@ export function demoWrites(b: () => YardBooks, now: () => number, putBacks: Set<
       o.assignedWorkerId = null; o.workerAcceptedAt = null; o.pickingAssignedAt = null; o.pickingStatus = null;
       if (putBack) { o.lines.forEach((l) => { l.pickStatus = null; l.pickedQty = null; }); o.pickCursor = 0; }
     },
-    putBack(oid: number) { order(oid); putBacks.add(oid); },
+    /** W7 as 0182: on a called-off order only, stamped once (the time and the person the server's); no stock, no stage moved. */
+    putBack(oid: number) {
+      const o = order(oid);
+      if (!isCancelled(o) || o.putBack) return;
+      o.putBack = { at: now(), by: me().userId, byName: me().name, lines: putBackLines(o).map((x) => ({ idx: x.line.idx, qty: x.qty })) };
+    },
     load(ids: number[], c: CarrierPick) { ids.forEach((x) => { const o = order(x); if (o.status === 'preparing') load(o, c); }); },
     handOver(oid: number, name: string, agent: boolean) {
       const o = order(oid);

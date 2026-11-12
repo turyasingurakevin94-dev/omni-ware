@@ -48,12 +48,12 @@ function Words(p: { label: string; class: string; read?: boolean }): JSX.Element
   return <span class={p.class} aria-hidden={p.read ? undefined : 'true'}><Keep text={p.label} /></span>;
 }
 
-/** The slide that cannot go yet (the knob grey, its icon saying why). */
+/** The slide that cannot go yet (the knob grey, its icon saying why). Never `disabled`: a tap reaches it (its onTap says or opens what is missing). */
 function Locked(p: { icon: LockIcon; label: string; amber?: boolean; quiet?: boolean; onTap?: () => void }): JSX.Element {
   const knob = p.icon === 'box' ? <Duo i={phBox} size={22} color="#F5B26B" />
     : <Icon name={p.icon} size={20} stroke={2} style={{ color: p.quiet ? '#FFFFFF' : p.icon === 'lock' ? '#DDE3F0' : '#F5B26B' }} />;
   return (
-    <button type="button" class={cx('ow-lslide', p.quiet && 'quiet')} disabled={!p.onTap} aria-disabled="true" onClick={p.onTap}>
+    <button type="button" class={cx('ow-lslide', p.quiet && 'quiet')} aria-disabled="true" onClick={p.onTap}>
       <span aria-hidden="true" class="ow-lslide-k">{knob}</span>
       <Words class={cx('ow-lslide-l', p.amber && 'amber')} label={p.label} read />
     </button>

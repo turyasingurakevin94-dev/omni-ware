@@ -25,11 +25,11 @@ Every board was also checked for: no control under 44 px (the 100-bag tile reads
 | IN14DeliverySending | `in/delivery` (`&slow=1`) | 3 | 2.52 | pass* | *The aisle bar is the shelf now, `shelf.ts` `onShelf` (integration 2026-11-11): 118 → 218 at 12:00, where the board draws FACTS' 10:41 figure 120 → 220; #0556's 2 bags were packed (and collected 11:10) before the delivery. |
 | IN15DeliveryOffline | `in/delivery` (`&offline=1`) | 3 | 2.52 | pass* | as IN14 |
 | IN12DeliveryDone | `in/delivery` | 3 | 9.04 | fail (minor) | No Undo chip (as IN06); the board's bag pictures sit 10 px lower and its 5 bags are wider; 12:00 for 12:05 (fixed demo clock) |
-| IN20Return | `in/return` (`&at=1102`) | 3 | 0.41 | pass | The photo is the demo's sample (no camera in the demo) |
-| IN23ReturnSending | `in/return` (`&slow=1`) | 4 | 4.2 | pass | The board dims a little less |
+| IN20Return | `in/return` (`&at=1102`) | 3 | 19.38 | pass | The head's two chips are 327 px for a 320 px row (342 with the phone's Figtree): the board lets "Ssali brought it" run past the padding, which made the sheet 362 px wide on a 360 screen (e2e). The chips now wrap: nothing clipped, the second on its own line, the body 36 px lower. The photo is the demo's sample |
+| IN23ReturnSending | `in/return` (`&slow=1`) | 4 | 17.74 | pass | As IN20: the head's chips wrap. The board dims a little less |
 | IN21ReturnSent | `in/return` | 4 | 5.34 | pass | Undo 10 s takes it back (W18a). 11:02 for 11:03 (fixed clock) |
-| IN24ReturnOffline | `in/return` (`&offline=1`) | 4 | 0.41 | pass | |
-| IN25ReturnFailed | `in/return` (`&fail=returnAsk`) | 4 | 4.41 | pass | The board's button runs past the bottom under the red bar; the app keeps it whole |
+| IN24ReturnOffline | `in/return` (`&offline=1`) | 4 | 19.02 | pass | As IN20: the head's chips wrap |
+| IN25ReturnFailed | `in/return` (`&fail=returnAsk`) | 4 | 23 | pass | As IN20: the head's chips wrap. The board's button runs past the bottom under the red bar; the app keeps it whole |
 | IN22ReturnDecided | `in/return` via push `invoice.ask.decided` | 0 | 0.26 | pass | At the gate and Sent both read 11:03 (one time on the books) |
 | IN30Ride | `in/ride` (`&at=1534`) | 2 | 0.65 | pass | |
 | IN31RideHandIn | `in/ride` (`&at=1552`) | 3 | 0.76 | pass | Katwe Timber reads 15:52 (fixed clock; board 15:34) |

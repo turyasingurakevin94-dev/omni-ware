@@ -41,7 +41,7 @@ The bars (`shell/App.tsx` `Bars`) sit above the tab bar: amber "No signal · N w
 ## The source (`src/core/store/source.ts`)
 
 Reads: `session`, `snapshot` (store_snapshot), `live` (store_live), `order` (store_order), `side` (places, routes, road names), `waitingCount`, `countArrived`.
-Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4 · `unpack` W5 · `release` W6 · `putBack` W7 (phone only) · `load` W8 · `handOver` W9 · `deliver` W10 · `askLetGo` W11 · `withdrawLetGo` W11a · `nameDirection` W12 · `lockRoute` W13 · `checkIn` W14 · `notOnList` W15 · `restock` W16 · `reportLoss` W17 · `returnAsk` W18 · `withdrawReturn` W18a · `rideTick` W19 · `rideHandIn` W19a · `sendCount` W20 · `replaceCount` W20a · `passYard` W22 · `gotYard` W22a · `closeYard` W23 · `setMyName` W24 · `pushOn` W25 · `signIn`/`signOut`/`resetPassword` W26 · `cantDeliver` W27. Not here on purpose: W8a, W10a (phone drafts), W18b, W21 (Ruth's app), W28 (Q11).
+Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4 · `unpack` W5 · `release` W6 · `putBack` W7 (stamped once on the order, 0182) · `load` W8 · `handOver` W9 · `deliver` W10 · `askLetGo` W11 · `withdrawLetGo` W11a · `nameDirection` W12 · `lockRoute` W13 · `checkIn` W14 · `notOnList` W15 · `restock` W16 · `reportLoss` W17 · `returnAsk` W18 · `withdrawReturn` W18a · `rideTick` W19 · `rideHandIn` W19a · `sendCount` W20 · `replaceCount` W20a · `passYard` W22 · `gotYard` W22a · `closeYard` W23 · `setMyName` W24 · `pushOn` W25 · `signIn`/`signOut`/`resetPassword` W26 · `cantDeliver` W27. Not here on purpose: W8a, W10a (phone drafts), W18b, W21 (Ruth's app), W28 (Q11).
 
 ## The demo at 360 × 800
 

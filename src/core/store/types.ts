@@ -135,7 +135,7 @@ export interface YardOrder {
   /** A counter sale: never a yard collection (0182, IM-31). */
   counter: boolean;
   comingBack: ComingBack | null;
-  /** payload.putBack (0182, W7): a called-off order's goods back on the shelf, stamped once by the server. Absent in the demo. */
+  /** payload.putBack (0182, W7): a called-off order's goods back on the shelf, stamped once by the server (the demo stamps it the same way). */
   putBack?: PutBack | null;
   /** store_money_holds lists it: "Not paid yet", a label only. */
   moneyHold: boolean;

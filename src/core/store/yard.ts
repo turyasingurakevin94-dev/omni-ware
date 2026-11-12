@@ -40,6 +40,9 @@ const DAY_MS = 864e5;
 
 export const isCancelled = (o: YardOrder): boolean => o.voided || o.cancelledAt != null || o.status === 'cancelled';
 
+/** A called-off order once put back (W7, 0182 payload.putBack, any phone) asks the yard nothing more: it leaves the day. */
+export const putAway = (o: YardOrder): boolean => !!o.putBack && isCancelled(o);
+
 /** An invoiced order leaves the board 24 h after its invoice (store.html:1751 quoteAgedOffBoard). */
 export function onBoard(o: YardOrder, now: Ms): boolean {
   return !(o.invoiced && o.invoicedAt != null && now - o.invoicedAt > DAY_MS);

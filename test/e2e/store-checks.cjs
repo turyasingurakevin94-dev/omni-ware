@@ -4,7 +4,7 @@
  *
  * &offline: the demo refuses every write as 'offline' and the outbox keeps it ("Not sent yet"). The signal
  * comes back by the browser's own 'online' event (context.setOffline), which the demo listens for
- * (src/core/store/demo/index.ts). &fail=<write>: that write fails once with its board code; Try again goes.
+ * (src/core/store/demo/index.ts) and the shell too (store.ts: what was kept goes by itself). &fail=<write>: that write fails once with its board code; Try again goes.
  */
 const { NEXT, checkinTo } = require('./store-yard.cjs');
 const { order, trips, returns, counter, barTone } = require('./store-lib.cjs');
@@ -17,16 +17,10 @@ async function signalBack(ph) {
   await ph.p.waitForTimeout(1200);
 }
 
-/**
- * The app sends what it kept when the signal is back: by itself when it listens for it, else from the bar's
- * Try again. The demo's shell does not listen (store.ts ready() returns before its 'online' listener when
- * isDemo), so it is said once as a note and the bar's Try again is tapped.
- */
+/** The app sends what it kept when the signal is back, by itself: no tap. */
 async function sendKept(ph, sent) {
-  if (await sent()) { ph.note('the kept write went by itself when the signal came back'); return; }
-  ph.note('the kept write did not go by itself on the demo (store.ts ready() skips its \'online\' listener when isDemo); sent with the bar\'s Try again');
-  await ph.tap('Try again');
-  await ph.p.waitForTimeout(900);
+  for (let i = 0; i < 10 && !(await sent()); i++) await ph.p.waitForTimeout(300);
+  ph.check(await sent(), 'back online, the kept write goes by itself (no tap)');
 }
 
 /** 5. &offline at 11:30: the check-in is kept (amber, Not sent yet); the signal back sends it (IN07). */
@@ -66,12 +60,11 @@ async function offlinePack(open) {
   await signalBack(ph);
   await sendKept(ph, picked);
   ph.check(await picked(), 'offline-pack: back online, the wheelbarrows\' 2 pc reach the books');
-  await ph.p.waitForTimeout(500);
+  for (let i = 0; i < 10 && (await order(ph, 552)).pickingStatus !== 'done'; i++) await ph.p.waitForTimeout(300);
   s = await ph.text();
-  const finish = await ph.p.locator('button.pk-finishing, button.pk-btn').count();
-  const packed = /^Packed$/m.test(s) || /finishing #0552/.test(s) || finish > 0;
-  ph.check(packed, 'offline-pack: back online, #0552 finishes (Packed, or a control to finish it): the board says "Back online to finish"',
-    `pack/order shows every line in ("Grace sees: Packing · 2 of 2") and no control at all; the books have pickingStatus "${(await order(ph, 552)).pickingStatus}". Screen: ${s.slice(0, 400)}`);
+  const o = await order(ph, 552);
+  ph.check(o.pickingStatus === 'done' && o.bay === 1, 'offline-pack: back online, the kept finish goes too: #0552 is packed on bay 1', JSON.stringify({ ps: o.pickingStatus, bay: o.bay }));
+  ph.check(/^Packed$/m.test(s) && /Bay 1/i.test(s), 'offline-pack: the screen says Packed · Bay 1 (PK06)', s.slice(0, 400));
 }
 
 /** 6. &fail=checkIn: the red "That did not save · tell Kevin · code CI-502", and Try again checks it in (IN08). */
@@ -166,9 +159,8 @@ async function taps(open) {
 
   const h = await open('&at=1047&state=agent');
   await job(h, 'agent', async (c) => {
-    // Today's card opens the gate on #0554, whose slide is locked "Code first"; its tap opens the keypad.
+    // Today's card opens on #0554's keypad (OU11): no tap to open it.
     await c.tap({ label: 'Hand over #0554 at the gate' });
-    await c.tap({ sel: '.ow-lslide' }, 350, { force: true });
     for (const d of '0554') await c.tap({ sel: `.gc-key:text-is("${d}")` });
     await c.slide();
     await h.wait('Delivered · collected');
@@ -176,11 +168,10 @@ async function taps(open) {
 
   const d = await open('&at=1405');
   await job(d, 'deliver', async (c) => {
-    // No "At the door" job on Today (core/store/jobs.ts has none): On the road, the order's Delivered, the shutter.
+    // Today's Next job is "At the door" (core/store/jobs.ts atTheDoor): it, then the shutter.
     const s = await d.text();
     d.check(/At the door/.test(s), 'taps deliver: Today\'s Next job is "At the door" (OU21, FLOW.md §5)', `Today's Next job: ${(/Next job\s*([\s\S]{0,120})/.exec(s) || [])[1]}`);
-    await c.tap({ sel: "[aria-label*='on the road' i]" });
-    await c.tap({ label: 'Delivered: Kato Construction, #0552' });
+    await c.tap(NEXT);
     await c.tap({ label: 'Take the photo: marks #0552 delivered' });
     await d.wait('WHAT HAPPENS NEXT');
   }, async () => (await order(d, 552)).status === 'completed');

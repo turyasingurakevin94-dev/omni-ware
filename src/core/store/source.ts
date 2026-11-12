@@ -124,7 +124,7 @@ export interface StoreSource {
   unpack(id: number): Promise<void>;
   /** W6 let go of an order you started; `putBack` also clears its ticks. */
   release(id: number, putBack: boolean): Promise<void>;
-  /** W7 a cancelled order put back: kept on this phone only (screens Q11). */
+  /** W7 a cancelled order put back: stamped once on the order by the server (0182 `{putBack:{lines}}`), so every phone sees it and it leaves the yard's lists. */
   putBack(id: number): Promise<void>;
 
   /* ---- Out (order.load, order.deliver, route.lock) ---- */

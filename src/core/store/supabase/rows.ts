@@ -10,7 +10,7 @@ import { roleName } from '../../supabase/rows.ts';
 import type { Row } from '../../supabase/client.ts';
 import type { Role } from '../../types.ts';
 import { countPlace, msOf, stockKey } from '../keys.ts';
-import { isCancelled } from '../yard.ts';
+import { putAway } from '../yard.ts';
 import type { Carrier, ShelfItem, StockCount, StockReport, StoreAsk, StoreReturn, StoreSession, Trip, TripLine, YardBooks, YardLine, YardOrder, YardPerson } from '../types.ts';
 
 /** The snapshot as read: the raw keys, kept so a write can send what the phone saw (p_expect). */
@@ -165,8 +165,7 @@ export function booksOf(d: Snap, s: StoreSession, at: number): YardBooks {
   const { me, people } = peopleOf(d, s);
   return {
     shopName: s.shopName, at, me, onSince: null, people,
-    // A called-off order once put back (W7, any phone) asks the yard nothing more: it leaves the day.
-    orders: ((d.orders || []) as Row[]).map((q) => orderOf(q, holds)).filter((o) => !(o.putBack && isCancelled(o))),
+    orders: ((d.orders || []) as Row[]).map((q) => orderOf(q, holds)).filter((o) => !putAway(o)),
     trips: ((d.trips || []) as Row[]).map((t) => tripOf(t, suppliers)),
     returns: ((d.returns || []) as Row[]).map(returnOf), counts,
     reports: ((d.reports || []) as Row[]).map(reportOf), asks: ((d.asks || []) as Row[]).map(askOf),

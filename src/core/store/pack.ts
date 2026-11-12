@@ -11,6 +11,7 @@
  *   isLastOpen(o, idx)   answering it finishes the order (the pack is held 10 s with Undo)
  *   shortNow(o, l)       short until Ruth settles it
  *   putBack(o)           a cancelled order's picked lines, what goes back to the shelf
+ *   canUnpack(o)         packed and still in the yard: Unpack frees its bay (W5)
  *   shortName(name)      "Iron sheet G28 · 3m" → "Iron sheet", for the strip's labels
  *   aisleOf(b, l)        the line's aisle: its name and letter ("G", "Tools")
  *   whereOf(o, b)        where · when · phone, the order's own (deliverTo first), or "They collect"
@@ -77,6 +78,11 @@ export function shortNow(o: YardOrder, l: YardLine): boolean {
 export function putBack(o: YardOrder): { line: YardLine; qty: number }[] {
   if (!isCancelled(o)) return [];
   return o.lines.filter((l) => !l.dropped && isAnswered(l) && (l.pickedQty ?? 0) > 0).map((line) => ({ line, qty: line.pickedQty as number }));
+}
+
+/** W5's own rule (store.html:2396 canUnpack; spec §4.2 "Unpack"): packed, still in the yard, no carrier, not called off. */
+export function canUnpack(o: YardOrder): boolean {
+  return !isCancelled(o) && o.status === 'preparing' && o.pickingStatus === 'done' && !o.carrier;
 }
 
 /** The strip's label: the name before its size and kind, two words at most ("Soft close hinge" → "Hinge"). */

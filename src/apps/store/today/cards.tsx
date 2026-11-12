@@ -118,7 +118,7 @@ export function cardOf(j: Job, b: YardBooks, now: number, go: () => void, compac
       act: { label: 'Close the yard', on: go },
     };
   }
-  // The rest as the Next job: a return, a report, a count, a load, a hand-over (one face, one figure).
+  // The rest as the Next job: the door, a return, a report, a count, a load, a hand-over (one face, one figure).
   const row = rowOf(j, b, now);
   const ruth = b.people.find((p) => p.role === 'manager');
   return {
@@ -164,6 +164,11 @@ export function rowOf(j: Job, b: YardBooks, now: number): NeedRow {
       return { icon: 'count', tone: 'warn', title: `Count · aisle ${letter}`, sub: `${j.aisle}${days != null ? ` · ${counted(days, 'day')}` : ''}`, act: 'Count', label: `Count aisle ${letter}, ${j.aisle}${days != null ? `: not counted for ${counted(days, 'day')}` : ''}` };
     }
     case 'load': return { icon: 'trolley', tone: 'info', title: 'To load', sub: o ? `${orderNo(o.id)} · bay ${o.bay ?? '—'}` : '', act: 'Load', label: 'Open To load' };
+    case 'door': {
+      const where = o ? (o.deliverTo || '').split(',')[0].trim() : '';
+      return { icon: 'truck', tone: 'good', title: `At the door · ${orderNo(j.orderId as number)}`, sub: [o ? shortName(o) : '', where].filter(Boolean).join(' · '), act: 'At the door',
+        label: `At the door: deliver ${orderNo(j.orderId as number)}${o ? ' to ' + o.client.name : ''}` };
+    }
     case 'gate': return { icon: 'gate', tone: 'good', title: `Ready to collect · ${orderNo(j.orderId as number)}`, sub: o ? shortName(o) : '', act: 'Gate', label: `Hand over ${orderNo(j.orderId as number)} at the gate` };
     case 'close': return { icon: 'moon', tone: 'neutral', title: 'Close the yard', sub: 'from 17:30', act: 'Close', label: 'Close the yard' };
     default: return { icon: 'orders', tone: 'info', title: `${j.kind === 'carry-on' ? 'Carry on' : 'Pack'} · ${o ? orderNo(o.id) : ''}`, sub: o ? `${shortName(o)} · ${counted(live(o).length, 'line')}` : '', act: j.kind === 'carry-on' ? 'Carry on' : 'Pack', label: `Pack ${o ? orderNo(o.id) : ''}` };

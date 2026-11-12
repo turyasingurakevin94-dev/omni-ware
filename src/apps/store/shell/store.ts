@@ -135,8 +135,11 @@ async function ready(s: StoreSession): Promise<void> {
   phase.value = books.value || online.value ? 'ready' : 'no-reach';
   src().side().then((x) => { side.value = x; }, () => undefined);
   if (isDemo) openDemoPush();
-  if (isDemo || timers) return;
+  if (timers) return;
   timers = true;
+  // The signal is back: what was kept goes by itself (the demo too: its &offline ends on the same event).
+  window.addEventListener('online', () => { void flush(); });
+  if (isDemo) return;
   setInterval(() => { now.value = src().now(); }, 30000);
   // The 45 s store_live refresh while visible (data §1d); the whole snapshot after 30 s away.
   setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 45000);
@@ -144,7 +147,6 @@ async function ready(s: StoreSession): Promise<void> {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') { hidden = Date.now(); void holder.flush(); } else if (Date.now() - hidden > 30000) void refresh(true);
   });
-  window.addEventListener('online', () => { void flush(); });
   void flush();
 }
 

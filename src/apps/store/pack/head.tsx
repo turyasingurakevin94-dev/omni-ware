@@ -63,7 +63,7 @@ export function PackHead(p: { b: YardBooks; o: YardOrder; since: string; sees: s
 }
 
 /** A state head: the customer, a hairline, the big word and its tail, then who it waits on and what the other app sees. */
-export function StateHead(p: { b: YardBooks; o: YardOrder; sub: string; word: string; tail?: string; tailTone?: 'rose' | 'soft'; who: ComponentChildren; sees: string; tone: SeesTone; onClose: () => void; children?: ComponentChildren }): JSX.Element {
+export function StateHead(p: { b: YardBooks; o: YardOrder; sub: string; word: string; tail?: string; tailTone?: 'rose' | 'soft' | 'amber'; who: ComponentChildren; sees: string; tone: SeesTone; onClose: () => void; children?: ComponentChildren }): JSX.Element {
   const c = customerFace(p.o, p.b);
   return (
     <SheetHead face={c} name={c.name} sub={p.sub} subMono onClose={p.onClose} style={{ gap: '12px', padding: '10px 20px 16px' }}>

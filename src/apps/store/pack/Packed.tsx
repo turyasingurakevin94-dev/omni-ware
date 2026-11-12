@@ -9,7 +9,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { bayCount, bayMap, freeBays } from '../../../core/store/bays.ts';
 import { customerFace, personFace, whoIs } from '../../../core/store/faces.ts';
-import { aisleOf, dropped, packLines, progress, whereOf } from '../../../core/store/pack.ts';
+import { aisleOf, canUnpack, dropped, packLines, progress, whereOf } from '../../../core/store/pack.ts';
 import type { YardOrder } from '../../../core/store/types.ts';
 import { isMine, moneyHeld } from '../../../core/store/yard.ts';
 import { clock, howLong } from '../../../core/time.ts';
@@ -45,9 +45,12 @@ function Bays(p: { o: YardOrder; bay: number | null; pickup: boolean; onBay: (n:
     const other = x && x.id !== p.o.id ? x : null;
     const canPick = choose && !other && !mine;
     const inner = <><span>{`Bay ${i}`}</span>{mine ? <b class="mono">{orderNo(p.o.id)}</b> : other ? <b class={cx('mono', moneyHeld(other) && 'amber')}>{orderNo(other.id)}</b> : <span>free</span>}</>;
+    // Another order packed on its bay: its tile opens Unpack (AD02), once this pack has gone.
     tiles.push(canPick || (choose && mine)
       ? <button key={i} type="button" class={cx('mo-bay', mine ? 'mine' : 'free', 'pick')} onClick={() => { p.onBay(i); setChoose(false); }}>{inner}</button>
-      : <span key={i} class={cx('mo-bay', mine ? 'mine' : other ? 'taken' : 'free')}>{inner}</span>);
+      : !choose && other && canUnpack(other)
+        ? <button key={i} type="button" class="mo-bay taken pick" aria-label={`Bay ${i}: ${orderNo(other.id)}, unpack it`} onClick={() => nav.push('pack/order', { id: other.id, unpack: 1 })}>{inner}</button>
+        : <span key={i} class={cx('mo-bay', mine ? 'mine' : other ? 'taken' : 'free')}>{inner}</span>);
   }
   if (p.pickup) tiles.push(<span key="gate" class="mo-bay mine"><span>Gate</span><b class="mono">{orderNo(p.o.id)}</b></span>);
   return (

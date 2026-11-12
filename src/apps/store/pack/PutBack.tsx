@@ -2,8 +2,8 @@
  * Cancelled · put it back (store-agent PK10; PK22 not saved; routes `pack/put-back { id }`).
  * The order was cancelled while still in the yard: what was picked goes back to the shelf, line
  * by line (tick each), from its bay to its aisles; then the red slide. Only lines already picked go
- * back; with none, "Stop packing · nothing was picked yet". The put-back is kept on this phone
- * only (W7, screens Q11: no write to the books until Kevin says it is recorded).
+ * back; with none, "Stop packing · nothing was picked yet". The put-back is stamped once on
+ * the order by the server (W7, 0182 `{putBack:{lines}}`); then the order leaves the yard's lists.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';

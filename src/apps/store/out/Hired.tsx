@@ -2,7 +2,7 @@
  * A hired driver (OU03, a sheet over the run): the last hired drivers by their phone, one tap each
  * (the newest picked), each with his plate and where he drove last; his phone checked as a Ugandan
  * mobile; "gets the drop on WhatsApp" (W8a, nothing written); who sees it after the slide; navy
- * "Abudu drives" puts him on the run (the slide on the run still commits).
+ * "Abudu drives" puts him on the run (the slide on the run still commits). "Someone new" opens AD01 (SomeoneNew.tsx).
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -16,6 +16,7 @@ import { LightSheet, sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { now, side } from '../shell/store.ts';
 import { AfterSlide, seller } from './parts.tsx';
+import { openSomeoneNew } from './SomeoneNew.tsx';
 
 export interface HiredPick { name: string; phone: string; what: string }
 
@@ -61,7 +62,7 @@ function HiredSheet(p: { d: Direction; b: YardBooks; chosen: HiredPick | null; o
           );
         })}
       </div>
-      <button type="button" class="hd-new" onClick={() => toast.show('Someone new: not drawn yet', { kind: 'warn' })}><Icon name="plus" size={16} stroke={2.4} />Someone new · name, plate, phone</button>
+      <button type="button" class="hd-new" onClick={() => openSomeoneNew(p.d, p.b, () => openHired(p.d, p.b, p.chosen, p.onPick), p.onPick)}><Icon name="plus" size={16} stroke={2.4} />Someone new · name, plate, phone</button>
       {sel && <div class="hd-wa"><Icon name="whatsapp" size={18} stroke={1.9} /><span>{firstWord(sel.name)} gets the drop on WhatsApp</span></div>}
       <AfterSlide ground="#FFFFFF" faces={[...(from ? [yardFace(p.b, from)] : []), ...p.d.drops.map((x) => orderFace(x.o, p.b))]}
         who={[from ? firstWord(from.name) : null, ...p.d.drops.map((x) => shortName(x.o))].filter(Boolean).join(' and ')} what={`On the road · ${sel ? firstWord(sel.name) : 'him'} (hired)`} />

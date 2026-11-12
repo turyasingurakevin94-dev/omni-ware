@@ -71,14 +71,38 @@ export interface LineViewProps {
   taker: string;
   onPacked: () => void;
   onShort: () => void;
+  /** Every line answered, the order not finished: finish it onto its bay. */
+  onFinish: () => void;
   retry: (() => void) | null;
   onClose: () => void;
+}
+
+/** The dock with no signal: kept on this phone, "Back online to finish" (PK11). */
+function KeptDock(): JSX.Element {
+  return (
+    <div class="pk-dock col">
+      <span class="pk-kept"><Icon name="clock" size={14} stroke={2.2} />Kept on this phone · it sends by itself</span>
+      <button type="button" class="pk-btn off" aria-disabled="true"><Icon name="offline" size={18} stroke={2.2} />Back online to finish</button>
+    </div>
+  );
 }
 
 /** PK02: the line now, the where card, the dropped lines, then Short and Packed. */
 export function LineView(p: LineViewProps): JSX.Element {
   const { b, o, l } = p;
-  if (!l) return <><WhereCard where={whereOf(o, b)} name={o.client.name} /><Dropped b={b} o={o} taker={p.taker} /></>;
+  if (!l) {
+    return (
+      <>
+        <TopNotice waitingWord="not sent yet" />
+        <WhereCard where={whereOf(o, b)} name={o.client.name} /><Dropped b={b} o={o} taker={p.taker} />
+        {p.kept ? <KeptDock /> : (
+          <div class="pk-dock one">
+            <button type="button" class="pk-btn red" onClick={p.onFinish}><Icon name="check" size={18} stroke={2.6} />{`Finish ${orderNo(o.id)}`}</button>
+          </div>
+        )}
+      </>
+    );
+  }
   const came = cameIn(b, o, l), a = aisleOf(b, l), c = AISLE[aisleKey(a ? a.name : l.name)];
   const it = b.items.find((x) => x.key === l.key);
   const stamp = p.kept ? 'Packed · not sent' : p.busy === 'failed' ? 'Packed · not saved' : null;
@@ -100,12 +124,7 @@ export function LineView(p: LineViewProps): JSX.Element {
       <WhereCard where={whereOf(o, b)} name={o.client.name} />
       {!p.kept && p.busy !== 'failed' && <Dropped b={b} o={o} taker={p.taker} />}
       {p.busy === 'failed' && p.retry ? <NotDoneCard what={`Packed ${orderNo(o.id)} · your ticks are kept on this phone`} onRetry={p.retry} onClose={p.onClose} />
-        : p.kept ? (
-          <div class="pk-dock col">
-            <span class="pk-kept"><Icon name="clock" size={14} stroke={2.2} />Kept on this phone · it sends by itself</span>
-            <button type="button" class="pk-btn off" disabled><Icon name="offline" size={18} stroke={2.2} />Back online to finish</button>
-          </div>
-        ) : (
+        : p.kept ? <KeptDock /> : (
           <div class="pk-dock">
             <button type="button" class="pk-btn white" disabled={p.busy === 'sending'} onClick={p.onShort}><Icon name="minus" size={18} stroke={2.4} />Short</button>
             <button type="button" class="pk-btn red" disabled={p.busy === 'sending'} aria-busy={p.busy === 'sending'} onClick={p.onPacked}>

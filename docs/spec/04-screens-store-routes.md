@@ -46,7 +46,7 @@ A route id belongs to one **area** (the canvas page: Today, Pack, Goods in, Shel
 | Id | Params | Kind | Boards |
 |---|---|---|---|
 | `pack` | `{ first? }` (an order id to put at the top, from a push) | stage sheet | PK01 (default), PK20 offline, PK08 For you, PK13 someone else just did this, PK14 empty, PK21 waits for the goods |
-| `pack/order` | `{ id, line? }` | pushed | PK02 (default, line 2 of 3), PK03 pressed, PK18 sending, PK11 offline, PK12 failed, PK04 short, PK16 short sending, PK19 short failed, PK05 short sent, PK06 packed, PK07 packed pickup (Ready to collect), PK15 unpack; added while building: AD02 the unpack sheet (from the order on its bay once the 10 s Undo has passed: Keep it packed / Unpack), AD05 unpacked (Undo), AD06 unpack not saved |
+| `pack/order` | `{ id, line?, unpack? }` (`unpack`: the order on its bay with the Unpack sheet, from PK06's bay tile) | pushed | PK02 (default, line 2 of 3), PK03 pressed, PK18 sending, PK11 offline, PK12 failed, PK04 short, PK16 short sending, PK19 short failed, PK05 short sent, PK06 packed, PK07 packed pickup (Ready to collect), PK15 unpack; added while building: AD02 the unpack sheet (from the order on its bay once the 10 s Undo has passed: Keep it packed / Unpack), AD05 unpacked (Undo), AD06 unpack not saved |
 | `pack/look` | `{ id }` | pushed | PK09 the copy (#0557), PK17 Okello's (#0556) |
 | `pack/put-back` | `{ id }` | pushed | PK10 cancelled · put it back, PK22 put back failed |
 

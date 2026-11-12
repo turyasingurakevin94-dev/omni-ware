@@ -78,7 +78,11 @@ const demo = (q = '?demo') => storeDemo(q, { instant: true });
   let failed = false;
   try { await d.putBack(530); } catch (_e) { failed = true; }
   await d.putBack(530);
-  t.check(failed && d.putBacks.has(530), '&fail=putBack fails once, then the put-back is kept on this phone');
+  const p530 = d.day.orders.find((o) => o.id === 530), stamp = p530.putBack && p530.putBack.at;
+  t.check(failed && p530.putBack && p530.putBack.byName === 'Musa Kiggundu' && p530.putBack.lines.length === 2, '&fail=putBack fails once, then the put-back is stamped on the order (0182)');
+  await d.putBack(530);
+  t.check(d.day.orders.find((o) => o.id === 530).putBack.at === stamp, 'the put-back is stamped once');
+  t.check(!(await d.snapshot()).orders.some((o) => o.id === 530), 'put back, #0530 leaves the yard\'s lists');
 
   /* ---- packing the wheelbarrows finishes #0552 ---- */
   d = demo(); await d.pick(552, [{ idx: 1, status: 'done', qty: 2 }], 2); await d.finishPack(552, 1);

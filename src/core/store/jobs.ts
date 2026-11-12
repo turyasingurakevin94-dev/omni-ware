@@ -10,7 +10,7 @@
  *   doneToday(b, now)       what the yard finished today, newest first
  *
  * The yard's order (store.html:2988 nextJob, as the provisional shell/next-job.ts had it, with the
- * jobs the boards add): your pack in progress · an order Ruth gave you · a trip back at the yard ·
+ * jobs the boards add): at the door (a drop of the run you are on: the shutter is the next tap) · your pack in progress · an order Ruth gave you · a trip back at the yard ·
  * a supplier's delivery at the gate · a trip Denis sent you to ride · the next to pack · a return
  * at the gate · a trip or delivery still on its way (later) · damage found and not reported · an
  * aisle due for a count · a delivery to load · a pickup to hand over · from 17:30, close the yard.
@@ -24,14 +24,15 @@
 import { clock, dayOf } from '../time.ts';
 import type { Ms } from '../types.ts';
 import { aislesDue } from './counts.ts';
+import { isAgent } from './gate.ts';
 import { roundsOf } from './keys.ts';
 import type { StoreReturn, Trip, YardBooks, YardOrder } from './types.ts';
 import { isCancelled, isPickup, moneyHeld, ordersAt } from './yard.ts';
 
-export type JobKind = 'carry-on' | 'for-you' | 'checkin' | 'delivery' | 'ride' | 'pack' | 'return' | 'coming' | 'report' | 'count' | 'load' | 'gate' | 'close';
+export type JobKind = 'door' | 'carry-on' | 'for-you' | 'checkin' | 'delivery' | 'ride' | 'pack' | 'return' | 'coming' | 'report' | 'count' | 'load' | 'gate' | 'close';
 
 /** The yard's order of jobs (head of file). */
-export const JOB_ORDER: JobKind[] = ['carry-on', 'for-you', 'checkin', 'delivery', 'ride', 'pack', 'return', 'coming', 'report', 'count', 'load', 'gate', 'close'];
+export const JOB_ORDER: JobKind[] = ['door', 'carry-on', 'for-you', 'checkin', 'delivery', 'ride', 'pack', 'return', 'coming', 'report', 'count', 'load', 'gate', 'close'];
 
 export interface Job {
   kind: JobKind;
@@ -81,9 +82,26 @@ function foundOpen(b: YardBooks): NonNullable<YardBooks['found']> {
   return (b.found || []).filter((f) => !b.reports.some((r) => r.key === f.key && r.createdAt >= f.at));
 }
 
+/**
+ * At the door (OU21, FLOW.md §5 "Next job 'At the door'"): a drop on the road with our driver, for the one on the run.
+ * The driver himself (store.html:2783 myDrops: carrier.staffId or assignedDeliveryId is me); a driver with no login
+ * of his own (a staff driver without one, or hired) is gone with the phone that sent him (carrier.by, the loader's
+ * name). Cancelled on the truck or coming back is not a door (OU27, OU24). Spec §3 lists the second half as open.
+ */
+export function atTheDoor(b: YardBooks, me: string | null): YardOrder[] {
+  return b.orders.filter((o) => {
+    const c = o.carrier;
+    if (o.status !== 'pending_delivery' || !c || (c.kind !== 'staff' && c.kind !== 'hired') || isCancelled(o) || o.comingBack) return false;
+    if (me && (c.staffId === me || o.assignedDeliveryId === me)) return true;
+    const driver = c.staffId ? b.people.find((p) => p.id === c.staffId) : null;
+    return !(driver && driver.userId) && !!c.by && c.by === b.me.name;
+  });
+}
+
 /** Every job, in the yard's order: ready ones and later ones together. */
 export function yardJobs(b: YardBooks, me: string | null, now: Ms): Job[] {
   const jobs: Job[] = [];
+  atTheDoor(b, me).forEach((o) => jobs.push({ kind: 'door', key: 'door:' + o.id, ready: true, route: 'out/door', params: { id: o.id }, at: o.carrier?.at ?? null, orderId: o.id }));
   ordersAt(b, 'packing', me, now).filter((o) => o.assignedWorkerId === me).forEach((o) => jobs.push(pack('carry-on', o)));
   ordersAt(b, 'for-you', me, now).forEach((o) => jobs.push(pack('for-you', o)));
   roundsOf(b.trips.filter((t) => !t.voided && !t.yardCheckedAt)).forEach((r) => {
@@ -105,7 +123,9 @@ export function yardJobs(b: YardBooks, me: string | null, now: Ms): Job[] {
   aislesDue(b, now).forEach((a) => jobs.push({ kind: 'count', key: 'count:' + a.aisle, ready: true, route: 'shelf/count', params: { aisle: a.aisle }, at: null, aisle: a.aisle }));
   const loadable = ordersAt(b, 'packed', me, now).filter((o) => !moneyHeld(o) && !isPickup(o, b.customers));
   if (loadable.length) jobs.push({ kind: 'load', key: 'load', ready: true, route: 'out/load', params: {}, at: loadable[0].pickingDoneAt, orderId: loadable[0].id });
-  ordersAt(b, 'ready', me, now).filter((o) => !moneyHeld(o)).forEach((o) => jobs.push({ kind: 'gate', key: 'gate:' + o.id, ready: true, route: 'out/gate', params: { id: o.id }, at: o.pickingDoneAt, orderId: o.id }));
+  ordersAt(b, 'ready', me, now).filter((o) => !moneyHeld(o)).forEach((o) => jobs.push({ kind: 'gate', key: 'gate:' + o.id, ready: true,
+    // An agent collects by his code: the job opens on the keypad (OU11, FLOW.md §5 "card 1 · code 4 · slide 1").
+    route: isAgent(o) ? 'out/gate-code' : 'out/gate', params: { id: o.id }, at: o.pickingDoneAt, orderId: o.id }));
   if (!jobs.some((j) => j.ready) && minutes(clock(now)) >= minutes(CLOSE_FROM) && !closedToday(b, now)) {
     jobs.push({ kind: 'close', key: 'close', ready: true, route: 'today/close-yard', params: {}, at: null });
   }

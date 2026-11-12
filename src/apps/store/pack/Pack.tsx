@@ -3,7 +3,9 @@
  * routes `pack/order { id, line? }`; spec §4.2). Looking is free: the first Packed claims the order
  * (W1). Red packs the whole line (W2), Short opens the count and Pack short sends the line short
  * (W2, Ruth settles it); the last line finishes the order onto its bay, held 10 s with Undo (W3).
- * No signal: the line is kept on this phone and the finish waits ("Back online to finish").
+ * No signal: the line is kept on this phone and so is the finish, behind it ("Back online to finish"):
+ * the outbox sends both in order when the signal is back, and the order is packed. Every line answered
+ * and the order not finished (a finish undone, refused or lost): Finish is the screen's one action.
  * Someone else took it first: back to To pack, "Someone else just did this · Refreshed".
  *
  * The screen keeps where it is in `mode`; the books say the rest. An order with nothing to pack
@@ -14,6 +16,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { bayFor } from '../../../core/store/bays.ts';
 import { whoIs } from '../../../core/store/faces.ts';
+import { keptPack } from '../../../core/store/outbox.ts';
 import { currentLine, isLastOpen, progress, type LineMark } from '../../../core/store/pack.ts';
 import type { PickAnswer } from '../../../core/store/source.ts';
 import { isMine, isPickup, stageOf } from '../../../core/store/yard.ts';
@@ -22,12 +25,13 @@ import { clock, howLong } from '../../../core/time.ts';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books, hold, held, me, notDone, now, undoHeld } from '../shell/store.ts';
+import { act, books, hold, held, kept, me, notDone, now, undoHeld } from '../shell/store.ts';
 import { PackHead } from './head.tsx';
 import { toSheet } from './parts.tsx';
 import { LineView, ShortView, SentView } from './LineCard.tsx';
 import { Look } from './Look.tsx';
 import { Packed, Unpacked } from './Packed.tsx';
+import { Unpack } from './Unpack.tsx';
 import { moved, chipPicked } from './sheet-data.ts';
 import { Waits } from './Waits.tsx';
 import './card.css';
@@ -41,11 +45,10 @@ type Mode =
 
 export type Busy = null | 'sending' | 'failed';
 
-export function Pack(p: { id: number; line: number | null }): JSX.Element {
+export function Pack(p: { id: number; line: number | null; unpack?: boolean }): JSX.Element {
   const b = books.value, o = b ? b.orders.find((x) => x.id === p.id) : null;
   const [mode, setMode] = useState<Mode>({ k: 'line' });
   const [busy, setBusy] = useState<Busy>(null);
-  const [keptIdx, setKept] = useState<number[]>([]);
   const [retry, setRetry] = useState<(() => void) | null>(null);
   const [want, setWant] = useState<number | null>(p.line);
 
@@ -57,6 +60,8 @@ export function Pack(p: { id: number; line: number | null }): JSX.Element {
   }, [mode]);
 
   if (!b || !o) return <FullSheet onBack={toSheet} backLabel="Back to To pack" head={<div class="ow-shead" />} />;
+  // From another order's bay tile (AD02): the order on its bay with the Unpack sheet, until the screen is left.
+  if (p.unpack) return <Unpack o={o} />;
   const order = o, books_ = b;
   const stage = stageOf(o, b, me.value, now.value);
   if (mode.k === 'done' || mode.k === 'unpacked') {
@@ -73,6 +78,7 @@ export function Pack(p: { id: number; line: number | null }): JSX.Element {
   const pr = progress(order);
   const since = order.workerAcceptedAt != null && isMine(order, me.value) ? `since ${clock(order.workerAcceptedAt)}` : `waiting ${howLong(order.stageEnteredAt ?? order.createdAt ?? now.value, now.value)}`;
   const taker = whoIs(b, order.takenBy), tName = taker ? firstWord(taker.name) : 'Sales';
+  const kp = keptPack(kept.value, order.id), keptIdx = kp.lines;
   const marks: Record<number, LineMark> = {};
   keptIdx.forEach((i) => { marks[i] = 'now'; });
 
@@ -105,7 +111,8 @@ export function Pack(p: { id: number; line: number | null }): JSX.Element {
     try {
       const r = await act('pick', order.id, [a], a.idx + 1);
       setBusy(null);
-      if (r.kept) { setKept((k) => [...k, a.idx]); if (!last) setWant(null); return; }
+      // Kept: the finish is kept behind the last line, so the outbox finishes the order when the signal is back.
+      if (r.kept) { if (last) void act('finishPack', ...finishArgs()).catch(() => undefined); else setWant(null); return; }
       notDone.value = null;
       setWant(null);
       if (last) after(); else setMode({ k: 'line' });
@@ -141,7 +148,7 @@ export function Pack(p: { id: number; line: number | null }): JSX.Element {
     }
     return (
       <FullSheet onBack={toSheet} backLabel="Back to To pack" head={head} pad="14px 16px 16px">
-        <LineView b={books_} o={order} l={cur} busy={busy} kept={!!cur && keptIdx.includes(cur.idx)} taker={tName}
+        <LineView b={books_} o={order} l={cur} busy={busy} kept={cur ? keptIdx.includes(cur.idx) : kp.finish} taker={tName} onFinish={() => finish()}
           onPacked={() => cur && send({ idx: cur.idx, status: 'done', qty: cur.qty }, () => finish())}
           onShort={() => cur && setMode({ k: 'short', idx: cur.idx, n: Math.max(0, cur.qty - 1) })}
           retry={retry} onClose={() => { setBusy(null); notDone.value = null; }} />
@@ -156,10 +163,13 @@ export function Pack(p: { id: number; line: number | null }): JSX.Element {
   }
 
   /** The order is packed onto its bay: held 10 s with Undo (W3, W3' for a pickup). */
-  function finish(bay?: number | null): void {
+  function finishArgs(bay?: number | null): [number, number | null] {
     const cur2 = books.value && books.value.orders.find((x) => x.id === order.id);
-    const pick = cur2 && isPickup(cur2, books_.customers) ? null : bay !== undefined ? bay : bayFor(order, books_);
-    const args: [number, number | null] = [order.id, pick];
+    return [order.id, cur2 && isPickup(cur2, books_.customers) ? null : bay !== undefined ? bay : bayFor(order, books_)];
+  }
+
+  function finish(bay?: number | null): void {
+    const args = finishArgs(bay), pick = args[1];
     setMode({ k: 'done', bay: pick, args });
     hold(`Packed ${orderNo(order.id)}`, 'finishPack', args, () => setMode({ k: 'unpacked', bay: pick }));
     // The moment says it with its own Undo (PK06): no toast over it.

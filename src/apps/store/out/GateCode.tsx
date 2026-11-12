@@ -32,6 +32,8 @@ export function GateCode(p: { params: Params }): JSX.Element {
   if (!b || !o) return <main class="st-ph" />;
   const says = codeSays(o, typed), name = firstWord(o.client.name), from = seller(b, o);
   const key = (d: string) => { if (typed.length < 4) setTyped(typed + d); };
+  /** The locked slide's tap: the keypad is already open; it takes the eye to the first key. */
+  const firstKey = () => { const k = document.querySelector<HTMLButtonElement>('.gc-key:not(:disabled)'); if (k) k.focus(); };
   if (c.phase === 'done') {
     return (
       <Done mark="hand-over" title="Handed over" chip={{ face: orderFace(o, b), name: o.client.name, sub: `${orderNo(o.id)} · code ${codeOf(o)}` }}
@@ -73,7 +75,7 @@ export function GateCode(p: { params: Params }): JSX.Element {
         <SheetDock hint={c.phase === 'kept' ? { icon: 'clock', text: 'Sends when the signal is back', tone: 'amber' } : hint}>
           {c.phase === 'sending' ? <Slide label="" onCommit={() => undefined} state="sending" sendWord="Handing over…" />
             : c.phase === 'kept' ? <Slide label="Not sent yet" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Not sent yet' }} />
-              : says !== 'match' ? <Slide label="Code first" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Code first' }} />
+              : says !== 'match' ? <Slide label="Code first" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Code first', onTap: firstKey }} />
                 : <Slide label={`Slide to hand over to ${name}`} onCommit={() => c.commit(`Handed over ${orderNo(o.id)}`, [o.id, o.client.name, true])}
                   onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}
         </SheetDock>

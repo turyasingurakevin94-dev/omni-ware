@@ -40,7 +40,7 @@ export const ROUTES: Route[] = [
   r('today/close-yard', 'today', 'pushed', '', 'TD16 TD19 TD17 TD27 TD28'),
 
   r('pack', 'pack', 'stage', '{ first? }', 'PK01 PK20 PK08 PK13 PK14 PK21'),
-  r('pack/order', 'pack', 'pushed', '{ id, line? }', 'PK02 PK03 PK18 PK11 PK12 PK04 PK16 PK19 PK05 PK06 PK07 PK15 AD02 AD05 AD06'),
+  r('pack/order', 'pack', 'pushed', '{ id, line?, unpack? }', 'PK02 PK03 PK18 PK11 PK12 PK04 PK16 PK19 PK05 PK06 PK07 PK15 AD02 AD05 AD06'),
   r('pack/look', 'pack', 'pushed', '{ id }', 'PK09 PK17'),
   r('pack/put-back', 'pack', 'pushed', '{ id }', 'PK10 PK22'),
 

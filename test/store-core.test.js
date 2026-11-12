@@ -134,7 +134,8 @@ const no = (id) => '#' + String(id).padStart(4, '0');
   await d.sendCount({ aisle: 'Spot count · Wire nails 4" · 25kg ctn', lines: [{ key: 'p-wn4', productId: 'p-wn4', variantIdx: null, name: 'Wire nails', counted: 18, system: 18, held: 2 }], missing: [] });
   t.check(b.counts.filter((x) => x.place === 'item:p-wn4' && x.status === 'sent').length === 1, 'W20: one waiting count per place (counting it again replaces it)');
   await d.putBack(530);
-  t.check(d.putBacks.has(530), 'W7: a put-back is kept on this phone');
+  const pb = b.orders.find((x) => x.id === 530);
+  t.check(!pb.putBack, 'W7: a put-back on an order not called off writes nothing (0182)');
 
   /* ---- offline and &fail ---- */
   const off = demo('?demo&offline');

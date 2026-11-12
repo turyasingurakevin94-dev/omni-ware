@@ -81,11 +81,17 @@ t.check(specKinds.every((k) => PUSH_KINDS.includes(k)), `every push kind of rout
   const canvas = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/canvas/store-agent/boards/canvas.json'), 'utf8'));
   const files = fs.readdirSync(path.join(ROOT, 'test/parity')).filter((f) => /^store-[a-z]+\.json$/.test(f));
   t.check(files.includes('store-today.json'), 'test/parity/store-today.json, the example spec, is there');
+  // A board of the "Added while building" page (AD) belongs to the area whose route draws it (routes.ts).
+  const routeSrc = fs.readFileSync(path.join(ROOT, 'src/apps/store/shell/routes.ts'), 'utf8');
+  const addedArea = (board) => {
+    const id = board.slice(0, 4), m = [...routeSrc.matchAll(/r\('[^']+', '([a-z]+)', '[a-z]+', '[^']*', '([^']*)'\)/g)].find((x) => x[2].split(' ').includes(id));
+    return m ? m[1] : null;
+  };
   for (const f of files) {
     const area = f.replace(/^store-|\.json$/g, ''), list = JSON.parse(fs.readFileSync(path.join(ROOT, 'test/parity', f), 'utf8'));
     list.forEach((s, i) => {
       const b2 = canvas.boards[s.board];
-      t.check(!!b2 && b2.page === area, `${f}[${i}] ${s.board}: a board of the ${area} page`);
+      t.check(!!b2 && (b2.page === area || (b2.page === 'added' && addedArea(s.board) === area)), `${f}[${i}] ${s.board}: a board of the ${area} page`);
       t.check(!s.demo || s.demo.startsWith('&'), `${f}[${i}]: demo flags start with "&"`);
       t.check(Array.isArray(s.steps || []), `${f}[${i}]: steps is a list`);
     });

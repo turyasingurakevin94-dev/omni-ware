@@ -20,6 +20,7 @@ import { t } from './shop.ts';
 import { demoWrites } from './writes.ts';
 import { shelfClash } from './shelf.ts';
 import { WRITE_CODE } from '../errors.ts';
+import { putAway } from '../yard.ts';
 import type { Kept } from '../../outbox.ts';
 
 /** TD06: #0552's iron sheets packed at 10:30 and the bent sheets reported at 10:24, both kept (no signal). */
@@ -40,8 +41,6 @@ export interface StoreDemo extends StoreSource {
   /** The day itself, for tests. */
   readonly day: YardBooks;
   readonly flags: StoreDemoFlags;
-  /** The orders this phone put back (W7, phone only). */
-  readonly putBacks: Set<number>;
   /** Writes already kept on this phone when the app opens (&kept: TD06's Waiting to send). */
   readonly kept: Kept[];
 }
@@ -52,11 +51,10 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
   // context.setOffline), so a kept write can then be sent. Nothing else fires it on the demo.
   if (f.offline && typeof window !== 'undefined') window.addEventListener('online', () => { f.offline = false; });
   const { books: b, now } = dayAt(f);
-  const putBacks = new Set<number>();
   let signedIn = f.state !== 'signed-out', failed = false, beaten = false;
   const session = (): StoreSession => ({ userId: b.me.userId || 'u-mk', shopId: 'shop-mukasa', shopName: b.shopName, role: b.me.role, name: b.me.name, staffId: b.me.id });
   const clock = () => now;
-  const W = demoWrites(() => b, clock, putBacks);
+  const W = demoWrites(() => b, clock);
 
   const wait = <T>(fn: () => T, write = false): Promise<T> => new Promise((resolve, reject) => {
     const run = () => { try { resolve(fn()); } catch (e) { reject(e); } };
@@ -75,15 +73,14 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     if (f.state === 'loading') return new Promise(() => { /* never answers: "Checking your shop…" */ });
     if (f.state === 'no-reach') return Promise.reject(dataError('offline', 'No signal'));
     if (f.fail === 'snapshot' && !failed) { failed = true; return wait(() => { throw dataError('refused', 'Could not load the yard', FAIL_CODE.snapshot); }); }
-    // No signal: the copy this phone saved at 7:52.
-    return wait(() => ({ ...copy(b), at: f.offline ? t('7:52') : now }));
+    // No signal: the copy this phone saved at 7:52. A put-back order leaves the day, as the real books read it (rows.ts).
+    return wait(() => { const c = copy(b); return { ...c, orders: c.orders.filter((o) => !putAway(o)), at: f.offline ? t('7:52') : now }; });
   };
 
   const src: StoreDemo = {
     kind: 'demo',
     get day() { return b; },
     flags: f,
-    putBacks,
     kept: f.kept ? keptSeed() : [],
     now: clock,
     online: () => !f.offline && f.state !== 'no-reach',
@@ -125,8 +122,8 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     setBay: (id, bay) => later('setBay', () => W.setBay(id, bay)),
     unpack: (id) => later('unpack', () => W.unpack(id)),
     release: (id, putBack) => later('release', () => W.release(id, putBack)),
-    // Phone only (screens Q11): no signal does not stop it; &fail=putBack fails it once (PK22).
-    putBack: (id) => (f.fail === 'putBack' && !failed ? later('putBack', () => W.putBack(id)) : Promise.resolve(W.putBack(id))),
+    // Recorded on the order (0182): no signal keeps it; &fail=putBack fails it once (PK22).
+    putBack: (id) => later('putBack', () => W.putBack(id)),
     load: (ids, c) => later('load', () => W.load(ids, c)),
     handOver: (id, name, agent) => later('handOver', () => W.handOver(id, name, agent)),
     deliver: (id, p) => later('deliver', () => W.deliver(id, p)),

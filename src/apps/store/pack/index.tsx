@@ -4,6 +4,7 @@
  *
  *   pack            ToPack.tsx      PK01 · PK08 · PK13 · PK14 · PK20 (and PK21's way in)
  *   pack/order      Pack.tsx        PK02 · PK03 · PK18 · PK11 · PK12 · PK04 · PK16 · PK19 · PK05 · PK06 · PK07 · PK15 · PK21
+ *                   Unpack.tsx      AD02 · AD05 · AD06 ({ id, unpack: 1 }, from PK06's bay tile)
  *   pack/look       Look.tsx        PK09 · PK17
  *   pack/put-back   PutBack.tsx     PK10 · PK22
  * Each draws its own bars (the notice at the top of its body, the not-done card in its dock's place).
@@ -18,7 +19,7 @@ const num = (v: unknown): number | null => (v == null || v === '' || !Number.isF
 
 export const screens: Record<string, ScreenDef> = {
   pack: { view: ({ params }) => <ToPack first={num(params.first)} />, bars: false },
-  'pack/order': { view: ({ params }) => <Pack id={Number(params.id)} line={num(params.line)} />, bars: false },
+  'pack/order': { view: ({ params }) => <Pack id={Number(params.id)} line={num(params.line)} unpack={!!params.unpack} />, bars: false },
   'pack/look': { view: ({ params }) => <Look id={Number(params.id)} />, bars: false },
   'pack/put-back': { view: ({ params }) => <PutBack id={Number(params.id)} />, bars: false },
 };

@@ -49,3 +49,13 @@ export function keptLine(k: Kept, b: YardBooks): KeptLine {
     default: return { title: k.kind, icon: 'other', who: null };
   }
 }
+
+/**
+ * What this phone keeps for one order's pack (PK11): the lines packed and not sent, and whether its finish
+ * waits too ("Back online to finish"). Read from the outbox itself, so a reopened screen says the same.
+ */
+export function keptPack(list: Kept[], orderId: number): { lines: number[]; finish: boolean } {
+  const mine = list.filter((k) => k.state !== 'refused' && Number(arg<number>(k, 0)) === orderId);
+  const lines = mine.filter((k) => k.kind === 'pick').flatMap((k) => (arg<{ idx: number }[]>(k, 1) || []).map((a) => a.idx));
+  return { lines, finish: mine.some((k) => k.kind === 'finishPack') };
+}

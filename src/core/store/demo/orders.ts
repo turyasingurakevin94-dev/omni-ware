@@ -44,7 +44,8 @@ const ggaba = { client: { name: 'Ggaba Stores', phone: '0782 330 917' }, custome
 const nansana = { client: { name: 'Nansana Hardware', phone: '0752 610 044' }, customerId: 'c-nans' };
 
 export function orders(): YardOrder[] {
-  const ssali = carrier('staff', 'Ssali', t('9:55'), 'st-ss', { dueBack: t('12:10') });
+  // Ssali's 9:55 run: FACTS does not say who sent it; not this phone, so its doors are not Musa's jobs (jobs.ts atTheDoor).
+  const ssali = carrier('staff', 'Ssali', t('9:55'), 'st-ss', { dueBack: t('12:10'), by: null });
   return [
     // Packing · Musa since 10:05: 40 pc packed 10:30, the wheelbarrows came on Denis's trip 10:05, the hinge dropped.
     order(552, 'preparing', t('9:14'), {

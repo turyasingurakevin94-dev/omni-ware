@@ -115,8 +115,8 @@ async function collect(open) {
   const g = await open('&at=1047&state=agent');
   await g.tap({ label: 'Hand over #0554 at the gate' });
   s = await g.text();
-  g.check(/Peter Sserwadda/.test(s) && /Code first/.test(await slideWords(g)), 'agent: #0554 at the gate waits for the code (Code first)', s.slice(0, 600));
-  await g.tap({ sel: '.ow-lslide' }, 350, { force: true });
+  g.check(/#0554 · agent pickup/i.test(s) && /Peter's code/.test(s) && /Code first/.test(await slideWords(g)), 'agent: #0554 opens on Peter\'s code, the slide waits (Code first, OU11)', s.slice(0, 600));
+  g.check(await g.p.locator('.gc-key').count() >= 10 && await g.p.locator('.ow-lslide[disabled]').count() === 0, 'agent: the keypad is open on arrival, and the locked slide is not a disabled button (OU11)');
   for (const d of '0554') await g.tap({ sel: `.gc-key:text-is("${d}")` });
   s = await g.text();
   g.check(/Matches #0554 · Peter Sserwadda/.test(s), 'agent: 0554 matches #0554 · Peter Sserwadda', s.slice(0, 500));
