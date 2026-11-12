@@ -48,11 +48,13 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 | Step | State |
 | --- | --- |
 | 1. Agent app design language | reuse `docs/audit/buyer/agent-design-language.md` |
-| 2. Decision hand-off map | not started |
-| 3. The Manager's day from first principles | not started |
-| 4–5. Pages on the new canvas | not started |
+| 2. Decision hand-off map | done · `handover.md`: 33 decisions, 38 mismatches, 14 new push kinds + push actions (migration 0182, to reserve), other apps: Sales 10 · Buyer 5 · Store 3 · Accounts 3, native shell §6 |
+| 3. The Manager's day from first principles | done · `day.md`: from the app 145 → 69 taps (all 30 drop), from the push 59 → 24 (17 of 20 drop; write-off, credit note, void stay a slide at 2), next decision 2 → 1 |
+| 4–5. Pages on the new canvas | in progress · `docs/canvas/manager/` (brief, 8 boards: Today, Orders, Money, MoneyCredit, Team, DecidePrice, DecideOrders, DecideStock + Main decisions board + Flow) |
 | 6. Scores | not started |
 
 ## Waiting on Kevin
 
-- Nothing yet.
+- P-12: a credit-limit ask needs a new `customer_asks` table (handover.md §4).
+- Migration 0182 must be reserved in decision-rights.md for the new pushes.
+- Three decisions stay 2 taps from the push (write-off, credit note, void): a money move that can't be undone is always a slide, and a notification can't hold one.
