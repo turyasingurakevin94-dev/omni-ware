@@ -149,3 +149,11 @@ Any total adds up from the lines it shows; the same figure is the same on every 
 - D-3 rungs: shop's price, "Same gain 29,000" (the old 2,000 gain a piece on the new cost).
 - New parts (to add to agent-design-language.md): the price scale (cost · asker · shop's on one track, hatched "never under cost"), the rung row, the decision sheet head ("From Grace · #0555 · 2 of 8"), the dock with a tap (reversible) instead of a slide, the lock-screen notification card.
 - From DecideOrders: D-19 (14:20) Esther asks to void #0545 Kato 320,000 (entered twice with #0544), 200,000 paid → Kato owes 878,000 → 758,000; D-10 (16:10) Brian's #0549 2 packs wall plugs at 0, cost 3,000; D-22 (11:25) Peter's #0557 Mukono Roofing cement 20 → 12 (288,000 less, 36,000 a bag), 300,000 paid.
+- From Orders: page 4 at 10:05 (after the 10:00 invoice run): #0548 Kato Construction 430,000 (delivered Fri 16:10) and #0557 Lubowa Builders 318,000 (delivered 08:50) bill themselves; twins for D-21 #0558/#0559 Kato 612,000; order amounts #0555 1,380,000 · #0552 1,210,000 (selling) · #0550 1,900,000 · #0549 1,425,000; on the move 9,835,000.
+
+## To reconcile in the review (clashes between boards)
+- #0544/#0545: Orders uses #0545 Walk-in "Only 567" (Grace) and #0544 Mukono Roofing "Price coming" Cement 425,000 (Faith); DecideOrders uses #0545/#0544 as Kato's order entered twice (void, 320,000). Pick one meaning per number.
+- D-21 twins: Orders #0558/#0559 Kato 612,000 vs DecideOrders' void of #0545 "entered twice with #0544".
+- #0557: Orders = Lubowa Builders 318,000 delivered; DecideOrders = Peter's agent order for Mukono Roofing.
+- #0549: DecideOrders has it given away (Brian, wall plugs at 0); Orders has it Kyaligonza 1,425,000 on the road.
+- Dock primary: DecidePrice uses a white tap button; DecideOrders a red one. One rule for all boards.
