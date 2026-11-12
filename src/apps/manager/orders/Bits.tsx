@@ -104,3 +104,13 @@ export function Empty(): JSX.Element {
     </div>
   );
 }
+
+/** The sending ring inside a navy answer ("Nudging"). */
+export function Spinner(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" class="mg-orders-spin" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.6" />
+      <path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" />
+    </svg>
+  );
+}

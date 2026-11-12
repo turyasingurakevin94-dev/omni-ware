@@ -17,7 +17,7 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { nav } from '../shell/nav.ts';
 import { undoHeld } from '../shell/store.ts';
-import { Clock, Told } from './Bits.tsx';
+import { Clock, Spinner, Told } from './Bits.tsx';
 import { useInPlace, type InPlace } from './useAnswer.ts';
 
 /** What the order is, in a few words: its line (and the supplier asked), or how many lines. */
@@ -31,15 +31,6 @@ export function whatItIs(o: MOrder): string {
 /** The words a nudge carries (the person sees "Ruth nudged you" and these). */
 export function nudgeWords(o: MOrder, mins: number): string {
   return `${orderNo(o.id)} has waited ${inStage(mins)} in ${STAGE[o.stage]}. Can you sort it now?`;
-}
-
-function Spinner(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" class="mg-orders-spin" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.6" />
-      <path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" />
-    </svg>
-  );
 }
 
 /** The two answers of a stuck order, and every state they pass through. */

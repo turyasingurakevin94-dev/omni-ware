@@ -89,7 +89,7 @@ export function Nudge(p: { params: Params }): JSX.Element | null {
         <>
           <div class="mg-tn-gets">
             <h2>{`${name} gets`}</h2>
-            <button type="button" aria-label="Change the words" aria-pressed={edit != null} onClick={() => setEdit(edit == null ? words : null)}><Icon name="pen" size={16} stroke={2} />{edit == null ? 'Change' : 'As the app says'}</button>
+            <button type="button" aria-label="Change the words" aria-pressed={edit != null} onClick={() => setEdit(edit == null ? words : null)}><Icon name="pen" size={16} stroke={2} />Change</button>
           </div>
           <div class="mg-tn-phone">
             <div class="mg-tn-push">

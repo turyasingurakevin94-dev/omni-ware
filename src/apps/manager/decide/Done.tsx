@@ -3,7 +3,7 @@
  * the answers coloured by who asked, Today's answers (what Ruth decided and what the app did by
  * itself), and Back to Today, the one end button of every flow.
  */
-import type { JSX } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 import type { Done as DoneLine, Person } from '../../../core/manager/types.ts';
 import { firstWord } from '../../../core/names.ts';
 import { hm as clock } from '../../../core/manager/words.ts';
@@ -13,7 +13,8 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import './done.css';
 
-export function Done(): JSX.Element | null {
+/** `strip`: the last answer's Undo strip, while it waits its 10 s (Decide shows All decided under it). */
+export function Done(p: { strip?: ComponentChildren; params?: unknown }): JSX.Element | null {
   const b = books.value;
   if (!b) return null;
   const mine = b.done.filter((d) => !d.auto && d.at >= now.value - 12 * 3600e3);
@@ -39,6 +40,7 @@ export function Done(): JSX.Element | null {
         )}
       </header>
       <div class="mg-d-body">
+        {p.strip}
         <div class="mg-done-h"><b>Today's answers</b><span><Icon name="bell" size={14} stroke={2} /><span class="mono">{`${told} told`}</span></span></div>
         <ul class="mg-done-list">{b.done.map((d, i) => <Line key={i} d={d} team={b.team} />)}</ul>
       </div>

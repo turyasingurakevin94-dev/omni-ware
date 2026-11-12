@@ -13,11 +13,13 @@ import type { Ask } from '../../../core/manager/types.ts';
 import { firstWord } from '../../../core/names.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { Avatar } from '../../../ui/Avatar.tsx';
-import { waited } from '../../../core/manager/words.ts';
+import { waited, whoSee } from '../../../core/manager/words.ts';
 import type { Params } from '../../../ui/stack.ts';
 import { nav } from '../shell/nav.ts';
 import { act, answer, books, held, now, undoHeld, waiting } from '../shell/store.ts';
 import { DockView } from './DockView.tsx';
+import { Done } from './Done.tsx';
+import { Bars } from '../shell/App.tsx';
 import { Head, titleOf } from './Head.tsx';
 import { KINDS } from './kinds/index.ts';
 import type { Ctx, KindView } from './kit.ts';
@@ -50,7 +52,12 @@ export function Decide(p: { params: Params }): JSX.Element | null {
   const a: Ask | null = (key && q.find((x) => x.key === key)) || q[0] || null;
   useEffect(() => { if (!a && b && !held.value && !busy) nav.replace('decide/done', {}); }, [a, b, held.value, busy]);
   if (!b) return null;
-  if (!a) return <div class="mg-d" />;
+  const h0 = held.value;
+  // The last answer waits its 10 s: All decided under its strip, Undo still there (Today p4).
+  if (!a) {
+    const left0 = h0 && last ? Math.max(0, Math.ceil((h0.until - tick) / 1000)) : 0;
+    return <Done strip={last && h0 ? <Strip last={last} left={left0} /> : null} />;
+  }
 
   const asker = askerOf(b, a);
   const n = q.indexOf(a) + 1;
@@ -94,13 +101,7 @@ export function Decide(p: { params: Params }): JSX.Element | null {
       <Head a={a} asker={asker} order={order} n={n} of={q.length} title={view.title} chip={view.chip || null} now={now.value}
         onClose={() => nav.back()} onNext={after ? () => { local.current = {}; setKey(after.key); } : null} />
       <div class="mg-d-body">
-        {last && (h || last.slide) && (
-          <div class="mg-strip" role="status">
-            <span class="ok"><Icon name="check" size={18} stroke={2.4} /></span>
-            <span class="t"><b>{last.word}</b><span>{[last.sub, last.told && `${last.told} see it`].filter(Boolean).join(' · ')}</span></span>
-            {!last.slide && h && <button type="button" class="mg-undo" onClick={() => undoHeld()}><i>{left}</i>Undo</button>}
-          </div>
-        )}
+        {last && (h || last.slide) && <Strip last={last} left={!last.slide && h ? left : null} />}
         {view.evidence}
         {after && (
           <button type="button" class="mg-d-nextrow" onClick={() => { local.current = {}; setKey(after.key); }}>
@@ -111,7 +112,19 @@ export function Decide(p: { params: Params }): JSX.Element | null {
           </button>
         )}
       </div>
+      <div class="mg-d-bars"><Bars /></div>
       <DockView d={view.dock} busy={busy} cooling={Date.now() - cool.current < COOL_MS} />
+    </div>
+  );
+}
+
+/** The answer's strip: "{answer} · {#order} · {who} see it", Undo with its count while it waits. */
+function Strip(p: { last: Last; left: number | null }): JSX.Element {
+  return (
+    <div class="mg-strip" role="status">
+      <span class="ok"><Icon name="check" size={18} stroke={2.4} /></span>
+      <span class="t"><b>{p.last.word}</b><span>{[p.last.sub, p.last.told && `${whoSee(p.last.told.split(' · '))} it`].filter(Boolean).join(' · ')}</span></span>
+      {p.left != null && <button type="button" class="mg-undo" onClick={() => undoHeld()}><i>{p.left}</i>Undo</button>}
     </div>
   );
 }

@@ -181,7 +181,11 @@ export type Ask = PriceAsk | CounterAsk | MarkupAsk | CreditAsk | StoreCreditAsk
 export type AskKind = Ask['kind'];
 
 /** Denis's restock list (D-23): not an ask, a list the Manager can hold. */
-export interface RestockLine { id: string; name: string; unit: string; qty: number; cost: UGX; weeksLeft: number | null; held: boolean }
+export interface RestockLine {
+  id: string; name: string; unit: string; qty: number; cost: UGX; weeksLeft: number | null; held: boolean;
+  /** Who held it and when (restock_buys.held_by, its log line): "Not yet · Ruth · Thu 15". */
+  heldBy?: string | null; heldAt?: Ms | null;
+}
 
 /** One line of Today's answers (the decision log, and what the app did by itself). */
 export interface Done {

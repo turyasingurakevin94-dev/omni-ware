@@ -19,14 +19,10 @@ import { Icon } from '../../../ui/icons.tsx';
 import { PageHead } from '../../../ui/PageHead.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now, undoHeld, waiting } from '../shell/store.ts';
-import { Clock, Empty, StageCols, tintBg, Told } from './Bits.tsx';
+import { Clock, Empty, Spinner, StageCols, tintBg, Told } from './Bits.tsx';
 import { nudgeWords, whatItIs } from './OrderCard.tsx';
 import { useInPlace } from './useAnswer.ts';
 import './orders.css';
-
-function Spin(): JSX.Element {
-  return <svg width="16" height="16" viewBox="0 0 24 24" class="mg-orders-spin" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2.6" /><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" /></svg>;
-}
 
 function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
   const { o, b, t } = p;
@@ -71,7 +67,7 @@ function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
             {spot.st === 'kept' ? <span class="mg-orders-waits"><Icon name="clock" size={16} stroke={2} />Waits</span>
               : holder.id !== b.me.id && (
                 <button type="button" class="mg-orders-btn navy h44" aria-disabled={busy ? 'true' : undefined} onClick={nudge}>
-                  {spot.st === 'sending' && act === 'nudge' ? <><Spin />Nudging</> : <><Icon name="send" size={16} stroke={2} />{`Nudge ${firstWord(holder.name)}`}</>}
+                  {spot.st === 'sending' && act === 'nudge' ? <><Spinner />Nudging</> : <><Icon name="send" size={16} stroke={2} />{`Nudge ${firstWord(holder.name)}`}</>}
                 </button>
               )}
           </div>
@@ -98,7 +94,7 @@ function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
           <button type="button" class="mg-orders-give" aria-disabled={busy ? 'true' : undefined} onClick={give}>
             <Avatar initials={to.initials} tint={to.tint} size={32} />
             <span class="mid"><b>{`Give it to ${firstWord(to.name)}`}</b><span class="mono s">{ROLE[to.role]}</span></span>
-            {spot.st === 'sending' && act === 'give' ? <span class="mg-orders-spin-dark" aria-hidden="true" /> : <Icon name="chevron-right" size={18} stroke={2.2} />}
+            <Icon name="chevron-right" size={18} stroke={2.2} />
           </button>
         )}
       </div>
