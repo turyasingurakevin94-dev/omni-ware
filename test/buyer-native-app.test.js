@@ -1,24 +1,29 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The Buyer app for Android (apps/buyer).
+ * The Buyer app for Android (apps/buyer): the new Buyer app (this test reads the built buyer.html,
+ * src/apps/buyer, switched 2026-11-11) inside its native shell.
  *
- * The app is buyer.html inside the same native shell the sales app uses.
- * Its build swaps the page's CDN links for copies it carries, and the
- * native layer in the page -- Back, the strip behind the clock, the bars'
- * size, fetching a newer buyer.html -- does nothing in a browser.
+ *   1. The page the app ships: the phone's swaps (apps/buyer/src/transform.js) take the CDN links out,
+ *      and apps/buyer/scripts/build-www.js packages the built page, never the old one.
+ *   2. The native layer: the shared one (src/native/start.ts), wired to the Buyer's own page, key and
+ *      build id (src/apps/buyer/shell/native.ts), with the old app's key so a phone it updated settles.
+ *   3. The pushes: the phone is signed up on sign-in, and a tapped push opens a drawn screen.
+ *   4. The shell: its own app id, version over the old app's, the workflow builds on src/.
  *
  * Run: node test/buyer-native-app.test.js   (or: npm test)
  */
 const path = require('path');
-const { read, createReporter } = require('./_extract');
+const { ROOT, read, createReporter } = require('./_extract');
 
 const t = createReporter('buyer native app');
-const transform = require(path.join(__dirname, '..', 'apps', 'buyer', 'src', 'transform.js'));
+const transform = require(path.join(ROOT, 'apps', 'buyer', 'src', 'transform.js'));
 const src = read('buyer.html');
+const U = require(path.join(ROOT, 'src/native/update.ts')).updater({ role: 'buyer', source: 'https://omni-ware.vercel.app/buyer.html', key: 'ow-buyer-bundle', build: 'owBuyerBuild' });
 
 /* ---------- 1. the page the app ships ---------- */
 {
+  t.check(src.slice(0, 300).includes('GENERATED from src/apps/buyer'), 'buyer.html is the page built from src/apps/buyer');
   const html = transform(src);
   t.check(html.includes('<link rel="stylesheet" href="fonts/fonts.css">') && !/fonts\.googleapis\.com/.test(html), 'the fonts come from inside the app, not Google');
   t.check(html.includes('<script src="vendor/supabase.js"></script>') && !/cdn\.jsdelivr\.net/.test(html), 'and so does the Supabase client');
@@ -26,40 +31,44 @@ const src = read('buyer.html');
   t.check(!/rel="manifest"/.test(html), 'the browser install manifest is left out');
   t.check(transform(html) === html, 'a page that has been through it once is unchanged by a second pass');
   const build = read('apps/buyer/scripts/build-www.js');
-  t.check(/path\.join\(ROOT, 'buyer\.html'\)/.test(build) && /"The phone app's native layer"|'The phone app\\'s native layer'|The phone app's native layer/.test(build), 'the build reads buyer.html and fails if the native layer is missing');
+  t.check(/const PAGES = ROOT;/.test(build) && /'buyer\.html'/.test(build) && /GENERATED from src\//.test(build) && /data-ow-native/.test(build),
+    'the build packages the built buyer.html and fails without its native layer');
+  t.check(!!U.builtPage(src), 'the built page passes the live update\'s safety rule (its build id and file list)');
+  t.check(U.builtPage(read('old/buyer.html')) === null, 'and the old page does not: an installed new app never turns back into the old one');
 }
 
-/* ---------- 2. the native layer: in the page, and out of the browser's way ---------- */
+/* ---------- 2. the native layer ---------- */
 {
-  const at = src.indexOf("The phone app's native layer");
-  t.check(at > 0 && at < src.indexOf('</head>') && at < src.indexOf('<script src="https://cdn.jsdelivr.net'), 'the native layer is in <head>, ahead of everything else the page runs');
-  const native = src.slice(at, src.indexOf('</script>', at));
-  t.check(/if\(!C \|\| typeof C\.isNativePlatform !== 'function' \|\| !C\.isNativePlatform\(\)\) return;/.test(native), 'and does nothing in a browser');
-  t.check(/window\.bxBack\(\)/.test(native) && /window\.bxBack = function\(\)/.test(src), 'Back closes a sheet, then a page, then the tab, before it leaves the app');
-  t.check(/var SOURCE = 'https:\/\/omni-ware\.vercel\.app\/buyer\.html';/.test(native) && /var KEY = 'ow-buyer-bundle';/.test(native),
-    'it fetches newer copies of buyer.html, kept apart from the sales app\'s');
-  t.check(/App\.addListener\('pause'/.test(native) && /setServerBasePath/.test(native), 'a newer page is switched to only when the app goes to the background');
-  t.check(/html\.length < 100000 \|\| html\.indexOf\('<\/html>'\) === -1/.test(native), 'and a cut-off download is never switched to');
-  t.check(src.length > 100000, 'the page itself is big enough to pass that check');
-  t.check(/#bx_pages \.bx-page:last-child/.test(native) && /\.bx-auth/.test(native) && /\.bx-scrim/.test(native) && !/sx_pages|\.sx-auth|\.sx-scrim/.test(native),
-    'the strip behind the clock reads this page\'s own screens, not the sales app\'s');
-  t.check(/--safe-t:var\(--safe-area-inset-top\); --safe-b:var\(--safe-area-inset-bottom\);/.test(src), 'and the bars\' size it measures is the one the page pads by');
-  t.check(/kind === 'warn' \? H\.notification\(\{ type: 'WARNING' \}\)/.test(native), 'a problem or a short line buzzes as a warning, not a tap');
+  const w = read('src/apps/buyer/shell/native.ts'), n = read('src/native/start.ts');
+  t.check(/from '\.\.\/\.\.\/\.\.\/native\/start\.ts'/.test(w), 'the Buyer uses the shared layer, not a copy');
+  t.check(/source: 'https:\/\/omni-ware\.vercel\.app\/buyer\.html'/.test(w) && /key: 'ow-buyer-bundle'/.test(w) && /build: 'owBuyerBuild'/.test(w),
+    'on its own page, the old app\'s key and its own build id (as this test does)');
+  t.check(/sheet\.isOpen/.test(w) && /nav\.back\(\)/.test(w) && /nav\.home\(\)/.test(w), 'Back reads the Buyer\'s own sheet and stack');
+  t.check(/if \(!C \|\| h\.isDemo\) return;/.test(n), 'the layer does nothing in a browser or in the demo');
+  t.check(src.includes('window.owBuyerBuild="') && src.includes('data-ow-native'), 'the built page carries its build id and the layer');
+  t.check(/startNative\(\);/.test(read('src/apps/buyer/main.tsx')), 'main.tsx starts it');
 }
 
-/* ---------- 3. the shell ---------- */
+/* ---------- 3. the pushes ---------- */
+{
+  const w = read('src/apps/buyer/shell/native.ts');
+  t.check(/pushNotificationActionPerformed/.test(w) && /registerPush\(\)/.test(w), 'a tapped push opens its screen; signed in, the phone is signed up');
+  t.check(/pushOn\(sb\(\), me\(\)\)|pushOnShared\(sb\(\), me\(\)\)/.test(read('src/core/buyer/supabase/index.ts')), 'the sign-up is the shared one (src/core/supabase/push.ts)');
+  for (const [kind, id] of [['supplier.answered', "'replies'"], ['trip.cash.ready', "'trip'"], ['order.buying', "'orders/order'"]]) {
+    t.check(w.includes(`'${kind}'`) || (kind.startsWith('trip.') && /\^trip\\\./.test(w)), `${kind} has a screen`);
+    t.check(w.includes(id), `${kind} opens ${id}`);
+  }
+}
+
+/* ---------- 4. the shell ---------- */
 {
   const cfg = JSON.parse(read('apps/buyer/capacitor.config.json'));
   t.check(cfg.appId === 'com.omniware.buyer' && cfg.appName === 'Omni-Ware Buyer' && cfg.webDir === 'www', 'its own app id and name, separate from the sales app');
-  t.check(cfg.plugins && cfg.plugins.SystemBars && cfg.plugins.SystemBars.insetsHandling === 'css' && cfg.plugins.SystemBars.initialViewportFitValueHint === 'cover',
-    'Android measures the bars into --safe-area-inset-* and draws edge to edge');
+  t.check(cfg.plugins && cfg.plugins.SystemBars && cfg.plugins.SystemBars.insetsHandling === 'css', 'Android measures the bars into --safe-area-inset-*');
   const gradle = read('apps/buyer/android/app/build.gradle');
-  t.check(/namespace = "com\.omniware\.buyer"/.test(gradle) && /applicationId "com\.omniware\.buyer"/.test(gradle), 'Android installs it beside the sales app, not over it');
-  t.check(/package com\.omniware\.buyer;/.test(read('apps/buyer/android/app/src/main/java/com/omniware/buyer/MainActivity.java')), 'its activity lives in its own package');
-  t.check(/<string name="app_name">Omni-Ware Buyer<\/string>/.test(read('apps/buyer/android/app/src/main/res/values/strings.xml')), 'and is called Omni-Ware Buyer on the phone');
+  t.check(/applicationId "com\.omniware\.buyer"/.test(gradle) && /versionCode 3/.test(gradle), 'it installs over the old Buyer app (a higher version)');
   const wf = read('.github/workflows/build-buyer-app.yml');
-  t.check(/- 'buyer\.html'/.test(wf) && /- 'apps\/buyer\/\*\*'/.test(wf) && /workflow_dispatch/.test(wf), 'every change to the page or the shell is built, and it can be built by hand');
-  t.check(/name: omniware-buyer-debug-apk/.test(wf) && /apps\/buyer\/android\/app\/build\/outputs\/apk\/debug\/app-debug\.apk/.test(wf), 'and hands back the APK under the run\'s Artifacts');
+  t.check(/'src\/\*\*'/.test(wf) && /'buyer\.html'/.test(wf) && /npm run build/.test(wf) && /assembleDebug/.test(wf), 'the workflow builds an APK whenever the page or src/ changes');
 }
 
 process.exit(t.done() ? 1 : 0);

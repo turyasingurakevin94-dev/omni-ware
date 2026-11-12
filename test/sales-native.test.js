@@ -23,8 +23,9 @@ const path = require('path');
 const { ROOT, createReporter } = require('./_extract');
 
 const t = createReporter('sales native layer');
-const B = require(path.join(ROOT, 'src/apps/sales/shell/native-back.ts'));
-const U = require(path.join(ROOT, 'src/apps/sales/shell/native-update.ts'));
+const B = require(path.join(ROOT, 'src/native/back.ts'));
+// The shared update on Sales' own page, key and build id (src/apps/sales/shell/native.ts SALES_APP).
+const U = require(path.join(ROOT, 'src/native/update.ts')).updater({ role: 'sales', source: 'https://omni-ware.vercel.app/next/sales.html', key: 'ow-sales-bundle', build: 'owSalesBuild' });
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 /* ---------- 1. Back: sheet → screen → Today → background ---------- */
@@ -46,7 +47,7 @@ const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
   t.check(B.backStep({ sheetOpen: false, depth: 3, rootId: 'customers' }) === 'screen', 'a screen pops before its tab goes to Today');
   t.check(B.backStep({ sheetOpen: false, depth: 1, rootId: 'chats' }) === 'today', 'a tab other than Today goes to Today');
   t.check(B.backStep({ sheetOpen: false, depth: 1, rootId: 'today' }) === 'background', 'only Today with nothing open puts the app in the background');
-  t.check(!/exitApp/.test(read('src/apps/sales/shell/native.ts')) && /minimizeApp/.test(read('src/apps/sales/shell/native.ts')), 'it never exits the app: the background is minimizeApp');
+  t.check(!/exitApp/.test(read('src/native/start.ts')) && /minimizeApp/.test(read('src/native/start.ts')), 'it never exits the app: the background is minimizeApp');
 }
 
 /* ---------- the live update, on a fake phone and server ---------- */
@@ -198,10 +199,11 @@ function phone(o = {}) {
 
   /* ---------- 7. inert in a browser and the demo; wired in ---------- */
   {
-    const n = read('src/apps/sales/shell/native.ts');
-    t.check(/if \(!C \|\| isDemo\) return;/.test(n) && /C\.isNativePlatform\(\)/.test(n), 'the layer does nothing in a browser or in the demo');
+    const n = read('src/native/start.ts'), w = read('src/apps/sales/shell/native.ts');
+    t.check(/if \(!C \|\| h\.isDemo\) return;/.test(n) && /C\.isNativePlatform\(\)/.test(n) && /isDemo,/.test(w), 'the layer does nothing in a browser or in the demo');
     t.check(/addListener\('pause'/.test(n) && /setServerBasePath/.test(n), 'a staged copy is switched to only when the app goes to the background');
-    t.check(/addListener\('backButton'/.test(n) && /sheet\.isOpen/.test(n) && /nav\.back\(\)/.test(n) && /nav\.home\(\)/.test(n), 'Back reads the app\'s own sheet and stack');
+    t.check(/addListener\('backButton'/.test(n) && /sheet\.isOpen/.test(w) && /nav\.back\(\)/.test(w) && /nav\.home\(\)/.test(w), 'Back reads the app\'s own sheet and stack');
+    t.check(/source: 'https:\/\/omni-ware\.vercel\.app\/next\/sales\.html'/.test(w) && /key: 'ow-sales-bundle'/.test(w) && /build: 'owSalesBuild'/.test(w), 'Sales wires the shared layer to its own page, key and build id (as this test does)');
     const m = read('src/apps/sales/main.tsx');
     t.check(/startNative\(\)/.test(m) && /!inPhoneApp\(\)/.test(m), 'main.tsx starts it, and the phone app keeps itself current without the service worker');
     t.check(read('next/sales.html').includes('data-ow-native'), 'the built page carries it (apps/sales/scripts/build-www.js checks the same marker)');

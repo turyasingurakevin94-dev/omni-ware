@@ -23,24 +23,27 @@ declare global {
 }
 
 /** sales.html:3591-3597 owCarryLogin: the old shared login, carried over once so nobody is signed out. */
-function carryLogin(env: Env): void {
+function carryLogin(env: Env, key: string): void {
   try {
-    if (localStorage.getItem(AUTH_KEY) != null) return;
+    if (localStorage.getItem(key) != null) return;
     const ref = (String(env.url).match(/^https:\/\/([^.]+)\./) || [])[1];
     const old = ref && localStorage.getItem('sb-' + ref + '-auth-token');
-    if (old) localStorage.setItem(AUTH_KEY, old);
+    if (old) localStorage.setItem(key, old);
   } catch (_e) { /* private mode: nothing to carry */ }
 }
 
 let made: { sb: Sb; env: Env } | null = null;
 
-/** The one client for this page. Null when supabase-js did not load (no signal on first open). */
-export function client(): { sb: Sb; env: Env } | null {
+/**
+ * The one client for this page. Null when supabase-js did not load (no signal on first open).
+ * Each app keeps its own sign-in under its own key (Sales 'ow-sales-auth', the Buyer 'ow-buyer-auth').
+ */
+export function client(storageKey: string = AUTH_KEY): { sb: Sb; env: Env } | null {
   if (made) return made;
   if (typeof window === 'undefined' || !window.supabase) return null;
   const env = envFor(location.hostname, !!window.Capacitor);
-  carryLogin(env);
-  made = { sb: window.supabase.createClient(env.url, env.anon, { auth: { storageKey: AUTH_KEY } }), env };
+  carryLogin(env, storageKey);
+  made = { sb: window.supabase.createClient(env.url, env.anon, { auth: { storageKey } }), env };
   return made;
 }
 

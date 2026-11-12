@@ -36,9 +36,17 @@ async function rowId(sb: Sb, s: Session, kind: string, floor: number): Promise<n
   return Number(v);
 }
 
-/** sales.html:3966 ordPatch: an order changes by the keys that change, merged on the server (ow_patch_order, 0165). */
-export async function patchOrder(sb: Sb, s: Session, id: number, patch: Row, name: string | null = null, phone: string | null = null): Promise<void> {
-  await ok(sb.rpc('ow_patch_order', { p_shop_id: s.shopId, p_id: id, p_patch: patch, p_client_name: name, p_client_phone: phone }));
+/**
+ * sales.html:3966 ordPatch: an order changes by the keys that change, merged on the server (ow_patch_order, 0165).
+ * The Buyer also drops keys and moves the stage in the same write (buyer.html:2447 changeOrder: p_drop, p_status);
+ * they are sent only when given. The row comes back as the database kept it (the Checking gate may hold a move).
+ */
+export async function patchOrder(sb: Sb, s: Session, id: number, patch: Row, name: string | null = null, phone: string | null = null,
+  more: { drop?: string[] | null; status?: string | null } = {}): Promise<Row | null> {
+  const args: Row = { p_shop_id: s.shopId, p_id: id, p_patch: patch, p_client_name: name, p_client_phone: phone };
+  if (more.drop && more.drop.length) args.p_drop = more.drop;
+  if (more.status) args.p_status = more.status;
+  return ok<Row | null>(sb.rpc('ow_patch_order', args));
 }
 
 /**
@@ -141,8 +149,8 @@ export async function withdrawBillAsk(sb: Sb, id: string): Promise<void> {
 }
 
 /** ask_cancel (0181): ask the Manager to cancel your own order before its invoice; asked again, the same ask comes back. */
-export async function askCancel(sb: Sb, s: Session, o: Order, why: string): Promise<BillAsk> {
-  const r = await ok<Row>(sb.rpc('ask_cancel', { p_shop_id: s.shopId, p_order: o.id, p_why: why, p_note: null }));
+export async function askCancel(sb: Sb, s: Session, o: Order, why: string, note?: string): Promise<BillAsk> {
+  const r = await ok<Row>(sb.rpc('ask_cancel', { p_shop_id: s.shopId, p_order: o.id, p_why: why, p_note: note && note.trim() ? note.trim() : null }));
   if (!r || !r.ok || !r.id) throw dataError('refused', 'The ask did not go through');
   return cancelAskOf({ id: r.id, quote_id: o.id, customer_id: o.customerId, why, amount: r.amount, status: r.status || 'sent', asked_by: s.userId, created_at: r.at });
 }

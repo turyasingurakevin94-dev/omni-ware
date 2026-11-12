@@ -20,6 +20,8 @@ const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('phone push');
 const APPS = ['sales', 'manager', 'buyer', 'store', 'accounts', 'sourcing', 'owner'];
+// The Buyer is switched: these read the old page (old/buyer.html); the new app's pushes are in test/buyer-native-app.test.js.
+const pageOf = (a) => (a === 'buyer' ? 'old/buyer.html' : `${a}.html`);
 
 for (const a of APPS) {
   const appId = JSON.parse(read(`apps/${a}/capacitor.config.json`)).appId;
@@ -32,13 +34,13 @@ for (const a of APPS) {
   t.check(/@capacitor\/push-notifications/.test(read(`apps/${a}/package.json`)), `${a}: the push plugin is in the app`);
   const vc = Number((/versionCode (\d+)/.exec(read(`apps/${a}/android/app/build.gradle`)) || [])[1]);
   t.check(vc >= 2, `${a}: the build that carries Firebase is versionCode 2 or later (${vc}), so the page can tell it from an older install`);
-  const page = read(`${a}.html`);
+  const page = read(pageOf(a));
   const inst = extractFunction(page, 'pushInstalled', `${a}.html`);
   t.check(/getInfo\(\)/.test(inst) && /Number\(i\.build\) >= 2/.test(inst), `${a}: the page asks the install before it asks for a token`);
 }
 
 for (const a of APPS.filter((x) => x !== 'store')) {
-  const src = read(`${a}.html`);
+  const src = read(pageOf(a));
   const fn = extractFunction(src, 'phonePush', `${a}.html`);
   t.check(/isNativePlatform\(\)/.test(fn) && /phonePush\.on/.test(fn), `${a}: signs up inside the installed app, once`);
   t.check(/from\('push_subscriptions'\)\.upsert\(\{ shop_id: S\.shopId, staff_id: st \? st\.id : null, user_id: S\.user\.id, fcm_token: t\.value \}, \{ onConflict: 'fcm_token' \}\)/.test(fn),
@@ -78,7 +80,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
     store: ['trip.back', 'stock.report.decided', 'stock_count', 'trip.sent', 'trip.taken', 'trip.cancelled', 'store.handover', 'store.ask.decided', 'job.given'],
   };
   for (const [a, kinds] of Object.entries(KINDS)) {
-    const src = read(`${a}.html`);
+    const src = read(pageOf(a));
     const open = extractFunction(src, 'pushOpen', `${a}.html`);
     t.check(/try \{/.test(open) && /catch \(/.test(open), `${a}: pushOpen never throws`);
     const missing = kinds.filter((k) => !open.includes(`'${k}'`));
@@ -93,7 +95,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
 {
   // Notifications on this phone: one row on You, beside Sounds & buzz.
   for (const [a, word] of [['sales', 'Sales'], ['buyer', 'Buyer'], ['accounts', 'Accounts'], ['sourcing', 'Sourcing']]) {
-    const src = read(`${a}.html`);
+    const src = read(pageOf(a));
     const st = extractFunction(src, 'pushState', `${a}.html`);
     t.check(["'On'", "'Not on'", "'Checking'", 'pushWhy()', 'pushNative()'].every((b) => st.includes(b)), `${a}: the row says On, Checking, or Not on with why`);
     t.check(extractFunction(src, 'pushWhy', `${a}.html`).includes(`install the new ${word} app`), `${a}: an older install is told to install the new ${word} app`);
@@ -105,7 +107,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
 {
   // What the Buyer passes on is read by the app it is for (0125, pushed by 0131 and 0134).
   for (const [a, kind] of [['accounts', 'trip_cash'], ['accounts', 'paper_bill'], ['sourcing', 'sourcing_fix'], ['sales', 'item_switch'], ['manager', 'yard_note']]) {
-    const src = read(`${a}.html`);
+    const src = read(pageOf(a));
     t.check(/from\('buyer_handoffs'\)\.select|selectAll\('buyer_handoffs'/.test(src) && src.includes(`'${kind}'`), `${a}: loads the Buyer's ${kind} hand-offs`);
     t.check(/from\('buyer_handoffs'\)\.update\(\{ status: 'done' \}\)\.eq\('shop_id', S\.shopId\)\.eq\('id', [\w.]+\)\.select\('id'\)/.test(src) && /!(r\.)?data\.length\) throw/.test(src),
       `${a}: and closes them (status done), counting it closed only when the row came back -- a switched-off task is no error, just no row`);

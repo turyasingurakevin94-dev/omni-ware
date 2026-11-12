@@ -26,7 +26,7 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('the audit fixes of 0138');
 const sql = read('supabase/migrations/0138_row_ids_one_sequence.sql');
-const buyer = read('buyer.html'), accounts = read('accounts.html'), sales = read('sales.html');
+const buyer = read('old/buyer.html'), accounts = read('accounts.html'), sales = read('sales.html');
 const doc = read('docs/decision-rights.md');
 const fn = name => { const at = sql.indexOf('create or replace function ' + name + '('); if (at < 0) throw new Error('0138 has no ' + name); const open = sql.indexOf('$$', at); const end = sql.indexOf('$$;', open + 2); return sql.slice(at, end); };
 

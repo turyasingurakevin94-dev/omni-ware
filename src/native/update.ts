@@ -1,11 +1,12 @@
 /*
  * Staying current without a store release (spec 07 §4 "Offline (phone app)", spec 06 §4): the
- * installed app checks the live sales.html now and then, keeps a copy of a newer one on the phone,
+ * installed app checks its live page (sales.html, buyer.html) now and then, keeps a copy of a newer one on the phone,
  * and switches to it the next time the app goes to the background, never in the middle of an order.
- * Moved from sales.html's native layer (its job 4); native.ts wires it to the Capacitor plugins.
+ * Moved from sales.html's native layer (its job 4); start.ts wires it to the Capacitor plugins.
+ * Shared by every new app: `updater(app)` gives one app's check, on its own page, key and build id.
  *
  * What a copy is: one folder under the app's data, `live/<hash>/`, holding
- *   - index.html       the page, through the phone's swaps (apps/sales/src/transform.js);
+ *   - index.html       the page, through the phone's swaps (apps/<role>/src/transform.js);
  *   - its own files    every file its <meta name="ow-files"> names (the tab files), fetched FROM THE
  *                      SERVER, beside the page, and each of the page's build;
  *   - the shell's      the Supabase client, the fonts and the swaps (transform.js and the files in
@@ -14,19 +15,21 @@
  * All or nothing: a file missing, of another build or cut off, and nothing is staged.
  *
  * The safety rule: only a build of this app is ever staged. A page without the build id
- * tools/build-app.js writes (window.owSalesBuild) and its <meta name="ow-files"> is refused, so an
+ * tools/build-app.js writes (window.owSalesBuild, window.owBuyerBuild) and its <meta name="ow-files"> is refused, so an
  * app that ships the new page never turns itself back into the old one by fetching an old live page.
  */
 
-/**
- * The new app's own page, next/sales.html, not the root sales.html: the root is the old app until Sales is
- * switched, and the safety rule refuses it, so an installed APK never moved past what it shipped and every fix
- * needed a new APK (Kevin, 10 Nov 2026: "dont always build the new apk"). next/ is built from src/ on every
- * change, before and after the switch.
- */
-export const SOURCE = 'https://omni-ware.vercel.app/next/sales.html';
-/** Kept under the same key as the old native layer, so a phone it updated settles here. */
-export const KEY = 'ow-sales-bundle';
+/** One app's update: its live page, the key its state is kept under, and the build id its page carries. */
+export interface NativeApp {
+  role: string;
+  /** The live page, e.g. https://omni-ware.vercel.app/sales.html. */
+  source: string;
+  /** Kept under the same key as the old native layer, so a phone it updated settles here. */
+  key: string;
+  /** The window variable tools/build-app.js writes the build id to (owSalesBuild). */
+  build: string;
+}
+
 export const EVERY = 30 * 60 * 1000;
 
 export interface Staged { dir: string; path: string; etag: string }
@@ -58,10 +61,10 @@ export interface UpdateIo {
 export type CheckResult = 'staged-already' | 'waiting' | 'unchanged' | 'refused' | 'current' | 'missing' | 'staged' | 'failed';
 
 /** The safety rule: the build id and file list of a whole build of this app, or null. */
-export function builtPage(html: string): { build: string; files: string[] } | null {
+function builtPageOf(app: NativeApp, html: string): { build: string; files: string[] } | null {
   // Half a page is worse than an old page.
   if (html.length < 100000 || html.indexOf('</html>') === -1) return null;
-  const build = (html.match(/window\.owSalesBuild="([0-9a-f]{8,64})"/) || [])[1];
+  const build = (html.match(new RegExp('window\\.' + app.build + '="([0-9a-f]{8,64})"')) || [])[1];
   const meta = html.match(/<meta name="ow-files" content="([^"]*)">/);
   if (!build || !meta) return null;
   const files = meta[1].split(/\s+/).filter(Boolean);
@@ -74,14 +77,13 @@ export function shellFiles(files: string[]): string[] {
   return files.filter((f) => f === 'transform.js' || f.indexOf('/') !== -1);
 }
 
-/** A file of `name` beside the live page. */
-export const beside = (name: string): string => new URL(name, SOURCE).href;
 
 /**
  * Check the live page; stage a newer build. At most every EVERY, and never while a copy waits for
  * the background. The copy running now carries on whatever happens here.
  */
-export async function check(io: UpdateIo): Promise<CheckResult> {
+async function checkOf(app: NativeApp, io: UpdateIo): Promise<CheckResult> {
+  const SOURCE = app.source, builtPage = (h: string) => builtPageOf(app, h), beside = (n: string) => new URL(n, SOURCE).href;
   const s = io.load();
   if (s.staged) return 'staged-already';
   if (io.now() - (s.checked || 0) < EVERY) return 'waiting';
@@ -154,4 +156,20 @@ export async function settle(io: SettleIo): Promise<void> {
   io.save(s);
   const all = await io.dirs().catch(() => [] as string[]);
   await Promise.all(all.filter((n) => n !== keep).map((n) => io.remove('live/' + n).catch(() => undefined)));
+}
+
+/** One app's update functions. */
+export function updater(app: NativeApp) {
+  return {
+    SOURCE: app.source,
+    KEY: app.key,
+    EVERY,
+    /** The safety rule: the build id and file list of a whole build of this app, or null. */
+    builtPage: (html: string) => builtPageOf(app, html),
+    /** A file of `name` beside the live page. */
+    beside: (name: string): string => new URL(name, app.source).href,
+    check: (io: UpdateIo) => checkOf(app, io),
+    settle,
+    shellFiles,
+  };
 }

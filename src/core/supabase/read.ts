@@ -18,7 +18,7 @@ import {
 } from './rows.ts';
 
 /** sales.html:3866 selectAll: a whole table for the shop, 1,000 rows a page, by key. */
-async function selectAll(sb: Sb, shopId: string, table: string, keyCol: string = 'id', filter?: (q: Sb) => Sb): Promise<Row[]> {
+export async function selectAll(sb: Sb, shopId: string, table: string, keyCol: string = 'id', filter?: (q: Sb) => Sb): Promise<Row[]> {
   let rows: Row[] = [], total: number | null = null;
   for (;;) {
     let q: Sb = sb.from(table).select('*', total === null ? { count: 'exact' } : undefined).eq('shop_id', shopId);
@@ -45,7 +45,7 @@ const data = (r: { data?: Row[] | null; error?: unknown }): Row[] => (r && !r.er
  * shop_members rows; Sales opens for sales, owner, admin or manager. More than one such shop:
  * the first (the shop picker is the shell's to draw when it is needed).
  */
-export async function readSession(sb: Sb): Promise<Session | null> {
+export async function readSession(sb: Sb, roles: string[] = ['sales', 'owner', 'admin', 'manager'], app: string = 'Sales'): Promise<Session | null> {
   const { data: u, error: ue } = await sb.auth.getUser();
   const user = !ue && u && u.user ? u.user : null;
   if (!user) {
@@ -56,8 +56,8 @@ export async function readSession(sb: Sb): Promise<Session | null> {
   // Before 0164 there is no display_name: the same read without it.
   if (error && /display_name/.test(String(error.message || ''))) ({ data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id));
   if (error) throw isNetwork(error) ? dataError('offline', 'No signal') : dataError('refused', String(error.message || error));
-  const pick = ((ms || []) as Row[]).find((m) => ['sales', 'owner', 'admin', 'manager'].includes(m.role));
-  if (!pick) throw dataError('refused', 'This login is not in Sales', 'role');
+  const pick = ((ms || []) as Row[]).find((m) => roles.includes(m.role));
+  if (!pick) throw dataError('refused', 'This login is not in ' + app, 'role');
   const meta = user.user_metadata || {};
   return {
     userId: String(user.id), shopId: String(pick.shop_id), shopName: String((pick.shops && pick.shops.name) || 'The shop'), role: pick.role as Role,

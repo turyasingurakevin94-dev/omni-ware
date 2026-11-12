@@ -29,7 +29,7 @@ const accounts = read('supabase/functions/supplier-accounts/index.ts');
 const clientPortal = read('supabase/functions/client-portal/index.ts');
 const page = read('supplier.html');
 const index = read('index.html');
-const buyer = read('buyer.html');
+const buyer = read('old/buyer.html');
 const migration = read('supabase/migrations/0132_supplier_accounts.sql');
 
 // Comments name every forbidden column on purpose; the code must not.
@@ -234,11 +234,11 @@ const accountsCode = codeOnly(accounts);
   // supplier.confirm), on the Buyer app's own reads.
   t.check(/from\('supplier_answers'\)/.test(buyer) && /async function readAppAnswers/.test(buyer),
     'the Buyer app reads answers from the supplier app');
-  const fold = extractFunction(buyer, 'readAppAnswers', 'buyer.html');
+  const fold = extractFunction(buyer, 'readAppAnswers', 'old/buyer.html');
   t.check(/a\.terms === orderSupplierTerms\(q, sid\)/.test(fold) && /q\.status === 'draft'/.test(fold) && /changeOrder\(/.test(fold)
     && /setOrderSupplierConfirm\(/.test(fold) && /by: 'supplier'/.test(fold),
     'it folds an answer only into the order the supplier saw, still in Checking, through the shop\'s own rule');
-  t.check(/readAppAnswers\(\);[\s\S]{0,40}\}\s*catch/.test(extractFunction(buyer, 'refreshLive', 'buyer.html')),
+  t.check(/readAppAnswers\(\);[\s\S]{0,40}\}\s*catch/.test(extractFunction(buyer, 'refreshLive', 'old/buyer.html')),
     'and on every refresh, not just at start');
 
   // And the Buyer is pushed when one arrives (0133).

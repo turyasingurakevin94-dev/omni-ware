@@ -16,6 +16,7 @@ import type { DataSource, OrderDraft } from '../../../core/datasource.ts';
 import type { DemoSource } from '../../../core/demo/index.ts';
 import { readFlags } from '../../../core/demo/flags.ts';
 import { idbStore, memoryStore, Outbox, type Kept } from '../../../core/outbox.ts';
+import { salesScope } from '../../../core/scope.ts';
 import { supabaseSource } from '../../../core/supabase/index.ts';
 import type { Books, ChatBooks, Member, Session } from '../../../core/types.ts';
 
@@ -25,6 +26,11 @@ export type Phase = 'starting' | 'login' | 'signed-elsewhere' | 'ready';
 export interface Draft extends OrderDraft {
   key: string;
   at: number;
+  /**
+   * Its place is kept on this phone (SAL-4): the outbox id. The draft is locked — shown, never edited or
+   * placed again — until the place goes (the draft is cleared) or the books refuse it (unlocked, with why).
+   */
+  placing?: string;
 }
 
 const flags = readFlags(typeof location === 'undefined' ? '' : location.search);
@@ -79,7 +85,7 @@ function send(kind: string, args: unknown): Promise<unknown> {
 
 async function openOutbox(userId: string): Promise<void> {
   const store = isDemo ? memoryStore((source as DemoSource).kept()) : (typeof indexedDB === 'undefined' ? memoryStore() : idbStore('sales', userId));
-  outbox = new Outbox(store, send, () => source.now());
+  outbox = new Outbox(store, send, () => source.now(), { scopeOf: salesScope, readsOk: () => source.now() - readOkAt < 120000 });
   outbox.onChange((l) => { kept.value = l; });
   outbox.onSent((id, value) => { sentFns.forEach((fn) => fn(id, value)); });
   outbox.onRefused((id, reason) => { refusedFns.forEach((fn) => fn(id, reason)); });
@@ -102,10 +108,13 @@ export function onKeptRefused(fn: (id: string, reason: string) => void): () => v
 }
 
 /** Read the books and the chats again (every 45 s and 15 s; on signal back; after a write). */
+/** When the books last read fine: a kept write that still fails as "no signal" then is not a signal problem (SAL-3). */
+let readOkAt = 0;
+
 export async function refresh(): Promise<void> {
   try {
     const [b, c] = await Promise.all([source.books(), source.chats()]);
-    books.value = b; chats.value = c; readError.value = null;
+    books.value = b; chats.value = c; readError.value = null; readOkAt = source.now();
   } catch (e) {
     readError.value = (e as Error).message || String(e);
   } finally {
@@ -199,12 +208,13 @@ export async function enter(s: Session): Promise<void> {
   await openOutbox(s.userId);
   drafts.value = loadDrafts(s.userId);
   phase.value = 'ready';
-  void refresh();
+  // What this phone kept goes as soon as the app opens, not only when the phone says it is back online (SAL-3).
+  void refresh().then(() => flush());
   timers.forEach((t) => clearInterval(t));
   if (!isDemo) {
     timers = [
       window.setInterval(() => { void refresh(); }, 45000),
-      window.setInterval(() => { now.value = source.now(); }, 30000),
+      window.setInterval(() => { now.value = source.now(); if (kept.value.some((k) => k.state === 'kept')) void flush(); }, 30000),
     ];
   }
 }
@@ -222,5 +232,9 @@ export async function signOut(): Promise<void> {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => { online.value = source.online(); void flush(); });
+  // Back in the app (another app, the phone woke): send what waits (SAL-3).
+  const back = () => { if (session.value && document.visibilityState === 'visible' && kept.value.some((k) => k.state === 'kept')) void flush(); };
+  document.addEventListener('visibilitychange', back);
+  window.addEventListener('focus', back);
   window.addEventListener('offline', () => { online.value = false; });
 }

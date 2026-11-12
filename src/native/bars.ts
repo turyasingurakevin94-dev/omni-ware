@@ -1,6 +1,6 @@
 /*
- * The phone's bars inside the Android app (the native layer, shell/native.ts). Moved from sales.html's
- * native layer (its jobs 2 and 3).
+ * The phone's bars inside an Android app (the native layer, src/native/start.ts). Moved from sales.html's
+ * native layer (its jobs 2 and 3); shared by every new app.
  *
  * Where the WebView sits decides everything, and it is one rule (barsPlan below):
  *   - Under the bars (edge to edge: capacitor.config.json SystemBars "css", viewport-fit=cover): the

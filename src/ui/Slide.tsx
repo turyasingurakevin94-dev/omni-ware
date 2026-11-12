@@ -70,6 +70,8 @@ export function Slide(p: SlideProps): JSX.Element {
   const state = p.state || 'ready';
   const track = useRef<HTMLDivElement>(null), knob = useRef<HTMLButtonElement>(null), fill = useRef<HTMLSpanElement>(null);
   const [done, setDone] = useState(false);
+  // One commit per press (SAL-4): a second Enter or click in the same moment, before the re-render, is dropped.
+  const fired = useRef(false);
   const live = state === 'ready' && !done;
   const drag = useRef({ x0: 0, dx: 0, max: 0, on: false, moved: false });
 
@@ -90,9 +92,11 @@ export function Slide(p: SlideProps): JSX.Element {
   }, [state, done]);
 
   const commit = () => {
+    if (fired.current) return;
+    fired.current = true;
     setDone(true);
     place(maxX(), true);
-    Promise.resolve(p.onCommit()).catch(() => undefined).then(() => setDone(false));
+    Promise.resolve(p.onCommit()).catch(() => undefined).then(() => { fired.current = false; setDone(false); });
   };
 
   const down = (e: PointerEvent) => {

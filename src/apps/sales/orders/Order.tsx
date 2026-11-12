@@ -17,13 +17,13 @@ import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import type { ScreenProps } from '../shell/types.ts';
 import { twinOf } from '../../../core/orders.ts';
-import { custOf, faceOf, kept, member, nameOf, orderOf, orderWhen, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName } from './data.ts';
+import { custOf, faceOf, kept, member, openAsk, nameOf, orderOf, orderWhen, overPaymentOf, owesOnceFixed, payFixesOf, shortItem, shortName } from './data.ts';
 import { go, payFor } from './links.ts';
 import { CheckList, CheckPills } from '../../../ui/CheckList.tsx';
 import { ActBar, type Act } from '../../../ui/ActTiles.tsx';
 import { MoneyTiles } from '../../../ui/MoneyTiles.tsx';
 import { Track } from '../../../ui/Track.tsx';
-import { AskTimeline, DoorCard, GateCard, LadderUnder, MapCard, OverRow, PaidBar, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
+import { AskTimeline, CancelCard, DoorCard, GateCard, LadderUnder, MapCard, OverRow, PaidBar, PayFixAsked, PriceTell, TwinCard } from './OrderParts.tsx';
 import { openChange } from './Change.tsx';
 import { openTell } from './Tell.tsx';
 import { openPayFix, openWrong } from './Wrong.tsx';
@@ -44,6 +44,9 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
   const ruth = firstWord(b.members.find((m) => m.role === 'manager')?.name || 'Manager'), esther = firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts');
   const k = kept(o);
   const pending = pendingOf(o);
+  // X-1: a cancel asked and still waiting holds the order; Ruth's no is shown once while the order is still before its bill.
+  const cx = openAsk(b, o, 'cancel');
+  const cxNo = !cx && !o.invoiced && !o.voided ? b.billAsks.filter((a) => a.orderId === o.id && a.kind === 'cancel' && a.status === 'declined').sort((x, y) => y.at - x.at)[0] : undefined;
   const op = delivered ? overPaymentOf(b, o) : null;
   const fixes = o.voided ? [] : payFixesOf(b, o);
   const tiles = fixes.length && v.bill ? [{ ...v.tiles[0], warnNote: v.tiles[1].note }, { ...v.tiles[1], dot: true, note: `${owesOnceFixed(b, o, fixes[0]).toLocaleString('en-US')} once fixed` }] : op ? [{ ...v.tiles[0], note: o.paid >= total ? 'paid in full' : v.tiles[0].note }, { k: 'Paid over', v: paidOver(b, op).over, tone: 'warn' as const, note: `${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')} settles it`, on: () => nav.push('orders/paid-over', { payment: op.id, from: 'order' }), label: `Paid over ${paidOver(b, op).over.toLocaleString('en-US')}: pick Give change or Deposit for ${firstWord(b.members.find((m) => m.role === 'accounts')?.name || 'Accounts')}` }] : v.tiles;
@@ -64,6 +67,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       )}>
       {delivered && !v.returnAsk && o.deliveredAt && o.deliverTo && dayOf(o.deliveredAt) === dayOf(t) && <DoorCard place={o.deliverTo ? o.deliverTo.split(',')[0] : 'At the gate'} by={member(b, o.holderId)?.name} at={`${dayLabel(o.deliveredAt)} · ${clock(o.deliveredAt)}`} photo={o.deliveredPhoto} />}
       {v.ready ? <GateCard o={o} /> : o.stage === 'road' && <MapCard b={b} o={o} />}
+      {(cx || cxNo) && <CancelCard ask={(cx || cxNo) as NonNullable<typeof cx>} ruth={ruth} />}
       <MoneyTiles tiles={tiles} />
       {op && <OverRow b={b} p={op} />}
       {(o.stage === 'road' && !v.ready) || v.bill ? null : delivered && !v.returnAsk && !open ? (
@@ -83,7 +87,7 @@ function OrderBody(p: { b: Books; o: Order }): JSX.Element {
       {fixes.length > 0 && v.bill && <PaidBar b={b} o={o} />}
       <div class="or-foot">
         <ActBar acts={acts} />
-        {owes > 0 && !v.returnAsk && !pending && !o.voided
+        {owes > 0 && !v.returnAsk && !pending && !o.voided && !cx
           ? <Button kind="red" icon="cash" class="or-take" onClick={() => payFor(b, o)}>Take payment · <span class="mono">{owes.toLocaleString('en-US')}</span></Button>
           : null}
         {delivered && !v.returnAsk && !v.bill && !o.voided && <button type="button" class="ow-btn k-ghost h52" onClick={() => go('sell/order', { customer: o.customerId, from: 'again', items: againItems(o) })}><Icon name="undo" size={18} stroke={2} />Sell again</button>}
