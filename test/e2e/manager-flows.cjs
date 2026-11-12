@@ -16,6 +16,7 @@
  *   offline      &offline: the answer is kept ("No signal · it sends when back"); the signal back sends it
  *   failed       &fail=settlePick: "Not sent · tell Kevin · code MG-502"; Try again sends it
  *   clash        &clash=carton: "Someone else just did this · Refreshed"
+ *   taps         the eight from Today: a safe answer 1 tap on its row, a slide Open + slide (day.md)
  *   empty        &state=empty: the + is a tick and opens All decided
  */
 const R = require('./runner.cjs');
@@ -133,10 +134,43 @@ async function clash(open) {
   k.check(/Someone else just did this/.test(await k.all()), 'someone else answered first: said so');
 }
 
+/**
+ * Taps per decision from Today (docs/audit/manager/day.md "From the app", less the tap that opens the app):
+ * the eight of 09:40. A row with its safe answer: 1 tap. A money or books move: Open + the slide = 2 (as Today p1 draws).
+ */
+async function taps(open) {
+  const k = await open('');
+  const rows = k.p.locator('.mg-today-pill');
+  let n = 0, slides = 0, total = 0;
+  for (let guard = 0; guard < 12; guard++) {
+    await k.p.waitForTimeout(800);
+    const pills = await rows.count();
+    if (!pills) break;
+    // The first row that can still be answered (not one waiting its Undo).
+    const pill = k.p.locator('.mg-today-pill:not([disabled])').first();
+    if (!(await pill.count())) { await k.p.waitForTimeout(10500); continue; }
+    const isOpen = /open/.test((await pill.getAttribute('class')) || '');
+    await pill.tap();
+    total += 1;
+    if (isOpen) {
+      await k.p.waitForTimeout(500);
+      if (await k.p.locator('.mg-dock .ow-knob').count()) { await k.slide('.mg-dock .ow-knob'); total += 1; slides++; }
+      else { await k.tap({ sel: '.mg-dock .mg-ans' }, 900); total += 1; }
+      await k.p.waitForTimeout(3000);
+      if (await k.p.locator('.mg-d[role=dialog]').count()) await k.p.locator('.mg-d-x').first().tap().catch(() => undefined);
+      if (await k.p.locator('.mg-done-back').count()) await k.p.locator('.mg-done-back').first().tap().catch(() => undefined);
+    }
+    n++;
+  }
+  k.note(`${n} decisions answered from Today in ${total} taps (${slides} slides as Open + slide); day.md from the app, less opening it: 8 × 1 (+1 a slide)`);
+  k.check(n === 8, 'the eight of 09:40 are answered from Today', n);
+  k.check(total <= 8 + slides, `each takes 1 tap, a slide 2 (got ${total} for ${n})`, total);
+}
+
 async function empty(open) {
   const k = await open('&state=empty');
   await k.tap({ sel: '.ow-plus' });
   k.check(/All decided/.test(await k.all()), 'nothing waits: the + opens All decided');
 }
 
-R.main({ app: 'manager', flows: { queue, 'per-decision': perDecision, undo, 'double-tap': doubleTap, offline, failed, clash, empty }, phone: PHONE });
+R.main({ app: 'manager', flows: { queue, 'per-decision': perDecision, undo, 'double-tap': doubleTap, offline, failed, clash, taps, empty }, phone: PHONE });
