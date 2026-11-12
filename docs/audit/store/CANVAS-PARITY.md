@@ -91,3 +91,76 @@ Where the board draws the same fault (F1, F11, F12), the board is wrong too: fix
   Fix: `#5F6980` (5.05:1). Redraw the boards the same.
 - **F13 · the aisle-count number field is 44×20** (SH14). `aislecount.css:39` makes the input 20 px tall inside the 44 px `.sh-box`, and a tap beside it does not focus it. Fix: `.sh-box label { flex: 1; height: 44px; align-items: center }` and `.sh-box input { height: 44px }`.
 - **F14 · the kept or failed report dims its notes** (SH26, SH27). `Report.tsx:99` puts `.dim` (opacity .55, `report.css:12`) on the whole form, so "Set the 3 aside, away from the good bundles" (2.13:1) and "Ruth decides: write it off or keep it · Undo for 10 s" (2.19:1) fade. The board keeps both at full strength. Fix: render `.sh-rp-note` and `.sh-rp-ruth` (lines 127–128) after the dimmed `div`, not inside it. Also give the unit buttons `disabled={off}` like the other form controls.
+
+## Pack
+
+Critic run 2026-11-12 on `6a95aa53` (origin/claude/store-build). The run covered 25 boards: the 22 Pack boards plus AD02, AD05 and AD06 (Unpack, "Added while building"). `test/parity/store-pack.json` is unchanged (every tap reached its board). **7 pass, 18 fail.**
+
+Accepted across the area (not failures):
+- **The item picture.** The demo's shelf has no photos, so the aisle's duotone stands in. It is about 3–4 % of a pack card.
+- **The rail icons** are the shell's `RAIL`.
+- **Figures corrected to the data** (spec §2a, FACTS §8):
+  - #0552's line 2 is the wheelbarrows (2 pc) where PK04, PK05, PK16 and PK19 draw wire nails (2 ctn).
+  - #0530 is cancelled at 10:38, where the boards say 10:41.
+  - The demo's fail code is PK-502, for the boards' sample codes.
+- **No per-line pick time** on PK15 and PK17: the books have no `pickedAt`.
+- **The shared parts.** The P28 toast (max-content, no seconds on Undo) for the boards' full-width band on PK05, PK15 and AD05. The shared Not done card's 44 px × on AD06.
+- **The demo clock.** The Undo ring starts at 10 s (boards 7 s), 10:41 for 10:42, 36m for 37 m.
+- **PK07** is on #0556, not #0554, because #0554 is already at the gate in the demo. Bay 1 is #0552 (FACTS: "#0552 bay 1").
+- **AD02's packer** is Okello and bay 3 is free, as the books have it. PK06 draws bay 3 free too.
+- **AD05's Buying** is "skipped": #0530 has no Buying in the books. AD05 lists the order under To pack now (Q23).
+- **PK13's Waiting on goods group** is not on the board, but the books hold it at that moment (PK01 draws it).
+- **Stand-in links.** A row that opens #0556's pack where the board links PK01 as a stand-in (routes §3).
+- **PK03's press.** The tool cannot hold a press. The `:active` rule is in `pack/card.css:49`.
+- **Inactive controls, as drawn:**
+  - Short and the amount tiles are dimmed while sending (PK16, PK18).
+  - "Back online to finish", "Waits for the goods" and the blocked put-back slide are disabled, at 4.30:1.
+- **The toast covers the back strip** for 10 s on PK05, PK15 and AD05. The board's toast covers it too.
+
+**No money on any Pack board.** "39m", "36m", "0m" and "3m" are minutes and sizes, not money. On all 25 boards there is no text under 11 px, no target under 44 px, and `scrollWidth` is 360 (the stage chips scroll, `stagesheet.css:17`).
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| PK01 To pack | `pack` | 2 | 5.91 | ok | ok | ok | ok | **2.76 NH** | ok | fail | F7 |
+| PK02 Pack | `pack/order` | 1 | 4.14 | ok | **strip** | ok | ok | ok | ok | fail | F1 |
+| PK03 Pressed | `pack/order` | 1 | 8.57 | ok (rule) | **strip** | ok | ok | ok | ok | fail | F1 |
+| PK18 Sending | `pack/order` | 2 | 4.14 | ok | **strip** | ok | ok | ok (disabled) | ok | fail | F1 |
+| PK11 No signal | `pack/order` | 2 | 3.92 | **2 not sent** | **strip** | ok | ok | ok (disabled) | ok | fail | F1, F2 |
+| PK12 Not saved | `pack/order` | 2 | 5.28 | ok | **strip** | ok | ok | ok | ok | fail | F1 |
+| PK04 Pack short | `pack/order` | 2 | 1.96 | ok | ok | ok | ok | ok | ok | pass | |
+| PK16 Short sending | `pack/order` | 3 | 1.5 | ok | ok | ok | ok | ok (dimmed, as drawn) | ok | pass | |
+| PK19 Short not saved | `pack/order` | 3 | 3.6 | ok | ok | ok | ok | ok | ok | pass | |
+| PK05 Short sent | `pack/order` | 3 | 2.48 | **strip tick** | **strip** | ok | ok | ok | ok | fail | F1, F5 |
+| PK06 Packed | `pack/order` | 2 | 1.8 | ok | ok | ok | ok | **4.46 Next job** | ok | fail | F6 |
+| PK07 Ready to collect | `pack/order` | 5 | 5.43 | ok (data) | ok | ok | ok | **4.46 Next job** | ok | fail | F6 |
+| PK15 Unpack | `pack/order` | 3 | 1.24 | ok | **strip** | ok | ok | ok | ok | fail | F1 |
+| PK08 For you | `pack` | 2 | 6.77 | ok | ok | ok | ok | **2.76 NH** | ok | fail | F7 |
+| PK09 Look only | `pack/look` | 3 | 0.08 | ok | ok | ok | ok | ok | ok | pass | |
+| PK13 Someone else | `pack` | 4 | 6.94 | ok | ok | ok | ok | **2.76 NH** | ok | fail | F7 |
+| PK17 Okello's | `pack/look` | 5 | 2.09 | ok | ok | ok | ok | ok | ok | pass | |
+| PK14 Empty | `pack` | 1 | 10.83 | **no helpers, 0 delivered** | **3 untested** | ok | ok | ok | ok | fail | F3 |
+| PK20 Offline | `pack` | 2 | 6.57 | **Waiting card** | ok | ok | ok | **2.76 NH** | ok | fail | F4, F7 |
+| PK21 Waits for the goods | `pack/order` | 3 | 6.95 | ok | ok | ok | ok | ok (disabled) | ok | pass | |
+| PK10 Put it back | `pack/put-back` | 4 | 0.58 | ok | **strip** | ok | ok | ok (blocked slide) | ok | fail | F1 |
+| PK22 Put back not saved | `pack/put-back` | 5 | 2.08 | ok | **strip** | ok | ok | ok | ok | fail | F1 |
+| AD02 Unpack #0530 | `pack/order {unpack}` | 3 | 4.15 | ok (data) | **under the sheet** | ok | ok | ok | ok | fail | F9 |
+| AD05 Unpacked | `pack/order {unpack}` | 4 | 6.89 | ok (data, Q23) | ok | ok | ok | ok | ok | pass | strip and Close → To pack, as labelled and drawn |
+| AD06 Unpack not saved | `pack/order {unpack}` | 4 | 9.84 | ok | **under the sheet** | ok | ok | **2.08 After Unpack** | ok | fail | F8, F9 |
+
+### Pack failures and fixes
+
+Where the board draws the same fault (F6, F7, F8), the board is wrong too: fix the app and redraw the board in the same commit.
+
+- **F1 · the back strip does not go to the screen below** (PK02, PK03, PK18, PK11, PK12, PK05, PK15, PK10, PK22). nav.ts's rule (and Shelf F5): Close goes to the board's place, the strip to the real screen below, named by `backTo`. Measured:
+  - `pack/order` reached by the red Next job (stack Today → #0552): the strip reads "Back to To pack" and `toSheet` replaces the top with To pack. The screen below is Today.
+  - `pack/put-back` reached from To pack's red row (stack Today → To pack → #0530): the strip reads "Back to Today" and calls `nav.home()`. The screen below is To pack.
+
+  Fix: `Pack.tsx:144,150` and `Packed.tsx:162`: `onBack={() => nav.back()} backLabel={backTo.value}`; `PutBack.tsx:48,87` the same. Close stays as it is (`toSheet` → To pack, `nav.home()` → Today, the boards' places). From To pack (PK09, PK17, PK21) nothing changes: the screen below is To pack.
+- **F2 · "2 not sent yet" for one packed line** (PK11). The board says **1**. With no signal the last line keeps two writes, `pick` and the `finishPack` kept behind it, and `pack/parts.tsx:94 TopNotice` counts writes, not what Musa did. The dock already says the finish waits ("Back online to finish"). Fix: in `TopNotice`, leave out a kept `finishPack` whose order also has a kept `pick` (`keptPack` in `core/store/outbox.ts:57` already pairs them).
+- **F3 · the empty yard is not the board's moment** (PK14). The board draws nothing to pack while the yard still has work: "Check in Denis's trip · ~11:30", To load 1, At the gate 1 #0555, "Next to pack #0549 Ggaba · Buying", and "1 delivered today". `&state=empty` empties the whole yard, so `ToPackEmpty.tsx:37–60` never draws its helpers, three of the board's links (→ IN02, OU01, OU10) cannot be tapped, and the head says "0 delivered today". Fix: make `&state=empty` (`core/store/demo/flags.ts`) empty only To pack, For you and Packing now (#0556, #0557, #0552 packed or gone), keeping Denis's trip, #0530 on To load, #0555 at the gate, #0549 in Buying and one delivery. Then check the three links.
+- **F4 · No signal: the Waiting group is a card, not a row** (PK20). Offline, the board folds Waiting on goods to its head row, "Waiting on goods 2 · Denis ~11:30 ›" (→ PK21). The app draws the full #0549 · #0546 card as on PK01. No written reason. Fix: in `ToPack.tsx`, when `!online` draw the Waiting group as one head row with Denis's due time, linking to the first waiting order. Or the lead corrects PK20 to PK01's card in spec §2a. Do not leave it unrecorded.
+- **F5 · the short line is ticked in the head's strip** (PK05). The board draws the line just packed short with a mint bar but its label white and bold, no tick ("C · Wire nails"), because it is short, not packed. `head.tsx:43` gives `short` the same tick as `done`, and the label goes soft. Fix: tick `done` only; draw `short` with the mint bar and the white 700 label, no tick.
+- **F6 · "Next job" at 4.46:1** (PK06, PK07), the board as drawn too. The 11 px label `.mo-next-t > span` (`moment.css:55`) is `var(--on-navy-2)` `#8D99B5` on the next-job card (`rgba(255,255,255,.08)` over navy). Fix: `#B3BCD2` (the hero's secondary, as Shelf F1). Redraw PK06 and PK07.
+- **F7 · the copy's dimmed face at 2.76:1** (PK01, PK08, PK13, PK20), the board as drawn too (`opacity: .6`). `.pk-face.dim { opacity: .6 }` (`pack.css:55`) fades the 12 px "NH" on the #0557 row. The row still opens Look only, so its words must read. Fix: drop the opacity. Show the copy with the slate holder face (`yardFace`), whose ink is at full strength; the red "Don't pack" pill already says it is the copy. Redraw the four boards.
+- **F8 · the failed unpack dims "After Unpack"** (AD06), the board as drawn too (`opacity: .5`). `.ad-after.dim` (`unpack.css:12`) brings "After Unpack · Undo for 10 s" to 2.08:1, "Brian sees: Packing again" to 3.17:1, and "BO" to 2.37:1. That is still what Unpack will do on Try again, so it is information, not an inactive control. Fix: do not add `.dim` in the failed state. Redraw AD06 without the 0.5.
+- **F9 · the page under the Unpack sheet** (AD02, AD06). A tap on the dim head (the scrim) closes the sheet and leaves #0530's Packed page (`Unpack.tsx:96–98`). That page's strip reads only "Back", and its Close calls `nav.back()` to #0552's Packed moment. The board links both to TD01. Fix: `Unpack.tsx:96` `backLabel={backTo.value}` ("Back to the order"); `Unpack.tsx:98` `onClose={() => nav.home()}` (the board's place, Today). Better still, a scrim tap does what the sheet's Close does (`keep`, → PK06), so the bare #0530 page, which no board draws, is never left open.
