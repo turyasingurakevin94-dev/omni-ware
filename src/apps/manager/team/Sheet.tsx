@@ -14,13 +14,13 @@ import { undoHeld } from '../shell/store.ts';
 import { movedAt, phaseOf, retryMove, useSecondsLeft } from './Move.tsx';
 import './sheet.css';
 
-export function TeamSheet(p: { label: string; head: ComponentChildren; children: ComponentChildren; dock: ComponentChildren }): JSX.Element {
+export function TeamSheet(p: { label: string; head: ComponentChildren; children: ComponentChildren; dock: ComponentChildren; follow?: boolean }): JSX.Element {
   const box = useRef<HTMLDivElement>(null), scrim = useRef<HTMLDivElement>(null);
   useDragClose(box, () => nav.back(), scrim);
   return (
     <div class="mg-ts" role="dialog" aria-label={p.label}>
       <div class="mg-ts-scrim" ref={scrim} onClick={() => nav.back()} />
-      <div class="mg-ts-box" ref={box}>
+      <div class={'mg-ts-box' + (p.follow ? ' follow' : '')} ref={box}>
         <header class="mg-ts-head"><span class="mg-ts-grab" aria-hidden="true" />{p.head}</header>
         <div class="mg-ts-body">{p.children}</div>
         <footer class="mg-ts-dock">{p.dock}</footer>

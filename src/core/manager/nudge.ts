@@ -11,6 +11,7 @@
  */
 import { money, short } from '../money.ts';
 import { firstWord, orderNo } from '../names.ts';
+import { inM } from './team.ts';
 import type { Cust, MOrder, Ms, Person, Stage } from './types.ts';
 import { onPace } from './watch.ts';
 import { inStage, STAGE } from './words.ts';
@@ -35,8 +36,8 @@ export function aboutOrder(o: Pick<MOrder, 'id' | 'customerName' | 'stage' | 'st
 /** A salesperson behind the month's pace. */
 export function aboutPace(p: Pick<Person, 'sold' | 'goal'>, now: Ms, month: string): string {
   const x = onPace(p.sold, p.goal, now);
-  if (x.ahead >= 0) return `You are ${short(x.ahead, 2)} ahead of pace for ${month}. Keep it going.`;
-  return `You are ${short(-x.ahead, 2)} behind pace for ${month}. ${short(x.perDay, 2)} a day gets you to ${short(p.goal || 0)}.`;
+  if (x.ahead >= 0) return `You are ${inM(x.ahead)} ahead of pace for ${month}. Keep it going.`;
+  return `You are ${inM(-x.ahead)} behind pace for ${month}. ${inM(x.perDay)} a day gets you to ${short(p.goal || 0)}.`;
 }
 
 /** A customer to chase (Money's Nudge Grace). */

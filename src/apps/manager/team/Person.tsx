@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { aboutPace, nudgeTitle } from '../../../core/manager/nudge.ts';
-import { askOn, custOf, dayRate, freeMove, holdsNow } from '../../../core/manager/team.ts';
+import { askOn, custOf, dayRate, freeMove, holdsNow, inM } from '../../../core/manager/team.ts';
 import type { ManagerBooks, MOrder, Person as P } from '../../../core/manager/types.ts';
 import { onPace, pace } from '../../../core/manager/watch.ts';
 import { ROLE, STAGE } from '../../../core/manager/words.ts';
@@ -117,7 +117,7 @@ export function Person(p: { params: Params }): JSX.Element | null {
   const holds = holdsNow(b, x), words = edit ?? aboutPace(x, t, month), id = 'nudge:' + x.id;
   const top = Math.max(rate.soFar, rate.needs, 1);
   return (
-    <TeamSheet label={x.name} head={(
+    <TeamSheet follow label={x.name} head={(
       <>
         <div class="mg-ts-who">
           {goal ? <Ring x={x} frac={op.pct} /> : <Avatar initials={x.initials} tint={x.tint} size={52} font={16} />}
@@ -125,8 +125,8 @@ export function Person(p: { params: Params }): JSX.Element | null {
             <b>{x.name}</b>
             <span class="mg-ts-role">{ROLE[x.role]}
               {goal > 0 && (op.ahead < 0
-                ? <span class="mg-ts-tag"><span class="mg-mono">{short(-op.ahead, 2)}</span> behind pace</span>
-                : <span class="mg-ts-tag up"><span class="mg-mono">{short(op.ahead, 2)}</span> ahead</span>)}
+                ? <span class="mg-ts-tag"><span class="mg-mono">{inM(-op.ahead)}</span> behind pace</span>
+                : <span class="mg-ts-tag up"><span class="mg-mono">{inM(op.ahead)}</span> ahead</span>)}
             </span>
           </span>
           <CloseX />
@@ -140,7 +140,7 @@ export function Person(p: { params: Params }): JSX.Element | null {
             </span>
             <span class="mg-tp-foot">
               <span><b class="mg-mono">{`${Math.round(op.pct * 100)}%`}</b>{' · '}<b class="mg-mono">{pcx.daysLeft}</b> days left</span>
-              <span><b class="mg-mono">{short(rate.needs, 2)}</b> a day</span>
+              <span><b class="mg-mono">{inM(rate.needs)}</b> a day</span>
             </span>
           </div>
         )}
@@ -160,10 +160,10 @@ export function Person(p: { params: Params }): JSX.Element | null {
       {goal > 0 && (
         <>
           <SectionHead title={`${her} pace`} meta="a day" after />
-          <div class="mg-tp-pace" role="img" aria-label={`So far ${short(rate.soFar, 2)} a day; needs ${short(rate.needs, 2)} a day for ${short(goal)}; at ${short(rate.soFar, 2)} the month ends near ${short(rate.ends)}`}>
-            <span class="mg-tp-pr"><span>So far</span><i><i style={{ width: pc(rate.soFar / top), background: TINTS[x.tint].fg }} /></i><b>{short(rate.soFar, 2)}</b></span>
-            <span class="mg-tp-pr"><span>Needs</span><i><i style={{ width: pc(rate.needs / top), background: 'var(--navy)' }} /></i><b>{short(rate.needs, 2)}</b></span>
-            <span class="mg-tp-pf"><span>{`at ${short(rate.soFar, 2)} → ~${short(rate.ends)}`}</span><span>{`${short(goal)} needs ${short(rate.needs, 2)}`}</span></span>
+          <div class="mg-tp-pace" role="img" aria-label={`So far ${inM(rate.soFar)} a day; needs ${inM(rate.needs)} a day for ${short(goal)}; at ${inM(rate.soFar)} the month ends near ${short(rate.ends)}`}>
+            <span class="mg-tp-pr"><span>So far</span><i><i style={{ width: pc(rate.soFar / top), background: TINTS[x.tint].fg }} /></i><b>{inM(rate.soFar)}</b></span>
+            <span class="mg-tp-pr"><span>Needs</span><i><i style={{ width: pc(rate.needs / top), background: 'var(--navy)' }} /></i><b>{inM(rate.needs)}</b></span>
+            <span class="mg-tp-pf"><span>{`at ${inM(rate.soFar)} → ~${short(rate.ends)}`}</span><span>{`${short(goal)} needs ${inM(rate.needs)}`}</span></span>
           </div>
         </>
       )}

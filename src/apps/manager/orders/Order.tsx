@@ -59,9 +59,11 @@ function PriceScale(p: { l: MLine; sells: number | null; shop: number | null }):
       {sells != null && <span class="tk sells" style={{ left: `${at(sells)}%` }} />}
       {costAt != null && <span class="tk cost" style={{ left: `${costAt}%` }} />}
       <span class="knob" style={{ left: `calc(${at(shop)}% - 11px)` }} />
-      {sells != null && <span class="lb mono" style={{ left: 0 }}>{`sells ${money(sells)}`}</span>}
-      {l.cost != null && <span class="lb mono cost" style={{ left: `${Math.min(costAt || 0, 56)}%` }}>{`cost ${money(l.cost)}`}</span>}
-      <span class="lb mono shop" style={{ right: 0 }}>{`shop's ${money(shop)}`}</span>
+      <span class="lbs">
+        {sells != null && <span class="lb mono">{`sells ${money(sells)}`}</span>}
+        {l.cost != null && <span class="lb mono cost">{`cost ${money(l.cost)}`}</span>}
+        <span class="lb mono shop">{`shop's ${money(shop)}`}</span>
+      </span>
     </div>
   );
 }

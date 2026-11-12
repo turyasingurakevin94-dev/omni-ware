@@ -8,6 +8,11 @@ import type { Ask, Cust, Day, ManagerBooks, MOrder, Ms, Person, Stage, TeamRole,
 import { limitsOf, onTheMove, pace, stuck } from './watch.ts';
 import { inStage, STAGE } from './words.ts';
 
+/** A pace figure in millions, as the Team boards write them: "0.83M", "2.09M", "1.08M", "35M". */
+export function inM(n: number): string {
+  return `${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
+}
+
 /** The team the Team tab counts: everyone but the Manager herself. */
 export function others(b: Pick<ManagerBooks, 'team' | 'me'>): Person[] {
   return b.team.filter((p) => p.id !== b.me.id && p.role !== 'manager' && p.role !== 'owner');

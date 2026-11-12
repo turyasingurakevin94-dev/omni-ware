@@ -37,6 +37,7 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
   const [limit, setLimit] = useState<number | null>(c0 ? c0.limit : null);
   const [days, setDays] = useState<number>(c0 && c0.termsDays ? c0.termsDays : 14);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
   if (!b || !c0) return null;
   const c = c0, seller = sellerOf(b, c);
   const now: LimitPick | null = c.limit ? { limit: c.limit, days: c.termsDays || termsFor(c.limit, null) } : null;
@@ -45,6 +46,7 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
   const bar = limitBar(c.owes, c.limit, limit);
   const save = async () => {
     setBusy(true);
+    setError(false);
     try {
       const r = await act('setLimit', c.id, pick);
       nav.back();
@@ -54,12 +56,13 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
       });
     } catch (_e) {
       setBusy(false);
+      setError(true);
     }
   };
   return (
     <MoneySheet label={`Change the limit for ${c.name}`} top={206}
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-sh-t"><b>{c.name}</b><span>{now ? `Limit now ${money(now.limit)} · ${now.days} days` : `Limit now · ${ANSWER.cashOnly}`}</span></span></div>}
-      dock={<MoneyDock told={seller ? [seller] : []} word={pickWord(pick)} mint
+      dock={<MoneyDock told={seller ? [seller] : []} word={pickWord(pick)} mint error={error ? 'Not saved · Try again' : null}
         tap={{ label: `Save · ${pickWord(pick)}`, icon: 'check', on: () => { void save(); }, busy, disabled: same ? 'Nothing to save' : undefined,
           label2: `Save: ${pickWord(pick)} for ${c.name}.${seller ? ` ${firstWord(seller.name)} sees it` : ''}` }} />}>
       <h2 class="mg-mo-h">Limit</h2>

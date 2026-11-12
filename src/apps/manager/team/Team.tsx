@@ -7,7 +7,7 @@
 import type { JSX } from 'preact';
 import { money, short } from '../../../core/money.ts';
 import { aboutPace } from '../../../core/manager/nudge.ts';
-import { everyoneElse, freeMove, goalSplit, others, overLimit } from '../../../core/manager/team.ts';
+import { everyoneElse, freeMove, goalSplit, inM, others, overLimit } from '../../../core/manager/team.ts';
 import type { ManagerBooks, Person } from '../../../core/manager/types.ts';
 import { onPace, pace } from '../../../core/manager/watch.ts';
 import { firstWord, orderNo, TINTS } from '../../../core/names.ts';
@@ -40,7 +40,7 @@ function Hero(p: { b: ManagerBooks }): JSX.Element {
         <button type="button" class="mg-team-me" aria-label={`${firstWord(b.me.name)}, your page`} onClick={() => nav.push('shell/you')}>{b.me.initials}</button>
       </div>
       <button type="button" class="mg-team-sold" onClick={() => nav.push('team/goals')}
-        aria-label={`Sales invoiced in ${month}: ${money(sold)} of ${money(goal)}, ${short(Math.abs(x.ahead), 2)} ${x.ahead >= 0 ? 'ahead of' : 'behind'} pace. Open goals and limits`}>
+        aria-label={`Sales invoiced in ${month}: ${money(sold)} of ${money(goal)}, ${inM(Math.abs(x.ahead))} ${x.ahead >= 0 ? 'ahead of' : 'behind'} pace. Open goals and limits`}>
         <span class="mg-team-over">{`SALES INVOICED · ${month.toUpperCase()} ›`}</span>
         <span class="mg-team-fig">{money(sold)} <small>UGX</small></span>
         <span class="mg-team-bar" aria-hidden="true">
@@ -49,7 +49,7 @@ function Hero(p: { b: ManagerBooks }): JSX.Element {
         </span>
         <span class="mg-team-foot">
           <span><b class="mg-mono">{`${Math.round(x.pct * 100)}%`}</b>{' of '}<b class="mg-mono">{short(goal)}</b>{' · '}<b class="mg-mono">{pc.daysLeft}</b>{' days left'}</span>
-          <span class={'mg-mono ' + (x.ahead >= 0 ? 'up' : 'down')}>{x.ahead >= 0 ? `+${short(x.ahead, 2)} ahead` : `−${short(-x.ahead, 2)} behind`}</span>
+          <span class={'mg-mono ' + (x.ahead >= 0 ? 'up' : 'down')}>{x.ahead >= 0 ? `+${inM(x.ahead)} ahead` : `−${inM(-x.ahead)} behind`}</span>
         </span>
       </button>
     </header>
@@ -69,7 +69,7 @@ function SalesRow(p: { b: ManagerBooks; s: Person }): JSX.Element {
           {moved ? <Moved id={id} word="Nudged" told={name} /> : (
             <span class="mg-team-body">
               <span class="mg-team-line"><b>{ph === 'waits' ? `Nudge ${name}` : name}</b>
-                {ph !== 'waits' && (x.ahead >= 0 ? <span class="mg-team-ahead">Ahead</span> : <span class="mg-team-behind mg-mono">{`−${short(-x.ahead, 2)}`}</span>)}</span>
+                {ph !== 'waits' && (x.ahead >= 0 ? <span class="mg-team-ahead">Ahead</span> : <span class="mg-team-behind mg-mono">{`−${inM(-x.ahead)}`}</span>)}</span>
               {ph !== 'waits' && (
                 <span class="mg-team-goal" aria-hidden="true"><i style={{ width: pctOf(s.sold, s.goal || 0), background: TINTS[s.tint].fg }} /><i class="tick" style={{ left: pctOf(x.pacePct, 1) }} /></span>
               )}
@@ -79,7 +79,7 @@ function SalesRow(p: { b: ManagerBooks; s: Person }): JSX.Element {
         </button>
         {x.ahead >= 0 && ph === 'idle'
           ? <button type="button" class="mg-team-chev" aria-label={`${name}'s page`} onClick={open}><Icon name="chevron-right" size={18} stroke={2.2} /></button>
-          : <MoveAct id={id} icon="send" word="Nudge" label={`Nudge ${name}: ${short(-x.ahead, 2)} behind pace`} on={nudge}
+          : <MoveAct id={id} icon="send" word="Nudge" label={`Nudge ${name}: ${inM(-x.ahead)} behind pace`} on={nudge}
             after={<button type="button" class="mg-team-chev" aria-label={`${name}'s page`} onClick={open}><Icon name="chevron-right" size={18} stroke={2.2} /></button>} />}
       </div>
       <NotSent id={id} />

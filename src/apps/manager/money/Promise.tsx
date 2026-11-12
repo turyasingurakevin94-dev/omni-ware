@@ -31,6 +31,7 @@ export function PromiseSheet(p: { params: Params }): JSX.Element | null {
   const [part, setPart] = useState('');
   const [day, setDay] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const later = useRef<HTMLInputElement>(null);
   if (!b) return null;
   const c = b.customers.find((x) => x.id === p.params.customer);
@@ -43,10 +44,11 @@ export function PromiseSheet(p: { params: Params }): JSX.Element | null {
   const me = top.value.key;
   const send = () => {
     setSent(word);
+    setError(false);
     answer(null, label, 'promise', [c.id, on, amount], {
       quiet: true,
       undo: () => setSent(null),
-      then: (r) => { if (r && top.peek().key === me) nav.back(); else if (!r) setSent(null); },
+      then: (r) => { if (r && top.peek().key === me) nav.back(); else if (!r) { setSent(null); setError(true); } },
     });
   };
   const seg = (k: How, name: string, v: JSX.Element | string, aria: string) => (
@@ -59,7 +61,7 @@ export function PromiseSheet(p: { params: Params }): JSX.Element | null {
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-pr-who"><b>{c.name}</b><span class="mono">{`owes ${money(c.owes)} · oldest ${oldestDays(c, today)} d`}</span></span></div>}
       dock={sent
         ? <MoneyDock strip={<HeldStrip word={sent} sub={seller ? `${firstWord(seller.name)} sees it` : ''} />} />
-        : <MoneyDock told={seller ? [seller] : []} word={word}
+        : <MoneyDock told={seller ? [seller] : []} word={word} error={error ? 'Not saved · Try again' : null}
           tap={{ label, icon: 'check', on: send, disabled: amount > 0 ? undefined : 'Type how much' }} />}>
       <h1 class="mg-mo-title">Promise</h1>
       <SectionHead title="How much" />
