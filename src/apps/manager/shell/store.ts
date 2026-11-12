@@ -45,6 +45,10 @@ export const saved = signal<ManagerBooks | null>(null);
 const holder = new Held();
 holder.onChange((h) => { held.value = h; });
 let outbox: Outbox | null = null;
+/** Answers being sent now (after their 10 s): All decided waits for them. */
+export const sending = signal<string[]>([]);
+/** The last answer the books refused or that did not send: its decision is back, with Try again. */
+export const failed = signal<{ key: string; label: string; retry: () => void } | null>(null);
 /** Keys answered on this phone and not yet read back: they leave the queue at once. */
 export const answered = signal<string[]>([]);
 /** The queue, in order, less what this phone just answered: the + badge, Needs you, the sheet's "n of N". */
@@ -186,10 +190,20 @@ export async function act(kind: WriteName, ...args: unknown[]): Promise<{ kept: 
 export function answer(key: string | null, label: string, kind: WriteName, args: unknown[],
   o: { quiet?: boolean; undo?: () => void; then?: (r: { kept: boolean } | null, e?: unknown) => void } = {}): void {
   if (key) answered.value = [...answered.value, key];
+  if (key && failed.value && failed.value.key === key) failed.value = null;
   const back = () => { if (key) answered.value = answered.value.filter((k) => k !== key); if (o.undo) o.undo(); };
   const w: HeldWrite = {
     label, quiet: o.quiet, undo: back,
-    send: () => act(kind, ...args).then((r) => { if (o.then) o.then(r); }, (e) => { back(); if (o.then) o.then(null, e); }),
+    send: () => {
+      if (key) sending.value = [...sending.value, key];
+      const done = () => { if (key) sending.value = sending.value.filter((k) => k !== key); };
+      return act(kind, ...args).then((r) => { done(); if (o.then) o.then(r); }, (e) => {
+        done();
+        // Refused or failed: the decision comes back with why, and Try again sends the same answer (the work is kept).
+        if (key && !isOffline(e)) failed.value = { key, label, retry: () => answer(key, label, kind, args, o) };
+        back(); if (o.then) o.then(null, e);
+      });
+    },
   };
   holder.hold(w);
   heldOn = top.peek().key;

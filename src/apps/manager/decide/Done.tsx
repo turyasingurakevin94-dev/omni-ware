@@ -14,11 +14,18 @@ import { books, now } from '../shell/store.ts';
 import './done.css';
 
 /** `strip`: the last answer's Undo strip, while it waits its 10 s (Decide shows All decided under it). */
+/** How far back "this round" of answers reaches from the last one. */
+const ROUND_MS = 3600e3;
+
 export function Done(p: { strip?: ComponentChildren; params?: unknown }): JSX.Element | null {
   const b = books.value;
   if (!b) return null;
-  const mine = b.done.filter((d) => !d.auto && d.at >= now.value - 12 * 3600e3);
-  const told = new Set(b.done.flatMap((d) => d.told)).size;
+  // This round: Ruth's answers within the hour before her last one (Today p4: 8 answered 09:41–09:59, not 07:55's).
+  const own = b.done.filter((d) => !d.auto);
+  const latest = own.length ? Math.max(...own.map((d) => d.at)) : 0;
+  const mine = own.filter((d) => d.at >= latest - ROUND_MS);
+  // Told: each person each answer reached (Today p4's bell).
+  const told = mine.reduce((n, d) => n + d.told.length, 0);
   const who = new Map<string, number>();
   mine.forEach((d) => { const id = d.told[0]; if (id) who.set(id, (who.get(id) || 0) + 1); });
   const people = [...who.entries()].map(([id, n]) => ({ p: b.team.find((x) => x.id === id), n })).filter((x): x is { p: Person; n: number } => !!x.p);

@@ -188,6 +188,14 @@ export function managerWrites({ sb, s, ctx }: WriteDeps): Writes {
       });
       if (q.status === 'completed' && !q.invoiced) await call(sb, 'invoice_order', { p_shop_id: s.shopId, p_quote_id: orderId });
     },
+    async priceAgain(orderId: number, idxs: number[]) {
+      // W13's other branch (manager.html saveGivenAway, "To price"): the line waits a price again, asked by the Manager.
+      await change(orderId, ['items'], (o) => {
+        let n = 0;
+        idxs.forEach((i) => { const it = items(o)[i]; if (it && freeOpen(it)) { it.sellPrice = null; it.priceAsk = true; it.priceNote = null; it.priceBy = s.userId; it.priceAt = iso(); n++; } });
+        return n > 0;
+      });
+    },
     async settlePick(orderId: number, all: boolean) {
       let total = 0;
       const q = await change(orderId, ['items', 'pickShortfallAckAt', 'pickSettle'], (o) => {

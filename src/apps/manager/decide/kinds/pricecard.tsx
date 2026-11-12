@@ -4,6 +4,7 @@
  * its three figures, the "Price set · another price" rung, and the keypad sheet it opens
  * (S03 parts in a LightSheet; Use waits under cost). Used by price.tsx, counter.tsx, markup.tsx.
  */
+import { units } from '../../../../core/manager/decide-stock.ts';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { money } from '../../../../core/money.ts';
@@ -27,7 +28,7 @@ export function signed(n: number): string {
 export function ItemCard(p: { l: MLine; price: UGX | null; sub: string }): JSX.Element {
   return (
     <div class="mg-pc-item">
-      <div class="t"><b>{p.l.name} · <span class="mg-mono">{`${p.l.qty} ${p.l.unit}`}</span></b><span>{p.sub}</span></div>
+      <div class="t"><b>{p.l.name} · <span class="mg-mono">{`${p.l.qty} ${units(p.l.qty, p.l.unit)}`}</span></b><span>{p.sub}</span></div>
       {p.price != null
         ? <div class="f"><b class="mg-mono">{money(Math.round(p.price * p.l.qty))}</b><span class="mg-mono">{`${money(p.price)} a ${p.l.unit}`}</span></div>
         : <div class="f"><b class="soon">{PRICE_COMING}</b></div>}

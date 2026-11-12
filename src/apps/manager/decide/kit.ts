@@ -46,6 +46,10 @@ export interface Dock {
 export interface KindView {
   /** The reason chip under the title ("No limit set", "Nothing paid", "−1,000 under cost"). */
   chip?: { text: string; tone: 'amber' | 'mint' | 'rose' } | null;
+  /** Several reason chips (D-3: "Cost 24,000 → 27,000" and "−1,000 under cost"); over `chip`. */
+  chips?: { text: string; tone: 'amber' | 'mint' | 'rose' }[];
+  /** The asked line after the time when there is no order ("Cement 50 kg · 3 bags", "Denis's trip · Owino"). */
+  where?: string;
   /** The title, when the kind words it itself ("Damaged · Cement 50 kg", "Musa's check-in differs"). */
   title?: string;
   evidence: JSX.Element;

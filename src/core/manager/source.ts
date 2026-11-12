@@ -54,6 +54,8 @@ export interface ManagerSource {
   invoiceNow(orderId: number): Promise<void>;
   billSmall(orderId: number): Promise<void>;
   givenAway(orderId: number, idxs: number[], why: string): Promise<void>;
+  /** D-10 Bill it: the lines at 0 go back to be priced (W13's other branch: no selling price, a price ask): D-2 asks it. */
+  priceAgain(orderId: number, idxs: number[]): Promise<void>;
   settlePick(orderId: number, all: boolean): Promise<void>;
 
   /* ---- stock (D-13 … D-17, D-23, D-24) ---- */
@@ -96,7 +98,7 @@ export interface ManagerSource {
 export const WRITES = [
   'price', 'costAndPrice', 'askCost', 'markup',
   'credit', 'storeCredit', 'limitAsk', 'setLimit',
-  'invoiceNow', 'billSmall', 'givenAway', 'settlePick',
+  'invoiceNow', 'billSmall', 'givenAway', 'priceAgain', 'settlePick',
   'takeCheckin', 'extra', 'writeOff', 'keepOnShelf', 'countTaken', 'countAgain', 'restock', 'carton',
   'creditNote', 'keepSold', 'voidBill', 'keepBilled', 'cancel', 'keepOrder', 'cancelTwin', 'bothReal', 'agent',
   'merge', 'notSame', 'opening', 'promise', 'goals', 'stageLimits', 'holdDays', 'nudge', 'giveTo',

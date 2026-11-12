@@ -36,6 +36,7 @@ export const kind: Kind<CheckinAsk> = (c) => {
   const label = `${ANSWER.takeCheckin} · ${signed(k.total)}`;
   return {
     title: `${sn}'s ${askWord('checkin')}`,
+    where: `${rn}'s trip · ${a.lines.find((l) => l.counted !== l.brought)?.place || a.lines[0]?.place || ''}`,
     chip: { text: `${k.differ} of ${k.rows.length} lines ${k.differ === 1 ? 'differs' : 'differ'}`, tone: 'amber' },
     evidence: (
       <>

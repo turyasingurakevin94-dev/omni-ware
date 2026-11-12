@@ -47,7 +47,8 @@ async function queue(open) {
     await primary(k);
     if (i < 7) {
       const nx = await place(k);
-      k.check(nx && nx.of === 7 - i, `after answer ${i + 1}, the next card is there by itself (${7 - i} left)`, nx && `${nx.n} of ${nx.of}`);
+      // The round keeps its count: "2 of 8" after the first answer (Today p3).
+      k.check(nx && nx.n === i + 2 && nx.of === 8, `after answer ${i + 1}, the next card is there by itself (${i + 2} of 8)`, nx && `${nx.n} of ${nx.of}`);
     }
   }
   await k.p.waitForTimeout(600);
@@ -108,7 +109,7 @@ async function doubleTap(open) {
   await el.tap();
   await k.p.waitForTimeout(900);
   const after = await place(k);
-  k.check(before && after && after.of === before.of - 1, 'a double tap answers one decision', after && `${after.n} of ${after.of}`);
+  k.check(before && after && after.n === before.n + 1 && after.of === before.of, 'a double tap answers one decision', after && `${after.n} of ${after.of}`);
 }
 
 async function offline(open) {

@@ -24,7 +24,7 @@ export function orders(): MOrder[] {
     // Checking (3)
     o(554, 'lubowa', 'Lubowa Builders', 'brian', 'draft', '07:00', [l(0, 'Timber 2×4', 'pcs', 40, 9_000, 11_250, { supplierId: 'ndeeba', supplierName: 'Ndeeba Timber' })], { holderId: 'denis' }),
     o(555, 'kyaligonza', 'Kyaligonza & Sons', 'grace', 'draft', '08:35', [l(0, 'Iron sheet G28', 'sht', 30, 38_000, 46_000, { shopPrice: 47_500 })], { holderId: 'ruth', credit: true }),
-    o(556, 'ggaba', 'Ggaba Stores', 'grace', 'draft', '08:20', [l(0, 'Cement 50 kg', 'bag', 10, 34_000, 43_000)], { holderId: 'ruth' }),
+    o(556, 'ggaba', 'Ggaba Stores', 'grace', 'draft', '08:20', [l(0, 'Cement 50 kg', 'bag', 10, 34_000, 43_000, { supplierId: 'hima', supplierName: 'Hima Cement' })], { holderId: 'ruth' }),
     // Buying (2)
     o(552, 'mukono', 'Mukono Roofing', 'faith', 'awaiting_goods', '07:20', [
       l(0, 'Iron sheet G28', 'sht', 20, 38_000, 47_500, { supplierId: 'namanve', supplierName: 'Namanve Sheets', buying: 'found' }),
@@ -56,7 +56,7 @@ function twin(): MLine[] {
 /** The later cards' orders (named only on a card with its time; BRIEF "Reconciled"). */
 export function laterOrders(): MOrder[] {
   return [
-    o(560, 'mukono', 'Mukono Roofing', 'peter', 'awaiting_goods', '10:30', [l(0, 'Cement 50 kg', 'bag', 20, 34_000, 42_500), l(1, 'Y12 rebar 12 m', 'pcs', 10, 31_000, 38_750)], { holderId: 'denis', paid: 300_000 }),
+    o(560, 'mukono', 'Mukono Roofing', 'peter', 'awaiting_goods', '10:30', [l(0, 'Cement 50 kg', 'bag', 20, 34_000, 42_500)], { holderId: 'denis', paid: 300_000 }),
     o(561, 'walkin', 'Walk-in', 'grace', 'completed', '09:20', [l(0, 'Wall plugs', 'pack', 1, 450, 567)], { deliveredAt: t('09:20'), counter: true, heldCode: 'OWSML' }),
     o(562, 'mukono', 'Mukono Roofing', 'faith', 'completed', '08:00', [l(0, 'Cement 50 kg', 'bag', 10, 34_000, null)], { deliveredAt: t('08:00'), heldCode: 'OWTPC', credit: true }),
     o(563, 'kyaligonza', 'Kyaligonza & Sons', 'brian', 'completed', '15:00', [l(0, 'Wall plugs', 'pack', 2, 1_500, 0)], { deliveredAt: t('15:00'), heldCode: 'OWGIV', credit: true }),

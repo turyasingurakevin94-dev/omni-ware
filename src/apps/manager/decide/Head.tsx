@@ -12,7 +12,7 @@ import { Icon } from '../../../ui/icons.tsx';
 
 export interface HeadProps {
   a: Ask; asker: Person | null; order: MOrder | null; n: number; of: number; now: number;
-  title?: string; chip: { text: string; tone: 'amber' | 'mint' | 'rose' } | null;
+  title?: string; chips: { text: string; tone: 'amber' | 'mint' | 'rose' }[]; where?: string;
   onClose: () => void; onNext: (() => void) | null;
 }
 
@@ -22,10 +22,22 @@ export function titleOf(a: Ask): string {
   return askWord(a.kind);
 }
 
+/** The asked line of an ask with no order: what it is about (DecideStock heads). */
+function whereOf(a: Ask): string {
+  switch (a.kind) {
+    case 'loss': return a.reports.map((r) => `${r.name} · ${r.qty} ${r.unit}${r.qty === 1 || /s$/.test(r.unit) ? '' : 's'}`).join(', ');
+    case 'carton': return `${a.name} · ${a.forOrder + a.forShelf} ${a.unit}s`;
+    case 'extra': return `${a.from}`;
+    case 'count': return a.aisle;
+    case 'markup': return a.name;
+    default: return '';
+  }
+}
+
 export function Head(p: HeadProps): JSX.Element {
   const { a, asker, order } = p;
   const late = p.now - a.at >= 3600e3;
-  const where = order ? `${orderNo(order.id)} ${order.customerName}` : '';
+  const where = order ? `${orderNo(order.id)} ${order.customerName}` : p.where || whereOf(a);
   return (
     <header class="mg-d-head">
       <div class="mg-d-row">
@@ -47,7 +59,7 @@ export function Head(p: HeadProps): JSX.Element {
         </div>
       </div>
       <h1 class="mg-d-title">{p.title || titleOf(a)}</h1>
-      {p.chip && <span class={'mg-chip ' + p.chip.tone}>{p.chip.text}</span>}
+      {p.chips.length > 0 && <div class="mg-chips">{p.chips.map((c) => <span key={c.text} class={'mg-chip ' + c.tone}>{c.text}</span>)}</div>}
     </header>
   );
 }

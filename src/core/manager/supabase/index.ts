@@ -82,7 +82,7 @@ export function managerSupabase(): ManagerSource {
 
     price: w('price'), costAndPrice: w('costAndPrice'), askCost: w('askCost'), markup: w('markup'),
     credit: w('credit'), storeCredit: w('storeCredit'), limitAsk: w('limitAsk'), setLimit: w('setLimit'),
-    invoiceNow: w('invoiceNow'), billSmall: w('billSmall'), givenAway: w('givenAway'), settlePick: w('settlePick'),
+    invoiceNow: w('invoiceNow'), billSmall: w('billSmall'), givenAway: w('givenAway'), priceAgain: w('priceAgain'), settlePick: w('settlePick'),
     takeCheckin: w('takeCheckin'), extra: w('extra'), writeOff: w('writeOff'), keepOnShelf: w('keepOnShelf'),
     countTaken: w('countTaken'), countAgain: w('countAgain'), restock: w('restock'), carton: w('carton'),
     creditNote: w('creditNote'), keepSold: w('keepSold'), voidBill: w('voidBill'), keepBilled: w('keepBilled'),

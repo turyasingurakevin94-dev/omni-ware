@@ -100,6 +100,14 @@ export function demoWrites(get: B, now: () => Ms) {
       o.heldCode = null; o.invoiced = true;
       done(`${ANSWER.givenAway} · ${why}`, orderNo(orderId), [o.sellerId]);
     },
+    priceAgain(orderId: number, idxs: number[]) {
+      const o = order(orderId);
+      idxs.forEach((i) => { o.lines[i].price = null; });
+      drop((x) => x.kind === 'given' && x.orderId === orderId);
+      o.heldCode = 'OWTPC';
+      b().asks.push({ key: `price:${orderId}:${idxs[0]}`, at: now(), askerId: o.sellerId, standing: false, orderId, kind: 'price', mode: 'coming', idx: idxs[0], asked: null, costWas: null });
+      done('To price', orderNo(orderId), [o.sellerId]);
+    },
     settlePick(orderId: number, all: boolean) {
       const o = order(orderId);
       drop((x) => x.kind === 'short' && x.orderId === orderId);

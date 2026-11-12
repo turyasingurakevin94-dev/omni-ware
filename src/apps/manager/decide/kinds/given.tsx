@@ -48,7 +48,7 @@ export const kind: Kind<GivenAsk> = (c) => {
       told: [o.sellerId || ''],
       word,
       primary: { tap: { label: word, on: () => c.tap(word, 'givenAway', [o.id, c.a.idxs, why]) } },
-      secondary: { label: ANSWER.billIt, disabled: 'not built yet', on: () => undefined },
+      secondary: { label: ANSWER.billIt, on: () => c.tap('To price', 'priceAgain', [o.id, c.a.idxs]) },
     },
   };
 };

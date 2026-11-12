@@ -94,12 +94,14 @@ function up(c: C, o: MOrder, l: MLine, shop: UGX | null): KindView {
     { k: 'Cost now', v: cost != null ? money(cost) : '?' },
     { k: `${cust} pays`, v: shop != null && sells != null ? signed(Math.round((shop - sells) * l.qty)) : '?', tone: 'warn' },
   ];
-  const chip = sells != null && cost != null && sells < cost
-    ? { text: `${signed(sells - cost)} under cost`, tone: 'amber' as const }
-    : was != null && cost != null ? { text: `Cost ${money(was)} → ${money(cost)}`, tone: 'mint' as const } : null;
+  // D-3's two chips: what the cost did, and how far under it the sale now is.
+  const chips = [
+    ...(was != null && cost != null ? [{ text: `Cost ${money(was)} → ${money(cost)}`, tone: 'mint' as const }] : []),
+    ...(sells != null && cost != null && sells < cost ? [{ text: `${signed(sells - cost)} under cost`, tone: 'amber' as const }] : []),
+  ];
   const second = same != null && same !== shop && !underCost(same, cost) ? same : null;
   return {
-    chip,
+    chips,
     evidence: (
       <>
         <ItemCard l={l} price={shop} sub={lineSub(c.b, o, c.a.askerId)} />

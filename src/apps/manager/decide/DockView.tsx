@@ -11,7 +11,7 @@ import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import type { Dock } from './kit.ts';
 
-export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean }): JSX.Element {
+export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean; online?: boolean }): JSX.Element {
   const d = p.d, pr = d.primary, wait = p.busy || p.cooling;
   return (
     <footer class="mg-dock" aria-busy={wait ? 'true' : undefined}>
@@ -28,7 +28,9 @@ export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean }): JSX
         </button>
       ) : (
         <Slide label={pr.slide.label} onCommit={pr.slide.on} state={p.busy ? 'sending' : 'ready'}
-          lock={pr.slide.disabled ? { icon: 'lock', label: pr.slide.disabled } : undefined}
+          lock={pr.slide.disabled ? { icon: 'lock', label: pr.slide.disabled }
+            // A slide moves money or books and is never kept on the phone: it waits for signal (DecideStock offline).
+            : p.online === false ? { icon: 'offline', label: `${pr.slide.label.split(' · ')[0]} needs signal` } : undefined}
           onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
       )}
       {d.secondary && (
