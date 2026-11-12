@@ -61,10 +61,10 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 | B2. Core | `src/core/manager/`: types, words, queue, price, credit, watch, errors, source; the demo of BRIEF.md (09:40 and the later cards by moment) |
 | B3. Pages not drawn | AD01–AD05 drawn (`Added`, `Added2`), reviewed at or above the Agent app (`review/added-1.md`, round 2) |
 | B4. Shell | `src/apps/manager/shell/` on the shared stack (`src/ui/stack.ts`), Undo (`src/core/held.ts`), error words (`src/core/notdone.ts`), sign-in (`src/ui/Gate.tsx`); `next/manager.html` builds |
-| B5. Tabs and Decide kinds | in progress: Today · Orders · Money · Team · Decide (price, credit, orders, stock kinds); Packed short and All decided done |
-| B6. Real books | in progress (`src/core/manager/supabase/`) |
-| B7. Migration 0184 | in progress (pushes, push actions; `customer_asks` kept apart for Kevin's yes) |
-| B8. Proof | to do: e2e per decision, offline / double tap / refusal / Undo, taps, the reviewer drives the built app |
+| B5. Tabs and Decide kinds | built: Today · Orders (+ Denis's restock list) · Money (+ limit, look alike, old books) · Team · the Decide sheet with all 19 kinds · All decided · sign in, could not reach, You; e2e 8 of 8 flows (`test/e2e/manager-flows.cjs`) |
+| B6. Real books | built: `src/core/manager/supabase/` (every read, R30 store_asks included; every write as data §2's new-app column); `test/manager-supabase.test.js` 92 checks on a fake client; not yet driven on a test shop |
+| B7. Migration 0184 | written and tested on Postgres (`test/manager-pushes-db.test.js`, 127 checks with OW_PG): the agreed words on every push, the new pushes, push actions + `answer_from_push`; `customer_asks` kept apart (`0184b`, Kevin's yes first). The other apps' lists sent to the Sales, Buyer, Store and Accounts sessions (12 Nov). The Android shell (handover §6) waits: the web app first (spec Q2) |
+| B8. Proof | e2e done on the demo (every decision, offline, double tap, refusal, Someone else, Undo); the independent review of the built app against the boards in progress (`review/build-1-*.md`) |
 | B9. Switch | when every page scores at or above its board and Kevin says switch |
 
 ## Waiting on Kevin
