@@ -129,3 +129,24 @@ Checks after the fixes:
 - Nothing is clipped at 360.
 
 **Verdict: every page is at or above its baseline on every measure. No blocking fix is left.**
+
+## Round 3 (re-rendered `Added.dc.html`, 12 Nov 2026)
+
+New card: **The way in · Orders → Denis's list**. It replaces "Pressed · Not yet". I scored it against Orders p1 (Agent Clients baseline 9 · 8 · 8 · 8 · 8).
+
+| Page | Baseline | **New** | Avg | Every measure? |
+|---|---|---|---|---|
+| AD05 The way in (Orders chip → list) | 9 · 8 · 8 · 8 · 8 | 9 · 9 · 8 · 8 · 9 | 8.6 | yes |
+
+Notes:
+- **Consistency.** It uses Orders p1's navy head ("Orders 10"), and the chip row is swiped left. "Stuck 1" has the `--bad` dot and "Ruth decides 5" is the same as on Orders p1. The fourth chip, "Denis's list 3", is drawn in the selected/pressed navy with a ring. The row uses the same DO avatar as Orders p1 ("DO Denis").
+- **Taps.** It is one tap from Orders to the list. This closes the gap left when the Pressed card was replaced: the Pressed state now lives on the selected chip.
+- **Glance.** "this trip · 3 lines · 4,450,000" agrees with the AD05 hero (THIS TRIP · 3 LINES · 4,450,000).
+- **In step.** The words match the AD05 header. The count 3 matches the hero.
+- **Fit.** Chips and the row look 44 px or more. Nothing is clipped. Mono subs are 11 px or more.
+
+Optional:
+- The row could show the split (for example "1 not yet") so Ruth sees what waits on her without opening it.
+- Say what happens to the chip when Denis has planned nothing: hide it, or show "0" as on the Empty card.
+
+**Verdict: at or above baseline on every measure. No blocking fix.** Every page on both boards remains at or above baseline.
