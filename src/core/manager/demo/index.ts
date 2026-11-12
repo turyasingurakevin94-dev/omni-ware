@@ -72,7 +72,12 @@ export function dayAt(f: ManagerDemoFlags): ManagerBooks {
     customers: customers(),
     orders: os,
     asks,
-    restock: [{ id: 'rb-80', name: 'Cement 50 kg', unit: 'bag', qty: 40, cost: 34_000, weeksLeft: 6, held: false }],
+    restock: [
+      // Denis's list for this trip (Added p4, AD05): 4,450,000 planned.
+      { id: 'rb-80', name: 'Cement 50 kg', unit: 'bag', qty: 40, cost: 34_000, weeksLeft: 6, held: false },
+      { id: 'rb-81', name: 'Iron sheet G28', unit: 'sht', qty: 60, cost: 38_000, weeksLeft: 2, held: false },
+      { id: 'rb-82', name: 'Ridge cap 3 m', unit: 'pcs', qty: 30, cost: 27_000, weeksLeft: 3, held: true },
+    ],
     inToday: { cash: 1_960_000, momo: 876_000, bank: 0 },
     done: morningDone(after),
   };

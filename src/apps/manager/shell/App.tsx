@@ -18,6 +18,7 @@ import { SheetHost } from '../../../ui/sheet.tsx';
 import { TabBar, type BarItem } from '../../../ui/TabBar.tsx';
 import { toast, ToastHost } from '../../../ui/toast.tsx';
 import { barTab, isSheet, nav, screen, showTabBar, top, under, type Tab } from './nav.ts';
+import { Loading } from './shell-screens.tsx';
 import { books, flush, held, kept, notDone, online, phase, undoHeld, waiting } from './store.ts';
 
 const ITEMS: BarItem<Tab>[] = [
@@ -62,7 +63,7 @@ function View(p: { id: string; params: Record<string, unknown>; k: number }): JS
 
 export function App(): JSX.Element {
   const ph = phase.value;
-  if (ph === 'starting') return <main class="ow-frame" aria-busy="true" />;
+  if (ph === 'starting') return <div class="ow-frame"><Loading /></div>;
   const early = ph === 'login' ? 'shell/sign-in' : ph === 'no-reach' ? 'shell/no-reach' : null;
   if (early) return <div class="ow-frame"><View id={early} params={{}} k={0} /><SheetHost /><ToastHost above={0} /></div>;
   const t = top.value, bar = showTabBar.value, u = under.value, s = screen(t.id), n = waiting.value.length;
