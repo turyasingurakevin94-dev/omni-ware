@@ -402,7 +402,7 @@ def money_p3():
                     f'<div style="display: flex; gap: 3px; height: 8px"><i style="width: 62.8%; border-radius: 999px 0 0 999px; background: {NAVY}"></i><i style="flex: 1; border-radius: 0 999px 999px 0; background: #8D99B5"></i></div>'
                     f'<div style="display: flex; justify-content: space-between; {MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}"><span>Wed 9 Sep · 1,450,000</span><span>Mon 14 Sep · 860,000</span></div>', pad="10px 14px", gap=6)
              + '</div>')
-    dk = dock(f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {ONNAVY}">{ic(P["bell"], 14)}{dot("GA")}Grace sees{chip("Promised · Mon 19", "onnavy")}</div>'
+    dk = dock(f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {ONNAVY}">{ic(P["eye"], 14)}{dot("GA")}Grace sees{chip("Promised · Mon 19", "onnavy")}</div>'
               f'{pill("Promised · 2,310,000 · Mon 19", "white", 56, "check", extra="; width: 100%", size=15)}', pad="14px 16px 20px")
     return top + sheet + dk
 
