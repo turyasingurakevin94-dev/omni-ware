@@ -174,6 +174,7 @@ The push title is `{asker} · {ask word} · {#order}`, its body the evidence, an
 | On credit? · On credit · Cash first | The credit ask and its two answers; the reason is a chip (Over the limit · Old bill · No limit set) | Needs a yes; Release; Keep held; Old bill first; held for credit |
 | Packed short · Bill what went · Bill it all | The short pick: the Store's act, the Manager's two answers | short pick to settle; bill the full quantity |
 | {Store}'s check-in differs · Take the check-in | A trip's check-in unlike the Buyer's; the Manager's answer | trip count; the yard's count; came in short or over |
+| Take the check-in → {Ruth} took {Musa}'s check-in | The button (verb) and what the Store and the Buyer then see (the result, the same words as P-4's push), like Approve → Approved | Check-in taken; Accepted the yard's count |
 | A count to check · Count taken · Count it again | A stock take and its answers | stock take done; accept the count; recount N |
 | Written off · Kept on the shelf | The loss answers | dismissed |
 | Return asked · Credit note raised · Kept as sold | The return | credit asked; decline the ask |
