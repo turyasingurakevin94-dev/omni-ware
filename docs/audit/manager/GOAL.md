@@ -55,7 +55,7 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 
 ## Waiting on Kevin
 
-- **Approve the canvas** before any code, migration or change to another app.
+- ~~Approve the canvas before any code, migration or change to another app.~~ **Approved** by Kevin on 12 Nov 2026: "implement this design as it is" (he asked for the build goal; a page not drawn is drawn on the canvas first, in the Agent language, then built).
 - P-12: a credit-limit ask needs a new `customer_asks` table (handover.md §4).
 - Three decisions stay 2 taps from the push (write-off, credit note, void): a money move that can't be undone is always a slide, and a notification can't hold one. They drop from the app.
 - Push answers from the notification need a new Android shell build (handover.md §6).
