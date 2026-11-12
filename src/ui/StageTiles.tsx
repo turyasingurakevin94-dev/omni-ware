@@ -15,7 +15,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { STAGE_WORD } from '../core/names.ts';
 import type { Stage } from '../core/types.ts';
 import { FaceStack, type Face } from './Avatar.tsx';
-import { Icon, STAGE_ICON } from './icons.tsx';
+import { Icon, STAGE_ICON, type IconName } from './icons.tsx';
 import { Tap } from './util.tsx';
 import './stagetiles.css';
 
@@ -34,6 +34,10 @@ export interface StageTile {
   need?: number;
   /** aria-label, e.g. "3 checking, 1 needs you". */
   label?: string;
+  /** The Store's tiles (store-agent TD01): its own word and icon in place of the stage's, and a figure after the count ("+1"). */
+  word?: string;
+  icon?: IconName;
+  extra?: string;
   on: () => void;
 }
 
@@ -42,13 +46,13 @@ export function StageTiles(p: { tiles: StageTile[]; children?: ComponentChildren
     <div class="ow-stiles">
       <div class="ow-stiles-grid">
         {p.tiles.map((t) => {
-          const zero = t.count === 0, tone = MARK[t.mark || 'money'];
+          const zero = t.count === 0, tone = MARK[t.mark || 'money'], word = t.word || STAGE_WORD[t.stage];
           return (
-            <Tap key={t.stage} on={t.on} class="ow-stile" label={t.label || `${t.count} ${STAGE_WORD[t.stage].toLowerCase()}${t.need ? `, ${t.need} need${t.need === 1 ? 's' : ''} you` : ''}`}>
+            <Tap key={word} on={t.on} class="ow-stile" label={t.label || `${t.count} ${word.toLowerCase()}${t.need ? `, ${t.need} need${t.need === 1 ? 's' : ''} you` : ''}`}>
               {t.need ? <span aria-hidden="true" class="ow-stile-need mono" style={{ background: tone }}>{t.need}</span>
                 : t.mark && <span aria-hidden="true" class="ow-stile-dot" style={{ background: tone }} />}
-              <span class="ow-stile-n"><Icon name={STAGE_ICON[t.stage]} size={15} stroke={1.9} /><span class="mono" style={zero ? { color: '#5F6980' } : undefined}>{t.count}</span></span>
-              <span class="ow-stile-l">{STAGE_WORD[t.stage]}</span>
+              <span class="ow-stile-n"><Icon name={t.icon || STAGE_ICON[t.stage]} size={15} stroke={1.9} /><span class="mono" style={zero ? { color: '#5F6980' } : undefined}>{t.count}{t.extra && <span class="ow-stile-x">{` ${t.extra}`}</span>}</span></span>
+              <span class="ow-stile-l">{word}</span>
               {!zero && <FaceStack faces={t.faces} more={t.more} />}
             </Tap>
           );

@@ -34,6 +34,12 @@ export interface MomentProps {
   end: ComponentChildren;
   /** Drawn as a card (the parts gallery) instead of the whole screen. */
   card?: boolean;
+  /** The mark in the disc, when not the tick (the Store's TD17 "The yard is closed": the moon). */
+  mark?: IconName;
+  /** Between What happens next and the end (the Store's TD14 "Take it back 10 s"). */
+  after?: ComponentChildren;
+  /** Which step of What happens next is now (mint); the first by default (the Store's TD14: the second). */
+  nowAt?: number;
 }
 
 export function Moment(p: MomentProps): JSX.Element {
@@ -41,7 +47,7 @@ export function Moment(p: MomentProps): JSX.Element {
     <div class={cx('ow-moment', p.card && 'card')}>
       {p.onClose && <div class="ow-moment-x"><button type="button" aria-label="Close" onClick={p.onClose}><Icon name="close" size={16} stroke={2.2} /></button></div>}
       <div class="ow-moment-top">
-        <span aria-hidden="true" class="ow-moment-tick"><Icon name="check" size={46} stroke={2.8} /></span>
+        <span aria-hidden="true" class="ow-moment-tick"><Icon name={p.mark || 'check'} size={46} stroke={2.8} /></span>
         <h1>{p.title}</h1>
         <button type="button" class="ow-moment-who" aria-label={p.who.label} onClick={p.who.on}>
           <Avatar {...p.who.face} size={30} font={11} />
@@ -64,22 +70,24 @@ export function Moment(p: MomentProps): JSX.Element {
           <span class="mono ow-moment-items-a">{fig(p.items.amount)}</span>
         </div>
       )}
-      {p.next && p.next.length > 0 && <WhatsNext steps={p.next} />}
+      {p.next && p.next.length > 0 && <WhatsNext steps={p.next} nowAt={p.nowAt} />}
+      {p.after}
       {p.end}
     </div>
   );
 }
 
 /** "What happens next": a glass card of steps, the first (now) in mint, joined by a short line. */
-export function WhatsNext(p: { steps: { icon: IconName; title: string; sub: string }[]; title?: string }): JSX.Element {
+export function WhatsNext(p: { steps: { icon: IconName; title: string; sub: string }[]; title?: string; nowAt?: number }): JSX.Element {
+  const at = p.nowAt ?? 0;
   return (
     <div class="ow-next-steps">
       <span class="ow-next-steps-h">{p.title || 'What happens next'}</span>
       {p.steps.map((s, i) => (
         <Fragment key={i}>
           {i > 0 && <span aria-hidden="true" class="ow-next-steps-line" />}
-          <div class="ow-next-step">
-            <span aria-hidden="true" class={cx('ow-next-step-sq', i === 0 && 'now')}><Icon name={s.icon} size={20} stroke={i === 0 ? 2 : 1.9} /></span>
+          <div class={cx('ow-next-step', i === at && 'now')}>
+            <span aria-hidden="true" class={cx('ow-next-step-sq', i === at && 'now')}><Icon name={s.icon} size={20} stroke={i === at ? 2 : 1.9} /></span>
             <span class="ow-next-step-t"><span>{s.title}</span><span>{s.sub}</span></span>
           </div>
         </Fragment>

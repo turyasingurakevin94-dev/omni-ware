@@ -19,7 +19,7 @@
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 6: wording and consistency');
-const store = read('store.html');
+const store = read('old/store.html');
 // A one-line function is its own line; a longer one is brace-matched.
 const fn = n => { const l = store.split('\n').find(x => x.startsWith('function ' + n + '(')); return l && (l.match(/\{/g) || []).length === (l.match(/\}/g) || []).length ? l : extractFunction(store, n); };
 // What a person reads: the app's code without its comments.

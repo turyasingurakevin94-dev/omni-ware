@@ -21,8 +21,8 @@ const path = require('path');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('store audit round 10: final polish');
-const store = read('store.html');
-const sw = read('store-sw.js');
+const store = read('old/store.html');
+const sw = read('old/store-sw.js');
 const sql = read('supabase/migrations/0168_store_member_roles.sql');
 const fn = n => { const l = store.split('\n').find(x => x.startsWith('function ' + n + '(')); return l && (l.match(/\{/g) || []).length === (l.match(/\}/g) || []).length ? l : extractFunction(store, n); };
 const region = (from, to) => store.slice(store.indexOf(from), store.indexOf(to, store.indexOf(from)));

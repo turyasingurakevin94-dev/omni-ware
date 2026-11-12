@@ -13,6 +13,7 @@
  *
  *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
  *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)
+ *   <TabBar items={[today, shelf]} plusIcon="play" plusLabel="Start the next job" plusCountWord="ready now" … />   the Store's
  *
  * Each tab is named by its word ("Today", "Suppliers"; BUY-15), Chats with its count.
  */
@@ -48,6 +49,12 @@ export interface TabBarProps<T extends string = BarTab> {
   plusLabel?: string;
   /** What the +'s count is, as its label says it: "not placed yet" (the default), or another bar's word ("stops to buy"). */
   plusCountWord?: string;
+  /** The centre's icon: the + by default; the Store's filled play (store-agent TD01, "Start the next job"). */
+  plusIcon?: 'plus' | 'play';
+  /** The centre greyed and off, with why in its name (the Store's TD07 "Start the next job: not loaded yet"). */
+  plusOff?: string;
+  /** The tabs shown but off (the Store's TD21 "Checking your shop…": nothing to open yet). */
+  tabsOff?: boolean;
   inline?: boolean;
 }
 
@@ -58,8 +65,8 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   const tab = (t: BarItem<T>) => {
     const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
-      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : t.word}
-        onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
+      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-disabled={p.tabsOff ? 'true' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : t.word}
+        onClick={(e) => { e.preventDefault(); if (!p.tabsOff) p.onTab(t.id); }}>
         <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} /><span class="ow-tab-w">{t.word}</span>
         {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
       </a>
@@ -69,10 +76,13 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   return (
     <nav ref={ref} aria-label="Main" class={cx('ow-tabbar', p.inline && 'inline')} style={{ gridTemplateColumns: [...items.slice(0, half).map(() => 'minmax(0, 1fr)'), '96px', ...items.slice(half).map(() => 'minmax(0, 1fr)')].join(' ') }}>
       {items.slice(0, half).map(tab)}
-      <a href="#new" class="ow-plus" aria-label={p.notPlaced > 0 ? `${plus}, ${p.notPlaced} ${p.plusCountWord || 'not placed yet'}` : plus}
-        onClick={(e) => { e.preventDefault(); p.onPlus(); }}>
-        <Icon name="plus" size={28} stroke={2.4} />
-        {p.notPlaced > 0 && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}
+      <a href="#new" class={cx('ow-plus', p.plusOff && 'off')} aria-disabled={p.plusOff ? 'true' : undefined}
+        aria-label={p.plusOff ? `${plus}: ${p.plusOff}` : p.notPlaced > 0 ? `${plus}, ${p.notPlaced} ${p.plusCountWord || 'not placed yet'}` : plus}
+        onClick={(e) => { e.preventDefault(); if (!p.plusOff) p.onPlus(); }}>
+        {p.plusIcon === 'play'
+          ? <Icon name="play" size={26} stroke={2} on style={{ marginLeft: '3px' }} />
+          : <Icon name="plus" size={28} stroke={2.4} />}
+        {p.notPlaced > 0 && !p.plusOff && <span class="ow-plus-count" aria-hidden="true">{p.notPlaced}</span>}
       </a>
       {items.slice(half).map(tab)}
     </nav>

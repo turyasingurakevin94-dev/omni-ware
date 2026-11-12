@@ -106,7 +106,7 @@ t.check(base.failed.length === 0, `a database from 0001-0178 (${base.failed.join
 {
   const on = copyDb('ow_live179_fresh');
   const missing = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n')
-    .filter((l) => /\|missing\|/.test(l)).map((l) => l.slice(0, 4));
+    .filter((l) => /\|missing\|/.test(l) && l.slice(0, 4) <= '0181').map((l) => l.slice(0, 4));
   t.check(JSON.stringify(missing) === '["0179","0180","0181"]', `which-migrations.sql names the three as missing (${missing.join(', ')})`);
   const s1 = run(on, 1);
   t.check(s1.status === 0 && /Ready\. Already in: none of 0179-0181/.test(s1.stderr), `step 1: ready, none of the three in yet (${errs(s1)[0] || 'ok'})`);
@@ -116,7 +116,7 @@ t.check(base.failed.length === 0, `a database from 0001-0178 (${base.failed.join
   t.check(s3.status === 0 && !/0179 is in already/.test(s3.stderr), `step 3 applies the three (${errs(s3)[0] || 'ok'})`);
   const s4 = run(on, 4);
   t.check(s4.status === 0 && oks(s4) === 3 && !/MISSING/.test(s4.stdout), `step 4: ok three times (${oks(s4)}; ${errs(s4)[0] || ''})`);
-  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l));
+  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l) && l.slice(0, 4) <= '0181');  // 0183 has its own script
   t.check(left.length === 0, `then which-migrations.sql names nothing missing (${left.join('; ') || 'none'})`);
   const again1 = run(on, 1), again3 = run(on, 3), again4 = run(on, 4);
   t.check(/Already in: 0179, 0180, 0181/.test(again1.stderr), 'run again, step 1 names all three as in');
@@ -157,7 +157,7 @@ t.check(base.failed.length === 0, `a database from 0001-0178 (${base.failed.join
   const m = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-f', path.join(migDir, fs.readdirSync(migDir).find((f) => f.startsWith('0180_')))]);
   t.check(m.status === 0, `a database with 0180 in, without 0179 or 0181 (${errs(m)[0] || 'ok'})`);
   const missing = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n')
-    .filter((l) => /\|(missing|partly)\|/.test(l)).map((l) => l.slice(0, 4));
+    .filter((l) => /\|(missing|partly)\|/.test(l) && l.slice(0, 4) <= '0181').map((l) => l.slice(0, 4));
   t.check(JSON.stringify(missing) === '["0179","0181"]', `which-migrations.sql reads it as live did: 0179 and 0181 missing (${missing.join(', ')})`);
   const s1 = run(on, 1);
   t.check(s1.status === 0 && /Ready\. Already in: 0180\./.test(s1.stderr) && !/Not the repo's/.test(s1.stderr), `step 1: 0180 already in, and does not stop (${errs(s1)[0] || (s1.stderr.match(/Already in: [^.]*/) || [''])[0]})`);
@@ -166,7 +166,7 @@ t.check(base.failed.length === 0, `a database from 0001-0178 (${base.failed.join
     && /0181 cancel asks\|not in: step 3 puts it in/.test(s2.stdout), `step 2 says where each stands (${errs(s2)[0] || 'ok'})`);
   const s3 = run(on, 3), s4 = run(on, 4);
   t.check(s3.status === 0 && s4.status === 0 && oks(s4) === 3, `steps 3 and 4: 0179 and 0181 go in, ok three times (${errs(s3)[0] || oks(s4)})`);
-  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l));
+  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l) && l.slice(0, 4) <= '0181');  // 0183 has its own script
   t.check(left.length === 0 && /Already in: 0179, 0180, 0181/.test(run(on, 1).stderr), `then nothing is missing and step 1 names all three (${left.join('; ') || 'none'})`);
   // place_order from an older draft: step 1 says so plainly and goes on; step 3 puts the repo's in its place.
   const draft = on(['-qAt', '-v', 'ON_ERROR_STOP=1', '-c', `do $x$ declare src text := pg_get_functiondef('place_order(uuid, jsonb, text)'::regprocedure);

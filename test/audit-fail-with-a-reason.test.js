@@ -30,7 +30,7 @@
 const { read, createReporter } = require('./_extract');
 
 const t = createReporter('the audit\'s failures with a reason');
-const accounts = read('accounts.html'), store = read('store.html'), buyer = read('old/buyer.html'), supplier = read('supplier.html'), owner = read('owner.html'), sales = read('sales.html'), manager = read('manager.html');
+const accounts = read('accounts.html'), store = read('old/store.html'), buyer = read('old/buyer.html'), supplier = read('supplier.html'), owner = read('owner.html'), sales = read('sales.html'), manager = read('manager.html');
 
 // accounts
 t.check(/S\.landed = \{ id, amount: row\.amount, category: row\.category, account: row\.account, at: Date\.now\(\) \};/.test(accounts), 'accounts: addCash remembers the line it landed');

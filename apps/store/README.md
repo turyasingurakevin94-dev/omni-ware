@@ -1,7 +1,8 @@
 # Omni-Ware Store — the phone app
 
-The store yard for Android. It is `store.html` (the same page a browser gets at
-`/store.html`) inside a native shell built with Capacitor 8 — the same shell
+The store yard for Android. It is the new Store app, `store.html` built from
+`src/apps/store` with its area files `store-<area>.js` (the same page a browser
+gets at `/store.html`; switched 2026-11-12, `docs/rebuild.md`), inside a native shell built with Capacitor 8 — the same shell
 the buyer and sales apps use (`apps/buyer`, `apps/sales`), with its own app id:
 `com.omniware.store`, so it installs beside them.
 
@@ -10,12 +11,12 @@ the buyer and sales apps use (`apps/buyer`, `apps/sales`), with its own app id:
 ```sh
 cd apps/store
 npm ci
-npm run build          # www/ from ../../store.html (never edit www/ by hand)
+npm run build          # www/ from ../../store.html and its area files (never edit www/ by hand)
 npx cap sync android
 cd android && ./gradlew assembleDebug
 ```
 
-Every push to `main` that touches `store.html` or `apps/store/` is built by
+Every push to `main` that touches `store.html`, its files, `src/` or `apps/store/` is built by
 `.github/workflows/build-store-app.yml`, which hands back an installable debug
 APK under the run's **Artifacts**. It can also be run by hand from the
 Actions tab ("Build store app (Android)" → Run workflow).
@@ -29,16 +30,22 @@ Actions tab ("Build store app (Android)" → Run workflow).
 - **Alerts** (push) need a Firebase Android app for `com.omniware.store`:
   download its `google-services.json` into `android/app/`. Without it the app
   works and the Alerts switch says it is not set up.
-- **The manager's push** for a finished stock take is the
-  `notify-stock-count` Edge Function plus a Database Webhook on
-  `stock_counts` INSERT (see the top of that function).
+- **The yard's pushes** are `0183` (`docs/live/apply-0183.sql` on the live
+  books): it sends every handover the yard takes part in, the count to Ruth
+  included. Once it is in, turn off the old `notify-worker` and
+  `notify-stock-count` Database Webhooks, or those pushes come twice.
 
 ## Updates without a store release
 
 Like the other apps, the installed app checks the live
-`https://omni-ware.vercel.app/store.html` now and then, keeps a newer copy on
-the phone and switches to it the next time the app goes to the background —
-never in the middle of a pick. A new APK is only needed when something under
+`https://omni-ware.vercel.app/store.html` now and then, keeps a newer copy (the
+page and every file its `ow-files` names, all of one build) on the phone and
+switches to it the next time the app goes to the background — never in the
+middle of a pick. It refuses any page that is not a build of the new app
+(`src/native/update.ts`). The native layer is the shared `src/native`, wired
+by `src/apps/store/shell/native.ts` (Back, the bars, the update, the pushes).
+Installed old Store apps take the new page by their own live update (same key
+`ow-store-bundle`). A new APK is only needed when something under
 `android/` changes.
 
 ## The camera and the map

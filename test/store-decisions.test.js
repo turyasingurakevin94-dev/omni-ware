@@ -18,7 +18,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 
 const t = createReporter('store decisions');
 const sql = read('supabase/migrations/0124_store_decisions.sql');
-const store = read('store.html');
+const store = read('old/store.html');
 const admin = read('index.html');
 
 /* ---------------- 1. the migration ---------------- */

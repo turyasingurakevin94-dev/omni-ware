@@ -21,7 +21,7 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('no money on a Store phone (0159)');
 const sql = read('supabase/migrations/0159_store_no_money.sql');
-const store = read('store.html');
+const store = read('old/store.html');
 const fn = name => { const i = sql.indexOf(`create or replace function ${name}(`); return i < 0 ? '' : sql.slice(i, sql.indexOf('$$;', i) + 3); };
 
 /* ---------------- 1. the SQL ---------------- */

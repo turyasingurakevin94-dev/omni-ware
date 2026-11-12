@@ -20,7 +20,7 @@ const { read, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 1: data integrity (0161)');
 const sql = read('supabase/migrations/0161_store_one_count_per_place.sql');
-const store = read('store.html');
+const store = read('old/store.html');
 const manager = read('manager.html');
 
 /* ---------------- the SQL ---------------- */
