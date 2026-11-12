@@ -67,7 +67,7 @@ export function Suppliers(): JSX.Element {
             <div class="ow-b-suppliers-stats" role="img" aria-label={`Found ${st.found} of the last ${st.asked} asks${st.replyMins != null ? `; they reply in ${replyWord(st.replyMins)}` : ''}`}>
               <div class="ow-b-suppliers-stat-row">
                 <span class="ow-b-suppliers-stat">
-                  <span class="ow-b-suppliers-over">Found · last 10 asks ›</span>
+                  <span class="ow-b-suppliers-over">Said yes · last 30 days ›</span>
                   <span class="ow-b-suppliers-fig"><b class="mono">{st.found}</b><span class="mono">{`of ${st.asked}`}</span></span>
                 </span>
                 {st.replyMins != null && (

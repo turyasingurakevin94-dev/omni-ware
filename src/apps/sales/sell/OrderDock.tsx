@@ -19,7 +19,8 @@ import { manager } from './people.ts';
 import { openDelivery } from './sheets.tsx';
 import '../../../ui/dock.css';
 
-export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.Element | null {
+/** `locked`: its place is kept on this phone (SAL-4): shown, never placed twice — "Waiting to send". */
+export function OrderDock(p: { onPlace: () => unknown; sending: boolean; locked?: boolean }): JSX.Element | null {
   const x = cur.value, s = sums.value, b = books.value, foot = useRef<HTMLDivElement>(null);
   useDockHeight(foot, !!(x && s && b));
   if (!x || !s || !b) return null;
@@ -51,6 +52,7 @@ export function OrderDock(p: { onPlace: () => unknown; sending: boolean }): JSX.
           : <div class="ow-dock-sum"><span class="mono ow-dock-total">{fig(orderFig(x.lines, s.total))}</span>{sub && <span class="mono ow-dock-sub amber">{sub}</span>}</div>}
       </div>
       <Slide label={empty ? 'Add an item to place' : `Slide to place · ${counted(n, 'item')}`} state={state}
+        lock={p.locked ? { icon: 'lock', label: 'Waiting to send · locked' } : undefined}
         onCommit={p.onPlace} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />
     </div>
   );

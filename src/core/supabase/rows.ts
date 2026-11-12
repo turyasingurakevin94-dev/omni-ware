@@ -3,11 +3,12 @@
  * Each mapper names the sales.html mapper it follows, so the two read the
  * books the same way (sales.html:3911-3975 loadAll, rowToQuote, rowToAsk …).
  */
+import { lineWord } from '../lineword.ts';
 import { whole } from '../money.ts';
 import { initials, phoneText, stageOf, tintFor } from '../names.ts';
 import { cheapestRow, fifoUnitCost, shopPrice, type PriceRow, type ProductRow } from '../price.ts';
 import type {
-  BillAsk, Chat, ChatEvent, ChatNote, Customer, CustomerKind, DebtEntry, Item, Line, Member, Message, Method, Ms, Order,
+  BillAsk, Chat, ChatEvent, ChatNote, Customer, CustomerKind, DebtEntry, Item, Line, LineState, Member, Message, Method, Ms, Order,
   OrderPayment, PayPromise, Payment, PaymentAsk, Role, ShopSettings, SourcingAsk, StageStep,
 } from '../types.ts';
 import type { Row } from './client.ts';
@@ -138,7 +139,20 @@ function itemName(pb: PriceBook, pid: string, vi: number | null, fallback: strin
 }
 
 /** saved_quotes.payload.items[i] → Line (spec 01 §4b). price null = "Price coming" (sales.html linePriceToConfirm). */
-export function lineOf(it: Row, pb: PriceBook): Line {
+/** The Buyer's word for a line not packed or come yet, from the order's own keys (SAL-1: no supplier price is read). */
+function buyWord(it: Row, p: Row): LineState | null {
+  const sid = String(it.supplierId || '');
+  if (sid === '__stock__') return null;
+  const c: Row = sid ? ((p.supplierConfirms || {})[sid] || {}) : {};
+  const w = lineWord({
+    removed: false, got: null, qty: num(it.qty), supplierId: sid || null, clientWaits: !!it.clientWaits, onTrip: false,
+    priceWaits: false, priceComing: false, asked: !!(c.askedAt || c.state === 'confirmed' || c.state === 'problem'),
+    answer: c.state === 'confirmed' ? 'found' : c.state === 'problem' ? 'notfound' : null,
+  });
+  return w === 'found' ? null : w === 'notfound' ? 'notfound' : w === 'nosupplier' ? 'nosupplier' : w === 'clientwaits' ? 'clientwaits' : 'waiting';
+}
+
+export function lineOf(it: Row, pb: PriceBook, p: Row = {}): Line {
   const vi = it.variantIdx == null || it.variantIdx === '' ? null : Number(it.variantIdx);
   const pid = String(it.productId || ''), supplierId = String(it.supplierId || '');
   const cost = num(it.price) > 0 ? num(it.price) : null;
@@ -159,7 +173,7 @@ export function lineOf(it: Row, pb: PriceBook): Line {
       ? { state: it.priceReview.state, price: whole(it.priceReview.price), was: it.priceReview.was == null ? null : whole(it.priceReview.was), by: String(it.priceReview.by || ''), byName: String(it.priceReview.byName || ''), at: ms(it.priceReview.at) || 0 }
       : null,
     priceToldAt: ms(it.priceToldAt),
-    state: it.pickStatus === 'done' ? 'packed' : it.pickStatus === 'short' ? 'short' : num(it.receivedQty) > 0 ? 'came' : null,
+    state: it.pickStatus === 'done' ? 'packed' : it.pickStatus === 'short' ? 'short' : num(it.receivedQty) > 0 ? 'came' : buyWord(it, p),
     stateAt: ms(it.pickedAt || it.receivedAt),
   };
 }
@@ -179,7 +193,9 @@ export function orderOf(q: Row, pb: PriceBook): Order {
     placedAt, placedBy: p.takenBy ? String(p.takenBy) : null,
     stage, stageAt: ms(p.stageEnteredAt) || placedAt, stageLog: log.length ? log : [{ stage, at: placedAt, by: null }],
     holderId: stage === 'packing' && p.assignedWorkerId ? 'staff:' + p.assignedWorkerId : stage === 'road' && p.assignedDeliveryId && !String(p.assignedDeliveryId).startsWith('__') ? 'staff:' + p.assignedDeliveryId : null,
-    lines: (Array.isArray(p.items) ? p.items : []).map((it: Row) => lineOf(it, pb)),
+    lines: [...(Array.isArray(p.items) ? p.items : []).map((it: Row) => lineOf(it, pb, p)),
+      // Lines the Buyer took off (droppedLines): kept on the order as "Not found", struck through (SAL-1).
+      ...(Array.isArray(p.droppedLines) ? p.droppedLines : []).map((d: Row) => ({ ...lineOf({ ...d, supplierId: '' }, pb, {}), state: 'dropped' as const, stateAt: ms(d.droppedAt) }))],
     charges: (Array.isArray(p.charges) ? p.charges : []).map((c: Row, i: number) => ({ id: num(c.id) || i + 1, label: String(c.label || c.service || 'Charge'), type: c.type === 'percent' ? 'percent' : 'fixed', value: num(c.value) })),
     credit: p.credit && Number(p.credit.pct) > 0 ? { pct: Number(p.credit.pct), days: num(p.credit.days) } : null,
     discount: whole(p.discount),
@@ -269,7 +285,7 @@ export function billAskOf(r: Row): BillAsk {
 /** cancel_asks (0181) → BillAsk, kind 'cancel': what the order came to when asked, and why. */
 export function cancelAskOf(r: Row): BillAsk {
   const status = r.status === 'accepted' || r.status === 'declined' || r.status === 'withdrawn' ? r.status : 'sent';
-  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: 'cancel', amount: whole(r.amount), reason: String(r.why || ''), status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
+  return { id: String(r.id), orderId: num(r.quote_id), customerId: r.customer_id ? String(r.customer_id) : null, kind: 'cancel', amount: whole(r.amount), reason: String(r.why || ''), ...(r.answer ? { note: String(r.answer) } : {}), status, by: String(r.asked_by || ''), at: ms(r.created_at) || 0 };
 }
 
 /** payment_asks → PaymentAsk (sales.html rowToPayAsk). */

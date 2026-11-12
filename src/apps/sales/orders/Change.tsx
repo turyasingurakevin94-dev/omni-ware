@@ -109,9 +109,12 @@ export function openCancel(id: number): void {
 function CancelSheet(p: { id: number }): JSX.Element | null {
   const b = books.value, o = b && orderOf(b, p.id);
   const [why, setWhy] = useState(0);
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   if (!b || !o) return null;
   const ruth = ruthOf(b), rn = firstWord(ruth?.name || 'Manager'), store = byRole(b, 'store'), list = WHY(shortName(b, o));
+  // SAL-6: "Something else" says what, for Ruth; the ask waits for the words.
+  const other = why === list.length - 1, needWords = other && !note.trim();
   return (
     <LightSheet class="or-sheet" ground eyebrow={eyebrow(b, o)} title="Cancel this order?" onClose={sheet.close} pad="12px 16px 22px">
       <div class="or-trio">
@@ -127,10 +130,11 @@ function CancelSheet(p: { id: number }): JSX.Element | null {
           </label>
         ))}
       </div>
+      {other && <textarea class="or-note" rows={3} aria-label={`Say why, for ${rn}`} placeholder={`Say why, for ${rn}…`} value={note} onInput={(e) => setNote((e.target as HTMLTextAreaElement).value)} />}
       {store && <Who face={faceOfMember(store)}>{`If anything was packed, ${firstWord(store.name)} puts it back`}</Who>}
       <div class="or-two h">
         <button type="button" class="or-btn-w" onClick={sheet.close}>Keep order</button>
-        <button type="button" class="or-btn-n" disabled={busy} onClick={() => ask(() => act('askCancel', o.id, list[why]), `Asked ${rn} to cancel ${orderNo(o.id)}`, takeBack, setBusy)}>{busy ? 'Sending…' : `Ask ${rn} to cancel`}</button>
+        <button type="button" class="or-btn-n" disabled={busy || needWords} onClick={() => ask(() => act('askCancel', o.id, list[why], other ? note.trim() : ''), `Asked ${rn} to cancel ${orderNo(o.id)}`, takeBack, setBusy)}>{busy ? 'Sending…' : needWords ? 'Say why to send' : `Ask ${rn} to cancel`}</button>
       </div>
     </LightSheet>
   );

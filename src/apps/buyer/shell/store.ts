@@ -61,17 +61,21 @@ function send(kind: string, args: unknown): Promise<unknown> {
 
 async function openOutbox(userId: string): Promise<void> {
   const store = isDemo || typeof indexedDB === 'undefined' ? memoryStore() : idbStore('buyer', userId);
-  outbox = new Outbox(store, send, () => src().now());
+  // The Buyer's writes keep one line (a trip is written stop by stop); a stuck one is called Not sent (SAL-3).
+  outbox = new Outbox(store, send, () => src().now(), { readsOk: () => src().now() - readOkAt < 120000 });
   outbox.onChange((l) => { kept.value = l; });
   kept.value = await outbox.items();
 }
 
 /** Read the books again. A failed read keeps the copy on screen and says why. */
+let readOkAt = 0;
+
 export async function refresh(): Promise<void> {
   try {
     const b = await src().books();
     books.value = b;
     readError.value = null;
+    readOkAt = src().now();
     online.value = src().online();
   } catch (e) {
     readError.value = isOffline(e) ? 'No signal' : String((e as Error).message || e);
@@ -89,9 +93,14 @@ async function ready(s: Session): Promise<void> {
   phase.value = 'ready';
   if (isDemo || timers) return;
   timers = true;
-  setInterval(() => { now.value = src().now(); }, 30000);
+  const waiting = () => kept.value.some((k) => k.state === 'kept');
+  setInterval(() => { now.value = src().now(); if (waiting()) void flush(); }, 30000);
   setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 60000);
   window.addEventListener('online', () => { void flush(); void refresh(); });
+  // Back in the app: send what waits (SAL-3).
+  const back = () => { if (document.visibilityState === 'visible' && waiting()) void flush(); };
+  document.addEventListener('visibilitychange', back);
+  window.addEventListener('focus', back);
   void flush();
 }
 

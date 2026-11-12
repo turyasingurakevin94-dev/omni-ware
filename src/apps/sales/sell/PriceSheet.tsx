@@ -35,7 +35,7 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
   // In cartons (SL42) every figure here is a carton's; the line keeps the price of one pair (core/units.ts).
   const per = perShown(l), s = shown(l);
   const shop = l.shopPrice * per, now = (l.price ?? l.shopPrice) * per, v = typed == null ? now : Number(typed || 0);
-  const low = v > 0 && priceTooLow(l, v / per), high = v >= shop * 5, under = !low && v > 0 && v < shop;
+  const low = v > 0 && priceTooLow(l, v / per), high = v >= shop * 5, under = !low && v > 0 && v < shop, zero = typed != null && !(v > 0);
   const paid = x.customerId ? lastPaid(b, x.customerId, l.itemId, l.variantIdx) : null, last = paid != null && per === 1 ? paid : null, m = manager(b);
   const c = x.customerId ? b.customers.find((y) => y.id === x.customerId) : null;
   const short = l.name.split(' · ')[0];
@@ -63,9 +63,14 @@ export function PriceSheet(p: { lineId: number }): JSX.Element | null {
         {under && <span class="mono sl-pfield-d"><Icon name="tag" size={12} stroke={2.4} />{fig(v - shop)}</span>}
       </div>
       <div class="sl-outcome"><span>{`${countWord(s.n, l.name, s.unit)} come to`}</span>{low ? <span class="mono faint">—</span> : <span class="mono">{v !== now && <><s>{fig(was)}</s>{' → '}</>}{fig(will)}</span>}</div>
-      {under && <div class="sl-callout warn"><span aria-hidden="true" class="ow-av" style={avatarStyle({ initials: m.initials, tint: m.tint, size: 28, font: 11 })}>{m.initials}</span><span>{`Under the shop’s price. ${m.first} says yes before it is packed.`}</span></div>}
-      {high && <div role="alert" class="sl-callout bad"><Icon name="warning" size={18} stroke={2} /><span>About <span class="mono">{Math.round(v / shop)}</span> times the shop’s <span class="mono">{fig(shop)}</span>. A zero too many?</span></div>}
-      {low && <div role="alert" class="sl-callout bad"><Icon name="lock" size={18} stroke={2} /><span>Under what it costs the shop. It can’t go this low.</span></div>}
+      {/* SAL-5 (board SalesPriceKeypad): one slot, always there, so a warning never moves a key under the finger. */}
+      <div class="sl-slot" aria-live="polite">
+        {under ? <div class="sl-callout warn"><span aria-hidden="true" class="ow-av" style={avatarStyle({ initials: m.initials, tint: m.tint, size: 28, font: 11 })}>{m.initials}</span><span>{`Under the shop’s price. ${m.first} says yes before it is packed.`}</span></div>
+          : high ? <div role="alert" class="sl-callout bad"><Icon name="warning" size={18} stroke={2} /><span>About <span class="mono">{Math.round(v / shop)}</span> times the shop’s <span class="mono">{fig(shop)}</span>. A zero too many?</span></div>
+            : low ? <div role="alert" class="sl-callout bad"><Icon name="lock" size={18} stroke={2} /><span>Under what it costs the shop. It can’t go this low.</span></div>
+              : zero ? <div role="alert" class="sl-callout warn zero"><Icon name="warning" size={18} stroke={2} /><span><span class="mono">0</span> is not a price · only {m.first} gives a line away</span></div>
+                : <div class="sl-callout rest"><span>The shop’s price <span class="mono">{fig(shop)}</span></span></div>}
+      </div>
       <Keypad value={typed == null ? '' : typed} onChange={(d) => setTyped(d)} />
       <div class={'sl-two' + (low ? ' one' : '')}>
         {low

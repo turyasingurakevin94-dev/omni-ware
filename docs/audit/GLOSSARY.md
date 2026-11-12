@@ -54,6 +54,10 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Check-in | Counting a trip's goods into the yard. A difference is "Your check-in of Denis's trip". | a count (a count is of an aisle or an item) | Store R6 · WORD-06 |
 | Counter sale | Pay and go, from our own shelf | — | Sales |
 | Walk-in order | An order with no customer name; the shop packs it | — | Sales |
+| {Buyer} asks the suppliers | What Checking is, said the same in Sales and the Manager; the Manager only when a price or credit waits | "Warren checks it"; "Checking is the buyer's · no buyer on the staff list" | Cross-app R1 · X-3 |
+| Cancel asked · {Manager} decides | Sales asked the Manager to cancel; payment and changes wait; the Buyer holds it ("On hold") until the answer | Take payment on it; buying for it | Cross-app R1 · X-1 |
+| Needs a supplier | A line with nothing on the shelf and nobody selling it yet; the Buyer picks one, or Sourcing finds it (Client waits). Never a tick | "found", "To ask" with nothing to tap, "unsourced" on screen | Cross-app R1 · X-2 |
+| Taken | An order placed, not invoiced yet ("Taken today · 4 orders"); never called sold | "Sold today" for orders in Checking | Cross-app R1 · X-4 |
 | Sell again | Start a new order from an old one | — | Sales UX audit |
 
 ## Stock
@@ -90,6 +94,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Refund | Money given back to a customer out of the cash book (a void with money) | — | Manager R1 · DATA-07 |
 | No seller | Sales on invoices that name no salesperson (old records) | "not linked" | Manager R1 · DATA-06 |
 | Sales invoiced | The one sales figure: invoiced goods in the period, no delivery fees, no test records; Today and Margins show the same | "sold" for a different sum | Manager R1 · DATA-08 |
+| Sold (Sales' hero) | The person's own Sales invoiced this month; the bar's mint part is what is on the move and not invoiced yet, hatched while nothing is sold | Sold counting orders not invoiced | Cross-app R1 · X-4, SAL-6 |
 | Money on a phone | Shown only to the roles allowed to see it, enforced in SQL by role. The yard's phone gets no money at all. | hidden in the browser only | Store, before the loop (0159, 0160) |
 
 ## Time
@@ -108,6 +113,8 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Not sent yet / Kept on this phone | Kept in the outbox; it sends itself when there is signal (amber) | "Sent" | Store R3 · REL-05 |
 | Sent | Only after the server's yes (green) | — | Store R3 · REL-05 |
 | Waiting to send | The one list of what isn't on the books yet ("Not sent · N") | "Nothing is waiting" while something is | Store R3 · REL-04 |
+| Not sent | A write the books refused, with why and how many tries; it stays until Remove or Try again and never holds up another | a silent jam; "Discard" (the word is Remove) | Cross-app R1 · SAL-3 |
+| N waiting to send | The head's word while anything waits on this phone; Live only when nothing does | "Live" with writes stuck | Cross-app R1 · SAL-3 |
 | Not done | The bar that stays until the work is done: amber "no signal", red for a save that failed ("tell Kevin · code"), blue "Someone else just did this · Refreshed" | a 5 s toast; losing the work | Store R3 · REL-07 |
 | Could not load the yard | A failed load, with Try again and a code | an empty yard, 0s, "No products" | Store R5 · PRIV-03 |
 | Checking your shop… | Signed in; the phone is asking which shop this person works in | a blank screen; "This login has no shop" too early | Store R8 · REL-11 |

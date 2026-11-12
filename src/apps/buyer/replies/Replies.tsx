@@ -49,7 +49,7 @@ function Head(p: { b: BuyerBooks; now: number }): JSX.Element {
       <div class="ow-b-replies-hrow">
         <button type="button" class="ow-b-replies-back" aria-label="Back to Today" onClick={() => nav.back()}><Icon name="back" size={22} stroke={2} /></button>
         <h1>Replies</h1>
-        <span class={'ow-b-replies-live' + (online.value ? '' : ' off')}><span />{online.value ? 'Live' : 'Offline'}</span>
+        <span class={'ow-b-replies-live' + (online.value && !kept.value.length ? '' : ' off')}><span />{!online.value ? 'Offline' : kept.value.length ? `${kept.value.length} waiting to send` : 'Live'}</span>
       </div>
       <div class="ow-b-replies-big"><span class="mono">{t.foundSuppliers}<span>{` of ${t.suppliers}`}</span></span><span>Found</span></div>
       <div class="ow-b-replies-hbar">

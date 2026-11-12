@@ -18,7 +18,7 @@ import { paidShares } from '../rules.ts';
 import type { StopCount } from '../source.ts';
 import { gotOf, priceRowOf, roundOrder, runsToGo, stem, tripPlanFor, type Run } from './buy.ts';
 import { setOff, setStopPay } from './keep.ts';
-import { quoteOf } from './order.ts';
+import { buyable, quoteOf } from './order.ts';
 import { readFail, readRow } from './read.ts';
 import { liveRound, myStaffOf, pendingCashAsk, type Raw } from './rows.ts';
 import { passOn, withdraw } from './write.ts';
@@ -29,7 +29,7 @@ const namesOf = (raw: Raw, sids: string[]): string => {
   const n = sids.map((x) => shortName(raw, x));
   return n.length > 2 ? n.slice(0, 2).join(', ') + ' +' + (n.length - 2) : n.join(' and ');
 };
-const runsOf = (raw: Raw, trips: Row[] = raw.trips): Run[] => roundOrder(runsToGo(raw.quotes.map(quoteOf), trips, raw.prices.map(priceRowOf), raw.restock, raw.now), raw.suppliers);
+const runsOf = (raw: Raw, trips: Row[] = raw.trips): Run[] => roundOrder(runsToGo(raw.quotes.map(quoteOf).filter(buyable(raw.cancelAsked)), trips, raw.prices.map(priceRowOf), raw.restock, raw.now), raw.suppliers);
 const roundCash = (raw: Raw, rid: string): Row | null => raw.handoffs.filter((h) => h.kind === 'trip_cash' && h.status !== 'withdrawn' && String((h.payload || {}).round || '') === rid).slice(-1)[0] || null;
 
 /** W12 buyer.html:3861 cashask (and 4481 tcashask for a round already out with no cash ask). */

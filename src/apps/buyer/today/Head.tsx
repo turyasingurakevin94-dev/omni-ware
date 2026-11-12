@@ -22,7 +22,8 @@ export function greeting(now: number): string {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 
-export function Head(p: { b: BuyerBooks; now: number; offline: boolean }): JSX.Element {
+/** `waiting`: writes not on the books yet — never Live while any wait (SAL-3). */
+export function Head(p: { b: BuyerBooks; now: number; offline: boolean; waiting?: number }): JSX.Element {
   const { b, now } = p;
   const t = tiles(b, now), buy = toBuy(b);
   const back = b.trip && b.trip.state === 'in' && !t.found ? handIn(b.trip, b) : null;
@@ -35,7 +36,9 @@ export function Head(p: { b: BuyerBooks; now: number; offline: boolean }): JSX.E
           <span class="ow-b-today-hero-date">{dayLabel(now)}
             {p.offline
               ? <span class="ow-b-today-live off"><i aria-hidden="true" />Offline</span>
-              : <span class="ow-b-today-live"><i aria-hidden="true" />Live</span>}
+              : p.waiting
+                ? <span class="ow-b-today-live off"><i aria-hidden="true" />{`${p.waiting} waiting to send`}</span>
+                : <span class="ow-b-today-live"><i aria-hidden="true" />Live</span>}
           </span>
         </div>
         <span class="ow-b-today-me" aria-label={firstName(b.me)} role="img">{b.me.initials}</span>

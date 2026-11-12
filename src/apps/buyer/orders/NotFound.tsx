@@ -50,6 +50,8 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
     return <div class="ow-b-orders-nfs"><span class="ow-grab" aria-hidden="true" /><span class="ow-b-orders-gone">This line is not here any more</span></div>;
   }
   const l = x.line, seller = v.seller ? firstWord(v.seller.name) : 'Sales';
+  // X-2: a line nobody sells yet is picked here (the same sheet): the cheapest on the list is asked, or Sourcing looks.
+  const pick = x.state === 'nosupplier';
   const alt = nextSupplier(b, l, now.value);
   const moses = byRole(b, 'sourcing');
   const finder = moses ? firstWord(moses.name) : 'Sourcing';
@@ -113,21 +115,21 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
                 <span class="n">{alt.supplier.name}</span>
                 <span class="p"><span class="mono">{fig(alt.price.price)}</span><span class="age">{alt.days === 0 ? "on the list · today" : `on the list · ${alt.days} ${alt.days === 1 ? "day" : "days"}`}</span></span>
               </span>
-              <RowAct icon="swap" word="Switch" busyWord="Switching" busy={busy === 'other'} label={`Switch to ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
+              <RowAct icon={pick ? 'send' : 'swap'} word={pick ? 'Ask' : 'Switch'} busyWord={pick ? 'Asking' : 'Switching'} busy={busy === 'other'} label={`${pick ? 'Ask' : 'Switch to'} ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
             </div>
             <div class="pic" role="img" aria-label={`Cost ${fig(alt.price.price)}, ${seller} sells at ${fig(l.sell)}`}>
               <div class="bar"><span style={{ width: barW((alt.price.price / Math.max(1, l.sell)) * 100), background: alt.price.price > l.sell ? '#8E2A22' : '#0F6B43' }} /></div>
               <div class="k"><span>cost <span class="mono">{fig(alt.price.price)}</span></span><span>sells <span class="mono">{fig(l.sell)}</span></span></div>
             </div>
             <div class="f">
-              <Sees who={seller}>Switched</Sees>
+              <Sees who={seller}>{pick ? 'Asked' : 'Switched'}</Sees>
               <button type="button" class="more" onClick={otherItem}>Other item<Icon name="chevron-right" size={16} stroke={2.2} /></button>
             </div>
           </div>
         ) : (
           <div class="ow-b-orders-noalt">
             <span aria-hidden="true" class="tile"><Icon name="search" size={18} stroke={2} /></span>
-            <span class="t"><b>No other supplier on the list</b><span>{`${finder} can find one while ${seller}'s client waits`}</span></span>
+            <span class="t"><b>{pick ? 'Nobody on the price list sells it' : 'No other supplier on the list'}</b><span>{`${finder} can find one while ${seller}'s client waits`}</span></span>
           </div>
         )}
 

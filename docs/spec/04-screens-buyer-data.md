@@ -294,6 +294,15 @@ Every order write goes through `changeOrder` → `rpc('ow_patch_order', {p_shop_
 - `askSourcing(item)` has no order; buyer.html only asks Sourcing through a line (`clientWaits`, W8a) or a `sourcing_fix` (W23).
 - Sales' `patchOrder` (`src/core/supabase/write.ts:40`) sends neither `p_drop` nor `p_status`; the Buyer needs both (W9, a dropped key).
 
+### 6a. Decided in cross-app round 1 (11 Nov 2026; `docs/audit/cross-app/ROUND-1.md`)
+
+- **A line's word is one rule** (`src/core/lineword.ts`), used by the Buyer's `lineState` and the Sales order page: Removed · In/Short · Needs a supplier (no shelf, no supplier, nobody waiting; the server's `'unsourced'`, 0174) or Client waits · On the trip · Price up · To ask · Asked · Found · Not found. A line placed with no selling price (`items[].priceAsk`, Price coming) is still asked of its supplier (BUY-3). A tick only for what is sure to come.
+- **Needs a supplier is the Buyer's** (X-2): its own row on Today and chip in Orders, opening the Not found sheet: the cheapest on the price list (Ask), or Client waits · Sourcing finds it (0139). Not counted in To ask; "Every supplier asked" only when both are none.
+- **An order with an open cancel ask is held** (X-1, `cancel_asks` 0181): out of To ask, Asked, Found, the asks and the trip until the Manager answers; listed under On hold with "Cancel asked · hold".
+- **A stop and the cash ask are the sum of the order's lines** in their own unit (BUY-4, #0212): `outlay` never rounds an order line up to a carton; a carton's shelf part stays the Manager's carton ask (0151).
+- **An order whose goods are still to come is never aged off** (BUY-5, #0148), however long ago it was invoiced; a test order (`qa`) is listed "Test · not counted" and never bought.
+- **To ask counts suppliers** (the rows Today lists); a supplier's record counts a yes or a no as asked, over the last 30 days on orders not voided (BUY-2).
+
 ## 7. Open questions and places buyer.html disagrees with itself
 
 | # | What | Where | Default until Kevin answers |

@@ -21,7 +21,7 @@ import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { AllClear, NextTrip, WaitingOn } from './Cards.tsx';
 import { Head } from './Head.tsx';
-import { AskRow, Chip, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
+import { AskRow, Chip, NeedsSupplierRow, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
 import { calm, hm, sellersOf, tripReady, waitingOn } from './rules.ts';
 import { MoveTiles } from './Tiles.tsx';
 import './today.css';
@@ -63,6 +63,8 @@ export function Today(): JSX.Element {
   if (!b) return <main class="ow-b-today-wait-main" aria-busy="true" />;
 
   const nf = lineRefs(b).filter((r) => r.state === 'notfound');
+  // X-2: a line nobody sells yet is the Buyer's to pick; "Every supplier asked" only when none is left (BUY-2).
+  const needs = lineRefs(b).filter((r) => r.state === 'nosupplier');
   const asks = askGroups(b, n), reps = replyRows(b, n);
   const ready = tripReady(b, n), quiet = calm(b, n);
   const waits = quiet ? waitingOn(b, n) : [];
@@ -70,7 +72,7 @@ export function Today(): JSX.Element {
 
   return (
     <>
-      <Head b={b} now={n} offline={off} />
+      <Head b={b} now={n} offline={off} waiting={kept.value.length} />
       {(off || k > 0) && (
         <Notice kind="offline" action={k > 0 && !off ? { label: 'Try again', on: () => { void flush(); } } : undefined}>
           {off ? 'No signal' : ''}{off && k > 0 ? ' · ' : ''}
@@ -88,10 +90,11 @@ export function Today(): JSX.Element {
           </>
         ) : (
           <>
-            {asks.length + nf.length > 0 ? (
+            {asks.length + nf.length + needs.length > 0 ? (
               <>
-                <Sec title="Needs you" dot="on" meta={String(asks.length + nf.length)} />
+                <Sec title="Needs you" dot="on" meta={String(asks.length + nf.length + needs.length)} />
                 {nf.map((r) => <NotFoundRow key={`${r.order.id}-${r.line.key}`} b={b} r={r} />)}
+                {needs.map((r) => <NeedsSupplierRow key={`ns-${r.order.id}-${r.line.key}`} b={b} r={r} />)}
                 {asks.map((g) => <AskRow key={g.supplier.id} b={b} g={g} />)}
               </>
             ) : !ready && (

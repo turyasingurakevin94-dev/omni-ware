@@ -13,7 +13,7 @@ import type { AskWay } from '../types.ts';
 import { priceRowOf } from './buy.ts';
 import { readRow } from './read.ts';
 import { itemName, type Raw } from './rows.ts';
-import { confirmState, costsOverSell, dropLine, leaveDraft, markAsked, patchOf, quoteOf, setConfirm, supplierGroups, supplierTerms, type Ctx, type Q } from './order.ts';
+import { buyable, confirmState, costsOverSell, dropLine, leaveDraft, markAsked, patchOf, quoteOf, setConfirm, supplierGroups, supplierTerms, type Ctx, type Q } from './order.ts';
 
 export interface Changed { q: Q; moved: boolean; held: Row | null }
 
@@ -37,7 +37,7 @@ const HOW: Record<AskWay, string> = { whatsapp: 'wa', call: 'call', visit: 'pers
 
 /** Draft orders with lines of this supplier whose answer reads `k` (buyer.html:1407 answerOf; 5978 stageOf). */
 function ordersAt(raw: Raw, sid: string, k: 'toask' | 'asked' | 'notfound'): number[] {
-  return raw.quotes.map(quoteOf).filter((q) => q.status === 'draft' && !q.voided && !q.cancelledAt && supplierGroups(q).some((g) => String(g.supplierId) === String(sid)))
+  return raw.quotes.map(quoteOf).filter((q) => q.status === 'draft' && !q.voided && !q.cancelledAt && buyable(raw.cancelAsked)(q) && supplierGroups(q).some((g) => String(g.supplierId) === String(sid)))
     .filter((q) => {
       const c = confirmState(q, sid);
       return k === 'asked' ? c.state === 'pending' && !!c.askedAt : k === 'notfound' ? c.state === 'problem' : c.state === 'stale' || (c.state === 'pending' && !c.askedAt);

@@ -6,13 +6,15 @@
  * src/core/buyer/supabase) both hand the app these shapes; where a field
  * lives in the books is written beside it.
  */
+import type { LineWord } from '../lineword.ts';
 import type { Member, Ms, UGX } from '../types.ts';
 
 /**
  * Where one line stands, in the words both apps use (docs/audit/buyer/handover.md §6):
  * To ask · Asked · Found · Not found · Price up · Client waits · Removed · On the trip · Short · In.
  */
-export type LineState = 'toask' | 'asked' | 'found' | 'notfound' | 'priceup' | 'clientwaits' | 'removed' | 'ontrip' | 'short' | 'in';
+/** Where a line stands: the shared words (core/lineword.ts). */
+export type LineState = LineWord;
 
 /** How the Buyer asked a supplier (supplierConfirms[sid].how). */
 export type AskWay = 'whatsapp' | 'call' | 'visit';
@@ -47,6 +49,8 @@ export interface BLine {
   repricedAt: Ms | null;
   /** The new cost is over the selling price: the Manager decides (items[].priceNote 'nomargin'). */
   ruthDecides: boolean;
+  /** Placed with no selling price (items[].priceAsk, "Price coming"): the Manager prices it, and it is asked all the same (BUY-3). */
+  priceComing?: boolean;
   /** The client waits while Sourcing finds it (items[].clientWaits). */
   clientWaits: { at: Ms; via: 'sourcing' | null } | null;
   /** Taken off the bill (saved_quotes.droppedLines). */
@@ -71,6 +75,10 @@ export interface BOrder {
   lines: BLine[];
   /** Per supplier id. */
   confirms: Record<string, Confirm>;
+  /** Held: Sales asked the Manager to cancel it (cancel_asks, X-1): not asked, not bought, not on a trip until answered. */
+  hold?: 'cancel' | null;
+  /** A test record (saved_quotes.qa): listed, marked, never on a trip or in the cash (BUY-5). */
+  test?: boolean;
 }
 
 /** A price on the shop's list (product prices by supplier). */

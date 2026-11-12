@@ -25,6 +25,7 @@ import { Duo, Icon, phWhatsapp } from '../../../ui/icons.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, chats, flush, kept, now, online } from '../shell/store.ts';
+import { notSentWords, openNotSent } from './NotSent.tsx';
 import { custOf, doneWeek, faceOf, mine, needs, owing, readyToCollect, soldIn, takeHeld, takeOf, tiles, total } from './data.ts';
 import { First } from './First.tsx';
 import { go } from './go.ts';
@@ -32,6 +33,7 @@ import { useLocal } from './local.ts';
 import { GoalStrip, Hero, type HeroGoal } from '../../../ui/Hero.tsx';
 import { NextMoves, WhoDue, scrollToNext } from "./NextMoves.tsx";
 import { openTell } from './Tell.tsx';
+import { FirstLoad } from '../shell/Loading.tsx';
 import './today.css';
 
 export function greeting(hm: string): string {
@@ -41,7 +43,8 @@ export function greeting(hm: string): string {
 
 /** The goal as the hero and the strip draw it. */
 export function goalOf(b: Books, nowMs: number) {
-  const today = dayOf(nowMs), g = b.goal, sold = total(soldIn(b, monthOf(today))), move = total(mine(b));
+  // On the move: placed and not invoiced yet (an invoiced order is already in sold — never counted twice, SAL-6).
+  const today = dayOf(nowMs), g = b.goal, sold = total(soldIn(b, monthOf(today))), move = total(mine(b).filter((o) => !o.invoiced));
   if (!g) return null;
   return { sold, move, target: g.target, pct: Math.round((sold / g.target) * 100), movePct: Math.round((move / g.target) * 100), daysLeft: daysApart(today, g.to), hit: sold >= g.target };
 }
@@ -57,12 +60,13 @@ export function Today(): JSX.Element {
     on();
     return () => window.removeEventListener('scroll', on);
   }, []);
-  if (!b) return <main class="td-wait" aria-busy="true" />;
+  if (!b) return <FirstLoad />;
 
   const me = b.me, today = dayOf(n), hm = clock(n), name = firstWord(me.name);
   const first = !b.orders.some((o) => o.placedBy === me.id) && !b.payments.some((p) => p.by === me.id);
   const goal = goalOf(b, n), live = mine(b), owe = owing(b, n), nd = needs(b, cb, n, L.told);
-  const kept_ = kept.value.length, busy = !first && nd.total >= 10, calm = !first && !off && nd.total === 0;
+  const kept_ = kept.value.length, busy = !first && nd.total >= 10, calm = !first && !off && nd.total === 0 && kept_ === 0;
+  const ns = notSentWords(kept.value);
   const toTop = () => window.scrollTo(0, 0);
 
   const heroGoal: HeroGoal | undefined = !goal ? undefined : goal.hit
@@ -71,7 +75,7 @@ export function Today(): JSX.Element {
     : { pct: goal.pct, movePct: goal.movePct, target: short(goal.target), daysLeft: goal.daysLeft };
   const hero = (
     <Hero greeting={`${first ? 'Welcome' : greeting(hm)}, ${name}`} line={first ? 'Your first day' : dayLabel(n)}
-      status={off ? 'updating' : 'live'} savedAt={clock(b.at)} me={{ initials: me.initials, tint: 'me' }}
+      status={off ? 'updating' : kept_ > 0 ? 'waiting' : 'live'} waiting={kept_} savedAt={clock(b.at)} me={{ initials: me.initials, tint: 'me' }}
       onMe={() => nav.push('today/you')} onFind={() => nav.push('today/find')}
       compact={busy ? <><b>{live.length}</b> on the move · <b class="w">{nd.total}</b> need you</> : undefined}
       month={monthName(today)} sold={money(goal ? goal.sold : 0)} note={first ? 'your first sale starts it' : undefined}
@@ -134,9 +138,10 @@ export function Today(): JSX.Element {
           </StageTiles>
         {calm ? <WhoDue b={b} cb={cb} now={n} /> : (
           <>
-            <SectionHead title="Needs you" dot count={off ? kept_ + nd.take.length : nd.total} after />
+            <SectionHead title="Needs you" dot count={off ? kept_ + nd.take.length : nd.total + (kept_ ? 1 : 0)} after />
             <div class="td-needs">
               {off && kept_ > 0 && <NeedsRow kind="notsent" title="Not sent yet" sub="kept on this phone" count={kept_} on={() => { void flush(); }} />}
+              {!off && kept_ > 0 && <NeedsRow kind="notsent" title={ns.title} sub={ns.sub} count={kept_} pill="Open" on={() => openNotSent(n)} />}
               {nd.take.length > 0 && <NeedsRow kind="take" title="Take payment" sub={`${money(take)} · oldest ${counted(nd.take[0].age, 'day')}`} count={nd.take.length} on={() => nav.push('today/to-collect')} />}
               {!off && tellN > 0 && <NeedsRow kind="tell" title="Tell them" sub={tellSub} count={tellN} on={() => openTell(0)} />}
               {!off && nd.waiting.length > 0 && <NeedsRow kind="chats" title="Chats waiting" sub={`oldest ${howLong(nd.waiting[0].since, n)}${newChats ? ` · ${newChats} new` : ''}`} count={nd.waiting.length} on={() => nav.tab('chats')} />}

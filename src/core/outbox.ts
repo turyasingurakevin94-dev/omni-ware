@@ -11,6 +11,13 @@
  * the data source. A write tried with signal goes at once and its answer
  * (or refusal) comes straight back; only a write that could not reach the
  * server is kept.
+ *
+ * Cross-app round 1 (SAL-3, docs/audit/cross-app/ROUND-1.md): writes are kept
+ * in order **per thing** (`scope`: an order, a draft, a customer), never one
+ * line for all — a write that cannot go never holds up a write on something
+ * else. A write still "no signal" after STUCK_TRIES tries while the books read
+ * fine is not a signal problem: it is marked refused ("Not sent"), never
+ * dropped. The scope '*' keeps the old single line for an app that asks for it.
  */
 import { isDataError } from './datasource.ts';
 import type { Ms } from './types.ts';
@@ -25,6 +32,20 @@ export interface Kept {
   /** kept: waiting for signal · refused: the server said no (reason) · sending: on its way. */
   state: 'kept' | 'sending' | 'refused';
   reason: string;
+  /** What it writes to ('order:586', 'draft:d-…'); writes on one scope go in order. '*' waits for everything. */
+  scope?: string;
+}
+
+/** The thing a write is about, for ordering (SAL-3). '*' = behind every kept write, and every later write behind it. */
+export type ScopeOf = (kind: string, args: unknown) => string;
+
+/** Tries that fail as "no signal" while the books read fine, before a kept write is called Not sent. */
+export const STUCK_TRIES = 5;
+
+export interface OutboxOptions {
+  scopeOf?: ScopeOf;
+  /** Whether the books were read fine just now (a stuck write is then not a signal problem). */
+  readsOk?: () => boolean;
 }
 
 export interface OutboxStore {
@@ -51,10 +72,24 @@ export class Outbox {
   private sentFns = new Set<(id: string, value: unknown) => void>();
   private refusedFns = new Set<(id: string, reason: string) => void>();
 
-  constructor(store: OutboxStore, sender: Sender, clock: () => Ms = Date.now) {
+  private scopeOf: ScopeOf;
+  private readsOk: () => boolean;
+
+  constructor(store: OutboxStore, sender: Sender, clock: () => Ms = Date.now, opt: OutboxOptions = {}) {
     this.store = store;
     this.sender = sender;
     this.clock = clock;
+    this.scopeOf = opt.scopeOf || (() => '*');
+    this.readsOk = opt.readsOk || (() => false);
+  }
+
+  private scope(k: Kept): string {
+    return k.scope || this.scopeOf(k.kind, k.args);
+  }
+
+  /** Whether a write on `scope` must wait behind what is kept (not refused). */
+  private waits(scope: string): boolean {
+    return this.list.some((k) => k.state !== 'refused' && (scope === '*' || this.scope(k) === '*' || this.scope(k) === scope));
   }
 
   /** What is kept, in order. */
@@ -91,38 +126,56 @@ export class Outbox {
    */
   async run<T = unknown>(kind: string, args: unknown): Promise<{ kept: false; value: T } | { kept: true; id: string }> {
     await this.ready();
-    // Sent in order: nothing jumps a write that is still waiting.
-    if (this.list.some((k) => k.state !== 'refused')) return { kept: true, id: await this.keep(kind, args) };
+    const scope = this.scopeOf(kind, args);
+    // A draft is placed once (SAL-4): the same write on the same draft, already kept, is that one.
+    if (scope.startsWith('draft:')) {
+      const same = this.list.find((k) => k.state !== 'refused' && k.kind === kind && this.scope(k) === scope);
+      if (same) return { kept: true, id: same.id };
+    }
+    // Sent in order on the same thing: nothing jumps a write on it that is still waiting.
+    if (this.waits(scope)) return { kept: true, id: await this.keep(kind, args, scope) };
     try {
       const value = (await this.sender(kind, args)) as T;
       return { kept: false, value };
     } catch (e) {
-      if (isOffline(e)) return { kept: true, id: await this.keep(kind, args) };
+      if (isOffline(e)) return { kept: true, id: await this.keep(kind, args, scope) };
       throw e;
     }
   }
 
-  /** Try every kept write, oldest first. Stops at the first that still has no signal. */
+  /**
+   * Try every kept write, oldest first. A write that still has no signal holds up only the later writes on
+   * its own scope; after three such misses in one go the phone has no signal and the rest wait.
+   */
   async flush(): Promise<{ sent: number; refused: number; left: number }> {
     await this.ready();
     if (this.flushing) return { sent: 0, refused: 0, left: this.list.length };
     this.flushing = true;
-    let sent = 0, refused = 0;
+    let sent = 0, refused = 0, misses = 0;
+    const held = new Set<string>();
+    const refuse = (k: Kept, reason: string) => {
+      k.state = 'refused'; k.reason = reason; refused += 1;
+      this.refusedFns.forEach((fn) => fn(k.id, k.reason));
+    };
     try {
       for (const k of this.list.slice()) {
         if (k.state === 'refused') continue;
+        const scope = this.scope(k);
+        if (held.has('*') || held.has(scope) || (scope === '*' && held.size)) continue;
         k.state = 'sending'; k.tries += 1;
+        await this.persist();
         try {
           const value = await this.sender(k.kind, k.args);
           this.list = this.list.filter((x) => x.id !== k.id);
           sent += 1;
           this.sentFns.forEach((fn) => fn(k.id, value));
         } catch (e) {
-          if (isOffline(e)) { k.state = 'kept'; break; }
-          k.state = 'refused';
-          k.reason = String((e as Error)?.message || e);
-          refused += 1;
-          this.refusedFns.forEach((fn) => fn(k.id, k.reason));
+          if (!isOffline(e)) refuse(k, String((e as Error)?.message || e));
+          else if (k.tries >= STUCK_TRIES && this.readsOk()) refuse(k, `Not sent · tried ${k.tries} times`);
+          else {
+            k.state = 'kept'; held.add(scope); misses += 1;
+            if (misses >= 3) { await this.persist(); break; }
+          }
         }
         await this.persist();
       }
@@ -146,14 +199,14 @@ export class Outbox {
     const k = this.list.find((x) => x.id === id);
     if (!k) return;
     if (args !== undefined) k.args = args;
-    k.state = 'kept'; k.reason = '';
+    k.state = 'kept'; k.reason = ''; k.tries = 0;
     await this.persist();
   }
 
-  private async keep(kind: string, args: unknown): Promise<string> {
+  private async keep(kind: string, args: unknown, scope: string): Promise<string> {
     const at = this.clock();
     const id = `${at.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    this.list.push({ id, kind, args, at, tries: 0, state: 'kept', reason: '' });
+    this.list.push({ id, kind, args, at, tries: 0, state: 'kept', reason: '', scope });
     await this.persist();
     return id;
   }
@@ -161,6 +214,8 @@ export class Outbox {
   private async ready(): Promise<void> {
     if (this.loaded) return;
     this.list = await this.store.load().catch(() => []);
+    // A write left 'sending' by a closed app was not answered: it waits again.
+    this.list.forEach((k) => { if (k.state === 'sending') k.state = 'kept'; });
     this.loaded = true;
   }
 
