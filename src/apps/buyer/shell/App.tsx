@@ -7,6 +7,7 @@ import { SheetHost } from '../../../ui/sheet.tsx';
 import { TabBar, type BarItem } from '../../../ui/TabBar.tsx';
 import { ToastHost } from '../../../ui/toast.tsx';
 import { Login } from './Gate.tsx';
+import { Opening } from './Opening.tsx';
 import { barTab, nav, screen, showTabBar, top, type Tab } from './nav.ts';
 import { kept, online, phase } from './store.ts';
 import { tripBadge } from './trip-entry.ts';
@@ -21,7 +22,8 @@ const repeatsBand = (t: { text: string; kind: string }): boolean => t.kind === '
 const ITEMS: BarItem<Tab>[] = [{ id: 'today', word: 'Today', icon: 'today' }, { id: 'suppliers', word: 'Suppliers', icon: 'store' }];
 
 export function App(): JSX.Element {
-  if (phase.value === 'starting') return <main class="ow-frame" aria-busy="true" />;
+  // Never a blank start (BUY-14): the navy head and Opening…, the kept copy dimmed under it.
+  if (phase.value === 'starting') return <Opening items={ITEMS} />;
   if (phase.value === 'login') return <Login />;
   const t = top.value, s = screen(t.id), bar = showTabBar.value;
   const View = s ? s.view : null;

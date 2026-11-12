@@ -84,7 +84,7 @@ export function buyerSupabase(): BuyerSource {
       return booksOf(r);
     },
 
-    async pushOn() { await pushOnShared(sb(), me()); },
+    async pushOn() { const r = await pushOnShared(sb(), me()); return { on: !!r.on }; },
 
     ask: (sid, way) => write((c, s, r, now) => W.ask(c, s, r, sid, way, now)),
     answerYes: (sid) => write((c, s, r, now) => W.answer(c, s, r, sid, 'confirmed', now)),

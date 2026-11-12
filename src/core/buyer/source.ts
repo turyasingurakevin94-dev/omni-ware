@@ -54,7 +54,7 @@ export interface BuyerSource {
    * This phone gets the Buyer's pushes: its token kept in push_subscriptions (as buyer.html:1664 phonePush
    * does on start). Only the real books, inside the phone app; the demo has none.
    */
-  pushOn?(): Promise<void>;
+  pushOn?(): Promise<{ on: boolean }>;
 
   /* the trip */
   /** The planned trip's stops on or off. */

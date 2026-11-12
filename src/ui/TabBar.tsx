@@ -13,6 +13,8 @@
  *
  *   <TabBar active="today" waiting={3} notPlaced={2} onTab={nav.tab} onPlus={…} />
  *   <TabBar inline items={[…]} … />      drawn in place; `items` for another bar (the agent's, kept for reference)
+ *
+ * Each tab is named by its word ("Today", "Suppliers"; BUY-15), Chats with its count.
  */
 import type { JSX } from 'preact';
 import { useRef } from 'preact/hooks';
@@ -56,7 +58,7 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   const tab = (t: BarItem<T>) => {
     const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
-      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : undefined}
+      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : t.word}
         onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
         <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} /><span class="ow-tab-w">{t.word}</span>
         {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
