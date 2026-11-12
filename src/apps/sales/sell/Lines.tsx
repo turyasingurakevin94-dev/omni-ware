@@ -81,6 +81,16 @@ function Head(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
   );
 }
 
+/** The open line's top row (SL06): a tap on it, or its ˄, closes the line to one row (Kevin, 11 Nov: "I don't want it to look big"). */
+function OpenHead(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
+  return (
+    <button type="button" class="sl-open-h" aria-expanded="true" aria-label={`Close ${sayItem(p.l.name)}`} onClick={closeLine}>
+      <Head l={p.l} b={p.b} chip={p.chip} />
+      <span aria-hidden="true" class="sl-open-x"><Icon name="chevron-up" size={18} stroke={2.4} /></span>
+    </button>
+  );
+}
+
 /** One line, closed: a tap opens it (the hinge with no price opens its "Price coming" sheet). */
 export function LineRow(p: { l: Line; b: Books; on?: () => void }): JSX.Element {
   return (
@@ -138,7 +148,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   if (q < 1) {
     return (
       <div class="sl-open g12">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         <div class="sl-open-r">
           <div class="sl-step bad">
             <button type="button" aria-label="Fewer" disabled><Icon name="minus" size={18} stroke={2.2} /></button>
@@ -165,7 +175,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
     const alt = asked.alt;
     return (
       <div class="sl-open g12">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         {stepRow}
         <div class="sl-whole">
           <span class="sl-whole-w"><Icon name="warning" size={14} stroke={2.2} />{`Sold by the ${l.unit === 'ctn' ? 'carton' : l.unit} only · you typed `}<b class="mono">{asked.qty}</b>{` ${asked.unit}`}</span>
@@ -186,7 +196,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   if (shortNow > 0 && shelf != null) {
     return (
       <div class="sl-open">
-        <div class="sl-open-h"><Head l={l} b={b} chip={<span class="sl-chip warn">{`${shortNow} short`}</span>} /></div>
+        <OpenHead l={l} b={b} chip={<span class="sl-chip warn">{`${shortNow} short`}</span>} />
         {stepRow}
         <div class="sl-short">
           <div class="sl-short-h"><span><Icon name="warning" size={16} stroke={2.2} /><b class="mono">{shortNow}</b> short</span><span><b class="mono">{raw}</b> asked · <b class="mono">{shelf}</b> on shelf</span></div>
@@ -204,7 +214,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
     const m = manager(b);
     return (
       <div class="sl-open">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         {stepRow}
         <div class="sl-open-r g8"><div class="sl-flex0"><PriceLink l={l} /></div><Bin l={l} /></div>
         <div class="sl-ruth">
@@ -218,7 +228,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   const last = p.customerId ? lastPaid(b, p.customerId, l.itemId, l.variantIdx) : null;
   return (
     <div class={'sl-open' + (rest > 0 ? ' split' : '')}>
-      <div class="sl-open-h"><Head l={l} b={b} /></div>
+      <OpenHead l={l} b={b} />
       {stepRow}
       {rest > 0 && split != null && <SplitPanel b={b} shelf={split} rest={rest} />}
       <div class="sl-open-p">

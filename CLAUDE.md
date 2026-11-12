@@ -84,6 +84,10 @@ Always make mockups with **/design**. Do not hand-build design canvases.
 
 Before any work on the Buyer app (`buyer.html`), read **`docs/audit/buyer/GOAL.md`**: the standing goal is to redesign it in the Agent app's design language, with the fewest steps, in step with the Sales app. Update its Progress table as steps are done.
 
+## Manager app goal
+
+Before any work on the Manager app (`manager.html`), read **`docs/audit/manager/GOAL.md`**: the standing goal is to redesign it in the Agent app's design language, with the fewest taps per decision, in step with the apps that send it work (Sales, Buyer, Store, Accounts). Update its Progress table as steps are done.
+
 ## Audit loop (Store app)
 
 The Store app (`store.html`) is improved in rounds, one aspect per round:

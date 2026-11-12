@@ -12,7 +12,10 @@ export { inPhoneApp };
 
 export const SALES_APP: NativeApp = {
   role: 'sales',
-  source: 'https://omni-ware.vercel.app/sales.html',
+  // The new app's own page, not the root sales.html: the root is the old app until Sales is switched, and the
+  // safety rule refuses it, so an installed APK never took a fix and every change needed a new APK (Kevin, 10 Nov
+  // 2026: "dont always build the new apk"). next/ is built from src/ on every change.
+  source: 'https://omni-ware.vercel.app/next/sales.html',
   key: 'ow-sales-bundle',
   build: 'owSalesBuild',
 };

@@ -44,6 +44,7 @@ const S = {
   back: "<path d='M15 6l-6 6 6 6'/>",
   'chevron-right': "<path d='m9 6 6 6-6 6'/>",
   'chevron-down': "<path d='m6 9 6 6 6-6'/>",
+  'chevron-up': "<path d='m6 15 6-6 6 6'/>",
   updown: "<path d='m8 9 4-4 4 4M8 15l4 4 4-4'/>",
   'arrow-right': "<path d='M5 12h14M13 6l6 6-6 6'/>",
   slide: "<path d='m6 6 6 6-6 6M12 6l6 6-6 6'/>",
