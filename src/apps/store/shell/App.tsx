@@ -60,9 +60,9 @@ function View(p: { id: string; params: Record<string, unknown>; k: number }): JS
 export function App(): JSX.Element {
   const ph = phase.value;
   if (ph === 'starting') return <main class="ow-frame" aria-busy="true" />;
-  if (ph === 'login') return <div class="ow-frame"><View id="shell/sign-in" params={{}} k={0} /></div>;
-  if (ph === 'checking') return <div class="ow-frame"><View id="shell/checking" params={{}} k={0} /></div>;
-  if (ph === 'no-reach') return <div class="ow-frame"><View id="shell/no-reach" params={{}} k={0} /></div>;
+  // The boot screens get the sheet and toast hosts too (TD20 Forgot password's words, Q21).
+  const early = ph === 'login' ? 'shell/sign-in' : ph === 'checking' ? 'shell/checking' : ph === 'no-reach' ? 'shell/no-reach' : null;
+  if (early) return <div class="ow-frame"><View id={early} params={{}} k={0} /><SheetHost /><ToastHost above={0} /></div>;
   const t = top.value, bar = showTabBar.value, u = under.value, s = screen(t.id);
   return (
     <div class={'ow-frame' + (bar ? ' with-bar' : '')}>

@@ -4,7 +4,7 @@
  * read. Opening it reads them (the bell goes to 0, WORD-10).
  */
 import type { JSX } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { firstWord } from '../../../core/names.ts';
 import { personFace, whoIs } from '../../../core/store/faces.ts';
 import { withRuth } from '../../../core/store/ruth.ts';
@@ -17,8 +17,16 @@ import { PageHead } from '../../../ui/PageHead.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, me, now } from '../shell/store.ts';
-import { alertDays, markSeen, seenAt, type AlertSaid } from './alerts-model.ts';
+import { alertDays, markSeen, seenAt, unread, type AlertSaid } from './alerts-model.ts';
 import './alerts.css';
+
+/** Each mark's centre on the line, oldest first, pushed right until it is at least GAP px from the one before (TD10: GA clear of DO). */
+const GAP = 30;
+function spread(times: number[], x: (ms: number) => number): number[] {
+  const out: number[] = [];
+  times.forEach((ms) => { const v = x(ms); out.push(out.length ? Math.max(v, out[out.length - 1] + GAP) : v); });
+  return out;
+}
 
 function Row(p: { s: AlertSaid; b: YardBooks; isNew: boolean }): JSX.Element {
   const from = whoIs(p.b, p.s.a.fromId), f = from ? personFace(from) : { initials: '?', tint: 't4' as const };
@@ -48,22 +56,27 @@ export function RuthRow(p: { b: YardBooks; n: number }): JSX.Element {
 
 export function Alerts(): JSX.Element {
   const b = books.value, n = now.value;
-  const seen = b ? seenAt(b) : 0;
+  // What was new when Alerts opened stays marked while it is open (opening it reads them, below).
+  const [seen] = useState(() => (b ? seenAt(b) : 0));
   useEffect(() => { if (b) markSeen(b, n); }, []);
+  const line = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(312);
+  useLayoutEffect(() => { if (line.current && line.current.clientWidth) setW(line.current.clientWidth); }, []);
   if (!b) return <main class="st-ph" />;
   const days = alertDays(b, n), today = days[0], todays = [...today.forYou, ...today.yard];
-  const fresh = today.forYou.filter((x) => x.a.at > seen).length;
+  const fresh = today.forYou.filter((x) => unread(x.a, seen)).length;
   const t0 = atTime(dayOf(n), `${Math.min(9, ...todays.map((x) => Number(clock(x.a.at).split(':')[0])))}:00`), span = Math.max(1, n - t0);
   const pos = (ms: number) => `${(Math.max(0, Math.min(1, (ms - t0) / span)) * 100).toFixed(1)}%`;
+  const marks = todays.slice().sort((x, y) => x.a.at - y.a.at), xs = spread(marks.map((m) => m.a.at), (ms) => Math.max(0, Math.min(1, (ms - t0) / span)) * w);
   const hours: number[] = [];
   for (let h = t0 + 3600e3; h < n - 900e3; h += 3600e3) hours.push(h);
   return (
     <>
       <PageHead title="Alerts" count={fresh ? `· ${fresh} new` : undefined} onBack={() => nav.back()}>
-        <div class="st-al-line" role="img" aria-label={`Today's alerts on a line from ${clock(t0)} to now`}>
+        <div ref={line} class="st-al-line" role="img" aria-label={`Today's alerts on a line from ${clock(t0)} to now`}>
           <span aria-hidden="true" class="st-al-track" />
-          {todays.slice().reverse().map((s) => { const p = whoIs(b, s.a.fromId), f = p ? personFace(p) : { initials: '?', tint: 't4' as const };
-            return <span key={s.a.id} aria-hidden="true" class={cx('ow-av st-al-dot', s.a.forYou && 'you')} style={{ ...avatarStyle({ ...f, size: 26, onNavy: true }), left: `calc(${pos(s.a.at)} - 13px)` }}>{f.initials}</span>; })}
+          {marks.map((s, i) => { const p = whoIs(b, s.a.fromId), f = p ? personFace(p) : { initials: '?', tint: 't4' as const }, x = xs[i];
+            return <span key={s.a.id} aria-hidden="true" class={cx('ow-av st-al-dot', s.a.forYou && 'you')} style={{ ...avatarStyle({ ...f, size: 26, onNavy: true }), left: `${(x - 13).toFixed(1)}px` }}>{f.initials}</span>; })}
           <span aria-hidden="true" class="st-al-nowdot" />
           <span class="mono st-al-tick" style={{ left: 0 }}>{clock(t0)}</span>
           {hours.map((h) => <span key={h} class="mono st-al-tick mid" style={{ left: pos(h) }}>{clock(h)}</span>)}
@@ -84,7 +97,7 @@ export function Alerts(): JSX.Element {
         </> : <>
           {today.forYou.length > 0 && <>
             <div class="st-al-h"><span aria-hidden="true" class="d bad" /><h2>For you</h2><span class="mono">{fresh ? `${fresh} new` : String(today.forYou.length)}</span></div>
-            <div class="st-al-card">{today.forYou.map((s) => <Row key={s.a.id} s={s} b={b} isNew={s.a.at > seen} />)}</div>
+            <div class="st-al-card">{today.forYou.map((s) => <Row key={s.a.id} s={s} b={b} isNew={unread(s.a, seen)} />)}</div>
           </>}
           {today.yard.length > 0 && <>
             <div class="st-al-h"><span aria-hidden="true" class="d" /><h2>In the yard today</h2><span class="mono">{today.yard.length}</span></div>

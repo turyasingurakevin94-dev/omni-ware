@@ -18,7 +18,7 @@ Built to the approved canvas `docs/canvas/store-agent/` (boards at 360 × 800, `
 - A sheet inside your screen is not a route: `sheet.open(...)` (`src/ui/sheet.tsx`); export a function when another area opens it (routes §4); another area calls it with `callArea('in', 'openNotOnList', …)` (`shell/areas.ts`), never by importing your folder.
 - **Each area is its own file** (`shell/areas.ts`, the Sales way): the page `next/store.html` holds the shell, `src/ui`, `src/core` and Today; Pack, Goods in, Shelf and Out are `next/store-pack.js`, `store-in.js`, `store-shelf.js`, `store-out.js` (60 KB gzip each; the page 200 KB), loaded when one of their ids first opens and all of them after the first paint. Until it is here an id draws its loading state (`shell/Loading.tsx`). Your folder may import the shell, `src/ui` and `src/core`, never another area's folder (the build refuses it). Your CSS loads with your file, so it must not restyle a shared class unscoped.
 - **Faces** come from `src/core/store/faces.ts` only: `personFace` (their tint: Grace navy), `yardFace(b, p)` (the holder slate, everywhere off Today's hero), `orderFace`, `customerFace`, `shortName`. Icons from `src/ui/icons.tsx` (the Store added `layers`, `came-in`, `copy`); the rail's icons are `shell/routes.ts` `RAIL`.
-- Compose from `src/ui` (`src/ui/README.md`). Added for the Store: `Hero` `bell` and `children`, `TabBar` `plusIcon="play"`, `Notice kind="failed"`, icons `play` and `shelf`.
+- Compose from `src/ui` (`src/ui/README.md`). Added for the Store: `Hero` `bell` and `children`, `TabBar` `plusIcon="play"` and `tabsOff` (TD21), `Notice kind="failed"`, icons `play` and `shelf`.
 - Files of 200–500 lines; none over 1,000. One rule, one place: a rule two screens need goes in `src/core/store/`, never copied.
 
 ## The state and the writes (`shell/store.ts`)
@@ -40,7 +40,7 @@ The bars (`shell/App.tsx` `Bars`) sit above the tab bar: amber "No signal · N w
 
 ## The source (`src/core/store/source.ts`)
 
-Reads: `session`, `snapshot` (store_snapshot), `live` (store_live), `order` (store_order), `side` (places, routes, road names), `waitingCount`, `countArrived`.
+Reads: `session`, `snapshot` (store_snapshot), `live` (store_live), `savedCopy` (the copy this phone kept, TD22; the demo's only for now), `order` (store_order), `side` (places, routes, road names), `waitingCount`, `countArrived`.
 Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4 · `unpack` W5 · `release` W6 · `putBack` W7 (stamped once on the order, 0182) · `load` W8 · `handOver` W9 · `deliver` W10 · `askLetGo` W11 · `withdrawLetGo` W11a · `nameDirection` W12 · `lockRoute` W13 · `checkIn` W14 · `notOnList` W15 · `restock` W16 · `reportLoss` W17 · `returnAsk` W18 · `withdrawReturn` W18a · `rideTick` W19 · `rideHandIn` W19a · `sendCount` W20 · `replaceCount` W20a · `passYard` W22 · `gotYard` W22a · `closeYard` W23 · `setMyName` W24 · `pushOn` W25 · `signIn`/`signOut`/`resetPassword` W26 · `cantDeliver` W27. Not here on purpose: W8a, W10a (phone drafts), W18b, W21 (Ruth's app), W28 (Q11).
 
 ## The demo at 360 × 800
@@ -53,7 +53,7 @@ Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4
 | `&at=930` · `1010` | the earlier moments of Out's empty boards, the day wound back (OU14, OU15; `demo/moments-out.ts`) |
 | `&state=cancel-0530` · `cancel-0534` · `ggaba-closed` · `agent` | the what-ifs (PK10, OU27, OU24, OU11) |
 | `&state=empty` · `yard-empty` · `first-day` · `nobody` | nothing to pack while the yard works (PK14), nothing in the yard (TD29, TD30; OU14 and OU15 are the moments 930 and 1010), Joy's first day (TD05), nobody to pass to (TD24) |
-| `&state=signed-out` · `loading` · `no-reach` | TD20, TD21, TD22 |
+| `&state=signed-out` · `loading` · `no-reach` | TD20 (the sign-in takes 1.5 s: TD23), TD21, TD22 (the 7:52 copy and two kept writes) |
 | `&as=okello` | Okello's phone: Musa passed him the yard (TD15, TD25, TD32) |
 | `&offline` | no signal: the copy saved 7:52, writes kept (amber) |
 | `&fail=<write>` (or `snapshot`) | that write fails once with its board code, then Try again goes (red) |

@@ -19,10 +19,13 @@ export function markSeen(b: YardBooks, now: number): void {
   try { localStorage.setItem(seenKey(b), String(now)); } catch (_e) { /* private mode */ }
 }
 
+/** Not read yet: not marked read, and newer than the last time Alerts was opened. */
+export const unread = (a: YardAlert, seen: number): boolean => !a.read && a.at > seen;
+
 /** The bell: today's alerts for you, not read yet. */
 export function bellCount(b: YardBooks, now: number): number {
   const seen = seenAt(b), today = dayOf(now);
-  return b.alerts.filter((a) => a.forYou && dayOf(a.at) === today && a.at > seen).length;
+  return b.alerts.filter((a) => a.forYou && dayOf(a.at) === today && unread(a, seen)).length;
 }
 
 export interface AlertSaid {

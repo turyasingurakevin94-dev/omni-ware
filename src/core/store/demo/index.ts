@@ -34,6 +34,8 @@ function keptSeed(): Kept[] {
 }
 
 const WRITE_MS = 250;
+/** The demo's sign-in takes this long (TD23 "Signing in…"). */
+const SIGN_IN_MS = 1500;
 /** &slow=1: long enough for a board's "Sending…" to be seen and shot. */
 const SLOW_MS = 60000;
 const copy = <T>(x: T): T => structuredClone(x);
@@ -83,7 +85,8 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     kind: 'demo',
     get day() { return b; },
     flags: f,
-    kept: f.kept ? keptSeed() : [],
+    // TD22: the shop cannot be reached, but this phone kept its 7:52 copy and two writes (as &offline&kept=1).
+    kept: f.kept || f.state === 'no-reach' ? keptSeed() : [],
     now: clock,
     online: () => !f.offline && f.state !== 'no-reach',
 
@@ -91,6 +94,8 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     signIn: async (email, password) => {
       if (!email.trim() || !password) throw dataError('refused', 'Wrong email or password', 'auth');
       if (f.offline) throw dataError('offline', 'No signal');
+      // As long as a real sign-in on yard signal, so Signing in… can be seen (TD23).
+      if (!opts.instant) await new Promise((r) => setTimeout(r, SIGN_IN_MS));
       signedIn = true;
       return session();
     },
@@ -98,6 +103,7 @@ export function storeDemo(search: string = '?demo', opts: { instant?: boolean } 
     resetPassword: async () => undefined,
 
     snapshot: read,
+    savedCopy: async () => { if (f.state !== 'no-reach' && !f.offline) return null; const c = copy(b); return { ...c, orders: c.orders.filter((o) => !putAway(o)), at: t('7:52') }; },
     live: read,
     order: async (id) => { const o = b.orders.find((x) => x.id === id); return o ? copy(o) : null; },
     side: async () => ({

@@ -11,6 +11,7 @@ import type { YardBooks } from '../../../core/store/types.ts';
 import { NOT_PAID } from '../../../core/store/yard.ts';
 import { clock, when } from '../../../core/time.ts';
 import { IconTile, type TileTone } from '../../../ui/ActRow.tsx';
+import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { avatarStyle, FaceStack, type Face } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
@@ -21,8 +22,11 @@ import { books, me, now } from '../shell/store.ts';
 import { sinceDays } from './parts.tsx';
 import './alerts.css';
 
+/** The aisle an aisle count was of ("Aisle A · Roofing" → Roofing); null for a spot count. */
+const aisleOf = (c: { aisle: string }): string | null => (/^Aisle \w+ · /.test(c.aisle) ? c.aisle.replace(/^Aisle \w+ · /, '') : null);
+
 interface Step { word: string; sub?: string; state: 'done' | 'now' | 'next'; icon: IconName }
-interface Said { icon: IconName; tone: TileTone; title: string; sub: string; steps: Step[]; act?: { word: string; on: () => void }; faces?: Face[]; on?: () => void }
+interface Said { icon: IconName; aisle?: string | null; tone: TileTone; title: string; sub: string; steps: Step[]; act?: { word: string; on: () => void }; faces?: Face[]; on?: () => void }
 
 function say(x: RuthItem, b: YardBooks, n: number): Said {
   const ruth = b.people.find((p) => p.role === 'manager'), rn = ruth ? firstWord(ruth.name) : 'Ruth';
@@ -38,7 +42,8 @@ function say(x: RuthItem, b: YardBooks, n: number): Said {
     case 'count': {
       const c = x.count!, l = c.lines[0];
       const title = c.lines.length === 1 ? `Count · ${l.name.split(' · ')[0]}` : `Count · ${c.aisle}`;
-      if (x.state === 'answered') return { icon: 'orders', tone: 'info', title: c.lines.length === 1 && /^Spot/.test(c.aisle) ? title : `Count · ${c.aisle.replace(/^Aisle/, 'aisle')}`, sub: `${when(x.at, n)} · ${firstWord(c.countedByName)}`, steps: [] };
+      // An aisle count answered: the aisle's own picture (TD30, Roofing's house), as Today's tiles draw it.
+      if (x.state === 'answered') return { icon: 'orders', aisle: aisleOf(c), tone: 'info', title: c.lines.length === 1 && /^Spot/.test(c.aisle) ? title : `Count · ${c.aisle.replace(/^Aisle/, 'aisle')}`, sub: `${when(x.at, n)} · ${firstWord(c.countedByName)}`, steps: [] };
       return { icon: 'count', tone: 'warn', title, sub: `you counted ${l ? `${l.counted} ${(b.items.find((i) => i.key === l.key) || { unit: '' }).unit}` : ''} · ${clock(c.createdAt)}`.replace('  ', ' '),
         on: () => nav.push('shelf/count', l ? { key: l.key } : {}),
         steps: [{ word: 'You counted', sub: clock(c.createdAt), state: 'done', icon: 'check' }, { word: `${rn} looks`, sub: 'now', state: 'now', icon: 'eye' }, { word: 'The shelf', state: 'next', icon: 'shelf' }] };
@@ -90,7 +95,8 @@ function Card(p: { s: Said; yours?: boolean }): JSX.Element {
     <div class="st-rcard">
       <div class="st-rcard-h">
         {p.s.on ? <Tap on={p.s.on} class="st-rcard-main">{head}</Tap> : <span class="st-rcard-main">{head}</span>}
-        {p.s.act && <button type="button" class="st-rcard-act" onClick={p.s.act.on}>{p.s.act.word}</button>}
+        {/* A 44 px button with the board's 36 px pill drawn inside it (TD11). */}
+        {p.s.act && <button type="button" class="st-rcard-act" onClick={p.s.act.on}><span>{p.s.act.word}</span></button>}
         {p.s.faces && <FaceStack faces={p.s.faces} ground="#FFFFFF" />}
       </div>
       {p.s.steps.length > 0 && <Track steps={p.s.steps} yours={p.yours} />}
@@ -136,8 +142,8 @@ export function WithRuth(): JSX.Element {
           <div class="st-al-h"><span aria-hidden="true" class="d good" /><h2>Answered</h2><span class="mono">{ans.length}</span><span class="r">last 7 days</span></div>
           <div class="st-al-card">{ans.map((x, i) => { const s = say(x, b, n); return (
             <div key={i} class="st-al">
-              <IconTile tone="info" icon={s.icon} size={40} />
-              <span class="st-al-t"><span>{s.title}</span><span class="mono">{s.sub}</span></span>
+              {s.aisle ? <ItemSquare aisle={s.aisle} size={38} radius={12} icon={22} /> : <IconTile tone="info" icon={s.icon} size={40} />}
+              <span class="st-al-t wrap"><span>{s.title}</span><span class="mono">{s.sub}</span></span>
               <span class="st-al-now good"><Icon name="check" size={12} stroke={2.4} />{x.answer}</span>
             </div>); })}</div>
         </>}

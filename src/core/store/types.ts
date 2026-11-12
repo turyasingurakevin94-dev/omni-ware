@@ -308,6 +308,8 @@ export interface YardAlert {
   forYou: boolean;
   /** The push's data, for its route (shell/pushes.ts). */
   data: Record<string, unknown>;
+  /** Read on this phone already (acted on, or Alerts opened since): the bell leaves it out. */
+  read?: boolean;
 }
 
 /**

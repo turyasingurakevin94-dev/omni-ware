@@ -2,11 +2,11 @@
  * The sample day, built: 10:41 from FACTS, then the later moments and the what-ifs
  * the boards draw (FACTS §8; flags.ts lists them). A moment is what the yard would
  * hold by then if each job before it had been done as the boards draw it; a what-if
- * changes only what it names. Gaps FACTS leaves (when #0534 was delivered, what was
- * left by 17:30) are filled as plainly as the boards allow and named here.
+ * changes only what it names. Every moment here is a row of FACTS §8 (what is delivered when,
+ * what Ruth answered, which pushes are new: the bell per board and per phone); the two never differ.
  */
 import type { YardBooks, YardOrder } from '../types.ts';
-import { alerts, counts, returns, trip, tripLine, trips } from './coming.ts';
+import { alert, alerts, counts, returns, trip, tripLine, trips } from './coming.ts';
 import type { StoreDemoFlags } from './flags.ts';
 import { carrier, line, order, orders } from './orders.ts';
 import { AISLES, NOW, agents, customers, items, people, suppliers, t } from './shop.ts';
@@ -24,6 +24,9 @@ const deliver = (o: YardOrder, to: string, at: number, collected: boolean) => {
   if (!collected) o.deliveredPhoto = `demo/${o.id}.jpg`;
   stamp(o, 'completed', at);
 };
+/** The pushes this phone got so far are read (Musa opened Alerts since): each later moment's bell counts only its own (FACTS §8). */
+const readAll = (b: YardBooks) => { b.alerts.forEach((a) => { a.read = true; }); };
+
 /** A trip's lines all in at the yard (receive_trip): on the shelf, the orders' lines received, an order all in to Packing. */
 function checkIn(b: YardBooks, ids: string[], at: number): void {
   b.trips.filter((x) => ids.includes(x.id)).forEach((tr) => {
@@ -63,6 +66,9 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     o.pickingStatus = 'done'; o.pickingDoneAt = t('10:52');
   }],
   [1130, (b) => {
+    // Bell 1 (TD02): the 10:41 pushes read; Denis's trip back at 11:30 is new.
+    readAll(b);
+    b.alerts.unshift(alert('al-7', 'trip.back', t('11:30'), 'u-do', 'Denis’s trip is back at the yard · 3 lines', { tripId: 'TRIP-1017B-1' }, true));
     deliver(byId(b, 555), 'Walk-in', t('10:47'), true);
     deliver(byId(b, 534), 'Kato Construction', t('10:58'), false);
     // #0552's wheelbarrows packed at 10:52 (its pickingDoneAt below): on bay 1, Not paid yet until 13:20 (TD02's To load 2).
@@ -91,6 +97,9 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     stamp(o, 'pending_delivery', t('13:20'));
   }],
   [1510, (b) => {
+    // Bell 1 (TD03): what came before is read; Denis sending Musa to Katwe Timber at 15:10 is new.
+    readAll(b);
+    b.alerts.unshift(alert('al-8', 'trip.sent', t('15:10'), 'u-do', 'Denis sent you to Katwe Timber · Hassan drives', { tripId: 'TRIP-1017C-1' }, true));
     // By 15:10 (TD03: 3 ready) the three jobs TD01 still lists are done, and stay done at 17:30: the bent sheets reported
     // 10:50 (Ruth wrote them off 12:30), #0548's return taken back 11:40, and aisle C counted, with Ruth since 14:40.
     b.reports.unshift({ id: 'rep-bent', key: 'p-is28', productId: 'p-is28', variantIdx: null, name: 'Iron sheet G28 · 3m', qty: 3, why: 'damaged', photo: 'demo/report.jpg',
@@ -108,7 +117,14 @@ const STEPS: [number, (b: YardBooks) => void][] = [
     }));
   }],
   [1730, (b) => {
+    // Bell 0 (TD04): every push read by the close.
+    readAll(b);
     checkIn(b, ['TRIP-1017C-1'], t('16:10'));
+    // Ruth answered by 17:30 (FACTS §8; spec §2a Q9): the Wire nails count accepted 16:20, #0557 (the copy) cancelled 16:30.
+    // Only aisle C's count (sent 14:40) carries to tomorrow: TD04 "1 with Ruth".
+    const wn4 = b.counts.find((c) => c.id === 'cnt-wn4');
+    if (wn4) { wn4.status = 'accepted'; wn4.decidedAt = t('16:20'); }
+    const cp = byId(b, 557); cp.cancelledAt = t('16:30'); cp.cancelledByName = 'Ruth Nakato'; stamp(cp, 'cancelled', t('16:30'));
     [549, 546, 559].forEach((id, i) => {
       const o = byId(b, id);
       o.lines.forEach((l) => { if (!l.dropped) { l.pickStatus = 'done'; l.pickedQty = l.receivedQty ?? l.qty; } });
@@ -140,7 +156,9 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
       b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });
       break;
     case 'yard-empty': case 'first-day':
-      b.orders = []; b.trips = []; b.returns = []; b.counts = b.counts.filter((c) => c.status === 'accepted'); b.alerts = []; b.found = [];
+      b.orders = []; b.trips = []; b.returns = []; b.counts = b.counts.filter((c) => c.status === 'accepted'); b.found = [];
+      // Nothing new today; the empty yard keeps the older days, read (TD29 "Fri 16 Oct · read"). Joy's first day has none.
+      b.alerts = f.state === 'yard-empty' ? b.alerts.filter((a) => a.at < t('0:00')) : [];
       // Nothing waits: every aisle counted yesterday (no count due either).
       b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });
       break;
@@ -188,6 +206,8 @@ export function dayAt(f: StoreDemoFlags): { books: YardBooks; now: number } {
   if (f.as === 'okello') {
     const op = b.people.find((p) => p.id === 'st-op') as YardBooks['me'];
     b.me = op; b.onSince = t('7:45');
+    // Okello's own pushes: the yard's, and Musa's pass at 10:42 (bell 1, TD15); Musa's own for-you pushes are not his.
+    b.alerts = [alert('al-ho', 'store.handover', t('10:42'), 'u-mk', 'Musa passed you the yard', { askId: 'ask-ho' }, true), ...b.alerts.filter((a) => !a.forYou)];
     b.asks.push({ id: 'ask-ho', kind: 'handover', ref: 'u-op', payload: { toStaffId: 'st-op', toUserId: 'u-op', toName: 'Okello Peter', orders: [552], waiting: 4, bays: [1] },
       by: 'u-mk', byName: 'Musa Kiggundu', status: 'sent', createdAt: t('10:42'), decidedAt: null, decidedBy: null });
     // W22 moved Musa's half-packed #0552 to Okello (his name on it, the picks kept; screens Q19).

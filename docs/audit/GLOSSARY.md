@@ -96,7 +96,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
-| How long | A duration: "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
+| How long | A duration: "just now" under a minute, "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
 | When | A moment: "15:20" today, "Thu 23:28" otherwise (`whenAt()`) | a clock time with no day when it isn't today | Store R6 · WORD-07 |
 | Undo | 10 seconds, or until the screen changes, everywhere | 5 s in one place, 10 s in another | Store R2 · FLOW-02 |
 

@@ -48,11 +48,12 @@ export function You(): JSX.Element {
     <div class="st-you-h">
       <span aria-hidden="true" class="st-close-grab" />
       <div class="st-you-r">
-        <span aria-hidden="true" class="st-you-ring">
-          <svg width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="37" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5" />
+        {/* The day ring and the three figures all go to Today (TD12). */}
+        <Tap on={() => nav.back()} class="st-you-ring" label={`Your day: ${d.length} of ${d.length + plan.jobs} jobs done`}>
+          <svg aria-hidden="true" width="84" height="84" viewBox="0 0 84 84"><circle cx="42" cy="42" r="37" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5" />
             <circle cx="42" cy="42" r="37" fill="none" stroke="#6FDCB0" stroke-width="5" stroke-linecap="round" stroke-dasharray={`${(C * fill).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 42 42)" /></svg>
-          <span>{b.me.initials}</span>
-        </span>
+          <span aria-hidden="true">{b.me.initials}</span>
+        </Tap>
         <span class="st-you-t"><b>{b.me.name}</b><span>{`${ROLE[b.me.role] || 'Store'} · ${b.shopName}`}</span>
           {since != null && <span class="st-you-pill"><Icon name="clock" size={13} stroke={2.4} />On since <span class="mono">{clock(since)}</span> · <span class="mono">{howLong(since, n)}</span></span>}</span>
         <button type="button" class="st-close-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={18} stroke={2.2} /></button>
@@ -62,8 +63,8 @@ export function You(): JSX.Element {
           <span>{checked[0] ? `${runner ? firstWord(runner.name) : 'trip'} · ${clock(checked[0].at)}` : '—'}</span></Tap>
         <Tap on={() => nav.back()} class="st-you-fig"><span><Icon name="orders" size={13} stroke={2} />Packed</span><b class="mono">{packed.length}</b>
           <span>{packed.map((x) => orderNo(x.orders[0].id)).slice(0, 2).join(' ') || '—'}</span></Tap>
-        <span class="st-you-fig"><span><Icon name="truck" size={13} stroke={2} />Out</span><b class="mono">{out}</b>
-          <span>{[...loads.map((x) => `${x.orders.length} ${x.name}`), gate.length ? `${gate.length} gate` : ''].filter(Boolean).join(' · ') || '—'}</span></span>
+        <Tap on={() => nav.back()} class="st-you-fig"><span><Icon name="truck" size={13} stroke={2} />Out</span><b class="mono">{out}</b>
+          <span>{[...loads.map((x) => `${x.orders.length} ${x.name}`), gate.length ? `${gate.length} gate` : ''].filter(Boolean).join(' · ') || '—'}</span></Tap>
       </div>
     </div>
   );
@@ -91,7 +92,7 @@ export function You(): JSX.Element {
       </div>
       <div class="st-shop">
         <span aria-hidden="true" class="st-shop-ic"><Icon name="store" size={20} stroke={2} /></span>
-        {/* The shop's place and phone are not in the yard's books (store_snapshot gives its name only): data gap, reported. */}
+        {/* The shop's place and phone are not in the yard's books (store_snapshot gives its name only): spec §3 Q25, left out until Kevin says. */}
         <span class="st-shop-t"><b>{b.shopName}</b><span><span aria-hidden="true" class="st-shop-dot" />Open</span></span>
       </div>
       <div class="st-signed">

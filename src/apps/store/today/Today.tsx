@@ -37,8 +37,11 @@ import './today.css';
 const toNeeds = (): void => { const el = document.getElementById('st-needs'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 60 }); };
 const toTop = (): void => window.scrollTo({ top: 0 });
 
-/** Joy's first day: no job of the yard's yet, and nothing done (TD05). */
-const firstDay = (b: YardBooks, j: Job[], done: number): boolean => j.length === 0 && done === 0 && !b.orders.length && !b.trips.length;
+/**
+ * Joy's first day (TD05, spec §4.6): the yard has nothing of its own yet (no order, trip or return) and nothing is done today.
+ * A shelf count that falls due does not end it: counting is the shelf's upkeep, and Walk the shelf is a first-day step.
+ */
+const firstDay = (b: YardBooks, j: Job[], done: number): boolean => j.every((x) => x.kind === 'count') && done === 0 && !b.orders.length && !b.trips.length && !b.returns.length;
 
 export function Today(): JSX.Element {
   const b = books.value, n = now.value, off = !online.value, j = liveJobs.value;
@@ -98,7 +101,7 @@ export function Today(): JSX.Element {
         </OnTheMove>
 
         {k.length > 0 && <>
-          <SectionHead title="Waiting to send" meta={String(k.length)} after />
+          <div id="st-kept"><SectionHead title="Waiting to send" meta={String(k.length)} after /></div>
           <GroupCard>
             {k.map((x) => <KeptRow key={x.id} k={x} b={b} onRemove={() => { if (confirm('Remove it from this phone? It will not be sent.')) void discard(x.id); }} />)}
             <div class="st-kept-foot"><Icon name="send" size={15} stroke={2} /><span>Each goes by itself · then they see it</span></div>

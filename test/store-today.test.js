@@ -102,5 +102,23 @@ const day = async (q) => { const d = storeDemo(q, { instant: true }); const b = 
   t.check(F.orderFace(o552, b).initials === 'KC' && F.orderFace(o552, b).tint === 't0' && F.orderFace(o555, b).initials === 'WI', 'faces: Kato KC, a walk-in WI');
   t.check(T.clock(now) === '10:43', 'the clock');
 
+  /* ---- The Today critic (2026-11-12): FACTS §8's bell, Ruth at 17:30, the first day, "just now" ---- */
+  const forYouNew = (bk) => bk.alerts.filter((a) => a.forYou && !a.read).length;
+  const bells = {};
+  for (const q of ['?demo', '?demo&at=1132', '?demo&at=1510', '?demo&at=1730', '?demo&as=okello&at=1043']) bells[q] = forYouNew((await day(q)).b);
+  t.check(JSON.stringify(Object.values(bells)) === '[2,1,1,0,1]', `the bell per board: 2 at 10:41, 1 at 11:32 and 15:10, 0 at 17:30, 1 on Okello's phone (got ${JSON.stringify(bells)})`);
+  ({ d, b } = await day('?demo&as=okello&at=1043'));
+  await d.gotYard(b.asks.find((a) => a.kind === 'handover').id);
+  t.check(forYouNew(await d.snapshot()) === 0, 'I\'ve got it reads the pass push (TD32: no bell)');
+  ({ b, now, me } = await day('?demo&at=1730'));
+  const withR = S.closeChecks(b, me, now, []).find((c) => c.kind === 'ruth');
+  t.check(withR && withR.n === 1 && withR.what === 'Aisle C count', `17:30: one thing with Ruth, aisle C's count (got ${withR && withR.n} "${withR && withR.what}")`);
+  ({ b, now, me } = await day('?demo'));
+  const two = S.closeChecks(b, me, now, []).find((c) => c.kind === 'ruth');
+  t.check(two.n === 2 && two.what === '2 asks', 'more than one with Ruth is counted, never named by one of them');
+  ({ b, now, me } = await day('?demo&state=first-day'));
+  t.check(J.yardJobs(b, me, now).length === 0 && b.me.name === 'Joy Namata', 'Joy\'s first day: no job, not even a count (TD05)');
+  t.check(T.howLong(now, now + 30e3) === 'just now' && T.howLong(now, now + 60e3) === '1 m', 'how long: "just now" under a minute (§4.7)');
+
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -96,9 +96,10 @@ export function closeChecks(b: YardBooks, me: string | null, now: Ms, setAside: 
   ordersAt(b, 'packed', me, now).forEach((o) => out.push({ kind: 'bay', tone: 'stays', orders: [o] }));
   const counts = b.counts.filter((c) => c.status === 'sent');
   const ruth = withRuth(b, me, now).filter((x) => x.state === 'with-ruth' && x.kind !== 'unpaid');
-  // Named by the newest count with Ruth ("Aisle C count"), else by how many; n is all that carries over.
+  // One ask with Ruth is named ("Aisle C count" when it is the count); more are counted ("3 asks"); n is all that carries over (TD16).
   const last = counts.slice().sort((x, y) => y.createdAt - x.createdAt)[0];
-  if (ruth.length) out.push({ kind: 'ruth', tone: 'carries', orders: [], at: last ? last.createdAt : ruth[0].at, what: last ? `${last.aisle.replace(/^Aisle (\w+) · .*$/, 'Aisle $1').replace(/^Spot count · /, '')} count` : `${ruth.length} asks`, n: ruth.length });
+  const named = ruth.length === 1 && last && ruth[0].kind === 'count' ? `${last.aisle.replace(/^Aisle (\w+) · .*$/, 'Aisle $1').replace(/^Spot count · /, '')} count` : `${ruth.length} asks`;
+  if (ruth.length) out.push({ kind: 'ruth', tone: 'carries', orders: [], at: ruth.length === 1 ? ruth[0].at : last ? last.createdAt : ruth[0].at, what: named, n: ruth.length });
   return out;
 }
 

@@ -64,6 +64,7 @@ export function when(ms: Ms, now: Ms): string {
 /** GLOSSARY "How long": "12 m", "2 h", "9 h 41 m", "2 days". */
 export function howLong(fromMs: Ms, toMs: Ms): string {
   const mins = Math.max(0, Math.floor((toMs - fromMs) / 60000));
+  if (mins < 1) return 'just now';
   if (mins < 60) return `${mins} m`;
   const h = Math.floor(mins / 60), m = mins % 60;
   if (h < 24) return m ? `${h} h ${m} m` : `${h} h`;

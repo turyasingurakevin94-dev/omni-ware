@@ -26,9 +26,9 @@
  *   &state=someone-checkin  Okello checks Denis's trip in at 11:32 while this phone counts it (IN09)
  *   &state=extra-answered   Ruth answered the binding wire not on the list: keep it, 11:48 (IN13)
  *   &state=return-decided   this phone sent #0548's return 11:03; Ruth took it back 11:20 (IN22)
- *   &state=signed-out       the sign-in (TD20, TD23, TD31)
+ *   &state=signed-out       the sign-in, which takes 1.5 s (TD20, TD23 Signing in…, TD31)
  *   &state=loading          the shop never answers: "Checking your shop…" (TD21)
- *   &state=no-reach         no signal and no copy on the phone (TD22)
+ *   &state=no-reach         the shop cannot be reached; this phone kept its 7:52 copy and two writes (TD22)
  *   &at=921                 before Musa's spot count of Wire nails 4" was sent (SH10–SH12, SH17–SH19; demo/shelf.ts)
  *   &state=recount · count-accepted · okello-counts · written-off · kept-on-shelf · restock-listed · shelf-calm
  *                           the shelf's what-ifs after 10:41 (SH13, SH16, SH25, SH22, SH24, SH32, SH06; demo/shelf.ts)

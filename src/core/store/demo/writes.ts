@@ -168,7 +168,11 @@ export function demoWrites(b: () => YardBooks, now: () => number) {
       asked('handover', p.toUserId || p.toStaffId, { ...p });
       p.orders.forEach((x) => { const o = order(x); if (o.status === 'preparing' && o.pickingStatus !== 'done') o.assignedWorkerId = p.toStaffId; });
     },
-    gotYard(aid: string) { const a = b().asks.find((x) => x.id === aid); if (!a) throw dataError('refused', 'That ask is gone', 'P0002'); a.status = 'accepted'; a.decidedAt = now(); a.decidedBy = me().userId; },
+    gotYard(aid: string) {
+      const a = b().asks.find((x) => x.id === aid); if (!a) throw dataError('refused', 'That ask is gone', 'P0002'); a.status = 'accepted'; a.decidedAt = now(); a.decidedBy = me().userId;
+      // Taking the yard reads its push on this phone (TD32: the bell goes quiet).
+      b().alerts.filter((x) => x.kind === 'store.handover' && x.data.askId === aid).forEach((x) => { x.read = true; });
+    },
     closeYard(c: CloseYard) { asked('close', new Date(now()).toISOString().slice(0, 10), { ...c }); },
     setMyName(name: string) { if (!name.trim()) throw dataError('refused', 'Write your name', 'P0001'); me().name = name.trim(); },
   };

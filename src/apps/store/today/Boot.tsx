@@ -5,11 +5,11 @@
  */
 import type { JSX } from 'preact';
 import { firstWord, initials } from '../../../core/names.ts';
-import { greeting } from '../../../core/time.ts';
+import { clock, greeting } from '../../../core/time.ts';
 import { Button } from '../../../ui/Button.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { TabBar } from '../../../ui/TabBar.tsx';
-import { kept, now, phase, session, signOut, start } from '../shell/store.ts';
+import { kept, now, openCopy, phase, saved, session, signOut, start } from '../shell/store.ts';
 import './signin.css';
 
 const Sh = (p: { w: string | number; h: number; light?: boolean; r?: number }): JSX.Element =>
@@ -36,20 +36,23 @@ export function Checking(): JSX.Element {
         <h2 class="st-boot-h">On the move</h2>
         <div class="st-boot-tiles">{[0, 1, 2, 3].map((i) => <span key={i}><Sh w={30} h={14} light /><Sh w={44} h={8} light /><Sh w={34} h={16} light r={999} /></span>)}</div>
         <h2 class="st-boot-h">Next job</h2>
-        <div class="st-boot-card"><Sh w={130} h={26} r={999} />
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}><span aria-hidden="true" style={{ width: '84px', height: '84px', borderRadius: '999px', boxShadow: 'inset 0 0 0 5px rgba(255,255,255,.08)', flex: 'none' }} />
-            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}><Sh w="90%" h={14} /><Sh w="60%" h={18} /><Sh w="80%" h={10} /></span></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}><Sh w="100%" h={58} r={12} /><Sh w="100%" h={58} r={12} /><Sh w="100%" h={58} r={12} /></div></div>
+        {/* TD21: the Next job card's shapes, flat navy: the tag and the from line, the 84 px ring and three lines, three tiles. */}
+        <div class="st-boot-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><Sh w={130} h={26} r={999} /><Sh w={90} h={14} r={6} /></div>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}><span aria-hidden="true" style={{ width: '84px', height: '84px', borderRadius: '999px', boxShadow: 'inset 0 0 0 5px rgba(255,255,255,.10)', flex: 'none' }} />
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '9px' }}><Sh w="80%" h={16} r={6} /><Sh w="50%" h={22} r={6} /><Sh w="65%" h={10} r={6} /></span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '6px' }}><Sh w="100%" h={58} r={12} /><Sh w="100%" h={58} r={12} /><Sh w="100%" h={58} r={12} /></div></div>
         <p class="st-boot-note"><Icon name="lock" size={14} stroke={2} />Your drafts on this phone are safe while it asks</p>
       </main>
       <TabBar<'today' | 'shelf'> items={[{ id: 'today', word: 'Today', icon: 'today' }, { id: 'shelf', word: 'Shelf', icon: 'shelf' }]} active="today" waiting={0} notPlaced={0}
-        plusIcon="play" plusLabel="Start the next job" plusOff="checking your shop" onTab={() => undefined} onPlus={() => undefined} />
+        plusIcon="play" plusLabel="Start the next job" plusOff="checking your shop" tabsOff onTab={() => undefined} onPlus={() => undefined} />
     </div>
   );
 }
 
 export function NoReach(): JSX.Element {
-  const waiting = kept.value.filter((k) => k.state !== 'refused').length;
+  const waiting = kept.value.filter((k) => k.state !== 'refused').length, copy = saved.value;
+  const toKept = () => { openCopy(); setTimeout(() => { const el = document.getElementById('st-kept'); if (el) el.scrollIntoView({ block: 'start' }); }, 0); };
   return (
     <>
       <header class="st-boot-hero" style={{ paddingBottom: '18px' }}>
@@ -64,8 +67,10 @@ export function NoReach(): JSX.Element {
         <span class="mono code">code ST-101</span>
         <Button kind="navy" icon="retry" stroke={2.4} onClick={() => { phase.value = 'starting'; void start(); }}>Try again</Button>
         <div class="st-noreach-two">
-          <button type="button" onClick={() => { phase.value = 'ready'; }}><b><Icon name="undo" size={16} stroke={2.2} />Open the copy</b><span>saved on this phone</span></button>
-          <span class="kept"><b><Icon name="lock" size={16} stroke={2.2} />Work kept</b><span>{waiting ? `${waiting} waiting to send` : 'nothing waiting'}</span></span>
+          {/* Only a copy this phone has is offered (TD22 "saved 7:52"); Work kept opens it at Waiting to send. */}
+          {copy && <button type="button" onClick={openCopy}><b><Icon name="undo" size={16} stroke={2.2} />Open the copy</b><span>{`saved ${clock(copy.at)}`}</span></button>}
+          {copy && waiting ? <button type="button" class="kept" onClick={toKept}><b><Icon name="lock" size={16} stroke={2.2} />Work kept</b><span>{`${waiting} waiting to send`}</span></button>
+            : <span class="kept"><b><Icon name="lock" size={16} stroke={2.2} />Work kept</b><span>{waiting ? `${waiting} waiting to send` : 'nothing waiting'}</span></span>}
         </div>
         <button type="button" class="st-noreach-out" onClick={() => { void signOut(); }}><Icon name="sign-out" size={18} stroke={2} />Sign out</button>
       </main>

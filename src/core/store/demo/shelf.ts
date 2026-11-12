@@ -111,6 +111,8 @@ export function shelfAt(b: YardBooks, f: StoreDemoFlags, now: Ms): void {
     if (have < AISLE_SIZE[cat]) b.items.push(...plain(cat, AISLE_SIZE[cat] - have));
   });
   b.items.forEach((it) => { if (it.category && AISLE_DAYS[it.category] != null) it.countedAt = t(COUNTED_AT[it.category] || '16:00', dayBack(AISLE_DAYS[it.category])); });
+  // Joy's first day (TD05 "0 jobs yet"): every aisle counted yesterday, so no count is due.
+  if (f.state === 'first-day') b.items.forEach((it) => { it.countedAt = t('16:00', '2026-10-16'); });
   const rp = b.items.find((x) => x.key === 'p-rp');
   if (rp) rp.listedAt = t('10:34');
   b.log = log();

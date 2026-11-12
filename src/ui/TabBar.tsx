@@ -51,6 +51,8 @@ export interface TabBarProps<T extends string = BarTab> {
   plusIcon?: 'plus' | 'play';
   /** The centre greyed and off, with why in its name (the Store's TD07 "Start the next job: not loaded yet"). */
   plusOff?: string;
+  /** The tabs shown but off (the Store's TD21 "Checking your shop…": nothing to open yet). */
+  tabsOff?: boolean;
   inline?: boolean;
 }
 
@@ -61,8 +63,8 @@ export function TabBar<T extends string = BarTab>(p: TabBarProps<T>): JSX.Elemen
   const tab = (t: BarItem<T>) => {
     const on = p.active === t.id, chats = t.id === 'chats' && p.waiting > 0;
     return (
-      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : undefined}
-        onClick={(e) => { e.preventDefault(); p.onTab(t.id); }}>
+      <a key={t.id} href={`#${t.id}`} class={cx('ow-tab', on && 'on')} aria-current={on ? 'page' : undefined} aria-disabled={p.tabsOff ? 'true' : undefined} aria-label={chats ? `Chats, ${p.waiting} ${p.waitingWord || 'waiting'}` : undefined}
+        onClick={(e) => { e.preventDefault(); if (!p.tabsOff) p.onTab(t.id); }}>
         <Icon name={t.icon} size={24} on={on} style={on ? ({ '--ic-in': '#FFFFFF' } as unknown as JSX.CSSProperties) : undefined} /><span class="ow-tab-w">{t.word}</span>
         {chats && <span class="ow-tab-count mono" aria-hidden="true">{p.waiting}</span>}
       </a>

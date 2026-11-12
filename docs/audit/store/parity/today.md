@@ -1,41 +1,41 @@
 # Canvas parity — Store, Today and the shell (TD, 33 boards)
 
-Spec `test/parity/store-today.json`; shots `docs/audit/store/parity/<Board>.png` (board left, app right) and `.diff.png`; figures in `results.json`. Run: `npm run build:store && NODE_PATH=$(npm root -g) node tools/parity/run.cjs --tab store-today`. Judged by the builder (a strict first pass); an independent critic re-checks. "pass" = same content and layout, the rest fonts, antialiasing or a known demo-figure difference named in the note. Every screen was checked at 360 × 800 for 44 px targets, text ≥ 11 px, no clipping; slides are committed from the keyboard (Tab to the knob, Enter) because the knob nudges forever.
+Spec `test/parity/store-today.json`; shots `docs/audit/store/parity/<Board>.png` (board left, app right) and `.diff.png`; figures in `results.json`. Run: `npm run build:store && NODE_PATH=$(npm root -g) node tools/parity/run.cjs --tab store-today`. Judged by the builder after the critic's T1–T27 (`../CANVAS-PARITY.md` "## Today", 2026-11-12); the critic's verdicts there are left as they were. Boards redrawn with the app: `docs/canvas/store-agent/review/TD-fixes.md`. Every screen checked at 360 × 800 for 44 px targets, text ≥ 11 px, no clipping; slides are committed from the keyboard (Tab to the knob, Enter).
 
 | Board | Route | Taps | Diff % | Result | Notes |
 |---|---|---|---|---|---|
-| TD01Today | `today` | 0 | 1.91 | pass | No driver time ("Ssali 13:20": the books keep no run time); #0530's faces are BO RN (Brian placed it, FACTS) where the board draws GA. |
-| TD09TodayMore | `today` (scrolled) | 1 | 13.69 | pass | The figure scrolls to Needs you under the compact head; the diff is the scroll offset and the head's shadow. Done today rows as drawn. |
-| TD33TodayPressed | `today` | 0 | 2.79 | pass* | The pressed red (#A82D24) is the shared TabBar's :active; a still shot cannot hold it (the scale .97 is not added: it would change Sales' bar). |
-| TD02TodayNextCheckin | `today` &at=1132 | 0 | 0.4 | pass | 8 done (the demo packs #0552 at 10:52, which the board does not count). |
-| TD03TodayNextRide | `today` &at=1510 | 0 | 2.03 | pass* | Integration (2026-11-11): by 15:10 the bent sheets (reported 10:50), #0548's return (taken back 11:40) and aisle C's count (with Ruth since 14:40) are done in `demo/moments.ts` and stay done at 17:30, so **3 ready** as drawn. Left: 16 done / 0 later where the board draws 12 / 1, and #0556 collected 11:10 (the board keeps NH on the road): the board's counts are not the sample day's. |
-| TD04TodayCalm | `today` &at=1730 | 0 | 2.46 | pass* | "3 of 4" where the board draws 4 of 4: the return is not set aside yet at 17:30 (TD28 is the entry, as the flow "1 return to shelve" says). 9 delivered (demo) vs 8. |
-| TD05TodayFirst | `today` &state=first-day | 0 | 27.97 | pass | "Ruth added you" without the date (the books keep no invite date). |
-| TD06TodayOffline | `today` &offline&kept=1 | 0 | 7.11 | pass | The new flag `&kept=1` seeds the two kept writes. A few px of section spacing. |
-| TD07TodayFailed | `today` &fail=snapshot | 0 | 2.97 | pass* | "tried 3 times" left out: the app reads once and says so; it never claims retries it did not make. |
-| TD08TodayUpdate | `today` &update=1 | 0 | 0.27 | pass | |
-| TD10Alerts | `today/alerts` | 1 | 3.51 | pass | Fri 16 Oct "1 · read": the demo keeps one of the seven. |
-| TD11WithRuth | `today/with-ruth` | 2 | 13.27 | pass* | Every ask and its step track as drawn; "Brian takes it" (FACTS) where the board says Grace; spacing within the cards a few px off, re-tuned after the shot. |
-| TD29AlertsEmpty | `today/alerts` &state=empty | 1 | 2.34 | pass | No "Fri 16 Oct · 6 · read" row: the empty demo has no older alerts. |
-| TD30WithRuthEmpty | `today/with-ruth` &state=empty | 2 | 6.52 | pass | Content as drawn; the head was 8 px taller in the shot (re-tuned after it). |
-| TD12You | `today/you` | 1 | 15.58 | pass* | No "Kampala Road" and no call button for the shop: the yard's books carry the shop's name only (data gap). |
-| TD13PassYard | `today/pass-yard` | 2 | 4.66 | pass | Ssali is out with the truck, so not offered (as drawn). |
-| TD18PassYardSending | `today/pass-yard` | 2 | 10.79 | not reached | The pass is held 10 s with "Take it back" (screens Q17, data W22'): the slide never waits on the server on this screen; the shot is TD13. |
-| TD14PassYardSent | `today/pass-yard` (held) | 5 | 8.54 | pass* | The Sales moment's spacing (disc 30 px lower); re-tuned after the shot. |
-| TD24PassYardNobody | `today/pass-yard` &state=nobody | 2 | 4.02 | pass | The slide's off label is the shared Slide's white (the board greys it). |
-| TD26PassYardFailed | `today/pass-yard` &fail=passYard | 5 | 5.04 | pass | Shot after the 10 s hold: That did not save · tell Kevin · ST-301 · Try again. |
-| TD15PassYardGot | `today` &as=okello&at=1043 | 0 | 0.62 | pass | |
-| TD25PassYardTaking | `today` &as=okello&at=1043 | 1 | 1.06 | pass | |
-| TD32OkelloToday | `today` &as=okello&at=1043 | 1 | 3.64 | pass | Kevin, 2026-11-11 (screens Q20): the packer's own half-packed order comes first, so #0552 is the Next job by the `jobs.ts` rule; passes by this ruling. |
-| TD28CloseYardDisabled | `today/close-yard` &at=1730 | 1 | 9.62 | pass* | Bays 1–4 and the gate (the shop has 4 bays, PK06); the board draws 3. Aisle C's count now reads "sent 14:40" (the board 16:40): it has to be done by 15:10 (TD03). |
-| TD16CloseYard | `today/close-yard` | 2 | 9.51 | pass* | As TD28; 9 out (demo). |
-| TD27CloseYardOffline | `today/close-yard` &offline | 2 | 10.01 | pass* | As TD28. |
-| TD19CloseYardSending | `today/close-yard` | 4 | 9.72 | pass* | Shot while the write is on its way (250 ms). |
-| TD17Closed | `today/close-yard` (done) | 5 | 6.08 | pass* | Moment spacing re-tuned after the shot. |
-| TD20SignIn | `shell/sign-in` &state=signed-out | 0 | 1.55 | pass | "Your manager sends you an invite link": before sign-in the app does not know who the manager is. |
-| TD31SignInError | `shell/sign-in` | 1 | 3.87 | pass | |
-| TD23SignInSending | `shell/sign-in` | 1 | 64.65 | not reached | The demo signs in at once; Signing in… shows for a frame, then Today. |
-| TD21Checking | `shell/checking` &state=loading | 0 | 12.43 | pass | |
-| TD22NoReach | `shell/no-reach` &state=no-reach | 0 | 10.75 | pass* | "tried 3 times" left out (as TD07); "nothing waiting" (the demo has no kept writes in this state). |
+| TD01Today | `today` | 0 | 1.94 | pass | T1, T2: `--on-navy` on the tiles, the blue tag `#B8C8F0`, board redrawn the same. No "Ssali 13:20": the books keep no run time (screens Q25, left out). |
+| TD09TodayMore | `today` (scrolled) | 1 | 13.69 | pass | The scroll offset and the head's shadow (accepted). |
+| TD33TodayPressed | `today` | 0 | 2.81 | pass* | T23: the .97 press is the Store's own (`shell/store.css`; Sales' canvas draws none); a still shot cannot hold `:active`. T1, T2 as TD01. |
+| TD02TodayNextCheckin | `today` &at=1132 | 0 | 0.39 | pass | T8: bell 1, Denis's trip back at 11:30 (FACTS §8); the 10:41 pushes read. |
+| TD03TodayNextRide | `today` &at=1510 | 0 | 0.83 | pass | T7: FACTS §8 now names #0534 10:58, #0547 11:20, #0556 collected 11:10; the board is corrected to the sample day (3 left · 16 done · 0 later, 6 delivered, nobody on the road). T8 bell 1 (Denis sent you). T9 "just now", #0559's LB face. |
+| TD04TodayCalm | `today` &at=1730 | 3 | 1.04 | pass | The critic's taps (set aside, Close): 4 of 4 with the tick. T7: 21 done, 9 delivered (board corrected). T8 bell 0. T10: 1 with Ruth (the Wire nails count accepted 16:20, #0557 cancelled 16:30: FACTS §8, spec §2a Q9). |
+| TD05TodayFirst | `today` &state=first-day | 0 | 0.31 | pass | T11: reached. The first day keys on a yard with nothing of its own; a due count does not end it (spec §4.6); the seed counts every aisle. "Ruth added you" without the date. |
+| TD06TodayOffline | `today` &offline&kept=1 | 0 | 7.11 | pass | Section spacing; Waiting to send now has an anchor (No reach's Work kept opens it). |
+| TD07TodayFailed | `today` &fail=snapshot | 0 | 2.97 | pass* | T12: the four dashed tiles are pictures, not links. "tried 3 times" left out (accepted). |
+| TD08TodayUpdate | `today` &update=1 | 0 | 0.27 | pass | T1, T2 as TD01; no "13:20" (Q25). |
+| TD10Alerts | `today/alerts` | 1 | 3.49 | pass | T13: GA pushed clear of DO (30 px). T14: titles 600, the words run to 4 px of the chip as drawn, nothing cut. T1 ticks. "2 new" kept while open. Fri "1 · read" (accepted). |
+| TD11WithRuth | `today/with-ruth` | 2 | 13.27 | pass* | T15: Gate is a 44 px button with the 36 px pill inside. Spacing within the cards (accepted). |
+| TD29AlertsEmpty | `today/alerts` &state=empty | 1 | 2.65 | pass | T16: the empty seed keeps the older day, read: "Fri 16 Oct · 1 · read" (the board 6: older days are not in FACTS). |
+| TD30WithRuthEmpty | `today/with-ruth` &state=empty | 2 | 6.39 | pass | T17: the aisle's own picture (Roofing's house); an answered title may take two lines. |
+| TD12You | `today/you` | 1 | 15.61 | pass* | T18: the day ring and Out go to Today like Checked in and Packed. T1 figures. No "Kampala Road" and no call (Q25, left out). |
+| TD13PassYard | `today/pass-yard` | 2 | 4.66 | pass |  |
+| TD18PassYardSending | `today/pass-yard` &slow=1 | 3 | 4.88 | pass | T19: reached. After the 10 s hold the write goes: the pick with the Sending… dock. |
+| TD14PassYardSent | `today/pass-yard` | 3 | 9.13 | pass* | T19: during the hold "Passing to Okello…", "Sends in 10 s", a clock, no tick; Sent only on the server's yes. Board redrawn. 10:41 on the demo clock where it draws 10:42. |
+| TD24PassYardNobody | `today/pass-yard` &state=nobody | 2 | 4.03 | pass | T20: the shared quiet locked slide (a lock on the knob where the board draws the arrow). T21 `--ink-soft`. |
+| TD26PassYardFailed | `today/pass-yard` &fail=passYard | 3 | 5.04 | pass | Shot after the hold: That did not save · ST-301 · Try again. |
+| TD15PassYardGot | `today` &as=okello&at=1043 | 0 | 0.61 | pass | T8: Okello's own push, bell 1. |
+| TD25PassYardTaking | `today` &as=okello&at=1043 | 1 | 0.9 | pass | T8 as TD15. |
+| TD32OkelloToday | `today` &as=okello&at=1043 | 1 | 3.55 | pass | T8: I've got it reads the pass push, bell 0. Q20 (#0552 first). |
+| TD28CloseYardDisabled | `today/close-yard` &at=1730 | 1 | 9.64 | pass* | T20 quiet locked slide. T7 9 out (board corrected). Bays 1–4 (accepted). |
+| TD16CloseYard | `today/close-yard` &at=1730 | 2 | 9.51 | pass* | T10: "Aisle C count with Ruth", one ask; more would be counted ("2 asks"). T7 9 out. |
+| TD27CloseYardOffline | `today/close-yard` &at=1730&offline | 2 | 10.04 | pass* | T20 quiet locked slide, "Back online to close". T7. |
+| TD19CloseYardSending | `today/close-yard` &at=1730 | 3 | 9.68 | pass* | T22: "Sending…" white on the red fill (`slide.css`). T7. |
+| TD17Closed | `today/close-yard` &at=1730 | 3 | 6.08 | pass* | Moment spacing. |
+| TD20SignIn | `shell/sign-in` &state=signed-out | 0 | 1.49 | pass | T24: the boot screens render the toast and sheet hosts; Forgot password says "Ask your manager for a new invite link" (Q21). |
+| TD31SignInError | `shell/sign-in` | 1 | 3.87 | pass | T24 as TD20. |
+| TD23SignInSending | `shell/sign-in` | 1 | 7.59 | pass | T25: the demo's sign-in takes 1.5 s; Signing in… is shot. |
+| TD21Checking | `shell/checking` &state=loading | 0 | 7.7 | pass | T26: the Next job skeleton as drawn (flat navy, tag and from, 84 px ring, three 58 px tiles); the tabs shown but off (`aria-disabled`), board corrected. |
+| TD22NoReach | `shell/no-reach` &state=no-reach | 0 | 10.69 | pass* | T27: Open the copy · saved 7:52 (only when a copy exists: `StoreSource.savedCopy`), 2 waiting to send, Work kept opens Today's Waiting to send. T21 `--ink-soft`. "tried 3 times" left out (accepted). |
 
-*pass with a named difference. Totals (integration pass, 2026-11-11): 28 pass (14 with a named difference; TD03 now draws 3 ready, TD32 passes by Kevin's Q20 ruling), 0 fail, 2 not reached as still screens (TD18, TD23), and TD33's pressed state.
+*pass with a named difference. Totals (Today fix, 2026-11-12): 33 reached, 33 pass (11 with a named difference), 0 fail.

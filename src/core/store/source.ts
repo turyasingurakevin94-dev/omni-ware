@@ -185,6 +185,8 @@ export interface StoreSource {
   setMyName(name: string): Promise<void>;
   /** W25 this phone gets the yard's pushes (the real books in the phone app; the demo has none). */
   pushOn?(): Promise<void>;
+  /** The yard as this phone last saved it (its `at` the saved time), or null: what "Open the copy" opens when the shop cannot be reached (TD22). */
+  savedCopy?(): Promise<YardBooks | null>;
 }
 
 /** Every write's name, for the outbox, &fail=<write> and the tests. */

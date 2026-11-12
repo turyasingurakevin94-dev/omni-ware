@@ -26,18 +26,20 @@ const TILES: { word: string; icon: IconName; id: string }[] = [
   { word: 'To load', icon: 'trolley', id: 'out/load' }, { word: 'On the road', icon: 'truck', id: 'out/road' },
 ];
 
-/** The four stages drawn dashed, each still a way in (TD05 "fills as jobs come", TD07 "—"). */
+/** The four stages drawn dashed: each a way in on the first day (TD05 "fills as jobs come"); not loaded, only a picture (TD07 "—"). */
 export function GhostMove(p: { meta?: string; dash?: boolean; label: string }): JSX.Element {
   return (
     <div class={'st-ghost' + (p.dash ? ' dash' : '')}>
       {p.meta && <div class="st-ghost-h"><span>On the move</span><span>{p.meta}</span></div>}
       <div class="st-ghost-g">
-        {TILES.map((t) => (
-          <Tap key={t.id} on={() => nav.push(t.id)} label={`${t.word}: ${p.label}`} class="st-ghost-t">
-            {p.dash ? <><span class="st-ghost-n"><Icon name={t.icon} size={15} stroke={1.9} /><span class="mono">—</span></span><span class="st-ghost-w">{t.word}</span><span aria-hidden="true" style={{ height: '24px' }} /></>
-              : <><Icon name={t.icon} size={16} stroke={1.9} /><span class="st-ghost-w">{t.word}</span></>}
-          </Tap>
-        ))}
+        {TILES.map((t) => p.dash
+          // Not loaded (TD07): nothing to open yet, so the tiles are only pictures of the stages.
+          ? <span key={t.id} role="img" aria-label={`${t.word}: ${p.label}`} class="st-ghost-t"><span class="st-ghost-n" aria-hidden="true"><Icon name={t.icon} size={15} stroke={1.9} /><span class="mono">—</span></span><span class="st-ghost-w" aria-hidden="true">{t.word}</span><span aria-hidden="true" style={{ height: '24px' }} /></span>
+          : (
+            <Tap key={t.id} on={() => nav.push(t.id)} label={`${t.word}: ${p.label}`} class="st-ghost-t">
+              <Icon name={t.icon} size={16} stroke={1.9} /><span class="st-ghost-w">{t.word}</span>
+            </Tap>
+          ))}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@
  */
 import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { aisleLetter, countAge } from '../../../core/store/counts.ts';
-import { orderFace, personFace, shortName, supplierFace, whoIs } from '../../../core/store/faces.ts';
+import { customerFace, orderFace, personFace, shortName, supplierFace, whoIs } from '../../../core/store/faces.ts';
 import { CLOSE_FROM, type Job } from '../../../core/store/jobs.ts';
 import { canClose, checksDone, closeChecks, closeFigures } from '../../../core/store/shift.ts';
 import { readAside } from './aside.ts';
@@ -83,7 +83,7 @@ export function cardOf(j: Job, b: YardBooks, now: number, go: () => void, compac
       tiles.splice(0, tiles.length,
         { aisle: aisleOf(b, l0?.key || '') || 'other', text: l0 ? `${l0.qty} ${l0.unit}` : '', sub: l0 ? l0.name.split(' · ')[0].split(' ').slice(1).join(' ') + (l0.name.includes(' · ') ? ' · ' + l0.name.split(' · ')[1] : '') : '' },
         { icon: 'pin', text: firstWord(t0.supplierName), sub: j.trips.length === 1 ? 'one stop' : `${j.trips.length} stops` },
-        ...(ord ? [{ icon: 'orders' as IconName, text: orderNo(ord.id), sub: destinationOf(ord, b.customers) || shortName(ord) }] : []));
+        ...(ord ? [{ face: customerFace(ord, b), text: orderNo(ord.id), sub: destinationOf(ord, b.customers) || shortName(ord) }] : []));
     }
     return {
       compact,

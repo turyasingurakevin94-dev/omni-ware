@@ -16,7 +16,7 @@ import { NavyPill } from '../../../ui/Pill.tsx';
 import { cx } from '../../../ui/util.tsx';
 
 export type RingTone = 'mint' | 'amber' | 'done' | 'none';
-export interface JobTile { aisle?: string; icon?: IconName; text: string; sub?: string; mark?: 'done' | 'wait' | 'drop'; strike?: boolean }
+export interface JobTile { aisle?: string; icon?: IconName; /** A customer's face in place of the icon (TD03's #0559 LB). */ face?: YardFace; text: string; sub?: string; mark?: 'done' | 'wait' | 'drop'; strike?: boolean }
 
 export interface JobCardProps {
   tag: { tone: 'mint' | 'amber' | 'glass' | 'blue'; icon: IconName; text: string };
@@ -86,7 +86,8 @@ export function JobCard(p: JobCardProps): JSX.Element {
               {t.mark === 'done' && <span aria-hidden="true" class="st-jt-mark done"><Icon name="check" size={10} stroke={3.4} /></span>}
               {t.mark === 'wait' && <span aria-hidden="true" class="st-jt-mark wait" />}
               {t.mark === 'drop' && <span aria-hidden="true" class="st-jt-mark drop"><Icon name="close" size={9} stroke={3.6} /></span>}
-              {t.aisle ? <AisleIcon aisle={t.aisle} size={18} color="#DDE3F0" /> : t.icon && <span class="st-jt-ic"><Icon name={t.icon} size={18} stroke={1.9} /></span>}
+              {t.face ? <span aria-hidden="true" class="ow-av" style={avatarStyle({ ...t.face, size: 20, font: 11 })}>{t.face.initials}</span>
+                : t.aisle ? <AisleIcon aisle={t.aisle} size={18} color="#DDE3F0" /> : t.icon && <span class="st-jt-ic"><Icon name={t.icon} size={18} stroke={1.9} /></span>}
               <span class={cx('mono st-jt-v', t.strike && 'strike')}>{t.text}</span>
               {t.sub && <span class="st-jt-s">{t.sub}</span>}
             </span>

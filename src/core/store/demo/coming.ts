@@ -62,7 +62,7 @@ export function counts(): StockCount[] {
   ];
 }
 
-const alert = (id: string, kind: string, at: Ms, fromId: string, text: string, data: Record<string, unknown>, forYou = false): YardAlert => ({ id, kind, at, fromId, text, data, forYou });
+export const alert = (id: string, kind: string, at: Ms, fromId: string, text: string, data: Record<string, unknown>, forYou = false): YardAlert => ({ id, kind, at, fromId, text, data, forYou });
 
 /** FACTS §7 and TD10: today's pushes (2 for you, 3 in the yard), and Fri's read one. */
 export function alerts(): YardAlert[] {

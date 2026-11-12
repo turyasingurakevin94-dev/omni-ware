@@ -104,8 +104,8 @@ export function CloseYard(): JSX.Element {
   );
   return (
     <YardSheet top={44} backLabel="Back to Today" onBack={() => nav.back()} head={head} class="st-close"
-      dock={!online.value ? <Slide label="Slide to close the yard" offlineLabel="Back online to close" state="offline" onCommit={() => undefined} />
-        : !ok ? <Slide label={todo && todo.kind === 'return' ? 'Set the return aside first' : 'Finish what is half done first'} state="blocked" onCommit={() => undefined} />
+      dock={!online.value ? <Slide label="Slide to close the yard" onCommit={() => undefined} lock={{ icon: 'offline', label: 'Back online to close', quiet: true }} />
+        : !ok ? <Slide label="Slide to close the yard" onCommit={() => undefined} lock={{ icon: 'lock', label: todo && todo.kind === 'return' ? 'Set the return aside first' : 'Finish what is half done first', quiet: true }} />
           : <Slide label="Slide to close the yard" onCommit={close} onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}>
       {!online.value && <Notice kind="offline" action={{ label: 'Try again', on: () => undefined }}>No signal · close it when back online</Notice>}
       <div class="st-checks">{checks.map((c, i) => <Check key={i} c={c} b={b} n={n} onAside={aside1} />)}</div>

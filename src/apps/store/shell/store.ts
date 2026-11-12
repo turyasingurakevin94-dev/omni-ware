@@ -47,6 +47,14 @@ export const side = signal<YardSide | null>(null);
 /** A new build is waiting (TD08 "Update ready · Reload"): set by the service worker, or the demo's &update. */
 export const updateReady = signal(isDemo && typeof location !== 'undefined' && /[?&]update(=1)?(&|$)/.test(location.search));
 
+/** The copy this phone saved, offered on Could not reach the shop (TD22 "Open the copy · saved 7:52"); null with none. */
+export const saved = signal<YardBooks | null>(null);
+/** Open the saved copy: Today on it, no signal (TD06), the kept writes waiting to send. */
+export function openCopy(): void {
+  if (!saved.value) return;
+  books.value = saved.value; online.value = false; status.value = 'updating'; phase.value = 'ready';
+}
+
 /** The holder's staff id: what "mine" means on an order (null with no staff row, data D12). */
 export const me = computed(() => (session.value ? session.value.staffId : null));
 
@@ -133,6 +141,7 @@ async function ready(s: StoreSession): Promise<void> {
   if (books.value && session.value && !session.value.staffId && isDemo) session.value = { ...session.value, staffId: books.value.me.id };
   // No yard and no signal: "Could not reach the shop" (TD22). A refused read: Today says so (TD07).
   phase.value = books.value || online.value ? 'ready' : 'no-reach';
+  if (phase.value === 'no-reach' && src().savedCopy) saved.value = await src().savedCopy!().catch(() => null);
   src().side().then((x) => { side.value = x; }, () => undefined);
   if (isDemo) openDemoPush();
   if (timers) return;

@@ -1,5 +1,6 @@
 /*
- * today/pass-yard (TD13 pick, TD18 sending, TD14 sent, TD24 nobody else, TD26 failed). Who takes the
+ * today/pass-yard (TD13 pick, TD14 held: "Passing to Okello…" with Take it back, TD18 sending, then Sent on the
+ * server's yes, TD24 nobody else, TD26 failed). Who takes the
  * yard (Okello prefilled: the first colleague on with a Store login), what moves to them, who is told,
  * then the red slide. The write is held 10 s with "Take it back" (screens Q17, data W22'): it goes when
  * the 10 s run out or this screen is left; "Take it back" keeps it on the phone and returns to the pick.
@@ -39,7 +40,8 @@ function Face(p: { who: YardPerson; size: number; dot?: 'on' | 'off' }): JSX.Ele
 export function PassYard(p: { to: string | null }): JSX.Element {
   const b = books.value, n = now.value;
   const [pick, setPick] = useState<string | null>(p.to);
-  const [phase, setPhase] = useState<'pick' | 'held' | 'sending' | 'failed'>('pick');
+  // held: the 10 s with Take it back (nothing sent yet) · sending: TD18's Sending… dock · sent: only on the server's yes (spec §4.8).
+  const [phase, setPhase] = useState<'pick' | 'held' | 'sending' | 'sent' | 'kept' | 'failed'>('pick');
   const [left, setLeft] = useState(HOLD_S);
   const [sentAt, setSentAt] = useState(n);
   const timer = useRef<number | null>(null), go = useRef<(() => void) | null>(null);
@@ -54,7 +56,7 @@ export function PassYard(p: { to: string | null }): JSX.Element {
     const payload = passPayload(plan, to);
     go.current = null; timer.current = null;
     setPhase('sending');
-    act('passYard', payload).then(() => setPhase('held')).catch(() => setPhase('failed'));
+    act('passYard', payload).then((r) => { setSentAt(now.value); setPhase(r.kept ? 'kept' : 'sent'); }).catch(() => setPhase('failed'));
   };
   const hold = () => {
     if (!to) return;
@@ -74,17 +76,20 @@ export function PassYard(p: { to: string | null }): JSX.Element {
     toast.show('Kept · the yard is still yours', { kind: 'ok' });
   };
 
-  if ((phase === 'held' || phase === 'sending') && to) {
+  if ((phase === 'held' || phase === 'sent' || phase === 'kept') && to) {
+    const isHeld = phase === 'held', sent = phase === 'sent';
     return (
       <div class="st-moment-wrap">
-        <Moment title={`Sent to ${tn}`} onClose={() => nav.home()} who={{ face: personFace(to), name: to.name, ref: clock(sentAt) }}
+        <Moment title={isHeld ? `Passing to ${tn}…` : sent ? `Sent to ${tn}` : 'Not sent yet'} mark={sent ? undefined : 'clock'} onClose={() => nav.home()}
+          who={{ face: personFace(to), name: to.name, ref: clock(sentAt) }}
           next={[
-            { icon: 'check', title: 'Sent', sub: `${clock(sentAt)} · his phone buzzed` },
+            isHeld ? { icon: 'clock', title: `Sends in ${left} s`, sub: 'take it back until then' }
+              : sent ? { icon: 'check', title: 'Sent', sub: `${clock(sentAt)} · his phone buzzed` } : { icon: 'clock', title: 'Kept on this phone', sub: 'it goes when there is signal' },
             { icon: 'hand-over', title: `${tn} taps “I’ve got it”`, sub: 'on his Today now' },
             { icon: 'shelf', title: 'The yard is his', sub: `${counted(plan.jobs, 'job')} and ${counted(plan.asks, 'ask')} move` },
           ]}
-          nowAt={1}
-          after={timer.current != null ? <button type="button" class="ow-end-quiet st-takeback" onClick={takeBack}><Icon name="undo" size={16} stroke={2.2} />Take it back <span class="mono">{`${left} s`}</span></button> : null}
+          nowAt={sent ? 1 : 0}
+          after={isHeld ? <button type="button" class="ow-end-quiet st-takeback" onClick={takeBack}><Icon name="undo" size={16} stroke={2.2} />Take it back <span class="mono">{`${left} s`}</span></button> : null}
           end={<>
             <div class="st-after dark"><span aria-hidden="true" class="ow-av" style={avatarStyle({ ...personFace(b.me), size: 24 })}>{b.me.initials}</span>
               <span>When he taps · <b>you see</b>{` “${tn} has it”`}</span></div>
@@ -105,7 +110,7 @@ export function PassYard(p: { to: string | null }): JSX.Element {
   const ruth = b.people.find((x) => x.role === 'manager');
   return (
     <YardSheet backLabel="Back to You" onBack={() => nav.back()} eyebrow={<>Pass the yard · <span class="mono">{clock(n)}</span></>} title="Who takes the yard?"
-      dock={nobody ? <Slide label="Pick who takes the yard" onCommit={() => undefined} state="blocked" />
+      dock={nobody ? <Slide label="Pick who takes the yard" onCommit={() => undefined} lock={{ icon: 'lock', label: 'Pick who takes the yard', quiet: true }} />
         : <Slide label={`Slide to pass to ${tn}`} onCommit={hold} state={phase === 'sending' ? 'sending' : online.value ? 'ready' : 'offline'} offlineLabel="Back online to pass"
           onHint={() => toast.show('Slide the red button across', { kind: 'warn' })} />}>
       <div role="radiogroup" aria-label="Who takes the yard" class="st-pick">
