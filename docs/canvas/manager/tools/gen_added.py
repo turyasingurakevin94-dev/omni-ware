@@ -20,6 +20,8 @@ P.update({
     "store": '<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/>',
     "decide": '<rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8 12l3 3 5-6"/>',
     "cloud": '<path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1 0 8z"/><path d="M4 4l16 16"/>',
+    "log": '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+    "book": '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
     "copy": '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
 })
 
@@ -90,16 +92,16 @@ def p_noreach():
     big = (f'<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 4px">'
            f'<span style="position: relative; width: 88px; height: 88px; border-radius: 999px; background: {WARNBG}; color: {WARN}; display: flex; align-items: center; justify-content: center">{ic(P["cloud"], 40, 1.8)}</span>'
            f'<span style="font-size: 22px; font-weight: 800; text-align: center">Could not reach the shop</span>'
-           f'<span style="{MONO}; letter-spacing: 0; font-size: 12px; color: {SOFT}">tried 09:40 · code NET-TIMEOUT</span></div>')
+           f'<span style="{MONO}; letter-spacing: 0; font-size: 12px; color: {SOFT}">tried 09:40</span></div>')
     copy = (f'<button aria-label="Open the copy saved on this phone at 09:38" style="width: 100%; border: none; background: #fff; box-shadow: inset 0 0 0 1px {LINE}; border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; text-align: left; color: {INK}">'
             f'<span style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: {TILE}; display: flex; align-items: center; justify-content: center">{ic(P["copy"], 20)}</span>'
-            f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Open the copy</span>'
+            f'<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Open the saved copy</span>'
             f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}">saved {M("09:38", 12, 600, INK)} · look only</span></span>'
             f'<span style="color: {SOFT}">{ic(P["chev"], 18)}</span></button>')
     retry = (f'<button style="width: 100%; height: 56px; border: none; border-radius: 999px; background: {NAVY}; color: #fff; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">{ic(P["retry"], 18, 2.4)}Try again</button>')
     out = (f'<button style="width: 100%; height: 48px; border: none; border-radius: 999px; background: transparent; color: {SOFT}; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px">{ic(P["out"], 16)}Sign out</button>')
-    return (brand_hero(136) + f'<div style="padding: 20px 16px; display: flex; flex-direction: column; gap: 14px">{big}{retry}{copy}</div>'
-            f'<div style="position: absolute; left: 16px; right: 16px; bottom: 20px">{out}</div>')
+    return (brand_hero(136) + f'<div style="padding: 20px 16px; display: flex; flex-direction: column; gap: 14px">{big}{retry}{copy}{out}</div>'
+            )
 
 
 def first_load():
@@ -210,7 +212,7 @@ def p_restock():
             f'<button aria-label="Back to Orders" style="width: 44px; height: 44px; border-radius: 999px; border: none; background: rgba(255,255,255,.08); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0">{ic(P["back"], 18)}</button>'
             f'<span style="flex: 1; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 17px; font-weight: 700">Denis\'s restock list</span>'
             f'<span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: {ONNAVY}">{dot("DO")}Denis · next trip {M("11:30", 12, 600, "#FFFFFF")}</span></span></div>'
-            f'<div style="display: flex; flex-direction: column; gap: 7px"><span style="font-size: 12px; font-weight: 600; letter-spacing: .06em; color: {ONNAVY}">PLANNED · 3 LINES</span>'
+            f'<div style="display: flex; flex-direction: column; gap: 7px"><span style="font-size: 12px; font-weight: 600; letter-spacing: .06em; color: {ONNAVY}">THIS TRIP · 3 LINES</span>'
             f'{ugx("4,450,000", 30)}'
             f'<div style="display: flex; gap: 3px; height: 6px"><i style="display: block; width: 81.8%; background: #fff; border-radius: 999px"></i><i style="display: block; flex: 1; border-radius: 999px; background: #F5B26B"></i></div>'
             f'<div style="display: flex; gap: 14px; font-size: 12px; font-weight: 600; color: {ONNAVY}">'
@@ -274,7 +276,7 @@ def owe_vs_limit(limit_m=3):
         f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 13px; font-weight: 700; color: {SOFT}">Owes · 6 orders</span>{M("1,615,000", 18)}</div>'
         f'<div style="position: relative"><div style="height: 14px; border-radius: 999px; background: #ECE8E1; overflow: hidden"><i style="display: block; width: {owe_w:.1f}%; height: 100%; background: {NAVY}; border-radius: 999px"></i></div>{mk}</div>'
         f'{labels}'
-        f'<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: {SOFT}"><span>Room left</span>{M(f"{left:,}", 13, 600, GOOD)}</div>', pad="12px 14px", gap=6)
+        f'<div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: {SOFT}"><span>Left</span>{M(f"{left:,}", 13, 600, GOOD)}</div>', pad="12px 14px", gap=6)
 
 
 def limit_dock(state="default"):
@@ -307,7 +309,7 @@ def rec_big(name, orders, owes, keep, who_):
     ring = f"inset 0 0 0 2px {NAVY}" if keep else f"inset 0 0 0 1px {LINE}"
     mark = (f'<span style="width: 24px; height: 24px; flex: none; border-radius: 999px; background: {NAVY}; color: #fff; display: flex; align-items: center; justify-content: center">{ic(P["check"], 14, 3)}</span>' if keep
             else f'<span style="width: 24px; height: 24px; flex: none; box-sizing: border-box; border-radius: 999px; border: 2px solid {DASH}"></span>')
-    tag = chip("Kept", "navy") if keep else chip("Goes into it", "soft")
+    tag = chip("Kept", "navy") if keep else chip("Merged in", "soft")
     return (f'<button aria-pressed="{str(keep).lower()}" aria-label="Keep {name}" style="flex: 1; min-width: 0; border: none; background: #fff; box-shadow: {ring}; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; color: {INK}">'
             f'<span style="display: flex; align-items: center; gap: 8px; width: 100%">{mark}<span style="font-size: 15px; font-weight: 800; white-space: nowrap">{name}</span></span>'
             f'<span style="display: flex; flex-direction: column; gap: 3px; width: 100%">'
@@ -326,14 +328,14 @@ def look_body():
         + "".join(f'<i style="height: 14px; border-radius: 4px; background: {NAVY if i < 6 else "#8D99B5"}"></i>' for i in range(7)) +
         f'</div><div style="display: flex; justify-content: space-between; {MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}"><span>6 + 1 = 7 orders</span><span>owes 1,615,000 + 0</span></div>', pad="12px 14px", gap=8)
     return (sheet_title(f'<span style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: {WARNBG}; color: {WARN}; display: flex; align-items: center; justify-content: center">{ic(P["merge"], 20)}</span>',
-                        "Look alike", "the app spotted 2 records")
+                        "Look alike", "2 customers look alike")
             + same
             + f'<div style="display: flex; gap: 8px">{rec_big("Ggaba Stores", "6", "1,615,000", True, dot("GA") + "Grace sells here")}{rec_big("Gaba Stores", "1", "0", False, dot("GA") + "Grace · 1 order")}</div>'
             + after)
 
 
 def log_line():
-    return (f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {SH.S_ON}; white-space: nowrap">{ic(P["book"], 14)}'
+    return (f'<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {SH.S_ON}; white-space: nowrap">{ic(P["log"], 14)}'
             f'<span>Goes in the owner\'s log</span></div>')
 
 
@@ -370,7 +372,7 @@ def books_body():
         f'{M(a, 13)}{chip("new", "warn") if new else ""}</div>' for i, (c, h, n, s, a, new) in enumerate(rows)), pad="2px 14px", gap=0)
     return (sheet_title(f'<span style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: {TILE}; display: flex; align-items: center; justify-content: center">{ic(P["book"], 20)}</span>',
                         "Old books", "Ggaba Stores · since 1 Oct")
-            + fig + bar + sec("Beside its bills", "2") + bills)
+            + fig + bar + sec("Bills", "2") + bills)
 
 
 def p_books():

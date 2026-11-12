@@ -88,3 +88,44 @@ Notes:
 9. Success states differ. The limit uses the navy toast with the ring timer. The merge uses a white card with a plain "Undo 10". Use the navy ring toast for both.
 10. Limit ERROR says "Not saved · no signal", but OFFLINE says a Save queues. Make the error a server refusal ("Not saved · try again") so the two states do not contradict.
 11. Pull the dock up under the content on the limit sheet (an empty band of about 80 px), as in round 4 fix 2.
+
+## Round 2 (re-rendered from the current `.dc.html`, 12 Nov 2026)
+
+I re-rendered both boards and checked them from the PNGs again.
+
+**Blocking fixes 1–3: all done.**
+1. Could not reach: "code NET-TIMEOUT" is gone. The line now reads "tried 09:40". Try again, Open the saved copy and Sign out now sit under the message.
+2. Limit: the default and pressed states both read **Left · 1,385,000**, the same word as Old books' "95,000 left".
+3. Restock: the hero reads **THIS TRIP · 3 LINES**. It no longer clashes with "Planned 2".
+
+**Optional fixes also done:**
+- 4: "Merged in"; "2 customers look alike".
+- 6: a list icon replaces the square before "Goes in the owner's log".
+- 7: "Bills · 2".
+- "Open the saved copy".
+- The Old books icon is now a book.
+
+**Still open (optional, not blocking):**
+- 5: "Fix the phone" is still not drawn.
+- 8: the strip order and the 2M limit on Old books.
+- 9: two different success toasts.
+- 10: the limit error still reads "no signal".
+- 11: the empty band above the limit dock.
+
+| Page | Baseline | Round 1 | **Round 2** | Every measure? |
+|---|---|---|---|---|
+| AD01 Sign in | 9 · 9 · 8 · 9 · 8 | 9 · 9 · 9 · 9 · 9 | 9 · 9 · 9 · 9 · 9 | yes |
+| AD01 Could not reach | 9 · 9 · 8 · 9 · 8 | 9 · 9 · 8 · 8 · 8 | **9 · 9 · 9 · 9 · 8** | **yes** |
+| AD02 You | 9 · 9 · 8 · 9 · 8 | 9 · 9 · 8 · 9 · 9 | 9 · 9 · 8 · 9 · 9 | yes |
+| AD05 Restock list | 9 · 8 · 8 · 8 · 8 | 9 · 8 · 8 · 8 · 9 | 9 · 8 · 9 · 8 · 9 | yes |
+| AD03 Change the limit | 9 · 9 · 8 · 8 · 8 | 9 · 9 · 9 · 8 · 9 | 9 · 9 · 9 · 8 · 9 | yes |
+| AD04 Look alike | 9 · 9 · 8 · 8 · 8 | 9 · 9 · 8 · 8 · 8 | 9 · 9 · 9 · 8 · 8 | yes |
+| AD04 Old books | 9 · 9 · 8 · 8 · 8 | 9 · 9 · 8 · 8 · 8 | 9 · 9 · 8 · 8 · 8 | yes |
+
+Checks after the fixes:
+- The figures are unchanged and still add up.
+- Each phone still has one red.
+- There is still no text under 11 px.
+- Nothing is clipped at 360.
+
+**Verdict: every page is at or above its baseline on every measure. No blocking fix is left.**
