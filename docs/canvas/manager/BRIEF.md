@@ -157,3 +157,4 @@ Any total adds up from the lines it shows; the same figure is the same on every 
 - #0557: Orders = Lubowa Builders 318,000 delivered; DecideOrders = Peter's agent order for Mukono Roofing.
 - #0549: DecideOrders has it given away (Brian, wall plugs at 0); Orders has it Kyaligonza 1,425,000 on the road.
 - Dock primary: DecidePrice uses a white tap button; DecideOrders a red one. One rule for all boards.
+- From DecideStock: cement shelf 26 → 23 after the write-off; D-13 PVC pipe 4 in 11 of 12 at Owino ("12 went on the truck at Owino" — Denis); D-15 2 cement bags from Nakawa 68,000 at cost; D-17 Aisle B Timber 2×4 −2, Wall plugs +4, net −12,000; D-23 Cement 40 bags 1,360,000, 6 weeks left.
