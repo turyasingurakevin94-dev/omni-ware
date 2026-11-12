@@ -91,7 +91,7 @@ t.check(base.failed.length === 0, `a database from 0001-0181 (${base.failed.join
 {
   const on = copyDb('ow_live183_fresh');
   const missing = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n')
-    .filter((l) => /\|(missing|partly)\|/.test(l)).map((l) => l.slice(0, 4));
+    .filter((l) => /\|(missing|partly)\|/.test(l)).map((l) => l.slice(0, 4)).filter((n) => n <= '0183'); // later builds (0184 …) are not this script's
   t.check(JSON.stringify(missing) === '["0183"]', `which-migrations.sql names 0183 alone as missing (${missing.join(', ')})`);
   const s1 = run(on, 1);
   t.check(s1.status === 0 && /Ready\. Step 3 puts 0183 in/.test(s1.stderr), `step 1: ready (${errs(s1)[0] || 'ok'})`);
@@ -103,7 +103,7 @@ t.check(base.failed.length === 0, `a database from 0001-0181 (${base.failed.join
   t.check(s4.status === 0 && ROWS >= 10 && oks(s4) === ROWS && !/MISSING/.test(s4.stdout), `step 4: ok on every row (${oks(s4)} of ${ROWS}; ${errs(s4)[0] || ''})`);
   const again1 = run(on, 1), again3 = run(on, 3), again4 = run(on, 4);
   t.check(/0183 is in already/.test(again1.stderr) && again3.status === 0 && oks(again4) === ROWS, `run again: step 1 says it is in; steps 3 and 4 ok (${errs(again3)[0] || 'ok'})`);
-  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l));
+  const left = (on(['-qAt', '-F', '|'], read('docs/live/which-migrations.sql')).stdout || '').split('\n').filter((l) => /\|(missing|partly)\|/.test(l) && l.slice(0, 4) <= '0183');
   t.check(left.length === 0, `then which-migrations.sql names nothing missing (${left.join('; ') || 'none'})`);
   const sc = on(['-qAt', '-F', '\t'], fs.readFileSync(path.join(__dirname, 'fixtures', 'store-new-app-scenario.sql'), 'utf8'));
   const rows = (sc.stdout || '').split('\n').filter((l) => /^(PASS|FAIL)\t/.test(l));

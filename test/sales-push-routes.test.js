@@ -41,8 +41,12 @@ const ELSEWHERE = [
   'trip.checked', 'delivery.checked',
   // 0183's pushes to the salesperson, until Sales' map opens them (docs/audit/store/OTHER-APPS.md, Sales; spec 04-screens-store-data §6d)
   'order.all_in', 'order.packed', 'order.unpaid_at_gate', 'order.ready', 'order.out', 'pick.settled',
+  // 0184's pushes to the salesperson, until Sales' map opens them (docs/audit/manager/handover.md §5 S-6)
+  'invoice.voided', 'credit_note.raised', 'team.nudge', 'goal.set',
+  // Manager, Buyer (0184)
+  'markup.wanted', 'promise.made', 'agent.change.decided',
   // Accounts
-  'trip.cash', 'trip.cash.ask', 'trip.own_money', 'bill.due', 'bill.paper', 'payment.ask',
+  'trip.cash','trip.cash.ask', 'trip.own_money', 'bill.due', 'bill.paper', 'payment.ask',
   // Sourcing
   'prices.confirm', 'sourcing.request', 'sourcing.dropped', 'sourcing.fix', 'store.new_item',
   // Owner
