@@ -133,7 +133,7 @@ export function waited(fromMs: number, nowMs: number): string {
 export function inStage(mins: number): string {
   const m = Math.max(0, Math.round(mins));
   const h = Math.floor(m / 60), r = m % 60;
-  return h ? `${h} h ${r} m` : `${r} m`;
+  return h ? `${h} h ${String(r).padStart(2, '0')} m` : `${r} m`;
 }
 
 /** A limit in minutes as the Goals page says it: 2 h · 1 d · 4 h. */

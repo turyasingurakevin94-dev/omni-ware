@@ -37,7 +37,7 @@ export function orders(): MOrder[] {
     o(550, 'kato', 'Kato Construction', 'grace', 'preparing', '08:30', [l(0, 'Iron sheet G28', 'sht', 40, 38_000, 47_500, { packed: 36 })], { holderId: 'musa', credit: true }),
     o(551, 'nansana', 'Nansana Hardware', 'grace', 'preparing', '08:40', [l(0, 'Cement 50 kg', 'bag', 29, 34_000, 42_500), l(1, 'Wall plugs', 'pack', 5, 1_500, 1_500)], { holderId: 'musa', driver: 'Ssali' }),
     // On the road (1)
-    o(549, 'kyaligonza', 'Kyaligonza & Sons', 'brian', 'pending_delivery', '09:05', [l(0, 'Iron sheet G28', 'sht', 30, 38_000, 47_500)], { holderId: 'ssali', driver: 'Ssali', credit: true }),
+    o(549, 'kyaligonza', 'Kyaligonza & Sons', 'brian', 'pending_delivery', '09:05', [l(0, 'Iron sheet G28', 'sht', 30, 38_000, 47_500)], { holderId: 'ssali', driver: 'Ssali', credit: true, createdAt: t('15:30', '2026-10-15') }),
     // Delivered, billing themselves
     o(548, 'kato', 'Kato Construction', 'grace', 'completed', '16:10', [l(0, 'Cement 50 kg', 'bag', 10, 34_000, 43_000)], { stageAt: t('16:10', '2026-10-16'), createdAt: t('09:00', '2026-10-16'), deliveredAt: t('16:10', '2026-10-16'), driver: 'Ssali', credit: true }),
     o(557, 'lubowa', 'Lubowa Builders', 'brian', 'completed', '08:50', [l(0, 'PVC pipe 4 in', 'pcs', 9, 28_000, 35_000), l(1, 'Wall plugs', 'pack', 2, 1_500, 1_500)], { deliveredAt: t('08:50'), createdAt: t('07:15'), driver: 'Ssali', credit: true }),
