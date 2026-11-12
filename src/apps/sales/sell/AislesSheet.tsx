@@ -28,7 +28,7 @@ export function AislesSheet(): JSX.Element | null {
   const fresh = b.items.filter((i) => isNew(i.listedAt, now.value)).length;
   const go = (v: string) => { query.value = v; sheet.close(); };
   return (
-    <Frame title="Browse the shop" sub={`${fig(n)} items · ${all.length} aisles`} onClose={sheet.close} ground pad="12px 16px 20px">
+    <Frame title="Browse the shop" sub={`${fig(n)} ${n === 1 ? 'item' : 'items'} · ${all.length} ${all.length === 1 ? 'aisle' : 'aisles'}`} onClose={sheet.close} ground pad="12px 16px 20px">
       <label class="sl-who-q">
         <Duo i={phSearch} size={19} color="#5F6980" />
         <input type="search" placeholder={`Search ${fig(n)} items`} aria-label="Search the shop" value={q} onInput={(e) => setQ((e.target as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === 'Enter') go(q); }} />
@@ -46,7 +46,7 @@ export function AislesSheet(): JSX.Element | null {
             <a key={a.name} href="#" class="sl-tile" onClick={(e) => { e.preventDefault(); openAisle(a.name); }}>
               <ItemSquare aisle={a.name} size={38} />
               {mk ? <span class="mono sl-tile-mk"><Duo i={phAgain} size={12} color="#0F6B43" />{mk}</span> : null}
-              <span class="sl-tile-t"><b class={a.name.length > 12 ? 'long' : undefined}>{a.name}</b><span class="mono">{`${fig(a.count)} items`}</span></span>
+              <span class="sl-tile-t"><b class={a.name.length > 12 ? 'long' : undefined}>{a.name}</b><span class="mono">{`${fig(a.count)} ${a.count === 1 ? 'item' : 'items'}`}</span></span>
             </a>
           );
         })}

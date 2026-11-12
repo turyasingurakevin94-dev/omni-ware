@@ -72,7 +72,13 @@ export function demoSource(search: string | DemoFlags = '?demo'): DemoSource {
       if (!signedIn) return null;
       // TD10: the login under this screen is now Musa's (Store); nothing is saved as Musa.
       if (flags.state === 'signed-elsewhere') return { userId: MUSA, shopId: s.books.shop.id, shopName: s.books.shop.name, role: 'store', name: 'Musa Kiggundu' };
-      return { userId: me.id, shopId: s.books.shop.id, shopName: s.books.shop.name, role: me.role === 'manager' ? 'manager' : 'sales', name: me.name };
+      const role = me.role === 'manager' ? 'manager' : 'sales';
+      // TD28: Grace's sign-in opens the shop and its old records (the shop's own name, and "(old records)").
+      const shops = flags.state === 'two-shops' ? [
+        { shopId: s.books.shop.id, name: s.books.shop.name, role: role as Session['role'], since: '2026-09-03' },
+        { shopId: 'old-records', name: `${s.books.shop.name} (old records)`, role: role as Session['role'], since: '2026-06-12' },
+      ] : undefined;
+      return { userId: me.id, shopId: s.books.shop.id, shopName: s.books.shop.name, role, name: me.name, ...(shops ? { shops } : {}) };
     },
     async signIn() { signedIn = true; return (await src.session()) as Session; },
     async signOut() { signedIn = false; },

@@ -105,6 +105,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 |---|---|---|---|
 | Sending… | The write is on its way (a neutral spinner) | a green tick before the server says yes | Store R3 · REL-05 |
 | Not sent yet / Kept on this phone | Kept in the outbox; it sends itself when there is signal (amber) | "Sent" | Store R3 · REL-05 |
+| Which shop? | The question when one sign-in opens more than one shop; the choice is kept on this phone until sign-out | opening the first shop without asking | Sales R3 · SAL-019 |
 | Sent | Only after the server's yes (green) | — | Store R3 · REL-05 |
 | Waiting to send | The one list of what isn't on the books yet ("Not sent · N") | "Nothing is waiting" while something is | Store R3 · REL-04 |
 | Not sent | A write the books refused, with why and how many tries; it stays until Remove or Try again and never holds up another | a silent jam; "Discard" (the word is Remove) | Cross-app R1 · SAL-3 |

@@ -23,21 +23,23 @@ import { Keep, cx } from './util.tsx';
 import './toast.css';
 
 type Kind = 'ok' | 'warn' | 'error';
-interface Toast { id: number; text: string; kind: Kind; sub: string; undo: (() => void) | null; retry: (() => void) | null }
+interface Toast { id: number; text: string; kind: Kind; sub: string; undo: (() => void) | null; retry: (() => void) | null; tag: string }
 
 const current = signal<Toast | null>(null);
 let n = 0, timer = 0;
 
 export const toast = {
-  show(text: string, o: { kind?: Kind; sub?: string; undo?: () => void; retry?: () => void; ms?: number } = {}): void {
-    const t: Toast = { id: ++n, text, kind: o.kind || 'ok', sub: o.sub || '', undo: o.undo || null, retry: o.retry || null };
+  /** `tag`: the screen it belongs to, so the screen can take it with it when it closes (hide(tag), SAL-025). */
+  show(text: string, o: { kind?: Kind; sub?: string; undo?: () => void; retry?: () => void; ms?: number; tag?: string } = {}): void {
+    const t: Toast = { id: ++n, text, kind: o.kind || 'ok', sub: o.sub || '', undo: o.undo || null, retry: o.retry || null, tag: o.tag || '' };
     current.value = t;
     clearTimeout(timer);
     const ms = o.ms ?? (t.undo ? 10000 : t.kind === 'error' ? 8000 : 3200);
     timer = window.setTimeout(() => { if (current.value && current.value.id === t.id) current.value = null; }, ms);
   },
-  hide(): void {
-    current.value = null;
+  /** Hide what shows; with a tag, only a toast of that screen. */
+  hide(tag?: string): void {
+    if (tag == null || (current.value && current.value.tag === tag)) current.value = null;
   },
   /** What is showing (for tests and the parts gallery). */
   get text(): string | null {

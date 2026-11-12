@@ -62,3 +62,13 @@ The Sales app is a phone app (spec 07), so 360 px only, as in rounds 1 and 2.
 
 | ID | Done? | What changed | How verified |
 |---|---|---|---|
+| SAL-015 | Yes | − at 1 leaves the count at 1, greyed, with "At least 1 — use the bin to remove it"; the line and the total stay at 1 (no 0, no going back to the opening count) (`sell/Lines.tsx` `atLeast`, SL14) | parity SL14 0.02%; e2e 13/13 |
+| SAL-019 | Yes (as planned) | A sign-in that opens more than one shop asks Which shop? (TD28, `shell/WhichShop.tsx`), kept on the phone until sign-out (`core/shop-choice.ts`, `readSession` `prefer`, `shops`). Not the cause of the missing orders: `round-3-check.sql` 2 and 3 showed the live books hold only 46 orders (#148–#214); Kevin restored an old backup in the console between 5 and 10 Nov, which deleted every newer row | parity TD28 0%; e2e: asks, opens on a choice, not asked again after a reload |
+| SAL-020 | **No — open question for Kevin** | Two server rules disagree: 0165 `ow_balance_check` (the stored balance is the truth, the log never splits it) and 0169 `ow_customer_balance` (log lines with no order + open bills), which the app follows. On the restored data the log's charges name no order, so 0169 counts every bill twice. CLAUDE.md: never pick silently | — |
+| SAL-011 | With SAL-020 | — | — |
+| SAL-021 | Yes, by cross-app round 1 (SAL-3, on main 11 Nov) | Writes wait only behind a write on the same thing; a write still "no signal" after 5 tries while reads work is refused with its reason; Today lists Not sent first, its sheet has Remove and Try again (`src/core/outbox.ts`, `today/NotSent.tsx`, spec 06 §7a). TD29/TD30 taken off the canvas: one design | cross-app round 1's tests (in npm test) |
+| SAL-022 | Yes | The cause was not loading: "New customer" is a link under the finger that tapped the red +, and `a:hover {color: inherit}` (0,1,1) beat its white (0,1,0) on a stuck touch hover. Now `:where(a:hover)` (`ui/tokens.css`) | cold open and after a touch: white on navy |
+| SAL-023 | Yes, by cross-app round 1 (SAL-5) | The message line is one 52 px slot, "The shop's price …" at rest, so a warning never moves a key (`sell/PriceSheet.tsx`); SL44 drawn to it, SL18–SL20 redrawn to the 52 px slot | parity SL44, SL18, SL19, SL20 ≤ 0.02% |
+| SAL-024 | **Not reproduced** | On the demo data the count and the rows agree (one list, `mineList`). The chat named (last message 10 Oct) is older than a week and should not count; to re-check once the books are restored | — |
+| SAL-025 | Yes | A line's Undo toast is tagged with its order and goes when the order closes (`ui/toast.tsx` `tag`, `sell/Order.tsx`) | — |
+| SAL-026 | Yes | "1 item", "1 aisle" on the aisle tiles and the Browse sheet | — |

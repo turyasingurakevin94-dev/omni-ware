@@ -3,6 +3,7 @@
  * tab roots, the sheet host and the toast host. Before the tabs: sign in,
  * or "signed in as someone else" (TD10).
  */
+import { WhichShop } from './WhichShop.tsx';
 import type { JSX } from 'preact';
 import { SheetHost } from '../../../ui/sheet.tsx';
 import { TabBar } from '../../../ui/TabBar.tsx';
@@ -17,6 +18,7 @@ export function App(): JSX.Element {
   if (phase.value === 'starting') return <div class="ow-frame"><FirstLoad /></div>;
   if (phase.value === 'login') return <Login />;
   if (phase.value === 'signed-elsewhere') return <SignedElsewhere />;
+  if (phase.value === 'which-shop') return <WhichShop />;
   wirePlacing();
   const t = top.value, s = screen(t.id), bar = showTabBar.value;
   const View = s ? s.view : null;

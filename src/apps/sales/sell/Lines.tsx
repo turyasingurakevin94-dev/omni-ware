@@ -10,7 +10,6 @@
  */
 import { computed, signal } from '@preact/signals';
 import type { JSX } from 'preact';
-import { useRef } from 'preact/hooks';
 import { lineTotal } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
 import type { Books, Item, Line } from '../../../core/types.ts';
@@ -33,9 +32,11 @@ import { UnitSwitch } from './LineUnit.tsx';
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
 /** A count under 1 on the open line, held until More or the bin (any other count is taken at once). */
 const editQty = signal<number | null>(null);
+/** The line whose − was tapped at 1 (SL14): it stays at 1 and says to use the bin. */
+const atLeast = signal<number | null>(null);
 
 /** The open line shows a warning of its own (a count under 1, a carton for kg): the boards set it closer (SL14, SL15). */
-export const openWarns = computed(() => openId.value != null && ((editQty.value != null && editQty.value < 1) || askedAs.value.has(openId.value)));
+export const openWarns = computed(() => openId.value != null && (atLeast.value === openId.value || askedAs.value.has(openId.value)));
 
 /** Close the open line, taking its count. */
 export function closeLine(): void {
@@ -101,7 +102,7 @@ export function LineRow(p: { l: Line; b: Books; on?: () => void }): JSX.Element 
 function binIt(l: Line): void {
   const gone = remove(l.lineId);
   editQty.value = null;
-  if (gone) toast.show(`Removed ${gone.name.split(' · ')[0]}`, { undo: () => restore(gone) });
+  if (gone) toast.show(`Removed ${gone.name.split(' · ')[0]}`, { undo: () => restore(gone), tag: 'order' });
 }
 
 function Bin(p: { l: Line; bad?: boolean }): JSX.Element {
@@ -134,26 +135,24 @@ function PriceLink(p: { l: Line }): JSX.Element {
 /** The open line. */
 export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string | null }): JSX.Element {
   const l = p.l, b = p.b, it = itemOf(b, l.itemId, l.variantIdx), shelf = it && it.onShelf != null ? it.onShelf : null;
-  // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does; only a count
-  // under 1 waits on the line (SL14: the bin removes it, More brings it back).
-  // Under 1, the line goes back to the count it had when it opened, struck beside the 0 (SL14), and the bin removes it.
-  const start = useRef({ id: l.lineId, qty: l.qty });
-  if (start.current.id !== l.lineId) start.current = { id: l.lineId, qty: l.qty };
+  // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does. A count can't
+  // go under 1 (SL14, round 3 SAL-015): − at 1 leaves it at 1, greyed, and says to use the bin; the line and the
+  // total never show a count that isn't on screen.
   // In cartons (SL42) the stepper counts cartons; the line keeps pairs (core/units.ts).
   const per = perShown(l), word = shown(l).unit, q = editQty.value ?? l.qty / per;
-  const set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n * per); } else { editQty.value = n; setQty(l.lineId, start.current.qty); } };
+  const set = (n: number) => { editQty.value = null; if (n >= 1) { atLeast.value = null; setQty(l.lineId, n * per); } else atLeast.value = l.lineId; };
   const asked = askedAs.value.get(l.lineId);
   const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, raw = q * per, rest = split != null && raw > split ? raw - split : 0;
   const shortNow = !rest && l.from === 'shelf' && shelf != null && raw > shelf ? raw - shelf : 0;
-  if (q < 1) {
+  if (atLeast.value === l.lineId && q <= 1) {
     return (
       <div class="sl-open g12">
         <OpenHead l={l} b={b} />
         <div class="sl-open-r">
-          <div class="sl-step bad">
-            <button type="button" aria-label="Fewer" disabled><Icon name="minus" size={18} stroke={2.2} /></button>
-            <span class="mono">0<span class="ow-word">{word}</span><s aria-label={`was ${l.qty / per}`}>{l.qty / per}</s></span>
-            <button type="button" aria-label="More" onClick={() => set(1)}><Icon name="plus" size={18} stroke={2.2} /></button>
+          <div class="sl-step at1">
+            <button type="button" aria-label="Fewer" aria-disabled="true" onClick={() => set(0)}><Icon name="minus" size={18} stroke={2.2} /></button>
+            <span class="mono">{fig(q)}<span class="ow-word">{word}</span></span>
+            <button type="button" aria-label="More" onClick={() => set(q + 1)}><Icon name="plus" size={18} stroke={2.2} /></button>
           </div>
           <span class="sl-flex" /><Bin l={l} bad />
         </div>

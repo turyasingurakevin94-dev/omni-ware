@@ -434,10 +434,15 @@ export interface Thread {
 }
 
 /** Who is signed in, to which shop. */
+/** One shop a sign-in opens (TD28 "Which shop?"). */
+export interface ShopChoice { shopId: string; name: string; role: Role; since: string | null }
+
 export interface Session {
   userId: string;
   shopId: string;
   shopName: string;
   role: Role;
   name: string;
+  /** Every shop this sign-in opens in this app, when there is more than one (TD28, SAL-019). */
+  shops?: ShopChoice[];
 }

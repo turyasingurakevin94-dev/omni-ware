@@ -40,6 +40,15 @@ async function resume(open) {
   await ph5.tap({ sel: 'a.sl-who-drow:has-text("Lubowa")' });
   l = await lines(ph5);
   check(l.length === 1 && /Iron sheet G28/.test(l[0]) && /60/.test(l[0]), "SL01: Who's due Lubowa opens her draft, 60 iron sheets", l.join(' | '));
+  // TD28 (round 3, SAL-019): a sign-in that opens two shops asks which; the choice is kept on the phone.
+  const ph6 = await open('&state=two-shops');
+  check(/Which shop\?/.test(await ph6.text()), 'TD28: a sign-in with two shops asks Which shop?');
+  await ph6.tap({ sel: '.sh-shop-card > button:first-child' });
+  await ph6.p.waitForTimeout(600);
+  check(!/Which shop\?/.test(await ph6.text()) && (await ph6.p.locator('a.ow-plus').count()) > 0, 'TD28: a shop chosen, the app opens on Today');
+  await ph6.p.reload({ waitUntil: 'load' });
+  await ph6.p.waitForTimeout(1200);
+  check(!/Which shop\?/.test(await ph6.text()), 'TD28: the choice is kept on this phone (no second ask after a reload)');
   return ph;
 }
 
