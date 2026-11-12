@@ -68,7 +68,7 @@ export function NoReach(): JSX.Element {
         <Button kind="navy" icon="retry" stroke={2.4} onClick={() => { phase.value = 'starting'; void start(); }}>Try again</Button>
         <div class="st-noreach-two">
           {/* Only a copy this phone has is offered (TD22 "saved 7:52"); Work kept opens it at Waiting to send. */}
-          {copy && <button type="button" onClick={openCopy}><b><Icon name="undo" size={16} stroke={2.2} />Open the copy</b><span>{`saved ${clock(copy.at)}`}</span></button>}
+          {copy && <button type="button" onClick={openCopy}><b><Icon name="undo" size={16} stroke={2.2} />Open the copy</b><span>saved on this phone <span class="mono">{clock(copy.at)}</span></span></button>}
           {copy && waiting ? <button type="button" class="kept" onClick={toKept}><b><Icon name="lock" size={16} stroke={2.2} />Work kept</b><span>{`${waiting} waiting to send`}</span></button>
             : <span class="kept"><b><Icon name="lock" size={16} stroke={2.2} />Work kept</b><span>{waiting ? `${waiting} waiting to send` : 'nothing waiting'}</span></span>}
         </div>

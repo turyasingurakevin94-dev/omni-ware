@@ -8,7 +8,7 @@
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { counted, firstWord, orderNo } from '../../../core/names.ts';
-import { personFace } from '../../../core/store/faces.ts';
+import { personFace, yardFace } from '../../../core/store/faces.ts';
 import { doneToday } from '../../../core/store/jobs.ts';
 import { mates, passPayload, passPlan } from '../../../core/store/shift.ts';
 import type { YardPerson } from '../../../core/store/types.ts';
@@ -91,7 +91,7 @@ export function PassYard(p: { to: string | null }): JSX.Element {
           nowAt={sent ? 1 : 0}
           after={isHeld ? <button type="button" class="ow-end-quiet st-takeback" onClick={takeBack}><Icon name="undo" size={16} stroke={2.2} />Take it back <span class="mono">{`${left} s`}</span></button> : null}
           end={<>
-            <div class="st-after dark"><span aria-hidden="true" class="ow-av" style={avatarStyle({ ...personFace(b.me), size: 24 })}>{b.me.initials}</span>
+            <div class="st-after dark"><span aria-hidden="true" class="ow-av" style={avatarStyle({ ...yardFace(b, b.me), size: 24 })}>{b.me.initials}</span>
               <span>When he taps · <b>you see</b>{` “${tn} has it”`}</span></div>
             <EndOfFlow on={() => nav.home()} ms={0} pct={Math.round(((HOLD_S - left) / HOLD_S) * 33)} />
           </>} />

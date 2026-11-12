@@ -79,10 +79,11 @@ const STEPS: [number, (b: YardBooks) => void][] = [
   }],
   [1200, (b) => {
     checkIn(b, ['TRIP-1017B-1', 'TRIP-1017B-2'], t('11:34'));
-    deliver(byId(b, 547), 'Ggaba Stores', t('11:20'), false);
+    // After Denis's check-in (11:34), so TD02 at 11:32 still draws #0556 to pack and #0547 on the road (FACTS §8).
+    deliver(byId(b, 547), 'Ggaba Stores', t('11:50'), false);
     const n = byId(b, 556);
     n.lines.forEach((l) => { l.pickStatus = 'done'; l.pickedQty = l.qty; });
-    deliver(n, 'Nansana Hardware', t('11:10'), true);
+    deliver(n, 'Nansana Hardware', t('11:45'), true);
     const h = b.trips.find((x) => x.id === 'TRIP-HIMA-1');
     if (h) { h.status = 'collected'; h.collectedAt = t('12:00'); }
   }],

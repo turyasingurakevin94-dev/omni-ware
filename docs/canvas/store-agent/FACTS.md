@@ -95,8 +95,8 @@ Aisles: 12 · 1,153 items, as Sales FACTS §6 (the Store shows aisle letters A�
 | 10:47 | #0555 paid (Grace 10:45) and collected at the gate | OU10, OU12 |
 | 11:30–11:34 | Denis's trip at the gate: 3 lines (#0549: Concrete nails 2" 4 box, Emulsion · cream 20L 1 tin; #0546: Iron sheet G30 · 3m 20 pc) + Gutter bracket 6 pc not found (Grace tells Lubowa) | TD02, IN02–IN09 |
 | 12:00 | Hima Cement delivery, 100 bag (4 torn) | IN10–IN15 |
-| 10:58 · 11:20 | Ssali's 9:55 run: #0534 delivered at the Ntinda site 10:58, #0547 at Ggaba 11:20; Ssali back ~12:10 (OU20), free to take #0552 at 13:20 | TD02, TD03, OU02–OU07, OU20 |
-| 11:10 | #0556 packed (2 bag Cement, 1 tin Wood glue) and collected by Nansana Hardware at the gate | TD03, TD04 |
+| 10:58 · 11:50 | Ssali's 9:55 run: #0534 delivered at the Ntinda site 10:58, #0547 at Ggaba 11:50; Ssali back ~12:10 (OU20), free to take #0552 at 13:20 | TD02 (#0547 still on the road at 11:32), TD03, OU02–OU07, OU20 |
+| 11:45 | #0556 packed (2 bag Cement, 1 tin Wood glue) and collected by Nansana Hardware at the gate, after Denis's check-in (TD02 at 11:32 still has it to pack) | TD03, TD04 |
 | 11:30 | Denis's trip back at the yard: the push "Denis’s trip is back at the yard · 3 lines" is Musa's one new alert (the 10:41 ones read) | TD02 (bell 1) |
 | 14:04–14:05 | #0552 at the Ntinda site, Delivered 14:05 | OU21–OU28 |
 | 15:10 | Denis sends Musa to Katwe Timber for Timber 4x2 · 12ft 10 pc, #0559 Lubowa (Sales FACTS §4.4); Hassan drives. The push "Denis sent you to Katwe Timber" is the one new alert. Done by then: the bent sheets reported 10:50 (Ruth wrote them off 12:30), #0548's return taken back 11:40, aisle C counted and sent 14:40 | TD03 (bell 1), IN30–IN35 |

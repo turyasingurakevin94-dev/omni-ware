@@ -27,7 +27,8 @@ effect(() => { const h = held.value; if (h && !h.quiet) toast.show(h.label, { un
 function startNext(): void {
   const j = nextJob.value;
   if (j) nav.push(j.route, j.params);
-  else toast.show('Nothing to do now', { kind: 'ok' });
+  // No job: To pack's own empty state says so as a screen (TD05 links the button to PK01/PK14).
+  else nav.push('pack');
 }
 
 export function Bars(): JSX.Element | null {
