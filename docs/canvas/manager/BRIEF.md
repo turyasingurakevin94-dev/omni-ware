@@ -130,14 +130,14 @@ Items: Iron sheet G28 (sht) · Ridge cap 3 m (pcs) · Cement 50 kg (bag) · Y12 
 
 Done today by Ruth (for success / history states): 07:55 approved Iron sheet G28 price for Brian (#0549); 08:30 invoiced #0546 (auto at 24 h).
 
-**Orders on the move:** Checking 3 (#0554 Lubowa · Timber asked 10:40 → Denis; #0555; #0556) · Buying 2 (#0552, #0553 Ggaba Stores Y12 not found → Katwe) · Packing 2 (#0550 short pick; #0551 waits on Ruth's credit answer) · On the road 1 (#0549 Kyaligonza, Ssali). Stuck: #0554 Checking 2 h 40 m over its 2 h limit (Denis holds it).
+**Orders on the move:** Checking 3 (#0554 Lubowa · Timber 2×4 40 pcs asked at Ndeeba 07:00, in Checking since 07:00 → Denis; #0555; #0556) · Buying 2 (#0552, #0553 Ggaba Stores Y12 not found → Katwe) · Packing 2 (#0550 short pick; #0551 waits on Ruth's credit answer) · On the road 1 (#0549 Kyaligonza, Ssali). Delivered 2, not yet billed (#0548, #0557). Stuck: #0554 has been 2 h 40 m in Checking against a 2 h limit = 40 m over (Denis holds it).
 
 **Money:** In today 2,836,000 (cash 1,960,000 · mobile money 876,000). To collect 6,679,000 from 5 customers:
 Kyaligonza & Sons 2,310,000 (oldest 38 days · held at 21) · Ggaba Stores 1,615,000 (16 d) · Mukono Roofing 1,214,000 (12 d) · Kato Construction 878,000 (4 d) · Lubowa Builders 662,000 (25 d, promised Mon 19 Oct).
 Age bands: under 7 d 878,000 · 8–21 d 2,829,000 · 22–30 d 662,000 · over 30 d 2,310,000 (sum 6,679,000).
 
-**Team (October so far, sales invoiced):** shop 61,110,000 of 105,000,000 (58%), pace 59,500,000 → ahead 1,610,000.
-Grace 23,400,000 of 35M (ahead) · Brian 17,050,000 of 30M (behind 0.83M) · Faith 14,980,000 of 30M (behind 2.09M) · counter and agents 5,680,000. Off today: Hassan (driver). Store: Musa packing #0550, Joy free. Buying: Denis on the trip from 11:30.
+**Team (October so far, sales invoiced; one pace for all: day 17.57 of 31 = 56.67%):** shop 61,110,000 of 105,000,000 (58%), pace 59,500,000 → ahead 1,610,000.
+Grace 23,400,000 of 35M (pace 19,833,000, ahead 3.57M) · Brian 16,170,000 of 30M (pace 17,000,000, behind 0.83M) · Faith 14,910,000 of 30M (pace 17,000,000, behind 2.09M) · counter and agents 6,630,000 (sum 61,110,000). Off today: Hassan (driver). Store: Musa packing #0550, Joy free. Buying: Denis back 09:10 from the early trip (Owino); next trip 11:30.
 
 ## Keep the figures true
 Any total adds up from the lines it shows; the same figure is the same on every board.
@@ -146,16 +146,14 @@ Any total adds up from the lines it shows; the same figure is the same on every 
 - D-4 counter sale: Grace at the counter 11:20, Cement 50 kg, 10 bags at 40,000; shop's 42,500; cost 34,000.
 - D-2 price coming: Brian, #0553 Ggaba Stores, Y12 rebar 12 m, 20 pcs, cost 31,000 (Katwe) → 38,750 at +25%.
 - D-33 new item: PVC pipe 4 in, cost 28,000, rivals 34,000–36,000 → 35,000 at 25%.
-- D-3 rungs: shop's price, "Same gain 29,000" (the old 2,000 gain a piece on the new cost).
+- D-3 rungs: "Shop's price 33,750" (the new cost 27,000 × 1.25) and "Same gain 29,000" (the old 2,000 gain a piece on the new cost).
 - New parts (to add to agent-design-language.md): the price scale (cost · asker · shop's on one track, hatched "never under cost"), the rung row, the decision sheet head ("From Grace · #0555 · 2 of 8"), the dock with a tap (reversible) instead of a slide, the lock-screen notification card.
-- From DecideOrders: D-19 (14:20) Esther asks to void #0545 Kato 320,000 (entered twice with #0544), 200,000 paid → Kato owes 878,000 → 758,000; D-10 (16:10) Brian's #0549 2 packs wall plugs at 0, cost 3,000; D-22 (11:25) Peter's #0557 Mukono Roofing cement 20 → 12 (288,000 less, 36,000 a bag), 300,000 paid.
-- From Orders: page 4 at 10:05 (after the 10:00 invoice run): #0548 Kato Construction 430,000 (delivered Fri 16:10) and #0557 Lubowa Builders 318,000 (delivered 08:50) bill themselves; twins for D-21 #0558/#0559 Kato 612,000; order amounts #0555 1,380,000 · #0552 1,210,000 (selling) · #0550 1,900,000 · #0549 1,425,000; on the move 9,835,000.
+- From DecideOrders: D-19 (14:20) Esther asks to void #0545 Kato 320,000 (entered twice with #0544), 200,000 paid → Kato owes 878,000 → 758,000 (only on the 14:20 card); D-10 (16:10) Brian's #0563 2 packs wall plugs at 0, cost 3,000; D-22 (11:25) Peter's #0560 Mukono Roofing cement 20 → 12 (340,000 less at the shop's 42,500), 300,000 paid.
+- From Orders: page 4 at 10:05 (after the 10:00 invoice run; all 8 decided by 09:59, so the + shows 2): #0548 Kato Construction 430,000 (delivered Fri 16:10) and #0557 Lubowa Builders 318,000 (delivered 08:50) bill themselves; can't bill itself: #0561 Walk-in 567 (Grace, D-9) and #0562 Mukono Roofing Cement 425,000 price coming (Faith, D-11); D-21 twins #0544/#0545 Kato 320,000; order amounts #0554 450,000 (Timber 2×4 40 pcs) · #0555 1,380,000 · #0556 430,000 · #0552 687,500 selling (Iron sheet G28 9 × 47,500 + Ridge cap 10 × 26,000; 765,000 at the shop's 33,750) · #0553 775,000 · #0550 1,900,000 · #0551 1,240,000 · #0549 1,425,000; on the move (8 orders) 8,287,500.
 
-## To reconcile in the review (clashes between boards)
-- #0544/#0545: Orders uses #0545 Walk-in "Only 567" (Grace) and #0544 Mukono Roofing "Price coming" Cement 425,000 (Faith); DecideOrders uses #0545/#0544 as Kato's order entered twice (void, 320,000). Pick one meaning per number.
-- D-21 twins: Orders #0558/#0559 Kato 612,000 vs DecideOrders' void of #0545 "entered twice with #0544".
-- #0557: Orders = Lubowa Builders 318,000 delivered; DecideOrders = Peter's agent order for Mukono Roofing.
-- #0549: DecideOrders has it given away (Brian, wall plugs at 0); Orders has it Kyaligonza 1,425,000 on the road.
-- Dock primary: DecidePrice uses a white tap button; DecideOrders a red one. One rule for all boards.
-- From DecideStock: cement shelf 26 → 23 after the write-off; D-13 PVC pipe 4 in 11 of 12 at Owino ("12 went on the truck at Owino" — Denis); D-15 2 cement bags from Nakawa 68,000 at cost; D-17 Aisle B Timber 2×4 −2, Wall plugs +4, net −12,000; D-23 Cement 40 bags 1,360,000, 6 weeks left.
-- From Money: D-7 limit 1.5M · 14 d (500k can't cover 1,240,000); D-6 at 2M (Mukono would owe 1,551,500); Ggaba Stores limit 2M, Esther asks 3M (D-32), look-alike "Gaba Stores", opening balance 290,000 since 1 Oct; Kyaligonza bills 1,450,000 + 860,000 = 2,310,000.
+## Reconciled (12 Nov) — one meaning each
+- Order numbers: #0544/#0545 Kato 320,000 twins (D-21; D-19 voids #0545 at 14:20) · #0546 auto-billed 08:30 · #0547 Lubowa return · #0548 Kato 430,000 delivered Fri 16:10 · #0549 Kyaligonza 1,425,000 on the road · #0550 Kato short pick · #0551 Nansana credit ask · #0552 Mukono price up · #0553 Ggaba Y12 price coming · #0554 Lubowa stuck · #0555 Kyaligonza under the shop's price · #0556 Ggaba cancel · #0557 Lubowa 318,000 delivered 08:50 · #0560 Peter's agent order (Mukono) · #0561 Walk-in 567 · #0562 Mukono Cement 425,000 price coming · #0563 Brian's wall plugs at 0. No other numbers (old Kyaligonza bills are named by date: Wed 9 Sep, Mon 14 Sep).
+- Times: the sample moment is 09:40; anything later sits only on a card labelled with its time. The + shows 8 at 09:40.
+- Dock rule: a reversible answer is a white pill with navy text; an irreversible one is the red-knob slide with the outline "Kept …" pill beside it. The only red on a screen is the + or a slide knob.
+- From DecideStock: cement shelf 26 → 23 after the write-off; D-13 (10:15) Denis's early trip, back 09:10: PVC pipe 4 in 11 of 12 at Owino, 28,000 each ("12 went on the truck at Owino" — Denis); D-15 2 cement bags from Nakawa 68,000 at cost; D-17 Aisle B Timber 2×4 −2, Wall plugs +4, net −12,000; D-23 Cement 40 bags 1,360,000, 6 weeks left.
+- From Money: D-7 limit choices 1.5M · 14 d (default) · 2M · 14 d · 3M · 30 d (500k can't cover 1,240,000); D-6 (13:10) at 2M (Mukono would owe 1,214,000 + #0552 765,000 = 1,979,000); Ggaba Stores limit 2M, Esther asks 3M (D-32), look-alike "Gaba Stores", opening balance 290,000 since 1 Oct; Kyaligonza bills 1,450,000 + 860,000 = 2,310,000.

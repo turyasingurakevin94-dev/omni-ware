@@ -90,7 +90,7 @@ proposed in §3 otherwise).
 | M-7 | answer not pushed, false promise | The return and void pages say "Accounts and Grace are told" (5397, 5511); only the asker gets `invoice.ask.decided` (0131:132). decision-rights Told: Accounts. | §4 P-6 `invoice.voided`, P-7 `credit_note.raised` to Accounts and the salesperson. |
 | M-8 | answer not pushed, false promise | An agent's change or cancel decided pushes no one; manager.html says "The agent and the buyer are told" (5596, 5616). | §4 P-8 `agent.change.decided` to the Buyer (and the agent's app). |
 | M-9 | answer not pushed | Cancel yes pushes the yard and the salesperson (0177:212-221), not the Buyer; the cancel page promises "{Denis} stops: off To ask and the trip" (cancelask). The Buyer's On hold just disappears. | §4 P-5: `order.cancelled` also to `trip.plan` when the order had bought-in lines. |
-| M-10 | no push at all | A nudge is a WhatsApp link (3750); decision-rights §3: "A nudge is a push, no longer only a WhatsApp link". The FAB is "Nudge" (navHTML 2380). | §4 P-9 `team.nudge` (a function and its push); the FAB becomes Decide next (day.md). |
+| M-10 | no push at all | A nudge is a WhatsApp link (3750); decision-rights §3: "A nudge is a push, no longer only a WhatsApp link". The FAB is "Nudge" (navHTML 2380). | §4 P-9 `team.nudge` (a function and its push; the task `team.nudge` already exists, 0116, decision-rights "Nudge someone"); the FAB becomes Decide next (day.md). |
 | M-11 | no push | A goal set (`set_person_goal`, 5951) tells the salesperson nothing; decision-rights `goal.set` Told: the salesperson. | §4 P-10 `goal.set` (quiet). |
 | M-12 | no push | A newly listed item reaches the Manager by no path; decision-rights `product.edit` Told: Manager (to set the markup). | §4 P-11 `markup.wanted`. |
 | M-13 | no path at all | decision-rights `credit.set` "Proposes: Sales, Accounts". Accounts' button reads "Void, credit note, limit, terms — Ruth · ask" (accounts.html:3254) but its page offers only void and credit note (6300-6335); Sales' "No limit set · Ruth decides" (`cust-head.tsx:128`) has nothing to tap. | §4 P-12 `credit.limit.ask` (needs a small table, Kevin to approve); until then Accounts drops "limit, terms" from the label. |
@@ -154,14 +154,14 @@ The push title is `{asker} · {ask word} · {#order}`, its body the evidence, an
 | D-18 return | **Return asked** · Ruth decides | **Credit note raised** · **Kept as sold** | `invoice.ask` | `invoice.ask.decided` (asker), **NEW** `credit_note.raised` (Accounts, Grace) |
 | D-19 void | **Void asked** · Ruth decides | **Voided** · **Kept as billed** (with money: **Refund** · **Deposit**) | `invoice.ask` | `invoice.ask.decided` (asker), **NEW** `invoice.voided` (Accounts, Grace) |
 | D-20 cancel | **Cancel asked** · Ruth decides | **Cancelled** · **Kept** | `order.cancel.ask` (route it) | `order.cancelled` (Grace, yard, **+ Buyer**), `order.cancel.ask.decided` (no) |
-| D-21 taken twice | **Taken twice?** | **Cancel #0559 · keep #0558** · **Both are real** | — (the app spots it) | `order.cancelled` |
+| D-21 taken twice | **Taken twice?** | **Cancel #0545 · keep #0544** · **Both are real** | — (the app spots it) | `order.cancelled` |
 | D-22 agent | **Peter asks: fewer** / **Peter asks to cancel** | **Agreed** · **Kept** (per line) | `agent.change`, `agent.cancel` | **NEW** `agent.change.decided` |
 | D-23 restock | (the Buyer's list) | **Not yet** · **Go ahead** | — | `restock.held`, `restock.released` |
 | D-24 carton | **A carton for the shelf?** · Ruth decides | **Shelf part OK** · **Order only** | `carton.ask` | `restock.released` / `carton.refused` |
 | D-25, D-32 limit | **Credit asked · {customer}** · Ruth decides | **Limit 500,000 · 14 days** · **Cash only** | **NEW** `credit.limit.ask` | **NEW** `credit.limit.ask.decided`; `customer.changed` |
 | D-28 promise | **Promised · 500,000 · Fri** (no ask) | — | **NEW** `promise.made` (quiet) | — |
 | D-29 goal | — | **Goal · 35,000,000** | — | **NEW** `goal.set` (quiet) |
-| D-30, D-31 chase, stuck | — | **Nudge {Grace}** · **Give it to {Musa}** | — | **NEW** `team.nudge`; `job.given`, `trip.sent` |
+| D-30, D-31 chase, stuck | — | **Nudge {Grace}** · **Give it to {Musa}** | — | **NEW** push `team.nudge` (task in 0116); `job.given`, `trip.sent` |
 | D-33 markup | **A new item to price** · {item} | **Markup 25%** | **NEW** `markup.wanted` | — |
 
 **Glossary rows to add** (`docs/audit/GLOSSARY.md`, Decided "Manager R2 · handover"):
@@ -209,16 +209,16 @@ others` like 0131. `{Ruth}` = `ow_first_name(shop, auth.uid())`; `#0548` =
 |---|---|---|---|---|---|---|
 | P-1 | `stock.count` | `stock_counts` after insert, `status = 'sent'` (replaces `notify-stock-count`) | task `stock.correct` | `A count to check · {aisle}` | `{Musa} counted {12} items · {2} differ: Roofing sheet −2, Cement +1` (or `· all match`) | `{table:'stock_counts', id}` |
 | P-2 | `stock.count.decided` | `stock_counts` after update, `old.status = 'sent'` and `new.status in ('accepted','recount')` | user `new.counted_by` | `Count taken · {aisle}` / `Count it again · {aisle}` | `{Ruth} took your count. The shelf now matches it.` / `{Ruth} asks for a new count of {2} items.` | `{table:'stock_counts', id}` |
-| P-3 | `pick.settled` | `saved_quotes` after update, `payload ? 'pickSettle'` and its `at` is new | user `payload.takenBy`; and the packer (`staff.user_id` of `assignedWorkerId`) | `{Ruth} billed what went · #0548` / `{Ruth} billed it all · #0548` | `Kato Construction — 4 of 6 roofing sheets · now 184,000. Tell them.` / `Kato Construction — 6 roofing sheets billed in full.` | `{table:'saved_quotes', id}` |
-| P-4 | `trip.difference.decided` | `collection_trips` after update, `difference_accepted_at` null → set | user of `assigned_worker_id` (the runner); user `yard_checked_by` | `{Ruth} took {Musa}'s check-in` | `{Denis}'s trip · Kiseka Steel — the shelf has the yard's 9 of 10.` | `{table:'collection_trips', id}` |
-| P-5 | `order.cancelled` (to the Buyer; extends 0177's `cancel_order`) | inside `cancel_order`, when the order was in Checking or Buying with a line from a supplier not received | task `trip.plan` | `Cancelled · stop buying` | `#0558 · Ggaba Stores — {Ruth} cancelled it. Off To ask and the trip.` | `{table:'saved_quotes', id}` |
-| P-6 | `invoice.voided` | `saved_quotes` after update, `invoiced and not old.voided and new.voided` | task `invoice.send` (Accounts); user `payload.takenBy` unless it is the asker | `Voided · #0548` | `Kato Construction · 430,000 — {Ruth}: entered twice.` + `· refund 200,000 cash` / `· 200,000 kept as a deposit` | `{table:'saved_quotes', id}` |
-| P-7 | `credit_note.raised` | `saved_quotes` after update, `jsonb_array_length(payload->'creditNotes')` grows | task `invoice.send`; user `payload.takenBy` unless the asker | `Credit note raised · #0548` | `Kato Construction — 2 roofing sheets back · 84,000 off what they owe.` (or `· 84,000 to pay back`) | `{table:'saved_quotes', id}` |
-| P-8 | `agent.change.decided` | `saved_quotes` after update, `agentChange.state` asked → agreed/declined, or `agentCancel.agreed`/`declined` set | task `trip.plan` when the order has a line from a supplier; the agent through the agent app (its own notice, `agent-nudge`) | `{Ruth} answered {Peter}` | `#0571 · {client} — 2 lines fewer. Buy only what is left.` / `#0571 — cancelled.` / `— kept as it is.` | `{table:'saved_quotes', id}` |
-| P-9 | `team.nudge` | new function `nudge_person(p_shop uuid, p_to uuid, p_order bigint, p_words text)` (task `team.nudge`), logs and pushes | user `p_to` | `{Ruth} nudged you` | `{the words}` e.g. `The Kato order (#0548) has waited 2 days in Packing. Can you sort it now?` | `{table:'saved_quotes', id}` or `{table:'staff', id}` |
+| P-3 | `pick.settled` | `saved_quotes` after update, `payload ? 'pickSettle'` and its `at` is new | user `payload.takenBy`; and the packer (`staff.user_id` of `assignedWorkerId`) | `{Ruth} billed what went · #0550` / `{Ruth} billed it all · #0550` | `Kato Construction — 36 of 40 Iron sheet G28 · now 1,710,000. Tell them.` / `Kato Construction — 40 Iron sheet G28 billed in full.` | `{table:'saved_quotes', id}` |
+| P-4 | `trip.difference.decided` | `collection_trips` after update, `difference_accepted_at` null → set | user of `assigned_worker_id` (the runner); user `yard_checked_by` | `{Ruth} took {Musa}'s check-in` | `{Denis}'s trip · Owino Plumbing — the shelf has the yard's 11 of 12.` | `{table:'collection_trips', id}` |
+| P-5 | `order.cancelled` (to the Buyer; extends 0177's `cancel_order`) | inside `cancel_order`, when the order was in Checking or Buying with a line from a supplier not received | task `trip.plan` | `Cancelled · stop buying` | `#0556 · Ggaba Stores — {Ruth} cancelled it. Off To ask and the trip.` | `{table:'saved_quotes', id}` |
+| P-6 | `invoice.voided` | `saved_quotes` after update, `invoiced and not old.voided and new.voided` | task `invoice.send` (Accounts); user `payload.takenBy` unless it is the asker | `Voided · #0545` | `Kato Construction · 320,000 — {Ruth}: entered twice.` + `· refund 200,000 cash` / `· 200,000 kept as a deposit` | `{table:'saved_quotes', id}` |
+| P-7 | `credit_note.raised` | `saved_quotes` after update, `jsonb_array_length(payload->'creditNotes')` grows | task `invoice.send`; user `payload.takenBy` unless the asker | `Credit note raised · #0547` | `Lubowa Builders — 5 Timber 2×4 back · 56,250 off what they owe.` (or `· 56,250 to pay back`) | `{table:'saved_quotes', id}` |
+| P-8 | `agent.change.decided` | `saved_quotes` after update, `agentChange.state` asked → agreed/declined, or `agentCancel.agreed`/`declined` set | task `trip.plan` when the order has a line from a supplier; the agent through the agent app (its own notice, `agent-nudge`) | `{Ruth} answered {Peter}` | `#0560 · {client} — 8 Cement 50 kg fewer. Buy only what is left.` / `#0560 — cancelled.` / `— kept as it is.` | `{table:'saved_quotes', id}` |
+| P-9 | `team.nudge` | new function `nudge_person(p_shop uuid, p_to uuid, p_order bigint, p_words text)` (task `team.nudge`, already granted to the Manager in 0116 and in decision-rights "Nudge someone"), logs and pushes | user `p_to` | `{Ruth} nudged you` | `{the words}` e.g. `The Lubowa Builders order (#0554) has waited 2 h 40 m in Checking, 40 m over its limit. Can you sort it now?` | `{table:'saved_quotes', id}` or `{table:'staff', id}` |
 | P-10 | `goal.set` (quiet: feed and badge, no sound) | `manager_notes` after insert or update, `kind = 'target'` and `body ? 'who'` and the aim changed | user `body.who` | `Your goal for {November}` | `{35,000,000} · {Ruth} set it` | `{table:'manager_notes', id}` |
-| P-11 | `markup.wanted` | `products` after insert by a login holding `product.edit` and not `markup.set` | task `markup.set` | `A new item to price` | `{Moses} listed {Roofing sheet 3 m} · set its markup` | `{table:'products', id}` |
-| P-12 | `credit.limit.ask`, `credit.limit.ask.decided` | **needs a table** `customer_asks (id, shop_id, customer_id, kind 'limit', amount, days, why, asked_by, asked_by_name, status sent/accepted/declined/withdrawn, decided_by, created_at)` with `ask_credit_limit` (`quote.make` or `finance.see`) and `answer_credit_limit` (`credit.set`, writes the customer's limit and terms through the 0122 guard). Kevin approves the table first. | ask → task `credit.set`; answer → user `asked_by` | `Credit asked · {Nansana Hardware}` / `{Ruth} set {Nansana}'s limit` · `{Ruth} kept {Nansana} on cash` | `{Grace} asks 500,000 · 14 days — {why}` / `Limit 500,000 · 14 days.` | `{table:'customer_asks', id}` |
+| P-11 | `markup.wanted` | `products` after insert by a login holding `product.edit` and not `markup.set` | task `markup.set` | `A new item to price` | `{Moses} listed {PVC pipe 4 in} · set its markup` | `{table:'products', id}` |
+| P-12 | `credit.limit.ask`, `credit.limit.ask.decided` | **needs a table** `customer_asks (id, shop_id, customer_id, kind 'limit', amount, days, why, asked_by, asked_by_name, status sent/accepted/declined/withdrawn, decided_by, created_at)` with `ask_credit_limit` (`quote.make` or `finance.see`) and `answer_credit_limit` (`credit.set`, writes the customer's limit and terms through the 0122 guard). Kevin approves the table first. | ask → task `credit.set`; answer → user `asked_by` | `Credit asked · {Ggaba Stores}` / `{Ruth} set {Ggaba}'s limit` · `{Ruth} kept {Ggaba} on cash` | `{Esther} asks 3,000,000 · 14 days — {why}` / `Limit 3,000,000 · 14 days.` | `{table:'customer_asks', id}` |
 | P-13 | `promise.made` (quiet) | `payment_promises` after insert by a login without `credit.set` | task `credit.set` | `{Kato} promised 500,000 · Fri` | `{Grace} took the promise · they owe 1,034,000.` | `{table:'payment_promises', id}` |
 
 **Changes to pushes that exist** (same migration, the words of §3):
@@ -231,10 +231,10 @@ others` like 0131. `{Ruth}` = `ow_first_name(shop, auth.uid())`; `#0548` =
 | `credit.ask` (0156:125) | "Not paid · let it go on credit?" | `Not paid yet · on credit?` |
 | `credit.ask.decided` (0156:134) | "Cash first · keep it" | `Cash first · it stays` (body unchanged) |
 | `pick.short` (0120:244) | "A short pick to settle" | `Packed short · {client}`, body `{Musa} packed 4 of 6 roofing sheets. Bill what went or bill it all?` |
-| `trip.difference` (0150:83) | "A trip came in short or over" | `{Musa}'s check-in differs`, body `{Denis}'s trip · Kiseka Steel — 9 of 10 checked in.` |
+| `trip.difference` (0150:83) | "A trip came in short or over" | `{Musa}'s check-in differs`, body `{Denis}'s trip · Owino Plumbing — 11 of 12 checked in.` |
 | `stock.report` (0129:30) | "Stock reported damaged" | `{Damaged|Lost|Stolen} · {3} {roofing sheets}`, body `{Musa} reported it. Write it off?` |
 | `invoice.held` (0169:833) | body = `sqlerrm` | body by code: OWTPC/OWPRC `Price coming · decide it to bill`, OWSHP `Packed short · decide the bill`, OWSML `Only {567} · check it`, OWGIV `A line at 0 · given away?`, else `Can't bill itself · open it` |
-| `order.cancel.ask.decided` (0181:251) | "Called off" / "… voided it." | title `Cancelled` / `Kept`; body `#0558 · Ggaba Stores — {Ruth} cancelled it.` / `— {Ruth} kept it: {answer}`; invoiced first `Billed first · ask for a void` |
+| `order.cancel.ask.decided` (0181:251) | "Called off" / "… voided it." | title `Cancelled` / `Kept`; body `#0556 · Ggaba Stores — {Ruth} cancelled it.` / `— {Ruth} kept it: {answer}`; invoiced first `Billed first · ask for a void` |
 | `order.cancelled` (0177:212) | "Called off · stop packing" | `Cancelled · stop packing` |
 | `restock.held`, `restock.released` (0136:547-552) | "The Manager held a restock line" | `{Ruth}: not yet · {item}` / `{Ruth}: go ahead · {item}` |
 | `carton.refused` (0158:72) | "Ruth said no to the carton" | `Order only · {item}`, body `{Ruth}: buy only what the order needs. The 8 for the shelf stay unbought.` |
@@ -251,25 +251,25 @@ same kinds. The ten that were at the floor (1 to open + 1 to answer) first:
 
 | D | Kind | Title | Body (the evidence) | Action (`data.actions`) |
 |---|---|---|---|---|
-| D-1 | `price.waits` | `{Grace} · Under the shop's price · #0548` | `{Roofing sheet} · {200,000}, shop's {210,000} · cost {168,000} · {10} pcs` | `approve` **Approve 200,000** |
-| D-4 | `price.waits` (counter) | `{Grace} · At the counter · under the shop's price` | `{Cement 50 kg} · {34,000}, shop's {36,000} · cost {31,000}` | `approve` **Approve 34,000** |
-| D-5 | `credit.hold` | `{Grace} · On credit? · {Kato Construction}` | `Over the limit · would owe {6.4M} of {5M} · oldest bill {34} d · usually pays in {18} d` | `credit` **On credit** |
-| D-12 | `pick.short` | `{Musa} · Packed short · #0548` | `{Roofing sheet} {4} of {6} · bill {184,000} (full {276,000})` | `went` **Bill what went 184,000** |
-| D-13 | `trip.difference` | `{Musa} · check-in differs · {Denis}'s trip` | `{Kiseka Steel} · {Y12 bar} {9} of {10} · {−42,000} at cost` + the Buyer's note when there is one | `take` **Take the check-in** |
-| D-16 | `stock.report` | `{Musa} · {Damaged} · {3} {roofing sheets}` | `on the shelf {22} → {19} · {−504,000} at cost` | `keep` **Kept on the shelf** only (the write-off is a slide) |
-| D-18 | `invoice.ask` (credit) | `{Grace} · Return asked · #0548` | `{2} {roofing sheets} · {damaged} · {−84,000} · owes {1,034,000} → {950,000}` | `keep` **Kept as sold** only (the credit note is a slide) |
-| D-19 | `invoice.ask` (void) | `{Esther} · Void asked · #0548` | `{Kato} · {430,000} · {entered twice}` + `: #0547 same total, same day` when a twin exists · `nothing paid` / `{200,000} paid` | `keep` **Kept as billed** only (the void is a slide) |
-| D-22 | `agent.change` | `{Peter} · asks for fewer · #0571` | `{Cement} {20} → {12} · {280,000} less · paid {300,000}` (first 2 lines, `+N more`) | `agree` **Agree** |
-| D-24 | `carton.ask` | `{Denis} · A carton for the shelf?` | `{Roofing sheet} · {2} for #0548, {8} for the shelf · {336,000} · shelf has {3}` | `ok` **Shelf part OK** |
+| D-1 | `price.waits` | `{Grace} · Under the shop's price · #0555` | `{Iron sheet G28} · {46,000}, shop's {47,500} · cost {38,000} · {30} sht` | `approve` **Approve 46,000** |
+| D-4 | `price.waits` (counter) | `{Grace} · At the counter · under the shop's price` | `{Cement 50 kg} · {10} bags at {40,000}, shop's {42,500} · cost {34,000}` | `approve` **Approve 40,000** |
+| D-5 | `credit.hold` | `{Grace} · On credit? · {Kyaligonza & Sons}` | `Old bill {38} d (held at {21}) · would owe {3,690,000}` | `credit` **On credit** |
+| D-12 | `pick.short` | `{Musa} · Packed short · #0550` | `{Iron sheet G28} {36} of {40} · bill {1,710,000} (full {1,900,000})` | `went` **Bill what went 1,710,000** |
+| D-13 | `trip.difference` | `{Musa} · Check-in differs · {Denis}'s trip` | `{Owino Plumbing} · {PVC pipe 4 in} {11} of {12} · {−28,000} at cost` + the Buyer's note when there is one | `take` **Take the check-in** |
+| D-16 | `stock.report` | `{Musa} · {Damaged} · {3} {Cement 50 kg}` | `on the shelf {26} → {23} · {−102,000} at cost` | `keep` **Kept on the shelf** only (the write-off is a slide) |
+| D-18 | `invoice.ask` (credit) | `{Brian} · Return asked · #0547` | `{5} {Timber 2×4} · {−56,250} · owes {662,000} → {605,750}` | `keep` **Kept as sold** only (the credit note is a slide) |
+| D-19 | `invoice.ask` (void) | `{Esther} · Void asked · #0545` | `{Kato} · {320,000} · {entered twice}` + ` with #0544` when a twin exists · `nothing paid` / `{200,000} paid` | `keep` **Kept as billed** only (the void is a slide) |
+| D-22 | `agent.change` | `{Peter} · asks for fewer · #0560` | `{Cement} {20} → {12} · {340,000} less · paid {300,000}` (first 2 lines, `+N more`) | `agree` **Agree** |
+| D-24 | `carton.ask` | `{Denis} · A carton for the shelf?` | `{Wall plugs} · {1} for the order, {199} for the shelf · {298,500} · ~{14} months of selling` | `ok` **Shelf part OK** |
 
-The other kinds with an action: D-2 `price.waits` (Price coming) **Set 210,000**
+The other kinds with an action: D-2 `price.waits` (Price coming) **Set 38,750**
 (cost + the item's markup, only when both are known); D-3 `price.waits` (Price
-up) **Shop's price 33,750**; D-6 `credit.hold` (no limit set) **On credit · 1.5M
-· 14 d** (the smallest of `limitChoices`, the shop's usual terms); D-7
-`credit.ask` **On credit · load it · 500k · 14 d**; D-9 `invoice.held` (OWSML)
+up) **Shop's price 33,750**; D-6 `credit.hold` (no limit set) **On credit · 2M
+· 14 d** (the smallest of `limitChoices` that covers the order, the shop's usual terms); D-7
+`credit.ask` **On credit · load it · 1.5M · 14 d** (the card also offers 2M · 14 d and 3M · 30 d); D-9 `invoice.held` (OWSML)
 **Bill 567**; D-15 `store.extra` **Keep it**; D-17 `stock.count` **Count it
 again** only; D-20 `order.cancel.ask` **Kept** only; D-32 `credit.limit.ask`
-**Limit 500,000 · 14 d**; D-33 `markup.wanted` **Markup 25% · 210,000**. No
+**Limit 3M · 14 d**; D-33 `markup.wanted` **Markup 25% · 35,000**. No
 action: D-10 (the why is a choice), D-8 and D-14 (no push), and every slide.
 
 **Also in 0182 for the actions:** `push_outbox.actions jsonb` (the answers the

@@ -132,3 +132,42 @@ Colour always comes with a word or number.
   started"; red badge for "waits on you".
 - Don't: rings, torn-paper slips, stamps, radial hero glows, three-plus
   coloured chips on one row, explanation sentences, more than one red thing.
+
+## 8. Manager additions (same language)
+
+Parts the Manager boards (`docs/canvas/manager/*.dc.html`) drew that the Agent
+app does not have. One line each: what it shows · the Agent part it is built from.
+
+- **Price scale**: cost · asker · shop's on one track, hatched "never under cost" zone left of cost · the hero's 6px bar.
+- **Rung row**: each rung (Shop's price 33,750 · Same gain 29,000 · Another price) is a tappable answer · Suggest row.
+- **Decision sheet head**: "From Grace · #0555 · 2 of 8", avatar, ask, age · Order head (`.ax-strip`).
+- **Dock with a white tap answer**: reversible answer as a white pill, navy text · `.ax-dock` + the seg's white "on" pill.
+- **Outline "Kept" pill**: the safe second answer beside a slide (1.5px white-35% ring) · `.ax-pill`.
+- **Lock-screen notification card**: evidence in 2–3 lines + one action, then Undo 10 s · Toasts/banners, navy.
+- **Undo countdown ring**: seconds left round the Undo pill · the FAB's count badge.
+- **Row slide**: a slide that sits on a Needs-you row · `.ax-slide`.
+- **Decide header with queue strip**: × · "1 of 8 · oldest first" · segment per waiting decision · Order head.
+- **NEXT preview card**: dashed row of the next decision under the sheet · Next move card.
+- **Stage columns in hero**: Checking · Buying · Packing · On the road · Delivered with counts, need badges, face dots · On the move tiles.
+- **Stage track**: where an order is along the five stages · On the move tiles in a row.
+- **Age-vs-limit bar**: time in a stage against its limit, the over part in bad · the hero's progress bar.
+- **Truck-wait ring**: minutes someone has stood waiting · the FAB's round + count badge.
+- **Short-pick cell grid**: one cell per unit, dashed cells for the missing · On the move tiles at cell size.
+- **Shelf/carton cell meter**: shelf before → after, or carton split order/shelf · short-pick cell grid.
+- **Twin-bill tiles**: two bills side by side, "Stays" / "Void" · Item card.
+- **Owes before → after bar**: struck old figure → new, one bar · the hero's progress bar + mono.
+- **Bills-itself ring**: hours left of the 24 h before the bill goes · Next move's ring avatar.
+- **Photo tile**: the yard's photo with its time · Item card photo.
+- **What-happens tiles**: each answer as a small card with its result (Keep it +2 · It goes back) · Category chips.
+- **Report switch**: a line on/off before the slide (write-off) · `.ax-seg`.
+- **Aging bar by band with hold line**: debtors by age band, the hold day marked · the hero's progress bar, split.
+- **Days track with hold tick**: one debtor's bills on a day line, hold day dashed · Suggest row's progress bar.
+- **Week strip**: day chips to pick a promise day · Category chips.
+- **Pair picker**: two look-alike records, tick the one to keep · dashed "Who's this for?" picker.
+- **Per-person goal bar with pace mark**: invoiced vs goal, a tick at today's pace · the hero's goal bar.
+- **+/− stepper row**: a figure (goal, hold days) with − and + · Suggest row's navy round +.
+- **Hold-line scale with customer dots**: customers by oldest bill, hold line between · aging bar.
+- **Push preview strip**: the words the person will get, bell + "Grace sees it" · Toasts/banners.
+- **Nudge/Give segmented head**: what to do with a person or order · `.ax-seg`.
+- **Before/after dot chart**: taps before (grey) → after (green), red when no drop · Suggest row's progress bar.
+- **Struck pill**: a choice that is gone (Keep held) · `.ax-pill` soft, struck.
