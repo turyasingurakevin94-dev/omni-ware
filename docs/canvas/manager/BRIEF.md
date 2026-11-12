@@ -141,3 +141,10 @@ Grace 23,400,000 of 35M (ahead) · Brian 17,050,000 of 30M (behind 0.83M) · Fai
 
 ## Keep the figures true
 Any total adds up from the lines it shows; the same figure is the same on every board.
+
+## Added during drawing (use these; they were fixed by the DecidePrice board)
+- D-4 counter sale: Grace at the counter 11:20, Cement 50 kg, 10 bags at 40,000; shop's 42,500; cost 34,000.
+- D-2 price coming: Brian, #0553 Ggaba Stores, Y12 rebar 12 m, 20 pcs, cost 31,000 (Katwe) → 38,750 at +25%.
+- D-33 new item: PVC pipe 4 in, cost 28,000, rivals 34,000–36,000 → 35,000 at 25%.
+- D-3 rungs: shop's price, "Same gain 29,000" (the old 2,000 gain a piece on the new cost).
+- New parts (to add to agent-design-language.md): the price scale (cost · asker · shop's on one track, hatched "never under cost"), the rung row, the decision sheet head ("From Grace · #0555 · 2 of 8"), the dock with a tap (reversible) instead of a slide, the lock-screen notification card.
