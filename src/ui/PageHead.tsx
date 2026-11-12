@@ -33,12 +33,15 @@ export interface PageHeadProps {
   search?: SearchProps;
   /** The page's one picture. */
   children?: ComponentChildren;
+  /** A pushed page (the Store's Alerts, With Ruth): the glass Back before the title (NAV-08). */
+  onBack?: () => void;
 }
 
 export function PageHead(p: PageHeadProps): JSX.Element {
   return (
-    <header class="ow-phead">
+    <header class={cx('ow-phead', p.onBack && 'back')}>
       <div class="ow-phead-top">
+        {p.onBack && <button type="button" class="ow-phead-b" aria-label="Back" onClick={p.onBack}><Icon name="back" size={20} stroke={2.2} /></button>}
         <h1>{p.title}{p.count != null && <span class="mono">{fig(p.count)}</span>}</h1>
         {(p.actions || []).map((a) => (
           <button key={a.label} type="button" class={cx('ow-phead-b', a.white && 'white')} aria-label={a.label} onClick={a.on}>

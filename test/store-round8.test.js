@@ -15,7 +15,7 @@
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('store audit round 8: accessibility');
-const store = read('store.html');
+const store = read('old/store.html');
 const fn = n => { const l = store.split('\n').find(x => x.startsWith('function ' + n + '(') || x.startsWith('async function ' + n + '(')); return l && (l.match(/\{/g) || []).length === (l.match(/\}/g) || []).length ? l : extractFunction(store, n); };
 
 (async () => {

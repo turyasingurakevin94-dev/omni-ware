@@ -84,7 +84,7 @@ export function buyerSupabase(): BuyerSource {
       return booksOf(r);
     },
 
-    async pushOn() { await pushOnShared(sb(), me()); },
+    async pushOn() { const r = await pushOnShared(sb(), me()); return { on: !!r.on }; },
 
     ask: (sid, way) => write((c, s, r, now) => W.ask(c, s, r, sid, way, now)),
     answerYes: (sid) => write((c, s, r, now) => W.answer(c, s, r, sid, 'confirmed', now)),
@@ -99,6 +99,7 @@ export function buyerSupabase(): BuyerSource {
 
     setStopOff: (sid, off) => write((c, s, r) => T.setStopOff(c, s, r, sid, off)),
     askCash: () => write((c, s, r) => T.askCash(c, s, r)),
+    takeBackCash: () => write((c, s, r) => T.takeBackCash(c, s, r)),
     stopDone: (sid, counts, paid) => write((c, s, r, now) => T.stopDone(c, s, r, sid, counts, paid, now)),
     undoStop: (sid) => write((c, s, r) => T.undoStop(c, s, r, sid)),
     handIn: () => write((c, s, r, now) => T.handIn(c, s, r, now)),

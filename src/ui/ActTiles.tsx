@@ -21,6 +21,8 @@ const TONE = {
   call: ['#E4E6FA', '#3A3F9B'], tell: ['#E4F4EA', '#0F6B43'], receipt: ['#DCEAF8', '#1A5A8A'],
   fix: ['#FDEEE1', '#7A4A02'], wrong: ['#FBE5E2', '#8E2A22'], change: ['#F1EEE8', '#5F6980'], plain: ['#F1EEE8', '#1C2233'],
   take: ['#FDEEE1', '#95530C'], promise: ['#E3EEFB', '#1A5A8A'],
+  /** An ask to a person, in her face's tint (Ruth's teal, --t2; the Store's OU13 "Ask Ruth"). */
+  teal: ['#DDF1EE', '#0E5E57'],
 } as const;
 
 /** A link when it goes somewhere, else a button. */

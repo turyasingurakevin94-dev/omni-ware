@@ -54,13 +54,19 @@ export interface BuyerSource {
    * This phone gets the Buyer's pushes: its token kept in push_subscriptions (as buyer.html:1664 phonePush
    * does on start). Only the real books, inside the phone app; the demo has none.
    */
-  pushOn?(): Promise<void>;
+  pushOn?(): Promise<{ on: boolean }>;
 
   /* the trip */
   /** The planned trip's stops on or off. */
   setStopOff(supplierId: string, off: boolean): Promise<void>;
   /** Send the cash ask to Accounts for the trip as planned. */
   askCash(): Promise<void>;
+  /**
+   * Take back the cash ask Accounts has not given yet (BUY-14): its buyer_handoffs row goes to withdrawn
+   * (0125 lets whoever passed it on withdraw it) and the plan is open again. Refused once given. Never kept
+   * on the phone: with no signal Esther could give the cash meanwhile.
+   */
+  takeBackCash(): Promise<void>;
   /** At a stop: what came (each line) and what was paid. */
   stopDone(supplierId: string, counts: StopCount[], paid: UGX): Promise<void>;
   /** Undo a stop just done (TripOn.dc.html, Success: "Undo 5"): open again, what came kept as a draft. Refused once handed in. */

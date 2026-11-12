@@ -80,7 +80,7 @@ async function sell(open) {
   await u.type('Kato', 'Customer name, phone or place');
   await u.tap('New order for Kato');
   await u.type('60 zawaina', 'Add an item: type its name');
-  await u.tap({ sel: '.sl-top-add' });
+  await u.tap({ sel: '.sl-top.one .sl-more-add' });
   await u.tap({ text: 'Zawaina hinge, normal 4 inch' });
   await u.tap('By the carton of 50, 85,000 a carton');
   let ut = await u.text();

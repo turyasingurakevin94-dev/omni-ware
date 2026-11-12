@@ -13,6 +13,7 @@ import type { Books, Order, Session } from '../types.ts';
 import { client, isNetwork, type Sb } from './client.ts';
 import { readBooks, readChats, readOrder, readSession, readThread } from './read.ts';
 import * as W from './write.ts';
+import { chosenShop, forgetShop } from '../shop-choice.ts';
 import * as Push from './push.ts';
 
 export function supabaseSource(): DataSource {
@@ -43,7 +44,7 @@ export function supabaseSource(): DataSource {
     online: () => typeof navigator === 'undefined' || navigator.onLine !== false,
 
     async session() {
-      session = await readSession(sb());
+      session = await readSession(sb(), undefined, undefined, chosenShop());
       return session;
     },
     async signIn(email, password) {
@@ -56,6 +57,7 @@ export function supabaseSource(): DataSource {
     async signOut() {
       // Sign-out clears the copy (spec 06 Q12): every ow-*-snap on this phone (sales.html:6816 owForgetCopies).
       try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /^ow-[a-z]+-snap:/.test(k)) localStorage.removeItem(k); } } catch (_e) { /* nothing kept */ }
+      forgetShop();
       session = null; last = null;
       await sb().auth.signOut();
     },

@@ -1,14 +1,19 @@
 name: Build store app (Android)
 
-# The store app is store.html inside a native shell (apps/store). Every
-# change to either is built, and Android hands back an installable debug
-# APK under the run's Artifacts.
+# The store app is the new Store app (store.html at the root, built from
+# src/apps/store, with its area files store-<area>.js; switched 2026-11-12,
+# docs/rebuild.md) inside a native shell (apps/store). Every change to either
+# is built, and Android hands back an installable debug APK under the run's
+# Artifacts. Installed phones then keep current by the page's own live update
+# (src/native/update.ts).
 
 on:
   push:
     branches: [main, claude/store-app]
     paths:
       - 'store.html'
+      - 'store-*.js'
+      - 'src/**'
       - 'apps/store/**'
       - '.github/workflows/build-store-app.yml'
   workflow_dispatch: {}
@@ -29,7 +34,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Build www from store.html
+      - name: Build www from the built store.html
         run: npm run build
       - run: npx cap sync android
       - name: Build debug APK

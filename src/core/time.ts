@@ -61,9 +61,22 @@ export function when(ms: Ms, now: Ms): string {
   return dayLabel(ms);
 }
 
+/**
+ * GLOSSARY "Yesterday 15:41 / Tue 10 Nov" (Buyer round 1, BUY-11): a time that may be from another day,
+ * after a word ("Found · 09:31"). Today "09:31" (the Buyer's boards keep the leading zero), yesterday
+ * "Yesterday 09:31", older "Thu 15 Oct". Sales keeps `when` and `clock`.
+ */
+export function whenShort(ms: Ms, now: Ms): string {
+  const d = dayOf(ms), today = dayOf(now), hm = clock(ms).padStart(5, '0');
+  if (d === today) return hm;
+  if (daysApart(d, today) === 1) return `Yesterday ${hm}`;
+  return dayLabel(ms);
+}
+
 /** GLOSSARY "How long": "12 m", "2 h", "9 h 41 m", "2 days". */
 export function howLong(fromMs: Ms, toMs: Ms): string {
   const mins = Math.max(0, Math.floor((toMs - fromMs) / 60000));
+  if (mins < 1) return 'just now';
   if (mins < 60) return `${mins} m`;
   const h = Math.floor(mins / 60), m = mins % 60;
   if (h < 24) return m ? `${h} h ${m} m` : `${h} h`;
@@ -105,4 +118,14 @@ export function replyWindow(lastInAt: Ms | null, now: Ms): { open: boolean; hour
   const left = lastInAt + 24 * 3600 * 1000 - now;
   if (left > 0) return { open: true, hoursLeft: Math.floor(left / 3600000), daysShut: 0 };
   return { open: false, hoursLeft: 0, daysShut: daysApart(dayOf(lastInAt), dayOf(now)) };
+}
+
+/**
+ * "Good morning" before 12, "Good afternoon" before 17, else "Good evening" (Kampala time). One rule for
+ * every Today: the Store uses it; Sales (src/apps/sales/today/Today.tsx) and the Buyer
+ * (src/apps/buyer/today/Head.tsx) still carry their own copies, to move here.
+ */
+export function greeting(ms: Ms): string {
+  const h = Number(clock(ms).split(':')[0]);
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }

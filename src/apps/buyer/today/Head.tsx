@@ -1,6 +1,6 @@
 /*
  * Today's navy hero (board Today, phones 1, 2 and 4): the greeting, the date and Live
- * (Offline when the phone has no signal), the avatar, "TO BUY TODAY ›" with what the
+ * (Offline when the phone has no signal), the avatar (opens You, shell/You.tsx), "TO BUY TODAY ›" with what the
  * found lines cost (opens the trip), and the bar "N of M suppliers found ›" (opens Replies).
  * After the hand-in: the bar is mint and says what was paid and the cash back.
  *
@@ -14,6 +14,7 @@ import { dayLabel } from '../../../core/time.ts';
 import { fig } from '../../../ui/Money.tsx';
 import { Tap, barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
+import { openYou } from '../shell/You.tsx';
 import { firstName, hm } from './rules.ts';
 import './head.css';
 
@@ -41,7 +42,7 @@ export function Head(p: { b: BuyerBooks; now: number; offline: boolean; waiting?
                 : <span class="ow-b-today-live"><i aria-hidden="true" />Live</span>}
           </span>
         </div>
-        <span class="ow-b-today-me" aria-label={firstName(b.me)} role="img">{b.me.initials}</span>
+        <button type="button" class="ow-b-today-me" aria-label={`${firstName(b.me)}, you`} onClick={() => openYou(b.me)}>{b.me.initials}</button>
       </div>
       <div class="ow-b-today-buy">
         <Tap on={() => nav.push('trip')} label={`To buy today: ${fig(buy)} UGX. Open the trip.`} class="ow-b-today-buy-fig">

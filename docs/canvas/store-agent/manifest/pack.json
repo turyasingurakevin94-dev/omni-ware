@@ -1,0 +1,473 @@
+{
+ "area": "Picking and packing",
+ "prefix": "PK",
+ "rows": [
+  {
+   "title": "To pack (the stage sheet)",
+   "boards": [
+    {
+     "file": "PK01ToPack.dc.html",
+     "title": "To pack → For you · To pack · Packing now · Packed · Waiting on goods, act from the row",
+     "agent_match": "PackingBusy.dc.html / MovePacking.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK20ToPackOffline.dc.html",
+     "title": "No signal → Updating · saved 7:52, the list still works",
+     "agent_match": "PackingBusy.dc.html + P27, live t08"
+    },
+    {
+     "file": "PK08ForYou.dc.html",
+     "title": "Ruth gave it to you → For you first, Okello sees Look only",
+     "agent_match": "PackingBusy.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK13SomeoneElse.dc.html",
+     "title": "Someone else just did this · Refreshed → #0556 moves to Packing now · Okello",
+     "agent_match": "PackingBusy.dc.html + P27 notice bar"
+    },
+    {
+     "file": "PK14ToPackEmpty.dc.html",
+     "title": "Nothing to pack → ghost + one way in (Check in Denis's trip)",
+     "agent_match": "ClientsEmpty.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK21WaitsForGoods.dc.html",
+     "title": "#0549 a line not here yet → grey Waits for the goods, Check-in opens it",
+     "agent_match": "Track3.dc.html (agent-ref)"
+    }
+   ]
+  },
+  {
+   "title": "Pack one order, a line at a time (#0552)",
+   "boards": [
+    {
+     "file": "PK02Pack.dc.html",
+     "title": "Line 2 of 3 → picture, aisle G, 2 pc, Ntinda site · today afternoon · 0772 418 220, Packed",
+     "agent_match": "PackCard.dc.html + Track3.dc.html (agent-ref); OR07Packing (Sales)"
+    },
+    {
+     "file": "PK03PackPressed.dc.html",
+     "title": "Packed pressed → #A82D24, scale .97",
+     "agent_match": "PackCard.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK18PackSending.dc.html",
+     "title": "Packed tapped → Sending…, Short locked",
+     "agent_match": "PackCard.dc.html, live busy state"
+    },
+    {
+     "file": "PK11PackOffline.dc.html",
+     "title": "No signal → Packed kept on this phone, Not sent yet",
+     "agent_match": "P27 notice bar, live t08"
+    },
+    {
+     "file": "PK12PackFailed.dc.html",
+     "title": "Not done → amber “Packed · not saved” stamp, tell Kevin · code, Try again",
+     "agent_match": "live t11 error toast"
+    }
+   ]
+  },
+  {
+   "title": "Pack short (Ruth settles, Grace told)",
+   "boards": [
+    {
+     "file": "PK04PackShort.dc.html",
+     "title": "Short (what-if: Wire nails 4\" · 25kg ctn, asks 2 ctn) → count cartons you see, 1 ctn, amber Pack short",
+     "agent_match": "PackLine.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK16PackShortSending.dc.html",
+     "title": "Sending… → control locked",
+     "agent_match": "PackLine.dc.html, live busy state"
+    },
+    {
+     "file": "PK19PackShortFailed.dc.html",
+     "title": "Pack short not done → count kept, tell Kevin · code, Try again",
+     "agent_match": "live t11 error toast"
+    },
+    {
+     "file": "PK05PackShortSent.dc.html",
+     "title": "Sent → 1 of 2 ctn, 1 SHORT stamp, Sent to Ruth · Grace told, Undo, finishing",
+     "agent_match": "Track3.dc.html + P28 undo toast"
+    }
+   ]
+  },
+  {
+   "title": "Packed (what goes back)",
+   "boards": [
+    {
+     "file": "PK06Packed.dc.html",
+     "title": "Packed → bay 1 picked, Grace sees Packed, Not paid yet to Grace + Ruth, one Undo, Next job",
+     "agent_match": "Sent.dc.html / P22 (agent-ref)"
+    },
+    {
+     "file": "PK07PackedPickup.dc.html",
+     "title": "#0554 Peter’s agent pickup packed → Ready to collect at the gate, push to agent Peter + Grace",
+     "agent_match": "NansubugaReady.dc.html / P22; OR38PickupGate (Sales)"
+    },
+    {
+     "file": "PK15Unpack.dc.html",
+     "title": "Unpack → bay 1 free, ticks stay, Undo, Grace sees Packing again",
+     "agent_match": "Track3.dc.html + P28 undo toast"
+    }
+   ]
+  },
+  {
+   "title": "Look only and Cancelled",
+   "boards": [
+    {
+     "file": "PK09LookOnly.dc.html",
+     "title": "#0557 the copy → Ruth is cancelling it, don't pack, Pack #0556 instead",
+     "agent_match": "Track3.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK17LookOkello.dc.html",
+     "title": "#0556 Okello's → look only, his ticks live",
+     "agent_match": "Track3.dc.html (agent-ref)"
+    },
+    {
+     "file": "PK10CalledOff.dc.html",
+     "title": "Cancelled · put it back → bay 2 to aisles A, C; slide grey until every line is ticked",
+     "agent_match": "Track3.dc.html + P15 slide"
+    },
+    {
+     "file": "PK22PutBackFailed.dc.html",
+     "title": "Put back not done → ticks kept, tell Kevin · code, Try again",
+     "agent_match": "live t11 error toast"
+    }
+   ]
+  }
+ ],
+ "flows": [
+  {
+   "name": "Pack #0552 (3 lines, 1 dropped), from Today",
+   "taps_before": 4,
+   "taps_after": 3,
+   "steps_before": 5,
+   "steps_after": 3,
+   "note": "2 lines to pack (hinge dropped): today tile + order + 2 Packed = 4; new Next job + 2 Packed = 3 (FL01 path)"
+  },
+  {
+   "name": "Pack #0556 pickup (2 lines) to Ready to collect",
+   "taps_before": 4,
+   "taps_after": 3,
+   "steps_before": 5,
+   "steps_after": 2,
+   "note": "today tile + order + 2 Packed = 4 (and it stays in Packing); new Next job + 2 Packed = 3, Ready to collect by itself"
+  },
+  {
+   "name": "Pack 6 lines, one short",
+   "taps_before": 9,
+   "taps_after": 8,
+   "steps_before": 6,
+   "steps_after": 4,
+   "note": "both from the Next job (STORE-TODAY: 9 from the Next job, 10 by the tile): Next job + 5 Packed + carton tile + Pack short = 8"
+  },
+  {
+   "name": "A line short (from the open line)",
+   "taps_before": 3,
+   "taps_after": 3,
+   "steps_before": 2,
+   "steps_after": 1
+  },
+  {
+   "name": "Put back a cancelled packed order (2 lines)",
+   "taps_before": 0,
+   "taps_after": 3,
+   "steps_before": 0,
+   "steps_after": 1
+  },
+  {
+   "name": "Unpack a packed order",
+   "taps_before": 3,
+   "taps_after": 1,
+   "steps_before": 2,
+   "steps_after": 1
+  },
+  {
+   "name": "Pack #0554 agent pickup (1 line) to Ready to collect",
+   "taps_before": 3,
+   "taps_after": 2,
+   "steps_before": 5,
+   "steps_after": 2,
+   "note": "1 line: today tile + order + Packed = 3; new Next job + Packed = 2"
+  },
+  {
+   "name": "Retry a failed pack / short / put back",
+   "taps_before": 2,
+   "taps_after": 1,
+   "steps_before": 2,
+   "steps_after": 1
+  }
+ ],
+ "scores": [
+  {
+   "file": "PK01ToPack.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK02Pack.dc.html",
+   "fidelity": 9,
+   "steps": 9.5,
+   "show": 9,
+   "polish": 9,
+   "in_step": 9
+  },
+  {
+   "file": "PK03PackPressed.dc.html",
+   "fidelity": 9,
+   "steps": 9.5,
+   "show": 9,
+   "polish": 9,
+   "in_step": 9
+  },
+  {
+   "file": "PK04PackShort.dc.html",
+   "fidelity": 8.5,
+   "steps": 9,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 9.5
+  },
+  {
+   "file": "PK16PackShortSending.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK05PackShortSent.dc.html",
+   "fidelity": 8.5,
+   "steps": 9,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 9.5
+  },
+  {
+   "file": "PK06Packed.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 9,
+   "polish": 9,
+   "in_step": 9
+  },
+  {
+   "file": "PK07PackedPickup.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 9,
+   "polish": 9,
+   "in_step": 9
+  },
+  {
+   "file": "PK08ForYou.dc.html",
+   "fidelity": 8.5,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9.5
+  },
+  {
+   "file": "PK09LookOnly.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK17LookOkello.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK10CalledOff.dc.html",
+   "fidelity": 8.5,
+   "steps": 9,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK11PackOffline.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK12PackFailed.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK13SomeoneElse.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK14ToPackEmpty.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 9,
+   "in_step": 9
+  },
+  {
+   "file": "PK15Unpack.dc.html",
+   "fidelity": 8.5,
+   "steps": 9.5,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK18PackSending.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK19PackShortFailed.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK20ToPackOffline.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK21WaitsForGoods.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  },
+  {
+   "file": "PK22PutBackFailed.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 9
+  }
+ ],
+ "handovers": [
+  {
+   "board": "PK01ToPack.dc.html",
+   "from_or_to": "Sales/Grace",
+   "words_here": "#0556 · they collect (To pack)",
+   "words_there": "Packing (OR07, To pack)",
+   "push": "order.pick 'To pack · #0556 · Nansana · they collect' → yard, on insert into Packing (IM-10)"
+  },
+  {
+   "board": "PK02Pack.dc.html",
+   "from_or_to": "Sales/Grace",
+   "words_here": "From Grace · #0552 · Grace sees: Packing · 1/2",
+   "words_there": "Packing · Musa · since 10:05 · 1 of 2 packed",
+   "push": "none (live track)"
+  },
+  {
+   "board": "PK04PackShort.dc.html",
+   "from_or_to": "Manager/Ruth + Sales/Grace",
+   "words_here": "Pack short · Ruth settles the short · Grace is told",
+   "words_there": "Ruth: a short pick to settle; Grace: 1 short · Ruth settles",
+   "push": "pick.short → Ruth (pick.settle) and Grace; pick.settled → packer (IM-37)"
+  },
+  {
+   "board": "PK06Packed.dc.html",
+   "from_or_to": "Sales/Grace + Manager/Ruth",
+   "words_here": "Grace sees: Packed · Not paid yet · Grace takes the money · Ruth may let it go",
+   "words_there": "Grace: Packed · Not paid yet · take the money; Ruth: or let it go on credit",
+   "push": "order.unpaid_at_gate → Grace (takenBy) + Ruth (credit.release) (IM-07); order.packed → Grace (IM-05)"
+  },
+  {
+   "board": "PK07PackedPickup.dc.html",
+   "from_or_to": "Agent/Peter + Sales/Grace",
+   "words_here": "Ready to collect · at the gate · code 0554",
+   "words_there": "Ready · waiting at the shop for you (agent); Ready to collect (Sales)",
+   "push": "order.ready → agent Peter + Grace (IM-03)"
+  },
+  {
+   "board": "PK08ForYou.dc.html",
+   "from_or_to": "Manager/Ruth",
+   "words_here": "Ruth gave you #0556 to pack · For you",
+   "words_there": "Ruth: Give to Musa",
+   "push": "'Ruth gave you #0556 to pack' → Musa only (IM-08, IM-09)"
+  },
+  {
+   "board": "PK09LookOnly.dc.html",
+   "from_or_to": "Manager/Ruth + Sales/Grace",
+   "words_here": "Look only · Ruth cancels it · Grace sees: Packing · copy",
+   "words_there": "Cancelled",
+   "push": "Ruth 10:16 '#0557 is a copy · don't pack it' → yard"
+  },
+  {
+   "board": "PK10CalledOff.dc.html",
+   "from_or_to": "Manager/Ruth + Sales/Brian",
+   "words_here": "Cancelled · put it back · Ruth and Brian see: Put back",
+   "words_there": "Cancelled; Ruth's log: Put back 10:52",
+   "push": "order.cancelled → yard, tap opens the put-back (IM-11); putBackAt written for Ruth"
+  },
+  {
+   "board": "PK15Unpack.dc.html",
+   "from_or_to": "Sales/Grace",
+   "words_here": "Grace sees: Packing again",
+   "words_there": "Packing",
+   "push": "none (track changes back)"
+  }
+ ],
+ "kept_fixes": [
+  "FLOW-02: Undo 10 s on Packed, Pack short and Unpack (toasts with a countdown ring); a packed order can be unpacked in the yard, ticks kept, bay freed (PK15)",
+  "REL-05: Sending… until the server's yes (PK16); never a green tick before it (PK11 stamps 'Packed · not sent', amber)",
+  "REL-07: the Not done bar with Try again, work kept (PK12 red, PK11 amber no signal, PK13 blue someone else)",
+  "REL-08: 'Someone else just did this · Refreshed' (PK13)",
+  "NAV-04: Look only for someone else's order or a copy (PK09, PK17); red packs only the full line, Pack short amber",
+  "STO-UI-02: every line opens at what was ordered (2 pc prefilled)",
+  "STO-UI-01 / GLOSSARY: count in the unit you see (PK04 tiles in cartons: 0 · 1 · 2 ctn)",
+  "WORD-03: one label 'Not paid yet', no money anywhere on the yard's phone",
+  "WORD-04: To pack counts ready now; Waiting on goods shown apart (+2)",
+  "WORD-11: Packing now names the person (Okello)",
+  "STO-UI-08: one picture style (item picture, aisle duotone squares)",
+  "A11Y: 44 px targets, 11 px minimum text, 4.5:1",
+  "REL-09: plain error words with 'tell Kevin · code' on every Not done card (PK12, PK19, PK22)",
+  "NAV-04: 'Waits for the goods' grey disabled button for a line not here yet (PK21)"
+ ],
+ "other_apps": [
+  "Sales: show 'Packed · Not paid yet · take the money' and 'Ready to collect' from pickingStatus (IM-03, IM-05, IM-07)",
+  "Sales: show '1 short · Ruth settles' on the order after pick.short (IM-37)",
+  "Manager: stop the Packing clock at pickingDoneAt; packed orders show 'Packed · waits for the truck / collector / money' (IM-28)",
+  "Manager: 'Give to Musa' writes awaiting_accept for that person only; only they (or a Manager) may take it (IM-08)",
+  "Manager: sees the put-back time (putBackAt) on a cancelled packed order (IM-11)",
+  "Store migration (reserved number): order.ready, order.unpaid_at_gate, pick.settled pushes; 'to pack' push on insert into Packing (IM-10)"
+ ],
+ "open_questions": [
+  "None open. Lead rulings applied: bays one order each; #0556 is Okello’s from 10:43; PK07 is #0554 (Peter’s agent pickup); the short is a what-if counted in cartons; #0530 cancelled as a what-if; the delivery phone stays."
+ ]
+}

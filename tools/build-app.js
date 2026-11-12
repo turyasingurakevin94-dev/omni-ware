@@ -9,6 +9,8 @@
  *                                            next/sales-demo.js         the demo (src/core/demo), loaded only on ?demo
  *                                            next/sales-parts.js        the parts gallery, only on ?demo&parts=…
  *   node tools/build-app.js buyer            buyer.html, buyer-demo.js  at the root: the Buyer is switched (docs/rebuild.md)
+ *   node tools/build-app.js store            store.html, store-<area>.js (pack, in, shelf, out), store-demo.js
+ *                                            at the root: the Store is switched (docs/rebuild.md)
  *   node tools/build-app.js sales --check    builds in memory; fails if any file differs or is over its budget
  *
  * The page is one self-contained file, like the old apps: the script and the
@@ -54,6 +56,14 @@ const ROLES = {
   buyer: {
     title: 'Buyer', theme: '#16203C', manifest: '/manifest-buyer.json', demo: 'src/core/buyer/demo/entry.ts', parts: null,
     lazy: [], sw: null, dir: '',
+  },
+  // The new Store app (docs/spec/04-screens-store.md): the shell and Today in the page; Pack, Goods in,
+  // Shelf and Out each a lazy file (src/apps/store/shell/areas.ts); the demo on ?demo.
+  // Switched (docs/rebuild.md, 2026-11-12): built to the root, store.html, store-<area>.js and store-demo.js;
+  // the old page is old/store.html.
+  store: {
+    title: 'Store', theme: '#16203C', manifest: '/manifest-store.json', demo: 'src/core/store/demo/entry.ts', parts: null,
+    lazy: ['pack', 'in', 'shelf', 'out'], sw: null, dir: '',
   },
 };
 const OPTS = { bundle: true, write: false, minify: true, format: 'iife', target: ['es2020'], legalComments: 'none', charset: 'utf8', logLevel: 'silent' };
@@ -178,7 +188,7 @@ async function build(role) {
   const id = crypto.createHash('sha256').update(p.js + p.css + tabs.map((t) => t.text).join('')).digest('hex').slice(0, 12);
   tabs.forEach((t) => { t.text = t.text.split(BUILD_MARK).join(id); });
   const files = tabs.map((t) => t.file);
-  // The build id the phone app's live update reads (src/native/update.ts NativeApp.build): owSalesBuild, owBuyerBuild.
+  // The build id the phone app's live update reads (src/native/update.ts NativeApp.build): owSalesBuild, owBuyerBuild, owStoreBuild.
   const html = page(role, `window.ow${role[0].toUpperCase() + role.slice(1)}Build=${JSON.stringify(id)};\n${p.js}`, p.css, files);
 
   // 4. The service worker: this build's page and tab files, kept together (a role without one has none yet).

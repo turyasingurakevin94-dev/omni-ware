@@ -10,7 +10,6 @@
  */
 import { computed, signal } from '@preact/signals';
 import type { JSX } from 'preact';
-import { useRef } from 'preact/hooks';
 import { lineTotal } from '../../../core/money.ts';
 import { lineWaits } from '../../../core/orders.ts';
 import type { Books, Item, Line } from '../../../core/types.ts';
@@ -33,9 +32,11 @@ import { UnitSwitch } from './LineUnit.tsx';
 export const askedAs = signal<Map<number, { qty: number; unit: string; alt: Item | null }>>(new Map());
 /** A count under 1 on the open line, held until More or the bin (any other count is taken at once). */
 const editQty = signal<number | null>(null);
+/** The line whose − was tapped at 1 (SL14): it stays at 1 and says to use the bin. */
+const atLeast = signal<number | null>(null);
 
 /** The open line shows a warning of its own (a count under 1, a carton for kg): the boards set it closer (SL14, SL15). */
-export const openWarns = computed(() => openId.value != null && ((editQty.value != null && editQty.value < 1) || askedAs.value.has(openId.value)));
+export const openWarns = computed(() => openId.value != null && (atLeast.value === openId.value || askedAs.value.has(openId.value)));
 
 /** Close the open line, taking its count. */
 export function closeLine(): void {
@@ -81,6 +82,16 @@ function Head(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
   );
 }
 
+/** The open line's top row (SL06): a tap on it, or its ˄, closes the line to one row (Kevin, 11 Nov: "I don't want it to look big"). */
+function OpenHead(p: { l: Line; b: Books; chip?: JSX.Element }): JSX.Element {
+  return (
+    <button type="button" class="sl-open-h" aria-expanded="true" aria-label={`Close ${sayItem(p.l.name)}`} onClick={closeLine}>
+      <Head l={p.l} b={p.b} chip={p.chip} />
+      <span aria-hidden="true" class="sl-open-x"><Icon name="chevron-up" size={18} stroke={2.4} /></span>
+    </button>
+  );
+}
+
 /** One line, closed: a tap opens it (the hinge with no price opens its "Price coming" sheet). */
 export function LineRow(p: { l: Line; b: Books; on?: () => void }): JSX.Element {
   return (
@@ -91,7 +102,7 @@ export function LineRow(p: { l: Line; b: Books; on?: () => void }): JSX.Element 
 function binIt(l: Line): void {
   const gone = remove(l.lineId);
   editQty.value = null;
-  if (gone) toast.show(`Removed ${gone.name.split(' · ')[0]}`, { undo: () => restore(gone) });
+  if (gone) toast.show(`Removed ${gone.name.split(' · ')[0]}`, { undo: () => restore(gone), tag: 'order' });
 }
 
 function Bin(p: { l: Line; bad?: boolean }): JSX.Element {
@@ -124,26 +135,24 @@ function PriceLink(p: { l: Line }): JSX.Element {
 /** The open line. */
 export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string | null }): JSX.Element {
   const l = p.l, b = p.b, it = itemOf(b, l.itemId, l.variantIdx), shelf = it && it.onShelf != null ? it.onShelf : null;
-  // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does; only a count
-  // under 1 waits on the line (SL14: the bin removes it, More brings it back).
-  // Under 1, the line goes back to the count it had when it opened, struck beside the 0 (SL14), and the bin removes it.
-  const start = useRef({ id: l.lineId, qty: l.qty });
-  if (start.current.id !== l.lineId) start.current = { id: l.lineId, qty: l.qty };
+  // Every figure follows the count at once (the line, the dock, SL40's sub-line), as the Counter does. A count can't
+  // go under 1 (SL14, round 3 SAL-015): − at 1 leaves it at 1, greyed, and says to use the bin; the line and the
+  // total never show a count that isn't on screen.
   // In cartons (SL42) the stepper counts cartons; the line keeps pairs (core/units.ts).
   const per = perShown(l), word = shown(l).unit, q = editQty.value ?? l.qty / per;
-  const set = (n: number) => { if (n >= 1) { editQty.value = null; setQty(l.lineId, n * per); } else { editQty.value = n; setQty(l.lineId, start.current.qty); } };
+  const set = (n: number) => { editQty.value = null; if (n >= 1) { atLeast.value = null; setQty(l.lineId, n * per); } else atLeast.value = l.lineId; };
   const asked = askedAs.value.get(l.lineId);
   const x = cur.value, split = x && x.split ? x.split[l.lineId] : undefined, raw = q * per, rest = split != null && raw > split ? raw - split : 0;
   const shortNow = !rest && l.from === 'shelf' && shelf != null && raw > shelf ? raw - shelf : 0;
-  if (q < 1) {
+  if (atLeast.value === l.lineId && q <= 1) {
     return (
       <div class="sl-open g12">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         <div class="sl-open-r">
-          <div class="sl-step bad">
-            <button type="button" aria-label="Fewer" disabled><Icon name="minus" size={18} stroke={2.2} /></button>
-            <span class="mono">0<span class="ow-word">{word}</span><s aria-label={`was ${l.qty / per}`}>{l.qty / per}</s></span>
-            <button type="button" aria-label="More" onClick={() => set(1)}><Icon name="plus" size={18} stroke={2.2} /></button>
+          <div class="sl-step at1">
+            <button type="button" aria-label="Fewer" aria-disabled="true" onClick={() => set(0)}><Icon name="minus" size={18} stroke={2.2} /></button>
+            <span class="mono">{fig(q)}<span class="ow-word">{word}</span></span>
+            <button type="button" aria-label="More" onClick={() => set(q + 1)}><Icon name="plus" size={18} stroke={2.2} /></button>
           </div>
           <span class="sl-flex" /><Bin l={l} bad />
         </div>
@@ -165,7 +174,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
     const alt = asked.alt;
     return (
       <div class="sl-open g12">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         {stepRow}
         <div class="sl-whole">
           <span class="sl-whole-w"><Icon name="warning" size={14} stroke={2.2} />{`Sold by the ${l.unit === 'ctn' ? 'carton' : l.unit} only · you typed `}<b class="mono">{asked.qty}</b>{` ${asked.unit}`}</span>
@@ -186,7 +195,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   if (shortNow > 0 && shelf != null) {
     return (
       <div class="sl-open">
-        <div class="sl-open-h"><Head l={l} b={b} chip={<span class="sl-chip warn">{`${shortNow} short`}</span>} /></div>
+        <OpenHead l={l} b={b} chip={<span class="sl-chip warn">{`${shortNow} short`}</span>} />
         {stepRow}
         <div class="sl-short">
           <div class="sl-short-h"><span><Icon name="warning" size={16} stroke={2.2} /><b class="mono">{shortNow}</b> short</span><span><b class="mono">{raw}</b> asked · <b class="mono">{shelf}</b> on shelf</span></div>
@@ -204,7 +213,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
     const m = manager(b);
     return (
       <div class="sl-open">
-        <div class="sl-open-h"><Head l={l} b={b} /></div>
+        <OpenHead l={l} b={b} />
         {stepRow}
         <div class="sl-open-r g8"><div class="sl-flex0"><PriceLink l={l} /></div><Bin l={l} /></div>
         <div class="sl-ruth">
@@ -218,7 +227,7 @@ export function OpenLine(p: { l: Line; b: Books; me: string; customerId: string 
   const last = p.customerId ? lastPaid(b, p.customerId, l.itemId, l.variantIdx) : null;
   return (
     <div class={'sl-open' + (rest > 0 ? ' split' : '')}>
-      <div class="sl-open-h"><Head l={l} b={b} /></div>
+      <OpenHead l={l} b={b} />
       {stepRow}
       {rest > 0 && split != null && <SplitPanel b={b} shelf={split} rest={rest} />}
       <div class="sl-open-p">

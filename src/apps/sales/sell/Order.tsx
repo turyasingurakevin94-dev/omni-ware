@@ -10,7 +10,7 @@
  * { customer, from: 'chat', chat } (what they asked on WhatsApp: SL04).
  */
 import type { JSX } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { isDataError } from '../../../core/datasource.ts';
 import type { Books, Order } from '../../../core/types.ts';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -72,6 +72,8 @@ export function OrderScreen(p: ScreenProps): JSX.Element {
   const b = books.value;
   const [ready] = useState(() => { if (b) init(b, p.params); return !!b; });
   const [sending, setSending] = useState(false);
+  // A line's Undo belongs to this order: it goes when the order closes, never over another tab (SAL-025).
+  useEffect(() => () => toast.hide('order'), []);
   if (b && !ready && !cur.value) init(b, p.params);
   const x = cur.value;
   if (!b || !x) return <main class="sl-order" aria-busy="true" />;

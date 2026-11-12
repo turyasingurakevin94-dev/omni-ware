@@ -136,3 +136,19 @@ export function isGenericName(name: string): boolean {
   const n = String(name || '').trim().toLowerCase();
   return !n || /^(walk-?in|cash (sale|customer|client)|counter (sale|customer)|customer|client|unknown|n\/a|none|-+|\.+)$/.test(n);
 }
+
+/** A login handle, not a name: has an @, or is one word with a digit ("grace2", "musa.k1") (store.html:1354 looksHandle). */
+export function looksHandle(name: string): boolean {
+  const n = String(name || '').trim();
+  return n.includes('@') || (/\d/.test(n) && !/\s/.test(n));
+}
+
+/**
+ * One name per person (store.html:1366 personName; WORD-01, STO-WORD-11): the first of the names given
+ * that is a real name (the one they chose, their staff record's, the one stored with the row), else the
+ * role's word ("The manager"), else "A colleague". Never an email handle, never "Someone".
+ */
+export function personName(names: (string | null | undefined)[], roleWord: string | null = null): string {
+  const hit = names.map((n) => String(n || '').trim()).find((n) => n && !looksHandle(n));
+  return hit || roleWord || 'A colleague';
+}

@@ -4,12 +4,13 @@
  * so every write goes through the one outbox (spec 06 Q4) and every read
  * refreshes the same copy.
  *
- *   phase     starting → login | signed-elsewhere | ready
+ *   phase     starting → login | signed-elsewhere | which-shop | ready
  *   books     the shop as last read (null while it loads: screens draw their skeleton)
  *   chats     the WhatsApp side, refreshed more often (spec 06 §2)
  *   online    signal on this phone; kept: what the outbox holds
  *   drafts    orders not placed yet (the red +'s count), kept on this phone
  */
+import { chooseShopOnPhone, chosenShop, forgetShop } from '../../../core/shop-choice.ts';
 import { computed, signal } from '@preact/signals';
 import { waitingChats } from '../../../core/chats.ts';
 import type { DataSource, OrderDraft } from '../../../core/datasource.ts';
@@ -20,7 +21,7 @@ import { salesScope } from '../../../core/scope.ts';
 import { supabaseSource } from '../../../core/supabase/index.ts';
 import type { Books, ChatBooks, Member, Session } from '../../../core/types.ts';
 
-export type Phase = 'starting' | 'login' | 'signed-elsewhere' | 'ready';
+export type Phase = 'starting' | 'login' | 'signed-elsewhere' | 'which-shop' | 'ready';
 
 /** An order being built and not placed yet (sales.html nwDrafts: kept on the phone). */
 export interface Draft extends OrderDraft {
@@ -205,6 +206,8 @@ export async function enter(s: Session): Promise<void> {
     phase.value = 'signed-elsewhere';
     return;
   }
+  // TD28 (SAL-019): a sign-in that opens more than one shop asks which, once; the choice is kept until sign-out.
+  if (s.shops && s.shops.length > 1 && !s.shops.some((x) => x.shopId === chosenShop())) { phase.value = 'which-shop'; return; }
   await openOutbox(s.userId);
   drafts.value = loadDrafts(s.userId);
   phase.value = 'ready';
@@ -219,6 +222,13 @@ export async function enter(s: Session): Promise<void> {
   }
 }
 
+/** Which shop? (TD28): kept on this phone, then the books of that shop. */
+export async function openShop(shopId: string): Promise<void> {
+  chooseShopOnPhone(shopId);
+  phase.value = 'starting';
+  await start();
+}
+
 export async function signIn(email: string, password: string): Promise<void> {
   await enter(await source.signIn(email, password));
 }
@@ -226,6 +236,7 @@ export async function signIn(email: string, password: string): Promise<void> {
 export async function signOut(): Promise<void> {
   timers.forEach((t) => clearInterval(t)); timers = [];
   await source.signOut();
+  forgetShop();
   session.value = null; books.value = null; chats.value = null; elsewhere.value = null;
   phase.value = 'login';
 }

@@ -19,7 +19,7 @@ const path = require('path');
 const { read, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 5: roles and privacy (0164)');
-const store = read('store.html');
+const store = read('old/store.html');
 const sql = read('supabase/migrations/0164_store_roles_and_privacy.sql');
 const invite = read('supabase/functions/invite-worker/index.ts');
 

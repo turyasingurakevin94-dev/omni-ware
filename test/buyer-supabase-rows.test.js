@@ -136,6 +136,37 @@ raw.quotes = raw.quotes.filter((q) => q.status !== 'awaiting_goods');
 b = booksOf(raw);
 t.check(b.trip && b.trip.state === 'in' && b.trip.handedInAt === NOW - 2 * MIN, 'nothing to plan: today\'s round reads handed in');
 
+/* ---- BUY-14: take back the cash ask (buyer_handoffs → withdrawn, only while open, only my own) ---- */
+const TR = require(path.join(ROOT, 'src/core/buyer/supabase/trip.ts'));
+const fakeSb = (rows) => {
+  const calls = [];
+  const q = { filters: [], patch: null };
+  const chain = {
+    update(p2) { q.patch = p2; return chain; },
+    eq(k, v) { q.filters.push([k, v]); return chain; },
+    select() { calls.push({ ...q }); return Promise.resolve({ data: rows, error: null }); },
+  };
+  return { calls, from(tbl) { q.table = tbl; return chain; } };
+};
+(async () => {
+  const sess = base().session;
+  const rawAsk = (status, by) => ({ ...base(), handoffs: [{ id: 'h9', kind: 'trip_cash', for_role: 'accounts', ref: 'round:ab12cd34', status, created_by: by, created_at: iso(NOW - 10 * MIN), payload: { supplierIds: ['s3'], amount: 640000, v: 2 } }] });
+  let sb = fakeSb([{ id: 'h9' }]);
+  await TR.takeBackCash(sb, sess, rawAsk('open', 'u-buyer'));
+  const c = sb.calls[0], f = Object.fromEntries(c.filters);
+  t.check(c.table === 'buyer_handoffs' && c.patch.status === 'withdrawn' && f.id === 'h9' && f.status === 'open' && f.kind === 'trip_cash' && f.created_by === 'u-buyer' && f.shop_id === 'shop',
+    'take back: my open trip_cash ask goes to withdrawn, filtered on status open');
+  sb = fakeSb([]);
+  try { await TR.takeBackCash(sb, sess, rawAsk('open', 'u-buyer')); t.check(false, 'no row changed should refuse'); }
+  catch (e) { t.check(e.kind === 'refused' && e.message === 'Esther has given it', 'no row changed (given meanwhile): refused, Esther has given it'); }
+  sb = fakeSb([{ id: 'h9' }]);
+  try { await TR.takeBackCash(sb, sess, rawAsk('done', 'u-buyer')); t.check(false, 'a given ask should refuse'); }
+  catch (e) { t.check(e.message === 'Esther has given it' && sb.calls.length === 0, 'a given ask: refused, nothing written'); }
+  try { await TR.takeBackCash(sb, sess, rawAsk('open', 'u-other')); t.check(false, "another's ask should refuse"); }
+  catch (e) { t.check(e.kind === 'refused' && sb.calls.length === 0, "another runner's ask: refused, nothing written"); }
+  process.exit(t.done() ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });
+
 /* ---- the order changes, as buyer.html makes them ---- */
 const ctx = { uid: 'u-buyer', now: NOW, agents: [] };
 const q = O.quoteOf(base().quotes[1]);
@@ -156,5 +187,4 @@ O.dropLine(q3, 0, 'Nobody has it', 'u-buyer', NOW);
 t.check(q3.items.length === 2 && q3.droppedLines[0].reason === 'Nobody has it' && q3.droppedLines[0].at === 0, 'a dropped line leaves items and is kept in droppedLines');
 O.setConfirm(q3, 's2', 'pending', '', {}, ctx);
 t.check(q3.supplierConfirms.s2.state === 'pending' && q3.supplierConfirms.s2.askedAt === NOW - 40 * MIN, 'undo to pending keeps askedAt');
-
-process.exit(t.done() ? 1 : 0);
+// The run ends when the take-back checks above (async) are done.

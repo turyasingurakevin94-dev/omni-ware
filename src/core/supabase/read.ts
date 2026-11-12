@@ -42,10 +42,11 @@ const data = (r: { data?: Row[] | null; error?: unknown }): Row[] => (r && !r.er
 
 /**
  * Who is signed in, and to which shop (sales.html:4833-4858 boot): the login, then their
- * shop_members rows; Sales opens for sales, owner, admin or manager. More than one such shop:
- * the first (the shop picker is the shell's to draw when it is needed).
+ * shop_members rows; Sales opens for sales, owner, admin or manager. More than one such shop: the one this phone
+ * chose (`prefer`), else the first, with every choice in `shops` so the shell asks Which shop? (TD28, SAL-019; as
+ * sales.html chooseShop did).
  */
-export async function readSession(sb: Sb, roles: string[] = ['sales', 'owner', 'admin', 'manager'], app: string = 'Sales'): Promise<Session | null> {
+export async function readSession(sb: Sb, roles: string[] = ['sales', 'owner', 'admin', 'manager'], app: string = 'Sales', prefer: string | null = null): Promise<Session | null> {
   const { data: u, error: ue } = await sb.auth.getUser();
   const user = !ue && u && u.user ? u.user : null;
   if (!user) {
@@ -56,12 +57,15 @@ export async function readSession(sb: Sb, roles: string[] = ['sales', 'owner', '
   // Before 0164 there is no display_name: the same read without it.
   if (error && /display_name/.test(String(error.message || ''))) ({ data: ms, error } = await sb.from('shop_members').select('shop_id, role, shops(name, created_at)').eq('user_id', user.id));
   if (error) throw isNetwork(error) ? dataError('offline', 'No signal') : dataError('refused', String(error.message || error));
-  const pick = ((ms || []) as Row[]).find((m) => roles.includes(m.role));
+  const mine = ((ms || []) as Row[]).filter((m) => roles.includes(m.role));
+  const pick = mine.find((m) => String(m.shop_id) === prefer) || mine[0];
   if (!pick) throw dataError('refused', 'This login is not in ' + app, 'role');
+  const shops = mine.length > 1 ? mine.map((m) => ({ shopId: String(m.shop_id), name: String((m.shops && m.shops.name) || 'The shop'), role: m.role as Role, since: m.shops && m.shops.created_at ? String(m.shops.created_at).slice(0, 10) : null })) : undefined;
   const meta = user.user_metadata || {};
   return {
     userId: String(user.id), shopId: String(pick.shop_id), shopName: String((pick.shops && pick.shops.name) || 'The shop'), role: pick.role as Role,
     name: String(pick.display_name || meta.full_name || meta.name || String(user.email || '').split('@')[0]),
+    ...(shops ? { shops } : {}),
   };
 }
 

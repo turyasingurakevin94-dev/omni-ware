@@ -4,7 +4,7 @@
  * stands in for would, after a short wait so "Sending…" is seen.
  *
  *   ?demo                 09:00, every line to ask
- *   &state=midday|trip|empty
+ *   &state=midday|cash|trip|empty
  *   &offline=1            no signal: writes are refused as offline (the outbox keeps them)
  */
 import { dataError } from '../../datasource.ts';
@@ -25,7 +25,7 @@ export interface BuyerDemo extends BuyerSource {
 export function readState(search: string): { state: BuyerDemoState | null; offline: boolean } {
   const q = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const s = q.get('state');
-  return { state: s === 'midday' || s === 'trip' || s === 'empty' || s === 'morning' ? s : null, offline: q.get('offline') === '1' };
+  return { state: s === 'midday' || s === 'cash' || s === 'trip' || s === 'empty' || s === 'morning' ? s : null, offline: q.get('offline') === '1' };
 }
 
 export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } = {}): BuyerDemo {
@@ -117,6 +117,11 @@ export function buyerDemo(search: string = '?demo', opts: { instant?: boolean } 
       b.trip.state = 'cash'; b.trip.cash.askedAt = clock();
       // Esther gives it at once in the demo, so the trip can go on.
       b.trip.cash.givenAt = clock(); b.trip.cash.by = b.team.find((m) => m.role === 'accounts')?.id || null; b.trip.state = 'on';
+    }),
+    takeBackCash: () => later(() => {
+      const t = b.trip, esther = b.team.find((m) => m.role === 'accounts');
+      if (!t || t.state !== 'cash') throw dataError('refused', `${esther ? esther.name.split(' ')[0] : 'Accounts'} has given it`, 'given');
+      t.state = 'planned'; t.cash = { ...t.cash, askedAt: null, givenAt: null, by: null };
     }),
     stopDone: (sid, counts: StopCount[], paid: UGX) => later(() => {
       const s = b.trip?.stops.find((x) => x.supplierId === sid);

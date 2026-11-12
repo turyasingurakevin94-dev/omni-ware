@@ -110,7 +110,7 @@ export function answeredRows(b: BuyerBooks, now: Ms): (SupplierGroup & { state: 
 
 export interface Tiles { toask: number; asked: number; found: number; ontrip: number; suppliers: number; foundSuppliers: number }
 
-/** On the move: suppliers to ask, asked, found; lines on the trip; and of all suppliers in play, how many found. */
+/** On the move: suppliers to ask, asked, found, on the trip; and of all suppliers in play, how many found. */
 export function tiles(b: BuyerBooks, now: Ms): Tiles {
   const refs = lineRefs(b), sup = (st: LineState) => new Set(refs.filter((r) => r.state === st).map((r) => r.line.supplierId)).size;
   // A supplier asked for a live order stays in play after its line moves on (Client waits, another supplier):
@@ -119,9 +119,72 @@ export function tiles(b: BuyerBooks, now: Ms): Tiles {
   liveOrders(b).forEach((o) => Object.entries(o.confirms).forEach(([sid, c]) => { if (c && c.askedAt && o.lines.some((l) => !l.removed)) inPlay.add(sid); }));
   return {
     // To ask counts the suppliers one Ask goes to (Kevin, 11 Nov: suppliers), the very rows Today lists (BUY-2).
-    toask: askGroups(b, now).length, asked: sup('asked'), found: sup('found'), ontrip: refs.filter((r) => r.state === 'ontrip').length,
+    // Every tile counts suppliers (BUY-03): On the trip too, the suppliers with a line on the road.
+    toask: askGroups(b, now).length, asked: sup('asked'), found: sup('found'), ontrip: sup('ontrip'),
     suppliers: inPlay.size, foundSuppliers: sup('found'),
   };
+}
+
+/*
+ * One definition per number (Buyer round 1, BUY-03; ROUND-1.md "the one definition per number"). Each
+ * number on a Buyer screen is one of these, and says its unit word beside it (UNIT, with counted()).
+ *
+ *   To ask · Asked · Found · On the trip   suppliers (tiles)
+ *   Checking                               orders still being checked (checking)
+ *   Needs you                              jobs: a supplier to ask, a line with no supplier, a Not found line (jobs)
+ *   the red +                              stops on the plan; a held line is not a stop (planStops)
+ *   a supplier's record                    asks over the last 30 days: said yes N of M; none at 0 of 0 (record)
+ */
+export const UNIT = { tile: 'supplier', checking: 'order', needs: 'job', stop: 'stop', record: 'ask' } as const;
+
+/** Still in Checking: a draft with a line not found yet, oldest first (Orders' head and Today's "On the move"). */
+export function checking(b: BuyerBooks): BOrder[] {
+  return b.orders.filter((o) => o.status === 'draft' && !readyForBuying(o)).sort((x, y) => x.placedAt - y.placedAt);
+}
+
+/** Needs you: one job per row Today draws — each supplier to ask, each line with no supplier, each Not found line. */
+export function jobs(b: BuyerBooks, now: Ms): number {
+  const refs = lineRefs(b);
+  return askGroups(b, now).length + refs.filter((r) => r.state === 'nosupplier' || r.state === 'notfound').length;
+}
+
+/**
+ * The stops the red +, the Plan's head and Today's trip card count. Before the cash ask: the plan's stops not
+ * taken off, and a stop whose every line is held (Price up, Asked) is no stop. Once asked: the trip's stops
+ * not off; on the road, those still to do.
+ */
+export function planStops(b: BuyerBooks): Stop[] {
+  const t = b.trip;
+  if (t && t.state === 'cash') return t.stops.filter((s) => !s.off);
+  if (t && t.state === 'on') return t.stops.filter((s) => !s.off && !s.done);
+  return planned(b).filter((s) => !s.off);
+}
+
+/** The plan's stops before the cash ask, off ones kept (Put back): the trip's own once planned, else the proposal; held-only stops gone. */
+export function planned(b: BuyerBooks): Stop[] {
+  const p = tripPlan(b), t = b.trip;
+  const stops = t && (t.state === 'planned' || t.state === 'cash') ? t.stops : p.stops;
+  if (t && t.state === 'cash') return stops;
+  const held = new Set(p.held.map((r) => `${r.order.id}|${r.line.key}`));
+  return stops.filter((s) => s.lines.some((l) => !held.has(`${l.orderId}|${l.key}`)));
+}
+
+/** A supplier's record, over the last 30 days: said yes `yes` of `asks`. Null at 0 of 0 (nothing to show). */
+export function record(s: Supplier): { yes: number; asks: number } | null {
+  return s.asked > 0 ? { yes: s.found, asks: s.asked } : null;
+}
+
+/** "said yes 9 of 10 asks". */
+export function recordWord(r: { yes: number; asks: number }): string {
+  return `said yes ${r.yes} of ${r.asks} ${r.asks === 1 ? 'ask' : 'asks'}`;
+}
+
+/** A unit for "/ pcs" and "per pcs": the price's own, else the line's, else "each" (BUY-12). */
+export function unitOr(unit: string | null | undefined, lineUnit?: string | null): string {
+  const u = String(unit || '').trim();
+  if (u) return u;
+  const l = String(lineUnit || '').trim();
+  return l || 'each';
 }
 
 /** "To buy today": what the trip as planned costs (the found lines, less any stop taken off this trip). */
@@ -261,4 +324,17 @@ export function askMessage(supplier: Supplier, lines: BLine[], shop: string): st
 /** The wa.me link, with the message written when there is one. */
 export function waLink(phone: string, text?: string): string {
   return `https://wa.me/${intlPhone(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+}
+
+/** A typed cost more than this share above or below the list price is "Far from the list" (BUY-07, GLOSSARY). */
+export const FAR_FROM_LIST = 0.5;
+
+/**
+ * Far from the list (Buyer round 1, BUY-07): the typed price is more than 50% above or below the list
+ * price, so it may be a slip (2,700 for 24,000). The screen says "check it" and its button becomes
+ * "Save anyway": nothing is blocked. No list price (or nothing typed): never far.
+ */
+export function farFromList(price: UGX, list: UGX | null | undefined): boolean {
+  if (!list || !(list > 0) || !(price > 0)) return false;
+  return Math.abs(price - list) > list * FAR_FROM_LIST;
 }

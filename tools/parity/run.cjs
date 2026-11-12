@@ -26,9 +26,18 @@
  *   {"tap": "Orders"}                      by aria-label, else visible text (exact, then contained)
  *   {"tap": {"label": "Close"}} · {"tap": {"text": "Kato"}} · {"tap": {"sel": "nav a:nth-child(2)"}}
  *   {"type": "Kato", "into": "Name, phone or what they said"}   into a field by its label or placeholder (or "sel")
+ *   {"drag": {"sel": ".ow-knob", "dx": 300, "hold": false}} (a slide; hold: shot while pressed)
  *   {"press": "Enter"} · {"wait": 400} · {"wait": "Placed"} (until that text shows) · {"scroll": 300} or {"scroll": "Show 34 more"}
  * A spec may also name a "region": [x, y, w, h] in board pixels, measured on its own as well
  * (TD01's tab bar: [0, 716, 360, 84]).
+ *
+ * More than one app (the Store, docs/spec/04-screens-store.md §1): an app names its boards, its page
+ * and its spec files in APPS below. `--app store` picks it; so does a spec file named
+ * test/parity/store-<area>.json, or `--tab store-<area>`. With none, it is Sales, as before.
+ *   node tools/parity/run.cjs --app store TD01Today.dc.html                  the spec in test/parity/store-*.json
+ *   node tools/parity/run.cjs TD01Today.dc.html test/parity/store-today.json
+ *   node tools/parity/run.cjs --tab store-today · node tools/parity/run.cjs --app store --all
+ * The Store's shots go to docs/audit/store/parity/.
  *
  * Each board is shot at its own size, its "$preview" (360 × 800 for a screen; the parts
  * boards Main and Main2 are 1600 × 1600 and 1600 × 1000, reached at ?demo&parts=main|main2,
@@ -40,10 +49,34 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const ROOT = path.join(__dirname, '..', '..');
-const BOARDS = path.join(ROOT, 'docs/canvas/sales-agent/boards');
 const SPECS = path.join(ROOT, 'test/parity');
-const OUT = path.join(ROOT, 'docs/audit/sales/parity');
 const ORIGIN = 'http://omni.local';
+
+/**
+ * Each app: its canvas boards, its page (with ?demo), where its shots go, which spec files are its
+ * own, and whether the page loads tabs after the first paint (Sales' per-tab loading marks <html data-tabs>).
+ */
+const APPS = {
+  sales: { boards: 'docs/canvas/sales-agent/boards', page: 'next/sales.html', out: 'docs/audit/sales/parity', specs: (f) => !/^store-/.test(f), tabs: true },
+  store: { boards: 'docs/canvas/store-agent/boards', page: 'store.html', out: 'docs/audit/store/parity', specs: (f) => /^store-/.test(f), tabs: true },
+};
+let APP = APPS.sales;
+let BOARDS = path.join(ROOT, APP.boards);
+let OUT = path.join(ROOT, APP.out);
+/** Choose the app the run is for (the default stays Sales). */
+function useApp(name) {
+  if (!APPS[name]) throw new Error(`No app "${name}" (known: ${Object.keys(APPS).join(', ')})`);
+  APP = APPS[name];
+  BOARDS = path.join(ROOT, APP.boards);
+  OUT = path.join(ROOT, APP.out);
+}
+/** The app a run's arguments name: --app x, a store-*.json spec file, or --tab store-…; else Sales. */
+function appOf(args) {
+  const i = args.indexOf('--app');
+  if (i >= 0) return args[i + 1];
+  if (args.some((a) => /(^|\/)store-[^/]*\.json$/.test(a)) || (args[0] === '--tab' && /^store-/.test(args[1] || ''))) return 'store';
+  return 'sales';
+}
 
 /** A board's own size: its $preview (shot.cjs reads it the same way); 360 × 800 when it says none. */
 function sizeOf(board) {
@@ -51,10 +84,12 @@ function sizeOf(board) {
   return m ? { W: +m[1], H: +m[2] } : { W: 360, H: 800 };
 }
 
-function allSpecs() {
+/** Every spec of the app (Sales by default: the specs other apps own are left out). */
+function allSpecs(app = 'sales') {
   const out = [];
   if (!fs.existsSync(SPECS)) return out;
-  for (const f of fs.readdirSync(SPECS).filter((x) => x.endsWith('.json')).sort()) {
+  const mine = (APPS[app] || APPS.sales).specs;
+  for (const f of fs.readdirSync(SPECS).filter((x) => x.endsWith('.json') && mine(x)).sort()) {
     const tab = f.replace(/\.json$/, '');
     const list = JSON.parse(fs.readFileSync(path.join(SPECS, f), 'utf8'));
     (Array.isArray(list) ? list : []).forEach((s) => out.push({ tab, ...s }));
@@ -62,21 +97,25 @@ function allSpecs() {
   return out;
 }
 
-function pick(args) {
-  if (args[0] === '--all') return allSpecs();
-  if (args[0] === '--tab') return allSpecs().filter((s) => s.tab === args[1]);
+function pick(argv) {
+  const name = appOf(argv);
+  useApp(name);
+  const args = argv.filter((a, i) => a !== '--app' && argv[i - 1] !== '--app');
+  if (args[0] === '--all') return allSpecs(name);
+  if (args[0] === '--tab') return allSpecs(name).filter((s) => s.tab === args[1]);
   const board = path.basename(args[0] || '');
   if (!board) throw new Error('usage: run.cjs <Board.dc.html> [spec file or JSON] | --tab <tab> | --all');
   if (args[1] && args[1].trim().startsWith('{')) return [{ tab: tabOf(board), board, ...JSON.parse(args[1]) }];
-  const pool = args[1] ? JSON.parse(fs.readFileSync(path.resolve(args[1]), 'utf8')).map((s) => ({ tab: path.basename(args[1], '.json'), ...s })) : allSpecs();
+  const pool = args[1] ? JSON.parse(fs.readFileSync(path.resolve(args[1]), 'utf8')).map((s) => ({ tab: path.basename(args[1], '.json'), ...s })) : allSpecs(name);
   const hit = pool.find((s) => s.board === board);
-  if (!hit) throw new Error(`No parity spec for ${board} (add one to test/parity/<tab>.json)`);
+  if (!hit) throw new Error(`No parity spec for ${board} (add one to test/parity/${name === 'sales' ? '' : name + '-'}<tab>.json)`);
   return [hit];
 }
 
 function tabOf(board) {
   const c = JSON.parse(fs.readFileSync(path.join(BOARDS, 'canvas.json'), 'utf8'));
   const page = (c.boards[board] && c.boards[board].page) || 'unknown';
+  if (APP === APPS.store) return 'store-' + page;
   return page === 'lang' ? 'parts' : page;
 }
 
@@ -130,7 +169,13 @@ async function step(p, s) {
   } else if (s.press) await p.keyboard.press(s.press);
   else if (typeof s.wait === 'number') await p.waitForTimeout(s.wait);
   else if (typeof s.wait === 'string') await p.getByText(s.wait).first().waitFor({ timeout: 8000 });
-  else if (typeof s.scroll === 'number') await p.mouse.wheel(0, s.scroll);
+  else if (s.drag) {
+    // A slide dragged by the finger: {"drag": {"sel": ".ow-knob", "dx": 300}}; "hold": true keeps it pressed for the shot (a pressed board).
+    const el = await find(p, s.drag.sel ? { sel: s.drag.sel } : s.drag.target), box = await el.boundingBox();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + (s.drag.dx || 300), y, { steps: 10 });
+    if (!s.drag.hold) await p.mouse.up();
+  } else if (typeof s.scroll === 'number') await p.mouse.wheel(0, s.scroll);
   else if (typeof s.scroll === 'string') await (await find(p, s.scroll)).scrollIntoViewIfNeeded();
   else throw new Error('Unknown step ' + JSON.stringify(s));
   await p.waitForTimeout(s.settle ?? 350);
@@ -142,13 +187,13 @@ async function shootApp(browser, spec, { W, H }) {
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push(e.message));
-  await p.goto(`${ORIGIN}/next/sales.html?demo${spec.demo || ''}`, { waitUntil: 'load' });
+  await p.goto(`${ORIGIN}/${APP.page}?demo${spec.demo || ''}`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
   await p.locator('#app > *').first().waitFor({ timeout: 8000 });
   // Per-tab loading (src/apps/sales/shell/tabs.ts): the other tabs' files arrive after the first
   // paint; the page marks <html data-tabs> when they are all here. A tap before then still works
   // (the tab loads first), but every board is shot with the whole app on the phone.
-  if (!/parts=/.test(spec.demo || '')) await p.waitForFunction(() => document.documentElement.dataset.tabs, null, { timeout: 8000 }).catch(() => {});
+  if (APP.tabs && !/parts=/.test(spec.demo || '')) await p.waitForFunction(() => document.documentElement.dataset.tabs, null, { timeout: 8000 }).catch(() => {});
   await p.waitForTimeout(500);
   let taps = 0;
   for (const s of spec.steps || []) { await step(p, s); if (s.tap != null) taps++; }
@@ -164,7 +209,7 @@ async function compare(browser, boardPng, appPng, board, region, { W, H }) {
   const p = await ctx.newPage();
   const url = (b) => 'data:image/png;base64,' + b.toString('base64');
   await p.setContent(`<!doctype html><body style="margin:0;background:#E6E3DD;font:600 13px system-ui">
-    <div style="display:flex;gap:16px;padding:12px 16px 0"><div style="width:${W}px">Canvas · ${board}</div><div style="width:${W}px">App · next/sales.html?demo</div></div>
+    <div style="display:flex;gap:16px;padding:12px 16px 0"><div style="width:${W}px">Canvas · ${board}</div><div style="width:${W}px">App · ${APP.page}?demo</div></div>
     <div style="display:flex;gap:16px;padding:8px 16px 16px"><img id="a" src="${url(boardPng)}" width="${W}" height="${H}"><img id="b" src="${url(appPng)}" width="${W}" height="${H}"></div>
     <canvas id="d" width="${W}" height="${H}" style="display:none"></canvas></body>`);
   await p.waitForFunction(() => [...document.images].every((i) => i.complete));
@@ -221,6 +266,6 @@ async function main() {
   process.exit(failed ? 1 : 0);
 }
 
-module.exports = { allSpecs, serve, step, sizeOf, ORIGIN };
+module.exports = { allSpecs, serve, step, sizeOf, ORIGIN, APPS, appOf };
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });

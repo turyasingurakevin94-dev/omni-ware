@@ -26,7 +26,7 @@ import { nav } from '../shell/nav.ts';
 import { act, books, kept, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
 import { FromChip, KEPT, KEPT_TOAST } from './parts.tsx';
-import { byRole, firstQuery, switchOptions, type SwitchRow } from './rules.ts';
+import { byRole, firstQuery, priceComing, switchOptions, type SwitchRow } from './rules.ts';
 import './sheets.css';
 
 /** Why the item changes (the Sales message says it). */
@@ -37,7 +37,8 @@ const SELLS_AT = 0.56;
 
 function Option(p: { r: SwitchRow; sell: number; qty: number; best: boolean; ruth: string; busy: boolean; disabled: boolean; on: () => void }): JSX.Element {
   const { r } = p, tone = r.ruth ? '#8E2A22' : r.diff > 0 ? '#7A4A02' : '#0F6B43';
-  const scale = p.sell / SELLS_AT;
+  // Price coming (sell 0): the bar is drawn against the price itself, never divided by 0 (BUY-08).
+  const scale = (p.sell > 0 ? p.sell : r.price.price || 1) / SELLS_AT;
   return (
     <div class={cx('ow-b-orders-opt', p.best && 'best')}>
       <div class="r">
@@ -138,7 +139,8 @@ export function SwitchScreen({ params }: { params: Params }): JSX.Element {
   return (
     <FullSheet onBack={() => nav.back()} backLabel={null} head={head} foot={none ? undefined : foot} pad="4px 16px 16px" gap={8}>
       {off && <Notice kind="offline">Offline · it sends when back</Notice>}
-      {!none && <div class="ow-b-orders-lh"><span>On the price list</span><span class="sells">sells <span class="mono">{fig(l.sell)}</span></span></div>}
+      {!none && <div class="ow-b-orders-lh"><span>On the price list</span>
+        {priceComing(l) ? <span class="sells">{`Price coming · ${ruth ? firstWord(ruth.name) : 'the Manager'} prices it`}</span> : <span class="sells">sells <span class="mono">{fig(l.sell)}</span></span>}</div>}
       {rows.map((r, i) => (
         <Option key={`${r.price.supplierId}|${r.price.item}`} r={r} sell={l.sell} qty={l.qty} best={i === 0} ruth={ruth ? firstWord(ruth.name) : 'Ruth'}
           busy={busy === `${r.price.supplierId}|${r.price.item}`} disabled={!!busy} on={() => { void pick(r); }} />

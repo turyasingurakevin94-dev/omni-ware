@@ -5,15 +5,16 @@
  *   <Notice kind="offline" action={{ label: 'Try again', on: flush }}>No signal · <b class="mono">2</b> not sent yet</Notice>
  *   <Notice kind="someone">Someone else just did this · Refreshed</Notice>
  *   <Notice kind="paused">Paused by Ruth</Notice>
+ *   <Notice kind="failed" action={{ label: 'Try again', on: retry }}>That did not save · tell Kevin</Notice>   red, navy Try again (the Store's IN08)
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { Icon, type IconName } from './icons.tsx';
 import './notice.css';
 
-const KIND: Record<'offline' | 'someone' | 'paused', IconName> = { offline: 'offline', someone: 'undo', paused: 'clock' };
+const KIND: Record<'offline' | 'someone' | 'paused' | 'failed', IconName> = { offline: 'offline', someone: 'undo', paused: 'clock', failed: 'warning' };
 
 export interface NoticeProps {
-  kind: 'offline' | 'someone' | 'paused';
+  kind: 'offline' | 'someone' | 'paused' | 'failed';
   action?: { label: string; on: () => void };
   /** Above the dock (KC17): the band runs on under the dock's rounded top. */
   under?: boolean;
@@ -23,7 +24,7 @@ export interface NoticeProps {
 
 export function Notice(p: NoticeProps): JSX.Element {
   return (
-    <div role="status" class={'ow-notice k-' + p.kind + (p.under ? ' under' : '') + (p.class ? ' ' + p.class : '')}>
+    <div role={p.kind === 'failed' ? 'alert' : 'status'} class={'ow-notice k-' + p.kind + (p.under ? ' under' : '') + (p.class ? ' ' + p.class : '')}>
       <span class="ow-notice-ic"><Icon name={KIND[p.kind]} size={18} stroke={2} /></span>
       <span class="ow-notice-t">{p.children}</span>
       {p.action && <button type="button" class="ow-notice-act" onClick={p.action.on}><span>{p.action.label}</span></button>}

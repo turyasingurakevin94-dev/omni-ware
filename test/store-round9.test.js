@@ -21,8 +21,8 @@ const path = require('path');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('store audit round 9: speed');
-const store = read('store.html');
-const sw = read('store-sw.js');
+const store = read('old/store.html');
+const sw = read('old/store-sw.js');
 const sql = read('supabase/migrations/0166_store_live_snapshot.sql');
 const fn = n => { const l = store.split('\n').find(x => x.startsWith('function ' + n + '(') || x.startsWith('async function ' + n + '(')); return l && (l.match(/\{/g) || []).length === (l.match(/\}/g) || []).length ? l : extractFunction(store, n); };
 
@@ -31,8 +31,8 @@ const fn = n => { const l = store.split('\n').find(x => x.startsWith('function '
   t.check(/if \(\/\(\^\|\\\.\)supabase\\\.co\$\/\.test\(url\.hostname\)\) return;/.test(sw) && !/indexedDB/.test(sw), 'the worker never answers a request to the books, and keeps no data');
   t.check(/if \(had\) \{ event\.waitUntil\(fresh\.catch\(\(\) => \{\}\)\); return had; \}/.test(sw) && /if \(old != null && old !== body\) await tell\(\);/.test(sw) && /ready = false;/.test(sw), 'the page comes from the phone, is fetched again behind it, and a changed one is told once');
   t.check(/@supabase\/supabase-js@/.test(sw) && /fonts\.gstatic\.com/.test(sw) && /\/manifest-store\.json/.test(sw), 'supabase.js, the fonts and the manifest are kept on the phone');
-  t.check(/navigator\.serviceWorker\.register\('\/store-sw\.js', \{ scope: '\/store\.html' \}\)/.test(store) && /if \(native \|\| !\('serviceWorker' in navigator\) \|\| !\(location\.protocol === 'https:' \|\| location\.hostname === 'localhost'\)\) return;/.test(store)
-    && /S\.prefs = loadPrefs\(\); applyPrefs\(\); registerStoreSW\(\);/.test(store), 'registered for the Store page only, over https, never inside the Android app');
+  t.check(/navigator\.serviceWorker\.register\('\/old\/store-sw\.js', \{ scope: '\/old\/store\.html' \}\)/.test(store) && /if \(native \|\| !\('serviceWorker' in navigator\) \|\| !\(location\.protocol === 'https:' \|\| location\.hostname === 'localhost'\)\) return;/.test(store)
+    && /S\.prefs = loadPrefs\(\); applyPrefs\(\); registerStoreSW\(\);/.test(store), 'registered for the (old) Store page only, over https, never inside the Android app');
   t.check(/<b style="font-size:var\(--t-14\)">Update ready<\/b>/.test(store) && /A newer Store app is here/.test(store) && /data-act="swreload"[^>]*>Reload<\/button>/.test(store) && /\$\{updateBar\(\)\}\$\{waitCard\(live\)\}/.test(store), 'Today says "Update ready · A newer Store app is here · Reload" at the top');
   // STO-SPD-02
   t.check(/ACT\['in:fdq'\] = t => \{ S\.ui\.fd\.q = t\.value; S\.ui\.fd\.lim = FD_STEP; clearTimeout\(ACT\.fdT\); ACT\.fdT = setTimeout\(findRedraw, 120\); \};/.test(store), 'typing waits 120 ms, then redraws what the query changes');

@@ -110,7 +110,7 @@ export function AskCard(p: { b: Books; c: Customer | null; ask: SourcingAsk | nu
         {`${names.join(' and ')} asked for `}<b class="mono">{asked}</b>
       </div>
       {sent
-        ? <div role="status" class="sl-ask-sent"><Icon name="check" size={16} stroke={2.8} />{`Sent to ${m.first} · ${ago === '0 m' ? 'just now' : `${ago} ago`}`}</div>
+        ? <div role="status" class="sl-ask-sent"><Icon name="check" size={16} stroke={2.8} />{`Sent to ${m.first} · ${ago === 'just now' ? ago : `${ago} ago`}`}</div>
         : <button type="button" class="sl-stock-go" onClick={() => void send(ask.name, p.qty, c)}><Icon name="plus" size={17} stroke={2.4} />{`Add ${c ? whose(c.name) : 'this'} ask · `}<span class="mono">{p.qty}</span> pc</button>}
     </div>
   );

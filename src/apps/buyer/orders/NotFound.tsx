@@ -9,13 +9,16 @@
  *   Remove           a slide in the navy dock → act('removeLine', …, reason)                           Grace sees: Removed
  *
  *   openNotFound(553, 'L0')     the Replies "No" path opens it too
+ *
+ * BUY-13 (board R1CostPrice): what the salesperson will see shows only once a choice is picked (the navy
+ * "{Seller} sees: Switched · Sending" over the slide), never before.
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
-import { Dock } from '../../../ui/Dock.tsx';
+import { Slide } from '../../../ui/Slide.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
@@ -26,13 +29,14 @@ import { barW } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { act, books, now } from '../shell/store.ts';
 import { FromChip, KEPT, KEPT_TOAST, RowAct, Sees, StateWord } from './parts.tsx';
-import { byRole, nextSupplier, orderView } from './rules.ts';
+import { byRole, nextSupplier, orderView, overSell, priceComing } from './rules.ts';
+import '../../../ui/dock.css';
 import './sheets.css';
 
 /** The reason Sales is told when a line comes off for want of a supplier (buyer.html W8). */
 export const REMOVE_REASON = 'Nobody has it';
 
-type Busy = 'other' | 'wait' | null;
+type Busy = 'other' | 'wait' | 'remove' | null;
 
 /** What happened, as a toast: kept on the phone (no signal) or done. */
 function told(r: { kept: boolean }, done: string, undo?: () => void): void {
@@ -56,7 +60,9 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
   const moses = byRole(b, 'sourcing');
   const finder = moses ? firstWord(moses.name) : 'Sourcing';
   const only = v.live.length <= 1;
-  const left = v.total - (x.state === 'removed' ? 0 : x.total);
+  const coming = priceComing(l);
+  // The word Sales gets, once a choice is picked (BUY-13).
+  const chosen = busy === 'other' ? (pick ? 'Asked' : 'Switched') : busy === 'wait' ? 'Client waits' : busy === 'remove' ? 'Removed' : null;
 
   const fail = (what: string, again: () => void) => (e: unknown) => {
     toast.show('Not saved', { kind: 'error', sub: what, retry: again });
@@ -85,11 +91,12 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
     } catch (e) { fail('Client waits', () => { void wait(); })(e); } finally { setBusy(null); }
   };
   const remove = async () => {
+    setBusy('remove');
     try {
       const r = await act('removeLine', o.id, l.key, REMOVE_REASON);
       sheet.close();
       told(r, `Removed · ${l.name}`);
-    } catch (e) { fail(`Remove ${l.name}`, () => { void remove(); })(e); }
+    } catch (e) { fail(`Remove ${l.name}`, () => { void remove(); })(e); } finally { setBusy(null); }
   };
   const otherItem = () => { sheet.close(); nav.push('orders/switch', { id: o.id, key: l.key }); };
 
@@ -117,12 +124,11 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
               </span>
               <RowAct icon={pick ? 'send' : 'swap'} word={pick ? 'Ask' : 'Switch'} busyWord={pick ? 'Asking' : 'Switching'} busy={busy === 'other'} label={`${pick ? 'Ask' : 'Switch to'} ${alt.supplier.name} at ${fig(alt.price.price)}`} on={() => { void other(); }} />
             </div>
-            <div class="pic" role="img" aria-label={`Cost ${fig(alt.price.price)}, ${seller} sells at ${fig(l.sell)}`}>
-              <div class="bar"><span style={{ width: barW((alt.price.price / Math.max(1, l.sell)) * 100), background: alt.price.price > l.sell ? '#8E2A22' : '#0F6B43' }} /></div>
-              <div class="k"><span>cost <span class="mono">{fig(alt.price.price)}</span></span><span>sells <span class="mono">{fig(l.sell)}</span></span></div>
+            <div class="pic" role="img" aria-label={coming ? `Cost ${fig(alt.price.price)}, price coming` : `Cost ${fig(alt.price.price)}, the client pays ${fig(l.sell)}`}>
+              <div class="bar"><span style={{ width: barW(coming ? 100 : (alt.price.price / Math.max(1, l.sell)) * 100), background: overSell(l, alt.price.price) ? '#8E2A22' : '#0F6B43' }} /></div>
+              <div class="k"><span>cost <span class="mono">{fig(alt.price.price)}</span></span>{coming ? <span>Price coming</span> : <span>client pays <span class="mono">{fig(l.sell)}</span></span>}</div>
             </div>
             <div class="f">
-              <Sees who={seller}>{pick ? 'Asked' : 'Switched'}</Sees>
               <button type="button" class="more" onClick={otherItem}>Other item<Icon name="chevron-right" size={16} stroke={2.2} /></button>
             </div>
           </div>
@@ -143,22 +149,24 @@ function NotFoundSheet(p: { orderId: number; lineKey: string }): JSX.Element {
               </span>
               <RowAct kind="line" icon="hourglass" word="Client waits" busyWord="Sending" busy={busy === 'wait'} on={() => { void wait(); }} />
             </div>
-            <div class="f line"><Sees who={seller}>Client waits</Sees></div>
           </div>
         ) : (
           <>
             <Button icon="hourglass" state={busy === 'wait' ? 'sending' : 'idle'} onClick={() => { void wait(); }}>{`Client waits · ${finder} finds it`}</Button>
-            <Sees who={seller} class="ow-b-orders-nfsees">Client waits</Sees>
           </>
         )}
       </div>
-      <Dock inline face={<Icon name="bell" size={16} stroke={2} />} words={`${seller} sees: Removed`} total={left} sub={{ text: fig(-x.total, false, true), tone: 'rose' }}
-        style={{ marginTop: 'auto' }}
-        slide={{
-          label: 'Slide to remove', onCommit: remove,
-          onHint: () => toast.show('Slide the red button across', { kind: 'warn' }),
-          lock: only ? { icon: 'lock', label: 'Only line · use Client waits' } : undefined,
-        }} />
+      <div class="ow-dock inline ow-b-orders-nfdock" style={{ marginTop: 'auto' }}>
+        {chosen && (
+          <div class="ow-b-orders-nfchosen" role="status">
+            <Sees who={seller} navy>{chosen}</Sees>
+            <span class="s"><span aria-hidden="true" class="ow-b-orders-spin" />Sending</span>
+          </div>
+        )}
+        <Slide label="Slide to remove" onCommit={remove} state={busy === 'remove' ? 'sending' : undefined}
+          onHint={() => toast.show('Slide the red button across', { kind: 'warn' })}
+          lock={only ? { icon: 'lock', label: 'Only line · use Client waits' } : undefined} />
+      </div>
     </div>
   );
 }

@@ -20,9 +20,10 @@ import { sheet } from '../../../ui/sheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act } from '../shell/store.ts';
+import { act, now } from '../shell/store.ts';
+import { whenShort } from '../../../core/time.ts';
 import { Chip, FromChip, Sees } from './Rows.tsx';
-import { hm, sellersOf, seeWord, unitWord } from './rules.ts';
+import { sellersOf, seeWord, unitWord } from './rules.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
 import { KEPT, KEPT_TOAST } from '../orders/parts.tsx';
 import './asksheet.css';
@@ -43,8 +44,9 @@ function AskSheet(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const run = async (pick: Pick): Promise<void> => {
     setBusy(pick);
     try {
-      if (!asked) await act('ask', s.id, 'call');
+      // New price opens at once; the price screen books the ask with the price on Save (BUY-06).
       if (pick === 'price') { sheet.close(); nav.push('replies/price', { supplier: s.id }); return; }
+      if (!asked) await act('ask', s.id, 'call');
       const r = await act(pick === 'yes' ? 'answerYes' : 'answerNo', s.id);
       sheet.close();
       if (r.kept) toast.show(KEPT, KEPT_TOAST);
@@ -95,7 +97,7 @@ function AskSheet(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
             {busy === 'no' ? <span aria-hidden="true" class="ow-spin" /> : <Icon name="close" size={18} stroke={2.2} />}Not found<Icon name="bell" size={14} stroke={2} />
           </button>
         </div>
-        <Sees who={who} class="ow-b-today-ask-sees" tail={<><span style={{ flex: 1 }} />{asked && g.askedAt != null && <span>Asked · <span class="mono">{hm(g.askedAt)}</span></span>}</>}>
+        <Sees who={who} class="ow-b-today-ask-sees" tail={<><span style={{ flex: 1 }} />{asked && g.askedAt != null && <span>Asked · <span class="mono">{whenShort(g.askedAt, now.value)}</span></span>}</>}>
           <Chip tone="good">Found</Chip>
         </Sees>
       </div>

@@ -7,13 +7,13 @@ import type { JSX } from 'preact';
 import { WORD } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, LineState } from '../../../core/buyer/types.ts';
 import { initials } from '../../../core/names.ts';
-import { clock } from '../../../core/time.ts';
+import { clock, whenShort } from '../../../core/time.ts';
 import type { Member, Ms } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { kept, online } from '../shell/store.ts';
+import { kept, now, online } from '../shell/store.ts';
 import './parts.css';
 
 /** A supplier's tile: 40 on a row, 52 in the hero, 32 on the sheet's strip. */
@@ -29,11 +29,11 @@ export function chipTone(st: LineState, late = false): 'good' | 'bad' | 'warn' |
   return 'neutral';
 }
 
-/** "Found · 09:25" (the answer's time, never the ask's, except an ask with no answer). */
+/** "Found · 09:25", "Found · Yesterday 09:25" (the answer's time, never the ask's, except an ask with no answer). */
 export function StateChip(p: { state: LineState; at: Ms | null; late?: boolean }): JSX.Element {
   return (
     <span class={cx('ow-b-suppliers-chip', 't-' + chipTone(p.state, p.late))}>
-      {p.at != null ? <>{WORD[p.state]} · <span class="mono">{hm(p.at)}</span></> : WORD[p.state]}
+      {p.at != null ? <>{WORD[p.state]} · <span class="mono">{whenShort(p.at, now.value)}</span></> : WORD[p.state]}
     </span>
   );
 }

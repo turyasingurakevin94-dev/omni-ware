@@ -26,6 +26,10 @@ const S = {
   'orders-tab': "<path d='M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z'/><path d='M3.5 7.5 12 12l8.5-4.5M12 12v9' fill='none' style='stroke:var(--ic-in,currentColor)'/>",
   customers: "<circle cx='9' cy='8' r='3.5'/><path d='M2.5 20c.6-3.6 3.3-6 6.5-6s5.9 2.4 6.5 6z'/><path d='M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2 .9 3.2 2.9 3.5 5.7' fill='none'/>",
   plus: "<path d='M12 5v14M5 12h14'/>",
+  /** The Store's red centre: start the next job (store-agent TD01), drawn filled. */
+  play: "<path d='M8 5.5v13l10.5-6.5z'/>",
+  /** The Store's Shelf tab: shelving with boxes (store-agent SH01; screens Q18). */
+  shelf: "<path d='M3.5 3v18M20.5 3v18M3.5 11h17M3.5 19h17'/><path d='M6.5 11V6.5h4.5V11M13 11V8h4.5v3M7 19v-4.5h6V19' fill='none'/>",
   minus: "<path d='M5 12h14'/>",
   /** A stage the order skipped, on a rail's 12 px disc (OR11, OR19, OR31): shorter than minus. */
   skip: "<path d='M6 12h12'/>",
@@ -40,6 +44,7 @@ const S = {
   back: "<path d='M15 6l-6 6 6 6'/>",
   'chevron-right': "<path d='m9 6 6 6-6 6'/>",
   'chevron-down': "<path d='m6 9 6 6 6-6'/>",
+  'chevron-up': "<path d='m6 15 6-6 6 6'/>",
   updown: "<path d='m8 9 4-4 4 4M8 15l4 4 4-4'/>",
   'arrow-right': "<path d='M5 12h14M13 6l6 6-6 6'/>",
   slide: "<path d='m6 6 6 6-6 6M12 6l6 6-6 6'/>",
@@ -58,6 +63,12 @@ const S = {
   checking: "<path d='M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2M9 14l2 2 4-4'/>",
   cart: "<path d='M3 4h2.5l2.2 11h10.6l2-8H6.3'/><circle cx='9' cy='19' r='1.5'/><circle cx='17' cy='19' r='1.5'/>",
   delivered: "<path d='M3.5 7.5 12 3l8.5 4.5V12M3.5 7.5 12 12l8.5-4.5M12 12v9l-8.5-4.5v-9M15 18l2 2 4-4'/>",
+  /** Two sheets: a copy of another order (the Store's PK09). */
+  copy: "<rect x='8' y='8' width='12' height='12' rx='2'/><path d='M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3'/>",
+  /** An arrow into a tray: came in at the gate (the Store's PK01 rail, PK02, PK13). */
+  'came-in': "<path d='M12 3v11M7.5 9.5 12 14l4.5-4.5M4 14v6h16v-6'/>",
+  /** A stack: the Store's To load (its rail, PK01 · OU01 · OU20). */
+  layers: "<path d='M12 3 3 7.5 12 12l9-4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5'/>",
   clock: "<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>",
   hourglass: "<path d='M7 3h10M7 21h10M8 3v3.5a4 4 0 0 0 1.6 3.2L12 11.5l2.4-1.8A4 4 0 0 0 16 6.5V3M8 21v-3.5a4 4 0 0 1 1.6-3.2L12 12.5l2.4 1.8a4 4 0 0 1 1.6 3.2V21'/>",
   warning: "<path d='M12 4 2.8 19.5h18.4zM12 10v4M12 17h.01'/>",
@@ -92,6 +103,35 @@ const S = {
   void: "<path d='M6 3h12v18l-3-2-3 2-3-2-3 2z'/><path d='M9.5 9.5l5 5M14.5 9.5l-5 5'/>",
   // The chat head's "whose chat" chip (S01): two arrows that swap.
   swap: "<path d='M7 7h12l-3.5-3.5M17 17H5l3.5 3.5'/>",
+  /* The Store's (store-agent TD boards): */
+  /** Coming in: goods down into the tray. */
+  'tray-in': "<path d='M12 3v9M8.5 8.5 12 12l3.5-3.5'/><path d='M4 13v6.5h16V13M4 13h4.5l1.2 2.2h4.6L15.5 13H20'/>",
+  /** To load: the yard's trolley with a box on it. */
+  trolley: "<path d='M3.5 4h2.5l3 12.5H20'/><circle cx='9.5' cy='19' r='1.8'/><path d='M10.5 6.5h8v7h-8z'/>",
+  /** A count: the clipboard with lines. */
+  count: "<path d='M9 4h6v3H9zM7 5.5H5V21h14V5.5h-2'/><path d='M9 12h6M9 16h4'/>",
+  /** Close the yard: the evening. */
+  moon: "<path d='M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z'/>",
+  /** Try again, Reload. */
+  retry: "<path d='M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4'/>",
+  /** The gate. */
+  gate: "<path d='M3 21V5M21 21V5M3 8h18M7 8v13M11 8v13M15 8v13M19 8v13'/>",
+  eye: "<path d='M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z'/><circle cx='12' cy='12' r='3'/>",
+  /** Big text. */
+  'text-size': "<path d='M3 19 8 6l5 13M4.8 14.5h6.4M15 19l3-8 3 8M15.9 16.6h4.2'/>",
+  mail: "<rect x='3' y='5' width='18' height='14' rx='2'/><path d='m4 7 8 6 8-6'/>",
+  /** The Store's Shelf (store-agent SH01–SH42; screens Q18): scan a shelf label, a count (tally), blind (no figures), in and out. */
+  scan: "<path d='M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 8.5v7M11 8.5v7M14 8.5v7M17 8.5v7'/>",
+  tally: "<path d='M6 5v14M10 5v14M14 5v14M3.5 15.5 17 8.5M19 5v14'/>",
+  blind: "<path d='M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.4.8-1.3 2-2.5 3.2M6.3 7.6C4.4 8.9 3 10.8 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1M9.9 9.9a3 3 0 0 0 4.2 4.2'/>",
+  'arrow-up': "<path d='M12 19V5M6 11l6-6 6 6'/>",
+  'arrow-down': "<path d='M12 5v14M6 13l6 6 6-6'/>",
+  /** The Store's goods in (store-agent IN): scan a label, count blind, the shelf rack, a damaged box, coming in. */
+  'scan-line': "<path d='M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10'/>",
+  'eye-off': "<path d='M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.5.9-1.6 2.4-3.1 3.7M6.6 7.6C4.6 8.9 3.1 10.8 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1M9.9 10a3 3 0 0 0 4.2 4.2'/>",
+  rack: "<path d='M4 3.5v17M20 3.5v17M4 9h16M4 15h16'/><path d='M7 9V6.5h4V9M13 15v-3h4v3'/>",
+  damaged: "<path d='M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5zM3.5 7.5 12 12l8.5-4.5'/><path d='M12 12l-1.5 3 2 1.5-1 3.5'/>",
+  arrive: "<path d='M12 3v9M8.5 8.5 12 12l3.5-3.5'/><path d='M4 13v6h16v-6'/>",
 };
 
 export type IconName = keyof typeof S;

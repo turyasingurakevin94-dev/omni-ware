@@ -2,8 +2,10 @@
  * P28 · Toasts (LANGUAGE.md §3 P28): the host and the toast itself. Top
  * centre, 14 px down, navy with a mint tick; warn is sand with a brown "!";
  * an Undo toast keeps a 44 px mint "Undo" for 10 seconds (GLOSSARY "Undo"),
- * and Undo runs the undo; an error sits at the bottom, above the tab bar or
- * the dock, as a white card with "Try again" and a 44 px ×.
+ * and after that until the next tap or key, and Undo runs the undo; a toast
+ * asked for while an Undo is under 5 s old waits behind it (BUY-10); an
+ * error sits at the bottom, above the tab bar or the dock, as a white card
+ * with "Try again" and a 44 px ×.
  *
  *   toast.show('Added 40 bags', { undo: () => … })
  *   toast.show('No signal', { kind: 'warn' })
@@ -23,21 +25,79 @@ import { Keep, cx } from './util.tsx';
 import './toast.css';
 
 type Kind = 'ok' | 'warn' | 'error';
-interface Toast { id: number; text: string; kind: Kind; sub: string; undo: (() => void) | null; retry: (() => void) | null }
+interface Toast { id: number; text: string; kind: Kind; sub: string; undo: (() => void) | null; retry: (() => void) | null; tag: string }
+
+/** `tag`: the screen a toast belongs to, so that screen takes it with it when it closes (hide(tag); Sales SAL-025). */
+type ShowOpts = { kind?: Kind; sub?: string; undo?: () => void; retry?: () => void; ms?: number; tag?: string };
 
 const current = signal<Toast | null>(null);
-let n = 0, timer = 0;
+let n = 0, timer = 0, shownAt = 0, held = 0;
+/** Toasts waiting behind an Undo that has not had its 5 s yet (BUY-10). */
+let queue: { t: Toast; ms: number }[] = [];
+/** An Undo stays at least this long, and then until the next tap or key (BUY-10). */
+const UNDO_MS = 10000;
+/** A later toast never takes an Undo's place sooner than this: it waits. */
+const UNDO_HOLD_MS = 5000;
+
+/** After its 10 s, an Undo goes on the next tap or key anywhere (the tap on Undo itself runs first). */
+let waitingTap: (() => void) | null = null;
+function untilNextAction(id: number): void {
+  stopWaiting();
+  const go = () => { stopWaiting(); if (current.value && current.value.id === id) toast.hide(); };
+  waitingTap = go;
+  document.addEventListener('click', go);
+  document.addEventListener('keydown', go);
+}
+function stopWaiting(): void {
+  if (!waitingTap) return;
+  document.removeEventListener('click', waitingTap);
+  document.removeEventListener('keydown', waitingTap);
+  waitingTap = null;
+}
+
+function put(t: Toast, ms: number): void {
+  stopWaiting();
+  clearTimeout(timer); clearTimeout(held);
+  current.value = t;
+  shownAt = Date.now();
+  if (t.undo) {
+    timer = window.setTimeout(() => { if (current.value && current.value.id === t.id) untilNextAction(t.id); }, Math.max(ms, UNDO_MS));
+    return;
+  }
+  timer = window.setTimeout(() => { if (current.value && current.value.id === t.id) toast.hide(); }, ms);
+}
+
+/** The next waiting toast, once the Undo in front of it has had its 5 s (or has gone). */
+function next(): void {
+  const q = queue.shift();
+  if (q) put(q.t, q.ms);
+}
 
 export const toast = {
-  show(text: string, o: { kind?: Kind; sub?: string; undo?: () => void; retry?: () => void; ms?: number } = {}): void {
-    const t: Toast = { id: ++n, text, kind: o.kind || 'ok', sub: o.sub || '', undo: o.undo || null, retry: o.retry || null };
-    current.value = t;
-    clearTimeout(timer);
-    const ms = o.ms ?? (t.undo ? 10000 : t.kind === 'error' ? 8000 : 3200);
-    timer = window.setTimeout(() => { if (current.value && current.value.id === t.id) current.value = null; }, ms);
+  show(text: string, o: ShowOpts = {}): void {
+    const t: Toast = { id: ++n, text, kind: o.kind || 'ok', sub: o.sub || '', undo: o.undo || null, retry: o.retry || null, tag: o.tag || '' };
+    const ms = o.ms ?? (t.undo ? UNDO_MS : t.kind === 'error' ? 8000 : 3200);
+    const c = current.value, young = c && c.undo ? UNDO_HOLD_MS - (Date.now() - shownAt) : 0;
+    if (young > 0) {
+      // Behind a fresh Undo: it waits its turn, then shows (and any after it, one by one).
+      queue.push({ t, ms });
+      clearTimeout(held);
+      held = window.setTimeout(next, young);
+      return;
+    }
+    if (queue.length) { queue.push({ t, ms }); return; }
+    put(t, ms);
   },
-  hide(): void {
+  /** Hide what shows. With a tag, only that screen's toasts go (the one showing and any waiting); others stay. */
+  hide(tag?: string): void {
+    if (tag != null) {
+      queue = queue.filter((x) => x.t.tag !== tag);
+      if (!current.value || current.value.tag !== tag) return;
+    }
+    stopWaiting();
+    clearTimeout(timer); clearTimeout(held);
     current.value = null;
+    next();
   },
   /** What is showing (for tests and the parts gallery). */
   get text(): string | null {

@@ -121,7 +121,7 @@ export function Start(p: { b: Books; c: Customer | null }): JSX.Element {
             <a key={a} href="#" class="sl-tile" onClick={(e) => { e.preventDefault(); openAisle(a); }}>
               <ItemSquare aisle={a} size={38} />
               {mk ? <span class="mono sl-tile-mk"><Duo i={phAgain} size={12} color="#0F6B43" />{mk}</span> : null}
-              <span class="sl-tile-t"><b>{a}</b><span class="mono">{`${fig(n)} items`}</span></span>
+              <span class="sl-tile-t"><b>{a}</b><span class="mono">{`${fig(n)} ${n === 1 ? 'item' : 'items'}`}</span></span>
             </a>
           );
         })}

@@ -49,3 +49,19 @@ Canvas: https://claude.ai/code/artifact/9db8c76a-d77f-4312-a3c1-442d10005ea7 (ro
 
 **Deferred**
 - SAL-017 (cost on the sales phone) to round 5, Roles and privacy.
+
+## Round 3 · Core workflows, on the new app (10–12 Nov 2026) · SAL-015, SAL-019, SAL-021..026 (SAL-020 open)
+
+**What changed**
+- **A count stays at least 1.** − at 1 leaves 1, greyed, and says to use the bin; the line and the total never show a count that isn't on screen (SL14).
+- **Which shop?** A sign-in that opens more than one shop asks which, once; kept on the phone until sign-out (TD28).
+- **A link keeps its colour after a tap.** A stuck touch hover turned white link-buttons ink on navy ("New customer", "Add · 153,000").
+- **A line's Undo goes with its order**, never over another tab. "1 item", not "1 items".
+- Stuck writes (SAL-021) and the price keypad's still keys (SAL-023) were built by cross-app round 1 on main; this round drew the canvas to them.
+
+**Design decisions**
+- The missing orders were not the app: Kevin restored a 25 Aug backup in the owner console between 5 and 10 Nov, which deleted every newer row on the server. The books need restoring from a Supabase backup before rounds can be checked on live data.
+- SAL-020 is Kevin's: 0165 (balance is the truth) and 0169 `ow_customer_balance` (log + bills) disagree, and on the restored data the log names no orders.
+
+**Deferred**
+- SAL-020 and SAL-011 (Kevin's choice of rule), SAL-024 (re-check on restored data), SAL-010/012/013/018 (re-check on restored data), SAL-017 (round 5).

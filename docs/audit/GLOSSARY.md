@@ -36,6 +36,12 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Delivered (the button) | On the road, beside each stop: the camera, then "Delivered". It opens the photo proof. | Mark delivered | Store R10 |
 | Coming in | Goods coming **into** the yard from suppliers: trips still buying ("Buying · 1 of 2") and trips heading back ("Coming"). A section of the In page. | On the way; on the road (that is orders going out) | Store R10 |
 | On the road | Orders going **out** to customers on a truck. Its pills: "out now · delivered · collected" (collected is part of delivered). | coming in | Store R10 |
+| Ready to collect | A packed pickup waiting at the gate for its collector (the order is On the road · at the gate). Sales: "Ready to collect · at the gate"; agent: "Ready to collect"; client: "Ready to collect at the shop" | It has left the shop; Packing for a packed pickup; "at the gate" for a trip | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Back at the yard | A buying trip that has come back and waits for its check-in ("Denis's trip is back at the yard · 3 lines"). "At the gate" is only for orders waiting to be collected and returns at the gate | At the gate (for a trip); a round is back | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Coming back | Goods on their way back to the yard: a delivery that could not be delivered ("Coming back · Ggaba closed"), or a return asked by Sales ("Coming back · #0548 · 2 bag") | On road; On the way | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Cancelled · put it back / Cancelled · bring it back | A cancelled order the yard still holds: on the bay or To pack, "put it back" (to the shelf); on a truck, "bring it back". The Manager's button stays "Cancel" | called off | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Counter sale · out | How the yard sees a counter sale: stock out of the shelf in the item's history, never a collection ("Counter sale" in every app; Accounts "Counter sale · income") | delivered · collected; Delivered today | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Delivered today | The day's Delivered count and the owner's and console's word for an order delivered today ("1 delivered today") | Done today; Completed | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
 | Packing now | To pack's orders another person has started; each row names them | Someone's on it | Store R10 · WORD-11 |
 | Remove (Waiting to send) | Drop something that was never sent from this phone, after "Remove it from this phone?" · Keep it / Remove. The books never had it. | delete; cancel (an order's word) | Store R10 · NAV-09 |
 | Packed | The order is packed and checked | — | Round skill |
@@ -73,6 +79,9 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
+| Client pays | What the client pays for an order or a line (`sellPrice`); only Sales or the Manager change it. The Buyer shows it as the order's figure. | the order's total worked out from the cost | Buyer R1 · BUY-02 |
+| Cost | What the shop pays the supplier for a line (the buyer's price, stored in `items[].price`); shown beside Client pays, never as the order | "price" for the supplier's price on an order line | Buyer R1 · BUY-02 |
+| Far from the list | A typed cost more than 50% above or below the list price: "Far from the list (24,000) · check it", then "Save anyway" | a silent save of a slip | Buyer R1 · BUY-07 |
 | Not paid yet | An order that can't leave until it is paid. One label on the bay, Today, Load and the slip. The one reason, only on the order: "Sales take the money before it leaves, or Ruth lets it go on credit." | waits on money; holds; cash customer | Store R6 · WORD-03 |
 | Owes | What a customer owes the shop (one customer: "Owes"; the list: "Owe") | — | Sales UX audit |
 | To collect | Money owed that Sales should collect | — | Sales UX audit |
@@ -95,7 +104,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
-| How long | A duration: "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
+| How long | A duration: "just now" under a minute, "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
 | When | A moment: "15:20" today, "Thu 23:28" otherwise (`whenAt()`) | a clock time with no day when it isn't today | Store R6 · WORD-07 |
 | Undo | 10 seconds, or until the screen changes, everywhere | 5 s in one place, 10 s in another | Store R2 · FLOW-02 |
 
@@ -105,6 +114,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 |---|---|---|---|
 | Sending… | The write is on its way (a neutral spinner) | a green tick before the server says yes | Store R3 · REL-05 |
 | Not sent yet / Kept on this phone | Kept in the outbox; it sends itself when there is signal (amber) | "Sent" | Store R3 · REL-05 |
+| Which shop? | The question when one sign-in opens more than one shop; the choice is kept on this phone until sign-out | opening the first shop without asking | Sales R3 · SAL-019 |
 | Sent | Only after the server's yes (green) | — | Store R3 · REL-05 |
 | Waiting to send | The one list of what isn't on the books yet ("Not sent · N") | "Nothing is waiting" while something is | Store R3 · REL-04 |
 | Not sent | A write the books refused, with why and how many tries; it stays until Remove or Try again and never holds up another | a silent jam; "Discard" (the word is Remove) | Cross-app R1 · SAL-3 |
@@ -145,3 +155,4 @@ Fix these in the next round that touches each app.
 |---|---|---|
 | Sales: the order stamp | "NOT PAID" / "PART PAID" | "Not paid yet" (Store R6 · WORD-03); a part-paid word still to agree |
 | Database push `store.handover` (0157/0159) | "… handed you the yard" | "… passed you the yard" (needs a migration) |
+| Buyer (R1 · BUY-11, `whenShort`) vs Store (`whenAt`) | Buyer: "Yesterday 15:41", "Tue 10 Nov"; Store: "Thu 23:28" | one rule for a moment not today, in `core/time.ts`, every app (Kevin to pick) |

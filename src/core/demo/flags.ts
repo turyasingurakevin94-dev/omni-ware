@@ -7,6 +7,7 @@
  *   &state=first-day         a new salesperson's first day (TD06)
  *   &state=empty             nothing live, nobody owes, no chats (CH06, OR04, CU06)
  *   &state=signed-elsewhere  someone else signed in under this screen (TD10)
+ *   &state=two-shops         the sign-in opens two shops: Which shop? (TD28)
  *   &state=loading           the books never arrive (CH07, CU08 skeletons)
  *   &state=busy              an afternoon with 38 live and 22 needing Grace (TD02)
  *   &state=goal-hit          Thu 29 Oct, the month's goal passed (TD08)
@@ -25,7 +26,7 @@
  *
  * Only what taps cannot cause is a flag. Everything else is reached by tapping.
  */
-export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'loading' | 'busy' | 'goal-hit' | 'test-record' | 'stretched' | 'one';
+export type DemoStateName = 'first-day' | 'empty' | 'signed-elsewhere' | 'two-shops' | 'loading' | 'busy' | 'goal-hit' | 'test-record' | 'stretched' | 'one';
 
 export interface DemoFlags {
   on: boolean;
@@ -50,7 +51,7 @@ export interface DemoFlags {
 /** What the demo's phone hears when it listens (&listen=1): Grace's answer to Kato's 10:29 (CH16). */
 export const HEARD = 'Yes, it can come to the Ntinda site';
 
-const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'loading', 'busy', 'goal-hit', 'test-record', 'stretched', 'one'];
+const STATES: DemoStateName[] = ['first-day', 'empty', 'signed-elsewhere', 'two-shops', 'loading', 'busy', 'goal-hit', 'test-record', 'stretched', 'one'];
 
 /** Reads ?demo&offline=1&clock=15:40&state=… from a query string. */
 export function readFlags(search: string): DemoFlags {

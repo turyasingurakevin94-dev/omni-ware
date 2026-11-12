@@ -44,7 +44,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/if l \? 'held' and ow_num\(l ->> 'system'\) is not null then\s*gone := [^;]*;\s*after := greatest\(0, round\(before \+ coalesce\(\(l ->> 'counted'\)::numeric, 0\) - ow_num\(l ->> 'system'\), 6\)\);/.test(raw),
     'a count saved with what was out applies only its own difference to the books at acceptance');
   t.check(/coalesce\(q\.payload ->> 'pickShortfallAckAt', ''\) = ''/.test(held), 'a short pick let stand as the full quantity counts the full quantity, as the invoice takes it');
-  const store = read('store.html');
+  const store = read('old/store.html');
   t.check(/system: ct\.system\[i\], held: \(ct\.held \|\| \{\}\)\[i\] \|\| 0/.test(store) && /ct\.system\[ct\.i\] = Math\.max\(0, \(Number\(D\(\)\.stock\[x\.key\]\) \|\| 0\) - ct\.held\[ct\.i\]\)/.test(store),
     'the Store saves what was out with each counted line, and expects the books less it');
   t.check(/data\.stock && typeof data\.stock === 'object'/.test(store) && /pickStatus === 'short' && !q\.pickShortfallAckAt/.test(store),

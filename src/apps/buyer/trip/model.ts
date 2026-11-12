@@ -3,7 +3,7 @@
  * No rule is worked out here that rules.ts already has (tripPlan, tripCash,
  * handIn, lineState); these only look things up and put words together.
  */
-import { handIn, tripCash, tripPlan, withStopDone, type LineRef } from '../../../core/buyer/rules.ts';
+import { handIn, planned, tripCash, tripPlan, withStopDone, type LineRef } from '../../../core/buyer/rules.ts';
 import type { StopCount } from '../../../core/buyer/source.ts';
 import type { Kept } from '../../../core/outbox.ts';
 import type { BLine, BOrder, BuyerBooks, Stop, Supplier, Trip } from '../../../core/buyer/types.ts';
@@ -51,12 +51,12 @@ export function sellersOf(b: BuyerBooks, orders: BOrder[]): string {
   return ids.map((id) => firstWord(memberOf(b, id)?.name || '')).filter(Boolean).join(' · ');
 }
 
-/** The plan as it stands: the trip's own stops once planned (they carry "off"), else the app's proposal. */
+/** The plan as it stands: the trip's own stops once planned (they carry "off"), else the app's proposal; held-only stops gone. */
 export interface PlanNow { stops: Stop[]; cash: number; held: LineRef[]; lines: number; asking: boolean }
 
 export function planNow(b: BuyerBooks): PlanNow {
-  const p = tripPlan(b);
-  const stops = b.trip && (b.trip.state === 'planned' || b.trip.state === 'cash') ? b.trip.stops : p.stops;
+  // The plan's stops, as the red + counts them (rules.planned: a stop of held lines only is no stop).
+  const p = tripPlan(b), stops = planned(b);
   const on = stops.filter((s) => !s.off);
   return {
     stops, cash: tripCash(stops), held: p.held,

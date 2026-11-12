@@ -1,0 +1,401 @@
+# Canvas parity — Store
+
+The independent critics' check of the new Store app (`next/store.html`) against the approved canvas (`docs/canvas/store-agent/boards/`, 360 × 800), each board reached by **real taps from Today** in the demo seeded with the canvas's `FACTS.md`. Modelled on `docs/audit/sales/CANVAS-PARITY.md`. The builders' own records (`docs/audit/store/parity/<area>.md`) are claims; this file is the critics' verdict.
+
+| How | Where |
+|---|---|
+| The taps and demo flags per board | `test/parity/store-<area>.json` |
+| Board beside app, diff, % of pixels that differ (any channel > 24/255) | `npm run build:store && NODE_PATH=$(npm root -g) node tools/parity/run.cjs --tab store-<area>` → `docs/audit/store/parity/` |
+| Rules a difference may rest on | `docs/spec/04-screens-store.md` §2a, §3 (Kevin's rulings), §4; `docs/spec/04-screens-store-routes.md` |
+
+Each area critic checks per board: **shows** (content, words, figures, states as drawn), **links** (every control tapped in Playwright, landing route read from `sessionStorage['ow-store-view']`), **44px** targets, **11px** text, **contrast** ≥ 4.5:1 (computed styles, background composited up the tree), **clip** (`scrollWidth` ≤ 360, no clipped or unreachable text), and **no money**. A difference passes only as font/antialias noise, a demo figure that differs with a written reason, or one of Kevin's rulings. Each area owns its own section below; a critic adds or replaces only its own.
+
+
+## Result (12 Nov 2026)
+
+| Area | Boards | Passed by its critic | Critic runs |
+|---|---|---|---|
+| Today | TD01–TD33 | **33 / 33** | 3 |
+| Pack | PK01–PK22 + AD02, AD05, AD06 | **25 / 25** | 3 |
+| Goods in | IN01–IN40 (29) | **29 / 29** | 2 |
+| Shelf | SH01–SH42 (30) | **30 / 30** | 3 |
+| Out | OU01–OU31 (28) + AD01, AD03, AD04, AD07 | **32 / 32** | 3 |
+| **All** | **149** | **149** | |
+
+Boards that shared a flaw with the app were redrawn with the same minimal change, never the app bent to a flawed board: `docs/canvas/store-agent/review/{SH,PK,TD,IN,OU}-fixes.md`. The AD boards' design scores (the AD rule's one review round and one revision) are in `docs/canvas/store-agent/review/AD.json` and `docs/audit/store/GOAL.md` "Added while building".
+
+## Shelf
+
+**Third critic run, 2026-11-12, on `bacd5c32` (the shared fixes from the other areas: `src/ui/pill.css`, `src/ui/sheet.css`, StageSheet's back strip, the demo states, howLong's "just now"; SH15 and SH41 redrawn). 30 boards, 30 pass, 0 fail.** I re-ran the spec and re-measured all 30. Three boards moved: SH32 (0.83 → 0.69), SH11 (0.26 → 0.12) and SH15 (0.51 → 0.39). All three are now closer to their boards, and nothing new differs. The strip names, links and measures are as on `6a95aa53`. Earlier runs: `a9af4308` found 5 pass and 25 fail; `6a95aa53` found 30 pass.
+
+Method: `npm run build:store`, then `tools/parity/run.cjs --tab store-shelf`, then every pair of images read by eye. Next, a Playwright replay of `test/parity/store-shelf.json` that measures computed styles: text size, contrast composited up the tree, every visible control's box, and `scrollWidth`. Last, every control each board draws is tapped in a fresh replay, and the landing is read from `sessionStorage['ow-store-view']`. The spec's taps are unchanged except SH41's last tap, which the fixer renamed "Back to Shelf" (the strip's new name). The redrawn boards (`docs/canvas/store-agent/review/SH-fixes.md`) were also measured.
+
+Accepted across the area (not failures):
+- **Kevin's rulings and the spec:**
+  - the tab badge 5 or 3 where the board draws 7 (the shell's `next-job.ts`, Today's area);
+  - "every / due in 21 days" and the aisle bars (Q10);
+  - no "Print again" (Q21);
+  - "412 on shelf" for "412 pc on shelf" (§4.5, one figure);
+  - the count's time 9:21 for 9:20 (the books keep when it was sent);
+  - "Clout tacks" for "Clout nails" (the written reason in the spec);
+  - a row that opens its own item where the board links a stand-in (routes §3);
+  - the amber bar's Try again retries rather than opening SH26 (BRIEF, P27);
+  - "Counted · aisle F · Okello" on SH32 (the row form SH03 draws).
+- **Layout and drawing:**
+  - the 40 px strip above each sheet (`.sh-full-back`, the board's own 40 px strip; the 44 px Close does the same job);
+  - dimmed keypad or form while sending, kept or failed (inactive controls, drawn the same on the board);
+  - 2–6 px row shifts from line-height, and mono figures such as "10:41" in SH32's banner (font only);
+  - the 11 s sent bar shot full where the board draws 60% (animation).
+- **No money and no clipping:** "1,153" and "3m" are counts and sizes. No board shows money. `scrollWidth` is 360 on all 30.
+
+The way-back strip is judged by the rule now in spec §4.9 ("Close goes to the board's place; the way back walks the stack"). Its name must be the screen really below, and it must land there. All 23 strips do: "Back to Roofing" lands on Aisle A, "Back to Find" on the search, "Back to Shelf" on Shelf, and "Back to the item" (SH23) on the item.
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| SH01 Shelf | `shelf` | 1 | 0.76 | ok | ok | ok | ok | ok | ok | pass | F1 fixed: `#B3BCD2` on the hero (5.83:1, field 4.60:1) |
+| SH41 Shelf offline | `shelf` | 4 | 0.58 | ok | ok | ok | ok | ok | ok | pass | F1 fixed. |
+| SH06 Nothing needs a look | `shelf` | 1 | 0.28 | ok | ok | ok | ok | ok | ok | pass | F1 fixed; "due in 8 days" is Q10 |
+| SH02 Find "nails" | `shelf/find` | 2 | 2.17 | ok | ok | ok | ok | ok | ok | pass | F2: Open → `shelf/count` with the waiting sheet (spec §4.5). F3: "Did you mean" scrolls (overflow-x auto, 489/360). #0549 → `in`. Orders 5 / All 9 accepted (#0534 and #0547 carry nails) |
+| SH42 Find nothing | `shelf/find` | 2 | 0.41 | ok | ok | ok | ok | ok | ok | pass | |
+| SH40 Scan | `shelf/scan` | 2 | 1.71 | ok | ok | ok | ok | ok | ok | pass | F4: A-3533 on board and app (`labelShort`, spec §4.5) |
+| SH04 Aisle A | `shelf/aisle` | 2 | 5.28 | ok | ok | ok | ok | ok | ok | pass | |
+| SH05 No aisle yet | `shelf/aisle` | 3 | 4.23 | ok | ok | ok | ok | ok | ok | pass | F5: Close → Shelf; "Back to Find" |
+| SH03 Item | `shelf/item` | 3 | 6.53 | ok | ok | ok | ok | ok | ok | pass | F5: Close → Shelf; "Back to Roofing" |
+| SH22 Ruth wrote off | `shelf/item` | 3 | 7.14 | ok | ok | ok | ok | ok | ok | pass | F6: the written-off part is tinted red |
+| SH24 Ruth kept it | `shelf/item` | 3 | 6.82 | ok | ok | ok | ok | ok | ok | pass | |
+| SH16 Count accepted | `shelf/item` | 3 | 0.24 | ok | ok | ok | ok | ok | ok | pass | F7: JM 11px. F8: 131 items |
+| SH32 Denis answered | `shelf/item` | 3 | 0.69 | ok | ok | ok | ok | ok | ok | pass | F7: GA 11px. F9: "On the restock list · just now", head as drawn |
+| SH10 Count | `shelf/count` | 5 | 0.05 | ok | ok | ok | ok | ok | ok | pass | Close → Shelf; "Back to Find" |
+| SH19 Key pressed | `shelf/count` | 5 | 0.05 | ok | ok | ok | ok | ok | ok | pass | |
+| SH11 Sending | `shelf/count` | 6 | 0.12 | ok | ok | ok | ok | ok | ok | pass | F10: no ring. F11: Undo 44px |
+| SH12 Sent to Ruth | `shelf/count` | 6 | 0.2 | ok | ok | ok | ok | ok | ok | pass | |
+| SH17 Not done | `shelf/count` | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | F10: pad dimmed, no ring. F11: Try again 44px |
+| SH18 Kept | `shelf/count` | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | F10 |
+| SH13 Count it again | `shelf/count` | 2 | 0.48 | ok | ok | ok | ok | ok | ok | pass | "Back to Shelf" (reached from Shelf) |
+| SH15 A count is waiting | `shelf/count` | 3 | 0.39 | ok | ok | ok | ok | ok | ok | pass | F5: Close and Leave it with Ruth → the item. F12: `#5F6980`. |
+| SH25 Someone else | `shelf/count` | 7 | 0.09 | ok | ok | ok | ok | ok | ok | pass | F5: Keep Okello's → the item. F10 |
+| SH14 Aisle count | `shelf/count {aisle}` | 5 | 5.45 | ok | ok | ok | ok | ok | ok | pass | F13: the number field is 44px tall |
+| SH20 Report | `shelf/report` | 2 | 1.31 | ok | ok | ok | ok | ok | ok | pass | F5: Close → the item. F11: pc/bundle 44px |
+| SH21 Sent to Ruth | `shelf/report` | 3 | 0.3 | ok | ok | ok | ok | ok | ok | pass | |
+| SH23 Nothing on the shelf | `shelf/report` | 4 | 6.25 | ok | ok | ok | ok | ok | ok | pass | F5: Close → Shelf; "Back to the item" |
+| SH26 Not sent yet | `shelf/report` | 3 | 0.8 | ok | ok | ok | ok | ok* | ok | pass | F14: the notes are at full strength; F11 |
+| SH27 Not done | `shelf/report` | 3 | 0.8 | ok | ok | ok | ok | ok* | ok | pass | F14, F11 |
+| SH30 We need more | `shelf/ask` | 2 | 0.07 | ok | ok | ok | ok | ok | ok | pass | F12 |
+| SH31 Sent to Denis | `shelf/ask` | 3 | 0.37 | ok | ok | ok | ok | ok | ok | pass | |
+
+`ok*`: the only text under 4.5:1 is the locked form (opacity .55). Those are inactive controls, the board draws them the same, and the notes outside them now measure in full.
+
+### Shelf failures and fixes
+
+None in the app. The first run's F1–F14 are all fixed and verified (above).
+
+The two notes left on the canvas last run (SH15's "Shelf" step label and SH41's aisle names) are fixed on the redrawn boards. Both boards now measure clean.
+
+## Pack
+
+**Re-check 2026-11-12 on `bacd5c32`** (origin/claude/store-build, after the fixes to F1–F9). This re-check covers 25 boards: the 22 Pack boards plus AD02, AD05 and AD06 (Unpack, "Added while building"). `test/parity/store-pack.json` is unchanged and every tap reached its board. I looked at every board/app pair, measured each board, and tapped each control again. The first run, on `6a95aa53`, had 7 pass and 18 fail. **Now: 25 pass of 25** (PK07's F10 fixed in `9a05bfac` and re-run alone: "just now" whole, fits its tile, no clip).
+
+| Fix | What it was | What the re-check found |
+|---|---|---|
+| F1 | Back strip | Fixed. `pack/order` reached from the red Next job reads "Back to Today" and lands on Today. `pack/put-back` reached from To pack reads "Back to To pack" and lands on To pack. Close still goes to the board's place (To pack, Today). |
+| F2 | Not-sent count | Fixed. PK11 reads "1 not sent yet". |
+| F3 | The empty yard | Fixed. PK14 now shows the board's helpers, and all three links land: → `in/checkin`, → `out/load`, → `out/gate {555}`. It says "1 delivered today". |
+| F4 | Waiting group offline | Fixed. PK20 offline folds Waiting on goods to its head row ("Denis ~11:30 ›"), which opens the first waiting order. |
+| F5 | Short line in the strip | Fixed. PK05's short line has its mint bar, a white label and no tick. |
+| F6 | Contrast: "Next job" | Fixed in the app and on the boards. |
+| F7 | Contrast: the copy's face | Fixed in the app and on the boards. |
+| F8 | Contrast: "After Unpack" | Fixed in the app and on the boards. No text in the area is now under 4.5:1 except inactive controls. |
+| F9 | The page under the Unpack sheet | Fixed. Tapping the scrim on AD02 or AD06 now does what Keep it packed does: the sheet closes and the app is back on PK06 (#0552 Packed). The bare #0530 page is never left open. |
+
+Accepted across the area (not failures):
+- **The item picture.** The demo's shelf has no photos, so the aisle's duotone stands in. It is about 3–4 % of a pack card.
+- **The rail icons** are the shell's `RAIL`.
+- **Figures corrected to the data** (spec §2a, FACTS §8):
+  - #0552's line 2 is the wheelbarrows (2 pc), where PK04, PK05, PK16 and PK19 draw wire nails (2 ctn).
+  - #0530 is cancelled at 10:38, where the boards say 10:41.
+  - The demo's fail code is PK-502, for the boards' sample codes.
+- **No per-line pick time** on PK15 or PK17: the books have no `pickedAt`.
+- **The shared parts.** The P28 toast (max-content, no seconds on Undo) stands for the boards' full-width band on PK05, PK15 and AD05. The shared Not done card has a 44 px ×, which AD06 does not draw.
+- **The demo clock.** The Undo ring starts at 10 s (boards 7 s), 10:41 for 10:42, 36m for 37 m.
+- **PK07** is on #0556, not #0554, because #0554 is already at the gate in the demo. Bay 1 shows #0552 (FACTS: "#0552 bay 1").
+- **AD02's packer** is Okello and bay 3 is free, as the books have it. PK06 draws bay 3 free too.
+- **AD05's Buying** is "skipped": #0530 has no Buying in the books. AD05 lists the order under To pack now (Q23).
+- **PK13's Waiting on goods group** is not on the board, but the books hold it at that moment (PK01 draws it).
+- **PK14's chips.** The Packed chip reads 1 (#0552, packed on bay 1, waiting for the truck), where the board reads 0 beside "To load 1 → Ntinda". Spec §4.1 says Packed is `pickingStatus: done` in Packing, a delivery waiting for the truck on its bay, so it is the To load list. A board that disagrees with §4 is corrected to it, so the app is right and the board's 0 is the error.
+- **PK14's helper tiles** are about 30 px shorter than the board draws them (52 vs 82 px). The words, figures and links are the same, and the tiles are still at least 44 px.
+- **Stand-in links.** A row that opens #0556's pack where the board links PK01 as a stand-in (routes §3).
+- **PK03's press.** The tool cannot hold a press. The `:active` rule is in `pack/card.css:49`.
+- **Inactive controls, as drawn:**
+  - Short and the amount tiles are dimmed while sending (PK16, PK18).
+  - "Back online to finish", "Waits for the goods" and the blocked put-back slide are disabled, at 4.30:1.
+- **The toast covers the back strip** for 10 s on PK05, PK15 and AD05. The board's toast covers it too.
+
+**No money on any Pack board.** "39m", "36m", "3m" and "1 m" are minutes and sizes, not money. On all 25 boards there is no text under 11 px, no target under 44 px, and `scrollWidth` is 360 (the stage chips scroll, `stagesheet.css:17`).
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| PK01 To pack | `pack` | 2 | 5.91 | ok | ok | ok | ok | ok | ok | pass | F7 fixed |
+| PK02 Pack | `pack/order` | 1 | 4.14 | ok | ok | ok | ok | ok | ok | pass | F1 fixed |
+| PK03 Pressed | `pack/order` | 1 | 8.57 | ok (rule) | ok | ok | ok | ok | ok | pass | |
+| PK18 Sending | `pack/order` | 2 | 4.14 | ok | ok | ok | ok | ok (disabled) | ok | pass | |
+| PK11 No signal | `pack/order` | 2 | 3.91 | ok | ok | ok | ok | ok (disabled) | ok | pass | F2 fixed |
+| PK12 Not saved | `pack/order` | 2 | 5.28 | ok | ok | ok | ok | ok | ok | pass | |
+| PK04 Pack short | `pack/order` | 2 | 1.96 | ok | ok | ok | ok | ok | ok | pass | |
+| PK16 Short sending | `pack/order` | 3 | 1.5 | ok | ok | ok | ok | ok (dimmed, as drawn) | ok | pass | |
+| PK19 Short not saved | `pack/order` | 3 | 3.6 | ok | ok | ok | ok | ok | ok | pass | |
+| PK05 Short sent | `pack/order` | 3 | 2.42 | ok | ok | ok | ok | ok | ok | pass | F5 fixed |
+| PK06 Packed | `pack/order` | 2 | 1.81 | ok | ok | ok | ok | ok | ok | pass | F6 fixed |
+| PK07 Ready to collect | `pack/order` | 5 | 5.54 | ok (data) | ok | ok | ok | ok | ok | pass | F10 fixed (`9a05bfac`) |
+| PK15 Unpack | `pack/order` | 3 | 1.24 | ok | ok | ok | ok | ok | ok | pass | |
+| PK08 For you | `pack` | 2 | 6.78 | ok | ok | ok | ok | ok | ok | pass | |
+| PK09 Look only | `pack/look` | 3 | 0.08 | ok | ok | ok | ok | ok | ok | pass | |
+| PK13 Someone else | `pack` | 4 | 6.94 | ok | ok | ok | ok | ok | ok | pass | |
+| PK17 Okello's | `pack/look` | 5 | 2.09 | ok | ok | ok | ok | ok | ok | pass | |
+| PK14 Empty | `pack` | 1 | 6.37 | ok (§4.1 Packed) | ok | ok | ok | ok | ok | pass | F3 fixed |
+| PK20 Offline | `pack` | 2 | 5.72 | ok | ok | ok | ok | ok | ok | pass | F4 fixed |
+| PK21 Waits for the goods | `pack/order` | 3 | 6.95 | ok | ok | ok | ok | ok (disabled) | ok | pass | |
+| PK10 Put it back | `pack/put-back` | 4 | 0.58 | ok | ok | ok | ok | ok (blocked slide) | ok | pass | |
+| PK22 Put back not saved | `pack/put-back` | 5 | 2.08 | ok | ok | ok | ok | ok | ok | pass | |
+| AD02 Unpack #0530 | `pack/order {unpack}` | 3 | 4.13 | ok (data) | ok | ok | ok | ok | ok | pass | F9 fixed |
+| AD05 Unpacked | `pack/order {unpack}` | 4 | 6.89 | ok (data, Q23) | ok | ok | ok | ok | ok | pass | |
+| AD06 Unpack not saved | `pack/order {unpack}` | 4 | 10.08 | ok | ok | ok | ok | ok | ok | pass | F8, F9 fixed |
+
+### Pack failures and fixes
+
+None open. F10 (PK07: "justnow" because `Packed.tsx:106` stripped every space) is fixed in `9a05bfac`; the figure now reads "just now".
+
+## Today
+
+Critic third run 2026-11-12 on `444adb85` (origin/claude/store-build), after the T1–T27 fixes (`bacd5c32`) and the G-T fixes (`444adb85`, `docs/canvas/store-agent/review/TD-fixes.md`). It re-checks the 8 boards that failed on `bacd5c32` and spot-checks the other 25 for regressions: the diffs are unchanged (±0.3 %), and contrast, targets, text size, clipping and money were re-measured on all 33. 33 boards. `test/parity/store-today.json` now has TD04's taps (set the return aside, Close) and reaches every board, TD18 and TD23 included. Every board link was replayed in Playwright, and the rest was measured in computed styles.
+
+**33 pass, 0 fail.**
+
+Measured on all 33:
+- contrast ≥ 4.5:1 on every text;
+- every control at least 44 px (Gate is now 57×44);
+- no text under 11 px;
+- `scrollWidth` 360;
+- no money ("41 m" and "1 m" are durations).
+
+The one ellipsis left, "#0538 · Nansana · Fri 1…" on TD10, is cut on the board too.
+
+Re-checked by hand:
+- TD33's press: `#A82D24` and `scale(.97)`.
+- "Forgot password?" shows "Ask your manager for a new invite link" (Q21).
+- TD07's tiles do nothing.
+- TD21's tabs are `aria-disabled`.
+- TD22's Open the copy opens Today "Updating · saved 7:52".
+- You's ring and Out link to Today.
+- TD05's Turn on alerts → `today/you` and Walk the shelf → `shelf`.
+
+Accepted (not failures):
+- **Recorded open questions.**
+  - "Ssali 13:20" (TD01, TD08, TD33) and Kampala Road with the shop's call button (TD12) are left out by Q25. The boards still draw them; redraw them with Q25's default.
+  - #0530's faces BO RN and "Brian takes it" follow FACTS (§2a).
+  - TD32's #0552 first is Q20.
+- **Choices with a correct written reason.**
+  - "tried 3 times" is left out on TD07 and TD22 (§4.8); both boards are now redrawn.
+  - "Your manager sends you an invite link" on TD20, TD23 and TD31: nobody is known before sign-in. The boards are redrawn.
+- **Demo figures.**
+  - TD02's 8 done: the board's own To load 2 counts #0552.
+  - Bay 4 (PK06).
+  - Aisle C "sent 14:40" on TD16, TD19, TD27 and TD28, now drawn on the boards too.
+  - TD10/TD29's "1 · read" (FACTS lists one alert from Fri 16 Oct).
+  - The demo clock's 10:41/17:30, where boards draw 10:42/17:42.
+  - TD31's empty password.
+- **Layout noise.** TD09's scroll offset, and TD11's cards 5–8 px taller.
+
+**T7, now sound.** FACTS §8 now puts #0556's collection at 11:45 and #0547's delivery at 11:50, after TD02's 11:32. `demo/moments.ts` stamps the same times, and the board, the app and FACTS agree. Writing the demo's later moments into FACTS is acceptable here because FACTS was silent on them.
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| TD01 Today | `today` | 0 | 1.94 | ok (Q25) | ok | ok | ok | ok | ok | pass | board redraw: no 13:20 |
+| TD09 Today scrolled | `today` | 1 | 13.69 | ok | ok | ok | ok | ok | ok | pass | scroll offset |
+| TD33 Next job pressed | `today` | 0 | 2.81 | ok | ok | ok | ok | ok | ok | pass | press measured |
+| TD02 Next is a check-in | `today` &at=1132 | 0 | 0.39 | ok | ok | ok | ok | ok | ok | pass | FACTS 11:45/11:50 now after 11:32 |
+| TD03 Next is a ride | `today` &at=1510 | 0 | 0.83 | ok | ok | ok | ok | ok | ok | pass | |
+| TD04 Calm | `today` &at=1730 | 3 | 1.04 | ok | ok | ok | ok | ok | ok | pass | |
+| TD05 First day | `today` &state=first-day | 0 | 0.31 | ok | ok | ok | ok | ok | ok | pass | red button → `pack` |
+| TD06 Offline | `today` &offline&kept=1 | 0 | 7.11 | ok | ok | ok | ok | ok | ok | pass | |
+| TD07 Load failed | `today` &fail=snapshot | 0 | 2.97 | ok | ok | ok | ok | ok | ok | pass | |
+| TD08 Update ready | `today` &update=1 | 0 | 0.27 | ok (Q25) | ok | ok | ok | ok | ok | pass | |
+| TD10 Alerts | `today/alerts` | 1 | 3.49 | ok | ok | ok | ok | ok | ok | pass | GA spaced |
+| TD11 With Ruth | `today/with-ruth` | 2 | 13.27 | ok | ok | ok | ok | ok | ok | pass | |
+| TD29 Alerts empty | `today/alerts` &state=empty | 1 | 2.65 | ok | ok | ok | ok | ok | ok | pass | "1 · read" (FACTS) |
+| TD30 With Ruth empty | `today/with-ruth` &state=empty | 2 | 6.39 | ok | ok | ok | ok | ok | ok | pass | |
+| TD12 You | `today/you` | 1 | 15.61 | ok (Q25) | ok | ok | ok | ok | ok | pass | |
+| TD13 Pass the yard | `today/pass-yard` | 2 | 4.66 | ok | ok | ok | ok | ok | ok | pass | |
+| TD18 Sending | `today/pass-yard` | 3 | 4.88 | ok | ok | ok | ok | ok | ok | pass | |
+| TD14 Passing (held) | `today/pass-yard` | 3 | 9.18 | ok | ok | ok | ok | ok | ok | pass | `yardFace` slate |
+| TD24 Nobody else | `today/pass-yard` &state=nobody | 2 | 4.02 | ok | ok | ok | ok | ok | ok | pass | lock knob, board redrawn |
+| TD26 Pass failed | `today/pass-yard` &fail=passYard | 3 | 5.04 | ok | ok | ok | ok | ok | ok | pass | |
+| TD15 Musa passed you | `today` &as=okello&at=1043 | 0 | 0.61 | ok | ok | ok | ok | ok | ok | pass | |
+| TD25 I've got it sending | `today` &as=okello&at=1043 | 1 | 0.9 | ok | ok | ok | ok | ok | ok | pass | |
+| TD32 The yard is yours | `today` &as=okello&at=1043 | 1 | 3.55 | ok (Q20) | ok | ok | ok | ok | ok | pass | |
+| TD28 Close, 3 of 4 | `today/close-yard` &at=1730 | 1 | 9.64 | ok | ok | ok | ok | ok | ok | pass | lock knob, 14:40 |
+| TD16 Close the yard | `today/close-yard` &at=1730 | 2 | 9.51 | ok | ok | ok | ok | ok | ok | pass | board: 14:40 |
+| TD27 Close offline | `today/close-yard` &offline | 2 | 10.05 | ok | ok | ok | ok | ok | ok | pass | no-signal knob, 14:40 |
+| TD19 Close sending | `today/close-yard` &at=1730 | 3 | 9.68 | ok | ok | ok | ok | ok | ok | pass | |
+| TD17 Closed | `today/close-yard` &at=1730 | 3 | 6.08 | ok | ok | ok | ok | ok | ok | pass | |
+| TD20 Sign in | `shell/sign-in` &state=signed-out | 0 | 1.49 | ok | ok | ok | ok | ok | ok | pass | |
+| TD31 Wrong password | `shell/sign-in` | 1 | 3.87 | ok | ok | ok | ok | ok | ok | pass | |
+| TD23 Signing in | `shell/sign-in` | 1 | 1.35 | ok | ok | ok | ok | ok | ok | pass | board's RN face still beside "Your manager" |
+| TD21 Checking | `shell/checking` &state=loading | 0 | 7.7 | ok | ok | ok | ok | ok | ok | pass | |
+| TD22 No reach | `shell/no-reach` &state=no-reach | 0 | 10.71 | ok | ok | ok | ok | ok | ok | pass | "7:52" wraps to a 2nd line |
+
+### Today: notes, no failures
+
+All of G-T5, G-T7, G-T14, G-T20, G-T22 and G-T23 were checked as fixed:
+- the first day's red button opens `pack`;
+- FACTS and the demo agree at 11:32;
+- the slate "you see" face;
+- the lock and no-signal knobs, as redrawn;
+- "saved on this phone 7:52";
+- the busy Sign in keeps `--oxide`.
+
+Small things left, none of them a failure:
+- **TD22.** At 360 px the app wraps "7:52" onto a second line of the copy tile; the board keeps it on one. Fix: `white-space: nowrap` on the tile's sub-line in `signin.css`, or shorten the tile's padding.
+- **TD20, TD23, TD31.** The boards' words now say "Your manager", but they still draw Ruth's RN face where the app draws the person icon. Redraw the face.
+- **TD01, TD08, TD33 and TD12.** The boards still draw "Ssali 13:20", and Kampala Road with the shop's call button. Both are left out by the default of open question Q25 until Kevin answers.
+
+## Goods in
+
+Critic re-run 2026-11-12 on `bacd5c32` (origin/claude/store-build), after the fixes for G1–G13 and the boards redrawn in `docs/canvas/store-agent/review/IN-fixes.md`. 29 boards. `test/parity/store-in.json` is as the fixer left it: each "Sending…" board is reached by `&fail`, the 10 s hold, then Try again, and every tap reached its board. **29 pass, 0 fail.**
+
+Accepted across the area (not failures):
+- **The demo clock, and figures with a written reason.**
+  - Times: 11:30 for 11:34 (IN06), "saved 11:30" for 11:33 (IN07), 12:00 for 12:03 and 12:05 (IN10–IN15, IN12), 15:52 for Katwe Timber's 15:34 (IN31–IN35, because the demo taps Done at the hand-in clock), 11:02 for 11:03 (IN21).
+  - Aisle B reads 118 → 218 for 120 → 220 (IN14, IN15): `shelf.ts` `onShelf`, after #0556's 2 bags were collected at 11:10.
+  - IN40 reads "4 checked in today" where the board says 3. By FACTS §8, four arrivals are checked in by 17:30: the 10:05 trip, the 11:34 trip, the 12:00 Hima delivery and the Katwe ride. The board should read 4 the next time it is drawn.
+- **The rail icons** are the shell's `RAIL`, as the Pack critic accepted.
+- **Inactive controls dimmed as drawn:**
+  - the off slide, "Count 2 more first" and "Waiting to send" (4.01:1);
+  - IN16's tiles and chips while sending;
+  - IN05 and IN14's Scan and "Not on the list" while sending (2.68:1, now `disabled`, as redrawn);
+  - IN23's bag strip and Good/Damaged switch while sending ("kept" 1.86, "back" 2.28, 1.83–2.89; the rest of the card stays at full strength, as drawn);
+  - IN24's disabled "Not sent yet" (4.29:1);
+  - IN10's 100-bag tile, which is 44×43 only while drawn pressed (scale .97).
+- **Stand-in links**:
+  - IN01's "A supplier turned up" opens the listed delivery.
+  - IN10 and IN11's "Stack it in aisle B" open `shelf/aisle` (aisle B) where the board links SH01 (routes §3).
+  - IN40's "Ask Denis for more" opens Find, now a ruling in spec §2a.
+- **Close and Back**: Close lands on the board's place. On the delivery boards, which are reached from Today's Next job, the strip reads "Back to Today" and lands there, the real screen below (nav.ts's rule).
+- **IN12's 4–10 px drift.** IN12's board draws the end screen's title 4 px higher than IN06's board, and the app draws one end screen. Words, figures, Undo and the bag row all match.
+- **Animations**: the Undo bar shows full after its run (IN06, IN12, IN21, IN32).
+- **No money on any Goods-in board**: "3m" is a sheet length. `scrollWidth` is 360 on all 29. No text is under 11 px, and nothing is clipped (the delivery sub now reads "at the yard 12:00").
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| IN01 Coming in | `in` | 1 | 5.78 | ok | ok | ok | ok | ok | ok | pass | the shared stage-sheet head, as redrawn |
+| IN40 Nothing coming | `in` | 1 | 3.81 | ok | ok | ok | ok | ok | ok | pass | 4 for 3 (FACTS); Ask → Find (§2a) |
+| IN02 Check-in | `in/checkin` | 3 | 1.27 | ok | ok | ok | ok | ok | ok | pass | pressed "1 tin" is the tap's moment |
+| IN03 A line differs | `in/checkin` | 6 | 0.03 | ok | ok | ok | ok | ok | ok | pass | |
+| IN04 Not on the list | sheet | 7 | 3.49 | ok | ok | ok | ok | ok | ok | pass | 2 px offsets |
+| IN16 Extra sending | sheet | 8 | 3.64 | ok | ok | ok | ok | ok | ok | pass | dimmed as drawn |
+| IN05 Sending | `in/checkin` | 7 | 3.08 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN06 Checked in | `in/checkin` | 6 | 2.04 | ok | ok | ok | ok | ok | ok | pass | Undo 10 s |
+| IN07 No signal | `in/checkin` | 6 | 2.30 | ok | ok | ok | ok | ok | ok | pass | saved 11:30, Scan and Not on the list live |
+| IN08 Not done | `in/checkin` | 6 | 2.58 | ok | ok | ok | ok | ok | ok | pass | Try again 40 drawn in a 44 target |
+| IN09 Someone else | `in/checkin` | 6 | 2.19 | ok | ok | ok | ok | ok | ok | pass | Close → Today |
+| IN13 Ruth: keep it | `in/checkin` (push) | 0 | 0.46 | ok | ok | ok | ok | ok | ok | pass | |
+| IN10 Delivery | `in/delivery` | 3 | 0.23 | ok | ok | ok | ok | ok | ok | pass | Torn? drawn |
+| IN11 Some torn | `in/delivery` | 7 | 0.30 | ok | ok | ok | ok | ok | ok | pass | bags overlap as drawn |
+| IN14 Delivery sending | `in/delivery` | 4 | 2.37 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN15 Delivery no signal | `in/delivery` | 6 | 2.33 | ok | ok | ok | ok | ok | ok | pass | |
+| IN12 Delivery done | `in/delivery` | 3 | 8.89 | ok | ok | ok | ok | ok | ok | pass | Undo; 4–10 px drift (above) |
+| IN20 Return | `in/return` | 3 | 0.41 | ok | ok | ok | ok | ok | ok | pass | one chip row |
+| IN23 Return sending | `in/return` | 4 | 0.44 | ok | ok | ok | ok | ok | ok | pass | |
+| IN21 Sent to Ruth | `in/return` | 4 | 5.32 | ok | ok | ok | ok | ok | ok | pass | |
+| IN24 Return no signal | `in/return` | 4 | 0.41 | ok | ok | ok | ok | ok | ok | pass | |
+| IN25 Return not done | `in/return` | 4 | 4.41 | ok | ok | ok | ok | ok | ok | pass | |
+| IN22 Ruth took it back | `in/return` (push) | 0 | 0.06 | ok | ok | ok | ok | ok | ok | pass | demo carries `gateAt`; see the note |
+| IN30 Ride | `in/ride` | 2 | 0.65 | ok | ok | ok | ok | ok | ok | pass | |
+| IN31 Hand in | `in/ride` | 3 | 0.76 | ok | ok | ok | ok | ok | ok | pass | |
+| IN34 Hand-in sending | `in/ride` | 5 | 0.85 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN33 Ride no signal | `in/ride` | 3 | 0.79 | ok | ok | ok | ok | ok | ok | pass | saved 15:52 |
+| IN35 Hand-in not done | `in/ride` | 4 | 1.08 | ok | ok | ok | ok | ok | ok | pass | |
+| IN32 Handed in | `in/ride` | 4 | 5.86 | ok | ok | ok | ok | ok | ok | pass | Undo 10 s |
+
+### Goods in: what is still open (not a board failure)
+
+- **The gate time on the real books** (IN22). The live `store_return_ask` has no field for it, so with real data "At the gate" shows the sent time. The demo carries `gateAt`, so the board passes. The gap is written down only in a code comment (`core/store/supabase/yard.ts:100`). Record it in spec §3 (or data §9) as an open question with its default, or add the field in the Store's reserved migration. Then the rule lives in the spec, not just in the code.
+
+## Out
+
+Critic third run 2026-11-12 on `b1a8d1ac` (origin/claude/store-build), after the builder fixed G11. This run re-checked OU13 and the new AD07 in full (its taps, links, measures and image) and re-ran the parity spec for all the others: every diff is within 0.4 points of the second run (`bacd5c32`), and the images were looked at again. Boards: the 28 OU boards plus AD01, AD03, AD04 (Someone new) and AD07 (the gate when money holds every order), all from "Added while building": 32 in all. `test/parity/store-out.json` now reaches OU14 at `&at=930` and OU15 at `&at=1010` (by On the road's Ready chip), and every tap reaches its board. Each board's links were replayed by tapping the board's controls. The back strips, Close and the OU24 slide were also tapped one by one, and the landing was read from `sessionStorage['ow-store-view']`.
+
+**32 of 32 pass.** G11 is fixed. A new board, AD07, draws the gate when every order there is held by money: OU10's head and gate picture with the amber lock, the order card with "Not paid yet", Grace and Ruth told, Done today, and the locked "Stays until paid" slide. `Gate.tsx` draws it at 3.73%, and "Ready to collect 1" now agrees with the body. OU13's Close lands on AD07 (`out/gate`). On AD07, the strip reads "Back to On the road" and goes there, Close goes to Today, and a tap on the locked knob opens #0555's own sheet (OU13).
+
+All ten round-1 failures are fixed:
+
+| | Fix |
+|---|---|
+| G1 | The strips name the screen below and land on it ("Back to On the road" over the gate; "Back to the door" on Coming back). |
+| G2 | The eyebrows are `#5F6980` in app and boards. |
+| G3 | The grey Code pill is inactive while a hand-over is held or kept: a tap stays on the gate. |
+| G4 | OU13's Close goes to the gate. |
+| G5 | OU13 shows Buying and Packing skipped and the gate "ready", redrawn. Ask Ruth's disc is Ruth's teal (spec §2a ruling). OU24's now-stop shows the return arrow and 9:55. |
+| G6 | OU14 and OU15 show their lists, and each row opens To load or To pack. OU14's Delivered tile is now a figure. |
+| G7 | The gate is drawn under the code's scrim. |
+| G8 | The cancel time is 10:38, and the put-back row is 304×45 and opens `pack/put-back`. |
+| G9 | OU17 is redrawn with the "Who drives" label row; the diff went from 9.32% to 2.08%. |
+| G10 | OU24's Close and slide go to On the road. |
+
+Still accepted across the area:
+- the run's now-stop "now" for 10:05 (P18);
+- "saved 7:52" (FACTS §1);
+- "arrived 14:05" (the demo clock is 14:05; FACTS gives 14:04–14:05);
+- no Done chip (Q22);
+- full progress bars (animation);
+- disabled chips, "All on", "Who collects", the keypad and the Code pill while held, kept, failed or full (inactive, as drawn);
+- the ghost rows (`aria-hidden`);
+- AD03's focus ring;
+- OU20's #0547 Delivered, which the board links to OU24 as a storyboard shortcut;
+- OU30's Packed tile, which goes to To pack (`pack/order` needs an order);
+- rows that sit a few px lower under 44 px hit areas. Examples: OU01 is 6–10 px lower below "Name it". OU27's board now draws its put-back row at 44 px.
+
+Some measurements are not counted:
+- Text covered by a sheet or a scrim (Today under a stage sheet, the gate under the code sheet).
+- 36 px pens: they have a 44 px `::after` hit area.
+- Inputs: they sit inside 52–80 px `<label>` cards.
+
+The money check flags only "3m", "26 m", "32 m", "46 m", "50 m" and "318K". These are a length, minutes and a plate, so there is **no money on any Out board**. `scrollWidth` is 360 on all 32.
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| OU01 To load | `out/load` | 0 (push) | 6.72 | ok | ok | ok | ok | ok | ok | pass | |
+| OU30 Nothing to load | `out/load` | 0 (push) | 9.88 | ok | ok | ok | ok | ok | ok | pass | reached as #0530 cancelled (written) |
+| OU31 Name this direction | `out/load` + sheet | 1 | 6.27 | ok | ok | ok | ok | ok | ok | pass | G2 fixed |
+| OU02 Load | `out/run` | 1 | 0.99 | ok | ok | ok | ok | ok | ok | pass | |
+| OU03 A hired driver | `out/run` + sheet | 2 | 6.72 | ok | ok | ok | ok | ok | ok | pass | |
+| AD01 Someone new | `out/run` + sheet | 3 | 0.37 | ok | ok | ok | ok | ok | ok | pass | |
+| AD03 Someone new, filled | `out/run` + sheet | 6 | 0.58 | ok | ok | ok | ok | ok | ok | pass | Robert Kasozi: AD open question 1 |
+| AD04 Not a mobile | `out/run` + sheet | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | |
+| OU17 Slide held | `out/run` | 2 | 2.08 | ok | ok | ok | ok | ok | ok | pass | G9 fixed (board redrawn) |
+| OU04 Sending | `out/run` | 4 | 1.06 | ok | ok | ok | ok | ok | ok | pass | |
+| OU05 On the road (end) | `out/run` | 2 | 0.47 | ok | ok | ok | ok | ok | ok | pass | |
+| OU06 Not sent yet | `out/run` | 3 | 6.34 | ok | ok | ok | ok | ok | ok | pass | |
+| OU07 Not saved | `out/run` | 3 | 6.38 | ok | ok | ok | ok | ok | ok | pass | |
+| OU10 Ready to collect | `out/gate` | 2 | 4.98 | ok | ok | ok | ok | ok | ok | pass | G1 fixed: "Back to On the road" → On the road; Close → Today |
+| OU08 Handing over | `out/gate` | 5 | 4.49 | ok | ok | ok | ok | ok | ok | pass | G1, G3 fixed |
+| OU16 Gate offline | `out/gate` | 4 | 7.75 | ok | ok | ok | ok | ok | ok | pass | G1, G3 fixed |
+| OU12 Handed over | `out/gate` | 3 | 0.58 | ok | ok | ok | ok | ok | ok | pass | |
+| OU13 Not paid yet | `out/gate {id}` | 2 | 7.21 | ok | ok | ok | ok | ok | ok | pass | G4, G5, G11 fixed: Close → AD07; strip "Back to On the road" → On the road |
+| AD07 All held at the gate | `out/gate` | 2 | 3.73 | ok | ok | ok | ok | ok | ok | pass | reached by On the road's Ready chip at 10:41; the locked knob opens OU13 |
+| OU15 Nobody to hand over | `out/gate` | 2 | 10.24 | ok | ok | ok | ok | ok | ok | pass | G1, G6 fixed (10:10; board redrawn "they collect", "To pack 2") |
+| OU11 Peter's code | `out/gate-code` | 7 | 0.38 | ok | ok | ok | ok | ok | ok | pass | G2, G7 fixed |
+| OU09 Wrong code | `out/gate-code` | 7 | 0.39 | ok | ok | ok | ok | ok | ok | pass | G2, G7 fixed |
+| OU20 On the road | `out/road` | 1 | 7.35 | ok | ok | ok | ok | ok | ok | pass | |
+| OU14 Nobody on the road | `out/road` | 1 | 11.19 | ok | ok | ok | ok | ok | ok | pass | G6 fixed (9:30; board redrawn "Next out", "To load 3"); the lower half sits 6–18 px low |
+| OU25 Road offline | `out/road` | 5 | 7.02 | ok | ok | ok | ok | ok | ok | pass | |
+| OU27 Cancelled on the truck | `out/road` | 1 | 9.30 | ok | ok | ok | ok | ok | ok | pass | G8 fixed; board redrawn with the row at 44 px |
+| OU21 At the door | `out/door` | 2 | 0.33 | ok | ok | ok | ok | ok | ok | pass | |
+| OU26 Delivering | `out/door` | 5 | 0.59 | ok | ok | ok | ok | ok | ok | pass | |
+| OU22 Delivered | `out/door` | 3 | 0.43 | ok | ok | ok | ok | ok | ok | pass | |
+| OU23 Why no photo | `out/door` + sheet | 4 | 4.35 | ok | ok | ok | ok | ok | ok | pass | G2 fixed |
+| OU28 Door not sent | `out/door` | 4 | 1.16 | ok | ok | ok | ok | ok | ok | pass | |
+| OU24 Coming back | `out/cant-deliver` | 4 | 3.31 | ok | ok | ok | ok | ok | ok | pass | G5, G10 fixed: "Back to the door" → door; Close and slide → On the road |
+
+### Out failures and fixes
+
+None open. G1–G11 are fixed and re-tapped. Design review of AD07 and the other AD boards (not a parity failure): `docs/canvas/store-agent/review/AD.json` round 3.

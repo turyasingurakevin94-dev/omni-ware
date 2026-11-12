@@ -6,9 +6,9 @@
  * fix sheet (suppliers/fix) to put what they said on the list.
  */
 import type { JSX } from 'preact';
-import { WORD } from '../../../core/buyer/rules.ts';
+import { UNIT, WORD, record, recordWord, unitOr } from '../../../core/buyer/rules.ts';
 import type { LineState } from '../../../core/buyer/types.ts';
-import { orderNo, phoneText } from '../../../core/names.ts';
+import { counted, orderNo, phoneText } from '../../../core/names.ts';
 import { GroupCard, IconTile, TILE_TONE } from '../../../ui/ActRow.tsx';
 import { AisleIcon, Duo, Icon, phWhatsapp, type IconName } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -30,6 +30,10 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
   const short = s.name.split(' ')[0], moses = first(byRole(b, 'sourcing'), 'Sourcing');
   const later = bought.some((x) => keptFor('confirmPrice', s.id, x.price.item));
   const wa = `https://wa.me/${intlPhone(s.phone)}`;
+  // The record, one rule (BUY-03): said yes N of M asks over 30 days; nothing at 0 of 0.
+  const rec = record(s);
+  // A price with no unit: the unit of a line of that item, else "each" (BUY-12).
+  const unitFor = (item: string, unit: string) => unitOr(unit, b.orders.flatMap((o) => o.lines).find((l) => l.name === item && l.unit)?.unit);
 
   return (
     <main class="ow-b-suppliers-one">
@@ -43,7 +47,7 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
           </span>
         </div>
         <div class="ow-b-suppliers-hero-stats">
-          <div><span>Found</span><span class="ow-b-suppliers-big"><b class="mono">{s.found}</b><span class="mono">{`of ${s.asked}`}</span></span></div>
+          {rec && <div><span>Said yes · 30 days ›</span><span class="ow-b-suppliers-big"><b class="mono">{rec.yes}</b><span class="mono">{`of ${counted(rec.asks, UNIT.record)}`}</span></span></div>}
           <div>
             <span>Reply</span>
             <span class="ow-b-suppliers-big">
@@ -52,9 +56,11 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
             </span>
           </div>
         </div>
-        <div class="ow-b-suppliers-segs" role="img" aria-label={`Found ${s.found} of the last ${s.asked} asks`}>
-          {Array.from({ length: s.asked }, (_, i) => <i key={i} class={i < s.found ? 'on' : undefined} />)}
-        </div>
+        {rec && (
+          <div class="ow-b-suppliers-segs" role="img" aria-label={`${recordWord(rec)} in 30 days`}>
+            {Array.from({ length: rec.asks }, (_, i) => <i key={i} class={i < rec.yes ? 'on' : undefined} />)}
+          </div>
+        )}
         <div class="ow-b-suppliers-calls">
           <a class="ow-b-suppliers-call" href={`tel:+${intlPhone(s.phone)}`} aria-label={`Call ${s.name}`}><Icon name="phone" size={22} stroke={2} /></a>
           <a class="ow-b-suppliers-wa" href={wa} target="_blank" rel="noopener">
@@ -67,7 +73,7 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
       <div class="ow-b-suppliers-one-body">
         {lines.length > 0 && (
           <section>
-            <h2 class="ow-b-suppliers-sh"><Icon name="list" size={16} stroke={2} /><span>With them now</span><b class="mono">{lines.length}</b></h2>
+            <h2 class="ow-b-suppliers-sh"><Icon name="list" size={16} stroke={2} /><span>With them now</span><b class="mono">{counted(lines.length, 'line')}</b></h2>
             <GroupCard pad={12}>
               {lines.map((r) => {
                 const seller = member(b, r.order.sellerId), tone = chipTone(r.state);
@@ -95,11 +101,11 @@ export function One(p: { params: Record<string, unknown> }): JSX.Element {
             <GroupCard pad={12}>
               {bought.map((x) => (
                 <button key={x.price.item} type="button" class="ow-b-suppliers-pr" onClick={() => nav.push('suppliers/fix', { id: s.id, item: x.price.item })}
-                  aria-label={`${x.price.item}: ${fig(x.now)} a ${x.price.unit}, ${x.days ? `${x.days} ${x.days === 1 ? 'day' : 'days'} old` : 'today'}. Fix the price`}>
+                  aria-label={`${x.price.item}: ${fig(x.now)} a ${unitFor(x.price.item, x.price.unit)}, ${x.days ? `${x.days} ${x.days === 1 ? 'day' : 'days'} old` : 'today'}. Fix the price`}>
                   <span class="ow-b-suppliers-pr-ic"><AisleIcon aisle={x.price.item} size={22} color="#1C2233" /></span>
                   <span class="ow-b-suppliers-pr-t">
                     <span>{x.price.item}</span>
-                    <span class="mono">{fig(x.now)} <small>UGX</small> / {x.price.unit}</span>
+                    <span class="mono">{fig(x.now)} <small>UGX</small> / {unitFor(x.price.item, x.price.unit)}</span>
                     {x.was != null && <span class="mono was">{`was ${fig(x.was)}`}</span>}
                   </span>
                   {keptFor('confirmPrice', s.id, x.price.item) ? <SendsLater /> : (

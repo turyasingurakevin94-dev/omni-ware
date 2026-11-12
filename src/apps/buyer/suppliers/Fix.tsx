@@ -13,6 +13,8 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Button } from '../../../ui/Button.tsx';
 import { AisleIcon, Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
+import { Callout } from '../../../ui/Notice.tsx';
+import { farFromList } from '../../../core/buyer/rules.ts';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
@@ -46,6 +48,8 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
   const mosesM = byRole(b, 'sourcing'), moses = first(mosesM, 'Sourcing');
   const list = x ? x.price.price : 0, days = x ? ageDays(x.price.at, now.value) : 0, diff = val != null && x ? val - list : 0;
   const pct = list ? Math.round((Math.abs(diff) / list) * 100) : 0;
+  // BUY-07: more than 50% from the list may be a slip (2,700 for 24,000): check it, then Save anyway.
+  const far = val != null && farFromList(val, list);
 
   const save = async (price: number, how: Send) => {
     if (!x) return;
@@ -115,6 +119,7 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
                   {` · ${diff > 0 ? 'Up' : 'Down'} `}<span class="mono">{`${pct}%`}</span>
                 </span>
               )}
+              {far && <Callout tone="warn" icon="warning">Far from the list (<span class="mono">{fig(list)}</span>) · check it</Callout>}
             </div>
             <button type="button" class="ow-b-suppliers-still" aria-busy={send === 'still' || undefined} disabled={send !== 'idle'} onClick={() => { void save(list, 'still'); }}>
               {send === 'still' ? <span class="ow-b-suppliers-spin" aria-hidden="true" /> : <Icon name="check" size={18} stroke={2.2} />}
@@ -180,7 +185,7 @@ export function Fix(p: { params: Record<string, unknown> }): JSX.Element {
         )}
         {price
           ? <Button h={52} state={send === 'save' ? 'sending' : val == null || send !== 'idle' ? 'disabled' : 'idle'} onClick={() => { if (val != null) void save(val, 'save'); }}>
-            {val == null ? 'Type their price' : 'Save · supplier told me'}
+            {val == null ? 'Type their price' : far ? 'Save anyway' : 'Save · supplier told me'}
           </Button>
           : sent
             ? <Button h={52} onClick={() => nav.back()}>Done</Button>

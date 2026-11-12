@@ -21,7 +21,7 @@ const { read, extractFunction, compileScope, createReporter } = require('./_extr
 const t = createReporter('store staff role');
 const src = read('index.html');
 const worker = read('shared-worker.js');
-const store = read('store.html');
+const store = read('old/store.html');
 
 /* ---------------- 1. the floor ---------------- */
 {

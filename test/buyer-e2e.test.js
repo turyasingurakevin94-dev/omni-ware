@@ -7,6 +7,9 @@
  * no text under 11 px).
  *
  *   ask        morning: Ask on the row (WhatsApp opens), the no-WhatsApp sheet, Yes · same
+ *   history    To ask › an order › Ask › New price › Save, 5 times: still on buyer.html, history.state is the screen (BUY-01)
+ *   you        the avatar opens You, Sign out; the start shows Opening… on the navy head (BUY-14)
+ *   undo       a toast's Undo outlasts 5 s and goes on the next tap after 10 s (BUY-10)
  *   trip       midday: the trip in route order, the cash ask slide → On the trip
  *   handin     on the trip: Got it all, Undo (5 s), Got it all again, Short (36 of 40), all done (Undo, cash back), Hand in → Handed in
  *   paid       paid 650,000 at Nakawa: #0550 2,018,000, the orders add up to what was paid
@@ -86,13 +89,108 @@ const small = new Set();
     let txt = await s.text();
     t.check(!txt.includes('NEXT MOVE'), 'one still to ask: no Next move trip card yet');
     t.check(!(await s.p.getByRole('button', { name: /^Found: .*waits on you/ }).count()), 'one still to ask: Found waits on nobody');
-    t.check(/Grace · Faith see Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
+    t.check(/Grace · Faith see: Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
+
+    /* ---- history (BUY-01): screens and sheets in and out 5 times, still on buyer.html, history.state = the screen ---- */
+    s = await open(b, '?demo');
+    const at = async (id, depth, sheet, step) => {
+      const h = await s.p.evaluate(() => ({ url: location.pathname, st: history.state }));
+      const ok = /buyer\.html$/.test(h.url) && h.st && h.st.id === id && h.st.depth === depth && h.st.sheet === sheet;
+      if (!ok) t.fail(`history ${step}: wanted ${id}/${depth}${sheet ? '+sheet' : ''}, got ${h.url} ${JSON.stringify(h.st)}`);
+      return ok;
+    };
+    let fine = true;
+    const price = async () => {
+      await s.p.locator('input').first().fill('40000'); await s.p.waitForTimeout(200);
+      await s.p.getByRole('button', { name: /^Save/ }).first().click(); await s.p.waitForTimeout(700);
+    };
+    for (let i = 0; i < 5; i++) {
+      await s.p.getByRole('button', { name: /^To ask: / }).click(); await s.p.waitForTimeout(500);
+      fine = (await at('orders', 2, false, `${i} To ask`)) && fine;
+      await s.p.getByRole('button', { name: /: open$/ }).first().click(); await s.p.waitForTimeout(500);
+      fine = (await at('orders/order', 3, false, `${i} an order`)) && fine;
+      await s.p.goBack(); await s.p.waitForTimeout(500);
+      fine = (await at('orders', 2, false, `${i} Back from the order`)) && fine;
+      const ask = s.p.getByRole('button', { name: /^Ask .+/ }).first(), who = ((await ask.getAttribute('aria-label')) || (await ask.textContent())).replace(/^Ask /, '').trim();
+      await ask.click(); await s.p.waitForTimeout(600);
+      if (await s.btn('Call Nakawa Cement Depot').count()) {
+        fine = (await at('orders', 2, true, `${i} the Ask sheet`)) && fine;
+        await s.p.getByRole('button', { name: /^New price/ }).click(); await s.p.waitForTimeout(500);
+        fine = (await at('replies/price', 3, false, `${i} New price from the sheet`)) && fine;
+        await price();
+        fine = (await at('orders', 2, false, `${i} saved`)) && fine;
+        await s.tap('Back to Today');
+      } else {
+        await s.tap('Back to Today');
+        await s.p.getByLabel(/suppliers found\. Open Replies/).click(); await s.p.waitForTimeout(500);
+        await s.p.getByRole('button', { name: `New price: ${who}` }).click(); await s.p.waitForTimeout(500);
+        fine = (await at('replies/price', 3, false, `${i} New price for ${who}`)) && fine;
+        await price();
+        fine = (await at('replies', 2, false, `${i} saved`)) && fine;
+        await s.p.getByRole('button', { name: /^Back to Today/ }).first().click(); await s.p.waitForTimeout(500);
+      }
+      fine = (await at('today', 1, false, `${i} Today`)) && fine;
+    }
+    t.check(fine, 'Today › To ask › an order › Ask › New price › Save, 5 times: on buyer.html, history.state is the screen');
+    await s.p.goBack(); await s.p.waitForTimeout(500);
+    t.check((await at('today', 1, false, 'Back on Today')) && (await s.text()).includes('Good morning, Denis'), 'Back on Today stays in the app');
+    t.check(!s.errors.length, `no page errors (history) ${s.errors.join('; ')}`);
+    // Not found: the sheet's entry, Back closes only the sheet; Other item takes the sheet's entry; Client waits pops it.
+    s = await open(b, '?demo&state=midday');
+    await s.p.getByRole('button', { name: /^To ask/ }).click(); await s.p.waitForTimeout(500);
+    await s.tap('Ggaba Stores, #0553: open');
+    const nf = () => s.p.getByRole('button', { name: /^Y12 rebar 12 m: not found/ }).first().click().then(() => s.p.waitForTimeout(600));
+    await nf();
+    fine = await at('orders/order', 3, true, 'Not found sheet');
+    await s.p.goBack(); await s.p.waitForTimeout(500);
+    fine = (await at('orders/order', 3, false, 'Back closes the sheet')) && !(await s.p.getByRole('button', { name: 'Client waits' }).count()) && fine;
+    await nf(); await s.tap('Other item');
+    fine = (await at('orders/switch', 4, false, 'Other item')) && fine;
+    await s.p.goBack(); await s.p.waitForTimeout(500);
+    fine = (await at('orders/order', 3, false, 'Back from Other item')) && fine;
+    await nf(); await s.tap('Client waits');
+    fine = (await at('orders/order', 3, false, 'Client waits')) && fine;
+    t.check(fine, 'Not found: Back closes the sheet; Other item and Client waits leave history.state on the screen');
+    t.check(!s.errors.length, `no page errors (history, Not found) ${s.errors.join('; ')}`);
+
+    /* ---- You and the start (BUY-14): the avatar opens You; Sign out lands on the sign-in; never a blank start ---- */
+    s = await open(b, '?demo');
+    await s.tap('Denis, you');
+    txt = await s.text();
+    t.check(/Denis Okello Buyer · Mukasa Hardware/.test(txt) && /Role Buyer/.test(txt) && /Shop Mukasa Hardware/.test(txt) && /Pushes on this phone (On|Off)/.test(txt), 'the avatar opens You: name, role, shop, pushes');
+    await s.p.goBack(); await s.p.waitForTimeout(400);
+    t.check(!(await s.btn('Sign out').count()) && (await at('today', 1, false, 'Back closes You')), 'Back closes You and stays on Today');
+    await s.tap('Denis, you'); await s.tap('Sign out');
+    t.check(await s.p.getByRole('button', { name: 'Sign in' }).isVisible(), 'Sign out lands on the sign-in page');
+    {
+      const ctx = await b.newContext({ viewport: { width: 360, height: 780 } }), p = await ctx.newPage();
+      await p.route(/buyer-demo\.js/, async (r) => { await new Promise((ok) => setTimeout(ok, 2000)); await r.continue(); });
+      await p.goto(PAGE + '?demo', { waitUntil: 'commit' });
+      await p.waitForTimeout(250);
+      t.check(/Opening…/.test(await p.evaluate(() => document.body.innerText)) && await p.locator('.ow-b-today-hero').isVisible(), 'the start: the navy head says Opening… at once, never blank');
+      await p.waitForTimeout(2600);
+      await p.goto(PAGE + '?demo', { waitUntil: 'commit' }); await p.waitForTimeout(250);
+      t.check(/Opening…[\s\S]*TO BUY TODAY/.test(await p.evaluate(() => document.body.innerText)), 'the next start: the copy kept on this phone shows under Opening…');
+      await ctx.close();
+    }
+
+    /* ---- Undo (BUY-10): a toast's Undo is still there after 5 s, and goes on the next tap after 10 s ---- */
+    s = await open(b, '?demo&state=midday');
+    await s.p.getByRole('button', { name: /^Y12 rebar 12 m not found for order 0553/ }).first().click(); await s.p.waitForTimeout(600);
+    await s.p.getByRole('button', { name: /^Switch to / }).first().click();
+    await s.p.waitForTimeout(5600);
+    const undoBtn = s.p.locator('.ow-toast').getByRole('button', { name: 'Undo' });
+    t.check(await undoBtn.isVisible(), 'Switch to another supplier: its Undo is still on screen after 5 s');
+    await s.p.waitForTimeout(5000);
+    t.check(await undoBtn.isVisible(), 'after 10 s the Undo stays until the next tap');
+    await s.p.mouse.click(180, 400); await s.p.waitForTimeout(300);
+    t.check(!(await undoBtn.count()), 'the next tap: the Undo goes');
 
     /* ---- Today: who sees an ask, a kept ask, the Ask sheet's Not found ---- */
     s = await open(b, '?demo');
     await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
     txt = await s.text();
-    t.check(txt.includes('Grace · Faith see Asked') && !/Brian[^.]*see Asked/.test(txt), 'asked Namanve: Grace and Faith see Asked, not Brian (his order is still to ask)');
+    t.check(txt.includes('Grace · Faith see: Asked') && !/Brian[^.]*see: Asked/.test(txt), 'asked Namanve: Grace and Faith see Asked, not Brian (his order is still to ask)');
     s = await open(b, '?demo&offline=1');
     await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
     t.check(!(await s.btn('Ask Namanve Sheets on WhatsApp, 3 lines').count()) && (await s.text()).includes('Waiting'), 'no signal: the asked row waits, no second Ask');
@@ -228,7 +326,7 @@ const small = new Set();
     await find().fill(''); await s.p.waitForTimeout(300);
     await s.tap('Ask Ndeeba Timber Works again on WhatsApp');
     txt = await s.text();
-    t.check(/found 5 of 10/.test(txt) && /Brian sees: Asked · \d\d:\d\d/.test(txt) && !(await s.p.locator('.ow-toast').count()), 'Ask again: the row says Asked and Brian sees it, no toast over the title');
+    t.check(/said yes 5 of 10 asks/.test(txt) && /Brian sees: Asked · \d\d:\d\d/.test(txt) && !(await s.p.locator('.ow-toast').count()), 'Ask again: the row says Asked and Brian sees it, no toast over the title');
     await s.p.getByRole('button', { name: /^Katwe Fabricators/ }).first().click(); await s.p.waitForTimeout(400);
     await s.p.getByRole('button', { name: /Fix the price/ }).first().click(); await s.p.waitForTimeout(400);
     await s.p.getByRole('button', { name: 'Close', exact: true }).dblclick(); await s.p.waitForTimeout(700);
@@ -250,6 +348,47 @@ const small = new Set();
     txt = await s.text();
     t.check(txt.includes('Sends later') && txt.includes('Moses sees it when back') && !txt.includes('Sent ·'), 'offline phone: Sends later, Moses sees it when back, never "Sent"');
     t.check(!s.errors.length, `no page errors (suppliers offline) ${s.errors.join('; ')}`);
+
+    /* ---- Buyer round 1 · BUY-03: each number has one meaning, and each pair of screens agrees ---- */
+    s = await open(b, '?demo&state=midday');
+    txt = await s.text();
+    const moving = Number((txt.match(/On the move (\d+) orders?/) || [])[1]);
+    const jobsN = Number((txt.match(/Needs you (\d+) jobs?/) || [])[1]);
+    const rowsN = await s.p.getByRole('button', { name: /^(Ask .*line|.* not found for order|.* needs a supplier)/ }).count();
+    t.check(jobsN === 1 && rowsN === jobsN, `Needs you: ${jobsN} job, one row each (${rowsN} rows)`);
+    t.check(/SUPPLIERS/.test(txt) && await s.btn('On the trip: none').isVisible(), 'the tiles say SUPPLIERS, and On the trip counts suppliers');
+    t.check(txt.includes('Trip · 3 stops') && await s.btn('The trip, 3 stops to buy').isVisible(), 'Today\'s trip card and the red + both say 3 stops');
+    t.check(/Timber 2×4 · #0554 · Asked/.test(txt), 'the held chip names the order: Timber 2×4 · #0554 · Asked');
+    await s.tap('To ask: none');
+    txt = await s.text();
+    const checkingN = Number((txt.match(/Checking (\d+)/) || [])[1]);
+    t.check(moving === 3 && checkingN === moving, `Today "On the move · ${moving} orders" = Orders "Checking ${checkingN}"`);
+    s = await open(b, '?demo&state=midday');
+    await s.tap('The trip, 3 stops to buy');
+    t.check((await s.text()).includes('Sat 17 Oct · 3 stops'), 'the Plan\'s head: 3 stops, as the + says');
+    const cut = await s.p.evaluate(() => [...document.querySelectorAll('.ow-b-trip-node > span:last-child')].some((e) => getComputedStyle(e).textOverflow === 'ellipsis' || e.scrollWidth > e.clientWidth + 1));
+    t.check(!cut, 'the route\'s names are never cut (two lines)');
+    s = await open(b, '?demo&state=midday');
+    await s.tap('Suppliers');
+    t.check(await s.p.getByRole('button', { name: 'Namanve Sheets: said yes 9 of 10 asks in 30 days' }).count() === 1, 'the Suppliers row: said yes 9 of 10 asks');
+    await s.p.getByRole('button', { name: /^Namanve Sheets: said yes/ }).click(); await s.p.waitForTimeout(500); await s.fit('one supplier');
+    txt = await s.text();
+    t.check(/SAID YES · 30 DAYS › 9 of 10 asks/i.test(txt) && txt.includes('With them now 3 lines'), 'the supplier\'s page: said yes 9 of 10 asks · 30 days, 3 lines');
+    t.check(/27,000 UGX \/ pcs was 24,000/.test(txt), 'a new cost reads was its own old cost (24,000)');
+
+    /* ---- BUY-14: take back the cash ask while Esther has not given it ---- */
+    s = await open(b, '?demo&state=cash');
+    await s.tap('The trip, 3 stops to buy');
+    txt = await s.text();
+    t.check(txt.includes('Waiting · Esther') && txt.includes("Esther's ask goes · she is told") && await s.btn('Take back the ask').isVisible(), 'the ask waits: the slide is named Take back the ask');
+    await s.slide('Take back the ask');
+    txt = await s.text();
+    t.check(/Ask taken back · Esther told 11:32/.test(txt) && await s.btn('Send cash ask to Esther').isVisible(), 'taken back: Esther told, the plan open again with Send cash ask');
+    t.check(!s.errors.length, `no page errors (take back) ${s.errors.join('; ')}`);
+    s = await open(b, '?demo&state=cash&offline=1');
+    await s.tap('The trip, 3 stops to buy');
+    txt = await s.text();
+    t.check(txt.includes('No signal · Esther may give meanwhile') && txt.includes('Take back needs signal') && !(await s.btn('Take back the ask').count()), 'no signal: Take back needs signal, never kept');
   } finally { await b.close(); }
   if (small.size) console.log('\nUnder 44 px tall (recorded):\n  ' + [...small].join('\n  '));
   process.exit(t.done() ? 1 : 0);

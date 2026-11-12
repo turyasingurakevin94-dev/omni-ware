@@ -4,7 +4,8 @@
  *
  *   <FromChip who={grace} no={553} />         "From Grace · #0553": where the work came from in Sales
  *   <Strip states={['found', 'asked']} />     one segment per line, in the line's colour
- *   <Sees who="Grace" word="Switched" bell /> what Sales gets back
+ *   <Sees who="Grace">Switched</Sees>         what Sales gets back: "{Seller} sees: {word}", the one label
+ *   <SeesCard who={grace} word="Buying" />    the same on a card with the seller's face (the order's word, Replies' foot)
  *   <StateWord state="found" at="09:31" />    a line's state word as a soft pill
  *   <RowAct …/>                               the navy pill on a row (Ask again), with its sending state
  */
@@ -16,7 +17,7 @@ import type { Member } from '../../../core/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { PILL, STRIP, STRIP_NAVY } from './rules.ts';
+import { PILL, STRIP, STRIP_NAVY, wordInk } from './rules.ts';
 import './orders.css';
 
 /** "From Grace · #0553": the seller's face, first name and the order number. */
@@ -41,13 +42,34 @@ export function Strip(p: { states: LineState[]; navy?: boolean; gap?: number }):
   );
 }
 
-/** "Grace sees: Switched" with the bell when a push goes. */
-export function Sees(p: { who: string; children: ComponentChildren; bell?: boolean; navy?: boolean; class?: string }): JSX.Element {
+/** "Grace sees: Switched" (BUY-04: the one label) with the bell when a push goes; the word in its state's ink when given. */
+export function Sees(p: { who: string; children: ComponentChildren; bell?: boolean; navy?: boolean; ink?: string; class?: string }): JSX.Element {
   return (
     <span class={cx('ow-b-orders-sees', p.navy && 'navy', p.class)}>
       {p.bell !== false && <Icon name="bell" size={14} stroke={2} />}
-      {`${p.who} sees:`} <b>{p.children}</b>
+      {`${p.who} sees:`} <b style={p.ink ? { color: p.ink } : undefined}>{p.children}</b>
     </span>
+  );
+}
+
+/** "GA  Grace sees: Buying   #0550": the seller's face, the one label, and what it is about at the end. */
+export function SeesCard(p: { who: Member | null; word: string; ink?: string; tail?: ComponentChildren; solid?: boolean }): JSX.Element {
+  return (
+    <div class={cx('ow-b-orders-seecard', p.solid && 'solid')}>
+      {p.who && <Avatar initials={p.who.initials} tint={p.who.tint} size={28} />}
+      <span class="t">{`${p.who ? firstWord(p.who.name) : 'Sales'} sees: `}<b style={{ color: p.ink || wordInk(p.word) }}>{p.word}</b></span>
+      {p.tail}
+    </div>
+  );
+}
+
+/** The board's pause mark for On hold (not in src/ui/icons.tsx yet): 24 box, round ends. */
+export function Pause(p: { size?: number }): JSX.Element {
+  const s = p.size || 14;
+  return (
+    <svg aria-hidden="true" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style={{ flex: 'none' }}>
+      <rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
   );
 }
 
