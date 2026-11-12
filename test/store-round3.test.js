@@ -20,7 +20,7 @@ const path = require('path');
 const { read, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 3: reliability (0162)');
-const store = read('store.html');
+const store = read('old/store.html');
 const sql = read('supabase/migrations/0162_store_expect_order.sql');
 
 // REL-04

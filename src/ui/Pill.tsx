@@ -90,7 +90,7 @@ export function ActionPill(p: { tone: ActTone; word: string; amount?: Fig; h?: 3
 }
 
 /** A tag on navy: mint, amber or glass; 26 tall with an icon (P09), or the small count pill of a page head ("4 owe"). */
-export function NavyPill(p: { tone: 'mint' | 'amber' | 'glass'; icon?: IconName; small?: boolean; children: ComponentChildren }): JSX.Element {
+export function NavyPill(p: { tone: 'mint' | 'amber' | 'glass' | 'blue'; icon?: IconName; small?: boolean; children: ComponentChildren }): JSX.Element {
   return (
     <span class={cx('ow-npill', 'n-' + p.tone, p.small && 'small')}>
       {p.icon && <Icon name={p.icon} size={13} stroke={2.4} />}

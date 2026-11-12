@@ -11,6 +11,7 @@
  *   <Track stage="delivered" sub="Collected 11:42" times={…} />          every stop ticked, the line full
  *   <Track stage="packing" skipped={['checking', 'buying']} … />          all on our shelf: those stops a dash, "skipped"
  *   <Track stage="road" word="Ready to collect" sub="at the gate" ready … />   a pickup at the gate (OR38)
+ *   <Track stage="road" word="Coming back" nowIcon="return" nowTime="9:55" … />   the now-stop's own icon and time (OU24: when he left)
  *
  * P18b · StageDots: the small dots of one order on a light card (a customer's orders).
  *   <StageDots stage="packing" ready={false} waits={false} />
@@ -39,6 +40,10 @@ export interface TrackProps {
   skipped?: Stage[];
   /** Ready to collect at the gate (OR38): the word over its line, the road stop the store with "ready" under it. */
   ready?: boolean;
+  /** The now-stop's icon when not the stage's own (OU24: the return arrow). */
+  nowIcon?: IconName;
+  /** Under the now-stop, a time in place of "now" (OU24: when he left, 9:55). */
+  nowTime?: string;
 }
 
 export function Track(p: TrackProps): JSX.Element {
@@ -56,14 +61,14 @@ export function Track(p: TrackProps): JSX.Element {
             : i < at || done
               ? <span key={s} class="ow-stop done"><Icon name="check" size={12} stroke={2.8} /></span>
               : i === at
-                ? <span key={s} class={cx('ow-stop now', p.waits && 'waits')}><Icon name={p.ready ? 'store' : STAGE_ICON[s]} size={16} stroke={2.2} /></span>
+                ? <span key={s} class={cx('ow-stop now', p.waits && 'waits')}><Icon name={p.nowIcon || (p.ready ? 'store' : STAGE_ICON[s])} size={16} stroke={2.2} /></span>
                 : <span key={s} class="ow-stop next"><Icon name={STAGE_ICON[s]} size={12} stroke={2.2} /></span>)}
         </div>
         <div class="ow-rail-names">
           {STAGES.map((s, i) => (
             <span key={s} class={cx(sk.includes(s) ? '' : i < at || done ? 'done' : i === at ? 'now' : '', i === at && p.waits && 'waits')}>
               <b>{STAGE_WORD[s]}</b>
-              {sk.includes(s) ? <em>skipped</em> : i === at && !done ? <em>{p.ready ? 'ready' : 'now'}</em> : <em class={t[s] ? 'mono' : undefined}>{t[s] || ''}</em>}
+              {sk.includes(s) ? <em>skipped</em> : i === at && !done ? (p.nowTime ? <em class="mono">{p.nowTime}</em> : <em>{p.ready ? 'ready' : 'now'}</em>) : <em class={t[s] ? 'mono' : undefined}>{t[s] || ''}</em>}
             </span>
           ))}
         </div>

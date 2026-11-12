@@ -21,7 +21,7 @@ const path = require('path');
 const { read, createReporter, extractFunction, extractDeclaration, compileScope } = require('./_extract');
 
 const t = createReporter('audit round 4: search and navigation (0163)');
-const store = read('store.html');
+const store = read('old/store.html');
 const sql = read('supabase/migrations/0163_store_find_forgives.sql');
 const region = (start, len) => { const i = store.indexOf(start); return i < 0 ? '' : store.slice(i, i + (len || 4000)); };
 
@@ -60,10 +60,10 @@ t.check(/data-stick aria-hidden="true"/.test(store) && /function stickSync\(pg\)
 const names = ['Hinges 4"', 'Butt hinges 4"', 'Gold screws 4*20', 'Black screws 4*20', 'Silicone Clear', 'Wire nails 4"', 'Door handle', 'Screws 4*25'];
 const items = names.map((n, i) => ({ key: 'P' + i, productName: n, aisle: { letter: 'K' } }));
 const S = compileScope([
-  extractDeclaration(store, 'ALIASES', 'store.html'), extractDeclaration(store, 'FD_RANK', 'store.html'),
+  extractDeclaration(store, 'ALIASES', 'old/store.html'), extractDeclaration(store, 'FD_RANK', 'old/store.html'),
   // fdNorm's regex holds quote marks the brace matcher reads as strings, so fdNorm and lev are cut by position.
-  store.slice(store.indexOf('function fdNorm('), store.indexOf('function fdHit(')), extractFunction(store, 'fdHit', 'store.html'),
-  extractFunction(store, 'fdScore', 'store.html'), extractFunction(store, 'itemSearch', 'store.html'), extractFunction(store, 'didYouMean', 'store.html'),
+  store.slice(store.indexOf('function fdNorm('), store.indexOf('function fdHit(')), extractFunction(store, 'fdHit', 'old/store.html'),
+  extractFunction(store, 'fdScore', 'old/store.html'), extractFunction(store, 'itemSearch', 'old/store.html'), extractFunction(store, 'didYouMean', 'old/store.html'),
 ], { stockItems: () => items, labelShort: () => '' }, ['itemSearch', 'didYouMean', 'fdNorm']);
 const found = q => S.itemSearch(q).map(x => x.productName);
 t.check(found('hindge').includes('Hinges 4"') && found('hindge').includes('Butt hinges 4"'), '"hindge" finds the hinges');

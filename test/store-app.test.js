@@ -29,7 +29,7 @@ const vm = require('vm');
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('store app');
-const html = read('store.html');
+const html = read('old/store.html');
 const adminSrc = read('index.html');
 const workerSrc = read('shared-worker.js');
 

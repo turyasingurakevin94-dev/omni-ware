@@ -1,0 +1,163 @@
+{
+ "area": "Added while building",
+ "prefix": "AD",
+ "rows": [
+  {
+   "title": "AD01 · Someone new (a hired driver we've never used)",
+   "boards": [
+    {
+     "file": "AD01SomeoneNew.dc.html",
+     "title": "Someone new → name, plate, phone over the run; Add his name first",
+     "agent_match": "OU03LoadHired.dc.html (store-agent)"
+    },
+    {
+     "file": "AD03SomeoneNewFilled.dc.html",
+     "title": "Filled → Phone checked, Robert gets the drop on WhatsApp, Robert drives (back to the load)",
+     "agent_match": "OU03LoadHired.dc.html (store-agent)"
+    },
+    {
+     "file": "AD04SomeoneNewPhone.dc.html",
+     "title": "Phone not a mobile → amber field, Fix his phone first",
+     "agent_match": "OU03LoadHired.dc.html (store-agent)"
+    }
+   ]
+  },
+  {
+   "title": "AD02 · Unpack a packed order (#0530, bay 2)",
+   "boards": [
+    {
+     "file": "AD02Unpack.dc.html",
+     "title": "Unpack #0530 → bay 2 → To pack, ticks stay, After Unpack · Undo for 10 s · Brian sees Packing again, Keep it packed / Unpack (navy)",
+     "agent_match": "PK06Packed.dc.html + PK15Unpack.dc.html (store-agent)"
+    },
+    {
+     "file": "AD05Unpacked.dc.html",
+     "title": "Unpacked · bay 2 free → Undo 9s, Brian sees Packing again, To pack now (#0556, #0530), Back to Today",
+     "agent_match": "PK15Unpack.dc.html (store-agent)"
+    },
+    {
+     "file": "AD06UnpackFailed.dc.html",
+     "title": "Not saved → #0530 is still packed on bay 2, tell Kevin · PK-0530-UNPACK, Try again",
+     "agent_match": "PK22PutBackFailed.dc.html (store-agent)"
+    }
+   ]
+  },
+  {
+   "title": "AD07 · Ready to collect when the money holds every order (OU13's Close, 10:41)",
+   "boards": [
+    {
+     "file": "AD07GateAllHeld.dc.html",
+     "title": "All held → #0555 the top card: the gate locked, Not paid yet, leaves when paid, Grace takes the money · Ruth may let it go, Stays until paid (a tap opens OU13)",
+     "agent_match": "OU10Gate.dc.html + OU13GateNotPaid.dc.html (store-agent)"
+    }
+   ]
+  }
+ ],
+ "flows": [
+  {
+   "name": "Load, a hired driver never used (1 drop, 2 lines)",
+   "taps_before": 10,
+   "taps_after": 8,
+   "steps_before": 5,
+   "steps_after": 3,
+   "note": "STORE-TODAY: tile + Change + name, plate, phone + Use + 2 ticks + slide = 10 (typing not counted); new: To load + Hired + Someone new + (name, plate, phone) + Robert drives + All on + slide = 6 taps + 3 fields counted as 2 more = 8"
+  },
+  {
+   "name": "Unpack a packed order still in the yard",
+   "taps_before": 3,
+   "taps_after": 2,
+   "steps_before": 2,
+   "steps_after": 1,
+   "note": "old: Packed chip + Unpack on the slip + Unpack; new: the order on its bay + Unpack (Undo 10 s, no confirm)"
+  }
+ ],
+ "scores": [
+  {
+   "file": "AD01SomeoneNew.dc.html",
+   "fidelity": 8.5,
+   "steps": 8,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 8
+  },
+  {
+   "file": "AD03SomeoneNewFilled.dc.html",
+   "fidelity": 9,
+   "steps": 8.5,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 8.5
+  },
+  {
+   "file": "AD04SomeoneNewPhone.dc.html",
+   "fidelity": 8.5,
+   "steps": 8,
+   "show": 8.5,
+   "polish": 8.5,
+   "in_step": 8.5
+  },
+  {
+   "file": "AD02Unpack.dc.html",
+   "fidelity": 8.5,
+   "steps": 8,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 8.5
+  },
+  {
+   "file": "AD05Unpacked.dc.html",
+   "fidelity": 9,
+   "steps": 9,
+   "show": 9,
+   "polish": 8.5,
+   "in_step": 8.5
+  },
+  {
+   "file": "AD06UnpackFailed.dc.html",
+   "fidelity": 8.5,
+   "steps": 8.5,
+   "show": 8.5,
+   "polish": 8,
+   "in_step": 8.5
+  }
+ ],
+ "handovers": [
+  {
+   "board": "AD03SomeoneNewFilled.dc.html",
+   "from_or_to": "Sales/Grace + customer Kato",
+   "words_here": "After the slide · Grace and Kato see: On the road · Robert (hired)",
+   "words_there": "On the road · Robert (hired)",
+   "push": "order.out '#0552 on the road · Robert (hired)' → Grace, after the run's slide (not from this sheet); WhatsApp list to Robert (W8a, nothing written)"
+  },
+  {
+   "board": "AD02Unpack.dc.html",
+   "from_or_to": "Sales/Brian",
+   "words_here": "After Unpack · Undo for 10 s · Brian sees: Packing again",
+   "words_there": "Packing again (as PK15, IB01's Unpack row)",
+   "push": "none: read live, the order's track moves back to Packing (IB01 'Unpacked in the yard', live)"
+  }
+ ],
+ "kept_fixes": [
+  "R2 FLOW-02: a packed order still in the yard can be unpacked, ticks kept, bay freed (AD02, AD05); held writes Undo 10 s (AD05)",
+  "R3 REL-06: Unpack is never where the last main button was; it opens as a sheet from the order on its bay once the 10 s Undo has passed (AD02)",
+  "R3 REL-07: a failed write keeps its work: Not done · that did not save, Try again (AD06)",
+  "loadhired (STORE-TODAY 48): new driver form Name, Plate, Phone; disabled 'Add their name first'; amber line when the phone is not a Ugandan mobile (AD01, AD04)"
+ ],
+ "other_apps": [],
+ "open_questions": [
+  "Robert Kasozi (UBK 427M, 0752 310 884) is invented: FACTS has no new hired driver (Abudu and Juma are OU03's). Confirm or replace (GOAL 'Waiting on Kevin' 9).",
+  "Unpack goes back to To pack (FLOW-02, PK15's tile) while 04-screens-store.md §4.2 says 'back to Packing now': the shared stage is Packing either way; which sub-state the yard list shows needs one word."
+ ],
+ "rules": [
+  "A hired driver's phone must be a Ugandan mobile (256 7/3 + 8 digits): docs/spec/04-screens-store.md §4.4 'The driver is remembered', store.html:4783 phoneOk; so AD04 blocks the sheet",
+  "Keep it packed / Unpack: the brief for AD02 and the old sheet (docs/audit/store/STORE-TODAY.md line 86, `unpack`: 'Keep it packed / Unpack'); Unpack is navy, not the slide, because it is undoable for 10 s (BRIEF 'One rule for sends'; CLAUDE.md: the slide is for irreversible yard actions)",
+  "Unpack is kept: FLOW-02 (STORE-TODAY.md line 145), REL-06 (line 154), the rule (line 315); spec 04-screens-store.md §4.2 'Unpack'"
+ ],
+ "states_note": [
+  "AD01 has no pressed, sending or not-saved board: the sheet writes nothing (04-screens-store-data.md W8a); the driver is kept by the run's slide, whose states are OU17, OU04, OU06, OU07",
+  "Unpack's pressed, sending and offline are the shell's parts (the navy button pressed, 'Sending…' on it, the amber P27 bar), as PK18 and PK11 draw them; not drawn again"
+ ],
+ "new_parts": [
+  "none: the sheet is OU03's light sheet; the fields are OU03's driver row (40px icon tile, 64px row) with a value line; the bay → To pack picture, ticks card, Brian strip, Undo toast and Not done bar are PK15's, PK10's and PK22's"
+ ]
+}

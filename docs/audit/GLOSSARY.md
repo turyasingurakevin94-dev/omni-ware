@@ -36,6 +36,12 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 | Delivered (the button) | On the road, beside each stop: the camera, then "Delivered". It opens the photo proof. | Mark delivered | Store R10 |
 | Coming in | Goods coming **into** the yard from suppliers: trips still buying ("Buying · 1 of 2") and trips heading back ("Coming"). A section of the In page. | On the way; on the road (that is orders going out) | Store R10 |
 | On the road | Orders going **out** to customers on a truck. Its pills: "out now · delivered · collected" (collected is part of delivered). | coming in | Store R10 |
+| Ready to collect | A packed pickup waiting at the gate for its collector (the order is On the road · at the gate). Sales: "Ready to collect · at the gate"; agent: "Ready to collect"; client: "Ready to collect at the shop" | It has left the shop; Packing for a packed pickup; "at the gate" for a trip | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Back at the yard | A buying trip that has come back and waits for its check-in ("Denis's trip is back at the yard · 3 lines"). "At the gate" is only for orders waiting to be collected and returns at the gate | At the gate (for a trip); a round is back | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Coming back | Goods on their way back to the yard: a delivery that could not be delivered ("Coming back · Ggaba closed"), or a return asked by Sales ("Coming back · #0548 · 2 bag") | On road; On the way | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Cancelled · put it back / Cancelled · bring it back | A cancelled order the yard still holds: on the bay or To pack, "put it back" (to the shelf); on a truck, "bring it back". The Manager's button stays "Cancel" | called off | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Counter sale · out | How the yard sees a counter sale: stock out of the shelf in the item's history, never a collection ("Counter sale" in every app; Accounts "Counter sale · income") | delivered · collected; Delivered today | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
+| Delivered today | The day's Delivered count and the owner's and console's word for an order delivered today ("1 delivered today") | Done today; Completed | Store redesign, 11 Nov 2026 (proposed, waits for Kevin's approval of the canvas) |
 | Packing now | To pack's orders another person has started; each row names them | Someone's on it | Store R10 · WORD-11 |
 | Remove (Waiting to send) | Drop something that was never sent from this phone, after "Remove it from this phone?" · Keep it / Remove. The books never had it. | delete; cancel (an order's word) | Store R10 · NAV-09 |
 | Packed | The order is packed and checked | — | Round skill |
@@ -95,7 +101,7 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
-| How long | A duration: "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
+| How long | A duration: "just now" under a minute, "41 m", "9 h 41 m", "2 days" (`howLong()`) | a clock time for a duration ("oldest 9:41") | Store R6 · WORD-07 |
 | When | A moment: "15:20" today, "Thu 23:28" otherwise (`whenAt()`) | a clock time with no day when it isn't today | Store R6 · WORD-07 |
 | Undo | 10 seconds, or until the screen changes, everywhere | 5 s in one place, 10 s in another | Store R2 · FLOW-02 |
 

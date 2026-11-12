@@ -39,7 +39,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/came in: their supplier is billed first/.test(c) && /collection_trips/.test(c), 'goods that came in, or a live buying trip, refuse it (manager.html obVoidBlock)');
   t.check(/position\('order\.cancel' in src\) > 0 then return/.test(sql), 'the two patched functions are left alone on a second run');
   // The Store screen already reads what the Cancel writes.
-  const store = read('store.html');
+  const store = read('old/store.html');
   t.check(/function orderCalledOff\(q\)\{ return !!q && \(q\.voided \|\| !!q\.cancelledAt \|\| q\.status === 'cancelled'\); \}/.test(store) && /q\.cancelledByName/.test(store), 'store.html reads status cancelled, cancelledAt and cancelledByName');
 }
 

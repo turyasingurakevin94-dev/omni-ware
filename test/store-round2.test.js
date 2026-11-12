@@ -17,7 +17,7 @@
 const { read, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 2: core workflows');
-const store = read('store.html');
+const store = read('old/store.html');
 
 // FLOW-01
 t.check(/function lineLevels\(l\)\{/.test(store) && /\[\[pu, per\], \[u, 1\]\]/.test(store), 'a trip line counts in its pack and its own unit');

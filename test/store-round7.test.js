@@ -18,7 +18,7 @@
 const { read, extractFunction, compileScope, createReporter } = require('./_extract');
 
 const t = createReporter('audit round 7: premium UI at 360px');
-const store = read('store.html');
+const store = read('old/store.html');
 const fn = n => { const l = store.split('\n').find(x => x.startsWith('function ' + n + '(')); return l && (l.match(/\{/g) || []).length === (l.match(/\}/g) || []).length ? l : extractFunction(store, n); };
 const region = (from, to) => store.slice(store.indexOf(from), store.indexOf(to, store.indexOf(from)));
 

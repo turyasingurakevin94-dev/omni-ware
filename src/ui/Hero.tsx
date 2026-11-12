@@ -13,6 +13,9 @@
  * proportion, "Goal hit · +1.2M over"); goal={null} with manager ("Ruth sets your goal");
  * compact (TD02, a busy day): the head row only, its line under the greeting, the goal under it
  * as a white GoalStrip. No onFind: no Find button (the parts board).
+ *
+ * The Store's Today (store-agent TD01): `bell` puts the glass Alerts bell (its crimson count) beside the
+ * avatar; with no `month` there is no Sold block, and `children` (the yard's own picture) follow the head row.
  */
 import type { ComponentChildren, JSX } from 'preact';
 import { Avatar, type Face } from './Avatar.tsx';
@@ -33,11 +36,14 @@ export interface HeroProps {
   /**
    * live: fresh and nothing waits · updating: an old copy ("Updating · saved 7:52") · waiting: writes not on the
    * books yet ("2 waiting to send", SAL-3) — never Live while anything waits.
+   * off / checking: the Store's own states (below).
    */
-  status: 'live' | 'updating' | 'waiting';
+  status: 'live' | 'updating' | 'waiting' | 'off' | 'checking';
   savedAt?: string;
   /** With status "waiting": how many writes wait. */
   waiting?: number;
+  /** The words for 'off' (a rose dot: the Store's TD07 "Not loaded", TD22 "Could not reach the shop") and 'checking' (an amber spinner: TD21 "Checking your shop…"). */
+  statusText?: string;
   me: Face;
   onMe: () => void;
   /** The glass Find button beside the avatar. */
@@ -55,6 +61,10 @@ export interface HeroProps {
   onGoal?: () => void;
   manager?: string;
   doors?: HeroDoor[];
+  /** The glass Alerts bell beside the avatar, with its count (the Store, TD01). */
+  bell?: { count: number; label: string; on: () => void };
+  /** What a role draws under the head row instead of Sold and the goal (the Store's yard). */
+  children?: ComponentChildren;
 }
 
 const chev = <Icon name="chevron-right" size={14} stroke={2.4} style={{ opacity: 0.7 }} />;
@@ -75,13 +85,21 @@ export function Hero(p: HeroProps): JSX.Element {
               ? <span class="ow-hero-live upd"><span aria-hidden="true" />{`Updating · saved ${p.savedAt}`}</span>
               : p.status === 'waiting'
                 ? <span class="ow-hero-live upd"><span aria-hidden="true" />{`${p.waiting || 0} waiting to send`}</span>
-                : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
+                : p.status === 'off' ? <span class="ow-hero-live off"><span aria-hidden="true" />{p.statusText}</span>
+                  : p.status === 'checking' ? <span class="ow-hero-live chk"><span aria-hidden="true" />{p.statusText}</span>
+                    : <span class="ow-hero-live"><span aria-hidden="true" />Live</span>}
           </span>
         )}
       </div>
-      {p.onFind ? (
+      {p.onFind || p.bell ? (
         <div class="ow-hero-acts">
-          <Tap on={p.onFind} label="Find a chat, customer, order or item" class="ow-hero-find"><Icon name="search" size={20} stroke={2} /></Tap>
+          {p.onFind && <Tap on={p.onFind} label="Find a chat, customer, order or item" class="ow-hero-find"><Icon name="search" size={20} stroke={2} /></Tap>}
+          {p.bell && (
+            <Tap on={p.bell.on} label={p.bell.label} class="ow-hero-find ow-hero-bell">
+              <Icon name="bell" size={20} stroke={2} />
+              {p.bell.count > 0 && <span aria-hidden="true" class="ow-hero-bell-n mono">{p.bell.count}</span>}
+            </Tap>
+          )}
           {me}
         </div>
       ) : me}
@@ -92,10 +110,10 @@ export function Hero(p: HeroProps): JSX.Element {
   return (
     <header class="ow-hero">
       <div class="ow-hero-top">{top}</div>
-      <Tap on={p.onSold} label={p.soldLabel || `Sold in ${p.month}: ${fig(p.sold ?? 0)}. Open your day.`} class="ow-hero-sold">
+      {p.month != null && <Tap on={p.onSold} label={p.soldLabel || `Sold in ${p.month}: ${fig(p.sold ?? 0)}. Open your day.`} class="ow-hero-sold">
         <span class="ow-hero-eyebrow">{`Sold · ${p.month}`}{chev}</span>
         <span class="ow-hero-fig"><span>UGX</span><span class="mono">{fig(p.sold ?? 0)}</span>{p.note && <span class="ow-hero-note">{p.note}</span>}</span>
-      </Tap>
+      </Tap>}
       {g && 'hit' in g ? (
         <Tap on={p.onGoal} label={g.label} class="ow-hero-goal">
           <span aria-hidden="true" class="ow-hero-bar hit"><span style={{ flex: g.target }} /><span style={{ flex: Math.max(0, g.sold - g.target) }} /></span>
@@ -129,6 +147,7 @@ export function Hero(p: HeroProps): JSX.Element {
           ))}
         </div>
       )}
+      {p.children}
     </header>
   );
 }

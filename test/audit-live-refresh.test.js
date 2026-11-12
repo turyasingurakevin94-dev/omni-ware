@@ -31,7 +31,7 @@
 const { read, createReporter } = require('./_extract');
 
 const t = createReporter('the audit\'s live refresh and paging (0137)');
-const apps = { sales: read('sales.html'), buyer: read('old/buyer.html'), store: read('store.html'), manager: read('manager.html'), accounts: read('accounts.html'), owner: read('owner.html') };
+const apps = { sales: read('sales.html'), buyer: read('old/buyer.html'), store: read('old/store.html'), manager: read('manager.html'), accounts: read('accounts.html'), owner: read('owner.html') };
 const LIVE = /function liveQuoteFilter\(q\)\{ return q\.or\('status\.neq\.completed,invoiced\.eq\.false,voided\.eq\.true,invoiced_ts\.gte\.' \+ new Date\(Date\.now\(\) - 2 \* 864e5\)\.toISOString\(\)\); \}/;
 const MERGE = /function mergeQuotes\(rows\)\{\n  const list = D\(\)\.savedQuotes \|\| \[\], at = new Map\(list\.map\(\(q, i\) => \[Number\(q\.id\), i\]\)\);\n  rows\.forEach\(r => \{ const q = rowToQuote\(r\), i = at\.get\(Number\(q\.id\)\); if \(i == null\) list\.push\(q\); else list\[i\] = q; \}\);/;
 
@@ -78,13 +78,13 @@ t.check(/const waTick = async \(\) => \{ if \(document\.visibilityState !== 'vis
 /* ---------------- 5. the database client ---------------- */
 const fs = require('fs'), path = require('path');
 for (const a of ['sales', 'buyer', 'store', 'manager', 'accounts', 'sourcing', 'owner', 'agent']) {
-  // The Buyer is switched: the old page is old/buyer.html, and its phone app ships the built buyer.html.
-  const src = read(a === 'buyer' ? 'old/buyer.html' : a + '.html');
+  // The Buyer and the Store are switched: the old pages are old/buyer.html and old/store.html, and their phone apps ship the built pages.
+  const src = read(a === 'buyer' || a === 'store' ? `old/${a}.html` : a + '.html');
   t.check(src.includes('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>') && !/supabase-js@2\/dist/.test(src), `${a}: supabase-js is pinned`);
   t.check(src.includes('<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>'), `${a}: and preconnected`);
   const tr = require(path.join(__dirname, '..', 'apps', a, 'src', 'transform.js'));
   // The Sales phone app ships the new app's page, not the old sales.html (apps/sales/scripts/build-www.js).
-  const out = tr(a === 'sales' ? read('next/sales.html') : a === 'buyer' ? read(`${a}.html`) : src);
+  const out = tr(a === 'sales' ? read('next/sales.html') : a === 'buyer' || a === 'store' ? read(`${a}.html`) : src);
   t.check(out.includes('<script src="vendor/supabase.js"></script>') && !/cdn\.jsdelivr\.net/.test(out), `${a}: the app's transform still swaps it for the bundled copy and drops the preconnect`);
 }
 
