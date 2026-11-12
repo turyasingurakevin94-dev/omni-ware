@@ -4,7 +4,8 @@
  * Money paid: a slide, with Refund · Deposit picked first as for a void (D-19). Kept: a tap.
  */
 import { money } from '../../../../core/money.ts';
-import { AFTER_WORDS, packedOf, UI_STAGE, whoStops } from '../../../../core/manager/decide-orders.ts';
+import { packedOf, UI_STAGE, whoStops } from '../../../../core/manager/decide-orders.ts';
+import { AFTER_WORDS } from '../../../../core/manager/words.ts';
 import type { CancelAsk } from '../../../../core/manager/types.ts';
 import { ANSWER, hm } from '../../../../core/manager/words.ts';
 import { firstWord, orderNo } from '../../../../core/names.ts';

@@ -5,7 +5,8 @@
  * Slide Credit note raised · 56,250 (creditNote) · Kept as sold (a tap).
  */
 import { money } from '../../../../core/money.ts';
-import { AFTER_WORDS, firstIn, returnAmount, returnMoney } from '../../../../core/manager/decide-orders.ts';
+import { firstIn, returnAmount, returnMoney } from '../../../../core/manager/decide-orders.ts';
+import { AFTER_WORDS } from '../../../../core/manager/words.ts';
 import type { ReturnAsk } from '../../../../core/manager/types.ts';
 import { ANSWER } from '../../../../core/manager/words.ts';
 import { Stepper } from '../../../../ui/Stepper.tsx';

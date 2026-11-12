@@ -5,7 +5,8 @@
  * grey, "Pick refund or deposit". Slide Voided · 320,000 (voidBill) · Kept as billed (a tap).
  */
 import { money } from '../../../../core/money.ts';
-import { AFTER_WORDS, owesAfterVoid } from '../../../../core/manager/decide-orders.ts';
+import { owesAfterVoid } from '../../../../core/manager/decide-orders.ts';
+import { AFTER_WORDS } from '../../../../core/manager/words.ts';
 import type { MOrder, VoidAsk } from '../../../../core/manager/types.ts';
 import { twins } from '../../../../core/manager/watch.ts';
 import { ANSWER } from '../../../../core/manager/words.ts';

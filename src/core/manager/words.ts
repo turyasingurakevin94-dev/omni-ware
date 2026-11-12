@@ -149,3 +149,26 @@ export function hm(ms: number): string {
   const d = new Date(ms + 3 * 3600e3);
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
+
+/** The words on the sheets after the order (D-18 … D-22), and the few others the screens share. */
+export const AFTER_WORDS = {
+  nothingPaid: 'Nothing paid',
+  paid: (v: string) => `${v} paid`,
+  offToAsk: 'off To ask',
+  offTheTrip: 'off the trip',
+  nothingToUnpack: 'nothing to unpack',
+  unpackIt: 'unpack it',
+  backOnShelf: 'Back on the shelf',
+  damaged: 'Damaged',
+  offOwes: 'Off what they owe',
+  cashBack: 'Cash back',
+  pickMoney: 'Pick refund or deposit',
+  stays: 'Stays',
+  void: 'Void',
+  enteredTwice: 'Entered twice',
+  invoiced: 'Invoiced',
+  open: 'Open',
+  givenTo: (name: string) => `Given to ${name}`,
+  found: 'Found',
+  notFound: 'Not found',
+} as const;

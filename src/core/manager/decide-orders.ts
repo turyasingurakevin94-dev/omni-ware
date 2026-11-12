@@ -5,24 +5,8 @@
  * The demo's writes (demo/writes.ts) move the books the same way.
  */
 import type { Cust, ManagerBooks, MOrder, Person, Stage, UGX } from './types.ts';
+import { AFTER_WORDS } from './words.ts';
 
-/** Words these sheets use that words.ts does not hold yet (handover §3; the board DecideOrders). */
-export const AFTER_WORDS = {
-  nothingPaid: 'Nothing paid',
-  paid: (v: string) => `${v} paid`,
-  offToAsk: 'off To ask',
-  offTheTrip: 'off the trip',
-  nothingToUnpack: 'nothing to unpack',
-  unpackIt: 'unpack it',
-  backOnShelf: 'Back on the shelf',
-  damaged: 'Damaged',
-  offOwes: 'Off what they owe',
-  cashBack: 'Cash back',
-  pickMoney: 'Pick refund or deposit',
-  stays: 'Stays',
-  void: 'Void',
-  enteredTwice: 'Entered twice',
-} as const;
 
 /** The light card's stage dots (src/ui/Track StageDots) use the shared stage names. */
 export const UI_STAGE: Record<Stage, 'checking' | 'buying' | 'packing' | 'road' | 'delivered'> = {
