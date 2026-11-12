@@ -10,7 +10,7 @@ import { useState } from 'preact/hooks';
 import { clockOf, columns, giveTo, holderOf } from '../../../core/manager/orders.ts';
 import type { ManagerBooks, MOrder } from '../../../core/manager/types.ts';
 import { stuck as stuckOf } from '../../../core/manager/watch.ts';
-import { ANSWER, hm, inStage, limitWord, ROLE, STAGE } from '../../../core/manager/words.ts';
+import { AFTER_WORDS, ANSWER, hm, inStage, limitWord, ROLE, STAGE } from '../../../core/manager/words.ts';
 import { money } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { IconTile } from '../../../ui/ActRow.tsx';
@@ -18,7 +18,8 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { PageHead } from '../../../ui/PageHead.tsx';
 import { nav } from '../shell/nav.ts';
-import { books, now, undoHeld, waiting } from '../shell/store.ts';
+import { books, now, waiting } from '../shell/store.ts';
+import { Strip } from './Strip.tsx';
 import { Clock, Empty, Spinner, StageCols, tintBg, Told } from './Bits.tsx';
 import { nudgeWords, whatItIs } from './OrderCard.tsx';
 import { useInPlace } from './useAnswer.ts';
@@ -35,7 +36,7 @@ function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
   const me = firstWord(b.me.name);
   const busy = spot.st === 'held' || spot.st === 'sending';
   const nudge = () => { if (!holder || busy) return; setAct('nudge'); spot.go(`${ANSWER.nudged} ${firstWord(holder.name)} · ${hm(t)}`, 'nudge', [holder.id, o.id, nudgeWords(o, c.mins)]); };
-  const give = () => { if (!to || busy) return; setAct('give'); spot.go(`Given to ${firstWord(to.name)} · ${orderNo(o.id)}`, 'giveTo', [o.id, to.id]); };
+  const give = () => { if (!to || busy) return; setAct('give'); spot.go(`${AFTER_WORDS.givenTo(firstWord(to.name))} · ${orderNo(o.id)}`, 'giveTo', [o.id, to.id]); };
   const actWord = act === 'give' && to ? `Give it to ${firstWord(to.name)}` : holder ? `Nudge ${firstWord(holder.name)}` : '';
   return (
     <>
@@ -72,19 +73,8 @@ function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
               )}
           </div>
         )}
-        {(spot.st === 'held' || spot.st === 'done') ? (
-          <div class="mg-orders-strip" role="status">
-            <Icon name="check" size={18} stroke={2.4} />
-            <span>{spot.label}</span>
-            {spot.st === 'held' && <button type="button" onClick={() => undoHeld()}><Icon name="undo" size={16} stroke={2.2} />Undo</button>}
-          </div>
-        ) : spot.st === 'error' ? (
-          <div class="mg-orders-err" role="alert">
-            <span class="ic"><Icon name="warning" size={18} stroke={2} /></span>
-            <span class="t"><b>Not sent</b><span class="mono">{`${actWord} · ${orderNo(o.id)}`}</span></span>
-            <button type="button" class="mg-orders-btn navy" onClick={spot.retry}><Icon name="retry" size={16} stroke={2.2} />Try again</button>
-          </div>
-        ) : holder && holder.id !== b.me.id && (
+        {spot.st !== 'idle' && spot.st !== 'sending' && spot.st !== 'kept' ? <Strip spot={spot} what={`${actWord} · ${orderNo(o.id)}`} />
+          : holder && holder.id !== b.me.id && (
           <div class="mg-orders-preview">
             <Icon name="bell" size={14} stroke={2} />
             <span>{`${firstWord(holder.name)} sees: `}<b>{`${me} nudged you`}</b>{` · ${nudgeWords(o, c.mins)}`}</span>
@@ -98,7 +88,7 @@ function StuckCard(p: { o: MOrder; b: ManagerBooks; t: number }): JSX.Element {
           </button>
         )}
       </div>
-      {seller && to && <Told card face={seller} who={`${firstWord(seller.name)} sees`} word={`Given to ${firstWord(to.name)}`} />}
+      {seller && to && <Told card face={seller} who={`${firstWord(seller.name)} sees`} word={AFTER_WORDS.givenTo(firstWord(to.name))} />}
     </>
   );
 }

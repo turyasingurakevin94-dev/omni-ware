@@ -16,6 +16,9 @@ import type { Cust, MOrder, Ms, Person, Stage } from './types.ts';
 import { onPace } from './watch.ts';
 import { inStage, STAGE } from './words.ts';
 
+/** A clock that never breaks across lines: "2 h 40 m" stays whole. */
+const whole = (mins: number): string => inStage(mins).replace(/ /g, '\u00a0');
+
 export const CALL_ME = 'Call me when you can.';
 
 /** The push's title, and the dock's "Denis sees Ruth nudged you". */
@@ -28,9 +31,9 @@ export function aboutOrder(o: Pick<MOrder, 'id' | 'customerName' | 'stage' | 'st
   const mins = Math.max(0, (now - o.stageAt) / 60000), limit = Number(limits[o.stage]) || 0;
   const what = `The ${o.customerName} order (${orderNo(o.id)})`;
   if (limit > 0 && mins > limit) {
-    return `${what} has waited ${inStage(mins)} in ${STAGE[o.stage]}, ${inStage(mins - limit)} over its limit. Can you sort it now?`;
+    return `${what} has waited ${whole(mins)} in ${STAGE[o.stage]}, ${whole(mins - limit)} over its limit. Can you sort it now?`;
   }
-  return `${what} is in ${STAGE[o.stage]} ${inStage(mins)}. Can you sort it now?`;
+  return `${what} is in ${STAGE[o.stage]} ${whole(mins)}. Can you sort it now?`;
 }
 
 /** A salesperson behind the month's pace. */

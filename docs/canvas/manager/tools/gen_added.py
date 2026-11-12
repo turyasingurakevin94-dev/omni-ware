@@ -380,6 +380,23 @@ def p_books():
     return money_p4() + dim() + sheet_wrap(136, books_body()) + abs_dock(dk)
 
 
+def way_in():
+    def fc(label, n, kind="off", dot_=None):
+        st = {"on": f"background: {NAVY}; color: #fff;", "off": f"background: #fff; color: {INK}; box-shadow: inset 0 0 0 1px {LINE};",
+              "press": f"background: #0C1326; color: #fff; transform: scale(.95); box-shadow: 0 0 0 4px rgba(22,32,60,.15);"}[kind]
+        return (f'<button aria-label="{label} {n}" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; {st} font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap">'
+                f'{dot_ or ""}{label} <b style="{MONO}; font-weight: 600; opacity: .75">{n}</b></button>')
+    head = (f'<div style="background: {NAVY}; color: #fff; border-radius: 16px; padding: 10px 14px; display: flex; align-items: baseline; gap: 8px">'
+            f'<span style="font-size: 20px; font-weight: 800">Orders</span>{M("10", 14, 600, ONNAVY)}</div>')
+    redot = f'<i style="width: 8px; height: 8px; border-radius: 999px; background: {BAD}"></i>'
+    row = (f'<div style="overflow: hidden; margin: 0 -12px; padding: 4px 12px"><div style="display: flex; gap: 6px; margin-left: -84px">'
+           f'{fc("All", "10", "on")}{fc("Stuck", "1", dot_=redot)}{fc("Ruth decides", "5")}{fc("Denis\'s list", "3", "press", dot("DO"))}</div></div>')
+    nxt = (f'<div style="display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 10px 12px">'
+           f'{av("DO", 32)}<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Denis\'s restock list</span>'
+           f'{M("this trip · 3 lines · 4,450,000", 11, 600, FAINT)}</span><span style="color: {SOFT}">{ic(P["chev"], 18)}</span></div>')
+    return head + row + nxt
+
+
 # ===================================================================== states
 def frag(d):
     return f'<div style="border-radius: 20px; overflow: hidden">{d.replace("border-radius: 24px 24px 0 0", "border-radius: 20px")}</div>'
@@ -391,8 +408,8 @@ def states1():
     st.append(state("SENDING · SIGNING IN", sign_form("sending"), "the button waits · nothing else to tap"))
     st.append(state("ERROR · WRONG EMAIL OR PASSWORD", sign_form("wrong"), "the password ring goes red · type it again"))
     st.append(state("OFFLINE · DISABLED · NO SIGNAL", sign_form("off"), "the button greys and waits for signal"))
-    st.append(state("PRESSED · NOT YET", card(rs_row("cement", "pressed", True), pad="0 12px", gap=0) + rs_sees(),
-                    "pill darkens · scales 95% · same row as DecideStock"))
+    st.append(state("THE WAY IN · ORDERS → DENIS'S LIST", way_in(),
+                    "Orders p1's chip row, swiped · 1 tap on Denis's list 3 opens orders/stock"))
     succ = (card(rs_row("cement", "done", True), pad="0 12px", gap=0)
             + SH.s_toast("Not yet · Cement 50 kg", "Denis sees it", 10))
     st.append(state("SUCCESS · UNDO 10 S", succ, "the row moves to Not yet · Undo 10 s · Denis gets the push"))

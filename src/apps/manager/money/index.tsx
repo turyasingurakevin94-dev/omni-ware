@@ -10,7 +10,7 @@ import { PromiseSheet } from './Promise.tsx';
 
 export const screens: Record<string, ScreenDef> = {
   money: { view: Money },
-  'money/debtor': { view: Debtor, tabBar: false },
+  'money/debtor': { view: Debtor, tabBar: false, bars: false },
   'money/promise': { view: PromiseSheet, tabBar: false, bars: false },
   'money/customer': { view: Customer, tabBar: false },
   'money/limit': { view: LimitSheet, tabBar: false, bars: false },

@@ -17,9 +17,9 @@ import { SectionHead } from '../../../ui/SectionHead.tsx';
 import type { Params } from '../../../ui/stack.ts';
 import { cx } from '../../../ui/util.tsx';
 import { nav, top } from '../shell/nav.ts';
-import { answer, books, now } from '../shell/store.ts';
+import { answer, books, now, online } from '../shell/store.ts';
 import { sellerOf } from './Money.tsx';
-import { HeldStrip, MoneyDock, MoneySheet, Tile } from './parts.tsx';
+import { ErrStrip, HeldStrip, MoneyDock, MoneySheet, Tile } from './parts.tsx';
 import './sheets.css';
 
 type How = 'all' | 'oldest' | 'part';
@@ -61,7 +61,8 @@ export function PromiseSheet(p: { params: Params }): JSX.Element | null {
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-pr-who"><b>{c.name}</b><span class="mono">{`owes ${money(c.owes)} · oldest ${oldestDays(c, today)} d`}</span></span></div>}
       dock={sent
         ? <MoneyDock strip={<HeldStrip word={sent} sub={seller ? `${firstWord(seller.name)} sees it` : ''} />} />
-        : <MoneyDock told={seller ? [seller] : []} word={word} error={error ? 'Not saved · Try again' : null}
+        : error ? <MoneyDock strip={<ErrStrip word={word} why={online.value ? 'Not saved' : 'Not saved · no signal'} retry={send} />} />
+        : <MoneyDock told={seller ? [seller] : []} word={word}
           tap={{ label, icon: 'check', on: send, disabled: amount > 0 ? undefined : 'Type how much' }} />}>
       <h1 class="mg-mo-title">Promise</h1>
       <SectionHead title="How much" />

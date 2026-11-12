@@ -12,11 +12,11 @@ import { firstWord, orderNo } from '../../../core/names.ts';
 import { clockOf, giveTo, holderOf, safeWord } from '../../../core/manager/orders.ts';
 import { askerOf, placeOf } from '../../../core/manager/queue.ts';
 import type { Ask, ManagerBooks, MOrder, Person } from '../../../core/manager/types.ts';
-import { ANSWER, askWord, hm, inStage, limitWord, STAGE } from '../../../core/manager/words.ts';
+import { AFTER_WORDS, ANSWER, askWord, hm, inStage, limitWord, STAGE } from '../../../core/manager/words.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { nav } from '../shell/nav.ts';
-import { undoHeld } from '../shell/store.ts';
+import { Strip } from './Strip.tsx';
 import { Clock, Spinner, Told } from './Bits.tsx';
 import { useInPlace, type InPlace } from './useAnswer.ts';
 
@@ -37,31 +37,13 @@ export function nudgeWords(o: MOrder, mins: number): string {
 export function StuckAnswers(p: { o: MOrder; b: ManagerBooks; now: number; spot: InPlace; act: string; setAct: (s: string) => void }): JSX.Element {
   const { o, b, spot } = p;
   const holder = holderOf(b, o), to = giveTo(b, o), c = clockOf(o, b.shop, p.now);
-  const stop = (e: Event) => e.stopPropagation();
   const nudge = holder && holder.id !== b.me.id ? () => { p.setAct(`Nudge ${firstWord(holder.name)}`); spot.go(`${ANSWER.nudged} ${firstWord(holder.name)} · ${hm(p.now)}`, 'nudge', [holder.id, o.id, nudgeWords(o, c.mins)]); } : null;
-  const give = to ? () => { p.setAct(`Give it to ${firstWord(to.name)}`); spot.go(`Given to ${firstWord(to.name)} · ${orderNo(o.id)}`, 'giveTo', [o.id, to.id]); } : null;
-  if (spot.st === 'held' || spot.st === 'done') {
-    return (
-      <div class="mg-orders-strip" role="status" onClick={stop}>
-        <Icon name="check" size={18} stroke={2.4} />
-        <span>{spot.label}</span>
-        {spot.st === 'held' && <button type="button" onClick={() => undoHeld()}><Icon name="undo" size={16} stroke={2.2} />Undo</button>}
-      </div>
-    );
-  }
-  if (spot.st === 'kept') return <div class="mg-orders-acts" onClick={stop}><span class="mg-orders-waits"><Icon name="clock" size={16} stroke={2} />Waits</span></div>;
-  if (spot.st === 'error') {
-    return (
-      <div class="mg-orders-err" role="alert" onClick={stop}>
-        <span class="ic"><Icon name="warning" size={18} stroke={2} /></span>
-        <span class="t"><b>Not sent</b><span class="mono">{`${p.act} · ${orderNo(o.id)}`}</span></span>
-        <button type="button" class="mg-orders-btn navy" onClick={spot.retry}><Icon name="retry" size={16} stroke={2.2} />Try again</button>
-      </div>
-    );
-  }
+  const give = to ? () => { p.setAct(`Give it to ${firstWord(to.name)}`); spot.go(`${AFTER_WORDS.givenTo(firstWord(to.name))} · ${orderNo(o.id)}`, 'giveTo', [o.id, to.id]); } : null;
+  const shown = Strip({ spot, what: `${p.act} · ${orderNo(o.id)}` });
+  if (shown) return shown;
   const sending = spot.st === 'sending';
   return (
-    <div class="mg-orders-acts" onClick={stop}>
+    <div class="mg-orders-acts" onClick={(e) => e.stopPropagation()}>
       {give && to && (
         <button type="button" class="mg-orders-btn out face" aria-disabled={sending ? 'true' : undefined} onClick={() => { if (!sending) give(); }}>
           <Avatar initials={to.initials} tint={to.tint} size={28} />{`Give it to ${firstWord(to.name)}`}

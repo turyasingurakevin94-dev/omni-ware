@@ -51,12 +51,12 @@ export function DockMove(p: { id: string; icon: IconName; word: string; done: st
       </div>
     );
   }
-  if (ph === 'sending') return <button type="button" class="mg-ts-ans" disabled aria-busy="true"><span class="ow-spin" aria-hidden="true" />Sending…</button>;
+  if (ph === 'sending') return <div class="mg-ts-row"><button type="button" class="mg-ts-ans" disabled aria-busy="true"><span class="ow-spin" aria-hidden="true" />Sending…</button></div>;
   if (ph === 'error') {
     return (
       <>
         <span class="mg-ts-err" role="alert"><Icon name="warning" size={16} stroke={2} />Not sent · Try again</span>
-        <button type="button" class="mg-ts-ans" onClick={() => retryMove(p.id)}>Try again</button>
+        <div class="mg-ts-row"><button type="button" class="mg-ts-ans" onClick={() => retryMove(p.id)}>Try again</button></div>
       </>
     );
   }

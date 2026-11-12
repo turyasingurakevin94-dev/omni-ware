@@ -9,7 +9,7 @@ import { asksOn, safePrice } from '../../../core/manager/orders.ts';
 import { lineShopPrice, scale } from '../../../core/manager/price.ts';
 import { askerOf, placeOf } from '../../../core/manager/queue.ts';
 import type { Ask, ManagerBooks, MLine, MOrder } from '../../../core/manager/types.ts';
-import { askWord, hm, STAGES, STAGE, waited, whoSee } from '../../../core/manager/words.ts';
+import { AFTER_WORDS, askWord, hm, STAGES, STAGE, waited, whoSee } from '../../../core/manager/words.ts';
 import { money } from '../../../core/money.ts';
 import { firstWord, orderNo } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -120,9 +120,9 @@ function WaitCard(p: { a: Ask; o: MOrder; b: ManagerBooks; q: Ask[]; t: number }
 }
 
 const FOUND: Record<string, { tone: TileTone; icon: IconName; word: string }> = {
-  found: { tone: 'good', icon: 'check', word: 'Found' },
+  found: { tone: 'good', icon: 'check', word: AFTER_WORDS.found },
   up: { tone: 'warn', icon: 'tag', word: 'Price up' },
-  notfound: { tone: 'bad', icon: 'warning', word: 'Not found' },
+  notfound: { tone: 'bad', icon: 'warning', word: AFTER_WORDS.notFound },
   coming: { tone: 'warn', icon: 'clock', word: 'Price coming' },
 };
 

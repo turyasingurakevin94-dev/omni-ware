@@ -19,6 +19,7 @@ import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
+import { Bars } from '../shell/App.tsx';
 import { held, undoHeld } from '../shell/store.ts';
 import './parts.css';
 
@@ -96,6 +97,7 @@ export function MoneySheet(p: { label: string; top: number; head: ComponentChild
           <div class="mg-mo-sheet-h">{p.head}<button type="button" class="mg-mo-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={18} stroke={2.2} /></button></div>
           {p.children}
         </div>
+        <div class="mg-mo-bars"><Bars /></div>
         {p.dock}
       </div>
     </div>
@@ -118,11 +120,11 @@ export function MoneyDock(p: {
     <footer class={cx('mg-mo-dock', p.class)}>
       {p.strip || (
         <>
-          <div class="mg-mo-sees">
+          {(p.log || (p.told && p.told.length) || p.word) && <div class="mg-mo-sees">
             {p.log ? <><Icon name="list" size={14} stroke={2} /><span>Goes in the owner's log</span></>
               : <><Icon name="bell" size={14} stroke={2} />{(p.told || []).map((x) => <Dot key={x.id} who={x} />)}<span>{whoSee(names)}</span>
                 {p.word && <span class={cx('mg-mo-word', p.mint && 'mint')}>{p.word}</span>}</>}
-          </div>
+          </div>}
           {p.error && <span class="mg-mo-err"><Icon name="warning" size={14} stroke={2.2} />{p.error}</span>}
           <div class={cx('mg-mo-acts', p.row && 'row')}>
             {p.tap && <AnsButton a={p.tap} white />}
@@ -147,6 +149,22 @@ function AnsButton(p: { a: Ans; white?: boolean }): JSX.Element {
       {a.busy ? <span class="mg-mo-spin" aria-hidden="true" /> : a.dot ? <Dot who={a.dot} /> : a.icon && !a.disabled && <Icon name={a.icon} size={18} stroke={2.2} />}
       <span>{a.disabled || a.label}</span>
     </button>
+  );
+}
+
+/** A page's dock fixed at the bottom, the shell's bars (no signal, not sent) above it (Money p2). */
+export function PageDock(p: { children: ComponentChildren }): JSX.Element {
+  return <div class="mg-mo-pagedock"><div class="mg-mo-bars"><Bars /></div>{p.children}</div>;
+}
+
+/** Not sent, as the board's error card in the dock: what, "Not saved · no signal" (or why), Try again. */
+export function ErrStrip(p: { word: string; why: string; retry: () => void }): JSX.Element {
+  return (
+    <div class="mg-mo-errcard" role="alert">
+      <span class="i"><Icon name="warning" size={18} stroke={2.2} /></span>
+      <span class="t"><b>{p.word}</b><span class="mono">{p.why}</span></span>
+      <button type="button" class="mg-mo-pill navy" onClick={p.retry}><Icon name="retry" size={16} stroke={2.2} />Try again</button>
+    </div>
   );
 }
 

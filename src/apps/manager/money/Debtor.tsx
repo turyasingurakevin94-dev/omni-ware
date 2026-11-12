@@ -20,7 +20,7 @@ import { toast } from '../../../ui/toast.tsx';
 import { nav } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import { nudge, sellerOf } from './Money.tsx';
-import { CustHead, MoneyDock, sellersOf, Track } from './parts.tsx';
+import { CustHead, MoneyDock, PageDock, sellersOf, Track } from './parts.tsx';
 import './debtor.css';
 
 const ink = { kept: '#0F6B43', broken: '#8E2A22', open: '#16203C' } as const;
@@ -95,9 +95,11 @@ export function Debtor(p: { params: Params }): JSX.Element | null {
             onClick={() => toast.show('Statement · not in this app yet', { kind: 'warn' })}><Icon name="receipt" size={18} stroke={2} />Statement</button>
         </div>
       </div>
-      <MoneyDock class="page" row told={seller ? [seller] : []} word={`${me} nudged you`}
-        tap={seller ? { label: `Nudge ${firstWord(seller.name)}`, dot: seller, on: () => nudge(b, c, days) } : undefined}
-        second={{ label: 'Promise', icon: 'calendar', on: () => nav.push('money/promise', { customer: c.id }) }} />
+      <PageDock>
+        <MoneyDock row told={seller ? [seller] : []} word={`${me} nudged you`}
+          tap={seller ? { label: `Nudge ${firstWord(seller.name)}`, dot: seller, on: () => nudge(b, c, days) } : undefined}
+          second={{ label: 'Promise', icon: 'calendar', on: () => nav.push('money/promise', { customer: c.id }) }} />
+      </PageDock>
     </main>
   );
 }

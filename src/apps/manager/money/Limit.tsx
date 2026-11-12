@@ -16,9 +16,10 @@ import type { Params } from '../../../ui/stack.ts';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
-import { act, books } from '../shell/store.ts';
+import { act, books, online, waiting } from '../shell/store.ts';
+import type { LimitAsk } from '../../../core/manager/types.ts';
 import { sellerOf } from './Money.tsx';
-import { MoneyDock, MoneySheet, Tile } from './parts.tsx';
+import { ErrStrip, MoneyDock, MoneySheet, Tile } from './parts.tsx';
 import './sheets.css';
 
 const pickWord = (l: LimitPick | null) => (l ? `Limit ${money(l.limit)} · ${l.days} days` : ANSWER.cashOnly);
@@ -48,7 +49,9 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
     setBusy(true);
     setError(false);
     try {
-      const r = await act('setLimit', c.id, pick);
+      // Esther's ask for this customer waits (D-32): the limit set answers it, so it never stays live.
+      const ask = waiting.peek().find((a): a is LimitAsk => a.kind === 'limit' && a.customerId === c.id);
+      const r = ask ? await act('limitAsk', ask.askId, !!pick, pick) : await act('setLimit', c.id, pick);
       nav.back();
       toast.show(pick ? `Limit set · ${money(pick.limit)}` : ANSWER.cashOnly, {
         sub: r.kept ? 'Waits for signal' : seller ? `${firstWord(seller.name)} sees it` : '',
@@ -62,7 +65,8 @@ export function LimitSheet(p: { params: Params }): JSX.Element | null {
   return (
     <MoneySheet label={`Change the limit for ${c.name}`} top={206}
       head={<div class="mg-mo-sh"><Tile c={c} /><span class="mg-mo-sh-t"><b>{c.name}</b><span>{now ? `Limit now ${money(now.limit)} · ${now.days} days` : `Limit now · ${ANSWER.cashOnly}`}</span></span></div>}
-      dock={<MoneyDock told={seller ? [seller] : []} word={pickWord(pick)} mint error={error ? 'Not saved · Try again' : null}
+      dock={error ? <MoneyDock strip={<ErrStrip word={pickWord(pick)} why={online.value ? 'Not saved' : 'Not saved · no signal'} retry={() => { void save(); }} />} />
+        : <MoneyDock told={same || !seller ? [] : [seller]} word={same ? undefined : pickWord(pick)} mint
         tap={{ label: `Save · ${pickWord(pick)}`, icon: 'check', on: () => { void save(); }, busy, disabled: same ? 'Nothing to save' : undefined,
           label2: `Save: ${pickWord(pick)} for ${c.name}.${seller ? ` ${firstWord(seller.name)} sees it` : ''}` }} />}>
       <h2 class="mg-mo-h">Limit</h2>

@@ -52,3 +52,27 @@ export function useInPlace(quiet = true): InPlace {
     retry: () => { const l = last.current; if (l) go(l.label, l.kind, l.args, l.key); },
   };
 }
+
+/**
+ * A list whose rows leave the books when answered (an ask, a twin) keeps each answered row in its
+ * place while its strip shows (Undo, then the answer and who sees it), so the result is drawn
+ * where the board draws it: in the row, never over the head.
+ */
+export function useKept<T>(live: { key: string; v: T }[]): { rows: { key: string; v: T; gone: boolean }[]; keep: (key: string, v: T) => void } {
+  const kept = useRef<Record<string, T>>({});
+  const order = useRef<string[]>([]);
+  const [, bump] = useState(0);
+  live.forEach((r) => { if (!order.current.includes(r.key)) order.current.push(r.key); });
+  const liveKeys = live.map((r) => r.key);
+  const rows = order.current
+    .map((key) => {
+      const l = live.find((r) => r.key === key);
+      if (l) return { key, v: l.v, gone: false };
+      return key in kept.current ? { key, v: kept.current[key], gone: true } : null;
+    })
+    .filter((r): r is { key: string; v: T; gone: boolean } => !!r);
+  return {
+    rows: rows.filter((r) => liveKeys.includes(r.key) || r.gone),
+    keep: (key, v) => { kept.current = { ...kept.current, [key]: v }; bump((i) => i + 1); },
+  };
+}
