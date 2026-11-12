@@ -120,5 +120,11 @@ const GRACE = 'u-grace', KATO = 'C001', LUBOWA = 'C006';
     t.check(pl.qtyIn === 'pack' && pl.qty === 50 && pl.sellPrice === 1700 && pl.packQty === 50 && pl.packUnit === 'carton' && !pl.priceBy, 'SL42: place_order gets the carton as sales.html wrote it: qty 50 pair, sellPrice 1,700, qtyIn pack, no price ask', JSON.stringify(pl));
   }
 
+  /* ---- A link-button keeps its own colour under a stuck :hover (Kevin, 11 Nov: "Add · 153,000" went ink on navy) ---- */
+  {
+    const css = require('fs').readFileSync(path.join(ROOT, 'src/ui/tokens.css'), 'utf8');
+    t.check(!/(^|[^(])\ba:hover\s*\{/m.test(css) && /:where\(a:hover\)/.test(css), 'tokens.css: a:hover carries no weight (:where), so .sl-top-add and every link-button keep their white after a tap');
+  }
+
   process.exit(t.done() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
