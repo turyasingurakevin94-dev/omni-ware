@@ -49,7 +49,7 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 | --- | --- |
 | 1. Agent app design language | reuse `docs/audit/buyer/agent-design-language.md` |
 | 2. Decision hand-off map | done · `handover.md`: 33 decisions, 38 mismatches, 14 new push kinds + push actions (migration 0182, to reserve), other apps: Sales 10 · Buyer 5 · Store 3 · Accounts 3, native shell §6 |
-| 3. The Manager's day from first principles | done · `day.md`: from the app 145 → 69 taps (all 30 drop), from the push 59 → 24 (17 of 20 drop; write-off, credit note, void stay a slide at 2), next decision 2 → 1 |
+| 3. The Manager's day from first principles | done · `day.md`: from the app 145 → 68 taps (all 30 drop), from the push 59 → 24 (17 of 20 drop; write-off, credit note, void stay a slide at 2), next decision 2 → 1 |
 | 4–5. Pages on the new canvas | in progress · `docs/canvas/manager/` (brief, 8 boards: Today, Orders, Money, MoneyCredit, Team, DecidePrice, DecideOrders, DecideStock + Main decisions board + Flow) |
 | 6. Scores | not started |
 

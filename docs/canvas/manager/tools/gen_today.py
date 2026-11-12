@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # Generates docs/canvas/manager/Today.dc.html (literal markup).
 import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sheet import d7_sheet, d18_sheet, s_toast  # the ONE decision sheet
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Today.dc.html')
 
 MONO = "font-family: 'IBM Plex Mono', monospace"
@@ -135,7 +138,7 @@ def hero(offline=False):
 def tile(icon, n, name, badge=None, faces=(), aria=""):
     b = ""
     if badge:
-        b = (f'<span style="position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: #C93A30; '
+        b = (f'<span style="position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: {NAVY}; '
              f'color: #fff; {MONO}; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff">{badge}</span>')
     fd = "".join(dot(f, 10) for f in faces)
     return (f'<button aria-label="{aria}" style="position: relative; height: 56px; border-radius: 12px; background: #F7F5F2; border: none; padding: 0; display: flex; flex-direction: column; '
@@ -158,21 +161,21 @@ def onmove():
 
 # ---------------------------------------------------------------- Needs-you rows (queue order)
 QUEUE = [
-    # ini, title, sub, control
-    ("MK", "Not paid yet · on credit?", "#0551 · 1,240,000 · 25 m", pill("On credit", aria="On credit, load it: Nansana Hardware, limit 1.5M, 14 days. Musa sees it")),
-    ("BO", "Return asked · Timber", "#0547 · −56,250 · 3 h", rowslide("Credit note", "Slide: credit note 56,250 for Lubowa Builders. Brian sees it")),
-    ("DO", "Price up · Ridge cap 3 m", "cost 27,000 · 2 h 10 m", pill("Shop's price", aria="Shop's price 33,750 for Ridge cap 3 m on 0552. Denis and Faith see it")),
-    ("MK", "Damaged · 3 Cement", "−102,000 · 1 h 30 m", rowslide("Write off", "Slide: write off 3 Cement 50 kg, 102,000 at cost. Musa sees it")),
-    ("GA", "Under the shop's price", "#0555 · 46,000 · 1 h 05 m", pill("Approve", aria="Approve 46,000 for Iron sheet G28 on 0555. Grace sees it")),
-    ("GA", "Cancel asked · #0556", "430,000 · 50 m", rowslide("Cancel", "Slide: cancel 0556, 430,000, nothing paid. Grace sees it")),
-    ("MK", "Packed short · Iron sheet", "36 of 40 · 40 m", pill("Bill what went", pad=12, aria="Bill what went: 36 Iron sheet G28, 1,710,000. Musa sees it")),
-    ("DO", "A carton for the shelf?", "298,500 · 15 m", pill("Shelf part OK", pad=12, aria="Shelf part OK: carton of 200 Wall plugs, 298,500. Denis sees it")),
+    # standing first, then oldest (the one queue order at 09:40) · the pill is the §3 answer the asker sees
+    ("MK", "Not paid yet · on credit?", "Musa · #0551 · 25 m", pill("On credit · load it", pad=12, aria="On credit, load it: Nansana Hardware, 1.5M, 14 days. Musa and Grace see it")),
+    ("BO", "Return asked", "Brian · #0547 · −56,250 · 3 h", pill("Open", aria="Open: Return asked, 0547. Credit note raised is a slide")),
+    ("DO", "Price up · Ridge cap", "Denis · #0552 · 2 h 10", pill("Shop's price", pad=12, aria="Shop's price 33,750 for Ridge cap 3 m on 0552. Denis and Faith see it")),
+    ("MK", "Damaged · 3 Cement", "Musa · 3 bags · 1 h 30", pill("Open", aria="Open: Damaged, 3 Cement 50 kg. Written off is a slide")),
+    ("GA", "Under the shop's price", "Grace · #0555 · 1 h 05", pill("Approved", aria="Approved 46,000 for Iron sheet G28 on 0555. Grace sees it")),
+    ("GA", "Cancel asked", "Grace · #0556 · 50 m", pill("Cancelled", aria="Cancelled 0556, nothing paid. Grace, Denis and Musa see it. Undo 10 s")),
+    ("MK", "Packed short", "Musa · #0550 · 40 m", pill("Bill what went", pad=12, aria="Bill what went: 36 Iron sheet G28, 1,710,000. Musa and Grace see it")),
+    ("DO", "A carton for the shelf?", "Denis · Wall plugs · 15 m", pill("Shelf part OK", pad=12, aria="Shelf part OK: carton of 200 Wall plugs, 298,500. Denis sees it")),
 ]
 
 
 def nk_row(ini, title, sub, ctrl, first=False, extra_style=""):
     bt = "" if first else "border-top: 1px solid #F1EEE8; "
-    return (f'<div style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 2px 0 8px; {bt}{extra_style}">{av(ini, 30)}'
+    return (f'<div style="display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 6px 0 8px; {bt}{extra_style}">{av(ini, 30)}'
             f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">'
             f'<span style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{title}</span>'
             f'<span style="{MONO}; font-size: 11px; color: #6B7480; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{sub}</span></div>{ctrl}</div>')
@@ -180,8 +183,8 @@ def nk_row(ini, title, sub, ctrl, first=False, extra_style=""):
 
 def needs_you():
     rows = "".join(nk_row(*q, first=(i == 0)) for i, q in enumerate(QUEUE))
-    return ('<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 17px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: #8E2A22"></i>'
-            f'<span style="flex: 1">Needs you</span><span style="{MONO}; font-size: 11px; font-weight: 500; color: #5F6980">oldest first</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">8</b></div>'
+    return ('<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 17px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: {NAVY}"></i>'
+            f'<span style="flex: 1">Needs you</span><span style="{MONO}; font-size: 11px; font-weight: 500; color: #5F6980">standing first · then oldest</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">8</b></div>'
             f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 0 0; overflow: hidden">{rows}</div>')
 
 
@@ -294,7 +297,7 @@ def credit_dock(state="default"):
         </div>'''
 
 
-P2 = phone(topbar(1, 0) + credit_card() + peek("BO", "Return asked · #0547", "3 h", 444) + credit_dock())
+P2 = phone(d7_sheet(next_=("BO", "Brian · Return asked · #0547", "3 h")))
 
 
 # ---------------------------------------------------------------- page 3 · answered, next slides in
@@ -349,7 +352,7 @@ def return_dock():
         </div>'''
 
 
-P3 = phone(topbar(2, 1) + undo_toast("On credit · load it", "#0551 · Musa sees it") + ghost_prev() + return_card() + peek("DO", "Price up · #0552", "2 h 10 m", 444) + return_dock())
+P3 = phone(d18_sheet(pos=2, total=8, toast=s_toast("On credit · load it", "#0551 · Musa · Grace see it"), next_=("DO", "Denis · Price up · #0552", "2 h 10")))
 
 
 # ---------------------------------------------------------------- page 4 · all decided
@@ -357,12 +360,12 @@ DONE = [
     # time, answer, sub, sees-initials, kind
     ("09:59", "Shelf part OK", "Wall plugs · 298,500", ["DO"], "tap"),
     ("09:57", "Bill what went", "#0550 · 1,710,000", ["MK", "GA"], "tap"),
-    ("09:55", "Cancelled", "#0556 · 430,000", ["GA", "DO", "MK"], "slide"),
+    ("09:55", "Cancelled", "#0556 · 430,000 · nothing paid", ["GA", "DO", "MK"], "tap"),
     ("09:52", "Approved", "#0555 · 46,000", ["GA"], "tap"),
     ("09:49", "Written off", "3 Cement 50 kg · 102,000", ["MK"], "slide"),
     ("09:46", "Shop's price", "#0552 · 33,750", ["DO", "FN"], "tap"),
     ("09:43", "Credit note raised", "#0547 · 56,250", ["BO", "EA"], "slide"),
-    ("09:41", "On credit · load it", "#0551 · 1.5M · 14 d", ["MK"], "tap"),
+    ("09:41", "On credit · load it", "#0551 · 1.5M · 14 d", ["MK", "GA"], "tap"),
     ("08:30", "Billed itself", "#0546 · 24 h after delivery", [], "auto"),
     ("07:55", "Approved", "#0549 · Iron sheet G28", ["BO"], "tap"),
 ]
@@ -410,7 +413,7 @@ P4 = phone(f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 2
           {who_bar()}
         </div>
         <div style="padding: 14px 12px 0; display: flex; flex-direction: column; gap: 8px">
-          <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 17px; font-weight: 700">Today's answers</span><span style="display: flex; align-items: center; gap: 4px; {MONO}; font-size: 13px; font-weight: 600; color: #5F6980">{ic("bell", 12)}10 told</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px"><span style="font-size: 17px; font-weight: 700">Today's answers</span><span style="display: flex; align-items: center; gap: 4px; {MONO}; font-size: 13px; font-weight: 600; color: #5F6980">{ic("bell", 12)}15 told</span></div>
           <div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; overflow: hidden">{done_rows()}</div>
         </div>
         <div style="position: absolute; left: 16px; right: 16px; bottom: 18px"><button style="width: 100%; height: 56px; border: none; border-radius: 999px; background: {NAVY}; color: #fff; font-size: 16px; font-weight: 700">Back to Today</button></div>''')
@@ -418,9 +421,9 @@ P4 = phone(f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 2
 
 # ---------------------------------------------------------------- score panel
 PAGES = [
-    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 9, 9, 9]),
-    ("2 · Decide card", "Needs-you + dock", [4, 3, 5, 6, 4], [9, 9, 8, 8, 8], [9, 10, 9, 9, 9]),
-    ("3 · Answered · next", "Needs-you + dock", [4, 4, 4, 6, 4], [9, 9, 8, 8, 8], [9, 10, 9, 9, 9]),
+    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 8, 8, 9]),
+    ("2 · Decide next", "Decision sheet", [4, 3, 5, 6, 4], [9, 9, 8, 8, 8], [9, 9, 9, 8, 9]),
+    ("3 · Answered · next", "Decision sheet", [4, 4, 4, 6, 4], [9, 9, 8, 8, 8], [9, 9, 8, 8, 9]),
     ("4 · All decided", "Agent Today", [4, 5, 4, 5, 3], [9, 9, 8, 9, 8], [9, 9, 9, 9, 9]),
 ]
 MEAS = ["Agent consistency", "Taps per decision", "Glanceability", "Polish", "In step with askers"]
@@ -463,7 +466,7 @@ def score_panel():
       </div>
       <div style="padding: 10px 12px; border-radius: 12px; background: #F1EEE8; display: flex; flex-direction: column; gap: 2px">
         <span style="font-size: 12px; font-weight: 700">Agent match · Agent Today + Needs-you</span>
-        <span style="font-size: 12px; font-weight: 600; color: #5F6980; line-height: 1.35">Flat navy hero · On the move tiles with need badges and face dots · Needs you with the answer on the row · red + FAB (Decide next) · navy dock with the red slide</span>
+        <span style="font-size: 12px; font-weight: 600; color: #5F6980; line-height: 1.35">Flat navy hero · navy need badges · Needs you: asker, ask word, the answer they see on the pill · the one sheet (navy head, white answer, red knob only on a slide)</span>
       </div>
       <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 2px">
         <span style="font-size: 12px; font-weight: 700">Taps · the 8 in the queue</span>
@@ -492,14 +495,14 @@ def state(lbl, inner, nt):
 GRACE_SEES = sees(dot("GA") + "Grace sees", "Approved", on_navy=False)
 G_ROW = lambda ctrl, sub="#0555 · 46,000 · 1 h 05 m", title="Under the shop's price", extra="": nk_row("GA", title, sub, ctrl, first=True, extra_style=extra)
 
-S_DEFAULT = state("DEFAULT", card(white_row(G_ROW(pill("Approve"))) + GRACE_SEES), "one tap answers · Iron sheet G28 · shop's 47,500")
-S_PRESSED = state("PRESSED", card(white_row(G_ROW(pill("Approve", bg="#0C1326", extra="; transform: scale(.95); box-shadow: 0 0 0 4px rgba(22,32,60,.15)"))) + GRACE_SEES), "pill darkens · scales 95% · tick feel")
+S_DEFAULT = state("DEFAULT", card(white_row(G_ROW(pill("Approved"))) + GRACE_SEES), "one tap answers · Iron sheet G28 · shop's 47,500")
+S_PRESSED = state("PRESSED", card(white_row(G_ROW(pill("Approved", bg="#0C1326", extra="; transform: scale(.95); box-shadow: 0 0 0 4px rgba(22,32,60,.15)"))) + GRACE_SEES), "pill darkens · scales 95% · tick feel")
 S_DISABLED = state("DISABLED", card(
     f'<div style="background: {NAVY}; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">'
     + limit_chips(-1).replace("background: #fff; color: #1C2233", "background: rgba(255,255,255,.08); color: #fff").replace("box-shadow: inset 0 0 0 1px #E6E3DD", "box-shadow: none")
     + '<button disabled aria-disabled="true" style="height: 56px; border: none; border-radius: 999px; background: rgba(255,255,255,.12); color: #B3BCD2; font-size: 16px; font-weight: 700; cursor: default">Pick a limit to load it</button></div>'),
     "#0551 · no limit picked · the button says what is missing")
-S_SENDING = state("SENDING", card(white_row(G_ROW(f'<button disabled aria-busy="true" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #243052; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: default">{ic("spin", 16, 2.4)}Approve</button>')) + GRACE_SEES), "row holds · nothing else moves")
+S_SENDING = state("SENDING", card(white_row(G_ROW(f'<button disabled aria-busy="true" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #243052; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: default">{ic("spin", 16, 2.4)}Approved</button>')) + GRACE_SEES), "row holds · nothing else moves")
 SUCCESS_CTRL = (f'<button aria-label="Undo, 8 seconds left" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #F1EEE8; color: {NAVY}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{ic("undo", 14, 2.4)}Undo <span style="{MONO}">8</span></button>')
 S_SUCCESS = state("SUCCESS", card(white_row(nk_row("GA", "Approved · 46,000", "#0555 · Iron sheet G28", SUCCESS_CTRL, first=True).replace(av("GA", 30), f'<span style="width: 30px; height: 30px; flex: none; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center">{ic("check", 16, 2.6)}</span>'))
     + sees(dot("GA") + "Grace sees", "Approved", on_navy=False).replace("</div>", '<span style="font-family: \'IBM Plex Mono\', monospace; color: #6B7480">in 8 s</span></div>')), "Undo 10 s · then the row leaves · FAB 8 → 7")
@@ -536,7 +539,7 @@ def notif(title, body, actions, when="now"):
 
 S_PUSH = state("PUSH · ACTION ON THE LOCK SCREEN", lock(notif("Grace · Under the shop's price · #0555",
     f'Iron sheet G28 · <span style="{MONO}">46,000</span>, shop\'s <span style="{MONO}">47,500</span> · cost <span style="{MONO}">38,000</span> · <span style="{MONO}">30</span> sht',
-    [("Approve 46,000", "#fff", NAVY)])), "D-1 from the push: 2 → 1 tap · no app opened")
+    [("Approved · 46,000", "#fff", NAVY)])), "D-1 from the push: 2 → 1 tap · no app opened")
 S_PUSH_UNDO = state("PUSH · UNDO 10 S", lock(notif("Approved · 46,000",
     f'#0555 · Grace sees it in <span style="{MONO}">10 s</span>',
     [(f'{ic("undo", 14, 2.4)}Undo · <span style="{MONO}">10 s</span>', "rgba(255,255,255,.12)", "#fff")])), "then sent · the app shows Undo if opened in the 10 s")
@@ -569,7 +572,7 @@ TOP = f'''<div style="height: 64px; display: flex; align-items: center; gap: 24p
   </div>'''
 
 ROW1 = ('<div style="display: flex; gap: 40px; align-items: flex-start">'
-        + column("1 · TODAY · 09:40", P1, "From the app, on the row · D-1 4 → 2 · D-3 7 → 2 · D-7 6 → 2 · D-12 4 → 2 · D-24 4 → 2 · slides D-16 · D-18 · D-20 4 → 2")
+        + column("1 · TODAY · 09:40", P1, "On the row, the answer they see: D-1 · D-3 · D-7 · D-12 · D-20 · D-24 → 2 taps · Open + slide D-16 · D-18 → 2")
         + column("2 · DECIDE NEXT · 1 OF 8 · 09:40", P2, "Not paid yet · on credit? (D-7): 6 → 2 from the app · 5 → 1 from the push · red + opens the oldest in 1 tap")
         + column("3 · ANSWERED · THE NEXT SLIDES IN · 09:41", P3, "Next decision: 2 → 1 (0 to reach it) · Return asked (D-18): 4 → 2 from the app · push 2 → 2 (a slide) · Kept as sold 2 → 1")
         + column("4 · ALL DECIDED · 09:59", P4, "8 decisions: 37 → 16 taps from the app · 24 → 11 from the push · 0 for the bill that billed itself")

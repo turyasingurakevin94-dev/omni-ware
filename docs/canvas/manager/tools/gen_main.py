@@ -1,7 +1,7 @@
 import html
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Main.dc.html')
-W, H = 2040, 2400
+W, H = 2040, 2480
 
 NAVY='#16203C'; INK='#1C2233'; SOFT='#5F6980'; FAINT='#6B7480'; LINE='#E6E3DD'; BG='#F7F5F2'; TILE='#F1EEE8'
 RED='#C93A30'; REDS='#FDE8E4'; REDD='#A82D24'; GOOD='#0F6B43'; GOODB='#E4F4EA'; WARN='#95530C'; WARNB='#FDEEE1'; WARNI='#7A4A02'
@@ -37,14 +37,14 @@ def sysav(icon, s=32):
     return f'<span style="width: {s}px; height: {s}px; border-radius: 10px; background: {TILE}; color: {INK}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px dashed {DASH}; box-sizing: border-box">{svg(icon, 16)}</span>'
 
 def badge(text, bg, fg, border=None):
-    b = f'border: 1px dashed {border}; ' if border else ''
+    b = f'border: 1.5px solid {border}; ' if border else ''
     return f'<span style="height: 20px; padding: 0 8px; border-radius: 999px; background: {bg}; color: {fg}; {b}font-size: 12px; font-weight: 800; letter-spacing: .04em; display: inline-flex; align-items: center; flex-shrink: 0; white-space: nowrap; box-sizing: border-box">{text}</span>'
 
-NEW = lambda: badge('NEW', REDS, REDD)
+NEW = lambda: badge('NEW', '#fff', NAVY, NAVY)
 ROUTE = lambda: badge('NOT ROUTED', WARNB, WARNI)
 RETIRE = lambda: badge('RETIRED', TILE, SOFT)
 NOASK = lambda: badge('NO ASKER YET', WARNB, WARNI)
-CHANGED = lambda: badge('NEW WORDS', '#E8EBF0', '#3D4A5C')
+CHANGED = lambda: ''
 
 def pill(label, kind='tap'):
     base = 'height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; box-sizing: border-box; flex-shrink: 0'
@@ -74,48 +74,48 @@ def row(id, asker, app, push, choices, back, sees, np=False):
     R[id] = dict(id=id, asker=asker, app=app, push=push, choices=choices, back=back, sees=sees, np=np)
 
 # TODAY
-row('D-4', 'GA', 'Sales · counter', dict(kind='price.waits', st='changed', title='Grace · At the counter · under the shop’s price', body='Cement 50 kg · 10 bags at 40,000 · shop’s 42,500 · cost 34,000', act='Approve 40,000'),
-    [('Approved','primary'),('Shop’s price','tap')], [('price.decided',['GA'],'')], ('Ruth decides first → pay', 'Sales · counter'))
+row('D-4', 'GA', 'Sales · counter', dict(kind='price.waits', st='changed', title='Grace · At the counter · under the shop’s price', body='Cement 50 kg · 10 bags at 40,000 · shop’s 42,500 · cost 34,000', act='Approved · 40,000'),
+    [('Approved · 40,000','primary'),('Shop’s price','tap')], [('price.decided',['GA'],'')], ('Approved · or Shop’s price', 'Sales · counter'))
 row('D-7', 'MK', 'Store · Load', dict(kind='credit.ask', st='changed', title='Musa · Not paid yet · on credit? · #0551', body='Nansana Hardware · owes 0 · 1,240,000 · no limit · truck waits', act='On credit · load it · 1.5M · 14 d'),
-    [('On credit · load it','primary'),('Cash first · it stays','tap')], [('credit.ask.decided',['MK'],'changed'),('credit.decided',['GA'],'')], ('On credit · load it', 'Store · With Ruth'))
+    [('On credit · load it','primary'),('Cash first · it stays','tap')], [('credit.ask.decided',['MK'],'changed'),('credit.decided',['GA'],'')], ('On credit · load it', 'Store · Musa · Sales · Grace'))
 row('D-30', ('sys','spark','the app'), 'aging · over 30 d', dict(none='Today · watch row', body='1 over 30 d · Kyaligonza & Sons · 2,310,000 · 38 d · Grace’s'),
     [('Nudge Grace','primary')], [('team.nudge',['GA'],'new')], ('Ruth nudged you', 'Sales · Today'))
 # ORDERS
-row('D-1', 'GA', 'Sales · price', dict(kind='price.waits', st='changed', title='Grace · Under the shop’s price · #0555', body='Iron sheet G28 · 46,000, shop’s 47,500 · cost 38,000 · 30 sht', act='Approve 46,000'),
-    [('Approved','primary'),('Price set · a rung','tap'),('Shop’s price','tap')], [('price.decided',['GA'],'changed')], ('Approved · no tell', 'Sales · the line'))
-row('D-2', 'BO', 'Sales · no price', dict(kind='price.waits', st='changed', title='Brian · Price coming · #0553', body='Y12 rebar 12 m · cost 31,000 + 25% = 38,750 · 20 pcs · Ggaba Stores', act='Set 38,750'),
-    [('Price set · 38,750','primary'),('another figure','tap')], [('price.decided',['BO'],'changed')], ('Ruth set a new price · Tell them', 'Sales · Today'))
-row('D-3', 'DO', 'Buyer · replies', dict(kind='price.waits', st='changed', title='Denis · Price up · #0552', body='Ridge cap 3 m · cost 27,000, sells 26,000 · 10 pcs', act='Shop’s price 33,750'),
-    [('Shop’s price','primary'),('Price set','tap')], [('price.decided',['FN'],'changed')], ('Ruth set a new price · Tell them', 'Sales · Faith'))
+row('D-1', 'GA', 'Sales · price', dict(kind='price.waits', st='changed', title='Grace · Under the shop’s price · #0555', body='Iron sheet G28 · 46,000, shop’s 47,500 · cost 38,000 · 30 sht', act='Approved · 46,000'),
+    [('Approved · 46,000','primary'),('Price set · a rung','tap'),('Shop’s price','tap')], [('price.decided',['GA'],'changed')], ('Approved', 'Sales · the line · no push'))
+row('D-2', 'BO', 'Sales · no price', dict(kind='price.waits', st='changed', title='Brian · Price coming · #0553', body='Y12 rebar 12 m · cost 31,000 + 25% = 38,750 · 20 pcs · Ggaba Stores', act='Price set · 38,750'),
+    [('Price set · 38,750','primary'),('another figure','tap')], [('price.decided',['BO'],'changed')], ('Price set · 38,750 · Tell them', 'Sales · Today'))
+row('D-3', 'DO', 'Buyer · replies', dict(kind='price.waits', st='changed', title='Denis · Price up · #0552', body='Ridge cap 3 m · cost 27,000, sells 26,000 · 10 pcs', act='Shop’s price · 33,750'),
+    [('Shop’s price · 33,750','primary'),('Price set','tap')], [('price.decided',['FN','DO'],'changed')], ('Shop’s price · Tell them', 'Sales · Faith · Buyer · Denis'))
 row('D-5', 'GA', 'Sales · order', dict(kind='credit.hold', st='changed', title='Grace · On credit? · Kyaligonza & Sons', body='Old bill · 38 d (held at 21) · owes 2,310,000', act='On credit'),
-    [('On credit','primary'),('Cash first','tap'),('Keep held','gone')], [('credit.decided',['GA'],'')], ('On credit · or Cash first · take payment', 'Sales · order (S-1)'))
+    [('On credit','primary'),('Cash first','tap'),('Keep held','gone')], [('credit.decided',['GA'],'')], ('On credit · or Cash first', 'Sales · order (S-1)'))
 row('D-6', 'FN', 'Sales · order', dict(kind='credit.hold', st='changed', title='Faith · On credit? · Mukono Roofing', body='No limit set · #0552 1,287,500 · would owe 2,501,500', act='On credit · 3M · 30 d'),
-    [('On credit · 3M · 30 d','primary'),('Cash first','tap')], [('credit.decided',['FN'],''),('customer.changed',['FN'],'')], ('On credit', 'Sales · order (S-1)'))
-row('D-8', ('sys','clock','the run'), 'after Delivered', dict(none='Orders row · no ask', body='#0546 · billed itself 08:30 · others: “bills itself in 18 h”', kind='order.delivered', st='retired'),
-    [('Invoice now · optional','tap')], [('order.invoiced',['EA','GA'],'')], ('Invoiced · to collect', 'Sales · Accounts'))
-row('D-9', ('sys','clock','the run'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Can’t bill itself · Only 567 · #0561', body='Walk-in · 1 line · 567 · Grace’s counter sale', act='Bill 567'),
+    [('On credit · 3M · 30 d','primary'),('Cash first','tap')], [('credit.decided',['FN'],''),('customer.changed',['FN'],'')], ('On credit · 3M · 30 d', 'Sales · order (S-1)'))
+row('D-8', ('sys','clock','bills itself'), 'at 24 h', dict(none='Orders row · no ask', body='#0546 · billed itself 08:30 · others: “bills itself in 18 h”', kind='order.delivered', st='retired'),
+    [('Invoice now','tap')], [('order.invoiced',['EA','GA'],'')], ('Invoiced · to collect', 'Sales · Accounts'))
+row('D-9', ('sys','clock','bills itself'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Can’t bill itself · Only 567 · #0561', body='Walk-in · 1 line · 567 · Grace’s counter sale', act='Bill it · 567'),
     [('Bill it','primary'),('Fix the order','tap')], [('order.invoiced',['EA'],'')], ('Invoiced', 'Accounts'))
-row('D-10', ('sys','clock','the run'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Can’t bill itself · a line at 0 · #0563', body='Brian’s · 2 packs Wall plugs at 0 · cost 3,000', act=None, actnote='why = a choice'),
-    [('Given away · why','tap'),('To price','tap')], [('order.invoiced',['EA'],'')], ('Invoiced', 'Accounts'))
-row('D-11', ('sys','clock','the run'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Price coming · decide it to bill', body='#0562 Mukono Roofing · Cement 425,000 · opens D-1 · D-2 · D-12', act=None, actnote='its ask’s action'),
+row('D-10', ('sys','clock','bills itself'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Can’t bill itself · a line at 0 · #0563', body='Brian’s · 2 packs Wall plugs at 0 · cost 3,000', act=None, actnote='why = a choice'),
+    [('Bill it','primary'),('Given away · why','tap')], [('order.invoiced',['EA'],'')], ('Invoiced', 'Accounts'))
+row('D-11', ('sys','clock','bills itself'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Price coming · decide it to bill', body='#0562 Mukono Roofing · Cement 425,000 · opens D-1 · D-2 · D-12', act=None, actnote='its ask’s action'),
     [('the underlying answer','note')], [('as D-1 · D-2 · D-12',[],'')], ('as the underlying ask', '—'))
-row('D-12', 'MK', 'Store · pack short', dict(kind='pick.short', st='changed', title='Musa · Packed short · #0550', body='Iron sheet G28 36 of 40 · full 1,900,000', act='Bill what went 1,710,000'),
-    [('Bill what went','primary'),('Bill it all','tap')], [('pick.settled',['MK'],'new'),('pick.settled → salesperson',[],'new')], ('Ruth billed what went · Tell them', 'Store · Sales'))
+row('D-12', 'MK', 'Store · pack short', dict(kind='pick.short', st='changed', title='Musa · Packed short · #0550', body='Iron sheet G28 36 of 40 · full 1,900,000', act='Bill what went · 1,710,000'),
+    [('Bill what went','primary'),('Bill it all','tap')], [('pick.settled',['MK'],'new'),('pick.settled → salesperson',[],'new')], ('Bill what went · Tell them', 'Store · Sales'))
 row('D-20', 'GA', 'Sales · Change', dict(kind='order.cancel.ask', st='route', title='Grace · Cancel asked · #0556', body='Ggaba Stores · 430,000 · not paid · changed their mind', act='Kept', actnote='only'),
-    [('Cancelled','slide'),('Kept','tap')], [('order.cancelled',['GA','MK'],'changed'),('order.cancelled',['DO'],'new')], ('Cancelled · or Kept · Ruth’s words', 'Sales · Buyer'))
+    [('Cancelled','slide'),('Kept','tap')], [('order.cancelled',['GA','MK'],'changed'),('order.cancelled',['DO'],'new')], ('Cancelled · or Kept', 'Sales · Store · Buyer'))
 row('D-21', ('sys','spark','the app'), 'spots it', dict(none='Today · row', body='Taken twice? #0544 & #0545 · Kato Construction · same 320,000'),
     [('Cancel #0545 · keep #0544','slide'),('Both are real','tap')], [('order.cancelled',['GA','MK'],'changed')], ('Cancelled', 'Sales · Store'))
-row('D-22', 'PS', 'Agent app', dict(kind='agent.change', st='changed', title='Peter · asks for fewer · #0560', body='Cement 50 kg 20 → 12 · Y12 rebar 12 m 10 → 10', act='Agree'),
-    [('Agreed','primary'),('Kept · per line','tap')], [('agent.change.decided',['DO','PS'],'new')], ('Ruth answered Peter · Agreed', 'Buyer · Agent'))
+row('D-22', 'PS', 'Agent app', dict(kind='agent.change', st='changed', title='Peter · asks for fewer · #0560', body='Cement 50 kg 20 → 12 · Y12 rebar 12 m 10 → 10', act='Agreed'),
+    [('Agreed','primary'),('Kept · per line','tap')], [('agent.change.decided',['DO','PS'],'new')], ('Agreed · or Kept', 'Buyer · Agent'))
 # STOCK
 row('D-13', 'MK', 'Store · check-in', dict(kind='trip.difference', st='changed', title='Musa · Check-in differs · Denis’s trip', body='Owino · PVC pipe 4 in 11 of 12 · −28,000 at cost · Denis’s note', act='Take the check-in'),
     [('Take the check-in','primary'),('Nudge Denis','tap')], [('trip.difference.decided',['DO','MK'],'new')], ('Ruth took Musa’s check-in', 'Buyer · Store'))
 row('D-14', 'DO', 'Buyer · yard note', dict(kind='trip.yard_note', st='noask', title='Why the trip’s count differs', body='goes in the trip’s history · closes with D-13', act=None, actnote='nothing to decide'),
     [('closes with the check-in','note')], [('nobody',[],'')], ('—', 'the trip’s history'))
 row('D-15', 'MK', 'Store · Load', dict(kind='store.extra', st='route', title='Musa · Not on the list · keep it?', body='2 bags Cement 50 kg on Denis’s trip · not on the list', act='Keep it'),
-    [('Keep it','primary'),('It goes back','tap')], [('store.ask.decided',['MK'],'')], ('Keep it · or It goes back', 'Store · With Ruth'), np=True)
+    [('Keep it','primary'),('It goes back','tap')], [('store.ask.decided',['MK'],'')], ('Keep it · or It goes back', 'Store · Ruth decides'), np=True)
 row('D-16', 'MK', 'Store · loss', dict(kind='stock.report', st='changed', title='Musa · Damaged · 3 Cement 50 kg', body='3 × 34,000 · −102,000 at cost · photo', act='Kept on the shelf', actnote='only'),
-    [('Written off · 102,000','slide'),('Kept on the shelf','missing')], [('stock.report.decided',['MK'],'')], ('Written off · or Kept on the shelf', 'Store · With Ruth'))
+    [('Written off · 102,000','slide'),('Kept on the shelf','missing')], [('stock.report.decided',['MK'],'')], ('Written off · or Kept on the shelf', 'Store · Ruth decides'))
 row('D-17', 'MK', 'Store · blind count', dict(kind='stock.count', st='new', title='Musa · A count to check · Aisle B', body='12 items counted · 2 differ', act='Count it again', actnote='only'),
     [('Count taken','slide'),('Count it again','tap')], [('stock.count.decided',['MK'],'new')], ('Count taken · or Count it again', 'Store · the count'))
 row('D-23', 'DO', 'Buyer · restock list', dict(none='Orders · Stock row · nobody asks', body='Cement 50 kg · a restock line planned'),
@@ -128,25 +128,25 @@ row('D-18', 'BO', 'Sales · Wrong', dict(kind='invoice.ask', st='changed', title
 row('D-19', 'EA', 'Accounts · propose', dict(kind='invoice.ask', st='changed', title='Esther · Void asked · #0545', body='Kato · 320,000 · entered twice with #0544 · 200,000 paid', act='Kept as billed', actnote='only'),
     [('Voided','slide'),('Kept as billed','tap'),('Refund · Deposit','tap')], [('invoice.ask.decided',['EA'],''),('invoice.voided',['EA'],'new')], ('Voided · or Kept as billed', 'Accounts (A-1)'))
 row('D-25', 'RN', 'Ruth · from a debtor', dict(none='Money · the customer · no ask', body='Ggaba Stores · owes 1,615,000 · oldest 16 d'),
-    [('Limit 2,000,000 · 14 days','primary'),('Save = told','note')], [('customer.changed',['GA'],'')], ('Ggaba Stores changed · Ruth: …', 'Sales · customer'))
-row('D-32', 'EA', 'Accounts · customer', dict(kind='credit.limit.ask', st='new', title='Esther · Credit asked · Ggaba Stores', body='2M → 3,000,000 · 14 d · owes 1,615,000 · pays every 2 weeks', act='Limit 3M · 14 d'),
-    [('Limit 3,000,000 · 14 days','primary'),('Cash only','tap')], [('credit.limit.ask.decided',['EA'],'new'),('customer.changed',['GA'],'')], ('Ruth set Ggaba’s limit', 'Accounts · customer (S-8)'), np=True)
+    [('Limit 2,000,000 · 14 days','primary'),('Cash only','tap')], [('customer.changed',['GA'],'')], ('Limit 2,000,000 · 14 days', 'Sales · customer'))
+row('D-32', 'EA', 'Accounts · customer', dict(kind='credit.limit.ask', st='new', title='Esther · Credit asked · Ggaba Stores', body='2M → 3,000,000 · 14 d · owes 1,615,000 · pays every 2 weeks', act='Limit 3,000,000 · 14 days'),
+    [('Limit 3,000,000 · 14 days','primary'),('Cash only','tap')], [('credit.limit.ask.decided',['EA'],'new'),('customer.changed',['GA'],'')], ('Limit 3,000,000 · 14 days · or Cash only', 'Accounts · customer (S-8)'), np=True)
 row('D-26', ('sys','spark','the app'), 'look-alike rules', dict(none='Money · Look alike card', body='Ggaba Stores ↔ Gaba Stores · same phone'),
     [('Merge into Ggaba Stores','slide'),('Not the same','tap')], [('owner’s log',[],'')], ('—', 'owner’s log'))
 row('D-27', ('sys','book','fresh start'), 'old books', dict(none='Money · old-books card', body='Ggaba Stores · 290,000 since Thu 1 Oct'),
     [('Opening balance · 290,000','slide')], [('owner’s log',[],'')], ('—', 'owner’s log'))
 row('D-28', 'BO', 'Sales · promise', dict(kind='promise.made', st='new', title='Lubowa Builders promised · Mon 19 Oct', body='Brian took the promise · they owe 662,000 · quiet', act=None, actnote='quiet · no answer'),
-    [('Ruth’s own: a day chip, Save','note')], [('—',[],'')], ('Promised · Mon 19 Oct', 'Sales · Money'))
+    [('Promised · 662,000 · Mon 19 Oct','note')], [('—',[],'')], ('Promised · Mon 19 Oct', 'Sales · Money'))
 row('D-33', 'ML', 'Sourcing · lists it', dict(kind='markup.wanted', st='new', title='Moses · A new item to price', body='PVC pipe 4 in · cost 28,000 · rivals 34,000–36,000', act='Markup 25% · 35,000'),
     [('Markup 25%','primary'),('another markup','tap')], [('owner’s log',[],'')], ('the price on every app', 'Sales · price list'))
 # TEAM
 row('D-29', 'RN', 'Ruth · monthly', dict(none='Team · goal rings', body='Faith 14,910,000 of 30M · suggested goal per person'),
-    [('Use the suggested goals','primary'),('Save','tap')], [('goal.set',['GA','BO','FN'],'new')], ('Your goal for November', 'Sales · Today (quiet)'))
+    [('Goals · 35M · 30M · 30M','primary'),('Goal · another figure','tap')], [('goal.set',['GA','BO','FN'],'new')], ('Your goal for November', 'Sales · Today (quiet)'))
 row('D-31', ('sys','clock','stage limits'), 'stuck order', dict(none='Today · watch row · Team', body='#0554 Lubowa · 2 h 40 m in Checking · 40 m over · Denis holds it'),
-    [('Nudge Denis','primary'),('Give it to …','tap'),('Assign','tap')], [('team.nudge',['DO'],'new'),('job.given · trip.sent',[],'')], ('Ruth nudged you', 'Buyer · Today'))
+    [('Nudge Denis','primary'),('Give it to Moses','tap')], [('team.nudge',['DO'],'new'),('job.given · trip.sent',[],'')], ('Ruth nudged you · or Given to Moses', 'Buyer · Today'))
 
 GROUPS = [
- ('Today', 'someone is standing there · watching', ['D-4','D-7','D-30']),
+ ('Today', 'standing there · watching', ['D-4','D-7','D-30']),
  ('Orders', 'prices · credit · bills itself · picks · cancels · agents', ['D-1','D-2','D-3','D-5','D-6','D-8','D-9','D-10','D-11','D-12','D-20','D-21','D-22']),
  ('Orders · Stock', 'check-ins · extras · losses · counts · restock · cartons', ['D-13','D-14','D-15','D-16','D-17','D-23','D-24']),
  ('Money', 'returns · voids · limits · look-alikes · promises · markups', ['D-18','D-19','D-25','D-32','D-26','D-27','D-28','D-33']),
@@ -227,9 +227,10 @@ hero = (f'<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 2
         f'<div style="font-size: 36px; font-weight: 800">Every decision that lands on Ruth</div></div>'
         f'<div style="display: flex; gap: 10px">'
         + stat('33', 'hand-offs · D-1 … D-33')
-        + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">30</span> 33', 'possible · was 30', '#6FDCB0')
-        + stat('20', 'answer on the push', '#6FDCB0')
-        + stat(f'{n_new} + 1', 'new pushes · 0182', '#fff', RED, '#FDE8E4')
+        + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">145</span> 68', 'taps · from the app', '#6FDCB0')
+        + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">59</span> 24', 'taps · from the push', '#6FDCB0')
+        + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">2</span> 1', 'each next in the queue', '#6FDCB0')
+        + stat(f'{n_new} + 1', 'new pushes · 0182', '#fff', 'rgba(255,255,255,.16)', '#D5DBEA')
         + '</div></div>')
 
 colhead = (f'<div style="display: grid; grid-template-columns: {COLS}; gap: 0 {GAP}px; padding: 12px 16px; background: {TILE}; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: {SOFT}; border-radius: 16px 16px 0 0">'
@@ -240,10 +241,9 @@ body = ''.join(ghead(n, s, ids) + ''.join(drow(R[i]) for i in ids) for n, s, ids
 legend_items = [
  (pill('Approved','primary'), 'a tap · Undo 10 s'),
  (pill('Written off','slide'), 'a slide · money or books'),
- (f'<span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #E8EDFB; color: #1F3A8A; border: 1px solid #C7D2F2; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">APPROVE 46,000</span>', 'notification action'),
+ (f'<span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #E8EDFB; color: #1F3A8A; border: 1px solid #C7D2F2; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">APPROVED · 46,000</span>', 'notification action'),
  (f'<span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #fff; color: {INK}; border: 1px solid {DASH}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">KEPT AS SOLD</span>', 'only the safe “keep”'),
  (NEW(), 'push 0182 adds'),
- (CHANGED(), '§3 words, kind kept'),
  (ROUTE(), 'sent, opens nothing'),
  (NOASK(), 'live app sends none'),
  (pill('Kept on the shelf','missing'), 'not possible today'),
@@ -251,6 +251,22 @@ legend_items = [
 legend = (f'<div style="display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding: 10px 20px; background: #fff; border: 1px solid {LINE}; border-radius: 16px">'
           + ''.join(f'<span style="display: inline-flex; align-items: center; gap: 8px">{a}<span style="font-size: 13px; font-weight: 600; color: {SOFT}">{e(b)}</span></span>' for a, b in legend_items)
           + '</div>')
+
+QUEUE = [('MK','Not paid yet · on credit?','#0551','truck waits',True),('BO','Return asked','#0547','3 h',False),('DO','Price up','#0552','2 h 10',False),
+ ('MK','Damaged · Cement 50 kg','3 bags','1 h 30',False),('GA','Under the shop’s price','#0555','1 h 05',False),('GA','Cancel asked','#0556','50 m',False),
+ ('MK','Packed short','#0550','40 m',False),('DO','A carton for the shelf?','Wall plugs','15 m',False)]
+QD = ['D-7','D-18','D-3','D-16','D-1','D-20','D-12','D-24']
+def qchip(i, q, d):
+    k, ask, ref, age, st = q
+    agec = WARNI if (st or ' h' in age) else SOFT
+    agebg = WARNB if agec == WARNI else TILE
+    return (f'<div style="min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border: 1px solid {LINE}; border-radius: 14px; background: {"#fff" if not st else "#F3F5FA"}; box-sizing: border-box">'
+            f'<span style="font-family: {MONO}; font-size: 14px; font-weight: 600; color: {NAVY}; width: 14px; flex-shrink: 0">{i}</span>{av(k, 28)}'
+            f'<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{e(ask)}</span>'
+            f'<span style="font-family: {MONO}; font-size: 11px; color: {SOFT}; white-space: nowrap"><span style="color: {INK}; font-weight: 600">{P[k][0]}</span> · {d} · {e(ref)} · <span style="background: {agebg}; color: {agec}; border-radius: 6px; padding: 0 4px">{e(age)}</span></span></div></div>')
+qstrip = (f'<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: #fff; border: 1px solid {LINE}; border-radius: 16px">'
+          f'<div style="display: flex; align-items: baseline; gap: 12px"><span style="font-size: 16px; font-weight: 800">The queue at 09:40 · 8 wait</span><span style="font-family: {MONO}; font-size: 13px; font-weight: 600; color: {SOFT}">standing first · then oldest</span><span style="font-family: {MONO}; font-size: 12px; color: {SOFT}; margin-left: auto">the + opens 1 · each answer slides in the next</span></div>'
+          f'<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">' + ''.join(qchip(i + 1, q, d) for i, (q, d) in enumerate(zip(QUEUE, QD))) + '</div></div>')
 
 doc = f'''<!doctype html>
 <html lang="en">
@@ -269,6 +285,7 @@ doc = f'''<!doctype html>
 {hero}
 <div style="padding: 18px 40px 0; display: flex; flex-direction: column; gap: 12px">
 {legend}
+{qstrip}
 <div style="background: #fff; border: 1px solid {LINE}; border-radius: 16px; display: flex; flex-direction: column">
 {colhead}
 {body}

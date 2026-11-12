@@ -3,6 +3,9 @@
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'DecidePrice.dc.html')
 MONO = "font-family: 'IBM Plex Mono', monospace"
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sheet as SH  # the ONE decision sheet
 NAVY, INK, SOFT, FAINT, ONNAVY = "#16203C", "#1C2233", "#5F6980", "#6B7480", "#B3BCD2"
 
 def ico(paths, size=16, sw=2, extra=""):
@@ -183,50 +186,60 @@ def gap_line(parts):
 def kv(label, val, col=INK):
     return f'<span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 11px; font-weight: 600; color: {SOFT}">{label}</span>{m(val, 13, 600, col)}</span>'
 
-# =================== PHONE 1 · D-1 Grace #0555 ===================
+def pphone(label, inner, foot):
+    return (f'<div style="display: flex; flex-direction: column; gap: 8px">'
+            f'<div style="font-size: 11px; font-weight: 700; letter-spacing: .08em; color: {SOFT}">{label}</div>'
+            f'<div style="position: relative; width: 360px; height: 780px; box-sizing: border-box; border-radius: 32px; border: 1px solid #E6E3DD; overflow: hidden; background: #F7F5F2">{inner}</div>'
+            f'<div style="{MONO}; font-size: 12px; color: {SOFT}; line-height: 1.4">{foot}</div></div>')
+
+def item_card(item, qty, client, line_total, each):
+    return (f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px">'
+            f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap">{item} · {m(qty)}</span>'
+            f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; white-space: nowrap">{client}</span></div>'
+            f'<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px">{m(line_total, 16, 600)}{m(each, 11, None, FAINT)}</div></div>')
+
+def pdock(names, word, total, gain, primary, second="", top_extra=""):
+    top = SH.s_total(total, gain, left=SH.s_sees(names, word))
+    return SH.sheet_dock("", primary, second, top_extra + top)
+
+# =================== PHONE 1 · D-1 Grace #0555 · 5 of 8 at 09:40 ===================
 p1_scale = scale(36000, 49000, 38000, [
     dict(v=38000, kind="cost", label="Cost", txt="38,000", pos="down", align="left"),
     dict(v=46000, kind="their", ini="GA", label="Grace", txt="46,000", pos="up", fill=True),
     dict(v=47500, kind="shop", label="Shop's", txt="47,500", pos="down", align="right"),
 ])
-p1 = phone("1 · D-1 · UNDER THE SHOP'S PRICE · " + m("09:40"),
-    sheet_head("GA", "Grace", "Under the shop's price", "#0555", "Kyaligonza &amp; Sons", "1 h 05", "2 of 8",
-               "Iron sheet G28", "30 sht", "1,380,000", "46,000 a sht")
-    + body(
-        scale_card(m("UGX a sht", 11, None, FAINT), p1_scale,
-                   gap_line(kv("Gain a sht", "8,000", "#0F6B43") + kv("Under the shop's", "−1,500", "#95530C") + kv("On 30 sht", "−45,000", "#95530C"))),
-        sec("Or", m("never under 38,000", 11, None, FAINT)),
-        rung("Shop's price", "47,500", "+45,000 on 30", "Shop's price, 47,500 a sheet. Grace is told", bell=True),
-        rung("Another price", "", "38,000 or more", "Another price, 38,000 or more", icon=PEN),
-    )
-    + dock(sees("GA", "Grace", "Approved", on_navy=True), "1,380,000", "gain 240,000", "Approve 46,000", "Approve 46,000 a sheet, Grace sees Approved"),
-    "Approve · app 4 → 2 taps · push 2 → 1",
-    "Under the shop's price, from Grace, order 0555")
+p1 = pphone("1 · D-1 · UNDER THE SHOP'S PRICE · 5 OF 8 · " + m("09:40"),
+    SH.decision_sheet(pos=5, total=8, ini="GA", who="Grace", role="Sales", asked="08:35", ref="#0555 Kyaligonza &amp; Sons", age="1 h 05",
+        title="Under the shop's price",
+        body=item_card("Iron sheet G28", "30 sht", "Kyaligonza &amp; Sons", "1,380,000", "46,000 a sht")
+            + scale_card(m("UGX a sht", 11, None, FAINT), p1_scale,
+                         gap_line(kv("Gain a sht", "8,000", "#0F6B43") + kv("Under the shop's", "−1,500", "#95530C") + kv("On 30 sht", "−45,000", "#95530C")))
+            + rung("Price set", "", "another price · 38,000 or more", "Price set: type another price, 38,000 or more", icon=PEN),
+        dock=pdock("Grace", "Approved", "1,380,000", "gain 240,000",
+                   SH.s_primary("Approved", "46,000", "Approved: 46,000 a sheet. Grace sees Approved"),
+                   SH.s_second("Shop's price · 47,500", "Shop's price: 47,500 a sheet. Grace sees Shop's price")),
+        aria="Under the shop's price, from Grace, order 0555"),
+    "Approved · app 4 → 2 taps · push 2 → 1<br>Shop's price · app 4 → 2 · Price set · app 6 → 3")
 
-# =================== PHONE 2 · D-4 counter ===================
-counter_chip = (f'<div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 700; align-self: flex-start">'
-                f'{ico(STORE, 16)}At the counter · waits {m("3 min", 13, 600)}</div>')
+# =================== PHONE 2 · D-4 counter · 11:20 ===================
 p2_scale = scale(32000, 44000, 34000, [
     dict(v=34000, kind="cost", label="Cost", txt="34,000", pos="down", align="left"),
     dict(v=40000, kind="their", ini="GA", label="Grace", txt="40,000", pos="up", fill=True),
     dict(v=42500, kind="shop", label="Shop's", txt="42,500", pos="down", align="right"),
 ])
-p2 = phone("2 · D-4 · AT THE COUNTER · " + m("11:20") + " · FIRST IN THE QUEUE",
-    sheet_head("GA", "Grace", "At the counter", "Walk-in", "Paying now · cash", "3 min", "first",
-               "Cement 50 kg", "10 bags", "400,000", "40,000 a bag", chip=counter_chip)
-    + body(
-        scale_card(m("UGX a bag", 11, None, FAINT), p2_scale,
-                   gap_line(kv("Gain a bag", "6,000", "#0F6B43") + kv("Under the shop's", "−2,500", "#95530C") + kv("On 10 bags", "−25,000", "#95530C"))).replace(">A sheet<", ">A bag<"),
-        rung("Shop's price", "42,500", "+25,000 on 10", "Shop's price, 42,500 a bag. Grace is told", bell=True),
-    )
-    + dock(sees("GA", "Grace", "Approved · pay", on_navy=True), "400,000", "gain 60,000", "Approve 40,000", "Approve 40,000 a bag, Grace takes the money"),
-    "Approve · app 4 → 2 taps · push 2 → 1",
-    "At the counter, from Grace")
+p2 = pphone("2 · D-4 · AT THE COUNTER · 1 OF 1 · " + m("11:20"),
+    SH.decision_sheet(pos=1, total=1, ini="GA", who="Grace", role="Sales", asked="11:17", ref="Walk-in · at the counter", age="3 m",
+        title="At the counter · under the shop's price", tags=[SH.s_tag("Paying now · cash", "amber")],
+        body=item_card("Cement 50 kg", "10 bags", "Walk-in · paying now · cash", "400,000", "40,000 a bag")
+            + scale_card(m("UGX a bag", 11, None, FAINT), p2_scale,
+                         gap_line(kv("Gain a bag", "6,000", "#0F6B43") + kv("Under the shop's", "−2,500", "#95530C") + kv("On 10 bags", "−25,000", "#95530C"))).replace(">A sheet<", ">A bag<"),
+        dock=pdock("Grace", "Approved", "400,000", "gain 60,000",
+                   SH.s_primary("Approved", "40,000", "Approved: 40,000 a bag. Grace sees Approved and takes the cash"),
+                   SH.s_second("Shop's price · 42,500", "Shop's price: 42,500 a bag. Grace sees Shop's price")),
+        aria="At the counter, under the shop's price, from Grace"),
+    "Approved · app 4 → 2 taps · push 2 → 1<br>nothing else waits at 11:20 · 1 of 1")
 
-# =================== PHONE 3 · D-3 Denis #0552 ===================
-up_chip = (f'<div style="display: flex; align-items: center; gap: 8px; align-self: flex-start; font-size: 13px; font-weight: 700; color: #fff">'
-           f'<span style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.1)">{ico(UP, 15)}Cost {m("24,000", 13, 600, ONNAVY)} → {m("27,000", 13, 600, "#fff")}</span>'
-           f'<span style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 999px; background: #FBE5E2; color: #8E2A22; white-space: nowrap">Under cost {m("−1,000", 13, 600)}</span></div>')
+# =================== PHONE 3 · D-3 Denis #0552 · 3 of 8 ===================
 p3_scale = scale(23000, 35000, 27000, [
     dict(v=24000, kind="ghost"),
     dict(v=26000, kind="bad", label="Sells", txt="26,000", pos="up", col="#8E2A22", align="right"),
@@ -234,24 +247,20 @@ p3_scale = scale(23000, 35000, 27000, [
     dict(v=29000, kind="tick", label="Same gain", txt="29,000", pos="up", align="left"),
     dict(v=33750, kind="shop", label="Shop's", txt="33,750", pos="down", align="right", fill=True, fillcol="#C9C4BA"),
 ], zone_label=None)
-p3 = phone("3 · D-3 · PRICE UP · " + m("09:40") + " · OLDEST",
-    sheet_head("DO", "Denis", "Price up", "#0552", "Mukono Roofing · Faith's", "2 h 10", "1 of 8",
-               "Ridge cap 3 m", "10 pcs", "337,500", "33,750 a pcs", chip=up_chip)
-    + body(
-        scale_card(m("UGX a pcs", 11, None, FAINT), p3_scale,
-                   gap_line(kv("Sells now", "26,000", "#8E2A22") + kv("Cost now", "27,000") + kv("Mukono pays", "+77,500", "#95530C"))).replace(">A sheet<", ">A piece<"),
-        sec("Or", m("never under 27,000", 11, None, FAINT)),
-        rung("Same gain", "29,000", "+2,000 a pcs · as before", "Same gain, 29,000 a piece. Faith is told", icon=TAG, bell=True),
-        rung("Another price", "", "27,000 or more", "Another price, 27,000 or more", icon=PEN),
-    )
-    + dock(f'<div style="display: flex; flex-direction: column; gap: 6px">{sees("FN", "Faith", "Price set", on_navy=True, bell=True)}{sees("DO", "Denis", "Price set", on_navy=True)}</div>',
-           "337,500", "gain 67,500", "Shop's price 33,750", "Shop's price, 33,750 a piece. Faith and Denis see Price set"),
-    "Shop's price · app 7 → 2 taps · push 5 → 1",
-    "Price up, from Denis, order 0552")
+p3 = pphone("3 · D-3 · PRICE UP · 3 OF 8 · " + m("09:40"),
+    SH.decision_sheet(pos=3, total=8, ini="DO", who="Denis", role="Buyer", asked="07:30", ref="#0552 Mukono Roofing", age="2 h 10",
+        title="Price up", tags=[SH.s_tag(f'Cost {m("24,000")} → {m("27,000")}'), SH.s_tag(f'{m("−1,000")} under cost', "amber")],
+        body=item_card("Ridge cap 3 m", "10 pcs", "Mukono Roofing · Faith's", "337,500", "33,750 a pcs")
+            + scale_card(m("UGX a pcs", 11, None, FAINT), p3_scale,
+                         gap_line(kv("Sells now", "26,000", "#8E2A22") + kv("Cost now", "27,000") + kv("Mukono pays", "+77,500", "#95530C"))).replace(">A sheet<", ">A piece<")
+            + rung("Price set", "", "another price · 27,000 or more", "Price set: type another price, 27,000 or more", icon=PEN),
+        dock=pdock("Faith · Denis", "Shop's price", "337,500", "gain 67,500",
+                   SH.s_primary("Shop's price", "33,750", "Shop's price: 33,750 a piece. Faith and Denis see Shop's price"),
+                   SH.s_second("Price set · 29,000", "Price set: 29,000 a piece, the same gain as before. Faith and Denis see Price set")),
+        aria="Price up, from Denis, order 0552"),
+    "Shop's price · app 7 → 2 taps · push 5 → 1<br>Price set · 29,000 (same gain) · app 7 → 2")
 
-# =================== PHONE 4 · D-2 Brian #0553 ===================
-cost_chip = (f'<div style="display: flex; align-items: center; gap: 6px; align-self: flex-start; height: 30px; padding: 0 10px 0 6px; border-radius: 999px; background: rgba(255,255,255,.1); font-size: 13px; font-weight: 700">'
-             f'{dot("DO", 14)}Cost from Denis · Katwe {m("31,000", 13, 600)}</div>')
+# =================== PHONE 4 · D-2 Brian #0553 · 10:15 ===================
 p4_scale = scale(29000, 42000, 31000, [
     dict(v=31000, kind="cost", label="Cost", txt="31,000", pos="down", align="left"),
     dict(v=37200, kind="tick"),
@@ -262,26 +271,25 @@ chips = "".join(
     f'<button aria-label="{a}" style="flex: 1; height: 52px; border: none; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 {"2px " + NAVY if on else "1px #E6E3DD"}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: {INK}">'
     f'<span style="font-size: 12px; font-weight: 700; color: {INK if on else SOFT}">{p}</span>{m(v, 13, 600)}</button>'
     for p, v, a, on in [("+20%", "37,200", "20 percent, 37,200", False), ("+25%", "38,750", "25 percent, the shop's markup, 38,750", True), ("+30%", "40,300", "30 percent, 40,300", False)])
-p4 = phone("4 · D-2 · PRICE COMING · " + m("10:15"),
-    sheet_head("BO", "Brian", "Price coming", "#0553", "Ggaba Stores", "0 h 10", "9 of 9",
-               "Y12 rebar 12 m", "20 pcs", "775,000", "38,750 a pcs", chip=cost_chip)
-    + body(
-        scale_card(m("UGX a pcs", 11, None, FAINT), p4_scale,
-                   gap_line(kv("Gain a pcs", "7,750", "#0F6B43") + kv("Markup", "25%") + kv("On 20 pcs", "+155,000", "#0F6B43"))).replace(">A sheet<", ">A piece<"),
-        sec("Markup", m("the shop's is 25%", 11, None, FAINT)),
-        f'<div style="display: flex; gap: 8px">{chips}</div>',
-        rung("Another price", "", "31,000 or more", "Another price, 31,000 or more", icon=PEN),
-    )
-    + dock(sees("BO", "Brian", "Price set", on_navy=True, bell=True), "775,000", "gain 155,000", "Set 38,750", "Set the price, 38,750 a piece. Brian sees Price set"),
-    "Set the price · app 6 → 2 taps · push 4 → 1",
-    "Price coming, from Brian, order 0553")
+p4 = pphone("4 · D-2 · PRICE COMING · 1 OF 2 · " + m("10:15"),
+    SH.decision_sheet(pos=1, total=2, ini="BO", who="Brian", role="Sales", asked="10:05", ref="#0553 Ggaba Stores", age="10 m",
+        title="Price coming", tags=[SH.s_tag(f'Cost from Denis · Katwe {m("31,000")}')],
+        body=item_card("Y12 rebar 12 m", "20 pcs", "Ggaba Stores", "775,000", "38,750 a pcs")
+            + scale_card(m("UGX a pcs", 11, None, FAINT), p4_scale,
+                         gap_line(kv("Gain a pcs", "7,750", "#0F6B43") + kv("Markup", "25%") + kv("On 20 pcs", "+155,000", "#0F6B43"))).replace(">A sheet<", ">A piece<")
+            + f'<div style="display: flex; gap: 8px">{chips}</div>',
+        dock=pdock("Brian", "Price set", "775,000", "gain 155,000",
+                   SH.s_primary("Price set", "38,750", "Price set: 38,750 a piece. Brian sees Price set"),
+                   SH.s_second("Another price", "Price set: type another price, 31,000 or more")),
+        next_=None, aria="Price coming, from Brian, order 0553"),
+    "Price set · app 6 → 2 taps · push 4 → 1<br>2 of 2 at 10:15: Musa's check-in differs")
 
 # =================== SCORE PANEL ===================
 scores = [
     ("D-1 · Under the shop's price", [5, 4, 5, 6, 4], [9, 9, 9, 9, 9]),
-    ("D-4 · At the counter", [5, 6, 4, 6, 5], [9, 9, 9, 9, 9]),
-    ("D-3 · Price up", [4, 3, 4, 6, 4], [9, 9, 9, 8, 9]),
-    ("D-2 · Price coming", [4, 4, 4, 5, 4], [9, 9, 9, 9, 8]),
+    ("D-4 · At the counter", [5, 6, 4, 6, 5], [9, 9, 9, 8, 9]),
+    ("D-3 · Price up", [4, 3, 4, 6, 4], [9, 9, 8, 8, 9]),
+    ("D-2 · Price coming", [4, 4, 4, 5, 4], [9, 9, 8, 8, 9]),
     ("D-33 · A new item to price", [3, 2, 3, 5, 2], [9, 9, 9, 8, 8]),
 ]
 AG = [9, 9, 8, 8, 8]
@@ -314,7 +322,7 @@ score_panel = (f'<div style="width: 360px; box-sizing: border-box; margin-top: 2
     f'<span style="{MONO}; font-size: 15px; font-weight: 600; color: {FAINT}">{all_old:.1f} · <b style="color: {NAVY}">{avg(AG):.1f}</b> · <b style="color: #0F6B43">{all_new:.1f}</b></span></div>'
     f'<div style="padding: 10px 12px; border-radius: 12px; background: #F1EEE8; display: flex; flex-direction: column; gap: 2px">'
     f'<span style="font-size: 12px; font-weight: 700">Agent match · Needs you + basket dock</span>'
-    f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; line-height: 1.35">Navy sheet head like the Ask sheet · rows with an icon tile · navy dock with the total, the earn line and one move</span></div></div>')
+    f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}; line-height: 1.35">The one decision sheet · the price scale as the evidence · navy dock: who sees what, the total, a white answer and an outline second</span></div></div>')
 
 # =================== STATES ===================
 def card(label, inner, cap, pad=16, bg="#F7F5F2"):
@@ -362,11 +370,15 @@ d33 = (f'<div style="display: flex; align-items: center; gap: 10px">{avatar("ML"
        f'{sees("ML", "Moses", "Markup 25%")}')
 s1 = card("DEFAULT · D-33 A NEW ITEM TO PRICE", d33, "markup · app 7 → 2 · push — → 1", pad=14)
 
+def frag(dock_html):
+    return f'<div style="border-radius: 20px; overflow: hidden">{dock_html.replace("border-radius: 24px 24px 0 0", "border-radius: 20px")}</div>'
+
+D1_SECOND = SH.s_second("Shop's price · 47,500", "Shop's price: 47,500 a sheet")
+
 # 2 PRESSED
 s2 = card("PRESSED",
-    rung("Shop's price", "47,500", "+45,000 on 30", "Shop's price", bell=True).replace("background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD", "background: #EEF0F5; box-shadow: inset 0 0 0 2px #16203C; transform: scale(.98)")
-    + mini_dock(sees("GA", "Grace", "Approved", on_navy=True), btn56("Approve 46,000", CHECK, "#DDE2EE", NAVY, "transform: scale(.97); box-shadow: 0 0 0 4px rgba(255,255,255,.18)")),
-    "rung · inset navy ring · dock button greys 8% · 97%")
+    frag(pdock("Grace", "Approved", "1,380,000", "gain 240,000", SH.s_primary("Approved", "46,000", state="pressed"), D1_SECOND)),
+    "the white answer greys 8% · 97% · navy ring · the outline waits")
 
 # 3 DISABLED · D-2 no known cost + under cost keypad
 s3 = card("DISABLED · NO KNOWN COST",
@@ -374,7 +386,7 @@ s3 = card("DISABLED · NO KNOWN COST",
     f'<div style="flex: 1; height: 52px; border-radius: 14px; border: 1.5px dashed {SOFT}; display: flex; align-items: center; gap: 8px; padding: 0 12px; box-sizing: border-box">'
     f'<span style="font-size: 12px; font-weight: 700; color: {SOFT}">Cost</span>{m("?", 18, 600, SOFT)}</div>'
     f'<button aria-label="Ask Denis for the cost" style="height: 52px; padding: 0 14px; border: none; border-radius: 999px; background: {NAVY}; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{dot("DO", 14)}Ask Denis</button></div>'
-    + btn56("Set price", CHECK, "#E6E3DD", SOFT, "cursor: default", 'disabled aria-disabled="true"')
+    + btn56("Price set", CHECK, "#E6E3DD", SOFT, "cursor: default", 'disabled aria-disabled="true"')
     + f'<div style="display: flex; gap: 8px; align-items: center">'
     f'<div style="flex: 1; height: 52px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 2px #8E2A22; display: flex; align-items: center; justify-content: space-between; padding: 0 12px">{m("36,000", 18, 600, "#8E2A22")}<span style="font-size: 12px; font-weight: 700; color: #8E2A22; display: flex; align-items: center; gap: 4px">{ico(LOCK, 13)}under 38,000</span></div>'
     f'<button disabled aria-disabled="true" style="height: 52px; padding: 0 18px; border: none; border-radius: 999px; background: #E6E3DD; color: {SOFT}; font-size: 14px; font-weight: 700; cursor: default">Use</button></div>',
@@ -383,8 +395,8 @@ s3 = card("DISABLED · NO KNOWN COST",
 # 4 SENDING · notification (push path) + in-app sending
 s4 = card("SENDING · FROM THE PUSH",
     notif("Grace · Under the shop's price · #0555", D1_NOTIF_BODY,
-          n_action("Approve 46,000", "Approve 46,000 from the notification", icon=CHECK) + '<span style="flex: 1"></span>' + n_action("Open", "Open the decision", "#B3BCD2"))
-    + mini_dock(sees("GA", "Grace", "Approved", on_navy=True), btn56("Approving", SPIN, "#243052", "#fff", "cursor: default", 'disabled aria-busy="true"')),
+          n_action("Approved · 46,000", "Approved, 46,000, from the notification", icon=CHECK) + '<span style="flex: 1"></span>' + n_action("Open", "Open the decision", "#B3BCD2"))
+    + frag(pdock("Grace", "Approved", "1,380,000", "gain 240,000", SH.s_primary("Approved", "46,000", state="sending"), "")),
     "push: 1 tap · in the app: the dock spins", pad=12)
 
 # 5 SUCCESS · Undo 10 s, next decision
@@ -394,7 +406,7 @@ s5 = card("SUCCESS · UNDO 10 S",
     + f'<div style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 8px 6px 10px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD">'
       f'<span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center">{ico(CHECK, 20)}</span>'
       f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">Approved · {m("46,000")}</span>'
-      f'<span style="{MONO}; font-size: 11px; color: {FAINT}">Next · Musa #0551 in 2 s</span></div>'
+      f'<span style="{MONO}; font-size: 11px; color: {FAINT}">Next · Grace #0556 in 2 s</span></div>'
       f'<button aria-label="Undo, 10 seconds" style="height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #F1EEE8; color: {INK}; font-size: 13px; font-weight: 700">Undo {m("10", 13, 600)}</button></div>',
     "push and app say the same word · next comes by itself", pad=12)
 
@@ -404,14 +416,13 @@ s6 = card("ERROR",
     f'<span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #FBE5E2; color: #8E2A22; display: flex; align-items: center; justify-content: center">{ico("<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 8v5\"/><path d=\"M12 16h.01\"/>", 20)}</span>'
     f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700">Not saved</span>'
     f'<span style="{MONO}; font-size: 11px; color: {FAINT}">Grace still sees Ruth decides</span></div></div>'
-    + mini_dock(sees("GA", "Grace", "Ruth decides", "#FDEEE1", "#7A4A02", on_navy=True), btn56("Try again", RETRY)),
+    + frag(pdock("Grace", "Ruth decides", "1,380,000", "gain 240,000", SH.s_primary("Approved", "46,000", state="retry"), "")),
     "the answer is kept · one tap sends it")
 
 # 7 OFFLINE
 s7 = card("OFFLINE",
     f'<div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-radius: 14px; background: #FDEEE1; color: #7A4A02; font-size: 13px; font-weight: 700">{ico(OFF, 18)}No signal · it sends when back</div>'
-    + mini_dock(sees("GA", "Grace", "Approved", "#FDEEE1", "#7A4A02", on_navy=True),
-                btn56("Approve 46,000", CLOCK)),
+    + frag(pdock("Grace", "Approved", "1,380,000", "gain 240,000", SH.s_primary("Approved", "46,000"), "")),
     "still 1 tap · the answer waits on the phone")
 
 # 8 EMPTY
@@ -420,8 +431,8 @@ s8 = card("EMPTY · ALL DECIDED",
     f'<div style="height: 56px; border-radius: 16px; border: 1.5px dashed #C9C4BA; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: {SOFT}">{ico(CHECK, 18)}Every price decided</div>'
     f'<div style="display: flex; flex-direction: column; gap: 4px; padding: 0 4px">'
     f'<span style="display: flex; align-items: center; gap: 6px; {MONO}; font-size: 11px; color: {FAINT}">{dot("BO")}07:55 · #0549 · Approved</span></div>'
-    f'<div style="display: flex; justify-content: center"><button aria-label="Decide: nothing waits" style="width: 64px; height: 64px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #fff; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(201,58,48,.35); display: flex; align-items: center; justify-content: center">{ico(PLUS, 28, 2.4)}</button></div>',
-    "the + has no badge · the log keeps today's answers")
+    f'<div style="display: flex; justify-content: center"><button aria-label="Decide next: nothing waits" style="width: 64px; height: 64px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #fff; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(201,58,48,.35); display: flex; align-items: center; justify-content: center">{ico(CHECK, 28, 2.4)}</button></div>',
+    "the + shows a tick · the log keeps today's answers")
 
 # =================== BOARD ===================
 def chip_n(n, t, inv=False):
