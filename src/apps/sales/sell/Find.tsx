@@ -65,6 +65,9 @@ export function enterFind(): void {
   if (hits[0]) addAsked(b, hits[0], a, c);
 }
 
+/** The search whose top match is open (SL08); any other search shows it as one line (SL46). */
+const topOpen = signal<string | null>(null);
+
 export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
   const b = p.b, c = p.c, a = readAsk(query.value), theirs = c ? theirItems(b, c) : new Set<string>();
   const hits = findItems(b, a, rankFor(b, c, now.value));
@@ -77,20 +80,33 @@ export function Find(p: { b: Books; c: Customer | null }): JSX.Element {
   const top = hits[0], more = hits.slice(1), q = count.value ?? (a.qty || 1);
   const word = a.words[a.words.length - 1] || '';
   const line = lineFor(top, q, 0);
+  // SL46: the top match is one line until opened (Kevin, 11 Nov: "I don't want it to look big"); a new search starts closed.
+  const opened = topOpen.value === query.value, open = () => { topOpen.value = query.value; }, shut = () => { topOpen.value = null; };
+  const priceShelf = <>{isPriced(top.price) ? <span class="mono">{fig(top.price)}</span> : <span>{PRICE_COMING}</span>}{(top.onShelf || 0) > 0 && <span class="sl-shelf5"><b class="mono">{fig(top.onShelf as number)}</b> on shelf</span>}</>;
   return (
     <>
       <div class="sl-read"><Icon name="spark" size={15} stroke={2} />Read as{a.qty != null && <span class="mono sl-read-n">{`×${a.qty}`}</span>}{a.words.map((w) => <span key={w} class="sl-read-w">{w}</span>)}</div>
+      {!opened ? (
+        <div class="sl-top one">
+          <ItemSquare aisle={top.aisle} size={44} />
+          <button type="button" class="sl-top-t" aria-expanded="false" aria-label={`${sayItem(top.name)}: open the count and price`} onClick={open}><span><Mark name={top.name} words={a.words} /></span><span>{priceShelf}</span></button>
+          <button type="button" class="mono sl-more-add" aria-label={`Add ${q} ${top.unit}`} onClick={() => addAsked(b, top, { ...a, qty: q }, c)}>{`+${q}`}</button>
+          <button type="button" class="sl-top-x" aria-label="Open the count and price" onClick={open}><Icon name="chevron-down" size={18} stroke={2.4} /></button>
+        </div>
+      ) : (
       <div class="sl-top">
         <div class="sl-top-h">
           <ItemSquare aisle={top.aisle} size={44} />
           <div class="sl-top-t"><span><Mark name={top.name} words={a.words} /></span><span>{isPriced(top.price) ? <><span class="mono">{fig(top.price)}</span><span>{`/${top.unit}`}</span></> : <span>{PRICE_COMING}</span>}{(top.onShelf || 0) > 0 && <span class="sl-shelf5"><b class="mono">{fig(top.onShelf as number)}</b> on shelf</span>}</span></div>
           {c && theirs.has(itemKey(top)) && <span class="sl-buys"><Duo i={phAgain} size={12} color="#0F6B43" />{`${first(c.name)} buys`}</span>}
+          <button type="button" class="sl-top-x up" aria-label={`Close ${sayItem(top.name)}: one line`} onClick={shut}><Icon name="chevron-up" size={18} stroke={2.4} /></button>
         </div>
         <div class="sl-top-r">
           <Stepper value={q} unit={top.unit} min={1} onChange={(n) => { count.value = n; }} />
           <a href="#" class="sl-top-add" onClick={(e) => { e.preventDefault(); addAsked(b, top, { ...a, qty: q }, c); }}>{isPriced(top.price) ? <>Add · <span class="mono">{fig(lineTotal(line))}</span></> : `Add · ${PRICE_COMING.toLowerCase()}`}</a>
         </div>
       </div>
+      )}
       {more.length > 0 && (
         <>
           <div class="sl-more-h"><span>{`More ${word}`}</span><span class="mono">{more.length}</span></div>
