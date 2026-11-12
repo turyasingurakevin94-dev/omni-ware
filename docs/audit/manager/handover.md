@@ -198,11 +198,8 @@ The push title is `{asker} · {ask word} · {#order}`, its body the evidence, an
 **Number.** The Manager's reserved numbers are all used: 0122 (Manager), 0158
 (Manager, the asks answered) and 0169 (Manager round 1, taken as the next free
 number and reserved in its Phase B) — `docs/decision-rights.md` §5 table. None
-is free. The highest migration on the branch is **0181**
-(`supabase/migrations/0181_sales_cancel_ask.sql`), so this is **0182**, and it
-**must be reserved** in that table before it is built (cross-app ROUND-1 also
-named 0182 as "the next free number" but did not reserve it, as it needed no
-migration). The table's footnote "the next number after 0127" is out of date.
+is free, and 0182 (cross-app round 1) and 0183 (Store) are taken, so this is **0184**, now
+reserved in that table (12 Nov 2026). The table's footnote "the next number after 0127" is out of date.
 New tables, functions and tasks also need their `test/decision-rights.test.js`
 rows. No new task: every recipient below is an existing task or user.
 
@@ -278,7 +275,7 @@ again** only; D-20 `order.cancel.ask` **Kept** only; D-32 `credit.limit.ask`
 **Limit 3M · 14 d**; D-33 `markup.wanted` **Markup 25% · 35,000**. No
 action: D-10 (the why is a choice), D-8 and D-14 (no push), and every slide.
 
-**Also in 0182 for the actions:** `push_outbox.actions jsonb` (the answers the
+**Also in 0184 for the actions:** `push_outbox.actions jsonb` (the answers the
 push offers, `[{id, label}]`, written by the trigger beside the title);
 `push_subscriptions.app_build int` (push-send sends `actions` only to a phone
 whose shell can show them, build ≥ 3); and one function

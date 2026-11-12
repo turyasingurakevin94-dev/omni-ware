@@ -34,12 +34,12 @@ Decisions, from the ask arriving to the answer reaching the person who asked: th
 
 ## Done when
 
-- [ ] every Manager page is on the canvas, and an independent reviewer scores it at or above the Agent app, from the rendered screens;
-- [ ] the decisions board names a push and one agreed word for every hand-off, and the Manager pages use only those words;
-- [ ] every push that doesn't exist yet is listed, ready for one migration after approval (using the Manager's reserved number in docs/decision-rights.md);
-- [ ] every change the other apps need to reach the same words is listed for their sessions;
-- [ ] each decision takes fewer taps than it does today (counted before and after);
-- [ ] this progress table is up to date.
+- [x] every Manager page is on the canvas, and an independent reviewer scores it at or above the Agent app, from the rendered screens (round 4: 36 pages, 8.66 vs 8.37, 0 below on average or on any measure);
+- [x] the decisions board names a push and one agreed word for every hand-off (33 of 33, `Main`), and the Manager pages use only those words (handover.md §3, checked by the reviewer);
+- [x] every push that doesn't exist yet is listed, ready for one migration after approval (handover.md §4: 14 kinds + push actions; **0184**, reserved);
+- [x] every change the other apps need to reach the same words is listed for their sessions (handover.md §5: Sales 10 · Buyer 5 · Store 3 · Accounts 3; §6 the Android shell);
+- [x] each decision takes fewer taps than it does today (counted before and after, day.md): from the app all 30 drop, 145 → 68; from the push 59 → 24 (write-off, credit note and void stay a 2-tap slide from the push, as money moves that can't be undone; they drop from the app); the next decision 2 → 1; the 3 not possible today become possible;
+- [x] this progress table is up to date.
 
 Then stop and ask Kevin to approve the canvas. No code, migrations or changes to the other apps until then. The build then follows docs/rebuild.md (spec first, `next/manager.html`, small files).
 
@@ -48,13 +48,15 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 | Step | State |
 | --- | --- |
 | 1. Agent app design language | reuse `docs/audit/buyer/agent-design-language.md` |
-| 2. Decision hand-off map | done · `handover.md`: 33 decisions, 38 mismatches, 14 new push kinds + push actions (migration 0182, to reserve), other apps: Sales 10 · Buyer 5 · Store 3 · Accounts 3, native shell §6 |
+| 2. Decision hand-off map | done · `handover.md`: 33 decisions, 38 mismatches, 14 new push kinds + push actions (migration 0184, reserved), other apps: Sales 10 · Buyer 5 · Store 3 · Accounts 3, native shell §6 |
 | 3. The Manager's day from first principles | done · `day.md`: from the app 145 → 68 taps (all 30 drop), from the push 59 → 24 (17 of 20 drop; write-off, credit note, void stay a slide at 2), next decision 2 → 1 |
-| 4–5. Pages on the new canvas | in progress · `docs/canvas/manager/` (brief, 8 boards: Today, Orders, Money, MoneyCredit, Team, DecidePrice, DecideOrders, DecideStock + Main decisions board + Flow) |
-| 6. Scores | not started |
+| 4–5. Pages on the new canvas | done · [canvas "Manager — Agent language"](https://claude.ai/artifact/TgJSJfvHJskZw293Vzd2qW): 11 boards — decisions board (Main), the day (Flow), Scores, the tabs Today · Orders · Money · Team, the Decide sheets (prices, after the order, stock, credit); every screen at 360 px with all 8 states; sources `docs/canvas/manager/` (generators in `tools/`) |
+| 6. Scores | done · independent review, 4 rounds from the rendered screens (`docs/canvas/manager/review/`): 7.94 → 8.44 → 8.62 → **8.66** vs the Agent app's 8.37; 28 → 8 → 0 → 0 pages below; Scores board |
 
 ## Waiting on Kevin
 
+- **Approve the canvas** before any code, migration or change to another app.
 - P-12: a credit-limit ask needs a new `customer_asks` table (handover.md §4).
-- Migration 0182 must be reserved in decision-rights.md for the new pushes.
-- Three decisions stay 2 taps from the push (write-off, credit note, void): a money move that can't be undone is always a slide, and a notification can't hold one.
+- Three decisions stay 2 taps from the push (write-off, credit note, void): a money move that can't be undone is always a slide, and a notification can't hold one. They drop from the app.
+- Push answers from the notification need a new Android shell build (handover.md §6).
+- After approval: migration 0184, then the build per docs/rebuild.md (spec first, `next/manager.html`, small files); the other apps' lists (handover.md §5) go to their sessions.

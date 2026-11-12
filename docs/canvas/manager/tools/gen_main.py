@@ -230,7 +230,7 @@ hero = (f'<div style="background: {NAVY}; color: #fff; border-radius: 0 0 28px 2
         + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">145</span> 68', 'taps · from the app', '#6FDCB0')
         + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">59</span> 24', 'taps · from the push', '#6FDCB0')
         + stat('<span style="color:#B3BCD2;text-decoration:line-through;font-size:22px">2</span> 1', 'each next in the queue', '#6FDCB0')
-        + stat(f'{n_new} + 1', 'new pushes · 0182', '#fff', 'rgba(255,255,255,.16)', '#D5DBEA')
+        + stat(f'{n_new} + 1', 'new pushes · 0184', '#fff', 'rgba(255,255,255,.16)', '#D5DBEA')
         + '</div></div>')
 
 colhead = (f'<div style="display: grid; grid-template-columns: {COLS}; gap: 0 {GAP}px; padding: 12px 16px; background: {TILE}; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: {SOFT}; border-radius: 16px 16px 0 0">'
@@ -244,7 +244,7 @@ legend_items = [
  (pill('Open'), 'a slide’s row · opens the sheet'),
  (f'<span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #E8EDFB; color: #1F3A8A; border: 1px solid #C7D2F2; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">APPROVED · 46,000</span>', 'notification action'),
  (f'<span style="height: 26px; padding: 0 10px; border-radius: 8px; background: #fff; color: {INK}; border: 1px solid {DASH}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">KEPT AS SOLD</span>', 'only the safe “keep”'),
- (NEW(), 'push 0182 adds'),
+ (NEW(), 'push 0184 adds'),
  (ROUTE(), 'sent, opens nothing'),
  (NOASK(), 'live app sends none'),
  (pill('Kept on the shelf','missing'), 'not possible today'),
