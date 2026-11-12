@@ -1,7 +1,7 @@
 /*
  * The Store's areas in their own files (docs/spec/07-stack.md §4, "per-tab loading", the
  * Sales way: src/apps/sales/shell/tabs.ts). The page ships the shell, src/ui, src/core and
- * Today; Pack, Goods in, Shelf and Out are each a file beside it (next/store-pack.js,
+ * Today; Pack, Goods in, Shelf and Out are each a file beside it (store-pack.js,
  * store-in.js, store-shelf.js, store-out.js, tools/build-app.js), loaded the first time one
  * of their screens opens, and all of them quietly after the first paint so they are on the
  * phone before the signal goes.

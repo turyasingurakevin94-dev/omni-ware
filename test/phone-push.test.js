@@ -10,7 +10,7 @@
  *      build applies it -- without it the app cannot get a token at all.
  *   2. Each app signs its phone up under its own login, once, as it
  *      starts, inside the installed app only. Store keeps its own alerts
- *      switch (store.html enablePush).
+ *      switch (old/store.html enablePush).
  *
  * Run: node test/phone-push.test.js   (or: npm test)
  */
@@ -20,8 +20,9 @@ const { read, extractFunction, createReporter } = require('./_extract');
 
 const t = createReporter('phone push');
 const APPS = ['sales', 'manager', 'buyer', 'store', 'accounts', 'sourcing', 'owner'];
-// The Buyer is switched: these read the old page (old/buyer.html); the new app's pushes are in test/buyer-native-app.test.js.
-const pageOf = (a) => (a === 'buyer' ? 'old/buyer.html' : `${a}.html`);
+// The Buyer and the Store are switched: these read the old pages (old/buyer.html, old/store.html); the new apps'
+// pushes are in test/buyer-native-app.test.js and test/store-native-app.test.js (the shared src/core/supabase/push.ts).
+const pageOf = (a) => (a === 'buyer' || a === 'store' ? `old/${a}.html` : `${a}.html`);
 
 for (const a of APPS) {
   const appId = JSON.parse(read(`apps/${a}/capacitor.config.json`)).appId;
@@ -53,9 +54,9 @@ for (const a of APPS.filter((x) => x !== 'store')) {
   t.check(/addListener\('registrationError'/.test(fn), `${a}: a phone that gets no token says so`);
   t.check(/function start\(\)\{\n  S\.started = true;\n  phonePush\(\);/.test(src), `${a}: asked as the app starts`);
 }
-t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscriptions/.test(read('store.html')), 'store keeps its own alerts switch');
+t.check(/function enablePush\(\)/.test(read('old/store.html')) && /push_subscriptions/.test(read('old/store.html')), 'store keeps its own alerts switch');
 {
-  const ep = extractFunction(read('store.html'), 'enablePush', 'store.html');
+  const ep = extractFunction(read('old/store.html'), 'enablePush', 'old/store.html');
   t.check(ep.indexOf('pushInstalled()') > -1 && ep.indexOf('pushInstalled()') < ep.indexOf('P.register()'), 'and its switch asks the install first, so an older Store app is told to update rather than closing');
 }
 
@@ -88,7 +89,7 @@ t.check(/function enablePush\(\)/.test(read('store.html')) && /push_subscription
     t.check(/pushNotificationActionPerformed', a => \{ const d = \(a && a\.notification && a\.notification\.data\) \|\| \{\};/.test(src) && /pushOpen\(d\);/.test(src),
       `${a}: the tap listener hands the push's data to pushOpen`);
   }
-  t.check(/A tap never takes an order/.test(extractFunction(read('store.html'), 'pushOpen', 'store.html')) && /orderIsMine\(q\)/.test(extractFunction(read('store.html'), 'pushOpen', 'store.html')),
+  t.check(/A tap never takes an order/.test(extractFunction(read('old/store.html'), 'pushOpen', 'old/store.html')) && /orderIsMine\(q\)/.test(extractFunction(read('old/store.html'), 'pushOpen', 'old/store.html')),
     'store: a tap opens an order to pack only when it is already this person\'s');
 }
 

@@ -2,7 +2,7 @@
 /*
  * What the Store flows add to lib.cjs (test/e2e/store-flows.cjs runs them).
  *
- *   - The demo's own day, read, never written: the page loads next/store-demo.js, whose storeDemo() the
+ *   - The demo's own day, read, never written: the page loads store-demo.js, whose storeDemo() the
  *     app calls once; an init script keeps the instance it returns as window.__storeDemo, so a flow can
  *     check what a tap wrote (an order's stage, a trip's check-in) in the books themselves.
  *   - A tap counter (FLOW.md §5 counts a press or a slide from a fresh open).

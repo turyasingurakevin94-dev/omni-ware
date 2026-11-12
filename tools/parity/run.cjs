@@ -58,7 +58,7 @@ const ORIGIN = 'http://omni.local';
  */
 const APPS = {
   sales: { boards: 'docs/canvas/sales-agent/boards', page: 'next/sales.html', out: 'docs/audit/sales/parity', specs: (f) => !/^store-/.test(f), tabs: true },
-  store: { boards: 'docs/canvas/store-agent/boards', page: 'next/store.html', out: 'docs/audit/store/parity', specs: (f) => /^store-/.test(f), tabs: true },
+  store: { boards: 'docs/canvas/store-agent/boards', page: 'store.html', out: 'docs/audit/store/parity', specs: (f) => /^store-/.test(f), tabs: true },
 };
 let APP = APPS.sales;
 let BOARDS = path.join(ROOT, APP.boards);

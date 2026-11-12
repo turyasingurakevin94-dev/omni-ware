@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * The new Store app end to end: its main flows on next/store.html?demo, from Today, by real taps (a slide is
+ * The new Store app end to end: its main flows on store.html?demo, from Today, by real taps (a slide is
  * a real drag), at 360 × 800, with zero console errors. The runner and the guards are Sales' (runner.cjs,
  * lib.cjs); the Store's own helpers are store-lib.cjs; the flows store-yard.cjs and store-checks.cjs.
  *

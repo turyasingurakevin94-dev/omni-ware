@@ -39,7 +39,7 @@ const blockOf = (src, app) => {
   if (i < 0 || j < 0) throw new Error(app + '.html: the shop block is missing');
   return src.slice(i, j);
 };
-const srcs = Object.fromEntries(Object.keys(APPS).map(a => [a, read(a === 'buyer' ? 'old/buyer.html' : a + '.html')])) // the Buyer is switched: the old page's block;
+const srcs = Object.fromEntries(Object.keys(APPS).map(a => [a, read(a === 'buyer' || a === 'store' ? `old/${a}.html` : a + '.html')])) // the Buyer and the Store are switched: the old pages' block;
 
 /* ---------------- 1. one block, every app ---------------- */
 const block = blockOf(srcs.manager, 'manager');

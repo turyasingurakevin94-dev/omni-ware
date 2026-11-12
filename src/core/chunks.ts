@@ -1,7 +1,7 @@
 /*
  * A role's lazy files (docs/spec/07-stack.md §4, "per-tab loading"): the one loader the
  * apps share. tools/build-app.js builds each lazy folder of a role into its own file beside
- * the page (next/sales-orders.js, next/store-pack.js); that file calls window.owSalesTab
+ * the page (next/sales-orders.js, store-pack.js); that file calls window.owSalesTab
  * when it runs, with the build id it was made with. The page's own build id is
  * window.ow<Role>Build (owSalesBuild, owStoreBuild); a file of another build is refused.
  *

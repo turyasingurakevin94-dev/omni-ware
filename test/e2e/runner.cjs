@@ -7,7 +7,7 @@
  *
  *   run({ app: 'sales', flows: { sell: fn, … }, phone: { … } })
  *
- * A flow is `async (open) => {}`; `open(flags, opts)` gives it a phone on next/<app>.html?demo<flags>
+ * A flow is `async (open) => {}`; `open(flags, opts)` gives it a phone on the app's page (lib.cjs pageOf) ?demo<flags>
  * (opts are lib.cjs phone's, over the app's own `phone` defaults).
  */
 const fs = require('fs');
@@ -58,7 +58,7 @@ async function run({ app, flows, phone = {} }) {
   const tag = `${app} e2e`;
   const pw = L.loadPlaywright();
   if (!pw) { console.log(`${tag}: skipped (Playwright is not installed here)`); return 0; }
-  if (!fs.existsSync(path.join(L.ROOT, `next/${app}.html`))) { console.error(`${tag}: next/${app}.html is missing (npm run build:${app})`); return 1; }
+  if (!fs.existsSync(path.join(L.ROOT, L.pageOf(app)))) { console.error(`${tag}: ${L.pageOf(app)} is missing (npm run build:${app})`); return 1; }
   const pick = process.argv.slice(2).filter((a) => !a.startsWith('-'));
   const unknown = pick.filter((n) => !flows[n]);
   if (unknown.length) { console.error(`${tag}: no such flow: ${unknown.join(', ')}\n  flows: ${Object.keys(flows).join(', ')}`); return 1; }

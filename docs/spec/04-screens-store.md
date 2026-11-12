@@ -34,7 +34,7 @@ Every board, its title and its route: `docs/canvas/store-agent/manifest/<area>.j
 | The job, step by step (what was cut, merged, automated) | `docs/audit/store/FLOW.md` |
 
 **Proof that the app matches.** `docs/audit/store/CANVAS-PARITY.md` (to write as each area is built) lists one row per board:
-- the board beside the app at 360 × 800, with the app reached by real taps from Today: `tools/parity/run.cjs` on `next/store.html?demo` (the tool is Sales'; the Store build adds its board folder, `next/store.html` and `test/parity/store-<area>.json`, the specs naming the route ids of [`04-screens-store-routes.md`](04-screens-store-routes.md));
+- the board beside the app at 360 × 800, with the app reached by real taps from Today: `tools/parity/run.cjs` on `store.html?demo` (`next/store.html` until the switch, 2026-11-12) (the tool is Sales'; the Store build adds its board folder, `next/store.html` and `test/parity/store-<area>.json`, the specs naming the route ids of [`04-screens-store-routes.md`](04-screens-store-routes.md));
 - the pixel difference and the screenshots under `docs/audit/store/parity/`;
 - the verdict of an independent critic.
 

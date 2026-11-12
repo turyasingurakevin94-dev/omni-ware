@@ -6,7 +6,8 @@
  *   - a tapped push opens only ids of that table (routes §5; this is test/store-push-routes.test.js of the spec);
  *   - a snapshot row becomes the yard's shape with no money key read;
  *   - the parity specs test/parity/store-*.json are well formed;
- *   - next/store.html is committed, built from src/, within budget, and carries no sample shop.
+ *   - store.html (switched 2026-11-12: this test reads the built store.html) is committed, built from src/,
+ *     within budget, and carries no sample shop; the old page is old/store.html, and the old worker retires itself.
  *
  * Run: node test/store-shell.test.js   (or: npm test)
  */
@@ -98,13 +99,14 @@ t.check(specKinds.every((k) => PUSH_KINDS.includes(k)), `every push kind of rout
   }
 
   /* ---- the built page ---- */
-  const page = path.join(ROOT, 'next/store.html');
+  const page = path.join(ROOT, 'store.html');
   const html = fs.existsSync(page) ? fs.readFileSync(page, 'utf8') : '';
-  t.check(html.split('\n')[0].includes('GENERATED from src/apps/store'), 'next/store.html is committed and says GENERATED from src/apps/store');
-  t.check(!html.includes('Mukasa Hardware') && !html.includes('Kiggundu'), 'the page carries no sample day (next/store-demo.js does, on ?demo)');
+  t.check(html.split('\n')[0].includes('GENERATED from src/apps/store'), 'store.html is committed and says GENERATED from src/apps/store');
+  t.check(!html.includes('Mukasa Hardware') && !html.includes('Kiggundu'), 'the page carries no sample day (store-demo.js does, on ?demo)');
   const gz = zlib.gzipSync(Buffer.from(html), { level: 9 }).length;
-  t.check(gz <= 200 * 1024, `next/store.html within the 200 KB budget: ${(gz / 1024).toFixed(1)} KB compressed`);
-  t.check(fs.existsSync(path.join(ROOT, 'next/store-demo.js')), 'next/store-demo.js is committed');
+  t.check(gz <= 200 * 1024, `store.html within the 200 KB budget: ${(gz / 1024).toFixed(1)} KB compressed`);
+  t.check(fs.existsSync(path.join(ROOT, 'store-demo.js')), 'store-demo.js is committed');
+  t.check(!fs.existsSync(path.join(ROOT, 'next/store.html')) && !fs.existsSync(path.join(ROOT, 'next/store-demo.js')), 'next/store* is gone (spec 07 §5: next/ goes at the switch)');
   // Per-area loading (shell/areas.ts, spec 07 §4): Pack, Goods in, Shelf and Out each a file beside the page,
   // named by it, of its build, within the 60 KB budget; the page keeps the shell and Today, the demo stays apart.
   const tool = require(path.join(ROOT, 'tools/build-app.js'));
@@ -113,16 +115,23 @@ t.check(specKinds.every((k) => PUSH_KINDS.includes(k)), `every push kind of rout
   t.check(lazy.every((a) => named.includes(`store-${a}.js`)) && !named.includes('store-demo.js'), `the page names each area's file, never the demo (${named.join(', ')})`);
   const storeBuild = (html.match(/window\.owStoreBuild="(\w+)"/) || [])[1];
   for (const f of named) {
-    const text = fs.existsSync(path.join(ROOT, 'next', f)) ? fs.readFileSync(path.join(ROOT, 'next', f), 'utf8') : '';
+    const text = fs.existsSync(path.join(ROOT, f)) ? fs.readFileSync(path.join(ROOT, f), 'utf8') : '';
     const g = zlib.gzipSync(Buffer.from(text), { level: 9 }).length;
-    t.check(text.startsWith('// GENERATED from src/apps/store/'), `next/${f} is committed, built from its area`);
-    t.check(g <= tool.TAB_BUDGET, `next/${f} within the 60 KB budget: ${(g / 1024).toFixed(1)} KB compressed`);
-    t.check(!!storeBuild && text.includes(`"${storeBuild}")`), `next/${f} is of the page's build (${storeBuild})`);
-    t.check(!text.includes('Mukasa Hardware'), `next/${f} carries no sample day`);
+    t.check(text.startsWith('// GENERATED from src/apps/store/'), `${f} is committed, built from its area`);
+    t.check(g <= tool.TAB_BUDGET, `${f} within the 60 KB budget: ${(g / 1024).toFixed(1)} KB compressed`);
+    t.check(!!storeBuild && text.includes(`"${storeBuild}")`), `${f} is of the page's build (${storeBuild})`);
+    t.check(!text.includes('Mukasa Hardware'), `${f} carries no sample day`);
   }
   const areaSrc = fs.readFileSync(path.join(ROOT, 'src/apps/store/shell/screens.ts'), 'utf8');
   t.check(!/from '\.\.\/(pack|in|shelf|out)\//.test(areaSrc), 'the shell imports no lazy area (they load by route id, shell/areas.ts)');
-  t.check(fs.readFileSync(path.join(ROOT, 'store.html'), 'utf8').split('\n')[0].indexOf('GENERATED') < 0, 'store.html, the live app, is untouched (not a built page)');
+  const oldPage = fs.readFileSync(path.join(ROOT, 'old/store.html'), 'utf8');
+  t.check(oldPage.indexOf('GENERATED') < 0 && /old copy until 2026-12-12/.test(oldPage.slice(0, 400)), 'old/store.html is the old app, not a built page, and says it is the old copy until 2026-12-12');
+  t.check(/register\('\/old\/store-sw\.js', \{ scope: '\/old\/store\.html' \}\)/.test(oldPage) && /const PAGE = '\/old\/store\.html';/.test(fs.readFileSync(path.join(ROOT, 'old/store-sw.js'), 'utf8')),
+    'the old page keeps its own worker, for old/store.html only, never the new page');
+  const retired = fs.readFileSync(path.join(ROOT, 'store-sw.js'), 'utf8');
+  t.check(/self\.registration\.unregister\(\)/.test(retired) && !/addEventListener\('fetch'/.test(retired) && /c\.delete\('\/store\.html'\)/.test(retired),
+    'the old worker on /store.html answers nothing, drops the old page it kept and takes itself off');
+  t.check(!/serviceWorker/.test(html), 'the new page registers no worker (so no old copy is served beside area files of a newer build)');
   let esb = null;
   try { esb = require.resolve('esbuild', { paths: [ROOT] }); } catch (_e) { esb = null; }
   if (!esb) console.log('  (skipped the build: esbuild is not installed here; build-check.yml runs it)');

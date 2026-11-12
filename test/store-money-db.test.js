@@ -33,7 +33,7 @@ const sql = raw.replace(/--[^\n]*/g, '');
   t.check(/Safe to run twice/.test(raw) && /ROLLBACK/.test(raw) && /CHECK AFTERWARDS/.test(raw), 'the header says it runs twice, and how to check and roll back');
   const doc = read('docs/decision-rights.md');
   t.check(/\| 0156 \| /.test(doc) && /`credit\.release` \| Manager \| Sales, Store \|/.test(doc), 'docs/decision-rights.md reserves 0156 and has the Store propose credit');
-  const store = read('store.html'), mgr = read('manager.html');
+  const store = read('old/store.html'), mgr = read('manager.html');
   // Round 5 (0164): the holds come in the snapshot, and the ask is creditAsk in the books, letGoAsk on the phone.
   t.check(/holds = snapHolds\(sn\.holds\) \|\| \{\}/.test(store) && /'handoverCheckedAt', 'letGoAsk'\]/.test(store), 'the Store app reads what waits on money and writes its ask on the order');
   t.check(/const go = all\.filter\(d => !moneyHold\(d\.q\)\)/.test(store) && /if \(moneyHold\(q\)\) \{ toast\(/.test(store), 'a held order is never picked for the truck or handed over');
