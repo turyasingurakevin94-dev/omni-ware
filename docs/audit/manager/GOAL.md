@@ -53,6 +53,20 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or changes to
 | 4–5. Pages on the new canvas | done · [canvas "Manager — Agent language"](https://claude.ai/artifact/TgJSJfvHJskZw293Vzd2qW): 11 boards — decisions board (Main), the day (Flow), Scores, the tabs Today · Orders · Money · Team, the Decide sheets (prices, after the order, stock, credit); every screen at 360 px with all 8 states; sources `docs/canvas/manager/` (generators in `tools/`) |
 | 6. Scores | done · independent review, 4 rounds from the rendered screens (`docs/canvas/manager/review/`): 7.94 → 8.44 → 8.62 → **8.66** vs the Agent app's 8.37; 28 → 8 → 0 → 0 pages below; Scores board |
 
+## Build (Kevin's build goal, 12 Nov 2026)
+
+| Step | State |
+| --- | --- |
+| B1. Spec | written · `docs/spec/04-screens-manager.md` (routes, the queue, the one Decide sheet, D-1…D-33, rules, Q1–Q7 for Kevin) and `04-screens-manager-data.md` (30 reads, 45 writes, §5 Q1–Q16) |
+| B2. Core | `src/core/manager/`: types, words, queue, price, credit, watch, errors, source; the demo of BRIEF.md (09:40 and the later cards by moment) |
+| B3. Pages not drawn | AD01–AD05 drawn (`Added`, `Added2`), reviewed at or above the Agent app (`review/added-1.md`, round 2) |
+| B4. Shell | `src/apps/manager/shell/` on the shared stack (`src/ui/stack.ts`), Undo (`src/core/held.ts`), error words (`src/core/notdone.ts`), sign-in (`src/ui/Gate.tsx`); `next/manager.html` builds |
+| B5. Tabs and Decide kinds | in progress: Today · Orders · Money · Team · Decide (price, credit, orders, stock kinds); Packed short and All decided done |
+| B6. Real books | in progress (`src/core/manager/supabase/`) |
+| B7. Migration 0184 | in progress (pushes, push actions; `customer_asks` kept apart for Kevin's yes) |
+| B8. Proof | to do: e2e per decision, offline / double tap / refusal / Undo, taps, the reviewer drives the built app |
+| B9. Switch | when every page scores at or above its board and Kevin says switch |
+
 ## Waiting on Kevin
 
 - ~~Approve the canvas before any code, migration or change to another app.~~ **Approved** by Kevin on 12 Nov 2026: "implement this design as it is" (he asked for the build goal; a page not drawn is drawn on the canvas first, in the Agent language, then built). Confirmed in plain words the same day: "Yes, I approve it".
