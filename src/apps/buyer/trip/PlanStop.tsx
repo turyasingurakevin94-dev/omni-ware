@@ -82,11 +82,11 @@ export function HeldPrice(p: { b: BuyerBooks; held: LineRef[] }): JSX.Element {
             <span class="ow-b-plan-lt"><span class="dim">{r.line.name}</span>
               <span class="ow-b-plan-meta"><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /><span class="mono">{`${r.line.qty} ${unitOr(r.line.unit)}`}</span></span>
             </span>
-            <span class="ow-b-plan-was">{r.line.priceWas != null && <s class="mono">{fig(r.line.priceWas)}</s>}<b class="mono">{fig(r.line.cost)}</b></span>
+            <span class="ow-b-plan-was">{r.line.priceWas != null && <span class="mono was">{`was ${fig(r.line.priceWas)}`}</span>}<b class="mono">{fig(r.line.cost)}</b></span>
           </div>
           <div class="ow-b-plan-hrow">
             <span class="ow-b-plan-up">Price up</span>
-            <span class="mono ow-b-plan-sells">{`sells ${fig(r.line.sell)}`}</span>
+            <span class="mono ow-b-plan-sells">{r.line.sell > 0 ? `sells ${fig(r.line.sell)}` : 'Price coming'}</span>
             {ruth && <Avatar initials={ruth.initials} tint={ruth.tint} size={28} />}
             <span class="ow-b-plan-ruth"><Icon name="bell" size={14} stroke={2} />{`${firstWord(ruth?.name || 'Ruth')} decides`}</span>
           </div>

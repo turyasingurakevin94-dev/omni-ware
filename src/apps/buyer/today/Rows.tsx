@@ -61,7 +61,7 @@ export function Chip(p: { tone: ChipTone; children: ComponentChildren; icon?: Ic
 /** "Grace sees" and what Sales sees, as chips. */
 export function Sees(p: { who: Member[]; children: ComponentChildren; class?: string; tail?: ComponentChildren }): JSX.Element | null {
   if (!p.who.length) return null;
-  return <div class={cx('ow-b-today-sees', p.class)}><Eye />{seeWord(p.who)}{p.children}{p.tail}</div>;
+  return <div class={cx('ow-b-today-sees', p.class)}><Eye />{`${seeWord(p.who)}: `}{p.children}{p.tail}</div>;
 }
 
 type RowState = 'idle' | 'sending' | 'error';

@@ -100,7 +100,7 @@ export function ReplyRow(p: ReplyRowProps): JSX.Element {
       <div class="ow-b-replies-pills">
         {lead}
         {pill('price', 'New price', 'soft')}
-        {pill('no', 'No', 'soft')}
+        {pill('no', 'Not found', 'soft')}
       </div>
     </div>
   );

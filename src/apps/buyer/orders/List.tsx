@@ -159,7 +159,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
       ) : (
         <div class="ow-b-orders-empty">
           <span class="tick"><Icon name="check" size={26} stroke={2.4} /></span>
-          <span class="t">{views.length ? `Nothing ${filter === 'ruth' ? `${ruthName} decides` : FILTERS.find((f) => f.id === filter)?.word.toLowerCase()}` : 'Nothing in Checking'}</span>
+          <span class="t">{views.length ? (filter === 'ruth' ? `Nothing waits on ${ruthName}` : filter === 'notfound' ? 'No Not found lines' : `Nothing ${FILTERS.find((f) => f.id === filter)?.word.toLowerCase()}`) : 'Nothing in Checking'}</span>
           {!views.length && <span aria-hidden="true" class="bars"><span /><span /><span /><span /></span>}
         </div>
       )}

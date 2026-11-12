@@ -86,13 +86,13 @@ const small = new Set();
     let txt = await s.text();
     t.check(!txt.includes('NEXT MOVE'), 'one still to ask: no Next move trip card yet');
     t.check(!(await s.p.getByRole('button', { name: /^Found: .*waits on you/ }).count()), 'one still to ask: Found waits on nobody');
-    t.check(/Grace · Faith see Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
+    t.check(/Grace · Faith see: Found · \d\d:\d\d/.test(txt), 'Grace · Faith see Found under Today (no trip card in its place)');
 
     /* ---- Today: who sees an ask, a kept ask, the Ask sheet's Not found ---- */
     s = await open(b, '?demo');
     await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
     txt = await s.text();
-    t.check(txt.includes('Grace · Faith see Asked') && !/Brian[^.]*see Asked/.test(txt), 'asked Namanve: Grace and Faith see Asked, not Brian (his order is still to ask)');
+    t.check(txt.includes('Grace · Faith see: Asked') && !/Brian[^.]*see: Asked/.test(txt), 'asked Namanve: Grace and Faith see Asked, not Brian (his order is still to ask)');
     s = await open(b, '?demo&offline=1');
     await s.tap('Ask Namanve Sheets on WhatsApp, 3 lines');
     t.check(!(await s.btn('Ask Namanve Sheets on WhatsApp, 3 lines').count()) && (await s.text()).includes('Waiting'), 'no signal: the asked row waits, no second Ask');

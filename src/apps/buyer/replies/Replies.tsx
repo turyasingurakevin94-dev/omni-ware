@@ -34,7 +34,7 @@ import { buyingNow, done, notFoundQueue } from './state.ts';
 import './replies.css';
 
 const KIND: Record<Exclude<Answer, 'price'>, 'answerYes' | 'answerNo'> = { yes: 'answerYes', no: 'answerNo' };
-const KEPT_WORD: Record<string, string> = { answerYes: 'Yes · same', answerPrice: 'New price', answerNo: 'No' };
+const KEPT_WORD: Record<string, string> = { answerYes: 'Yes · same', answerPrice: 'New price', answerNo: 'Not found' };
 
 /** The answer for this supplier kept on the phone or refused, if any. */
 function keptFor(list: Kept[], sid: string): Kept | null {

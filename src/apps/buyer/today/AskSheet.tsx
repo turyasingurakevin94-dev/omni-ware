@@ -44,8 +44,9 @@ function AskSheet(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
   const run = async (pick: Pick): Promise<void> => {
     setBusy(pick);
     try {
-      if (!asked) await act('ask', s.id, 'call');
+      // New price opens at once; the price screen books the ask with the price on Save (BUY-06).
       if (pick === 'price') { sheet.close(); nav.push('replies/price', { supplier: s.id }); return; }
+      if (!asked) await act('ask', s.id, 'call');
       const r = await act(pick === 'yes' ? 'answerYes' : 'answerNo', s.id);
       sheet.close();
       if (r.kept) toast.show(KEPT, KEPT_TOAST);

@@ -20,7 +20,11 @@ import { barW } from '../../../ui/util.tsx';
 import type { LineState } from '../../../core/buyer/types.ts';
 import { seesWord } from '../replies/rules.ts';
 import type { Params } from '../shell/nav.ts';
-import { nav } from '../shell/nav.ts';
+import { nav, stack } from '../shell/nav.ts';
+
+/** Back names the screen under this one (BUY-12): "Back to Replies" when opened from Replies. */
+const BACK: Record<string, string> = { today: 'Today', orders: 'Checking', replies: 'Replies', trip: 'the trip', suppliers: 'Suppliers' };
+const backTo = (): string => { const s = stack.value, under = s.length > 1 ? s[s.length - 2].id.split('/')[0] : 'orders'; return `Back to ${BACK[under] || 'Checking'}`; };
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
 import { FromChip, Initials, Pause, Sees, SeesCard, StateWord, Strip } from './parts.tsx';
@@ -124,7 +128,7 @@ export function OrderScreen({ params }: { params: Params }): JSX.Element {
     </TitleHead>
   );
   return (
-    <FullSheet onBack={() => nav.back()} backLabel="Back to Checking" head={head} pad="14px 16px 24px" gap={8}>
+    <FullSheet onBack={() => nav.back()} backLabel={backTo()} head={head} pad="14px 16px 24px" gap={8}>
       {off && <Notice kind="offline" action={kept.value.length ? { label: 'Try again', on: () => { void flush(); } } : undefined}>Offline · it sends when back</Notice>}
       <div class="ow-b-orders-lh"><span>Lines</span><span class="mono">{v.live.length}</span></div>
       {hold && (
