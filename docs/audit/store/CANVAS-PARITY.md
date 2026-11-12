@@ -244,87 +244,65 @@ Accepted (not failures):
 
 ## Goods in
 
-Critic run 2026-11-12 on `6a95aa53` (origin/claude/store-build). 29 boards. `test/parity/store-in.json` is unchanged: every tap reached its board, and the re-run diffs equal the builder's to 0.01. **11 pass, 18 fail.**
+Critic re-run 2026-11-12 on `bacd5c32` (origin/claude/store-build), after the fixes for G1–G13 and the boards redrawn in `docs/canvas/store-agent/review/IN-fixes.md`. 29 boards. `test/parity/store-in.json` is as the fixer left it: each "Sending…" board is reached by `&fail`, the 10 s hold, then Try again, and every tap reached its board. **29 pass, 0 fail.**
 
 Accepted across the area (not failures):
 - **The demo clock, and figures with a written reason.**
-  - Times: 11:30 for 11:34 (IN06); 12:00 for 12:03 and 12:05 (IN10–IN15, IN12); 15:52 for Katwe Timber's 15:34 (IN31–IN35, because the demo taps Done at the hand-in clock); 11:02 for 11:03 (IN21).
+  - Times: 11:30 for 11:34 (IN06), "saved 11:30" for 11:33 (IN07), 12:00 for 12:03 and 12:05 (IN10–IN15, IN12), 15:52 for Katwe Timber's 15:34 (IN31–IN35, because the demo taps Done at the hand-in clock), 11:02 for 11:03 (IN21).
   - Aisle B reads 118 → 218 for 120 → 220 (IN14, IN15): `shelf.ts` `onShelf`, after #0556's 2 bags were collected at 11:10.
-  - IN40 reads "4 checked in today" for the board's 3. By FACTS §8, four arrivals are checked in by 17:30: the 10:05 trip, the 11:34 trip, the 12:00 Hima delivery and the Katwe ride. The board is one short.
+  - IN40 reads "4 checked in today" where the board says 3. By FACTS §8, four arrivals are checked in by 17:30: the 10:05 trip, the 11:34 trip, the 12:00 Hima delivery and the Katwe ride. The board should read 4 the next time it is drawn.
 - **The rail icons** are the shell's `RAIL`, as the Pack critic accepted.
 - **Inactive controls dimmed as drawn:**
   - the off slide, "Count 2 more first" and "Waiting to send" (4.01:1);
   - IN16's tiles and chips while sending;
+  - IN05 and IN14's Scan and "Not on the list" while sending (2.68:1, now `disabled`, as redrawn);
+  - IN23's bag strip and Good/Damaged switch while sending ("kept" 1.86, "back" 2.28, 1.83–2.89; the rest of the card stays at full strength, as drawn);
   - IN24's disabled "Not sent yet" (4.29:1);
   - IN10's 100-bag tile, which is 44×43 only while drawn pressed (scale .97).
-- **Stand-in links**: IN01's "A supplier turned up" opens the listed delivery. IN10 and IN11's "Stack it in aisle B" open `shelf/aisle` (aisle B) where the board links SH01 (routes §3).
-- The contrast hits under IN01's sheet ("Packing now · yours", 3.21:1) are Today's rows under the scrim, not on screen.
-- **No money on any Goods-in board**: "3m" is a sheet length. `scrollWidth` is 360 on all 29, and no text is under 11 px.
+- **Stand-in links**:
+  - IN01's "A supplier turned up" opens the listed delivery.
+  - IN10 and IN11's "Stack it in aisle B" open `shelf/aisle` (aisle B) where the board links SH01 (routes §3).
+  - IN40's "Ask Denis for more" opens Find, now a ruling in spec §2a.
+- **Close and Back**: Close lands on the board's place. On the delivery boards, which are reached from Today's Next job, the strip reads "Back to Today" and lands there, the real screen below (nav.ts's rule).
+- **IN12's 4–10 px drift.** IN12's board draws the end screen's title 4 px higher than IN06's board, and the app draws one end screen. Words, figures, Undo and the bag row all match.
+- **Animations**: the Undo bar shows full after its run (IN06, IN12, IN21, IN32).
+- **No money on any Goods-in board**: "3m" is a sheet length. `scrollWidth` is 360 on all 29. No text is under 11 px, and nothing is clipped (the delivery sub now reads "at the yard 12:00").
 
 | Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| IN01 Coming in | `in` | 1 | 9.54 | **head** | ok | ok | ok | ok | ok | fail (board) | G1 |
-| IN40 Nothing coming | `in` | 1 | 8.88 | **head** | **Ask Denis** | ok | ok | ok | ok | fail | G1, G2 |
+| IN01 Coming in | `in` | 1 | 5.78 | ok | ok | ok | ok | ok | ok | pass | the shared stage-sheet head, as redrawn |
+| IN40 Nothing coming | `in` | 1 | 3.81 | ok | ok | ok | ok | ok | ok | pass | 4 for 3 (FACTS); Ask → Find (§2a) |
 | IN02 Check-in | `in/checkin` | 3 | 1.27 | ok | ok | ok | ok | ok | ok | pass | pressed "1 tin" is the tap's moment |
-| IN03 A line differs | `in/checkin` | 6 | 0.04 | ok | ok | ok | ok | ok | ok | pass | |
-| IN04 Not on the list | sheet | 7 | 3.56 | ok | ok | ok | ok | ok | ok | pass | 2 px offsets |
+| IN03 A line differs | `in/checkin` | 6 | 0.03 | ok | ok | ok | ok | ok | ok | pass | |
+| IN04 Not on the list | sheet | 7 | 3.49 | ok | ok | ok | ok | ok | ok | pass | 2 px offsets |
 | IN16 Extra sending | sheet | 8 | 3.64 | ok | ok | ok | ok | ok | ok | pass | dimmed as drawn |
-| IN05 Sending | `in/checkin` | 6 | 3.08 | ok | **Scan** | ok | ok | ok | ok | fail | G3 |
-| IN06 Checked in | `in/checkin` | 6 | 2.19 | **no Undo** | ok | ok | ok | ok | ok | fail | G4 |
-| IN07 No signal | `in/checkin` | 6 | 2.49 | **saved 7:52, dimmed extra** | **Scan, Not on the list** | ok | ok | **2.68** | ok | fail | G3, G5 |
+| IN05 Sending | `in/checkin` | 7 | 3.08 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN06 Checked in | `in/checkin` | 6 | 2.04 | ok | ok | ok | ok | ok | ok | pass | Undo 10 s |
+| IN07 No signal | `in/checkin` | 6 | 2.30 | ok | ok | ok | ok | ok | ok | pass | saved 11:30, Scan and Not on the list live |
 | IN08 Not done | `in/checkin` | 6 | 2.58 | ok | ok | ok | ok | ok | ok | pass | Try again 40 drawn in a 44 target |
-| IN09 Someone else | `in/checkin` | 6 | 2.19 | ok | **Close** | ok | ok | ok | ok | fail | G6 |
+| IN09 Someone else | `in/checkin` | 6 | 2.19 | ok | ok | ok | ok | ok | ok | pass | Close → Today |
 | IN13 Ruth: keep it | `in/checkin` (push) | 0 | 0.46 | ok | ok | ok | ok | ok | ok | pass | |
-| IN10 Delivery | `in/delivery` | 3 | 1.31 | **Torn?** | **Close, back** | ok | ok | ok | **sub** | fail | G6, G7, G8 |
-| IN11 Some torn | `in/delivery` | 7 | 0.74 | **Torn bags wraps** | **Close, back** | ok | ok | ok | **sub** | fail | G6, G8, G9 |
-| IN14 Delivery sending | `in/delivery` | 3 | 2.52 | **dimmed extra** | **Close, back** | ok | ok | ok | **sub** | fail | G3, G6, G8 |
-| IN15 Delivery no signal | `in/delivery` | 3 | 2.53 | **saved 7:52, dimmed extra** | **Close, back, Not on the list** | ok | ok | **2.68** | **sub** | fail | G3, G5, G6, G8 |
-| IN12 Delivery done | `in/delivery` | 3 | 9.04 | **no Undo, bag row** | ok | ok | ok | ok | ok | fail | G4, G9 |
-| IN20 Return | `in/return` | 3 | 19.38 | **chips wrap** | ok | ok | ok | **"kept" 1.86** | ok | fail | G10, G11 |
-| IN23 Return sending | `in/return` | 4 | 17.74 | **chips wrap, whole card dimmed** | ok | ok | ok | **2.30–4.27** | ok | fail | G10, G11, G12 |
-| IN21 Sent to Ruth | `in/return` | 4 | 5.34 | ok | ok | ok | ok | ok | ok | pass | bar full after 10 s (animation) |
-| IN24 Return no signal | `in/return` | 4 | 19.02 | **chips wrap** | ok | ok | ok | **"kept" 1.86** | ok | fail | G10, G11 |
-| IN25 Return not done | `in/return` | 4 | 23.0 | **chips wrap, "Grace sees" under the red bar** | ok | ok | ok | **"kept" 1.86** | ok | fail | G10, G11 |
-| IN22 Ruth took it back | `in/return` (push) | 0 | 0.26 | **gate 11:03, bold sub** | ok | ok | ok | ok | ok | fail | G13 |
+| IN10 Delivery | `in/delivery` | 3 | 0.23 | ok | ok | ok | ok | ok | ok | pass | Torn? drawn |
+| IN11 Some torn | `in/delivery` | 7 | 0.30 | ok | ok | ok | ok | ok | ok | pass | bags overlap as drawn |
+| IN14 Delivery sending | `in/delivery` | 4 | 2.37 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN15 Delivery no signal | `in/delivery` | 6 | 2.33 | ok | ok | ok | ok | ok | ok | pass | |
+| IN12 Delivery done | `in/delivery` | 3 | 8.89 | ok | ok | ok | ok | ok | ok | pass | Undo; 4–10 px drift (above) |
+| IN20 Return | `in/return` | 3 | 0.41 | ok | ok | ok | ok | ok | ok | pass | one chip row |
+| IN23 Return sending | `in/return` | 4 | 0.44 | ok | ok | ok | ok | ok | ok | pass | |
+| IN21 Sent to Ruth | `in/return` | 4 | 5.32 | ok | ok | ok | ok | ok | ok | pass | |
+| IN24 Return no signal | `in/return` | 4 | 0.41 | ok | ok | ok | ok | ok | ok | pass | |
+| IN25 Return not done | `in/return` | 4 | 4.41 | ok | ok | ok | ok | ok | ok | pass | |
+| IN22 Ruth took it back | `in/return` (push) | 0 | 0.06 | ok | ok | ok | ok | ok | ok | pass | demo carries `gateAt`; see the note |
 | IN30 Ride | `in/ride` | 2 | 0.65 | ok | ok | ok | ok | ok | ok | pass | |
 | IN31 Hand in | `in/ride` | 3 | 0.76 | ok | ok | ok | ok | ok | ok | pass | |
-| IN34 Hand-in sending | `in/ride` | 4 | 0.85 | ok | ok | ok | ok | ok | ok | pass | |
-| IN33 Ride no signal | `in/ride` | 3 | 0.86 | **saved 7:52** | ok | ok | ok | ok | ok | fail | G5 |
+| IN34 Hand-in sending | `in/ride` | 5 | 0.85 | ok | ok | ok | ok | ok | ok | pass | via `&fail` and Try again |
+| IN33 Ride no signal | `in/ride` | 3 | 0.79 | ok | ok | ok | ok | ok | ok | pass | saved 15:52 |
 | IN35 Hand-in not done | `in/ride` | 4 | 1.08 | ok | ok | ok | ok | ok | ok | pass | |
-| IN32 Handed in | `in/ride` | 4 | 6.0 | **no Undo** | ok | ok | ok | ok | ok | fail | G4 |
+| IN32 Handed in | `in/ride` | 4 | 5.86 | ok | ok | ok | ok | ok | ok | pass | Undo 10 s |
 
-### Goods in failures and fixes
+### Goods in: what is still open (not a board failure)
 
-- **G1 · two heads for one stage sheet** (IN01, IN40), the board's flaw. IN01 and IN40 draw their own head: a 24 px strip, a square foot, a taller rail, and on IN40 "nothing coming" beside the title. PK01 and OU01 draw the shared `shell/StageSheet.tsx` head (40 px strip, rounded foot), which the app uses everywhere. The builder chose PK01's silently. Keep the app as it is. Redraw IN01's and IN40's heads as PK01's, and record in spec §2a that the stage sheet has one head (PK01).
-- **G2 · "Ask Denis for more" opens Find** (IN40). The board links SH30 (`shelf/ask`). The app opens `shelf/find`, because an ask needs an item. This is not in the spec. Either have the lead relink the board to SH02 and record it in routes §3, or open `shelf/ask` with an item picker. Do not leave it unrecorded.
-- **G3 · dead or dimmed head buttons while sending or kept.**
-  - `Checkin.tsx:136` and `Delivery.tsx:101` ignore the Scan tap when `locked`, but the button still looks live. IN05 and IN07 link it to SH40.
-  - `Checkin.tsx:140` and `Delivery.tsx:104` disable "Not on the list" (2.68:1) when kept. IN07 and IN15 draw it at full strength and live. While sending (IN14), the board draws it live, but IN05 draws it dimmed.
-  - Fix: let Scan and Not on the list work while kept (the extra waits in the outbox, as the return does). Disable both while sending, with the `disabled` attribute rather than a silent guard. Redraw IN14 dimmed, the same as IN05.
-- **G4 · no Undo after a check-in** (IN06, IN12, IN32). All three boards draw "Undo 10 s" with its bar, and spec §4.9 says that every write that moves goods waits at least 10 s with Undo (`core/store/held.ts`). The builder's reason is that "no write takes a check-in back", but the fix is to hold the write, not to undo it. Fix: send the check-in, the delivery and the ride hand-in through `held.ts`, as the return already is (`Return.tsx:126`). Show the Undo chip in `CheckedIn.tsx` and the Ride end screen. If this cannot be built, it is an open question for Kevin in §3, not a pass.
-- **G5 · "Updating · saved 7:52"** (IN07, IN15, IN33). `Checkin.tsx:125`, `Delivery.tsx:90` and `Ride.tsx:158` pass `b.at`, the time the books on the phone were last read. The boards draw when this work was kept: 11:33, 12:04, 15:52. "Saved 7:52" tells the yard that their count was saved four hours ago. Fix: pass the outbox entry's time (the slide's time).
-- **G6 · Close and the back strip** (IN09, IN10, IN11, IN14, IN15).
-  - IN10–IN15 are reached from Today's Next job, so the strip, which reads "Back to Coming in", lands on Today, and so does Close (`Delivery.tsx:101 nav.back()`). The board links both to IN01.
-  - IN09's Close lands on Coming in. The board links it to TD01.
-  - Fix: Delivery's Close calls `nav.tab('in')`. IN09's Close calls `nav.tab('today')`, labelled "Close: back to Today". The strip keeps `nav.back()`, but its label names the screen actually below (as Shelf F5).
-- **G7 · "Torn?" is not on the board** (IN10). The app adds `.in-anytorn` (`Delivery.tsx:122`), which pushes "Tap the stacks of 10 you see" onto two lines. No board draws the way from IN10 to IN11, and that gap is the board's. Draw "Torn?" on IN10 first (canvas first), with the hint kept to one line: drop "you see", or put Torn? on the hint's row.
-- **G8 · the delivery head is cut off**, the board as drawn too (IN10, IN11, IN14, IN15). The sub "at the yard 12:00 · 1 line" is 187 px in a 152 px box and shows as "at the yard 12:00 · …". The section head already says "1 line · refill". Fix: the sub reads "at the yard 12:00". Redraw the four boards.
-- **G9 · bag rows** (IN11, IN12). The board overlaps the torn bags by −8 px. The app spaces them out, so "Torn bags" wraps to two lines. Fix: `in.css:269 .in-torn-bags > * + * { margin-left: -8px }`. IN12's five bags sit 10 px lower and narrower than on the board: match `CheckedIn` "Where it went" to the board's art size.
-- **G10 · the return head's chips** (IN20, IN23, IN24, IN25). See the note below.
-- **G11 · "kept" at 1.86:1** (IN20, IN23–IN25), the board as drawn too. `return.css:7 .rt-unit { opacity: .45 }` fades the word with the picture. The word says what happens to the bag, so it is not an inactive label. Fix: put the .45 on `.rt-pic` only, and leave `.rt-w` at `--ink-soft` (5.0:1). Redraw the boards.
-- **G12 · sending dims too much** (IN23). `return.css:3` sets the whole `.in-card` to .6, so "Cement · Hima 50kg" (4.27), "Grace asked" (2.47), "Set aside · never back on the shelf" (3.26) and the Wood glue row (2.30) all fall below 4.5. The board dims only the bag strip, the Good/Damaged switch and the camera button. Fix: `.rt-form.locked .rt-units, .rt-form.locked [role=radiogroup], .rt-form.locked .nl-cam { opacity: .45 }`, and nothing else.
-- **G13 · Ruth's answer** (IN22).
-  - `Return.tsx:195` stamps "At the gate" with the ask's `createdAt`, so it always equals Sent (11:03). The board, and the app's own IN20, say 11:02. Fix: carry `gateAt` in `askOf` and show it.
-  - `in.css:223` makes "2 bag · back wall" 12 px bold mono. The board draws 11 px regular mono. Fix: limit that rule to `span + span:not(.mono)`.
-
-**On the return head's chips (G10).** The board does not fit, in its own font either. With `nowrap`, the chips run 20–348 in a row that ends at 340, 8 px too far. The board hides this only because its sheet has `overflow: hidden`. Wrapping does stop the clip, but it costs the body 36 px. On IN25 that pushes "Grace sees Return asked" under the red bar, and it is the whole 18–23 % diff.
-
-A better fix keeps the board's one row: shorten the first chip to **"From Grace · Fri 15:40"** (`Return.tsx:135`, drop "asked"). The card just below already says "Grace asked 2 of 3 bag". The chip then reads like the other heads ("From Denis · Buyer"). Measured at 360 px, the two chips end at x ≈ 317 of 340, which leaves room for the phone's wider Figtree (+15 px). Keep `flex-wrap` in `.in-head-chips` only as the fallback for a long name. Redraw IN20, IN23, IN24 and IN25 with the shorter chip in the same commit.
-
-The other options are worse:
-- a scrolling chip row hides who brought the return;
-- an ellipsis on the first chip cuts off the time;
-- tighter padding saves about 6 px, which is not enough.
+- **The gate time on the real books** (IN22). The live `store_return_ask` has no field for it, so with real data "At the gate" shows the sent time. The demo carries `gateAt`, so the board passes. The gap is written down only in a code comment (`core/store/supabase/yard.ts:100`). Record it in spec §3 (or data §9) as an open question with its default, or add the field in the Store's reserved migration. Then the rule lives in the spec, not just in the code.
 
 ## Out
 
