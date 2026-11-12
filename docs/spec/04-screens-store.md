@@ -166,6 +166,8 @@ Each rule is written once in code (the place named is where the new app keeps it
 | **Ask for more** is asked in the unit the Buyer buys (the pack when the item has one); how soon (We're out / Running low) prefilled; it names the orders short of it | `core/store/restock.ts` | `store.html:2495 restockUnit`, `2496 sendRestock`, `5617`; SH30 |
 | **Find**: the best match first; misspellings find ("hindge", "4x20", "silcone", "Did you mean"); a size like 1 1/4" is one tag; chips only with a query, a chip's count is its rows; 30 rows at a time, "Show 30 more"; every order row opens something | `core/store/find.ts` | `store.html:5647–5700`; NAV-03, NAV-05, NAV-06, NAV-07, STO-SPD-02 |
 | **No aisle yet**: a product with no category has no aisle letter | `shelf.ts` | DATA-05; SH05 |
+| **A shelf label's short code** (under its bars, for a person to read) is the aisle letter and four digits from the item's key, `h = (h × 31 + char) mod 10000` ("A-3533" for Iron sheet G28): the labels already stuck on the shelves carry it. The bars carry the key itself (`OW1:` / `OW-`). SH40's "A-014" was a designer's sample; the board now reads the rule's code | `shelf.ts` `labelShort` | `store.html:5814 labelShort`, `5811 labelCode`; SH40 (Shelf parity F4) |
+| **Find's Open** on the best match opens the item; while a count of it waits with Ruth it opens that count, with its waiting sheet ("Count it again" or leave it) | `shelf/Find.tsx` `Best` | SH02 links Open to SH15 (Shelf parity F2) |
 
 ### 4.6 The shift
 
@@ -207,6 +209,7 @@ Each rule is written once in code (the place named is where the new app keeps it
 |---|---|---|
 | **Back walks the app**: phone and browser Back go back one screen (a sheet closes first, one history entry per screen); on Today, "Leave Omni-ware?" | `src/native` back, `shell/nav.ts` | `store.html:2098 navArm`, `2209 SHEET.leaveapp`; NAV-02 |
 | **A reload reopens the same screen**; flows reopen from Today with their drafts | `shell/nav.ts` | `store.html:2035 saveView`, `2037 restoreView`; NAV-09 |
+| **Close goes to the board's place; the way back walks the stack.** A sheet's Close goes where its board links (the Shelf's item and aisle → Shelf; a report → its item, or Shelf when the shelf is empty; a waiting count's Close, Leave it and Keep theirs → the item): down the stack when that place is below, else in the top's place. The 40 px strip above a sheet is Back, and its words name the screen really below ("Back to Find", "Back to Roofing") | `shell/nav.ts` `nav.to`, `backTo` | Shelf parity F5 (critic 2026-11-12); SH03, SH05, SH10, SH15, SH20, SH23, SH25 |
 | **Back and the title stay at the top** of every long page | `src/ui` | NAV-08 |
 | **Big text** (You): the whole scale at least 1.2×, controls 52 px | `src/ui` tokens | `store.html:2130 bigPx`; STO-A11Y-01 |
 | **Alerts** are this phone's row in `push_subscriptions`, signed up when the person turns them on and has a staff row. The bell counts only today's alerts for you; opening Alerts reads them | `core/supabase/push.ts` | `store.html:2647–2704 enablePush, listenPush, pushOpen`, `3248 seenAt`; WORD-10; spec 06 §6a |

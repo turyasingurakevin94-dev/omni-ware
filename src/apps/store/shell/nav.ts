@@ -8,6 +8,8 @@
  *   nav.back()                       the one below (phone and browser Back do the same, NAV-02)
  *   nav.replace('pack', {})          swap the top (a stage sheet's rail, an end-of-flow screen)
  *   nav.home()                       "Back to Today", never a pushed today (routes §3)
+ *   nav.to('shelf/item', { key })    Close: to the board's place, down the stack when it is there (else in the top's place)
+ *   backTo                           the way-back strip's words, from the entry really below ("Back to Find")
  *
  * A reload reopens the same screen (NAV-09; store.html:2035 saveView): the stack is kept in
  * sessionStorage under ow-store-view. An open sheet has its own history entry, so Back closes
@@ -16,7 +18,7 @@
 import { computed, effect, signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { sheet } from '../../../ui/sheet.tsx';
-import { route } from './routes.ts';
+import { isTab, RAIL, route } from './routes.ts';
 
 export type Params = Record<string, string | number | boolean | null | undefined>;
 export type Tab = 'today' | 'shelf';
@@ -67,6 +69,19 @@ export const showTabBar = computed(() => {
   return stack.value.length === 1 && route(top.value.id)?.kind === 'tab';
 });
 
+/** What a place is called on its way back: one list, the stack's entries named (F5). */
+const NAME: Record<string, (p: Params) => string> = {
+  today: () => 'Today', shelf: () => 'Shelf', 'shelf/find': () => 'Find', 'shelf/aisle': (p) => (p.aisle ? String(p.aisle) : 'No aisle yet'),
+  'shelf/item': () => 'the item', 'shelf/count': (p) => (p.key ? 'the count' : 'the aisle count'), 'shelf/report': () => 'the report',
+  'shelf/scan': () => 'the scanner', 'shelf/ask': () => 'the ask', 'pack/order': () => 'the order',
+};
+const nameOf = (e: Entry): string | null => (NAME[e.id] ? NAME[e.id](e.params) : RAIL.find((x) => x.id === e.id)?.word ?? null);
+/** "Back to Find": the entry below the top, by name ("Back" when it has none). */
+export const backTo = computed(() => {
+  const e = stack.value[stack.value.length - 2], n = e ? nameOf(e) : null;
+  return n ? `Back to ${n}` : 'Back';
+});
+
 function setStack(next: Entry[], pushHistory: boolean): void {
   stack.value = next;
   if (typeof window === 'undefined') return;
@@ -90,6 +105,22 @@ export const nav = {
     pendingTimer = window.setTimeout(() => { pending = 0; }, 1000);
   },
   home(): void { setStack([entry('today')], false); },
+  /**
+   * Close: to the place the board's Close links. Down the stack to it when it is below (Back's history walked with
+   * it); else a tab becomes the stack's root, any other place takes the top's.
+   */
+  to(id: string, params?: Params): void {
+    known(id);
+    const s = stack.value, same = (e: Entry) => e.id === id && (!params || Object.keys(params).every((k) => String(e.params[k]) === String(params[k])));
+    for (let i = s.length - 2; i >= 0; i--) {
+      if (!same(s[i])) continue;
+      if (typeof window !== 'undefined') { ours++; history.go(-(s.length - 1 - i)); }
+      setStack(s.slice(0, i + 1), false);
+      return;
+    }
+    if (isTab(id)) nav.tab(id as Tab);
+    else nav.replace(id, params);
+  },
   /** A full-screen shell route (sign-in, checking, no reach): the stack is only it. */
   only(id: string): void { known(id); stack.value = [entry(id)]; },
 };

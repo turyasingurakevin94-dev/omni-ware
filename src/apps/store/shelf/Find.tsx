@@ -112,6 +112,8 @@ function Best(p: { b: YardBooks; it: ShelfItem; q: string; at: number }): JSX.El
   const s = itemState(p.b, p.it, p.at), ruth = p.b.people.find((x) => x.role === 'manager') || { initials: 'RN', tint: 't2' };
   const move = s.ruth ? 'Count it again' : s.due ? 'Count' : s.low ? 'We need more' : 'Count';
   const go = () => (s.low && !s.ruth && !s.due ? nav.push('shelf/ask', { key: p.it.key }) : nav.push('shelf/count', { key: p.it.key }));
+  // Open: the item, or, while a count of it waits with Ruth, that count's screen with its waiting sheet (SH02 → SH15).
+  const open = () => (s.ruth ? nav.push('shelf/count', { key: p.it.key }) : nav.push('shelf/item', { key: p.it.key }));
   const line = stateLine(p.b, p.it, s, p.at);
   return (
     <div class="sh-best">
@@ -121,7 +123,7 @@ function Best(p: { b: YardBooks; it: ShelfItem; q: string; at: number }): JSX.El
       </div>
       <div class="sh-best-a">
         <button type="button" class="sh-best-go" onClick={go}><Icon name={move === 'We need more' ? 'cart' : 'tally'} size={18} stroke={2} />{move}</button>
-        <button type="button" class="sh-best-open" onClick={() => nav.push('shelf/item', { key: p.it.key })}>Open</button>
+        <button type="button" class="sh-best-open" onClick={open}>Open</button>
       </div>
     </div>
   );

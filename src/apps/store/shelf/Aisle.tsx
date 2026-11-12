@@ -16,7 +16,7 @@ import { Avatar } from '../../../ui/Avatar.tsx';
 import { AISLE, AisleIcon, aisleKey, Icon } from '../../../ui/icons.tsx';
 import { ItemSquare } from '../../../ui/ItemSquare.tsx';
 import { cx, Tap } from '../../../ui/util.tsx';
-import { nav, type Params } from '../shell/nav.ts';
+import { backTo, nav, type Params } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import { foundFor } from './found.ts';
 import { glyphOf, ItemPic } from './glyphs.tsx';
@@ -73,7 +73,7 @@ function OneAisle(p: { b: YardBooks; name: string }): JSX.Element {
       <div class="sh-head-row">
         <span aria-hidden="true" class="sh-al-l" style={{ background: `linear-gradient(145deg, ${ink.soft} 0%, #FFFFFF 150%)` }}><b class="mono" style={{ color: ink.ink }}>{a.letter}</b></span>
         <div class="sh-head-t"><span class="sh-al-t"><AisleIcon aisle={a.name} size={18} color="#FFFFFF" />{a.name}</span><span><span class="mono">{a.items.length}</span>{` items${holds(a.items) ? ' · ' + holds(a.items) : ''}`}</span></div>
-        <button type="button" class="sh-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
+        <button type="button" class="sh-x" aria-label="Close" onClick={() => nav.to('shelf')}><Icon name="close" size={16} stroke={2.2} /></button>
       </div>
       <div class="sh-al-fresh">
         <span class="sh-al-n"><span class="mono">{days}</span><span>{`${days === 1 ? 'day' : 'days'} since counted · `}{a.due ? 'due now' : <>due in <span class="mono">{left}</span></>}</span></span>
@@ -88,7 +88,7 @@ function OneAisle(p: { b: YardBooks; name: string }): JSX.Element {
     </div>
   );
   return (
-    <ItemSheet back={() => nav.back()} backLabel="Back to Shelf" head={head} body="count">
+    <ItemSheet back={() => nav.back()} backLabel={backTo.value} head={head} body="count">
       <div role="group" aria-label="Show" class="sh-fchips">
         <button type="button" aria-pressed={show === 'all'} class={cx('sh-fchip', show === 'all' && 'on')} onClick={() => setShow('all')}>All<b class="mono">{all.length}</b></button>
         {packed.length > 0 && <button type="button" aria-pressed={show === 'packed'} class={cx('sh-fchip', show === 'packed' && 'on')} onClick={() => setShow('packed')}><span aria-hidden="true" class="sh-dot" style={{ background: '#8DA2D6' }} />Packed<b class="mono">{packed.length}</b></button>}
@@ -122,12 +122,12 @@ function NoAisle(p: { b: YardBooks }): JSX.Element {
       <div class="sh-head-row">
         <span aria-hidden="true" class="sh-al-q"><b class="mono">?</b></span>
         <div class="sh-head-t"><span class="sh-al-t">No aisle yet</span><span><span class="mono">{waiting.length}</span>{` items · ${moses.name.split(' ')[0]} gives each an aisle`}</span></div>
-        <button type="button" class="sh-x" aria-label="Close" onClick={() => nav.back()}><Icon name="close" size={16} stroke={2.2} /></button>
+        <button type="button" class="sh-x" aria-label="Close" onClick={() => nav.to('shelf')}><Icon name="close" size={16} stroke={2.2} /></button>
       </div>
     </div>
   );
   return (
-    <ItemSheet back={() => nav.back()} backLabel="Back to Shelf" head={head} body="noaisle">
+    <ItemSheet back={() => nav.back()} backLabel={backTo.value} head={head} body="noaisle">
       {waiting.length ? (
         <div class="sh-al-list">{waiting.map((it) => <Row key={it.key} b={b} it={it} at={at} />)}</div>
       ) : (

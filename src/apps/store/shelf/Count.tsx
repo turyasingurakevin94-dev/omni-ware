@@ -14,7 +14,7 @@ import { aislesOf, letterOf, onShelf } from '../../../core/store/shelf.ts';
 import type { ShelfItem, StockCount, YardBooks } from '../../../core/store/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
-import { nav, type Params } from '../shell/nav.ts';
+import { backTo, nav, type Params } from '../shell/nav.ts';
 import { books, flush, now, online } from '../shell/store.ts';
 import { AisleCount } from './AisleCount.tsx';
 import { BlindRow, Levels, Pad, Seen, typed } from './count-parts.tsx';
@@ -27,10 +27,11 @@ const ago = (at: number, n: number) => (n - at < 3600e3 ? 'just now' : clock(at)
 
 /** The 9:21 count with Ruth: Count it again (it replaces it) or leave it. */
 function Waiting(p: { b: YardBooks; it: ShelfItem; c: StockCount; onAgain: () => void }): JSX.Element {
+  const toItem = () => nav.to('shelf/item', { key: p.it.key });
   const b = p.b, mine = p.c.countedBy === b.me.userId, who = b.people.find((x) => x.userId === p.c.countedBy) || b.me, ruth = person(b, 'manager', 'Ruth Nakato');
   return (
-    <Over top={300} eyebrow={p.it.name} title="A count is already waiting" onClose={() => nav.back()}
-      foot={<><SendButton label="Count it again" icon="tally" onClick={p.onAgain} /><button type="button" class="sh-ghost" onClick={() => nav.back()}>{`Leave it with ${first(ruth.name)}`}</button></>}>
+    <Over top={300} eyebrow={p.it.name} title="A count is already waiting" onClose={toItem}
+      foot={<><SendButton label="Count it again" icon="tally" onClick={p.onAgain} /><button type="button" class="sh-ghost" onClick={toItem}>{`Leave it with ${first(ruth.name)}`}</button></>}>
       <div class="sh-wait-card">
         <div class="sh-wait-r">
           <Avatar initials={who.initials} tint={who.tint} size={38} font={13} />
@@ -60,7 +61,7 @@ function Spot(p: { b: YardBooks; it: ShelfItem }): JSX.Element {
   const [again, setAgain] = useState(false), [sentAt, setSentAt] = useState(at);
   const s = useSend();
   const aisle = aislesOf(b, at).find((a) => a.name === it.category);
-  const total = inLineUnit(L, values), any = values.some((v) => v != null), busy = s.phase === 'held' || s.phase === 'kept';
+  const total = inLineUnit(L, values), any = values.some((v) => v != null), busy = s.phase === 'held' || s.phase === 'kept' || s.phase === 'failed';
   const lines = () => [countLine(it, total, onShelf(b, it.key))];
   const send = (old: StockCount | null) => {
     setSentAt(now.peek());
@@ -86,7 +87,7 @@ function Spot(p: { b: YardBooks; it: ShelfItem }): JSX.Element {
   const other = clash ? b.people.find((x) => x.userId === clash.countedBy) : null;
   return (
     <>
-      <ItemSheet back={() => nav.back()} backLabel="Back to the item" body="count" head={<ItemHead it={it} sub={sub} onClose={() => nav.tab('shelf')}><BlindRow ruth={ruth} /></ItemHead>}>
+      <ItemSheet back={() => nav.back()} backLabel={backTo.value} body="count" head={<ItemHead it={it} sub={sub} onClose={() => nav.to('shelf')}><BlindRow ruth={ruth} /></ItemHead>}>
         {!online.value ? <NoSignal saved={clock(b.at)} onRetry={() => { void flush(); }} />
           : clash && other ? (
             <div role="status" class="sh-asked someone">
@@ -101,7 +102,7 @@ function Spot(p: { b: YardBooks; it: ShelfItem }): JSX.Element {
           ) : s.phase !== 'failed' && aisle && aisle.days != null ? (
             <div class="sh-last"><span aria-hidden="true"><Icon name="clock" size={17} stroke={2} /></span><span>{`Aisle ${aisle.letter} last counted `}<b class="mono">{aisle.days}</b>{` ${aisle.days === 1 ? 'day' : 'days'} ago`}</span></div>
           ) : null}
-        <Levels it={it} levels={L} values={values} active={active} onPick={(i) => !busy && setActive(i)} caret={!busy && !clash && any} />
+        <Levels it={it} levels={L} values={values} active={busy || clash ? -1 : active} onPick={(i) => !busy && setActive(i)} caret={!busy && !clash && any} />
         {clash && other ? (
           <>
             <div role="img" aria-label={`${first(other.name)}'s count is with Ruth. Yours would replace it.`} class="sh-vs">
@@ -110,7 +111,7 @@ function Spot(p: { b: YardBooks; it: ShelfItem }): JSX.Element {
               <span><Avatar initials={b.me.initials} tint="t4" size={26} font={11} /><span class="sh-vs-t"><span>Yours</span><span>would replace it</span></span></span>
             </div>
             <SendButton label="Send mine instead" onClick={() => send(clash)} />
-            <button type="button" class="sh-ghost" onClick={() => nav.back()}>{`Keep ${first(other.name)}'s`}</button>
+            <button type="button" class="sh-ghost" onClick={() => nav.to('shelf/item', { key: it.key })}>{`Keep ${first(other.name)}'s`}</button>
             <GroupHead dot="#5F6980" title="Counts of this item" meta={String(countsOf(b, it.key).filter((c) => c.createdAt > at - 864e5).length + 1)} />
             <div class="sh-card">
               {countsOf(b, it.key).filter((c) => c.createdAt > at - 864e5).map((c) => {

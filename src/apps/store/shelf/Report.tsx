@@ -17,7 +17,7 @@ import type { ShelfItem, YardBooks } from '../../../core/store/types.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { cx, Tap } from '../../../ui/util.tsx';
-import { nav, type Params } from '../shell/nav.ts';
+import { backTo, nav, type Params } from '../shell/nav.ts';
 import { books, flush, isDemo, now, online } from '../shell/store.ts';
 import { foundDone, foundFor } from './found.ts';
 import { Glyph, ItemPic } from './glyphs.tsx';
@@ -116,8 +116,8 @@ function Form(p: { b: YardBooks; it: ShelfItem; why: Why | null; found: ReturnTy
           </div>
           {per > 1 && (
             <div role="radiogroup" aria-label="Unit" class="sh-rp-unit">
-              <button type="button" role="radio" aria-checked={!inPack} class={cx(!inPack && 'on')} onClick={() => setInPack(false)}>{it.unit}</button>
-              <button type="button" role="radio" aria-checked={inPack} class={cx(inPack && 'on')} onClick={() => setInPack(true)}>{it.packUnit}</button>
+              <button type="button" role="radio" aria-checked={!inPack} disabled={off} class={cx(!inPack && 'on')} onClick={() => setInPack(false)}>{it.unit}</button>
+              <button type="button" role="radio" aria-checked={inPack} disabled={off} class={cx(inPack && 'on')} onClick={() => setInPack(true)}>{it.packUnit}</button>
             </div>
           )}
         </div>
@@ -126,6 +126,9 @@ function Form(p: { b: YardBooks; it: ShelfItem; why: Why | null; found: ReturnTy
           <span><span>{photo ? 'Photo taken' : 'Take a photo'}</span><span>{photo ? <>{`${first(ruth.name)} sees it · `}<span class="mono">{clock(photoAt)}</span></> : `${first(ruth.name)} sees it`}</span></span>
           <button type="button" disabled={off} onClick={() => photoPick(setPhoto)}><Icon name="camera" size={16} stroke={2} />{photo ? 'Retake' : 'Take'}</button>
         </div>
+      </div>
+      {/* The notes stay at full strength while the form waits (SH26, SH27): they say what to do now. */}
+      <div class="sh-rp-form">
         {why === 'damaged' && <div class="sh-rp-note"><Glyph g="carton" size={16} /><span>{`Set the ${pieces} aside, away from the good ${per > 1 ? `${it.packUnit}s` : 'ones'}`}</span></div>}
         <div class="sh-rp-ruth"><Avatar initials={ruth.initials} tint={ruth.tint} size={24} font={11} /><span>{`${first(ruth.name)} decides: write it off or keep it · Undo for `}<span class="mono">10</span> s</span></div>
         {s.phase === 'idle' && (noting
@@ -150,7 +153,7 @@ export function Report(p: { params: Params }): JSX.Element {
   const came = b.orders.find((o) => o.status === 'preparing' && o.lines.some((l) => l.key === it.key && l.receivedQty));
   const rest = nameRest(it.name);
   const head = (
-    <ItemHead it={it} title={`Report · ${shortName(it.name)}`} sub={canReport(shelf) ? `${letter} · ${it.category} · ${shelf} on shelf` : `${rest ? rest + ' · ' : ''}${letter} · ${it.category}`} onClose={() => nav.back()}>
+    <ItemHead it={it} title={`Report · ${shortName(it.name)}`} sub={canReport(shelf) ? `${letter} · ${it.category} · ${shelf} on shelf` : `${rest ? rest + ' · ' : ''}${letter} · ${it.category}`} onClose={() => (canReport(shelf) ? nav.to('shelf/item', { key: it.key }) : nav.to('shelf'))}>
       {canReport(shelf) ? (found && found.orderId ? (
         <Tap on={() => nav.push('pack/order', { id: found.orderId as number })} class="sh-rp-from" label={`Found while packing ${orderNo(found.orderId)}`}>
           {foundO && <Avatar {...orderFace(foundO, b)} size={30} font={11} />}<span>Found <span class="mono">{clock(found.at)}</span>{` · packing ${orderNo(found.orderId)}`}</span><span aria-hidden="true"><Icon name="chevron-right" size={16} stroke={2.2} /></span>
@@ -164,7 +167,7 @@ export function Report(p: { params: Params }): JSX.Element {
     </ItemHead>
   );
   return (
-    <ItemSheet back={() => nav.back()} backLabel="Back to the item" head={head} body={canReport(shelf) ? 'report' : 'noaisle'}>
+    <ItemSheet back={() => nav.back()} backLabel={backTo.value} head={head} body={canReport(shelf) ? 'report' : 'noaisle'}>
       {canReport(shelf) ? <Form b={b} it={it} why={(p.params.why as Why) || null} found={found} /> : <Empty b={b} it={it} at={at} />}
     </ItemSheet>
   );

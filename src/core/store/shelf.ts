@@ -21,6 +21,15 @@ const DAY_MS = 864e5;
 /** An aisle's letter by its place in the shop's list ("Roofing" → A); null: no aisle yet (DATA-05). The rule is counts.ts aisleLetter. */
 export const letterOf = (b: Pick<YardBooks, 'aisles'>, category: string | null): string | null => aisleLetter(b, category) || null;
 export const aisleOfLetter = (b: Pick<YardBooks, 'aisles'>, letter: string): string | null => b.aisles[letter.toUpperCase().charCodeAt(0) - 65] || null;
+/**
+ * The short code printed under a shelf label's bars, for a person to read: the aisle letter and four digits from the
+ * item's key ("A-3533"). The labels already on the shelves carry it (store.html:5814 labelShort); spec §4.5.
+ */
+export function labelShort(b: Pick<YardBooks, 'aisles'>, it: Pick<ShelfItem, 'key' | 'category'>): string {
+  let h = 0;
+  for (const c of String(it.key)) h = (h * 31 + c.charCodeAt(0)) % 10000;
+  return `${letterOf(b, it.category) || '?'}-${String(h).padStart(4, '0')}`;
+}
 
 /** A line has left the shelf: packed (or short at what was picked) on an order not invoiced and not called off. */
 function leftFor(o: YardOrder): boolean {

@@ -110,7 +110,8 @@ function words(r: Row, now: Ms, ruth: string): [string, string] {
     }
     case 'writeoff': return [`Written off · ${r.note} · ${ruth}`, `${ago(r.at, now)} · you reported ${r.asked != null ? clock(r.asked) : ''}`];
     case 'kept': return [`Report · kept on the shelf · ${ruth}`, `${ago(r.at, now)} · you reported ${r.asked != null ? clock(r.asked) : ''}`];
-    case 'ask': return ['Asked for more · Denis', `${r.note || 'Sent'} · ${ago(r.at, now)}`];
+    // The answer's first part and when (SH32): "next trip" is the banner's, it already says it.
+    case 'ask': return ['Asked for more · Denis', `${r.note ? r.note.split(' · ')[0] : 'Sent'} · ${ago(r.at, now)}`];
     default: return [r.note, when];
   }
 }

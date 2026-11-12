@@ -20,7 +20,7 @@ import type { ShelfItem, YardBooks, YardPerson } from '../../../core/store/types
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { cx, Tap } from '../../../ui/util.tsx';
-import { nav, type Params } from '../shell/nav.ts';
+import { backTo, nav, type Params } from '../shell/nav.ts';
 import { books, now } from '../shell/store.ts';
 import { foundFor } from './found.ts';
 import { GroupHead, ItemHead, ItemSheet, Moved, Nums, ShelfActs, soldBy } from './parts.tsx';
@@ -51,12 +51,14 @@ function Picture(p: { b: YardBooks; it: ShelfItem; at: number; n: ReturnType<typ
     return <div class="sh-pict"><div class="sh-pict-r"><span class="sh-pict-n"><span class="sh-pict-due"><Icon name="blind" size={20} stroke={2} />Count due</span><span>no figure until it is counted</span></span></div></div>;
   }
   const per = it.packQty > 1 ? it.packQty : 1, full = Math.floor(shelf / per), part = (shelf % per) / per;
+  // Just written off (SH22): the pieces gone, red, above what is left in the last bundle.
+  const offPart = n && n.kind === 'off' && per > 1 ? Math.min(n.r.qty / per, 1 - part) : 0;
   const blocks = per > 1 || shelf + ask + (old && old > shelf ? old - shelf : 0) <= 24;
   const label = per > 1 ? `${shelf} pieces on the shelf: ${full} ${it.packUnit}s of ${per} and ${shelf % per} loose.${pk ? ` ${pk} more packed for order ${packed.map((x) => x.order.id).join(', ')}.` : ''}`
     : `${shelf} ${it.unit} on the shelf${old != null ? `; the shelf had ${old}` : ''}${ask ? `, about ${ask} more on the next trip` : ''}`;
   return (
     <div role="img" aria-label={label} class="sh-pict">
-      <div class="sh-pict-r">
+      <div class={cx('sh-pict-r', low && 'low')}>
         <span class="sh-pict-n">{old != null && <s class="mono">{old}</s>}<span class="mono">{shelf}</span><span>{`${it.unit} on shelf`}</span></span>
         {low ? <span class="sh-pict-low">Low</span>
           : <span class="sh-pict-sales"><Avatar initials={grace.initials} tint="me" size={22} font={11} />Sales sees <b class="mono">{shelf}</b></span>}
@@ -64,7 +66,7 @@ function Picture(p: { b: YardBooks; it: ShelfItem; at: number; n: ReturnType<typ
       {blocks && (
         <span aria-hidden="true" class={cx('sh-blocks', ask > 0 && 'big')}>
           {Array.from({ length: per > 1 ? full : shelf }, (_, i) => <span key={i} class="f" />)}
-          {per > 1 && part > 0 && <span class="part"><span style={{ height: `${Math.round(part * 100)}%` }} /></span>}
+          {per > 1 && (part > 0 || offPart > 0) && <span class="part"><span style={{ height: `${Math.round(part * 100)}%` }} />{offPart > 0 && <span class="off" style={{ bottom: `${Math.round(part * 100)}%`, height: `${Math.round(offPart * 100)}%` }} />}</span>}
           {old != null && old > shelf && per === 1 && Array.from({ length: old - shelf }, (_, i) => <span key={'g' + i} class="gone" />)}
           {Array.from({ length: per === 1 ? ask : 0 }, (_, i) => <span key={'a' + i} class="come" />)}
           {pk > 0 && <><span class="gap" />{Array.from({ length: Math.ceil(pk / per) }, (_, i) => <span key={'p' + i} class="pk" />)}</>}
@@ -95,14 +97,15 @@ export function ItemView(p: { it: ShelfItem; bare?: boolean }): JSX.Element {
   const b = books.value as YardBooks, at = now.value, it = p.it, n = news(b, it, at), ruth = person(b, 'manager', 'Ruth Nakato');
   const found = foundFor(it.key), packed = n && n.kind === 'count' ? [] : packedFor(b, it.key), shelf = onShelf(b, it.key);
   const sub = `${letterOf(b, it.category) || '?'} · ${it.category || 'No aisle yet'} · ${soldBy(it)}`;
-  const close = () => nav.back();
+  const close = () => nav.to('shelf'), back = () => nav.back();
   const aisle = aislesOf(b, at).find((a) => a.name === it.category);
-  const rest = aisle && aisle.due ? aisle.items.filter((x) => x.key !== it.key && countDue(x, b, at)).length : 0;
+  // The rest of the aisle: every other item in it, as the aisle count takes them all (SH16: 132 − this one).
+  const rest = aisle && aisle.due ? aisle.items.filter((x) => x.key !== it.key).length : 0;
   const head = <ItemHead it={it} sub={sub} onClose={close}><Picture b={b} it={it} at={at} n={n} /></ItemHead>;
-  if (p.bare) return <ItemSheet back={close} backLabel="Back" head={<ItemHead it={it} sub={sub} onClose={close} />} body="count">{null}</ItemSheet>;
+  if (p.bare) return <ItemSheet back={back} backLabel={backTo.value} head={<ItemHead it={it} sub={sub} onClose={close} />} body="count">{null}</ItemSheet>;
   const joseph = b.people.find((x) => x.role === 'owner'), grace = person(b, 'sales', 'Grace Akello'), denis = person(b, 'buyer', 'Denis Okello');
   return (
-    <ItemSheet back={close} backLabel="Back to Shelf" head={head}>
+    <ItemSheet back={back} backLabel={backTo.value} head={head}>
       {n && n.kind === 'count' && <Banner tone="good" who={ruth} title={`${ruth.name.split(' ')[0]} accepted your count`} sub={<>just now · the shelf takes your <Nums text={`${n.line.counted} ${it.unit}`} /></>} />}
       {n && n.kind === 'off' && <Banner tone="good" who={ruth} title={`${ruth.name.split(' ')[0]} wrote off ${n.r.qty} ${it.unit} · ${n.r.note || n.r.why}`} sub={<>just now · the shelf moved <Nums text={`${shelf + n.r.qty} → ${shelf}`} /></>} />}
       {n && n.kind === 'kept' && <Banner tone="info" who={ruth} title={`${ruth.name.split(' ')[0]} kept the ${n.r.qty} on the shelf`} sub={<>just now · the shelf stays <Nums text={String(shelf)} /> · put them back</>} />}
@@ -142,7 +145,7 @@ export function ItemView(p: { it: ShelfItem; bare?: boolean }): JSX.Element {
       <div class="sh-gap2" />
       <GroupHead dot="#5F6980" title="What moved" meta="4 weeks" />
       <Moved rows={moved(b, it.key, at)} now={at} ruth={ruth.name.split(' ')[0]} max={n && n.kind === 'ask' ? 3 : 4} />
-      {n && n.kind === 'count' && joseph && <div class="sh-line"><Avatar initials={joseph.initials} tint={joseph.tint} size={22} font={10} />{`${joseph.name.split(' ')[0]} sees it in the log`}</div>}
+      {n && n.kind === 'count' && joseph && <div class="sh-line"><Avatar initials={joseph.initials} tint={joseph.tint} size={22} font={11} />{`${joseph.name.split(' ')[0]} sees it in the log`}</div>}
       {n && n.kind === 'count' && aisle && rest > 0 && (
         <Tap on={() => nav.push('shelf/count', { aisle: aisle.name })} class="sh-rest" label={`Rest of aisle ${aisle.letter}: count`}>
           <span aria-hidden="true"><Icon name="clock" size={18} stroke={2} /></span>
@@ -150,7 +153,7 @@ export function ItemView(p: { it: ShelfItem; bare?: boolean }): JSX.Element {
           <span class="sh-found-b">Count</span>
         </Tap>
       )}
-      {lookOf(b, it, at) === 'low' && <div class="sh-line"><Avatar initials={grace.initials} tint="me" size={22} font={10} />Sales sees <b class="mono">{`${shelf} on shelf`}</b> · Order in for more</div>}
+      {lookOf(b, it, at) === 'low' && <div class="sh-line"><Avatar initials={grace.initials} tint="me" size={22} font={11} />Sales sees <b class="mono">{`${shelf} on shelf`}</b> · Order in for more</div>}
       <div class="sh-acts"><ShelfActs onCount={() => nav.push('shelf/count', { key: it.key })} onReport={() => nav.push('shelf/report', { key: it.key })} onMore={() => nav.push('shelf/ask', { key: it.key })} /></div>
     </ItemSheet>
   );
