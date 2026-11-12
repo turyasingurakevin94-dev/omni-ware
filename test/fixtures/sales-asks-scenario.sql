@@ -69,7 +69,7 @@ select _try('check: invoiced, the stock gone off the shelf', 'ok', $q$select _is
 select _try('check: nobody is told a counter sale is "ready to invoice"', 'ok', $q$select _is($c$_to('order.delivered') = ''$c$)$q$);
 select _try('sales: an ordinary order reaches Delivered', 'ok', $q$insert into saved_quotes(id, shop_id, client_name, date, status, invoiced, amount_paid, voided, payload) values (7002,'11111111-1111-1111-1111-111111111111','Kato Construction',current_date,'completed',false,0,false,
   '{"client":{"name":"Kato Construction"},"items":[{"lineId":1,"productId":"P1","productName":"Cement","unit":"bag","qty":1,"supplierId":"__stock__","price":30000,"sellPrice":37500}],"charges":[],"payments":[]}')$q$);
-select _try('check: that one still tells the Manager', 'ok', $q$select _is($c$_to('order.delivered') = '0b'$c$)$q$);
+select _try('check: nor the Manager since 0184 (it waits on nobody: the 24-hour run bills it)', 'ok', $q$select _is($c$_to('order.delivered') = ''$c$)$q$);
 
 -- ---- a payment recorded wrong
 select _try('sales: asks Accounts to correct the method', 'ok', $q$insert into payment_asks(shop_id, cash_txn_id, amount, what, want, asked_by, asked_by_name, status) values ('11111111-1111-1111-1111-111111111111', 1, 420000, 'method', '{"from":"momo","account":"bank"}', '00000000-0000-0000-0000-00000000000d', 'Grace', 'sent')$q$);

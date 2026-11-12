@@ -94,7 +94,7 @@ select _try('check: the difference goes to the Manager', 'ok', $q$select _is($c$
 -- ---- a write-off report, a held restock line
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000e';
 select _try('store: reports 2 bags damaged', 'ok', $q$insert into stock_reports(shop_id,key,product_id,name,qty,why,reported_by,reported_by_name,status) values ('11111111-1111-1111-1111-111111111111','P1','P1','Cement',2,'damaged','00000000-0000-0000-0000-00000000000e','Musa Kiggundu','sent')$q$);
-select _try('check: the report goes to the Manager', 'ok', $q$select _is($c$_to('stock.report')='0b' and (select body from push_outbox where kind='stock.report') = '2 Cement — Musa Kiggundu'$c$)$q$);
+select _try('check: the report goes to the Manager', 'ok', $q$select _is($c$_to('stock.report')='0b' and (select title from push_outbox where kind='stock.report') = 'Musa · Damaged · 2 Cement' and (select body from push_outbox where kind='stock.report') like '%Write it off?'$c$)$q$);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select _try('manager: holds a restock line', 'ok', $q$select hold_restock_buy('bbbbbbbb-0000-0000-0000-000000000001', true)$q$);
 select _try('check: a push for the Buyer (buy.restock: whoever holds it)', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='restock.held' and to_task='buy.restock')$c$)$q$);

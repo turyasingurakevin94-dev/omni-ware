@@ -34,8 +34,10 @@ const ended = (id: string, r: { kept: boolean } | null, e?: unknown): void => {
 
 /** A tap: held 10 s with Undo, then sent. `label` is the strip's word ("Nudged Faith"). */
 export function tapMove(id: string, label: string, kind: WriteName, args: unknown[]): void {
-  put(id, { phase: 'held', at: now.peek(), label, kind, args });
-  answer(null, label, kind, args, { quiet: true, undo: () => put(id, null), then: (r, e) => ended(id, r, e) });
+  const m: Move = { phase: 'held', at: now.peek(), label, kind, args };
+  put(id, m);
+  // A refused send runs `undo` too: the row comes back as "Not sent · Try again", never as if nothing was tapped.
+  answer(null, label, kind, args, { quiet: true, undo: () => put(id, null), then: (r, e) => { if (e) put(id, { ...m, phase: 'error' }); else ended(id, r); } });
 }
 
 /** Try again: sent now. */

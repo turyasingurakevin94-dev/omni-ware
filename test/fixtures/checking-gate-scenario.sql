@@ -91,7 +91,7 @@ select _try('manager: #0605 (Grace pays on delivery) to Packing', 'ok', $q$updat
 select _try('check: #0605 is in Packing', 'ok', $q$select _is($c$_held(605) = 'preparing'$c$)$q$);
 select _try('manager: #0606 (Sadat has owed 40 days) to Packing', 'ok', $q$update saved_quotes set status = 'preparing' where id=606$q$);
 select _try('check: #0606 is kept in Checking, a credit hold', 'ok', $q$select _is($c$_held(606) = 'credit'$c$)$q$);
-select _try('check: the Manager''s credit.hold push says how long', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='credit.hold' and to_task='credit.release' and ref->>'id'='606' and body like 'Sadat would owe 335,000 · no limit set · owed 40 days')$c$)$q$);
+select _try('check: the Manager''s credit.hold push says how long', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='credit.hold' and to_task='credit.release' and ref->>'id'='606' and body = 'No limit set · Old bill 40 d (held at 21) · would owe 335,000')$c$)$q$);
 select _try('manager: says Release', 'ok', $q$update saved_quotes set payload = payload || '{"creditCheck":{"decision":"release","by":"00000000-0000-0000-0000-00000000000b"}}' where id=606$q$);
 select _try('check: #0606 goes on to Packing with the Release', 'ok', $q$select _is($c$_held(606) = 'preparing'$c$)$q$);
 select _try('manager: #0607 (Musa, 10 days) to Packing', 'ok', $q$update saved_quotes set status = 'preparing' where id=607$q$);

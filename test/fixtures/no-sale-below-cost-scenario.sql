@@ -83,7 +83,7 @@ reset role;
 set request.jwt.claim.sub = '';
 select _try('the hourly run', 'ok', $q$select ow_invoice_due_orders()$q$);
 select _try('check: #0301 is not invoiced; #0302 (given away + priced) is', 'ok', $q$select _is($c$not (select invoiced from saved_quotes where id=301) and (select invoiced from saved_quotes where id=302)$c$)$q$);
-select _try('check: the Manager''s prices (price.approve) are told why #0301 waits', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='invoice.held' and to_task='price.approve' and ref->>'id'='301' and ref->>'code'='OWPRC' and body like '%Cement sells under its cost%')$c$)$q$);
+select _try('check: the Manager''s prices (price.approve) are told why #0301 waits', 'ok', $q$select _is($c$exists(select 1 from push_outbox where kind='invoice.held' and to_task='price.approve' and ref->>'id'='301' and ref->>'code'='OWPRC' and body like '% — Price coming · decide it to bill' and body not like '%OWPRC%')$c$)$q$);
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select _try('manager: prices Cement at 32,000', 'ok', $q$update saved_quotes set payload = jsonb_set(payload, '{items,0,sellPrice}', '32000') where id=301$q$);

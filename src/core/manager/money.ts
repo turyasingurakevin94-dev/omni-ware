@@ -79,12 +79,13 @@ export function ifKept(c: Pick<Cust, 'owes' | 'bills'>, amount: UGX): { after: U
   return { after: Math.max(0, c.owes - amount), bills };
 }
 
-/** The promises dots: each promise's place along the line, from a week before the first to today (1 = today). */
-export function promiseLine(ps: Promise_[], today: Day): { p: Promise_; x: number }[] {
-  if (!ps.length) return [];
+/** The promises dots: each promise's place along the line, from a week before the first to today or the last promise (1 = the end); where today sits. */
+export function promiseLine(ps: Promise_[], today: Day): { dots: { p: Promise_; x: number }[]; today: number } {
+  if (!ps.length) return { dots: [], today: 1 };
   const sorted = [...ps].sort((a, b) => (a.on < b.on ? -1 : 1));
-  const from = addDays(sorted[0].on, -7), span = Math.max(1, daysApart(from, today));
-  return sorted.map((p) => ({ p, x: Math.max(0, Math.min(1, daysApart(from, p.on) / span)) }));
+  const last = sorted[sorted.length - 1].on, end = last > today ? last : today;
+  const from = addDays(sorted[0].on, -7), span = Math.max(1, daysApart(from, end));
+  return { dots: sorted.map((p) => ({ p, x: daysApart(from, p.on) / span })), today: daysApart(from, today) / span };
 }
 
 /* ---------------- the limit (D-25) ---------------- */

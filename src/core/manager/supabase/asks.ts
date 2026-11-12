@@ -16,8 +16,8 @@ import { stockKey } from '../../supabase/rows.ts';
 import { fifoUnitCost } from '../../price.ts';
 import type { Order } from '../../types.ts';
 import type { Ask, CheckinLine, LossReport, RestockLine } from '../types.ts';
-import { agentKey, agentOpen, costWas, creditAskOpen, freeOpen, isLive, kindOf, priceNow, shortWaits, waitsPrice, type Q } from './lines.ts';
-import { heldCodeOf, ms, type Ctx } from './rows.ts';
+import { agentKey, agentOpen, costWas, creditAskOpen, freeOpen, heldCodeOf, isLive, kindOf, ms, priceNow, shortWaits, waitsPrice, type Q } from './lines.ts';
+import type { Ctx } from './rows.ts';
 
 const num = (v: unknown): number => Number(v) || 0;
 const vi = (v: unknown): number | null => (v == null || v === '' ? null : Number(v));

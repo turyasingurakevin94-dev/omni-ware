@@ -16,15 +16,9 @@ import { dayOf } from '../../time.ts';
 import type { Customer, Order, ShopSettings } from '../../types.ts';
 import type { Cust, Day, Done, ManagerBooks, MLine, MOrder, Ms, Person, Shop, Stage, TeamRole } from '../types.ts';
 import { asksOf, restockOf } from './asks.ts';
-import { atZero, freeOpen, inPlay, isLive, quoteOf, shortLines, waitsPrice, type Q } from './lines.ts';
+import { atZero, heldCodeOf, inPlay, isLive, ms, quoteOf, type Q } from './lines.ts';
 import type { MSession, Raw } from './read.ts';
 
-export const ms = (v: unknown): Ms | null => {
-  if (v == null || v === '') return null;
-  if (typeof v === 'number') return v;
-  const n = Date.parse(String(v));
-  return Number.isNaN(n) ? Number(v) || null : n;
-};
 const num = (v: unknown): number => Number(v) || 0;
 
 /** Everything a mapper needs from one read: the rows, the price book, the orders both ways, who is who. */
@@ -100,25 +94,6 @@ function lineOfQ(x: Ctx, q: Q, o: Order, it: Row, idx: number): MLine {
     givenAway: it.givenAway && it.givenAway.why ? String(it.givenAway.why) : null,
     productId: it.productId ? String(it.productId) : null,
   };
-}
-
-/**
- * Why the 24-hour run could not bill it (MOrder.heldCode). The row does not say: the run only pushes
- * invoice.held with the code (0169:833, to a task, which push_outbox's RLS does not let the Manager read).
- * Default: worked out on the phone from what the run checks, in its order: under 1,000 (OWSML), a short
- * pick (OWSHP), a price waiting (OWPRC), a line with no price (OWTPC), a 0 with no why (OWGIV).
- */
-export function heldCodeOf(x: Ctx, q: Q, o: Order): string | null {
-  if (!isLive(q) || q.invoiced || q.status !== 'completed') return null;
-  const at = ms(q.deliveredAt) || ms(q.stageEnteredAt);
-  if (!at || x.now - at < 24 * 3600e3) return null;
-  const items: Row[] = Array.isArray(q.items) ? q.items : [];
-  if (orderTotal(o) < 1000) return 'OWSML';
-  if (!q.pickShortfallAckAt && shortLines(q).length) return 'OWSHP';
-  if (items.some((it) => waitsPrice(it, x.pb))) return 'OWPRC';
-  if (o.lines.some((l) => l.qty > 0 && l.state !== 'dropped' && l.price == null)) return 'OWTPC';
-  if (items.some(freeOpen)) return 'OWGIV';
-  return null;
 }
 
 export function mOrderOf(x: Ctx, q: Q): MOrder {

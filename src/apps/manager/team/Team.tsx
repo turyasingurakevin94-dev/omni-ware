@@ -9,7 +9,7 @@ import { money, short } from '../../../core/money.ts';
 import { aboutPace } from '../../../core/manager/nudge.ts';
 import { everyoneElse, freeMove, goalSplit, inM, others, overLimit } from '../../../core/manager/team.ts';
 import type { ManagerBooks, Person } from '../../../core/manager/types.ts';
-import { onPace, pace } from '../../../core/manager/watch.ts';
+import { onPace, pace, stuck } from '../../../core/manager/watch.ts';
 import { firstWord, orderNo, TINTS } from '../../../core/names.ts';
 import { monthName } from '../../../core/time.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
@@ -92,14 +92,15 @@ function Tile(p: { b: ManagerBooks; x: Person }): JSX.Element {
   const free = /^free$/i.test(x.holds);
   const go = () => {
     if (x.off) toast.show(`${name} is off today`, { kind: 'warn' });
-    else nav.push('team/nudge', { staff: x.id });
+    else if (need) nav.push('team/nudge', { staff: x.id, order: stuck(p.b, now.value).find((y) => y.o.holderId === x.id)!.o.id });
+    else nav.push('team/person', { staff: x.id });
   };
   const face = x.role === 'driver'
     ? <span class={'mg-team-ic' + (x.off ? ' off' : '')} aria-hidden="true"><Icon name={x.off ? 'moon' : 'truck'} size={16} stroke={2} /></span>
     : <Avatar initials={x.initials} tint={x.tint} size={28} />;
   return (
     <button type="button" class={'mg-team-tile' + (x.off ? ' off' : '')} onClick={go}
-      aria-label={`${name}: ${x.holds}${need ? `, ${need} over its limit` : ''}`}>
+      aria-label={`${name}: ${x.holds}${need ? `, ${need} over its limit. Open nudge` : ''}`}>
       {face}
       <span class="n">{name}</span>
       <span class={'h' + (free ? ' free' : '')}>{mono(x.holds)}</span>
@@ -121,7 +122,7 @@ function GiveRow(p: { b: ManagerBooks }): JSX.Element | null {
           <Avatar initials={m.to.initials} tint={m.to.tint} size={38} />
           <span class="mg-team-ok" aria-hidden="true"><Icon name="check" size={12} stroke={3} /></span>
         </span>
-        {moved ? <Moved id={id} word={`Given to ${to}`} told={to} /> : (
+        {moved ? <Moved id={id} word="Given" told={to} /> : (
           <span class="mg-team-body">
             <b class="mg-team-t14">{`${to} is free`}</b>
             <span class="mg-team-sub mg-mono">{`${orderNo(m.order.id)} · ${firstWord(m.from.name)} has ${m.fromHas}`}</span>

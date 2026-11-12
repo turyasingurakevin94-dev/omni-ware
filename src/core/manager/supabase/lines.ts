@@ -14,9 +14,20 @@
  * under its cost, an untagged line with no price, and a review gone stale (price or qty
  * changed since). The two disagree; neither is picked silently.
  */
-import { whole } from '../../money.ts';
+import { orderTotal, whole } from '../../money.ts';
 import type { Row } from '../../supabase/client.ts';
 import { lineOf, type PriceBook } from '../../supabase/rows.ts';
+import type { Order } from '../../types.ts';
+import type { Ms } from '../types.ts';
+import type { Ctx } from './rows.ts';
+
+export const ms = (v: unknown): Ms | null => {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v;
+  const n = Date.parse(String(v));
+  return Number.isNaN(n) ? Number(v) || null : n;
+};
+
 
 /** The order as manager.html holds it: the payload spread over the row's columns (rowToQuote 1153). */
 export type Q = Row;
@@ -115,3 +126,22 @@ export function agentOpen(q: Q): { cancel: boolean; lines: Row[] } | null {
 
 /** The live filter's twin on the phone: an order whose decisions can still change. */
 export const inPlay = (q: Q): boolean => isLive(q) && (q.status !== 'completed' || !q.invoiced);
+
+/**
+ * Why the 24-hour run could not bill it (MOrder.heldCode). The row does not say: the run only pushes
+ * invoice.held with the code (0169:833, to a task, which push_outbox's RLS does not let the Manager read).
+ * Default: worked out on the phone from what the run checks, in its order: under 1,000 (OWSML), a short
+ * pick (OWSHP), a price waiting (OWPRC), a line with no price (OWTPC), a 0 with no why (OWGIV).
+ */
+export function heldCodeOf(x: Ctx, q: Q, o: Order): string | null {
+  if (!isLive(q) || q.invoiced || q.status !== 'completed') return null;
+  const at = ms(q.deliveredAt) || ms(q.stageEnteredAt);
+  if (!at || x.now - at < 24 * 3600e3) return null;
+  const items: Row[] = Array.isArray(q.items) ? q.items : [];
+  if (orderTotal(o) < 1000) return 'OWSML';
+  if (!q.pickShortfallAckAt && shortLines(q).length) return 'OWSHP';
+  if (items.some((it) => waitsPrice(it, x.pb))) return 'OWPRC';
+  if (o.lines.some((l) => l.qty > 0 && l.state !== 'dropped' && l.price == null)) return 'OWTPC';
+  if (items.some(freeOpen)) return 'OWGIV';
+  return null;
+}

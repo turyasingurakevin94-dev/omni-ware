@@ -31,6 +31,8 @@ async function place(k) {
 
 /** Answer the card on screen with its primary answer: the slide when it has one, else the white answer. */
 async function primary(k) {
+  // The dock cools for 700 ms after an answer, while the next card comes (a double tap answers once).
+  await k.p.waitForFunction(() => !document.querySelector('.mg-dock[aria-busy=true]'), null, { timeout: 4000 }).catch(() => undefined);
   if (await k.p.locator('.mg-dock .ow-knob').count()) await k.slide('.mg-dock .ow-knob');
   else await k.tap({ sel: '.mg-dock .mg-ans' }, 900);
 }
@@ -79,10 +81,12 @@ async function perDecision(open) {
     // A void with money: pick refund or deposit first (the knob is grey until then).
     if (await k.p.locator('.mg-dock [role=radio]').count() && /void/.test(key)) await k.tap({ sel: '.mg-dock [role=radio] >> nth=1' });
     await primary(k);
-    // A tap waits its 10 s, then goes; the last card opens All decided, whose list says the answer.
-    await k.p.waitForTimeout(11500);
-    const all = await k.all();
-    k.check(/All decided/.test(all) && word.test(all), `${key}: answered, and Today's answers says so`, all.slice(0, 200));
+    // The strip says the answer the asker sees, with who is told (a tap: with Undo; a slide: done).
+    const strip = await k.p.locator('.mg-strip').first().innerText().catch(() => '');
+    k.check(word.test(strip) && /see/.test(strip), `${key}: the strip says the answer and who sees it`, strip);
+    // A tap goes after its 10 s: no red bar, and the card has left the queue.
+    await k.p.waitForTimeout(11000);
+    k.check(!/Not sent/.test(await k.all()), `${key}: sent`);
   }
 }
 

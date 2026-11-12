@@ -14,7 +14,7 @@ import type { Dock } from './kit.ts';
 export function DockView(p: { d: Dock; busy?: boolean; cooling?: boolean }): JSX.Element {
   const d = p.d, pr = d.primary, wait = p.busy || p.cooling;
   return (
-    <footer class="mg-dock">
+    <footer class="mg-dock" aria-busy={wait ? 'true' : undefined}>
       {d.above}
       <div class="mg-dock-top">
         <span class="mg-sees"><Icon name="bell" size={14} stroke={2} />{whoSee(d.told)}{d.word && <span class="w">{d.word}</span>}</span>

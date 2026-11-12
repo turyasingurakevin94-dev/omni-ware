@@ -7,10 +7,10 @@
  */
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { aboutPace, nudgeTitle } from '../../../core/manager/nudge.ts';
-import { askOn, custOf, dayRate, freeMove, holdsNow, inM } from '../../../core/manager/team.ts';
+import { aboutOrder, aboutPace, CALL_ME, nudgeTitle } from '../../../core/manager/nudge.ts';
+import { aboutOf, askOn, custOf, dayRate, freeMove, holdsNow, inM } from '../../../core/manager/team.ts';
 import type { ManagerBooks, MOrder, Person as P } from '../../../core/manager/types.ts';
-import { onPace, pace } from '../../../core/manager/watch.ts';
+import { limitsOf, onPace, pace } from '../../../core/manager/watch.ts';
 import { ROLE, STAGE } from '../../../core/manager/words.ts';
 import { money, short } from '../../../core/money.ts';
 import { firstWord, orderNo, TINTS } from '../../../core/names.ts';
@@ -114,7 +114,7 @@ export function Person(p: { params: Params }): JSX.Element | null {
   if (!b || !x) return null;
   const name = firstWord(x.name), her = x.role === 'sales' ? 'Her' : 'Their', month = monthName(t);
   const goal = x.goal || 0, op = onPace(x.sold, x.goal, t), rate = dayRate(x.sold, x.goal, t), pcx = pace(t);
-  const holds = holdsNow(b, x), words = edit ?? aboutPace(x, t, month), id = 'nudge:' + x.id;
+  const holds = holdsNow(b, x), first = aboutOf(b, x, t)[0], words = edit ?? (goal ? aboutPace(x, t, month) : first ? aboutOrder(first, t, limitsOf(b.shop)) : CALL_ME), id = 'nudge:' + x.id;
   const top = Math.max(rate.soFar, rate.needs, 1);
   return (
     <TeamSheet follow label={x.name} head={(
@@ -149,8 +149,8 @@ export function Person(p: { params: Params }): JSX.Element | null {
       <>
         <Sees who={name} word={nudgeTitle(b.me)} />
         {edit != null && <textarea class="mg-ts-words" aria-label={`What ${name} gets`} value={edit} onInput={(e) => setEdit((e.target as HTMLTextAreaElement).value)} />}
-        <DockMove id={id} icon="send" word={`Nudge ${name}`} done={`Nudged ${name}`} off={x.userId ? (words.trim() ? undefined : 'Write the words') : `${name} has no phone`}
-          on={() => tapMove(id, `Nudged ${name}`, 'nudge', [x.id, null, words.trim()])}
+        <DockMove id={id} icon="send" word={`Nudge ${name}`} done="Nudged" off={x.userId ? (words.trim() ? undefined : 'Write the words') : `${name} has no phone`}
+          on={() => tapMove(id, `Nudged ${name}`, 'nudge', [x.id, !goal && first ? first.id : null, words.trim()])}
           before={<button type="button" class="mg-ts-pen" aria-label="Other words" aria-pressed={edit != null} onClick={() => setEdit(edit == null ? words : null)}><Icon name="pen" size={20} stroke={2} /></button>} />
       </>
     )}>

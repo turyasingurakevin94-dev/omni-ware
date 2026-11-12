@@ -27,7 +27,7 @@ const ink = { kept: '#0F6B43', broken: '#8E2A22', open: '#16203C' } as const;
 
 function Dots(p: { ps: Promise_[]; today: string }): JSX.Element {
   const W = 300, x = (f: number) => 10 + f * (W - 20);
-  const line = promiseLine(p.ps, p.today);
+  const { dots: line, today: tx } = promiseLine(p.ps, p.today);
   return (
     <svg width="100%" height="44" viewBox={`0 0 ${W} 44`} preserveAspectRatio="xMidYMid meet" role="img"
       aria-label={line.map((d) => `${dayLabel(d.p.on)} ${d.p.state}`).join(', ')}>
@@ -37,11 +37,11 @@ function Dots(p: { ps: Promise_[]; today: string }): JSX.Element {
           {d.p.state === 'kept'
             ? <><circle cx={x(d.x)} cy="14" r="7" fill={ink.kept} /><path d={`M${x(d.x) - 3} 14l2 2 4-4`} stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" /></>
             : <circle cx={x(d.x)} cy="14" r="6" fill="#fff" stroke={ink[d.p.state]} stroke-width="2.5" />}
-          <text x={x(d.x)} y="38" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#6B7480">{dayLabel(d.p.on).split(' ').slice(1).join(' ')}</text>
+          <text x={d.x > 0.93 ? W - 4 : x(d.x)} y="38" text-anchor={d.x > 0.93 ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#6B7480">{dayLabel(d.p.on).split(' ').slice(1).join(' ')}</text>
         </g>
       ))}
-      <rect x={W - 11} y="4" width="2" height="20" fill="#1C2233" />
-      <text x={W - 14} y="38" text-anchor="end" font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#1C2233">today</text>
+      <rect x={x(tx) - 1} y="4" width="2" height="20" fill="#1C2233" />
+      <text x={tx >= 1 ? x(tx) - 3 : x(tx)} y="38" text-anchor={tx >= 1 ? 'end' : 'middle'} font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="#1C2233">today</text>
     </svg>
   );
 }

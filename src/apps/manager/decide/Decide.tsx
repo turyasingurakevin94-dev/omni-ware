@@ -27,6 +27,8 @@ import './decide.css';
 
 /** How long the dock ignores taps after an answer, while the next card comes (a double tap answers once). */
 export const COOL_MS = 700;
+/** How long a slide's result shows before All decided takes its place. */
+const SLIDE_SHOWN_MS = 2500;
 
 interface Last { key: string; word: string; sub: string; told: string; slide: boolean }
 
@@ -50,13 +52,18 @@ export function Decide(p: { params: Params }): JSX.Element | null {
 
   // The card on screen: the one asked for while it waits, else the head of the queue.
   const a: Ask | null = (key && q.find((x) => x.key === key)) || q[0] || null;
-  useEffect(() => { if (!a && b && !held.value && !busy) nav.replace('decide/done', {}); }, [a, b, held.value, busy]);
+  // The queue is empty: All decided. A slide's result stays SLIDE_SHOWN_MS on top of it first (it has no Undo to wait on).
+  useEffect(() => {
+    if (a || !b || held.value || busy) return undefined;
+    const t = setTimeout(() => nav.replace('decide/done', {}), last && last.slide ? SLIDE_SHOWN_MS : 0);
+    return () => clearTimeout(t);
+  }, [a, b, held.value, busy]);
   if (!b) return null;
   const h0 = held.value;
   // The last answer waits its 10 s: All decided under its strip, Undo still there (Today p4).
   if (!a) {
     const left0 = h0 && last ? Math.max(0, Math.ceil((h0.until - tick) / 1000)) : 0;
-    return <Done strip={last && h0 ? <Strip last={last} left={left0} /> : null} />;
+    return <Done strip={last && (h0 || last.slide) ? <Strip last={last} left={last.slide ? null : left0} /> : null} />;
   }
 
   const asker = askerOf(b, a);

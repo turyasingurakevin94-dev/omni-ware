@@ -74,7 +74,8 @@ t.check(/function enablePush\(\)/.test(read('old/store.html')) && /push_subscrip
   // the data, and each app's pushOpen sends that to its own screen.
   const KINDS = {
     sales: ['price.decided', 'price.changed', 'credit.decided', 'invoice.ask.decided', 'payment.ask.decided', 'request.listed', 'item.switch'],
-    manager: ['price.waits', 'credit.hold', 'pick.short', 'agent.change', 'order.delivered', 'trip.difference', 'trip.yard_note', 'stock.report', 'invoice.ask', 'invoice.held'],
+    // order.delivered no longer reaches the Manager (0184 retired it: the 24-hour run bills it).
+    manager: ['price.waits', 'credit.hold', 'pick.short', 'agent.change', 'trip.difference', 'trip.yard_note', 'stock.report', 'invoice.ask', 'invoice.held'],
     buyer: ['order.buying', 'trip.cash.ready', 'restock.held', 'trip.sent', 'trip.taken', 'trip.cancelled', 'store.restock', 'carton.refused'],
     accounts: ['trip.cash', 'trip.cash.ask', 'bill.due', 'payment.ask', 'bill.paper'],
     sourcing: ['sourcing.request', 'sourcing.dropped', 'prices.confirm', 'sourcing.fix'],
@@ -89,6 +90,34 @@ t.check(/function enablePush\(\)/.test(read('old/store.html')) && /push_subscrip
     t.check(/pushNotificationActionPerformed', a => \{ const d = \(a && a\.notification && a\.notification\.data\) \|\| \{\};/.test(src) && /pushOpen\(d\);/.test(src),
       `${a}: the tap listener hands the push's data to pushOpen`);
   }
+  // The kinds the database sends since the Manager's hand-offs (docs/audit/manager/handover.md §4, 0183 and 0184),
+  // by the app that takes them. Each app's own build routes them (handover §5: S-6, B-1, ST-1, A-1, the new Manager
+  // app); until it does, a tap opens the app. Here: the database writes every one.
+  const SENT = {
+    manager: ['order.cancel.ask', 'credit.ask', 'carton.ask', 'store.extra', 'stock.count.sent', 'markup.wanted', 'promise.made', 'payment.ask.decided'],
+    sales: ['pick.settled', 'invoice.voided', 'credit_note.raised', 'team.nudge', 'goal.set', 'price.decided'],
+    buyer: ['trip.difference.decided', 'agent.change.decided', 'order.cancelled', 'restock.released', 'carton.refused'],
+    store: ['stock.count.decided', 'stock.recount', 'trip.difference.decided', 'invoice.ask.decided', 'pick.settled'],
+    accounts: ['invoice.voided', 'credit_note.raised', 'invoice.ask.decided'],
+  };
+  const migDir = path.join(__dirname, '..', 'supabase', 'migrations');
+  const allSql = fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).map((f) => fs.readFileSync(path.join(migDir, f), 'utf8').replace(/--[^\n]*/g, '')).join('\n');
+  for (const [a, kinds] of Object.entries(SENT)) {
+    const none = kinds.filter((k) => !allSql.includes(`'${k}'`));
+    t.check(!none.length, `${a}: the database sends each push its hand-offs promise (${none.join(', ') || 'all'})`);
+  }
+  // N-9: a push carries only a safe answer, never a write-off, credit note, void, refund, count taken, merge,
+  // opening balance, cancel, limit or bill (0184 ow_push_actions, the one place they are listed).
+  const m184 = read('supabase/migrations/0184_manager_pushes.sql').replace(/--[^\n]*/g, '');
+  const at = m184.indexOf('create or replace function ow_push_actions(');
+  const acts = m184.slice(at, m184.indexOf('$$;', at));
+  const pairs = acts.split(/\n  (?:els)?if p_kind = /).slice(1)
+    .flatMap((chunk) => [...chunk.matchAll(/'id', '([a-z]+)'/g)].map((x) => `${(/^'([a-z._]+)'/.exec(chunk) || [])[1]}:${x[1]}`));
+  const SAFE = ['price.waits:approve', 'price.waits:shop', 'credit.hold:credit', 'pick.short:went', 'trip.difference:take',
+    'stock.report:keep', 'invoice.ask:keep', 'carton.ask:ok', 'store.extra:keep', 'stock.count.sent:again', 'order.cancel.ask:kept'];
+  t.check(pairs.length >= 11 && pairs.every((p) => SAFE.includes(p)), `the Manager's push actions are the safe answers only (${pairs.join(', ')})`);
+  t.check(!/'id', '(writeoff|write_off|credit_note|void|refund|accept|taken|merge|opening|cancel|limit|bill|agree|markup)'/.test(acts), 'and none is a money or books move');
+
   t.check(/A tap never takes an order/.test(extractFunction(read('old/store.html'), 'pushOpen', 'old/store.html')) && /orderIsMine\(q\)/.test(extractFunction(read('old/store.html'), 'pushOpen', 'old/store.html')),
     'store: a tap opens an order to pack only when it is already this person\'s');
 }
