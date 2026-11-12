@@ -35,7 +35,7 @@ const demo = (q = '?demo') => storeDemo(q, { instant: true });
   t.check(A.tripName('Denis', buying.trip, all) === "Denis's trip", 'the trip on its way is just "Denis\'s trip"');
   const ret = all.find((a) => a.kind === 'return');
   t.check(ret && ret.ret.orderId === 548 && T.clock(ret.due) === '11:00', 'the return #0548 at ~11:00');
-  t.check(A.coming(A.arrivals(await demo('?demo&state=empty').snapshot(), d.now())).length === 0, 'empty: nothing coming in (IN40)');
+  t.check(A.coming(A.arrivals(await demo('?demo&state=yard-empty').snapshot(), d.now())).length === 0, 'empty: nothing coming in (IN40)');
 
   /* ---- IN02–IN06 the check-in at 11:30 ---- */
   d = demo('?demo&at=1130'); b = await d.snapshot();

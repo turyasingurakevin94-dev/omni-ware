@@ -24,7 +24,7 @@ import type { YardBooks } from '../../../core/store/types.ts';
 import { clock, howLong } from '../../../core/time.ts';
 import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { nav } from '../shell/nav.ts';
+import { backTo, nav } from '../shell/nav.ts';
 import { act, books, hold, held, kept, me, notDone, now, undoHeld } from '../shell/store.ts';
 import { PackHead } from './head.tsx';
 import { toSheet } from './parts.tsx';
@@ -59,7 +59,7 @@ export function Pack(p: { id: number; line: number | null; unpack?: boolean }): 
     return () => clearTimeout(t);
   }, [mode]);
 
-  if (!b || !o) return <FullSheet onBack={toSheet} backLabel="Back to To pack" head={<div class="ow-shead" />} />;
+  if (!b || !o) return <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={<div class="ow-shead" />} />;
   // From another order's bay tile (AD02): the order on its bay with the Unpack sheet, until the screen is left.
   if (p.unpack) return <Unpack o={o} />;
   const order = o, books_ = b;
@@ -141,13 +141,13 @@ export function Pack(p: { id: number; line: number | null; unpack?: boolean }): 
     if (mode.k === 'sent') {
       const l = order.lines[mode.idx];
       return (
-        <FullSheet onBack={toSheet} backLabel="Back to To pack" head={head} pad="14px 16px 16px">
+        <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={head} pad="14px 16px 16px">
           <SentView b={books_} o={order} l={l} n={mode.n} at={mode.at} taker={tName} onFinish={() => finish()} />
         </FullSheet>
       );
     }
     return (
-      <FullSheet onBack={toSheet} backLabel="Back to To pack" head={head} pad="14px 16px 16px">
+      <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={head} pad="14px 16px 16px">
         <LineView b={books_} o={order} l={cur} busy={busy} kept={cur ? keptIdx.includes(cur.idx) : kp.finish} taker={tName} onFinish={() => finish()}
           onPacked={() => cur && send({ idx: cur.idx, status: 'done', qty: cur.qty }, () => finish())}
           onShort={() => cur && setMode({ k: 'short', idx: cur.idx, n: Math.max(0, cur.qty - 1) })}

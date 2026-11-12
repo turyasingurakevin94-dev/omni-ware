@@ -19,7 +19,7 @@ const KEY = () => `ow-store-found:${session.value ? session.value.shopId : ''}`;
 function seed(): Found[] {
   if (!isDemo || typeof location === 'undefined') return [];
   const q = new URLSearchParams(location.search);
-  if (['empty', 'first-day'].includes(q.get('state') || '')) return [];
+  if (['empty', 'yard-empty', 'first-day'].includes(q.get('state') || '')) return [];
   // FACTS §4: 3 pc bent, found 10:20 while packing #0552 (Sat 17 Oct 2026, Kampala).
   return [{ key: 'p-is28', qty: 3, why: 'damaged', note: 'bent', at: Date.parse('2026-10-17T10:20:00+03:00'), orderId: 552 }];
 }

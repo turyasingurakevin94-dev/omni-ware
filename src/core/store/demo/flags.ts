@@ -16,7 +16,9 @@
  *   &state=cancel-0534      #0534 cancelled on Ssali's truck (OU27)
  *   &state=ggaba-closed     #0547 coming back · Ggaba closed (after OU24)
  *   &state=agent            #0554 Peter Sserwadda's pickup, ready at the gate, code 0554 (OU11, OU09)
- *   &state=empty            nothing in the yard (PK14, IN40, OU14, OU15, OU30, TD29, TD30)
+ *   &state=empty            nothing to pack or packing: #0556, #0557 and #0530 gone, #0552 packed on bay 1; the trip,
+ *                           #0555 at the gate, the road and Waiting on goods stay (PK14)
+ *   &state=yard-empty       nothing in the yard at all (OU14, OU15, TD29, TD30)
  *   &state=for-you          Ruth gave #0556 to Musa at 10:40 (PK08)
  *   &state=okello-0556      Okello takes #0556 at 10:43 the moment Musa first packs it: the claim clashes (PK13, PK17)
  *   &state=first-day        Joy's first day (TD05)
@@ -42,12 +44,12 @@
  *   &update=1               a new build is ready (TD08)
  *   &big=1                  Big text on (You, TD12)
  */
-export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'agent' | 'empty' | 'first-day' | 'nobody' | 'signed-out' | 'loading' | 'no-reach'
+export type StoreDemoState = 'cancel-0530' | 'cancel-0534' | 'ggaba-closed' | 'agent' | 'empty' | 'yard-empty' | 'first-day' | 'nobody' | 'signed-out' | 'loading' | 'no-reach'
   | 'for-you' | 'okello-0556' | ShelfState | 'someone-checkin' | 'extra-answered' | 'return-decided';
 /** The shelf's what-ifs (demo/shelf.ts; SH13, SH16, SH25, SH22, SH24, SH32, SH06). */
 export type ShelfState = 'recount' | 'count-accepted' | 'okello-counts' | 'written-off' | 'kept-on-shelf' | 'restock-listed' | 'shelf-calm';
 
-export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach', 'for-you', 'okello-0556',
+export const STATES: StoreDemoState[] = ['cancel-0530', 'cancel-0534', 'ggaba-closed', 'agent', 'empty', 'yard-empty', 'first-day', 'nobody', 'signed-out', 'loading', 'no-reach', 'for-you', 'okello-0556',
   'recount', 'count-accepted', 'okello-counts', 'written-off', 'kept-on-shelf', 'restock-listed', 'shelf-calm',
   'someone-checkin', 'extra-answered', 'return-decided'];
 /** The named moments, HHMM. */

@@ -60,7 +60,8 @@ export function rowFor(kind: Row['kind'], o: YardOrder, b: YardBooks, me: string
   const days = o.pickingDoneAt != null ? daysApart(dayOf(o.pickingDoneAt), dayOf(now)) : 0;
   const mate = b.people.find((x) => x.role === 'store' && x.id !== me && !x.away);
   return {
-    kind, o, face: c, name: c.name,
+    // A copy wears the holder's slate (faces.ts yardFace), at full strength: "Don't pack" says it is the copy (F7).
+    kind, o, face: kind === 'copy' ? { initials: c.initials, tint: 't4' } : c, name: c.name,
     // A packer's small face keeps their own tint (FACTS §1: MK slate), not the phone holder's navy.
     badge: kind === 'mine' || kind === 'theirs' ? (packer ? yardFace(b, packer) : null) : giver ? personFace(giver) : null,
     sub: '', pill: kind === 'pack' ? tight(waitingSince(o), now) : kind === 'packed' && days >= 1 ? `${days}d on the bay` : null,

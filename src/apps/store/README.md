@@ -51,7 +51,7 @@ Writes (data §3): `claim` W1 · `pick` W2 · `finishPack` W3/W3' · `setBay` W4
 |---|---|
 | `&at=1047` · `1130` · `1200` · `1405` · `1510` · `1730` | the later moments of FACTS §8 (each includes those before) |
 | `&state=cancel-0530` · `cancel-0534` · `ggaba-closed` · `agent` | the what-ifs (PK10, OU27, OU24, OU11) |
-| `&state=empty` · `first-day` · `nobody` | the empty boards, Joy's first day (TD05), nobody to pass to (TD24) |
+| `&state=empty` · `yard-empty` · `first-day` · `nobody` | nothing to pack while the yard works (PK14), nothing in the yard (OU14, OU15, TD29, TD30), Joy's first day (TD05), nobody to pass to (TD24) |
 | `&state=signed-out` · `loading` · `no-reach` | TD20, TD21, TD22 |
 | `&as=okello` | Okello's phone: Musa passed him the yard (TD15, TD25, TD32) |
 | `&offline` | no signal: the copy saved 7:52, writes kept (amber) |

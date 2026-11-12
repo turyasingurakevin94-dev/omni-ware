@@ -19,7 +19,7 @@ import { Icon } from '../../../ui/icons.tsx';
 import { StatusPill } from '../../../ui/Pill.tsx';
 import { Slide } from '../../../ui/Slide.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { nav } from '../shell/nav.ts';
+import { backTo, nav } from '../shell/nav.ts';
 import { act, books, notDone } from '../shell/store.ts';
 import { StateHead } from './head.tsx';
 import { FromTo, LinesCard } from './lists.tsx';
@@ -45,7 +45,7 @@ function Body(p: { b: YardBooks; o: YardOrder }): JSX.Element {
   };
   const faces = [by, t].filter((x): x is NonNullable<typeof x> => !!x).map(personFace);
   return (
-    <FullSheet onBack={() => nav.home()} backLabel="Back to Today" pad="14px 16px 16px"
+    <FullSheet onBack={() => nav.back()} backLabel={backTo.value} pad="14px 16px 16px"
       head={(
         <StateHead b={b} o={o} sub={`${orderNo(o.id)} · ${tn}${bay != null ? ` · bay ${bay}` : ''}`} word="Cancelled" tail={`put it back${bay != null ? ` · bay ${bay}` : ''}`} tailTone="rose" onClose={() => nav.home()}
           who={by && <><Avatar {...personFace(by)} size={24} style={{ boxShadow: '0 0 0 2px #16203C' }} /><span class="pk-from-w">{`${bn} cancelled it${at ? ' · ' + at : ''}`}</span></>}
@@ -84,6 +84,6 @@ function Body(p: { b: YardBooks; o: YardOrder }): JSX.Element {
 
 export function PutBack(p: { id: number }): JSX.Element {
   const b = books.value, o = b ? b.orders.find((x) => x.id === p.id) : null;
-  if (!b || !o) return <FullSheet onBack={() => nav.home()} backLabel="Back to Today" head={<div class="ow-shead" />} />;
+  if (!b || !o) return <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={<div class="ow-shead" />} />;
   return <Body b={b} o={o} />;
 }

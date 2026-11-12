@@ -24,7 +24,7 @@ import { Icon } from '../../../ui/icons.tsx';
 import { sheet } from '../../../ui/sheet.tsx';
 import { Track } from '../../../ui/Track.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { nav } from '../shell/nav.ts';
+import { backTo, nav } from '../shell/nav.ts';
 import { books, hold, me, notDone, now } from '../shell/store.ts';
 import { StateHead } from './head.tsx';
 import { FromTo, LinesCard } from './lists.tsx';
@@ -62,7 +62,7 @@ function UnpackSheet(p: { o: YardOrder; st: Signal<Ask>; onKeep: () => void; onU
           from={<><b>Bay <span class="mono">{o.bay}</span></b><span class="ad-ft-s">{`${orderNo(o.id)} · ${onBayFor(o, n)}`}</span></>}
           to={<><Icon name="orders" size={18} stroke={2} /><span>To pack</span></>} />
         <Ticks b={b} o={o} title="Your ticks stay" />
-        <div class={cx('ad-after', failed && 'dim')}>
+        <div class="ad-after">
           <span class="ad-after-k">After Unpack<br /><span>Undo for 10 s</span></span>
           <span class="ad-flex" />
           {t && <Avatar {...personFace(t)} size={24} font={11} class="ad-after-f" />}
@@ -93,9 +93,9 @@ function OnBay(p: { b: YardBooks; o: YardOrder; onAsk: () => void }): JSX.Elemen
   }
   const held = moneyHeld(o) ? ' · not paid yet' : '';
   return (
-    <FullSheet onBack={() => nav.back()} backLabel="Back" pad="14px 16px 16px"
+    <FullSheet onBack={() => nav.back()} backLabel={backTo.value} pad="14px 16px 16px"
       head={(
-        <StateHead b={b} o={o} sub={`${orderNo(o.id)} · ${tn} · bay ${o.bay}`} word="Packed" tail={`${onBayFor(o, n)} on bay ${o.bay}${held}`} tailTone="amber" onClose={() => nav.back()}
+        <StateHead b={b} o={o} sub={`${orderNo(o.id)} · ${tn} · bay ${o.bay}`} word="Packed" tail={`${onBayFor(o, n)} on bay ${o.bay}${held}`} tailTone="amber" onClose={() => nav.to('today')}
           who={packer && <><Avatar {...personFace(packer)} size={24} style={{ boxShadow: '0 0 0 2px #16203C' }} /><span class="pk-from-w">{`Packed ${o.pickingDoneAt != null ? dayLabel(o.pickingDoneAt) : ''} · ${firstWord(packer.name)}`}</span></>}
           sees={`${tn} sees: Packed`} tone="mint" />
       )}>
@@ -145,17 +145,24 @@ export function Unpack(p: { o: YardOrder }): JSX.Element {
   const was = useRef(o);
   if (done === false) was.current = o;
   // Not saved, the sheet stands taller for its Not done card (AD06: 252, AD02: 292).
-  const ask = (): void => sheet.open(() => <UnpackSheet o={was.current} st={st} onKeep={keep} onUnpack={go} />, { label: `Unpack ${orderNo(o.id)}`, top: st.value === 'failed' ? 252 : 292 });
-  function keep(): void { sheet.close(); nav.back(); }
+  // Any way the sheet goes but Unpack (its Close, Keep it packed, the dim head, a pull down, the phone's Back) is
+  // Keep it packed: back to the order below (PK06), so the bare page under the sheet is never left open (F9).
+  const quiet = useRef(false);
+  const ask = (): void => sheet.open(() => <UnpackSheet o={was.current} st={st} onKeep={keep} onUnpack={go} />, {
+    label: `Unpack ${orderNo(o.id)}`, top: st.value === 'failed' ? 252 : 292,
+    onClose: () => { if (quiet.current) quiet.current = false; else window.setTimeout(() => nav.back(), 0); },
+  });
+  function keep(): void { sheet.close(); }
   function go(): void {
     const bay = was.current.bay;
+    quiet.current = true;
     sheet.close();
     setDone(bay);
     hold(`Unpacked · bay ${bay} free`, 'unpack', [o.id], () => { setDone(false); ask(); }, {
       then: (_r, e) => { if (e && live.current) { st.value = 'failed'; setDone(false); ask(); } },
     });
   }
-  useEffect(() => { ask(); return () => { live.current = false; sheet.close(); }; }, []);
-  if (!b) return <FullSheet onBack={() => nav.back()} backLabel="Back" head={<div class="ow-shead" />} />;
+  useEffect(() => { ask(); return () => { live.current = false; quiet.current = true; sheet.close(); }; }, []);
+  if (!b) return <FullSheet onBack={() => nav.back()} backLabel={backTo.value} head={<div class="ow-shead" />} />;
   return done !== false ? <Unpacked b={b} o={o} bay={done} /> : <OnBay b={b} o={was.current} onAsk={ask} />;
 }

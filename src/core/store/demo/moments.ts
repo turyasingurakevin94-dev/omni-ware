@@ -131,7 +131,15 @@ function whatIf(b: YardBooks, f: StoreDemoFlags): void {
         lines: [{ ...line(0, 'p-wg', 4), pickStatus: 'done', pickedQty: 4 }],
       }));
       break;
-    case 'empty': case 'first-day':
+    case 'empty':
+      // PK14: nothing to pack while the yard still works: #0552 packed on bay 1 (To load, not paid), the copy and
+      // #0556 gone, #0530 gone; Denis's trip, #0555 at the gate, Ssali's run and Waiting on goods as at 10:41.
+      b.orders = b.orders.filter((o) => ![530, 556, 557].includes(o.id));
+      { const k = byId(b, 552); k.lines[1] = { ...k.lines[1], pickStatus: 'done', pickedQty: 2 }; k.pickingStatus = 'done'; k.pickingDoneAt = t('10:40'); }
+      b.returns = []; b.counts = b.counts.filter((c) => c.status === 'accepted'); b.alerts = []; b.found = [];
+      b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });
+      break;
+    case 'yard-empty': case 'first-day':
       b.orders = []; b.trips = []; b.returns = []; b.counts = b.counts.filter((c) => c.status === 'accepted'); b.alerts = []; b.found = [];
       // Nothing waits: every aisle counted yesterday (no count due either).
       b.items.forEach((i) => { i.countedAt = t('16:00', '2026-10-16'); });

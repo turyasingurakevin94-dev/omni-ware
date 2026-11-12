@@ -18,7 +18,7 @@ import { FullSheet } from '../../../ui/FullSheet.tsx';
 import { Track } from '../../../ui/Track.tsx';
 import { Duo, Icon, phPlay, AISLE, aisleKey } from '../../../ui/icons.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
-import { nav } from '../shell/nav.ts';
+import { backTo, nav } from '../shell/nav.ts';
 import { readyJobs, yardJobs } from '../../../core/store/jobs.ts';
 import { books, held, me, now } from '../shell/store.ts';
 import { StateHead } from './head.tsx';
@@ -159,7 +159,7 @@ export function Unpacked(p: { o: YardOrder; bay: number | null; onAgain: () => v
   const times = { checking: clock(o.createdAt ?? o.savedAt ?? now.value), buying: when('awaiting_goods') };
   const since = o.workerAcceptedAt != null ? `since ${clock(o.workerAcceptedAt)}` : '';
   return (
-    <FullSheet onBack={toSheet} backLabel="Back to To pack" pad="14px 16px 16px"
+    <FullSheet onBack={() => nav.back()} backLabel={backTo.value} pad="14px 16px 16px"
       head={(
         <StateHead b={b} o={o} sub={`${orderNo(o.id)} · ${since}`} word="Packing" tail="unpacked · your ticks stay" onClose={toSheet}
           who={null} sees="" tone="glass">

@@ -13,13 +13,14 @@ import type { YardFace } from '../../../core/store/faces.ts';
 import type { Where } from '../../../core/store/pack.ts';
 import { notDone, online, kept, flush, status, books } from '../shell/store.ts';
 import { clock } from '../../../core/time.ts';
-import { nav, stack } from '../shell/nav.ts';
+import { nav } from '../shell/nav.ts';
+import { keptPack } from '../../../core/store/outbox.ts';
 import './pack.css';
 
 /** A customer's face, with the packer's (or Ruth's) small face at its foot (PK01 "KC · MK"). */
-export function FaceBadge(p: { face: YardFace; badge?: YardFace | null; size?: number; dim?: boolean }): JSX.Element {
+export function FaceBadge(p: { face: YardFace; badge?: YardFace | null; size?: number }): JSX.Element {
   const s = p.size || 32;
-  if (!p.badge) return <span class={cx('pk-face', p.dim && 'dim')}><Avatar {...p.face} size={s} /></span>;
+  if (!p.badge) return <span class="pk-face"><Avatar {...p.face} size={s} /></span>;
   return (
     <span class="pk-face badge" style={{ width: `${s}px`, height: `${s}px` }}>
       <Avatar {...p.face} size={s} />
@@ -91,7 +92,10 @@ export function NotDoneCard(p: { what: string; onRetry: () => void; onClose: () 
  * was saved), blue "Someone else just did this · Refreshed". The red one is NotDoneCard, by the dock.
  */
 export function TopNotice(p: { waitingWord?: 'not sent yet' | null }): JSX.Element | null {
-  const n = notDone.value, waiting = kept.value.filter((k) => k.state !== 'refused').length, b = books.value;
+  // What Musa did, not the writes: a kept finish rides behind its order's kept line (PK11 "1 not sent yet").
+  const live = kept.value.filter((k) => k.state !== 'refused'), idOf = (k: { args: unknown }) => Number(Array.isArray(k.args) ? k.args[0] : k.args);
+  const waiting = live.filter((k) => !(k.kind === 'finishPack' && keptPack(live, idOf(k)).lines.length)).length;
+  const n = notDone.value, b = books.value;
   if (!online.value || waiting > 0) {
     return (
       <Notice kind="offline" class={waiting > 0 && p.waitingWord ? 'pk-notice tall' : 'pk-notice'} action={{ label: 'Try again', on: () => { void flush(); } }}>
@@ -115,9 +119,5 @@ export function IconSquare(p: { icon: IconName; tone: 'info' | 'good' | 'warn' |
   return <span aria-hidden="true" class={'pk-isq t-' + p.tone} style={p.size ? { width: `${p.size}px`, height: `${p.size}px` } : undefined}><Icon name={p.icon} size={20} stroke={1.9} /></span>;
 }
 
-/** Back to the sheet: the one under, or To pack in this screen's place (PK02's Close and its strip). */
-export function toSheet(): void {
-  const s = stack.value;
-  if (s.length > 1 && s[s.length - 2].id === 'pack') nav.back();
-  else nav.replace('pack');
-}
+/** Close to To pack, the boards' place (shell/nav.ts nav.to): down the stack when it is below, else in this screen's place. */
+export function toSheet(): void { nav.to('pack'); }

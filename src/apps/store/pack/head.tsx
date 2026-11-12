@@ -40,7 +40,7 @@ function Strip(p: { b: YardBooks; o: YardOrder; now: YardLine | null; marks?: Re
           <span key={l.idx} class={'pk-strip-s m-' + m}>
             <span />
             <span>
-              {(m === 'done' || m === 'short') && <Icon name="check" size={11} stroke={3} />}
+              {m === 'done' && <Icon name="check" size={11} stroke={3} />}
               {m === 'dropped' && <Icon name="close" size={11} stroke={3} />}
               {m === 'dropped' ? `${nm} dropped` : a ? `${a.letter} · ${nm}` : nm}
             </span>

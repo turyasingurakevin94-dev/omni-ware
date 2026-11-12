@@ -15,7 +15,7 @@ import { StatusPill } from '../../../ui/Pill.tsx';
 import { Tap, cx } from '../../../ui/util.tsx';
 import { nav } from '../shell/nav.ts';
 import { StageSheet } from '../shell/StageSheet.tsx';
-import { books, me, now } from '../shell/store.ts';
+import { books, me, now, online } from '../shell/store.ts';
 import { FaceBadge, PushCard, Section, TopNotice, savedLine } from './parts.tsx';
 import { ToPackEmpty } from './ToPackEmpty.tsx';
 import { CHIPS, chipPicked, moved, sheetOf, type Chip, type Row, type Sheet } from './sheet-data.ts';
@@ -41,7 +41,7 @@ export function PackRow(p: { r: Row; first?: boolean }): JSX.Element {
     const go = () => nav.push(r.kind === 'cancelled' ? 'pack/put-back' : 'pack/look', { id: r.o.id });
     return (
       <Tap on={go} class={cx('pk-row', !p.first && 'line')}>
-        <FaceBadge face={r.face} badge={r.kind === 'theirs' ? r.badge : null} dim={r.kind === 'copy'} />
+        <FaceBadge face={r.face} badge={r.kind === 'theirs' ? r.badge : null} />
         <span class={cx('pk-row-t', r.kind === 'copy' && 'soft', r.kind === 'theirs' && 'gap')}><b>{r.name}</b><Sub r={r} /></span>
         {r.kind === 'copy' && <StatusPill tone="bad" icon="lock" style={{ height: '26px' }}>Don’t pack</StatusPill>}
         {r.kind === 'theirs' && <StatusPill tone="info" style={{ height: '26px' }}><Icon name="eye" size={14} stroke={2.4} />{r.whose}</StatusPill>}
@@ -120,6 +120,16 @@ function Group(p: { id: Chip; s: Sheet; lit: number | null }): JSX.Element | nul
       return <><Section dot={c.dot} title="Packed" count={s.chips.packed} meta={s.packedMeta} /><Rows rows={s.packed} lit={has(s.packed)} /></>;
     case 'waiting':
       if (!s.waiting.length) return null;
+      // No signal: folded to its head row, who brings the goods and when (PK20); it opens the first one (PK21).
+      if (!online.value) {
+        return (
+          <Tap on={() => open(s.waiting[0])} class="pk-sec pk-sec-go">
+            <span aria-hidden="true" class="pk-sec-dot" style={{ background: c.dot }} /><b>Waiting on goods</b><span class="mono pk-sec-n">{s.waiting.length}</span>
+            <span class="pk-sec-sp pk-sec-meta">{s.buyer ? `${s.buyer.name}${s.buyer.due != null ? ` ~${clock(s.buyer.due)}` : ''}` : ''}</span>
+            <span class="pk-chev"><Icon name="chevron-right" size={14} stroke={2.4} /></span>
+          </Tap>
+        );
+      }
       return <><Section dot={c.dot} title="Waiting on goods" count={s.waiting.length} /><Waiting s={s} /></>;
     default: return null;
   }

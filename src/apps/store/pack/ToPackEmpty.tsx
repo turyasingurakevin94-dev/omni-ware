@@ -43,7 +43,7 @@ export function ToPackEmpty(p: { s: Sheet }): JSX.Element {
           {packed.length > 0 && (
             <Tap on={() => nav.replace('out/load')} class="pk-two-t">
               <Icon name="layers" size={20} stroke={1.9} style={{ color: '#1A5A8A' }} />
-              <span><b>To load <span class="mono">{packed.length}</span></b><span>{`→ ${String(firstTo || '').split(/[ ,]/)[0]}`}</span></span>
+              <span><b>To load <span class="mono">{packed.length}</span></b><span>{`→ ${String(firstTo || '').split(/[ ,]/)[0]}${packed[0].leavesAt != null ? ` · ${clock(packed[0].leavesAt)}` : ''}`}</span></span>
             </Tap>
           )}
           {ready.length > 0 && (
