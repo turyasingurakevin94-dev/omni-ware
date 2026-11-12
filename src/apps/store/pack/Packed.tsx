@@ -103,7 +103,7 @@ export function Packed(p: { o: YardOrder; bay: number | null; held: boolean; onU
   const ls = packLines(o), one = ls.length === 1 ? ls[0] : null, drops = dropped(o).length;
   const took = o.workerAcceptedAt != null && o.pickingDoneAt != null ? o.pickingDoneAt - o.workerAcceptedAt : o.workerAcceptedAt != null ? now.value - o.workerAcceptedAt : null;
   const tiles: [string, string, string][] = [
-    one ? [String(one.pickedQty ?? one.qty), `${one.unit} packed`, ''] : [took != null ? howLong(0, took).replace(/ /g, '') : '—', 'to pack', ''],
+    one ? [String(one.pickedQty ?? one.qty), `${one.unit} packed`, ''] : [took != null ? howLong(0, took).replace(/^(\d+) (\S+)$/, '$1$2') : '—', 'to pack', ''],
     [`${pr.done}/${pr.of}`, 'lines in', 'mint'],
     drops ? [String(drops), 'dropped', 'rose'] : [String(pr.short), 'short', ''],
   ];
