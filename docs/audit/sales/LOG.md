@@ -61,7 +61,7 @@ Canvas: https://claude.ai/code/artifact/9db8c76a-d77f-4312-a3c1-442d10005ea7 (ro
 
 **Design decisions**
 - The missing orders were not the app: Kevin restored a 25 Aug backup in the owner console between 5 and 10 Nov, which deleted every newer row on the server. The books need restoring from a Supabase backup before rounds can be checked on live data.
-- SAL-020 is Kevin's: 0165 (balance is the truth) and 0169 `ow_customer_balance` (log + bills) disagree, and on the restored data the log names no orders.
+- SAL-020: no change. 0169's rule (log lines with no order + the bills) is right for everything written today, because every writer now names the order; Onora's double count is old rows that round 1's correction fixed and the restore brought back. "The stored balance is the truth" was built and withdrawn: it would show Lubowa's paid 349,000 as owed.
 
 **Deferred**
 - SAL-020 and SAL-011 (Kevin's choice of rule), SAL-024 (re-check on restored data), SAL-010/012/013/018 (re-check on restored data), SAL-017 (round 5).
