@@ -1,40 +1,53 @@
 /*
- * 'orders/order' (id) · One order (docs/canvas/buyer/Orders.dc.html phone 2):
- * a full sheet with the client, where it came from in Sales, its total and
- * how many lines are found; then each line with its supplier and state word;
- * the Ruth fold under a line whose new price is over the selling price (the
- * Manager decides, nothing for the Buyer to do); and what the salesperson
- * sees. A Not found line opens the Not found sheet.
+ * 'orders/order' (id) · One order (docs/canvas/buyer/Orders.dc.html phone 2;
+ * Buyer round 1 boards R1CostPrice and R1WhoSees): a full sheet with the
+ * client, where it came from in Sales, what the client pays and what it costs
+ * us (BUY-02: two figures, labelled; the Buyer never changes Client pays);
+ * then each line with its supplier, its state word and what the salesperson
+ * sees of it ("{Seller} sees: {word}", BUY-04); the Ruth fold under a line
+ * whose new cost is over the selling price, the Price coming fold under a line
+ * with no selling price (BUY-08); an order on hold says so first (BUY-05). A
+ * Not found line opens the Not found sheet.
  */
 import type { JSX } from 'preact';
 import { firstWord, initials, orderNo } from '../../../core/names.ts';
-import { Avatar } from '../../../ui/Avatar.tsx';
+import type { Member } from '../../../core/types.ts';
 import { FullSheet, TitleHead } from '../../../ui/FullSheet.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
 import { barW } from '../../../ui/util.tsx';
 import type { LineState } from '../../../core/buyer/types.ts';
+import { seesWord } from '../replies/rules.ts';
 import type { Params } from '../shell/nav.ts';
-import { nav } from '../shell/nav.ts';
+import { nav, stack } from '../shell/nav.ts';
+
+/** Back names the screen under this one (BUY-12): "Back to Replies" when opened from Replies. */
+const BACK: Record<string, string> = { today: 'Today', orders: 'Checking', replies: 'Replies', trip: 'the trip', suppliers: 'Suppliers' };
+const backTo = (): string => { const s = stack.value, under = s.length > 1 ? s[s.length - 2].id.split('/')[0] : 'orders'; return `Back to ${BACK[under] || 'Checking'}`; };
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
-import { FromChip, Initials, StateWord, Strip } from './parts.tsx';
-import { byRole, INK, orderView, PILL, seesWords, type LineView } from './rules.ts';
+import { FromChip, Initials, Pause, Sees, SeesCard, StateWord, Strip } from './parts.tsx';
+import { byRole, HOLD_INK, holdOf, INK, lineSees, orderView, PILL, priceComing, type LineView } from './rules.ts';
 
 const TILE: Partial<Record<LineState, IconName>> = {
   found: 'check', in: 'check', notfound: 'close', priceup: 'warning', asked: 'clock', toask: 'send', nosupplier: 'search',
   clientwaits: 'hourglass', removed: 'trash', ontrip: 'truck', short: 'warning',
 };
 
+/** "2 prices coming". */
+const comingWord = (n: number): string => `${n} ${n === 1 ? 'price' : 'prices'} coming`;
+
 function LineRow(p: { x: LineView; onNotFound: () => void }): JSX.Element {
   const { x } = p, l = x.line, [bg, ink] = PILL[x.state];
+  // BUY-13: the old cost is a grey "was" word, never struck.
+  const was = l.priceWas != null && l.priceWas !== l.cost ? ` · was ${fig(l.priceWas)}` : '';
   const body = (
     <>
       <span aria-hidden="true" class="tile" style={{ background: bg, color: ink }}><Icon name={TILE[x.state] || 'clock'} size={20} stroke={2.2} /></span>
       <span class="t">
         <span class="n">{l.name}</span>
-        <span class="mono q">{`${l.qty} ${l.unit} × ${fig(l.cost)}`}<br />{`= ${fig(x.total)}`}</span>
+        <span class="mono q">{`${l.qty} ${l.unit} × ${fig(l.cost)}${was}`}<br />{`= ${fig(x.total)}`}</span>
         {x.supplier && <span class="s">{x.supplier.name}</span>}
       </span>
       <StateWord state={x.state} at={x.state === 'removed' ? null : x.at} />
@@ -42,7 +55,7 @@ function LineRow(p: { x: LineView; onNotFound: () => void }): JSX.Element {
   );
   return x.state === 'notfound' || x.state === 'nosupplier'
     ? <button type="button" class="ow-b-orders-line tap" aria-label={`${l.name}: ${x.state === 'notfound' ? 'not found' : 'needs a supplier'}. Choose what to do`} onClick={p.onNotFound}>{body}</button>
-    : <div class={'ow-b-orders-line' + (x.state === 'removed' ? ' off' : '')}>{body}</div>;
+    : <div class="ow-b-orders-line">{body}</div>;
 }
 
 /** Ruth decides: the new cost over the selling price, as a picture (was · sells · cost). */
@@ -73,6 +86,17 @@ function RuthFold(p: { x: LineView; who: { name: string; initials: string } }): 
   );
 }
 
+/** Price coming · Ruth prices it (BUY-08): the line has no selling price; the Manager prices it, nothing for the Buyer. */
+function ComingFold(p: { who: Member | null }): JSX.Element {
+  const name = p.who ? firstWord(p.who.name) : 'The Manager';
+  return (
+    <div class="ow-b-orders-coming">
+      {p.who && <span aria-hidden="true" class="av">{p.who.initials}</span>}
+      <span>{`Price coming · ${name} prices it`}</span>
+    </div>
+  );
+}
+
 export function OrderScreen({ params }: { params: Params }): JSX.Element {
   const b = books.value, id = Number(params.id);
   const o = b ? b.orders.find((x) => x.id === id) : null;
@@ -84,43 +108,47 @@ export function OrderScreen({ params }: { params: Params }): JSX.Element {
     );
   }
   const v = orderView(o, b, now.value);
-  const ruth = byRole(b, 'manager');
+  const ruth = byRole(b, 'manager'), ruthName = ruth ? firstWord(ruth.name) : 'the Manager';
   const seller = v.seller ? firstWord(v.seller.name) : 'Sales';
-  const sees = seesWords(v, ruth ? firstWord(ruth.name) : 'Ruth');
+  const hold = holdOf(o);
+  const sees = seesWord(b, o);
   const off = !online.value || kept.value.length > 0;
   const head = (
     <TitleHead small class="ow-b-orders-ohead" lead={<Initials name={o.client} ini={initials(o.client)} size={44} />}
       title={o.client} sub={<FromChip who={v.seller} no={o.id} navy />} onClose={() => nav.back()}>
       <div class="fig">
-        <span><span class="mono big">{fig(v.total)}</span><span class="mono ugx">UGX</span></span>
-        <span class="found"><span class="mono g">{v.found}</span> of <span class="mono">{v.live.length}</span> Found</span>
+        <span class="pays">
+          <span class="cap">Client pays</span>
+          {v.pays > 0 || !v.coming ? <span><span class="mono big">{fig(v.pays)}</span><span class="mono ugx">UGX</span></span> : null}
+          {v.coming > 0 && <span class="coming">{v.pays > 0 ? `+ ${comingWord(v.coming)}` : comingWord(v.coming)}</span>}
+        </span>
+        <span class="cost"><span class="cap">Cost</span><span class="mono">{fig(v.cost)}</span></span>
       </div>
       <Strip navy gap={4} states={v.live.map((x) => x.state)} />
     </TitleHead>
   );
   return (
-    <FullSheet onBack={() => nav.back()} backLabel="Back to Checking" head={head} pad="14px 16px 24px" gap={8}>
+    <FullSheet onBack={() => nav.back()} backLabel={backTo()} head={head} pad="14px 16px 24px" gap={8}>
       {off && <Notice kind="offline" action={kept.value.length ? { label: 'Try again', on: () => { void flush(); } } : undefined}>Offline · it sends when back</Notice>}
-      {o.hold && <Notice kind="paused">{`Cancel asked · ${ruth ? firstWord(ruth.name) : 'the Manager'} decides · nothing is asked or bought for it`}</Notice>}
       <div class="ow-b-orders-lh"><span>Lines</span><span class="mono">{v.live.length}</span></div>
+      {hold && (
+        <div class="ow-b-orders-holdbar" role="status">
+          {ruth && <span aria-hidden="true" class="av">{ruth.initials}</span>}
+          <span class="t">{`${hold.word} · ${hold.why} · ${ruthName} decides`}</span>
+          <span aria-hidden="true" class="ic"><Pause size={16} /></span>
+        </div>
+      )}
       {v.lines.map((x) => (
-        <div key={x.line.key} class="ow-b-orders-lwrap">
+        <div key={x.line.key} class={'ow-b-orders-lwrap' + (x.state === 'removed' ? ' off' : '')}>
           <LineRow x={x} onNotFound={() => openNotFound(o.id, x.line.key)} />
           {x.state === 'priceup' && ruth && <RuthFold x={x} who={ruth} />}
+          {x.state !== 'removed' && priceComing(x.line) && <ComingFold who={ruth} />}
+          <div class="ow-b-orders-lfoot">
+            <Sees who={seller} ink={hold ? HOLD_INK : INK[x.state]}>{lineSees(o, x.state)}</Sees>
+          </div>
         </div>
       ))}
-      <div class="ow-b-orders-seecard">
-        {v.seller && <Avatar initials={v.seller.initials} tint={v.seller.tint} size={32} />}
-        <span class="t">
-          <span class="n">{`${seller} sees`}</span>
-          <span class="w">
-            {sees.map((s, i) => (
-              <span key={s.word}>{i > 0 && <span class="dot">·</span>}<span style={{ color: INK[s.state] }}>{s.word}</span></span>
-            ))}
-          </span>
-        </span>
-      </div>
+      <SeesCard who={v.seller} word={sees.word} />
     </FullSheet>
   );
 }
-

@@ -79,6 +79,9 @@ Most rows come from the Store audit rounds (`docs/audit/store/`, mainly round 6,
 
 | Word | Means | Never | Decided |
 |---|---|---|---|
+| Client pays | What the client pays for an order or a line (`sellPrice`); only Sales or the Manager change it. The Buyer shows it as the order's figure. | the order's total worked out from the cost | Buyer R1 · BUY-02 |
+| Cost | What the shop pays the supplier for a line (the buyer's price, stored in `items[].price`); shown beside Client pays, never as the order | "price" for the supplier's price on an order line | Buyer R1 · BUY-02 |
+| Far from the list | A typed cost more than 50% above or below the list price: "Far from the list (24,000) · check it", then "Save anyway" | a silent save of a slip | Buyer R1 · BUY-07 |
 | Not paid yet | An order that can't leave until it is paid. One label on the bay, Today, Load and the slip. The one reason, only on the order: "Sales take the money before it leaves, or Ruth lets it go on credit." | waits on money; holds; cash customer | Store R6 · WORD-03 |
 | Owes | What a customer owes the shop (one customer: "Owes"; the list: "Owe") | — | Sales UX audit |
 | To collect | Money owed that Sales should collect | — | Sales UX audit |
@@ -152,3 +155,4 @@ Fix these in the next round that touches each app.
 |---|---|---|
 | Sales: the order stamp | "NOT PAID" / "PART PAID" | "Not paid yet" (Store R6 · WORD-03); a part-paid word still to agree |
 | Database push `store.handover` (0157/0159) | "… handed you the yard" | "… passed you the yard" (needs a migration) |
+| Buyer (R1 · BUY-11, `whenShort`) vs Store (`whenAt`) | Buyer: "Yesterday 15:41", "Tue 10 Nov"; Store: "Thu 23:28" | one rule for a moment not today, in `core/time.ts`, every app (Kevin to pick) |

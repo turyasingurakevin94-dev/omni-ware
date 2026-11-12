@@ -61,6 +61,18 @@ export function when(ms: Ms, now: Ms): string {
   return dayLabel(ms);
 }
 
+/**
+ * GLOSSARY "Yesterday 15:41 / Tue 10 Nov" (Buyer round 1, BUY-11): a time that may be from another day,
+ * after a word ("Found · 09:31"). Today "09:31" (the Buyer's boards keep the leading zero), yesterday
+ * "Yesterday 09:31", older "Thu 15 Oct". Sales keeps `when` and `clock`.
+ */
+export function whenShort(ms: Ms, now: Ms): string {
+  const d = dayOf(ms), today = dayOf(now), hm = clock(ms).padStart(5, '0');
+  if (d === today) return hm;
+  if (daysApart(d, today) === 1) return `Yesterday ${hm}`;
+  return dayLabel(ms);
+}
+
 /** GLOSSARY "How long": "12 m", "2 h", "9 h 41 m", "2 days". */
 export function howLong(fromMs: Ms, toMs: Ms): string {
   const mins = Math.max(0, Math.floor((toMs - fromMs) / 60000));

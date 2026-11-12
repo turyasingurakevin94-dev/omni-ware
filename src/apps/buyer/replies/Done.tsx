@@ -16,7 +16,8 @@ import { SplitBar } from '../../../ui/Bar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { toast } from '../../../ui/toast.tsx';
-import { firstName, orderWord, seller } from './rules.ts';
+import { wordInk } from '../orders/rules.ts';
+import { firstName, seesWord, seller } from './rules.ts';
 import { act } from '../shell/store.ts';
 import { done, type Done } from './state.ts';
 
@@ -47,11 +48,12 @@ function Undo(p: { sid: string }): JSX.Element | null {
 function Sees(p: { b: BuyerBooks; ids: number[]; sid: string }): JSX.Element {
   const os = p.b.orders.filter((o) => p.ids.includes(o.id));
   const m = os.length ? seller(p.b, os[0]) : null;
-  const word = os.length ? orderWord(os[0], p.b.trip).word : 'Found';
+  // BUY-04: the same word the order sheet and the Replies foot show.
+  const word = os.length ? seesWord(p.b, os[0]).word : 'Found';
   return (
     <div class="ow-b-replies-dsees">
       {m && <Avatar initials={m.initials} tint={m.tint} size={26} />}
-      <span>{`${firstName(m)} sees: `}<b>{word}</b></span>
+      <span>{`${firstName(m)} sees: `}<b style={{ color: wordInk(word) }}>{word}</b></span>
       <Undo sid={p.sid} />
     </div>
   );

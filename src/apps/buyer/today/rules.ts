@@ -4,6 +4,7 @@
  *
  *   hm(ms)              "09:05" (the board's times have the leading zero)
  *   shortItem(name)     "Ridge cap 3 m" → "Ridge cap", "Y12 rebar 12 m" → "Y12 rebar"
+ *   itemName(name)      the whole name for a chip, an empty variant's trailing dash gone
  *   unitWord(n, unit)   "20 bags" (a word unit takes an s; "sht", "pcs", "m" stay as they are)
  *   sellersOf(b, os)    the salespeople behind some orders, by display name, once each
  *   waitingOn(b, now)   who Denis waits on when nothing waits on him: Ruth (a price), the suppliers asked
@@ -29,6 +30,11 @@ export function shortItem(name: string): string {
 /** "20 bags", "1 bag", "40 sht": a unit that is a word (it has a vowel) takes an s; a short form does not. */
 export function unitWord(n: number, unit: string): string {
   return n === 1 || /s$/i.test(unit) || !/[aeiou]/i.test(unit) ? unit : `${unit}s`;
+}
+
+/** An item's name for a chip, whole, without an empty variant's dash ("Expansion Bolts —" → "Expansion Bolts"; BUY-12). */
+export function itemName(name: string): string {
+  return name.replace(/[\s—–-]+$/, '').trim() || name;
 }
 
 /** One message per supplier: what we need from them, every order together. */

@@ -5,7 +5,9 @@
  *
  *   checking(b)              the orders still in Checking (draft, not every line found)
  *   buying(b)                orders that just left Checking for Buying
- *   orderView(o, b, now)     one order: total, its lines' states, the word that matters most, the act on its row
+ *   orderView(o, b, now)     one order: Client pays and Cost, its lines' states, the word that matters most, the act on its row
+ *   holdOf(o)                the order is on hold (a cancel asked, X-1): the banner, the filters and the sees word read it
+ *   priceComing(l)           the line has no selling price yet: the Manager prices it, its cost never sends it to her
  *   nextSupplier(b, line)    the next best supplier for a line from the price list
  *   switchOptions(b, l, q)   the price list rows a line can switch to
  */
@@ -59,7 +61,28 @@ export interface LineView {
   /** "09:31": when the supplier answered (or was asked); null when nobody was asked. */
   at: string | null;
   supplier: Supplier | null;
+  /** What the line costs us: qty × cost (items[].price). */
   total: UGX;
+}
+
+/**
+ * Price coming (BUY-08, GLOSSARY): placed with no selling price (items[].priceAsk), or none on the line.
+ * The Manager prices it; the line never reads "sells 0" and its cost never sends it to "{Manager} decides".
+ */
+export function priceComing(l: BLine): boolean {
+  return !!l.priceComing || !(l.sell > 0);
+}
+
+/** A cost over what the client pays: the Manager decides (never for a line whose price is coming). */
+export function overSell(l: BLine, cost: UGX): boolean {
+  return !priceComing(l) && cost > l.sell;
+}
+
+export interface Hold { word: 'On hold'; why: 'Cancel asked' }
+
+/** The one hold rule (BUY-05): Sales asked the Manager to cancel; nothing is asked or bought until she answers. */
+export function holdOf(o: BOrder): Hold | null {
+  return o.hold === 'cancel' ? { word: 'On hold', why: 'Cancel asked' } : null;
 }
 
 export interface OrderView {
@@ -68,7 +91,12 @@ export interface OrderView {
   lines: LineView[];
   /** The lines still on the bill. */
   live: LineView[];
-  total: UGX;
+  /** Client pays (BUY-02): Σ qty × sellPrice of the lines on the bill. Only Sales or the Manager change it. */
+  pays: UGX;
+  /** Cost: Σ qty × cost of the lines on the bill (what the shop pays the suppliers). */
+  cost: UGX;
+  /** Lines on the bill with no selling price yet (Price coming): Client pays adds "+ N price coming". */
+  coming: number;
   found: number;
   /** The word that matters most and the line it is about. */
   top: LineView | null;
@@ -98,7 +126,8 @@ export function orderView(o: BOrder, b: BuyerBooks, now: Ms): OrderView {
   });
   return {
     order: o, seller: b.team.find((m) => m.id === o.sellerId) || null, lines, live,
-    total: live.reduce((t, x) => t + x.total, 0), found: live.filter((x) => x.state === 'found').length, top, late,
+    pays: live.reduce((t, x) => t + (priceComing(x.line) ? 0 : x.line.sell * x.line.qty), 0),
+    cost: live.reduce((t, x) => t + x.total, 0), coming: live.filter((x) => priceComing(x.line)).length, found: live.filter((x) => x.state === 'found').length, top, late,
   };
 }
 
@@ -126,20 +155,19 @@ export function byState(states: LineState[]): LineState[] {
 
 export function matches(v: OrderView, f: Filter): boolean {
   if (f === 'all') return true;
-  if (f === 'hold') return !!v.order.hold;
-  if (v.order.hold) return false;
+  const held = !!holdOf(v.order);
+  if (f === 'hold') return held;
+  // A held order waits on the Manager: it is counted in "{Manager} decides" too (BUY-05).
+  if (f === 'ruth' && held) return true;
+  if (held) return false;
   const st = FILTERS.find((x) => x.id === f)?.state;
   return !st || v.live.some((x) => x.state === st);
 }
 
-/** What the salesperson sees for each line, the words once each: "Found · Price up · Ruth decides". */
-export function seesWords(v: OrderView, decider: string): { word: string; state: LineState }[] {
-  const out: { word: string; state: LineState }[] = [];
-  v.lines.forEach((x) => {
-    const word = x.state === 'priceup' ? `${WORD.priceup} · ${decider} decides` : x.state === 'asked' && x.at ? `${WORD.asked} · ${x.at}` : WORD[x.state];
-    if (!out.some((w) => w.word === word)) out.push({ word, state: x.state });
-  });
-  return out;
+/** What the salesperson sees for one line (BUY-04): the shared line word, or On hold while the order is held. */
+export function lineSees(o: BOrder, state: LineState): string {
+  const h = holdOf(o);
+  return h ? h.word : WORD[state];
 }
 
 const same = (p: ListPrice, l: BLine): boolean => (p.productId && l.productId ? p.productId === l.productId : p.item === l.name);
@@ -173,7 +201,7 @@ export function switchOptions(b: BuyerBooks, l: BLine, q: string): SwitchRow[] {
     .filter((p) => words.every((w) => p.item.toLowerCase().includes(w)))
     .map((price) => ({ price, supplier: b.suppliers.find((s) => s.id === price.supplierId) as Supplier }))
     .filter((x) => !!x.supplier)
-    .map((x) => ({ ...x, same: same(x.price, l), diff: x.price.price - l.cost, ruth: x.price.price > l.sell, total: x.price.price * l.qty }))
+    .map((x) => ({ ...x, same: same(x.price, l), diff: x.price.price - l.cost, ruth: overSell(l, x.price.price), total: x.price.price * l.qty }))
     .sort((x, y) => Number(y.same) - Number(x.same) || Number(x.ruth) - Number(y.ruth) || x.price.price - y.price.price);
 }
 
@@ -186,4 +214,15 @@ export function firstQuery(name: string): string {
 /** A person by role (Ruth the Manager, Moses in Sourcing), by display name. */
 export function byRole(b: BuyerBooks, role: Member['role']): Member | null {
   return b.team.find((m) => m.role === role) || null;
+}
+
+/** The ink of On hold: the Manager's lavender. */
+export const HOLD_INK = '#3A3F9B';
+
+/** The ink a sees word is written in: its line state's ("Price up · Ruth decides" takes Price up's), On hold lavender, else navy. */
+export function wordInk(word: string): string | undefined {
+  const w = word.split(' · ')[0];
+  if (w === 'On hold') return HOLD_INK;
+  const st = (Object.keys(WORD) as LineState[]).find((k) => WORD[k] === w);
+  return st ? INK[st] : undefined;
 }

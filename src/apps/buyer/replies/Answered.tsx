@@ -24,7 +24,7 @@ export function Answered(p: { b: BuyerBooks; now: number }): JSX.Element | null 
   const words = rows.map((r) => WORD[r.state]);
   if (!open) {
     return (
-      <button type="button" class="ow-b-replies-answered" aria-expanded="false" onClick={() => setOpen(true)}>
+      <button type="button" class="ow-b-replies-answered" aria-expanded="false" aria-label={`Answered, ${rows.length}`} onClick={() => setOpen(true)}>
         <span class="t">Answered</span>
         <span class="ow-b-replies-dots" role="img" aria-label={words.join(', ')}>
           {rows.map((r) => <span key={r.supplier.id} style={{ background: DOT[TONE[r.state] || 'good'] }} />)}

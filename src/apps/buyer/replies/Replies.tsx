@@ -28,12 +28,13 @@ import { act, books, discard, kept, now, online } from '../shell/store.ts';
 import { Answered } from './Answered.tsx';
 import { DoneCard } from './Done.tsx';
 import { ReplyRow, type Answer } from './ReplyRow.tsx';
-import { firstName, salesSees, seenOrders } from './rules.ts';
+import { SeesCard } from '../orders/parts.tsx';
+import { salesSees, seenOrders } from './rules.ts';
 import { buyingNow, done, notFoundQueue } from './state.ts';
 import './replies.css';
 
 const KIND: Record<Exclude<Answer, 'price'>, 'answerYes' | 'answerNo'> = { yes: 'answerYes', no: 'answerNo' };
-const KEPT_WORD: Record<string, string> = { answerYes: 'Yes · same', answerPrice: 'New price', answerNo: 'No' };
+const KEPT_WORD: Record<string, string> = { answerYes: 'Yes · same', answerPrice: 'New price', answerNo: 'Not found' };
 
 /** The answer for this supplier kept on the phone or refused, if any. */
 function keptFor(list: Kept[], sid: string): Kept | null {
@@ -64,21 +65,15 @@ function Head(p: { b: BuyerBooks; now: number }): JSX.Element {
   );
 }
 
+/** The foot (BUY-04, board R1WhoSees): one row per order, "{Seller} sees: {word}" and its number: the order sheet's words. */
 function SalesSees(p: { b: BuyerBooks; ids: number[] }): JSX.Element | null {
   const gs = salesSees(p.b, p.ids);
   if (!gs.length) return null;
   return (
     <div class="ow-b-replies-seesall">
-      {gs.map((g) => (
-        <div key={g.who ? g.who.id : 'sales'} class="ow-b-replies-seesline">
-          <span class="w">{`${firstName(g.who)} sees`}</span>
-          {g.orders.map((s) => (
-            <span key={s.order.id} class="ow-b-replies-schip">
-              {s.push && <Icon name="bell" size={12} stroke={2.2} />}<span class="mono">{orderNo(s.order.id)}</span>{s.word}
-            </span>
-          ))}
-        </div>
-      ))}
+      {gs.flatMap((g) => g.orders.map((s) => (
+        <SeesCard key={s.order.id} solid who={g.who} word={s.word} tail={<span class="mono">{orderNo(s.order.id)}</span>} />
+      )))}
     </div>
   );
 }

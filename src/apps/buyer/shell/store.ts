@@ -5,6 +5,9 @@
  *
  *   phase   starting → login | ready
  *   books   the shop as last read (null while it loads)
+ *   copy    the books as last read on this phone, kept for the next start (BUY-14: never a blank start;
+ *           drawn dimmed under "Opening…" until the fresh read lands; forgotten on Sign out)
+ *   pushes  whether this phone is signed up for the Buyer's pushes
  *   kept    writes kept on this phone (no signal) or refused
  */
 import { computed, signal } from '@preact/signals';
@@ -31,6 +34,29 @@ export const online = signal(true);
 export const kept = signal<Kept[]>([]);
 export const now = signal<number>(Date.now());
 export const readError = signal<string | null>(null);
+export const pushes = signal(false);
+
+/** The kept copy (one per phone: the last person signed in here). */
+export interface Copy { userId: string; at: number; books: BuyerBooks }
+const COPY_KEY = 'ow-buyer-copy' + (isDemo ? '-demo' : '');
+function readCopy(): Copy | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(COPY_KEY) || 'null') as Copy | null;
+    return c && c.userId && c.books && c.books.me ? c : null;
+  } catch (_e) { return null; }
+}
+export const copy = signal<Copy | null>(typeof localStorage !== 'undefined' ? readCopy() : null);
+function keepCopy(b: BuyerBooks): void {
+  const s = session.value;
+  if (!s) return;
+  const c: Copy = { userId: s.userId, at: Date.now(), books: b };
+  copy.value = c;
+  try { localStorage.setItem(COPY_KEY, JSON.stringify(c)); } catch (_e) { /* storage full: the next start opens without it */ }
+}
+function forgetCopy(): void {
+  copy.value = null;
+  try { localStorage.removeItem(COPY_KEY); } catch (_e) { /* nothing kept */ }
+}
 
 export const me = computed(() => (books.value ? books.value.me : null));
 
@@ -74,6 +100,7 @@ export async function refresh(): Promise<void> {
   try {
     const b = await src().books();
     books.value = b;
+    keepCopy(b);
     readError.value = null;
     readOkAt = src().now();
     online.value = src().online();
@@ -88,6 +115,8 @@ export async function refresh(): Promise<void> {
 let timers = false;
 async function ready(s: Session): Promise<void> {
   session.value = s;
+  // Another person's copy is never shown again.
+  if (copy.value && copy.value.userId !== s.userId) forgetCopy();
   await openOutbox(s.userId);
   await refresh();
   phase.value = 'ready';
@@ -120,12 +149,14 @@ export async function start(): Promise<void> {
   try {
     if (isDemo) source = await loadDemo();
     const s = await src().session();
-    if (!s) { phase.value = 'login'; return; }
+    if (!s) { forgetCopy(); phase.value = 'login'; return; }
     await ready(s);
   } catch (e) {
     if (isOffline(e)) {
       readError.value = 'No signal';
-      phase.value = 'login';
+      online.value = false;
+      // With a kept copy the app stays on it, Offline, until the signal comes back; without one, the login says No signal.
+      if (!copy.value) phase.value = 'login';
       const again = () => { window.removeEventListener('online', again); void start(); };
       window.addEventListener('online', again);
       return;
@@ -147,12 +178,16 @@ export async function signIn(email: string, password: string): Promise<void> {
 export async function registerPush(): Promise<void> {
   const s = source;
   if (!s || !s.pushOn) return;
-  try { await s.pushOn(); } catch (_e) { /* no Play services, permission off, no signal */ }
+  try {
+    // The shared sign-up says whether it took: refused permission or no Play services is Off.
+    pushes.value = (await s.pushOn()).on;
+  } catch (_e) { pushes.value = false; /* no Play services, permission off, no signal */ }
 }
 
 export async function signOut(): Promise<void> {
   await src().signOut();
-  books.value = null; session.value = null; phase.value = 'login';
+  forgetCopy();
+  books.value = null; session.value = null; pushes.value = false; phase.value = 'login';
 }
 
 /** A write: through the outbox, then a fresh read. Rejects only when the server refused it. */

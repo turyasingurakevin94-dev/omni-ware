@@ -7,7 +7,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { StopCount } from '../../../core/buyer/source.ts';
-import { shortWord } from '../../../core/buyer/rules.ts';
+import { shortWord, unitOr } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
 import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { Button } from '../../../ui/Button.tsx';
@@ -47,7 +47,7 @@ export function StopCard(p: StopCardProps): JSX.Element {
   const paid = typed != null ? digits(typed) : mode === 'short' ? auto : p.stop.planned;
   const shorts = rows.filter((r) => got[r.order.id + r.line.key] < r.line.qty);
   // Paid differently hides the lines: the head says what the payment is for (phone 3, "20 bag · #0550").
-  const what = [rows.length === 1 ? `${rows[0].line.qty} ${rows[0].line.unit}` : counted(rows.length, 'line'), ...[...new Set(rows.map((r) => r.order.id))].map(orderNo)].join(' · ');
+  const what = [rows.length === 1 ? `${rows[0].line.qty} ${unitOr(rows[0].line.unit)}` : counted(rows.length, 'line'), ...[...new Set(rows.map((r) => r.order.id))].map(orderNo)].join(' · ');
 
   const go = async (c: StopCount[], amount: number) => {
     setState('sending'); setWhy('');
@@ -87,7 +87,7 @@ export function StopCard(p: StopCardProps): JSX.Element {
               <span class="ow-b-on-lt"><span>{r.line.name}</span><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /></span>
               {mode === 'short'
                 ? <Stepper value={g} unit={`of ${r.line.qty}`} min={0} max={r.line.qty} what={`${r.line.name} for ${orderNo(r.order.id)}`} onChange={(v) => setGot({ ...got, [k]: v })} />
-                : <span class="mono ow-b-on-qty">{r.line.qty} <small>{r.line.unit}</small></span>}
+                : <span class="mono ow-b-on-qty">{r.line.qty} <small>{unitOr(r.line.unit)}</small></span>}
             </div>
             {mode === 'short' && <span class="ow-b-on-lbar" aria-hidden="true"><i class={cx(g < r.line.qty && 'short')} style={{ width: `${r.line.qty ? (g / r.line.qty) * 100 : 0}%` }} /></span>}
           </div>
@@ -99,7 +99,7 @@ export function StopCard(p: StopCardProps): JSX.Element {
           </button>
         : field)}
       {mode === 'paid' && field}
-      {mode === 'paid' && <PaidFacts planned={p.stop.planned} paid={paid} inHand={p.inHand} perUnit={rows.length === 1 ? { qty: rows[0].line.qty, unit: rows[0].line.unit } : null} />}
+      {mode === 'paid' && <PaidFacts planned={p.stop.planned} paid={paid} inHand={p.inHand} perUnit={rows.length === 1 ? { qty: rows[0].line.qty, unit: unitOr(rows[0].line.unit) } : null} />}
       {mode === 'short' && shorts.length > 0 && (
         <Callout tone="warn" icon="bell">
           {`${firstWord(memberOf(p.b, shorts[0].order.sellerId)?.name || 'Sales')} sees: `}<b>{shortWord(got[shorts[0].order.id + shorts[0].line.key], shorts[0].line.qty)}</b>
