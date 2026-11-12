@@ -325,3 +325,16 @@ export function askMessage(supplier: Supplier, lines: BLine[], shop: string): st
 export function waLink(phone: string, text?: string): string {
   return `https://wa.me/${intlPhone(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 }
+
+/** A typed cost more than this share above or below the list price is "Far from the list" (BUY-07, GLOSSARY). */
+export const FAR_FROM_LIST = 0.5;
+
+/**
+ * Far from the list (Buyer round 1, BUY-07): the typed price is more than 50% above or below the list
+ * price, so it may be a slip (2,700 for 24,000). The screen says "check it" and its button becomes
+ * "Save anyway": nothing is blocked. No list price (or nothing typed): never far.
+ */
+export function farFromList(price: UGX, list: UGX | null | undefined): boolean {
+  if (!list || !(list > 0) || !(price > 0)) return false;
+  return Math.abs(price - list) > list * FAR_FROM_LIST;
+}

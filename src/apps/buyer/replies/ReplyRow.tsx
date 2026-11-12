@@ -91,7 +91,7 @@ export function ReplyRow(p: ReplyRowProps): JSX.Element {
             const m = seller(b, o);
             return <span key={o.id} class="ow-b-replies-ochip">{m && <Avatar initials={m.initials} tint={m.tint} size={26} />}<span class="mono">{orderNo(o.id)}</span></span>;
           })}
-          <span class="ow-b-replies-sees">{`${sellers.length === 1 ? firstName(sellers[0]) : 'Sales'} sees: `}<b>Asked</b></span>
+          <span class="ow-b-replies-sees">{`${sellers.map(firstName).join(' · ') || 'Sales'} ${sellers.length > 1 ? 'see' : 'sees'}: `}<b>Asked</b></span>
           <button type="button" class="ow-b-replies-again" disabled={off} onClick={p.onAskAgain} aria-label={`Ask ${name} again`}>
             <Icon name="undo" size={15} stroke={2} />Ask again
           </button>

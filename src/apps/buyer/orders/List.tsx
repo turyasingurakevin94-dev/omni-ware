@@ -20,25 +20,29 @@ import type { Params } from '../shell/nav.ts';
 import { nav } from '../shell/nav.ts';
 import { books, flush, kept, now, online } from '../shell/store.ts';
 import { openNotFound } from './NotFound.tsx';
-import { FromChip, Initials, KEPT, KEPT_TOAST, RowAct, Strip, Waiting } from './parts.tsx';
-import { buying, byNeed, byRole, byState, checking, FILTERS, INK, matches, orderView, type Filter, type OrderView } from './rules.ts';
+import { FromChip, Initials, KEPT, KEPT_TOAST, Pause, RowAct, Strip, Waiting } from './parts.tsx';
+import { buying, byNeed, byRole, byState, checking, FILTERS, holdOf, INK, matches, orderView, type Filter, type OrderView } from './rules.ts';
 import { WORD } from '../../../core/buyer/rules.ts';
 
 const isFilter = (x: unknown): x is Filter => FILTERS.some((f) => f.id === x);
 
 function Row(p: { v: OrderView; decider: { name: string; initials: string } | null; busy: boolean; waiting: boolean; onAsk: () => void }): JSX.Element {
-  const { v } = p, o = v.order, top = o.hold || o.test ? null : v.top;
+  const { v } = p, o = v.order, hold = holdOf(o), top = hold || o.test ? null : v.top;
   const toAsk = !!top && top.state === 'toask' && !!top.supplier;
   const word = !top ? '' : top.state === 'priceup' ? `${WORD.priceup} · ` : toAsk ? `${WORD.toask} · ${firstWord(top.supplier ? top.supplier.name : '')}` : `${WORD[top.state]}${top.at ? ' · ' : ''}`;
   const tail = !top || toAsk ? '' : top.state === 'priceup' ? fig(top.line.cost) : top.at || '';
   const open = () => nav.push('orders/order', { id: o.id });
   return (
     // The whole card opens the order for a finger; for a screen reader the name is the one button (no button inside a button).
-    <div class={'ow-b-orders-row' + (o.hold ? ' held' : '')} onClick={open}>
+    <div class="ow-b-orders-row" onClick={open}>
       <button type="button" class="top" aria-label={`${o.client}, ${orderNo(o.id)}: open`}>
         <Initials name={o.client} ini={initials(o.client)} />
         <span class="who"><span class="n">{o.client}</span><FromChip who={v.seller} no={o.id} /></span>
-        <span class="mono sum">{fig(v.total)}</span>
+        <span class="sum">
+          <span class="cap">Client pays</span>
+          {v.pays > 0 || !v.coming ? <span class="mono">{fig(v.pays)}</span> : <span class="c">Price coming</span>}
+          <span class="c">Cost <span class="mono">{fig(v.cost)}</span></span>
+        </span>
       </button>
       <div class="foot">
         <div class="state">
@@ -63,8 +67,8 @@ function Row(p: { v: OrderView; decider: { name: string; initials: string } | nu
         {top && top.state === 'nosupplier' && (
           <RowAct word="Pick" busyWord="Picking" busy={false} label={`Pick a supplier for ${top.line.name}`} on={() => openNotFound(o.id, top.line.key)} />
         )}
-        {o.hold && <span class="ow-b-orders-hold"><Icon name="lock" size={14} stroke={2.2} />Cancel asked · hold</span>}
-        {o.test && !o.hold && <span class="ow-b-orders-hold test">Test · not counted</span>}
+        {hold && <span class="ow-b-orders-hold"><Pause />{`${hold.word} · ${hold.why}`}</span>}
+        {o.test && !hold && <span class="ow-b-orders-hold test">Test · not counted</span>}
       </div>
     </div>
   );
@@ -83,7 +87,7 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
   const filter: Filter = chosen === 'toask' && !views.some((v) => matches(v, 'toask')) ? 'all' : chosen;
   const shown = views.filter((v) => matches(v, filter));
   const lines = views.flatMap((v) => v.live);
-  const total = views.reduce((s, v) => s + v.total, 0);
+  const total = views.reduce((s, v) => s + v.cost, 0);
   const moved = buying(b);
   const ruth = byRole(b, 'manager');
   const ruthName = ruth ? firstWord(ruth.name) : 'Ruth';
@@ -128,12 +132,14 @@ export function OrdersList({ params }: { params: Params }): JSX.Element {
         <ChipRow label="Show">
           {FILTERS.map((f) => {
             const n = views.filter((v) => matches(v, f.id)).length;
-            if ((f.id === 'toask' || f.id === 'needs' || f.id === 'hold') && !n) return null;
+            // On hold stays while it is the chosen chip (board R1WhoSees, empty filter: "On hold 0").
+            if ((f.id === 'toask' || f.id === 'needs' || f.id === 'hold') && !n && !(f.id === 'hold' && filter === 'hold')) return null;
             return (
               <FilterChip key={f.id} on={filter === f.id} dot={f.dot || undefined} count={n} onClick={() => setFilter(f.id)}>
                 {f.id === 'all' && <span aria-hidden="true" class="ow-b-orders-chipic"><Icon name="list" size={16} stroke={2.2} /></span>}
                 {f.id === 'ruth' && <Icon name="lock" size={14} stroke={2.2} />}
                 {f.id === 'toask' && <span aria-hidden="true" class="ow-b-orders-dashdot" />}
+                {f.id === 'hold' && <Pause />}
                 {f.id === 'ruth' ? `${ruthName} decides` : f.word}
               </FilterChip>
             );

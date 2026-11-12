@@ -4,11 +4,13 @@
  * draws them.
  *
  *   waitWord(askedAt, now)   "35m", "2h": how long a supplier has had the ask
- *   orderWord(o, trip)       what Sales sees for an order: Buying, or its most pressing line word
+ *   orderWord(o, trip)       what Sales sees for an order: On hold, Buying, or its most pressing line word
+ *   seesWord(b, o)           the same, with who acts next ("Price up · Ruth decides"): the one word every "{Seller} sees:" shows
  *   salesSees(b, ids)        per salesperson, the orders they see moving and their word
  *   seller(b, o)             the salesperson's face and display name
  */
 import { readyForBuying, lineState, WORD } from '../../../core/buyer/rules.ts';
+import { holdOf } from '../orders/rules.ts';
 import type { BOrder, BuyerBooks, LineState, Trip } from '../../../core/buyer/types.ts';
 import type { Member, Ms } from '../../../core/types.ts';
 
@@ -30,6 +32,8 @@ export interface OrderSees { order: BOrder; word: string; push: boolean }
 
 /** What Sales sees for this order now. A push goes out for Not found and Price up (BRIEF "What Sales gets"). */
 export function orderWord(o: BOrder, trip: Trip | null): OrderSees {
+  const h = holdOf(o);
+  if (h) return { order: o, word: h.word, push: false };
   if (isBuying(o)) return { order: o, word: 'Buying', push: false };
   const states = o.lines.filter((l) => !l.removed).map((l) => lineState(o, l, trip));
   const st = PRESS.find((s) => states.includes(s)) || 'found';
@@ -62,6 +66,11 @@ export function salesSees(b: BuyerBooks, ids: number[]): SeesGroup[] {
  * The word as Sales gets it (BRIEF "What Sales gets"): who acts next on it, by display name.
  * Price up · Ruth decides; Client waits · Moses finds it.
  */
+/** What the salesperson sees for this order, in one word with who acts next (BUY-04): Replies, the order sheet and Done agree. */
+export function seesWord(b: BuyerBooks, o: BOrder): OrderSees {
+  return withWho(b, orderWord(o, b.trip));
+}
+
 function withWho(b: BuyerBooks, s: OrderSees): OrderSees {
   const by = (role: Member['role']) => b.team.find((m) => m.role === role) || null;
   if (s.word === WORD.priceup) return { ...s, word: `${WORD.priceup} · ${firstName(decider(b))} decides` };
