@@ -164,3 +164,135 @@ Where the board draws the same fault (F6, F7, F8), the board is wrong too: fix t
 - **F7 · the copy's dimmed face at 2.76:1** (PK01, PK08, PK13, PK20), the board as drawn too (`opacity: .6`). `.pk-face.dim { opacity: .6 }` (`pack.css:55`) fades the 12 px "NH" on the #0557 row. The row still opens Look only, so its words must read. Fix: drop the opacity. Show the copy with the slate holder face (`yardFace`), whose ink is at full strength; the red "Don't pack" pill already says it is the copy. Redraw the four boards.
 - **F8 · the failed unpack dims "After Unpack"** (AD06), the board as drawn too (`opacity: .5`). `.ad-after.dim` (`unpack.css:12`) brings "After Unpack · Undo for 10 s" to 2.08:1, "Brian sees: Packing again" to 3.17:1, and "BO" to 2.37:1. That is still what Unpack will do on Try again, so it is information, not an inactive control. Fix: do not add `.dim` in the failed state. Redraw AD06 without the 0.5.
 - **F9 · the page under the Unpack sheet** (AD02, AD06). A tap on the dim head (the scrim) closes the sheet and leaves #0530's Packed page (`Unpack.tsx:96–98`). That page's strip reads only "Back", and its Close calls `nav.back()` to #0552's Packed moment. The board links both to TD01. Fix: `Unpack.tsx:96` `backLabel={backTo.value}` ("Back to the order"); `Unpack.tsx:98` `onClose={() => nav.home()}` (the board's place, Today). Better still, a scrim tap does what the sheet's Close does (`keep`, → PK06), so the bare #0530 page, which no board draws, is never left open.
+
+## Today
+
+Critic run 2026-11-12 on `6a95aa53` (origin/claude/store-build). 33 boards. `test/parity/store-today.json` is unchanged in the commit. Every tap reached its board except TD04 (below), TD18 and TD23. Every board link was replayed in Playwright (landing route read from `sessionStorage['ow-store-view']`); the rest was measured in computed styles. **4 pass, 29 fail.**
+
+Accepted across the area (not failures):
+- #0530's faces BO RN and "Brian takes it": FACTS says Brian placed #0530 (§2a: the board is corrected).
+- TD02's 8 done: the board's own To load 2 counts #0552 as packed.
+- "tried 3 times" left out on TD07 and TD22: §4.8, the app says only what is true. Redraw the boards.
+- TD20/TD31 "Your manager sends you an invite link": nobody is known before sign-in. Redraw.
+- TD28's Bay 4: PK06 draws four bays (§2a).
+- TD32's #0552 first: Q20.
+- The demo clock's 10:41/17:30 where a board draws 10:42/17:42.
+- TD31's empty password: the demo refuses only an empty one.
+- TD10's "1 · read" for 7: older days are not in FACTS.
+- TD09's scroll offset and head shadow.
+- TD11's cards 5–8 px taller each (line-height).
+
+TD33's pressed red is right: `#A82D24`, measured under a held mouse. Times such as "41 m" are durations, not money: **no money on any Today board.** `scrollWidth` is 360 on all 33, and no text is under 11 px.
+
+**Spec tap corrected (not committed, per the brief).** TD04 is the calm Today after the return is set aside. Its steps on `&at=1730` should be `[{"tap":{"sel":".st-job-act"}},{"tap":"It's set aside"},{"tap":"Close"}]`. With them the card reads **4 of 4** with the tick, as drawn (diff 1.67 %), and the builder's "3 of 4" note falls away.
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| TD01 Today | `today` | 0 | 1.91 | **no "13:20"** | ok | ok | ok | **3.21, 4.46** | ok | fail | T1, T2, T6 |
+| TD09 Today scrolled | `today` | 1 | 13.7 | ok | ok | ok | ok | ok | ok | pass | scroll offset, head shadow |
+| TD33 Next job pressed | `today` | 0 | 3.02 | **no scale .97, no "13:20"** | ok | ok | ok | **3.21, 4.46** | ok | fail | T1, T2, T6, T23 |
+| TD02 Next is a check-in | `today` &at=1132 | 0 | 0.58 | **bell 2** | ok | ok | ok | **3.21** | ok | fail | T1, T8 |
+| TD03 Next is a ride | `today` &at=1510 | 0 | 2.03 | **3 left · 16 done · 0 later, road 0, bell 2, "0 m", tile face** | ok | ok | ok | **3.21** | ok | fail | T1, T7, T8, T9 |
+| TD04 Calm | `today` &at=1730 | 3* | 1.67 | **21 done, 9 delivered, 3 with Ruth, bell 2** | ok | ok | ok | ok | ok | fail | T7, T8, T10 |
+| TD05 First day | `today` &state=first-day | 0 | 27.97 | **a Today with a count job, no Get going** | **red button → count** | ok | ok | ok | ok | fail | T11 |
+| TD06 Offline | `today` &offline&kept=1 | 0 | 7.11 | ok | ok | ok | ok | **4.46** | ok | fail | T2 |
+| TD07 Load failed | `today` &fail=snapshot | 0 | 2.97 | ok | **tiles open sheets** | ok | ok | ok | ok | fail | T12 |
+| TD08 Update ready | `today` &update=1 | 0 | 0.27 | **no "13:20"** | ok | ok | ok | **3.21, 4.46** | ok | fail | T1, T2, T6 |
+| TD10 Alerts | `today/alerts` | 1 | 3.51 | **GA hidden** | ok | ok | ok | **3.89** | **3 lines cut** | fail | T1, T13, T14 |
+| TD11 With Ruth | `today/with-ruth` | 2 | 13.27 | ok | ok | **Gate 57×36** | ok | ok | ok | fail | T15 |
+| TD29 Alerts empty | `today/alerts` &state=empty | 1 | 2.34 | **no "Fri 16 Oct · 6 · read"** | ok | ok | ok | **3.89** | ok | fail | T1, T16 |
+| TD30 With Ruth empty | `today/with-ruth` &state=empty | 2 | 6.52 | **box icon** | ok | ok | ok | ok | **title cut** | fail | T17 |
+| TD12 You | `today/you` | 1 | 15.58 | **no Kampala Road, no call** | **ring, Out** | ok | ok | **3.17** | ok | fail | T1, T6, T18 |
+| TD13 Pass the yard | `today/pass-yard` | 2 | 4.66 | ok | ok | ok | ok | ok | ok | pass | |
+| TD18 Sending | `today/pass-yard` | 2 | 10.91 | **not reached** | ok | ok | ok | ok | ok | fail | T19 |
+| TD14 Sent to Okello | `today/pass-yard` | 3 | 8.54 | **"Sent" while held** | ok | ok | ok | ok | ok | fail | T19 |
+| TD24 Nobody else | `today/pass-yard` &state=nobody | 2 | 4.02 | **slide off drawn live** | ok | ok | ok | **4.35** | ok | fail | T20, T21 |
+| TD26 Pass failed | `today/pass-yard` &fail=passYard | 3 | 5.04 | ok | ok | ok | ok | ok | ok | pass | |
+| TD15 Musa passed you | `today` &as=okello&at=1043 | 0 | 0.62 | **bell 2** | ok | ok | ok | **3.21** | ok | fail | T1, T8 |
+| TD25 I've got it sending | `today` &as=okello&at=1043 | 1 | 0.91 | **bell 2** | ok | ok | ok | **3.21** | ok | fail | T1, T8 |
+| TD32 The yard is yours | `today` &as=okello&at=1043 | 1 | 3.64 | **bell 2** | ok | ok | ok | **3.21, 4.46** | ok | fail | T1, T2, T8 |
+| TD28 Close, 3 of 4 | `today/close-yard` &at=1730 | 1 | 9.62 | **slide off drawn live, 9 out** | ok | ok | ok | ok | ok | fail | T7, T20 |
+| TD16 Close the yard | `today/close-yard` &at=1730 | 2 | 9.51 | **9 out, one name for 3 with Ruth** | ok | ok | ok | ok | ok | fail | T7, T10 |
+| TD27 Close offline | `today/close-yard` &offline | 2 | 10.01 | **slide off drawn live, 9 out** | ok | ok | ok | ok | ok | fail | T7, T20 |
+| TD19 Close sending | `today/close-yard` &at=1730 | 3 | 9.72 | **9 out** | ok | ok | ok | **1.24** | ok | fail | T7, T22 |
+| TD17 Closed | `today/close-yard` &at=1730 | 3 | 6.08 | ok | ok | ok | ok | ok | ok | pass | |
+| TD20 Sign in | `shell/sign-in` &state=signed-out | 0 | 1.49 | ok | **Forgot password: nothing** | ok | ok | ok | ok | fail | T24 |
+| TD31 Wrong password | `shell/sign-in` | 1 | 3.87 | ok | **Forgot password: nothing** | ok | ok | ok | ok | fail | T24 |
+| TD23 Signing in | `shell/sign-in` | 1 | 64.65 | **not reached** | **Forgot password: nothing** | ok | ok | ok | ok | fail | T24, T25 |
+| TD21 Checking | `shell/checking` &state=loading | 0 | 12.43 | **Next job skeleton** | **Shelf tab inert** | ok | ok | ok | ok | fail | T26 |
+| TD22 No reach | `shell/no-reach` &state=no-reach | 0 | 10.75 | **no "7:52", nothing waiting** | **Open the copy → Not loaded** | ok | ok | **4.35** | ok | fail | T21, T27 |
+
+\*TD04 with the corrected taps above. The committed spec (0 taps) shows "3 of 4" and the MK ring (2.46 %).
+
+### Today failures and fixes
+
+Where the board draws the same fault (T1, T2, T15), the board is wrong too: fix the app and redraw the board in the same commit.
+
+- **T1 · `--on-navy-2` (#8D99B5) as text on navy, 3.17–3.89:1.** Measured:
+  - the Next job tiles' second line ("Iron sheet", "#0549", "one stop", "count") and the struck dropped line ("10 pair"): 3.21:1, `today.css:77–78` (`.st-jt-v.strike`, `.st-jt-s`);
+  - You's stat lines ("Denis · 10:05", "#0555", "2 Ssali · 1 gate"): 3.17:1, `you.css:16`;
+  - Alerts' "9:00" and "10:00" ticks: 3.89:1, `alerts.css:9`.
+
+  The boards draw the same #8D99B5. Fix: `var(--on-navy)` (#B3BCD2: 4.82:1 on the tile, 4.75:1 on You's figures, 5.83:1 on the hero), as Shelf F1. Redraw TD01–03, TD08, TD10, TD12, TD15, TD25, TD29, TD32 and TD33.
+- **T2 · the blue tag "Packing now · yours" at 4.46:1** (12 px bold, #A9BCEB on `rgba(141,162,214,.18)` over the card). This is the shared `src/ui/pill.css:36 .ow-npill.n-blue`, and the board draws it the same. Fix: #B8C8F0 (5.05:1), and redraw the boards' tag.
+- **T6 · FACTS figures left out, with no recorded reason:**
+  - TD01, TD08, TD33: "Ssali **13:20**" (FACTS: "Ssali leaves 13:20");
+  - TD12: "Open · **Kampala Road**" and the shop's call button (FACTS: "Mukasa Hardware, Kampala Road").
+
+  The builder's reason (the books keep no run time and no shop address) is true, but it is written only in `parity/today.md`. Fix: either write both gaps into spec §3 as open questions (and data §9), with the default "left out", or carry the data (the run's time on the order's carrier; the shop's address and phone in `side`) and draw it in `cards.tsx` and `You.tsx`.
+- **T7 · the demo invents moments FACTS does not have.** In `src/core/store/demo/moments.ts`, step 1130 delivers #0534 at 10:58, and step 1200 delivers #0547 at 11:20 and collects #0556 at 11:10. FACTS §8 names none of these, and TD03 still draws NH on the road at 15:10. The result:
+  - TD03 shows 3 jobs left · 16 done · 0 later · On the road 0, where the board draws 4 · 12 · 1 · 1 (NH);
+  - TD04, TD16, TD19, TD27 and TD28 show 9 out and 21 done, where the board draws 8 and 18.
+
+  Fix: remove those three deliveries from `moments.ts`, or add them to FACTS §8 with their times and redraw the counts on TD03, TD04 and the close boards. §2a does not allow the two to disagree.
+- **T8 · the bell is always 2.** The board draws:
+  - 1 at 11:32 and at 15:10 (TD02, TD03);
+  - none at 17:30 (TD04);
+  - 1 on Okello's phone, "Musa passed you the yard" (TD15, TD25);
+  - none once he has the yard (TD32).
+
+  Fix in the demo (`moments.ts`, `coming.ts alerts()`): each later moment marks the 10:41 pushes read, and `&as=okello` gets Okello's own alerts (the pass push), not Musa's. `bellCount` (`alerts-model.ts`) needs no change.
+- **T9 · "Denis sent you · 0 m"** (TD03). Spec §4.7 says under a minute is "just now", but `src/core/time.ts:66 howLong` returns "0 m". Fix it there, in one place: `if (mins < 1) return 'just now'`. The board says "1 m" from 15:09, while the demo sends at 15:10 (FACTS §8), so after the fix the app reads "just now" and the board should say the same. The third tile also differs: the board draws #0559's LB face, the app a box. Fix the ride tiles in `cards.tsx` to use `customerFace`, as the board does.
+- **T10 · "3 with Ruth" on the Close card, and one name on the sheet** (TD04, TD16). Today's card counts `n` = 3, where the board draws 1. The close sheet's row says only "Aisle C count with Ruth" while it carries 3: in `shift.ts:99–100`, `what` names the newest count even when n > 1. Fixes:
+  - in `closeChecks`, name the count only when `n === 1`; otherwise say "`n` asks with Ruth";
+  - for the demo, decide whether the 9:21 Wire nails count and #0557's cancel are answered by 17:30. FACTS does not say, so add them to §2a's sample-gaps row (Q9) and match the board.
+- **T11 · TD05 is not reached: Joy's first day draws an ordinary Today** ("1 jobs left", a Count · aisle C Next job, the red button opening `shelf/count`). `Today.tsx:41 firstDay` requires no jobs, but on empty books aisle C's 21-day count (Q10) is a job. Fix one of two ways, and write the rule in spec §4.6:
+  - the first-day rule keys on the person (no job ever done, joined today), not on an empty yard;
+  - or, if it stays "nothing of the yard yet", the `first-day` seed (`moments.ts:134` and `:176`) marks every aisle counted.
+
+  Then the board's Get going, its links (Turn on alerts → `today/you`, Walk the shelf → `shelf`) and the call to Musa can be checked.
+- **T12 · the not-loaded tiles open stage sheets** (TD07). The board links the four dashed tiles to Today, so they do nothing. In the app, tapping "To pack: not loaded yet" opens `pack` over a yard that has not loaded. Fix the failed state in `Today.tsx`/`frame.tsx`: render the tiles as plain elements (no `nav.push`), as drawn.
+- **T13 · Grace's face hidden on the Alerts timeline** (TD10). At true scale GA (10:02) sits under DO (10:05). The board spaces them apart (GA at x 216, DO at 248). Fix in `Alerts.tsx`'s timeline: push a mark right until it is at least 30 px from the one before.
+- **T14 · Alerts rows cut** (TD10). "New to pack · they coll…", "Ruth marked it deliver…" and "1 line · Denis · 10:…" end in an ellipsis. Two causes:
+  - the title is 700 in the app and 600 on the board (`alerts.css:24 .st-al-t > span:first-child`);
+  - the chip is 4 px wider than the board's (`pill.css:32`: gap 6 and padding 10, where the board uses gap 4 and padding 9).
+
+  Fix: `font-weight: 600` on the title, and the board's chip spacing on this card (scoped to `.st-al`).
+- **T15 · "Gate" is 57×36** (TD11, `alerts.css:79 .st-rcard-act`). The board wraps its 36 px pill in a 44 px link. Fix: a 44 px tall button with the 36 px pill drawn inside it. The visible pill can stay 36 px.
+- **T16 · no older alerts on the empty board** (TD29). The board keeps "Fri 16 Oct · 6 · read" (collapsed, → `today/alerts`), but `moments.ts:135` empties `b.alerts` for `&state=empty`. Fix: keep the older read alerts in the empty seed, so the collapsed row and its tap can be checked.
+- **T17 · the answered aisle count** (TD30, `WithRuth.tsx:41`). The app draws the `orders` box, where the board draws the aisle's own icon (Roofing: the house). Its title "Count · aisle A · Roofi…" is cut, where the board shows it whole. Fix: use the aisle's category icon (as Today's tiles do), and let the answered row's title wrap to two lines instead of ending in an ellipsis.
+- **T18 · You's figures** (TD12). The board links the day ring ("Your day: 5 of 12 jobs done") and all three stats to Today. The app links Checked in and Packed, but not Out (a plain element) and not the ring. Fix in `You.tsx`: make Out and the ring the same link as the other two.
+- **T19 · Pass the yard says "Sent" before it is sent** (TD14, TD18). After the slide, the app goes straight to "Sent to Okello · 10:41 · his phone buzzed" while the write is still held for 10 s (Q17), and TD26 shows it can still fail after that. Spec §4.8 says never show a tick before the server's yes, and TD18's "Sending…" is never shown. Fix in `PassYard.tsx`:
+  - during the hold, show TD14's screen with true words ("Passing to Okello… · Take it back 10 s", no tick, step 1 "Sends in 10 s");
+  - when the hold ends, show TD18's Sending… dock;
+  - show "Sent" only on the server's yes.
+
+  The lead also redraws TD14's held state, because the board draws the screen after the send.
+- **T20 · a slide that cannot go is drawn live** (TD24 "Pick who takes the yard", TD27 "Back online to close", TD28 "Set the return aside first"). The board draws the quiet track (`rgba(255,255,255,.05)` with a 1 px ring) and the words in #9AA3BC at weight 600. The app draws the normal track with white 700 words; only its knob is grey. Fix: in `PassYard.tsx:108` and `CloseYard.tsx:107–108`, use the shared locked slide that already draws this (`Slide.tsx`'s `ow-lslide quiet`, `slide.css:19–21`), not `<Slide state="blocked|offline">`.
+- **T21 · `--ink-faint` on the ground, 4.35:1.** TD24's "a colleague with a yard login shows here" (`frame.css:43 .st-nobody span`) and TD22's "code ST-101" (`signin.css:61`). The boards draw #5F6980. Fix: `var(--ink-soft)`, as the token's own comment says.
+- **T22 · "Sending…" in dark ink on the red fill, 1.24:1** (TD19). `slide.css .ow-sslide-l` sets no colour, so it takes the dock's ink. The board draws it white. Fix: `.ow-sslide { color: #FFFFFF; }`.
+- **T23 · the pressed red button keeps its size** (TD33). The colour is right, but the board also draws `scale(.97)`. Fix: `.ow-plus:active { transform: scale(.97) }` in `src/ui/tabbar.css`. The shared P16 is drawn with the same press; if Sales' canvas disagrees, list it as an open question rather than choosing.
+- **T24 · "Forgot password?" does nothing** (TD20, TD31, TD23). `SignIn.tsx:58` calls `toast.show`, but `shell/App.tsx:62–64` renders the login, checking and no-reach phases without `<ToastHost />`. So Q21's words, "Ask your manager for a new invite link", never show. Fix: render `<ToastHost />` (and `<SheetHost />`) in those three branches.
+- **T25 · TD23 cannot be reached.** The demo signs in at once, so "Signing in…" shows for one frame. Fix: make the demo's `signIn` wait about 1.5 s (or add a `&slow=1` flag), and shoot it in the spec.
+- **T26 · Checking** (TD21). The Next job skeleton does not match the board:
+  - the board draws a 228 px flat navy card with the tag and from pills, an 84 px ring, three 58 px tiles, and the lock line 16 px lower;
+  - the app (`Boot.tsx`) draws a 210 px gradient card with a thin bar and a smaller ring.
+
+  Fix: match the board's shapes. Also, the board links Today and Shelf in the tab bar, but in the checking phase the app's tabs do nothing (`App.tsx:63`). Either mark them `aria-disabled` and have the lead correct TD21's links, or let Shelf open.
+- **T27 · No reach** (TD22). Four differences:
+  - "Open the copy" says "saved on this phone" without the board's **7:52**;
+  - tapping it opens Today "Not loaded" (TD07), because the `no-reach` demo has no saved copy;
+  - "Work kept" says "nothing waiting" where the board draws "2 waiting to send";
+  - "Work kept" is not a link, where the board draws one.
+
+  Fix: the `no-reach` seed keeps the 7:52 copy and the two kept writes, as `&offline&kept=1` does. `Boot.tsx:67` prints the copy's time and shows "Open the copy" only when a copy exists. "Work kept" opens Today's Waiting to send.
