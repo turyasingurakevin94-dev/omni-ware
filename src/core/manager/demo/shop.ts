@@ -60,7 +60,7 @@ export function customers(): Cust[] {
     }),
     c('ggaba', 'Ggaba Stores', 'GS', {
       phone: '0772 418 330', place: 'Ggaba', owes: 1_615_000, limit: 2_000_000, termsDays: 14, sellers: ['grace'], orders: 6,
-      bills: [{ orderId: 0, day: '2026-10-01', left: 290_000 }, { orderId: 531, day: '2026-10-01', left: 1_325_000 }],
+      bills: [{ orderId: 531, day: '2026-10-01', left: 1_615_000 }],
       lookAlike: { id: 'gaba', why: 'phone' }, oldBooks: { amount: 290_000, since: '2026-10-01' },
     }),
     c('gaba', 'Gaba Stores', 'GS', { phone: '0772 418 330', place: 'Ggaba', sellers: ['grace'], orders: 1, lookAlike: { id: 'ggaba', why: 'phone' } }),

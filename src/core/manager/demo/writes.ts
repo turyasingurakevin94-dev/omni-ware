@@ -223,7 +223,8 @@ export function demoWrites(get: B, now: () => Ms) {
     },
     opening(customerId: string, amount: UGX, since: Day) {
       const c = cust(customerId);
-      if (c) c.oldBooks = null;
+      // As set_opening_balance: the old books' figure becomes what they owe, the first bill (0148).
+      if (c) { c.owes += amount; c.bills.unshift({ orderId: 0, day: since, left: amount }); c.oldBooks = null; }
       done('Opening balance', `${c ? c.name : ''} · ${money(amount)} · since ${since}`, []);
     },
     promise(customerId: string, on: Day, amount: UGX) {
