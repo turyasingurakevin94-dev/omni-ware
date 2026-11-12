@@ -344,7 +344,7 @@ def notif(title, body_lines, action_html, when="now"):
     lines = "".join(f'<span style="{MONO}; font-size: 12px; color: #D5DAE6; line-height: 1.35">{l}</span>' for l in body_lines)
     return (f'<div style="background: #0B1020; border-radius: 16px; padding: 10px">'
             f'<div style="background: #222A3D; border-radius: 14px; padding: 10px 12px 4px; display: flex; flex-direction: column; gap: 4px; color: #fff">'
-            f'<span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: {ONNAVY}"><i style="width: 14px; height: 14px; border-radius: 4px; background: #C93A30"></i>Manager · {when}</span>'
+            f'<span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: {ONNAVY}"><i style="width: 14px; height: 14px; border-radius: 4px; background: #16203C; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3)"></i>Manager · {when}</span>'
             f'<span style="font-size: 14px; font-weight: 700">{title}</span>{lines}'
             f'<div style="display: flex; align-items: center; gap: 4px; border-top: 1px solid rgba(255,255,255,.08); margin-top: 4px">{action_html}</div></div></div>')
 

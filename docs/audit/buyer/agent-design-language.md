@@ -171,3 +171,7 @@ app does not have. One line each: what it shows · the Agent part it is built fr
 - **Nudge/Give segmented head**: what to do with a person or order · `.ax-seg`.
 - **Before/after dot chart**: taps before (grey) → after (green), red when no drop · Suggest row's progress bar.
 - **Struck pill**: a choice that is gone (Keep held) · `.ax-pill` soft, struck.
+
+**Manager choice (Nov 2026):** need badges and the "Needs you" dot are **navy** in the Manager app, so the
+only red on a screen is the one move (the + FAB, or the slide knob). The Manager's screens carry many
+waiting counts at once; red on each would compete with the one move.

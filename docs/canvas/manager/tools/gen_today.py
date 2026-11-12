@@ -3,7 +3,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from sheet import d7_sheet, d18_sheet, s_toast  # the ONE decision sheet
+from sheet import d7_sheet, d18_sheet, d7_dock, s_toast  # the ONE decision sheet
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Today.dc.html')
 
 MONO = "font-family: 'IBM Plex Mono', monospace"
@@ -493,14 +493,12 @@ def state(lbl, inner, nt):
 
 
 GRACE_SEES = sees(dot("GA") + "Grace sees", "Approved", on_navy=False)
-G_ROW = lambda ctrl, sub="#0555 · 46,000 · 1 h 05 m", title="Under the shop's price", extra="": nk_row("GA", title, sub, ctrl, first=True, extra_style=extra)
+G_ROW = lambda ctrl, sub="Grace · #0555 · 1 h 05", title="Under the shop's price", extra="": nk_row("GA", title, sub, ctrl, first=True, extra_style=extra)
 
 S_DEFAULT = state("DEFAULT", card(white_row(G_ROW(pill("Approved"))) + GRACE_SEES), "one tap answers · Iron sheet G28 · shop's 47,500")
 S_PRESSED = state("PRESSED", card(white_row(G_ROW(pill("Approved", bg="#0C1326", extra="; transform: scale(.95); box-shadow: 0 0 0 4px rgba(22,32,60,.15)"))) + GRACE_SEES), "pill darkens · scales 95% · tick feel")
 S_DISABLED = state("DISABLED", card(
-    f'<div style="background: {NAVY}; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">'
-    + limit_chips(-1).replace("background: #fff; color: #1C2233", "background: rgba(255,255,255,.08); color: #fff").replace("box-shadow: inset 0 0 0 1px #E6E3DD", "box-shadow: none")
-    + '<button disabled aria-disabled="true" style="height: 56px; border: none; border-radius: 999px; background: rgba(255,255,255,.12); color: #B3BCD2; font-size: 16px; font-weight: 700; cursor: default">Pick a limit to load it</button></div>'),
+    '<div style="border-radius: 16px; overflow: hidden">' + d7_dock("disabled").replace("border-radius: 24px 24px 0 0", "border-radius: 16px") + '</div>'),
     "#0551 · no limit picked · the button says what is missing")
 S_SENDING = state("SENDING", card(white_row(G_ROW(f'<button disabled aria-busy="true" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #243052; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: default">{ic("spin", 16, 2.4)}Approved</button>')) + GRACE_SEES), "row holds · nothing else moves")
 SUCCESS_CTRL = (f'<button aria-label="Undo, 8 seconds left" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: #F1EEE8; color: {NAVY}; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{ic("undo", 14, 2.4)}Undo <span style="{MONO}">8</span></button>')

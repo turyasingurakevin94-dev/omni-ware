@@ -184,6 +184,11 @@ The push title is `{asker} · {ask word} · {#order}`, its body the evidence, an
 | Shelf part OK · Order only | The carton answers | Approve the shelf part; Refuse; said no to the carton |
 | Not yet · Go ahead | The restock hold | held a restock line; let it go ahead |
 | Decide next | The Manager's FAB: the oldest waiting decision | Start with the oldest (which opened a list) |
+| Open | A row whose answer is a slide: opens the decision sheet (never answers on the row) | Go; View |
+| Change | Opens an editor behind a value already set (a limit, a goal) | Edit (for a value) |
+| Promise · Promised | The button that records a promise to pay · the state after | Record a promise |
+| Nothing paid | An order or bill with no payment on it (a cancel needs no money choice) | Unpaid (as a reason) |
+| Another price | The rung that opens the price keypad | Custom; Other |
 
 ---
 

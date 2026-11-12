@@ -3,6 +3,9 @@
 import os
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'DecideStock.dc.html')
 M = "font-family: 'IBM Plex Mono', monospace"
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sheet as SH  # the ONE decision sheet
 
 def svg(paths, size=16, sw=2, extra=''):
     return (f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -117,7 +120,7 @@ def ghost_btn(t, aria, icon=None, h=44):
 
 def slide(t, aria, state='ready'):
     if state == 'ready':
-        fill = '<i style="position: absolute; left: 5px; top: 5px; bottom: 5px; width: 50px; border-radius: 999px; background: rgba(201,58,48,.35)"></i>'
+        fill = '<i style="position: absolute; left: 5px; top: 5px; bottom: 5px; width: 50px; border-radius: 999px; background: rgba(255,255,255,.10)"></i>'
         knob = f'<button aria-label="{aria}" style="position: relative; z-index: 1; width: 50px; height: 50px; border-radius: 999px; background: #C93A30; border: none; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0">{svg(I["go"], 22, 2.4)}</button>'
         lab = f'<span style="position: absolute; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 700; color: #fff; padding: 0 60px; white-space: nowrap">{t}</span>'
         bg = 'rgba(255,255,255,.08)'
@@ -127,7 +130,7 @@ def slide(t, aria, state='ready'):
         lab = f'<span style="position: absolute; left: 0; right: 0; text-align: center; font-size: 15px; font-weight: 600; color: #B3BCD2; padding: 0 56px 0 60px; white-space: nowrap">{t}</span>'
         bg = 'rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08)'
     else:  # busy
-        fill = '<i style="position: absolute; left: 5px; right: 5px; top: 5px; bottom: 5px; border-radius: 999px; background: rgba(201,58,48,.35)"></i>'
+        fill = '<i style="position: absolute; left: 5px; right: 5px; top: 5px; bottom: 5px; border-radius: 999px; background: rgba(255,255,255,.10)"></i>'
         knob = f'<span style="flex: 1"></span><button disabled aria-busy="true" aria-label="{aria}" style="position: relative; z-index: 1; width: 50px; height: 50px; border-radius: 999px; background: #C93A30; border: none; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; cursor: default">{svg(I["spin"], 22, 2.4)}</button>'
         lab = f'<span style="position: absolute; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: 700; color: #fff; padding: 0 60px; white-space: nowrap">{t}</span>'
         bg = 'rgba(255,255,255,.08)'
@@ -173,13 +176,12 @@ p1_body = f'''<div style="{CARD}; padding: 12px; display: flex; gap: 12px">
 {switch(True, "Write off Cement 50 kg, 3 bags")}
 </div>
 <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["doc"], 14)}In the owner's log · at cost</div>'''
-p1_dock = dock(
-    ghost_btn('Kept on the shelf', 'Kept on the shelf: nothing is written off, Musa is told', 'shelf') + total('102,000', '−3 bags', '#F5B2A8'),
-    sees('MK', 'Musa', chip('Written off')).replace('<div style="display: flex;', '<div style="display: flex; padding: 0 2px;', 1) + slide('Write off · 102,000', 'Slide to write off 3 bags, 102,000 at cost'))
-P1 = sheet('Damaged, from Musa', 'MK', 'Damaged · write off?', f'From Musa · Store', '1 h 30', '6 of 8',
-           ev_pill('alert', f'Broken in the yard · {mono("3")} bags', 'loss'),
-           strip(f'Cement 50 kg · {mono("3 bags")}', 'Asked · <span style="font-family: \'IBM Plex Mono\', monospace">08:10</span> · photo', '102,000', '34,000 a bag'),
-           p1_body, p1_dock)
+P1 = SH.decision_sheet(pos=4, total=8, ini="MK", who="Musa", role="Store", asked="08:10", ref="Cement 50 kg · 3 bags", age="1 h 30",
+    title="Damaged · Cement 50 kg", tags=[SH.s_tag(f'Broken in the yard · {mono("3")} bags', "amber")], body=p1_body,
+    dock=SH.sheet_dock("", SH.s_slide("Written off", "102,000", "Slide: Written off, 3 bags, 102,000 at cost. Musa sees it"),
+                       SH.s_second("Kept on the shelf", "Kept on the shelf: nothing is written off. Musa sees it"),
+                       SH.s_total("102,000", "3 bags at cost", "#B3BCD2", left=SH.s_sees("Musa", "Written off"))),
+    aria="Damaged, Cement 50 kg, from Musa")
 
 # ======================= PHONE 2 · D-24 carton =======================
 ticks = ''.join(f'<i style="flex: 1; height: 10px; border-radius: 2px; background: {"#0F6B43" if i < 14 else "#F1EEE8"}"></i>' for i in range(15))
@@ -193,16 +195,14 @@ p2_body = f'''<div style="{CARD}; padding: 12px 14px; display: flex; flex-direct
 <div style="display: flex; justify-content: space-between; {M}; font-size: 11px; color: #6B7480"><span>Oct 2026</span><span>Dec 2027</span></div>
 </div>
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-{outcome("Shelf part OK", "200 · 300,000", "199 on the shelf", "shelf", "good")}
+{outcome("Shelf part OK", "199 · 298,500", "carton 300,000 · 1 for the order", "shelf", "good")}
 {outcome("Order only", "1 · 1,500", "nothing on the shelf", "box", "soft")}
 </div>'''
-p2_dock = dock(sees('DO', 'Denis', chip('Shelf part OK')) + total('298,500', '+199 packs'),
-               '<div style="display: flex; gap: 8px; align-items: center">' + ghost_btn('Order only', 'Order only: Denis buys 1 pack', None, 56).replace('flex: none;', 'flex: none; padding: 0 16px;') +
-               white_btn('Shelf part OK', 'Shelf part OK: Denis buys the carton, 199 for the shelf').replace('width: 100%;', 'flex: 1;') + '</div>')
-P2 = sheet('A carton for the shelf, from Denis', 'DO', 'A carton for the shelf?', 'From Denis · Buyer', '0 h 15', '8 of 8',
-           ev_pill('box', f'{mono("1")} for the order · {mono("199")} for the shelf'),
-           strip('Wall plugs · <span style="font-family: \'IBM Plex Mono\', monospace">200 packs</span>', 'Asked · <span style="font-family: \'IBM Plex Mono\', monospace">09:25</span> · a carton', '298,500', '1,500 a pack'),
-           p2_body, p2_dock)
+P2 = SH.decision_sheet(pos=8, total=8, ini="DO", who="Denis", role="Buyer", asked="09:25", ref="Wall plugs · 200 packs", age="15 m",
+    title="A carton for the shelf?", tags=[SH.s_tag(f'{mono("1")} for the order · {mono("199")} for the shelf')], body=p2_body,
+    dock=SH.sheet_dock(SH.s_sees("Denis", "Shelf part OK"), SH.s_primary("Shelf part OK", "298,500", "Shelf part OK: Denis buys the carton, 199 for the shelf, 298,500. Denis sees it"),
+                       SH.s_second("Order only · 1,500", "Order only: Denis buys 1 pack. Denis sees it")),
+    aria="A carton for the shelf, from Denis")
 
 # ======================= PHONE 3 · D-13 check-in (+D-14 note) =======================
 def tline(name, sup, d, m, diff=None):
@@ -224,14 +224,11 @@ p3_body = f'''<div style="{CARD}; padding: 12px 14px; display: flex; flex-direct
 <span style="padding: 8px 10px; border-radius: 12px; background: #F7F5F2; font-size: 13px; font-weight: 600">“12 went on the truck at Owino.”</span>
 <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #5F6980">{svg(I["tick"], 13)}Closes with the check-in</span>
 </div>'''
-p3_dock = dock(sees('MK', 'Musa', chip('Check-in taken')) + total('−28,000', '11 on the shelf', '#F5B2A8'),
-               '<div style="display: flex; gap: 8px; align-items: center">' +
-               f'<button aria-label="Nudge Denis about the difference" style="flex: none; width: 56px; height: 56px; border: none; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0">{svg(I["chat"], 22)}</button>' +
-               white_btn('Take the check-in', 'Take the check-in: the shelf takes Musa\'s count, Musa and Denis are told').replace('width: 100%;', 'flex: 1;') + '</div>')
-P3 = sheet("Musa's check-in differs", 'MK', "Musa's check-in differs", "From Musa · Denis's trip", '0 h 05', '1 of 2',
-           ev_pill('truck', f'{mono("1")} of {mono("3")} lines differs', 'warn'),
-           strip('PVC pipe 4 in · <span style="font-family: \'IBM Plex Mono\', monospace">11 of 12</span>', 'Asked · <span style="font-family: \'IBM Plex Mono\', monospace">10:10</span> · Owino · back 09:10', '−28,000', 'at cost'),
-           p3_body, p3_dock)
+P3 = SH.decision_sheet(pos=1, total=1, ini="MK", who="Musa", role="Store", asked="10:10", ref="Denis's trip · Owino", age="6 m",
+    title="Musa's check-in differs", tags=[SH.s_tag(f'{mono("1")} of {mono("3")} lines differs', "amber")], body=p3_body,
+    dock=SH.sheet_dock(SH.s_sees("Musa · Denis", "Ruth took Musa's check-in"), SH.s_primary("Take the check-in", "−28,000", "Take the check-in: the shelf takes Musa's count, 28,000 at cost. Musa and Denis see it"),
+                       SH.s_second("Nudge Denis", "Nudge Denis about the difference")),
+    aria="Musa's check-in differs, Denis's trip")
 
 # ======================= PHONE 4 · D-15 not on the list =======================
 c4 = ''.join(f'<i style="height: 18px; box-sizing: border-box; border-radius: 3px; {"background: #16203C" if i < 20 else "background: #FDEEE1; border: 1.5px dashed #95530C"}"></i>' for i in range(22))
@@ -246,31 +243,30 @@ p4_body = f'''<div style="{CARD}; padding: 12px 14px; display: flex; flex-direct
 {outcome("Keep it", "+2 · 68,000", "on the shelf, at cost", "shelf", "good")}
 {outcome("It goes back", "2 · back", "to Nakawa, next trip", "back", "soft")}
 </div>'''
-p4_dock = dock(sees('MK', 'Musa', chip('Keep it')) + total('68,000', '+2 bags'),
-               '<div style="display: flex; gap: 8px; align-items: center">' + ghost_btn('It goes back', 'It goes back: the 2 bags go back to Nakawa', None, 56).replace('flex: none;', 'flex: none; padding: 0 16px;') +
-               white_btn('Keep it', 'Keep it: 2 bags go on the shelf, Musa is told').replace('width: 100%;', 'flex: 1;') + '</div>')
-P4 = sheet('Not on the list, from Musa', 'MK', 'Not on the list · keep it?', "From Musa · Denis's trip", '0 h 03', '2 of 2',
-           ev_pill('truck', f'{mono("2")} bags more than the list', 'warn'),
-           strip('Cement 50 kg · <span style="font-family: \'IBM Plex Mono\', monospace">2 bags</span>', 'Asked · <span style="font-family: \'IBM Plex Mono\', monospace">10:17</span> · on the truck', '68,000', '2 × 34,000'),
-           p4_body, p4_dock)
+P4 = SH.decision_sheet(pos=2, total=2, ini="MK", who="Musa", role="Store", asked="10:17", ref="Denis's trip · Nakawa", age="3 m",
+    title="Not on the list · keep it?", tags=[SH.s_tag(f'{mono("2")} bags more than the list', "amber")], body=p4_body,
+    dock=SH.sheet_dock(SH.s_sees("Musa", "Keep it"), SH.s_primary("Keep it", "68,000", "Keep it: 2 bags go on the shelf, 68,000 at cost. Musa sees it"),
+                       SH.s_second("It goes back", "It goes back: the 2 bags go back to Nakawa. Musa sees it")),
+    aria="Not on the list, keep it? From Musa")
 
 def phone_col(lab, ph, taps):
-    return f'<div style="display: flex; flex-direction: column; gap: 8px">{label(lab)}{ph}{note(taps)}</div>'
+    frame = f'<div style="position: relative; width: 360px; height: 780px; box-sizing: border-box; border-radius: 32px; border: 1px solid #E6E3DD; overflow: hidden; background: #F7F5F2">{ph}</div>'
+    return f'<div style="display: flex; flex-direction: column; gap: 8px">{label(lab)}{frame}{note(taps)}</div>'
 
 ROW1 = ''.join([
-  phone_col(f'1 · D-16 · DAMAGED · WRITE OFF · {mono("09:40")}', P1, 'Write off · app 4 → 2 · push 2 → 2 (a slide)<br>Kept on the shelf · app — → 2 · push — → 1'),
-  phone_col(f'2 · D-24 · A CARTON FOR THE SHELF · {mono("09:40")}', P2, 'Shelf part OK · app 4 → 2 · push 2 → 1<br>Order only · app 4 → 2'),
-  phone_col(f"3 · D-13 + D-14 · CHECK-IN DIFFERS · {mono('10:15')}", P3, "Take the check-in · app 4 → 2 · push 2 → 1<br>with Denis's note 3 → 1 · the note alone 2 → 0"),
-  phone_col(f'4 · D-15 · NOT ON THE LIST · {mono("10:20")}', P4, 'Keep it · app — → 2 · push — → 1<br>no screen today · It goes back — → 2'),
+  phone_col(f'1 · D-16 · DAMAGED · 4 OF 8 · {mono("09:40")}', P1, 'Written off · app 4 → 2 · push 2 → 2 (a slide)<br>Kept on the shelf · app — → 2 · push — → 1'),
+  phone_col(f'2 · D-24 · A CARTON FOR THE SHELF · 8 OF 8 · {mono("09:40")}', P2, 'Shelf part OK · app 4 → 2 · push 2 → 1<br>Order only · app 4 → 2'),
+  phone_col(f"3 · D-13 + D-14 · CHECK-IN DIFFERS · 1 OF 1 · {mono('10:16')}", P3, "Take the check-in · app 4 → 2 · push 2 → 1<br>with Denis's note 3 → 1 · the note alone 2 → 0"),
+  phone_col(f'4 · D-15 · NOT ON THE LIST · 2 OF 2 · {mono("10:20")}', P4, 'Keep it · app — → 2 · push — → 1<br>no screen today · It goes back — → 2'),
 ])
 
 # ======================= SCORE PANEL =======================
 AG = [9, 9, 8, 8, 8]
 LABELS = ['Agent consistency', 'Taps per decision', 'Glanceability', 'Polish', 'In step with asker']
-PAGES = [('D-16 · Write off', [5, 5, 5, 6, 4], [9, 9, 9, 9, 9]),
-         ('D-24 · A carton for the shelf', [5, 6, 5, 6, 5], [9, 10, 9, 9, 9]),
-         ('D-13 + D-14 · Check-in differs', [5, 5, 6, 6, 4], [9, 10, 9, 9, 9]),
-         ('D-15 · Not on the list', [1, 1, 1, 1, 1], [9, 10, 9, 9, 9])]
+PAGES = [('D-16 · Written off', [5, 5, 5, 6, 4], [9, 9, 9, 8, 9]),
+         ('D-24 · A carton for the shelf', [5, 6, 5, 6, 5], [9, 9, 9, 9, 9]),
+         ('D-13 + D-14 · Check-in differs', [5, 5, 6, 6, 4], [9, 9, 8, 8, 9]),
+         ('D-15 · Not on the list', [1, 1, 1, 1, 1], [9, 9, 9, 9, 9])]
 avg = lambda xs: f'{sum(xs) / len(xs):.1f}'
 GOOD, BAD = '#0F6B43', '#C93A30'
 sp = ''
@@ -293,7 +289,7 @@ SCORE = f'''<div style="width: 360px; box-sizing: border-box; margin-top: 23px; 
 <span style="display: flex; gap: 10px; font-size: 11px; font-weight: 600; color: #5F6980"><span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 9px; background: #C9C4BA"></i>Manager today</span><span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 9px; background: #16203C"></i>Agent app</span><span style="display: flex; align-items: center; gap: 4px"><i style="width: 10px; height: 4px; border-radius: 9px; background: #0F6B43"></i>New</span></span></div>
 {sp}
 <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 0"><span style="font-size: 13px; font-weight: 700">Average</span><span style="{M}; font-size: 15px; font-weight: 600; color: #6B7480">{avg(allold)} · <b style="color: #16203C">{avg(AG)}</b> · <b style="color: #0F6B43">{avg(allnew)}</b></span></div>
-<div style="padding: 10px 12px; border-radius: 12px; background: #F1EEE8; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700">Agent match · Needs you + basket dock</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; line-height: 1.35">Navy sheet head with the asker · evidence drawn in white cards · navy dock: who sees what, the mono total, one white button or the red slide</span></div>
+<div style="padding: 10px 12px; border-radius: 12px; background: #F1EEE8; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; font-weight: 700">Agent match · Needs you + basket dock</span><span style="font-size: 12px; font-weight: 600; color: #5F6980; line-height: 1.35">The one decision sheet · evidence drawn in white cards · navy dock: who sees what, one white answer or the red-knob slide, an outline second</span></div>
 </div>'''
 
 # ======================= ROW 2 · STATES =======================
@@ -304,13 +300,13 @@ def state(lab, inner, nt):
 NAVYBOX = 'background: #16203C; color: #fff; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px'
 
 # 1 DEFAULT · D-17 count
-dots17 = ''.join(f'<i style="height: 14px; border-radius: 4px; background: {"#6FDCB0" if i < 10 else "#F5B2A8"}"></i>' for i in range(12))
+dots17 = ''.join(f'<i style="height: 14px; border-radius: 4px; background: {"#6FDCB0" if i < 10 else "#F5B26B"}"></i>' for i in range(12))
 def cline(n, b, c, v, col):
     return (f'<div style="display: flex; align-items: center; gap: 8px; min-height: 30px"><span style="flex: 1; font-size: 13px; font-weight: 700; white-space: nowrap">{n}</span>'
             f'{mono(f"{b} → {c}", 12, 600, "#5F6980")}<span style="width: 64px; text-align: right">{mono(v, 12, 600, col)}</span></div>')
 S1 = state('DEFAULT · D-17 A COUNT TO CHECK · 16:20', f'''<div style="{NAVYBOX}">
 <div style="display: flex; align-items: center; gap: 10px">{av("MK", 36, 12)}<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700; white-space: nowrap">A count to check · Aisle B</span><span style="font-size: 12px; font-weight: 600; color: #B3BCD2; white-space: nowrap">From Musa · Asked · {mono("16:20")}</span></div></div>
-<div style="display: flex; align-items: center; gap: 10px"><div role="img" aria-label="12 items: 10 agree, 2 differ" style="flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px">{dots17}</div>{mono("−12,000", 15, 600, "#F5B2A8")}</div>
+<div style="display: flex; align-items: center; gap: 10px"><div role="img" aria-label="12 items: 10 agree, 2 differ" style="flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px">{dots17}</div>{mono("−12,000", 15, 600, "#F5B26B")}</div>
 </div>
 <div style="{CARD}; padding: 4px 12px">{cline("Timber 2×4", 30, 28, "−18,000", "#8E2A22")}<div style="height: 1px; background: #F1EEE8"></div>{cline("Wall plugs", 40, 44, "+6,000", "#0F6B43")}</div>
 <div style="background: #16203C; border-radius: 16px; padding: 8px; display: flex; gap: 8px; align-items: center">{ghost_btn("Count it again", "Count it again: Musa counts the 2 items again")}<div style="flex: 1">{slide("Count taken", "Slide to take the count, net −12,000")}</div></div>''',
@@ -327,18 +323,19 @@ S2 = state("PRESSED · D-23 DENIS'S RESTOCK LIST", f'''<div style="display: flex
 <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["eye"], 14)}{dot("DO")}Denis sees{chip("Not yet", "warn")}<span>or</span>{chip("Go ahead")}{svg(I["bell"], 14)}</div>''',
  'D-23 · Not yet · app 4 → 3 · no push in (nobody asks) · pill darkens 95%')
 
+def frag(dock_html):
+    return f'<div style="border-radius: 16px; overflow: hidden">{dock_html.replace("border-radius: 24px 24px 0 0", "border-radius: 16px")}</div>'
+
 # 3 DISABLED · D-16 switch off
 S3 = state('DISABLED · D-16 NOTHING PICKED', f'''<div style="display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 6px 4px 6px 10px; box-sizing: border-box; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD">
 <span style="width: 38px; height: 38px; flex: none; border-radius: 12px; background: #F1EEE8; color: #5F6980; display: flex; align-items: center; justify-content: center">{svg(I["bag"], 20)}</span>
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 14px; font-weight: 700; white-space: nowrap; color: #5F6980">Cement 50 kg · {mono("3")}</span><span style="{M}; font-size: 11px; color: #6B7480">Damaged · 3 × 34,000</span></div>
 {mono("0", 13, 600, "#5F6980")}{switch(False, "Write off Cement 50 kg, 3 bags")}</div>
-<div style="background: #16203C; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: center; justify-content: space-between">{ghost_btn("Kept on the shelf", "Kept on the shelf", "shelf")}{total("0", "nothing picked", "#B3BCD2")}</div>{slide("Pick what to write off", "Write off: pick a line first", "off")}</div>''',
+{frag(SH.sheet_dock("", SH.s_slide("Pick what to write off", None, "Written off: pick a line first", "disabled"), SH.s_second("Kept on the shelf"), SH.s_total("0", "nothing picked", "#B3BCD2", left=SH.s_sees("Musa", "Written off"))))}''',
  'switch off → knob greys · Kept on the shelf still one tap')
 
 # 4 SENDING · D-16
-S4 = state('SENDING · D-16 THE SLIDE WENT', f'''<div style="background: #16203C; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
-<div style="display: flex; align-items: center; justify-content: space-between">{sees("MK", "Musa", chip("Written off"))}{total("102,000", "−3 bags", "#F5B2A8")}</div>
-{slide("Writing off", "Writing off 102,000", "busy")}</div>
+S4 = state('SENDING · D-16 THE SLIDE WENT', f'''{frag(SH.sheet_dock('', SH.s_slide('Written off', '102,000', 'Sending: Written off, 102,000', 'sending'), '', SH.s_total('102,000', '3 bags at cost', '#B3BCD2', left=SH.s_sees('Musa', 'Written off'))))}
 <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["shelf"], 14)}Shelf {mono("26 → 23", 12, 600, "#1C2233")} once the books take it</div>''',
  'the knob rests at the end · a slide can\'t go twice')
 
@@ -346,11 +343,11 @@ S4 = state('SENDING · D-16 THE SLIDE WENT', f'''<div style="background: #16203C
 undo_bar = '<i style="display: block; height: 3px; border-radius: 9px; background: rgba(255,255,255,.15); position: relative; overflow: hidden"><i style="position: absolute; left: 0; top: 0; bottom: 0; width: 60%; background: #6FDCB0; border-radius: 9px"></i></i>'
 S5 = state('SUCCESS · UNDO 10 S · D-14 CLOSES', f'''<div style="{NAVYBOX}; gap: 8px">
 <div style="display: flex; align-items: center; gap: 10px"><span style="width: 36px; height: 36px; flex: none; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center">{svg(I["tick"], 20, 2.4)}</span>
-<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Check-in taken</span><span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #B3BCD2; white-space: nowrap">{dot("MK", 10)}Musa · {dot("DO", 10)}Denis see it {svg(I["bell"], 12)}</span></div>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Ruth took Musa's check-in</span><span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #B3BCD2; white-space: nowrap">{dot("MK", 10)}Musa · {dot("DO", 10)}Denis see it {svg(I["bell"], 12)}</span></div>
 <button aria-label="Undo, 6 seconds left" style="flex: none; height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">{svg(I["undo"], 15)}Undo · {mono("6 s")}</button></div>
 {undo_bar}</div>
 <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 12px; font-weight: 600; color: #5F6980">{svg(I["doc"], 14)}Denis's note → the trip's history</div>
-<button aria-label="Next: Musa, not on the list" style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px 6px 8px; border: none; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD; text-align: left; color: #1C2233; transform: translateX(14px); opacity: .9">{av("MK", 36, 12)}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 700; color: #5F6980">NEXT · 2 of 2</span><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Not on the list · keep it?</span></span>{svg(I["chev"], 18)}</button>''',
+<button aria-label="Next: Musa, not on the list" style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px 6px 8px; border: none; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E6E3DD; text-align: left; color: #1C2233">{av("MK", 36, 12)}<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; font-weight: 700; color: #5F6980">NEXT · 2 of 2</span><span style="font-size: 14px; font-weight: 700; white-space: nowrap">Not on the list · keep it?</span></span>{svg(I["chev"], 18)}</button>''',
  'Undo 10 s, then the next card slides in by itself')
 
 # 6 ERROR · D-15
@@ -376,8 +373,8 @@ S8 = state('EMPTY · NO STOCK DECISION · 09:59', f'''<div style="{CARD}; paddin
 <span style="width: 36px; height: 36px; flex: none; border-radius: 999px; background: #E4F4EA; color: #0F6B43; display: flex; align-items: center; justify-content: center">{svg(I["tick"], 20, 2.4)}</span>
 <div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Nothing waits on you</span><span style="{M}; font-size: 11px; color: #6B7480">09:49 · written off 102,000 · Musa</span></div></div>
 <div style="position: relative; margin: 6px -12px -12px; background: #fff; border-top: 1px solid #E6E3DD; display: grid; grid-template-columns: 1fr 1fr 80px 1fr 1fr; align-items: start; padding: 6px 0 8px">
-{tab("Today", I["clock"], True)}{tab("Orders", I["list"])}
-<button aria-label="Decide next: nothing waits" style="justify-self: center; margin-top: -24px; width: 60px; height: 60px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #fff; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(201,58,48,.35); display: flex; align-items: center; justify-content: center; padding: 0">{svg(I["tick"], 26, 2.4)}</button>
+{tab("Today", '<path d="M6.3 16.4a5.7 5.7 0 0 1 11.4 0z" fill="currentColor"/><path d="M12 3.4v2.3M5.4 6.5l1.6 1.6M18.6 6.5l-1.6 1.6M2.4 16.4h19.2M5.6 20.4h12.8"/>', True)}{tab("Orders", '<path d="M8 4h8v3H8z"/><path d="M6 5.5H5V21h14V5.5h-1"/><path d="M9 12h6"/><path d="M9 16h4"/>')}
+<button aria-label="Decide next: nothing waits" style="justify-self: center; margin-top: -24px; width: 60px; height: 60px; box-sizing: border-box; border-radius: 999px; background: #C93A30; color: #fff; border: 4px solid #F7F5F2; box-shadow: 0 6px 20px rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center; padding: 0">{svg(I["tick"], 26, 2.4)}</button>
 {tab("Money", '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>')}{tab("Team", '<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 12 0v1"/><path d="M16 4a4 4 0 0 1 0 8M22 21v-1a6 6 0 0 0-4-5.6"/>')}
 </div>''',
  'the + shows a tick, no badge · the log keeps it')
@@ -386,7 +383,7 @@ S8 = state('EMPTY · NO STOCK DECISION · 09:59', f'''<div style="{CARD}; paddin
 def notif(ini, title, body, action, aria):
     bg, ink = PEOPLE[ini]
     return f'''<div style="background: #262C3A; border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; color: #fff">
-<div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #B3BCD2"><i style="width: 14px; height: 14px; border-radius: 4px; background: #C93A30"></i>Manager · now</div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #B3BCD2"><i style="width: 14px; height: 14px; border-radius: 4px; background: #16203C; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3)"></i>Manager · now</div>
 <div style="display: flex; gap: 10px"><div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; font-weight: 700">{title}</span><span style="{M}; font-size: 12px; color: #D5DAE6; line-height: 1.45">{body}</span></div>{av(ini, 36, 12)}</div>
 <div style="display: flex; gap: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.08)">{action}</div></div>'''
 def nact(t, aria):
@@ -415,7 +412,7 @@ TOP = f'''<div style="height: 64px; display: flex; align-items: center; gap: 20p
 <div style="display: flex; flex-direction: column; gap: 2px; flex: none"><span style="font-size: 28px; font-weight: 800; letter-spacing: -.01em">Decide · stock</span><span style="{M}; font-size: 12px; color: #5F6980">manager.html · the red + · Sat 17 Oct · mirrors Agent Needs you + dock</span></div>
 <div style="flex: 1"></div>
 <div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #16203C; color: #fff"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Asks in</span>{ask_chip("D-16", "Damaged")}{ask_chip("D-24", "A carton")}{ask_chip("D-13", "Check-in differs")}{ask_chip("D-15", "Not on the list")}{ask_chip("D-17", "A count to check")}</div>
-<div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #FDE8E4; color: #A82D24"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Answers out</span>{ans_chip("Written off")}{ans_chip("Shelf part OK")}{ans_chip("Check-in taken")}{ans_chip("Keep it")}{ans_chip("Count taken")}{ans_chip("Not yet")}</div>
+<div style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 7px 0 14px; border-radius: 999px; background: #FDE8E4; color: #A82D24"><span style="font-size: 13px; font-weight: 700; margin-right: 2px; white-space: nowrap">Answers out</span>{ans_chip("Written off")}{ans_chip("Shelf part OK")}{ans_chip("Ruth took Musa&#39;s check-in")}{ans_chip("Keep it")}{ans_chip("Count taken")}{ans_chip("Not yet")}</div>
 </div>'''
 
 HTML = f'''<!doctype html>
