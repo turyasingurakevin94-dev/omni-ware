@@ -229,16 +229,17 @@ WATCH = [
 def watch_rows():
     out = ""
     for ini, t, ev, act, aria in WATCH:
-        out += (f'<button aria-label="{aria}" style="min-width: 0; height: 52px; border: none; border-radius: 12px; background: #F7F5F2; padding: 0 8px; display: flex; flex-direction: column; justify-content: center; gap: 3px; text-align: left; color: #1C2233">'
-                f'<span style="display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap">{av(ini, 18, 11)}<b style="font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis">{t}</b></span>'
-                f'<span style="display: flex; align-items: center; justify-content: space-between; gap: 4px; white-space: nowrap">{mono(ev, 11, "#1C2233", 600)}<span style="font-size: 11px; font-weight: 700; color: {NAVY}; text-decoration: underline">{act.split()[0]}</span></span></button>')
+        # round 3, fix 9: Nudge is a 44px navy pill, as on Team
+        out += (f'<div style="min-width: 0; border-radius: 12px; background: #F7F5F2; padding: 6px; display: flex; flex-direction: column; gap: 5px; color: #1C2233">'
+                f'<span style="display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; padding: 0 2px">{av(ini, 18, 11)}{mono(ev, 12, "#1C2233", 600)}</span>'
+                f'<button aria-label="{aria}" style="height: 44px; border: none; border-radius: 999px; background: {NAVY}; color: #fff; font-size: 13px; font-weight: 700; padding: 0">{act.split()[0]}</button></div>')
     return ('<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; height: 20px; font-size: 15px; font-weight: 700">' + ic("eye", 15) +
-            f'<span style="flex: 1">Watch</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">stuck · behind · over 30 d</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">3</b></div>'
+            f'<span style="flex: 1">Watch</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">#0554 stuck · Faith behind · Kyaligonza 38 d</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">3</b></div>'
             f'<div style="background: #fff; border: 1px solid #E6E3DD; border-radius: 16px; padding: 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px">{out}</div>')
 
 
 def needs_compact():
-    rows = "".join(nk_row(*q, first=(i == 0), h=40) for i, q in enumerate(QUEUE))
+    rows = "".join(nk_row(*q, first=(i == 0), h=38) for i, q in enumerate(QUEUE))
     rows = rows.replace("height: 44px; padding: 0 ", "height: 36px; padding: 0 ")
     return (f'<div style="display: flex; align-items: center; gap: 8px; padding: 0 4px; height: 20px; font-size: 15px; font-weight: 700"><i style="width: 8px; height: 8px; border-radius: 999px; background: {NAVY}"></i>'
             f'<span style="flex: 1">Needs you</span><span style="font-size: 11px; font-weight: 600; color: #5F6980">the pill = what they see</span><b style="{MONO}; font-size: 13px; font-weight: 600; color: #5F6980">8</b></div>'
@@ -246,7 +247,7 @@ def needs_compact():
 
 
 P1 = phone(hero_compact() + '<div style="padding: 8px 12px 0; display: flex; flex-direction: column; gap: 4px">' + onmove_compact()
-           + '<div style="height: 2px"></div>' + needs_compact() + '<div style="height: 2px"></div>' + watch_rows() + '</div>' + tabbar())
+           + needs_compact() + watch_rows() + '</div>' + tabbar())
 
 
 # ---------------------------------------------------------------- Decide card parts
@@ -469,7 +470,7 @@ P4 = phone(f'''<div style="background: {NAVY}; color: #fff; border-radius: 0 0 2
 
 # ---------------------------------------------------------------- score panel
 PAGES = [
-    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 9, 8, 9]),
+    ("1 · Today", "Agent Today", [5, 4, 4, 6, 4], [9, 9, 8, 9, 8], [9, 9, 9, 9, 9]),
     ("2 · Decide next", "Decision sheet", [4, 3, 5, 6, 4], [9, 9, 8, 8, 8], [9, 9, 9, 8, 9]),
     ("3 · Answered · next", "Decision sheet", [4, 4, 4, 6, 4], [9, 9, 8, 8, 8], [9, 9, 8, 8, 9]),
     ("4 · All decided", "Agent Today", [4, 5, 4, 5, 3], [9, 9, 8, 9, 8], [9, 9, 9, 9, 8]),

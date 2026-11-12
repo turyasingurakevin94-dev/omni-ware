@@ -237,7 +237,7 @@ p2 = pphone("2 · D-4 · AT THE COUNTER · 1 OF 1 · " + m("11:20"),
         dock=pdock("Grace", "Approved", "400,000", "gain 60,000",
                    SH.s_primary("Approved", "40,000", "Approved: 40,000 a bag. Grace sees Approved and takes the cash"),
                    SH.s_second("Shop's price · 42,500", "Shop's price: 42,500 a bag. Grace sees Shop's price")),
-        aria="At the counter, under the shop's price, from Grace"),
+        fit=True, aria="At the counter, under the shop's price, from Grace"),
     "Approved · app 4 → 2 taps · push 2 → 1<br>nothing else waits at 11:20 · 1 of 1")
 
 # =================== PHONE 3 · D-3 Denis #0552 · 3 of 8 ===================

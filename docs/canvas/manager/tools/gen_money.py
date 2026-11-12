@@ -493,7 +493,7 @@ def money_states():
 
 def money_board():
     strip = top_strip("Money", "manager.html · tab 3 of 4 · Sat 17 Oct · mirrors Agent Money",
-                      [("28", "Promised · 662,000 · Mon"), ("32", "Credit asked")],
+                      [("28", "Promise · 2,310,000"), ("32", "Credit asked")],
                       [("28", "Promised · Mon 19"), ("30", "Nudge Grace"), ("32", "Limit 3,000,000 · 14 days")])
     strip = strip.replace(ACCS, "#FFFFFF; box-shadow: inset 0 0 0 1.5px " + NAVY).replace(ACCD, NAVY)
     phones = [
@@ -588,17 +588,17 @@ def cr_p1():
     ev = cr_owe_card("Would owe", "3,690,000", [(62.6, NAVY, ""), (37.4, "#8D99B5", HATCH)],
                      legend_items=[("Owes", "2,310,000", NAVY, ""), ("#0555", "1,380,000", "#8D99B5", HATCH)])
     age = card(
-        f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 13px; font-weight: 700; color: {SOFT}">Oldest bill</span>{mono("38 d", 18, 600, BAD)}</div>'
+        f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 13px; font-weight: 700; color: {SOFT}">Oldest bill</span>{mono("38 d", 18, 600, INK)}</div>'
         f'<svg width="300" height="40" viewBox="0 0 300 40" aria-hidden="true"><rect x="0" y="10" width="300" height="8" rx="4" fill="#ECE8E1"/>'
         f'<rect x="0" y="10" width="{21/40*300:.0f}" height="8" rx="4" fill="#C9C4BA"/>'
         f'<line x1="{21/40*300:.0f}" y1="2" x2="{21/40*300:.0f}" y2="26" stroke="{INK}" stroke-width="2" stroke-dasharray="3 2"/>'
-        f'<circle cx="{33/40*300:.0f}" cy="14" r="6" fill="#fff" stroke="{BAD}" stroke-width="2.5"/><circle cx="{38/40*300:.0f}" cy="14" r="6" fill="{BAD}"/>'
+        f'<rect x="{21/40*300:.0f}" y="10" width="{(38-21)/40*300:.0f}" height="8" rx="4" fill="{WARN}"/><circle cx="{33/40*300:.0f}" cy="14" r="5" fill="#fff" stroke="{INK}" stroke-width="2"/><circle cx="{38/40*300:.0f}" cy="14" r="5" fill="#fff" stroke="{INK}" stroke-width="2"/>'
         f'<text x="{21/40*300:.0f}" y="38" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="{INK}">held from 21 d</text>'
-        f'<text x="300" y="38" text-anchor="end" font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="{BAD}">9 Sep</text></svg>'
-        f'<div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 12px; font-weight: 600; color: {SOFT}">Promises</span>{chip("1 kept", "good")}{chip("2 broken", "bad")}</div>', pad="12px 14px", gap=6)
+        f'<text x="300" y="38" text-anchor="end" font-family="IBM Plex Mono" font-size="11" font-weight="600" fill="{INK}">9 Sep</text></svg>'
+        f'<div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 12px; font-weight: 600; color: {SOFT}">Promises</span>{chip("1 kept", "good")}{chip("2 broken", "warn")}</div>', pad="12px 14px", gap=6)
     bills = card("".join(
         f'<div style="display: flex; align-items: center; gap: 10px; min-height: 40px{"; border-top: 1px solid " + TILE if i else ""}">'
-        f'<span style="width: 30px; height: 30px; border-radius: 10px; background: {BADBG}; color: {BAD}; display: flex; align-items: center; justify-content: center; flex: none">{ic(P["doc"], 15)}</span>'
+        f'<span style="width: 30px; height: 30px; border-radius: 10px; background: {TILE}; color: {SOFT}; display: flex; align-items: center; justify-content: center; flex: none">{ic(P["doc"], 15)}</span>'
         f'<span style="flex: 1; display: flex; flex-direction: column; gap: 1px">{mono(d, 13)}<span style="{MONO}; letter-spacing: 0; font-size: 11px; color: {FAINT}">{n} · {ag} d</span></span>{mono(a, 13)}</div>'
         for i, (d, n, ag, a) in enumerate([("Wed 9 Sep", "oldest bill", 38, "1,450,000"), ("Mon 14 Sep", "bill", 33, "860,000")])), pad="4px 14px", gap=0)
     dock_ = SH.sheet_dock(SH.s_sees("Grace", "On credit"),
@@ -606,7 +606,7 @@ def cr_p1():
                           SH.s_second("Cash first", "Cash first: 0555 waits until Kyaligonza pays. Grace sees Cash first"))
     return SH.decision_sheet(pos=1, total=1, ini="GA", who="Grace", role="Sales", asked="12:15", ref="#0555 Kyaligonza &amp; Sons",
                              age="5 m", title="On credit?", tags=[SH.s_tag("Old bill · 38 days", "amber")],
-                             body=ev + age + bills, dock=dock_, aria="On credit? From Grace, order 0555")
+                             body=ev + age + bills, dock=dock_, fit=True, aria="On credit? From Grace, order 0555")
 
 
 def cr_p2():
@@ -626,7 +626,7 @@ def cr_p2():
 
 def cr_p3():
     # D-7 is drawn once, in tools/sheet.py, so Today p2 and this page are the same sheet
-    return SH.d7_sheet(pos=1, total=8, next_=("BO", "Brian · Return asked · #0547", "3 h"))
+    return SH.d7_sheet(pos=1, total=8, next_=("BO", "Brian · Return asked · #0547", "3 h"), fit=True)
 
 
 def cr_p4():
@@ -638,7 +638,7 @@ def cr_p4():
         f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">'
         f'<span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: {TILE}"><span style="font-size: 12px; font-weight: 700; color: {SOFT}">At 2M · now</span>{mono("390,000 over", 14, 600, INK)}<span style="font-size: 11px; font-weight: 600; color: {SOFT}">#0553 waits</span></span>'
         f'<span style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: {GOODBG}"><span style="font-size: 12px; font-weight: 700; color: {GOOD}">At 3M · asked</span>{mono("610,000 left", 14, 600, INK)}<span style="font-size: 11px; font-weight: 600; color: {GOOD}">#0553 goes</span></span></div>', pad="10px", gap=0)
-    facts = cr_facts([("clock", "Oldest bill", "16 d"), ("cal", "Terms", "14 → 14 days")])
+    facts = cr_facts([("clock", "Oldest bill", "16 d"), ("cal", "Terms", "14 days · same")])
     quote = (f'<div style="display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #fff; border: 1px solid {LINE}">{av("EA", 24)}'
              f'<span style="font-size: 13px; font-weight: 600; color: {INK}; line-height: 1.35">“Pays every 2 weeks”</span></div>')
     dock_ = SH.sheet_dock(SH.s_sees("Esther · Grace", "Limit 3,000,000 · 14 days"),
@@ -725,7 +725,7 @@ def credit_board():
         ("1 · Credit hold", (5, 6, 4, 5, 4), AG, (9, 9, 8, 8, 9)),
         ("2 · No limit set", (4, 3, 4, 4, 4), AG, (9, 8, 8, 8, 9)),
         ("3 · Store asks", (5, 3, 5, 5, 5), AG, (9, 9, 8, 8, 9)),
-        ("4 · Credit asked", (0, 0, 0, 0, 0), AG, (9, 9, 8, 8, 9)),
+        ("4 · Credit asked", (0, 0, 0, 0, 0), AG, (9, 9, 9, 9, 9)),
     ], "Agent Money / Money Pro",
         "The one decision sheet: navy head (n of N, asker, ask word) · white evidence cards, one bar each · navy dock: who sees what, one white answer, one outline")
     return board("Manager Money credit", strip, phones, panel, credit_states())

@@ -181,7 +181,7 @@ P1 = SH.decision_sheet(pos=4, total=8, ini="MK", who="Musa", role="Store", asked
     dock=SH.sheet_dock("", SH.s_slide("Written off", "102,000", "Slide: Written off, 3 bags, 102,000 at cost. Musa sees it"),
                        SH.s_second("Kept on the shelf", "Kept on the shelf: nothing is written off. Musa sees it"),
                        SH.s_total("102,000", "3 bags at cost", "#B3BCD2", left=SH.s_sees("Musa", "Written off"))),
-    aria="Damaged, Cement 50 kg, from Musa")
+    fit=True, aria="Damaged, Cement 50 kg, from Musa")
 
 # ======================= PHONE 2 · D-24 carton =======================
 ticks = ''.join(f'<i style="flex: 1; height: 10px; border-radius: 2px; background: {"#0F6B43" if i < 14 else "#F1EEE8"}"></i>' for i in range(15))

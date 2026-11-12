@@ -105,7 +105,7 @@ row('D-20', 'GA', 'Sales · Change', dict(kind='order.cancel.ask', st='route', t
     [('Cancelled','primary'),('Kept','tap'),('Nothing paid · Undo 10 s','note')], [('order.cancelled',['GA','MK'],'changed'),('order.cancelled',['DO'],'new')], ('Cancelled · or Kept', 'Sales · Store · Buyer'))
 row('D-21', ('sys','spark','the app'), 'spots it', dict(none='Today · row', body='Taken twice? #0544 & #0545 · Kato Construction · same 320,000'),
     [('Cancel #0545 · keep #0544','slide'),('Both are real','tap')], [('order.cancelled',['GA','MK'],'changed')], ('Cancelled', 'Sales · Store'))
-row('D-22', 'PS', 'Agent app', dict(kind='agent.change', st='changed', title='Peter · asks for fewer · #0560', body='Cement 50 kg 20 → 12 · Y12 rebar 12 m 10 → 10', act='Agreed'),
+row('D-22', 'PS', 'Agent app', dict(kind='agent.change', st='changed', title='Peter · asks for fewer · #0560', body='Cement 50 kg 20 → 12 · 340,000 less · 300,000 paid', act='Agreed'),
     [('Agreed','primary'),('Kept · per line','tap')], [('agent.change.decided',['DO','PS'],'new')], ('Agreed · or Kept', 'Buyer · Agent'))
 # STOCK
 row('D-13', 'MK', 'Store · check-in', dict(kind='trip.difference', st='changed', title='Musa · Check-in differs · Denis’s trip', body='Owino · PVC pipe 4 in 11 of 12 · −28,000 at cost · Denis’s note', act='Take the check-in'),
@@ -135,13 +135,13 @@ row('D-26', ('sys','spark','the app'), 'look-alike rules', dict(none='Money · L
     [('Merge into Ggaba Stores','slide'),('Not the same','tap')], [('owner’s log',[],'')], ('—', 'owner’s log'))
 row('D-27', ('sys','book','fresh start'), 'old books', dict(none='Money · old-books card', body='Ggaba Stores · 290,000 since Thu 1 Oct'),
     [('Opening balance · 290,000','slide')], [('owner’s log',[],'')], ('—', 'owner’s log'))
-row('D-28', 'BO', 'Sales · promise', dict(kind='promise.made', st='new', title='Lubowa Builders promised · Mon 19 Oct', body='Brian took the promise · they owe 662,000 · quiet', act=None, actnote='quiet · no answer'),
-    [('Promise','tap'),('Promised · Mon 19 Oct','note')], [('—',[],'')], ('Promised · Mon 19 Oct', 'Sales · Money'))
+row('D-28', 'RN', 'Ruth · from a debtor', dict(none='Money · the debtor · Promise', body='Kyaligonza & Sons · owes 2,310,000 · pays Mon 19 Oct'),
+    [('Promised · 2,310,000 · Mon 19','primary'),('Pick a day later','tap')], [('no push · Ruth’s own (P-13 is Sales’)',[],'')], ('Promised · Mon 19', 'Sales · Grace · the debtor row'))
 row('D-33', 'ML', 'Sourcing · lists it', dict(kind='markup.wanted', st='new', title='Moses · A new item to price', body='PVC pipe 4 in · cost 28,000 · rivals 34,000–36,000', act='Markup 25% · 35,000'),
     [('Markup 25%','primary'),('another markup','tap')], [('owner’s log',[],'')], ('the price on every app', 'Sales · price list'))
 # TEAM
 row('D-29', 'RN', 'Ruth · monthly', dict(none='Team · goal rings', body='Faith 14,910,000 of 30M · suggested goal per person'),
-    [('Goals · 35M · 30M · 30M','primary'),('Change','tap')], [('goal.set',['GA','BO','FN'],'new')], ('Your goal for November', 'Sales · Today (quiet)'))
+    [('Goals · 105M','primary'),('Change','tap')], [('goal.set',['GA','BO','FN'],'new')], ('Your goal for November', 'Sales · Today (quiet)'))
 row('D-31', ('sys','clock','stage limits'), 'stuck order', dict(none='Today · watch row · Team', body='#0554 Lubowa · 2 h 40 m in Checking · 40 m over · Denis holds it'),
     [('Nudge Denis','primary'),('Give it to Moses','tap')], [('team.nudge',['DO'],'new'),('job.given · trip.sent',[],'')], ('Ruth nudged you · or Given to Moses', 'Buyer · Today'))
 

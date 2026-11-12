@@ -139,10 +139,12 @@ def s_slide(word, fig=None, aria=None, state="ready"):
     knob_bg = S_RED if state in ("ready", "sending") else "#5F6980"
     pos = "right: 4px" if state == "sending" else "left: 4px"
     knob_in = s_ic("spin", 20, 2.4) if state == "sending" else s_ic("dbl", 20, 2.4)
+    # sending: the knob rests on the right, so the label keeps clear of it (round 3, fix 1)
+    pad = "padding: 0 60px 0 16px" if state == "sending" else "padding-left: 44px"
     col = "#FFFFFF" if state != "disabled" else S_ON
     a = aria or f"Slide: {word}" + (f" {fig}" if fig else "")
     return (f'<div role="slider" aria-label="{a}" style="position: relative; width: 100%; height: 56px; box-sizing: border-box; border-radius: 999px; '
-            f'background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; padding-left: 44px">'
+            f'background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; {pad}">'
             f'<span style="position: absolute; {pos}; top: 4px; width: 48px; height: 48px; border-radius: 999px; background: {knob_bg}; color: #fff; '
             f'display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.25)">{knob_in}</span>'
             f'<span style="font-size: 16px; font-weight: 700; color: {col}; white-space: nowrap">{word}{f}</span></div>')
@@ -179,12 +181,16 @@ def s_next(ini, text, age, sub=None):
 
 
 def decision_sheet(*, pos, total, ini, who, role, asked, ref, age, title, body, dock, tags=None,
-                   age_warn=None, aria=None, offline=False, next_=None, body_gap=10):
+                   age_warn=None, aria=None, offline=False, next_=None, body_gap=10, fit=False):
     nx = s_next(*next_) if next_ else ""
+    # fit: a short body; the dock follows the content and keeps the room below it (round 3)
+    grow = "flex: none" if fit else "flex: 1; min-height: 0"
+    if fit:
+        dock = dock.replace("flex: none; background: " + S_NAVY, "flex: 1; background: " + S_NAVY, 1)
     a = aria or f"Decide: {title}, from {who}"
     return (f'<div role="dialog" aria-label="{a}" style="position: absolute; inset: 0; display: flex; flex-direction: column; background: #F7F5F2">'
             + sheet_head(pos, total, ini, who, role, asked, ref, age, title, tags, age_warn, offline)
-            + f'<div style="flex: 1; min-height: 0; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: {body_gap}px">{body}{nx}</div>'
+            + f'<div style="{grow}; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: {body_gap}px">{body}{nx}</div>'
             + dock + '</div>')
 
 
@@ -292,10 +298,10 @@ def d7_dock(state="default"):
                       s_second("Cash first · it stays", "Cash first, it stays: Musa keeps the order until it is paid"), top)
 
 
-def d7_sheet(state="default", pos=1, total=8, next_=None):
+def d7_sheet(state="default", pos=1, total=8, next_=None, fit=False):
     return decision_sheet(pos=pos, total=total, ini="MK", who="Musa", role="Store", asked="09:15", ref="#0551 Nansana Hardware",
                           age="25 m", title="Not paid yet · on credit?", tags=[s_tag("No limit set", "amber")],
-                          body=d7_body(), dock=d7_dock(state), next_=next_,
+                          body=d7_body(), dock=d7_dock(state), next_=next_, fit=fit,
                           aria="Not paid yet, on credit? From Musa, order 0551")
 
 

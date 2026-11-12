@@ -296,7 +296,7 @@ def stepper(v):
 
 def d18_body():
     # D-18 is drawn once, in tools/sheet.py: Today p3 shows the same sheet
-    return SH.d18_sheet(pos=2, total=8, next_=("DO", "Denis · Price up · #0552", "2 h 10", "Ridge cap · sells 26,000 · cost 27,000"))
+    return SH.d18_sheet(pos=2, total=8, next_=("DO", "Denis · Price up · #0552", "2 h 10", "Ridge cap · cost 27,000"))
 
 
 # ------------------------------------------------------------ D-19 void
@@ -374,10 +374,7 @@ def line_change(name, a, b, diff, on=True, same=False):
 
 def d22_body():
     ev = card(
-        line_change("Cement 50 kg", "20", "12", "−340,000")
-        + f'<div style="height: 1px; background: {TILE}"></div>'
-        + line_change("PVC pipe 4 in", "6", "6", "", same=True)
-        ,
+        line_change("Cement 50 kg", "20", "12", "−340,000"),
         12, 8)
     gets = card(
         owes_bars("850,000", "510,000", 60, "Cement on #0560")
@@ -511,7 +508,7 @@ def score_panel():
         ("2 · Cancel asked · D-20", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 9)]),
         ("3 · Return asked · D-18", [(4, 9, 9), (5, 9, 9), (4, 8, 8), (5, 8, 8), (3, 8, 9)]),
         ("4 · Void asked · D-19", [(4, 9, 9), (4, 9, 9), (4, 8, 8), (5, 8, 8), (3, 8, 9)]),
-        ("5 · A line at 0 · Peter asks", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 8)]),
+        ("5 · A line at 0 · Peter asks", [(3, 9, 9), (3, 9, 9), (4, 8, 8), (5, 8, 8), (2, 8, 9)]),
     ]
     blocks, to, ta, tn = [], 0, 0, 0
     for n, r in pages:
