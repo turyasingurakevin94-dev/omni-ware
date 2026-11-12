@@ -39,6 +39,19 @@ Then stop and ask Kevin to approve the canvas. No code, migrations or other-app 
 | 7 | An independent reviewer scores every page against its Agent screen; revise until each is at or above it | Done | 3–4 review rounds per area (`docs/canvas/store-agent/review/`), scores below and in each board's title |
 | 8 | Changes other apps need, listed apart | Done | `OTHER-APPS.md`; proposed shared words added to `docs/audit/GLOSSARY.md` (marked proposed) |
 
+## Build progress
+
+The build goal (set 11 Nov 2026): build the new Store app from the approved canvas (`src/apps/store`, `src/core/store`, `next/store.html`), on the same database, one migration.
+
+| # | Step | State | Evidence |
+|---|---|---|---|
+| B1 | Spec first | Done | `docs/spec/04-screens-store.md`, `04-screens-store-routes.md`, `04-screens-store-data.md` (every `store.html` read and write with its line; open questions in §3 and data §9) |
+| B2 | One migration | Done | `0182_store_new_app.sql`, reserved in `docs/decision-rights.md`: every IB01 push, a packed pickup → Ready to collect (money held at the hand-over), the allow-list fields, dropped lines to the yard, put-back recorded on the order; 86 real-database cases; live script `docs/live/apply-0182.sql` (not yet applied to the live books) |
+| B3 | The app | Done | 5 areas + shell, the page 106 KB of 200 KB gzip with each area a lazy file (23–34 KB of 60); no file over 400 lines; no money on the phone |
+| B4 | Canvas parity, independent critic per area | Done (see `CANVAS-PARITY.md`) | Today 33/33 · Pack 25/25 (with AD02, AD05, AD06) · Goods in 29/29 · Shelf 30/30 · Out with AD01, AD03, AD04, AD07; boards that shared an app flaw were redrawn, listed in `docs/canvas/store-agent/review/*-fixes.md` |
+| B5 | Tests | Done | unit tests per rule (`test/store-*.test.js`), `npm run e2e:store` 8 of 8 flows (pack → load → deliver, ready to collect → hand over, agent code, not paid yet, check-in, return, offline, failed save), taps measured against FLOW.md §5; `npm test` exit 0 |
+| B6 | Switch | **Waiting on Kevin** | try `next/store.html?demo` and then on the real books (after `apply-0182.sql`); then `store.html` becomes the new app and the old one is kept as `old/store.html` for 30 days |
+
 ## Scores
 
 The independent reviewer scored each Store board and its matching Agent screen (or the approved Sales board) on Consistency · Steps · Glance · Polish · In step, 0–10 each. The figures are the mean of the five axes.
@@ -218,7 +231,7 @@ The round-2 fixes were applied once after the last scoring (no third round).
 
 ## Waiting on Kevin
 
-1. **Approve the canvas** — then the build starts in the Store's session (one migration for the new pushes, the next free number after 0181, recorded in `docs/decision-rights.md`).
+1. ~~**Approve the canvas**~~ — approved; the build is done (Build progress above) and waits on item 15.
 2. **The blind rule in Find**: on the yard's phone an item due for a count shows "Count due" in place of its figure (an audit fix), where Sales shows "96 on shelf" (SH02). Keep it?
 3. **Who gives out a yard login** when nobody can take the yard at the end of a shift (TD24 asks Ruth).
 4. **A ridden trip is checked in by someone else** (Okello) so the count stays blind (IN31, IN32). Confirm.
@@ -232,3 +245,6 @@ The round-2 fixes were applied once after the last scoring (no third round).
 12. ~~**Next job after taking over the yard** (screens Q20)~~ — answered 2026-11-11, Kevin: the packer's own half-packed order comes first (TD32 passes).
 13. ~~**Forgot password and label printing** (screens Q21)~~ — answered 2026-11-11, Kevin: drop both; Forgot password keeps "Ask your manager for a new invite link".
 14. ~~**On the road's "Done" chip** (screens Q22)~~ — answered 2026-11-11, Kevin: remove it; Today's "Delivered today" is the one place.
+15. **Try the new app and say if it may replace `store.html`**: `next/store.html?demo` (the sample day; `&at=1130`, `&at=1730` for later moments), then on the real books after `docs/live/apply-0182.sql` is run. At the switch, turn off the `notify-worker` and `notify-stock-count` webhooks (0182 sends those pushes; otherwise they come twice and counts still ring the owner).
+16. **Open questions from the build** (spec §3): Q23 after Unpack, To pack or Packing now; Q24 who gets "At the door" when the driver has no login (the app: whoever sent him); Q25 a run's planned time and the shop's address are not in the books; data D15 a return's gate time is not in the books; the count push reads "Musa's count of …" (no unit on a count line).
+17. **Rulings made while building, to confirm**: "Ask Ruth" uses Ruth's teal face (the "Send to Ruth" button stays navy); "Who drives" stays while the slide is held (OU17); shelf labels use the old app's number (A-3533, `store.html:5814`); FACTS §8 gained the demo's later moments (#0556 collected 11:45, #0547 delivered 11:50).

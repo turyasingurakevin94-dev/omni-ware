@@ -8,6 +8,8 @@ The Store redesign is design only, and it is built in the Store's own session. T
 
 ## The database (one migration, in the Store's session)
 
+**Built (12 Nov 2026):** `supabase/migrations/0182_store_new_app.sql` on `claude/store-build` sends every push below; not built: `order.copy` (no app marks a copy), pushes to an agent or a customer (no channel), `trip.short` in the check-in's words. The salesperson's new kinds (`order.packed`, `order.ready`, `order.unpaid_at_gate`, `order.out`, `order.all_in`, `pick.settled`, `order.back`) reach Grace's phone now but open nothing until the Sales session adds them to its push map (`test/sales-push-routes.test.js` lists them as waiting).
+
 The next free number after 0181, added to the reserved-number table in `docs/decision-rights.md` in the same commit. It adds the pushes below and the allow-list fields `deliverTo`, `deliverWhen`, `deliverPhone`, `counter`, `takenBack[].restocked`. Every push kind here is the one IB01 draws; nobody waits on a handover without one. Two handovers have no push on purpose because nobody waits on them: a counter sale (the yard reads it live as "Counter sale · out") and the shelf figure (both apps read "412 on shelf").
 
 | Push (kind) | From → to | Words |
