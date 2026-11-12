@@ -367,3 +367,85 @@ The other options are worse:
 - a scrolling chip row hides who brought the return;
 - an ellipsis on the first chip cuts off the time;
 - tighter padding saves about 6 px, which is not enough.
+
+## Out
+
+Critic run 2026-11-12 on `6a95aa53` (origin/claude/store-build). 28 OU boards plus AD01, AD03 and AD04 (Someone new, from "Added while building"), 31 in all. `test/parity/store-out.json` is unchanged: every tap reached its board. **18 pass, 13 fail.** The builder's `parity/out.md` says 28 pass and 3 partial. It missed the Close and back-strip routes, the dead rows on the empty boards, and the 4.35:1 eyebrows.
+
+These are accepted across the area and are not failures:
+- the shared Track's "now" where the run board writes 10:05 (P18);
+- "saved 7:52" on OU25, because FACTS §1 says 7:52 and the board's 10:38 is the board's own slip;
+- "arrived 14:05" for 14:04 on OU21, OU26 and OU28 (the demo clock is 14:05; FACTS gives 14:04–14:05);
+- no "Done" chip on OU20 (Q22);
+- the end screens' progress bar, full after 11 s (an animation);
+- dimmed driver chips, "All on", "Who collects" and the keypad while a write is held, kept or failed, or the code is full. All are `disabled`, so they are inactive controls, as drawn;
+- the ghost rows on the empty boards (`aria-hidden`, decorative);
+- the phone field's focus ring on AD03 (the field just typed in);
+- #0547's Delivered on OU20, which the board links straight to OU24 as a storyboard shortcut. The app goes through the door's Can't deliver, as OU21 itself links;
+- OU30's Packed tile, which the board links to PK06. The app opens To pack, because `pack/order` needs an order and nothing is packed.
+
+Contrast hits on Today's text under a stage sheet (for example "To pack · 50 m" or "Cement · B") are covered by the sheet and are not counted. Pens use a 36 px disc inside a 44 px `::after` hit area. The input fields sit inside `<label>` cards of 52–80 px, so a tap anywhere on the card focuses them.
+
+The money check flags only "3m", "46 m", "32 m", "318K" and "50 m". These are a sheet length, minutes and a plate (UAX 318K), so **there is no money on any Out board**. `scrollWidth` is 360 on all 31.
+
+| Board | Route | Taps | Diff % | Shows | Links | 44px | 11px | Contrast | Clip | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| OU01 To load | `out/load` | 0 (push) | 6.72 | ok | ok | ok | ok | ok | ok | pass | rows sit 6–10 px lower from the 44 px "Name it" row |
+| OU30 Nothing to load | `out/load` | 0 (push) | 9.88 | ok | ok | ok | ok | ok | ok | pass | reached as #0530 cancelled (written); Packed tile, see above |
+| OU31 Name this direction | `out/load` + sheet | 1 | 6.27 | ok | ok | ok | ok | **4.35** | ok | fail | G2 |
+| OU02 Load | `out/run` | 1 | 0.99 | ok | ok | ok | ok | ok | ok | pass | |
+| OU03 A hired driver | `out/run` + sheet | 2 | 6.72 | ok | ok | ok | ok | ok | ok | pass | |
+| AD01 Someone new | `out/run` + sheet | 3 | 0.37 | ok | ok | ok | ok | ok | ok | pass | |
+| AD03 Someone new, filled | `out/run` + sheet | 6 | 0.70 | ok | ok | ok | ok | ok | ok | pass | Robert Kasozi is AD open question 1 |
+| AD04 Not a mobile | `out/run` + sheet | 6 | 0.02 | ok | ok | ok | ok | ok | ok | pass | |
+| OU17 Slide held | `out/run` | 2 | 9.32 | **Who drives** | ok | ok | ok | ok | ok | fail | G9 |
+| OU04 Sending | `out/run` | 4 | 1.06 | ok | ok | ok | ok | ok | ok | pass | |
+| OU05 On the road (end) | `out/run` | 2 | 0.47 | ok | ok | ok | ok | ok | ok | pass | |
+| OU06 Not sent yet | `out/run` | 3 | 6.34 | ok | ok | ok | ok | ok | ok | pass | |
+| OU07 Not saved | `out/run` | 3 | 6.38 | ok | ok | ok | ok | ok | ok | pass | |
+| OU10 Ready to collect | `out/gate` | 2 | 4.98 | ok | **back strip** | ok | ok | ok | ok | fail | G1 |
+| OU08 Handing over | `out/gate` | 5 | 4.49 | ok | **back strip** | ok | ok | **Code 3.18** | ok | fail | G1, G3 |
+| OU16 Gate offline | `out/gate` | 4 | 7.75 | ok | **back strip** | ok | ok | **Code 3.18** | ok | fail | G1, G3 |
+| OU12 Handed over | `out/gate` | 3 | 0.58 | ok | ok | ok | ok | ok | ok | pass | |
+| OU13 Not paid yet | `out/gate {id}` | 2 | 7.17 | **Track, Ask tint** | **Close** | ok | ok | ok | ok | fail | G4, G5 |
+| OU15 Nobody to hand over | `out/gate` | 2 | 10.56 | **no Coming list** | **back strip, rows** | ok | ok | ok | ok | fail | G1, G6 |
+| OU11 Peter's code | `out/gate-code` | 7 | 0.82 | **no gate under** | ok | ok | ok | **4.35** | ok | fail | G2, G7 |
+| OU09 Wrong code | `out/gate-code` | 7 | 0.83 | **no gate under** | ok | ok | ok | **4.35** | ok | fail | G2, G7 |
+| OU20 On the road | `out/road` | 1 | 7.35 | ok | ok | ok | ok | ok | ok | pass | |
+| OU14 Nobody on the road | `out/road` | 1 | 10.06 | **no Next out** | **rows** | ok | ok | ok | ok | fail | G6 |
+| OU25 Road offline | `out/road` | 5 | 7.02 | ok | ok | ok | ok | ok | ok | pass | |
+| OU27 Cancelled on the truck | `out/road` | 1 | 9.52 | **10:39** | ok | **Put back 41** | ok | ok | ok | fail | G8 |
+| OU21 At the door | `out/door` | 2 | 0.37 | ok | ok | ok | ok | ok | ok | pass | |
+| OU26 Delivering | `out/door` | 5 | 0.59 | ok | ok | ok | ok | ok | ok | pass | |
+| OU22 Delivered | `out/door` | 3 | 0.43 | ok | ok | ok | ok | ok | ok | pass | |
+| OU23 Why no photo | `out/door` + sheet | 4 | 4.35 | ok | ok | ok | ok | **4.35** | ok | fail | G2 |
+| OU28 Door not sent | `out/door` | 4 | 1.16 | ok | ok | ok | ok | ok | ok | pass | |
+| OU24 Coming back | `out/cant-deliver` | 4 | 3.35 | **Track** | **Close, back, slide** | ok | ok | ok | ok | fail | G5, G10 |
+
+### Out failures and fixes
+
+Where the board draws the same fault (G2, G3, G9), the board is wrong too: fix the app and redraw the board in the same commit.
+
+- **G1 · the stage sheet's back strip says "Back to Today" over another screen** (OU10, OU08, OU16, OU15). `out/gate` is pushed from On the road, but the shared strip (`shell/StageSheet.tsx:71`, `backLabel="Back to Today"`) always says Today. Tapping it lands on On the road. Fix: `backLabel={backTo.value}`, as the Shelf's `ItemSheet` callers do (`shell/nav.ts` `backTo`). This is a shell file (Today's area); it touches every stage sheet.
+- **G2 · 11 px eyebrows at 4.35:1** on the ground `#F7F5F2`:
+  - "#0554 · agent pickup" (OU11, OU09), from `out/gate.css:75 .gc-top-t > span`;
+  - "#0552 · Kato · Ntinda site" (OU23) and "Load map · → Bweyogerere way" (OU31), from `src/ui/sheet.css:19 .ow-lsheet-eye` on `.ow-lsheet.ground`.
+
+  `tokens.css:21` itself says `--ink-faint` is "on white only; on --ground use --ink-soft". Fix: `gate.css:75` uses `var(--ink-soft)` (5.05:1), and add `.ow-lsheet.ground .ow-lsheet-eye { color: var(--ink-soft) }`. The boards draw `#6B7480` too: redraw them.
+- **G3 · "Code" stays live while a hand-over is held or kept** (OU08, OU16). `Gate.tsx:177` only adds `.dim` to the `Tap`. The grey pill (white on `#8B90A0`, 3.18:1) still opens `out/gate-code` in the middle of a write. Fix: when `dim`, render it with no `on` and `aria-disabled="true"` (or as a `disabled` button), so it is an inactive control as drawn. If it should stay tappable, it needs the navy pill. The board draws the same grey.
+- **G4 · Not paid yet: Close goes to the wrong place** (OU13). The board's Close goes to OU10, the gate. `GateHeld.tsx:33` calls `nav.back()`, which lands on On the road. Fix: `onClose={() => nav.to('out/gate')}`. The back strip is right: it says "Back to On the road" and goes there.
+- **G5 · Track and tint differences with no ruling:**
+  - **OU13**: the board writes "skipped" under Buying and Packing (the walk-in came off the shelf), and "now" under the gate. `GateHeld.tsx:35` passes no `skipped`, so both captions are blank, and `ready` writes "ready". Fix: pass `skipped={['buying', 'packing']}` (the shared Track draws a skipped stop as a dash, OR11, so redraw the board's two ticks as dashes), and redraw "now" as "ready" (the Track's OR38). Record both in spec §2a.
+  - **OU13 Ask Ruth's disc**: the board draws teal (`#DDF1EE`/`#0E5E57`); spec §4 says "Ask Ruth (navy)". The app draws blue (`ActTiles` tone `promise`, `#E3EEFB`), which matches neither. The lead picks one and the other two follow.
+  - **OU24**: the board draws the return arrow in the On the road stop, with "9:55" (when he left) under it. The app draws the truck with "now". The Track has no way to change the now-stop's icon or time. Fix: add `nowIcon`/`nowTime` to `src/ui/Track.tsx` and pass `return`/`9:55` from `CantDeliver.tsx:55`. Otherwise, redraw the board and record it in §2a.
+- **G6 · the empty boards' list rows are not links, and the demo never shows them** (OU15, OU14):
+  - OU15 links each "Coming to the gate" row to To pack (PK01). `Gate.tsx:80` `MiniOrder` has no `on`.
+  - OU14 links each "Next out" row to To load (OU01). `Road.tsx:124` has none either.
+
+  Fix: `on={() => nav.replace('pack')}` and `on={() => nav.replace('out/load')}`. `&state=empty` holds no orders, so neither list, nor "Delivered 1 · collected 8:50", nor "To load 2" can be seen. Add a demo state with the yard empty but these orders still coming (10:10 for OU15, 9:30 for OU14, in `core/store/demo/moments.ts`) and point the parity spec at it. Also, OU14's Delivered tile (`Road.tsx:132`) has `on: () => undefined`, so it is a control that does nothing. The board draws no link there: render it with no `on`.
+- **G7 · the code sheet has nothing under its scrim** (OU11, OU09). The board draws Ready to collect dimmed under Peter's code. `out/gate-code` is a pushed route that draws its own scrim over plain navy (`GateCode.tsx:50`). Fix: draw the gate under it, as NameSheet does over To load (OU31). Either render `<Gate>` beneath the scrim or open the code as a sheet over `out/gate`. The Close and the scrim tap already go back to the gate.
+- **G8 · OU27, the cancelled drop:**
+  - Ruth's cancel reads **10:39**; the board says 10:38. FACTS gives no time, and the builder wrote no reason. Fix: `core/store/demo/moments.ts:125`, `t('10:38')`.
+  - The "Put back at the gate · 3 lines" row is 304×41 (`road.css:43 .rd-bb-k`, `min-height: 40px`). Fix: `min-height: 44px`. The board links the whole red banner and the row to PK10; the app links the row only, which is fine once it is 44.
+- **G9 · OU17: "Who drives" kept while the knob is held.** The board drops the label row in this state, so the body moves 23 px up mid-drag. The app keeps it, which is better: nothing jumps under the thumb. That is the builder's own reason, not a ruling. Fix the board: redraw OU17 with the label row, and write it in spec §2a.
+- **G10 · Coming back: Close, the back strip and the slide land on the door** (OU24). The board sends all three to On the road (OU20). `CantDeliver.tsx:53` (Close) and `:45` (after the slide) call `nav.back()`, which reopens #0547's door. `:71` writes "Back to On the road" but goes to the door. Fix: Close and the slide's success call `nav.to('out/road')`; the strip uses `backLabel={backTo.value}`, which here reads "Back to the door".
