@@ -62,7 +62,7 @@ decisions have no tab: they are a card on Today and a page over it.
 | Stock take: Stock tile → row → slide | yes | — | route the push (P-1) | **1 slide** |
 | Return: qty, back/damaged, way, slide | yes | the ask already carries the lines and qty | default the way (off what they owe; cash back only on money paid) | **1 slide** |
 | Void with money: Refund → account → Void → undo | yes | refund-and-account is one choice: **Refund cash · Refund MoMo · Refund bank · Keep as deposit** | — | **1 chip + 1 slide** |
-| Cancel ask: Today → tile → row → Cancel | yes | — | route the push (M-1) | **1 slide** (2 with money) |
+| Cancel ask: Today → tile → row → Cancel | yes | — | route the push (M-1) | **1 tap** (Nothing paid: Undo 10 s, not a slide); with money **2** (still a slide) |
 | Taken twice: row → pick → Void | yes | the row names which to keep (the later one is dropped by default) | cancel through `cancel_order` (M-20) | **1 slide** |
 | Agent change: per line Agree, then Answer | yes | default all agreed | — | **1 tap** |
 | Carton for the shelf | yes, when the Buyer asks | — | — | **1 tap** |
@@ -163,7 +163,7 @@ ways, used together:
 
 **Never a notification action:** an irreversible money or books move — a
 write-off, a credit note, a void, a refund, a stock take, a merge, an opening
-balance, a cancel. They keep the slide on the card (or on the row). Their push
+balance, a cancel with money. They keep the slide on the card (or on the row). Their push
 still carries the evidence and offers only the **safe "keep" answer** as an
 action (Kept on the shelf · Kept as sold · Kept as billed · Count it again ·
 Kept). What that needs is handover.md §6 (native changes) and §4 (the words
@@ -199,7 +199,7 @@ needed (new). Evidence costs no tap.
 | D-17 A count to check | "Musa · A count to check · Aisle B" | "12 items · 2 differ · net −12,000" | slide **Count taken**; ★ only **Count it again** | 4 → **2** | 4 → **2** |
 | D-18 Return asked | "Brian · Return asked · #0547" | "5 Timber 2×4 · −56,250 · Lubowa owes 662,000 → 605,750" | slide **Credit note raised · 56,250**; ★ only **Kept as sold** | 2 → **2** ✗ (kept: 2 → **1**) | 4 → **2** |
 | D-19 Void asked | "Esther · Void asked · #0545" | "Kato · 320,000 · entered twice with #0544 · 200,000 paid" (14:20) | slide **Voided · 320,000** (with money: chip, then slide); ★ only **Kept as billed** | 2 → **2** ✗ (with money 4 → **3**; kept 2 → **1**) | 4 → **2** (with money 6 → 3) |
-| D-20 Cancel asked | "Grace · Cancel asked · #0556" | "Ggaba Stores · Checking · 430,000 · nothing paid · changed their mind" | slide **Cancelled**; ★ only **Kept** | 4 → **2** | 4 → **2** |
+| D-20 Cancel asked | "Grace · Cancel asked · #0556" | "Ggaba Stores · Checking · 430,000 · nothing paid · changed their mind" | tap **Cancelled** (Nothing paid · Undo 10 s); ★ only **Kept** | 4 → **2** | 4 → **2** |
 | D-21 Taken twice? | — (the app spots it) | row: "Kato · #0544 & #0545 · same 320,000" | slide **Cancel #0545 · keep #0544** on the row | — | 4 → **2** |
 | D-22 Peter asks: fewer | "Peter · asks for fewer · #0560" | "Mukono Roofing · Cement 20 → 12 · Y12 rebar 10 → 10 · 340,000 less · paid 300,000" (11:25) | ★ **Agree** (per-line keep on the card) | 2 → **1** | 4 → **2** |
 | D-23 Restock: not yet | — | Orders → Stock row: "Cement 50 kg · 40 bags · 1,360,000 · 6 weeks left on the shelf" | **Not yet** on the row | — | 4 → **3** |
@@ -290,5 +290,5 @@ Assign 4 → 2.
   so the yard and Grace are told; a check-in note closed with its check-in;
   the next decision offered by itself.
 - **Kept as a slide** (irreversible money or books): write-off, stock take,
-  credit note, void, cancel, merge, opening balance. Prices, credit, short
-  picks, check-ins, extras, cartons and agents are taps with Undo 10 s.
+  credit note, void, a cancel with money, merge, opening balance. Prices, credit, short
+  picks, check-ins, extras, cartons, agents and a cancel with nothing paid are taps with Undo 10 s.

@@ -56,7 +56,7 @@ Q = [  # who, ask, evidence, age_min, answer, kind, app before, app after, push 
  ('DO','Price up · #0552','Ridge cap 3 m · cost 27,000, sells 26,000',130,'Shop’s price · 33,750','primary',7,2,5,1,False,'Denis · Faith'),
  ('MK','Damaged · 3 Cement 50 kg','−102,000 at cost · photo',90,'Written off · 102,000','slide',4,2,2,2,False,'Musa'),
  ('GA','Under the shop’s price · #0555','Iron sheet G28 · 46,000 of 47,500',65,'Approved · 46,000','primary',4,2,2,1,False,'Grace'),
- ('GA','Cancel asked · #0556','Ggaba Stores · 430,000 · not paid',50,'Cancelled','slide',4,2,4,2,False,'Grace · Musa · Denis'),
+ ('GA','Cancel asked · #0556','Ggaba Stores · 430,000 · Nothing paid',50,'Cancelled · Undo 10 s','primary',4,2,4,2,False,'Grace · Musa · Denis'),
  ('MK','Packed short · #0550','Iron sheet G28 36 of 40',40,'Bill what went · 1,710,000','primary',4,2,2,1,False,'Musa · Grace'),
  ('DO','A carton for the shelf?','Wall plugs · 199 for the shelf · 298,500',15,'Shelf part OK','primary',4,2,2,1,False,'Denis'),
 ]
@@ -74,7 +74,7 @@ for i, (k, ask, ev, m, ans, kind, ab, aa, pb, pa, st, who) in enumerate(Q):
               f'<div style="display: flex; flex-direction: column; gap: 4px"><div style="height: 8px; border-radius: 99px; background: {TILE}; display: flex"><div style="width: {w}%; border-radius: 99px; background: {barc}"></div></div><span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: {barc}">{age(m)}</span></div>'
               f'<div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-start; padding: 4px 0">{pill(ans, kind)}<span style="display: inline-flex; align-items: center; gap: 4px; font-family: {MONO}; font-size: 11px; color: {SOFT}; white-space: nowrap">{svg("bell", 12)}{e(who)} {"sees" if " · " not in who else "see"} it</span></div>'
               f'<span style="font-family: {MONO}; font-size: 14px; font-weight: 600; color: {SOFT}; text-align: right">{ab} → <span style="color: {GOOD}">{aa}</span></span>'
-              f'<span style="font-family: {MONO}; font-size: 14px; font-weight: 600; color: {SOFT}; text-align: right">{pb} → <span style="color: {BAD if same else GOOD}">{pa}</span></span></div>')
+              f'<span style="font-family: {MONO}; font-size: 14px; font-weight: 600; color: {SOFT}; text-align: right">{pb} → <span style="color: {NAVY if same else GOOD}">{pa}</span></span></div>')
 sab = sum(q[6] for q in Q); saa = sum(q[7] for q in Q); spb = sum(q[8] for q in Q); spa = sum(q[9] for q in Q)
 qhead = (f'<div style="display: grid; grid-template-columns: {QCOLS}; gap: 14px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: {SOFT}; padding-bottom: 4px">'
          '<span>#</span><span></span><span>Who waits · what · the evidence</span><span>Waited</span><span>The answer</span><span style="text-align: right">App</span><span style="text-align: right">Push</span></div>')
@@ -179,13 +179,13 @@ def track(b, a, mx, width):
     if b is not None and not same:
         dots += f'<div style="position: absolute; left: {pos(b)}%; top: 3px; width: 12px; height: 12px; margin-left: -6px; border-radius: 99px; background: #B9BFCB"></div>'
     if a is not None:
-        col = BAD if same else GOOD
-        ring = f'box-shadow: 0 0 0 3px {BADB}; ' if same else ''
+        col = NAVY if same else GOOD
+        ring = f'box-shadow: 0 0 0 3px #E8EDFB; ' if same else ''
         hollow = f'background: #fff; border: 2px dashed {WARN}; ' if b is None else f'background: {col}; '
         dots += f'<div style="position: absolute; left: {pos(a)}%; top: 2px; width: 14px; height: 14px; margin-left: -7px; border-radius: 99px; box-sizing: border-box; {hollow}{ring}"></div>'
     ticks = ''.join(f'<div style="position: absolute; left: {pos(t)}%; top: 6px; width: 1px; height: 6px; background: {DASH}"></div>' for t in range(0, mx + 1))
     bl = '—' if b is None else str(b)
-    ac = BAD if same else (WARN if b is None else GOOD)
+    ac = NAVY if same else (WARN if b is None else GOOD)
     return (f'<div style="display: flex; align-items: center; gap: 14px"><div style="position: relative; width: {width}px; height: 18px; flex-shrink: 0"><div style="position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: {LINE}"></div>{ticks}{dots}</div>'
             f'<span style="font-family: {MONO}; font-size: 13px; font-weight: 600; color: {SOFT}; white-space: nowrap">{bl} → <span style="color: {ac}">{a}</span></span></div>')
 
@@ -195,7 +195,7 @@ def drow(d):
     chip_bg = WARN if flag == 'np' else NAVY
     extra = ''
     if flag == 'np': extra = f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: {WARNB}; color: {WARNI}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">not today</span>'
-    if flag == 'slide': extra = f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: {BADB}; color: {BAD}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">slide · keep → 1</span>'
+    if flag == 'slide': extra = f'<span style="height: 20px; padding: 0 7px; border-radius: 999px; background: #E8EDFB; color: {NAVY}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center">slide · keep → 1</span>'
     if flag == 'under': extra = f'<span style="font-family: {MONO}; font-size: 12px; color: {FAINT}">as D-1 · D-2 · D-12</span>'
     return (f'<div style="display: grid; grid-template-columns: {DCOLS}; gap: 14px; align-items: center; min-height: 29px; border-top: 1px solid {LINE}">'
             f'<span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: #fff; background: {chip_bg}; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-flex; align-items: center; justify-self: start">{id}</span>'
@@ -212,7 +212,7 @@ def tot(label, pb, pa, ab, aa):
 legend = (f'<div style="display: flex; gap: 20px; align-items: center; font-size: 13px; font-weight: 600; color: {SOFT}">'
           f'<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #B9BFCB"></span>before</span>'
           f'<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 14px; border-radius: 99px; background: {GOOD}"></span>after</span>'
-          f'<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 14px; border-radius: 99px; background: {BAD}; box-shadow: 0 0 0 3px {BADB}"></span>no drop</span>'
+          f'<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 14px; border-radius: 99px; background: {NAVY}; box-shadow: 0 0 0 3px #E8EDFB"></span>no drop</span>'
           f'<span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 14px; height: 14px; border-radius: 99px; border: 2px dashed {WARN}; box-sizing: border-box"></span>new path</span></div>')
 per = card(f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 20px; font-weight: 800">Every decision · taps before → after</span>{legend}</div>'
            + f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px"><div style="display: flex; flex-direction: column">{dh}{colA}</div>'
@@ -224,7 +224,7 @@ def lst(items, kind):
     out = ''
     for it in items:
         if kind == 'gone':
-            ic = f'<span style="width: 26px; height: 26px; border-radius: 99px; background: {BADB}; color: {BAD}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{svg("x", 14, 2.5)}</span>'
+            ic = f'<span style="width: 26px; height: 26px; border-radius: 99px; background: {TILE}; color: {SOFT}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{svg("x", 14, 2.5)}</span>'
             tx = f'<span style="font-size: 13px; font-weight: 600; text-decoration: line-through; color: {SOFT}">{e(it)}</span>'
         else:
             ic = f'<span style="width: 26px; height: 26px; border-radius: 99px; background: {GOODB}; color: {GOOD}; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{svg("check", 14, 2.5)}</span>'
@@ -241,13 +241,14 @@ for id, slide, keep, p, k, who in SL:
     srows += (f'<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid {LINE}; padding: 10px 0">'
               f'<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: #fff; background: {NAVY}; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-flex; align-items: center">{id}</span>{av(who, 24)}{pill(slide, "slide")}</div>'
               f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: {MONO}; font-size: 13px; font-weight: 600; color: {SOFT}">'
-              f'<span>push <span style="color: {BAD}">{p}</span></span><span>{e(keep)} <span style="color: {GOOD}">{k}</span></span></div></div>')
+              f'<span>push <span style="color: {NAVY}">{p}</span></span><span>{e(keep)} <span style="color: {GOOD}">{k}</span></span></div></div>')
 stays = (f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 17px; font-weight: 700">Stays a slide · no drop from the push</span><span style="font-family: {MONO}; font-size: 13px; color: {SOFT}">3 of 20</span></div>'
          + srows
          + f'<div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px"><span style="font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: {SOFT}; width: 100%">never a notification action</span>'
-         + ''.join(f'<span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {TILE}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{w}</span>' for w in ['write-off','credit note','void','refund','stock take','merge','opening balance','cancel'])
-         + '</div>')
-SEC = [('Price set · another figure', '5 → 3'), ('Bill it all', '3 → 2'), ('Cash first · from the app', '3 → 2'), ('Check-in with Denis’s note', '3 → 1'), ('Cancel with money', '5 → 3'), ('Void with money · push', '4 → 3'), ('Give it to Moses · a stuck order', '4 → 2')]
+         + ''.join(f'<span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {TILE}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{w}</span>' for w in ['write-off','credit note','void','refund','stock take','merge','opening balance','cancel with money'])
+         + '</div>'
+         + f'<div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid {LINE}; padding-top: 10px; margin-top: 4px"><span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: #fff; background: {NAVY}; height: 22px; padding: 0 7px; border-radius: 99px; display: inline-flex; align-items: center">D-20</span>{av("GA", 24)}{pill("Cancelled", "primary")}<span style="font-family: {MONO}; font-size: 12px; font-weight: 600; color: {SOFT}; white-space: nowrap">Nothing paid · a tap · Undo 10 s</span></div>')
+SEC = [('Another price', '5 → 3'), ('Bill it all', '3 → 2'), ('Cash first · from the app', '3 → 2'), ('Check-in with Denis’s note', '3 → 1'), ('Cancel with money', '5 → 3'), ('Void with money · push', '4 → 3'), ('Give it to Moses · a stuck order', '4 → 2')]
 second = (f'<span style="font-size: 17px; font-weight: 700">Second choices also drop</span>'
           + ''.join(f'<div style="display: flex; align-items: center; justify-content: space-between; min-height: 36px; border-top: 1px solid {LINE}"><span style="font-size: 13px; font-weight: 600">{e(n)}</span><span style="font-family: {MONO}; font-size: 14px; font-weight: 600; color: {SOFT}">{t.split(" → ")[0]} → <span style="color: {GOOD}">{t.split(" → ")[1]}</span></span></div>' for n, t in SEC))
 bottom = (f'<div style="display: grid; grid-template-columns: 1fr 1fr 1.15fr 0.9fr; gap: 24px">'
