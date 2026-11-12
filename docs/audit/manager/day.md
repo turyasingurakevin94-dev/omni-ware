@@ -185,7 +185,7 @@ needed (new). Evidence costs no tap.
 | D-3 Price up | "Denis · Price up · #0552" | "Ridge cap 3 m · cost 27,000, sells 26,000 · 10 pcs" | ★ **Shop's price 33,750** (another rung on the card) | 5 → **1** | 7 → **2** |
 | D-4 Counter sale | "Grace · At the counter · under the shop's price" | "Cement 50 kg · 10 bags at 40,000, shop's 42,500 · cost 34,000" | ★ **Approve 40,000** | 2 → **1** | 4 → **2** |
 | D-5 On credit? (over / old bill) | "Grace · On credit? · Kyaligonza & Sons" | "Old bill 38 d (held at 21) · owes 2,310,000 · would owe 3,690,000" | ★ **On credit** (Cash first on the card) | 2 → **1** | 3 → **2** |
-| D-6 On credit? (no limit set) | "Faith · On credit? · Mukono Roofing" | "No limit set · #0552 765,000 · would owe 1,979,000" | ★ **On credit · 2M · 14 d** | 5 → **1** | 6 → **2** |
+| D-6 On credit? (no limit set) | "Faith · On credit? · Mukono Roofing" | "No limit set · #0552 1,287,500 · would owe 2,501,500" | ★ **On credit · 3M · 30 d** | 5 → **1** | 6 → **2** |
 | D-7 Not paid yet · on credit? | "Musa · Not paid yet · on credit? · #0551" | "Nansana Hardware · owes 0 · 1,240,000 · no limit set · 1st order on credit · truck waits" | ★ **On credit · load it · 1.5M · 14 d** (2M · 14 d, 3M · 30 d on the card) | 5 → **1** | 6 → **2** |
 | D-8 Invoice | — (bills itself; Orders: "Delivered · bills itself in 18 h") | — | none (Invoice now, optional) | 2 → **0** | 3 → **0** |
 | D-9 Only 567 · check it | "Can't bill itself · Only 567 · #0561" | "Walk-in · 1 line · 567 · Grace's counter sale" | ★ **Bill 567** | 3 → **1** | 4 → **2** |

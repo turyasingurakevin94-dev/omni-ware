@@ -185,7 +185,7 @@ def page1():
             f'<div style="display: flex; align-items: center; gap: 10px"><span style="flex: 1; display: flex; align-items: baseline; gap: 8px; font-size: 26px; font-weight: 800; letter-spacing: -.02em">Orders {m("10", 16, MINT, 600)}</span>'
             f'<button aria-label="Search orders" style="all: unset; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center">{ic("search", 20, "#fff")}</button></div>'
             f'{stagecols()}'
-            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: {ONNAVY}"><span style="color: #F7A196">1 stuck</span><span>5 wait on you</span><span>{m("8,287,500", 11, ONNAVY, 600)} on the move</span></div></div>')
+            f'<div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: {ONNAVY}"><span style="color: #F7A196">1 stuck</span><span>5 wait on you</span><span>{m("8,810,000", 11, ONNAVY, 600)} on the move</span></div></div>')
     rows = (
       sec("Stuck", "1", RED) +
       orow("BO", "#0554", "Lubowa Builders", "450,000", "Timber 2×4 · asked Ndeeba", "2 h 40 m / 2 h", 133, "DO", "Denis", over=True,
@@ -225,7 +225,7 @@ def page2():
             f'<button aria-label="Back to Orders" style="all: unset; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center; flex: none">{ic("back", 20, "#fff")}</button>'
             f'<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px"><span style="font-size: 19px; font-weight: 800; white-space: nowrap">Mukono Roofing</span>'
             f'<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: {ONNAVY}; white-space: nowrap">{av("FN", 20, fs=9)}From Faith · {m("#0552", 12, "#fff", 600)}</span></div></div>'
-            f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="display: flex; align-items: baseline; gap: 6px">{m("687,500", 28, "#fff", 600, "letter-spacing: -.02em; line-height: 1")}<span style="font-size: 13px; font-weight: 700; color: {ONNAVY}">UGX</span></span>{m("2 lines", 11, ONNAVY, 600)}</div>'
+            f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="display: flex; align-items: baseline; gap: 6px">{m("1,210,000", 28, "#fff", 600, "letter-spacing: -.02em; line-height: 1")}<span style="font-size: 13px; font-weight: 700; color: {ONNAVY}">UGX</span></span>{m("2 lines", 11, ONNAVY, 600)}</div>'
             f'{track(1)}</div>')
     holds = (f'<div style="background: #fff; border: 1.5px solid {NAVY}; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">'
              f'<div style="display: flex; align-items: center; gap: 10px">{av("RN", 36)}'
@@ -244,7 +244,7 @@ def page2():
              f'{m("10 pcs · under cost by 1,000", 11, BAD, 600)}'
              f'<div style="display: flex; align-items: center; gap: 8px">{pill("Other price", kind="ghost", h=44)}{pill("Shop&#39;s price 33,750", "check", h=44, extra="flex: 1")}</div></div>')
     lines = (sec("Lines", "2") +
-             line_card("check", GOOD, GOODB, "Iron sheet G28", "9 sht × 47,500 = 427,500", "Namanve Sheets", chip("Found", "good")) +
+             line_card("check", GOOD, GOODB, "Iron sheet G28", "20 sht × 47,500 = 950,000", "Namanve Sheets", chip("Found", "good")) +
              line_card("tag", WARN, WARNB, "Ridge cap 3 m", "10 pcs × 26,000 = 260,000", "cost 24,000 → 27,000", chip("Price up", "warn")))
     nxt = (f'<div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 4px">{ic("cart", 16, SOFT)}'
            f'<span style="font-size: 12px; font-weight: 600; color: {SOFT}">Then</span>{av("DO", 22, fs=9)}<span style="font-size: 12px; font-weight: 700">Denis buys</span>{m("· trip 11:30", 11, SOFT, 600)}</div>')

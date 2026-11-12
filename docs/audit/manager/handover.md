@@ -264,8 +264,8 @@ same kinds. The ten that were at the floor (1 to open + 1 to answer) first:
 
 The other kinds with an action: D-2 `price.waits` (Price coming) **Set 38,750**
 (cost + the item's markup, only when both are known); D-3 `price.waits` (Price
-up) **Shop's price 33,750**; D-6 `credit.hold` (no limit set) **On credit · 2M
-· 14 d** (the smallest of `limitChoices` that covers the order, the shop's usual terms); D-7
+up) **Shop's price 33,750**; D-6 `credit.hold` (no limit set) **On credit · 3M
+· 30 d** (the smallest of `limitChoices` that covers the order, the shop's usual terms); D-7
 `credit.ask` **On credit · load it · 1.5M · 14 d** (the card also offers 2M · 14 d and 3M · 30 d); D-9 `invoice.held` (OWSML)
 **Bill 567**; D-15 `store.extra` **Keep it**; D-17 `stock.count` **Count it
 again** only; D-20 `order.cancel.ask` **Kept** only; D-32 `credit.limit.ask`

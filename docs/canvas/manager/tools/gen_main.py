@@ -89,8 +89,8 @@ row('D-3', 'DO', 'Buyer · replies', dict(kind='price.waits', st='changed', titl
     [('Shop’s price','primary'),('Price set','tap')], [('price.decided',['FN'],'changed')], ('Ruth set a new price · Tell them', 'Sales · Faith'))
 row('D-5', 'GA', 'Sales · order', dict(kind='credit.hold', st='changed', title='Grace · On credit? · Kyaligonza & Sons', body='Old bill · 38 d (held at 21) · owes 2,310,000', act='On credit'),
     [('On credit','primary'),('Cash first','tap'),('Keep held','gone')], [('credit.decided',['GA'],'')], ('On credit · or Cash first · take payment', 'Sales · order (S-1)'))
-row('D-6', 'FN', 'Sales · order', dict(kind='credit.hold', st='changed', title='Faith · On credit? · Mukono Roofing', body='No limit set · #0552 765,000 · would owe 1,979,000', act='On credit · 2M · 14 d'),
-    [('On credit · 2M · 14 d','primary'),('Cash first','tap')], [('credit.decided',['FN'],''),('customer.changed',['FN'],'')], ('On credit', 'Sales · order (S-1)'))
+row('D-6', 'FN', 'Sales · order', dict(kind='credit.hold', st='changed', title='Faith · On credit? · Mukono Roofing', body='No limit set · #0552 1,287,500 · would owe 2,501,500', act='On credit · 3M · 30 d'),
+    [('On credit · 3M · 30 d','primary'),('Cash first','tap')], [('credit.decided',['FN'],''),('customer.changed',['FN'],'')], ('On credit', 'Sales · order (S-1)'))
 row('D-8', ('sys','clock','the run'), 'after Delivered', dict(none='Orders row · no ask', body='#0546 · billed itself 08:30 · others: “bills itself in 18 h”', kind='order.delivered', st='retired'),
     [('Invoice now · optional','tap')], [('order.invoiced',['EA','GA'],'')], ('Invoiced · to collect', 'Sales · Accounts'))
 row('D-9', ('sys','clock','the run'), 'can’t bill itself', dict(kind='invoice.held', st='changed', title='Can’t bill itself · Only 567 · #0561', body='Walk-in · 1 line · 567 · Grace’s counter sale', act='Bill 567'),

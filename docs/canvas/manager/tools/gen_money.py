@@ -566,19 +566,19 @@ def cr_p1():
 
 def cr_p2():
     ev = card(
-        f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 13px; font-weight: 700; color: {SOFT}">Would owe</span>{mono("1,979,000", 18)}</div>'
-        + stack_bar([(1214000/3000000*100, NAVY, ""), (765000/3000000*100, "#8D99B5", HATCH)], marks=[(2/3*100, GOOD)])
-        + f'<div style="position: relative; height: 16px"><span style="position: absolute; left: 66.7%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: {GOOD}; white-space: nowrap">{mono("2M", 11, 700, GOOD)} limit</span>'
-          f'<span style="position: absolute; right: 0; {MONO}; letter-spacing: 0; font-size: 11px; font-weight: 600; color: {FAINT}">3M</span></div>'
-        + legend([("Owes", "1,214,000", NAVY, ""), ("#0552", "765,000", "#8D99B5", HATCH)]), pad="12px 14px", gap=8)
+        f'<div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 13px; font-weight: 700; color: {SOFT}">Would owe</span>{mono("2,501,500", 18)}</div>'
+        + stack_bar([(1214000/4000000*100, NAVY, ""), (1287500/4000000*100, "#8D99B5", HATCH)], marks=[(75, GOOD)])
+        + f'<div style="position: relative; height: 16px"><span style="position: absolute; left: 75%; transform: translateX(-50%); font-size: 11px; font-weight: 700; color: {GOOD}; white-space: nowrap">{mono("3M", 11, 700, GOOD)} limit</span>'
+          f'<span style="position: absolute; right: 0; {MONO}; letter-spacing: 0; font-size: 11px; font-weight: 600; color: {FAINT}">4M</span></div>'
+        + legend([("Owes", "1,214,000", NAVY, ""), ("#0552", "1,287,500", "#8D99B5", HATCH)]), pad="12px 14px", gap=8)
     facts = card(
         "".join(f'<div style="display: flex; align-items: center; gap: 10px; min-height: 34px"><span style="color: {SOFT}">{ic(P[i], 16)}</span><span style="flex: 1; font-size: 13px; font-weight: 600">{l}</span>{mono(v, 13)}</div>'
-                for i, l, v in [("clock", "Oldest bill", "12 d"), ("doc", "#0552 · 2 lines", "765,000"), ("lock", "Limit", "none")]), pad="6px 14px", gap=0)
+                for i, l, v in [("clock", "Oldest bill", "12 d"), ("doc", "#0552 · 2 lines", "1,287,500"), ("lock", "Limit", "none")]), pad="6px 14px", gap=0)
     body = (f'<div style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 12px">'
             f'{asker("FN", "Faith", "#0552", "13:05", "5 m")}'
             f'{ask_head("On credit?", "MR", "Mukono Roofing", "No limit set", "warn")}{ev}{facts}'
-            f'<div style="padding: 0 4px">{sees("Faith", ": On credit · 2M · 14 d")}</div></div>')
-    return decide_top() + body + answer_dock(limit_seg(["2M", "3M", "5M"], "2M"), "Cash first", "On credit")
+            f'<div style="padding: 0 4px">{sees("Faith", ": On credit · 3M · 30 d")}</div></div>')
+    return decide_top() + body + answer_dock(limit_seg(["2M", "3M", "5M"], "3M", ton="30 d"), "Cash first", "On credit")
 
 def truck_ring(mins=25, of=60):
     import math
@@ -682,7 +682,7 @@ def credit_board():
         phone("1 · CREDIT HOLD · D-5 · <span style=\"font-family: 'IBM Plex Mono', monospace\">10:20</span>", cr_p1(),
               "On credit (D-5): push 2 → 1 · app 3 → 2"),
         phone("2 · NO LIMIT SET · D-6 · <span style=\"font-family: 'IBM Plex Mono', monospace\">13:10</span>", cr_p2(),
-              "On credit · 2M · 14 d (D-6): push 5 → 1 · app 6 → 2"),
+              "On credit · 3M · 30 d (D-6): push 5 → 1 · app 6 → 2"),
         phone("3 · THE STORE ASKS · D-7 · <span style=\"font-family: 'IBM Plex Mono', monospace\">09:40</span>", cr_p3(),
               "On credit · load it (D-7): push 5 → 1 · app 6 → 2"),
         phone("4 · CREDIT ASKED · D-32 · <span style=\"font-family: 'IBM Plex Mono', monospace\">11:40</span>", cr_p4(),
