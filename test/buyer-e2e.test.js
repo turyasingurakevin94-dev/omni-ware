@@ -228,7 +228,7 @@ const small = new Set();
     await find().fill(''); await s.p.waitForTimeout(300);
     await s.tap('Ask Ndeeba Timber Works again on WhatsApp');
     txt = await s.text();
-    t.check(/found 5 of 10/.test(txt) && /Brian sees: Asked · \d\d:\d\d/.test(txt) && !(await s.p.locator('.ow-toast').count()), 'Ask again: the row says Asked and Brian sees it, no toast over the title');
+    t.check(/said yes 5 of 10 asks/.test(txt) && /Brian sees: Asked · \d\d:\d\d/.test(txt) && !(await s.p.locator('.ow-toast').count()), 'Ask again: the row says Asked and Brian sees it, no toast over the title');
     await s.p.getByRole('button', { name: /^Katwe Fabricators/ }).first().click(); await s.p.waitForTimeout(400);
     await s.p.getByRole('button', { name: /Fix the price/ }).first().click(); await s.p.waitForTimeout(400);
     await s.p.getByRole('button', { name: 'Close', exact: true }).dblclick(); await s.p.waitForTimeout(700);
@@ -250,6 +250,47 @@ const small = new Set();
     txt = await s.text();
     t.check(txt.includes('Sends later') && txt.includes('Moses sees it when back') && !txt.includes('Sent ·'), 'offline phone: Sends later, Moses sees it when back, never "Sent"');
     t.check(!s.errors.length, `no page errors (suppliers offline) ${s.errors.join('; ')}`);
+
+    /* ---- Buyer round 1 · BUY-03: each number has one meaning, and each pair of screens agrees ---- */
+    s = await open(b, '?demo&state=midday');
+    txt = await s.text();
+    const moving = Number((txt.match(/On the move (\d+) orders?/) || [])[1]);
+    const jobsN = Number((txt.match(/Needs you (\d+) jobs?/) || [])[1]);
+    const rowsN = await s.p.getByRole('button', { name: /^(Ask .*line|.* not found for order|.* needs a supplier)/ }).count();
+    t.check(jobsN === 1 && rowsN === jobsN, `Needs you: ${jobsN} job, one row each (${rowsN} rows)`);
+    t.check(/SUPPLIERS/.test(txt) && await s.btn('On the trip: none').isVisible(), 'the tiles say SUPPLIERS, and On the trip counts suppliers');
+    t.check(txt.includes('Trip · 3 stops') && await s.btn('The trip, 3 stops to buy').isVisible(), 'Today\'s trip card and the red + both say 3 stops');
+    t.check(/Timber 2×4 · #0554 · Asked/.test(txt), 'the held chip names the order: Timber 2×4 · #0554 · Asked');
+    await s.tap('To ask: none');
+    txt = await s.text();
+    const checkingN = Number((txt.match(/Checking (\d+)/) || [])[1]);
+    t.check(moving === 3 && checkingN === moving, `Today "On the move · ${moving} orders" = Orders "Checking ${checkingN}"`);
+    s = await open(b, '?demo&state=midday');
+    await s.tap('The trip, 3 stops to buy');
+    t.check((await s.text()).includes('Sat 17 Oct · 3 stops'), 'the Plan\'s head: 3 stops, as the + says');
+    const cut = await s.p.evaluate(() => [...document.querySelectorAll('.ow-b-trip-node > span:last-child')].some((e) => getComputedStyle(e).textOverflow === 'ellipsis' || e.scrollWidth > e.clientWidth + 1));
+    t.check(!cut, 'the route\'s names are never cut (two lines)');
+    s = await open(b, '?demo&state=midday');
+    await s.tap('Suppliers');
+    t.check(await s.p.getByRole('button', { name: 'Namanve Sheets: said yes 9 of 10 asks in 30 days' }).count() === 1, 'the Suppliers row: said yes 9 of 10 asks');
+    await s.p.getByRole('button', { name: /^Namanve Sheets: said yes/ }).click(); await s.p.waitForTimeout(500); await s.fit('one supplier');
+    txt = await s.text();
+    t.check(/SAID YES · 30 DAYS › 9 of 10 asks/i.test(txt) && txt.includes('With them now 3 lines'), 'the supplier\'s page: said yes 9 of 10 asks · 30 days, 3 lines');
+    t.check(/27,000 UGX \/ pcs was 24,000/.test(txt), 'a new cost reads was its own old cost (24,000)');
+
+    /* ---- BUY-14: take back the cash ask while Esther has not given it ---- */
+    s = await open(b, '?demo&state=cash');
+    await s.tap('The trip, 3 stops to buy');
+    txt = await s.text();
+    t.check(txt.includes('Waiting · Esther') && txt.includes("Esther's ask goes · she is told") && await s.btn('Take back the ask').isVisible(), 'the ask waits: the slide is named Take back the ask');
+    await s.slide('Take back the ask');
+    txt = await s.text();
+    t.check(/Ask taken back · Esther told 11:32/.test(txt) && await s.btn('Send cash ask to Esther').isVisible(), 'taken back: Esther told, the plan open again with Send cash ask');
+    t.check(!s.errors.length, `no page errors (take back) ${s.errors.join('; ')}`);
+    s = await open(b, '?demo&state=cash&offline=1');
+    await s.tap('The trip, 3 stops to buy');
+    txt = await s.text();
+    t.check(txt.includes('No signal · Esther may give meanwhile') && txt.includes('Take back needs signal') && !(await s.btn('Take back the ask').count()), 'no signal: Take back needs signal, never kept');
   } finally { await b.close(); }
   if (small.size) console.log('\nUnder 44 px tall (recorded):\n  ' + [...small].join('\n  '));
   process.exit(t.done() ? 1 : 0);

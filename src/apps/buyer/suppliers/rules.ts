@@ -133,7 +133,8 @@ export function boughtFrom(b: BuyerBooks, sid: string, now: Ms): Bought[] {
     const newer = refs.find((r) => r.line.supplierId === sid && r.line.name === price.item && r.line.priceWas != null
       && r.line.repricedAt != null && r.line.repricedAt > price.at);
     const at = newer ? (newer.line.repricedAt as Ms) : price.at, days = ageDays(at, now);
-    return { price, now: newer ? newer.line.cost : price.price, was: newer ? price.price : null, days, fresh: days <= FRESH_DAYS };
+    // "was" is the line's own old cost (BUY-09), never the list's current price.
+    return { price, now: newer ? newer.line.cost : price.price, was: newer ? newer.line.priceWas : null, days, fresh: days <= FRESH_DAYS };
   });
 }
 

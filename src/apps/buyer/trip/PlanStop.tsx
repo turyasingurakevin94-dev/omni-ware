@@ -5,9 +5,9 @@
  * Held lines sit dashed, open or closed (phone 3): a new price waits on Ruth, or the supplier has not answered.
  */
 import type { JSX } from 'preact';
-import type { LineRef } from '../../../core/buyer/rules.ts';
+import { unitOr, type LineRef } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
-import { clock } from '../../../core/time.ts';
+import { whenShort } from '../../../core/time.ts';
 import { counted, firstWord, orderNo } from '../../../core/names.ts';
 import { Avatar } from '../../../ui/Avatar.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -55,7 +55,7 @@ export function PlanStop(p: PlanStopProps): JSX.Element {
       {p.open && rows.map((r) => (
         <div key={r.order.id + r.line.key} class="ow-b-plan-line">
           <span class="ow-b-plan-lt"><span>{r.line.name}</span>
-            <span class="ow-b-plan-meta"><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /><span class="mono">{`${r.line.qty} ${r.line.unit} × ${fig(r.line.cost)}`}</span></span>
+            <span class="ow-b-plan-meta"><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /><span class="mono">{`${r.line.qty} ${unitOr(r.line.unit)} × ${fig(r.line.cost)}`}</span></span>
           </span>
           <span class="mono ow-b-plan-lamt">{fig(r.line.qty * r.line.cost)}</span>
         </div>
@@ -80,7 +80,7 @@ export function HeldPrice(p: { b: BuyerBooks; held: LineRef[] }): JSX.Element {
         <div key={r.order.id + r.line.key} class="ow-b-plan-held">
           <div class="ow-b-plan-hrow">
             <span class="ow-b-plan-lt"><span class="dim">{r.line.name}</span>
-              <span class="ow-b-plan-meta"><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /><span class="mono">{`${r.line.qty} ${r.line.unit}`}</span></span>
+              <span class="ow-b-plan-meta"><OrderChip who={memberOf(p.b, r.order.sellerId)} id={r.order.id} /><span class="mono">{`${r.line.qty} ${unitOr(r.line.unit)}`}</span></span>
             </span>
             <span class="ow-b-plan-was">{r.line.priceWas != null && <s class="mono">{fig(r.line.priceWas)}</s>}<b class="mono">{fig(r.line.cost)}</b></span>
           </div>
@@ -98,12 +98,12 @@ export function HeldPrice(p: { b: BuyerBooks; held: LineRef[] }): JSX.Element {
 }
 
 /** A supplier with lines held off the trip and no stop: still Asked, or a price waits on Ruth. Dashed, "held". */
-export function HeldRow(p: { b: BuyerBooks; supplierId: string; refs: LineRef[] }): JSX.Element {
+export function HeldRow(p: { b: BuyerBooks; supplierId: string; refs: LineRef[]; now: number }): JSX.Element {
   const sup = supplierOf(p.b, p.supplierId);
   const ids = [...new Set(p.refs.map((r) => r.order.id))];
   const asked = p.refs.find((r) => r.state === 'asked');
   const c = asked ? asked.order.confirms[p.supplierId] : null;
-  const why = asked ? `Asked${c && c.askedAt ? ' · ' + clock(c.askedAt) : ''}` : 'Price up';
+  const why = asked ? `Asked${c && c.askedAt ? ' · ' + whenShort(c.askedAt, p.now) : ''}` : 'Price up';
   return (
     <div class="ow-b-plan-off held">
       <span class="ow-b-plan-n off"><Icon name="clock" size={16} stroke={2} /></span>

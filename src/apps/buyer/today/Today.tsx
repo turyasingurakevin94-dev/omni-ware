@@ -12,7 +12,9 @@
  * ("Grace sees  Found · 09:25") are on the screen.
  */
 import type { JSX } from 'preact';
-import { answeredRows, askGroups, lineRefs, liveOrders, replyRows } from '../../../core/buyer/rules.ts';
+import { UNIT, answeredRows, askGroups, checking, jobs, lineRefs, replyRows } from '../../../core/buyer/rules.ts';
+import { counted } from '../../../core/names.ts';
+import { whenShort } from '../../../core/time.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { Notice } from '../../../ui/Notice.tsx';
@@ -22,7 +24,7 @@ import { books, flush, kept, now, online } from '../shell/store.ts';
 import { AllClear, NextTrip, WaitingOn } from './Cards.tsx';
 import { Head } from './Head.tsx';
 import { AskRow, Chip, NeedsSupplierRow, NotFoundRow, ReplyRow, Sees } from './Rows.tsx';
-import { calm, hm, sellersOf, tripReady, waitingOn } from './rules.ts';
+import { calm, sellersOf, tripReady, waitingOn } from './rules.ts';
 import { MoveTiles } from './Tiles.tsx';
 import './today.css';
 
@@ -52,8 +54,8 @@ function SalesSees(p: { b: BuyerBooks; now: number }): JSX.Element | null {
   if (!who.length || (!found && asked == null)) return null;
   return (
     <Sees who={who}>
-      {found && found.answeredAt != null && <Chip tone="good">Found · <span class="mono">{hm(found.answeredAt)}</span></Chip>}
-      {asked != null && <Chip tone="warn">Asked · <span class="mono">{hm(asked)}</span></Chip>}
+      {found && found.answeredAt != null && <Chip tone="good">Found · <span class="mono">{whenShort(found.answeredAt, n)}</span></Chip>}
+      {asked != null && <Chip tone="warn">Asked · <span class="mono">{whenShort(asked, n)}</span></Chip>}
     </Sees>
   );
 }
@@ -69,6 +71,7 @@ export function Today(): JSX.Element {
   const ready = tripReady(b, n), quiet = calm(b, n);
   const waits = quiet ? waitingOn(b, n) : [];
   const late = reps.some((g) => g.late);
+  const nJobs = jobs(b, n);
 
   return (
     <>
@@ -80,7 +83,7 @@ export function Today(): JSX.Element {
         </Notice>
       )}
       <main class="ow-b-today-main">
-        <Sec title="On the move" meta={quiet && waits.length ? `${waits.length} waiting` : `${liveOrders(b).length} orders`} />
+        <Sec title="On the move" meta={quiet && waits.length ? `${waits.length} waiting` : counted(checking(b).length, UNIT.checking)} />
         <MoveTiles b={b} now={n} />
 
         {quiet ? (
@@ -90,16 +93,16 @@ export function Today(): JSX.Element {
           </>
         ) : (
           <>
-            {asks.length + nf.length + needs.length > 0 ? (
+            {nJobs > 0 ? (
               <>
-                <Sec title="Needs you" dot="on" meta={String(asks.length + nf.length + needs.length)} />
+                <Sec title="Needs you" dot="on" meta={counted(nJobs, UNIT.needs)} />
                 {nf.map((r) => <NotFoundRow key={`${r.order.id}-${r.line.key}`} b={b} r={r} />)}
                 {needs.map((r) => <NeedsSupplierRow key={`ns-${r.order.id}-${r.line.key}`} b={b} r={r} />)}
                 {asks.map((g) => <AskRow key={g.supplier.id} b={b} g={g} />)}
               </>
             ) : !ready && (
               <>
-                <Sec title="Needs you" dot="off" meta="0" />
+                <Sec title="Needs you" dot="off" meta={counted(0, UNIT.needs)} />
                 <div class="ow-b-today-none"><Icon name="check" size={18} stroke={2.4} />Every supplier asked</div>
               </>
             )}

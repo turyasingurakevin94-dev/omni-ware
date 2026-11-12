@@ -22,11 +22,12 @@ import { IconTile } from '../../../ui/ActRow.tsx';
 import { Icon, type IconName } from '../../../ui/icons.tsx';
 import { toast } from '../../../ui/toast.tsx';
 import { cx } from '../../../ui/util.tsx';
-import { act } from '../shell/store.ts';
+import { act, now } from '../shell/store.ts';
+import { whenShort } from '../../../core/time.ts';
 import { openNotFound } from '../orders/NotFound.tsx';
 import { askKept, askSupplier } from '../shell/ask.ts';
 import { KEPT, KEPT_TOAST, Waiting } from '../orders/parts.tsx';
-import { firstName, hm, sellersOf, seeWord } from './rules.ts';
+import { firstName, sellersOf, seeWord } from './rules.ts';
 
 /** The board's eye ("… sees"): not in src/ui/icons.tsx yet. */
 export function Eye(): JSX.Element {
@@ -140,7 +141,7 @@ export function ReplyRow(p: { b: BuyerBooks; g: SupplierGroup }): JSX.Element {
         <span class="ow-b-today-row-name">{s.name}</span>
         {st === 'error' ? <span class="mono ow-b-today-row-why">{`Not saved · ${why}`}</span> : (
           <>
-            {g.askedAt != null && <span class={cx('mono ow-b-today-row-at', g.late && 'late')}>{`Asked · ${hm(g.askedAt)}`}</span>}
+            {g.askedAt != null && <span class={cx('mono ow-b-today-row-at', g.late && 'late')}>{`Asked · ${whenShort(g.askedAt, now.value)}`}</span>}
             <span class="ow-b-today-row-sub">{g.orders.slice(0, 3).map((o) => <FromChip key={o.id} b={p.b} o={o} />)}</span>
           </>
         )}

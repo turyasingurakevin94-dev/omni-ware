@@ -2,21 +2,23 @@
  * Today's cards (board Today, phones 2 and 4).
  *
  *   <NextTrip/>     Next move: the trip the app proposes, its stops in route order with their cash, what is
- *                   held off it (Ruth decides · Asked; one chip per item and state), and who in Sales sees Found. No button: the red + is the way in.
+ *                   held off it (Ruth decides · Asked with its orders; one chip per item and state), and who in Sales sees Found. No button: the red + is the way in.
  *   <AllClear/>     Nothing waits on you. After the hand-in: the orders the Store counts in (Packing shows
  *                   only after the count), and the shorts Sales was told of.
  *   <WaitingOn/>    Waiting on others: Ruth and the suppliers asked, faces and names (opens Replies).
  */
 import type { JSX } from 'preact';
-import { WORD, handIn, lineRefs, tripPlan } from '../../../core/buyer/rules.ts';
+import { WORD, handIn, lineRefs, planStops, tripPlan, type LineRef } from '../../../core/buyer/rules.ts';
+import { whenShort } from '../../../core/time.ts';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
 import { orderNo } from '../../../core/names.ts';
 import { TINTS } from '../../../core/names.ts';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
 import { nav } from '../shell/nav.ts';
+import { now } from '../shell/store.ts';
 import { Chip, Dot, Sees } from './Rows.tsx';
-import { firstName, hm, sellersOf, shortItem, type Waiter } from './rules.ts';
+import { firstName, itemName, sellersOf, type Waiter } from './rules.ts';
 import './cards.css';
 
 export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
@@ -25,9 +27,12 @@ export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
   const ruth = b.team.find((m) => m.role === 'manager');
   const found = lineRefs(b).filter((r) => r.state === 'found').map((r) => r.order);
   const who = sellersOf(b, [...new Set(found)]);
-  const n = plan.stops.length;
-  // One chip per item and state: "Iron sheet · Asked" once, though two orders wait on it.
-  const held = plan.held.filter((r, i, all) => all.findIndex((x) => shortItem(x.line.name) === shortItem(r.line.name) && x.state === r.state) === i);
+  // The stops the red + counts (BUY-03): a held line is not a stop.
+  const n = planStops(b).length;
+  // One chip per item and state: "Iron sheet G28 · #0550 #0552 · Asked" once, though two orders wait on it.
+  const same = (x: LineRef, r: LineRef) => itemName(x.line.name) === itemName(r.line.name) && x.state === r.state;
+  const held = plan.held.filter((r, i, all) => all.findIndex((x) => same(x, r)) === i);
+  const nos = (r: LineRef) => [...new Set(plan.held.filter((x) => same(x, r)).map((x) => orderNo(x.order.id)))].join(' ');
   return (
     <div class="ow-b-today-next" role="group" aria-label={`Next move: trip, ${n} stop${n === 1 ? '' : 's'}, cash ${fig(plan.cash)}. The red plus starts it.`}>
       <div class="ow-b-today-next-h">
@@ -48,8 +53,8 @@ export function NextTrip(p: { b: BuyerBooks }): JSX.Element {
         <div class="ow-b-today-next-held">
           <span>Held</span>
           {held.map((r) => r.state === 'priceup'
-            ? <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip warn face"><Dot m={ruth} />{`${shortItem(r.line.name)} · ${ruth ? firstName(ruth) : 'Manager'} decides`}</span>
-            : <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip neutral">{`${shortItem(r.line.name)} · ${WORD[r.state]}`}</span>)}
+            ? <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip warn face"><Dot m={ruth} />{`${itemName(r.line.name)} · ${ruth ? firstName(ruth) : 'Manager'} decides`}</span>
+            : <span key={`${r.order.id}-${r.line.key}`} class="ow-b-today-chip neutral">{`${itemName(r.line.name)} · `}<span class="mono">{nos(r)}</span>{` · ${WORD[r.state]}`}</span>)}
         </div>
       )}
       <Sees who={who} class="ow-b-today-next-sees"><Chip tone="good">{WORD.found}</Chip></Sees>
@@ -71,7 +76,7 @@ export function AllClear(p: { b: BuyerBooks }): JSX.Element {
         <span aria-hidden="true" class="ow-b-today-clear-ic"><Icon name="check" size={20} stroke={2.4} /></span>
         <div class="ow-b-today-clear-t">
           <span class="ow-b-today-clear-big">Nothing waits on you</span>
-          {t && t.handedInAt != null && <span class="ow-b-today-clear-sub">Handed in · <span class="mono">{hm(t.handedInAt)}</span>{store ? ` · ${firstName(store)} counts it in` : ''}</span>}
+          {t && t.handedInAt != null && <span class="ow-b-today-clear-sub">Handed in · <span class="mono">{whenShort(t.handedInAt, now.value)}</span>{store ? ` · ${firstName(store)} counts it in` : ''}</span>}
         </div>
       </div>
       {counting.map((o) => (

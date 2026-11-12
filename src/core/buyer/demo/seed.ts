@@ -6,6 +6,7 @@
  *   morning   09:00 · every line to ask (the default)
  *   midday    11:15 · the answers in: Nakawa, Namanve, Owino found, Kiseka not found,
  *             the ridge cap's price up, Ndeeba late · the trip ready to plan
+ *   cash      11:32 · the cash ask sent at 11:30, Esther has not given it yet (R1You)
  *   trip      11:45 · the cash given, on the trip, no stop done yet
  *   empty     nothing to buy
  */
@@ -14,7 +15,7 @@ import type { Member, Ms } from '../../types.ts';
 import { BRIAN, DENIS, ESTHER, FAITH, GRACE, MOSES, MUSA, RUTH, people } from '../../demo/seed/people.ts';
 import type { BLine, BOrder, BuyerBooks, Confirm, ListPrice, Supplier } from '../types.ts';
 
-export type BuyerDemoState = 'morning' | 'midday' | 'trip' | 'empty';
+export type BuyerDemoState = 'morning' | 'midday' | 'cash' | 'trip' | 'empty';
 
 const DAY = '2026-10-17';
 export const tb = (hm: string): Ms => at(DAY, hm);
@@ -110,12 +111,13 @@ export function seed(state: BuyerDemoState | null): Seeded {
   const me = team().find((m) => m.id === DENIS) as Member;
   const books: BuyerBooks = { me, team: team(), orders: os, suppliers: suppliers(), prices: prices(), trip: null, savedAt: 0 };
   let now = tb('9:00');
-  if (st === 'midday' || st === 'trip') { midday(os); now = tb('11:15'); }
-  if (st === 'trip') {
-    now = tb('11:45');
+  if (st === 'midday' || st === 'cash' || st === 'trip') { midday(os); now = tb('11:15'); }
+  if (st === 'cash' || st === 'trip') {
+    const given = st === 'trip';
+    now = tb(given ? '11:45' : '11:32');
     books.trip = {
-      id: 'trip-1017', state: 'on', handedInAt: null,
-      cash: { amount: 3500000, askedAt: tb('11:30'), givenAt: tb('11:45'), by: ESTHER },
+      id: 'trip-1017', state: given ? 'on' : 'cash', handedInAt: null,
+      cash: { amount: 3500000, askedAt: tb('11:30'), givenAt: given ? tb('11:45') : null, by: given ? ESTHER : null },
       stops: [
         { supplierId: SUP.nakawa, lines: [{ orderId: 550, key: 'L1' }], planned: 680000, paid: null, done: false, off: false },
         { supplierId: SUP.owino, lines: [{ orderId: 553, key: 'L1' }], planned: 540000, paid: null, done: false, off: false },

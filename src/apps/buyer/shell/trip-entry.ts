@@ -1,14 +1,13 @@
 /*
- * The red +: it opens the trip. Its count is the stops the trip has to make
- * (planned, or still to do on the road); none when there is nothing to buy.
+ * The red +: it opens the trip. Its count is the stops on the plan (core/buyer/rules.ts planStops, the one
+ * definition the Plan's head and Today's trip card read too: a held line is not a stop); on the road, the
+ * stops still to do. None when there is nothing to buy.
  */
 import { computed } from '@preact/signals';
-import { tripPlan } from '../../../core/buyer/rules.ts';
+import { planStops } from '../../../core/buyer/rules.ts';
 import { books } from './store.ts';
 
 export const tripBadge = computed(() => {
   const b = books.value;
-  if (!b) return 0;
-  if (b.trip && (b.trip.state === 'cash' || b.trip.state === 'on')) return b.trip.stops.filter((s) => !s.off && !s.done).length;
-  return tripPlan(b).stops.length;
+  return b ? planStops(b).length : 0;
 });

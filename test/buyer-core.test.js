@@ -100,6 +100,51 @@ const T = require(path.join(ROOT, 'src/core/time.ts'));
   const c2 = d.shop.orders.find((o) => o.id === 552).lines[1];
   t.check(c2.ruthDecides && c2.priceWas === 24000, 'a new price over the selling price: Ruth decides, was 24,000');
 
+  /* ---- Buyer round 1 · BUY-03: one definition per number ---- */
+  d = buyerDemo('?demo&state=midday', { instant: true });
+  b = await d.books(); now = d.now();
+  const P = require(path.join(ROOT, 'src/apps/buyer/trip/model.ts'));
+  t.check(R.checking(b).map((o) => o.id).join() === '552,553,554', `Checking counts orders: #0552 #0553 #0554 (got ${R.checking(b).map((o) => o.id).join()})`);
+  t.check(R.jobs(b, now) === 1, `Needs you counts jobs: Kiseka's Not found line, nothing to ask (got ${R.jobs(b, now)})`);
+  const tn = R.tiles(b, now);
+  t.check(tn.toask === 0 && tn.asked === 1 && tn.found === 3 && tn.ontrip === 0, 'tiles count suppliers: 0 to ask, 1 asked, 3 found, 0 on the trip');
+  t.check(R.planStops(b).length === 3 && P.planNow(b).stops.filter((s) => !s.off).length === 3, 'the red + and the Plan: 3 stops');
+  // A planned trip whose stop holds only a held line (the Ridge cap, Price up): that is no stop (before: + 3 vs plan 2).
+  b.trip = { id: 'x', state: 'planned', handedInAt: null, cash: { amount: 0, askedAt: null, givenAt: null, by: null }, stops: [
+    ...R.tripPlan(b).stops, { supplierId: 's-katwe', lines: [{ orderId: 552, key: 'L1' }], planned: 270000, paid: null, done: false, off: false }] };
+  t.check(R.planStops(b).length === 3 && P.planNow(b).stops.length === 3, 'a stop of held lines only is not a stop, on the + and on the Plan');
+  b.trip = null;
+  t.check(R.record(b.suppliers.find((s) => s.id === 's-namanve')).yes === 9 && R.recordWord({ yes: 9, asks: 10 }) === 'said yes 9 of 10 asks', 'a supplier\'s record: said yes 9 of 10 asks');
+  t.check(R.record({ found: 0, asked: 0 }) === null, 'a record of 0 of 0 is hidden');
+  t.check(R.unitOr('', 'bag') === 'bag' && R.unitOr(null, '') === 'each' && R.unitOr('pcs', 'bag') === 'pcs', 'a missing unit: the line\'s, else each');
+  t.check(R.UNIT.tile === 'supplier' && R.UNIT.checking === 'order' && R.UNIT.needs === 'job' && R.UNIT.stop === 'stop', 'each number has its unit word');
+
+  /* ---- BUY-09: "was" is the line's own old cost, never the list's current price ---- */
+  const SR = require(path.join(ROOT, 'src/apps/buyer/suppliers/rules.ts'));
+  b = await d.books();
+  b.prices.find((x) => x.item === 'Ridge cap 3 m').price = 25000;
+  const capB = SR.boughtFrom(b, 's-namanve', now).find((x) => x.price.item === 'Ridge cap 3 m');
+  t.check(capB.was === 24000 && capB.now === 27000, `Ridge cap: 27,000, was 24,000 (its own old cost), not the list's 25,000 (got was ${capB && capB.was})`);
+
+  /* ---- BUY-11: a time not today carries its day ---- */
+  const at = (day, hm) => T.at(day, hm);
+  const noon = at('2026-11-12', '12:00');
+  t.check(T.whenShort(at('2026-11-12', '9:31'), noon) === '09:31', 'today: 09:31');
+  t.check(T.whenShort(at('2026-11-11', '15:41'), noon) === 'Yesterday 15:41', 'yesterday: Yesterday 15:41');
+  t.check(T.whenShort(at('2026-11-10', '10:00'), noon) === 'Tue 10 Nov', 'older: Tue 10 Nov');
+  t.check(T.clock(at('2026-11-12', '9:31')) === '9:31' && T.when(at('2026-11-11', '15:41'), noon) === 'Wed 15:41', 'Sales keeps clock and when as they were');
+
+  /* ---- BUY-14: take back a cash ask Esther has not given ---- */
+  d = buyerDemo('?demo&state=cash', { instant: true });
+  t.check(d.shop.trip.state === 'cash' && d.shop.trip.cash.givenAt == null, 'the cash demo: the ask waits on Esther');
+  await d.takeBackCash();
+  t.check(d.shop.trip.state === 'planned' && d.shop.trip.cash.askedAt == null, 'taken back: the plan is open again');
+  try { await d.takeBackCash(); t.check(false, 'a second take back should be refused'); }
+  catch (e) { t.check(e.kind === 'refused' && e.message === 'Esther has given it', `nothing to take back: refused (${e.message})`); }
+  d = buyerDemo('?demo&state=trip', { instant: true });
+  try { await d.takeBackCash(); t.check(false, 'a given ask should be refused'); }
+  catch (e) { t.check(e.kind === 'refused' && e.message === 'Esther has given it', 'a given ask is never taken back: Esther has given it'); }
+
   /* ---- offline writes are refused as offline (the outbox keeps them) ---- */
   d = buyerDemo('?demo&offline=1', { instant: true });
   try { await d.ask('s-namanve', 'whatsapp'); t.check(false, 'offline ask should fail'); }

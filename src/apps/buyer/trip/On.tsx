@@ -13,7 +13,7 @@ import type { StopCount } from '../../../core/buyer/source.ts';
 import { handIn, shortWord } from '../../../core/buyer/rules.ts';
 import type { BuyerBooks, Stop } from '../../../core/buyer/types.ts';
 import { counted, orderNo } from '../../../core/names.ts';
-import { clock } from '../../../core/time.ts';
+import { clock, whenShort } from '../../../core/time.ts';
 import { Dock } from '../../../ui/Dock.tsx';
 import { Icon } from '../../../ui/icons.tsx';
 import { fig } from '../../../ui/Money.tsx';
@@ -63,8 +63,8 @@ export function On(p: { b: BuyerBooks }): JSX.Element {
         ? <NavyHero title="On the trip" at={2} text={`Back · ${clock(now.value)}`} onClose={() => nav.back()}
             pill={b.me && <Avatar initials={b.me.initials} tint="me" onNavy size={40} />}
             eyebrow={`Cash back to ${en}`} amount={h.back} pct={100} mint foot={`${done.length} of ${counted(stops.length, 'stop')} · ${fig(paid)} paid`} />
-        : <NavyHero title="On the trip" at={2} text={`Out · ${t.cash.givenAt ? clock(t.cash.givenAt) : '—'}`} onClose={() => nav.back()}
-            pill={t.cash.givenAt ? <GavePill who={esther} at={clock(t.cash.givenAt)} /> : undefined}
+        : <NavyHero title="On the trip" at={2} text={`Out · ${t.cash.givenAt ? whenShort(t.cash.givenAt, now.value) : '—'}`} onClose={() => nav.back()}
+            pill={t.cash.givenAt ? <GavePill who={esther} at={whenShort(t.cash.givenAt, now.value)} /> : undefined}
             eyebrow="Cash in hand" amount={inHand} pct={pct} foot={`${done.length} of ${counted(stops.length, 'stop')} · ${fig(paid)} paid`} />}
       <RouteStrip nodes={nodes} donePct={pct} />
       <div class="ow-b-trip-body">
@@ -106,7 +106,7 @@ function StopRow(p: { b: BuyerBooks; n: number; stop: Stop; kept: boolean; next:
     const diff = (s.paid ?? 0) - s.planned;
     const j = justDone.value && justDone.value.sid === s.supplierId ? justDone.value : null;
     const at = s.doneAt ?? (j ? j.at : null);
-    const sub = [word, at != null ? clock(at) : '', !short && diff ? fig(diff, false, true) : ''].filter(Boolean).join(' · ');
+    const sub = [word, at != null ? whenShort(at, now.value) : '', !short && diff ? fig(diff, false, true) : ''].filter(Boolean).join(' · ');
     return (
       <div class="ow-b-on-row">
         <span class={cx('ow-b-on-n', short ? 'short' : 'done')}><Icon name="check" size={16} stroke={2.4} /></span>

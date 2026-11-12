@@ -9,6 +9,7 @@ import { signal } from '@preact/signals';
 import type { JSX } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import type { BuyerBooks } from '../../../core/buyer/types.ts';
+import { record, recordWord } from '../../../core/buyer/rules.ts';
 import { orderNo } from '../../../core/names.ts';
 import { GroupCard } from '../../../ui/ActRow.tsx';
 import { Icon } from '../../../ui/icons.tsx';
@@ -121,6 +122,8 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
   const more = r.orders.length > 1 ? ` +${r.orders.length - 1}` : '';
   const done = justAsked.value && justAsked.value.id === r.s.id ? justAsked.value : null;
   const later = r.waits && keptFor('ask', r.s.id);
+  // The record, one rule (BUY-03): the same figure as the supplier's own page; nothing at 0 of 0.
+  const rec = record(r.s);
   if (done) {
     // SUCCESS (Suppliers.dc.html): their record, then "✓ Asked · 11:10" (Undo is not built: no write undoes an ask).
     return (
@@ -129,7 +132,7 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
           <SupTile name={r.s.name} size={44} />
           <span class="ow-b-suppliers-t">
             <span class="ow-b-suppliers-name">{r.s.name}</span>
-            <span class="ow-b-suppliers-rec mono">{`found ${r.s.found} of ${r.s.asked}${r.s.replyMins != null ? ` · ${replyWord(r.s.replyMins)}` : ''}`}</span>
+            <span class="ow-b-suppliers-rec mono">{[rec ? recordWord(rec) : 'no asks in 30 days', r.s.replyMins != null ? replyWord(r.s.replyMins) : ''].filter(Boolean).join(' · ')}</span>
           </span>
         </div>
         <div class="ow-b-suppliers-asked"><span><Icon name="check" size={14} stroke={2.4} />Asked · <span class="mono">{hm(done.at)}</span></span></div>
@@ -139,7 +142,7 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
   return (
     <div class="ow-b-suppliers-row">
       <button type="button" class="ow-b-suppliers-main" onClick={() => nav.push('suppliers/one', { id: r.s.id })}
-        aria-label={`${r.s.name}${r.waits ? '' : `: found ${r.s.found} of ${r.s.asked}`}`}>
+        aria-label={`${r.s.name}${r.waits ? '' : rec ? `: ${recordWord(rec)} in 30 days` : ': no asks in 30 days'}`}>
         <SupTile name={r.s.name} />
         <span class="ow-b-suppliers-t">
           <span class="ow-b-suppliers-name">{r.s.name}</span>
@@ -150,11 +153,11 @@ function Row(p: { b: BuyerBooks; r: SupRow; sending: boolean; onAsk: () => void 
               {r.orders.length > 0 && <span class="mono">{orderNo(r.orders[0]) + more}</span>}
             </span>
           )}
-          {!r.state && <span class="ow-b-suppliers-sub quiet">{r.s.place}</span>}
+          {!r.state && <span class="ow-b-suppliers-sub quiet">{rec ? r.s.place : 'no asks in 30 days'}</span>}
         </span>
-        {!r.waits && (
+        {!r.waits && rec && (
           <span class="ow-b-suppliers-rate mono">
-            <b>{`${r.s.found}/${r.s.asked}`}</b>
+            <b>{`${rec.yes}/${rec.asks}`}</b>
             {r.s.replyMins != null && <span>{replyWord(r.s.replyMins)}</span>}
           </span>
         )}

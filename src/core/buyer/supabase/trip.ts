@@ -55,6 +55,23 @@ export async function askCash(sb: Sb, s: Session, raw: Raw): Promise<void> {
   });
 }
 
+/** Accounts' first name, as the refusal says it ("Esther has given it"). */
+const accountsName = (raw: Raw): string => firstWord((raw.members.find((m) => m.role === 'accounts') || {}).display_name) || 'Accounts';
+
+/**
+ * BUY-14 · take back the cash ask Accounts has not given: this buyer's own open trip_cash ask goes to
+ * withdrawn (0125's RLS and guard let whoever passed it on withdraw it). The update matches only an ask still
+ * open, so an ask Esther has given is never taken back: no row changed, refused.
+ */
+export async function takeBackCash(sb: Sb, s: Session, raw: Raw): Promise<void> {
+  const ask = pendingCashAsk(raw, null);
+  const given = () => dataError('refused', `${accountsName(raw)} has given it`, 'given');
+  if (!ask || ask.status !== 'open' || String(ask.created_by || '') !== s.userId) throw given();
+  const rows = await ok(sb.from('buyer_handoffs').update({ status: 'withdrawn' })
+    .eq('shop_id', s.shopId).eq('id', ask.id).eq('kind', 'trip_cash').eq('created_by', s.userId).eq('status', 'open').select('id'));
+  if (!Array.isArray(rows) || rows.length === 0) throw given();
+}
+
 /** W17a buyer.html:4449 dropStop: the stop is called off; the cash it carried moves to a stop that stays. */
 async function dropStop(sb: Sb, s: Session, x: Row, note: string, keep: Row | null): Promise<void> {
   const cash = x.cash_given != null ? Number(x.cash_given) : null;
