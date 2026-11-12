@@ -15,3 +15,5 @@ The Shelf critic (`docs/audit/store/CANVAS-PARITY.md` "## Shelf") found three fa
 | SH15 A count is waiting | the step times "9:21" and "now" `#6B7480` → `#5F6980` | F12: 11 px grey at 4.35:1 on `#F7F5F2`; `#5F6980` is 5.05:1 |
 | SH30 We need more | "on the shelf · you ask for 10" `#6B7480` → `#5F6980` | F12 |
 | SH40 Scan | the label's short code "A-014" → "A-3533" | F4: the code under a label's bars is the aisle letter and four digits from the item's key (`store.html:5814 labelShort`, the labels already on the shelves); "A-014" followed no rule. Now spec §4.5 and `core/store/shelf.ts labelShort`. Kevin can choose another numbering; the spec row is the one place to change |
+| SH15 | "Shelf" step label #6B7480 → #5F6980 | 4.35:1 → 4.5:1+ (critic re-check) |
+| SH41 | aisle tiles lose opacity .9 | aisle names 4.43:1 → full contrast (critic re-check) |
