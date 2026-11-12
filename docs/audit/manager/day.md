@@ -139,89 +139,141 @@ Today). The Nudge moves onto the rows that need one and onto Team.
 - Decisions that live here: D-29 goals (one suggested goal per person),
   stage limits and the hold days, D-31 assign and nudge.
 
+## Two ways to one tap
+
+Opening a page to press one button is the step most decisions can lose. Two
+ways, used together:
+
+1. **Answer on the row.** Every row in Today's Needs you and every card in the
+   Decide-next queue carries its evidence in one line (the figure that decides
+   it: "cost 27,000 · sells 26,000 · 10 pcs", "4 of 6 packed · 184,000",
+   "owes 6.4M of 5M") and the **one safe answer** as a button on the row
+   (Approve · Bill what went · On credit · Keep it · Take the check-in · Agreed
+   · Shelf part OK …). One tap answers; Undo 10 s stays on the row. Opening the
+   card is only for another answer (a rung on the ladder, Bill it all, Cash
+   first) or a closer look. **From the app: 1 tap to open + 1 to answer.**
+2. **Answer from the push.** The push carries the evidence in its title and
+   body (an expanded Android notification shows 2–3 lines, so the evidence is
+   read before the tap) and the same one safe answer as a **notification action
+   button**. One tap answers from the lock screen; the notification turns into
+   "Approved · Undo" for 10 s before anything is sent, and the app shows it
+   with Undo when it next opens inside that window. The answer goes through
+   one server function that re-checks the ask (someone else answered first →
+   "Someone else just did this"). **From the push: 1 tap.**
+
+**Never a notification action:** an irreversible money or books move — a
+write-off, a credit note, a void, a refund, a stock take, a merge, an opening
+balance, a cancel. They keep the slide on the card (or on the row). Their push
+still carries the evidence and offers only the **safe "keep" answer** as an
+action (Kept on the shelf · Kept as sold · Kept as billed · Count it again ·
+Kept). What that needs is handover.md §6 (native changes) and §4 (the words
+and the actions of each push).
+
 ## Every decision, the new path
 
-"Open" is the tap on the push (or the FAB when it is next in the queue);
-"Answer" is what Ruth taps; evidence costs no tap (it is on the card).
+"From the push" starts at the tap on the push (today: only when `pushOpen`
+routes it; an unrouted push lands on Today and costs the app path). "From the
+app" starts at the tap that opens the app: today + the Decide-now tile + the
+row + the answer; new = the answer on the Needs-you row (or the FAB card) — or,
+for a slide, the row's slide. "—" = no push exists for it (today) or none is
+needed (new). Evidence costs no tap.
 
-| ID | See the ask | See the evidence | Answer | Taps before → after |
-|---|---|---|---|---|
-| D-1 Under the shop's price | push `price.waits` → the card: "Grace · Kato · Roofing sheet at 200,000 · Under the shop's price" | the ladder: cost 168,000 · Grace's 200,000 · usual 205,000 · shop's 210,000, each with its margin | tap **Approved** (or a rung: **Price set · 205,000**, **Shop's price**) | 2 → **2** (Set price 5 → 2; another figure 3) |
-| D-2 Price coming | push → card "Price coming · 3 m roofing sheet" | the cost (or "no cost: type it"), the shop's markup, what Kato usually pays | tap **Price set · 210,000** (cost + markup, the suggested rung) | 4 → **2** |
-| D-3 Price up | push → card "Price up · now costs 215,000, sells at 200,000" | was · sells · new cost bars, the loss per line | tap **Shop's price · 269,000** or a rung | 5 → **2** |
-| D-4 Counter sale | push → card pinned "At the counter · Grace · 1:20" | shop's price struck, Grace's price, margin | tap **Approved** / **Shop's price** | 2 → **2** |
-| D-5 On credit? (limit or old bill) | push `credit.hold` → card with the chip **Over the limit** / **Old bill · 34 days** | the limit gauge and oldest-bill ring (as today), promises dots, "usually pays in 18 d" | tap **On credit** / **Cash first** | 2 → **2** |
-| D-6 On credit? (no limit set) | push → card, chip **No limit set** | the order, what they have bought before, NEW badge | tap one chip **On credit · 500k · 14 d** (or **Cash first**) | 5 → **2** |
-| D-7 Not paid yet · on credit? (the Store) | push `credit.ask` → card pinned "Musa · the truck waits" | as D-6 | tap **On credit · load it · 500k · 14 d** / **Cash first · it stays** | 5 → **2** |
-| D-8 Invoice | nothing to see: Orders shows "Delivered · bills itself in 18 h" | — | none (optional **Invoice now**, 2) | 2 → **0** |
-| D-9 Only 567 · check it | push `invoice.held` → card "Can't bill itself · Only 567" | the slip | tap **Bill it** (or Fix the order) | 3 → **2** |
-| D-10 A line at 0 | push → card "Can't bill itself · a line at 0" | the line, its cost | tap **Given away · {why chip}** (or **Price coming**) | 5 → **2** |
-| D-11 Run skipped (price, short pick) | the underlying card | — | the underlying answer | +0 (as today) |
-| D-12 Packed short | push `pick.short` → card "Musa packed 4 of 6" | the line bars, both bills side by side | tap **Bill what went · 184,000** / **Bill it all · 276,000** | 2 → **2** (bill it all 3 → 2) |
-| D-13 Check-in differs | push `trip.difference` → card "Musa's check-in of Denis's trip" (+ Denis's note on it) | per line Denis → yard bars, the difference at cost, the trip cash | tap **Take the check-in** (Undo 10 s) | 2 → **2** (with a note 3 → 2) |
-| D-14 Denis's note alone | in the trip's history, no card | — | none | 2 → **0** |
-| D-15 Not on the list · keep it? | push `store.extra` → card "Musa · 2 bags cement on the truck" | on the shelf now, last price paid, any order short of it | tap **Keep it** / **It goes back** | not possible → **2** |
-| D-16 Damaged · 3 roofing sheets | push `stock.report` → card | the item, its shelf, the cost of the loss | slide **Write off · 504,000** / tap **Kept on the shelf** | 2 → **2** (kept: not possible → 2) |
-| D-17 A count to check | push `stock.count` (P-1) → card "Musa · Aisle B · 2 differ" | the grid of agree/differ, net at cost | slide **Count taken** / tap **Count it again** | 4 → **2** |
-| D-18 Return asked | push `invoice.ask` → card "Grace · 2 roofing sheets back · damaged" | the slip with the lines, "owes 1,034,000 → 950,000" | slide **Credit note raised · 84,000** / tap **Kept as sold** | 2 → **2** |
-| D-19 Void asked | push → card "Esther · INV-0548 · entered twice" | the twin bill beside it, what they owe before → after, money paid | with money: chip **Refund cash** / **Keep as deposit**; slide **Voided · 430,000**; or tap **Kept as billed** | 2 → **2** (with money 4 → 3) |
-| D-20 Cancel asked | push `order.cancel.ask` (routed) → card "Grace · #0558 · changed their mind" | stage, lines, money paid, "Musa puts back what was packed · Denis stops · Grace is told" | slide **Cancelled** / tap **Kept** | 4 → **2** |
-| D-21 Taken twice? | the FAB queue (no asker) | the two slips side by side, minutes apart | slide **Cancel #0559 · keep #0558** / tap **Both are real** | 4 → **3** (app, FAB, slide) |
-| D-22 Peter asks: fewer | push `agent.change` → card | each line before → after, the credit it leaves | tap **Agreed** (each line defaults to agreed; tap a line to keep it) | 2 → **2** |
-| D-23 Restock: not yet | Orders → Stock → the restock list | weeks of shelf left per line | tap **Not yet** | 4 → **3** (app, Orders, Not yet) |
-| D-24 A carton for the shelf? | push `carton.ask` → card | the order's part and the shelf's part, the cash | tap **Shelf part OK** / **Order only** | 2 → **2** |
-| D-25 A customer's limit and terms | Money → the customer | owes, limit gauge, oldest bill, promises | tap a limit chip; **Save** (Grace told by itself) | 8 → **5** (app, Money, customer, chip, Save) |
-| D-26 Look alike | Money → the look-alike card | the two records side by side, their bills | slide **Merge into Kato Construction** / tap **Not the same** | 6 → **4** |
-| D-27 Opening balance | Money → old books → the customer | the old book's figure, since when | slide **Opening balance · 290,000** | ≈6 → **4** |
-| D-28 Promise (Ruth's own) | Money → the debtor | dots of past promises | tap a day chip (amount defaults to what is owed); **Save** | 6 → **4** |
-| D-29 Goals | Team | last month's invoiced per person, the suggested goal | tap **Use the suggested goals**; Save | 5 → **4** (app, Team, Use, Save) |
-| D-30 Chase debtors | Today's watch row or Money | aging bars | tap **Nudge Grace** on the row (words written, P-9) | 5 → **3** (app, Money, Nudge) |
-| D-31 Stuck order | Today's watch row | who holds it, over its limit by how much | tap **Give it to Musa** / **Nudge Musa** | nudge 5 → **2** (give 2 → 2; assign 4 → 2) |
-| D-32 Credit asked (Grace / Esther) | push `credit.limit.ask` (P-12) → card | as D-25 | tap **Limit 500,000 · 14 d** / **Cash only** | not possible → **2** |
-| D-33 A new item to price | push `markup.wanted` (P-11) → card | cost, rivals' prices, the shop's default markup | tap **Markup 25%** (or step) | 7 → **2** |
+| ID | See the ask (push words or row) | Evidence (on the push / the row) | The answer (★ = notification action) | From the push: before → after | From the app: before → after |
+|---|---|---|---|---|---|
+| D-1 Under the shop's price | "Grace · Under the shop's price · #0548" | "Roofing sheet · 200,000, shop's 210,000 · cost 168,000 · 10 pcs" | ★ **Approve 200,000** (rung or Shop's price on the card) | 2 → **1** | 4 → **2** |
+| D-2 Price coming | "Grace · Price coming · #0548" | "Roofing sheet 3 m · cost 168,000 + 25% = 210,000" | ★ **Set 210,000** | 4 → **1** | 6 → **2** |
+| D-3 Price up | "Denis · Price up · #0552" | "Ridge cap 3 m · cost 27,000, sells 26,000 · 10 pcs" | ★ **Shop's price 33,750** (another rung on the card) | 5 → **1** | 7 → **2** |
+| D-4 Counter sale | "Grace · At the counter · under the shop's price" | "Cement 50 kg · 34,000, shop's 36,000 · cost 31,000" | ★ **Approve 34,000** | 2 → **1** | 4 → **2** |
+| D-5 On credit? (over / old bill) | "Grace · On credit? · Kato Construction" | "Over the limit · would owe 6.4M of 5M · oldest bill 34 d · usually pays in 18 d" | ★ **On credit** (Cash first on the card) | 2 → **1** | 3 → **2** |
+| D-6 On credit? (no limit set) | "Grace · On credit? · Nansana Hardware" | "No limit set · 1,200,000 · 3rd order · paid the last 2" | ★ **On credit · 1.5M · 14 d** | 5 → **1** | 6 → **2** |
+| D-7 Not paid yet · on credit? | "Musa · Not paid yet · on credit? · truck waits" | "Ggaba Stores · owes 430,000 · no limit set · 1st order" | ★ **On credit · load it · 500k · 14 d** | 5 → **1** | 6 → **2** |
+| D-8 Invoice | — (bills itself; Orders: "Delivered · bills itself in 18 h") | — | none (Invoice now, optional) | 2 → **0** | 3 → **0** |
+| D-9 Only 567 · check it | "Can't bill itself · Only 567 · #0572" | "Walk-in · 1 line · nails 0.5 kg" | ★ **Bill 567** | 3 → **1** | 4 → **2** |
+| D-10 A line at 0 | "Can't bill itself · a line at 0 · #0541" | "Kato · Binding wire 1 kg at 0 · cost 4,500" | the why is a choice: on the card, **Given away · {why chip}** | 5 → **2** | 6 → **2** |
+| D-11 run skipped | the underlying push | — | the underlying answer | as D-1/2/12 | as D-1/2/12 |
+| D-12 Packed short | "Musa · Packed short · #0548" | "Roofing sheet 4 of 6 · bill 184,000 (full 276,000)" | ★ **Bill what went 184,000** | 2 → **1** | 4 → **2** |
+| D-13 Check-in differs | "Musa · check-in differs · Denis's trip" | "Kiseka Steel · Y12 bar 9 of 10 · −42,000 at cost" (+ "Denis: one bent, left it") | ★ **Take the check-in** | 2 → **1** | 4 → **2** |
+| D-14 Denis's note alone | — (the trip's history) | — | none | 2 → **0** | 4 → **0** |
+| D-15 Not on the list | "Musa · Not on the list · keep it?" | "2 bags cement on Denis's trip · shelf has 14 · paid 31,000 last" | ★ **Keep it** (It goes back on the card) | — (no screen) → **1** | — → **2** |
+| D-16 Damaged · write off | "Musa · Damaged · 3 roofing sheets" | "on the shelf 22 → 19 · −504,000 at cost" | slide **Write off · 504,000** on the card; ★ only **Kept on the shelf** | 2 → **2** ✗ (kept: — → **1**) | 4 → **2** (the row's slide) |
+| D-17 A count to check | "Musa · A count to check · Aisle B" | "12 items · 2 differ · net −36,000" | slide **Count taken**; ★ only **Count it again** | 4 → **2** | 4 → **2** |
+| D-18 Return asked | "Grace · Return asked · #0548" | "2 roofing sheets · damaged · −84,000 · owes 1,034,000 → 950,000" | slide **Credit note raised · 84,000**; ★ only **Kept as sold** | 2 → **2** ✗ (kept: 2 → **1**) | 4 → **2** |
+| D-19 Void asked | "Esther · Void asked · #0548" | "Kato · 430,000 · entered twice: #0547 same total, same day · nothing paid" | slide **Voided · 430,000** (with money: chip, then slide); ★ only **Kept as billed** | 2 → **2** ✗ (with money 4 → **3**; kept 2 → **1**) | 4 → **2** (with money 6 → 3) |
+| D-20 Cancel asked | "Grace · Cancel asked · #0558" | "Ggaba Stores · Packing · 430,000 · nothing paid · changed their mind" | slide **Cancelled**; ★ only **Kept** | 4 → **2** | 4 → **2** |
+| D-21 Taken twice? | — (the app spots it) | row: "#0558 & #0559 · 12 min apart · same 430,000" | slide **Cancel #0559 · keep #0558** on the row | — | 4 → **2** |
+| D-22 Peter asks: fewer | "Peter · asks for fewer · #0571" | "Cement 20 → 12 · Y12 bar 10 → 10 · 280,000 less · paid 300,000" | ★ **Agree** (per-line keep on the card) | 2 → **1** | 4 → **2** |
+| D-23 Restock: not yet | — | Orders → Stock row: "Cement · 6 weeks left on the shelf" | **Not yet** on the row | — | 4 → **3** |
+| D-24 A carton for the shelf? | "Denis · A carton for the shelf?" | "Roofing sheet · 2 for #0548, 8 for the shelf · 336,000 · shelf has 3" | ★ **Shelf part OK** (Order only on the card) | 2 → **1** | 4 → **2** |
+| D-25 Limit and terms | — | Money → the customer: limit gauge, oldest bill | a limit chip, Save (Grace told by itself) | — | 8 → **5** |
+| D-26 Look alike | — | Money card: the two records side by side | slide **Merge into Kato Construction** | — | 6 → **4** |
+| D-27 Opening balance | — | Money → old books: the figure, since when | slide **Opening balance · 290,000** | — | ≈6 → **4** |
+| D-28 Promise (Ruth's) | — | Money → the debtor: promise dots | a day chip, Save | — | 6 → **4** |
+| D-29 Goals | — | Team: last month per person, the suggested goal | **Use the suggested goals**, Save | — | 5 → **4** |
+| D-30 Chase debtors | — | Today's watch row: "3 over 30 days · 2.1M · Grace's 2" | **Nudge Grace** on the row | — | 5 → **3** (app, Money, Nudge; or 2 from the Today row) |
+| D-31 Stuck order | — | Today's watch row: "Kato · Packing 2 d · 1 d over · Musa" | **Nudge Musa** / **Give it to Joy** on the row | — | 5 → **2** (give 2 → 2; assign 4 → 2) |
+| D-32 Credit asked | "Grace · Credit asked · Nansana Hardware" | "500,000 · 14 d · 3 orders, paid 2 on time" | ★ **Limit 500,000 · 14 d** | — (no path) → **1** | — → **2** |
+| D-33 A new item to price | "Moses · A new item to price" | "Roofing sheet 3 m · cost 168,000 · rivals 205,000–215,000" | ★ **Markup 25% · 210,000** | — (no push) → **1** | 7 → **2** |
 
 **In the queue** (several waiting, which is most of the day): today each next
 decision costs **2** (the row, then the answer, after the page pops back to the
-list); with Decide next it costs **1** (the answer; the next card comes by
-itself).
+list); with the row answers and Decide next it costs **1**.
 
 ## Totals
 
-The primary answer of each decision; "—" = not possible today.
+From the push: the 20 decisions that have a push today. From the app: the 30
+decisions possible today. The primary answer of each.
 
-| ID | Today | New | | ID | Today | New |
-|---|---|---|---|---|---|---|
-| D-1 | 2 | 2 | | D-18 | 2 | 2 |
-| D-2 | 4 | 2 | | D-19 | 2 | 2 |
-| D-3 | 5 | 2 | | D-20 | 4 | 2 |
-| D-4 | 2 | 2 | | D-21 | 4 | 3 |
-| D-5 | 2 | 2 | | D-22 | 2 | 2 |
-| D-6 | 5 | 2 | | D-23 | 4 | 3 |
-| D-7 | 5 | 2 | | D-24 | 2 | 2 |
-| D-8 | 2 | 0 | | D-25 | 8 | 5 |
-| D-9 | 3 | 2 | | D-26 | 6 | 4 |
-| D-10 | 5 | 2 | | D-27 | 6 | 4 |
-| D-12 | 2 | 2 | | D-28 | 6 | 4 |
-| D-13 | 2 | 2 | | D-29 | 5 | 4 |
-| D-14 | 2 | 0 | | D-30 | 5 | 3 |
-| D-16 | 2 | 2 | | D-31 | 5 | 2 |
-| D-17 | 4 | 2 | | D-33 | 7 | 2 |
-| **30 decisions** | | | | **Sum** | **115** | **70** |
-| D-15, D-16 kept, D-32 | — | 2 each (6) | | Each next in the queue | 2 | 1 |
+| ID | Push before | Push after | App before | App after |
+|---|---|---|---|---|
+| D-1 | 2 | 1 | 4 | 2 |
+| D-2 | 4 | 1 | 6 | 2 |
+| D-3 | 5 | 1 | 7 | 2 |
+| D-4 | 2 | 1 | 4 | 2 |
+| D-5 | 2 | 1 | 3 | 2 |
+| D-6 | 5 | 1 | 6 | 2 |
+| D-7 | 5 | 1 | 6 | 2 |
+| D-8 | 2 | 0 | 3 | 0 |
+| D-9 | 3 | 1 | 4 | 2 |
+| D-10 | 5 | 2 | 6 | 2 |
+| D-12 | 2 | 1 | 4 | 2 |
+| D-13 | 2 | 1 | 4 | 2 |
+| D-14 | 2 | 0 | 4 | 0 |
+| D-16 | 2 | **2** | 4 | 2 |
+| D-17 | 4 | 2 | 4 | 2 |
+| D-18 | 2 | **2** | 4 | 2 |
+| D-19 | 2 | **2** | 4 | 2 |
+| D-20 | 4 | 2 | 4 | 2 |
+| D-21 | — | — | 4 | 2 |
+| D-22 | 2 | 1 | 4 | 2 |
+| D-23 | — | — | 4 | 3 |
+| D-24 | 2 | 1 | 4 | 2 |
+| D-25 | — | — | 8 | 5 |
+| D-26 | — | — | 6 | 4 |
+| D-27 | — | — | 6 | 4 |
+| D-28 | — | — | 6 | 4 |
+| D-29 | — | — | 5 | 4 |
+| D-30 | — | — | 5 | 3 |
+| D-31 | — | — | 5 | 2 |
+| D-33 | — (no push) | 1 | 7 | 2 |
+| **Sum** | **59** (20) | **24** (same 20) | **145** (30) | **69** (30) |
+| D-15, D-16 kept, D-32 (not possible today) | — | 1 each | — | 2 each |
+| Each next in the queue | 2 | — | 2 | 1 |
 
-Second choices that also drop: Set price 5 → 2, Bill it all 3 → 2, a check-in
-with the Buyer's note 3 → 2, a void with money 4 → 3, a cancel with money 5 → 3,
+**Every decision drops from the app** (145 → 69). **From the push, 17 of 20
+drop** (59 → 24). **Three do not**, by rule: **D-16 write-off, D-18 credit note,
+D-19 void** stay 1 to open + 1 slide, because an irreversible money move never
+gets a notification action. Their safe "keep" answer does drop to 1 from the
+push (Kept on the shelf, Kept as sold, Kept as billed), and a void with money
+drops 4 → 3. Making them 1 would need a slide on the notification itself,
+which Android does not offer; not proposed.
+
+Second choices that also drop: Set price (another figure) 5 → 3 (push, rung or
+keypad, Use), Bill it all 3 → 2, Cash first 3 → 2 from the app, a check-in with the Buyer's note 3 → 1, a cancel with money 5 → 3,
 Assign 4 → 2.
-
-**Not fewer, at the floor (1 to open + 1 to answer from the push):** D-1
-Approve, D-4, D-5, D-12 went, D-13, D-16, D-18, D-19, D-22, D-24. These gain
-only in the queue (2 → 1 each next) and from the app (4 → 2 with the FAB in
-place of tile + row). A push that answers from the notification itself would
-make them 1, but the evidence would not be seen: not proposed.
 
 ## Steps removed or automated
 
-- **Removed:** the four pushes that open Today instead of their ask (M-1, M-2,
+- **Removed:** opening a page to press one button (the one safe answer is on the row and on the push as a notification action); the four pushes that open Today instead of their ask (M-1, M-2,
   M-3, M-16); the six tiles as doors and the Decide list as a step (the FAB
   opens the oldest; the list stays for looking); "Back to the next row" (the
   next card comes by itself); "Keep held" and "Old bill first" (two credit

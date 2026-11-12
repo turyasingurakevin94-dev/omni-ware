@@ -23,6 +23,8 @@ otherwise from the tap that opens the app (or the unrouted push, which lands on
 Today): + the Decide-now tile (manager.html:4658, every tile but Credit and
 Invoices opens the list) + the row + the answer. Typing digits is not counted;
 a stepper press, a chip, a button, a confirm and a slide each count 1.
+The new counts (from the push and from the app, kept apart) are in
+`docs/audit/manager/day.md` "Totals".
 
 ---
 
@@ -132,6 +134,8 @@ asker's screen while it waits (Sales, Buyer and Store already do this:
 `orders/data.ts:130`, `orders/rules.ts:139`, store.html With Ruth). Names are
 display names (glossary People).
 
+The push title is `{asker} · {ask word} · {#order}`, its body the evidence, and its one action the safe answer (§4, "Pushes that carry their evidence and their answer"); the same button sits on the Manager's Needs-you row.
+
 | Hand-off | Ask word (asker's screen, Manager's row, push title) | Answer words (Manager's buttons = asker's screen = push title) | Push to the Manager | Push back |
 |---|---|---|---|---|
 | D-1 under the shop's price | **Under the shop's price** · Ruth decides | **Approved** · **Price set · 205,000** · **Shop's price** | `price.waits` | `price.decided` "Ruth set a new price · Tell them" — only when the price moved |
@@ -237,6 +241,53 @@ others` like 0131. `{Ruth}` = `ow_first_name(shop, auth.uid())`; `#0548` =
 | `order.delivered` (0120:262) | pushed to `invoice.make` on every delivery | retire (drop the branch): it waits on nobody; the run bills it, `invoice.held` covers the ones it can't |
 | `notify-stock-count` (function) | FCM straight to owner, admin, manager | retire the webhook once P-1 is live |
 
+**Pushes that carry their evidence and their answer** (day.md "Two ways to one
+tap"). The title names who asks and what; the body is the evidence (an expanded
+notification shows 2–3 lines); the action is the one safe answer, sent through
+`answer_from_push` (below) after a 10 s Undo on the notification. An
+irreversible money or books move never gets an action; its push offers only the
+safe "keep" answer. These words replace the titles and bodies above for the
+same kinds. The ten that were at the floor (1 to open + 1 to answer) first:
+
+| D | Kind | Title | Body (the evidence) | Action (`data.actions`) |
+|---|---|---|---|---|
+| D-1 | `price.waits` | `{Grace} · Under the shop's price · #0548` | `{Roofing sheet} · {200,000}, shop's {210,000} · cost {168,000} · {10} pcs` | `approve` **Approve 200,000** |
+| D-4 | `price.waits` (counter) | `{Grace} · At the counter · under the shop's price` | `{Cement 50 kg} · {34,000}, shop's {36,000} · cost {31,000}` | `approve` **Approve 34,000** |
+| D-5 | `credit.hold` | `{Grace} · On credit? · {Kato Construction}` | `Over the limit · would owe {6.4M} of {5M} · oldest bill {34} d · usually pays in {18} d` | `credit` **On credit** |
+| D-12 | `pick.short` | `{Musa} · Packed short · #0548` | `{Roofing sheet} {4} of {6} · bill {184,000} (full {276,000})` | `went` **Bill what went 184,000** |
+| D-13 | `trip.difference` | `{Musa} · check-in differs · {Denis}'s trip` | `{Kiseka Steel} · {Y12 bar} {9} of {10} · {−42,000} at cost` + the Buyer's note when there is one | `take` **Take the check-in** |
+| D-16 | `stock.report` | `{Musa} · {Damaged} · {3} {roofing sheets}` | `on the shelf {22} → {19} · {−504,000} at cost` | `keep` **Kept on the shelf** only (the write-off is a slide) |
+| D-18 | `invoice.ask` (credit) | `{Grace} · Return asked · #0548` | `{2} {roofing sheets} · {damaged} · {−84,000} · owes {1,034,000} → {950,000}` | `keep` **Kept as sold** only (the credit note is a slide) |
+| D-19 | `invoice.ask` (void) | `{Esther} · Void asked · #0548` | `{Kato} · {430,000} · {entered twice}` + `: #0547 same total, same day` when a twin exists · `nothing paid` / `{200,000} paid` | `keep` **Kept as billed** only (the void is a slide) |
+| D-22 | `agent.change` | `{Peter} · asks for fewer · #0571` | `{Cement} {20} → {12} · {280,000} less · paid {300,000}` (first 2 lines, `+N more`) | `agree` **Agree** |
+| D-24 | `carton.ask` | `{Denis} · A carton for the shelf?` | `{Roofing sheet} · {2} for #0548, {8} for the shelf · {336,000} · shelf has {3}` | `ok` **Shelf part OK** |
+
+The other kinds with an action: D-2 `price.waits` (Price coming) **Set 210,000**
+(cost + the item's markup, only when both are known); D-3 `price.waits` (Price
+up) **Shop's price 33,750**; D-6 `credit.hold` (no limit set) **On credit · 1.5M
+· 14 d** (the smallest of `limitChoices`, the shop's usual terms); D-7
+`credit.ask` **On credit · load it · 500k · 14 d**; D-9 `invoice.held` (OWSML)
+**Bill 567**; D-15 `store.extra` **Keep it**; D-17 `stock.count` **Count it
+again** only; D-20 `order.cancel.ask` **Kept** only; D-32 `credit.limit.ask`
+**Limit 500,000 · 14 d**; D-33 `markup.wanted` **Markup 25% · 210,000**. No
+action: D-10 (the why is a choice), D-8 and D-14 (no push), and every slide.
+
+**Also in 0182 for the actions:** `push_outbox.actions jsonb` (the answers the
+push offers, `[{id, label}]`, written by the trigger beside the title);
+`push_subscriptions.app_build int` (push-send sends `actions` only to a phone
+whose shell can show them, build ≥ 3); and one function
+`answer_from_push(p_outbox_id bigint, p_action text, p_key uuid)`: it reads the
+outbox row, checks the caller is a recipient and holds the decision's task,
+checks the ask is still open and unchanged since the push (else refused,
+"Someone else just did this"), and calls the same function the app calls
+(`decidePrice`'s write through `ow_patch_order`, `creditCheck`, `pickSettle`,
+`accept_trip_difference`, `answer_store_ask`, `hold_restock_buy`,
+`answer_cancel_ask(no)`, `decide_invoice_ask(declined)`, `write_off`'s keep =
+`stock_reports.status 'dismissed'`, `ask_recount`, `answer_credit_limit`,
+`set_product_markup`), idempotent on `p_key`. It writes the owner's log line
+like the app's answer and carries `via: 'push'`. An action id the row does not
+offer is refused, so a push can never carry a money move.
+
 Each new or changed kind is added to `test/phone-push.test.js` `KINDS` (manager:
 `order.cancel.ask`, `credit.ask`, `carton.ask`, `store.extra`, `stock.count`,
 `markup.wanted`, `credit.limit.ask`, `payment.ask.decided`; sales: `pick.settled`,
@@ -287,3 +338,34 @@ Each new or changed kind is added to `test/phone-push.test.js` `KINDS` (manager:
 ### The Manager app itself (for the redesign; listed so nothing is lost)
 
 Read `store_asks` (extra) and answer with `answer_store_ask`; route `order.cancel.ask`, `store.extra`, `stock.count`, `payment.ask.decided`; send the cancel of a twin through `cancel_order`; add **Kept on the shelf** to the write-off; use 0176's `void_invoice` and `raise_credit_note` (one write each) in place of the phone's multi-call paths (5410-5426, 5521-5547); fix `out_for_delivery` (5643); use only the §3 words; every "is told" on a done screen names only pushes that exist.
+
+---
+
+## §6 Native changes (the Manager's Android shell)
+
+The Manager APK is `manager.html` inside a Capacitor 8 shell, `apps/manager`
+(`capacitor.config.json`: `com.omniware.manager`, `@capacitor/push-notifications`
+8.1), built by `.github/workflows/build-manager-app.yml` (`npx cap sync
+android`, then `./gradlew assembleDebug` in `apps/manager/android`). The native
+side is a bare `MainActivity extends BridgeActivity`
+(`apps/manager/android/app/src/main/java/com/omniware/manager/MainActivity.java`);
+today every push is drawn by the system from FCM's `notification` block
+(`supabase/functions/push-send/index.ts:125`), which cannot carry action
+buttons, and a tap only reaches `pushNotificationActionPerformed`
+(manager.html:2286). What the notification actions need:
+
+| # | Where | Change |
+|---|---|---|
+| N-1 | `supabase/functions/push-send/index.ts:108-125` | For a row with `actions` and a subscription with `app_build ≥ 3`: send a **data-only** message (no `notification` block) with `data.title`, `data.body`, `data.outboxId` (the `push_outbox.id`) and `data.actions` (the row's `[{id, label}]` as a JSON string), `android.priority: high`. Every other row and older phone: as today. |
+| N-2 | `apps/manager/android/app/src/main/java/com/omniware/manager/` new `DecideMessagingService.java` | Extends the plugin's `com.capacitorjs.plugins.pushnotifications.MessagingService` (so the plugin keeps the token and the in-app events) and, for a data message with `title`, draws the notification itself: channel **Decisions** (high, sound), `NotificationCompat.BigTextStyle` with the body (the 2–3 lines of evidence), the tap opening `MainActivity` with the data (so `pushOpen` still opens the card), and one `addAction` per `data.actions` entry with a `PendingIntent` to N-3. |
+| N-3 | new `DecideActionReceiver.java` | On an action: replaces the notification with "{label} · Undo" for 10 s (an Undo action cancels it); after 10 s enqueues a `WorkManager` job (network required) that calls `answer_from_push(p_outbox_id, p_action, p_key)` (§4) over HTTPS with the signed-in session; on success the notification becomes "{label} · Grace sees it" and auto-cancels; on a refusal it shows the server's words ("Someone else just did this") with a tap to open. With no signal the job waits (the outbox rule: kept, sent when there is signal). |
+| N-4 | the session for N-3 | The web app's Supabase session lives in the WebView; the job needs it natively. `phonePush()` (manager.html:2273) passes the refresh token to a small native store (`EncryptedSharedPreferences`) through a tiny Capacitor plugin method (`DecideBridge.setSession`), cleared on sign-out; the job refreshes the access token itself. |
+| N-5 | `manager.html` `phonePush` / `pushOpen` | Writes `app_build` with the token (`push_subscriptions`); on open reads the native queue (`DecideBridge.pending()`) and shows each answer made from a push in the last 10 s with **Undo** (an Undo after sending calls the decision's own undo: price back, credit back, pick back, `hold_restock_buy` back), and refreshes so the card is gone. The same answers are the row buttons of day.md. |
+| N-6 | `apps/manager/android/app/src/main/AndroidManifest.xml` | Declares the service (`com.google.firebase.MESSAGING_EVENT`, replacing the plugin's), the receiver, `POST_NOTIFICATIONS`; `androidx.work:work-runtime` and `androidx.security:security-crypto` in `app/build.gradle`. |
+| N-7 | `apps/manager/android/app/build.gradle` `versionCode` (2 today, line 10) | → 3, and `pushInstalled()` (manager.html:2269) keeps its `build ≥ 2` check for push and adds `≥ 3` for actions, so an older APK gets plain pushes. |
+| N-8 | `.github/workflows/build-manager-app.yml` | No change of steps; its `paths` already cover `apps/manager/**`. iOS is not built by it: actions are Android only for now (an iPhone gets the evidence and opens the card). |
+| N-9 | tests | `test/phone-push.test.js`: the manager's action kinds have an action only from the safe list (never write-off, credit note, void, refund, count taken, merge, opening balance, cancel); an SQL test of `answer_from_push` as Manager, Sales and Store (refused without the task, refused when stale, refused for an action id the row does not offer, once only per key). |
+
+The same layer serves the other phone apps later (Sales' "Tell them", the
+Store's "I've got it"); nothing here is Manager-only except the action list.
+
